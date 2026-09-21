@@ -1015,6 +1015,41 @@ void MapCanvas::buildGuides()
     }
 }
 
+void MapCanvas::buildTracking()
+{
+    // THE TRACES, so a mark is visible as a line and not only as a place the
+    // cursor jumps to. A user who cannot see what they acquired cannot tell a
+    // trace from a snap that happened to agree with it.
+    const auto& marks = controller_.bus().tracking_marks();
+    if (marks.empty()) return;
+
+    // THE AID COLOUR, dashed — the same ink a snap marker and a drafting guide
+    // use. `warn` means exactly one thing in this program and a trace is that
+    // thing; the accent means selection, active tool and primary action, and a
+    // trace is none of those (design.md §1.2).
+    const std::size_t batch = nextBatch(tokens_->warn.rgba(), 1.0f, true);
+    const auto w            = static_cast<float>(width());
+    const auto h            = static_cast<float>(height());
+
+    for (const core::Point2 at : marks) {
+        const render::ScreenPointF p = render::to_f(view_.to_screen(at));
+        addRun(batch, {{0.0F, p.y}, {w, p.y}}, false);
+        addRun(batch, {{p.x, 0.0F}, {p.x, h}}, false);
+
+        // AND THE MARK ITSELF, as a small square: the two lines cross at every
+        // trace pair, so the crossing alone does not say which points were
+        // acquired.
+        constexpr float kMark = 4.0F;
+        addRun(batch,
+               {{p.x - kMark, p.y - kMark},
+                {p.x + kMark, p.y - kMark},
+                {p.x + kMark, p.y + kMark},
+                {p.x - kMark, p.y + kMark},
+                {p.x - kMark, p.y - kMark}},
+               false);
+    }
+}
+
 void MapCanvas::buildRuler()
 {
     if (!look_.ruler) return;
@@ -1747,6 +1782,7 @@ void MapCanvas::buildOverlay()
 
     buildSelectionBox();
     buildGuides();
+    buildTracking();
     // THE PRINT FRAME OVER THE DRAWING and under the rulers: it is a window on
     // the drawing, so it has to sit on top of it, and the rulers and the scale
     // bar are the shell's furniture and stay readable over everything.
@@ -2025,6 +2061,27 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         select_anchor_ = event->position();
         cursor_        = event->position();
         cursor_valid_  = true;
+        update();
+        return;
+    }
+
+    // SHIFT + RIGHT BUTTON MARKS A POINT FOR TRACKING, which is the hand version
+    // of `İZ <nokta>`. The point marked is the SNAPPED one, so a corner is
+    // acquired exactly and not to the pixel — acquiring the corner is the whole
+    // gesture, and a mark half a millimetre off it would put every trace half a
+    // millimetre off too.
+    //
+    // It goes through the COMMAND, not into the bus directly: a mark made by the
+    // mouse and a mark typed at the prompt have to be one thing, and the command
+    // is that one thing (Article 1.1).
+    if (event->button() == Qt::RightButton && (event->modifiers() & Qt::ShiftModifier) != 0) {
+        const core::Point2 at = snap_preview_valid_
+                                    ? snap_preview_.point
+                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+        controller_.runLine(QStringLiteral("İZ %1,%2")
+                                .arg(core::mm_to_metres(at.x), 0, 'f', 3)
+                                .arg(core::mm_to_metres(at.y), 0, 'f', 3),
+                            command::Origin::Gui);
         update();
         return;
     }

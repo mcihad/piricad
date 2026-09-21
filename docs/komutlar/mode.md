@@ -67,7 +67,7 @@ Bugün oturum kapsamında sekiz mod vardır:
 
 | Mod | Tür | Varsayılan | Ne yapar |
 |---|---|---|---|
-| `yakalama_modları` | Bit maskesi | `7` | Etkin nesne yakalama modları |
+| `yakalama_modları` | Bit maskesi | `0x10822F` | Etkin nesne yakalama modları |
 | `dik_mod` | Evet/hayır | `hayır` | İmleci yatay ve düşey eksene kilitler |
 | `yüzey_normali` | Evet/hayır | `hayır` | Çizgiyi başladığı **yüzeye** dik kilitler |
 | `köşegen` | Evet/hayır | `hayır` | İmleci öncekinden 45°'nin katlarına kilitler |
@@ -173,9 +173,15 @@ Bütün koordinat biçimleri için bkz. [Komut satırı](komut-satiri.md).
 | 17 | `131072` | Ekleme noktası | Bir nesnenin **yerleştirildiği** noktaya: blok referansının ekleme noktasına |
 | 18 | `262144` | Çeyrek nokta | Bir eğrinin eksenleri kestiği **dört** noktaya: 0, 100, 200 ve 300 grad |
 | 19 | `524288` | Teğet nokta | Son noktadan bir eğriye çizilen **teğetin** eğriye dokunduğu yere |
+| 20 | `1048576` | İzleme | [`İZ`](tracking.md) ile işaretlenmiş noktaların yatay/düşey izlerine ve iki izin kesişimine |
 
-Varsayılan `0x822F` = uç nokta + orta nokta + merkez + kesişim + **en yakın** +
-düğüm + ağırlık merkezi.
+Varsayılan `0x10822F` = uç nokta + orta nokta + merkez + kesişim + **en yakın** +
+düğüm + ağırlık merkezi + **izleme**.
+
+**İzleme kimseden bir şey almaz**, bu yüzden varsayılanda açıktır: işaret yoksa
+kip hiçbir şey yapmaz. Kapalı olsaydı kimsenin bulamayacağı bir özellik olurdu.
+Bir iz, gerçek olan her şeyin **altında** sıralanır — kullanıcının kurduğu iskele,
+ölçülmüş bir noktayı elinden almaz.
 
 **Eğriler çizildikleri gibi yakalanır, saklandıkları gibi değil.** Daire merkez
 ve yarıçapla, yay merkez ve iki uçla, elips merkez ve iki eksen ucuyla saklanır;

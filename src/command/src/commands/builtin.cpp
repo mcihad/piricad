@@ -32,6 +32,7 @@ namespace kentos::command {
     X(entity_info)                                                                                 \
     X(measure_angle)                                                                               \
     X(stretch)                                                                                     \
+    X(tracking)                                                                                    \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

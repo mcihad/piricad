@@ -501,7 +501,7 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 17); // 13 + AĞIRLIK MERKEZİ + EKLEME + ÇEYREK + TEĞET
+    CHECK_EQ(count, 18); // 13 + AĞIRLIK MERKEZİ + EKLEME + ÇEYREK + TEĞET + İZLEME
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
 }
 
@@ -1879,4 +1879,125 @@ TEST_CASE("açılı kılavuz geri alınır ve yinelenir")
     REQUIRE(doc.apply(redo, &again).ok());
     CHECK_EQ(doc.guides().size(), std::size_t{2});
     CHECK(doc.guides().ray(1));
+}
+
+// ============================================================================
+// Temporary tracking (OTRACK) — the last item of the plan
+// ============================================================================
+
+TEST_CASE("izleme: iki işaretin izleri kesişir")
+{
+    core::Document doc;
+    const core::Point2 marks[2]{{10'000, 0}, {0, 20'000}};
+
+    core::SnapQuery q;
+    q.modes          = core::SnapTracking;
+    q.tracking       = std::span<const core::Point2>(marks, 2);
+    q.tracking_reach = 2000;
+    // Near the crossing of the first mark's easting and the second's northing:
+    // "level with that corner and in line with this one", which is the question
+    // the whole feature exists to answer.
+    q.aim = core::Point2{10'500, 19'700};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapTracking);
+    CHECK_EQ(r.point, (core::Point2{10'000, 20'000}));
+}
+
+TEST_CASE("izleme: öbür eşleşme de verilir, işaretleme sırası karar vermez")
+{
+    core::Document doc;
+    const core::Point2 marks[2]{{10'000, 0}, {0, 20'000}};
+
+    core::SnapQuery q;
+    q.modes          = core::SnapTracking;
+    q.tracking       = std::span<const core::Point2>(marks, 2);
+    q.tracking_reach = 2000;
+    // The OTHER pairing: the second mark's easting with the first's northing.
+    // Which mark contributes which axis is decided by POINTING, not by the order
+    // they were marked in.
+    q.aim = core::Point2{300, 400};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapTracking);
+    CHECK_EQ(r.point, (core::Point2{0, 0}));
+}
+
+TEST_CASE("izleme: tek işaret kendi yatay ve düşey izini verir")
+{
+    core::Document doc;
+    const core::Point2 mark[1]{{10'000, 20'000}};
+
+    core::SnapQuery q;
+    q.modes          = core::SnapTracking;
+    q.tracking       = std::span<const core::Point2>(mark, 1);
+    q.tracking_reach = 2000;
+
+    // Level with it: the northing is taken, the easting is the aim's own.
+    q.aim                        = core::Point2{50'000, 19'500};
+    const core::SnapResult level = core::snap(doc, q);
+    CHECK(level.mode == core::SnapTracking);
+    CHECK_EQ(level.point, (core::Point2{50'000, 20'000}));
+
+    // In line with it: the easting is taken instead.
+    q.aim                          = core::Point2{9'600, 90'000};
+    const core::SnapResult inline_ = core::snap(doc, q);
+    CHECK(inline_.mode == core::SnapTracking);
+    CHECK_EQ(inline_.point, (core::Point2{10'000, 90'000}));
+}
+
+TEST_CASE("izleme: erişim sıfırsa mod açık olsa da çalışmaz")
+{
+    core::Document doc;
+    const core::Point2 marks[2]{{10'000, 0}, {0, 20'000}};
+
+    core::SnapQuery q;
+    q.modes    = core::SnapTracking;
+    q.tracking = std::span<const core::Point2>(marks, 2);
+    // THE "NO REACH, NO AID" CONTRACT every other mode keeps: a client that
+    // cannot say how close is close cannot ask for the aid.
+    q.tracking_reach = 0;
+    q.aim            = core::Point2{10'000, 20'000};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapNone);
+    CHECK_EQ(r.point, (core::Point2{10'000, 20'000})); ///< the aim, untouched
+}
+
+TEST_CASE("izleme gerçek bir köşeyi elden almaz")
+{
+    core::Document doc;
+    core::Op undo;
+    // A real corner at (10, 20) and marks whose crossing is the SAME point. The
+    // measured corner must win: a trace is scaffolding the user put up.
+    const core::Point2 ring[2]{{10'000, 20'000}, {40'000, 20'000}};
+    REQUIRE(doc.add_polyline(0, std::span<const core::Point2>(ring, 2), undo).ok());
+
+    const core::Point2 marks[2]{{10'000, 0}, {0, 20'000}};
+    core::SnapQuery q;
+    q.modes          = core::SnapEndpoint | core::SnapTracking;
+    q.radius         = 2000;
+    q.tracking       = std::span<const core::Point2>(marks, 2);
+    q.tracking_reach = 2000;
+    q.aim            = core::Point2{10'200, 19'900};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapEndpoint); ///< the corner, not the trace
+    CHECK_EQ(r.point, (core::Point2{10'000, 20'000}));
+}
+
+TEST_CASE("izleme: yakalama modu listesinde ve ayarın aralığında")
+{
+    // THE BIT HAS TO BE WRITEABLE. The setting's range stopped at bit 17 while
+    // ÇEYREK (1<<18) and TEĞET (1<<19) were already declared, so those two modes
+    // could not be switched on through the setting at all — `MOD
+    // yakalama_modları` refused the value. This pins the bound to the mask.
+    const core::SettingCatalog& cat = core::builtin_settings();
+    const std::uint32_t index       = cat.find("core.yakalama.modlar");
+    REQUIRE(index != core::kNoSetting);
+
+    const core::SettingRange& range = cat.at(index).range;
+    CHECK(range.max >= static_cast<std::int64_t>(core::SnapAllMask));
+    // AND ON BY DEFAULT, which costs nothing: with no mark the mode does nothing.
+    CHECK((cat.at(index).fallback.as_int() & core::SnapTracking) != 0);
 }

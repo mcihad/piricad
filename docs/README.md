@@ -131,6 +131,7 @@ Tek tek komutlar:
 | `AYAR` | [Proje ayarları](komutlar/setting.md) |
 | `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
 | `MOD` | [Oturum modları](komutlar/mode.md) |
+| `İZ` | [Geçici izleme: iki köşenin izlerinin kesişimi](komutlar/tracking.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
 | `BAĞLAM` | [Üzerinde çalışılanın özeti](komutlar/context.md) |
 | `KATMANLAR` | [Katman dökümü](komutlar/layers.md) |

@@ -96,6 +96,15 @@ public:
     /// window; it buys no privilege — this IS the command line's own road.
     void runScriptLine(const QString& line);
 
+    /// Ends a command that is waiting for more input, the way the right button
+    /// and Enter do. Public for the same reason `runScriptLine` is: a probe and
+    /// a screenshot run have to be able to finish a draw command before the next
+    /// line, because a draw command takes an unbounded run of points and PARKS —
+    /// and a transparent line typed after it (`İZ`, `YAKINLAŞ`) runs beside it
+    /// rather than ending it. It buys no privilege: this is the gesture's own
+    /// road (`Controller::finishInteractive`).
+    void endCommand();
+
     /// Brings the transcript in front: the properties dock, on its `Geçmiş` tab.
     ///
     /// THE TRANSCRIPT IS A TAB, not a dock of its own — which is why a

@@ -5591,8 +5591,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
     // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
     // + PANOYAKOPYALA, KES, YAPIŞTIR
-    // + NESNEBİLGİ, AÇIÖLÇ + ESNET
-    CHECK_EQ(f.reg.size(), std::size_t{90});
+    // + NESNEBİLGİ, AÇIÖLÇ + ESNET + İZ
+    CHECK_EQ(f.reg.size(), std::size_t{91});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
@@ -6798,4 +6798,119 @@ TEST_CASE("BÖLÜMLE tanımsız bloğu adıyla reddeder")
     // The refusal says what to do about it, which is BLOK's job and not this one's.
     CHECK(r.error().message.find("BLOK ile tanımlayın") != std::string::npos);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1}); ///< nothing half-placed
+}
+
+// ============================================================================
+// İZ — the marks a trace runs from
+// ============================================================================
+
+TEST_CASE("İZ nokta işaretler ve en çok ikisini tutar")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{1});
+    CHECK(said.find("1 işaret") != std::string::npos);
+
+    REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
+    REQUIRE_EQ(f.bus.tracking_marks().size(), std::size_t{2});
+    CHECK_EQ(f.bus.tracking_marks()[0], (core::Point2{10'000, 0}));
+    CHECK_EQ(f.bus.tracking_marks()[1], (core::Point2{0, 20'000}));
+
+    // A THIRD MARK IS A NEW PAIR, not a third axis: the oldest goes.
+    REQUIRE(f.bus.execute_line("İZ 30,40", Origin::Test).ok());
+    REQUIRE_EQ(f.bus.tracking_marks().size(), std::size_t{2});
+    CHECK_EQ(f.bus.tracking_marks()[0], (core::Point2{0, 20'000}));
+    CHECK_EQ(f.bus.tracking_marks()[1], (core::Point2{30'000, 40'000}));
+}
+
+TEST_CASE("İZ aynı noktayı iki kez işaretlemez")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("İZ 10,20", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("İZ 10,20", Origin::Test).ok());
+    // Acquiring a corner, moving away and coming back to it means ONE trace —
+    // and two identical marks would make the crossing the mark itself.
+    CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{1});
+}
+
+TEST_CASE("İZ sil=evet işaretleri temizler, İZ tek başına listeler")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("İZ", Origin::Test).ok());
+    CHECK(said.find("İşaretli nokta yok") != std::string::npos);
+
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
+
+    said.clear();
+    REQUIRE(f.bus.execute_line("İZ", Origin::Test).ok());
+    CHECK(said.find("2 işaret") != std::string::npos);
+    CHECK(said.find("Kesişimler") != std::string::npos);
+
+    said.clear();
+    REQUIRE(f.bus.execute_line("İZ sil=evet", Origin::Test).ok());
+    CHECK(f.bus.tracking_marks().empty());
+    CHECK(said.find("silindi") != std::string::npos);
+}
+
+TEST_CASE("İZ şeffaftır, geri alma adımı yemez ve belgeye dokunmaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    const std::uint64_t before = f.doc.content_hash();
+    const std::size_t depth    = f.undo.undo_depth();
+
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+    CHECK_EQ(f.undo.undo_depth(), depth);
+
+    // AND IT IS TRANSPARENT, which is what lets it run beside a waiting command:
+    // the mark is made in the MIDDLE of a ÇİZGİ and outlives it.
+    const CommandSpec* spec = f.reg.resolve("İZ");
+    REQUIRE(spec != nullptr);
+    CHECK(has_flag(spec->flags, Flags::Transparent));
+    CHECK(has_flag(spec->flags, Flags::ReadOnly));
+
+    // Not in the journal as a document mutation.
+    for (const auto& e : f.journal.entries())
+        CHECK(e.command_id != "core.tracking");
+}
+
+TEST_CASE("İZ ile işaretlenen noktalar yakalamaya geçiyor")
+{
+    Fixture f;
+    // THE SEAM THIS PINS. The marks live on the bus and the engine reads them
+    // through `SnapQuery::tracking`; a field nobody writes is a feature nobody
+    // has, which is exactly what happened to `normal_lock` once.
+    //
+    // A VIEW SCALE FIRST, because a client with no view gets an aperture of zero
+    // and no aid fires at all — the "no view, no aid" contract every mode keeps.
+    // 10 mm per pixel is an ordinary sheet zoom.
+    f.bus.aids().set_view_scale(10.0);
+
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
+
+    // A line whose second point is aimed WITHIN THE APERTURE of the crossing
+    // lands on it. 10 mm per pixel and the default tolerance make that aperture
+    // a few centimetres, so the aim is a few centimetres off — aiming half a
+    // metre away would be out of reach, which is the contract and not a bug.
+    REQUIRE(f.bus.execute_line("ÇİZGİ 50,50 10.05,19.95", Origin::Test).ok());
+
+    core::EntityId last = core::kNoEntity;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kPolylineKind) last = e;
+    REQUIRE(last != core::kNoEntity);
+
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[last]);
+    const auto xs             = f.doc.geometry().ring_xs(span.first);
+    const auto ys             = f.doc.geometry().ring_ys(span.first);
+    REQUIRE_EQ(xs.size(), std::size_t{2});
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{10'000, 20'000}));
 }

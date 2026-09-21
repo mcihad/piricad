@@ -377,12 +377,29 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       reddi, 3-4-5 üçgeniyle teğet ayağı, teğetin gerçek bir köşeyi almaması); `test_command.cpp`'ye
       üç vaka (çokgenin kutunun alamayacağını alması, çitin kestiğini alması, ÖNCEKİ/SON).
       Bit sayısı tripwire'ı 15 → 17.
-- [ ] **Geçici izleme (OTRACK) yapılmadı ve sebebi:** yazılı karşılığı `xy(P,Q)` olarak P1a'da
-      geldi; fare hâli ise ÜÇ parça istiyor — oturumda geçici bir işaretli nokta listesi,
-      nokta isteminde onu işaretleyecek bir jest (şeffaf bir sözcük ya da `Shift+sağ tık`), ve
-      `SnapQuery`'ye o listeyi okuyan bir alan. Yakalama motoruna bir alan eklemek ve tuvale geçici
-      bir durum koymak, bu paketin geri kalanı gibi tek dosyalık bir iş değil; kendi commit'ini
-      hak ediyor ve `xy(P,Q)` bugün aynı noktayı yazarak veriyor.
+- [x] **Geçici izleme (OTRACK)** — üç parçası da geldi, kendi commit'iyle:
+      * **Oturumda işaretli nokta listesi**: `Bus::tracking_marks()` / `mark_tracking` /
+        `clear_tracking`. En çok iki işaret; üçüncü en eskisinin yerini alıyor (üç işaret üçüncü bir
+        eksen değil, yeni bir çift), aynı nokta iki kez işaretlenmiyor. Oturum durumu, belge değil
+        (model.md R43): hash'lenmiyor, günlüğe düşmüyor, geri alınmıyor.
+      * **Jest**: şeffaf `İZ` komutu (`core.tracking`; `IZ`, `TRACK`, `TRK`) ve tuvalde
+        **Shift + sağ tık**. Jest komuttan geçiyor, doğrudan motora değil — fareyle konan işaret ile
+        yazılan işaret tek şey olmalı (Article 1.1). İşaretlenen nokta **yakalanmış** noktadır,
+        piksel değil.
+      * **Motor alanı**: `SnapQuery::tracking` (span) + `tracking_reach`, yeni bit
+        `core::SnapTracking`. **Kesişim tek izi yener** — iki işaret koyan kullanıcı onların
+        belirlediği noktayı hedefler; tek iz her zaman bir eksende daha yakındır, yani yalnız
+        mesafeye göre yarıştırılsa kesişim hiç yakalanamazdı (aynı sıralama `SnapGuide`'ın).
+        Gerçek olan her şeyin altında.
+      * Tuvalde izler ve işaret kareleri çiziliyor (`warn` mürekkebi, design.md §1.2 — aksan
+        seçim/etkin araç/birincil eylem demek, iz bunların hiçbiri değil).
+      * `xy(P,Q)` duruyor ve aynı noktayı veriyor: biri iki noktayı birlikte alıp kesişimi
+        hesaplıyor, öbürü tek tek işaretleyip motora hesaplatıyor. Tek kural, iki yol.
+- [x] **YAN YOLDA: yakalama maskesi ayarının ARALIĞI iki modu ulaşılmaz kılıyordu.** Aralık
+      `0x3FFFF`'te (17. bit) duruyordu, oysa ÇEYREK (1<<18) ve TEĞET (1<<19) P4'te bildirilmişti:
+      `MOD yakalama_modları` o değerleri reddediyor, F3 listesi iki modu açamıyordu. Aralık
+      `SnapAllMask`'i kapsayacak şekilde genişletildi ve bir test bağı kuruldu — 21. biti ekleyen
+      kişi o satırı da genişletmek zorunda.
 
 ## P5 — Ölçülendirme (tamamlandı)
 

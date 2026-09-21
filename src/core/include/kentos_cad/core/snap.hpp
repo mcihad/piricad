@@ -40,6 +40,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <span>
 
 namespace kentos::core {
 
@@ -159,7 +160,26 @@ enum SnapMode : std::uint32_t {
     /// modes are.
     SnapTangent = 1u << 19,
 
+    /// İZLEME — a trace from a point the user MARKED, horizontal and vertical.
+    ///
+    /// AutoCAD's object-snap tracking, and the answer to the commonest setting-out
+    /// question a drawing cannot answer by itself: put a point level with THAT
+    /// corner and in line with THIS one. Two marks give a crossing — the x of one
+    /// and the y of the other — which is exactly what the `xy(P,Q)` point function
+    /// writes down; this is its hand version. One mark gives its own two traces,
+    /// so the cursor can be held level with a corner while its distance is typed.
+    ///
+    /// The marks are SESSION state, never the document's (model.md R43): they are
+    /// a hand's scaffolding and they vanish with the run. Ranked with the
+    /// constructed modes, below every real feature, for the reason `SnapGuide` is:
+    /// a trace the user asked for must not take a measured corner away from them.
+    SnapTracking = 1u << 20,
+
     /// The modes that need geometry to snap to. Grid and polar need none.
+    ///
+    /// NOT `SnapTracking`: a trace needs a MARK, not geometry, and a client with
+    /// no view still has its marks. Putting it here would switch it off for every
+    /// caller that left `radius` at zero.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapCentroid | SnapIntersection |
                      SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
                      SnapApparent | SnapGuide | SnapInsertion | SnapQuadrant | SnapTangent,
@@ -176,7 +196,7 @@ enum SnapMode : std::uint32_t {
     SnapConstructedMask = SnapExtension | SnapParallel | SnapApparent,
 
     /// Every mode a user may switch on.
-    SnapAllMask = SnapObjectMask | SnapGrid | SnapPolar,
+    SnapAllMask = SnapObjectMask | SnapGrid | SnapPolar | SnapTracking,
 };
 
 /// Stable machine name of ONE mode bit — "uc", "orta", "izgara". Used by the MOD
@@ -243,6 +263,19 @@ struct SnapQuery
     /// millimetres. 0 disables it. Applied after `ortho` and `polar`, so the
     /// direction lock chooses the ray and this chooses the length along it.
     Mm step{0};
+
+    /// The points the user MARKED for tracking (`SnapTracking`), newest last.
+    ///
+    /// A span rather than a vector: the marks live on the session and a query is
+    /// built per aim, so copying them per frame would be an allocation per mouse
+    /// move. At most two are read — a third mark replaces the oldest, which is
+    /// what the engine below assumes and what `İZ` enforces.
+    std::span<const Point2> tracking{};
+
+    /// How far from a trace the aim may be and still be taken, in millimetres.
+    /// Zero switches tracking off however the mask is set — the same "no reach,
+    /// no aid" contract `radius`, `grid_step` and `polar_step` keep.
+    Mm tracking_reach{0};
 };
 
 /// What the engine decided, and why. `mode` is SnapNone when nothing applied and

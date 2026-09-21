@@ -383,7 +383,7 @@ const std::uint32_t* snap_mode_bits()
         SnapEndpoint,      SnapMidpoint, SnapCenter,   SnapCentroid, SnapIntersection,
         SnapPerpendicular, SnapNearest,  SnapNode,     SnapGrid,     SnapPolar,
         SnapExtension,     SnapParallel, SnapApparent, SnapGuide,    SnapInsertion,
-        SnapQuadrant,      SnapTangent,  SnapNone,
+        SnapQuadrant,      SnapTangent,  SnapTracking, SnapNone,
     };
     return bits;
 }
@@ -411,6 +411,7 @@ const char* snap_mode_id(std::uint32_t single_bit)
     case SnapInsertion: return "ekleme";
     case SnapQuadrant: return "ceyrek";
     case SnapTangent: return "teget";
+    case SnapTracking: return "izleme";
     default: return "yok";
     }
 }
@@ -438,6 +439,7 @@ const char* snap_mode_label(std::uint32_t single_bit)
     case SnapInsertion: return "ekleme noktası";
     case SnapQuadrant: return "çeyrek nokta";
     case SnapTangent: return "teğet nokta";
+    case SnapTracking: return "izleme";
     default: return "yok";
     }
 }
@@ -1162,6 +1164,73 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         if (have_angled) {
             result.point  = best_angled;
             result.mode   = SnapGuide;
+            result.entity = kNoEntity;
+            return result;
+        }
+    }
+
+    // ---- 1c. the tracking traces ----
+    //
+    // AFTER the guides and for the same reason both come after the objects: a
+    // trace is scaffolding the user put up and it must never take a measured
+    // corner away from them.
+    //
+    // TWO MARKS GIVE A CROSSING, which is the whole point of the feature: the
+    // easting of one and the northing of the other, level with that corner and in
+    // line with this one. Both pairings are offered and the nearer to the aim
+    // wins, so which mark contributes which axis is decided by pointing rather
+    // than by the order they were marked in — the same way `SnapTangent` picks
+    // between two feet.
+    //
+    // ONE MARK GIVES ITS OWN TWO TRACES, so the cursor can be held level with a
+    // corner while the distance along is typed.
+    if ((q.modes & SnapTracking) != 0 && q.tracking_reach > 0 && !q.tracking.empty()) {
+        Point2 best{};
+        bool have  = false;
+        Mm nearest = q.tracking_reach;
+
+        const auto offer = [&](Point2 candidate) {
+            const Mm d = mm_round(std::hypot(static_cast<double>(candidate.x - q.aim.x),
+                                             static_cast<double>(candidate.y - q.aim.y)));
+            if (d < nearest || (!have && d <= nearest)) {
+                nearest = d;
+                best    = candidate;
+                have    = true;
+            }
+        };
+
+        // AT MOST TWO ARE READ, newest last. A third mark replaces the oldest
+        // before the query is built (`Bus::mark_tracking`), so this never has to
+        // decide which two of three a user meant.
+        const std::size_t count = q.tracking.size() < 2 ? q.tracking.size() : 2;
+        const Point2 first      = q.tracking[q.tracking.size() - count];
+        const Point2 second     = q.tracking.back();
+
+        // A CROSSING OUTRANKS A SINGLE TRACE, whenever one is within reach. Two
+        // marks acquired is a user aiming at the point they determine; a lone
+        // trace is always nearer in one axis, so measuring the two against each
+        // other by distance alone would mean the crossing could never be caught.
+        // The same ordering `SnapGuide` uses for the same reason.
+        if (count >= 2) {
+            offer(Point2{first.x, second.y});
+            offer(Point2{second.x, first.y});
+        }
+
+        // EACH MARK'S OWN TRACES, when no crossing was close enough: holding
+        // level with one corner while the distance along is typed is a thing a
+        // hand does, and with one mark it is the only thing there is.
+        if (!have) {
+            offer(Point2{q.aim.x, second.y});
+            offer(Point2{second.x, q.aim.y});
+            if (count >= 2) {
+                offer(Point2{q.aim.x, first.y});
+                offer(Point2{first.x, q.aim.y});
+            }
+        }
+
+        if (have) {
+            result.point  = best;
+            result.mode   = SnapTracking;
             result.entity = kNoEntity;
             return result;
         }

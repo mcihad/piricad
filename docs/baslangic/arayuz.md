@@ -327,6 +327,13 @@ Hangi modun tuttuğu ekranda görünür: imlecin altında o moda ait bir işaret
 belirir. Kesikli kılavuz çizgi de yakalanan noktaya uzanır, çünkü çizgi oraya
 düşecektir.
 
+**Geçici izleme** bir noktayı, çizimde hiçbir geometrinin bulunmadığı bir yere
+koymanın yoludur: *şu köşeyle aynı hizada, bu köşeyle aynı doğrultuda*. Nokta
+isteminde **Shift + sağ tık** ile bir köşeyi işaretlersiniz; işaretli her noktadan
+yatay ve düşey bir kesikli **iz** geçer ve iki izin kesişimi yakalanır. İkinci
+işaretten sonra kesişim, tek bir izi yener. Ayrıntısı
+[`İZ`](../komutlar/tracking.md) sayfasındadır.
+
 | Kısayol | Ne yapar |
 |---|---|
 | **F1** | Komut listesi sayfası — `Ctrl+K` ile aynı |
@@ -337,6 +344,7 @@ düşecektir.
 | **Shift** (basılı) | Bir komut nokta beklerken yüzey normalini **tuttuğunuz sürece** açar |
 | **Ctrl** (basılı) | Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
+| **Shift + sağ tık** | Bir komut nokta beklerken imleçteki noktayı **izleme için işaretler** ([`İZ`](../komutlar/tracking.md)) |
 
 #### Hangi modlar açık
 

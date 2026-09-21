@@ -31,6 +31,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.entity_info`](entity_info.md) | Nesne Bilgisi | `NESNEBİLGİ`, `NESNEBILGI`, `OBJINFO`, `NB` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
 | [`core.measure_angle`](measure_angle.md) | Açı Ölç | `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`core.stretch`](stretch.md) | Esnet | `ESNET`, `STRETCH`, `ES` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
+| [`core.tracking`](tracking.md) | Geçici İzleme | `İZ`, `IZ`, `TRACK`, `TRK` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -392,6 +393,17 @@ Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır.
 | `nesneler` | selection | en az 0 | Yalnız bu nesneler esnetilir; verilmezse pencerenin dokunduğu her nesne |
 
 Ayrıntılı kullanım: [ESNET](stretch.md)
+
+### `core.tracking` — İZ (Geçici İzleme)
+
+Geçici izleme için nokta işaretler; iki işaretin izleri kesişir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nokta` | point_list | isteğe bağlı | İşaretlenecek nokta; yoksa işaretler listelenir |
+| `sil` | bool | isteğe bağlı | Bütün işaretleri siler |
+
+Ayrıntılı kullanım: [İZ](tracking.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -5836,6 +5848,44 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "TOPOLOJI",
         "TOPOLOGY",
         "TPL"
+      ]
+    }
+  },
+  {
+    "name": "core_tracking",
+    "title": "Geçici İzleme",
+    "description": "Geçici izleme için nokta işaretler; iki işaretin izleri kesişir.\nKomut: İZ (IZ, TRACK, TRK)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İşaretlenecek nokta; yoksa işaretler listelenir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sil": {
+          "type": "boolean",
+          "description": "Bütün işaretleri siler (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.tracking",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "İZ",
+        "IZ",
+        "TRACK",
+        "TRK"
       ]
     }
   },

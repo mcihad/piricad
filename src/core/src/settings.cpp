@@ -1535,8 +1535,20 @@ KENTOS_SETTING(yakalama_modlari)
         // away from anyone: the priority table ranks it below every real feature,
         // so a corner, a midpoint, a centre and an intersection all still win
         // over the edge that carries them.
-        .fallback = SettingValue::integer(0x822F),
-        .range    = SettingRange::between(0, 0x3FFFF),
+        // İZLEME joins the default and cannot take anything from anyone: a trace
+        // only exists once the user has MARKED a point (`İZ`), and with no mark
+        // the mode does nothing at all. Off by default it would have been a
+        // feature nobody finds.
+        //
+        // THE RANGE COVERS EVERY DECLARED BIT, and it did not. It stopped at
+        // 0x3FFFF — bits 0 to 17 — while ÇEYREK (1<<18) and TEĞET (1<<19) had
+        // already been declared, so the two modes P4 added were UNREACHABLE
+        // through the setting however they were written: `MOD yakalama_modları`
+        // refused the value and the F3 list could not switch them on. Whoever
+        // adds bit 21 must widen this line with it; `SnapAllMask` is the list and
+        // this is the bound on writing it.
+        .fallback = SettingValue::integer(0x10822F),
+        .range    = SettingRange::between(0, 0x1FFFFF),
         .values   = {},
         .unit     = "bit maskesi",
         .summary  = "Etkin nesne yakalama modları, bit maskesi. Yakalama çizimi değil "

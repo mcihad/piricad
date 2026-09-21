@@ -699,6 +699,24 @@ public:
     /// snapshotted on every read would make `ÖNCEKİ` mean "the same thing".
     void remember_selection() { previous_selection_ = selection_; }
 
+    /// THE POINTS MARKED FOR TRACKING (`core::SnapTracking`), newest last.
+    ///
+    /// Session state, not the document's (model.md R43): a mark is a hand's
+    /// scaffolding for one setting-out and it is not hashed, not journalled and
+    /// not undoable. Held on the bus rather than on a session because a mark
+    /// OUTLIVES the command that made it — that is the whole point of a
+    /// transparent `İZ` typed in the middle of a `ÇİZGİ`.
+    const std::vector<core::Point2>& tracking_marks() const noexcept { return tracking_; }
+
+    /// Marks `at`. At most two are kept: a third replaces the oldest, which is
+    /// what tracking means everywhere it exists and what keeps the engine from
+    /// having to decide which two of three a user meant.
+    void mark_tracking(core::Point2 at);
+
+    /// Forgets every mark. What `İZ sil=evet` does, and what the end of a run
+    /// does — scaffolding that outlived its job is scaffolding in the way.
+    void clear_tracking() noexcept { tracking_.clear(); }
+
     Selection& selection() noexcept { return selection_; }
 
     const Selection& selection() const noexcept { return selection_; }
@@ -929,6 +947,7 @@ private:
 
     Selection selection_{};
     Selection previous_selection_{};
+    std::vector<core::Point2> tracking_; ///< marked for tracking, newest last
     InputAids aids_{};
     core::StyleLibrary style_library_{};
 

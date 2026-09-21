@@ -1245,6 +1245,33 @@ int main(int argc, char** argv)
         later([&window] { window.runScriptLine(QStringLiteral("KILAVUZ")); });
         later([&window, shot] { shot(QStringLiteral("10-acili-kilavuz"), &window); });
 
+        // AND THE TRACKING TRACES: two corners of a parcel acquired, so the
+        // crossing of one's easting with the other's northing is on screen.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YENİ"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            // TWO PARCELS APART FROM EACH OTHER, because that is the real case:
+            // a corner of one and a corner of the other determine a point in the
+            // EMPTY SPACE between them. Acquiring two corners of the same parcel
+            // would put the traces on its own edges and demonstrate nothing.
+            window.runScriptLine(QStringLiteral("ALAN 0,0 12,0 12,8 0,8"));
+            // THE DRAW COMMAND IS ENDED FIRST. It takes an unbounded run of
+            // corners and parks waiting for the next; `İZ` and `YAKINLAŞ` are
+            // TRANSPARENT and run beside a waiting command rather than ending it,
+            // so without this the parcel was never committed and the frame came
+            // out empty.
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("ALAN 26,18 38,18 38,26 26,26"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("İZ 12,8"));  ///< the first parcel's corner
+            window.runScriptLine(QStringLiteral("İZ 26,18")); ///< the second parcel's corner
+        });
+        later([&window] { window.showTranscript(); });
+        later([&window, shot] { shot(QStringLiteral("11-izleme"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

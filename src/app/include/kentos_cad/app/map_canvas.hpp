@@ -386,6 +386,12 @@ private:
     /// drawing it is there to help place. Dashed and in the aid colour, so it
     /// cannot be mistaken for a line the plot will print.
     void buildGuides();
+
+    /// The tracking traces and the marks they run from (`core::SnapTracking`).
+    /// Drawn so a mark is visible as a LINE and not only as a place the cursor
+    /// jumps to: a user who cannot see what they acquired cannot tell a trace
+    /// from a snap that happened to agree with it.
+    void buildTracking();
     void buildScaleBar();
     void buildNorthArrow();
     void buildZoomStack();

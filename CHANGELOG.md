@@ -6,6 +6,46 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — geçici izleme (OTRACK): İZ ve izlerin kesişimi
+
+Planın son maddesi. Bir çizimin kendi başına cevaplayamadığı en yaygın aplikasyon
+sorusu: **şu köşeyle aynı hizada, bu köşeyle aynı doğrultuda bir nokta.** Cevabın
+yerinde hiçbir geometri yoktur ve iki köşenin hiçbirinde oraya işaret eden bir şey
+yoktur; nokta yalnızca o iki köşe var olduğu için vardır.
+
+- **`İZ`** (`core.tracking`; `IZ`, `TRACK`, `TRK`) bir noktayı işaretler. İşaretli
+  her noktadan yatay ve düşey bir iz geçer; iki işaretin izleri **kesişir**.
+- **Şeffaf**, ve bütün tasarımı bu: işaret başka bir komutun ortasında konur —
+  `ÇİZGİ`, sonra "Sonraki nokta:" isteminde `İZ 12,8`, sonra kesişime tıklamak.
+  İşaretler `Bus` üzerinde durur, çünkü bir işaret onu koyan **komuttan uzun
+  yaşar**.
+- **Fareyle Shift + sağ tık**, nokta isteminde. İşaretlenen nokta **yakalanmış**
+  noktadır, piksel değil: köşeyi tam almak jestin tamamıdır. Jest komuttan geçer,
+  doğrudan motora değil — fareyle konan işaret ile yazılan işaret tek şey olmalı.
+- **Kesişim tek izi yener.** İki işaret koyan kullanıcı onların belirlediği noktayı
+  hedefler; tek bir iz her zaman bir eksende daha yakındır, yani ikisi yalnız
+  mesafeye göre yarıştırılsa kesişim **hiç yakalanamazdı**. Aynı sıralama
+  `KILAVUZ`'un ve aynı sebeple.
+- **En çok iki işaret**: üçüncü en eskisinin yerini alır, çünkü üç işaret üçüncü bir
+  eksen değil yeni bir çifttir. Aynı noktayı iki kez işaretlemek bir kez
+  işaretlemektir — iki özdeş işaretin kesişimi işaretin kendisi olurdu.
+- **Oturum durumu, belge değil** (model.md R43): hash'lenmiyor, günlüğe düşmüyor,
+  geri alma adımı yemiyor. Bir işaret iskeledir.
+- Varsayılan olarak **açık** ve kimseden bir şey almaz: işaret yoksa kip hiçbir şey
+  yapmaz, ve bir iz gerçek olan her şeyin **altında** sıralanır.
+- Yazılı karşılığı `xy(P,Q)` duruyor ve aynı noktayı verir: biri iki noktayı
+  birlikte alıp kesişimi hesaplar, öbürü tek tek işaretleyip motora hesaplatır.
+  Tek kural, iki yol (Article 1.2).
+
+### Düzeltildi — iki yakalama modu ayardan ulaşılamıyordu
+
+Yan yolda çıktı: `core.yakalama.modlar` ayarının **aralığı** `0x3FFFF`'te (17.
+bit) duruyordu, oysa ÇEYREK (1<<18) ve TEĞET (1<<19) P4'te bildirilmişti. `MOD
+yakalama_modları` o değerleri reddediyor, F3 listesi iki modu açamıyordu — yani
+P4'ün eklediği iki mod, nasıl yazılırsa yazılsın ayardan **ulaşılamazdı**. Aralık
+`SnapAllMask`'i kapsayacak şekilde genişletildi ve bir test bağı kuruldu: 21.
+biti ekleyen kişi o satırı da genişletmek zorunda.
+
 ### Eklendi — işletim sistemi panosu ve BÖLÜMLE blok=
 
 Planın kalan iki maddesi, ikisi de "kendi commit'ini hak ediyor" koşuluyla

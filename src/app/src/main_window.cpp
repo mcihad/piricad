@@ -4794,6 +4794,11 @@ void MainWindow::runScriptLine(const QString& line)
     controller_->runLine(line, command::Origin::Gui);
 }
 
+void MainWindow::endCommand()
+{
+    controller_->finishInteractive();
+}
+
 void MainWindow::runScriptFile(const QString& path)
 {
     if (path.isEmpty()) return;

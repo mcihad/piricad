@@ -34,6 +34,7 @@
 #include "kentos_cad/core/snap.hpp"
 
 #include <cstdint>
+#include <span>
 
 namespace kentos::core {
 /// Forward-declared: the aids read a document to snap against, and this header
@@ -64,6 +65,11 @@ struct AidSettings
     /// How far past the aperture UZANTI, PARALEL and UZATILMIŞ KESİŞİM may look
     /// for the edge they build from; see `core::SnapQuery::reach`.
     core::Mm reach{0};
+
+    /// `core::SnapQuery::tracking_reach`: how far from a tracking trace the aim
+    /// may be and still be taken. The aperture's own distance, so a trace is as
+    /// easy to catch as a corner is.
+    core::Mm tracking_reach{0};
 
     /// `core.yakalama.adim`: the multiple the distance from the previous point is
     /// rounded to, in millimetres. 0 is off.
@@ -100,8 +106,12 @@ public:
     /// Resolves one aim. `base` is the previous point of the running command —
     /// the rubber-band origin — which is what dik mod, kutupsal izleme and the
     /// DİK object snap measure from.
+    /// `marks` are the points marked for tracking (`Bus::tracking_marks`), newest
+    /// last. Passed in rather than read from anywhere: this object has no bus,
+    /// and the marks are session state that belongs to one.
     core::SnapResult resolve(const core::Document& doc, const AidSettings& s, core::Point2 aim,
-                             bool has_base, core::Point2 base) const;
+                             bool has_base, core::Point2 base,
+                             std::span<const core::Point2> marks = {}) const;
 
     /// The last aid that fired, for the canvas marker. Session state, drawn only
     /// (model.md R43); nothing downstream may treat it as an input.

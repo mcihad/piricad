@@ -58,12 +58,17 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
     const bool direction =
         prompt.has_rubber_band && (set.ortho || set.normal_lock ||
                                    (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
-    if (!object_snap && !grid && !direction) return v;
+    // A TRACE NEEDS A MARK AND NOT A VIEW, so it is its own gate: with the
+    // aperture at zero and every object mode off, a marked corner still tracks.
+    const bool tracking = set.tracking_reach > 0 && (set.modes & core::SnapTracking) != 0 &&
+                          !bus.tracking_marks().empty();
+    if (!object_snap && !grid && !direction && !tracking) return v;
 
     const core::Document& doc = bus.document();
 
     const auto resolve = [&](core::Point2 aim, bool has_base, core::Point2 base) {
-        const core::SnapResult r = bus.aids().resolve(doc, set, aim, has_base, base);
+        const core::SnapResult r =
+            bus.aids().resolve(doc, set, aim, has_base, base, bus.tracking_marks());
         bus.aids().remember(r);
         return r.point;
     };

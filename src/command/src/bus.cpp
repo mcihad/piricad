@@ -38,6 +38,20 @@ core::SettingValue Bus::setting(std::string_view id) const
     return store == nullptr ? core::SettingValue{} : store->get(id);
 }
 
+void Bus::mark_tracking(core::Point2 at)
+{
+    // THE SAME POINT TWICE IS ONE MARK. A user who acquires a corner, moves away
+    // and comes back to it means one trace, not two identical ones — and two
+    // identical marks would make the crossing the mark itself.
+    for (const core::Point2& held : tracking_)
+        if (held == at) return;
+
+    // AT MOST TWO, OLDEST OUT. Tracking answers "level with that and in line with
+    // this": a third mark is a new pair, not a third axis.
+    tracking_.push_back(at);
+    if (tracking_.size() > 2) tracking_.erase(tracking_.begin());
+}
+
 core::AngleConvention Bus::angle_convention() const
 {
     return core::AngleConvention{

@@ -67,6 +67,9 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     // further, because a perpendicular to an edge the user cannot see is a
     // direction they did not choose.
     out.normal_reach = out.snap_radius;
+    // AND THE TRACE'S OWN, the same distance: a trace should be as easy to catch
+    // as a corner, and a trace nobody can catch is a mode that does nothing.
+    out.tracking_reach = out.snap_radius;
 
     // A multiple of the aperture, not a fixed distance. The reach then follows the
     // zoom the way a user expects: an extension worth offering at 1:1000 covers
@@ -92,7 +95,8 @@ const AidSettings& InputAids::settings(const core::Settings& app,
 }
 
 core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings& s,
-                                    core::Point2 aim, bool has_base, core::Point2 base) const
+                                    core::Point2 aim, bool has_base, core::Point2 base,
+                                    std::span<const core::Point2> marks) const
 {
     core::SnapQuery q;
     q.aim        = aim;
@@ -113,6 +117,12 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     q.normal_reach = s.normal_reach;
     q.reach        = s.reach;
     q.step         = s.step;
+
+    // THE MARKS, and the reach that switches them on. Carried here for the same
+    // reason `normal_lock` had to be: a query field nobody writes is a feature
+    // nobody has.
+    q.tracking       = marks;
+    q.tracking_reach = s.tracking_reach;
 
     return core::snap(doc, q);
 }
