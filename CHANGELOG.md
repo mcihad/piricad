@@ -6,6 +6,46 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — sadeleştirme elle yazılmıştı, artık Clipper2'nin
+
+Planın adını verdiği 237 tanımlayıcı ağaçta tek tek arandı; 225'i vardı ve
+bulunmayan 12'nin üçü gerçek iş çıktı. En önemlisi bu:
+
+**`ÇİZGİDÜZENLE islem=sadelestir` kendi döngüsünü yürütüyordu.** Plan
+"Sadeleştirme Clipper2 `SimplifyPath`" diyor ve CLAUDE.md 5.16 çözülmüş bir
+problemi yeniden çözmeyi yasaklıyor — ama sebep kuraldan da somut:
+
+Eski hâli her köşeyi, son **TUTULAN** köşeden sonrakine giden doğruya göre
+ölçüyordu. Bu bir dik-uzaklık süzgeci ve sadeleştirme demek değil: bir köşenin
+kalıp kalmaması, komşularından **hangisinin ondan önce kaldığına** bağlı oluyor,
+yani aynı şekil yürüyüşün nereden başladığına göre başka iniyor. Sıra-bağımsız
+olmayan bir sadeleştirme, şeklin bir özelliği değildir.
+
+- `core::simplify_ring` Clipper2'ye devrediyor, kapalı/açık ayrımıyla: bir
+  halkanın ilk ve son köşesi komşudur, açık bir dizinin uçları ise uçtur ve uç
+  hiç atılmaz.
+- **Her şeyi yiyen bir tolerans şekli geri verir**: çağıran bir yüzü
+  inceltmek istedi, silmek istemedi.
+- Dört çekirdek testi, ve **sıra bağımsızlığı testi eski hâli çürütüyor**: aynı
+  testere dişi ileriden ve geriden aynı iniyor.
+
+### Eklendi — SEÇ ÇOKGENPENCERE, tek anlamlı yazım
+
+`ÇOKGEN` aynı zamanda bir **çizim** komutudur (düzgün çokgen), yani birini
+çizip sonra `SEÇ ÇOKGEN` yazan kullanıcı tek sözcükle iki şey söylüyor. Planın
+kullandığı uzun yazım artık çalışıyor; ikisi de aynı kipe gidiyor ve uzun olan
+hangisi olduğunu söylüyor.
+
+### Bilinsin — DİKAYAK'ın lastik bandı yapılmadı
+
+Plan `DİKAYAK` için "taban çizgisi + dik ayak izi" lastik bandı istiyordu
+(`RubberShape::Offset`). Bir lastik bant **imlecin** koyacağı noktayı önizler;
+`ayak` ve `boy` ise `ctx.number` ile sorulur ve bir sayı Enter'a basılana kadar
+**yoktur** — önizlenecek bir nokta yok. Ayağı tıklayarak vermek ayrı bir özellik
+olurdu (sayı isteminde nokta almak) ve plan metninde o yok. Bugünkü hâl: taban
+çizgisi lastik bantla veriliyor, sonra sayılar yazılıyor, ve komut satırı odağı
+sayı istemlerinde kendiliğinden geliyor.
+
 ### Eklendi — POLİGON istasyonlarını numaralıyor
 
 Plan bunu dört sözcükle istiyordu: *"noktalar `NOKTA` olarak, **numaralı**"*. Numara

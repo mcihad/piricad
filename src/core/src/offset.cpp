@@ -127,6 +127,35 @@ Mm2 ring_area(const std::vector<Point2>& ring) noexcept
     return static_cast<Mm2>(twice / 2);
 }
 
+std::vector<Point2> simplify_ring(const std::vector<Point2>& ring, Mm tolerance, bool closed)
+{
+    // NOTHING CARRIES LESS THAN NO INFORMATION, and a run too short to thin has
+    // nothing to give up: an open run needs an interior vertex to drop, a closed
+    // one needs a fourth corner or it stops being a face.
+    if (tolerance <= 0) return ring;
+    if (ring.size() < (closed ? 4u : 3u)) return ring;
+
+    // CLIPPER2 TAKES THE EPSILON AS A SQUARED DISTANCE, in the same units the
+    // path is in — millimetres here, so the square of the tolerance. Written out
+    // as a double because the square of a metre-scale tolerance overflows nothing
+    // but reads badly as an integer expression.
+    const auto epsilon = static_cast<double>(tolerance) * static_cast<double>(tolerance);
+    const Clipper2Lib::Path64 thinned = Clipper2Lib::SimplifyPath(to_path(ring), epsilon, closed);
+
+    // A SIMPLIFICATION THAT LEFT NOTHING USABLE IS NOT AN ANSWER. Clipper2 can
+    // reduce a ring to two points when every vertex is within the tolerance of
+    // one line, and two points are not a face — the caller asked to thin a shape,
+    // not to delete it, so the original comes back and the caller's count of
+    // dropped vertices is honestly zero.
+    if (thinned.size() < (closed ? 3u : 2u)) return ring;
+
+    std::vector<Point2> out;
+    out.reserve(thinned.size());
+    for (const Clipper2Lib::Point64& p : thinned)
+        out.push_back(Point2{p.x, p.y});
+    return out;
+}
+
 Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left)
 {
     // Reach: the box's diagonal, doubled. Anything at least that long puts this

@@ -15,6 +15,10 @@
 #include <string>
 #include <vector>
 
+#include "kentos_cad/core/offset.hpp"
+
+#include <algorithm>
+
 using namespace kentos::core;
 
 namespace {
@@ -925,4 +929,75 @@ TEST_CASE("YÜK: tür yükü yuvayla birlikte saklanır, bayt bayt geri okunur")
     CHECK(g.payload.empty());
     CHECK(g.payload_ref.empty());
     CHECK_FALSE(g.has_payload());
+}
+
+// ============================================================================
+// simplify_ring — Clipper2, not a loop written here
+// ============================================================================
+
+TEST_CASE("simplify_ring: şekil taşımayan köşeyi atar, uçları bırakmaz")
+{
+    // A 1 mm wobble in the middle of a straight 100 m run carries no shape.
+    const std::vector<Point2> run{{0, 0}, {50'000, 1}, {100'000, 0}, {100'000, 50'000}};
+    const auto thinned = simplify_ring(run, 10, false); ///< 10 mm tolerance
+
+    REQUIRE_EQ(thinned.size(), std::size_t{3});
+    CHECK_EQ(thinned.front(), (Point2{0, 0})); ///< an end is never dropped
+    CHECK_EQ(thinned.back(), (Point2{100'000, 50'000}));
+}
+
+TEST_CASE("simplify_ring: sırayla değişmez — aynı şekil hangi uçtan bakılırsa aynı iner")
+{
+    // WHY THE LIBRARY AND NOT A LOOP. The hand-rolled filter this replaced
+    // compared each vertex against the line from the last KEPT one to the next,
+    // so whether a vertex survived depended on which of its neighbours had
+    // survived before it — and the same shape thinned differently depending on
+    // where the walk started. A simplification that is not order-independent is
+    // not a property of the shape.
+    std::vector<Point2> stair;
+    for (int i = 0; i <= 20; ++i)
+        stair.push_back(Point2{i * 5'000, (i % 2) * 3}); ///< a 3 mm sawtooth
+
+    std::vector<Point2> backwards(stair.rbegin(), stair.rend());
+
+    const auto forward = simplify_ring(stair, 50, false);
+    auto reverse       = simplify_ring(backwards, 50, false);
+    std::reverse(reverse.begin(), reverse.end());
+
+    CHECK_EQ(forward, reverse);
+}
+
+TEST_CASE("simplify_ring: sıfır tolerans, kısa halka ve her şeyi yiyen sadeleştirme")
+{
+    const std::vector<Point2> square{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
+
+    // Nothing carries less than no information.
+    CHECK_EQ(simplify_ring(square, 0, true), square);
+    CHECK_EQ(simplify_ring(square, -5, true), square);
+
+    // A run too short to thin has nothing to give up.
+    const std::vector<Point2> two{{0, 0}, {10'000, 0}};
+    CHECK_EQ(simplify_ring(two, 100, false), two);
+
+    // AND A TOLERANCE THAT WOULD LEAVE NOTHING USABLE gives the shape back: the
+    // caller asked to thin a face, not to delete it.
+    const auto swallowed = simplify_ring(square, 1'000'000, true);
+    CHECK(swallowed.size() >= 3);
+}
+
+TEST_CASE("simplify_ring: kapalı halkada dikiş de sadeleşir")
+{
+    // A CLOSED RING'S FIRST AND LAST VERTEX ARE NEIGHBOURS, and a vertex sitting
+    // on the seam is as droppable as any other. An open run's ends are not: they
+    // are where the run meets whatever it meets.
+    const std::vector<Point2> ring{{0, 0},       {50'000, 2}, {100'000, 0}, {100'000, 100'000},
+                                   {0, 100'000}, {0, 50'000}};
+
+    const auto closed = simplify_ring(ring, 100, true);
+    const auto open   = simplify_ring(ring, 100, false);
+
+    // Closed may drop the seam vertex (0, 50 000) as well as the wobble; open
+    // keeps its last point because it is an end.
+    CHECK(closed.size() <= open.size());
+    CHECK_EQ(open.back(), (Point2{0, 50'000}));
 }

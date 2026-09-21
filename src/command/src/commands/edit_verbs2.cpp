@@ -38,6 +38,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -557,27 +558,21 @@ Task<void> run_pedit(Context& ctx)
             } else if (is("ac")) {
                 role = core::RingRole::Open;
             } else {
-                // SADELEŞTİR: a vertex whose perpendicular distance from the
-                // line between its neighbours is under the tolerance carries no
-                // information about the shape. The ends are never dropped —
-                // they are where the run meets whatever it meets.
-                std::vector<core::Point2> kept;
-                kept.push_back(pts.front());
-                for (std::size_t i = 1; i + 1 < pts.size(); ++i) {
-                    core::Point2 foot{};
-                    double t = 0.0;
-                    if (!core::closest_point_on_line(kept.back(), pts[i + 1], pts[i], foot, t)) {
-                        kept.push_back(pts[i]);
-                        continue;
-                    }
-                    const core::Mm off = core::segment_length(pts[i], foot);
-                    if (off > tolerance)
-                        kept.push_back(pts[i]);
-                    else
-                        ++dropped;
-                }
-                if (pts.size() >= 2) kept.push_back(pts.back());
-                pts = std::move(kept);
+                // SADELEŞTİR: a vertex within the tolerance of the simplified
+                // line carries no information about the shape.
+                //
+                // CLIPPER2 DOES IT, not a loop here. This used to walk the run
+                // comparing each vertex against the line from the last KEPT one
+                // to the next — which is a perpendicular-distance filter and not
+                // what simplifying means: whether a vertex survives then depends
+                // on which of its neighbours happened to survive before it, so
+                // the same shape thinned differently depending on where the walk
+                // started. Clipper2 has solved this and every degenerate case
+                // around it, and CLAUDE.md 5.16 says a solved problem is not
+                // re-solved here. The plan named `SimplifyPath` by name.
+                const std::size_t was = pts.size();
+                pts = core::simplify_ring(pts, tolerance, role != core::RingRole::Open);
+                dropped += was - pts.size();
             }
 
             store.push_back(std::move(pts));

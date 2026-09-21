@@ -523,6 +523,27 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## Plan metninin ikinci denetimi (2026-09-21)
 
+- [x] **Mekanik tarama: planın adını verdiği 237 tanımlayıcı ağaçta arandı**, 225'i bulundu.
+  Bulunmayan 12'nin hepsi hesaplı: `Bus::on_clipboard_request` (yerine mevcut `on_file_request`
+  seam'i kullanıldı, sebebi CHANGELOG'da), `Category::Edit` (gerçek ad `Modify`), İŞARETLE'nin dört
+  adı (bilerek yazılmadı), üç satır/dosya atfı, ve **üçü gerçek iş çıktı**:
+- [x] **`ÇİZGİDÜZENLE islem=sadelestir` ELLE YAZILMIŞTI.** Plan "Sadeleştirme Clipper2
+  `SimplifyPath`" diyor ve 5.16 çözülmüş bir problemi yeniden çözmeyi yasaklıyor. Eski hâli her
+  köşeyi son TUTULAN köşeden sonrakine giden doğruya göre ölçüyordu — bu bir dik-uzaklık süzgeci ve
+  sadeleştirme demek değil: bir köşenin kalıp kalmaması, komşularından hangisinin ondan önce
+  kaldığına bağlı oluyor, yani aynı şekil yürüyüşün nereden başladığına göre başka iniyor.
+  Sıra-bağımsız olmayan bir sadeleştirme, şeklin bir özelliği değildir. `core::simplify_ring`
+  Clipper2'ye devrediyor; dört çekirdek testi (sıra bağımsızlığı testi eski hâli çürütüyor),
+  kapalı halkada dikiş, sıfır tolerans ve "her şeyi yiyen tolerans şekli geri verir" hâli.
+- [x] **`SEÇ ÇOKGENPENCERE`** eklendi: `ÇOKGEN` aynı zamanda bir ÇİZİM komutu (düzgün çokgen), yani
+  birini çizip sonra `SEÇ ÇOKGEN` yazan kullanıcı tek sözcükle iki şey söylüyor. Planın kullandığı
+  uzun yazım artık çalışıyor; ikisi de aynı kipe gidiyor ve uzun olan hangisi olduğunu söylüyor.
+- [~] **`RubberShape::Offset` yapılmadı ve sebebi:** plan `DİKAYAK` için "taban çizgisi + dik ayak
+  izi" lastik bandı istiyordu. Bir lastik bant İMLECİN koyacağı noktayı önizler; `ayak` ve `boy` ise
+  `ctx.number` ile SORULUYOR ve bir sayı Enter'a basılana kadar yoktur — önizlenecek bir nokta yok.
+  Ayağı tıklayarak vermek ayrı bir özellik olurdu (sayı isteminde nokta almak), ve o plan metninde
+  yok. Bugünkü hâl: taban çizgisi lastik bantla veriliyor, sonra sayılar yazılıyor ve komut satırı
+  odağı sayı istemlerinde kendiliğinden geliyor (bu oturumda düzeltildi).
 - [x] **`POLİGON` istasyonlarını NUMARALIYOR.** Plan bunu dört sözcükle istiyordu ("noktalar
   `NOKTA` olarak, **numaralı**") ve numara hiç yazılmıyordu. Bir poligon istasyonu, ondan sonraki
   her detayın ölçüldüğü yerdir: numarası olmayan bir istasyon, bir mühendisin **atıfta

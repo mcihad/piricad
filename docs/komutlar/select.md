@@ -53,7 +53,7 @@ SEÇ PENCERE <köşe> <köşe>
 SEÇ KESEN <köşe> <köşe>
 SEÇ KUTU <köşe> <köşe>
 SEÇ NOKTA <nokta> [tolerans=<metre>]
-SEÇ ÇOKGEN <köşe> <köşe> <köşe> ...
+SEÇ ÇOKGENPENCERE <köşe> <köşe> <köşe> ...   (kısası: ÇOKGEN)
 SEÇ ÇOKGENKESEN <köşe> <köşe> <köşe> ...
 SEÇ ÇİT <nokta> <nokta> ...
 SEÇ ÖNCEKİ
@@ -67,7 +67,7 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 
 | Parametre | Ne yapar |
 |---|---|
-| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `ÇOKGEN`, `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
+| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `ÇOKGENPENCERE` (ya da `ÇOKGEN`), `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
 | `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` modunda tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
@@ -127,7 +127,7 @@ söyler — böylece betik bir şey uydurmak yerine ne istediğini yazmış olur
 
 | Kip | Ne alır | Ne zaman |
 |---|---|---|
-| `ÇOKGEN` | Çizdiğiniz çokgenin **tamamen içindeki** nesneler | Bir ada dikdörtgen değildir: kutu ya kastettiğinizi kaçırır ya komşuyu da alır |
+| `ÇOKGENPENCERE` · `ÇOKGEN` | Çizdiğiniz çokgenin **tamamen içindeki** nesneler | Bir ada dikdörtgen değildir: kutu ya kastettiğinizi kaçırır ya komşuyu da alır |
 | `ÇOKGENKESEN` | Çokgenin **değdiği** her nesne | Bir koridorun kestiği her parsel |
 | `ÇİT` | Çizdiğiniz **hattın kestiği** her nesne | Yol boyunca bir bordür dizisi, arkasındaki binalar olmadan |
 | `ÖNCEKİ` | Bundan önceki seçim | Beş parsel seçip yanlışlıkla altıncıyı seçtiniz |

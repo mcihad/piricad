@@ -7474,3 +7474,22 @@ TEST_CASE("YAY yontem=devam günlüğe ÇÖZÜLMÜŞ yayı yazar")
         REQUIRE(again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
     CHECK_EQ(again.doc.content_hash(), f.doc.content_hash());
 }
+
+TEST_CASE("SEÇ ÇOKGENPENCERE, ÇOKGEN'in tek anlamlı yazımıdır")
+{
+    // `ÇOKGEN` is also a DRAW command — the regular polygon — so a user who has
+    // just drawn one and then types `SEÇ ÇOKGEN` is saying one word for two
+    // things. The plan used the long spelling; both reach the mode and the long
+    // one says which.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 5,5 6,6", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 50,50 60,60", Origin::Test).ok());
+
+    for (const char* word : {"ÇOKGENPENCERE", "COKGENPENCERE", "ÇOKGEN", "WP"}) {
+        REQUIRE(f.bus.execute_line("SEÇ HİÇBİRİ", Origin::Test).ok());
+        REQUIRE_MESSAGE(
+            f.bus.execute_line(std::string("SEÇ ") + word + " 0,0 20,0 0,20", Origin::Test).ok(),
+            word);
+        CHECK_MESSAGE(f.bus.selection().size() == std::size_t{1}, word);
+    }
+}

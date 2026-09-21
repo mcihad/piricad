@@ -95,7 +95,12 @@ bool parse_mode(const std::string& typed, Mode& out)
         out = Mode::Box;
     } else if (matches(typed, {"NOKTA", "POINT", "P"})) {
         out = Mode::Point;
-    } else if (matches(typed, {"ÇOKGEN", "COKGEN", "WPOLYGON", "WP"})) {
+        // `ÇOKGENPENCERE` IS THE UNAMBIGUOUS SPELLING and the one the plan used.
+        // `ÇOKGEN` is also a DRAW command (the regular polygon), so a user who
+        // has just used it and then types `SEÇ ÇOKGEN` is saying one word for two
+        // things. Both reach this mode; the long one says which.
+    } else if (matches(typed,
+                       {"ÇOKGENPENCERE", "COKGENPENCERE", "ÇOKGEN", "COKGEN", "WPOLYGON", "WP"})) {
         out = Mode::Polygon;
     } else if (matches(typed, {"ÇOKGENKESEN", "COKGENKESEN", "CPOLYGON", "CP"})) {
         out = Mode::PolygonCrossing;

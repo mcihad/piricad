@@ -109,6 +109,27 @@ Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject
 /// In `core` rather than in either caller because both an ifraz and an ordinary
 /// BÖL are the same cut, and two copies of a geometric trick this particular is
 /// two chances to get it subtly different (CLAUDE.md 5.16).
+/// Drops the vertices of `ring` that carry no shape, keeping every point within
+/// `tolerance` millimetres of the simplified line.
+///
+/// CLIPPER2'S OWN, not a loop written here. `ÇİZGİDÜZENLE islem=sadelestir` used
+/// to walk the run comparing each vertex against the line from the last KEPT one
+/// to the next — a perpendicular-distance filter, which is not what simplifying
+/// means: whether a vertex survives then depends on which of its neighbours
+/// happened to survive before it, so the same shape thins differently depending
+/// on where the walk started. Clipper2 has solved this and every degenerate case
+/// around it (collinear runs, spikes, a closed ring's seam), and CLAUDE.md 5.16
+/// says a solved problem is not re-solved here.
+///
+/// `closed` tells it the run is a ring, because a ring's first and last vertex
+/// are neighbours and an open run's are ends — an end is never dropped, it is
+/// where the run meets whatever it meets.
+///
+/// A tolerance of zero or less returns the ring unchanged: nothing carries less
+/// than no information. A ring too short to thin (under three points open, four
+/// closed) comes back as it went in.
+std::vector<Point2> simplify_ring(const std::vector<Point2>& ring, Mm tolerance, bool closed);
+
 Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left);
 
 /// The signed area a ring encloses, in square millimetres.
