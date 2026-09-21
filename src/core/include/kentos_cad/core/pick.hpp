@@ -198,6 +198,28 @@ void pick_candidates(const Document& doc, const Box2& box, std::vector<EntityId>
 /// cleared, so a caller may reuse its capacity across picks (§10.4).
 void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vector<EntityId>& out);
 
+/// Every visible entity a POLYGON selects, under the same two rules a box has:
+/// `Window` takes the ones wholly inside it, `Crossing` the ones it touches at
+/// all. `out` is cleared first.
+///
+/// WHY A POLYGON AT ALL. A parcel block is not rectangular and a road corridor
+/// is not either, so a box either misses what the user meant or takes the
+/// neighbours with it — and a surveyor then deselects by hand, which is where
+/// the wrong parcel gets left in. `fence` is the polygon's vertices in order and
+/// is treated as closed; fewer than three is no polygon and selects nothing.
+void pick_in_polygon(const Document& doc, std::span<const Point2> fence, PickMode mode,
+                     std::vector<EntityId>& out);
+
+/// Every visible entity an OPEN polyline crosses — AutoCAD's fence select.
+/// `out` is cleared first.
+///
+/// A LINE DRAWN THROUGH A DRAWING, and what it touches is what it selects. It is
+/// how a run of kerb stones along a road is taken without a box that would also
+/// take the buildings behind them: the fence follows the road. Fewer than two
+/// points is no fence and selects nothing.
+void pick_along_fence(const Document& doc, std::span<const Point2> fence,
+                      std::vector<EntityId>& out);
+
 /// The visible entity nearest `cursor` whose geometry comes within `radius`, or
 /// `kNoEntity`. Ties break on the lower slot, which makes the answer stable.
 EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius);

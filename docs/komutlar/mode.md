@@ -171,6 +171,8 @@ Bütün koordinat biçimleri için bkz. [Komut satırı](komut-satiri.md).
 | 14 | `16384` | Kılavuz | Kendi koyduğunuz çizim kılavuzuna |
 | 15 | `32768` | Ağırlık merkezi | Kapalı bir halkanın **alan** ağırlık merkezine |
 | 17 | `131072` | Ekleme noktası | Bir nesnenin **yerleştirildiği** noktaya: blok referansının ekleme noktasına |
+| 18 | `262144` | Çeyrek nokta | Bir eğrinin eksenleri kestiği **dört** noktaya: 0, 100, 200 ve 300 grad |
+| 19 | `524288` | Teğet nokta | Son noktadan bir eğriye çizilen **teğetin** eğriye dokunduğu yere |
 
 Varsayılan `0x822F` = uç nokta + orta nokta + merkez + kesişim + **en yakın** +
 düğüm + ağırlık merkezi.
@@ -190,6 +192,22 @@ aradığınız köşeyi gölgeler" gerekçesineydi; oysa bunu maske değil **ön
 merkez ve bir kesişim onu her zaman yener. Kapalı olmasının bedeli ise gerçekti: bir
 sınırın **ortasına** getirilen imleç hiçbir şeye oturmuyor, ölçü pikselin düştüğü yerden
 alınıyordu. "Şu çizgiye kaç metre" bir ölçümün en sık sorduğu sorudur.
+
+**Çeyrek nokta bir eğrinin adı olan tek yeridir.** Bir baca kapağı çeyreklerinden
+aplike edilir, bir yol geçiş eğrisi onlardan ölçülendirilir, bir borunun taban
+kotu alt çeyreğindedir. Bu yüzden öncelikte **uç nokta ile aynı sıradadır**: bir
+eğride çeyrek, bir çizgide köşenin olduğu kadar açıkça belirtilmiş bir noktadır —
+eğrinin, çizimin yazıldığı ızgarayla buluştuğu yerdir. Bir yayda yalnız
+**süpürülen** çeyrekler verilir: kesildiği çemberin çeyreği, çizilen şeyin
+üzerinde bir nokta değildir.
+
+**Teğet nokta kurulmuş bir noktadır** — uzantı ve paralel gibi — ve aynı sebeple
+kurulmuştur: bir çizim başlamamışsa teğet diye bir şey yoktur. **İki** teğet
+ayağı sunulur ve imlece yakın olan kazanır, yani hangisini kastettiğinizi
+göstererek seçersiniz. Önceki nokta çemberin **içindeyse** teğet yoktur ve motor
+bir nokta uydurmak yerine hiçbir şey söylemez. Öncelikte gerçek olan her şeyin
+altındadır: bu motorun icat ettiği bir nokta, çizimin gerçekten içerdiği bir
+noktayı kullanıcıdan asla alamaz.
 
 **Merkez ile ağırlık merkezi ayrı iki şeydir**, ve CAD bunları hep ayrı tutmuştur.
 `Merkez`, bir **eğrinin** çizildiği noktadır — dairenin ya da yayın merkezi; bir

@@ -501,7 +501,7 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 15); // 13 + AĞIRLIK MERKEZİ + EKLEME
+    CHECK_EQ(count, 17); // 13 + AĞIRLIK MERKEZİ + EKLEME + ÇEYREK + TEĞET
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
 }
 
@@ -1640,4 +1640,125 @@ TEST_CASE("SÜTUN: katman= verilen sütun yalnız o katmana tanımlanır")
     // it was meant for.
     REQUIRE(rig.line("SÜTUN kimlik=ada katman=PARSEL").ok());
     CHECK_EQ(schema.column(schema.find("ada"))->spec().layer, "PARSEL");
+}
+
+// ------------------------------------------------- ÇEYREK and TEĞET (P4-1) ----
+
+TEST_CASE("YAKALAMA: ÇEYREK dairenin dört eksen noktasına oturur")
+{
+    // A circle of radius 50 m about the origin. Its quarters are the four points
+    // where it crosses the axes the drawing is written in, and they are EXACT by
+    // construction — centre ± radius on each axis, no trigonometry.
+    core::Document doc;
+    core::Op undo;
+    const auto made = doc.add_circle(core::LayerId{0}, Point2{0, 0}, 50'000, undo);
+    REQUIRE(made.ok());
+
+    const Point2 quarters[4]{{0, 50'000}, {50'000, 0}, {0, -50'000}, {-50'000, 0}};
+    for (const Point2& want : quarters) {
+        core::SnapQuery q;
+        q.aim    = Point2{want.x + 400, want.y + 300};
+        q.radius = 2000;
+        q.modes  = core::SnapQuadrant;
+
+        const core::SnapResult r = core::snap(doc, q);
+        CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapQuadrant));
+        CHECK(r.point == want);
+
+        // IDEMPOTENT: snapping the resolved point returns it unchanged, which is
+        // what makes a journal replay land on the same millimetre.
+        q.aim = r.point;
+        CHECK(core::snap(doc, q).point == r.point);
+    }
+
+    // A QUARTER RANKS WITH A VERTEX, not below a centre: on a curve it is as
+    // much a stated point as a corner is on a line.
+    core::SnapQuery both;
+    both.aim    = Point2{49'000, 500};
+    both.radius = 3000;
+    both.modes  = core::SnapQuadrant | core::SnapNearest;
+    CHECK_EQ(static_cast<int>(core::snap(doc, both).mode), static_cast<int>(core::SnapQuadrant));
+}
+
+TEST_CASE("YAKALAMA: ÇEYREK yayda yalnız süpürülen çeyrekleri sunar")
+{
+    // A quarter arc from due east to due north about the origin: the only
+    // quarters ON it are its own two ends. The south and west quarters belong to
+    // the circle it was cut from, not to the thing that is drawn.
+    core::Document doc;
+    core::Op undo;
+    const auto made = doc.add_arc(core::LayerId{0}, Point2{0, 0}, 50'000, Point2{50'000, 0},
+                                  Point2{0, 50'000}, undo);
+    REQUIRE(made.ok());
+
+    core::SnapQuery on_it;
+    on_it.aim    = Point2{49'500, 400};
+    on_it.radius = 2000;
+    on_it.modes  = core::SnapQuadrant;
+    CHECK_EQ(static_cast<int>(core::snap(doc, on_it).mode), static_cast<int>(core::SnapQuadrant));
+
+    core::SnapQuery off_it;
+    off_it.aim    = Point2{-49'500, 400};
+    off_it.radius = 2000;
+    off_it.modes  = core::SnapQuadrant;
+    CHECK_EQ(static_cast<int>(core::snap(doc, off_it).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: TEĞET son noktadan çembere teğet ayağı verir")
+{
+    // A circle of radius 30 m about the origin and a run already at (50, 0):
+    // sin(a) = r/d = 30/50, so the tangent feet are at (18, ±24) — a 3-4-5
+    // triangle, which is why these numbers and not others.
+    core::Document doc;
+    core::Op undo;
+    const auto made = doc.add_circle(core::LayerId{0}, Point2{0, 0}, 30'000, undo);
+    REQUIRE(made.ok());
+
+    core::SnapQuery q;
+    q.aim      = Point2{18'500, 23'000}; // near the upper foot
+    q.radius   = 4000;
+    q.modes    = core::SnapTangent;
+    q.has_base = true;
+    q.base     = Point2{50'000, 0};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapTangent));
+    CHECK(r.point == (Point2{18'000, 24'000}));
+
+    // THE OTHER FOOT IS THERE TOO, and the aim is what picks between them: a
+    // silent choice between two tangents is a line drawn on the wrong side.
+    q.aim = Point2{18'500, -23'000};
+    CHECK(core::snap(doc, q).point == (Point2{18'000, -24'000}));
+
+    // NO BASE POINT, NO TANGENT. A tangent exists only because a run is under
+    // way; without one there is nothing for the line to come from.
+    q.has_base = false;
+    q.aim      = Point2{18'500, 23'000};
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+
+    // A BASE INSIDE THE CIRCLE HAS NONE EITHER, and the engine says nothing
+    // rather than inventing a point.
+    q.has_base = true;
+    q.base     = Point2{5'000, 0};
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: TEĞET kurulmuş bir noktadır, gerçek bir köşeyi almaz")
+{
+    // A circle and a lone surveyed point on top of one of its tangent feet. The
+    // monument must win: a point this engine invented can never take a point the
+    // drawing actually contains away from the user.
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_circle(core::LayerId{0}, Point2{0, 0}, 30'000, undo).ok());
+    REQUIRE(doc.add_point(core::LayerId{0}, Point2{18'000, 24'000}, undo).ok());
+
+    core::SnapQuery q;
+    q.aim      = Point2{18'300, 24'200};
+    q.radius   = 2000;
+    q.modes    = core::SnapTangent | core::SnapNode;
+    q.has_base = true;
+    q.base     = Point2{50'000, 0};
+
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNode));
 }

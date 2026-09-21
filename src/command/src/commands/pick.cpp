@@ -36,7 +36,35 @@ using core::EntityKey;
 
 /// What the user asked for. Canonical Turkish names; the aliases are folded onto
 /// these once, here, so no other file repeats the list.
-enum class Mode : std::uint8_t { Report, All, Clear, Objects, Layer, Window, Crossing, Box, Point };
+enum class Mode : std::uint8_t {
+    Report,
+    All,
+    Clear,
+    Objects,
+    Layer,
+    Window,
+    Crossing,
+    Box,
+    Point,
+
+    /// ÇOKGEN / ÇOKGENKESEN — a polygon instead of a box. A parcel block is not
+    /// rectangular and neither is a road corridor, so a box either misses what
+    /// the user meant or takes the neighbours with it.
+    Polygon,
+    PolygonCrossing,
+
+    /// ÇİT — a line drawn THROUGH the drawing; what it crosses is what it takes.
+    /// A run of kerb stones along a road, without the buildings behind them.
+    Fence,
+
+    /// ÖNCEKİ — the selection before this one. One step deep on purpose: a stack
+    /// of selections is a stack nobody can keep in their head.
+    Previous,
+
+    /// SON — the most recently created entity. What a drafter means by "that
+    /// one" after drawing it.
+    Last,
+};
 
 /// What to do with what was found.
 enum class Op : std::uint8_t { Replace, Add, Remove, Toggle };
@@ -66,6 +94,16 @@ bool parse_mode(const std::string& typed, Mode& out)
         out = Mode::Box;
     } else if (matches(typed, {"NOKTA", "POINT", "P"})) {
         out = Mode::Point;
+    } else if (matches(typed, {"ÇOKGEN", "COKGEN", "WPOLYGON", "WP"})) {
+        out = Mode::Polygon;
+    } else if (matches(typed, {"ÇOKGENKESEN", "COKGENKESEN", "CPOLYGON", "CP"})) {
+        out = Mode::PolygonCrossing;
+    } else if (matches(typed, {"ÇİT", "CIT", "FENCE", "F"})) {
+        out = Mode::Fence;
+    } else if (matches(typed, {"ÖNCEKİ", "ONCEKI", "PREVIOUS", "PR"})) {
+        out = Mode::Previous;
+    } else if (matches(typed, {"SON", "LAST", "L"})) {
+        out = Mode::Last;
     } else {
         return false;
     }
@@ -84,6 +122,11 @@ const char* mode_name(Mode m)
     case Mode::Crossing: return "KESEN";
     case Mode::Box: return "KUTU";
     case Mode::Point: return "NOKTA";
+    case Mode::Polygon: return "ÇOKGEN";
+    case Mode::PolygonCrossing: return "ÇOKGENKESEN";
+    case Mode::Fence: return "ÇİT";
+    case Mode::Previous: return "ÖNCEKİ";
+    case Mode::Last: return "SON";
     }
     return "DURUM";
 }
@@ -160,8 +203,7 @@ Task<void> run_select(Context& ctx)
     if (const Value v = ctx.argument("mod"); !v.empty()) {
         if (!parse_mode(v.as_text(), mode)) {
             ctx.echo("Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
-                     "NOKTA. "
-                     "Girilen: '" +
+                     "NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
                      v.as_text() + "'");
             co_return;
         }
@@ -211,6 +253,38 @@ Task<void> run_select(Context& ctx)
             if (!second) co_return;
             supplied.push_back(*second);
         }
+    } else if (mode == Mode::Polygon || mode == Mode::PolygonCrossing || mode == Mode::Fence) {
+        // A RUN OF POINTS, ENDED BY THE USER. A polygon and a fence have no fixed
+        // number of corners, so the loop runs until ESC or the right button —
+        // exactly as `ALAN` collects a boundary. The guide shows the shape so
+        // far, which is the only thing that says what the next click will take.
+        const bool closed = mode != Mode::Fence;
+
+        // ONLY WHEN THE CALLER DID NOT SAY. A typed line, a script and a journal
+        // give the whole run up front, and asking anyway drains the same points
+        // a second time — which is not a longer polygon but a self-overlapping
+        // one, and `ring_contains` then answers that nothing is inside it. The
+        // box branch above keeps the same rule for the same reason.
+        while (supplied.empty()) {
+            PointOptions options;
+            if (!supplied.empty()) {
+                options.rubber_band   = true;
+                options.rubber_origin = supplied.back();
+                options.rubber_shape  = closed ? RubberShape::Ring : RubberShape::Line;
+                options.rubber_chain  = supplied;
+            }
+            auto next = co_await ctx.point(
+                "noktalar",
+                supplied.empty() ? (closed ? "Seçim çokgeninin ilk köşesi" : "Çitin ilk noktası")
+                                 : (closed ? "Sonraki köşe" : "Çitin sonraki noktası"),
+                options);
+            if (!next) break;
+            supplied.push_back(*next);
+        }
+        if (supplied.size() < (closed ? 3u : 2u)) {
+            ctx.echo(closed ? "Seçim çokgeni en az üç köşe ister." : "Çit en az iki nokta ister.");
+            co_return;
+        }
     } else if (mode == Mode::Point && supplied.empty()) {
         auto aim = co_await ctx.point("noktalar", "Seçilecek nesnenin üzerinde bir nokta");
         if (!aim) co_return;
@@ -233,6 +307,49 @@ Task<void> run_select(Context& ctx)
         const core::EntityTable& entities = doc.entities();
         for (core::EntityId e = 0; e < entities.size(); ++e)
             if (entities.visible(e)) picked.push_back(doc.key_of(e));
+        break;
+    }
+
+    case Mode::Polygon:
+    case Mode::PolygonCrossing: {
+        core::pick_in_polygon(
+            doc, supplied,
+            mode == Mode::Polygon ? core::PickMode::Window : core::PickMode::Crossing, slots);
+        picked = keys_of(doc, slots);
+        break;
+    }
+
+    case Mode::Fence: {
+        core::pick_along_fence(doc, supplied, slots);
+        picked = keys_of(doc, slots);
+        break;
+    }
+
+    case Mode::Previous: {
+        // THE KEYS, NOT THE SLOTS. A key survives an erase and a reload; a slot
+        // is an index into this document's table (model.md R1). An entity that
+        // has since been deleted is dropped rather than resurrected.
+        for (EntityKey k : bus.previous_selection().keys()) {
+            // ALIVE, NOT MERELY KNOWN. A deleted entity keeps its slot mapping
+            // — that is what lets an undo bring it back — so `slot_of` alone
+            // would resurrect a selection of things the user has just erased,
+            // and the next SİL would report deleting what is already gone.
+            const core::EntityId slot = doc.slot_of(k);
+            if (slot != core::kNoEntity && doc.alive(slot)) picked.push_back(k);
+        }
+        break;
+    }
+
+    case Mode::Last: {
+        // THE MOST RECENTLY CREATED LIVE ENTITY, which is what "that one" means
+        // after drawing something. Walked from the top because a slot is handed
+        // out in creation order and the newest is the highest live one.
+        const core::EntityTable& entities = doc.entities();
+        for (core::EntityId e = entities.size(); e-- > 0;)
+            if (doc.alive(e) && entities.visible(e)) {
+                picked.push_back(doc.key_of(e));
+                break;
+            }
         break;
     }
 
@@ -358,6 +475,11 @@ Task<void> run_select(Context& ctx)
     // ---- apply ----
     const std::size_t before = selection.size();
 
+    // REMEMBERED BEFORE IT IS REPLACED, and only when this run actually changes
+    // it: `SEÇ ÖNCEKİ` twice has to go back and forth rather than forget what it
+    // was going back to, and a reporting run must not overwrite the way back.
+    if (mode != Mode::Previous) bus.remember_selection();
+
     if (mode == Mode::Clear) {
         selection.clear();
     } else {
@@ -423,9 +545,11 @@ KENTOS_COMMAND(select)
         .params =
             {
                 Param::text("mod", Arity::optional(),
-                            "TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA"),
-                Param::points("noktalar", Arity{0, 2},
-                              "Kutu köşeleri (iki nokta) veya tek tıklama noktası"),
+                            "TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | "
+                            "ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON"),
+                Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
+                              "Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama "
+                              "noktası"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "NESNE modunda nesne kimlikleri"},
                 Param::text("katman", Arity::optional(), "KATMAN modunda katman adı"),
@@ -443,8 +567,9 @@ KENTOS_COMMAND(select)
         // Deliberately NOT AiAccessible. A suggestion engine that could change
         // what the engineer has highlighted could change what the next SİL
         // removes without ever emitting SİL itself (.claude/ai.md, §5.1).
-        .summary = "Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.",
-        .run     = &run_select,
+        .summary = "Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, "
+                   "önceki seçim, son nesne ya da tek nokta.",
+        .run = &run_select,
         // NOT A QUERY, THOUGH IT WRITES NOTHING. A changed highlight changes
         // what the next SİL deletes, so it is treated as an edit to the thing
         // the next edit will act on — which is also why it is closed to agents.

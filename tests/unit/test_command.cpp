@@ -1005,6 +1005,104 @@ TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
 }
 
+TEST_CASE("SEÇ: çokgen ve kesen çokgen, kutunun alamayacağı şekli alır")
+{
+    // Three parcels in a row. An L-shaped polygon takes the first and the third
+    // and leaves the middle one — which is exactly what a box cannot do, and why
+    // a surveyor deselecting by hand is where the wrong parcel gets left in.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("ALAN 20,0 30,0 30,10 20,10", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,20 10,20 10,30 0,30", Origin::CommandLine).ok());
+
+    // An L covering the first and third parcels but not the second.
+    REQUIRE(f.bus
+                .execute_line("SEÇ mod=ÇOKGEN noktalar=-1,-1 noktalar=15,-1 noktalar=15,35 "
+                              "noktalar=-1,35",
+                              Origin::CommandLine)
+                .ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2});
+
+    // KESEN ÇOKGEN also takes what it merely touches: a polygon clipping the
+    // corner of the middle parcel takes it as well.
+    REQUIRE(f.bus
+                .execute_line("SEÇ mod=ÇOKGENKESEN noktalar=-1,-1 noktalar=25,-1 "
+                              "noktalar=25,5 noktalar=-1,5",
+                              Origin::CommandLine)
+                .ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the first and the middle
+
+    // Fewer than three corners is no polygon.
+    const auto refused =
+        f.bus.execute_line("SEÇ mod=ÇOKGEN noktalar=0,0 noktalar=10,10", Origin::CommandLine);
+    CHECK(refused.ok());                                ///< it says so rather than failing
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< and changes nothing
+}
+
+TEST_CASE("SEÇ: ÇİT çizdiği hattın kestiği her şeyi alır")
+{
+    // A row of fence posts drawn as short lines, and a fence line running along
+    // them: the fence takes the ones it crosses and nothing else. A box over the
+    // same ground would take the building behind them too.
+    Fixture f;
+    for (int i = 0; i < 4; ++i) {
+        const std::string x = std::to_string(i * 10);
+        REQUIRE(f.bus.execute_line("ÇİZGİ " + x + ",0 " + x + ",10", Origin::CommandLine).ok());
+    }
+    REQUIRE(f.bus.execute_line("ALAN 0,20 30,20 30,30 0,30", Origin::CommandLine).ok());
+
+    // A fence across the posts at y = 5, stopping short of the third.
+    REQUIRE(
+        f.bus.execute_line("SEÇ mod=ÇİT noktalar=-5,5 noktalar=15,5", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the posts at x = 0 and 10
+
+    // THE BUILDING IS NOT TOUCHED, because the fence does not reach it.
+    REQUIRE(
+        f.bus.execute_line("SEÇ mod=ÇİT noktalar=-5,25 noktalar=35,25", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1}); ///< only the face
+
+    // Fewer than two points is no fence.
+    REQUIRE(f.bus.execute_line("SEÇ mod=ÇİT noktalar=0,0", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+}
+
+TEST_CASE("SEÇ: ÖNCEKİ bir adım geri gider, SON en yeni nesneyi alır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("ALAN 20,0 30,0 30,10 20,10", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 40,0 50,0", Origin::CommandLine).ok());
+
+    // `SON` takes the most recently created entity, which is what a drafter
+    // means by "that one" after drawing it.
+    REQUIRE(f.bus.execute_line("SEÇ mod=SON", Origin::CommandLine).ok());
+    REQUIRE_EQ(f.bus.selection().size(), std::size_t{1});
+    CHECK_EQ(f.bus.selection().keys().front(), f.doc.entities().key[2]);
+
+    // Select both parcels, then select something else by mistake, then go back.
+    REQUIRE(f.bus.execute_line("SEÇ mod=KUTU noktalar=-1,-1 31,11", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2});
+
+    REQUIRE(f.bus.execute_line("SEÇ mod=SON", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+
+    REQUIRE(f.bus.execute_line("SEÇ mod=ÖNCEKİ", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the two parcels are back
+
+    // ONE STEP DEEP, AND IT GOES BOTH WAYS: `ÖNCEKİ` again returns to what was
+    // held before it, not two steps back — a stack of selections is a stack
+    // nobody can keep in their head.
+    REQUIRE(f.bus.execute_line("SEÇ mod=ÖNCEKİ", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2});
+
+    // A DELETED ENTITY IS NOT RESURRECTED. The previous selection holds keys,
+    // and a key whose entity is gone is dropped rather than restored.
+    REQUIRE(f.bus.execute_line("SEÇ mod=TÜMÜ", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("SİL", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("SEÇ mod=ÖNCEKİ", Origin::CommandLine).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{0});
+}
+
 TEST_CASE("PATLAT: çizgi kenarlara, alan sınırına ayrılır")
 {
     {

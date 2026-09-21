@@ -659,6 +659,22 @@ public:
 
     const core::StyleLibrary& style_library() const noexcept { return style_library_; }
 
+    /// THE SELECTION BEFORE THE CURRENT ONE, which is what `SEÇ ÖNCEKİ` restores.
+    ///
+    /// A drafter selects five parcels, edits them, selects one more thing by
+    /// mistake and has lost the five. Every CAD program has had a way back since
+    /// the first one, and the way back is one step deep on purpose: a stack of
+    /// selections is a stack nobody can keep in their head.
+    ///
+    /// Not document state and not journalled (model.md R43), exactly as the live
+    /// selection is not.
+    const Selection& previous_selection() const noexcept { return previous_selection_; }
+
+    /// Remembers the current selection as the previous one. Called by `SEÇ`
+    /// before it replaces what is held, and by nothing else: a helper that
+    /// snapshotted on every read would make `ÖNCEKİ` mean "the same thing".
+    void remember_selection() { previous_selection_ = selection_; }
+
     Selection& selection() noexcept { return selection_; }
 
     const Selection& selection() const noexcept { return selection_; }
@@ -888,6 +904,7 @@ private:
     core::Settings session_settings_{core::builtin_settings(), core::SettingScopeMask::Session};
 
     Selection selection_{};
+    Selection previous_selection_{};
     InputAids aids_{};
     core::StyleLibrary style_library_{};
 

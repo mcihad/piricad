@@ -299,15 +299,36 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       İkinci bir ad ikinci bir komut demek olurdu ve `blok=` ile blok yerleştirme (planın ayırt edici
       maddesi) P6'nın pano altyapısıyla birlikte gelecek.
 
-## P4 — Yakalama ve seçim
+## P4 — Yakalama ve seçim (büyük kısmı tamamlandı)
 
-- [ ] **P4-1** `SnapQuadrant` (ÇEYREK: 0/100/200/300 grad) ve `SnapTangent` (TEĞET) bitleri; `test_snap.cpp`
-  idempotens; `MOD`, F3 menüsü, ipucu tek listeden (5.10).
-- [ ] **P4-2** Geçici izleme (OTRACK): `SnapQuery::tracking` 1–2 nokta; istemde `İZ` sözcüğü (transparent,
-  R18) ve `Shift+sağ tık`; `xy(P,Q)` fonksiyonunun fare hâli.
-- [ ] **P4-3** Seçim: `ÇİT`, `ÇOKGENPENCERE`/`ÇOKGENKESEN`, `ÖNCEKİ` (Session saklar), `SON`; `pick.hpp`
-  `pick_in_polygon`/`pick_along_fence`.
-- [ ] **P4-4** Docs: `arayuz.md` "Harita alanı" ve yakalama; `secim` sayfası.
+- [x] **Yakalama bitleri: ÇEYREK ve TEĞET.** `SnapQuadrant` (bit 18) bir eğrinin eksenleri kestiği
+      dört noktayı verir — 0, 100, 200, 300 grad — ve **yapıca tamdır**: merkez ± yarıçap, trigonometri
+      yok. Bir yayda yalnız SÜPÜRÜLEN çeyrekler sunulur. Öncelikte UÇ ile aynı sırada: bir eğride
+      çeyrek, bir çizgide köşenin olduğu kadar belirtilmiş bir noktadır.
+      `SnapTangent` (bit 19) son noktadan eğriye teğetin ayağını verir; **iki** ayak sunulur ve
+      imlece yakın olan kazanır. `SnapConstructedMask`'e KONMADI ve sebebi kodda yazılı: teğet ayağı
+      eğrinin ÜZERİNDEDİR, uzantı gibi geometrinin dışında değil — oraya koymak `reach` ayarlamamış
+      her çağırıcı için modu kapatıyordu. Öncelikte gerçek olan her şeyin altında.
+      F3 penceresi motor listesinden üretildiği için ikisi kendiliğinden orada (5.10).
+- [x] **Seçim kipleri: ÇOKGEN, ÇOKGENKESEN, ÇİT, ÖNCEKİ, SON.** Çekirdekte
+      `core::pick_in_polygon` ve `core::pick_along_fence`; çokgenin kendi kutusu cull, çokgen testi
+      yalnız ondan geçene koşuyor (§10.1). Köşe sayısı sınırsız: arayüzde sağ tık/Esc bitirir, komut
+      satırında `noktalar=` tekrarlanır. `ÖNCEKİ` bir adım derin ve `Bus::previous_selection`'da;
+      silinmiş bir nesneyi GERİ GETİRMİYOR — `slot_of` silinmiş bir anahtarı hâlâ çözer (geri alma
+      onun sayesinde çalışır), bu yüzden canlılık da soruluyor. `ÇİT` tek bir noktayı almıyor: bir
+      hattın bir röperden geçmesi bir elin çizebileceği bir şey değil.
+- [x] **Docs:** `mode.md`'ye iki bit satırı ve ikisinin gerekçesi; `select.md`'ye beş kip tablosu ve
+      incelikleri. `make reference`.
+- [x] **Test:** `test_snap.cpp`'ye dört vaka (dört çeyrek + idempotens, yayda süpürülmeyen çeyrek
+      reddi, 3-4-5 üçgeniyle teğet ayağı, teğetin gerçek bir köşeyi almaması); `test_command.cpp`'ye
+      üç vaka (çokgenin kutunun alamayacağını alması, çitin kestiğini alması, ÖNCEKİ/SON).
+      Bit sayısı tripwire'ı 15 → 17.
+- [ ] **Geçici izleme (OTRACK) yapılmadı ve sebebi:** yazılı karşılığı `xy(P,Q)` olarak P1a'da
+      geldi; fare hâli ise ÜÇ parça istiyor — oturumda geçici bir işaretli nokta listesi,
+      nokta isteminde onu işaretleyecek bir jest (şeffaf bir sözcük ya da `Shift+sağ tık`), ve
+      `SnapQuery`'ye o listeyi okuyan bir alan. Yakalama motoruna bir alan eklemek ve tuvale geçici
+      bir durum koymak, bu paketin geri kalanı gibi tek dosyalık bir iş değil; kendi commit'ini
+      hak ediyor ve `xy(P,Q)` bugün aynı noktayı yazarak veriyor.
 
 ## P5 — Ölçülendirme
 

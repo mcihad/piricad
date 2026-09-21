@@ -139,14 +139,40 @@ enum SnapMode : std::uint32_t {
     /// drawing states outright.
     SnapInsertion = 1u << 17,
 
+    /// ÇEYREK — the four quarter points of a circle, an arc or an ellipse: where
+    /// it crosses the axes of the drawing, at 0, 100, 200 and 300 grad.
+    ///
+    /// The one place on a curve that has a NAME. A manhole cover is set out from
+    /// its quarters, a road transition is dimensioned from them, and a pipe's
+    /// invert is at the bottom one. Ranked with UÇ, because on a curve a quarter
+    /// is as much a stated point as a vertex is on a line: it is where the curve
+    /// meets the grid the drawing is written in.
+    SnapQuadrant = 1u << 18,
+
+    /// TEĞET — the point on a curve where a line from the LAST POINT touches it.
+    ///
+    /// A constructed point, like UZANTI and PARALEL, and constructed the same
+    /// way: it exists only because a run is already under way and has somewhere
+    /// to come from. Both tangent feet are offered and the nearer to the aim
+    /// wins, which is how a user picks the one they meant by pointing at it.
+    /// Ranked below every real feature for the reason the other constructed
+    /// modes are.
+    SnapTangent = 1u << 19,
+
     /// The modes that need geometry to snap to. Grid and polar need none.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapCentroid | SnapIntersection |
                      SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
-                     SnapApparent | SnapGuide | SnapInsertion,
+                     SnapApparent | SnapGuide | SnapInsertion | SnapQuadrant | SnapTangent,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason
     /// `SnapQuery::reach` exists, and they are off unless the user asks.
+    /// NOT `SnapTangent`, and the distinction is what this mask is FOR. An
+    /// extension, a parallel and an apparent intersection are points somewhere
+    /// the geometry is not, so the engine has to look beyond the aperture to
+    /// find the edge that implies them. A tangent foot is ON the curve: the
+    /// curve is already inside the aperture, because the foot is. Putting it
+    /// here switched it off for every caller that had not set `reach`.
     SnapConstructedMask = SnapExtension | SnapParallel | SnapApparent,
 
     /// Every mode a user may switch on.

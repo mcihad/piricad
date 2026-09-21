@@ -53,6 +53,11 @@ SEÇ PENCERE <köşe> <köşe>
 SEÇ KESEN <köşe> <köşe>
 SEÇ KUTU <köşe> <köşe>
 SEÇ NOKTA <nokta> [tolerans=<metre>]
+SEÇ ÇOKGEN <köşe> <köşe> <köşe> ...
+SEÇ ÇOKGENKESEN <köşe> <köşe> <köşe> ...
+SEÇ ÇİT <nokta> <nokta> ...
+SEÇ ÖNCEKİ
+SEÇ SON
 SEÇ <mod> ... islem=EKLE | ÇIKAR | TERSİNE
 ```
 
@@ -62,7 +67,7 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 
 | Parametre | Ne yapar |
 |---|---|
-| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU` veya `NOKTA`. Verilmezse seçim yalnızca raporlanır |
+| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `ÇOKGEN`, `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
 | `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` modunda tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
@@ -116,6 +121,30 @@ Bunun bir sonucu vardır ve bilerek böyledir: **ekranı olmayan bir istemcinin
 piksel toleransı yoktur.** Başsız çalışan bir betik `SEÇ NOKTA` yazdığında yalnızca
 noktanın tam üstündeki nesneyi bulur. Aralık isterse `tolerans=` ile metre cinsinden
 söyler — böylece betik bir şey uydurmak yerine ne istediğini yazmış olur.
+
+## Beş kip daha
+
+| Kip | Ne alır | Ne zaman |
+|---|---|---|
+| `ÇOKGEN` | Çizdiğiniz çokgenin **tamamen içindeki** nesneler | Bir ada dikdörtgen değildir: kutu ya kastettiğinizi kaçırır ya komşuyu da alır |
+| `ÇOKGENKESEN` | Çokgenin **değdiği** her nesne | Bir koridorun kestiği her parsel |
+| `ÇİT` | Çizdiğiniz **hattın kestiği** her nesne | Yol boyunca bir bordür dizisi, arkasındaki binalar olmadan |
+| `ÖNCEKİ` | Bundan önceki seçim | Beş parsel seçip yanlışlıkla altıncıyı seçtiniz |
+| `SON` | En son oluşturulan nesne | Bir şey çizdikten sonra "şunu" dediğiniz nesne |
+
+**Çokgen ve çit köşeleri sayıca sınırsızdır.** Arayüzde tıklamaya devam edersiniz
+ve **sağ tık** ya da **Esc** bitirir; komut satırında `noktalar=` tekrarlanır.
+Çokgen en az üç köşe, çit en az iki nokta ister.
+
+**`ÖNCEKİ` bir adım derindir** ve bu bilinçli: bir seçim yığını kimsenin kafasında
+tutamadığı bir yığındır. İki kez `ÖNCEKİ` ileri geri gider. Arada silinmiş bir
+nesne **geri getirilmez**: önceki seçim kalıcı anahtarları tutar ve karşılığı
+gitmiş bir anahtar atılır, çünkü bir sonraki `SİL`'in zaten gitmiş bir şeyi
+sildiğini bildirmesi yanlış olur.
+
+**`ÇİT` tek bir noktayı almaz.** Bir çit bir hattır ve bir hattın bir röperden
+geçmesi, tam üstünden geçmesi demektir — bir elin çizebileceği bir şey değil.
+Ölçülmüş bir nokta çokgenle seçilir, çitle değil.
 
 ## Örnekler
 

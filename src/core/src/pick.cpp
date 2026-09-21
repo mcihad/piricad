@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <span>
 
 namespace kentos::core {
 namespace {
@@ -487,6 +488,162 @@ void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vecto
                 }
             }
         }
+    });
+}
+
+namespace {
+
+/// The bounding box of a run of points, empty when there are none.
+Box2 box_of_points(std::span<const Point2> pts) noexcept
+{
+    Box2 out;
+    for (const Point2& p : pts) {
+        if (out.empty()) {
+            out = Box2{p.x, p.y, p.x, p.y};
+            continue;
+        }
+        out.min_x = std::min(out.min_x, p.x);
+        out.min_y = std::min(out.min_y, p.y);
+        out.max_x = std::max(out.max_x, p.x);
+        out.max_y = std::max(out.max_y, p.y);
+    }
+    return out;
+}
+
+/// Whether `probe` is inside the closed polygon `fence`.
+bool fence_contains(std::span<const Point2> fence, Point2 probe) noexcept
+{
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+    xs.reserve(fence.size());
+    ys.reserve(fence.size());
+    for (const Point2& p : fence) {
+        xs.push_back(p.x);
+        ys.push_back(p.y);
+    }
+    return ring_contains(xs, ys, probe);
+}
+
+/// Whether any segment of `fence` — closed when `closed` — crosses a→b.
+bool fence_crosses(std::span<const Point2> fence, bool closed, Point2 a, Point2 b) noexcept
+{
+    const std::size_t n        = fence.size();
+    const std::size_t segments = closed ? n : n - 1;
+    for (std::size_t i = 0; i < segments; ++i) {
+        Point2 meet{};
+        if (segment_intersection(a, b, fence[i], fence[(i + 1) % n], meet)) return true;
+    }
+    return false;
+}
+
+/// Every run of `e`, handed to `each` as points. The one place this file turns a
+/// `Runs` view into the plain vectors the fence tests want.
+template<typename Fn> void for_each_run(const Document& doc, EntityId e, Fn&& each)
+{
+    Runs runs;
+    runs.build(doc, e);
+    for (std::uint32_t r = 0; r < runs.count; ++r) {
+        const auto xs = runs.xs(doc, e, r);
+        const auto ys = runs.ys(doc, e, r);
+        if (xs.empty()) continue;
+        std::vector<Point2> pts;
+        pts.reserve(xs.size());
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            pts.push_back(Point2{xs[v], ys[v]});
+        each(pts, runs.closed(doc, e, r));
+    }
+}
+
+} // namespace
+
+void pick_in_polygon(const Document& doc, std::span<const Point2> fence, PickMode mode,
+                     std::vector<EntityId>& out)
+{
+    out.clear();
+    if (fence.size() < 3) return; ///< fewer than three points is no polygon
+
+    const Box2 hull = box_of_points(fence);
+    if (hull.empty()) return;
+
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+
+    // THE POLYGON'S OWN BOUNDING BOX IS THE CULL, and the polygon test runs only
+    // on what survives it: the spatial index answers boxes, and a fence over a
+    // city block must not walk every parcel in the drawing (§10.1).
+    for_each_candidate(doc, hull, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        if (!boxes_overlap(entities.box_of(e), hull)) return;
+
+        bool inside_all = true;
+        bool touched    = false;
+
+        for_each_run(doc, e, [&](const std::vector<Point2>& pts, bool closed) {
+            if (touched && mode == PickMode::Crossing) return;
+            for (const Point2& p : pts) {
+                if (fence_contains(fence, p)) {
+                    touched = true;
+                    if (mode == PickMode::Crossing) return;
+                } else {
+                    inside_all = false;
+                }
+            }
+            if (mode == PickMode::Window) return;
+
+            // Crossing also counts an edge that cuts the fence without either
+            // end being inside it — a long boundary straight across a block.
+            const std::size_t n        = pts.size();
+            const std::size_t segments = n < 2 ? 0 : (closed ? n : n - 1);
+            for (std::size_t v = 0; v < segments; ++v)
+                if (fence_crosses(fence, true, pts[v], pts[(v + 1) % n])) {
+                    touched = true;
+                    return;
+                }
+        });
+
+        if (mode == PickMode::Window) {
+            if (inside_all && touched) out.push_back(e);
+        } else if (touched) {
+            out.push_back(e);
+        }
+    });
+}
+
+void pick_along_fence(const Document& doc, std::span<const Point2> fence,
+                      std::vector<EntityId>& out)
+{
+    out.clear();
+    if (fence.size() < 2) return; ///< fewer than two points is no fence
+
+    const Box2 hull = box_of_points(fence);
+    if (hull.empty()) return;
+
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+
+    for_each_candidate(doc, hull, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        if (!boxes_overlap(entities.box_of(e), hull)) return;
+
+        bool crossed = false;
+        for_each_run(doc, e, [&](const std::vector<Point2>& pts, bool closed) {
+            if (crossed) return;
+            const std::size_t n = pts.size();
+            if (n == 1) {
+                // A LONE POINT HAS NO EDGE TO CROSS. A fence is a line and a line
+                // through a monument does not touch it unless it passes through
+                // it exactly, which is not something a hand can draw — so a
+                // surveyed point is selected by a polygon, never by a fence.
+                return;
+            }
+            const std::size_t segments = closed ? n : n - 1;
+            for (std::size_t v = 0; v < segments; ++v)
+                if (fence_crosses(fence, false, pts[v], pts[(v + 1) % n])) {
+                    crossed = true;
+                    return;
+                }
+        });
+        if (crossed) out.push_back(e);
     });
 }
 

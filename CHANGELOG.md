@@ -6,6 +6,41 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ÇEYREK ve TEĞET yakalama, beş yeni seçim kipi (P4)
+
+- **ÇEYREK**: bir eğrinin eksenleri kestiği dört nokta — 0, 100, 200, 300 grad.
+  Bir eğrinin **adı olan tek yeri**: bir baca kapağı çeyreklerinden aplike
+  edilir, bir borunun taban kotu alt çeyreğindedir. Yapıca tam — merkez ±
+  yarıçap, trigonometri yok. Bir yayda yalnız **süpürülen** çeyrekler sunulur:
+  kesildiği çemberin çeyreği, çizilen şeyin üzerinde bir nokta değildir.
+  Öncelikte UÇ ile aynı sırada.
+- **TEĞET**: son noktadan eğriye çizilen teğetin dokunduğu yer. **İki** ayak
+  sunulur ve imlece yakın olan kazanır — iki teğetten birini sessizce seçmek,
+  çizgiyi yanlış tarafa çekmektir. Önceki nokta çemberin içindeyse teğet yoktur
+  ve motor bir nokta uydurmak yerine hiçbir şey söyler. `SnapConstructedMask`'e
+  **konmadı**: teğet ayağı eğrinin ÜZERİNDEDİR, uzantı gibi geometrinin dışında
+  değil, ve oraya koymak `reach` ayarlamamış her çağırıcı için modu kapatıyordu.
+- F3 penceresi motor listesinden üretildiği için iki bit kendiliğinden orada
+  (CLAUDE.md 5.10) — hiçbir tabloya elle eklenmedi.
+- **Seçim kipleri: ÇOKGEN · ÇOKGENKESEN · ÇİT · ÖNCEKİ · SON.** Bir ada
+  dikdörtgen değildir ve bir yol koridoru da değil: kutu ya kastedileni kaçırır
+  ya komşuyu da alır, ve elle seçimden çıkarmak yanlış parselin içeride kaldığı
+  yerdir. `ÇİT` çizdiği hattın kestiğini alır — yol boyunca bir bordür dizisi,
+  arkasındaki binalar olmadan. Köşe sayısı sınırsız.
+- **`ÖNCEKİ` silinmiş bir nesneyi geri getirmiyor.** `slot_of` silinmiş bir
+  anahtarı hâlâ çözer — geri alma onun sayesinde çalışır — bu yüzden canlılık da
+  soruluyor; yoksa bir sonraki `SİL` zaten gitmiş bir şeyi sildiğini bildirirdi.
+  Bir adım derin ve bu bilinçli: bir seçim yığını kimsenin kafasında tutamadığı
+  bir yığındır.
+- Çekirdekte `pick_in_polygon` ve `pick_along_fence`; çokgenin kendi kutusu cull,
+  çokgen testi yalnız ondan geçene koşuyor. Yedi yeni test, iki sayfa güncel.
+
+**Geçici izleme (OTRACK) yapılmadı ve sebebi planda yazılı:** yazılı karşılığı
+`xy(P,Q)` olarak P1a'da geldi; fare hâli oturumda geçici bir işaretli nokta
+listesi, onu işaretleyecek bir jest ve `SnapQuery`'ye yeni bir alan istiyor —
+yakalama motoruna alan eklemek bu paketin geri kalanı gibi tek dosyalık bir iş
+değil.
+
 ### Eklendi — yedi düzenleme fiili (P3)
 
 Bir drafter'ın sürekli kullandığı ve bu programın adı bile olmayan yedi fiil.

@@ -42,6 +42,12 @@ constexpr std::uint32_t kPriority[] = {
     SnapNode,
     SnapInsertion,
     SnapEndpoint,
+
+    // A QUARTER IS A STATED POINT ON A CURVE. It is where the curve meets the
+    // axes the drawing is written in, and a manhole, a transition curve and a
+    // pipe invert are all set out from one — so it ranks with a vertex rather
+    // than with the derived points below.
+    SnapQuadrant,
     SnapIntersection,
     SnapMidpoint,
     SnapCenter,
@@ -56,6 +62,10 @@ constexpr std::uint32_t kPriority[] = {
     SnapApparent,
     SnapParallel,
     SnapExtension,
+
+    // A TANGENT EXISTS ONLY BECAUSE A RUN IS UNDER WAY, which is what makes it
+    // constructed: there is no tangent point without a point to come from.
+    SnapTangent,
 
     // A guide is a line the USER drew for themselves, so it sits below every
     // point the drawing actually contains — the same rule the constructed modes
@@ -370,10 +380,10 @@ std::size_t priority_index(std::uint32_t bit)
 const std::uint32_t* snap_mode_bits()
 {
     static const std::uint32_t bits[] = {
-        SnapEndpoint,     SnapMidpoint,      SnapCenter,    SnapCentroid,
-        SnapIntersection, SnapPerpendicular, SnapNearest,   SnapNode,
-        SnapGrid,         SnapPolar,         SnapExtension, SnapParallel,
-        SnapApparent,     SnapGuide,         SnapInsertion, SnapNone,
+        SnapEndpoint,      SnapMidpoint, SnapCenter,   SnapCentroid, SnapIntersection,
+        SnapPerpendicular, SnapNearest,  SnapNode,     SnapGrid,     SnapPolar,
+        SnapExtension,     SnapParallel, SnapApparent, SnapGuide,    SnapInsertion,
+        SnapQuadrant,      SnapTangent,  SnapNone,
     };
     return bits;
 }
@@ -399,6 +409,8 @@ const char* snap_mode_id(std::uint32_t single_bit)
     case SnapStep: return "adim";
     case SnapGuide: return "kilavuz";
     case SnapInsertion: return "ekleme";
+    case SnapQuadrant: return "ceyrek";
+    case SnapTangent: return "teget";
     default: return "yok";
     }
 }
@@ -424,6 +436,8 @@ const char* snap_mode_label(std::uint32_t single_bit)
     case SnapStep: return "adım";
     case SnapGuide: return "kılavuz";
     case SnapInsertion: return "ekleme noktası";
+    case SnapQuadrant: return "çeyrek nokta";
+    case SnapTangent: return "teğet nokta";
     default: return "yok";
     }
 }
@@ -787,6 +801,56 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
                         if (full || on_arc(centre, arc_start_of(geometry, slot),
                                            arc_end_of(geometry, slot), on))
                             offer(best[priority_index(SnapNearest)], on, e, q.aim, limit);
+                    }
+                }
+
+                // THE FOUR QUARTERS, exact by construction: centre ± radius on
+                // each axis, no trigonometry and no rounding beyond the radius
+                // itself. On an arc only the quarters the sweep actually covers
+                // are offered — a quarter of the circle it was cut from is not a
+                // point on the thing that is drawn.
+                if ((object_modes & SnapQuadrant) != 0 && radius > 0) {
+                    const Point2 quarters[4]{{centre.x, centre.y + radius},
+                                             {centre.x + radius, centre.y},
+                                             {centre.x, centre.y - radius},
+                                             {centre.x - radius, centre.y}};
+                    for (const Point2& one : quarters) {
+                        if (!full && !on_arc(centre, arc_start_of(geometry, slot),
+                                             arc_end_of(geometry, slot), one))
+                            continue;
+                        offer(best[priority_index(SnapQuadrant)], one, e, q.aim, limit);
+                    }
+                }
+
+                // THE TANGENT FEET FROM THE LAST POINT. From a point at distance
+                // `d` from the centre there are two tangent points, and the
+                // half-angle between the centre line and each is acos(r/d) — so
+                // the feet are the centre line turned by that angle, both ways,
+                // scaled to the radius. A point inside the circle has none, and
+                // a point ON it has one: itself.
+                if ((object_modes & SnapTangent) != 0 && radius > 0 && q.has_base) {
+                    const double px = static_cast<double>(q.base.x - centre.x);
+                    const double py = static_cast<double>(q.base.y - centre.y);
+                    const double d  = std::sqrt(px * px + py * py);
+                    const auto r    = static_cast<double>(radius);
+                    if (d >= r) {
+                        // cos and sin of the half-angle, from the right triangle
+                        // (r, sqrt(d²−r²), d) — no `acos` and no libm beyond the
+                        // one square root, which IEEE-754 rounds correctly.
+                        const double cos_a = r / d;
+                        const double sin_a = std::sqrt(std::max(0.0, 1.0 - cos_a * cos_a));
+                        const double ux    = px / d;
+                        const double uy    = py / d;
+                        const Point2 feet[2]{{centre.x + mm_round(r * (ux * cos_a - uy * sin_a)),
+                                              centre.y + mm_round(r * (uy * cos_a + ux * sin_a))},
+                                             {centre.x + mm_round(r * (ux * cos_a + uy * sin_a)),
+                                              centre.y + mm_round(r * (uy * cos_a - ux * sin_a))}};
+                        for (const Point2& one : feet) {
+                            if (!full && !on_arc(centre, arc_start_of(geometry, slot),
+                                                 arc_end_of(geometry, slot), one))
+                                continue;
+                            offer(best[priority_index(SnapTangent)], one, e, q.aim, limit);
+                        }
                     }
                 }
 
