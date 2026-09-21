@@ -317,6 +317,42 @@ bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, doub
     return true;
 }
 
+CircleMeet circle_intersection(Point2 a, Mm radius_a, Point2 b, Mm radius_b, Point2& left,
+                               Point2& right) noexcept
+{
+    // Translated to `a` before anything is multiplied, for the reason
+    // `line_intersection` gives: the squares of raw TM3 coordinates are 10^19 and
+    // the millimetre that matters is long gone by then.
+    const double dx = static_cast<double>(b.x - a.x);
+    const double dy = static_cast<double>(b.y - a.y);
+    const double d2 = dx * dx + dy * dy;
+    if (d2 == 0.0) return CircleMeet::SameCentre;
+
+    const double d  = std::sqrt(d2);
+    const double r1 = static_cast<double>(radius_a < 0 ? -radius_a : radius_a);
+    const double r2 = static_cast<double>(radius_b < 0 ? -radius_b : radius_b);
+
+    if (d > r1 + r2) return CircleMeet::TooFar;
+    if (d < (r1 > r2 ? r1 - r2 : r2 - r1)) return CircleMeet::Nested;
+
+    // The foot of the common chord, at distance `along` from `a` down a→b, and
+    // the half-chord `h` perpendicular to it. `h2` is clamped at zero rather than
+    // tested again: the two cases above have already ruled out a real overlap
+    // failure, and what is left is the last bit of a tangency.
+    const double along = (d2 + r1 * r1 - r2 * r2) / (2.0 * d);
+    const double h2    = r1 * r1 - along * along;
+    const double h     = h2 > 0.0 ? std::sqrt(h2) : 0.0;
+
+    const double ux = dx / d;
+    const double uy = dy / d;
+
+    // (-uy, ux) is the LEFT normal of a→b in a right-handed frame, which is the
+    // same left `dik(A,B,ayak,boy)` means by a positive offset (TODOS-CAD P1a-6).
+    left  = Point2{a.x + mm_round(along * ux - h * uy), a.y + mm_round(along * uy + h * ux)};
+    right = Point2{a.x + mm_round(along * ux + h * uy), a.y + mm_round(along * uy - h * ux)};
+    return h > 0.0 ? CircleMeet::Two : CircleMeet::Tangent;
+}
+
 bool segment_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out) noexcept
 {
     // The segment case IS the line case with both parameters inside their span.

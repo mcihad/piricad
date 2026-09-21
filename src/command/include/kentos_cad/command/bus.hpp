@@ -14,6 +14,7 @@
 
 #include "kentos_cad/command/aids.hpp"
 #include "kentos_cad/command/journal.hpp"
+#include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/selection.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -28,6 +29,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -590,6 +592,33 @@ public:
     /// under the same convention (CLAUDE.md 5.11, TODOS-CAD P0-2). ÖLÇ,
     /// APLİKASYON and the canvas readout write angles through the same call.
     core::AngleConvention angle_convention() const;
+
+    /// Everything the grammar needs to turn a coordinate into a point: the angle
+    /// convention above, and how `n(1284)` finds the surveyed point numbered
+    /// 1284 in THIS document.
+    ///
+    /// ONE PLACE BUILDS IT, and the three seams that resolve a coordinate all
+    /// call it: `bind_tokens` for a typed line, `dispatch` for a coordinate a
+    /// script carried as text, and the shell for an answer typed into a running
+    /// command's prompt. A fourth reading of a coordinate is what CLAUDE.md 5.11
+    /// exists to prevent, and a client that assembled its own context would be
+    /// one (TODOS-CAD P1a-1).
+    ///
+    /// The lookup holds a reference to this bus and must not outlive it, which
+    /// is why it is built per call rather than stored.
+    ResolveContext resolve_context() const;
+
+    /// The surveyed point numbered `number`, or nothing when the drawing has
+    /// none.
+    ///
+    /// A point carries its number in the `nokta_no` attribute — the column
+    /// `NOKTALAR` fills when it reads a list from the field (io/service.cpp) —
+    /// and the cell is compared as TEXT against the decimal spelling of
+    /// `number`, so `1284` finds `1284` and not `1284/A`. Where two points
+    /// somehow carry one number, the first in slot order answers: that is the
+    /// deterministic reading, and the usual cause is the same list imported
+    /// twice, where both points are the same coordinate anyway.
+    std::optional<core::Point2> numbered_point(std::int64_t number) const;
 
     /// Writes a declared setting into whichever store its scope names.
     ///

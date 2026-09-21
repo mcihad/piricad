@@ -22,6 +22,15 @@
 // filter predicate (`evaluate_predicate`) and a single coordinate written as text
 // (`parse_point`, the script path).
 //
+// POINT FUNCTIONS go through the same four (TODOS-CAD P1a): `orta(…)`,
+// `kes(…)` and the rest are read by `classify` and resolved by `resolve_point`,
+// so every byte sequence tried here is also tried as an argument list — nested
+// calls, a signature that fits nothing, two shapes of `kes`, an angle with a
+// suffix inside a call. `n()` is given a lookup that answers for a handful of
+// numbers, so both the found and the missing road are walked; the harness also
+// runs each input once with NO lookup, which is the headless case where `n()`
+// must refuse rather than reach for a document that is not there.
+//
 // Build:
 //   cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
 //   ./build/dev/bin/kentos_fuzz_komut build/dev/fuzz-corpus/komut tests/fuzz/tohum/komut \
@@ -49,6 +58,23 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     using kentos::core::AngleUnit;
     using kentos::core::Point2;
 
+    // A stand-in drawing for `n(1284)`: three numbered points and nothing else,
+    // so a hit and a miss are both one call away. The real one walks the
+    // document (`Bus::numbered_point`); what the grammar sees is this shape.
+    const auto context = [](AngleConvention convention) {
+        kentos::command::ResolveContext ctx;
+        ctx.convention  = convention;
+        ctx.named_point = [](std::int64_t number) -> std::optional<Point2> {
+            switch (number) {
+            case 1: return Point2{0, 0};
+            case 1284: return Point2{485320150, 4310220400};
+            case -7: return Point2{-1, -1};
+            default: return std::nullopt;
+            }
+        };
+        return ctx;
+    };
+
     // ---- 1. a line, and every coordinate on it under every convention ----
     if (auto parsed = kentos::command::parse_line(text)) {
         Point2 last{};
@@ -59,7 +85,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
                 for (int rule = 0; rule < 2; ++rule) {
                     const AngleConvention convention{static_cast<AngleUnit>(unit),
                                                      static_cast<AngleRule>(rule)};
-                    if (auto p = kentos::command::resolve_point(token, last, convention))
+                    if (auto p = kentos::command::resolve_point(token, last, context(convention)))
                         last = p.value();
                 }
         }
@@ -77,7 +103,13 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     (void)kentos::command::evaluate_predicate(text, row);
 
     // ---- 4. one coordinate as text, the script path ----
-    (void)kentos::command::parse_point(text, Point2{}, AngleConvention{});
+    (void)kentos::command::parse_point(text, Point2{}, context(AngleConvention{}));
+
+    // ---- 5. the same text with NO document behind it ----
+    //
+    // The headless case: `ResolveContext::named_point` is empty, `n()` must say
+    // so and every other function must be unaffected.
+    (void)kentos::command::parse_point(text, Point2{}, kentos::command::ResolveContext{});
 
     return 0;
 }

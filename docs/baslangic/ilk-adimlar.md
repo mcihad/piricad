@@ -52,6 +52,24 @@ Enter'a basın. Üç köşeli bir çizgi belirir. Girdiğiniz üç koordinat ü�
 Komut adı yerine kısaltma da yazabilirsiniz: `Ç`, `L` ve `LINE` aynı komuttur.
 Bütün biçimler için [Komut satırı](../komutlar/komut-satiri.md) sayfasına bakın.
 
+Beşinci bir biçim daha var: koordinatı yazmak yerine **onu nasıl bulduğunuzu**
+yazabilirsiniz. Arazide en çok kullanılanı dik ayak / dik boy'dur — bir cepheyi
+taban alıp üzerinde kaç metre gidildiğini ve oradan kaç metre yana çıkıldığını
+söylemek:
+
+```
+ÇİZGİ dik(0,0,100,0,30,5) dik(0,0,100,0,30,-5)
+```
+
+Taban `0,0` → `100,0` doğrusudur. İki nokta da taban üzerinde 30 metre ilerideki
+noktadan 5 metre yana çıkar: ilki **sola**, ikincisi sağa. Kural budur —
+**sol pozitif, sağ negatif**, tabana A'dan B'ye yürüyor gibi bakarak. `0,0`'dan
+`100,0`'a, yani doğuya yürürken sol el kuzeyi gösterir, bu yüzden ilk nokta
+`(30, 5)`, ikincisi `(30, −5)` olur.
+
+`orta`, `kes`, `semt`, `ara` ve numaralı ölçü noktasını getiren `n(1284)` de aynı
+şekilde yazılır: [Nokta fonksiyonları](../komutlar/komut-satiri.md#nokta-fonksiyonları).
+
 ## 4. Katman yaratın
 
 ```

@@ -14,7 +14,7 @@ PR (CLAUDE.md 6.7).
 | `kentos_fuzz_proje` | native project format (`.pcad`) | `tohum/proje/` |
 | `kentos_fuzz_dxf` | DXF import seam (GDAL/OGR + the KentOSCad conversion) | `tohum/dxf/` |
 | `kentos_fuzz_shp` | Shapefile import seam | `tohum/shp/` |
-| `kentos_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions | `tohum/komut/` |
+| `kentos_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions, with and without a numbered-point lookup behind `n()` | `tohum/komut/` |
 
 Still to land with their formats: DWG, GML/PlanGML, LAS/LAZ, GeoJSON and the
 journal reader.
@@ -83,6 +83,9 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `komut/12-unicode.txt` | Turkish letters in a command name and a quoted value |
 | `komut/13-bos-ve-yalniz-ad.txt` | an empty line, a blank line, a bare command name |
 | `komut/14-asiri-sayi.txt` | numbers at the edge of a double, an overflowing power |
+| `komut/15-nokta-fonksiyonu.txt` | every point function and every shape of `kes`, nested calls, a suffixed angle inside a call, `son`, `yon=` |
+| `komut/16-nokta-fonksiyonu-bozuk.txt` | parallel directions, circles that do not meet, a missing `n()`, an argument list that fits no shape, unbalanced brackets |
+| `komut/17-nokta-derin.txt` | point functions nested past `detail::kMaxCallDepth` |
 
 ## When a crash is found
 

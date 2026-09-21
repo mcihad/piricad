@@ -32,6 +32,14 @@ four axes exact in both rules and all three units, with and without the `g/d/r`
 suffix, so a platform that disagreed in the last bit would show up here as a
 moved vertex rather than as a surveyor's complaint.
 
+`nokta-fonksiyonlari.txt` does the same for the point functions (TODOS-CAD
+P1a), and it is the harder case: `dik`, `kes`, `ara` and `uzanti` divide by a
+square root, so every vertex in it is an answer that a differently-rounded
+`sqrt` or a fused multiply-add would move. The triangles are chosen so the
+answer is a whole millimetre — a 3-4-5 with legs of 30 and 40 metres, and the
+axes — which is what makes a one-millimetre drift visible as a wrong integer
+rather than as a last-bit difference nobody reads.
+
 ## Running
 
 `kentos_tests` runs every scenario and diffs against `beklenen/`. To regenerate

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/parser.hpp"
 
+#include "point_function.hpp"
+
 #include "kentos_cad/core/text.hpp"
 
 #include <cmath>
@@ -262,9 +264,24 @@ bool split_polar(std::string_view s, std::string_view& dist, std::string_view& a
     return false;
 }
 
-core::Result<Token> classify(std::string_view raw)
+} // namespace
+
+/// THE classifier: what one already-unquoted token of a command line is.
+///
+/// `depth` is how many point functions this token sits inside; it is passed on
+/// rather than tracked, so the recursion between a call and its arguments is
+/// bounded by `detail::kMaxCallDepth` from wherever it was entered
+/// (point_function.hpp).
+core::Result<Token> detail::classify(std::string_view raw, int depth)
 {
     Token t;
+
+    // A POINT FUNCTION, before anything else, because `orta(0,0,10,10)` is one
+    // token of a shape nothing else here reads: `is_call_text` accepts only a
+    // name this grammar declares, followed by a parenthesis that closes at the
+    // very end, so an ordinary word that happens to hold brackets is untouched
+    // (TODOS-CAD P1a-1).
+    if (detail::is_call_text(raw)) return detail::parse_call(raw, depth);
 
     // Quoted text is already unquoted by the tokeniser.
     // Keyword argument: key=<value>
@@ -279,7 +296,7 @@ core::Result<Token> classify(std::string_view raw)
             }
         }
         if (key_is_word) {
-            auto inner = classify(rest);
+            auto inner = classify(rest, depth);
             if (!inner) return inner;
             t.kind = Token::Kind::KeyValue;
             t.word = std::string(key);
@@ -374,8 +391,6 @@ core::Result<Token> classify(std::string_view raw)
     t.word = std::string(raw);
     return t;
 }
-
-} // namespace
 
 // ---- the filter predicate, CLAUDE.md 5.11 -----------------------------------
 //
@@ -774,7 +789,7 @@ core::Result<ParsedLine> parse_line(std::string_view line)
 
         // Nothing was quoted: classify it as written.
         if (quote_at == std::string::npos) {
-            auto t = classify(text);
+            auto t = detail::classify(text, 0);
             if (!t) return t.error();
             out.tokens.push_back(std::move(t.value()));
             continue;
@@ -818,13 +833,22 @@ core::Result<ParsedLine> parse_line(std::string_view line)
     return out;
 }
 
+/// What the message says a coordinate may look like. One string, because the
+/// three places that refuse a non-coordinate must not describe the grammar
+/// three different ways (CLAUDE.md 5.10).
+namespace {
+const char* const kCoordinateForms =
+    "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı | nokta fonksiyonu: orta, dik, semt, kes, "
+    "ara, uzanti, xy, n, son). Girilen: ";
+} // namespace
+
 bool is_coordinate(const Token& t)
 {
     return t.kind == Token::Kind::Absolute || t.kind == Token::Kind::Relative ||
-           t.kind == Token::Kind::Polar;
+           t.kind == Token::Kind::Polar || t.kind == Token::Kind::Call;
 }
 
-core::Result<Point2> resolve_point(const Token& t, Point2 last, core::AngleConvention convention)
+core::Result<Point2> resolve_point(const Token& t, Point2 last, const ResolveContext& ctx)
 {
     switch (t.kind) {
     case Token::Kind::Absolute: return Point2{core::mm_from_metres(t.a), core::mm_from_metres(t.b)};
@@ -837,18 +861,16 @@ core::Result<Point2> resolve_point(const Token& t, Point2 last, core::AngleConve
         // itself comes from core — `sin_cos_udeg`, one rounding per axis — so a
         // typed polar point is the same millimetre on every platform (§7.3),
         // where the `std::cos`/`std::sin` this used to call were not.
-        core::AngleConvention applied = convention;
+        core::AngleConvention applied = ctx.convention;
         if (t.angle_unit) applied.unit = *t.angle_unit;
         return last + core::polar_offset(t.a, t.b, applied);
     }
-    default:
-        return err(ErrorCode::InvalidArgument,
-                   "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: " + describe(t));
+    case Token::Kind::Call: return detail::resolve_call(t, last, ctx);
+    default: return err(ErrorCode::InvalidArgument, kCoordinateForms + describe(t));
     }
 }
 
-core::Result<Point2> parse_point(std::string_view text, Point2 last,
-                                 core::AngleConvention convention)
+core::Result<Point2> parse_point(std::string_view text, Point2 last, const ResolveContext& ctx)
 {
     // A JSON string may carry blanks around the coordinate; a coordinate never
     // contains one, so they are not part of what is read.
@@ -857,13 +879,11 @@ core::Result<Point2> parse_point(std::string_view text, Point2 last,
     while (!text.empty() && is_space(text.back()))
         text.remove_suffix(1);
 
-    auto token = classify(text);
+    auto token = detail::classify(text, 0);
     if (!token) return token.error();
     if (!is_coordinate(token.value()))
-        return err(ErrorCode::InvalidArgument,
-                   "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: " +
-                       describe(token.value()));
-    return resolve_point(token.value(), last, convention);
+        return err(ErrorCode::InvalidArgument, kCoordinateForms + describe(token.value()));
+    return resolve_point(token.value(), last, ctx);
 }
 
 std::string describe(const Token& t)
@@ -882,6 +902,7 @@ std::string describe(const Token& t)
     }
     case Token::Kind::KeyValue:
         return t.word + "=" + (t.nested.empty() ? std::string("?") : describe(t.nested.front()));
+    case Token::Kind::Call: return detail::describe_call(t);
     }
     return "?";
 }

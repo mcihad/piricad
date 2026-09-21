@@ -69,12 +69,82 @@ evet/hayır veya nesne seçimi.
 
 ## Koordinat ve ifade
 
-### `Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: 'abc'`
+### `Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı | nokta fonksiyonu: orta, dik, semt, kes, ara, uzanti, xy, n, son). Girilen: 'abc'`
 
 **Sebep.** Nokta beklenen yere koordinat olmayan bir şey girilmiş.
 
-**Çözüm.** Dört koordinat biçiminden birini kullanın. Bkz.
+**Çözüm.** Beş koordinat biçiminden birini kullanın. Bkz.
 [Komut satırı](komutlar/komut-satiri.md).
+
+## Nokta fonksiyonları
+
+### `kes(): argümanlar hiçbir biçime uymuyor. Biçimler: kes(A,açı1,B,açı2) · kes(A,r1,B,r2,sol|sağ|yon=<nokta>) · kes(A,B,C,D). Girilen: 'kes(0,0,50)'`
+
+**Sebep.** Argüman listesi fonksiyonun hiçbir biçimine oturmuyor. En sık sebebi,
+mutlak yazılan bir noktanın **iki** argüman yeri harcadığının atlanmasıdır:
+`kes(0,0,50)` iki nokta değil, bir nokta ve bir sayıdır.
+
+**Çözüm.** Mesajdaki biçimlerden birini yazın. Bkz.
+[Nokta fonksiyonları](komutlar/komut-satiri.md#nokta-fonksiyonları).
+
+### `orta(): 1. argüman nokta olmalı (x,y | @dx,dy | @mesafe<açı | son | fonksiyon). Girilen: 'abc'`
+
+**Sebep.** Tek biçimi olan bir fonksiyonun bir argümanı okunamadı; mesaj kaçıncı
+argüman olduğunu ve ne geldiğini söyler.
+
+**Çözüm.** O argümanı koordinat, `son` ya da başka bir nokta fonksiyonu olarak yazın.
+
+### `orta(): fazla argüman. Beklenen: orta(A,B)`
+
+**Sebep.** Fonksiyona biçiminin aldığından çok argüman verilmiş.
+
+**Çözüm.** Fazlalığı çıkarın. `orta(0,0,10,10)` iki noktadır; `orta(0,0,10,10,20,20)`
+üç nokta olurdu ve `orta` iki alır.
+
+### `1284 numaralı nokta yok. Nokta listesini NOKTALAR ile okuyun.`
+
+**Sebep.** `n(1284)` çizimde bulunamadı. Numaralı noktalar `nokta_no` özniteliğiyle
+gelir; onu `NOKTALAR` doldurur.
+
+**Çözüm.** Ölçü listesini `NOKTALAR dosya="olcu.txt"` ile okuyun ya da numarayı
+düzeltin. Numara metin olarak birebir karşılaştırılır: `1284` `1284/A`'yı bulmaz.
+
+### `n(): bu bağlamda çizim yok, numaralı nokta aranamaz.`
+
+**Sebep.** `n()` çizimin olmadığı bir bağlamda çağrılmış — örneğin yalnız bir ifadenin
+denendiği yerde.
+
+**Çözüm.** Numaralı noktayı bir çizim açıkken kullanın.
+
+### `kes(): iki doğrultu paralel, kesişmiyorlar. Açılar: 100,0000 grad ve 300,0000 grad`
+
+**Sebep.** İki doğrultu aynı ya da tam ters; kesişimleri tek bir nokta değil. Aynı
+mesaj iki doğru için `kes(): iki doğru paralel, kesişmiyorlar.` biçiminde gelir.
+
+**Çözüm.** Açılardan ya da noktalardan birini düzeltin.
+
+### `kes(): çemberler birbirine ulaşmıyor. Yarıçaplar 10,000 m ve 20,000 m, merkezler arası 100,000 m.`
+
+**Sebep.** İki mesafe ölçüsü kesişmiyor. Mesaj iki yarıçapı ve merkezler arası mesafeyi
+birlikte yazar, çünkü hangisinin yanlış olduğu ancak üçü bir arada görülünce anlaşılır.
+`kes(): bir çember ötekinin tamamen içinde.` aynı ölçünün öteki türlü tutmamasıdır.
+
+**Çözüm.** Mesafeleri ve merkez noktalarını karşılaştırın; genellikle bir ölçü yanlış
+noktaya yazılmıştır.
+
+### `kes(): yön noktası iki çözüme eşit uzaklıkta, hangisi olduğu belli değil. 'yon=sol' ya da 'yon=sağ' yazın.`
+
+**Sebep.** İki mesafe kesişiminin iki çözümü vardır ve verilen yakın nokta tam
+ortalarında kaldı.
+
+**Çözüm.** `yon=sol` ya da `yon=sağ` yazın.
+
+### `Nokta fonksiyonları en fazla 16 kat iç içe yazılır.`
+
+**Sebep.** İç içe yazılmış fonksiyonlar sınırı aştı.
+
+**Çözüm.** İnşayı birkaç komuta bölün: ara noktayı `NOKTA` ile çizip `n(...)` ile
+kullanmak da bir yoldur.
 
 ### `Beklenen: '@dx,dy' veya '@mesafe<açı'. Girilen: '@50'`
 

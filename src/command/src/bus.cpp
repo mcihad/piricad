@@ -5,6 +5,7 @@
 
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/command/parser.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <chrono>
@@ -45,6 +46,36 @@ core::AngleConvention Bus::angle_convention() const
     };
 }
 
+ResolveContext Bus::resolve_context() const
+{
+    return ResolveContext{
+        .convention  = angle_convention(),
+        .named_point = [this](std::int64_t number) { return numbered_point(number); },
+    };
+}
+
+std::optional<core::Point2> Bus::numbered_point(std::int64_t number) const
+{
+    const core::AttrId column = doc_.attributes().find("nokta_no");
+    if (column == core::kNoAttr) return std::nullopt;
+
+    const std::string wanted = std::to_string(number);
+    for (core::EntityId e = 0; e < doc_.entities().size(); ++e) {
+        if (!doc_.alive(e) || doc_.entities().kind[e] != core::kPointKind) continue;
+
+        const auto cell = doc_.attribute(column, e);
+        if (!cell || !cell.value().present || cell.value().text != wanted) continue;
+
+        const core::RingSpan span = doc_.geometry().rings_of(doc_.entities().slot[e]);
+        if (span.count == 0) continue;
+        const auto xs = doc_.geometry().ring_xs(span.first);
+        const auto ys = doc_.geometry().ring_ys(span.first);
+        if (xs.empty()) continue;
+        return core::Point2{xs[0], ys[0]};
+    }
+    return std::nullopt;
+}
+
 core::Result<core::SettingChange> Bus::set_setting(std::string_view id,
                                                    const core::SettingValue& value)
 {
@@ -78,7 +109,7 @@ std::int64_t now_ms()
 /// parameters. The CLI, macro playback and the script engine share this, because
 /// they share the grammar (kentoscad.md §3).
 core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>& tokens,
-                               core::AngleConvention convention)
+                               const ResolveContext& ctx)
 {
     Args args;
     core::Point2 last{};
@@ -146,7 +177,7 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
 
     const auto value_from_token = [&](const Param& p, const Token& t) -> core::Result<Value> {
         if (is_coordinate(t)) {
-            auto pt = resolve_point(t, last, convention);
+            auto pt = resolve_point(t, last, ctx);
             if (!pt) return pt.error();
             last      = pt.value();
             have_last = true;
@@ -435,7 +466,7 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
     // R10), so nothing here lets a coordinate originate in model text.
     {
         core::Point2 last{};
-        const core::AngleConvention convention = angle_convention();
+        const ResolveContext ctx = resolve_context();
         for (const auto& p : spec->params) {
             if (p.kind != ParamKind::Point && p.kind != ParamKind::PointList) continue;
             const Value* v = args->find(p.name);
@@ -452,7 +483,7 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
 
             Value::Points points;
             const auto read = [&](const std::string& text) -> core::Status {
-                auto pt = parse_point(text, last, convention);
+                auto pt = parse_point(text, last, ctx);
                 if (!pt) return pt.error();
                 last = pt.value();
                 points.push_back(pt.value());
@@ -508,7 +539,7 @@ core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin ori
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
-    auto args = bind_tokens(*spec, parsed.value().tokens, angle_convention());
+    auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
 
     return dispatch(Invocation{spec->id, std::move(args.value()), origin});
@@ -531,7 +562,7 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
-    auto args = bind_tokens(*spec, parsed.value().tokens, angle_convention());
+    auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
 
     auto tx = std::make_unique<Transaction>(doc_, spec->summary.empty() ? spec->id : spec->summary);
