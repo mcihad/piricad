@@ -12,6 +12,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <variant>
 #include <vector>
@@ -155,6 +156,23 @@ public:
     /// the order, so re-recording a parameter mid-command cannot reorder the
     /// journal line it will be written to.
     void set(std::string name, Value v);
+
+    /// Reorders the arguments to match `names`, which is the order a command's
+    /// parameters are DECLARED in; anything not named keeps its relative place at
+    /// the end.
+    ///
+    /// WHY THE JOURNAL NEEDS THIS. `Args` keeps insertion order and `to_json`
+    /// prints it, so `ÇOKGEN yontem=ic 0,0 6` and `ÇOKGEN 0,0 6 yontem=ic` — one
+    /// invocation, typed two ways — wrote two different journal lines. Article 6.4
+    /// asks for a BYTE-IDENTICAL journal from the GUI, the command line and a
+    /// script, and the three cannot be made to agree on a typing order: a tool
+    /// that starts `KILAVUZ yon=45g` and then asks for the point genuinely binds
+    /// `yon` first, while a typed line puts the positional point first.
+    ///
+    /// The declared order is the one thing every client shares, so the record is
+    /// written in it. Nothing else changes: the same arguments with the same
+    /// values, in the order the command itself declares them.
+    void reorder_like(std::span<const std::string> names);
 
     /// Renames `from` to `to` IN PLACE, keeping the argument's position. Used by
     /// the bus for a `Param::was` retired name, so that an old journal line's

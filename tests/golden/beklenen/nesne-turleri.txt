@@ -121,7 +121,7 @@ gunluk
   {"seq":11,"cmd":"core.block","args":{"ad":"KAPAK","taban":[485500000,4310300000],"nesneler":[6,7]},"origin":"test","crs":"TUREF/TM36","katman":"SEMBOL"}
   {"seq":12,"cmd":"core.insert","args":{"ad":"KAPAK","nokta":[485520000,4310300000],"olcek":2.0,"aci":90.0},"origin":"test","crs":"TUREF/TM36","katman":"SEMBOL"}
   {"seq":13,"cmd":"core.insert","args":{"ad":"KAPAK","nokta":[485540000,4310300000],"olcek":-1.0,"aci":0.0},"origin":"test","crs":"TUREF/TM36","katman":"SEMBOL"}
-  {"seq":14,"cmd":"core.insert","args":{"ad":"KAPAK","nokta":[485560000,4310300000],"sutun":3,"satir":2,"sutun_aralik":5000,"satir_aralik":4000,"olcek":1.0,"aci":0.0},"origin":"test","crs":"TUREF/TM36","katman":"SEMBOL"}
+  {"seq":14,"cmd":"core.insert","args":{"ad":"KAPAK","nokta":[485560000,4310300000],"olcek":1.0,"aci":0.0,"sutun":3,"satir":2,"sutun_aralik":5000,"satir_aralik":4000},"origin":"test","crs":"TUREF/TM36","katman":"SEMBOL"}
   {"seq":15,"cmd":"core.layer","args":{"ad":"OLCULER"},"origin":"test","crs":"TUREF/TM36","katman":"OLCULER"}
   {"seq":16,"cmd":"core.dimension","args":{"birinci":[485600000,4310200000],"ikinci":[485612500,4310200000],"konum":[485600000,4310203000],"tur":"hizali","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCULER"}
   {"seq":17,"cmd":"core.dimension","args":{"birinci":[485600000,4310220000],"ikinci":[485603000,4310227000],"konum":[485610000,4310223000],"tur":"dogrusal","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCULER"}

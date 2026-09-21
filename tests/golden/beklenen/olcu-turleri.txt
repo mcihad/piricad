@@ -65,7 +65,7 @@ gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"OLCU"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
   {"seq":2,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[40000,0],"konum":[20000,-8000],"tur":"hizali","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
   {"seq":3,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[40000,30000],"konum":[20000,-20000],"tur":"dogrusal","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
-  {"seq":4,"cmd":"core.dimension","args":{"tur":"ordinat","birinci":[0,0],"ikinci":[30000,20000],"konum":[45000,20000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
-  {"seq":5,"cmd":"core.dimension","args":{"tur":"ordinat","birinci":[0,0],"ikinci":[30000,20000],"konum":[30000,40000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
-  {"seq":6,"cmd":"core.dimension","args":{"tur":"yay","birinci":[100000,0],"ikinci":[150000,0],"bitis":[100000,50000],"konum":[145000,45000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
-  {"seq":7,"cmd":"core.dimension","args":{"tur":"yay","birinci":[100000,-100000],"ikinci":[150000,-100000],"bitis":[50000,-100000],"konum":[100000,-40000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":4,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[30000,20000],"konum":[45000,20000],"tur":"ordinat","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":5,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[30000,20000],"konum":[30000,40000],"tur":"ordinat","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":6,"cmd":"core.dimension","args":{"birinci":[100000,0],"ikinci":[150000,0],"konum":[145000,45000],"tur":"yay","bitis":[100000,50000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":7,"cmd":"core.dimension","args":{"birinci":[100000,-100000],"ikinci":[150000,-100000],"konum":[100000,-40000],"tur":"yay","bitis":[50000,-100000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}

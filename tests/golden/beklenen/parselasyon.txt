@@ -105,5 +105,5 @@ gunluk
   {"seq":5,"cmd":"core.line","args":{"noktalar":[[485340000,4310240000],[485370000,4310240000],[485370000,4310270000],[485340000,4310270000],[485340000,4310240000]]},"origin":"script","crs":"TUREF/TM36","katman":"PARSEL"}
   {"seq":6,"cmd":"core.layer","args":{"ad":"YOL","renk":4284310640},"origin":"script","crs":"TUREF/TM36","katman":"YOL"}
   {"seq":7,"cmd":"core.line","args":{"noktalar":[[485290000,4310235000],[485380000,4310235000]]},"origin":"script","crs":"TUREF/TM36","katman":"YOL"}
-  {"seq":8,"cmd":"core.layer","args":{"ad":"KAPALI","renk":4288716960,"gorunur":false},"origin":"script","crs":"TUREF/TM36","katman":"KAPALI"}
+  {"seq":8,"cmd":"core.layer","args":{"ad":"KAPALI","gorunur":false,"renk":4288716960},"origin":"script","crs":"TUREF/TM36","katman":"KAPALI"}
   {"seq":9,"cmd":"core.line","args":{"noktalar":[[485290000,4310190000],[485380000,4310190000]]},"origin":"script","crs":"TUREF/TM36","katman":"KAPALI"}

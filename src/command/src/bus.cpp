@@ -786,8 +786,22 @@ core::Result<DispatchResult> Bus::finish(Session& session)
 void Bus::journal_entry(const Session& session)
 {
     JournalEntry e;
-    e.command_id   = session.spec().id;
-    e.args         = session.resolved();
+    e.command_id = session.spec().id;
+    e.args       = session.resolved();
+
+    // WRITTEN IN THE DECLARED ORDER, not the typing order. `Args` keeps insertion
+    // order, so one invocation typed two ways wrote two different journal lines —
+    // and Article 6.4 asks for a byte-identical journal from the GUI, the command
+    // line and a script. The three cannot be made to agree on a typing order: a
+    // tool that starts `KILAVUZ yon=45g` and then asks for the point binds `yon`
+    // first, while a typed line puts the positional point first. The declared
+    // order is the one thing every client shares.
+    std::vector<std::string> declared;
+    declared.reserve(session.spec().params.size());
+    for (const Param& p : session.spec().params)
+        declared.push_back(p.name);
+    e.args.reorder_like(declared);
+
     e.origin       = session.input().origin();
     e.crs          = doc_.crs().id();
     e.timestamp_ms = now_ms();

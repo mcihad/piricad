@@ -366,6 +366,34 @@ void Args::set(std::string name, Value v)
     items_.emplace_back(std::move(name), std::move(v));
 }
 
+void Args::reorder_like(std::span<const std::string> names)
+{
+    // A STABLE PARTITION BY DECLARED POSITION. An argument the spec does not name
+    // sorts after every one it does and keeps its place among its own kind, so an
+    // extra key — which the validator refuses anyway — cannot reorder the rest.
+    std::vector<std::pair<std::string, Value>> out;
+    out.reserve(items_.size());
+
+    for (const std::string& wanted : names)
+        for (auto& [name, value] : items_)
+            if (name == wanted) {
+                out.emplace_back(name, std::move(value));
+                break;
+            }
+
+    for (auto& [name, value] : items_) {
+        bool declared = false;
+        for (const std::string& wanted : names)
+            if (name == wanted) {
+                declared = true;
+                break;
+            }
+        if (!declared) out.emplace_back(name, std::move(value));
+    }
+
+    items_ = std::move(out);
+}
+
 void Args::rename(std::string_view from, std::string to)
 {
     for (auto& [name, value] : items_)

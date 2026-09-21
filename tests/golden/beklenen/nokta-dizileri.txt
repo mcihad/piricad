@@ -93,4 +93,4 @@ gunluk
   {"seq":8,"cmd":"core.leader","args":{"noktalar":[[485500000,4310500000],[485503000,4310503000],[485506000,4310503000]],"metin":"Röper","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"CIZGILER"}
   {"seq":9,"cmd":"core.layer","args":{"ad":"KOPYALAR"},"origin":"test","crs":"TUREF/TM36","katman":"KOPYALAR"}
   {"seq":10,"cmd":"core.point_draw","args":{"noktalar":[[485600000,4310200000]]},"origin":"test","crs":"TUREF/TM36","katman":"KOPYALAR"}
-  {"seq":11,"cmd":"core.copy","args":{"baslangic":[485600000,4310200000],"bitis":[[485620000,4310200000],[485640000,4310200000],[485660000,4310200000]],"nesneler":[12]},"origin":"test","crs":"TUREF/TM36","katman":"KOPYALAR"}
+  {"seq":11,"cmd":"core.copy","args":{"nesneler":[12],"baslangic":[485600000,4310200000],"bitis":[[485620000,4310200000],[485640000,4310200000],[485660000,4310200000]]},"origin":"test","crs":"TUREF/TM36","katman":"KOPYALAR"}

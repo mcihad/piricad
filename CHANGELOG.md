@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — günlük satırı artık yazım sırasına bağlı değil
+
+Article 6.4'ün öbür yarısı. `Args` ekleme sırasını tutuyor ve `to_json` onu
+basıyordu, yani `ÇOKGEN yontem=ic 0,0 6` ile `ÇOKGEN 0,0 6 yontem=ic` — bir
+çağrının iki yazımı — **iki farklı günlük satırı** yazıyordu.
+
+Üç istemciyi bir YAZIM sırasında anlaştırmak mümkün değil: `KILAVUZ yon=45g` ile
+başlayıp noktayı sonra soran bir araç gerçekten `yon`'u önce bağlar, yazılan satır
+ise konumsal noktayı öne koyar, betik ise JSON'un kendi sırasını verir. Üçünün
+paylaştığı tek şey **bildirilen parametre sırasıdır**, ve kayıt artık onunla
+yazılıyor (`Args::reorder_like`, `Bus::journal_entry`).
+
+Dört altın fikstür yenilendi ve değişimin **yalnız anahtar sırası** olduğu
+doğrulandı: her satırın JSON'u eskisine eşit, hiçbir değer kıpırdamadı. Bir kanıt
+vakası bağı kuruyor ve beklenen sırayı `Registry`'den okuyor — elle yazılmış bir
+sıra, taşınan bir parametreyle sessizce yanlışa düşerdi.
+
 ### Eklendi — geçici izleme (OTRACK): İZ ve izlerin kesişimi
 
 Planın son maddesi. Bir çizimin kendi başına cevaplayamadığı en yaygın aplikasyon

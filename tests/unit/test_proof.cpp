@@ -1424,3 +1424,46 @@ TEST_CASE("açı birimi değişse de kaydedilmiş bir açılı kılavuz aynı ye
 
     CHECK_EQ(again.doc.guides().angle(0), want);
 }
+
+TEST_CASE("PROOF: günlük satırı BİLDİRİLEN sıraya yazılır, yazım sırasına değil")
+{
+    // ARTICLE 6.4's other half. `Args` keeps insertion order and `to_json` prints
+    // it, so one invocation typed two ways wrote two different journal lines —
+    // and 6.4 asks for a BYTE-IDENTICAL journal from the GUI, the command line
+    // and a script. The three cannot be made to agree on a typing order: a tool
+    // that starts `KILAVUZ yon=45g` and then asks for the point genuinely binds
+    // `yon` first, while a typed line puts the positional point first.
+    //
+    // The declared order is the one thing every client shares, so the record is
+    // written in it.
+    Rig keyword_first;
+    REQUIRE(keyword_first.bus
+                .execute_line("ÇOKGEN yontem=ic 0,0 kenar_sayisi=6 yaricap=10", Origin::CommandLine)
+                .ok());
+
+    Rig keyword_last;
+    REQUIRE(keyword_last.bus
+                .execute_line("ÇOKGEN 0,0 kenar_sayisi=6 yaricap=10 yontem=ic", Origin::CommandLine)
+                .ok());
+
+    CHECK_EQ(what_happened(keyword_first.journal), what_happened(keyword_last.journal));
+    CHECK_EQ(keyword_first.doc.content_hash(), keyword_last.doc.content_hash());
+
+    // AND THE ORDER IS THE SPEC'S. Read from the registry rather than typed here,
+    // so a parameter added or moved in the declaration moves the record with it
+    // and this test cannot drift from what it is checking.
+    const CommandSpec* spec = keyword_first.reg.resolve("ÇOKGEN");
+    REQUIRE(spec != nullptr);
+    REQUIRE_EQ(keyword_first.journal.entries().size(), std::size_t{1});
+
+    std::vector<std::string> written;
+    for (const auto& [name, value] : keyword_first.journal.entries().front().args.items())
+        written.push_back(name);
+
+    std::vector<std::string> expected;
+    for (const Param& p : spec->params)
+        for (const std::string& name : written)
+            if (name == p.name) expected.push_back(name);
+
+    CHECK_EQ(written, expected);
+}
