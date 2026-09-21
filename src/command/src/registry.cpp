@@ -115,36 +115,6 @@ std::uint64_t Registry::fingerprint() const
     return h;
 }
 
-std::string Registry::markdown_reference() const
-{
-    std::string out = "# KentOSCad Command Reference\n\n";
-    out += "> Generated from the command registry. Do not edit by hand.\n\n";
-    out += "| Id | Names | Category | Undo | Flags | Summary |\n";
-    out += "|---|---|---|---|---|---|\n";
-
-    for (const auto& spec : specs_) {
-        out += "| `" + spec.id + "` | ";
-        for (std::size_t i = 0; i < spec.names.size(); ++i) {
-            if (i) out += ", ";
-            out += "`" + spec.names[i] + "`";
-        }
-        out += " | ";
-        out += category_name(spec.category);
-        out += " | ";
-        out += spec.undo == UndoPolicy::SingleTransaction ? "tek işlem"
-               : spec.undo == UndoPolicy::None            ? "yok"
-                                                          : "özel";
-        out += " | ";
-        if (has_flag(spec.flags, Flags::Interactive)) out += "E";
-        if (has_flag(spec.flags, Flags::Scriptable)) out += "S";
-        if (has_flag(spec.flags, Flags::AiAccessible)) out += "A";
-        if (has_flag(spec.flags, Flags::Transparent)) out += "T";
-        if (has_flag(spec.flags, Flags::ReadOnly)) out += "R";
-        out += " | " + spec.summary + " |\n";
-    }
-    return out;
-}
-
 Registry& registry()
 {
     static Registry r;

@@ -142,6 +142,20 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(canvas-edits PROPERTIES TIMEOUT 120)
 
+    # AND YARDIM → KOMUT LİSTESİ. The answer used to be the whole generated
+    # reference inside a `QMessageBox`, whose text has no scroll area: the window
+    # grew taller than the screen with no way to move it. `unit` links no Qt and
+    # so cannot see a window's height or its scrollbar; this runs the real binary,
+    # dispatches `YARDIM` the way the menu does, and checks that a page came up
+    # with every command on it, a scrollbar, and a bounded height.
+    add_test(NAME help-page
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_HELP_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(help-page PROPERTIES TIMEOUT 120)
+
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page
     # box, the author field and the encryption of what came out — plus the print

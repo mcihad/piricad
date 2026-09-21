@@ -176,7 +176,11 @@ public:
     /// empty — which is what the Katman menu and `KENTOS_SMOKE` ask for.
     void openAttributeTable(const QString& layerName = QString());
 
-    void openCommandSearch();
+    /// Opens the command list page, `YARDIM`'s answer and `Ctrl+K`'s.
+    ///
+    /// `focus_on` is a command name to open on — what `YARDIM komut=ÇİZGİ` asks
+    /// for; empty opens on the first row.
+    void openCommandSearch(const QString& focus_on = QString());
 
     /// Asks which of `candidates` the click meant, and sends the answer to the
     /// bus with `modifiers` applied.
@@ -248,6 +252,16 @@ public:
     ///
     /// It exists because a window is judged by looking at it, and a reviewer who
     /// has to build a drawing by hand before every look does not look.
+    /// `KENTOS_HELP_PROBE`: runs the help command the way its menu entry does
+    /// and checks what the user gets. Returns the number of failures.
+    ///
+    /// The help menu used to pour the generated reference into a `QMessageBox`,
+    /// whose text has no scroll area: the window grew past the bottom of the
+    /// screen and there was no way to move it. That is what this asserts
+    /// against — a page of a fixed height whose list scrolls, opened by the
+    /// command rather than by a private path.
+    int probeHelpPage();
+
     void probeDialogs();
 
     /// Builds the drawing every window probe photographs: a named layer, three
@@ -402,7 +416,6 @@ private slots:
     /// the mask through `MOD`, so the panel is a client of the bus like any other.
     void openSnapModes();
 
-    void showCommandReference();
     void openScript();
     void openDatabase();
 

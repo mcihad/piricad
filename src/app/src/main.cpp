@@ -316,10 +316,10 @@ int main(int argc, char** argv)
     // in its constructor.
     for (const char* probe :
          {"KENTOS_PRINT_PROBE", "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR", "KENTOS_DESIGNER_PROBE",
-          "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE", "KENTOS_HAND_PROBE", "KENTOS_LAYER_PROBE",
-          "KENTOS_PICK_PROBE", "KENTOS_TABLE_PROBE", "KENTOS_SCHEMA_PROBE", "KENTOS_CHAT_PROBE",
-          "KENTOS_TOOL_PROBE", "KENTOS_NORMAL_PROBE", "KENTOS_FAMILY_PROBE", "KENTOS_BUDGET_PROBE",
-          "KENTOS_PROBE_LINE"})
+          "KENTOS_HELP_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE", "KENTOS_HAND_PROBE",
+          "KENTOS_LAYER_PROBE", "KENTOS_PICK_PROBE", "KENTOS_TABLE_PROBE", "KENTOS_SCHEMA_PROBE",
+          "KENTOS_CHAT_PROBE", "KENTOS_TOOL_PROBE", "KENTOS_NORMAL_PROBE", "KENTOS_FAMILY_PROBE",
+          "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1159,6 +1159,14 @@ int main(int argc, char** argv)
 
         later([&window] { window.openCommandSearch(); });
         later([shot] { shot(QStringLiteral("5-komut-arama"), QApplication::activePopupWidget()); });
+        // Opened ON a command, which is what `YARDIM komut=ÖLÇÜ` does: the same
+        // page, with the parameter list on the right filled in. Photographed
+        // separately because an empty right-hand pane and a full one are two
+        // different pictures.
+        later([&window] { window.openCommandSearch(QStringLiteral("ÖLÇÜ")); });
+        later([shot] {
+            shot(QStringLiteral("5b-komut-ayrinti"), QApplication::activePopupWidget());
+        });
         later([] {
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
@@ -1436,6 +1444,14 @@ int main(int argc, char** argv)
             window.probeDesigner();
             QApplication::exit(0);
         });
+    }
+
+    // YARDIM → KOMUT LİSTESİ, ASSERTED. `/tests` links no Qt, so nothing there
+    // can see that the answer is a page with a scrollbar rather than a message
+    // box taller than the screen. Exits non-zero on any of it.
+    if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
     }
 
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {

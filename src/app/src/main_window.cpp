@@ -182,12 +182,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // and the window menu the platform already gives away for free.
     titleBar_ = new TitleBar(this);
     setMenuWidget(titleBar_);
-    connect(titleBar_, &TitleBar::searchRequested, this, &MainWindow::openCommandSearch);
+    connect(titleBar_, &TitleBar::searchRequested, this, [this] { openCommandSearch(); });
 
     auto* search = new QAction(this);
     search->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_K));
     search->setShortcutContext(Qt::ApplicationShortcut);
-    connect(search, &QAction::triggered, this, &MainWindow::openCommandSearch);
+    connect(search, &QAction::triggered, this, [this] { openCommandSearch(); });
     addAction(search);
     // NO `AllowTabbedDocks`, and that is a decision rather than an omission.
     //
@@ -1402,7 +1402,20 @@ void MainWindow::buildMenus()
 
     auto* about = bar->addMenu(tr("&Yardım"));
     auto* ref   = about->addAction(tr("Komut Listesi"));
-    connect(ref, &QAction::triggered, this, &MainWindow::showCommandReference);
+    // F1 EXPLICITLY, not `QKeySequence::HelpContents`, which is `Cmd+?` on
+    // macOS: every CAD program this one sits beside answers F1 with help, and a
+    // shortcut the manual prints has to be the shortcut on all three platforms.
+    ref->setShortcut(QKeySequence(Qt::Key_F1));
+    ref->setShortcutContext(Qt::ApplicationShortcut);
+    // THE MENU RUNS THE COMMAND, and the command opens the page. It used to pour
+    // the whole generated reference into a `QMessageBox`, which has no scroll
+    // area for its text and so grew a window taller than the screen — the
+    // user's words were that it does not scroll and is awful. Going through
+    // `YARDIM` rather than calling the page directly keeps the menu an ordinary
+    // client: the same line, the same transcript, the same page a typed `YARDIM`
+    // or `Ctrl+K` gets (Article 1.2).
+    connect(ref, &QAction::triggered, this,
+            [this] { controller_->runLine(QStringLiteral("YARDIM"), command::Origin::Gui); });
     about->addSeparator();
     auto* info = about->addAction(tr("Hakkında"));
     connect(info, &QAction::triggered, this, &MainWindow::showAbout);
@@ -1564,6 +1577,15 @@ void MainWindow::buildPanels()
         info.scale       = static_cast<std::int64_t>(std::llround(view.scale_denominator(dpi)));
         info.crs         = controller_->document().crs().id();
         return info;
+    };
+    // `YARDIM` ANSWERS WITH A PAGE HERE, AND WITH TEXT EVERYWHERE ELSE — the
+    // same seam as `on_print_request` and for the same reason: the command knows
+    // WHAT to show and nothing about windows, and a headless client still gets
+    // its answer because the command echoes and reports either way. It used to
+    // append ninety-eight lines to the transcript, which is a list you scroll
+    // past rather than a list you read.
+    controller_->bus().on_help_page = [this](const std::string& focus_on) {
+        openCommandSearch(QString::fromStdString(focus_on));
     };
     toolsPanel_->setScenePicker(
         [this](FieldKind kind, std::function<void(std::optional<QString>)> done) {
@@ -2911,6 +2933,65 @@ void MainWindow::probeDesigner()
     designer.close();
 }
 
+int MainWindow::probeHelpPage()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[yardim] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+
+    // EXACTLY WHAT THE MENU DOES. Not `openCommandSearch`: the point is that the
+    // command reaches the page, which is the seam the menu, `Ctrl+K`, a typed
+    // `YARDIM` and an agent all share.
+    //
+    // The transcript's own sink is borrowed for the call so the lines can be
+    // counted as well as shown: the page is the answer for a person, and the
+    // text is still the answer for a script, and BOTH have to happen.
+    std::vector<std::string> said;
+    auto transcript            = controller_->bus().on_echo;
+    controller_->bus().on_echo = [&said](std::string_view line) { said.emplace_back(line); };
+    controller_->runLine(QStringLiteral("YARDIM"), command::Origin::Gui);
+    controller_->bus().on_echo = std::move(transcript);
+    QCoreApplication::processEvents();
+
+    for (const std::string& line : said)
+        (void)std::fprintf(stdout, "[yardim] metin| %s\n", line.c_str());
+    check(
+        said.size() > 1 && said.size() < 20,
+        QStringLiteral("metin de yazıldı, ama bir liste dökümü değil (%1 satır)").arg(said.size()));
+
+    check(palette_ != nullptr, QStringLiteral("YARDIM sayfayı açtı"));
+    if (palette_ == nullptr) return failures;
+    check(palette_->isVisible(), QStringLiteral("sayfa görünür"));
+
+    const CommandPalette::Shown page = palette_->shown();
+    (void)std::fprintf(stdout, "[yardim] %d komut, %d başlık, kaydırma %d, yükseklik %d\n",
+                       page.commands, page.headings, page.scroll_max, page.height);
+
+    check(page.commands == static_cast<int>(controller_->registry().size()),
+          QStringLiteral("her komut listede (%1)").arg(controller_->registry().size()));
+    check(page.headings > 1, QStringLiteral("kategori başlıkları var"));
+    // The two complaints, in order: it scrolls, and it does not grow past a
+    // screen. A list that fits has `maximum() == 0`; this one cannot fit.
+    check(page.scroll_max > 0, QStringLiteral("liste kaydırılabiliyor"));
+    check(page.height > 0 && page.height < 900, QStringLiteral("sayfa ekranı aşmıyor"));
+    check(!page.selected.isEmpty(), QStringLiteral("bir komut seçili"));
+    check(!page.detail.isEmpty(), QStringLiteral("sağ bölme dolu"));
+
+    // And asked about ONE command, the page opens on it — the `komut=` form.
+    controller_->runLine(QStringLiteral("YARDIM komut=ÖLÇÜ"), command::Origin::Gui);
+    QCoreApplication::processEvents();
+    const CommandPalette::Shown on_one = palette_->shown();
+    check(on_one.selected == QStringLiteral("ÖLÇÜ"),
+          QStringLiteral("YARDIM komut=ÖLÇÜ ÖLÇÜ'yü seçti (%1)").arg(on_one.selected));
+    check(on_one.detail == QStringLiteral("ÖLÇÜ"), QStringLiteral("sağ bölme ÖLÇÜ'yü anlatıyor"));
+
+    palette_->hide();
+    return failures;
+}
+
 void MainWindow::probeDialogs()
 {
     const auto say = [](const QString& text) {
@@ -3066,7 +3147,7 @@ void MainWindow::probeDialogs()
     }
 }
 
-void MainWindow::openCommandSearch()
+void MainWindow::openCommandSearch(const QString& focus_on)
 {
     if (!palette_) {
         palette_ = new CommandPalette(controller_->registry(), this);
@@ -3080,7 +3161,7 @@ void MainWindow::openCommandSearch()
             commandLine_->setFocus(Qt::ShortcutFocusReason);
         });
     }
-    palette_->reveal();
+    palette_->reveal(focus_on);
 }
 
 void MainWindow::resetLayout()
@@ -3419,16 +3500,6 @@ void MainWindow::refreshStatus()
     readout_->setScale(ground_mm_per_paper_mm > 0.0
                            ? tr("1 : %1").arg(groupedNumber(qRound(ground_mm_per_paper_mm)))
                            : QStringLiteral("—"));
-}
-
-void MainWindow::showCommandReference()
-{
-    // Generated from the registry, never hand-written (kentoscad.md §2.3).
-    QMessageBox box(this);
-    box.setWindowTitle(tr("Komut Listesi"));
-    box.setTextFormat(Qt::MarkdownText);
-    box.setText(QString::fromStdString(controller_->registry().markdown_reference()));
-    box.exec();
 }
 
 void MainWindow::runScriptLine(const QString& line)

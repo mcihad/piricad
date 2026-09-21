@@ -5,8 +5,15 @@ program içinden komut listesine ve tek bir komutun parametrelerine ulaşabilece
 
 ## Ne yapar
 
-Parametresiz çağrıldığında bütün komutları adları ve açıklamalarıyla listeler. `komut`
-parametresi verildiğinde tek bir komutun parametrelerini, tiplerini ve adetlerini yazar.
+Parametresiz çağrıldığında komutları kategorilerine göre özetler ve — arayüzde —
+**Komut Listesi sayfasını** açar: solda kategori başlıkları altında bütün komutlar,
+sağda imlecin üzerinde olduğu komutun aldığı parametreler. `komut` parametresi
+verildiğinde tek bir komutun parametrelerini, tiplerini ve adetlerini yazar; sayfa da
+o komutun üzerinde açılır.
+
+Sayfa arayüzün işidir, metin ise her istemcinin: betikten, komut satırından ya da bir
+ajandan çağrıldığında `YARDIM` metni aynı biçimde yazar. Komut, karşısında bir pencere
+olup olmadığına bakmaz.
 
 Listenin kaynağı komut kaydıdır. Yeni bir komut eklendiğinde `YARDIM` onu **kendiliğinden**
 bilir; elle güncellenen ikinci bir liste yoktur.
@@ -44,23 +51,23 @@ Bütün komutları listele:
 YARDIM
 ```
 
-Çıktı:
+Çıktı — kategori başına bir satır, tamamı için sayfa:
 
 ```text
-Komutlar (12):
-    ÇİZGİ, CIZGI, LINE, Ç, L  — İki veya daha fazla nokta arasında doğru parçaları çizer.
-    SİL, SIL, ERASE, E  — Seçilen nesneleri siler.
-    SEÇ, SEC, SELECT, S  — Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
-    KATMAN, LAYER, KAT  — Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
-    YAKINLAŞ, YAKINLAS, ZOOM, Z  — Görünümü çizim kapsamına veya verilen çarpana ayarlar.
-    GERİAL, GERIAL, UNDO, U  — Son işlemi geri alır.
-    YİNELE, YINELE, REDO  — Geri alınan işlemi yineler.
-    BETİK, BETIK, SCRIPT  — Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
-    AYAR, SETTING, AY  — Proje ayarlarını listeler, okur ve değiştirir.
-    TERCİH, TERCIH, PREFERENCE, PREF  — Uygulama tercihlerini listeler, okur ve değiştirir.
-    MOD, MODE, MD  — Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir.
-    YARDIM, HELP, ?  — Komut listesini veya tek bir komutun ayrıntısını gösterir.
+Komutlar (97). Ayrıntı: YARDIM komut=<ad>; aramak için Ctrl+K.
+Çizim (20): ÇİZGİ, ÇOKLUÇİZGİ, NOKTA, METİN, ALAN, DİKDÖRTGEN, DAİRE, YAY, DİLİM, HALKA, ELİPS, SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER, KILAVUZ, ETİKET, EŞYÜKSELTİ
+Düzenleme (31): YAZIDÜZENLE, KÖŞETAŞI, KÖŞEEKLE, ALANAÇEVİR, TAŞI, KOPYALA, DİZİ, BİRLEŞTİR, BÖL, BUDA, UZAT, PAH, YUVARLA, KATMANAT, STİLKOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA, OFSET, ÖZNİTELİK, SÜTUN, SİL, SEÇ, OTURT, DÖNÜŞTÜR, TEVHİT, İFRAZ, ALANİFRAZ, ALANDÜZENLE, BAĞÇÖZ, BAĞLA
+Görünüm (2): KAYDIR, YAKINLAŞ
+Katman (4): KATMAN, KATMANGÖRÜNÜM, STİL, SEMBOL
+Dosya (14): STİLAKTAR, NOKTALAR, ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON, YENİ, AÇ, KAYDET, FARKLIKAYDET, İÇEAKTAR, DIŞAAKTAR, VERİTABANI, YAZDIR, YAZDIRMAPROFİLİ
+Sorgu (14): ÖLÇ, ALANÖLÇ, KOORDİNAT, APLİKASYON, TOPOLOJİ, HACİM, KATMANLAR, ÖZNİTELİKŞEMASI, SORGULA, SEÇİMBİLGİSİ, GÖRÜNÜMBİLGİSİ, BAĞLAM, ARAÇARA, İŞŞABLONU
+İşlem (2): UZUNLUKYAZ, KÖŞENUMARALA
+Betik (1): BETİK
+Sistem (9): GERİAL, YİNELE, AYAR, TERCİH, MOD, YARDIM, ÖNERİ, MCPSUNUCU, YAPAYZEKAMODELİ
 ```
+
+Komut sayısı ve adlar sizin yapınızdaki kayda göre değişir; yukarıdaki çıktı 97 komutlu
+bir yapıdan alınmıştır.
 
 Tek bir komutun ayrıntısı:
 
@@ -83,8 +90,20 @@ Kısaltma da çalışır:
 
 ### Arayüz
 
-**Yardım > Komut Listesi** menüsü aynı listeyi biçimlendirilmiş bir tablo hâlinde açar:
-komut kimliği, adları, kategorisi, geri alma davranışı, özellikleri ve açıklaması.
+**Yardım > Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
+yazmak da aynı sayfayı açar. Üçü de aynı komutu çalıştırır, ayrı bir yol yoktur.
+
+Sayfanın düzeni:
+
+| Bölüm | Ne gösterir |
+|---|---|
+| Üst alan | Süzgeç. Yazdığınız şey ad, kısaltma, komut kimliği ve açıklamada aranır; `cizgi` yazmak `ÇİZGİ`yi bulur |
+| Sol liste | Kategori başlıkları (Çizim, Düzenleme, Görünüm, Katman, Dosya, Sorgu, İşlem, Betik, Sistem) altında komutlar: adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
+| Sağ bölme | İmlecin üzerinde olduğu komut: kategorisi, komut kimliği, kabul ettiği bütün yazımlar, açıklaması ve parametre listesi — her parametrenin tipi, gerekli mi, aralığı, birimi ve varsa sözcük listesi |
+| Alt satır | Komut sayısı ve tuşlar |
+
+Tuşlar: `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazar (parametrelerini
+orada tamamlarsınız), `Esc` kapatır. Süzgeç alanındaki imleç hiç oradan ayrılmaz.
 
 **Yardım > Hakkında** sürüm, lisans, etkin çizim arka ucu ve komut sayısını gösterir.
 

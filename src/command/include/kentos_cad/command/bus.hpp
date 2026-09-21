@@ -822,6 +822,23 @@ public:
     /// a sheet came out.
     std::function<Task<core::Result<std::string>>(const PrintRequest&)> on_print_request;
 
+    /// Shows the command list as a PAGE, when something can show one.
+    ///
+    /// `YARDIM` answered by echoing one line per command into the transcript —
+    /// ninety-eight of them, which pushed the running conversation out of sight
+    /// and took the scroll position with it. A listing is a thing you read, not
+    /// a thing you scroll back through.
+    ///
+    /// THE SAME SEAM AS `on_print_request`, AND FOR THE SAME REASON. A command
+    /// body may not ask where it was called from (command.md P10), so the shell
+    /// installs this and opens the page while a script, a batch run and an agent
+    /// — which have no handler and no screen — get the grouped text answer and
+    /// the structured `report` instead. One command, one behaviour, and the
+    /// difference is in what the host can do rather than in who asked.
+    ///
+    /// The argument is the command to open on, or empty for the whole list.
+    std::function<void(const std::string&)> on_help_page;
+
     /// Asked by `core.saveas` and `core.export` before they build their request:
     /// the file the document currently belongs to, so the transcript and the GUI
     /// dialog can start where the user last was. NOT document state (model.md

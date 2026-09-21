@@ -6,6 +6,47 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — komut listesi: doksan sekiz transkript satırı ve bir taşan pencere yerine bir sayfa
+
+`YARDIM` bütün komutları transkripte döküyordu — her komut için adı, bütün
+eşadları ve açıklaması, doksan sekiz satır. Transkript akan bir konuşmadır, yani
+bu döküm kullanıcının o ana kadar yaptığı her şeyi görünmez yere itiyor ve kaydırma
+konumunu da beraberinde götürüyordu. **Yardım > Komut Listesi** ise üretilmiş
+referansın tamamını bir `QMessageBox`'a koyuyordu; bir `QMessageBox`'ın metni
+kaydırma alanı taşımaz, dolayısıyla pencere ekranın altından taşıyor ve kaydırmanın
+yolu olmuyordu. Kullanıcının ifadesiyle: *"scroll olmuyor ve aşağı doğru uzayıp
+gitmiş"*, *"çok geç açılıyor"*, *"berbat"*.
+
+Bir liste TEK bir soruyu yanıtlar — ne var — ve bunun cevabı okunacak bir sayfadır,
+geriye kaydırılacak bir konuşma değil.
+
+- **Sayfa.** 980×560; solda dokuz kategori başlığı altında 97 komut (adı, tek satır
+  açıklaması, sağ kenarda kısaltmaları), sağda imlecin üzerindeki komutun kategorisi,
+  kimliği, bütün yazımları ve **parametre listesi**: her parametrenin tipi,
+  gerekliliği, aralığı, birimi ve varsa sözcük listesi. Liste kaydırılır, yatay
+  kaydırma çubuğu yoktur, yükseklik sabittir.
+- **Dört yol, bir sayfa.** `Ctrl+K`, **Yardım > Komut Listesi**, yeni **F1** ve komut
+  satırına yazılan `YARDIM` aynı komutu çalıştırır. Menü artık `YARDIM` satırını veri
+  yoluna gönderiyor; kendine ait bir yolu yok (Article 1.2).
+- **Metin her istemciye yine yazılıyor,** ama kategori başına bir satır: on satır,
+  doksan sekiz değil. Betik, başsız çalıştırma ve ajan için komut ayrıca
+  `Context::report` ile bütün kümeyi veri olarak döndürüyor — kimlik, adlar, kategori
+  ve özet — yani makine artık yüz echo satırını kazımak yerine tek cevap okuyor
+  (command.md R26).
+- **Dikiş, dal değil.** `Bus::on_help_page`, `on_print_request` ile aynı kalıpta:
+  komut NEYİ göstereceğini bilir, pencereler hakkında hiçbir şey bilmez ve hiçbir
+  komut `InputSource`'a bakmaz (command.md P10).
+- `Registry::markdown_reference()` kaldırıldı: tek tüketicisi o pencereydi ve komut
+  listesinin üçüncü bir sunumuydu.
+- **Kanıt:** `tests/unit/test_command.cpp` metnin kategorilere göre yazıldığını,
+  satır sayısının komut sayısıyla büyümediğini, dikişin doğru adla çağrıldığını ve
+  bilinmeyen bir adda hiç çağrılmadığını sınıyor. `/tests` Qt bağlamadığı için
+  pencerenin yüksekliğini ve kaydırma çubuğunu göremez: yeni `help-page` ctest'i
+  (`KENTOS_HELP_PROBE`) gerçek ikiliyi çalıştırıp `YARDIM`'ı menünün yolundan
+  gönderiyor ve sayfanın açıldığını, 97 komutun listede olduğunu, listenin
+  kaydırıldığını, yüksekliğin ekranı aşmadığını ve `YARDIM komut=ÖLÇÜ`'nün sayfayı
+  ÖLÇÜ üzerinde açtığını doğruluyor.
+
 ### Eklendi — nokta fonksiyonları: koordinatı yazmak yerine nasıl bulunduğunu yazmak
 
 Bir harita mühendisi araziden koordinatla dönmez; iki bilinen noktadan ölçülmüş

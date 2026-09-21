@@ -155,14 +155,16 @@ ortak kaynağıdır. Ayrıntı: [Komut günlüğü](../mimari/gunluk.md).
 YARDIM
 ```
 
-Bütün komutları adları ve açıklamalarıyla listeler. Tek bir komutun ayrıntısı için:
+Komutları kategorilerine göre özetler ve **Komut Listesi sayfasını** açar: solda bütün
+komutlar, sağda seçili komutun parametreleri. Tek bir komutun ayrıntısı için:
 
 ```
 YARDIM komut=ÇİZGİ
 ```
 
-Aynı listeye **Yardım > Komut Listesi** menüsünden de ulaşılır. Her iki liste de komut
-kaydından üretilir; elle tutulan ikinci bir liste yoktur.
+Sayfa o komutun üzerinde açılır. Aynı sayfaya **Yardım > Komut Listesi** (`F1`) ve
+`Ctrl+K` ile de ulaşılır; üçü de aynı komutu çalıştırır. Liste komut kaydından üretilir;
+elle tutulan ikinci bir liste yoktur.
 
 ## Sırada ne var
 

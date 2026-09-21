@@ -47,6 +47,17 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
 4. **`Mm` int64**; trigonometri `double` yerel, sonuç yuvarlanır; iki platformda farklı bit = hata (2.5).
 5. **Mevzuat sabiti C++'a yazılmaz** (5.13): poligon toleransları, ölçü metin yükseklikleri `/data/catalogs`.
 6. **Türkçe önce** (R7), `AiAccessible` — bu komutlar AI'nin eğitim yüzeyi (2.8).
+6a. **Araç eklenirken arayüzü de eklenir.** Kullanıcının talimatı: *"araçları eklerken arayüz ile
+   kullanımlarını ve ilave araçları da arayüze eklemen gerekiyor"*. Yeni bir komut yalnız komut
+   satırından çalışıyorsa paket bitmemiştir. Her pakette, o paketin komutları için:
+   menü girişi (**Çizim** / **Değiştir** / **Harita** / **Analiz**), gereken yerde araç çubuğu
+   düğmesi ve `Glyph`, F-tuşu ya da kısayol gerekiyorsa o, yeni yakalama bitinin **F3 menüsünde**
+   ve `MOD` listesinde görünmesi, yeni seçim kipinin durum çubuğu ipucunda görünmesi, ve
+   `docs/komutlar/<slug>.md`'nin **Arayüz** bölümünün gerçekten yazılmış olması. Bu 5.15'in
+   (fareyle erişilemeyen özellik yok) ve 1.2'nin (GUI eşit istemci) uygulamasıdır: bir jest
+   komutu çağırır, komut jesti taklit etmez. Gerekli bir bileşen setin dışındaysa `widgets.cpp`
+   /`fields.cpp`'ye girer ve 6.13'e göre canlı standarda, kapı envanterine ve
+   `docs/baslangic/bilesenler.md`'ye aynı değişiklikte eklenir.
 7. **Bitti** = command.md DoD + Article 6: `KENTOS_COMMAND` tek beyan · `make reference` + dört üretilmiş
    dosya aynı commit'te (6.14) · `docs/komutlar/<slug>.md` sekiz bölüm + `docs/README.md` satırı (6.12) ·
    `test_proof.cpp` eşitlik kanıtı + günlük replay (6.4) · iptal testi (boş undo deltası) · `Value`

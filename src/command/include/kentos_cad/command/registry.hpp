@@ -55,9 +55,6 @@ public:
     /// could differ.
     std::uint64_t fingerprint() const;
 
-    /// Generated command reference, Markdown. Never hand-written.
-    std::string markdown_reference() const;
-
     std::size_t size() const noexcept { return specs_.size(); }
 
 private:

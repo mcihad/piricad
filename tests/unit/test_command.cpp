@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 
 #include "kentos_cad/command/bus.hpp"
@@ -1465,6 +1466,92 @@ TEST_CASE("a failing rule rolls the whole transaction back")
     // No partial application, ever (kentoscad.md §2.5).
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
     CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+}
+
+TEST_CASE("YARDIM: liste kategorilere göre, satır sayısı komut sayısı kadar değil")
+{
+    // THE LISTING IS NINE LINES, NOT NINETY-EIGHT.
+    //
+    // `YARDIM` echoed one line per command — name, every alias and the summary —
+    // into the transcript, which is a running conversation: a hundred appends
+    // pushed everything the user had done out of sight and took the scroll
+    // position with it. It was reported as a command list that "stretches away
+    // downwards" and "opens far too late".
+    //
+    // What a listing answers is what EXISTS, and a category answers that better
+    // than a sentence repeated for every command. The count is asserted against
+    // the registry rather than against a number typed here, so the day a tenth
+    // category is declared this test says so instead of drifting.
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("YARDIM", Origin::Test).ok());
+
+    std::size_t lines = 0;
+    for (const char c : said)
+        if (c == '\n') ++lines;
+
+    std::set<Category> groups;
+    for (const auto& spec : f.bus.registry().all())
+        if (!spec.names.empty()) groups.insert(spec.category);
+
+    // One heading line plus one line per category that has anything in it.
+    CHECK_EQ(lines, groups.size() + 1);
+    CHECK(lines < f.bus.registry().size() / 4);
+
+    // Every category present is named, and the first line says where to go next.
+    for (const Category c : groups)
+        CHECK_MESSAGE(said.find(category_name(c)) != std::string::npos, category_name(c));
+    CHECK(said.find("YARDIM komut=") != std::string::npos);
+
+    // AND THE WHOLE SET STILL LEAVES, as data. An agent reads one answer instead
+    // of scraping a hundred echo lines (command.md R26).
+    const auto result = f.bus.execute_line("YARDIM", Origin::Test);
+    REQUIRE(result.ok());
+    const core::Json& report = result.value().report;
+    const core::Json* count  = report.find("sayi");
+    const core::Json* all    = report.find("komutlar");
+    REQUIRE(count != nullptr);
+    REQUIRE(all != nullptr);
+    CHECK_EQ(count->as_int(), static_cast<std::int64_t>(f.bus.registry().size()));
+    CHECK_EQ(all->as_array().size(), f.bus.registry().size());
+    const core::Json* names = all->as_array().front().find("adlar");
+    REQUIRE(names != nullptr);
+    CHECK(!names->as_array().empty());
+}
+
+TEST_CASE("YARDIM sayfayı açtırır, ama metni her istemciye yine yazar")
+{
+    Fixture f;
+
+    // THE SEAM, NOT A BRANCH ON THE CLIENT. `run_help` asks whoever can show a
+    // page to show one and writes its text regardless, so the answer a script
+    // reads does not depend on whether a window happened to be open
+    // (command.md P10 — nothing looks at `InputSource`).
+    std::vector<std::string> opened;
+    f.bus.on_help_page = [&opened](const std::string& on) { opened.push_back(on); };
+
+    std::vector<std::string> said;
+    f.bus.on_echo = [&said](std::string_view line) { said.emplace_back(line); };
+
+    REQUIRE(f.bus.execute_line("YARDIM", Origin::Test).ok());
+    REQUIRE_EQ(opened.size(), std::size_t{1});
+    CHECK(opened.front().empty()); ///< the whole list
+    CHECK(said.size() > 1);        ///< and the text came too
+
+    // Asked about one command, the page opens ON it — by the primary Turkish
+    // name, whatever spelling was typed.
+    said.clear();
+    REQUIRE(f.bus.execute_line("YARDIM komut=cizgi", Origin::Test).ok());
+    REQUIRE_EQ(opened.size(), std::size_t{2});
+    CHECK_EQ(opened.back(), "ÇİZGİ");
+    CHECK(!said.empty());
+
+    // An unknown name opens nothing: there is no page for a command that is not
+    // there, and the error is the whole answer.
+    REQUIRE(f.bus.execute_line("YARDIM komut=YOKBÖYLEBİRŞEY", Origin::Test).ok());
+    CHECK_EQ(opened.size(), std::size_t{2});
 }
 
 TEST_CASE("read-only commands never become an undo step")

@@ -58,15 +58,26 @@ boyutlandırmak, ekran kenarına yapıştırmak, sağ tıkla pencere menüsünü
 Onun hemen altındaki 34 px'lik **menü şeridi** uygulamanındır: solda on menü,
 ortada açık belgenin adı ve sürümü, sağda **komut arama** ile kullanıcı baş harfi.
 
-### Komut arama — `Ctrl+K`
+### Komut listesi — `Ctrl+K`
 
-Kutucuğa tıklayın ya da **Ctrl+K**'ya basın: bir arama penceresi açılır ve
-yazdıkça komutları süzer. Liste `Registry`'den üretilir; yani bugün var olan her
-komut oradadır ve yarın eklenen komut da hiçbir liste güncellenmeden orada olur.
+Kutucuğa tıklayın, **Ctrl+K**'ya basın, **Yardım > Komut Listesi**'ni (`F1`) seçin
+ya da komut satırına `YARDIM` yazın: dördü de aynı sayfayı açar. Üstte süzgeç, solda
+kategori başlıkları altında bütün komutlar, sağda imlecin üzerinde olduğu komutun
+aldığı parametreler.
+
+| Bölüm | Ne gösterir |
+|---|---|
+| Süzgeç | Yazdıkça süzer; ad, kısaltma, komut kimliği ve açıklama aranır |
+| Sol liste | Çizim · Düzenleme · Görünüm · Katman · Dosya · Sorgu · İşlem · Betik · Sistem başlıkları altında komut adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
+| Sağ bölme | Komutun kategorisi, kimliği, kabul ettiği bütün yazımlar, açıklaması ve parametreleri — her parametrenin tipi, gerekliliği, aralığı, birimi ve varsa sözcük listesi |
+| Alt satır | Komut sayısı ve tuşlar |
+
+Liste `Registry`'den üretilir; yani bugün var olan her komut oradadır ve yarın eklenen
+komut da hiçbir liste güncellenmeden orada olur.
 
 Arama Türkçe katlamayla çalışır: `cizgi` yazınca `ÇİZGİ`, `olcek` yazınca `ÖLÇEK`
-bulunur. Seçtiğiniz komut komut satırına yazılır, imleç sonuna gelir — çünkü
-argümanı olan bir komutun argümanı yazılmalıdır.
+bulunur. `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazıp imleci sonuna
+koyar — çünkü argümanı olan bir komutun argümanı yazılmalıdır — `Esc` kapatır.
 
 ## Menü çubuğu
 
@@ -88,7 +99,7 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 | **Analiz** | Öznitelik Tablosu (**F6**), Yapay Zekâ Önerisi |
 | **Katman** | Katman, Katman Yöneticisi · Tümünü Göster, Gösterimi Ters Çevir |
 | **Pencere** | Panellerin açık/kapalı durumu, Yerleşimi Sıfırla |
-| **Yardım** | Komut Listesi, Hakkında |
+| **Yardım** | Komut Listesi (**F1**), Hakkında |
 
 ## Araç çubuğu
 
@@ -287,6 +298,7 @@ düşecektir.
 
 | Kısayol | Ne yapar |
 |---|---|
+| **F1** | Komut listesi sayfası — `Ctrl+K` ile aynı |
 | **F3** | Nesne yakalamayı açar/kapatır |
 | **Shift+F3** | **Yakalama modları listesini açar** — hangi modların açık olduğunu seçersiniz |
 | **F8** | Dik modu açar/kapatır — imleci yatay ve düşey eksene kilitler |
@@ -713,7 +725,7 @@ yapabilecekleriniz:
 
 | Tuş | İşlev |
 |---|---|
-| **Ctrl+K** | Komut arama — yazdıkça süzülen komut listesi |
+| **Ctrl+K** | Komut listesi — kategorilere ayrılmış, yazdıkça süzülen sayfa |
 | **Ctrl+9** | Komut satırını açar veya kapatır |
 | Komut satırına yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |
@@ -724,6 +736,7 @@ yapabilecekleriniz:
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |
+| **F1** | [Komut listesi](../komutlar/help.md) — `Ctrl+K` ile aynı sayfa |
 | **F6** | [Öznitelik tablosu](../veri/oznitelik-tablosu.md) |
 | **F12** | Geliştirici bilgisi |
 | **Alt** + menünün altçizgili harfi | Menüleri açar; altçizgiler yalnızca Alt basılıyken görünür |
