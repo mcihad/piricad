@@ -70,7 +70,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.leader`](leader.md) | Lider | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`core.points`](points.md) | Nokta Listesi | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
-| [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
+| [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | Öznitelik | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | Sütun | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
 | [`core.erase`](erase.md) | Sil | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -889,12 +889,14 @@ Ayrıntılı kullanım: [NOKTALAR](points.md)
 
 ### `core.guide` — KILAVUZ (Kılavuz)
 
-Cetvel kılavuzu ekler, listeler ve siler.
+Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `yon` | text | isteğe bağlı | yatay | düşey; yoksa kılavuzlar listelenir |
+| `yon` | text | isteğe bağlı | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir |
 | `deger` | integer | isteğe bağlı | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
+| `nokta` | point_list | isteğe bağlı | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa |
+| `tur` | text | isteğe bağlı | doğru: iki yöne sonsuz · ışın: noktadan ileriye |
 | `sil` | bool | isteğe bağlı | Verilen yerdeki kılavuzu siler |
 
 Ayrıntılı kullanım: [KILAVUZ](guide.md)
@@ -2971,17 +2973,30 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_guide",
     "title": "Kılavuz",
-    "description": "Cetvel kılavuzu ekler, listeler ve siler.\nKomut: KILAVUZ (GUIDE, KLV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler.\nKomut: KILAVUZ (GUIDE, KLV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "yon": {
           "type": "string",
-          "description": "yatay | düşey; yoksa kılavuzlar listelenir (metin)"
+          "description": "yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir (metin)"
         },
         "deger": {
           "type": "integer",
           "description": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı)"
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "tur": {
+          "type": "string",
+          "enum": [
+            "dogru",
+            "isin"
+          ],
+          "description": "doğru: iki yöne sonsuz · ışın: noktadan ileriye (metin)"
         },
         "sil": {
           "type": "boolean",

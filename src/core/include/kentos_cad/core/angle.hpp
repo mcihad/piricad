@@ -178,6 +178,17 @@ Point2 polar_offset(double distance_metres, double angle, AngleConvention conven
 /// axis (§7.3).
 Point2 polar_offset_turns(double distance_metres, double turns, AngleRule rule) noexcept;
 
+/// The MATHEMATICAL direction of an angle written under `convention`: whole
+/// micro-degrees counter-clockwise from east, which is `atan2_udeg`'s own unit
+/// and what `sin_cos_udeg` takes back.
+///
+/// The inverse of the conversion `direction_turns` does on the way out, and here
+/// so that both ends of it live in one file: a stored direction and a typed one
+/// must agree or a drafting guide drawn at 45 grad snaps at 55. Semt is clockwise
+/// from north, so the mathematical angle is a quarter turn minus the reading,
+/// folded into one circle by exact integer steps.
+std::int64_t math_udeg_from_angle(double value, AngleConvention convention) noexcept;
+
 /// The direction from `from` to `to` under `rule`, as a fraction of a full turn
 /// in [0, 1). Semt is clockwise from north, matematik counter-clockwise from
 /// east. The zero vector answers 0. Deterministic: `atan2_udeg`, not libm.

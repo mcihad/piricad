@@ -1050,12 +1050,22 @@ Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& u
 
 Status Document::add_guide(GuideAxis axis, Mm coordinate, Op& undo_out)
 {
-    undo_out              = Op{};
-    undo_out.kind         = Op::Kind::SetGuides;
-    undo_out.guide_axes   = guides_.axes();
-    undo_out.guide_coords = guides_.coordinates();
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetGuides;
+    undo_out.guides = guides_.rows();
 
     guides_.add(axis, coordinate);
+    ++revision_;
+    return ok();
+}
+
+Status Document::add_angled_guide(Point2 through, std::int64_t angle, bool ray, Op& undo_out)
+{
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetGuides;
+    undo_out.guides = guides_.rows();
+
+    guides_.add_angled(through, angle, ray);
     ++revision_;
     return ok();
 }
@@ -1066,10 +1076,9 @@ Status Document::remove_guide(std::size_t index, Op& undo_out)
         return err(ErrorCode::NotFound, "Kılavuz yok: " + std::to_string(index) + ". Çizimde " +
                                             std::to_string(guides_.size()) + " kılavuz var.");
 
-    undo_out              = Op{};
-    undo_out.kind         = Op::Kind::SetGuides;
-    undo_out.guide_axes   = guides_.axes();
-    undo_out.guide_coords = guides_.coordinates();
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetGuides;
+    undo_out.guides = guides_.rows();
 
     guides_.remove(index);
     ++revision_;
@@ -1101,9 +1110,9 @@ void Document::load_layouts(std::vector<Layout> layouts)
     ++revision_;
 }
 
-void Document::set_guides(std::vector<GuideAxis> axes, std::vector<Mm> coords)
+void Document::set_guides(std::vector<GuideRow> rows)
 {
-    guides_.load(std::move(axes), std::move(coords));
+    guides_.load(std::move(rows));
     ++revision_;
 }
 
@@ -1372,11 +1381,10 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetGuides: {
         // The inverse of "restore this list" is "restore the list that is here
         // now", which is what makes a guide change redoable as well as undoable.
-        inverse              = Op{};
-        inverse.kind         = Op::Kind::SetGuides;
-        inverse.guide_axes   = guides_.axes();
-        inverse.guide_coords = guides_.coordinates();
-        set_guides(op.guide_axes, op.guide_coords);
+        inverse        = Op{};
+        inverse.kind   = Op::Kind::SetGuides;
+        inverse.guides = guides_.rows();
+        set_guides(op.guides);
         return ok();
     }
     case Op::Kind::SetLayouts: {

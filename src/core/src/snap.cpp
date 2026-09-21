@@ -1082,7 +1082,43 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         bool have_h = false, have_v = false;
         Mm dh = q.radius, dv = q.radius;
 
+        // AN ANGLED GUIDE CANNOT BE FOLDED INTO THE TWO AXES, so it is answered on
+        // its own terms: the foot of the perpendicular onto the line, and the
+        // nearest such foot wins. It is tried against the cardinal pair rather
+        // than after it, because a user who drew a 45° guide through a corner
+        // means that line and not the horizontal one four metres away.
+        Point2 best_angled{};
+        bool have_angled = false;
+        Mm da            = q.radius;
+
         for (std::size_t i = 0; i < guides.size(); ++i) {
+            if (guides.axis(i) == GuideAxis::Angled) {
+                const Point2 at  = guides.through(i);
+                const SinCos dir = sin_cos_udeg(guides.angle(i));
+                // A METRE ALONG THE DIRECTION names the line. The span only has to
+                // be long enough that `closest_point_on_line` is not degenerate
+                // and short enough that `t` keeps its meaning in millimetres.
+                const Point2 along{at.x + mm_round(dir.cos * 1000000.0),
+                                   at.y + mm_round(dir.sin * 1000000.0)};
+                Point2 foot{};
+                double t = 0.0;
+                if (!closest_point_on_line(at, along, q.aim, foot, t)) continue;
+
+                // A RAY RUNS FORWARD ONLY. Behind its point there is no line, so
+                // the foot is the point itself — which is what a drafter sees when
+                // they pull a one-sided guide off a corner.
+                if (guides.ray(i) && t < 0.0) foot = at;
+
+                const Mm d = mm_round(std::hypot(static_cast<double>(foot.x - q.aim.x),
+                                                 static_cast<double>(foot.y - q.aim.y)));
+                if (d < da || (!have_angled && d <= da)) {
+                    da          = d;
+                    best_angled = foot;
+                    have_angled = true;
+                }
+                continue;
+            }
+
             const Mm c = guides.coordinate(i);
             if (guides.axis(i) == GuideAxis::Horizontal) {
                 const Mm d = abs_mm(c - q.aim.y);
@@ -1104,7 +1140,27 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         }
 
         if (have_h || have_v) {
-            result.point  = Point2{have_v ? best_v : q.aim.x, have_h ? best_h : q.aim.y};
+            const Point2 crossed{have_v ? best_v : q.aim.x, have_h ? best_h : q.aim.y};
+            // A CROSSING BEATS A SLIDE. Two cardinal guides give a POINT, which is
+            // what a pair of them is for; a single one gives a foot, and an angled
+            // guide's foot competes with that on distance alone.
+            if (have_angled && !(have_h && have_v)) {
+                const Mm dc = mm_round(std::hypot(static_cast<double>(crossed.x - q.aim.x),
+                                                  static_cast<double>(crossed.y - q.aim.y)));
+                if (da < dc) {
+                    result.point  = best_angled;
+                    result.mode   = SnapGuide;
+                    result.entity = kNoEntity;
+                    return result;
+                }
+            }
+            result.point  = crossed;
+            result.mode   = SnapGuide;
+            result.entity = kNoEntity;
+            return result;
+        }
+        if (have_angled) {
+            result.point  = best_angled;
             result.mode   = SnapGuide;
             result.entity = kNoEntity;
             return result;

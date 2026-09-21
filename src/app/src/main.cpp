@@ -1228,6 +1228,22 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("9-esnetme"), &window); });
 
+        // AND THE ANGLED GUIDES, which the ruler cannot give: one at 50 grad
+        // through a corner, one a ray at 0 grad (due north under semt), and an
+        // ordinary horizontal one beside them for comparison.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YENİ"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 30,0 30,20 0,20"));
+            window.runScriptLine(QStringLiteral("KILAVUZ yon=yatay deger=10000"));
+            window.runScriptLine(QStringLiteral("KILAVUZ yon=50g nokta=0,0"));
+            window.runScriptLine(QStringLiteral("KILAVUZ yon=0g nokta=20,0 tur=isin"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window] { window.showTranscript(); });
+        later([&window] { window.runScriptLine(QStringLiteral("KILAVUZ")); });
+        later([&window, shot] { shot(QStringLiteral("10-acili-kilavuz"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

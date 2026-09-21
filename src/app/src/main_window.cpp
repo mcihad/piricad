@@ -1456,6 +1456,14 @@ void MainWindow::buildMenus()
     draw->addAction(commandAction(Glyph::Line, tr("Kılavuz"), QStringLiteral("KILAVUZ"),
                                   tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
                                      "kısaltma: KLV")));
+    // THE ANGLED GUIDE IS A LINE THE RULER CANNOT GIVE. Dragging off the ruler
+    // yields horizontal and vertical only; an angled one needs an angle, and an
+    // angle is a number — so it has a row of its own that starts the command with
+    // one already chosen and then asks for the point it passes through.
+    draw->addAction(commandAction(Glyph::Ruler, tr("Açılı Kılavuz"),
+                                  QStringLiteral("KILAVUZ yon=45g"),
+                                  tr("KILAVUZ yon=<açı> — verilen noktadan geçen açılı kılavuz; "
+                                     "açı oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV")));
     draw->addAction(commandAction(Glyph::Text, tr("Etiket"), QStringLiteral("ETİKET"),
                                   tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
                                      "etiketler  ·  kısaltma: ETK")));

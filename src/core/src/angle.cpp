@@ -40,6 +40,16 @@ Point2 polar_offset_turns(double distance_metres, double turns, AngleRule rule) 
     };
 }
 
+std::int64_t math_udeg_from_angle(double value, AngleConvention convention) noexcept
+{
+    const std::int64_t reading = udeg_from_angle(value, convention.unit);
+    std::int64_t math =
+        convention.rule == AngleRule::Matematik ? reading : kUDegFullCircle / 4 - reading;
+    math %= kUDegFullCircle;
+    if (math < 0) math += kUDegFullCircle;
+    return math;
+}
+
 double direction_turns(Point2 from, Point2 to, AngleRule rule) noexcept
 {
     const Mm dx = to.x - from.x;

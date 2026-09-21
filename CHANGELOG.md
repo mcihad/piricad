@@ -6,6 +6,49 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — açılı kılavuz: `KILAVUZ yon=<açı> nokta= tur=isin` (P2-5)
+
+Planın ertelenmiş son maddesi, ertelemenin gerektirdiği **veri göçüyle** birlikte
+(CLAUDE.md 0.2a: bir göçtür, refactor değil).
+
+- **Model alan kazandı, anlam değiştirmedi.** `core::GuideStore` altı sütuna çıktı
+  — eksen, koordinat, açı, geçtiği noktanın iki koordinatı, ışın — ve
+  `core::GuideRow` bir satırı dikişlerde değer olarak taşıyor. Yan yana altı
+  parametre, bir çağıranın enlemi boylamın yerine geçirme biçimidir.
+- **Saklanan açı matematik mikro-derece**: doğudan saat yönünün tersine,
+  `atan2_udeg`'in kendi birimi. Saklanan sayı ile yakalama testi arasında hiçbir
+  dönüşüm yok; kullanıcının yazdığı ve listenin yazdığı açı **kenarda bir kez**
+  çevriliyor. Bir yerde grad, öbüründe derece okuyan program yoktur.
+- **Açı oturumun kuralıyla okunur** ve sonek onu geçersiz kılar: `yon=50`
+  varsayılanda 50 grad, `yon=50d` 50 derece, `yon=0.7r` 0,7 radyan — `@mesafe<açı`
+  ile aynı harf, aynı anlam. Günlüğe **birimiyle** yazılır: `50` yazan bir satır
+  bugün bir yönü, `core.aci.birim` değiştikten sonra başkasını gösterirdi
+  (Article 1.4, ve bir test bunu kanıtlıyor).
+- **`tur=isin` tek yönlüdür** ve yakalama bunu bilir: ışının gerisinde çizgi
+  yoktur, yani imleç noktanın arkasındayken **noktanın kendisine** oturur. Bir
+  köşeden tek yöne çekilmiş kılavuzun elde verdiği şey budur.
+- **Dosyada dört isteğe bağlı blok** (`0x0092`–`0x0095`), **yalnız açılı kılavuz
+  varsa** yazılıyor: yalnız cetvel kılavuzu taşıyan bir çizim bu sürümden önceki
+  yapının yazdığı baytların aynısını yazar. Açılı kılavuz taşıyan dosya
+  `min_reader_version`'ı yükseltir, çünkü `kBlkGuideAxis` **eski** bir blok ve `2`
+  değeri yeni — eski bir okuyucu o sütunu bozuk sayardı, yani doğru bir ret
+  yanıltıcı bir gerekçeyle. Sürümü yükseltmek reddin ne olduğunu söylemesini
+  sağlar. İki io testi her iki yarıyı da çiviliyor.
+- **Tuvalde ekran uzayında uzatılıyor, dünyada değil.** On bin kilometreyi dünyada
+  koşup görünüme çevirmek hiçbir float'ın taşıyamadığı bir ekran koordinatı verdi
+  ve kalınlaştırma hiç çizmedi: ilk denemede 45° kılavuz karede yoktu. Yön
+  dünyadan bir kez alınıyor, uçlar sınırlı bir piksel sayısı kadar uzatılıyor.
+- `model.md` **R47–R47d** eklendi (kılavuz kuralları ilk kez yazılı hâle geldi);
+  `docs/komutlar/guide.md` açı kuralı, doğru/ışın ve dosya biçimi bölümleriyle;
+  **Çizim** menüsünde `Açılı Kılavuz` satırı.
+
+### Düzeltildi — iki eski uyarı
+
+Tam yeniden derlemede çıktı, ikisi de bu oturumun kendi satırlarından:
+`file.cpp`'de pano fiilleri bir `switch`'te eksikti (`-Wswitch`) ve
+`pick.cpp`'de `SEÇ SON` döngüsü `size_t`'i `EntityId`'ye daraltıyordu
+(`-Wshorten-64-to-32`). Article 6.3 sıfır uyarı istiyor; ikisi de kapandı.
+
 ### Düzeltildi — POLİGON okumaları sormuyordu; ve P1b'nin eksik üç eşitlik kanıtı
 
 - **`POLİGON` açı ve kenarı yalnız argümandan okuyordu.** Gerekçe kodun içinde

@@ -690,13 +690,30 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // existed — which is what keeps the golden fixtures valid.
     std::vector<std::uint8_t> guide_axes;
     std::vector<std::int64_t> guide_coords;
+    std::vector<std::int64_t> guide_angles;
+    std::vector<std::int64_t> guide_through_x;
+    std::vector<std::int64_t> guide_through_y;
+    std::vector<std::uint8_t> guide_rays;
     for (std::size_t i = 0; i < doc.guides().size(); ++i) {
         guide_axes.push_back(static_cast<std::uint8_t>(doc.guides().axis(i)));
         guide_coords.push_back(static_cast<std::int64_t>(doc.guides().coordinate(i)));
+        guide_angles.push_back(doc.guides().angle(i));
+        guide_through_x.push_back(static_cast<std::int64_t>(doc.guides().through(i).x));
+        guide_through_y.push_back(static_cast<std::int64_t>(doc.guides().through(i).y));
+        guide_rays.push_back(doc.guides().ray(i) ? 1u : 0u);
     }
     if (!guide_axes.empty()) {
         blocks.push_back(column(kBlkGuideAxis, guide_axes));
         blocks.push_back(column(kBlkGuideCoord, guide_coords));
+        // THE FOUR ANGLED COLUMNS ONLY WHEN ONE IS ANGLED, so a drawing of
+        // ordinary ruler guides writes exactly the bytes the build before this
+        // one wrote — which is what keeps the stored golden fixtures valid.
+        if (doc.guides().any_angled()) {
+            blocks.push_back(column(kBlkGuideAngle, guide_angles));
+            blocks.push_back(column(kBlkGuideThroughX, guide_through_x));
+            blocks.push_back(column(kBlkGuideThroughY, guide_through_y));
+            blocks.push_back(column(kBlkGuideRay, guide_rays));
+        }
     }
 
     // The four layout blocks. The rows were built above, before the string pool
@@ -785,14 +802,18 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // ---- the header ----
     FileHeader header{};
     std::memcpy(header.magic, kMagic, sizeof(kMagic));
-    header.format_version     = kFormatVersion;
-    header.min_reader_version = kMinReaderVersion;
-    header.header_bytes       = static_cast<std::uint32_t>(sizeof(FileHeader));
-    header.block_count        = static_cast<std::uint32_t>(directory.size());
-    header.directory_offset   = directory_offset;
-    header.file_bytes         = total;
-    header.content_hash       = doc.content_hash();
-    header.settings_hash      = settings.fold(core::fnv1a(std::string_view{}));
+    header.format_version = kFormatVersion;
+    // THE FILE SAYS WHAT IT NEEDS, per drawing rather than per build. Only an
+    // angled guide raises it, because only that uses a new value of an OLD block
+    // (format.hpp `kMinReaderVersionAngledGuide`).
+    header.min_reader_version =
+        doc.guides().any_angled() ? kMinReaderVersionAngledGuide : kMinReaderVersion;
+    header.header_bytes     = static_cast<std::uint32_t>(sizeof(FileHeader));
+    header.block_count      = static_cast<std::uint32_t>(directory.size());
+    header.directory_offset = directory_offset;
+    header.file_bytes       = total;
+    header.content_hash     = doc.content_hash();
+    header.settings_hash    = settings.fold(core::fnv1a(std::string_view{}));
 
     // ---- out ----
     AtomicFile file;

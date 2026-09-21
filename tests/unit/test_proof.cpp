@@ -1333,3 +1333,94 @@ TEST_CASE("PROOF: ARANOKTA gui, komut satırı ve betikten aynı belgeyi ve ayn�
     CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
     CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
 }
+
+TEST_CASE("PROOF: açılı KILAVUZ gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for the angled half of `core.guide`. 50 grad through (10, 20)
+    // — under the default semt rule that is north-east, and the stored direction
+    // is the mathematical one, so the three roads have to agree on the
+    // conversion as well as on the point.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("KILAVUZ yon=50g", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        REQUIRE(session.waiting()); ///< it asks for the point it passes through
+        CHECK(session.supply(Value::point(core::Point2{10'000, 20'000})).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus.execute_line("KILAVUZ yon=50g nokta=10,20", Origin::CommandLine).ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Açılı kılavuz kanıtı",
+            "komutlar": [ {"cmd": "core.guide", "args": {
+                "yon": "50g", "nokta": [10000, 20000] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    // ---- the proof ----
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        REQUIRE_EQ(rig->doc.guides().size(), std::size_t{1});
+        CHECK(rig->doc.guides().axis(0) == core::GuideAxis::Angled);
+        CHECK_EQ(rig->doc.guides().through(0), (core::Point2{10'000, 20'000}));
+        CHECK_FALSE(rig->doc.guides().ray(0));
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE DIRECTION A PROTRACTOR WOULD HAVE READ. 50 grad clockwise from
+    // north is 45° east of north, which counter-clockwise from east is 45° —
+    // exactly, because `sin_cos_udeg` is exact on the diagonals.
+    CHECK_EQ(cli.doc.guides().angle(0), 45 * core::kUDegPerDegree);
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    // THE UNIT IS IN THE JOURNAL. A line that said `yon=50` would mean one
+    // direction today and another after somebody changed `core.aci.birim`
+    // (Article 1.4).
+    CHECK(what_happened(cli.journal).find("50") != std::string::npos);
+    CHECK(what_happened(cli.journal).find("g\"") != std::string::npos);
+}
+
+TEST_CASE("PROOF: açılı KILAVUZ günlükten yeniden oynatılabilir")
+{
+    Rig first;
+    REQUIRE(first.bus.execute_line("KILAVUZ yon=yatay deger=5000", Origin::Test).ok());
+    REQUIRE(first.bus.execute_line("KILAVUZ yon=50g nokta=10,20", Origin::Test).ok());
+    REQUIRE(first.bus.execute_line("KILAVUZ yon=30d nokta=0,0 tur=isin", Origin::Test).ok());
+
+    Rig again;
+    for (const auto& e : first.journal.entries()) {
+        auto r = again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        REQUIRE_MESSAGE(r.ok(), e.command_id);
+    }
+    CHECK_EQ(again.doc.content_hash(), first.doc.content_hash());
+    REQUIRE_EQ(again.doc.guides().size(), std::size_t{3});
+    CHECK(again.doc.guides().ray(2));
+}
+
+TEST_CASE("açı birimi değişse de kaydedilmiş bir açılı kılavuz aynı yeri gösterir")
+{
+    // WHY THE SUFFIX IS RECORDED. The stored direction is mathematical
+    // micro-degrees and the journal line carries the unit it was typed in, so a
+    // replay under another `core.aci.birim` reproduces the same line. Without the
+    // suffix the same `50` would be read as 50 degrees and the guide would move.
+    Rig first;
+    REQUIRE(first.bus.execute_line("KILAVUZ yon=50g nokta=10,20", Origin::Test).ok());
+    const std::int64_t want = first.doc.guides().angle(0);
+
+    Rig again;
+    REQUIRE(again.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    for (const auto& e : first.journal.entries())
+        REQUIRE(again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+
+    CHECK_EQ(again.doc.guides().angle(0), want);
+}

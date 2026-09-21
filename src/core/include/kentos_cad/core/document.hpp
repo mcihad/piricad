@@ -144,7 +144,7 @@ struct Op
         /// guide was removed. The list is a handful of numbers — a drawing has
         /// a dozen guides, not a million — so replacing it whole is both correct
         /// and cheaper than the bookkeeping any finer record would need.
-        SetGuides, ///< guide_axes, guide_coords
+        SetGuides, ///< guides
 
         /// The WHOLE layout list, restored as it was — the same bargain
         /// `SetGuides` makes, for the same reason. An item is named by an id
@@ -184,8 +184,10 @@ struct Op
     std::uint32_t geometry_slot{0};
 
     /// The guide list as it was before the change; see `Kind::SetGuides`.
-    std::vector<GuideAxis> guide_axes;
-    std::vector<Mm> guide_coords;
+    ///
+    /// Rows rather than parallel columns: the store is SoA because that is how it
+    /// is stored, and an undo record is a value because that is what it is.
+    std::vector<GuideRow> guides;
 
     /// The layout list as it was before the change; see `Kind::SetLayouts`.
     std::vector<Layout> layouts_arg;
@@ -492,12 +494,16 @@ public:
     /// Adds a drafting guide. `undo_out` carries the whole previous list.
     Status add_guide(GuideAxis axis, Mm coordinate, Op& undo_out);
 
+    /// Adds a guide through `through` running at `angle` micro-degrees. `ray`
+    /// makes it one-sided: forward from the point only (`KILAVUZ tur=isin`).
+    Status add_angled_guide(Point2 through, std::int64_t angle, bool ray, Op& undo_out);
+
     /// Removes the guide at `index`. Refuses an index past the end by name.
     Status remove_guide(std::size_t index, Op& undo_out);
 
     /// Replaces the whole guide list — how `SetGuides` is undone, and how a file
     /// reader installs what it read.
-    void set_guides(std::vector<GuideAxis> axes, std::vector<Mm> coords);
+    void set_guides(std::vector<GuideRow> rows);
 
     Result<AttrValue> attribute(AttrId col, EntityId e) const;
 

@@ -289,6 +289,21 @@ Status Transaction::add_guide(core::GuideAxis axis, core::Mm coordinate)
     return core::ok();
 }
 
+Status Transaction::add_angled_guide(core::Point2 at, std::int64_t angle, bool ray)
+{
+    core::Op undo;
+    auto st = doc_.add_angled_guide(at, angle, ray, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::add_guide_row(const core::GuideRow& row)
+{
+    return row.axis == core::GuideAxis::Angled ? add_angled_guide(row.through, row.angle, row.ray)
+                                               : add_guide(row.axis, row.coordinate);
+}
+
 Status Transaction::set_layouts(std::vector<core::Layout> layouts)
 {
     core::Op undo;

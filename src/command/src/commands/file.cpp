@@ -59,7 +59,14 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
     case FileRequest::Verb::New:
     case FileRequest::Verb::Open:
     case FileRequest::Verb::Import:
-    case FileRequest::Verb::ImportPoints: break;
+    case FileRequest::Verb::ImportPoints:
+    // THE CLIPBOARD IS NOT AN OUTPUT A CLIENT WAS PROMISED. Both verbs do touch a
+    // file — the clipboard payload is a native project file in the temp directory
+    // — but that path is the program's own scratch and not something the user
+    // asked for; naming it as an output would put a temporary file in a client's
+    // list of results (TODOS C-03).
+    case FileRequest::Verb::ClipboardCopy:
+    case FileRequest::Verb::ClipboardPaste: break;
     }
     ctx.echo(result.value());
 }

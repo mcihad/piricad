@@ -766,28 +766,71 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         auto coords = view.column<std::int64_t>(kBlkGuideCoord, n, "kilavuz koordinati");
         if (!coords) return coords.error();
 
-        std::vector<core::GuideAxis> parsed_axes;
-        std::vector<core::Mm> parsed_coords;
-        parsed_axes.reserve(static_cast<std::size_t>(n));
-        parsed_coords.reserve(static_cast<std::size_t>(n));
+        // THE ANGLED COLUMNS, when the drawing has an angled guide in it. All
+        // four together or none: a file with some of them is corrupt rather than
+        // old, and saying so beats reading a guide whose direction is missing as
+        // one pointing due east.
+        const bool angled_here = view.has(kBlkGuideAngle) || view.has(kBlkGuideThroughX) ||
+                                 view.has(kBlkGuideThroughY) || view.has(kBlkGuideRay);
+        std::vector<std::int64_t> angle_col;
+        std::vector<std::int64_t> tx_col;
+        std::vector<std::int64_t> ty_col;
+        std::vector<std::uint8_t> ray_col;
+        if (angled_here) {
+            for (const BlockId id :
+                 {kBlkGuideAngle, kBlkGuideThroughX, kBlkGuideThroughY, kBlkGuideRay})
+                if (!view.has(id) || view.count_of(id) != n)
+                    return err(ErrorCode::ParseError,
+                               std::string(kErrConsist) +
+                                   ": açılı kılavuz sütunları eksik ya da farklı uzunlukta; "
+                                   "dördü birlikte yazılır (açı, sağa, yukarı, ışın).");
+
+            auto a = view.column<std::int64_t>(kBlkGuideAngle, n, "kilavuz acisi");
+            if (!a) return a.error();
+            auto x = view.column<std::int64_t>(kBlkGuideThroughX, n, "kilavuz noktasi (saga)");
+            if (!x) return x.error();
+            auto y = view.column<std::int64_t>(kBlkGuideThroughY, n, "kilavuz noktasi (yukari)");
+            if (!y) return y.error();
+            auto r = view.column<std::uint8_t>(kBlkGuideRay, n, "kilavuz isini");
+            if (!r) return r.error();
+            angle_col.assign(a.value().begin(), a.value().end());
+            tx_col.assign(x.value().begin(), x.value().end());
+            ty_col.assign(y.value().begin(), y.value().end());
+            ray_col.assign(r.value().begin(), r.value().end());
+        }
+
+        std::vector<core::GuideRow> parsed_guides;
+        parsed_guides.reserve(static_cast<std::size_t>(n));
 
         for (std::uint64_t i = 0; i < n; ++i) {
-            const std::uint8_t raw_axis = axes.value()[static_cast<std::size_t>(i)];
-            if (raw_axis > 1)
+            const auto row_at           = static_cast<std::size_t>(i);
+            const std::uint8_t raw_axis = axes.value()[row_at];
+            // 2 IS ANGLED AND ONLY MEANS ANYTHING WITH ITS COLUMNS. A file that
+            // says 2 and carries no angle is one whose writer disagreed with
+            // itself, and a guess would put a construction line somewhere nobody
+            // drew it.
+            if (raw_axis > 2 || (raw_axis == 2 && !angled_here))
                 return err(ErrorCode::ParseError,
                            std::string(kErrConsist) + ": " + std::to_string(i) +
                                ". kılavuzun ekseni tanınmıyor (" + std::to_string(raw_axis) +
-                               "). Beklenen: 0 yatay, 1 düşey.");
+                               "). Beklenen: 0 yatay, 1 düşey, 2 açılı (açı sütunlarıyla).");
 
-            parsed_axes.push_back(static_cast<core::GuideAxis>(raw_axis));
-            parsed_coords.push_back(
-                static_cast<core::Mm>(coords.value()[static_cast<std::size_t>(i)]));
+            core::GuideRow one;
+            one.axis       = static_cast<core::GuideAxis>(raw_axis);
+            one.coordinate = static_cast<core::Mm>(coords.value()[row_at]);
+            if (angled_here) {
+                one.angle   = angle_col[row_at];
+                one.through = core::Point2{static_cast<core::Mm>(tx_col[row_at]),
+                                           static_cast<core::Mm>(ty_col[row_at])};
+                one.ray     = ray_col[row_at] != 0;
+            }
+            parsed_guides.push_back(one);
         }
         // Through the transaction, like the dashes above: the reader builds the
         // document the way every other client does, so a partly-read file rolls
         // back whole rather than leaving half a guide list behind.
-        for (std::size_t g = 0; g < parsed_axes.size(); ++g)
-            if (auto st = tx.add_guide(parsed_axes[g], parsed_coords[g]); !st) return st.error();
+        for (const core::GuideRow& made : parsed_guides)
+            if (auto st = tx.add_guide_row(made); !st) return st.error();
     }
 
     // ---- the sheet layouts (core/layout.hpp) ----

@@ -345,7 +345,11 @@ Task<void> run_select(Context& ctx)
         // after drawing something. Walked from the top because a slot is handed
         // out in creation order and the newest is the highest live one.
         const core::EntityTable& entities = doc.entities();
-        for (core::EntityId e = entities.size(); e-- > 0;)
+        // COUNTED IN THE ID'S OWN TYPE. `size()` returns a `std::size_t` and an
+        // `EntityId` is narrower, so the loop variable is made from the bound
+        // rather than assigned it — the narrowing is real and belongs where it
+        // is written.
+        for (auto e = static_cast<core::EntityId>(entities.size()); e-- > 0;)
             if (doc.alive(e) && entities.visible(e)) {
                 picked.push_back(doc.key_of(e));
                 break;

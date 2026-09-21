@@ -17,6 +17,7 @@
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/spline.hpp"
+#include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/render/backend.hpp"
 
 #include <QApplication>
@@ -950,6 +951,43 @@ void MapCanvas::buildGuides()
     // first, inside the view, and this uses the one helper that does it
     // (render.md R2, P1).
     for (std::size_t i = 0; i < guides.size(); ++i) {
+        if (guides.axis(i) == core::GuideAxis::Angled) {
+            // EXTENDED IN SCREEN SPACE, not in the world. Running the line a huge
+            // distance in millimetres and letting the view transform it is the
+            // obvious way and it does not work: ten thousand kilometres past the
+            // origin lands at a screen coordinate no float carries usefully, and
+            // the widening pass then draws nothing at all — the 45° guide of the
+            // first attempt was simply absent from the frame.
+            //
+            // So the DIRECTION comes from the world, once, by projecting the point
+            // and a metre along it; the ENDS are that direction extended by a
+            // bounded number of pixels. `kReach` is a pixel count larger than any
+            // window and small enough to stay exact in a float, which is the whole
+            // requirement. A ray runs one way only, and its near end is its own
+            // point.
+            constexpr float kReach = 1.0e5F;
+            const core::SinCos dir = core::sin_cos_udeg(guides.angle(i));
+            const core::Point2 at  = guides.through(i);
+            const core::Point2 step{at.x + core::mm_round(dir.cos * 1000.0),
+                                    at.y + core::mm_round(dir.sin * 1000.0)};
+
+            const render::ScreenPointF origin = render::to_f(view_.to_screen(at));
+            const render::ScreenPointF along  = render::to_f(view_.to_screen(step));
+            const float dx                    = along.x - origin.x;
+            const float dy                    = along.y - origin.y;
+            const float len                   = std::hypot(dx, dy);
+            if (len <= 0.0F) continue; ///< zoomed so far out that a metre is nothing
+
+            const float ux = dx / len;
+            const float uy = dy / len;
+            const render::ScreenPointF ahead{origin.x + ux * kReach, origin.y + uy * kReach};
+            const render::ScreenPointF back =
+                guides.ray(i)
+                    ? origin
+                    : render::ScreenPointF{origin.x - ux * kReach, origin.y - uy * kReach};
+            addRun(batch, {back, ahead}, false);
+            continue;
+        }
         if (guides.axis(i) == core::GuideAxis::Horizontal) {
             const render::ScreenPointF p =
                 render::to_f(view_.to_screen(core::Point2{0, guides.coordinate(i)}));

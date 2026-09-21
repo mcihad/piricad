@@ -632,6 +632,84 @@ TEST_CASE("IO: kılavuzlar dosyayla gider ve sırasıyla geri gelir")
     CHECK(reloaded.doc.guides().coordinate(1) == 485320000);
 }
 
+TEST_CASE("IO: açılı kılavuz dosyayla gider, açısı ve noktası bozulmadan")
+{
+    // P2-5's migration, both halves. The angled guide's four columns are
+    // OPTIONAL and written only when one exists (io.md R10), so a drawing of
+    // ordinary ruler guides still writes the bytes the build before this one
+    // wrote — and a drawing with an angled guide raises `min_reader_version`, so
+    // an older build refuses it by name instead of reading a construction line
+    // it cannot represent.
+    TempDir tmp("acili-kilavuz");
+    const std::string path = tmp.file("acili.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KILAVUZ yon=yatay deger=5000", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KILAVUZ yon=50g nokta=10,20", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KILAVUZ yon=30d nokta=0,0 tur=isin", Origin::Test).ok());
+
+    const std::int64_t angle_one = written.doc.guides().angle(1);
+    const std::int64_t angle_two = written.doc.guides().angle(2);
+
+    auto saved = written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test);
+    if (!saved) FAIL_WITH("FARKLIKAYDET", saved.error().message);
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+
+    REQUIRE(reloaded.doc.guides().size() == 3);
+    // THE ORDER IS KEPT, cardinal and angled alike: a user who removes "the
+    // second one" means the second they placed.
+    CHECK(reloaded.doc.guides().axis(0) == core::GuideAxis::Horizontal);
+    CHECK(reloaded.doc.guides().coordinate(0) == 5000);
+
+    CHECK(reloaded.doc.guides().axis(1) == core::GuideAxis::Angled);
+    CHECK_EQ(reloaded.doc.guides().angle(1), angle_one);
+    CHECK_EQ(reloaded.doc.guides().through(1), (core::Point2{10'000, 20'000}));
+    CHECK_FALSE(reloaded.doc.guides().ray(1));
+
+    CHECK(reloaded.doc.guides().axis(2) == core::GuideAxis::Angled);
+    CHECK_EQ(reloaded.doc.guides().angle(2), angle_two);
+    CHECK(reloaded.doc.guides().ray(2)); ///< tur=isin survives the round trip
+
+    // The document is the same document, hash and all.
+    CHECK_EQ(reloaded.doc.content_hash(), written.doc.content_hash());
+}
+
+TEST_CASE("IO: açılı kılavuz dosyanın okuyucu sürümünü yükseltir, cetvel kılavuzu yükseltmez")
+{
+    TempDir tmp("kilavuz-surum");
+    const std::string cardinal = tmp.file("cetvel.pcad");
+    const std::string angled   = tmp.file("acili.pcad");
+
+    const auto reader_version_of = [](const std::string& file) {
+        std::ifstream in(file, std::ios::binary);
+        REQUIRE(in.good());
+        char head[32]{};
+        in.read(head, sizeof(head));
+        std::uint32_t v = 0;
+        std::memcpy(&v, head + 12, sizeof(v)); ///< io.md R8: offset 12, inside the first 32
+        return v;
+    };
+
+    Rig a;
+    REQUIRE(a.bus.execute_line("KILAVUZ yon=yatay deger=5000", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("FARKLIKAYDET \"" + cardinal + "\"", Origin::Test).ok());
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("KILAVUZ yon=50g nokta=10,20", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("FARKLIKAYDET \"" + angled + "\"", Origin::Test).ok());
+
+    // A DRAWING SAYS WHAT IT NEEDS, per drawing rather than per build: an old
+    // reader still opens the first file and is told to upgrade for the second,
+    // instead of reading `kBlkGuideAxis` value 2 as a corrupt column.
+    CHECK_EQ(reader_version_of(cardinal), io::kMinReaderVersion);
+    CHECK_EQ(reader_version_of(angled), io::kMinReaderVersionAngledGuide);
+    CHECK(io::kMinReaderVersionAngledGuide > io::kMinReaderVersion);
+}
+
 TEST_CASE("IO: kılavuzu olmayan bir çizim kılavuz bloğu yazmaz")
 {
     TempDir tmp("kilavuzsuz");

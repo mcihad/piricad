@@ -179,6 +179,14 @@ public:
     /// saved with the file.
     Status add_guide(core::GuideAxis axis, core::Mm coordinate);
 
+    /// Adds an angled guide through `at`, running at `angle` micro-degrees;
+    /// `ray` makes it one-sided (`KILAVUZ tur=isin`).
+    Status add_angled_guide(core::Point2 at, std::int64_t angle, bool ray);
+
+    /// Adds whatever `row` describes — how the file reader restores a guide list
+    /// without having to branch on its kind.
+    Status add_guide_row(const core::GuideRow& row);
+
     /// Removes the guide at `index`.
     Status remove_guide(std::size_t index);
 

@@ -267,12 +267,27 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   Üçüncü nokta bir köşe DEĞİL, yalnız yüksekliği veriyor: kenarın normaline izdüşürülüyor, yani eli
   birkaç milimetre kayan kullanıcı paralelkenar değil dikdörtgen alıyor. (`aci=` ayrıca gerekmedi:
   `3n` döndürmenin kendisidir ve bir açıdan daha okunaklıdır.)
-- [ ] **P2-5** `KILAVUZ yon=<açı>`, `nokta=`, `tur=isin` — **ERTELENDİ, sebebi yazılı.** Bugünkü
-  `core::Guide` yalnız {eksen, koordinat} taşıyor ve proje dosyasında iki paralel dizi olarak
-  saklanıyor (`project_writer.cpp`). Açı ve geçtiği nokta eklemek BELGE MODELİ değişikliğidir
-  (CLAUDE.md 0.2a: "bir veri göçüdür, refactor değil"): `model.md`, `io/format.hpp` sürüm artışı, eski
-  biçimi okuyan bir okuyucu ve gidiş-dönüş testi gerektirir. Komut düzeyinde yarım yapmak, kaydedilip
-  açılınca kaybolan bir kılavuz demek olurdu. Kendi commit'ini hak ediyor.
+- [x] **P2-5** `KILAVUZ yon=<açı>`, `nokta=`, `tur=isin` — **ertelemenin gerektirdiği göç yapıldı**
+  (CLAUDE.md 0.2a: veri göçü, refactor değil). Kendi commit'i:
+  * `core::GuideStore` altı sütuna çıktı (eksen, koordinat, açı, geçtiği noktanın iki koordinatı,
+    ışın); `core::GuideRow` dikişlerde değer olarak taşıyor. Model **alan kazandı**, anlam
+    değiştirmedi — 0.2a'nın izin verdiği tek değişim biçimi.
+  * Saklanan açı **matematik mikro-derece** (doğudan saat yönünün tersine, `atan2_udeg`'in birimi):
+    saklanan sayı ile yakalama testi arasında dönüşüm yok. Kullanıcının yazdığı ve listenin
+    yazdığı açı kenarda bir kez çevriliyor (`core::math_udeg_from_angle`, `core::direction_turns`).
+  * Dosyada dört **isteğe bağlı** blok (`0x0092`–`0x0095`), **yalnız açılı kılavuz varsa** yazılıyor:
+    yalnız cetvel kılavuzu taşıyan bir çizim eskisiyle bayt-özdeş. Açılı kılavuz taşıyan dosya
+    `min_reader_version`'ı yükseltiyor (`io::kMinReaderVersionAngledGuide`), çünkü `kBlkGuideAxis`
+    eski bir blok ve `2` değeri yeni — eski bir okuyucu o sütunu bozuk sayardı, yani doğru bir ret
+    yanıltıcı bir gerekçeyle. İkisi de testli.
+  * Yakalama: açılı kılavuza dik ayak; **ışının gerisinde noktanın kendisi**; iki cetvel kılavuzunun
+    kesişimi açılıyı yener, tek cetvel kılavuzu yenmez (mesafeye bakılır). Dört snap testi.
+  * Tuvalde çizim **ekran uzayında uzatılıyor**, dünyada değil: on bin kilometreyi dünyada koşup
+    görünüme çevirmek hiçbir float'ın işine yaramayan bir ekran koordinatı veriyor ve kalınlaştırma
+    hiç çizmiyordu — ilk denemede 45° kılavuz karede yoktu.
+  * `model.md` R47–R47d eklendi; `docs/komutlar/guide.md` açı kuralı, doğru/ışın ve dosya biçimi
+    bölümleriyle; **Çizim** menüsünde `Açılı Kılavuz` satırı; eşitlik kanıtı + günlük replay + birim
+    değişse aynı yeri gösterme testi.
 - [x] **P2-6** `ELİPS yontem=merkez|eksen` — ve `eksen` kozmetik bir ad değil: eksenin İKİ UCU
   (AutoCAD'in varsayılanı), merkez ikisinin ortası. Aynı elips iki şekilde yazılıyor ve ikisi bayt
   bayt aynı çizimi veriyor (testte).

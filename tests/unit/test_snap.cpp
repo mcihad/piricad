@@ -1762,3 +1762,121 @@ TEST_CASE("YAKALAMA: TEĞET kurulmuş bir noktadır, gerçek bir köşeyi almaz"
 
     CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNode));
 }
+
+// ============================================================================
+// Angled drafting guides — P2-5
+// ============================================================================
+
+TEST_CASE("açılı kılavuz imleci kendi doğrultusuna çeker")
+{
+    core::Document doc;
+    core::Op undo;
+    // A 45° line through the origin, in the MATHEMATICAL unit the store keeps:
+    // counter-clockwise from east, micro-degrees.
+    REQUIRE(doc.add_angled_guide(core::Point2{0, 0}, 45 * core::kUDegPerDegree, false, undo).ok());
+
+    core::SnapQuery q;
+    q.modes  = core::SnapGuide;
+    q.radius = 2000;
+    q.aim    = core::Point2{10'000, 8'000}; ///< 1 m off the line, measured across
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    // The foot of the perpendicular onto y = x from (10, 8) is (9, 9).
+    CHECK_EQ(r.point, (core::Point2{9'000, 9'000}));
+}
+
+TEST_CASE("ışın kılavuzu noktasının gerisinde çekmez")
+{
+    core::Document doc;
+    core::Op undo;
+    // A ray east from (0,0): forward only. A cursor BEHIND the point has no line
+    // to slide along, so the nearest thing on the ray is the point itself — which
+    // is what a drafter sees when they pull a one-sided guide off a corner.
+    REQUIRE(doc.add_angled_guide(core::Point2{0, 0}, 0, true, undo).ok());
+
+    core::SnapQuery q;
+    q.modes  = core::SnapGuide;
+    q.radius = 3000;
+    q.aim    = core::Point2{-2'000, 1'000};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    CHECK_EQ(r.point, (core::Point2{0, 0}));
+
+    // And forward of it the ray behaves like any line.
+    q.aim                     = core::Point2{5'000, 1'000};
+    const core::SnapResult on = core::snap(doc, q);
+    CHECK(on.mode == core::SnapGuide);
+    CHECK_EQ(on.point, (core::Point2{5'000, 0}));
+}
+
+TEST_CASE("iki cetvel kılavuzunun kesişimi açılı bir kılavuzu yener")
+{
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 10'000, undo).ok());
+    REQUIRE(doc.add_guide(core::GuideAxis::Vertical, 10'000, undo).ok());
+    REQUIRE(doc.add_angled_guide(core::Point2{0, 0}, 45 * core::kUDegPerDegree, false, undo).ok());
+
+    core::SnapQuery q;
+    q.modes  = core::SnapGuide;
+    q.radius = 3000;
+    q.aim    = core::Point2{9'500, 9'500};
+
+    // A CROSSING IS A POINT and that is what a pair of guides is for; a single
+    // guide only gives a foot. The angled one here answers the aim itself — it
+    // passes through it — and the crossing still wins.
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    CHECK_EQ(r.point, (core::Point2{10'000, 10'000}));
+}
+
+TEST_CASE("açılı kılavuz tek bir cetvel kılavuzundan yakınsa onu yener")
+{
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 12'000, undo).ok()); ///< 11,5 m away
+    REQUIRE(doc.add_angled_guide(core::Point2{0, 0}, 0, false, undo).ok()); ///< east, 0,5 m away
+
+    core::SnapQuery q;
+    q.modes  = core::SnapGuide;
+    q.radius = 5000;
+    q.aim    = core::Point2{5'000, 500};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    CHECK_EQ(r.point, (core::Point2{5'000, 0})); ///< the nearer line answers
+}
+
+TEST_CASE("açılı kılavuz geri alınır ve yinelenir")
+{
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 5'000, undo).ok());
+    const std::uint64_t one_guide = doc.content_hash();
+
+    core::Op added;
+    REQUIRE(doc.add_angled_guide(core::Point2{1'000, 2'000}, 30 * core::kUDegPerDegree, true, added)
+                .ok());
+    REQUIRE_EQ(doc.guides().size(), std::size_t{2});
+    CHECK(doc.guides().axis(1) == core::GuideAxis::Angled);
+    CHECK_EQ(doc.guides().angle(1), 30 * core::kUDegPerDegree);
+    CHECK_EQ(doc.guides().through(1), (core::Point2{1'000, 2'000}));
+    CHECK(doc.guides().ray(1));
+    CHECK(doc.guides().any_angled());
+
+    // THE WHOLE LIST IS THE UNDO RECORD, because a guide has no key — and the
+    // inverse of "restore this list" is "restore the one that is here now", which
+    // is what makes it redoable too.
+    core::Op redo;
+    REQUIRE(doc.apply(added, &redo).ok());
+    CHECK_EQ(doc.guides().size(), std::size_t{1});
+    CHECK_FALSE(doc.guides().any_angled());
+    CHECK_EQ(doc.content_hash(), one_guide);
+
+    core::Op again;
+    REQUIRE(doc.apply(redo, &again).ok());
+    CHECK_EQ(doc.guides().size(), std::size_t{2});
+    CHECK(doc.guides().ray(1));
+}

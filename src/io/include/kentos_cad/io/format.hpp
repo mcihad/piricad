@@ -62,14 +62,25 @@ inline constexpr const char* kProjectExtension = ".pcad";
 ///
 /// Bumped when the meaning of an existing block changes. Adding a new optional
 /// block is NOT a version bump, because R10 makes an unknown block skippable.
-inline constexpr std::uint32_t kFormatVersion = 1;
+///
+/// 2 because `kBlkGuideAxis` gained the value 2 for an angled guide: the block is
+/// old and one of its values is new, which is a change of meaning however small.
+inline constexpr std::uint32_t kFormatVersion = 2;
 
 /// The lowest reader version that can still make sense of what this build wrote.
 ///
 /// A file is refused when its `min_reader_version` exceeds `kFormatVersion`:
-/// that is the file saying "you would misread me". It stays at 1 for as long as
+/// that is the file saying "you would misread me". The floor for a drawing whose
 /// every added block is optional (R10).
 inline constexpr std::uint32_t kMinReaderVersion = 1;
+
+/// What a drawing holding an ANGLED GUIDE writes instead.
+///
+/// The one thing in this format that raises the field, and only for the drawings
+/// that actually contain one: an older reader meets `kBlkGuideAxis` value 2, does
+/// not know it, and refuses the guide column as corrupt — a true refusal with a
+/// misleading reason. Raising the field makes the refusal say what it is.
+inline constexpr std::uint32_t kMinReaderVersionAngledGuide = 2;
 
 /// Stable error tokens. `core::Error` carries an `ErrorCode` enum rather than the
 /// string code io.md R9 writes, so the token is placed at the FRONT of the
@@ -224,8 +235,26 @@ enum BlockId : std::uint32_t {
     /// The COUNT comes from the directory, as it does for images: `DocumentRecord`
     /// has no reserved field left, and `BlockView::column` already refuses a
     /// length that disagrees with count × stride.
-    kBlkGuideAxis  = 0x0039, ///< u8[],  0 horizontal, 1 vertical
+    kBlkGuideAxis  = 0x0039, ///< u8[],  0 horizontal, 1 vertical, 2 angled
     kBlkGuideCoord = 0x003A, ///< i64[], Mm — northing for horizontal, easting for vertical
+
+    /// The ANGLED guide's three extra facts, added later and optional together.
+    ///
+    /// Four more columns rather than a record, for the reason the first two are
+    /// columns. They are written only when the drawing HAS an angled guide, so a
+    /// drawing of ordinary ruler guides is byte-identical to what the build
+    /// before this one wrote — which is what keeps the golden fixtures valid.
+    ///
+    /// AN ANGLED GUIDE RAISES `min_reader_version`, and it is the one thing in
+    /// this file that does. `kBlkGuideAxis` is an EXISTING block whose value 2 is
+    /// new, so a reader that has never heard of it would refuse the guide column
+    /// as corrupt — a true refusal with a misleading reason. Raising the field
+    /// makes the refusal say what it is: this file needs a newer reader. A
+    /// drawing without one keeps writing 1 and still opens everywhere.
+    kBlkGuideAngle    = 0x0092, ///< i64[], micro-degrees counter-clockwise from east
+    kBlkGuideThroughX = 0x0093, ///< i64[], Mm — a point the line passes through (sağa)
+    kBlkGuideThroughY = 0x0094, ///< i64[], Mm — the same point (yukarı)
+    kBlkGuideRay      = 0x0095, ///< u8[],  1 = forward from the point only (tur=isin)
 
     // ---- entity table, one block per column (model.md R6 cull block first) --
     kBlkEntityMinX  = 0x0040, ///< i64[]
