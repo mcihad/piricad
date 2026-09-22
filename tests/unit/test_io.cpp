@@ -2887,6 +2887,16 @@ TEST_CASE("DXF: birimsiz dosya proje ayarının birimiyle okunur ve bunu söyler
     CHECK(metres.transcript.find("not: Dosya birim bildirmiyor; çizim metre olarak okundu (AYAR "
                                  "çizim_birimi)") != std::string::npos);
     CHECK(metres.transcript.find("uyarı: Dosya birim") == std::string::npos);
+
+    // BUT THE ASSUMED COORDINATE SYSTEM IS A WARNING, and the difference between
+    // the two is the whole reason each is what it is. A unitless DXF almost
+    // always means metres, so a warning on every one of them would be a warning
+    // nobody reads. A coordinate system has no such default: TM30 and TM33 are
+    // both plausible and confusing them produces a silently wrong deed — which
+    // is what this same layer says in its own words when it REFUSES a format
+    // that could have carried one (io.md R20: never a silent assumption).
+    CHECK(metres.transcript.find("uyarı: Dosya koordinat sistemi bildirmiyor") !=
+          std::string::npos);
 }
 
 TEST_CASE("DXF: kâğıt alanındaki nesne okunmaz ve sayılır")

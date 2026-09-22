@@ -931,6 +931,38 @@ Rapor: "ölçüm yüzey normali araçlarını falan da iyileştir."
 - [x] **Belgeler**: `measure_angle.md`'ye süpürme yayı ve kol sırası; `arayuz.md`'ye her yardımcının
   kendi işaretini çizdiği ve testin bunu modları dolaşarak güvenceye aldığı.
 
+## İçe aktarma penceresi tasarımı (2026-09-22)
+
+Rapor: "import sayfasını iyileştir tasarım olarak çok kötü."
+
+Görsel dil icat edilmedi: CLAUDE.md 5.19 ve ui.md R29 her kontrolün `widgets.hpp`/
+`fields.hpp` setinden gelmesini şart koşuyor, renkler `tokens.hpp`'nin. Değişen şey
+**rütbe** — hangi içerik hangi bileşeni ve hangi tonu hak ediyor.
+
+- [x] **Uyarılar `Banner` oldu**, seviyeden tona: `Error` → Danger, ötekiler → Warn.
+  İlk cümle başlık, gerisi ne yapılacağı. Çizimin üstünde, çünkü dosya hakkında.
+  Çalışma anında kurulduğu için `applyTheme` elle çağrılıyor — `applyThemeToChildren`
+  yalnız o an var olan pencereleri dolaşıyor, ve banner'lar ilk denemede koyu temada
+  boyanmıştı.
+- [x] **`Info` olgu sayılıyor**, sessiz satırlara katılıyor. Dört banner iki önemlinin
+  rütbesini götürüyordu.
+- [x] **Okunamayan dosya orada reddediliyor** (`judgePick`): izin listesi artık
+  **İleri**'yi de yönetiyor; eskiden var olan her dosya onu açıyordu.
+- [x] **Biçim listesi `Badge`'li**: okunur / okunur · yazılır / okunmaz.
+- [x] **Pencere sayfasının boyunu alıyor**, büyüyor ama küçülmüyor.
+- [x] **Cümle en üste**, metin 720 px sütuna.
+- [x] **Varsayılan CRS `Warning`** (vector.cpp, dxf_reader.cpp); birim `Info` kaldı ve
+  iki kararın gerekçesi `test_io.cpp`'de yan yana yazılı.
+- [ ] **Sürükle-bırak hedefi eklenmedi.** Dosya sayfasının işi bir dosya almak ve
+  sürükleyip bırakmak onun en doğal yolu; ama kesikli çerçeveli bir hedef yeni bir
+  bileşen demek (ui.md R32: yaşayan standart + kapı envanteri + el kitabı, aynı
+  değişiklikte) ve P13 özel stylesheet'i yasakladığı için boyanması gerekir. Boşluk
+  pencereyi kısaltarak çözüldü; hedef eklenirse alan da anlam kazanır.
+- [ ] **`ÇİZİM` başlığının ilk harfi küçük görünüyor.** Kaynak baytları büyük Ç
+  (`0xC3 0x87`) ve aynı üsluptaki `BİÇİMLER`'in Ç'si tam boy çıkıyor, yani bir
+  çeviri ya da stil dönüşümü değil. Teşhis edilemedi; tek harflik kozmetik bir
+  mesele olduğu için düzeltilmiş gibi yazılmadı.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

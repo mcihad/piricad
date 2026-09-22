@@ -182,6 +182,11 @@ public:
 private:
     // ---- pages ----
     QWidget* buildFilePage();
+
+    /// Reads `text` as a path and says, on the page where it was typed, whether
+    /// this program can open it — the facts line, the verdict banner and whether
+    /// `İleri` is live.
+    void judgePick(const QString& text);
     QWidget* buildLayerPage();
     QWidget* buildFieldPage();
     QWidget* buildStepper();
@@ -207,9 +212,18 @@ private:
 
     Controller& controller_;
 
-    QStackedWidget* pages_   = nullptr;
-    QLineEdit* pathField_    = nullptr;
-    QLabel* fileFacts_       = nullptr;
+    QStackedWidget* pages_ = nullptr;
+    QLineEdit* pathField_  = nullptr;
+    QLabel* fileFacts_     = nullptr;
+
+    /// THE VERDICT ON THE PICK, shown where the pick is made.
+    ///
+    /// The window knows the allow-list and used to ignore it: any existing file
+    /// enabled `İleri`, so choosing a `.dwg` on a build without the reader — or a
+    /// `.txt` — was accepted here and refused a page later, after the user had
+    /// committed to the flow. The format list was printed at the bottom as
+    /// reference the user was expected to check for themselves.
+    Banner* verdict_         = nullptr;
     ProgressStrip* progress_ = nullptr;
     QLabel* progressText_    = nullptr;
     QWidget* progressBox_    = nullptr;
@@ -220,6 +234,22 @@ private:
     QWidget* stepRuleTwo_    = nullptr;
     QListWidget* fields_     = nullptr;
     QLabel* fieldTally_      = nullptr;
+
+    /// The reader's diagnostics, one banner each, above the drawing.
+    ///
+    /// They used to be flattened into one grey paragraph under the preview, with
+    /// their level spelled as a lower-case word in front of the sentence — so
+    /// "this file declares no coordinate system" and "this file declares no
+    /// units" read as footnotes. In a cadastral drawing those two are the ones
+    /// that put a parcel in the wrong place at the wrong scale, and the output
+    /// is a document somebody signs.
+    QVBoxLayout* notices_ = nullptr;
+
+    /// The theme the window is wearing, kept because the notices are built AFTER
+    /// the theme was applied. `applyThemeToChildren` walks the widgets that exist
+    /// when it runs, so a banner created when a file is read never heard about
+    /// the mode and painted itself in the other one.
+    ThemeMode mode_ = ThemeMode::Dark;
 
     ImportPreview* preview_ = nullptr;
     QListWidget* layers_    = nullptr;

@@ -875,7 +875,14 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             crs = project_crs;
             if (!unlabelled) {
                 unlabelled = true;
-                diag.note(Severity::Info,
+                // A WARNING, NOT A NOTE, and `Severity`'s own definition is the
+                // reason: "the reader had to assume something; the drawing may
+                // be wrong". This is that, and it is the assumption that costs
+                // most — a drawing read into the wrong zone is a parcel in the
+                // wrong place. io.md R20 forbids a SILENT assumption; a DXF
+                // cannot carry a CRS, so the assumption is sanctioned, but
+                // filing it at the mildest level is what made it silent.
+                diag.note(Severity::Warning,
                           "Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi "
                           "sistemi varsayıldı: " +
                               project_crs +

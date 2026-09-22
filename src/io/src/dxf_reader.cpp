@@ -1934,8 +1934,12 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
                                   "kendi sistemi de yok. Yanına aynı adlı bir .prj dosyası koyun "
                                   "ya da AYAR koordinat_sistemi ile çizimin sistemini kurun.");
             sink.set_crs(options.project_crs);
+            // See the same note in `vector.cpp`: an assumed coordinate system is
+            // a `Warning` by `Severity`'s own definition, and io.md R20's
+            // "never a silent assumption" is about being HEARD, not only about
+            // being recorded.
             sink.report().diagnostics.note(
-                Severity::Info,
+                Severity::Warning,
                 "Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi "
                 "sistemi varsayıldı: " +
                     options.project_crs +

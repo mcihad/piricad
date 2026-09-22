@@ -215,13 +215,31 @@ okunmadığı sessizce geçmez.
 **Dosya > İçe Aktar…** menüsü veya **Dosya** araç çubuğundaki **İçe Aktar**
 düğmesi **iki adımlı içe aktarma sihirbazını** açar.
 
-**1 · DOSYA.** Yolu yazın ya da **Gözat…** ile seçin. Sayfa dosyanın biçimini,
-boyutunu ve son değişiklik tarihini gösterir; altında bu yapının okuyabildiği
-bütün biçimler listelenir. **İleri**'ye bastığınızda dosya okunur — okuma
-sürerken geçen süre yazılır ve **Okumayı durdur** ile okuma gerçekten
-durdurulur. Bu adımda çizime **hiçbir şey eklenmez**.
+**1 · DOSYA.** Sayfanın en üstünde ne olacağı yazar: dosya önce yalnızca okunur,
+çizime hiçbir şey eklenmez. Yolu yazın ya da **Gözat…** ile seçin. Sayfa dosyanın
+biçimini, boyutunu ve son değişiklik tarihini gösterir; sayfanın dibinde bu
+yapının okuyabildiği biçimler, her birinin yanında **okunur**, **okunur ·
+yazılır** ya da **okunmaz** etiketiyle listelenir.
 
-**2 · KATMANLAR.** Solda dosyanın çizimi, sağda katman listesi. Her satırda
+**Okunamayan bir dosya seçtiğinizde bunu orada söyler.** Bir `.dwg` (bu yapı DWG
+okumuyorsa) ya da listede olmayan bir uzantı seçerseniz alanın altında ne
+yapmanız gerektiğini yazan bir uyarı çıkar ve **İleri** kapalı kalır. Önceden
+herhangi bir dosya **İleri**'yi açıyordu ve ret bir sonraki sayfada geliyordu.
+
+**İleri**'ye bastığınızda dosya okunur — okuma sürerken geçen süre yazılır ve
+**Okumayı durdur** ile okuma gerçekten durdurulur. Bu adımda çizime **hiçbir şey
+eklenmez**.
+
+**2 · KATMANLAR.** Sayfanın en üstünde, çizimin üzerinde, **okuyucunun
+uyarıları** durur — her biri kendi şeridinde, kalın satırı olan ve altında ne
+yapılacağını yazan. En çok gerekeni ilk sıradadır: *dosya koordinat sistemi
+bildirmiyor*. Bir DXF koordinat sistemi taşıyamaz, o yüzden çizimin kendi sistemi
+varsayılır — ve TM30 ile TM33'ü karıştırmak sessizce yanlış bir tapu üretir, bu
+yüzden varsayım küçük yazıyla değil uyarı olarak durur. Dosyanın kendi olguları
+(sürücü, nesne ve katman sayısı, sistem, okunan türler) çizimin **altında**,
+sessiz satırlar hâlinde kalır: olgu olgudur, uyarı uyarıdır.
+
+Solda dosyanın çizimi, sağda katman listesi. Her satırda
 katmanın adı ve o katmandan kaç nesne geleceği yazar; kutucuğu kaldırdığınız
 katman soldaki çizimden de kalkar, böylece ne aldığınızı almadan önce
 görürsünüz. **Tümü** ve **Hiçbiri** bağlantıları görünen satırlara uygulanır —

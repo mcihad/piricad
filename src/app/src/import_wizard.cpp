@@ -320,7 +320,12 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
 {
     setHeading(Glyph::Open, tr("İçe Aktar"));
     setModal(true);
-    resize(1080, 660);
+    // WIDE ENOUGH FOR THE LAYER PAGE'S TWO COLUMNS; the HEIGHT is the page's own
+    // (see `showPage`). One size for every step gave the first page — a path
+    // field and a reference list — the height the layer page needs for a preview
+    // and a checklist, so more than half of the first thing a user ever sees in
+    // this window was empty.
+    resize(1080, 420);
 
     auto* body   = new QWidget(this);
     auto* column = new QVBoxLayout(body);
@@ -531,55 +536,69 @@ QWidget* ImportWizard::buildFilePage()
     col->setContentsMargins(20, 18, 20, 18);
     col->setSpacing(0);
 
-    auto* heading = new QLabel(tr("DOSYA"), page);
+    // ONE MEASURED COLUMN. Every line of prose here used to run the full width of
+    // the window — around 170 characters — because the page had no column at all;
+    // the field was measured and nothing else was. A line nobody can track back
+    // to its own left edge is not read (§16.1's 650 px text measure).
+    auto* body    = new QWidget(page);
+    auto* measure = new QVBoxLayout(body);
+    measure->setContentsMargins(0, 0, 0, 0);
+    measure->setSpacing(0);
+    body->setMaximumWidth(720);
+
+    // WHAT THIS WINDOW DOES, before the field rather than after the progress bar.
+    // The sentence was the last thing on the page, under a progress band that is
+    // hidden until a read starts — so the one promise that makes the window safe
+    // to use ("nothing is added to the drawing yet") was read, if at all, after
+    // the decision it is about.
+    auto* lead = new QLabel(tr("Dosya önce yalnızca okunur; çizime hiçbir şey eklenmez. "
+                               "Katmanları seçtikten sonra içe aktarma tek bir adımda yapılır "
+                               "ve tek adımda geri alınır."),
+                            body);
+    lead->setWordWrap(true);
+    measure->addWidget(lead);
+    measure->addSpacing(16);
+
+    auto* heading = new QLabel(tr("DOSYA"), body);
     heading->setObjectName(QStringLiteral("groupCaption"));
-    col->addWidget(heading);
-    col->addSpacing(10);
+    measure->addWidget(heading);
+    measure->addSpacing(10);
 
     auto* pick = new QHBoxLayout;
     pick->setSpacing(8);
 
-    pathField_ = new QLineEdit(page);
+    pathField_ = new QLineEdit(body);
     pathField_->setFixedHeight(30);
     pathField_->setPlaceholderText(io::dwg_backend_available()
                                        ? tr("DXF, DWG, Shapefile veya GeoPackage yolu")
                                        : tr("DXF, Shapefile veya GeoPackage yolu"));
-    connect(pathField_, &QLineEdit::textChanged, this, [this](const QString& text) {
-        const QFileInfo about(text.trimmed());
-        const bool ready = about.isFile();
-        next_->setEnabled(ready);
-        fileFacts_->setText(
-            ready ? tr("%1 · %2 · son değişiklik %3")
-                        .arg(about.suffix().toUpper(), readableSize(about.size()),
-                             about.lastModified().toString(QStringLiteral("dd.MM.yyyy HH:mm")))
-                  : QString());
-    });
+    connect(pathField_, &QLineEdit::textChanged, this,
+            [this](const QString& text) { judgePick(text); });
 
-    auto* browse = new Button(ButtonRole::Secondary, tr("Gözat…"), Glyph::Open, page);
+    auto* browse = new Button(ButtonRole::Secondary, tr("Gözat…"), Glyph::Open, body);
     connect(browse, &QPushButton::clicked, this, &ImportWizard::browse);
 
     pick->addWidget(pathField_, 1);
     pick->addWidget(browse);
-    // §16.1's grid is 312 px columns with a 26 px gutter; two columns plus the
-    // gutter is 650, which is also the width that document says a long text
-    // field spans. A field stretched to the full 1040 is not a field, it is a
-    // ruler.
-    pick->addStretch(0);
-    auto* measured = new QWidget(page);
-    measured->setLayout(pick);
-    measured->setMaximumWidth(720);
-    col->addWidget(measured);
+    measure->addLayout(pick);
 
-    col->addSpacing(6);
-    fileFacts_ = new QLabel(page);
+    measure->addSpacing(6);
+    fileFacts_ = new QLabel(body);
     fileFacts_->setObjectName(QStringLiteral("quiet"));
-    col->addWidget(fileFacts_);
+    measure->addWidget(fileFacts_);
 
-    col->addSpacing(22);
+    // THE VERDICT, where the pick is made. Hidden while the pick is fine, because
+    // a banner that is always up says nothing.
+    verdict_ = new Banner(Tone::Danger, QString(), QString(), body);
+    verdict_->setVisible(false);
+    measure->addSpacing(10);
+    measure->addWidget(verdict_);
+
+    measure->addSpacing(18);
 
     // The progress band. Hidden until a read starts, because a bar sitting still
     // at zero is a promise the window has not made yet.
-    progressBox_ = new QWidget(page);
+    progressBox_ = new QWidget(body);
     auto* pcol   = new QVBoxLayout(progressBox_);
     pcol->setContentsMargins(0, 0, 0, 0);
     pcol->setSpacing(8);
@@ -598,17 +617,15 @@ QWidget* ImportWizard::buildFilePage()
     pcol->addWidget(progressText_);
 
     progressBox_->setVisible(false);
-    col->addWidget(progressBox_);
+    measure->addWidget(progressBox_);
 
-    auto* note = new QLabel(
-        tr("Dosya önce yalnızca okunur; çizime hiçbir şey eklenmez. Katmanları "
-           "seçtikten sonra içe aktarma tek bir adımda yapılır ve tek adımda geri alınır."),
-        page);
-    note->setObjectName(QStringLiteral("quiet"));
-    note->setWordWrap(true);
-    col->addWidget(note);
+    col->addWidget(body);
 
-    col->addSpacing(26);
+    // REFERENCE SITS AT THE BOTTOM. The formats used to follow the prose in the
+    // upper half and left the lower half of a 1320 px window empty, which reads
+    // as an unfinished page. What a user acts on is at the top; what they look
+    // up is at the foot.
+    col->addStretch(1);
 
     auto* formatHeading = new QLabel(tr("DESTEKLENEN BİÇİMLER"), page);
     formatHeading->setObjectName(QStringLiteral("groupCaption"));
@@ -619,34 +636,96 @@ QWidget* ImportWizard::buildFilePage()
     // driver set in /cmake and hands it to /src/io as a compile definition; a
     // second copy here would be the "hand-maintained second list" 5.10 forbids,
     // and it would go stale the first time a driver is added.
+    //
+    // EACH ROW ENDS IN A BADGE, and that is the whole change: the rows were
+    // dot-joined sentences in one grey weight, so "okunur ve yazılır" and "bu
+    // sürümde okunmaz" read alike and the one fact a user scans this list for —
+    // can this program open my file — had to be read word by word.
     auto* grid = new QVBoxLayout;
     grid->setSpacing(4);
+    const auto formatRow = [this, &grid](const QString& extension, const QString& label,
+                                         const QString& capability, Tone tone,
+                                         const QString& hint = QString()) {
+        auto* line = new QHBoxLayout;
+        line->setSpacing(8);
+
+        auto* name = new QLabel(extension, this);
+        name->setMinimumWidth(64);
+        line->addWidget(name);
+
+        auto* what = new QLabel(label, this);
+        what->setObjectName(QStringLiteral("quiet"));
+        line->addWidget(what, 1);
+
+        auto* mark = new Badge(capability, tone, this);
+        if (!hint.isEmpty()) mark->setToolTip(hint);
+        line->addWidget(mark);
+
+        auto* holder = new QWidget(this);
+        holder->setLayout(line);
+        holder->setMaximumWidth(720);
+        grid->addWidget(holder);
+    };
+
     for (const io::VectorFormat& f : io::vector_formats()) {
         if (!f.read) continue;
-        auto* row = new QLabel(tr("%1  ·  %2  ·  %3")
-                                   .arg(QString::fromStdString(f.extension).toUpper(),
-                                        QString::fromStdString(f.label),
-                                        f.write ? tr("okunur ve yazılır") : tr("yalnızca okunur")),
-                               page);
-        row->setObjectName(QStringLiteral("quiet"));
-        grid->addWidget(row);
+        formatRow(QString::fromStdString(f.extension).toUpper(), QString::fromStdString(f.label),
+                  f.write ? tr("okunur · yazılır") : tr("okunur"),
+                  f.write ? Tone::Neutral : Tone::Accent);
     }
 
     // The io layer's status names a CMake flag, which is for the person who
     // builds the program; the person who uses it is told what to do instead.
-    auto* dwgRow = new QLabel(io::dwg_backend_available()
-                                  ? tr(".DWG  ·  AutoCAD çizimi  ·  %1").arg(tr("yalnızca okunur"))
-                                  : tr(".DWG  ·  bu sürümde okunmaz; çizimi DXF olarak kaydedip "
-                                       "içe aktarın"),
-                              page);
-    dwgRow->setToolTip(QString::fromStdString(io::dwg_backend_status()));
-    dwgRow->setObjectName(QStringLiteral("quiet"));
-    dwgRow->setWordWrap(true);
-    grid->addWidget(dwgRow);
-    col->addLayout(grid);
+    if (io::dwg_backend_available())
+        formatRow(tr(".DWG"), tr("AutoCAD çizimi"), tr("okunur"), Tone::Accent,
+                  QString::fromStdString(io::dwg_backend_status()));
+    else
+        formatRow(tr(".DWG"), tr("AutoCAD çizimi — çizimi DXF olarak kaydedip aktarın"),
+                  tr("okunmaz"), Tone::Danger, QString::fromStdString(io::dwg_backend_status()));
 
-    col->addStretch(1);
+    col->addLayout(grid);
     return page;
+}
+
+void ImportWizard::judgePick(const QString& text)
+{
+    const QFileInfo about(text.trimmed());
+    const bool exists = about.isFile();
+
+    fileFacts_->setText(
+        exists ? tr("%1 · %2 · son değişiklik %3")
+                     .arg(about.suffix().toUpper(), readableSize(about.size()),
+                          about.lastModified().toString(QStringLiteral("dd.MM.yyyy HH:mm")))
+               : QString());
+
+    // WHETHER THIS PROGRAM CAN OPEN IT, decided HERE. The window has the
+    // allow-list and used to ignore it: any existing file enabled `İleri`, so a
+    // `.dwg` on a build without the reader, or a `.txt`, was accepted on this
+    // page and refused on the next one — after the user had committed to the
+    // flow. A window that knows the answer has to give it where the question is
+    // asked.
+    QString why;
+    if (exists) {
+        const QString suffix = QStringLiteral(".") + about.suffix().toLower();
+        bool readable        = false;
+        for (const io::VectorFormat& f : io::vector_formats())
+            if (f.read && QString::fromStdString(f.extension).toLower() == suffix) readable = true;
+        if (suffix == QStringLiteral(".dwg")) readable = io::dwg_backend_available();
+
+        if (!readable)
+            why = suffix == QStringLiteral(".dwg")
+                      ? tr("Bu sürüm DWG okumuyor. Çizimi AutoCAD'de DXF olarak kaydedip onu "
+                           "aktarın.")
+                      : tr("Desteklenen biçimler aşağıda listeli. Dosyanın uzantısını "
+                           "denetleyin.");
+    }
+
+    verdict_->setTitle(why.isEmpty() ? QString()
+                                     : tr("%1 dosyası okunamıyor").arg(about.suffix().toUpper()));
+    verdict_->setText(why);
+    verdict_->applyTheme(mode_);
+    verdict_->setVisible(!why.isEmpty());
+    next_->setEnabled(exists && why.isEmpty());
 }
 
 QWidget* ImportWizard::buildLayerPage()
@@ -659,6 +738,26 @@ QWidget* ImportWizard::buildLayerPage()
     // ---- left: the drawing ----
     auto* left = new QVBoxLayout;
     left->setSpacing(10);
+
+    // THE READER'S NOTICES, ABOVE THE DRAWING AND ONE BANNER EACH.
+    //
+    // They were flattened into one grey paragraph UNDER the preview, with their
+    // level spelled as a lower-case word in front of the sentence — so "this
+    // file declares no coordinate system" and "this file declares no units" sat
+    // in the same weight as the object count, below the picture, at the bottom
+    // of the page. Those two are the ones that put a parcel in the wrong place
+    // at the wrong scale, and what leaves this program is a document somebody
+    // signs. They are the most consequential words in the window and they were
+    // the quietest.
+    //
+    // Above the drawing because they are about the FILE, not about the picture;
+    // and the preview is the stretching item, so a file with four notices gives
+    // them their room and keeps the thumbnail smaller. That is the right
+    // priority: the thumbnail is a reassurance, the notices are a decision.
+    notices_ = new QVBoxLayout;
+    notices_->setSpacing(8);
+    notices_->setContentsMargins(0, 0, 0, 0);
+    left->addLayout(notices_);
 
     auto* drawnHeading = new QLabel(tr("ÇİZİM"), page);
     drawnHeading->setObjectName(QStringLiteral("groupCaption"));
@@ -866,24 +965,54 @@ void ImportWizard::probeFinished()
         row->setCheckState(Qt::Checked);
     }
 
+    // THE FACTS STAY QUIET, because they are facts: what was read, how much of
+    // it, in which system. Metadata reads as metadata.
     QStringList said;
     said << tr("%1 · %2 nesne · %3 katman")
                 .arg(QString::fromStdString(found_.driver), grouped(found_.entities),
                      grouped(static_cast<std::uint64_t>(found_.layers.size())));
     if (!found_.crs.empty()) said << QString::fromStdString(found_.crs);
-    // Most serious first, each with its level in front, so a warning about an
-    // assumed unit is not the eighth line under seven counts.
+    summary_->setText(said.join(QStringLiteral("\n")));
+
+    // AND THE NOTICES GET THEIR OWN RANK. The level the reader already recorded
+    // picks the tone, so the window stops spelling it as a word in front of a
+    // sentence: `Warning` is something assumed and the drawing may be wrong,
+    // `Degraded` and `Skipped` say something did not come through whole, `Error`
+    // is a failure the reader survived, `Info` only informs.
+    while (QLayoutItem* old_item = notices_->takeAt(0)) {
+        if (QWidget* gone = old_item->widget()) gone->deleteLater();
+        delete old_item;
+    }
     for (const io::Diagnostic& line : found_.diagnostics.ordered()) {
         // The reader's hint about `alanlar=` is for the command line; here the
         // third page IS that choice, so the hint would send the user elsewhere.
         if (line.text.find("alanlar=") != std::string::npos) continue;
-        if (line.level == io::Severity::Info)
+
+        // AN `Info` IS A FACT, NOT A NOTICE. "the types read were ARC, CIRCLE,
+        // LINE" is the same kind of statement as the object count, and a banner
+        // for it costs the notices their rank: four banners on one small file
+        // and the two that matter stop standing out. Facts join the facts.
+        if (line.level == io::Severity::Info) {
             said << QString::fromStdString(line.text);
-        else
-            said << QStringLiteral("%1: %2").arg(QString::fromUtf8(io::severity_prefix(line.level)),
-                                                 QString::fromStdString(line.text));
+            summary_->setText(said.join(QStringLiteral("\n")));
+            continue;
+        }
+
+        const Tone tone = line.level == io::Severity::Error ? Tone::Danger : Tone::Warn;
+
+        // THE FACT IS THE TITLE, THE FIX IS THE BODY. A reader's notice is one
+        // long sentence run — what was assumed, and then what to do if the
+        // assumption is wrong — so the first sentence is the heading and the
+        // rest is the instruction under it. That is the shape a banner has, and
+        // the shape an error should have: what happened, then how to fix it.
+        const QString whole = QString::fromStdString(line.text).trimmed();
+        const int stop      = whole.indexOf(QStringLiteral(". "));
+        const QString title = stop > 0 ? whole.left(stop + 1) : whole;
+        const QString rest  = stop > 0 ? whole.mid(stop + 2).trimmed() : QString();
+        auto* notice        = new Banner(tone, title, rest, this);
+        notice->applyTheme(mode_);
+        notices_->addWidget(notice);
     }
-    summary_->setText(said.join(QStringLiteral("\n")));
 
     preview_->setDocument(scratch_.get());
 
@@ -946,6 +1075,19 @@ void ImportWizard::showPage(int page)
 {
     pages_->setCurrentIndex(page);
     back_->setEnabled(page > 0);
+
+    // THE WINDOW TAKES THE HEIGHT ITS PAGE NEEDS — and it GROWS but never
+    // shrinks. Growing is what the steps ask for: picking one file needs a
+    // field, choosing layers needs a preview beside a checklist. Never shrinking
+    // is what keeps stepping back and forth from reflowing the window under the
+    // hand: once a size has been shown, it stays available.
+    //
+    // `QStackedWidget` reports the tallest page whatever is on top, so the page
+    // itself is asked instead.
+    if (QWidget* live = pages_->widget(page); live != nullptr) {
+        const int wanted = live->sizeHint().height() + (height() - pages_->height());
+        if (wanted > height()) resize(width(), wanted);
+    }
     next_->setText(page == 2 ? tr("İçe Aktar") : tr("İleri"));
 
     stepOne_->setObjectName(page == 0 ? QStringLiteral("wizardStepOn")

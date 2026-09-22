@@ -135,6 +135,12 @@ std::vector<Diagnostic> ImportDiagnostics::lines() const
                               : " ise bu sürüm o birimi çizim birimi olarak sunmuyor; dosyayı "
                                 "kaynağında metreye çevirip yeniden aktarın.")});
         } else if (!declared_unit.has_value()) {
+            // A NOTE, DELIBERATELY, and `test_io.cpp` pins it: a file that names
+            // no unit is told so in EVERY unit, metres included, and metres is
+            // what almost every unitless DXF means. A warning on every one of
+            // them would be a warning nobody reads — and it sits beside the
+            // assumed COORDINATE SYSTEM, which has no such default and is a
+            // warning for exactly that reason (`vector.cpp`).
             out.push_back(Diagnostic{Severity::Info,
                                      "Dosya birim bildirmiyor; çizim " + used +
                                          " olarak okundu (AYAR çizim_birimi). Yanlışsa GERİAL "

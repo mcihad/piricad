@@ -6,6 +6,54 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — içe aktarma penceresinde rütbe: en sessiz şey en önemliydi
+
+Bu pencere bir "dosya seç" penceresi değil, bir **beyan denetimi**: bir DXF ne
+koordinat sistemi ne birim taşır, ve bunları yanlış almak parseli yanlış yere
+yanlış ölçekte koymak demek. Çıktı imzalanan bir belge. Buna göre bakıldığında
+sıralama tersti.
+
+- **Okuyucunun uyarıları** tek bir gri paragrafa düzleştirilmiş, önizlemenin
+  ALTINDA, seviyeleri cümlenin önüne küçük harfle yazılmış hâlde duruyordu — yani
+  "dosya koordinat sistemi bildirmiyor" nesne sayısıyla aynı ağırlıkta, sayfanın
+  dibinde. Artık her biri bileşen setinin `Banner`'ı: seviyesi tonu seçiyor,
+  ilk cümle başlık, gerisi ne yapılacağı. Çizimin **üstünde**, çünkü dosya
+  hakkında; ve önizleme esneyen öge olduğu için dört uyarılı bir dosya onlara
+  yerini veriyor. Küçük resim bir teselli, uyarı bir karardır.
+- **Bir `Info` olgu sayılıyor** ve sessiz satırlara katılıyor ("okunan türler:
+  ARC, CIRCLE, LINE"). Dört banner, iki önemlinin rütbesini götürüyordu.
+- **Okunamayan dosya seçildiğinde pencere bunu orada söylüyor.** Yapı izin
+  listesini biliyordu ve kullanmıyordu: var olan her dosya **İleri**'yi açıyor,
+  ret bir sonraki sayfada geliyordu — kullanıcı akışa girdikten sonra.
+- **Biçim listesi taranabilir oldu:** nokta ile birleştirilmiş cümleler yerine
+  her satırın sonunda **okunur** / **okunur · yazılır** / **okunmaz** etiketi.
+  Bu listeye bakan biri tek bir şey arar; artık gözüne o çarpıyor.
+- **Sayfanın yarısı boş değil.** Bütün adımlara tek boy veriliyordu, yani bir
+  yol alanı ve bir başvuru listesi, katman sayfasının önizleme + liste için
+  istediği yüksekliği alıyordu. Pencere artık bulunduğu sayfanın boyunu alıyor;
+  büyüyor, küçülmüyor (ileri geri gezerken pencere elin altında yeniden
+  akmasın diye).
+- **Cümle en üste taşındı.** "Dosya önce yalnızca okunur; çizime hiçbir şey
+  eklenmez" sayfanın en son satırıydı — okuma başlamadan gizli duran bir ilerleme
+  şeridinin altında. Pencereyi kullanmayı güvenli kılan tek söz, hakkında olduğu
+  karardan sonra okunuyordu.
+- **Metin bir sütuna alındı.** Her satır pencere genişliğinde, 170 karaktere
+  yakın akıyordu; alan ölçülmüştü, yazı ölçülmemişti.
+
+### Düzeltildi — varsayılan koordinat sistemi artık uyarı
+
+`io.md` R20: "eksik ya da tanınmayan CRS bir hata olmalı, asla sessiz bir
+varsayım değil." CRS taşıyabilen biçimlerde eksik CRS gerçekten hata. DXF
+taşıyamadığı için varsayım sanksiyonlu — ama en yumuşak seviyeye (`Info`)
+yazılıyordu, ki R20'nin yasakladığı sessizlik tam bu. `Severity`'nin kendi
+tanımı da bunu söylüyor: `Warning` = "okuyucu bir şey varsaymak zorunda kaldı;
+çizim yanlış olabilir."
+
+**Birim varsayımına dokunulmadı** ve bu bilinçli: birim bildirmeyen bir DXF
+neredeyse her zaman metre demektir, her içe aktarmada uyarı vermek uyarıyı
+değersizleştirir, ve `test_io.cpp` bu kararı gerekçesiyle sabitliyor. Koordinat
+sisteminin öyle bir varsayılanı yok. İki kararın farkı artık testte yazılı.
+
 ### Düzeltildi — yedi yakalama modu hiçbir işaret çizmiyordu
 
 `map_canvas.cpp`'deki işaret `switch`'inin sonunda bir `default: break;` vardı —
