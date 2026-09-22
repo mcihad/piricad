@@ -40,6 +40,10 @@ betiğin kendi adları için hiçbir şey öneriyordu.
 - Parametre tipleri `Coord` / `Coords` diye okunuyor. Önceki `list[list[int]]`
   yalnız çirkin değil **yanlıştı**: `core.circle_draw`'ın merkezi tek noktadır ve
   belge herkese `center=[[y, x]]` yazmasını söylüyordu.
+- Yeni `python-editor` ctest'i istemi **gerçek tuş olaylarıyla** sürüyor ve ne
+  önerildiğini denetliyor: `cad.` seksenden fazla aday veriyor mu, `cad.doc.`
+  komut önermiyor mu, çağrı içinde `points=` çıkıyor mu, yazılmış anahtar tekrar
+  önerilmiyor mu, betiğin kendi adı geliyor mu, çağrı bitince ipucu kapanıyor mu.
 
 
 ### Eklendi — Python konsolu ve `PYTHON` komutu

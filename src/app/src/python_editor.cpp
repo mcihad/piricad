@@ -735,12 +735,22 @@ void ScriptEditor::offerCompletions(const Context& where)
             }
         }
         add(QStringLiteral("cad"), tr("çizim"));
-        for (const QString& n : localNames())
-            if (n != where.prefix) add(n, tr("bu betikte"));
-        for (const QString& n : kPythonWords)
-            add(n, tr("anahtar sözcük"));
-        for (const QString& n : kPythonBuiltins)
-            add(n, tr("yerleşik"));
+
+        // JUST AFTER THE BRACKET, THE KEYWORDS AND NOTHING ELSE. With nothing
+        // typed yet the question is "what does this command take", and answering
+        // it with thirty Python keywords buries the five words that are the
+        // answer. The moment a letter is typed the list widens again, because by
+        // then the user is naming something rather than asking.
+        const bool just_opened =
+            !where.call.isEmpty() && where.prefix.isEmpty() && callable(where.call) != nullptr;
+        if (!just_opened) {
+            for (const QString& n : localNames())
+                if (n != where.prefix) add(n, tr("bu betikte"));
+            for (const QString& n : kPythonWords)
+                add(n, tr("anahtar sözcük"));
+            for (const QString& n : kPythonBuiltins)
+                add(n, tr("yerleşik"));
+        }
     }
 
     words_->clear();
@@ -814,6 +824,22 @@ void ScriptEditor::updateSignatureHint(const Context& where)
     }
     hint_->move(at);
     hint_->QWidget::show();
+}
+
+QStringList ScriptEditor::completionsShown() const
+{
+    QStringList shown;
+    if (!completer_->popup()->isVisible()) return shown;
+    for (int i = 0; i < completer_->completionCount(); ++i) {
+        const QModelIndex at = completer_->completionModel()->index(i, 0);
+        shown << completer_->completionModel()->data(at).toString();
+    }
+    return shown;
+}
+
+bool ScriptEditor::hintVisible() const
+{
+    return hint_->isVisible();
 }
 
 QWidget* ScriptEditor::signatureHint() const
@@ -1104,6 +1130,18 @@ void PythonConsole::focusPrompt()
     prompt_->setFocus(Qt::OtherFocusReason);
 }
 
+QStringList PythonConsole::probeOffered(const QString& source)
+{
+    prompt_->clear();
+    typeIntoPrompt(source);
+    return prompt_->completionsShown();
+}
+
+bool PythonConsole::promptHintVisible() const
+{
+    return prompt_->hintVisible();
+}
+
 QWidget* PythonConsole::promptHint() const
 {
     return prompt_->signatureHint();
@@ -1113,6 +1151,16 @@ void PythonConsole::typeIntoPrompt(const QString& source)
 {
     prompt_->setFocus(Qt::OtherFocusReason);
     for (const QChar c : source) {
+        // A NEWLINE IS SHIFT+RETURN HERE, which is what a person presses: plain
+        // Return submits. Sending the character as text would put a `\n` nowhere —
+        // the editor reads the KEY for Return, not the text — and the probe would
+        // be typing one long line while believing it typed two.
+        if (c == QLatin1Char('\n')) {
+            QKeyEvent press(QEvent::KeyPress, Qt::Key_Return, Qt::ShiftModifier,
+                            QStringLiteral("\n"));
+            QCoreApplication::sendEvent(prompt_, &press);
+            continue;
+        }
         QKeyEvent press(QEvent::KeyPress, 0, Qt::NoModifier, QString(c));
         QCoreApplication::sendEvent(prompt_, &press);
     }

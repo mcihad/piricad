@@ -323,7 +323,8 @@ int main(int argc, char** argv)
           "KENTOS_PICK_PROBE",      "KENTOS_TABLE_PROBE",   "KENTOS_SCHEMA_PROBE",
           "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",    "KENTOS_NORMAL_PROBE",
           "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE",  "KENTOS_CLIP_PROBE",
-          "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE"})
+          "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
+          "KENTOS_PYTHON_PROBE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1460,6 +1461,11 @@ int main(int argc, char** argv)
     // probes around it: developer tooling, not a feature. It is what proves the
     // seam no unit test can reach — a decoded tool call becoming a bubble, a
     // card and an undo entry in a running shell.
+    if (qEnvironmentVariableIsSet("KENTOS_PYTHON_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probePython()); });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_CHAT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeChat()); });

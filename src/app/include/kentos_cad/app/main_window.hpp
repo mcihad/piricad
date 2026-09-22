@@ -133,6 +133,10 @@ public:
     /// The Python prompt's signature strip, for the probe that photographs it.
     QWidget* pythonSignatureHint() const;
 
+    /// Drives the Python prompt and checks what it offers. Returns the number of
+    /// failures, so `ctest` fails on any of them.
+    int probePython();
+
     /// The other three windows, public for the same reason as the designer:
     /// `KENTOS_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing

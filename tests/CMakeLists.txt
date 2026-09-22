@@ -325,6 +325,17 @@ if(TARGET kentos_cad)
                 "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(chat PROPERTIES TIMEOUT 120)
+
+    # The Python prompt's completion and signature hint, driven by real key
+    # events. A unit test cannot reach them: what is being checked is what happens
+    # BETWEEN the keys, inside a widget, and that needs the shell.
+    add_test(NAME python-editor
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_PYTHON_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(python-editor PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.

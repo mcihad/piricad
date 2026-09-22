@@ -6639,6 +6639,91 @@ int probeCredentialOffThread(Controller& controller)
 
 } // namespace
 
+int MainWindow::probePython()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool held, const char* what) {
+        if (held) return;
+        ++failures;
+        (void)std::fprintf(stdout, "[python] BASARISIZ — %s\n", what);
+        (void)std::fflush(stdout);
+    };
+    const auto say = [](const char* what, const QString& detail) {
+        (void)std::fprintf(stdout, "[python] %-26s %s\n", what, detail.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    check(pythonConsole_ != nullptr, "Python konsolu kurulmadı");
+    if (pythonConsole_ == nullptr) return 1;
+    showPythonConsole();
+
+    // ---- `cad.` offers the whole surface -----------------------------------
+    //
+    // THE COUNT IS THE POINT. The old completer answered `cad.` with nothing at
+    // all — it wanted three characters and a `cad` prefix — and the way that bug
+    // stays fixed is a number that cannot be met by a hand-written list.
+    {
+        const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("cad."));
+        say("cad. ->", QString::number(shown.size()) + QStringLiteral(" aday"));
+        check(shown.size() > 80, "cad. bütün komutları önermiyor");
+        check(shown.contains(QStringLiteral("line")), "cad. -> line yok");
+        check(shown.contains(QStringLiteral("doc")), "cad. -> doc yok");
+        check(shown.contains(QStringLiteral("viewport")), "cad. -> viewport yok");
+        check(shown.contains(QStringLiteral("Point")), "cad. -> Point yok");
+        check(shown.contains(QStringLiteral("run")), "cad. -> run yok");
+    }
+
+    // ---- an owner narrows it, rather than widening it -----------------------
+    {
+        const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("cad.doc."));
+        say("cad.doc. ->", shown.join(QStringLiteral(" ")));
+        check(shown.contains(QStringLiteral("layers")), "cad.doc. -> layers yok");
+        check(shown.contains(QStringLiteral("entity_count")), "cad.doc. -> entity_count yok");
+        check(!shown.contains(QStringLiteral("line")), "cad.doc. komut öneriyor");
+    }
+    {
+        const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("cad.viewport."));
+        check(shown.contains(QStringLiteral("bbox")), "cad.viewport. -> bbox yok");
+        check(!shown.contains(QStringLiteral("layers")), "cad.viewport. -> doc çağrısı öneriyor");
+    }
+
+    // ---- inside a call, the keywords ----------------------------------------
+    {
+        const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("cad.line("));
+        say("cad.line( ->", shown.join(QStringLiteral(" ")));
+        check(shown.contains(QStringLiteral("points=")), "çağrı içinde points= önerilmiyor");
+        check(pythonConsole_->promptHintVisible(), "çağrı içinde imza ipucu yok");
+    }
+    {
+        // ALREADY WRITTEN IS NOT OFFERED AGAIN: a second `points=` is a TypeError.
+        const QStringList shown =
+            pythonConsole_->probeOffered(QStringLiteral("cad.line(points=[], "));
+        check(!shown.contains(QStringLiteral("points=")), "yazılmış anahtar tekrar öneriliyor");
+    }
+
+    // ---- outside a call, the script's own names and Python's ----------------
+    {
+        const QStringList shown =
+            pythonConsole_->probeOffered(QStringLiteral("kenar_sayisi = 6\nken"));
+        say("yerel ad ->", shown.join(QStringLiteral(" ")));
+        check(shown.contains(QStringLiteral("kenar_sayisi")), "betiğin kendi adı önerilmiyor");
+    }
+    {
+        const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("pri"));
+        check(shown.contains(QStringLiteral("print")), "yerleşik print önerilmiyor");
+    }
+
+    // ---- the hint follows the cursor out of the call ------------------------
+    {
+        (void)pythonConsole_->probeOffered(QStringLiteral("cad.line(points=[]) "));
+        check(!pythonConsole_->promptHintVisible(), "çağrı bittikten sonra ipucu duruyor");
+    }
+
+    (void)std::fprintf(stdout, "[python] %d hata\n", failures);
+    (void)std::fflush(stdout);
+    return failures;
+}
+
 int MainWindow::probeChat()
 {
     int failures     = 0;

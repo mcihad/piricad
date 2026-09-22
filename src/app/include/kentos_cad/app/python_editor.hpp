@@ -100,6 +100,15 @@ public:
     /// Empty when there is nothing to recall.
     void setHistory(const QStringList& entries) { history_ = entries; }
 
+    /// What the popup is offering right now, for the probe that checks it.
+    ///
+    /// The COMPLETION MODEL and not the candidate list: what is asked is what the
+    /// user can actually see, after the prefix has filtered it.
+    QStringList completionsShown() const;
+
+    /// Whether the signature strip is up.
+    bool hintVisible() const;
+
     /// The signature strip, for a probe that photographs it. It is a window of
     /// its own, so a grab of the shell does not contain it.
     QWidget* signatureHint() const;
@@ -220,6 +229,12 @@ public:
 
     /// Focuses the prompt, for the menu action and the shortcut.
     void focusPrompt();
+
+    /// Clears the prompt, types `source` and answers what completion offers.
+    QStringList probeOffered(const QString& source);
+
+    /// Whether the prompt's signature strip is up.
+    bool promptHintVisible() const;
 
     /// The prompt's signature strip, for the probe.
     QWidget* promptHint() const;
