@@ -237,6 +237,54 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         arrowHead(p, QPointF(21.0, 12.0), QPointF(16.0, 12.0), c, 3.4);
         break;
 
+    case Glyph::Stretch:
+        // A FRAME WITH ONE CORNER PULLED OUT, which is what the command does: the
+        // vertices inside the crossing window move and the rest stay. Deliberately
+        // NOT four-way arrows — those belong to `TAŞI`, and sharing them made the
+        // two tools one tool in the column.
+        p.setPen(stroke(c, 1.6));
+        p.drawPolyline(QPolygonF({QPointF(4.4, 19.6), QPointF(4.4, 7.4), QPointF(13.4, 7.4)}));
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(4.4, 19.6), QPointF(16.6, 19.6), QPointF(16.6, 12.0)}));
+        p.drawLine(QPointF(13.4, 7.4), QPointF(16.6, 12.0));
+        grip(p, QPointF(16.6, 12.0), c);
+        arrowHead(p, QPointF(21.2, 6.6), QPointF(16.2, 11.0), c, 3.4);
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(16.6, 11.4), QPointF(20.2, 7.6));
+        break;
+
+    case Glyph::Ellipse:
+        // AN ELLIPSE, and its two axes: what tells it from a circle at a glance is
+        // that it has a long one and a short one.
+        p.drawEllipse(QPointF(12.0, 12.0), 9.0, 5.6);
+        p.setPen(stroke(c, 1.2));
+        p.drawLine(QPointF(3.0, 12.0), QPointF(21.0, 12.0));
+        p.drawLine(QPointF(12.0, 6.4), QPointF(12.0, 17.6));
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+
+    case Glyph::Annulus:
+        // TWO CONCENTRIC CIRCLES: the ring is the space between them, and the
+        // inner one is what makes it a ring rather than a disc.
+        p.drawEllipse(QPointF(12.0, 12.0), 9.0, 9.0);
+        p.setPen(stroke(c, 1.4));
+        p.drawEllipse(QPointF(12.0, 12.0), 4.4, 4.4);
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+
+    case Glyph::Sector: {
+        // A WEDGE CUT FROM A CIRCLE, drawn as the two radii and the arc between
+        // them — the shape the command asks for in that order.
+        QPainterPath wedge;
+        wedge.moveTo(12.0, 12.0);
+        wedge.lineTo(20.6, 12.0);
+        wedge.arcTo(QRectF(3.4, 3.4, 17.2, 17.2), 0.0, -108.0);
+        wedge.closeSubpath();
+        p.drawPath(wedge);
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+    }
+
     case Glyph::Copy:
         // Two offset outlines: the original and its duplicate.
         p.setPen(stroke(c, 1.5));

@@ -6,6 +6,41 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — dört araç başka bir aracın ikonunu taşıyordu
+
+Rapor: "taşı ve esnet ikonları aynı." Bir kolon **etiket değil ikon** gösterir,
+yani tek ikonu paylaşan iki araç elin uzandığı tek araçtır. Dördü de kendi
+ikonunu aldı: `ESNET` (çerçeveden çekilen köşe — `TAŞI`'nın dört yön oku
+değil), `ELİPS` (iki eksenli elips), `HALKA` (iç içe iki çember), `DİLİM`
+(çemberden kesilmiş dilim). Kalan paylaşımlar aynı şeklin yöntem çeşitleridir
+ve kartta etiketleriyle görünür.
+
+### Düzeltildi — DAİRE'nin üç yöntemi çemberi önizlemiyordu
+
+`2n` ve `3n` lastik bir **çizgi** gösteriyordu, `ttr` ise hiçbir şey. Dördünün
+kılavuzu da artık tıklayınca oluşacak çemberin kendisi, ve çemberi kuracak olan
+fonksiyondan geliyor (`core::circle_from_guide`).
+
+- **`ttr`** en çok gereken yerdi: verilen yarıçapta iki doğruya teğet **dört**
+  çember var, kullanıcı köşeyi göstererek seçiyor, ve hangisini aldığını
+  tıkladıktan sonra öğreniyordu. Şimdi iki teğet doğru ve imlecin bulunduğu
+  çeyrekteki pah çemberi önizleniyor.
+- **Dört çözümü arayan kod `core`'a taşındı** (`core::tangent_circle_centre`) ve
+  komutla kılavuz onu paylaşıyor — önizlemenin gösterdiği çember, çizilen
+  çember.
+- **Dört yapı tek evde**: `CircleBuild` ile `merkez`, `2n`, `3n` ve `ttr`
+  `core::circle_from_guide`'a indi; komut kendi uzaklık yardımcısını bıraktı.
+  Aritmetik birebir aynı, altın fikstürler değişmedi.
+
+### Düzeltildi — halkanın iç çemberi ekranda kalıyor
+
+Kullanıcının isteği: "halka çizilirken ilk çizilen halkanın kılavuz çizgileri
+kalmalı ki görebilelim." Yapılan şey iki çemberin kendisi; yalnız en yenisi
+gösterildiğinde ikinci tıklama birincisini silmiş gibi görünüyordu. İç çember
+artık `rubber_chain` ile duruyor ve iki kılavuz birlikte çiziliyor. Aynı ilke
+`DİLİM`e de uygulandı: sabitlenen ilk kenarın yarıçap çizgisi de duruyor, böylece
+şekil çıplak bir yay değil dilim olarak okunuyor.
+
 ### Düzeltildi — çizimden sonra araç elde kalıyor, ve elde kalan araç aynı araç
 
 Kullanıcının raporu: "çizim yaptıktan sonra varsayılan araç seçiliyor

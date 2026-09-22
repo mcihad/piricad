@@ -27,27 +27,32 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
+#include <initializer_list>
 #include <string>
+#include <vector>
 
 namespace kentos::command {
 namespace {
 
-/// The distance between two points in millimetres, computed in metres.
+/// The circle a construction makes, asked of `core` rather than worked out here.
 ///
-/// Metres before squaring: the square of a TM3 coordinate difference in
-/// millimetres leaves the 53-bit mantissa long before it leaves int64, and
-/// translating to the first point is what keeps the operands small (core.md R3).
-/// `double` is transient and never stored.
-core::Mm span(core::Point2 a, core::Point2 b)
+/// EVERY ONE OF THE FOUR METHODS GOES THROUGH THIS, including `merkez`, which
+/// used to carry its own distance helper. The reason is the guide: the canvas
+/// previews three of these constructions and has to arrive at the same circle,
+/// and a second copy of the arithmetic is a copy that eventually disagrees
+/// (core/circle.hpp).
+bool built(core::CircleBuild how, std::initializer_list<core::Point2> fixed, core::Point2 cursor,
+           core::Point2& centre, core::Mm& radius, core::Mm given = 0)
 {
-    const double dx = core::mm_to_metres(b.x - a.x);
-    const double dy = core::mm_to_metres(b.y - a.y);
-    return core::mm_round(std::sqrt(dx * dx + dy * dy) * core::kMmPerMetre);
+    const std::vector<core::Point2> chain(fixed);
+    return core::circle_from_guide(core::CircleGuide{.build = how, .radius = given}, chain, cursor,
+                                   centre, radius);
 }
 
 Task<void> run(Context& ctx)
@@ -66,15 +71,21 @@ Task<void> run(Context& ctx)
         // half is a rounding twice over.
         auto first = co_await ctx.point("birinci", "Çapın bir ucu");
         if (!first) co_return;
-        auto second = co_await ctx.point("ikinci", "Çapın öteki ucu",
-                                         PointOptions{.rubber_band   = true,
-                                                      .rubber_origin = *first,
-                                                      .rubber_shape  = RubberShape::Line});
+        // THE CIRCLE, NOT ITS DIAMETER. Previewed as a line, this method showed
+        // the user a rubber band and told them nothing about the circle it was
+        // about to make — the same defect the rotated rectangle had. The guide
+        // is built by `core::circle_from_guide`, which is the arithmetic below.
+        auto second = co_await ctx.point(
+            "ikinci", "Çapın öteki ucu",
+            PointOptions{.rubber_band    = true,
+                         .rubber_origin  = *first,
+                         .rubber_shape   = RubberShape::CircleBuild,
+                         .rubber_chain   = {*first},
+                         .rubber_payload = core::encode_circle_guide(
+                             core::CircleGuide{.build = core::CircleBuild::Diameter})});
         if (!second) co_return;
 
-        centre = core::Point2{(first->x + second->x) / 2, (first->y + second->y) / 2};
-        radius = span(*first, *second) / 2;
-        if (radius <= 0) {
+        if (!built(core::CircleBuild::Diameter, {*first}, *second, centre, radius)) {
             ctx.echo("Çapın iki ucu aynı nokta; yarıçap sıfır olamaz.");
             co_return;
         }
@@ -89,10 +100,18 @@ Task<void> run(Context& ctx)
                                                       .rubber_origin = *first,
                                                       .rubber_shape  = RubberShape::Line});
         if (!second) co_return;
-        auto third = co_await ctx.point("ucuncu", "Çember üzerinde üçüncü nokta",
-                                        PointOptions{.rubber_band   = true,
-                                                     .rubber_origin = *second,
-                                                     .rubber_shape  = RubberShape::Line});
+        // TWO POINTS DETERMINE NO CIRCLE, so the second is asked for with a
+        // line; the THIRD one settles it, and from there the guide is the
+        // circumcircle itself — drawn by `core::circumcircle`, which is what
+        // this method computes below (CLAUDE.md 5.10).
+        auto third = co_await ctx.point(
+            "ucuncu", "Çember üzerinde üçüncü nokta",
+            PointOptions{.rubber_band    = true,
+                         .rubber_origin  = *second,
+                         .rubber_shape   = RubberShape::CircleBuild,
+                         .rubber_chain   = {*first, *second},
+                         .rubber_payload = core::encode_circle_guide(
+                             core::CircleGuide{.build = core::CircleBuild::ThreePoint})});
         if (!third) co_return;
 
         if (!core::circumcircle(*first, *second, *third, centre, radius)) {
@@ -128,9 +147,6 @@ Task<void> run(Context& ctx)
         if (!b2) co_return;
         auto wanted = co_await ctx.number("yaricap", "Yarıçap (m)");
         if (!wanted) co_return;
-        auto near = co_await ctx.point("yon", "Dairenin geleceği köşeyi gösterin");
-        if (!near) co_return;
-
         const core::Mm r = core::mm_from_metres(*wanted);
         if (r <= 0) {
             ctx.session().fail(
@@ -138,48 +154,26 @@ Task<void> run(Context& ctx)
             co_return;
         }
 
-        // THE FOUR CENTRES are the crossings of the two lines offset by the
-        // radius, each line offset to both sides. `core::line_intersection` does
-        // the crossing; the offset is the line's own left normal.
-        const auto offset_line = [](core::Point2 p, core::Point2 q, core::Mm by, core::Point2& op,
-                                    core::Point2& oq) {
-            const double dx  = core::mm_to_metres(q.x - p.x);
-            const double dy  = core::mm_to_metres(q.y - p.y);
-            const double len = std::sqrt(dx * dx + dy * dy);
-            if (len == 0.0) return false;
-            const core::Mm nx = core::mm_round(-dy / len * static_cast<double>(by));
-            const core::Mm ny = core::mm_round(dx / len * static_cast<double>(by));
-            op                = core::Point2{p.x + nx, p.y + ny};
-            oq                = core::Point2{q.x + nx, q.y + ny};
-            return true;
-        };
+        // THE ONE PICK WHERE SEEING IT MATTERS MOST, and it had no guide at all.
+        // Four circles of this radius are tangent to both lines, one in each
+        // quadrant they make, and the user chooses by pointing at a corner: the
+        // fillet follows the cursor from quadrant to quadrant so the junction is
+        // right before the click, not after it.
+        auto near = co_await ctx.point(
+            "yon", "Dairenin geleceği köşeyi gösterin",
+            PointOptions{.rubber_band    = true,
+                         .rubber_origin  = *a1,
+                         .rubber_shape   = RubberShape::CircleBuild,
+                         .rubber_chain   = {*a1, *a2, *b1, *b2},
+                         .rubber_payload = core::encode_circle_guide(
+                             core::CircleGuide{.build = core::CircleBuild::Tangent, .radius = r})});
+        if (!near) co_return;
 
+        // THE FOUR CENTRES, chosen by the corner the user pointed at. The search
+        // is `core::tangent_circle_centre`, shared with the guide above so the
+        // circle that was previewed is the circle that is drawn.
         core::Point2 best{};
-        bool found     = false;
-        double nearest = 0.0;
-        for (const core::Mm side_a : {r, -r})
-            for (const core::Mm side_b : {r, -r}) {
-                core::Point2 p1{};
-                core::Point2 p2{};
-                core::Point2 q1{};
-                core::Point2 q2{};
-                if (!offset_line(*a1, *a2, side_a, p1, p2)) continue;
-                if (!offset_line(*b1, *b2, side_b, q1, q2)) continue;
-
-                core::Point2 meet{};
-                double t = 0.0;
-                double u = 0.0;
-                if (!core::line_intersection(p1, p2, q1, q2, meet, t, u)) continue;
-
-                const double to_it = core::distance_squared(*near, meet);
-                if (!found || to_it < nearest) {
-                    found   = true;
-                    nearest = to_it;
-                    best    = meet;
-                }
-            }
-
-        if (!found) {
+        if (!core::tangent_circle_centre(*a1, *a2, *b1, *b2, r, *near, best)) {
             ctx.session().fail(
                 core::err(core::ErrorCode::InvalidArgument,
                           "İki doğru paralel; verilen yarıçapta ikisine de teğet bir daire yok."));
@@ -208,9 +202,7 @@ Task<void> run(Context& ctx)
                                                    .rubber_shape  = RubberShape::Circle});
         if (!rim) co_return;
 
-        centre = *middle;
-        radius = span(*middle, *rim);
-        if (radius <= 0) {
+        if (!built(core::CircleBuild::Centre, {*middle}, *rim, centre, radius)) {
             ctx.echo("Çember noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
             co_return;
         }

@@ -855,14 +855,14 @@ void MainWindow::buildActions()
     // asks for occasionally — a junction fillet, a protection band around a well.
     // Giving them a column button each would also mean two more glyphs sharing a
     // circle, which reads as one control drawn twice.
-    actSector_ = drawTool(Glyph::Arc, tr("Daire Dilimi"), QStringLiteral("DİLİM"),
+    actSector_ = drawTool(Glyph::Sector, tr("Daire Dilimi"), QStringLiteral("DİLİM"),
                           tr("DİLİM — merkez ve iki kenardan daire dilimi  ·  kısaltma: DL"));
     drawingTools_->addAction(actSector_);
-    actEllipse_ = drawTool(Glyph::Circle, tr("Elips"), QStringLiteral("ELİPS"),
+    actEllipse_ = drawTool(Glyph::Ellipse, tr("Elips"), QStringLiteral("ELİPS"),
                            tr("ELİPS — merkez ve iki eksenden elips; ikinci eksen birincisine "
                               "diktir  ·  kısaltma: EL"));
     drawingTools_->addAction(actEllipse_);
-    actAnnulus_ = drawTool(Glyph::Circle, tr("Halka"), QStringLiteral("HALKA"),
+    actAnnulus_ = drawTool(Glyph::Annulus, tr("Halka"), QStringLiteral("HALKA"),
                            tr("HALKA — merkez, iç ve dış yarıçaptan delikli halka  ·  "
                               "kısaltma: HLK"));
     drawingTools_->addAction(actAnnulus_);
@@ -1224,7 +1224,7 @@ void MainWindow::buildActions()
     // ESNET IS A MODAL TOOL, not a menu row: it arms, then asks for a window and
     // an offset. `modifyTool` puts it in the exclusive group with TAŞI and BUDA,
     // which is where the tool column can light it while it waits.
-    actStretch_ = modifyTool(Glyph::Move, tr("Esnet"), QStringLiteral("ESNET"),
+    actStretch_ = modifyTool(Glyph::Stretch, tr("Esnet"), QStringLiteral("ESNET"),
                              tr("ESNET — pencere içindeki köşeleri taşır, dışındakileri "
                                 "yerinde bırakır  ·  kısaltma: ES"));
     // THE COMMAND EXISTS, so the button is not a placeholder any more. `SORGULA`
@@ -1914,7 +1914,7 @@ void MainWindow::buildToolBox()
                    QStringLiteral("DAİRE yontem=ttr"),
                    tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir")),
         actEllipse_,
-        methodTool(Glyph::Circle, tr("Elips — eksenin iki ucu"),
+        methodTool(Glyph::Ellipse, tr("Elips — eksenin iki ucu"),
                    QStringLiteral("ELİPS yontem=eksen"),
                    tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni verir")),
         actAnnulus_,

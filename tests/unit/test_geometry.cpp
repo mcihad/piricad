@@ -9,6 +9,7 @@
 
 #include "kentos_cad/core/transform.hpp"
 
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/polygon.hpp"
 
@@ -1128,4 +1129,121 @@ TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
     std::vector<std::uint8_t> bad_sides = bytes;
     bad_sides[0]                        = 1; // one side is not a polygon
     CHECK_FALSE(decode_polygon_guide(bad_sides).has_value());
+}
+
+// ---------------------------------------------------------------------------
+// core/circle.hpp — the four constructions, and the guide that previews three.
+//
+// Same rule as the polygon: ONE answer. The canvas previews `2n`, `3n` and `ttr`
+// with the very function DAİRE builds them with, so a case that passes here
+// passes for the guide and for the document at once. `ttr` is why it matters —
+// four circles of the radius are tangent to two crossing lines, the user picks
+// one by pointing, and a preview that guessed differently would show the right
+// fillet and draw the wrong one.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Daire: iki doğruya teğet çemberin merkezi, işaret edilen köşeye göre")
+{
+    using namespace kentos::core;
+
+    // The axes as the two lines, and a radius of 5 m. The four centres are then
+    // (±5, ±5) — one in each quadrant — and which one is wanted is the one
+    // nearest the corner pointed at. Exact, because the offsets are along the
+    // axes and the crossing is integer.
+    const Point2 a1{-20'000, 0};
+    const Point2 a2{20'000, 0};
+    const Point2 b1{0, -20'000};
+    const Point2 b2{0, 20'000};
+    const Mm r = 5'000;
+
+    struct Case
+    {
+        Point2 near;
+        Point2 want;
+    };
+
+    for (const Case c :
+         {Case{{10'000, 10'000}, {5'000, 5'000}}, Case{{-10'000, 10'000}, {-5'000, 5'000}},
+          Case{{-10'000, -10'000}, {-5'000, -5'000}}, Case{{10'000, -10'000}, {5'000, -5'000}}}) {
+        Point2 centre{};
+        REQUIRE(tangent_circle_centre(a1, a2, b1, b2, r, c.near, centre));
+        CHECK_EQ(centre, c.want);
+    }
+
+    // Parallel lines have no such circle, and neither does a non-positive radius.
+    Point2 centre{};
+    CHECK_FALSE(tangent_circle_centre(a1, a2, Point2{-20'000, 9'000}, Point2{20'000, 9'000}, r,
+                                      Point2{0, 4'000}, centre));
+    CHECK_FALSE(tangent_circle_centre(a1, a2, b1, b2, 0, Point2{1, 1}, centre));
+}
+
+TEST_CASE("Daire kılavuzu: dört yapı ve reddedilen hâlleri")
+{
+    using namespace kentos::core;
+
+    Point2 centre{};
+    Mm radius = 0;
+
+    // merkez: the chain holds the centre, the cursor is on the rim.
+    const Point2 at_centre[1]{Point2{0, 0}};
+    REQUIRE(circle_from_guide(CircleGuide{.build = CircleBuild::Centre}, at_centre,
+                              Point2{30'000, 0}, centre, radius));
+    CHECK_EQ(centre, (Point2{0, 0}));
+    CHECK_EQ(radius, Mm{30'000});
+
+    // 2n: the two ends of a diameter. The centre is their midpoint and the
+    // radius half the FULL span, which is one rounding rather than two.
+    const Point2 first[1]{Point2{0, 0}};
+    REQUIRE(circle_from_guide(CircleGuide{.build = CircleBuild::Diameter}, first, Point2{40'000, 0},
+                              centre, radius));
+    CHECK_EQ(centre, (Point2{20'000, 0}));
+    CHECK_EQ(radius, Mm{20'000});
+
+    // 3n: three points on the rim. A 3-4-5 triangle's circumcircle has the
+    // hypotenuse as its diameter, so the centre is that side's midpoint.
+    const Point2 two[2]{Point2{0, 0}, Point2{30'000, 0}};
+    REQUIRE(circle_from_guide(CircleGuide{.build = CircleBuild::ThreePoint}, two, Point2{0, 40'000},
+                              centre, radius));
+    CHECK_EQ(centre, (Point2{15'000, 20'000}));
+    CHECK_EQ(radius, Mm{25'000});
+
+    // ttr: the chain holds the two lines, the radius is given, the cursor picks.
+    const Point2 four[4]{Point2{-20'000, 0}, Point2{20'000, 0}, Point2{0, -20'000},
+                         Point2{0, 20'000}};
+    REQUIRE(circle_from_guide(CircleGuide{.build = CircleBuild::Tangent, .radius = 5'000}, four,
+                              Point2{10'000, -10'000}, centre, radius));
+    CHECK_EQ(centre, (Point2{5'000, -5'000}));
+    CHECK_EQ(radius, Mm{5'000});
+
+    // A CHAIN THAT IS TOO SHORT DRAWS NOTHING, which is what the canvas needs:
+    // the guide is asked for on every mouse move, including before the points
+    // that fix it have been given.
+    CHECK_FALSE(circle_from_guide(CircleGuide{.build = CircleBuild::ThreePoint}, first,
+                                  Point2{1, 1}, centre, radius));
+    CHECK_FALSE(circle_from_guide(CircleGuide{.build = CircleBuild::Tangent, .radius = 5'000}, two,
+                                  Point2{1, 1}, centre, radius));
+    // Degenerate input too: a zero diameter, and three points in a line.
+    CHECK_FALSE(circle_from_guide(CircleGuide{.build = CircleBuild::Diameter}, first, Point2{0, 0},
+                                  centre, radius));
+    const Point2 in_a_line[2]{Point2{0, 0}, Point2{10'000, 0}};
+    CHECK_FALSE(circle_from_guide(CircleGuide{.build = CircleBuild::ThreePoint}, in_a_line,
+                                  Point2{20'000, 0}, centre, radius));
+}
+
+TEST_CASE("Daire kılavuzu: yük gidip geliyor")
+{
+    using namespace kentos::core;
+
+    const CircleGuide guide{.build = CircleBuild::Tangent, .radius = 7'500};
+    const std::vector<std::uint8_t> bytes = encode_circle_guide(guide);
+    REQUIRE_EQ(bytes.size(), std::size_t{9});
+    const auto back = decode_circle_guide(bytes);
+    REQUIRE(back.has_value());
+    CHECK_EQ(back.value(), guide);
+
+    CHECK_FALSE(decode_circle_guide(std::vector<std::uint8_t>{}).has_value());
+    CHECK_FALSE(decode_circle_guide(std::vector<std::uint8_t>(8, 0)).has_value());
+    std::vector<std::uint8_t> bad = bytes;
+    bad[0]                        = 9;
+    CHECK_FALSE(decode_circle_guide(bad).has_value());
 }

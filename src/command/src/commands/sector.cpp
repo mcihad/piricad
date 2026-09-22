@@ -118,10 +118,15 @@ Task<void> run_annulus(Context& ctx)
                                                  .rubber_shape  = RubberShape::Circle});
     if (!inner) co_return;
 
+    // THE INNER CIRCLE STAYS ON SCREEN while the outer one is aimed. It is
+    // already fixed, and a preview that shows only the newest circle makes every
+    // click look like it erased the one before it — the ring being made is the
+    // TWO of them, so both are drawn (`Prompt::rubber_chain`).
     auto outer = co_await ctx.point("dis", "Dış çember üzerinde bir nokta",
                                     PointOptions{.rubber_band   = true,
                                                  .rubber_origin = *centre,
-                                                 .rubber_shape  = RubberShape::Circle});
+                                                 .rubber_shape  = RubberShape::Circle,
+                                                 .rubber_chain  = {*inner}});
     if (!outer) co_return;
 
     core::Mm r_in  = radius_between(*centre, *inner);

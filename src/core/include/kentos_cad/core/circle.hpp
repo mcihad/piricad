@@ -28,6 +28,8 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -59,5 +61,64 @@ void circle_outline(Point2 centre, Mm radius, std::vector<Mm>& xs, std::vector<M
 /// and building a second table would be building a second answer — the two
 /// curves would then disagree about where a quadrant is (§7.3).
 const std::vector<std::pair<double, double>>& unit_circle();
+
+// ---------------------------------------------------------------------------
+// The constructions a circle arrives by, and the guide that previews them.
+//
+// WHY THESE ARE HERE AND NOT IN THE COMMAND. The canvas has to draw the guide
+// that promises what the next click will make, and it can only do that by
+// computing the very circle the command will compute. `DAİRE yontem=ttr` is the
+// case that forces it: there are FOUR circles of a given radius tangent to two
+// crossing lines, the user picks one by pointing at a corner, and a preview that
+// guessed differently from the command would put the fillet on the wrong corner
+// of the junction while showing the right one.
+// ---------------------------------------------------------------------------
+
+/// The centre of the circle of `radius` tangent to both lines and nearest to
+/// `near`, which is how the wanted one of the four is chosen.
+///
+/// The four centres are the crossings of the two lines offset by the radius,
+/// each line offset to both sides. False when either line is degenerate or the
+/// two are parallel — in which case no such circle exists and the caller says so
+/// rather than drawing one.
+bool tangent_circle_centre(Point2 a1, Point2 a2, Point2 b1, Point2 b2, Mm radius, Point2 near,
+                           Point2& centre) noexcept;
+
+/// Which construction made the circle. All four methods of `DAİRE` are here so
+/// that the arithmetic has ONE home: three of them are also what a guide
+/// previews, and `Centre` is here because the command would otherwise keep its
+/// own copy of the same distance.
+enum class CircleBuild : std::uint8_t {
+    Diameter,   ///< `2n`: the two ends of a diameter — the chain holds the first
+    ThreePoint, ///< `3n`: three points on the rim — the chain holds the first two
+    Tangent,    ///< `ttr`: the chain holds the two lines' four points, and `radius` is given
+    Centre      ///< `merkez`: the chain holds the centre, the cursor is on the rim. Previewed by
+                ///< `RubberShape::Circle`, which the arc shares, so no guide names this one.
+};
+
+/// What a circle guide needs beyond the points it is handed.
+struct CircleGuide
+{
+    /// Which of the constructions the points are to be read as.
+    CircleBuild build{CircleBuild::Diameter};
+
+    /// The radius, for `Tangent` only, where it is typed rather than pointed at.
+    Mm radius{0};
+
+    friend constexpr bool operator==(const CircleGuide&, const CircleGuide&) = default;
+};
+
+/// Fixed 9-byte layout: build (uint8), radius (int64). Fixed rather than
+/// versioned because a guide lives for the length of one prompt and is never
+/// written to a file.
+std::vector<std::uint8_t> encode_circle_guide(const CircleGuide& guide);
+std::optional<CircleGuide> decode_circle_guide(std::span<const std::uint8_t> bytes);
+
+/// The circle a `CircleBuild` makes from the points fixed so far (`chain`) and
+/// the one the cursor is at. False when those points do not determine a circle:
+/// a zero diameter, three points in a line, parallel tangents, a chain that is
+/// too short. The canvas then draws nothing rather than drawing rubbish.
+bool circle_from_guide(const CircleGuide& guide, std::span<const Point2> chain, Point2 cursor,
+                       Point2& centre, Mm& radius) noexcept;
 
 } // namespace kentos::core

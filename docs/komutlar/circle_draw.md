@@ -77,6 +77,24 @@ en yakını alınır; sessiz bir seçim pahı kavşağın yanlış köşesine ko
 `3n`'in hesabı `YAY yontem=3n` ile paylaşılır (`core::circumcircle`), yani bir
 daire ile ondan kesilen yay birbirine uyar.
 
+### Kılavuz: her yöntemde çemberin kendisi
+
+Dört yöntemin de kılavuzu, tıklayınca oluşacak **çemberi** gösterir — çizgisini
+değil. `2n` ve `3n` eskiden lastik bir çizgi gösteriyordu, `ttr` ise hiçbir şey
+göstermiyordu.
+
+| `yontem` | Kılavuz neyi gösterir |
+|---|---|
+| `merkez` | Merkezden imlece yarıçap, ve o yarıçaptaki çember |
+| `2n` | Çapın ilk ucu sabit; çember imleçle büyür |
+| `3n` | İlk iki nokta sabitlendikten sonra üçüncüsünün çevrel çemberi |
+| `ttr` | İki teğet doğru ve imlecin bulunduğu çeyrekteki pah çemberi |
+
+`ttr`'de bu en çok gerekli olan yerdir: dört çözümden hangisini aldığınızı
+tıklamadan **önce** görürsünüz. Kılavuz, çemberi kuracak olan fonksiyonun
+kendisinden gelir (`core::circle_from_guide`), yani gördüğünüz çember oluşacak
+çemberdir.
+
 ## Sözdizimi
 
 ```text
@@ -131,6 +149,11 @@ Sol paletteki **daire** aracına basın ya da komut satırına `DAİRE` yazın; 
 komutu gönderir. Önce merkeze, sonra çember üzerinde bir yere tıklayın. İki tıklama
 arasında merkezden imlecinize kesikli bir kılavuz uzanır: göreceğiniz uzunluk
 yarıçaptır.
+
+Öteki üç yöntem aynı düğmenin **kartında**: düğmeyi basılı tutun ya da köşesindeki
+işarete tıklayın. Kartta **Daire — çapın iki ucu**, **Daire — üç nokta** ve
+**Daire — iki doğruya teğet** vardır; aynı karttaki **Elips** ve **Halka** ayrı
+şekillerdir ve artık kendi ikonlarını taşırlar.
 
 Yakalama açıkken hem merkez hem çember noktası mevcut nesnelere oturur —
 [`MOD`](mode.md) ile hangi yakalamaların açık olduğunu ayarlayabilirsiniz.

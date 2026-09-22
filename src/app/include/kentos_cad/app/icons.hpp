@@ -124,6 +124,18 @@ enum class Glyph {
     Chat,   ///< a speech bubble: the panel's own mark on the tool bar
     Server, ///< a stack of two boxes: the MCP listener
     Plug,   ///< a two-pin plug: a client connected to it
+
+    // ---- shapes and edits that were wearing another tool's mark ---------------
+    //
+    // A COLUMN SHOWS ICONS, NOT LABELS, so two tools with one glyph are one tool
+    // to the hand that reaches for them. These four were reported as exactly
+    // that: `ESNET` wore the four-way arrows that belong to `TAŞI`, and `ELİPS`,
+    // `HALKA` and `DİLİM` all wore the circle of `DAİRE` although not one of
+    // them is a circle.
+    Stretch, ///< a corner pulled out of a frame: ESNET
+    Ellipse, ///< an ellipse with its two axes: ELİPS
+    Annulus, ///< two concentric circles: HALKA
+    Sector,  ///< a wedge cut from a circle: DAİRE DİLİMİ
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

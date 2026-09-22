@@ -42,8 +42,12 @@ HALKA merkez=0,0 ic=5,0 dis=10,0
 
 ### Arayüz
 
-**Çizim ▸ Halka**. Merkezi tıklayın, sonra iki çember noktasını. Her tıklamada
-kılavuz o yarıçapın çemberini gösterir.
+**Çizim ▸ Halka**, ya da araç kutusundaki daire düğmesinin kartından **Halka**.
+Merkezi tıklayın, sonra iki çember noktasını.
+
+**İç çember, dış çemberi ararken ekranda kalır.** Yapılan şey iki çemberin
+kendisi; yalnız en yenisi gösterilse ikinci tıklama birincisini silmiş gibi
+görünürdü. İki kılavuz birlikte durur, aralarındaki alan da halkanın kendisidir.
 
 ### Betik
 

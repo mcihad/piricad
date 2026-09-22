@@ -798,6 +798,30 @@ Rapor: "çizim yaptıktan sonra varsayılan araç seçiliyor tekrardan." İki ay
   zaten çözülmüş değeri tutar. Karar kullanıcının: bir betiğin `kenar_sayisi`'nı atlaması ayardan
   okumak anlamına gelecek mi. Bu satır o kararı bekliyor.
 
+## Daire, elips, halka ve ikon ayrımı (2026-09-22)
+
+Rapor: "taşı ve esnet ikonları aynı toolbox üzerinde, aynı düzenlemeleri daire ve elips için de
+yapalım" + "halka çizilirken ilk çizilen halkanın kılavuz çizgileri kalmalı."
+
+- [x] **Dört yeni ikon**: `Stretch`, `Ellipse`, `Annulus`, `Sector`. Kolon etiket değil ikon
+  gösterir; `ESNET` `TAŞI`'nın okunu, `ELİPS`/`HALKA`/`DİLİM` ise `DAİRE`'nin çemberini taşıyordu.
+  Denetim yeniden çalıştırıldı: kalan paylaşımlar yalnız aynı şeklin yöntem çeşitleri.
+- [x] **`core/circle.hpp` büyüdü**: `tangent_circle_centre` (dört çözümden en yakını),
+  `CircleBuild` (merkez/2n/3n/ttr), `CircleGuide` + yükü, `circle_from_guide`. Komut dört yöntemi de
+  buradan kuruyor ve kendi `span` kopyasını bıraktı; aritmetik birebir, altın fikstür değişmedi.
+- [x] **`RubberShape::CircleBuild`**: `2n` (zincir: ilk uç), `3n` (zincir: ilk iki nokta), `ttr`
+  (zincir: iki doğrunun dört noktası, yük: yarıçap). Tuval dalı tek; çemberi `circle_outline` çiziyor.
+- [x] **HALKA'nın iç çemberi** `rubber_chain` ile duruyor; `Circle` dalı zincir doluysa sabitlenmiş
+  çemberi de çiziyor. `DİLİM`de aynı zincir ilk kenarın yarıçap çizgisini veriyor.
+- [x] **ELİPS'e dokunulmadı, çünkü önizlemesi zaten doğruydu**: `merkez`de birinci eksen çizgi,
+  üçüncü tıklamada elipsin kendisi; `eksen`de merkez iki ucun ortası. Gerçek fareyle doğrulandı.
+- [x] **Testler**: `test_geometry.cpp`'de üç yeni vaka (dört çeyrekte teğet merkez, dört yapı ve
+  reddedilen hâlleri, yük gidip gelmesi); `test_command.cpp`'de her yöntemin kılavuz yükü ve
+  `ttr`'nin işaret edilen çeyreği çizdiği, HALKA'nın zinciri. 1000 birim testi, 57 ctest.
+- [x] **Gerçek olaylarla görsel**: `2n`, `3n`, `ttr` ve HALKA kareleri alındı.
+- [x] **Belgeler**: `circle_draw.md`'ye "Kılavuz: her yöntemde çemberin kendisi" tablosu ve kart
+  adımları; `annulus.md`'ye iç çemberin kalması.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

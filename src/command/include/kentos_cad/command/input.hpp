@@ -58,8 +58,10 @@ enum class RubberShape : std::uint8_t {
     AreaEdit, ///< a face with one edge or corner following the cursor to a wanted area: ALANDÜZENLE
     Polygon,  ///< the regular polygon a centre, the cursor and `rubber_payload`'s side count and
               ///< fit make: ÇOKGEN
-    EdgeRectangle ///< the rectangle the chain's edge and the cursor's depth make: DİKDÖRTGEN
-                  ///< yontem=3n
+    EdgeRectangle, ///< the rectangle the chain's edge and the cursor's depth make: DİKDÖRTGEN
+                   ///< yontem=3n
+    CircleBuild    ///< the circle the chain's fixed points and the cursor make, by the construction
+                   ///< `rubber_payload` names: DAİRE yontem=2n|3n|ttr
 };
 
 struct Prompt

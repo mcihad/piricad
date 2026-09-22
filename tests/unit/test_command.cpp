@@ -7675,3 +7675,106 @@ TEST_CASE("DİKDÖRTGEN yontem=3n: üçüncü nokta dikdörtgeni önizliyor")
     CHECK_EQ(box.max_y, core::Mm{3'000});
     CHECK_EQ(box.max_x, core::Mm{10'000}); // the depth, not a corner
 }
+
+TEST_CASE("DAİRE: her yöntem çemberin kendisini önizliyor")
+{
+    // Three of the four methods used to preview a LINE — and `ttr`, the one with
+    // four answers, previewed nothing at all. What the guide carries is asserted
+    // here rather than how it looks: the shape, the chain that fixes it, and the
+    // construction in the payload. The picture is then `core::circle_from_guide`'s,
+    // and that function's own cases are in `test_geometry.cpp`.
+    {
+        // 2n — the chain holds the first end of the diameter.
+        Fixture f;
+        auto started = f.bus.begin_interactive("DAİRE yontem=2n");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::CircleBuild);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{1});
+        CHECK_EQ(session.prompt().rubber_chain[0], (core::Point2{0, 0}));
+        const auto guide = core::decode_circle_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::CircleBuild::Diameter);
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // 3n — two points fix nothing, so the SECOND is asked for with a line and
+        // the third with the circumcircle.
+        Fixture f;
+        auto started = f.bus.begin_interactive("DAİRE yontem=3n");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.prompt().rubber_shape == RubberShape::Line);
+        REQUIRE(session.supply(Value::point(core::Point2{30'000, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::CircleBuild);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        const auto guide = core::decode_circle_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::CircleBuild::ThreePoint);
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // ttr — the chain holds the two lines' four points and the payload the
+        // radius that was typed, so the fillet follows the cursor from quadrant
+        // to quadrant before the click decides which one.
+        Fixture f;
+        auto started = f.bus.begin_interactive("DAİRE yontem=ttr");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        for (const core::Point2 at : {core::Point2{-20'000, 0}, core::Point2{20'000, 0},
+                                      core::Point2{0, -20'000}, core::Point2{0, 20'000}})
+            REQUIRE(session.supply(Value::point(at)).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "yaricap");
+        REQUIRE(session.supply(Value::number(5.0)).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::CircleBuild);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{4});
+        const auto guide = core::decode_circle_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::CircleBuild::Tangent);
+        CHECK_EQ(guide->radius, core::Mm{5'000});
+
+        // And the circle it draws is the one the command then commits: the
+        // quadrant the cursor is in.
+        REQUIRE(session.supply(Value::point(core::Point2{10'000, -10'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_x, core::Mm{0});
+        CHECK_EQ(box.max_x, core::Mm{10'000});
+        CHECK_EQ(box.min_y, core::Mm{-10'000});
+        CHECK_EQ(box.max_y, core::Mm{0});
+    }
+}
+
+TEST_CASE("HALKA: dış çember aranırken iç çember ekranda kalıyor")
+{
+    // The user's words: the guide of the first circle has to stay so it can be
+    // seen. The ring being made is the TWO circles, and with only the newest one
+    // previewed the second click looked as though it had erased the first.
+    Fixture f;
+    auto started = f.bus.begin_interactive("HALKA");
+    REQUIRE(started.ok());
+    Session& session = *started.value();
+
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok()); // merkez
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().rubber_chain.empty()); // nothing fixed yet
+
+    REQUIRE(session.supply(Value::point(core::Point2{10'000, 0})).ok()); // iç
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().rubber_shape == RubberShape::Circle);
+    REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{1});
+    CHECK_EQ(session.prompt().rubber_chain[0], (core::Point2{10'000, 0}));
+
+    REQUIRE(session.supply(Value::point(core::Point2{20'000, 0})).ok()); // dış
+    REQUIRE(f.bus.finish(session).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+}

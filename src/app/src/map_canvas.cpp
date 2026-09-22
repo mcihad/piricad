@@ -1626,9 +1626,70 @@ void MapCanvas::buildOverlay()
                 addRun(batch, run, !arc);
             }
 
+            // WHAT IS ALREADY FIXED STAYS DRAWN. For HALKA the chain holds the
+            // inner rim point, and the ring being made is the TWO circles: with
+            // only the newest one previewed, the second click looked as though it
+            // had erased the first. For a sector the chain holds the first edge,
+            // and its radius line is what makes the shape read as a slice rather
+            // than as a bare arc.
+            if (!chain.empty()) {
+                if (!arc) {
+                    const double cx             = core::mm_to_metres(chain.front().x - centre.x);
+                    const double cy             = core::mm_to_metres(chain.front().y - centre.y);
+                    const core::Mm fixed_radius = core::mm_round(
+                        std::sqrt(cx * cx + cy * cy) * static_cast<double>(core::kMmPerMetre));
+                    if (fixed_radius > 0) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        core::circle_outline(centre, fixed_radius, curve_scratch_x_,
+                                             curve_scratch_y_);
+                        addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                    }
+                }
+                addRun(batch,
+                       {render::to_f(view_.to_screen(centre)),
+                        render::to_f(view_.to_screen(chain.front()))},
+                       false);
+            }
+
             // The radius, so the user can read the size they are setting rather
             // than only see it.
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::CircleBuild) {
+            // THE CIRCLE THE CLICK WILL MAKE, by the construction the command
+            // named, from the function the command builds it with
+            // (`core::circle_from_guide`).
+            //
+            // These three methods used to preview a LINE — or, for `ttr`, nothing
+            // at all. `ttr` is the one where it matters most: four circles of the
+            // radius are tangent to both lines, the user picks one by pointing at
+            // a corner, and until now they found out which after the click.
+            if (auto decoded = core::decode_circle_guide(session->prompt().rubber_payload)) {
+                core::Point2 centre{};
+                core::Mm radius = 0;
+                if (core::circle_from_guide(decoded.value(), session->prompt().rubber_chain,
+                                            cursorWorld(), centre, radius)) {
+                    curve_scratch_x_.clear();
+                    curve_scratch_y_.clear();
+                    core::circle_outline(centre, radius, curve_scratch_x_, curve_scratch_y_);
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                }
+            }
+            // The points already fixed, as the run that made them: a diameter's
+            // first end, the two rim points, the two tangent lines. Without them
+            // the guide would be a circle floating free of what fixed it.
+            if (const auto& chain = session->prompt().rubber_chain; chain.size() == 4) {
+                addRun(batch,
+                       {render::to_f(view_.to_screen(chain[0])),
+                        render::to_f(view_.to_screen(chain[1]))},
+                       false);
+                addRun(batch,
+                       {render::to_f(view_.to_screen(chain[2])),
+                        render::to_f(view_.to_screen(chain[3]))},
+                       false);
+            } else {
+                addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+            }
         } else if (shape == command::RubberShape::Rectangle) {
             // THE FACE, not its diagonal. A rectangle previewed as one line tells
             // the user nothing about what the next click will make, and with the
