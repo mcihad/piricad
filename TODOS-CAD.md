@@ -822,6 +822,32 @@ yapalım" + "halka çizilirken ilk çizilen halkanın kılavuz çizgileri kalmal
 - [x] **Belgeler**: `circle_draw.md`'ye "Kılavuz: her yöntemde çemberin kendisi" tablosu ve kart
   adımları; `annulus.md`'ye iç çemberin kalması.
 
+## Yay yöntemleri (2026-09-22)
+
+Rapor: "şimdi yay hatalarını düzelt, aynı sorunlar."
+
+- [x] **`core/arc.hpp` büyüdü**: `ArcBuild` (3n / teğet / yarıçap), `ArcGuide` + yükü,
+  `arc_from_guide`, `arc_radius_side`, `arc_by_radius`. Komut ve kılavuz aynı fonksiyonları
+  çağırıyor; `insa-yontemleri.txt` bayt-özdeş kaldı, yani `devam`'ın geometrisi değişmedi.
+- [x] **`RubberShape::ArcBuild`**: `3n` (zincir: başlangıç + üzerinden), `devam` (zincir: başlangıç
+  + teğet üzerinde bir nokta, 1 km ötede — iki taraf aynı doğrultuyu okusun diye), `bby` (zincir:
+  iki uç, yük: yarıçap). Tuval dalı tek; `arc_outline` çiziyor.
+- [x] **`bby` yanı soruyor** (`yon_nokta`, yeni nokta parametresi). Eskiden `yon` yalnız argümandan
+  okunuyor ve `sol` varsayılıyordu: arayüzden öteki yay erişilemezdi. `yon` verilmişse soru yok —
+  eski günlük satırları aynen oynuyor.
+- [x] **Yan ölçütü kirişin hangi yanı**, en yakın merkez değil: yarıçap tam yarım açıklıkken iki
+  merkez çakışıyor ve o test iki yayı ayırt edemiyor (test bunu tutuyor).
+- [x] **Yarıçap denetimi yan sorusundan önce.** Olmayan bir yayın yanı sorulmaz.
+- [x] **`bma`'ya dokunulmadı**: süpürme bir sayıdır ve fareyle verilen hâli `merkez` yöntemidir.
+  İkinci bir pointed yöntem eklemek `merkez`i tekrarlamak olurdu.
+- [x] **Testler**: `test_geometry.cpp`'de iki yeni vaka (üç yapı ve reddedilen hâlleri, yan ölçütü,
+  yük gidip gelmesi); `test_command.cpp`'de beş bölüm (3n zinciri ve yarım çember, devam'ın teğet
+  zinciri, bby'nin sorduğu yan ve kuzey yayı, `yon` verilince soru sormaması, küçük yarıçabın anında
+  reddi). 1003 birim testi, 57 ctest.
+- [x] **Gerçek olaylarla görsel**: `3n`, `devam` (teğet ayrılış), `bby` (yan seçimi) kareleri.
+- [x] **Belgeler**: `arc_draw.md`'ye "Kılavuz: her yöntemde yayın kendisi" tablosu, `yon`/`yon_nokta`
+  satırları, kart adımları; `make reference` (dört üretilmiş dosya, 6.14).
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

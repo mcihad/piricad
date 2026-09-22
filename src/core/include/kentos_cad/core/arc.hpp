@@ -23,6 +23,8 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <optional>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -82,5 +84,71 @@ bool arc_from_bulge(Point2 a, Point2 b, double bulge, Point2& centre, Mm& radius
 /// counter-clockwise when `ccw`: what a DXF writer puts on the vertex. The
 /// inverse of `arc_from_bulge` to within the rounding of the stored centre.
 double bulge_from_arc(Point2 a, Point2 b, Point2 centre, Mm radius, bool ccw) noexcept;
+
+// ---------------------------------------------------------------------------
+// The constructions an arc arrives by, and the guide that previews them.
+//
+// SAME RULE AS THE CIRCLE AND THE POLYGON: one answer, computed once here, so
+// the guide the canvas draws and the arc the command commits cannot drift apart.
+// Three of `YAY`'s five methods had no guide worth the name — the third point of
+// `3n` and the end of a tangent continuation were previewed as straight LINES,
+// which say nothing about the curve — and `bby` never asked which side the curve
+// goes at all.
+// ---------------------------------------------------------------------------
+
+/// How the points in hand are to be read.
+enum class ArcBuild : std::uint8_t {
+    ThreePoint, ///< `3n`: the chain holds the start and a point it passes through; the cursor is
+                ///< the end
+    Tangent,    ///< `devam`: the chain holds the start and a point ALONG the tangent there; the
+                ///< cursor is the end
+    Radius      ///< `bby`: the chain holds the two ends and `radius` is given; the cursor says
+                ///< which of the two arcs was meant
+};
+
+/// What an arc guide needs beyond the points it is handed.
+struct ArcGuide
+{
+    /// Which of the constructions the points are to be read as.
+    ArcBuild build{ArcBuild::ThreePoint};
+
+    /// The radius, for `Radius` only, where it is typed rather than pointed at.
+    Mm radius{0};
+
+    friend constexpr bool operator==(const ArcGuide&, const ArcGuide&) = default;
+};
+
+/// Fixed 9-byte layout: build (uint8), radius (int64). Fixed rather than
+/// versioned because a guide lives for the length of one prompt and is never
+/// written to a file.
+std::vector<std::uint8_t> encode_arc_guide(const ArcGuide& guide);
+std::optional<ArcGuide> decode_arc_guide(std::span<const std::uint8_t> bytes);
+
+/// Which of the two arcs of a given radius joining `a` and `b` the point
+/// `toward` asks for: true for the one `yon=sag` names.
+///
+/// DECIDED BY WHICH SIDE OF THE CHORD `toward` LIES ON, and that is the whole
+/// reason this is a function of its own. The obvious test — whichever of the two
+/// centres is nearer — fails in exactly the case a fillet is most often drawn
+/// in: when the radius is half the span the two centres COINCIDE, and the two
+/// arcs are still different arcs (they differ by which end is the start, which
+/// is what the model stores). The chord has two sides whatever the radius is.
+bool arc_radius_side(Point2 a, Point2 b, Point2 toward) noexcept;
+
+/// The arc of `radius` joining `a` and `b` on the named side, in stored form.
+/// False when the radius is shorter than half the span, which joins nothing.
+bool arc_by_radius(Point2 a, Point2 b, Mm radius, bool to_right, Point2& centre, Mm& out_radius,
+                   Point2& start, Point2& end) noexcept;
+
+/// The arc a construction makes, in the form the document stores: a centre, a
+/// radius and the two ends COUNTER-CLOCKWISE from `start` to `end` (the winding
+/// this file's own note explains).
+///
+/// False when the points do not determine an arc: three points in a line, an end
+/// that lies along the tangent (that is a straight line, not an arc), a radius
+/// shorter than half the span, a chain that is too short. The canvas then draws
+/// nothing rather than drawing rubbish.
+bool arc_from_guide(const ArcGuide& guide, std::span<const Point2> chain, Point2 cursor,
+                    Point2& centre, Mm& radius, Point2& start, Point2& end) noexcept;
 
 } // namespace kentos::core

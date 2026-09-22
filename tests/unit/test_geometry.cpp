@@ -9,6 +9,7 @@
 
 #include "kentos_cad/core/transform.hpp"
 
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/polygon.hpp"
@@ -1246,4 +1247,89 @@ TEST_CASE("Daire kılavuzu: yük gidip geliyor")
     std::vector<std::uint8_t> bad = bytes;
     bad[0]                        = 9;
     CHECK_FALSE(decode_circle_guide(bad).has_value());
+}
+
+// ---------------------------------------------------------------------------
+// core/arc.hpp — the three constructions a guide previews.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Yay: üç noktadan, teğet devamdan ve yarıçaptan")
+{
+    using namespace kentos::core;
+
+    Point2 centre{};
+    Mm radius = 0;
+    Point2 start{};
+    Point2 end{};
+
+    // THREE POINTS ON THE ARC: the two ends of a diameter and the top of that
+    // circle, so the centre and the radius are exact and the middle point says
+    // which of the two arcs between the ends was meant.
+    const Point2 two[2]{Point2{0, 0}, Point2{15'000, 15'000}};
+    const ArcGuide three{.build = ArcBuild::ThreePoint};
+    REQUIRE(arc_from_guide(three, two, Point2{30'000, 0}, centre, radius, start, end));
+    CHECK_EQ(centre, (Point2{15'000, 0}));
+    CHECK_EQ(radius, Mm{15'000});
+    // Walking start -> through -> end turns clockwise here, so the stored arc
+    // runs the other way: the model keeps one winding (model.md R11).
+    CHECK_EQ(start, (Point2{30'000, 0}));
+    CHECK_EQ(end, (Point2{0, 0}));
+
+    // Three points in a line have no arc, and two points alone determine none.
+    const Point2 in_a_line[2]{Point2{0, 0}, Point2{10'000, 0}};
+    CHECK_FALSE(arc_from_guide(three, in_a_line, Point2{20'000, 0}, centre, radius, start, end));
+    const Point2 one[1]{Point2{0, 0}};
+    CHECK_FALSE(arc_from_guide(three, one, Point2{1, 1}, centre, radius, start, end));
+
+    // TANGENT CONTINUATION. The chain is the start and a point along the tangent
+    // there; leaving (0,0) due east and ending at (0, 20) is the half circle
+    // whose centre is (0, 10).
+    const Point2 ray[2]{Point2{0, 0}, Point2{1'000'000, 0}};
+    const ArcGuide tangent{.build = ArcBuild::Tangent};
+    REQUIRE(arc_from_guide(tangent, ray, Point2{0, 20'000}, centre, radius, start, end));
+    CHECK_EQ(centre, (Point2{0, 10'000}));
+    CHECK_EQ(radius, Mm{10'000});
+
+    // An end ALONG the tangent is a straight line, not an arc, and is refused
+    // rather than dividing by zero.
+    CHECK_FALSE(arc_from_guide(tangent, ray, Point2{50'000, 0}, centre, radius, start, end));
+
+    // BY RADIUS, AND THE SIDE IS THE CHORD'S. This is the case the obvious test
+    // gets wrong: at a radius of exactly half the span the two centres COINCIDE,
+    // so "whichever centre is nearer" cannot tell the two arcs apart — but the
+    // chord still has two sides, and the two arcs are still different arcs.
+    CHECK(arc_radius_side(Point2{0, 0}, Point2{100'000, 0}, Point2{50'000, 10'000}));
+    CHECK_FALSE(arc_radius_side(Point2{0, 0}, Point2{100'000, 0}, Point2{50'000, -10'000}));
+
+    const Point2 ends[2]{Point2{0, 0}, Point2{100'000, 0}};
+    const ArcGuide by_radius{.build = ArcBuild::Radius, .radius = 50'000};
+    REQUIRE(arc_from_guide(by_radius, ends, Point2{50'000, 10'000}, centre, radius, start, end));
+    CHECK_EQ(centre, (Point2{50'000, 0}));
+    CHECK_EQ(start, (Point2{100'000, 0})); // the ends swap with the side
+    CHECK_EQ(end, (Point2{0, 0}));
+    REQUIRE(arc_from_guide(by_radius, ends, Point2{50'000, -10'000}, centre, radius, start, end));
+    CHECK_EQ(start, (Point2{0, 0}));
+    CHECK_EQ(end, (Point2{100'000, 0}));
+
+    // A radius shorter than half the span joins nothing.
+    const ArcGuide too_small{.build = ArcBuild::Radius, .radius = 10'000};
+    CHECK_FALSE(
+        arc_from_guide(too_small, ends, Point2{50'000, 10'000}, centre, radius, start, end));
+}
+
+TEST_CASE("Yay kılavuzu: yük gidip geliyor")
+{
+    using namespace kentos::core;
+
+    const ArcGuide guide{.build = ArcBuild::Radius, .radius = 12'000};
+    const std::vector<std::uint8_t> bytes = encode_arc_guide(guide);
+    REQUIRE_EQ(bytes.size(), std::size_t{9});
+    const auto back = decode_arc_guide(bytes);
+    REQUIRE(back.has_value());
+    CHECK_EQ(back.value(), guide);
+
+    CHECK_FALSE(decode_arc_guide(std::vector<std::uint8_t>{}).has_value());
+    std::vector<std::uint8_t> bad = bytes;
+    bad[0]                        = 9;
+    CHECK_FALSE(decode_arc_guide(bad).has_value());
 }

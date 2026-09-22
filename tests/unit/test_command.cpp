@@ -7778,3 +7778,124 @@ TEST_CASE("HALKA: dış çember aranırken iç çember ekranda kalıyor")
     REQUIRE(f.bus.finish(session).ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 }
+
+TEST_CASE("YAY: her yöntem yayın kendisini önizliyor, ve bby yanı soruyor")
+{
+    // Three of the five methods previewed a straight LINE where the answer is a
+    // CURVE, and `bby` never asked which side the curve goes — it read `yon`
+    // from its arguments and defaulted to `sol`, so from the interface the other
+    // arc was unreachable by mouse.
+    {
+        // 3n — two points on a curve determine nothing, so the second is asked
+        // for with a line and the third with the arc.
+        Fixture f;
+        auto started = f.bus.begin_interactive("YAY yontem=3n");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.prompt().rubber_shape == RubberShape::Line);
+        REQUIRE(session.supply(Value::point(core::Point2{15'000, 15'000})).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::ArcBuild);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        const auto guide = core::decode_arc_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::ArcBuild::ThreePoint);
+
+        REQUIRE(session.supply(Value::point(core::Point2{30'000, 0})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        // The half circle above the chord: 30 m across and 15 m tall.
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_x, core::Mm{0});
+        CHECK_EQ(box.max_x, core::Mm{30'000});
+        CHECK_EQ(box.max_y, core::Mm{15'000});
+    }
+    {
+        // devam — the tangent continuation. The chain carries the start and a
+        // point along the tangent, so the guide reads the same direction the
+        // command does rather than each rounding its own.
+        Fixture f;
+        REQUIRE(
+            f.bus.execute_line("ÇOKLUÇİZGİ noktalar=0,0 noktalar=100,0", Origin::CommandLine).ok());
+        auto started = f.bus.begin_interactive("YAY yontem=devam");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::ArcBuild);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        CHECK_EQ(session.prompt().rubber_chain[0], (core::Point2{100'000, 0}));
+        const auto guide = core::decode_arc_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::ArcBuild::Tangent);
+
+        // Leaving (100, 0) due east and ending 20 m north of it is the half
+        // circle centred 10 m north of the join.
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 20'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+    }
+    {
+        // bby — the side is ASKED for, by pointing, with the arc previewed; and
+        // the two sides are two different arcs.
+        Fixture f;
+        auto started = f.bus.begin_interactive("YAY yontem=bby");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "yaricap");
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "yon_nokta");
+        CHECK(session.prompt().rubber_shape == RubberShape::ArcBuild);
+        const auto guide = core::decode_arc_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->build == core::ArcBuild::Radius);
+        CHECK_EQ(guide->radius, core::Mm{50'000});
+
+        // Pointing NORTH of the chord gives the arc that arches north, which is
+        // the one `yon=sag` names — and which the mouse could not reach at all
+        // before, because the command always took `sol`.
+        REQUIRE(session.supply(Value::point(core::Point2{50'000, 10'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_y, core::Mm{0});
+        CHECK_EQ(box.max_y, core::Mm{50'000});
+    }
+    {
+        // AND A RUN THAT WAS GIVEN `yon` ASKS NOTHING MORE, which is what keeps
+        // every journal line written before the gesture existed replayable.
+        Fixture f;
+        auto started = f.bus.begin_interactive("YAY yontem=bby yon=sol");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+        CHECK(session.finished()); // no side question
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_y, core::Mm{-50'000});
+        CHECK_EQ(box.max_y, core::Mm{0});
+    }
+    {
+        // A radius that joins nothing is refused THE MOMENT IT IS TYPED, before
+        // the side is asked for: which side of an arc that cannot exist is a
+        // question with no answer.
+        Fixture f;
+        auto started = f.bus.begin_interactive("YAY yontem=bby");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        REQUIRE(session.supply(Value::number(10.0)).ok());
+        CHECK_FALSE(session.waiting()); // it did not go on to ask the side
+        const auto done = f.bus.finish(session);
+        CHECK_FALSE(done.ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+}

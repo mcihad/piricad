@@ -497,6 +497,7 @@ Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da ba
 | `uzerinden` | point_list | isteğe bağlı | 3n: yayın üzerinden geçtiği nokta |
 | `supurme` | number | isteğe bağlı | bma: süpürme açısı |
 | `yaricap` | number | isteğe bağlı | bby: yarıçap (m) |
+| `yon_nokta` | point_list | isteğe bağlı | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz |
 | `yon` | text | isteğe bağlı | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre |
 
 Ayrıntılı kullanım: [YAY](arc_draw.md)
@@ -1832,6 +1833,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "yaricap": {
           "type": "number",
           "description": "bby: yarıçap (m) [m] (sayı)"
+        },
+        "yon_nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "yon": {
           "type": "string",

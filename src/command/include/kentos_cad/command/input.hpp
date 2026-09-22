@@ -60,8 +60,10 @@ enum class RubberShape : std::uint8_t {
               ///< fit make: ÇOKGEN
     EdgeRectangle, ///< the rectangle the chain's edge and the cursor's depth make: DİKDÖRTGEN
                    ///< yontem=3n
-    CircleBuild    ///< the circle the chain's fixed points and the cursor make, by the construction
-                   ///< `rubber_payload` names: DAİRE yontem=2n|3n|ttr
+    CircleBuild,   ///< the circle the chain's fixed points and the cursor make, by the
+                   ///< construction `rubber_payload` names: DAİRE yontem=2n|3n|ttr
+    ArcBuild       ///< the arc the chain's fixed points and the cursor make, by the construction
+                   ///< `rubber_payload` names: YAY yontem=3n|devam|bby
 };
 
 struct Prompt

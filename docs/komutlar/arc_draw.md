@@ -65,9 +65,26 @@ bir süpürme **saat yönünde**dir — bir mühendisin bir süpürmeden kastett
 ve bir tura katlanmaz: −100 grad, 300 grad değildir.
 
 `bby`'nin **iki** çözümü vardır: yarıçap iki noktayı iki yaydan biriyle
-birleştirir, biri sola biri sağa kavis yapar. `yon=sol|sag` hangisi olduğunu
-söyler ve varsayılan `sol`dur. Yarıçap iki nokta arasının yarısından küçükse
-hiçbirini birleştirmez ve komut bunu söyler.
+birleştirir, biri kirişin bir yanına biri öbür yanına kavis yapar. `yon=sol|sag`
+hangisi olduğunu söyler. Yazıyla vermezseniz komut **sorar**: yayın hangi yandan
+geçeceğini gösterirsiniz ve yay imlecin tarafına doğru kavislenerek önizlenir.
+Yarıçap iki nokta arasının yarısından küçükse hiçbirini birleştirmez ve komut
+bunu **yarıçapı yazdığınız anda** söyler — olmayan bir yayın hangi yanı
+sorulmaz.
+
+### Kılavuz: her yöntemde yayın kendisi
+
+| `yontem` | Kılavuz neyi gösterir |
+|---|---|
+| `merkez` | İkinci tıklamaya kadar bütün çember (seçtiğiniz şey yarıçap), sonra yayın kendisi |
+| `3n` | İlk iki nokta çizgiyle, üçüncüsünde üç noktadan geçen yay |
+| `devam` | Son çizilenin ucundan **teğet** ayrılan yay — kırık olup olmadığını tıklamadan görürsünüz |
+| `bby` | Yazılan yarıçapta, imlecin tarafına kavislenen yay |
+| `bma` | Süpürme bir sayıdır ve yazılır; fareyle verilen hâli `merkez` yöntemidir |
+
+Kılavuz, yayı kuracak olan fonksiyonun kendisinden gelir
+(`core::arc_from_guide`), yani gördüğünüz yay oluşacak yaydır. `3n` ve `devam`
+eskiden düz bir **çizgi** gösteriyordu — bir kavisin olmadığı tek şey.
 
 ## Sözdizimi
 
@@ -89,6 +106,8 @@ göreli (`@50,30`) ve kutupsal (`@100<45`).
 | `merkez` | Yayın merkezi |
 | `baslangic` | Yayın başladığı nokta. Merkezle arasındaki uzaklık yarıçaptır |
 | `bitis` | Yayın biteceği yön. Yalnız yönü okunur, uzaklığı değil |
+| `yon` | `bby`: yayın hangi yandan geçeceği — `sol` ya da `sag` |
+| `yon_nokta` | `bby`: yanın gösterildiği nokta; `yon` verilmişse sorulmaz |
 
 ## Örnekler
 
@@ -125,6 +144,12 @@ tıkladıktan sonra kılavuz **yayın kendisine** döner ve imleciniz döndükç
 büyür: bırakacağınız yay tam olarak gördüğünüz yaydır.
 
 Yakalama açıkken üç nokta da mevcut nesnelere oturur ([`MOD`](mode.md)).
+
+Öteki dört yöntem aynı düğmenin **kartında**: düğmeyi basılı tutun ya da
+köşesindeki işarete tıklayın. `bby`'de yarıçapı yazdıktan sonra komut yayın
+hangi yandan geçeceğini sorar; imleci kirişin bir yanından öbürüne geçirdikçe yay
+taraf değiştirir. Aynı karttaki **Daire Dilimi** ayrı bir şekildir ve artık kendi
+ikonunu taşır.
 
 Araç kalıcıdır: bir yayı bitirdiğinizde `YAY` yeniden kurulur. Aracı bırakmak için
 **Esc**'e basın.

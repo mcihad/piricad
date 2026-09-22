@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <string>
+#include <vector>
 
 namespace kentos::command {
 namespace {
@@ -65,15 +66,25 @@ Task<void> run(Context& ctx)
                                                  .rubber_origin = *a,
                                                  .rubber_shape  = RubberShape::Line});
         if (!b) co_return;
+        // THE ARC, NOT A LINE. Two points on a curve determine nothing, so the
+        // second is asked for with a line; the THIRD settles it, and from there
+        // the guide is the arc itself — built by `core::arc_from_guide`, which is
+        // the construction this branch commits (CLAUDE.md 5.10).
+        const std::vector<core::Point2> so_far{*a, *b};
+        const core::ArcGuide guide{.build = core::ArcBuild::ThreePoint};
         auto c = co_await ctx.point("bitis", "Yayın bitiş noktası",
-                                    PointOptions{.rubber_band   = true,
-                                                 .rubber_origin = *b,
-                                                 .rubber_shape  = RubberShape::Line});
+                                    PointOptions{.rubber_band    = true,
+                                                 .rubber_origin  = *b,
+                                                 .rubber_shape   = RubberShape::ArcBuild,
+                                                 .rubber_chain   = so_far,
+                                                 .rubber_payload = core::encode_arc_guide(guide)});
         if (!c) co_return;
 
         core::Point2 middle{};
         core::Mm r = 0;
-        if (!core::circumcircle(*a, *b, *c, middle, r)) {
+        core::Point2 from_end{};
+        core::Point2 to_end{};
+        if (!core::arc_from_guide(guide, so_far, *c, middle, r, from_end, to_end)) {
             ctx.session().fail(
                 core::err(core::ErrorCode::InvalidArgument,
                           "Üç nokta aynı doğru üzerinde; onlardan geçen bir yay yok. Orta noktayı "
@@ -81,19 +92,7 @@ Task<void> run(Context& ctx)
             co_return;
         }
 
-        // WHICH WAY ROUND. An arc is stored counter-clockwise from start to end
-        // (core/arc.hpp), and the three points say which of the two arcs between
-        // the ends was meant: the one the middle point is on. The cross product
-        // of start→middle and start→end is the test, in metres so the product
-        // stays inside the mantissa.
-        const double sx = core::mm_to_metres(b->x - a->x);
-        const double sy = core::mm_to_metres(b->y - a->y);
-        const double ex = core::mm_to_metres(c->x - a->x);
-        const double ey = core::mm_to_metres(c->y - a->y);
-        const bool ccw  = (sx * ey - sy * ex) > 0.0;
-
-        auto made =
-            ctx.transaction().add_arc(ctx.active_layer(), middle, r, ccw ? *a : *c, ccw ? *c : *a);
+        auto made = ctx.transaction().add_arc(ctx.active_layer(), middle, r, from_end, to_end);
         if (!made) {
             ctx.session().fail(made.error());
             co_return;
@@ -170,24 +169,32 @@ Task<void> run(Context& ctx)
         tx /= t_len;
         ty /= t_len;
 
+        // THE TANGENT ARC, previewed. This end used to be asked for with a
+        // straight line, which is the one shape the answer is NOT: the whole
+        // point of the method is that the curve leaves the last thing drawn
+        // without a kink, and the user could not see whether it did until after
+        // the click.
+        //
+        // The direction travels as a POINT a kilometre along the tangent, so the
+        // guide and this branch read the same direction from the same two points
+        // rather than each rounding its own (`core::arc_from_guide`).
+        const std::vector<core::Point2> ray{
+            from, core::Point2{from.x + core::mm_round(tx * 1'000'000.0),
+                               from.y + core::mm_round(ty * 1'000'000.0)}};
+        const core::ArcGuide guide{.build = core::ArcBuild::Tangent};
         auto c = co_await ctx.point("bitis", "Yayın bitiş noktası (teğet devam)",
-                                    PointOptions{.rubber_band   = true,
-                                                 .rubber_origin = from,
-                                                 .rubber_shape  = RubberShape::Line});
+                                    PointOptions{.rubber_band    = true,
+                                                 .rubber_origin  = from,
+                                                 .rubber_shape   = RubberShape::ArcBuild,
+                                                 .rubber_chain   = ray,
+                                                 .rubber_payload = core::encode_arc_guide(guide)});
         if (!c) co_return;
 
-        // THE CENTRE IS WHERE THE PERPENDICULAR AT THE START MEETS THE CHORD'S
-        // BISECTOR, and that is one equation: the centre is `from + s·n` for the
-        // normal `n`, and equidistant from both ends, so
-        //   s = |d|² / (2 · d·n)   with d = end − start.
-        // `d·n == 0` means the end lies ALONG the tangent — a straight line, not
-        // an arc — and the command says so rather than dividing by zero.
-        const double nx = -ty;
-        const double ny = tx;
-        const double dx = static_cast<double>(c->x - from.x);
-        const double dy = static_cast<double>(c->y - from.y);
-        const double dn = dx * nx + dy * ny;
-        if (dn > -1.0 && dn < 1.0) {
+        core::Point2 centre{};
+        core::Mm radius = 0;
+        core::Point2 first{};
+        core::Point2 last{};
+        if (!core::arc_from_guide(guide, ray, *c, centre, radius, first, last)) {
             ctx.session().fail(core::err(
                 core::ErrorCode::InvalidArgument,
                 "Bitiş noktası teğetin üzerinde: buradan devam eden şey bir yay değil bir "
@@ -195,19 +202,7 @@ Task<void> run(Context& ctx)
             co_return;
         }
 
-        const double span_sq = dx * dx + dy * dy;
-        const double s       = span_sq / (2.0 * dn);
-        const core::Point2 centre{from.x + core::mm_round(nx * s), from.y + core::mm_round(ny * s)};
-        const core::Mm radius = core::segment_length(centre, from);
-
-        // STORED COUNTER-CLOCKWISE, like every arc in this model. The tangent
-        // turns left when the centre is on the left (`s > 0`), and that is the
-        // counter-clockwise sweep from start to end; on the right the two ends
-        // swap, exactly as `bby` swaps them by side.
-        const bool counter_clockwise = s > 0.0;
-        auto made =
-            ctx.transaction().add_arc(ctx.active_layer(), centre, radius,
-                                      counter_clockwise ? from : *c, counter_clockwise ? *c : from);
+        auto made = ctx.transaction().add_arc(ctx.active_layer(), centre, radius, first, last);
         if (!made) {
             ctx.session().fail(made.error());
             co_return;
@@ -218,8 +213,8 @@ Task<void> run(Context& ctx)
         // document it is replayed into (model.md P4). Recorded as the `merkez`
         // form, which is what the default branch reads back.
         ctx.record("merkez", Value::point(centre));
-        ctx.record("baslangic", Value::point(counter_clockwise ? from : *c));
-        ctx.record("bitis", Value::point(counter_clockwise ? *c : from));
+        ctx.record("baslangic", Value::point(first));
+        ctx.record("bitis", Value::point(last));
         co_return;
     }
 
@@ -229,6 +224,13 @@ Task<void> run(Context& ctx)
         // says which by pointing at the side the curve goes.
         auto a = co_await ctx.point("baslangic", "Yayın başlangıç noktası");
         if (!a) co_return;
+        // WHETHER THE SIDE CAME WITH THE INVOCATION, read before anything is
+        // awaited — a branch on whether a value was given, not on which client
+        // gave it (command.md P10). A run that was handed `yon` asks nothing
+        // more, which is what keeps every journal line written before this
+        // change replayable (Article 1.4).
+        const bool side_given = ctx.has_argument("yon");
+
         auto c = co_await ctx.point("bitis", "Yayın bitiş noktası",
                                     PointOptions{.rubber_band   = true,
                                                  .rubber_origin = *a,
@@ -238,10 +240,18 @@ Task<void> run(Context& ctx)
         if (!wanted) co_return;
 
         const core::Mm r = core::mm_from_metres(*wanted);
-        core::Point2 left{};
-        core::Point2 right{};
-        const core::CircleMeet meet = core::circle_intersection(*a, r, *c, r, left, right);
-        if (meet != core::CircleMeet::Two && meet != core::CircleMeet::Tangent) {
+        const std::vector<core::Point2> ends{*a, *c};
+        const core::ArcGuide guide{.build = core::ArcBuild::Radius, .radius = r};
+
+        // THE RADIUS IS JUDGED THE MOMENT IT IS TYPED, before the side is asked
+        // for: a radius shorter than half the span joins nothing, and asking
+        // which side of an arc that cannot exist would be a question with no
+        // answer.
+        core::Point2 middle{};
+        core::Mm made_radius = 0;
+        core::Point2 first{};
+        core::Point2 last{};
+        if (!core::arc_by_radius(*a, *c, r, false, middle, made_radius, first, last)) {
             ctx.session().fail(
                 core::err(core::ErrorCode::InvalidArgument,
                           "Bu yarıçap iki noktayı birleştirmiyor: yarıçap, iki nokta arasının "
@@ -250,14 +260,43 @@ Task<void> run(Context& ctx)
         }
 
         std::string side = "sol";
-        if (const Value v = ctx.argument("yon"); !v.empty()) side = v.as_text();
-        const bool to_right       = core::turkish_key_equals(side, "sag");
-        const core::Point2 middle = to_right ? right : left;
+        bool to_right    = false;
+        if (side_given) {
+            side     = ctx.argument("yon").as_text();
+            to_right = core::turkish_key_equals(side, "sag");
+        } else {
+            // TWO ARCS OF THAT RADIUS JOIN TWO POINTS, one bulging each side of
+            // the chord, and which one was meant is not in the numbers. The
+            // command used to read `yon` from its arguments and default to
+            // `sol`, so from the interface it ALWAYS drew one of them and the
+            // other was unreachable by mouse — although the note above it said
+            // the user points at the side. Now they do, with the arc following
+            // the cursor from one side of the chord to the other.
+            auto pointed =
+                co_await ctx.point("yon_nokta", "Yayın hangi yandan geçeceğini gösterin",
+                                   PointOptions{.rubber_band    = true,
+                                                .rubber_origin  = *a,
+                                                .rubber_shape   = RubberShape::ArcBuild,
+                                                .rubber_chain   = ends,
+                                                .rubber_payload = core::encode_arc_guide(guide)});
+            if (!pointed) co_return;
 
-        // The centre on the LEFT of start→end bulges the arc to the RIGHT, and
-        // the arc is stored counter-clockwise, so the ends swap with the side.
-        auto made = ctx.transaction().add_arc(ctx.active_layer(), middle, r, to_right ? *c : *a,
-                                              to_right ? *a : *c);
+            to_right = core::arc_radius_side(*a, *c, *pointed);
+            side     = to_right ? "sag" : "sol";
+
+            // NOT PART OF THE RECORD: the gesture is HOW the side was chosen and
+            // `yon` is what the side IS. A line carrying both would have two
+            // answers to one question (Article 1.4).
+            ctx.record("yon_nokta", Value{});
+        }
+
+        if (!core::arc_by_radius(*a, *c, r, to_right, middle, made_radius, first, last)) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument, "Bu yarıçapta bir yay kurulamadı."));
+            co_return;
+        }
+
+        auto made = ctx.transaction().add_arc(ctx.active_layer(), middle, made_radius, first, last);
         if (!made) {
             ctx.session().fail(made.error());
             co_return;
@@ -390,6 +429,9 @@ KENTOS_COMMAND(arc_draw)
                 Param::points("uzerinden", Arity::optional(), "3n: yayın üzerinden geçtiği nokta"),
                 Param::number("supurme", Arity::optional(), "bma: süpürme açısı"),
                 Param::number("yaricap", Arity::optional(), "bby: yarıçap (m)").measured_in("m"),
+                Param::points("yon_nokta", Arity::optional(),
+                              "bby: yayın hangi yandan geçeceği gösterilen nokta; yon "
+                              "verilmişse sorulmaz"),
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
                               "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre"),
             },

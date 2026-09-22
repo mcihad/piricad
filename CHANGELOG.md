@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — YAY: üç yöntem yayı önizlemiyordu, `bby` ise yanı hiç sormuyordu
+
+Aynı hastalık, beşinin üçünde.
+
+- **`3n` ve `devam` düz bir ÇİZGİ önizliyordu** — bir kavisin olmadığı tek şey.
+  Artık `3n`'de üç noktadan geçen yay, `devam`'da ise son çizilenin ucundan
+  **teğet** ayrılan yay gösteriliyor; kırık olup olmadığını tıklamadan önce
+  görüyorsunuz. `devam`'da teğet doğrultusu kılavuza bir **nokta** olarak
+  geçiyor, böylece kılavuz ile komut aynı iki noktadan aynı doğrultuyu okuyor,
+  her biri kendi yuvarlamasını yapmıyor.
+- **`bby`'nin yanı hiç sorulmuyordu.** Komut `yon`'u argümanından okuyup yoksa
+  `sol` varsayıyordu — yani arayüzden **hep** biri çiziliyor, öteki fareyle
+  erişilemez oluyordu; üstündeki yorumda "kullanıcı yanı gösterir" yazmasına
+  rağmen öyle bir soru yoktu. Şimdi soruyor: imleci kirişin bir yanından öbürüne
+  geçirdikçe yay taraf değiştiriyor. `yon=` yazan için hiçbir şey değişmedi ve
+  komut fazladan soru sormuyor.
+- **Yarıçap, yazıldığı anda denetleniyor.** Olmayan bir yayın hangi yanı
+  sorulmaz: iki nokta arasının yarısından küçük bir yarıçap yan sorusundan önce
+  reddediliyor.
+- **Üç yapı `core`'a indi** (`core/arc.hpp`: `ArcBuild`, `ArcGuide`,
+  `arc_from_guide`, `arc_radius_side`, `arc_by_radius`) ve komut da kılavuz da
+  onları çağırıyor. Altın fikstür bayt-özdeş kaldı.
+
+`bby`'nin yanını **kirişin hangi yanı** olduğuna göre seçmek bir düzeltme
+değil, doğru ölçüt: "hangi merkez daha yakın" testi, bir pahın en sık çizildiği
+durumda çöküyor — yarıçap tam yarım açıklık olduğunda iki merkez **çakışıyor**,
+ama iki yay hâlâ iki ayrı yay (hangi ucun başlangıç olduğuyla ayrılıyorlar).
+Kirişin ise yarıçap ne olursa olsun iki yanı var.
+
 ### Düzeltildi — dört araç başka bir aracın ikonunu taşıyordu
 
 Rapor: "taşı ve esnet ikonları aynı." Bir kolon **etiket değil ikon** gösterir,

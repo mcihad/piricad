@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include <cmath>
+#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -276,6 +278,136 @@ double bulge_from_arc(Point2 a, Point2 b, Point2 centre, Mm radius, bool ccw) no
     const double sagitta = s > kUDegFullCircle / 2 ? r + leg : r - leg;
     const double bulge   = sagitta / h;
     return ccw ? bulge : -bulge;
+}
+
+namespace {
+
+/// Whether start->through->end turns counter-clockwise, in metres so the cross
+/// product stays inside the mantissa.
+bool turns_ccw(Point2 a, Point2 through, Point2 b) noexcept
+{
+    const double sx = mm_to_metres(through.x - a.x);
+    const double sy = mm_to_metres(through.y - a.y);
+    const double ex = mm_to_metres(b.x - a.x);
+    const double ey = mm_to_metres(b.y - a.y);
+    return (sx * ey - sy * ex) > 0.0;
+}
+
+} // namespace
+
+std::vector<std::uint8_t> encode_arc_guide(const ArcGuide& guide)
+{
+    std::vector<std::uint8_t> bytes(9);
+    bytes[0] = static_cast<std::uint8_t>(guide.build);
+    std::memcpy(bytes.data() + 1, &guide.radius, sizeof(guide.radius));
+    return bytes;
+}
+
+std::optional<ArcGuide> decode_arc_guide(std::span<const std::uint8_t> bytes)
+{
+    if (bytes.size() != 9) return std::nullopt;
+    if (bytes[0] > static_cast<std::uint8_t>(ArcBuild::Radius)) return std::nullopt;
+
+    ArcGuide guide{};
+    guide.build = static_cast<ArcBuild>(bytes[0]);
+    std::memcpy(&guide.radius, bytes.data() + 1, sizeof(guide.radius));
+    return guide;
+}
+
+bool arc_radius_side(Point2 a, Point2 b, Point2 toward) noexcept
+{
+    // Metres before multiplying, so the cross product stays inside the mantissa.
+    const double ex = mm_to_metres(b.x - a.x);
+    const double ey = mm_to_metres(b.y - a.y);
+    const double tx = mm_to_metres(toward.x - a.x);
+    const double ty = mm_to_metres(toward.y - a.y);
+    return (ex * ty - ey * tx) > 0.0;
+}
+
+bool arc_by_radius(Point2 a, Point2 b, Mm radius, bool to_right, Point2& centre, Mm& out_radius,
+                   Point2& start, Point2& end) noexcept
+{
+    if (radius <= 0) return false;
+
+    Point2 left{};
+    Point2 right{};
+    const CircleMeet meet = circle_intersection(a, radius, b, radius, left, right);
+    if (meet != CircleMeet::Two && meet != CircleMeet::Tangent) return false;
+
+    // The centre on the LEFT of a->b bulges the arc to the RIGHT, and the arc is
+    // stored counter-clockwise, so the ends swap with the side.
+    centre     = to_right ? right : left;
+    out_radius = radius;
+    start      = to_right ? b : a;
+    end        = to_right ? a : b;
+    return true;
+}
+
+bool arc_from_guide(const ArcGuide& guide, std::span<const Point2> chain, Point2 cursor,
+                    Point2& centre, Mm& radius, Point2& start, Point2& end) noexcept
+{
+    switch (guide.build) {
+    case ArcBuild::ThreePoint: {
+        if (chain.size() < 2) return false;
+        const Point2 a       = chain[0];
+        const Point2 through = chain[1];
+        if (!circumcircle(a, through, cursor, centre, radius) || radius <= 0) return false;
+
+        // WHICH WAY ROUND. An arc is stored counter-clockwise from start to end,
+        // and the three points say which of the two arcs between the ends was
+        // meant: the one the middle point is on.
+        const bool ccw = turns_ccw(a, through, cursor);
+        start          = ccw ? a : cursor;
+        end            = ccw ? cursor : a;
+        return true;
+    }
+    case ArcBuild::Tangent: {
+        if (chain.size() < 2) return false;
+        const Point2 from   = chain[0];
+        const Point2 along  = chain[1];
+        const double tx_raw = mm_to_metres(along.x - from.x);
+        const double ty_raw = mm_to_metres(along.y - from.y);
+        const double t_len  = std::sqrt(tx_raw * tx_raw + ty_raw * ty_raw);
+        if (t_len <= 0.0) return false;
+        const double tx = tx_raw / t_len;
+        const double ty = ty_raw / t_len;
+
+        // THE CENTRE IS WHERE THE PERPENDICULAR AT THE START MEETS THE CHORD'S
+        // BISECTOR, and that is one equation: the centre is `from + s*n` for the
+        // normal `n`, and equidistant from both ends, so
+        //   s = |d|^2 / (2 * d.n)   with d = end - start.
+        // `d.n == 0` means the end lies ALONG the tangent — a straight line, not
+        // an arc — so nothing is answered rather than dividing by zero.
+        const double nx = -ty;
+        const double ny = tx;
+        const double dx = static_cast<double>(cursor.x - from.x);
+        const double dy = static_cast<double>(cursor.y - from.y);
+        const double dn = dx * nx + dy * ny;
+        if (dn > -1.0 && dn < 1.0) return false;
+
+        const double span_sq = dx * dx + dy * dy;
+        const double s       = span_sq / (2.0 * dn);
+        centre               = Point2{from.x + mm_round(nx * s), from.y + mm_round(ny * s)};
+        // MEASURED FROM THE ROUNDED CENTRE, not from `|s|`: the centre is what
+        // gets stored, so the radius has to be the distance to THAT point or the
+        // two would disagree by a millimetre.
+        radius = segment_length(centre, from);
+        if (radius <= 0) return false;
+
+        // The arc leaves `from` along the tangent, so it runs counter-clockwise
+        // from `from` when the centre is to its LEFT.
+        const bool ccw = s > 0.0;
+        start          = ccw ? from : cursor;
+        end            = ccw ? cursor : from;
+        return true;
+    }
+    case ArcBuild::Radius:
+        if (chain.size() < 2) return false;
+        return arc_by_radius(chain[0], chain[1], guide.radius,
+                             arc_radius_side(chain[0], chain[1], cursor), centre, radius, start,
+                             end);
+    }
+    return false;
 }
 
 } // namespace kentos::core

@@ -1690,6 +1690,30 @@ void MapCanvas::buildOverlay()
             } else {
                 addRun(batch, {render::to_f(from), toScreenF(to)}, false);
             }
+        } else if (shape == command::RubberShape::ArcBuild) {
+            // THE ARC THE CLICK WILL MAKE, by the construction the command named,
+            // from the function the command builds it with
+            // (`core::arc_from_guide`).
+            //
+            // Three of YAY's methods previewed a straight LINE, which is the one
+            // shape the answer is not; `bby` never even asked which side the
+            // curve goes. A curve that is shown as a line is a curve the user
+            // finds out about after the click.
+            if (auto decoded = core::decode_arc_guide(session->prompt().rubber_payload)) {
+                core::Point2 centre{};
+                core::Mm radius = 0;
+                core::Point2 first{};
+                core::Point2 last{};
+                if (core::arc_from_guide(decoded.value(), session->prompt().rubber_chain,
+                                         cursorWorld(), centre, radius, first, last)) {
+                    curve_scratch_x_.clear();
+                    curve_scratch_y_.clear();
+                    core::arc_outline(centre, radius, first, last, curve_scratch_x_,
+                                      curve_scratch_y_);
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false, 0, 0);
+                }
+            }
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::Rectangle) {
             // THE FACE, not its diagonal. A rectangle previewed as one line tells
             // the user nothing about what the next click will make, and with the
