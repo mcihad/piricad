@@ -380,7 +380,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // Enter on an empty command line is "done pointing". Focus is here far more
     // often than on the canvas, so without this the gesture had nowhere to land.
     connect(commandLine_, &CommandLine::accepted, this, [this] {
-        if (!controller_->supplyPickedObjects()) (void)canvas_->acceptGuide();
+        // AN EMPTY ENTER, in the order the three things it can mean are asked
+        // for: those objects · that wanted area · that is the shape, done.
+        if (controller_->supplyPickedObjects()) return;
+        if (canvas_->acceptGuide()) return;
+        (void)canvas_->finishPointRun();
     });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
@@ -3979,6 +3983,91 @@ int MainWindow::probeRealMouse()
         canvas_->setFocus(Qt::OtherFocusReason);
     }
 
+    // ---- 8. THE TOOL STAYS IN THE HAND AFTER A DRAW -------------------------
+    //
+    // The user's report: "after drawing, the default tool gets selected again".
+    // Two separate defects were behind it, and both are asserted here.
+    {
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        QCoreApplication::processEvents();
+
+        /// Enter, sent where a hand sends it: to the widget that has the focus.
+        /// The command line owns it far more often than the canvas does.
+        const auto press_enter = [this] {
+            QWidget* target = commandLine_;
+            QKeyEvent down(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(target, &down);
+            QCoreApplication::processEvents();
+        };
+
+        // ENTER FINISHES A POINT RUN and leaves the tool armed. Before this, Enter
+        // fell through to nothing: the only key that ended such a run was Esc, and
+        // Esc puts the tool away too, so every line cost another trip to the tool
+        // column.
+        actLine_->trigger();
+        QCoreApplication::processEvents();
+        const std::size_t before = controller_->document().live_entity_count();
+        for (const core::Point2 at : {core::Point2{0, 0}, core::Point2{20'000, 0}}) {
+            const render::ScreenPoint px = canvas_->view().to_screen(at);
+            const QPointF on(px.x, px.y);
+            onCanvas(QEvent::MouseMove, on, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, on, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, on, Qt::LeftButton);
+        }
+        QCoreApplication::processEvents();
+        press_enter();
+
+        check(controller_->document().live_entity_count() > before,
+              QStringLiteral("Enter çizgiyi bitirdi (%1 nesne)")
+                  .arg(controller_->document().live_entity_count()));
+        const command::Session* again = controller_->session();
+        check(again != nullptr && again->waiting(),
+              QStringLiteral("Enter'dan sonra araç elde kaldı ve yeniden soruyor"));
+        check(drawingTools_->checkedAction() == actLine_,
+              QStringLiteral("yanan düğme hâlâ ÇİZGİ (yanan: %1)")
+                  .arg(drawingTools_->checkedAction() == nullptr
+                           ? QStringLiteral("-")
+                           : drawingTools_->checkedAction()->property(kToolCommand).toString()));
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+
+        // AND THE TOOL THAT COMES BACK IS THE ONE THAT RAN, not its family's
+        // first member. A method tool carries a whole line, which the repeat
+        // resolved as a command NAME, found nothing, and walked on to the plain
+        // tool — so picking "Çokgen — dıştan" and drawing one silently left the
+        // inscribed one armed for the next.
+        QAction* method = nullptr;
+        for (QAction* action : drawingTools_->actions())
+            if (action->property(kToolCommand).toString() == QStringLiteral("ÇOKGEN yontem=dis"))
+                method = action;
+        check(method != nullptr, QStringLiteral("ÇOKGEN yontem=dis aracı kolonda var"));
+        if (method != nullptr) {
+            method->trigger();
+            QCoreApplication::processEvents();
+            // Answered the way a hand answers it: typed at the command line,
+            // which is where the focus goes for a number (`onPromptChanged`).
+            controller_->runLine(QStringLiteral("5"), command::Origin::CommandLine);
+            QCoreApplication::processEvents();
+            controller_->supplyPoint(core::Point2{0, 100'000}); // merkez
+            QCoreApplication::processEvents();
+            controller_->supplyPoint(core::Point2{0, 110'000}); // kenar, 10 m kuzeyde
+            QCoreApplication::processEvents();
+
+            check(
+                drawingTools_->checkedAction() == method,
+                QStringLiteral("çizimden sonra yanan düğme hâlâ yöntem aracı (yanan: %1)")
+                    .arg(drawingTools_->checkedAction() == nullptr
+                             ? QStringLiteral("-")
+                             : drawingTools_->checkedAction()->property(kToolCommand).toString()));
+            const command::Session* repeat = controller_->session();
+            check(repeat != nullptr && repeat->waiting(),
+                  QStringLiteral("yöntem aracı kendini yeniden kurdu"));
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+        }
+    }
+
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
 }
@@ -5367,31 +5456,58 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated, bool dis
     }
     if (dismissed) return;
 
+    // THE SAME TOOL, NOT THE FAMILY'S FIRST ONE. A method tool carries a whole
+    // line (`ÇOKGEN yontem=dis`), and resolving all of it as a command NAME finds
+    // nothing — so the loop walked on and matched the plain `ÇOKGEN`, whose name
+    // does resolve to the same command id. The user picked "Çokgen — dıştan",
+    // drew one, and the next one was silently the inscribed one: the tool they
+    // chose was replaced by the default. That is what "the default tool gets
+    // selected again after drawing" was.
+    //
+    // `armedLine()` is the line that actually started this run, so a button
+    // carrying exactly it is the button that ran (the same test
+    // `syncToolSelection` uses to decide which one to light).
+    const QString armed = controller_->armedLine();
+    if (!armed.isEmpty())
+        for (QAction* action : drawingTools_->actions()) {
+            if (!action->property(kToolRepeats).toBool() || !action->isEnabled()) continue;
+            if (action->property(kToolCommand).toString() != armed) continue;
+            rearm(action, id);
+            return;
+        }
+
     for (QAction* action : drawingTools_->actions()) {
         if (!action->property(kToolRepeats).toBool()) continue;
 
         const QVariant carried = action->property(kToolCommand);
         if (!carried.isValid() || !action->isEnabled()) continue;
 
-        const command::CommandSpec* spec =
-            controller_->registry().resolve(carried.toString().toStdString());
+        // BY THE FIRST WORD, for the same reason: a button may carry a line.
+        const QString word               = carried.toString().section(QLatin1Char(' '), 0, 0);
+        const command::CommandSpec* spec = controller_->registry().resolve(word.toStdString());
         if (spec == nullptr || spec->id != id.toStdString()) continue;
 
-        // A TOOL THAT STARTS BY ASKING WHICH OBJECTS asks again from nothing: with
-        // the selection left standing, a re-armed TAŞI would take the same
-        // objects and ask for a base point the instant the move landed, and a
-        // re-armed ALANÖLÇ would measure the same parcel for ever.
-        const bool wants_objects =
-            !spec->params.empty() && spec->params.front().kind == command::ParamKind::Selection;
-        if (wants_objects && !controller_->bus().selection().empty())
-            controller_->runLine(QStringLiteral("SEÇ TEMİZLE"), command::Origin::Gui);
-
-        // Queued, not called: this runs inside the finishing command's own signal,
-        // and starting the next session on top of the one being torn down is how a
-        // coroutine gets resumed after its frame is gone.
-        QMetaObject::invokeMethod(this, [action] { action->trigger(); }, Qt::QueuedConnection);
+        rearm(action, id);
         return;
     }
+}
+
+void MainWindow::rearm(QAction* action, const QString& id)
+{
+    // A TOOL THAT STARTS BY ASKING WHICH OBJECTS asks again from nothing: with
+    // the selection left standing, a re-armed TAŞI would take the same objects
+    // and ask for a base point the instant the move landed, and a re-armed
+    // ALANÖLÇ would measure the same parcel for ever.
+    const command::CommandSpec* spec = controller_->registry().resolve(id.toStdString());
+    const bool wants_objects         = spec != nullptr && !spec->params.empty() &&
+                               spec->params.front().kind == command::ParamKind::Selection;
+    if (wants_objects && !controller_->bus().selection().empty())
+        controller_->runLine(QStringLiteral("SEÇ TEMİZLE"), command::Origin::Gui);
+
+    // Queued, not called: this runs inside the finishing command's own signal,
+    // and starting the next session on top of the one being torn down is how a
+    // coroutine gets resumed after its frame is gone.
+    QMetaObject::invokeMethod(this, [action] { action->trigger(); }, Qt::QueuedConnection);
 }
 
 void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)

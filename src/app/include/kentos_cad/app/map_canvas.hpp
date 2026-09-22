@@ -190,6 +190,13 @@ public:
     /// kind is being asked, so the caller can go on to what Enter means next.
     bool acceptGuide();
 
+    /// Enter's answer when nothing else claims it: finishes a run that is asking
+    /// for a POINT, the way the right button does, leaving the tool in the hand.
+    /// False when no such run is waiting. Reached from the canvas and from the
+    /// command line, because focus is on the line far more often than on the
+    /// drawing — both roads, one answer.
+    bool finishPointRun();
+
     /// Opens the PRINT FRAME: an inner window of the viewport at `aspect`
     /// (printable width over printable height), with everything outside it
     /// greyed. The frame keeps its size on screen — it is the SHEET, not a

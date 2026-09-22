@@ -1332,6 +1332,35 @@ bool MapCanvas::acceptGuide()
     return true;
 }
 
+bool MapCanvas::finishPointRun()
+{
+    // ENTER FINISHES THE SHAPE, exactly as the right button does.
+    //
+    // A command that reads points until the next one does not come — ÇİZGİ, ALAN,
+    // ÇOKLUÇİZGİ, DİKAYAK — is FINISHED by saying "that is all", and the right
+    // button was the only way to say it. Enter fell through to nothing, so the
+    // only key that ended such a run was Esc, and Esc also PUTS THE TOOL AWAY
+    // (`Controller::finishInteractive` versus `cancelInteractive`). The user had
+    // to reach for the tool again after every shape and read it as the tool being
+    // dropped after every draw.
+    //
+    // It is also keyboard parity: a capability reachable only with a mouse is one
+    // the program may not ship (CLAUDE.md 5.15, ui.md R21).
+    //
+    // ONLY FOR A POINT PROMPT. A selection is answered by `supplyPickedObjects`,
+    // a wanted area by `acceptGuide`, and a name or a number by typing it — an
+    // empty Enter at those means "I have nothing to say" and must not end the run.
+    const auto* session = controller_.session();
+    if (session == nullptr || !session->waiting() ||
+        session->prompt().kind != command::ParamKind::Point)
+        return false;
+
+    controller_.finishInteractive();
+    snap_preview_valid_ = false;
+    update();
+    return true;
+}
+
 core::AreaGhost MapCanvas::areaGhost() const
 {
     core::AreaGhost none;
@@ -2460,6 +2489,7 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             update();
             return;
         }
+        if (finishPointRun()) return;
     }
 
     if (event->key() == Qt::Key_Escape) {

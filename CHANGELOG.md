@@ -6,6 +6,34 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çizimden sonra araç elde kalıyor, ve elde kalan araç aynı araç
+
+Kullanıcının raporu: "çizim yaptıktan sonra varsayılan araç seçiliyor
+tekrardan." Arkasında iki ayrı kusur vardı; ikisi de gerçek işletim sistemi
+olaylarıyla ölçüldü.
+
+**Enter bir nokta dizisini bitirmiyordu.** Sağ tık `finishInteractive()`
+çağırıp aracı elde bırakıyor; Enter ise `supplyPickedObjects`/`acceptGuide`'a
+düşüp boşa çıkıyordu. Böyle bir çalışmayı bitiren tek tuş Esc kalıyordu — ve Esc
+aracı *bırakır*. Kullanıcı her çizgiden sonra araç kolonuna geri gidiyordu. Artık
+Enter, nokta bekleyen bir çalışmayı sağ tıkla aynı şekilde bitiriyor
+(`MapCanvas::finishPointRun`, tuvalden ve komut satırından — tek gövde, iki yol).
+Bu aynı zamanda klavye eşitliği: yalnız fareyle erişilen bir yetenek
+gönderilemez (5.15, ui.md R21).
+
+**Tekrar kurulan araç, ailenin ilk üyesiydi.** Bir yöntem aracı tam satır taşıyor
+(`ÇOKGEN yontem=dis`); tekrar mantığı bunu komut ADI diye çözüyor, bulamıyor ve
+döngüye devam edip düz `ÇOKGEN`'i buluyordu — adı aynı komut kimliğine çözülen
+üye. "Çokgen — dıştan"ı seçip bir tane çizdiğinizde sıradaki sessizce içten olan
+oluyordu: seçtiğiniz araç varsayılanla değişiyordu. Eşleşme artık önce
+`Controller::armedLine()`'a, sonra ilk sözcüğe bakıyor; `armedLine_` de sinyal
+atıldıktan sonra temizleniyor, çünkü hangi aracın çalıştığını söyleyen tek şey
+odur (beş düğme `core.arc_draw` gönderiyor).
+
+`KENTOS_REALMOUSE_PROBE`'un 8. bölümü ikisini de tutuyor: Enter'dan sonra oturum
+yeniden soruyor ve yanan düğme hâlâ ÇİZGİ; yöntem aracıyla bir çokgen çizildikten
+sonra yanan düğme hâlâ `ÇOKGEN yontem=dis`.
+
 ### Düzeltildi — çokgen araçları komple elden geçti: kılavuz, soru sırası, işaretle boy verme
 
 Kullanıcının raporu: "döndürülmüş dikdörtgen çiziyor ama çizerken kılavuz yok;

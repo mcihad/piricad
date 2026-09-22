@@ -777,6 +777,27 @@ geçir." Hepsi `KENTOS_OSCLICK_PROBE` + `scripts/os-tikla.sh` ile gerçek olayla
   arayüz sırası ve yeni hata; `rectangle.md`'ye iki yöntemin kılavuzu ve döndürülmüş dikdörtgenin
   arayüz adımları; `make reference` (dört üretilmiş dosya, 6.14).
 
+## Araç çizimden sonra elde kalıyor (2026-09-22)
+
+Rapor: "çizim yaptıktan sonra varsayılan araç seçiliyor tekrardan." İki ayrı kusur.
+
+- [x] **Enter nokta dizisini bitirmiyordu.** Sağ tık `finishInteractive()`, Enter ise hiçbir şey.
+  Böyle bir çalışmayı bitiren tek tuş Esc'ti ve Esc aracı bırakır. `MapCanvas::finishPointRun()`
+  geldi; tuvalden ve komut satırından çağrılıyor, yalnız `ParamKind::Point` isteminde çalışıyor
+  (seçim `supplyPickedObjects`'in, istenen alan `acceptGuide`'ın, ad/sayı yazmanın).
+- [x] **Tekrar, ailenin ilk üyesini kuruyordu.** `onInteractiveFinished` tam satırı komut adı diye
+  çözüyor, bulamıyor, döngü devam edip düz üyeyi buluyordu. Artık önce `armedLine()` ile tam satır,
+  sonra ilk sözcük; `armedLine_` sinyalden sonra temizleniyor. `rearm()` ortak gövde oldu.
+- [x] **Probe 8. bölüm** (`KENTOS_REALMOUSE_PROBE`): Enter'dan sonra oturum yeniden soruyor, yanan
+  düğme hâlâ ÇİZGİ; yöntem aracıyla çizimden sonra yanan düğme hâlâ `ÇOKGEN yontem=dis`. Offscreen
+  ve gerçek pencerede 0 kusur.
+- [ ] **Tekrar her seferinde kenar sayısını yeniden soruyor.** Şimdi araç elde kaldığı için görünür
+  oldu: beş altıgen çizmek "6" yazmayı beş kez istiyor. AutoCAD son değeri varsayılan olarak sunar
+  (`<4>`), bizde böyle bir mekanizma yok. Dürüst yolu bir oturum ayarı olmalı (`core.aci.birim`
+  kalıbı): komut, argüman gelmediğinde ayarı okur, betik açıkça verdiğinde ayar karışmaz ve günlük
+  zaten çözülmüş değeri tutar. Karar kullanıcının: bir betiğin `kenar_sayisi`'nı atlaması ayardan
+  okumak anlamına gelecek mi. Bu satır o kararı bekliyor.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

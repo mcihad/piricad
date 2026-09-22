@@ -560,9 +560,15 @@ void Controller::settleSession()
         const bool asked = asked_;
         asked_           = false;
         session_.reset();
-        armedLine_.clear();
         emit promptChanged(QString());
+        // CLEARED AFTER THE SIGNAL, not before it. The shell re-arms the tool that
+        // ran, and the only thing that says WHICH tool that was is the line that
+        // started it: five buttons send `core.arc_draw`. Cleared first, the shell
+        // had nothing to match and fell back to the command id, which matches the
+        // plain tool — so a method tool silently became its family's default one
+        // after every run.
         emit interactiveFinished(id, mutated, !asked);
+        armedLine_.clear();
     } else if (session_->waiting()) {
         asked_ = true;
         emit promptChanged(QString::fromStdString(session_->prompt().message));
@@ -664,9 +670,9 @@ void Controller::cancelInteractive()
     const bool dismissed = !finishing_ || !asked_;
     asked_               = false;
     session_.reset();
-    armedLine_.clear();
     emit promptChanged(QString());
-    emit interactiveFinished(id, mutated, dismissed);
+    emit interactiveFinished(id, mutated, dismissed); // see the note above: cleared after
+    armedLine_.clear();
     settle();
     emit documentChanged();
 }

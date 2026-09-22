@@ -517,6 +517,10 @@ private slots:
 
     /// Re-arms a modal draw tool after it has finished a shape, so the next one
     /// can be drawn without going back to the tool column.
+    /// Starts `action`'s tool again after a run of `id` finished, clearing a
+    /// standing selection first for a tool that begins by asking for objects.
+    void rearm(QAction* action, const QString& id);
+
     void onInteractiveFinished(const QString& id, bool mutated, bool dismissed);
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);
