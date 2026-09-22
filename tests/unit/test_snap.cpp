@@ -19,6 +19,7 @@
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/render/snap_marker.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <array>
@@ -2122,4 +2123,64 @@ TEST_CASE("YAKALAMA: her mod idempotent — snap(snap(p)) == snap(p)")
     // nothing here is not proven idempotent by this test, and saying so out loud
     // is the difference between a test and a claim.
     CHECK_EQ(silent, std::size_t{0});
+}
+
+// ---------------------------------------------------------------------------
+// Every mode draws a mark — render/snap_marker.hpp.
+//
+// This is the test the `default: break;` in the canvas needed and never had. A
+// mode with no case drew NOTHING: the aid fired, the point moved, and the marker
+// said it had not. It was found once for `DÜĞÜM` and fixed by adding a case,
+// which left the hole open — and seven more modes fell into it afterwards. The
+// hole is closed by walking the bits rather than by remembering.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Yakalama işareti: her modun bir işareti var")
+{
+    using namespace kentos::core;
+
+    struct Named
+    {
+        std::uint32_t bit;
+        const char* id;
+    };
+
+    // EVERY BIT THE ENGINE CAN REPORT, named so a failure says which one. The
+    // list is the modes a `SnapResult` carries, which is every object mode plus
+    // the constraints that move a point without being an object.
+    const Named all[]{
+        {SnapEndpoint, "uc"},          {SnapMidpoint, "orta"},
+        {SnapCenter, "merkez"},        {SnapCentroid, "agirlik_merkezi"},
+        {SnapIntersection, "kesisim"}, {SnapPerpendicular, "dik"},
+        {SnapNearest, "yakin"},        {SnapNode, "dugum"},
+        {SnapExtension, "uzanti"},     {SnapParallel, "paralel"},
+        {SnapApparent, "uzatilmis"},   {SnapGuide, "kilavuz"},
+        {SnapInsertion, "ekleme"},     {SnapQuadrant, "ceyrek"},
+        {SnapTangent, "tegent"},       {SnapNormal, "yuzey_normali"},
+        {SnapGrid, "izgara"},          {SnapPolar, "kutupsal"},
+        {SnapOrtho, "dik_mod"},        {SnapStep, "adim"},
+        {SnapTracking, "iz"},
+    };
+
+    for (const Named& mode : all) {
+        const kentos::render::Marker mark =
+            kentos::render::snap_marker(mode.bit, 100.0F, 50.0F, 6.0F);
+        INFO("mod: ", mode.id);
+        CHECK_FALSE(mark.empty());
+        // A stroke of one point is not a stroke: the overlay draws runs.
+        for (const kentos::render::MarkerRun& stroke : mark.runs)
+            CHECK(stroke.points.size() >= 2);
+    }
+
+    // AND EVERY BIT OF THE MASK IS IN THAT LIST. Without this the test would pass
+    // for the modes somebody remembered to add to it, which is the same hole one
+    // level up.
+    std::uint32_t covered = 0;
+    for (const Named& mode : all)
+        covered |= mode.bit;
+    CHECK_EQ(SnapAllMask & ~covered, std::uint32_t{0});
+
+    // An unknown bit still answers a mark rather than nothing: the engine moved
+    // the point, so something has to say so.
+    CHECK_FALSE(kentos::render::snap_marker(1U << 30, 0.0F, 0.0F, 6.0F).empty());
 }

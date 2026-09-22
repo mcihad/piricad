@@ -20,6 +20,7 @@
 #include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/render/backend.hpp"
+#include "kentos_cad/render/snap_marker.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -777,68 +778,17 @@ void MapCanvas::buildSnapMarker()
     // SHAPE is chosen here rather than in the backend because which glyph means
     // which aid is a decision about the product, and every backend would otherwise
     // have to make the same one and agree.
-    switch (snap_preview_.mode) {
-    case core::SnapEndpoint: // square
-        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
-        break;
-    case core::SnapMidpoint: // triangle
-        addRun(batch, {{x, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
-        break;
-    case core::SnapCenter: addCircle(batch, x, y, h); break;
-    case core::SnapIntersection: // cross
-        addRun(batch, {{x - h, y - h}, {x + h, y + h}}, false);
-        addRun(batch, {{x - h, y + h}, {x + h, y - h}}, false);
-        break;
-    case core::SnapPerpendicular: // the right-angle mark
-        addRun(batch, {{x - h, y - h}, {x - h, y + h}, {x + h, y + h}}, false);
-        addRun(batch, {{x, y + h}, {x, y}, {x - h, y}}, false);
-        break;
-    case core::SnapNearest: // bowtie
-        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x - h, y + h}, {x + h, y + h}}, true);
-        break;
-    case core::SnapGrid: // lattice cell with its centre marked
-        addRun(batch, {{x - h, y}, {x + h, y}}, false);
-        addRun(batch, {{x, y - h}, {x, y + h}}, false);
-        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
-        break;
-    case core::SnapNode: // a filled ring: the surveyed monument itself
-        // DÜĞÜM had no glyph and fell through to `default`, so snapping to a
-        // control point drew nothing at all — the one thing on a cadastral sheet
-        // every boundary is measured from, and the marker said it had not fired.
-        addCircle(batch, x, y, h * 0.55f);
-        addRun(batch, {{x - h, y}, {x - h * 0.55f, y}}, false);
-        addRun(batch, {{x + h * 0.55f, y}, {x + h, y}}, false);
-        addRun(batch, {{x, y - h}, {x, y - h * 0.55f}}, false);
-        addRun(batch, {{x, y + h * 0.55f}, {x, y + h}}, false);
-        break;
-    case core::SnapInsertion: // a square with its centre marked: where a thing was PUT
-        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
-        addRun(batch, {{x - h * 0.4f, y}, {x + h * 0.4f, y}}, false);
-        addRun(batch, {{x, y - h * 0.4f}, {x, y + h * 0.4f}}, false);
-        break;
-    case core::SnapPolar:
-    case core::SnapOrtho: // diamond: the point is on a locked direction
-        addRun(batch, {{x, y - h}, {x + h, y}, {x, y + h}, {x - h, y}}, true);
-        break;
-
-    // The constructed points get OPEN glyphs — a shape with a gap in it — so a
-    // point this engine built is never mistaken at a glance for a corner the
-    // drawing actually contains.
-    case core::SnapExtension: // an arrow continuing to the right
-        addRun(batch, {{x - h, y}, {x + h, y}}, false);
-        addRun(batch, {{x, y - h * 0.6f}, {x + h, y}, {x, y + h * 0.6f}}, false);
-        break;
-    case core::SnapParallel: // the two strokes of the parallel sign
-        addRun(batch, {{x - h * 0.3f, y - h}, {x - h, y + h}}, false);
-        addRun(batch, {{x + h, y - h}, {x + h * 0.3f, y + h}}, false);
-        break;
-    case core::SnapApparent: // a cross with an open corner
-        addRun(batch, {{x - h, y - h}, {x + h, y + h}}, false);
-        addRun(batch, {{x - h, y + h}, {x, y}}, false);
-        break;
-
-    default: break;
-    }
+    // THE MARK IS `render::snap_marker`'S, not a switch here. A switch with a
+    // `default: break;` is a silent hole: a mode with no case drew nothing at
+    // all, so the aid fired, the point moved, and the marker said it had not.
+    // Seven modes had grown that hole — the surface normal, the quadrant, the
+    // tangent, the guide, the centroid, the tracking mark and the step — and a
+    // test now walks every bit and fails when one draws nothing
+    // (render/snap_marker.hpp).
+    const render::Marker mark = render::snap_marker(snap_preview_.mode, x, y, h);
+    for (const render::MarkerRun& stroke : mark.runs)
+        addRun(batch, stroke.points, stroke.closed);
+    if (mark.ring > 0.0F) addCircle(batch, x, y, mark.ring);
 
     // The label says which aid fired. Without it a user cannot tell an endpoint
     // from an intersection when both glyphs sit under the cursor — and with the
@@ -1748,6 +1698,68 @@ void MapCanvas::buildOverlay()
                 addCircle(lit, on.x, on.y, 8.0f);
                 addRun(lit, {on, toScreenF(to)}, false);
             }
+        } else if (shape == command::RubberShape::Angle &&
+                   !session->prompt().rubber_chain.empty()) {
+            // THE TWO ARMS AND THE SWEEP BETWEEN THEM, with the reading on it.
+            // Both arms used to be previewed as a plain line from the vertex, so
+            // the first one left the screen while the second was aimed — and the
+            // angle, the only thing the command measures, was not on the canvas
+            // at all until the answer was already in the transcript.
+            const core::Point2 vertex = session->prompt().rubber_origin;
+            const core::Point2 arm_a  = session->prompt().rubber_chain.front();
+            const core::Point2 arm_b  = cursorWorld();
+
+            addRun(batch,
+                   {render::to_f(view_.to_screen(vertex)), render::to_f(view_.to_screen(arm_a))},
+                   false);
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+
+            // THE SWEEP, drawn at a radius that is READABLE rather than at the
+            // arms' own length: an angle between a 2 cm arm and a 40 m one has
+            // to be legible at both ends, so the mark sits a fixed number of
+            // pixels from the vertex like every other mark this canvas draws.
+            const core::Mm reach       = core::mm_round(28.0 * view_.mm_per_pixel());
+            const core::AngleRule rule = look_.angle.rule;
+            const double to_a          = core::direction_turns(vertex, arm_a, rule);
+            const double to_b          = core::direction_turns(vertex, arm_b, rule);
+            double between             = to_b - to_a;
+            between -= std::floor(between);
+
+            if (reach > 0 && between > 0.0) {
+                // THE SWEEP THE COMMAND REPORTS, not the shorter one. Drawing
+                // the short way round while writing the other number beside it
+                // was the very thing this pass has been removing: the picture
+                // said one angle and the reading said another. The sweep runs
+                // from the FIRST arm to the second in the rule's own direction,
+                // which is how the command defines it — and why the order the
+                // two arms are picked in is a choice rather than noise.
+                const core::Point2 at_a =
+                    vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_a, rule);
+                const core::Point2 at_b =
+                    vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_b, rule);
+                curve_scratch_x_.clear();
+                curve_scratch_y_.clear();
+                // `arc_outline` sweeps counter-clockwise from start to end.
+                // Under semt an increasing angle turns CLOCKWISE, so going from
+                // a to b that way is going counter-clockwise from b to a.
+                const bool ccw_from_a = rule != core::AngleRule::Semt;
+                core::arc_outline(vertex, reach, ccw_from_a ? at_a : at_b, ccw_from_a ? at_b : at_a,
+                                  curve_scratch_x_, curve_scratch_y_);
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
+            }
+
+            // AND THE READING, which is what the user is here for. The generic
+            // dynamic-input label writes the distance and bearing to the cursor;
+            // for this shape the number that matters is the angle between the
+            // arms, in the session's own unit.
+            if (look_.dynamic_input) {
+                const render::ScreenPointF at = toScreenF(to);
+                const std::string text        = core::angle_text(between, look_.angle.unit);
+                overlay_.labels.push_back(
+                    render::OverlayLabel{tokens_->readout.rgba(), at.x + 12.0F, at.y - 10.0F,
+                                         static_cast<float>(look_.hint_px), false, text});
+                guide_label_ = text;
+            }
         } else if (shape == command::RubberShape::ArcBuild) {
             // THE ARC THE CLICK WILL MAKE, by the construction the command named,
             // from the function the command builds it with
@@ -2025,7 +2037,8 @@ void MapCanvas::buildOverlay()
         // is being dragged — that is what every CAD calls dynamic input, and what
         // a surveyor setting out a 12 cm step needs to see the step working.
         if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
-            shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates) {
+            shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates &&
+            shape != command::RubberShape::Angle) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

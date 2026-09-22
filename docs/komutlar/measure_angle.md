@@ -114,11 +114,25 @@ Aynı üç nokta, başka bir sözleşme. `core.aci.birim` bir **proje** ayarıd�
 
 ### Arayüz
 
-**Harita → Açı Ölç**, ya da araç kolonundaki ölçüm ailesinde **Açı Ölç**. Araç
-kollanır; tepeye, sonra birinci kola, sonra ikinci kola tıklarsınız. İkinci ve
-üçüncü tıklamada tepeden imlece bir lastik bant çizilir. Yakalama açıktır: köşeye
-`UÇ`, kenar ortasına `ORTA` yakalar, böylece ölçtüğünüz açı gerçekten çizimdeki
-köşedir, tıklamanızın piksel hassasiyeti değildir.
+**Harita → Açı Ölç**, ya da araç kolonundaki ölçüm ailesinde **Açı Ölç** (artık
+kendi ikonunu taşıyor; eskiden `ÖLÇ` ile aynı cetveli kullanıyordu). Araç
+kollanır; tepeye, sonra birinci kola, sonra ikinci kola tıklarsınız.
+
+**Üçüncü tıklamaya kadar ölçtüğünüz açı ekranda durur.** Birinci kol yerinde
+kalır, imlece ikinci kol uzanır, ve tepede ikisi arasındaki **süpürme bir yay
+olarak** çizilir; yayın yanında okuma yazar. Eskiden her iki kol da tepeden
+imlece giden düz bir çizgi olarak gösteriliyordu, yani ikinciyi nişanlarken
+birincisi ekrandan kayboluyor ve komutun tek ölçtüğü şey — aradaki açı — cevap
+döküme düşene kadar hiçbir yerde görünmüyordu.
+
+**Yay, komutun bildirdiği süpürmedir.** Kısa olanı çizip uzun olanı yazmak gibi
+bir şey yapılmaz: süpürme **birinci koldan ikinciye**, oturumun kuralının kendi
+yönünde okunur (varsayılan *semt*'te saat yönünde). Yani kolları hangi sırayla
+tıkladığınız sizin seçiminizdir; ters çevirince tümler açıyı alırsınız. Komut
+ikisini de yazar.
+
+Yakalama açıktır: köşeye `UÇ`, kenar ortasına `ORTA` yakalar, böylece ölçtüğünüz
+açı gerçekten çizimdeki köşedir, tıklamanızın piksel hassasiyeti değildir.
 
 ### Betik
 

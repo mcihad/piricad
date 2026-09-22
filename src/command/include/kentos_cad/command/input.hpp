@@ -64,10 +64,12 @@ enum class RubberShape : std::uint8_t {
                    ///< construction `rubber_payload` names: DAİRE yontem=2n|3n|ttr
     ArcBuild,      ///< the arc the chain's fixed points and the cursor make, by the construction
                    ///< `rubber_payload` names: YAY yontem=3n|devam|bby
-    Fixed,     ///< the reference the run has already fixed, with NOTHING following the cursor: the
-               ///< baseline of DİKAYAK, the station of ALIM, the line of ARANOKTA
-    Candidates ///< the answers this pick chooses between, marked; the one nearest the cursor is
-               ///< the one it will take: KESİŞİMNOKTA yontem=mesafe
+    Fixed,      ///< the reference the run has already fixed, with NOTHING following the cursor: the
+                ///< baseline of DİKAYAK, the station of ALIM, the line of ARANOKTA
+    Candidates, ///< the answers this pick chooses between, marked; the one nearest the cursor is
+                ///< the one it will take: KESİŞİMNOKTA yontem=mesafe
+    Angle ///< the two arms of an angle and the sweep between them, with the reading written on it:
+          ///< AÇIÖLÇ
 };
 
 struct Prompt

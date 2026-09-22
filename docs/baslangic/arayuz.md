@@ -384,6 +384,15 @@ işaretten sonra kesişim, tek bir izi yener. Ayrıntısı
 | **F8** | Dik modu açar/kapatır — imleci yatay ve düşey eksene kilitler |
 | **F10** | Yüzey normalini açar/kapatır — imleci başlanan **kenara** dik kilitler |
 | **Shift** (basılı) | Bir komut nokta beklerken yüzey normalini **tuttuğunuz sürece** açar |
+
+**Her yardımcı kendi işaretini çizer.** Bir yakalama tuttuğunda imlecin altında o
+moda ait bir şekil ve adı görünür: uç noktada kare, ortada üçgen, merkezde halka,
+kesişimde çarpı, yüzey normalinde bir yüzey ve üzerinde duran **dik açı işareti**,
+çeyrekte çeyrek yay, teğette eğriye yatan bir çizgi, izde küçük bir kutu ve
+kuyrukları. Yedi mod bir zamanlar hiçbir şey çizmiyordu — yakalama tutuyor, nokta
+kayıyor, işaret ise tutmadığını söylüyordu. Şimdi her modun işareti var ve bir
+test bunu modların **hepsini dolaşarak** güvence altına alıyor, yani yeni bir mod
+işaretsiz gönderilemiyor.
 | **Ctrl** (basılı) | Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
 | **Del** ya da **⌫** | Seçili nesneleri siler (`SİL`). Mac klavyesinde ⌦ tuşu çoğu zaman yoktur; ⌫ (Backspace) da siler |

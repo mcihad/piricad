@@ -906,6 +906,31 @@ Rapor: "senin dediklerini yapalım ama hayalet önizleme kusursuz olmalı."
   tamamlayacağı bir şey yok; `GhostSpec::copies` alanı ötelemeli tekrar için hazır duruyor ama
   aralığı fareyle veren bir yol eklenmedi. Eklenirse `DİZİ` de kopyalarını önizler.
 
+## Ölçüm ve yüzey normali (2026-09-22)
+
+Rapor: "ölçüm yüzey normali araçlarını falan da iyileştir."
+
+- [x] **Yedi mod hiçbir işaret çizmiyordu.** Tuvalin işaret `switch`'indeki `default: break;`
+  sessiz bir delikti: yardımcı tutuyor, nokta kayıyor, işaret tutmadığını söylüyordu. `DÜĞÜM` için
+  bir kez bulunup dal eklenerek kapatılmış, delik açık kalmıştı; yüzey normali, çeyrek, teğet,
+  kılavuz, ağırlık merkezi, iz ve adım içine düşmüştü.
+- [x] **`render/snap_marker.hpp`** (Qt'siz) işaretlerin tek evi; tanınmayan bit bile bir işaret
+  alıyor. Yüzey normalinin işareti: bir yüzey ve üzerinde duran dik açı işareti.
+- [x] **Test modların hepsini dolaşıyor** (`test_snap.cpp`): her mod için işaret boş olamaz, her
+  koşu en az iki nokta, ve `SnapAllMask`'in her biti listede olmak zorunda — yani testin kendisi de
+  eksik kalamıyor. Yeni bir mod işaretsiz gönderilemez.
+- [x] **AÇIÖLÇ ölçtüğü açıyı gösteriyor** (`RubberShape::Angle`): birinci kol duruyor, ikinci kol
+  imlece uzanıyor, tepede süpürme yay olarak çiziliyor, yanında okuma. Yay komutun bildirdiği
+  süpürmenin kendisi — kısa olanı çizip uzun olanı yazmak, bu turda kaldırılan hatanın aynısı olurdu.
+  Yay sabit piksel yarıçapında, çünkü 2 cm'lik kolla 40 m'lik kol arasındaki açı iki ucunda da
+  okunabilmeli.
+- [x] **AÇIÖLÇ kendi ikonunu aldı**; `ÖLÇ` ile aynı cetveli taşıyordu.
+- [x] **ÖLÇ, ALANÖLÇ, KOORDİNAT, NESNEBİLGİ'ye dokunulmadı**: ÖLÇ'ün lastik bandı ve canlı okuması
+  zaten doğru, öbür üçünün fareyle tamamlanacak bir şeyi yok (biri seçim, biri tek nokta).
+- [x] **Gerçek olaylarla görsel**: iki kol, süpürme yayı ve `335,5788 grad` okuması bir arada.
+- [x] **Belgeler**: `measure_angle.md`'ye süpürme yayı ve kol sırası; `arayuz.md`'ye her yardımcının
+  kendi işaretini çizdiği ve testin bunu modları dolaşarak güvenceye aldığı.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

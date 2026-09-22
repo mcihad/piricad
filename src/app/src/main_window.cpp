@@ -1218,7 +1218,7 @@ void MainWindow::buildActions()
     actEntityInfo_ = modifyTool(Glyph::Identify, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
                                 tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
                                    "öznitelikler  ·  kısaltma: NB"));
-    actMeasureAngle_ = modifyTool(Glyph::Measure, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
+    actMeasureAngle_ = modifyTool(Glyph::MeasureAngle, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
                                   tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
                                      "kuralıyla yazar  ·  kısaltma: AÇÖ"));
 

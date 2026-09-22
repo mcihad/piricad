@@ -6,6 +6,41 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yedi yakalama modu hiçbir işaret çizmiyordu
+
+`map_canvas.cpp`'deki işaret `switch`'inin sonunda bir `default: break;` vardı —
+ve o default sessiz bir delik: hiçbir dalı olmayan bir mod hiçbir şey çizmiyor,
+yani yardımcı tutuyor, nokta kayıyor, işaret ise tutmadığını söylüyordu. Bu bir
+kez `DÜĞÜM` için bulunup bir dal eklenerek kapatılmıştı, yani delik açık kalmıştı
+— ve arkasından yedi mod içine düştü: **yüzey normali**, çeyrek, teğet, kılavuz,
+ağırlık merkezi, iz ve adım.
+
+İşaretler `render/snap_marker.hpp`'ye çıktı (Qt'siz) ve bir test **bütün modları
+dolaşıp** işaretsiz olanda kırılıyor. Yedisinin işareti de yazıldı; yüzey
+normalininki bir yüzey ve üzerinde duran **dik açı işareti** — kilidin yaptığı
+şeyin tamamı, ve kullanıcının onu yaptığını göremediği tek şey. Ayrıca tanınmayan
+bir bit bile bir işaret alıyor: motor noktayı oynattıysa bunu söyleyen bir şey
+olmak zorunda. Yeni bir mod artık işaretsiz gönderilemiyor — derleme kırılır.
+
+### Düzeltildi — AÇIÖLÇ ölçtüğü açıyı göstermiyordu
+
+İki kol da tepeden imlece giden düz bir çizgi olarak önizleniyordu, yani ikinciyi
+nişanlarken birincisi ekrandan kayboluyor ve komutun **tek ölçtüğü şey** — aradaki
+açı — cevap döküme düşene kadar hiçbir yerde görünmüyordu.
+
+Yeni `RubberShape::Angle` ile birinci kol yerinde duruyor, imlece ikinci kol
+uzanıyor ve tepede süpürme bir **yay** olarak çiziliyor; yanında okuma yazıyor.
+Yay, komutun bildirdiği süpürmenin kendisi: kısa olanı çizip uzun olanı yazmak
+bu turda kaldırılan hatanın aynısı olurdu, o yüzden süpürme birinci koldan
+ikinciye, oturumun kuralının yönünde okunuyor. Kol sırası kullanıcının seçimi.
+
+Yay bir de piksel cinsinden sabit bir yarıçapta çiziliyor — 2 cm'lik bir kolla
+40 m'lik bir kol arasındaki açı iki ucunda da okunabilsin diye.
+
+### Eklendi — AÇIÖLÇ kendi ikonunu aldı
+
+`ÖLÇ` ile aynı cetveli taşıyordu; artık iki kol ve aralarındaki yay.
+
 ### Düzeltildi — hayalet önizleme artık komutun kendi dönüşümü
 
 Hayalet, fiil ne olursa olsun bir **öteleme**ydi: tuvalin yardımcısı `dx, dy`

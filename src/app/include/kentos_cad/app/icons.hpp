@@ -154,10 +154,11 @@ enum class Glyph {
     // shared the two-outlines mark with `BLOKEKLE`. Each of the five does a
     // different thing to the same objects, which is exactly when an icon has to
     // say which.
-    Scale,       ///< a small square growing into a large one: ÖLÇEKLE
-    Mirror,      ///< a shape and its reflection across a dashed axis: AYNALA
-    Array,       ///< a grid of small squares: DİZİ
-    BlockInsert, ///< a square dropped onto an insertion cross: BLOKEKLE
+    Scale,        ///< a small square growing into a large one: ÖLÇEKLE
+    Mirror,       ///< a shape and its reflection across a dashed axis: AYNALA
+    Array,        ///< a grid of small squares: DİZİ
+    BlockInsert,  ///< a square dropped onto an insertion cross: BLOKEKLE
+    MeasureAngle, ///< two arms and the sweep between them: AÇIÖLÇ, which wore ÖLÇ's own mark
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

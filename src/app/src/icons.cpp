@@ -364,6 +364,21 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawRect(QRectF(9.0, 3.6, 11.4, 11.4));
         break;
 
+    case Glyph::MeasureAngle: {
+        // TWO ARMS AND THE SWEEP BETWEEN THEM, which is what the tool measures
+        // and what its preview now draws on the canvas.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(4.4, 19.4), QPointF(20.2, 19.4));
+        p.drawLine(QPointF(4.4, 19.4), QPointF(17.0, 6.0));
+        p.setPen(stroke(c, 1.2));
+        QPainterPath sweep;
+        sweep.arcMoveTo(QRectF(4.4 - 9.0, 19.4 - 9.0, 18.0, 18.0), 0.0);
+        sweep.arcTo(QRectF(4.4 - 9.0, 19.4 - 9.0, 18.0, 18.0), 0.0, 47.0);
+        p.drawPath(sweep);
+        grip(p, QPointF(4.4, 19.4), c);
+        break;
+    }
+
     case Glyph::Copy:
         // Two offset outlines: the original and its duplicate.
         p.setPen(stroke(c, 1.5));

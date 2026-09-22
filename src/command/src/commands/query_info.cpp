@@ -182,10 +182,16 @@ Task<void> run_measure_angle(Context& ctx)
                                                  .rubber_origin = *vertex,
                                                  .rubber_shape  = RubberShape::Line});
     if (!first) co_return;
+    // THE FIRST ARM STAYS, AND THE SWEEP IS DRAWN. Both arms were previewed as a
+    // plain line from the vertex, so while the second was aimed the first had
+    // left the screen — and the one thing the command measures, the angle
+    // BETWEEN them, was nowhere on the canvas until the answer was already in
+    // the transcript.
     auto second = co_await ctx.point("ikinci", "İkinci kolun üzerinde bir nokta",
                                      PointOptions{.rubber_band   = true,
                                                   .rubber_origin = *vertex,
-                                                  .rubber_shape  = RubberShape::Line});
+                                                  .rubber_shape  = RubberShape::Angle,
+                                                  .rubber_chain  = {*first}});
     if (!second) co_return;
 
     if (*first == *vertex || *second == *vertex) {
