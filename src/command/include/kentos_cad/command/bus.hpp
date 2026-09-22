@@ -863,6 +863,19 @@ public:
     /// script depends on command, never the reverse (Constitution Article 3).
     std::function<core::Status(const std::string& path)> on_run_script;
 
+    /// The same seam for a Python SNIPPET rather than a file.
+    ///
+    /// A SECOND HOOK AND NOT A SECOND MEANING FOR THE FIRST: `on_run_script`
+    /// takes a path and chooses its host by the extension, which a snippet has
+    /// no way to answer. A console line and a file are the same act to the bus —
+    /// one batch, one undo step, one journal record — and differ only in where
+    /// the text came from.
+    ///
+    /// Unset means this build has no Python, and `PYTHON` says so rather than
+    /// failing silently. Never reachable by an agent: `core.python` carries no
+    /// `AiAccessible` bit and CLAUDE.md 5.24 forbids giving it one.
+    std::function<core::Status(const std::string& source)> on_run_python;
+
     /// Installed by `io::DatabaseService`. Unset means this build has no database
     /// engine attached — either it was compiled without PostGIS or nothing wired
     /// the service — and `VERİTABANI` says so rather than pretending it connected.

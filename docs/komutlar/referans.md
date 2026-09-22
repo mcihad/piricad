@@ -94,6 +94,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.import`](import.md) | İçe Aktar | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
 | [`core.export`](export.md) | Dışa Aktar | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | Betik Çalıştır | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
+| [`core.python`](python.md) | Python Çalıştır | `PYTHON`, `PİTON`, `PITON`, `PY` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir Python parçacığını komut veri yolu üzerinden çalıştırır. |
 | [`core.database`](database.md) | Veritabanı | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
 | [`core.print`](print.md) | Yazdır | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
 | [`core.print_profile`](print_profile.md) | Yazdırma Profili | `YAZDIRMAPROFİLİ`, `YAZDIRMAPROFILI`, `PRINTPROFILE`, `YZP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
@@ -1238,6 +1239,16 @@ Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 | `dosya` | text | 1 | Çalıştırılacak betik dosyasının yolu |
 
 Ayrıntılı kullanım: [BETİK](script.md)
+
+### `core.python` — PYTHON (Python Çalıştır)
+
+Bir Python parçacığını komut veri yolu üzerinden çalıştırır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `kod` | text | 1 | Çalıştırılacak Python kaynağı |
+
+Ayrıntılı kullanım: [PYTHON](python.md)
 
 ### `core.database` — VERİTABANI (Veritabanı)
 

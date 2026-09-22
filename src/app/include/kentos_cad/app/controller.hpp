@@ -81,6 +81,27 @@ public:
     runLineResult(const QString& line, command::Origin origin = command::Origin::CommandLine);
     void runCommand(const QString& line); ///< toolbar / menu — same road as a script
 
+    /// Runs a Python snippet through `core.python`.
+    ///
+    /// THE COMMAND AND NOT THE RUNNER, even though this class owns the runner.
+    /// A panel that called `PythonRunner` directly would be the private entry
+    /// point Article 1.2 forbids: the snippet would miss the journal line the bus
+    /// writes for the command, and the same act would be unreachable from the
+    /// command line. The argument is passed as a built `Invocation` rather than
+    /// as text, because Python source contains quotes and newlines and rendering
+    /// it into a command line to be parsed back is a round trip that cannot be
+    /// made lossless.
+    void runPython(const QString& source);
+
+    /// The `kentos.cad` callable names this build exposes, for completion and
+    /// for the editor's highlighting.
+    ///
+    /// From the REGISTRY, so a command added today is completable today and there
+    /// is no second list (CLAUDE.md 5.10). Answered in every build, including one
+    /// with no Python: the names are a fact about the command set, not about the
+    /// interpreter.
+    QStringList pythonApiNames() const;
+
     /// The line that armed the running session, or empty. Read by
     /// `MainWindow::syncToolSelection` to light the exact button pressed.
     const QString& armedLine() const noexcept { return armedLine_; }

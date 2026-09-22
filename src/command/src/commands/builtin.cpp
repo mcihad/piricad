@@ -95,6 +95,7 @@ namespace kentos::command {
     X(import)                                                                                      \
     X(exportfile)                                                                                  \
     X(script)                                                                                      \
+    X(python)                                                                                      \
     X(database)                                                                                    \
     X(print)                                                                                       \
     X(print_profile)                                                                               \

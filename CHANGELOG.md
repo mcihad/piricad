@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Python konsolu ve `PYTHON` komutu
+
+Pencerenin altında, komut satırının kardeşi bir panel: yazdığınızı `>>>` ile,
+programın söylediğini altına yazar. **Pencere > Python Konsolu**.
+
+- **`PYTHON` komutu** (`core.python`) panelin çalıştırdığı şeydir. Panel bir
+  istemcidir, özel bir giriş değil: aynı parçacığı komut satırından ve JSON
+  betikten de çalıştırırsınız (Article 1.2, 5.15).
+- **Yapay zekâya kapalı ve kapalı kalacak** (yeni `CLAUDE.md` 5.24). Ajan komut
+  önerir; komut önizlenebilir, doğrulanır, tek tek günlüğe yazılır. Bir parçacık
+  çalışana kadar bunların hiçbiri değildir.
+- **Sözdizimi renklendirmesi** `cad.` adlarını **canlı komut kaydından** tanır:
+  `cad.line` renklenir, `cad.lien` renklenmez. Üç yeni mürekkep (`design.md` §2):
+  yorum, sayı ve `def`/`class` ile tanımlanan ad.
+- Enter gönderir, Shift+Enter satır ekler, Yukarı/Aşağı geçmişi getirir. Açık bir
+  parantez varsa gönderim beklemeye alınır; bir `:` beklemeye ALMAZ, çünkü istem
+  çok satırlıdır ve döngüyle gövdesi birlikte yazılır.
+
+Yol boyunca düzeltilenler: yerleşim sürümü 6'ya çıktı (eski kayıtlı yerleşim yeni
+paneli tanımadığı için konsol ekranın ortasında yüzen bir pencere olarak
+açılıyordu); istemin yüksekliği tek sayfadan (`theme.cpp`) geliyor, çünkü oradaki
+genel kural her `QPlainTextEdit`'in `max-height`'ını temizliyor ve widget'ın
+kendi `setFixedHeight`'ı hiçbir şey yapmıyordu.
+
+
 ### Eklendi — `kentos.cad`: her komut bir Python fonksiyonu
 
 `cad.run("ÇİZGİ 0,0 10,10")` yanına her komutun kendi fonksiyonu geldi:

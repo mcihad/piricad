@@ -124,7 +124,53 @@ Task<void> run_script(Context& ctx)
         ctx.echo("Betik tamamlandı: " + *path);
 }
 
+Task<void> run_python(Context& ctx)
+{
+    auto code = co_await ctx.text("kod", "Python kodu");
+    if (!code || code->empty()) co_return;
+
+    Bus& bus = ctx.session().bus();
+    if (!bus.on_run_python) {
+        // SAYS WHICH BUILD, because the option is the whole difference and a user
+        // who typed the command deserves the sentence that ends their search
+        // rather than "not connected" (`.claude/script.md` R21).
+        ctx.echo("Bu yapıda Python yok. KENTOS_WITH_PYTHON=ON ile derleyin.");
+        co_return;
+    }
+
+    auto st = bus.on_run_python(*code);
+    if (!st) ctx.echo("Python hatası: " + st.error().message);
+}
+
 } // namespace
+
+KENTOS_COMMAND(python)
+{
+    return CommandSpec{
+        .id    = "core.python",
+        .names = {"PYTHON", "PİTON", "PITON", "PY"},
+        .title = "Python Çalıştır",
+        // A COMMAND AND NOT ONLY A PANEL. The Python console at the bottom of the
+        // window is a CLIENT of this, exactly as the command line is a client of
+        // the bus: a capability reachable only by mouse is forbidden (Article
+        // 1.2, CLAUDE.md 5.15), and this is what makes the console's one gesture
+        // expressible from the command line and from a script.
+        .category = Category::Script,
+        .params =
+            {Param::text("kod", Arity::exactly(1), "Çalıştırılacak Python kaynağı").en("code")},
+        .undo = UndoPolicy::Custom,
+        // NO `AiAccessible`, and CLAUDE.md 5.24 forbids ever adding it. An agent
+        // proposes commands, which are previewable, validated and journalled one
+        // at a time; a snippet is arbitrary code with the user's own filesystem
+        // and network, and no preview can show what it will do.
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Bir Python parçacığını komut veri yolu üzerinden çalıştırır.",
+        .run     = &run_python,
+        // A SNIPPET IS WHATEVER IT CONTAINS, exactly like a script file.
+        .effect = Effect::Query | Effect::ViewChange | Effect::DocumentEdit | Effect::FileRead |
+                  Effect::FileWrite | Effect::ExternalWrite | Effect::SettingsChange,
+    };
+}
 
 KENTOS_COMMAND(help)
 {

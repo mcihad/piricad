@@ -1112,6 +1112,20 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
 
+        // THE PYTHON CONSOLE, driven the way a user drives it: a line typed at
+        // the prompt and Enter. What the panel shows afterwards is what the bus
+        // said, so the frame is evidence and not a mock-up.
+        later([&window] {
+            window.showPythonConsole(
+                QStringLiteral("cad.run(\"KATMAN RÖPER\")\n"
+                               "for i in range(3):\n"
+                               "    cad.circle_draw(center=[485330000 + i * 20000, 4310215000],\n"
+                               "                    rim=[485334000 + i * 20000, 4310215000])\n"
+                               "print(\"nesne:\", cad.doc.entity_count(), \"katman:\","
+                               " cad.doc.layer_count())"));
+        });
+        later([&window, shot] { shot(QStringLiteral("1b-python-konsolu"), &window); });
+
         // AND THE LAYOUT DESIGNER, which is a whole editor and had never been
         // photographed. It opens modal, so the steps after it run inside its
         // own event loop — which is fine: a `singleShot` fires in a nested loop

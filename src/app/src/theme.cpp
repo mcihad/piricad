@@ -438,6 +438,16 @@ QString themeStyleSheet(ThemeMode mode)
                                            min-height: 24px; max-height: 24px; }
         QPlainTextEdit#expressionEdit:focus { border: 1px solid %(accent)s; }
 
+        /* The Python console's prompt: three lines, and NAMED because the rule
+         * above this one clears `max-height` for every QPlainTextEdit — which is
+         * right for a transcript and is why a `setFixedHeight` on the prompt did
+         * nothing. A stylesheet beats a widget call, so the height belongs here.
+         * The transcript keeps the cleared maximum and takes what is left. */
+        QPlainTextEdit#pythonPrompt      { min-height: 64px; max-height: 64px; }
+        QPlainTextEdit#pythonTranscript  { background: %(panel)s; color: %(textDim)s;
+                                           border: none; border-radius: 0px;
+                                           padding: 6px 8px; }
+
         /* The statistics panel's head and the two footer switches' words. */
         QLabel#statsTitle                { background: transparent; color: %(text)s;
                                            font-size: 13px; font-weight: 600; }

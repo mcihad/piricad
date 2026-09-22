@@ -286,6 +286,12 @@ Sağda Tablo / Form segmenti.
 operatör `#E0A55E`, metin sabiti `#9DC78A`, mantıksal `#A48FD0`. Yanında **Filtrele**
 (birincil), `Kaydet ▾` (adlandırılmış filtre), ve tablo içi arama.
 
+**Python editörü ve konsolu.** Aynı dört mürekkep taşır — anahtar sözcük mantıksaldır,
+katar metin sabitidir, `cad.` adları alandır — ve Python'un fazladan üç söz türü için üç
+renk daha: yorum `#6B747E` (açık temada `#767F89`), sayı `#D89AC6` (`#943C7A`), `def` ya
+da `class` ile **tanımlanan** ad `#E6C97A` (`#8A6A14`). Yorum bilerek en sönük olandır:
+okunmalı ama koddan önce göze girmemelidir.
+
 **Izgara.** Kolon genişlikleri sabit ve sürüklenerek değişir; ilk kolon 46 px satır numarası
 (sağa hizalı, `--text-faint`). Kural seti:
 - Sayısal kolon → mono, sağa hizalı. Metin kolon → sans, sola hizalı, taşarsa `…`.

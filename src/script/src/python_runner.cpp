@@ -572,6 +572,17 @@ core::Result<RunReport> PythonRunner::run_file(const std::string& path, std::sto
     return run_text(buf.str(), path, std::move(token));
 }
 
+/// Wires the snippet hook. Called by both `install` overloads, because a build
+/// with Python has `PYTHON` whichever way the file hosts were installed.
+void install_snippet(command::Bus& bus, PythonRunner& runner)
+{
+    bus.on_run_python = [&runner](const std::string& source) -> core::Status {
+        auto r = runner.run_text(source, "Python");
+        if (!r) return r.error();
+        return core::ok();
+    };
+}
+
 void install(command::Bus& bus, PythonRunner& runner)
 {
     bus.on_run_script = [&runner](const std::string& path) -> core::Status {
@@ -579,6 +590,7 @@ void install(command::Bus& bus, PythonRunner& runner)
         if (!r) return r.error();
         return core::ok();
     };
+    install_snippet(bus, runner);
 }
 
 void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
@@ -601,6 +613,7 @@ void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
         if (!r) return r.error();
         return core::ok();
     };
+    install_snippet(bus, python);
 }
 
 } // namespace kentos::script

@@ -21,6 +21,7 @@
 #include "kentos_cad/app/print_dialog.hpp"
 #include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/provider_service.hpp"
+#include "kentos_cad/app/python_editor.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
@@ -87,7 +88,6 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
-#include <cstdio>
 
 namespace kentos::app {
 
@@ -152,7 +152,12 @@ QString groupedNumber(qint64 value)
 /// nobody designed — reported as "huge tabs at the top of the right sidebar,
 /// meaningless". Any state saved while they were tabbed has to be declined or
 /// it comes back on the next start.
-constexpr int kLayoutVersion = 5;
+/// 6 because the Python console is a NEW BOTTOM DOCK. `restoreState` hides a
+/// dock the saved state does not name, and Qt then treats it as floating when it
+/// is shown — so on every machine that had opened an earlier build, the console
+/// came up as a loose window in the middle of the screen instead of the strip
+/// under the canvas. Declining the old state is exactly what this number is for.
+constexpr int kLayoutVersion = 6;
 
 /// Whether this process is a probe driving the real shell.
 ///
@@ -1448,7 +1453,7 @@ void MainWindow::buildMenus()
     if (tbMain_) view->addAction(tbMain_->toggleViewAction());
 
     auto* panels = view->addMenu(tr("Paneller"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, journalDock_}) {
+    for (QDockWidget* dock : {layerDock_, propertyDock_, journalDock_, pythonDock_}) {
         if (dock) panels->addAction(dock->toggleViewAction());
     }
     panels->addSeparator();
@@ -1684,7 +1689,7 @@ void MainWindow::buildMenus()
     });
 
     auto* window = bar->addMenu(tr("&Pencere"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, chatDock_, journalDock_}) {
+    for (QDockWidget* dock : {layerDock_, propertyDock_, chatDock_, journalDock_, pythonDock_}) {
         if (dock) window->addAction(dock->toggleViewAction());
     }
     window->addSeparator();
@@ -2155,6 +2160,21 @@ void MainWindow::buildPanels()
     chatDock_ = makeDock(QStringLiteral("chatDock"), chatHeader_, chatPanel_);
     chatDock_->toggleViewAction()->setText(tr("Yapay Zeka"));
 
+    // ---- the Python console, hidden until asked for ----
+    //
+    // AT THE BOTTOM, BESIDE THE JOURNAL, because it is the command line's sibling:
+    // a place where the user types and the program answers. The right-hand docks
+    // are things read WHILE drawing; this is a thing typed INSTEAD of drawing, and
+    // it wants the full width a line of code needs.
+    pythonConsole_ = new PythonConsole(*controller_, this);
+
+    pythonHeader_ = new PanelHeader(this);
+    pythonHeader_->addTab(tr("Python"), static_cast<int>(Glyph::Script));
+    pythonHeader_->setButtons(PanelHeader::Grip | PanelHeader::Float | PanelHeader::Close);
+
+    pythonDock_ = makeDock(QStringLiteral("pythonDock"), pythonHeader_, pythonConsole_);
+    pythonDock_->toggleViewAction()->setText(tr("Python Konsolu"));
+
     // ---- the command journal, hidden until asked for ----
     journalHeader_ = new PanelHeader(this);
     journalHeader_->addTab(tr("Komut Günlüğü"), static_cast<int>(Glyph::Script));
@@ -2167,6 +2187,7 @@ void MainWindow::buildPanels()
     addDockWidget(Qt::RightDockWidgetArea, layerDock_);
     addDockWidget(Qt::RightDockWidgetArea, chatDock_);
     addDockWidget(Qt::BottomDockWidgetArea, journalDock_);
+    addDockWidget(Qt::BottomDockWidgetArea, pythonDock_);
 
     // The reference has no bottom panel open: the command line carries the
     // conversation and the journal is there when a user asks for it. The chat is
@@ -2174,6 +2195,7 @@ void MainWindow::buildPanels()
     // assistant panel taking a third of the screen.
     journalDock_->hide();
     chatDock_->hide();
+    pythonDock_->hide();
 
     // 312 px wide, and the layers panel 268 px tall — both from design.md 7.
     resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
@@ -2181,7 +2203,7 @@ void MainWindow::buildPanels()
 
     // These fire during TEARDOWN as well as during use — see the note in
     // `~MainWindow`, which is where the connection is severed.
-    for (QDockWidget* dock : {propertyDock_, layerDock_, chatDock_, journalDock_}) {
+    for (QDockWidget* dock : {propertyDock_, layerDock_, chatDock_, journalDock_, pythonDock_}) {
         connect(dock, &QDockWidget::topLevelChanged, this, [this] { syncDockTitles(); });
         connect(dock, &QDockWidget::visibilityChanged, this, [this] { syncDockTitles(); });
     }
@@ -5214,6 +5236,10 @@ void MainWindow::resetLayout()
         journalDock_->setFloating(false);
         addDockWidget(Qt::BottomDockWidgetArea, journalDock_);
     }
+    if (pythonDock_ != nullptr) {
+        pythonDock_->setFloating(false);
+        addDockWidget(Qt::BottomDockWidgetArea, pythonDock_);
+    }
 
     if (propertyDock_ != nullptr && layerDock_ != nullptr) {
         resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
@@ -5318,6 +5344,22 @@ void MainWindow::onDocumentChanged()
         journalView_->appendPlainText(QString::fromStdString(e.to_json(false).dump()));
 
     canvas_->update();
+}
+
+void MainWindow::showPythonConsole(const QString& source)
+{
+    if (pythonDock_ == nullptr || pythonConsole_ == nullptr) return;
+    pythonDock_->show();
+    pythonDock_->raise();
+
+    // SIZED AFTER IT IS SHOWN, and that ordering is the whole of it: `resizeDocks`
+    // on a hidden dock is a request Qt has nowhere to apply. The console's own
+    // `sizeHint` carries the same number, which is what actually holds when the
+    // user reopens the panel later.
+    resizeDocks({pythonDock_}, {260}, Qt::Vertical);
+
+    pythonConsole_->focusPrompt();
+    if (!source.isEmpty()) pythonConsole_->runSource(source);
 }
 
 void MainWindow::showTranscript()

@@ -30,6 +30,7 @@ qt_add_executable(kentos_cad
     src/dialog_chrome.cpp
     src/database_dialog.cpp
     src/expression_edit.cpp
+    src/python_editor.cpp
     src/export_dialog.cpp
     src/print_dialog.cpp
     src/print_service.cpp
@@ -69,6 +70,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/attribute_panel.hpp
     include/kentos_cad/app/datagrid.hpp
     include/kentos_cad/app/expression_edit.hpp
+    include/kentos_cad/app/python_editor.hpp
     include/kentos_cad/app/export_dialog.hpp
     include/kentos_cad/app/print_dialog.hpp
     include/kentos_cad/app/print_service.hpp

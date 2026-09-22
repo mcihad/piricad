@@ -91,6 +91,10 @@
       "kalici": true,
       "sebep": "Keyfî dosyadan betik çalıştırır. Bir ajanın diskteki herhangi bir dosyayı komut dizisi olarak çalıştırması, doğrulanmış araç yüzeyinin etrafından dolaşmaktır (5.22)."
     },
+    "core.python": {
+      "kalici": true,
+      "sebep": "Keyfî Python kaynağı çalıştırır. Ajan KOMUT önerir; komut önizlenebilir, doğrulanır ve tek tek günlüğe yazılır. Bir parçacık çalışana kadar bunların hiçbiri değildir ve gömülü yorumlayıcıda kullanıcının dosya sistemi ile ağı vardır (CLAUDE.md 5.24)."
+    },
     "core.help": {
       "plan": "A-02",
       "sebep": "Zararsız; ajan katalogu zaten Registry'den üretiliyor, ama `YARDIM` çıktısının yapısal sonucu C-03 ile tanımlanacak."

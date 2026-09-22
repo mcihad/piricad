@@ -126,6 +126,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.import`](#cadimport) | `core.import` | `İÇEAKTAR` | Dış bir veri dosyasını çizime ekler. |
 | [`cad.export`](#cadexport) | `core.export` | `DIŞAAKTAR` | Çizimi dış bir veri biçimine yazar. |
 | [`cad.script`](#cadscript) | `core.script` | `BETİK` | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
+| [`cad.python`](#cadpython) | `core.python` | `PYTHON` | Bir Python parçacığını komut veri yolu üzerinden çalıştırır. |
 | [`cad.database`](#caddatabase) | `core.database` | `VERİTABANI` | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
 | [`cad.print`](#cadprint) | `core.print` | `YAZDIR` | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
 | [`cad.print_profile`](#cadprint_profile) | `core.print_profile` | `YAZDIRMAPROFİLİ` | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
@@ -2205,6 +2206,24 @@ cad.script(
 | `file` | `str` | `dosya` | Çalıştırılacak betik dosyasının yolu |
 
 [Komut sayfası](../komutlar/script.md)
+
+### `cad.python`
+
+Bir Python parçacığını komut veri yolu üzerinden çalıştırır.
+
+Komut: `core.python` — `PYTHON`
+
+```python
+cad.python(
+    code: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `code` | `str` | `kod` | Çalıştırılacak Python kaynağı |
+
+[Komut sayfası](../komutlar/python.md)
 
 ### `cad.database`
 

@@ -1414,6 +1414,16 @@ def script(
         file — Çalıştırılacak betik dosyasının yolu
     """
 
+def python(
+    *,
+    code: str = ...,
+) -> int:
+    """Bir Python parçacığını komut veri yolu üzerinden çalıştırır.
+
+    Komut: core.python (PYTHON)
+        code — Çalıştırılacak Python kaynağı
+    """
+
 def database(
     *,
     action: str = ...,

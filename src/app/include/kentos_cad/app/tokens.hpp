@@ -135,6 +135,16 @@ struct Tokens
     QColor syntaxOperator; ///< `=`, `>`, `<>` and the arithmetic
     QColor syntaxString;   ///< a single-quoted constant
     QColor syntaxLogical;  ///< AND, OR, NOT and their Turkish names
+
+    // ---- the Python editor and console ----
+    //
+    // THE SAME FOUR INKS CARRY MOST OF IT, deliberately: a keyword is a logical
+    // word, a literal is a constant, a name the program itself defines is a
+    // field. Three more are needed because Python has three parts of speech the
+    // filter bar has not.
+    QColor syntaxComment; ///< `# ...`, and the one ink that must recede
+    QColor syntaxNumber;  ///< a literal quantity
+    QColor syntaxDef;     ///< the name being DEFINED by `def` or `class`
 };
 
 /// The dark tokens — `design.md` §2, verbatim.

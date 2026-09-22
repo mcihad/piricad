@@ -115,6 +115,16 @@ public:
     /// where a user would read it; it is the same call the menu makes.
     void showTranscript();
 
+    /// Opens the Python console and puts the cursor in its prompt. Public for the
+    /// reason `runScriptLine` is: a probe and a menu action are the same client,
+    /// and a capability only one of them could reach would be the private entry
+    /// point Article 1.2 forbids.
+    ///
+    /// `source` is typed into the prompt and sent when it is not empty, so a
+    /// screenshot shows the panel in the state a user leaves it in rather than
+    /// empty.
+    void showPythonConsole(const QString& source = {});
+
     /// The other three windows, public for the same reason as the designer:
     /// `KENTOS_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing
@@ -755,8 +765,11 @@ private:
     /// demand, so the toolbar mark and `Pencere ▸ Yapay Zeka` both just show it.
     class ChatPanel* chatPanel_{nullptr};
     PanelHeader* chatHeader_{nullptr};
+    class PythonConsole* pythonConsole_{nullptr};
+    PanelHeader* pythonHeader_{nullptr};
     QDockWidget* chatDock_{nullptr};
     QDockWidget* journalDock_{nullptr};
+    QDockWidget* pythonDock_{nullptr};
 
     // ---- actions, each of which dispatches one command ----
 

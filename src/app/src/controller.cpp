@@ -453,6 +453,31 @@ void Controller::refreshSelection()
     selection_revision_ = selection.revision();
 }
 
+void Controller::runPython(const QString& source)
+{
+    // BUILT, NOT FORMATTED. Python source carries quotes, backslashes and
+    // newlines; writing it into `PYTHON kod="..."` for the parser to read back
+    // would be a round trip that cannot be made lossless, and the first script
+    // with an apostrophe in a comment would prove it. `Invocation` IS the
+    // serialisable form (Article 1.4), so the value travels as a value.
+    command::Invocation inv;
+    inv.name   = "core.python";
+    inv.origin = command::Origin::Gui;
+    inv.args.set("kod", command::Value::text(source.toStdString()));
+    runInvocation(inv);
+}
+
+QStringList Controller::pythonApiNames() const
+{
+    QStringList names;
+    for (const command::CommandSpec& spec : registry_.all()) {
+        if (spec.run == nullptr || !has_flag(spec.flags, command::Flags::Scriptable)) continue;
+        names << QString::fromStdString(command::python_callable_name(spec));
+    }
+    names.sort();
+    return names;
+}
+
 void Controller::runCommand(const QString& line)
 {
     // A BUTTON MAY CARRY A WHOLE LINE, not just a name — `SEÇ mod=KUTU` is one
