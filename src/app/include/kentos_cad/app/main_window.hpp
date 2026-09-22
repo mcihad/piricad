@@ -332,6 +332,25 @@ public:
     /// do not cover is exactly where the defect has to be.
     int probeRealMouse();
 
+    /// `KENTOS_OSCLICK_PROBE=<dir>`: the window held open for REAL window-system
+    /// events. Returns 0 — nothing is asserted here.
+    ///
+    /// Every probe above synthesises its events inside the process. What none
+    /// of them can produce is a click that arrives from the operating system —
+    /// through Cocoa, the platform plugin and Qt's own hit test — which is the
+    /// only kind a user ever makes. This one prints where its buttons and its
+    /// canvas are in GLOBAL coordinates, then pumps events until `<dir>/dur`
+    /// appears or `KENTOS_OSCLICK_SECONDS` pass, reporting every change it sees:
+    /// the lit tool, the prompt, the object count, new transcript lines, and an
+    /// open family card with its rows. A driver outside the process — `osascript`
+    /// System Events — does the clicking, and its log against this one is the
+    /// evidence. A picture is left at the end.
+    int probeOsClicks();
+
+    /// The window as the user sees it: `grab()` with the live GPU canvas pasted
+    /// over the canvas widget, which `grab()` alone leaves blank under QRhi.
+    QImage probePicture();
+
     /// `KENTOS_STRIP_PROBE`: the status strip under a long message. Returns the
     /// failure count.
     ///

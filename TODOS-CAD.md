@@ -700,13 +700,40 @@ yedi bölümle bunları sürekli tutuyor.
   karşılaştırma tablosu.
 - [x] **Kart probe'u** (`tool-flyouts` ctest) "çalıştı"yı üç hâlle tanımlıyor: bekleyen oturum,
   yanan düğme ya da dökümde cevap. `BLOKEKLE`'nin reddi üçüncüsü.
+- [x] **İŞLETİM SİSTEMİ DÜZEYİNDE TIKLAMA YAPILDI ve altı şikâyetin hepsi gerçek fare/klavye
+  olaylarıyla doğrulandı.** Kullanıcı erişilebilirlik iznini verdi; `KENTOS_OSCLICK_PROBE` ile
+  pencere açık tutuluyor, her düğmenin ekran konumu yazılıyor, sonra dışarıdan gerçek olaylar
+  sürülüyor ve probe ne olduğunu satır satır bildiriyor (tetiklenen eylem, oturum, istem, nesne
+  sayısı, döküm satırı, açılan kart). Gerçek olaylarla alınan kayıt:
+  `tetiklendi ÇİZGİ` → `istem İlk nokta` → `nesne 1` → `nesne 2` →
+  `2 çizgi çizildi, her biri ayrı nesne (tek nesne için ÇOKLUÇİZGİ).`;
+  YAY köşe işareti → `kart 6 satır` → 2. üye → `tetiklendi YAY yontem=3n` →
+  **`yanan YAY yontem=3n`** ve ilk noktadan sonra `istem Yayın üzerinden geçtiği nokta`;
+  `tetiklendi BLOKEKLE` → blok yokken tam açıklama; çizginin üstüne tıklama →
+  `1 nesne bulundu` → **⌫** → `nesne 0` → `1 nesne silindi.`; 500 ms basılı tutma kartı açıyor.
+- [x] **`osascript` GERÇEK FARE DEĞİLDİR — ve bu tek başına bir bulgu.** System Events'in
+  `click at` komutu fare olayı göndermiyor; noktadaki öğeye erişilebilirlik "press" uyguluyor.
+  Uygulamanın olay akışı izlendiğinde hiçbir `MouseButtonPress` gelmediği, buna rağmen araç
+  eyleminin işaretlendiği görüldü. Bu yüzden sürücü `scripts/os-tikla.c` (CGEventPost) oldu:
+  fiziksel farenin geçtiği yol. Bir sonraki okuyucu `osascript` ile "araçlar çalışmıyor" sonucuna
+  varmasın diye yazılıyor.
+- [ ] **ERİŞİLEBİLİRLİK AÇIĞI (yeni, bu denemede bulundu).** Araç kolonundaki düğmeler
+  `checkable` olduğu için macOS erişilebilirlik katmanı onları "geçiş kutusu" sayıyor: AXPress
+  eylemi `setChecked` yapıyor, `triggered` çıkmıyor, **komut çalışmıyor**. Kanıt: gerçek fareyle
+  `olay bas QToolButton/ÇİZGİ` + `tetiklendi ÇİZGİ` çıkarken, erişilebilirlik basışında yalnız
+  `isaretlendi METİN` çıkıyor, ne olay ne tetikleme var. Ekran okuyucu kullanan biri için her
+  çizim aracı yanıp hiçbir şey yapmıyor demek. Komutlar komut satırından ve menüden erişilebilir
+  olduğu için 5.15 ihlali değil, ama 6.9'un klavye/erişilebilirlik şartını karşılamıyor.
+  Düzeltmesi bu partinin kapsamı dışında: ya düğmelerin erişilebilir "press" eylemi kendi
+  eylemini tetikleyecek şekilde verilmeli, ya da yanma `checkable` dışında bir yolla taşınmalı —
+  ikisi de kolonun bütününü ilgilendirir ve kendi testini ister.
 - [~] **İşletim sistemi düzeyinde tıklama** (Cocoa'nın gerçek olayları) ile aynı probe: Qt'nin
   sentezlediği olaylar ile gerçek olaylar arasında bir fark varsa yalnız orada görünür. Bu makinede
   yapılamadı: `osascript`'in erişilebilirlik (assistive access) izni yok (`-1719`), `cliclick` ve
   `pyobjc/Quartz` kurulu değil. İzin bir sistem güvenlik ayarıdır ve yalnız kullanıcı verir: Sistem
-  Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik'te terminale izin verilirse `osascript -e 'tell
-  application "System Events" to click at {x, y}'` ile sürülür; probe'un kendisi (`probeRealMouse`)
-  zaten gerçek pencerede, gerçek hit-test ile çalışıyor ve yeşil.
+  Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik'te terminale izin verilir. **İzin verildi ve
+  yapıldı; üstteki iki satır sonucu yazıyor.** `osascript`'in `click at`'i yetmedi (erişilebilirlik
+  basışı, fare olayı değil); sürücü `scripts/os-tikla.c` + `scripts/os-tikla.sh`.
 
 ## Doğrulama (her pakette)
 

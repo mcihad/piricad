@@ -6,6 +6,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — gerçek işletim sistemi olaylarıyla sürülen probe
+
+`KENTOS_OSCLICK_PROBE=<dizin>` pencereyi açık tutar, her araç düğmesinin ve
+tuvalin ekran konumunu yazar, sonra dışarıdan gelen **gerçek** fare ve klavye
+olaylarının ne yaptığını satır satır bildirir: hangi eylem tetiklendi, hangi
+oturum başladı, hangi istem soruldu, nesne sayısı ne oldu, döküme ne düştü,
+hangi kart açıldı. Sürücüsü `scripts/os-tikla.c` (CGEventPost) ve
+`scripts/os-tikla.sh`; macOS ve Erişilebilirlik izni ister.
+
+Bunun gerekçesi tek cümlede: **`osascript`'in `click at`'i fare değildir.**
+Noktadaki öğeye erişilebilirlik "press" uygular; uygulamaya hiçbir
+`MouseButtonPress` gelmez. Onunla yapılan bir deneme "araç kutusundaki hiçbir
+şey çalışmıyor" sonucunu verir, çünkü hiçbir tıklama olmamıştır. Diğer bütün
+probe'lar olayları süreç içinde üretir; bu, dışarıdan gelen olayın geçtiği yolu
+— pencere sistemi, platform eklentisi, Qt'nin isabet testi — sınayan tek yoldur.
+
+Altı şikâyetin hepsi bu yolla doğrulandı: `tetiklendi ÇİZGİ` → `nesne 1` →
+`nesne 2` → "2 çizgi çizildi, her biri ayrı nesne"; YAY köşe işareti kartı
+açıyor, seçilen üye `yanan YAY yontem=3n` olarak yanıyor ve sıradaki noktayı
+soruyor; BLOKEKLE blok yokken açıklıyor; çizgiye tıklayıp **⌫** basınca
+`1 nesne silindi.`
+
+### Bilinsin — araç düğmeleri erişilebilirlik katmanında komut çalıştırmıyor
+
+Aynı deneme bir açık buldu ve düzeltmesi bu partide değil: kolon düğmeleri
+`checkable` olduğu için macOS erişilebilirlik katmanı AXPress'i `setChecked`'e
+eşliyor, `triggered` çıkmıyor, komut çalışmıyor. Ekran okuyucu kullanan biri
+için düğme yanar ve hiçbir şey olmaz. Komutlar komut satırından ve menüden
+erişilebilir olduğu için mouse-only bir yetenek değil (5.15), ama 6.9'un
+erişilebilirlik şartını karşılamıyor. `TODOS-CAD.md` kanıtıyla birlikte
+taşıyor.
+
 ### Düzeltildi — araç kutusu gerçek kullanımda: ışık, kılavuz, alan, blok, silme
 
 Mac'te gerçek fareyle çalışan bir kullanıcının raporu: "yeni çizim öğeleri

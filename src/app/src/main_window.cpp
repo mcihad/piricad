@@ -58,6 +58,7 @@
 #include <QDir>
 #include <QDockWidget>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
@@ -3769,25 +3770,14 @@ int MainWindow::probeRealMouse()
         (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); kılavuzun "
                                    "ekranda olduğu ancak gerçek pencerede sınanır\n");
 
-    if (shooting) {
-        QImage picture = grab().toImage();
-        if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
-            QPainter painter(&picture);
-            painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
-        }
-        (void)picture.save(into + QStringLiteral("/cizgi-kilavuz.png"));
-    }
-    /// The same composite — window plus the live canvas — under another name,
-    /// for the pictures the later sections leave behind.
+    /// The window plus the live canvas, under the given name, for the pictures
+    /// this probe leaves behind.
     const auto shoot = [this, shooting, &into](const char* name) {
         if (!shooting) return;
-        QImage picture = grab().toImage();
-        if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
-            QPainter painter(&picture);
-            painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
-        }
-        (void)picture.save(into + QLatin1Char('/') + QLatin1String(name) + QStringLiteral(".png"));
+        (void)probePicture().save(into + QLatin1Char('/') + QLatin1String(name) +
+                                  QStringLiteral(".png"));
     };
+    shoot("cizgi-kilavuz");
 
     onCanvas(QEvent::MouseButtonPress, second, Qt::LeftButton);
     onCanvas(QEvent::MouseButtonRelease, second, Qt::LeftButton);
@@ -3989,6 +3979,215 @@ int MainWindow::probeRealMouse()
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
+}
+
+QImage MainWindow::probePicture()
+{
+    QImage picture = grab().toImage();
+    if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
+        QPainter painter(&picture);
+        painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
+    }
+    return picture;
+}
+
+int MainWindow::probeOsClicks()
+{
+    const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_OSCLICK_PROBE"));
+    QDir().mkpath(into);
+    bool given  = false;
+    int seconds = qEnvironmentVariableIntValue("KENTOS_OSCLICK_SECONDS", &given);
+    if (!given || seconds <= 0) seconds = 60;
+
+    const auto say = [](const QString& line) {
+        (void)std::fprintf(stdout, "[os] %s\n", line.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+    const auto centre = [](const QWidget* w) {
+        return w->mapToGlobal(QPoint(w->width() / 2, w->height() / 2));
+    };
+    const auto name_of = [](const QAction* action) {
+        if (action == nullptr) return QStringLiteral("-");
+        const QString word = action->property(kToolCommand).toString();
+        return word.isEmpty() ? action->text() : word;
+    };
+
+    // WHERE EVERYTHING IS, in the coordinates the window system clicks in. A
+    // family button is given twice: its centre, which runs the face, and the
+    // wedge in its corner, which a plain left click opens the card with — the
+    // one card gesture a driver without a right button or a hold can make.
+    const QRect frame = frameGeometry();
+    say(QStringLiteral("pencere %1 %2 %3 %4")
+            .arg(frame.x())
+            .arg(frame.y())
+            .arg(frame.width())
+            .arg(frame.height()));
+    for (QToolButton* button : toolBox_->buttons()) {
+        QAction* face = button->defaultAction();
+        if (face == nullptr) continue;
+        const QPoint at = centre(button);
+        if (button->property("kentos.family").toBool()) {
+            const QPoint corner =
+                button->mapToGlobal(QPoint(button->width() - 2, button->height() - 2));
+            say(QStringLiteral("aile %1 %2 %3 kose %4 %5")
+                    .arg(name_of(face))
+                    .arg(at.x())
+                    .arg(at.y())
+                    .arg(corner.x())
+                    .arg(corner.y()));
+        } else {
+            say(QStringLiteral("dugme %1 %2 %3").arg(name_of(face)).arg(at.x()).arg(at.y()));
+        }
+    }
+    const QPoint canvas_at = canvas_->mapToGlobal(QPoint(0, 0));
+    say(QStringLiteral("tuval %1 %2 %3 %4")
+            .arg(canvas_at.x())
+            .arg(canvas_at.y())
+            .arg(canvas_->width())
+            .arg(canvas_->height()));
+    const QPoint line_at = centre(commandLine_);
+    say(QStringLiteral("komut-satiri %1 %2").arg(line_at.x()).arg(line_at.y()));
+
+    // WHAT THE ACTION ITSELF DID. An exclusive `QActionGroup` checks an action
+    // when it is triggered, so a lit button does NOT prove the command ran: the
+    // light can come from Qt while `runCommand` never fired. The signal is
+    // listened to directly, so the two can be told apart in the log.
+    const auto action_name = [](const QAction* action) {
+        const QString word = action->property(kToolCommand).toString();
+        return word.isEmpty() ? action->text() : word;
+    };
+    for (QAction* action : drawingTools_->actions()) {
+        connect(action, &QAction::triggered, this, [say, action_name, action] {
+            say(QStringLiteral("tetiklendi %1").arg(action_name(action)));
+        });
+        // `toggled` fires for `setChecked` as well as for `trigger`, so a check
+        // that arrives WITHOUT a trigger is visible as one line and not the other.
+        connect(action, &QAction::toggled, this, [say, action_name, action](bool on) {
+            if (on) say(QStringLiteral("isaretlendi %1").arg(action_name(action)));
+        });
+    }
+
+    // AND WHETHER THE BUTTON GOT THE CLICK AT ALL. Everything above watches what
+    // the program did; this watches what the window system delivered, which is
+    // the half no synthesised probe can be wrong about in the same way.
+    struct Watch : QObject
+    {
+        std::function<void(const QString&)> say;
+
+        bool eventFilter(QObject* o, QEvent* e) override
+        {
+            const char* what = nullptr;
+            switch (e->type()) {
+            case QEvent::MouseButtonPress: what = "bas"; break;
+            case QEvent::MouseButtonRelease: what = "birak"; break;
+            case QEvent::MouseButtonDblClick: what = "cift"; break;
+            case QEvent::Enter: what = "gir"; break;
+            default: break;
+            }
+            if (what != nullptr) {
+                QString who = QString::fromLatin1(o->metaObject()->className());
+                if (const auto* b = qobject_cast<QToolButton*>(o); b != nullptr)
+                    if (const QAction* face = b->defaultAction(); face != nullptr) {
+                        const QString word = face->property(kToolCommand).toString();
+                        who += QLatin1Char('/') + (word.isEmpty() ? face->text() : word);
+                    }
+                QString where;
+                if (e->type() != QEvent::Enter) {
+                    const auto* m = static_cast<QMouseEvent*>(e);
+                    where         = QStringLiteral(" @%1,%2")
+                                .arg(qRound(m->globalPosition().x()))
+                                .arg(qRound(m->globalPosition().y()));
+                }
+                say(QStringLiteral("olay %1 %2%3").arg(QLatin1String(what), who, where));
+            }
+            return false;
+        }
+    };
+
+    Watch watch;
+    watch.say = say;
+    // ON THE APPLICATION, not on the buttons: the question is WHERE a real click
+    // lands, and a filter on what we expect it to land on cannot answer that.
+    qApp->installEventFilter(&watch);
+
+    QString lit_before;
+    QString prompt_before;
+    QString state_before;
+    std::size_t count_before    = controller_->document().live_entity_count();
+    qsizetype transcript_before = transcript_->toPlainText().size();
+    const QWidget* card_before  = nullptr;
+    say(QStringLiteral("nesne %1").arg(count_before));
+    say(QStringLiteral("hazır"));
+
+    // THEN WATCH. Nothing here sends an event; the loop only pumps what the
+    // window system delivers and says what changed, so that the driver's log
+    // and this one can be read side by side.
+    QElapsedTimer clock;
+    clock.start();
+    while (clock.elapsed() < seconds * 1000 && !QFile::exists(into + QStringLiteral("/dur"))) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+
+        const QString lit_now = name_of(drawingTools_->checkedAction());
+        if (lit_now != lit_before) {
+            say(QStringLiteral("yanan %1").arg(lit_now));
+            lit_before = lit_now;
+        }
+
+        const command::Session* live = controller_->session();
+
+        // The session as three facts, because "the button lit" is not one of
+        // them: which command, whether it is waiting for an answer, whether a
+        // worker holds it.
+        const QString state_now = live == nullptr
+                                      ? QStringLiteral("-")
+                                      : QStringLiteral("%1 bekliyor=%2 calisiyor=%3")
+                                            .arg(QString::fromStdString(live->spec().id))
+                                            .arg(live->waiting() ? 1 : 0)
+                                            .arg(live->working() ? 1 : 0);
+        if (state_now != state_before) {
+            say(QStringLiteral("oturum %1").arg(state_now));
+            state_before = state_now;
+        }
+
+        const QString prompt_now = live != nullptr && live->waiting()
+                                       ? QString::fromStdString(live->prompt().message)
+                                       : QString();
+        if (prompt_now != prompt_before) {
+            say(prompt_now.isEmpty() ? QStringLiteral("istem -")
+                                     : QStringLiteral("istem %1").arg(prompt_now));
+            prompt_before = prompt_now;
+        }
+
+        const std::size_t count_now = controller_->document().live_entity_count();
+        if (count_now != count_before) {
+            say(QStringLiteral("nesne %1").arg(count_now));
+            count_before = count_now;
+        }
+
+        const QString text = transcript_->toPlainText();
+        if (text.size() > transcript_before) {
+            for (const QString& line : text.mid(transcript_before).split(QLatin1Char('\n')))
+                if (!line.trimmed().isEmpty()) say(QStringLiteral("döküm %1").arg(line));
+            transcript_before = text.size();
+        }
+
+        QWidget* popup = QApplication::activePopupWidget();
+        QWidget* card =
+            popup != nullptr && popup->property("kentos.rows").isValid() ? popup : nullptr;
+        if (card != nullptr && card != card_before) {
+            const QPoint first = card->mapToGlobal(card->property("kentos.rowCentre").toPoint());
+            say(QStringLiteral("kart %1 satır, ilk %2 %3, adım %4")
+                    .arg(card->property("kentos.rows").toInt())
+                    .arg(first.x())
+                    .arg(first.y())
+                    .arg(card->property("kentos.rowPitch").toInt()));
+        }
+        card_before = card;
+    }
+
+    (void)probePicture().save(into + QStringLiteral("/os-son.png"));
+    say(QStringLiteral("bitti nesne=%1 yanan=%2").arg(count_before).arg(lit_before));
+    return 0;
 }
 
 int MainWindow::probeFlyouts()

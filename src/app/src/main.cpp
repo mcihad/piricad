@@ -323,7 +323,7 @@ int main(int argc, char** argv)
           "KENTOS_PICK_PROBE",      "KENTOS_TABLE_PROBE",  "KENTOS_SCHEMA_PROBE",
           "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",   "KENTOS_NORMAL_PROBE",
           "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE", "KENTOS_CLIP_PROBE",
-          "KENTOS_PROBE_LINE"})
+          "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1543,6 +1543,13 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_REALMOUSE_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeRealMouse() == 0 ? 0 : 1); });
+    }
+
+    // AND EVENTS FROM THE WINDOW SYSTEM ITSELF: the window stays open and reports
+    // what real clicks do to it, while a driver outside the process makes them.
+    if (qEnvironmentVariableIsSet("KENTOS_OSCLICK_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeOsClicks()); });
     }
 
     // THE TOOL FAMILIES, OPENED WITH A MOUSE. Eleven tools live only behind a
