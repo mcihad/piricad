@@ -131,6 +131,92 @@ Tam liste: [Python API referansı](../python/referans.md). O sayfa da bu fonksiy
 komut kaydından üretilir; yanında `docs/python/kentos_cad.pyi` tip taslağı vardır ve
 programın dışında betik yazan bir düzenleyici onu okuyup tamamlama yapabilir.
 
+## Değer tipleri
+
+Koordinat iki biçimde yazılır ve ikisi de her yerde geçerlidir:
+
+```python
+cad.line(points=[[485320150, 4310220400], [485370150, 4310250400]])
+
+a = cad.Point(east=485320150, north=4310220400)
+b = cad.Point(east=485370150, north=4310250400)
+cad.line(points=[a, b])
+```
+
+**Eksen adları harf değil.** Bir paftada doğu değeri **Y** yazar, kuzey değeri **X**;
+kodda ise ilk eksen `x`'tir, yani ikisi birbirinin tersidir. Hangi harfi seçersek
+okuyucuların yarısı tersini anlar, bu yüzden API `east` ve `north` der.
+
+| | |
+|---|---|
+| `cad.Point(east, north)` | `p.east`, `p.north`, `p[0]`, `p[1]`, `list(p)` |
+| | `p.distance_to(q)` → **metre** |
+| `cad.Box(min_east, min_north, max_east, max_north)` | `b.width`, `b.height`, `b.center`, `b.corners` |
+| | `b.contains(point)`, `b.is_empty()` |
+
+Belgelerde ve imza ipucunda bu ikisi `Coord` (bir koordinat) ve `Coords` (koordinat
+listesi) diye geçer.
+
+## Görünüm
+
+`cad.viewport`, pencerenin o an baktığı yeri **değer olarak** verir:
+
+```python
+if cad.viewport.exists():
+    bbox = cad.viewport.bbox()
+    print(bbox.width, bbox.height, cad.viewport.scale())
+```
+
+| Çağrı | Döndürdüğü |
+|---|---|
+| `cad.viewport.exists()` | `bool` — başsız çalıştırmada, günlük oynatmada ve testte `False` |
+| `cad.viewport.bbox()` | `cad.Box` |
+| `cad.viewport.center()` | `cad.Point` |
+| `cad.viewport.scale()` | `int` — 1:N'deki N, bilinmiyorsa 0 |
+| `cad.viewport.mm_per_pixel()` | `float` |
+| `cad.viewport.size_px()` | `(genişlik, yükseklik)` |
+| `cad.viewport.crs()` | `str` |
+
+Pencere yoksa `exists()` dışındaki çağrılar hata verir. Uydurulmuş bir dikdörtgen,
+sonraki çizimi kimsenin bakmadığı bir yere koyardı.
+
+Aynı bilgiyi bir cümle hâlinde okumak isterseniz `GÖRÜNÜMBİLGİSİ` komutu vardır; ikisi
+de aynı kaynağı okur.
+
+## Editör
+
+**Pencere > Python Konsolu** panelindeki istem bir kod editörüdür:
+
+| Tuş | Ne yapar |
+|---|---|
+| **Enter** | Gönderir |
+| **Shift+Enter** | Satır ekler |
+| **Tab** | Dört boşluk — sekme karakteri hiç yazılmaz |
+| **Shift+Tab** | Bir girinti geri alır |
+| **Yukarı / Aşağı** | İlk ve son satırdayken geçmişi getirir |
+| **Ctrl+Boşluk** | Tamamlamayı açar |
+| **Esc** | İpucunu kapatır |
+
+Enter girintiyi korur, `:` ile biten satırdan sonra bir girinti ekler.
+
+**Tamamlama** üç yerde çalışır ve üçünde de başka şey önerir:
+
+- `cad.` yazdığınızda bu yapının **bütün komutlarını** — yanlarında Türkçe adlarıyla —
+  artı `doc`, `viewport`, `Point`, `Box` ve `run`.
+- `cad.doc.` ve `cad.viewport.` yazdığınızda o nesnenin okuma çağrılarını.
+- Bir çağrının parantezi içindeyken **o komutun anahtar kelimelerini** (`points=`),
+  zaten yazdıklarınızı tekrar önermeden. Dışarıdaysanız betiğin kendi tanımladığı
+  adları, Python anahtar sözcüklerini ve yerleşiklerini.
+
+Bir komut adı seçtiğinizde parantezleri kendi açılır.
+
+**İmza ipucu** parantezin içindeyken beliren şerittir: komutun bütün parametrelerini
+yazar, **o an yazdığınızı vurgular** ve altına o parametrenin Türkçe açıklamasını
+koyar. Uzun imzalar satır kırar.
+
+İkisi de **komut kaydından** beslenir: bu yapıda gerçekten var olan bir ad renklenir ve
+önerilir, olmayan renklenmez.
+
 ## Okuma
 
 Hepsi **değer** döndürür: sayı, metin, liste. Hiçbiri çizimin içine tutamak vermez.

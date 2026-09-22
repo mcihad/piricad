@@ -10,6 +10,10 @@
 
 from typing import Any
 
+# Bir koordinat iki biçimde yazılabilir ve ikisi de her yerde geçerlidir.
+Coord = 'Point | list[int]'
+Coords = 'list[Coord]'
+
 class _Document:
     """Çizimden okuma. Hiçbiri çizimi değiştirmez."""
 
@@ -23,6 +27,61 @@ class _Document:
 
 doc: _Document
 
+class Point:
+    """Bir koordinat, milimetre tam sayı.
+
+    east  — sağa değer (paftada Y).   north — yukarı değer (paftada X).
+    Harfler bilerek sunulmuyor: kodda ve paftada ters şeyler demek.
+    """
+
+    def __init__(self, east: int, north: int) -> None: ...
+    @property
+    def east(self) -> int: ...
+    @property
+    def north(self) -> int: ...
+    def distance_to(self, other: 'Point') -> float: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, i: int) -> int: ...
+    def __iter__(self) -> Any: ...
+
+class Box:
+    """Eksenlere paralel bir dikdörtgen, milimetre tam sayı."""
+
+    def __init__(self, min_east: int, min_north: int,
+                 max_east: int, max_north: int) -> None: ...
+    @property
+    def min_east(self) -> int: ...
+    @property
+    def min_north(self) -> int: ...
+    @property
+    def max_east(self) -> int: ...
+    @property
+    def max_north(self) -> int: ...
+    @property
+    def width(self) -> int: ...
+    @property
+    def height(self) -> int: ...
+    @property
+    def center(self) -> Point: ...
+    @property
+    def corners(self) -> tuple[Point, Point, Point, Point]: ...
+    def contains(self, point: Point) -> bool: ...
+    def is_empty(self) -> bool: ...
+    def __iter__(self) -> Any: ...
+
+class _Viewport:
+    """Pencerenin o an baktığı yer. Pencere yoksa exists() False döner."""
+
+    def exists(self) -> bool: ...
+    def bbox(self) -> Box: ...
+    def center(self) -> Point: ...
+    def scale(self) -> int: ...
+    def mm_per_pixel(self) -> float: ...
+    def size_px(self) -> tuple[int, int]: ...
+    def crs(self) -> str: ...
+
+viewport: _Viewport
+
 def run(*parts: str) -> int:
     """Bir komut satırını veri yoluna gönderir; metre cinsinden."""
 
@@ -32,7 +91,7 @@ def write_file(path: str, text: str) -> None: ...
 
 def line(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
 ) -> int:
     """İki veya daha fazla nokta arasında doğru parçaları çizer.
 
@@ -42,7 +101,7 @@ def line(
 
 def polyline(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
 ) -> int:
     """Birden çok noktadan TEK bir çizgi nesnesi çizer.
 
@@ -52,7 +111,7 @@ def polyline(
 
 def point_draw(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
 ) -> int:
     """Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
 
@@ -62,8 +121,8 @@ def point_draw(
 
 def perp_offset(
     *,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    start: Coord = ...,
+    end: Coord = ...,
     chainage: list[float] = ...,
     offset: list[float] = ...,
     connect: bool = ...,
@@ -80,8 +139,8 @@ def perp_offset(
 
 def survey_polar(
     *,
-    station: list[int] = ...,
-    backsight: list[list[int]] = ...,
+    station: Coord = ...,
+    backsight: Coord = ...,
     angle: list[float] = ...,
     distance: list[float] = ...,
     connect: bool = ...,
@@ -99,17 +158,17 @@ def survey_polar(
 def intersect_point(
     *,
     method: str = ...,
-    first: list[int] = ...,
-    second: list[list[int]] = ...,
-    third: list[list[int]] = ...,
-    fourth: list[list[int]] = ...,
+    first: Coord = ...,
+    second: Coord = ...,
+    third: Coord = ...,
+    fourth: Coord = ...,
     first_angle: float = ...,
     second_angle: float = ...,
     first_distance: float = ...,
     second_distance: float = ...,
     side: str = ...,
-    side_point: list[list[int]] = ...,
-    intersection: list[list[int]] = ...,
+    side_point: Coord = ...,
+    intersection: Coord = ...,
 ) -> int:
     """İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.
 
@@ -130,8 +189,8 @@ def intersect_point(
 
 def point_along(
     *,
-    first: list[int] = ...,
-    second: list[int] = ...,
+    first: Coord = ...,
+    second: Coord = ...,
     method: str = ...,
     value: list[float] = ...,
     count: int = ...,
@@ -148,13 +207,13 @@ def point_along(
 
 def polygon_regular(
     *,
-    center: list[int] = ...,
+    center: Coord = ...,
     sides: int = ...,
     method: str = ...,
     radius: float = ...,
     side_length: float = ...,
     angle: float = ...,
-    corner: list[list[int]] = ...,
+    corner: Coord = ...,
 ) -> int:
     """Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan.
 
@@ -171,8 +230,8 @@ def polygon_regular(
 def break(
     *,
     object: list[int] = ...,
-    first: list[int] = ...,
-    second: list[list[int]] = ...,
+    first: Coord = ...,
+    second: Coord = ...,
 ) -> int:
     """Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
 
@@ -225,10 +284,10 @@ def explode(
 def align(
     *,
     object: list[int] = ...,
-    source: list[int] = ...,
-    target: list[int] = ...,
-    source2: list[list[int]] = ...,
-    target2: list[list[int]] = ...,
+    source: Coord = ...,
+    target: Coord = ...,
+    source2: Coord = ...,
+    target2: Coord = ...,
     scale: bool = ...,
 ) -> int:
     """Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler.
@@ -300,7 +359,7 @@ def cut(
 
 def paste(
     *,
-    point: list[list[int]] = ...,
+    point: Coord = ...,
     in_place: bool = ...,
     file: str = ...,
 ) -> int:
@@ -324,9 +383,9 @@ def entity_info(
 
 def measure_angle(
     *,
-    apex: list[int] = ...,
-    first: list[int] = ...,
-    second: list[int] = ...,
+    apex: Coord = ...,
+    first: Coord = ...,
+    second: Coord = ...,
 ) -> int:
     """Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar.
 
@@ -338,9 +397,9 @@ def measure_angle(
 
 def stretch(
     *,
-    window: list[list[int]] = ...,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    window: Coords = ...,
+    start: Coord = ...,
+    end: Coord = ...,
     objects: list[int] = ...,
 ) -> int:
     """Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır.
@@ -354,7 +413,7 @@ def stretch(
 
 def tracking(
     *,
-    point: list[list[int]] = ...,
+    point: Coord = ...,
     delete: bool = ...,
 ) -> int:
     """Geçici izleme için nokta işaretler; iki işaretin izleri kesişir.
@@ -366,10 +425,10 @@ def tracking(
 
 def text(
     *,
-    points: list[int] = ...,
+    points: Coord = ...,
     text: str = ...,
     height: int = ...,
-    end: list[list[int]] = ...,
+    end: Coord = ...,
     alignment: str = ...,
 ) -> int:
     """Çizime metin yazar; yükseklik ve hizalama verilebilir.
@@ -412,7 +471,7 @@ def exportstyle(
 
 def area(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     rings: list[int] = ...,
 ) -> int:
     """Kapalı bir alan çizer; istenirse içine delik açar.
@@ -424,7 +483,7 @@ def area(
 
 def rectangle(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     method: str = ...,
 ) -> int:
     """Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
@@ -436,15 +495,15 @@ def rectangle(
 
 def circle_draw(
     *,
-    center: list[list[int]] = ...,
-    rim: list[list[int]] = ...,
+    center: Coord = ...,
+    rim: Coord = ...,
     method: str = ...,
-    first: list[list[int]] = ...,
-    second: list[list[int]] = ...,
-    third: list[list[int]] = ...,
-    fourth: list[list[int]] = ...,
+    first: Coord = ...,
+    second: Coord = ...,
+    third: Coord = ...,
+    fourth: Coord = ...,
     radius: float = ...,
-    side: list[list[int]] = ...,
+    side: Coord = ...,
 ) -> int:
     """Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer.
 
@@ -462,14 +521,14 @@ def circle_draw(
 
 def arc_draw(
     *,
-    center: list[list[int]] = ...,
-    start: list[list[int]] = ...,
-    end: list[list[int]] = ...,
+    center: Coord = ...,
+    start: Coord = ...,
+    end: Coord = ...,
     method: str = ...,
-    through: list[list[int]] = ...,
+    through: Coord = ...,
     sweep: float = ...,
     radius: float = ...,
-    side_point: list[list[int]] = ...,
+    side_point: Coord = ...,
     side: str = ...,
 ) -> int:
     """Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer.
@@ -490,7 +549,7 @@ def vertex_move(
     *,
     object: list[int] = ...,
     vertex: int = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
@@ -504,7 +563,7 @@ def vertex_insert(
     *,
     object: list[int] = ...,
     vertex: int = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Bir kenarın ortasına yeni köşe ekler.
 
@@ -527,8 +586,8 @@ def to_area(
 def move(
     *,
     objects: list[int] = ...,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    start: Coord = ...,
+    end: Coord = ...,
 ) -> int:
     """Seçilen nesneleri iki nokta arasındaki kadar taşır.
 
@@ -541,8 +600,8 @@ def move(
 def copy(
     *,
     objects: list[int] = ...,
-    start: list[int] = ...,
-    end: list[list[int]] = ...,
+    start: Coord = ...,
+    end: Coords = ...,
 ) -> int:
     """Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
@@ -560,7 +619,7 @@ def array(
     columns: int = ...,
     row_spacing: float = ...,
     column_spacing: float = ...,
-    center: list[int] = ...,
+    center: Coord = ...,
     count: int = ...,
     angle: float = ...,
 ) -> int:
@@ -591,8 +650,8 @@ def combine(
 def split(
     *,
     object: list[int] = ...,
-    points: list[list[int]] = ...,
-    point: list[int] = ...,
+    points: Coords = ...,
+    point: Coord = ...,
 ) -> int:
     """Nesneleri çizilen bir kesme çizgisiyle böler.
 
@@ -606,7 +665,7 @@ def trim(
     *,
     object: list[int] = ...,
     boundary: list[int] = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Bir çizgiyi kestiği sınır çizgisine kadar budar.
 
@@ -620,7 +679,7 @@ def extend(
     *,
     object: list[int] = ...,
     boundary: list[int] = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
 
@@ -633,7 +692,7 @@ def extend(
 def chamfer(
     *,
     object: list[int] = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
     distance: float = ...,
 ) -> int:
     """Bir köşeyi düz bir kenarla keser (pah kırar).
@@ -647,7 +706,7 @@ def chamfer(
 def fillet(
     *,
     object: list[int] = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
     radius: float = ...,
 ) -> int:
     """Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
@@ -674,7 +733,7 @@ def match_style(
     *,
     source: list[int] = ...,
     objects: list[int] = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Bir nesnenin stilini seçilen nesnelere uygular.
 
@@ -687,9 +746,9 @@ def match_style(
 def rotate(
     *,
     objects: list[int] = ...,
-    center: list[int] = ...,
+    center: Coord = ...,
     angle: float = ...,
-    angle_point: list[list[int]] = ...,
+    angle_point: Coord = ...,
 ) -> int:
     """Seçilen nesneleri bir merkez etrafında döndürür.
 
@@ -703,9 +762,9 @@ def rotate(
 def scale(
     *,
     objects: list[int] = ...,
-    center: list[int] = ...,
+    center: Coord = ...,
     factor: float = ...,
-    factor_point: list[list[int]] = ...,
+    factor_point: Coord = ...,
 ) -> int:
     """Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 
@@ -719,8 +778,8 @@ def scale(
 def mirror(
     *,
     objects: list[int] = ...,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    start: Coord = ...,
+    end: Coord = ...,
 ) -> int:
     """Seçilen nesneleri iki noktadan geçen eksende aynalar.
 
@@ -732,8 +791,8 @@ def mirror(
 
 def measure(
     *,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    start: Coord = ...,
+    end: Coord = ...,
 ) -> int:
     """İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
 
@@ -754,7 +813,7 @@ def measure_area(
 
 def coordinate(
     *,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
 
@@ -764,8 +823,8 @@ def coordinate(
 
 def pan(
     *,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    start: Coord = ...,
+    end: Coord = ...,
 ) -> int:
     """Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
 
@@ -790,9 +849,9 @@ def offset(
 
 def sector(
     *,
-    center: list[int] = ...,
-    start: list[int] = ...,
-    end: list[int] = ...,
+    center: Coord = ...,
+    start: Coord = ...,
+    end: Coord = ...,
 ) -> int:
     """Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
 
@@ -804,9 +863,9 @@ def sector(
 
 def annulus(
     *,
-    center: list[int] = ...,
-    inner: list[int] = ...,
-    outer: list[int] = ...,
+    center: Coord = ...,
+    inner: Coord = ...,
+    outer: Coord = ...,
 ) -> int:
     """Merkez, iç ve dış yarıçaptan delikli halka çizer.
 
@@ -818,11 +877,11 @@ def annulus(
 
 def ellipse_draw(
     *,
-    center: list[list[int]] = ...,
-    first: list[list[int]] = ...,
-    second: list[list[int]] = ...,
+    center: Coord = ...,
+    first: Coord = ...,
+    second: Coord = ...,
     method: str = ...,
-    second_end: list[list[int]] = ...,
+    second_end: Coord = ...,
     start: float = ...,
     end: float = ...,
 ) -> int:
@@ -840,7 +899,7 @@ def ellipse_draw(
 
 def spline(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     degree: int = ...,
     closed: bool = ...,
 ) -> int:
@@ -854,7 +913,7 @@ def spline(
 
 def hatch(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     objects: list[int] = ...,
     pattern: str = ...,
     angle: float = ...,
@@ -875,7 +934,7 @@ def hatch(
 def block(
     *,
     name: str = ...,
-    base: list[int] = ...,
+    base: Coord = ...,
     objects: list[int] = ...,
     note: str = ...,
 ) -> int:
@@ -891,7 +950,7 @@ def block(
 def insert(
     *,
     name: str = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
     scale: float = ...,
     scale_y: float = ...,
     angle: float = ...,
@@ -916,12 +975,12 @@ def insert(
 
 def dimension(
     *,
-    first: list[int] = ...,
-    second: list[int] = ...,
-    position: list[int] = ...,
+    first: Coord = ...,
+    second: Coord = ...,
+    position: Coord = ...,
     type: str = ...,
-    apex: list[list[int]] = ...,
-    end: list[list[int]] = ...,
+    apex: Coord = ...,
+    end: Coord = ...,
     style: str = ...,
     text: str = ...,
     catalog: str = ...,
@@ -942,7 +1001,7 @@ def dimension(
 
 def leader(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     text: str = ...,
     style: str = ...,
     catalog: str = ...,
@@ -976,7 +1035,7 @@ def guide(
     *,
     direction: str = ...,
     value: int = ...,
-    point: list[list[int]] = ...,
+    point: Coord = ...,
     type: str = ...,
     delete: bool = ...,
 ) -> int:
@@ -1043,7 +1102,7 @@ def erase(
 def select(
     *,
     mode: str = ...,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     type: str = ...,
     objects: list[int] = ...,
     layer: str = ...,
@@ -1165,7 +1224,7 @@ def layout_item(
     text: str = ...,
     text_height: float = ...,
     scale: int = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     grid: str = ...,
     grid_spacing: int = ...,
     locked: bool = ...,
@@ -1440,8 +1499,8 @@ def database(
 
 def print(
     *,
-    window: list[list[int]] = ...,
-    center: list[int] = ...,
+    window: Coords = ...,
+    center: Coord = ...,
     scale: int = ...,
     layout: str = ...,
     file: str = ...,
@@ -1560,13 +1619,13 @@ def adjust_area(
     *,
     objects: list[int] = ...,
     scope: str = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     layer: str = ...,
     area: float = ...,
     mode: str = ...,
     edge: int = ...,
     vertex: int = ...,
-    point: list[int] = ...,
+    point: Coord = ...,
 ) -> int:
     """Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.
 
@@ -1586,7 +1645,7 @@ def label_length(
     *,
     objects: list[int] = ...,
     scope: str = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     layer: str = ...,
     unit: str = ...,
     decimals: int = ...,
@@ -1620,9 +1679,9 @@ def number_vertices(
     *,
     objects: list[int] = ...,
     scope: str = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     layer: str = ...,
-    start: list[int] = ...,
+    start: Coord = ...,
     direction: str = ...,
     prefix: str = ...,
     digits: int = ...,
@@ -1656,7 +1715,7 @@ def detach(
     *,
     objects: list[int] = ...,
     scope: str = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     layer: str = ...,
 ) -> int:
     """Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.
@@ -1672,7 +1731,7 @@ def attach(
     *,
     objects: list[int] = ...,
     scope: str = ...,
-    window: list[list[int]] = ...,
+    window: Coords = ...,
     layer: str = ...,
     source: list[int] = ...,
     attach_to: str = ...,
@@ -1700,7 +1759,7 @@ def attach(
 
 def fit(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     scale_locked: bool = ...,
     crs: str = ...,
 ) -> int:
@@ -1714,8 +1773,8 @@ def fit(
 
 def stakeout(
     *,
-    station: list[int] = ...,
-    backsight: list[list[int]] = ...,
+    station: Coord = ...,
+    backsight: Coord = ...,
     objects: list[int] = ...,
 ) -> int:
     """İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).
@@ -1740,12 +1799,12 @@ def reproject(
 
 def traverse(
     *,
-    start: list[int] = ...,
-    backsight: list[int] = ...,
+    start: Coord = ...,
+    backsight: Coord = ...,
     angle: list[float] = ...,
     distance: list[float] = ...,
-    end: list[list[int]] = ...,
-    end_backsight: list[list[int]] = ...,
+    end: Coord = ...,
+    end_backsight: Coord = ...,
     tolerance_class: str = ...,
     first_number: int = ...,
     distribution: str = ...,
@@ -1778,7 +1837,7 @@ def merge(
 
 def split_parcel(
     *,
-    points: list[list[int]] = ...,
+    points: Coords = ...,
     objects: list[int] = ...,
 ) -> int:
     """Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
@@ -1790,7 +1849,7 @@ def split_parcel(
 
 def split_area(
     *,
-    direction: list[list[int]] = ...,
+    direction: Coords = ...,
     objects: list[int] = ...,
     area: int = ...,
     tolerance: int = ...,

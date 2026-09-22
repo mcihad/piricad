@@ -14,6 +14,7 @@
 #include "kentos_cad/app/layout_templates.hpp"
 #include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/provider_service.hpp"
+#include "kentos_cad/app/python_api_info.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -101,6 +102,14 @@ public:
     /// with no Python: the names are a fact about the command set, not about the
     /// interpreter.
     QStringList pythonApiNames() const;
+
+    /// Every callable with its keywords, for completion and the signature hint.
+    ///
+    /// THE SAME PROJECTION THE INTERPRETER USES, from the same registry and with
+    /// the same type spelling (`script::python_type_name`). An editor that
+    /// described a different surface from the one that runs would be worse than
+    /// an editor with no hints at all.
+    QVector<PythonCallable> pythonApi() const;
 
     /// The line that armed the running session, or empty. Read by
     /// `MainWindow::syncToolSelection` to light the exact button pressed.

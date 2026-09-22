@@ -1126,6 +1126,21 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("1b-python-konsolu"), &window); });
 
+        // AND THE TWO THINGS THAT MAKE IT AN EDITOR rather than a text box: the
+        // completion popup, and the signature hint with the active parameter
+        // picked out. Typed key by key, because what is photographed is what
+        // happens BETWEEN the keys.
+        later([&window] { window.typeIntoPythonPrompt(QStringLiteral("cad.circ")); });
+        // THE POPUP IS ITS OWN WINDOW, so a grab of the shell does not contain it.
+        later([shot] {
+            shot(QStringLiteral("1c-python-tamamlama"), QApplication::activePopupWidget());
+        });
+        later([&window] { window.typeIntoPythonPrompt(QStringLiteral("le_draw(center=")); });
+        later([&window, shot] { shot(QStringLiteral("1d-python-imza"), &window); });
+        later([&window, shot] {
+            shot(QStringLiteral("1e-python-imza-ipucu"), window.pythonSignatureHint());
+        });
+
         // AND THE LAYOUT DESIGNER, which is a whole editor and had never been
         // photographed. It opens modal, so the steps after it run inside its
         // own event loop — which is fine: a `singleShot` fires in a nested loop

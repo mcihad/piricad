@@ -6,6 +6,42 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — `cad.Point`, `cad.Box`, `cad.viewport` ve gerçek bir editör
+
+**Değer tipleri.** `cad.Point(east, north)` ve `cad.Box(...)` programın **kendi**
+tipleridir, Python tarafında yeniden tanımlanmış kopyaları değil — `cad.Point`,
+`core::Point2`'nin ta kendisi. Bir koordinat iki sayılık liste olarak da, `Point`
+olarak da her yere verilebilir.
+
+Eksen adları harf değil: bir paftada doğu değeri **Y** yazar, kodda ilk eksen
+`x`'tir, yani ikisi birbirinin tersidir. Hangi harfi seçsek okuyucuların yarısı
+tersini anlardı; API `east` ve `north` diyor.
+
+**`cad.viewport`** pencerenin baktığı yeri değer olarak veriyor: `bbox()`,
+`center()`, `scale()`, `mm_per_pixel()`, `size_px()`, `crs()`. Pencere yoksa
+`exists()` `False` döner ve diğerleri hata verir — uydurulmuş bir dikdörtgen,
+sonraki çizimi kimsenin bakmadığı bir yere koyardı. `GÖRÜNÜMBİLGİSİ` komutuyla
+aynı kaynağı okur: biri insanın, öbürü betiğin okuduğu biçim.
+
+**Editör baştan yazıldı.** Önceki hâli üç harf yazılmasını ve `cad` ile
+başlamasını bekliyordu; yani `cad.` için hiçbir şey, çağrı içinde hiçbir şey,
+betiğin kendi adları için hiçbir şey öneriyordu.
+
+- **Tamamlama bağlama bakıyor:** `cad.` bütün komutları (yanında Türkçe adları),
+  `cad.doc.` ve `cad.viewport.` o nesnenin çağrılarını, bir çağrının parantezi
+  içi **o komutun anahtar kelimelerini** — zaten yazılanı tekrar önermeden.
+  Dışarıda betiğin kendi tanımladığı adlar, Python anahtar sözcükleri ve
+  yerleşikler. **Ctrl+Boşluk** her yerde açar.
+- **İmza ipucu:** parantez içindeyken komutun bütün parametrelerini yazan,
+  **o an yazılanı vurgulayan** ve altına Türkçe açıklamasını koyan bir şerit.
+  Uzun imzalar satır kırıyor.
+- Bir komut adı seçilince parantezler kendi açılıyor; anahtar kelimeler
+  (`points=`) sözdiziminde ayrı renkte.
+- Parametre tipleri `Coord` / `Coords` diye okunuyor. Önceki `list[list[int]]`
+  yalnız çirkin değil **yanlıştı**: `core.circle_draw`'ın merkezi tek noktadır ve
+  belge herkese `center=[[y, x]]` yazmasını söylüyordu.
+
+
 ### Eklendi — Python konsolu ve `PYTHON` komutu
 
 Pencerenin altında, komut satırının kardeşi bir panel: yazdığınızı `>>>` ile,

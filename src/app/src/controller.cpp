@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/script/python_doc.hpp"
 
 #include "kentos_cad/app/ai_transport.hpp"
 
@@ -476,6 +477,34 @@ QStringList Controller::pythonApiNames() const
     }
     names.sort();
     return names;
+}
+
+QVector<PythonCallable> Controller::pythonApi() const
+{
+    QVector<PythonCallable> out;
+    out.reserve(static_cast<qsizetype>(registry_.all().size()));
+
+    for (const command::CommandSpec& spec : registry_.all()) {
+        if (spec.run == nullptr || !has_flag(spec.flags, command::Flags::Scriptable)) continue;
+
+        PythonCallable c;
+        c.name    = QString::fromStdString(command::python_callable_name(spec));
+        c.command = QString::fromStdString(spec.id);
+        c.turkish = spec.names.empty() ? QString() : QString::fromStdString(spec.names.front());
+        c.summary = QString::fromStdString(spec.summary);
+        c.args.reserve(static_cast<qsizetype>(spec.params.size()));
+        for (const command::Param& p : spec.params) {
+            c.args.push_back(PythonArg{QString::fromStdString(p.english),
+                                       QString::fromStdString(script::python_type_name(p)),
+                                       QString::fromStdString(p.help),
+                                       QString::fromStdString(p.unit)});
+        }
+        out.push_back(std::move(c));
+    }
+
+    std::sort(out.begin(), out.end(),
+              [](const PythonCallable& a, const PythonCallable& b) { return a.name < b.name; });
+    return out;
 }
 
 void Controller::runCommand(const QString& line)

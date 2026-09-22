@@ -23,7 +23,21 @@ namespace kentos::command {
 class Registry;
 } // namespace kentos::command
 
+namespace kentos::command {
+/// One declared parameter; declared rather than included for the same reason
+/// `Registry` is.
+struct Param;
+} // namespace kentos::command
+
 namespace kentos::script {
+
+/// What a parameter looks like from Python: `list[int]`, `float`, `str`.
+///
+/// ONE ANSWER, because three callers ask: the generated reference, the generated
+/// stub and the editor's signature hint. Three spellings of `list[list[int]]`
+/// would disagree the first time an arity changed, and the one that disagrees is
+/// always the one the user is reading (CLAUDE.md 5.10).
+std::string python_type_name(const command::Param& p);
 
 /// `docs/python/referans.md` — every command's Python signature, its English
 /// keywords and the Turkish help each one carries.

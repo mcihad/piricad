@@ -360,6 +360,10 @@ py::object PythonRunner::Impl::build_module()
     // AFTER the hand-written names above, so a projected name can never quietly
     // replace `run`, `layers` or `setting` — `bind_commands` would overwrite one,
     // and a test walks the registry to prove none collides.
+    // THE VALUE TYPES FIRST, because a viewport call returns one and a generated
+    // command takes one.
+    detail::bind_types(cad);
+    detail::bind_viewport(host, cad);
     detail::bind_commands(host, cad);
 
     return package;

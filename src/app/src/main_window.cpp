@@ -5349,6 +5349,20 @@ void MainWindow::onDocumentChanged()
 void MainWindow::showPythonConsole(const QString& source)
 {
     if (pythonDock_ == nullptr || pythonConsole_ == nullptr) return;
+
+    // PUT IT BACK WHERE IT BELONGS BEFORE SHOWING IT. A saved layout can leave a
+    // dock floating in the middle of the screen or collapsed to nothing, and both
+    // states are ones the user never chose — they are what `restoreState` does
+    // with a dock it half remembers. Opening a panel that cannot be read is worse
+    // than not opening it, so the one gesture that opens it also repairs it.
+    //
+    // A DELIBERATE float is respected: this only reaches a dock that is floating
+    // AND hidden, which is the state nobody asks for.
+    if (pythonDock_->isFloating() && !pythonDock_->isVisible()) {
+        pythonDock_->setFloating(false);
+        addDockWidget(Qt::BottomDockWidgetArea, pythonDock_);
+    }
+
     pythonDock_->show();
     pythonDock_->raise();
 
@@ -5360,6 +5374,17 @@ void MainWindow::showPythonConsole(const QString& source)
 
     pythonConsole_->focusPrompt();
     if (!source.isEmpty()) pythonConsole_->runSource(source);
+}
+
+void MainWindow::typeIntoPythonPrompt(const QString& source)
+{
+    if (pythonConsole_ == nullptr) return;
+    pythonConsole_->typeIntoPrompt(source);
+}
+
+QWidget* MainWindow::pythonSignatureHint() const
+{
+    return pythonConsole_ == nullptr ? nullptr : pythonConsole_->promptHint();
 }
 
 void MainWindow::showTranscript()

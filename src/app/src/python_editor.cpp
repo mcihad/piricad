@@ -8,10 +8,13 @@
 #include <QAbstractItemView>
 #include <QCompleter>
 #include <QKeyEvent>
+#include <QListView>
 #include <QPainter>
 #include <QRegularExpression>
+#include <QScreen>
 #include <QScrollBar>
-#include <QStringListModel>
+#include <QStandardItemModel>
+#include <QStyledItemDelegate>
 #include <QTextBlock>
 #include <QVBoxLayout>
 
@@ -27,6 +30,89 @@ const Tokens& tokensOf(ThemeMode mode)
 {
     return mode == ThemeMode::Dark ? darkTokens() : lightTokens();
 }
+
+/// THE HAND-WRITTEN HALF OF THE SURFACE, and the only part of it that is a list
+/// here. Everything under `cad.<command>` is projected from the registry; these
+/// eleven names are written in `python_runner.cpp` by hand, so they are written
+/// here by hand too — and a test walks the module to prove the two agree, which
+/// is what keeps a list this short from drifting.
+const QStringList kHostCalls{QStringLiteral("run"), QStringLiteral("sandbox"),
+                             QStringLiteral("read_file"), QStringLiteral("write_file")};
+
+const QStringList kDocCalls{QStringLiteral("layers"),          QStringLiteral("layer_count"),
+                            QStringLiteral("active_layer"),    QStringLiteral("entity_count"),
+                            QStringLiteral("selection_count"), QStringLiteral("crs"),
+                            QStringLiteral("setting")};
+
+const QStringList kViewportCalls{QStringLiteral("exists"),       QStringLiteral("bbox"),
+                                 QStringLiteral("center"),       QStringLiteral("scale"),
+                                 QStringLiteral("mm_per_pixel"), QStringLiteral("size_px"),
+                                 QStringLiteral("crs")};
+
+/// Python's own words, offered where a name with no owner is being typed.
+const QStringList kPythonWords{
+    QStringLiteral("False"),  QStringLiteral("None"),   QStringLiteral("True"),
+    QStringLiteral("and"),    QStringLiteral("as"),     QStringLiteral("assert"),
+    QStringLiteral("break"),  QStringLiteral("class"),  QStringLiteral("continue"),
+    QStringLiteral("def"),    QStringLiteral("del"),    QStringLiteral("elif"),
+    QStringLiteral("else"),   QStringLiteral("except"), QStringLiteral("finally"),
+    QStringLiteral("for"),    QStringLiteral("from"),   QStringLiteral("global"),
+    QStringLiteral("if"),     QStringLiteral("import"), QStringLiteral("in"),
+    QStringLiteral("is"),     QStringLiteral("lambda"), QStringLiteral("not"),
+    QStringLiteral("or"),     QStringLiteral("pass"),   QStringLiteral("raise"),
+    QStringLiteral("return"), QStringLiteral("try"),    QStringLiteral("while"),
+    QStringLiteral("with"),   QStringLiteral("yield")};
+
+const QStringList kPythonBuiltins{
+    QStringLiteral("abs"),   QStringLiteral("all"),    QStringLiteral("any"),
+    QStringLiteral("bool"),  QStringLiteral("dict"),   QStringLiteral("enumerate"),
+    QStringLiteral("float"), QStringLiteral("int"),    QStringLiteral("isinstance"),
+    QStringLiteral("len"),   QStringLiteral("list"),   QStringLiteral("max"),
+    QStringLiteral("min"),   QStringLiteral("print"),  QStringLiteral("range"),
+    QStringLiteral("round"), QStringLiteral("sorted"), QStringLiteral("str"),
+    QStringLiteral("sum"),   QStringLiteral("tuple"),  QStringLiteral("zip")};
+
+/// Draws a completion row: the name, then its kind dimmed on the right.
+///
+/// A DELEGATE AND NOT A STYLESHEET, for the reason the signature hint is painted:
+/// the two halves of the row differ in MEANING, and a sheet has no way to say
+/// "this column quieter than that one" without an object name per column.
+class CompletionRow : public QStyledItemDelegate
+{
+public:
+    CompletionRow(QObject* parent, ThemeMode* theme) : QStyledItemDelegate(parent), theme_(theme) {}
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
+        const Tokens& t = tokensOf(*theme_);
+        const bool on   = (option.state & QStyle::State_Selected) != 0;
+
+        painter->fillRect(option.rect, on ? t.accentWash : t.bgPanel);
+
+        const QAbstractItemModel* model = index.model();
+        const QString name              = model->data(model->index(index.row(), 0)).toString();
+        const QString detail            = model->data(model->index(index.row(), 1)).toString();
+
+        QRect box = option.rect.adjusted(8, 0, -8, 0);
+        painter->setPen(t.text);
+        painter->drawText(box, Qt::AlignLeft | Qt::AlignVCenter, name);
+
+        painter->setPen(t.textFaint);
+        painter->drawText(box, Qt::AlignRight | Qt::AlignVCenter, detail);
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        QSize size = QStyledItemDelegate::sizeHint(option, index);
+        size.setHeight(qMax(size.height(), 22));
+        size.setWidth(size.width() + 28); // the gap between name and kind
+        return size;
+    }
+
+private:
+    ThemeMode* theme_;
+};
 
 /// Python's reserved words, exactly as CPython 3.14 defines them.
 ///
@@ -133,6 +219,147 @@ bool wantsMore(const QStringList& lines)
     return depth > 0;
 }
 
+} // namespace
+
+/// The signature hint: one painted strip under the cursor.
+///
+/// PAINTED AND NOT STYLED, like the status strip and the title bar: it is three
+/// runs of text whose colours ARE the meaning — the active parameter in the
+/// accent, the rest quiet, the Turkish help under them — and a stylesheet cannot
+/// say "this word and not that one". It carries no controls, so CLAUDE.md 5.19
+/// has nothing to object to.
+///
+/// A CHILD WINDOW rather than a tooltip: a tooltip disappears when the user
+/// types, which is exactly when a signature is worth reading.
+class SignatureHint : public QWidget
+{
+public:
+    explicit SignatureHint(QWidget* parent) : QWidget(parent, Qt::ToolTip | Qt::FramelessWindowHint)
+    {
+        setAttribute(Qt::WA_ShowWithoutActivating);
+        setFocusPolicy(Qt::NoFocus);
+    }
+
+    /// `head` is `cad.line(`, `parts` the parameters, `active` the one the cursor
+    /// is on (-1 for none), `note` the Turkish help under the line.
+    void show(const QString& head, const QStringList& parts, int active, const QString& note,
+              const QString& tail, ThemeMode mode)
+    {
+        head_   = head;
+        parts_  = parts;
+        active_ = active;
+        note_   = note;
+        tail_   = tail;
+        theme_  = mode;
+        adjustSize();
+        update();
+    }
+
+    QSize sizeHint() const override
+    {
+        const QFontMetrics fm(font());
+        const QVector<int> rows = layoutRows(fm);
+        int widest              = 0;
+        for (const int w : rows)
+            widest = qMax(widest, w);
+        widest          = qMax(widest, fm.horizontalAdvance(note_) + kPad);
+        const int lines = static_cast<int>(rows.size()) + (note_.isEmpty() ? 0 : 1);
+        return {qMin(widest, kMaxWidth) + kPad, lines * fm.height() + 2 * kPad};
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
+
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setPen(QPen(t.border, 1));
+        p.setBrush(t.bgRaised);
+        p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 4.0, 4.0);
+
+        const QFontMetrics fm(font());
+        const int indent = kPad + fm.horizontalAdvance(head_);
+        int x            = kPad;
+        int y            = kPad + fm.ascent();
+
+        p.setPen(t.textDim);
+        p.drawText(x, y, head_);
+        x = indent;
+
+        for (int i = 0; i < parts_.size(); ++i) {
+            // THE COMMA STAYS WITH THE PARAMETER IT FOLLOWS. Drawn before the
+            // wrap test rather than after it, or a break lands between a
+            // parameter and its own comma and the next line opens with `, radius`
+            // — which reads as a typo and is the first thing a reader's eye
+            // catches.
+            if (i != 0) {
+                p.setPen(t.textFaint);
+                p.drawText(x, y, QStringLiteral(","));
+                x += fm.horizontalAdvance(QStringLiteral(", "));
+            }
+
+            // WRAPPED, because a command with nine parameters is two screens wide
+            // and a hint that runs off the edge is a hint nobody reads. The break
+            // is between parameters, never inside one, and the continuation lines
+            // are indented under the opening bracket so the call still reads as
+            // one call.
+            if (x > indent && x + fm.horizontalAdvance(parts_.at(i)) > kMaxWidth) {
+                x = indent;
+                y += fm.height();
+            }
+            // THE ACTIVE PARAMETER IS THE WHOLE REASON THIS EXISTS. A signature
+            // with every word the same weight answers "what does it take"; this
+            // answers "what does it want NEXT", which is the question the person
+            // with their hands on the keyboard actually has.
+            p.setPen(i == active_ ? t.accent : t.textFaint);
+            p.drawText(x, y, parts_.at(i));
+            x += fm.horizontalAdvance(parts_.at(i));
+        }
+
+        p.setPen(t.textDim);
+        p.drawText(x, y, tail_);
+
+        if (!note_.isEmpty()) {
+            p.setPen(t.textFaint);
+            p.drawText(kPad, y + fm.height(), note_);
+        }
+    }
+
+private:
+    static constexpr int kPad      = 7;
+    static constexpr int kMaxWidth = 860; ///< past this the signature wraps
+
+    /// The width of each wrapped row, for `sizeHint`. Measured the way
+    /// `paintEvent` lays it out, because a hint sized one way and drawn another
+    /// is a hint with its last parameter cut off.
+    QVector<int> layoutRows(const QFontMetrics& fm) const
+    {
+        QVector<int> rows;
+        const int indent = kPad + fm.horizontalAdvance(head_);
+        int x            = indent;
+        for (int i = 0; i < parts_.size(); ++i) {
+            if (i != 0) x += fm.horizontalAdvance(QStringLiteral(", "));
+            if (x > indent && x + fm.horizontalAdvance(parts_.at(i)) > kMaxWidth) {
+                rows.push_back(x);
+                x = indent;
+            }
+            x += fm.horizontalAdvance(parts_.at(i));
+        }
+        rows.push_back(x + fm.horizontalAdvance(tail_));
+        return rows;
+    }
+
+    QString head_;
+    QStringList parts_;
+    QString tail_;
+    QString note_;
+    int active_{-1};
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+namespace {
+
 /// The gutter. A bare `QWidget` whose paint and width forward to the editor,
 /// which is Qt's own code-editor shape: the numbers need the editor's block
 /// geometry and have no business owning any of it.
@@ -161,6 +388,12 @@ PythonHighlighter::PythonHighlighter(QTextDocument* document) : QSyntaxHighlight
 void PythonHighlighter::setApiNames(const QStringList& names)
 {
     api_ = names;
+    rehighlight();
+}
+
+void PythonHighlighter::setArgumentNames(const QStringList& names)
+{
+    args_ = names;
     rehighlight();
 }
 
@@ -208,6 +441,22 @@ void PythonHighlighter::highlightBlock(const QString& text)
             if (!api_.contains(m.captured(1))) continue;
             setFormat(static_cast<int>(m.capturedStart()), static_cast<int>(m.capturedLength()),
                       api);
+        }
+    }
+
+    // A KEYWORD ARGUMENT IS NOT AN ORDINARY NAME. `points=` names a declared
+    // parameter and reads as one only when it is tinted as one — and only when
+    // this build really declares it, so a misspelling stays plain.
+    if (!args_.isEmpty()) {
+        QTextCharFormat argument;
+        argument.setForeground(t.syntaxField);
+        static const QRegularExpression keyword(QStringLiteral("\\b(\\w+)\\s*="));
+        auto it = keyword.globalMatch(text);
+        while (it.hasNext()) {
+            const QRegularExpressionMatch m = it.next();
+            if (!args_.contains(m.captured(1))) continue;
+            setFormat(static_cast<int>(m.capturedStart(1)), static_cast<int>(m.capturedLength(1)),
+                      argument);
         }
     }
 
@@ -266,11 +515,23 @@ ScriptEditor::ScriptEditor(QWidget* parent) : QPlainTextEdit(parent)
     highlighter_ = new PythonHighlighter(document());
     gutter_      = new Gutter(this);
 
-    words_     = new QStringListModel(this);
+    hint_ = new SignatureHint(this);
+
+    words_     = new QStandardItemModel(this);
     completer_ = new QCompleter(words_, this);
     completer_->setWidget(this);
     completer_->setCompletionMode(QCompleter::PopupCompletion);
-    completer_->setCaseSensitivity(Qt::CaseSensitive);
+    completer_->setCompletionColumn(0);
+    completer_->setCompletionRole(Qt::DisplayRole);
+
+    // CASE-INSENSITIVE, because the API is lower case and a user coming from the
+    // Turkish command line types `CAD.` about once a session. Matching by
+    // CONTAINS rather than by prefix would offer `circle_draw` for `raw`, which
+    // is a different editor's idea and not this one's.
+    completer_->setCaseSensitivity(Qt::CaseInsensitive);
+    completer_->popup()->setItemDelegate(new CompletionRow(completer_, &theme_));
+    if (auto* list = qobject_cast<QListView*>(completer_->popup()); list != nullptr)
+        list->setUniformItemSizes(true);
     connect(completer_, QOverload<const QString&>::of(&QCompleter::activated), this,
             &ScriptEditor::insertCompletion);
 
@@ -288,24 +549,276 @@ ScriptEditor::ScriptEditor(QWidget* parent) : QPlainTextEdit(parent)
     highlightCurrentLine();
 }
 
-void ScriptEditor::setApiNames(const QStringList& names)
+void ScriptEditor::setApi(QVector<PythonCallable> api)
 {
-    highlighter_->setApiNames(names);
+    api_ = std::move(api);
 
-    // OFFERED WITH THE `cad.` IN FRONT, because that is what the user is typing.
-    // A completer over bare names would offer `line` in the middle of a comment.
-    QStringList offered;
-    offered.reserve(names.size() * 2 + 8);
-    for (const QString& n : names)
-        offered << QStringLiteral("cad.") + n;
-    offered << QStringLiteral("cad.run") << QStringLiteral("cad.sandbox")
-            << QStringLiteral("cad.read_file") << QStringLiteral("cad.write_file")
-            << QStringLiteral("cad.doc.layers") << QStringLiteral("cad.doc.layer_count")
-            << QStringLiteral("cad.doc.active_layer") << QStringLiteral("cad.doc.entity_count")
-            << QStringLiteral("cad.doc.selection_count") << QStringLiteral("cad.doc.crs")
-            << QStringLiteral("cad.doc.setting");
-    offered.sort();
-    words_->setStringList(offered);
+    QStringList names;
+    QStringList arguments;
+    names.reserve(api_.size() + 16);
+    for (const PythonCallable& c : api_) {
+        names << c.name;
+        for (const PythonArg& a : c.args)
+            if (!arguments.contains(a.name)) arguments << a.name;
+    }
+    for (const QString& n : kHostCalls)
+        names << n;
+    for (const QString& n : kDocCalls)
+        names << n;
+    for (const QString& n : kViewportCalls)
+        names << n;
+    names << QStringLiteral("Point") << QStringLiteral("Box") << QStringLiteral("doc")
+          << QStringLiteral("viewport");
+
+    highlighter_->setApiNames(names);
+    highlighter_->setArgumentNames(arguments);
+}
+
+const PythonCallable* ScriptEditor::callable(const QString& name) const
+{
+    for (const PythonCallable& c : api_)
+        if (c.name == name) return &c;
+    return nullptr;
+}
+
+QStringList ScriptEditor::localNames() const
+{
+    // WHAT THE BUFFER ITSELF DEFINES. Half of what a person types is a name they
+    // wrote three lines up, and a completer that knew only the API would be
+    // useless for exactly that half.
+    //
+    // Four shapes, read off the text: an assignment, a `def`/`class`, a `for`
+    // target and an `import ... as`. Not a scope analysis — a name defined in a
+    // function is offered outside it, which costs a wrong suggestion and saves
+    // writing a Python binder in an editor.
+    static const QRegularExpression assigned(
+        QStringLiteral("^\\s*([A-Za-z_]\\w*)\\s*(?::[^=]+)?=[^=]"));
+    static const QRegularExpression defined(
+        QStringLiteral("^\\s*(?:def|class)\\s+([A-Za-z_]\\w*)"));
+    static const QRegularExpression looped(
+        QStringLiteral("^\\s*for\\s+([A-Za-z_]\\w*(?:\\s*,\\s*[A-Za-z_]\\w*)*)\\s+in\\b"));
+    static const QRegularExpression imported(
+        QStringLiteral("^\\s*(?:import|from)\\b.*?\\bas\\s+([A-Za-z_]\\w*)"));
+
+    QStringList out;
+    const QStringList lines = toPlainText().split(QLatin1Char('\n'));
+    for (const QString& line : lines) {
+        for (const QRegularExpression* re : {&assigned, &defined, &looped, &imported}) {
+            const QRegularExpressionMatch m = re->match(line);
+            if (!m.hasMatch()) continue;
+            for (const QString& name : m.captured(1).split(QLatin1Char(','))) {
+                const QString clean = name.trimmed();
+                if (!clean.isEmpty() && !out.contains(clean)) out << clean;
+            }
+        }
+    }
+    return out;
+}
+
+ScriptEditor::Context ScriptEditor::contextAt() const
+{
+    Context where;
+
+    const QTextCursor cursor = textCursor();
+    const QString source     = toPlainText().left(cursor.position());
+
+    // ---- what is being typed, and what owns it ------------------------------
+    int at = static_cast<int>(source.size());
+    while (at > 0 &&
+           (source.at(at - 1).isLetterOrNumber() || source.at(at - 1) == QLatin1Char('_')))
+        --at;
+    where.prefix = source.mid(at);
+
+    if (at > 0 && source.at(at - 1) == QLatin1Char('.')) {
+        int owner = at - 1;
+        while (owner > 0 && (source.at(owner - 1).isLetterOrNumber() ||
+                             source.at(owner - 1) == QLatin1Char('_') ||
+                             source.at(owner - 1) == QLatin1Char('.')))
+            --owner;
+        where.owner = source.mid(owner, at - 1 - owner);
+    }
+
+    // ---- which call the cursor is inside ------------------------------------
+    //
+    // Walked backwards, counting brackets and skipping strings, to the first
+    // unclosed `(`. Commas at THAT depth are the argument separators; commas
+    // inside a nested list are not, which is why a depth counter and not a split.
+    int depth      = 0;
+    int commas     = 0;
+    int open       = -1;
+    bool in_string = false;
+    QChar quote;
+    for (int i = static_cast<int>(source.size()) - 1; i >= 0; --i) {
+        const QChar c = source.at(i);
+        if (in_string) {
+            if (c == quote && (i == 0 || source.at(i - 1) != QLatin1Char('\\'))) in_string = false;
+            continue;
+        }
+        if (c == QLatin1Char('"') || c == QLatin1Char('\'')) {
+            in_string = true;
+            quote     = c;
+            continue;
+        }
+        if (c == QLatin1Char(')') || c == QLatin1Char(']') || c == QLatin1Char('}'))
+            ++depth;
+        else if (c == QLatin1Char('[') || c == QLatin1Char('{'))
+            --depth;
+        else if (c == QLatin1Char('(')) {
+            if (depth == 0) {
+                open = i;
+                break;
+            }
+            --depth;
+        } else if (c == QLatin1Char(',') && depth == 0) {
+            ++commas;
+        } else if (c == QLatin1Char('\n') && depth == 0) {
+            // A newline at depth zero ends the statement, so a call on the line
+            // above is not the call we are in.
+            break;
+        }
+    }
+
+    if (open >= 0) {
+        int name = open;
+        while (name > 0 &&
+               (source.at(name - 1).isLetterOrNumber() || source.at(name - 1) == QLatin1Char('_')))
+            --name;
+        where.call          = source.mid(name, open - name);
+        where.argumentIndex = commas;
+
+        static const QRegularExpression written(QStringLiteral("([A-Za-z_]\\w*)\\s*="));
+        auto it = written.globalMatch(source.mid(open + 1));
+        while (it.hasNext())
+            where.used << it.next().captured(1);
+    }
+
+    return where;
+}
+
+void ScriptEditor::offerCompletions(const Context& where)
+{
+    struct Item
+    {
+        QString text;   ///< what gets inserted
+        QString detail; ///< what is shown, dimmed, to its right
+    };
+
+    QVector<Item> items;
+
+    const auto add = [&items](const QString& text, const QString& detail) {
+        items.push_back(Item{text, detail});
+    };
+
+    if (where.owner == QStringLiteral("cad")) {
+        for (const PythonCallable& c : api_)
+            add(c.name, c.turkish.isEmpty() ? c.command : c.turkish);
+        for (const QString& n : kHostCalls)
+            add(n, tr("konak"));
+        add(QStringLiteral("doc"), tr("çizimden okuma"));
+        add(QStringLiteral("viewport"), tr("görünüm"));
+        add(QStringLiteral("Point"), tr("koordinat tipi"));
+        add(QStringLiteral("Box"), tr("dikdörtgen tipi"));
+    } else if (where.owner == QStringLiteral("cad.doc")) {
+        for (const QString& n : kDocCalls)
+            add(n, tr("çizimden okuma"));
+    } else if (where.owner == QStringLiteral("cad.viewport")) {
+        for (const QString& n : kViewportCalls)
+            add(n, tr("görünüm"));
+    } else if (where.owner.isEmpty()) {
+        // INSIDE A CALL, THE KEYWORDS COME FIRST, because that is what the cursor
+        // is actually waiting for. One that is already written is not offered
+        // again — a second `points=` is a TypeError, not a suggestion.
+        if (const PythonCallable* c = callable(where.call); c != nullptr) {
+            for (const PythonArg& a : c->args) {
+                if (where.used.contains(a.name)) continue;
+                add(a.name + QStringLiteral("="), a.type);
+            }
+        }
+        add(QStringLiteral("cad"), tr("çizim"));
+        for (const QString& n : localNames())
+            if (n != where.prefix) add(n, tr("bu betikte"));
+        for (const QString& n : kPythonWords)
+            add(n, tr("anahtar sözcük"));
+        for (const QString& n : kPythonBuiltins)
+            add(n, tr("yerleşik"));
+    }
+
+    words_->clear();
+    words_->setColumnCount(2);
+    for (const Item& item : items) {
+        auto* name   = new QStandardItem(item.text);
+        auto* detail = new QStandardItem(item.detail);
+        detail->setFlags(Qt::NoItemFlags);
+        words_->appendRow({name, detail});
+    }
+
+    if (items.isEmpty()) {
+        completer_->popup()->hide();
+        return;
+    }
+
+    completer_->setCompletionPrefix(where.prefix);
+    if (completer_->completionCount() == 0) {
+        completer_->popup()->hide();
+        return;
+    }
+    completer_->popup()->setCurrentIndex(completer_->completionModel()->index(0, 0));
+
+    QRect box = cursorRect();
+    box.setWidth(completer_->popup()->sizeHintForColumn(0) +
+                 completer_->popup()->sizeHintForColumn(1) + 36 +
+                 completer_->popup()->verticalScrollBar()->sizeHint().width());
+    box.translate(-fontMetrics().horizontalAdvance(where.prefix), 0);
+    completer_->complete(box);
+}
+
+void ScriptEditor::updateSignatureHint(const Context& where)
+{
+    const PythonCallable* c = callable(where.call);
+    if (c == nullptr || !hasFocus()) {
+        hint_->hide();
+        return;
+    }
+
+    QStringList parts;
+    parts.reserve(c->args.size());
+    for (const PythonArg& a : c->args)
+        parts << a.name + QStringLiteral(": ") + a.type;
+
+    // WHICH ARGUMENT IS ACTIVE. A keyword already written wins over the position:
+    // `cad.line(points=` is on `points` whatever the comma count says, because
+    // the user named it.
+    int active = where.argumentIndex;
+    if (!where.used.isEmpty()) {
+        for (int i = 0; i < c->args.size(); ++i)
+            if (c->args.at(i).name == where.used.last()) active = i;
+    }
+    if (active >= c->args.size()) active = -1;
+
+    QString note = c->summary;
+    if (active >= 0) {
+        const PythonArg& a = c->args.at(active);
+        note               = a.name + QStringLiteral(" — ") + a.help;
+        if (!a.unit.isEmpty()) note += QStringLiteral(" [") + a.unit + QStringLiteral("]");
+    }
+
+    hint_->setFont(font());
+    hint_->show(QStringLiteral("cad.") + c->name + QLatin1Char('('), parts, active, note,
+                QStringLiteral(") -> int"), theme_);
+
+    // UNDER THE CURSOR, and pushed back onto the screen when the line is long.
+    QPoint at = mapToGlobal(cursorRect().bottomLeft()) + QPoint(0, 6);
+    if (const QScreen* screen = this->screen(); screen != nullptr) {
+        const int right = screen->availableGeometry().right() - hint_->width() - 8;
+        at.setX(qMin(at.x(), right));
+    }
+    hint_->move(at);
+    hint_->QWidget::show();
+}
+
+QWidget* ScriptEditor::signatureHint() const
+{
+    return hint_;
 }
 
 int ScriptEditor::gutterWidth() const
@@ -372,32 +885,26 @@ void ScriptEditor::highlightCurrentLine()
     setExtraSelections(lines);
 }
 
-QString ScriptEditor::wordUnderCursor() const
-{
-    QTextCursor cursor = textCursor();
-    const QString line = cursor.block().text().left(cursor.positionInBlock());
-
-    // Walk back over what may be part of a dotted name. Stopping at the dot would
-    // make `cad.li` complete as `li`, which matches nothing offered.
-    int at = static_cast<int>(line.size());
-    while (at > 0) {
-        const QChar c = line.at(at - 1);
-        if (c.isLetterOrNumber() || c == QLatin1Char('_') || c == QLatin1Char('.'))
-            --at;
-        else
-            break;
-    }
-    return line.mid(at);
-}
-
 void ScriptEditor::insertCompletion(const QString& completion)
 {
+    // THE WHOLE WORD IS REPLACED, not appended to. Appending the tail worked only
+    // while matching was by prefix and case-sensitive: with `CAD.li` matching
+    // `line` the tail is `ne`, and a match shorter than what was typed gives a
+    // negative length.
     QTextCursor cursor = textCursor();
-    const int extra =
-        static_cast<int>(completion.length() - completer_->completionPrefix().length());
-    cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, 0);
-    cursor.insertText(completion.right(extra));
+    const int typed    = static_cast<int>(completer_->completionPrefix().length());
+    cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, typed);
+    cursor.insertText(completion);
     setTextCursor(cursor);
+
+    // A CALL OPENS ITS OWN PARENTHESES and the hint comes up with them, because
+    // the next thing wanted is an argument and the next thing shown should be
+    // which one. A keyword (`points=`) gets nothing: it is already complete.
+    if (!completion.endsWith(QLatin1Char('=')) && callable(completion) != nullptr) {
+        insertPlainText(QStringLiteral("()"));
+        moveCursor(QTextCursor::Left);
+    }
+    updateSignatureHint(contextAt());
 }
 
 void ScriptEditor::keyPressEvent(QKeyEvent* event)
@@ -428,6 +935,20 @@ void ScriptEditor::keyPressEvent(QKeyEvent* event)
         cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, kIndent);
         if (cursor.selectedText() == QString(kIndent, QLatin1Char(' ')))
             cursor.removeSelectedText();
+        return;
+    }
+
+    // CTRL+SPACE ASKS, wherever the cursor is. Every editor has this gesture and
+    // it is the answer to "the popup is not up and I want it".
+    if (event->key() == Qt::Key_Space && (event->modifiers() & Qt::ControlModifier) != 0) {
+        offerCompletions(contextAt());
+        return;
+    }
+
+    // ESCAPE PUTS BOTH AWAY. The popup takes it first (the guard above returns),
+    // so this is the hint's Escape and not the popup's.
+    if (event->key() == Qt::Key_Escape && hint_->isVisible()) {
+        hint_->hide();
         return;
     }
 
@@ -478,23 +999,30 @@ void ScriptEditor::keyPressEvent(QKeyEvent* event)
 
     QPlainTextEdit::keyPressEvent(event);
 
-    const QString prefix = wordUnderCursor();
-    if (prefix.length() < 3 || !prefix.startsWith(QStringLiteral("cad"))) {
+    const Context where = contextAt();
+    updateSignatureHint(where);
+
+    // WHEN TO OFFER, and the rule is the one an editor earns its keep by:
+    //
+    //   after a `.`      — always, even with nothing typed yet, because that is
+    //                      the moment the user is asking "what is in here"
+    //   inside a call    — always, because the answer is a short list of keywords
+    //                      this command declares and nothing else will do
+    //   a bare word      — from two characters, or the popup fights every `i`
+    //                      in every `if`
+    //
+    // The old rule was "three characters and it must start with `cad`", which
+    // offered nothing for `cad.` itself, nothing inside a call, and nothing for
+    // any name the script defined.
+    const bool after_dot   = !where.owner.isEmpty();
+    const bool in_call     = !where.call.isEmpty() && callable(where.call) != nullptr;
+    const bool long_enough = where.prefix.length() >= 2;
+
+    if (!after_dot && !in_call && !long_enough) {
         completer_->popup()->hide();
         return;
     }
-    if (prefix != completer_->completionPrefix()) {
-        completer_->setCompletionPrefix(prefix);
-        completer_->popup()->setCurrentIndex(completer_->completionModel()->index(0, 0));
-    }
-    if (completer_->completionCount() == 0) {
-        completer_->popup()->hide();
-        return;
-    }
-    QRect box = cursorRect();
-    box.setWidth(completer_->popup()->sizeHintForColumn(0) +
-                 completer_->popup()->verticalScrollBar()->sizeHint().width());
-    completer_->complete(box);
+    offerCompletions(where);
 }
 
 void ScriptEditor::applyTheme(ThemeMode mode)
@@ -503,6 +1031,16 @@ void ScriptEditor::applyTheme(ThemeMode mode)
     highlighter_->setTheme(mode);
     highlightCurrentLine();
     gutter_->update();
+    hint_->update();
+    completer_->popup()->update();
+}
+
+void ScriptEditor::focusOutEvent(QFocusEvent* event)
+{
+    // A HINT FLOATING OVER A WINDOW NOBODY IS TYPING IN is a hint in the way. It
+    // is a child window, so it does not go away by itself.
+    hint_->hide();
+    QPlainTextEdit::focusOutEvent(event);
 }
 
 // =============================================================================
@@ -530,7 +1068,7 @@ PythonConsole::PythonConsole(Controller& controller, QWidget* parent)
     prompt_->setObjectName(QStringLiteral("pythonPrompt"));
     prompt_->setFixedHeight(kPromptHeight);
     prompt_->setAccessibleName(tr("Python istemi"));
-    prompt_->setApiNames(controller_.pythonApiNames());
+    prompt_->setApi(controller_.pythonApi());
 
     // A FLOOR AND NOT A HINT. A dock area divides the height it has among the
     // docks in it, and a `sizeHint` is only a preference — the panel first opened
@@ -564,6 +1102,20 @@ void PythonConsole::appendOutput(const QString& text)
 void PythonConsole::focusPrompt()
 {
     prompt_->setFocus(Qt::OtherFocusReason);
+}
+
+QWidget* PythonConsole::promptHint() const
+{
+    return prompt_->signatureHint();
+}
+
+void PythonConsole::typeIntoPrompt(const QString& source)
+{
+    prompt_->setFocus(Qt::OtherFocusReason);
+    for (const QChar c : source) {
+        QKeyEvent press(QEvent::KeyPress, 0, Qt::NoModifier, QString(c));
+        QCoreApplication::sendEvent(prompt_, &press);
+    }
 }
 
 void PythonConsole::runSource(const QString& source)

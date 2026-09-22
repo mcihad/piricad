@@ -14,11 +14,59 @@ Nasıl kullanıldığı: [Python betikleri](../betik/python.md).
 
 - Her çağrı **yalnız anahtar kelime** alır; konumsal argüman yoktur.
 - Anahtar kelimeler **İngilizcedir**. Komutun kendi adı Türkçe kalır.
+- `Coord` bir koordinattır: `cad.Point(east, north)` ya da iki elemanlı
+  tam sayı listesi. `Coords` bunlardan bir liste.
 - Koordinatlar **milimetre tam sayıdır** ve `[Sağa, Yukarı]` sırasındadır.
   Metre yazmak isterseniz `cad.run("ÇİZGİ 0,0 10,10")` komut satırının
   dilbilgisini kullanır.
 - Dönen değer, komutun kaç ilkel düzenleme yaptığıdır.
 - Bir hata istisna yükseltir; yakalamazsanız betiğin tamamı geri alınır.
+
+## Değer tipleri
+
+Bunlar programın kendi tipleridir, Python tarafında yeniden tanımlanmış
+kopyaları değil: `cad.Point`, `core::Point2`'nin ta kendisidir.
+
+**Eksen adları harf DEĞİL.** `Point2.x` doğuya gider ve bir paftada **Y**
+yazar; `.y` kuzeye gider ve paftada **X** yazar. Harflerden hangisini
+seçersek okuyucuların yarısı tersini anlar, bu yüzden API `east` ve `north`
+der. Sıralama komut satırı ve günlükle aynıdır: önce doğu.
+
+| Çağrı | Döndürdüğü |
+|---|---|
+| `cad.Point(east, north)` | Bir koordinat, milimetre tam sayı |
+| `p.east` · `p.north` | `int` |
+| `p[0]` · `p[1]` · `list(p)` | doğu, kuzey sırasıyla |
+| `p.distance_to(q)` | `float` — **metre** |
+| `cad.Box(min_east, min_north, max_east, max_north)` | Bir dikdörtgen |
+| `b.min_east` · `b.min_north` · `b.max_east` · `b.max_north` | `int` |
+| `b.width` · `b.height` | `int` — milimetre, boş kutuda 0 |
+| `b.center` | `cad.Point` |
+| `b.corners` | dört `cad.Point`, sol alttan saat yönünün tersine |
+| `b.contains(point)` | `bool` — kenarlar dahil |
+| `b.is_empty()` | `bool` — boş kutu gerçek bir durumdur, hata değil |
+
+Bir `Point`, iki sayılık liste kabul eden her yere doğrudan verilebilir:
+`cad.line(points=[a, b])`.
+
+## Görünüm
+
+`cad.viewport`, pencerenin o an baktığı yeri **değer olarak** verir.
+`GÖRÜNÜMBİLGİSİ` komutu aynı kaynağı okur ama transkripte bir cümle yazar:
+biri insanın, öbürü betiğin okuduğu biçimdir.
+
+| Çağrı | Döndürdüğü |
+|---|---|
+| `cad.viewport.exists()` | `bool` — başsız çalıştırmada, oynatmada ve testte `False` |
+| `cad.viewport.bbox()` | `cad.Box` — görünen dikdörtgen |
+| `cad.viewport.center()` | `cad.Point` |
+| `cad.viewport.scale()` | `int` — 1:N'deki N, bilinmiyorsa 0 |
+| `cad.viewport.mm_per_pixel()` | `float` |
+| `cad.viewport.size_px()` | `(genişlik, yükseklik)` piksel |
+| `cad.viewport.crs()` | `str` |
+
+Pencere yoksa `exists()` dışındaki çağrılar hata verir — uydurulmuş bir
+dikdörtgen, sonraki çizimi kimsenin bakmadığı bir yere koyardı.
 
 ## Çizimden okuma
 
@@ -171,13 +219,13 @@ Komut: `core.line` — `ÇİZGİ`
 
 ```python
 cad.line(
-    points: list[list[int]],
+    points: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Ardışık doğru parçalarının köşe noktaları [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Ardışık doğru parçalarının köşe noktaları [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/line.md)
 
@@ -189,13 +237,13 @@ Komut: `core.polyline` — `ÇOKLUÇİZGİ`
 
 ```python
 cad.polyline(
-    points: list[list[int]],
+    points: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Çoklu çizginin köşe noktaları; hepsi tek nesne olur [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Çoklu çizginin köşe noktaları; hepsi tek nesne olur [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/polyline.md)
 
@@ -207,13 +255,13 @@ Komut: `core.point_draw` — `NOKTA`
 
 ```python
 cad.point_draw(
-    points: list[list[int]],
+    points: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Yerleştirilecek noktalar [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Yerleştirilecek noktalar [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/point_draw.md)
 
@@ -225,8 +273,8 @@ Komut: `core.perp_offset` — `DİKAYAK`
 
 ```python
 cad.perp_offset(
-    start: list[int],
-    end: list[int],
+    start: Coord,
+    end: Coord,
     chainage: list[float],
     offset: list[float],
     connect: bool,
@@ -235,8 +283,8 @@ cad.perp_offset(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `start` | `list[int]` | `baslangic` | Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce] |
 | `chainage` | `list[float]` | `ayak` | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
 | `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir |
 | `connect` | `bool` | `cizgi` | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
@@ -251,8 +299,8 @@ Komut: `core.survey_polar` — `ALIM`
 
 ```python
 cad.survey_polar(
-    station: list[int],
-    backsight: list[list[int]],
+    station: Coord,
+    backsight: Coord,
     angle: list[float],
     distance: list[float],
     connect: bool,
@@ -261,8 +309,8 @@ cad.survey_polar(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `station` | `list[int]` | `istasyon` | Aletin durduğu bilinen nokta [mm, Sağa (Y) önce] |
-| `backsight` | `list[list[int]]` | `baglama` | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır [mm, Sağa (Y) önce] |
+| `station` | `Coord` | `istasyon` | Aletin durduğu bilinen nokta [mm, Sağa (Y) önce] |
+| `backsight` | `Coord` | `baglama` | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır [mm, Sağa (Y) önce] |
 | `angle` | `list[float]` | `aci` | Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] |
 | `distance` | `list[float]` | `kenar` | Alete olan uzaklık (m) [m] |
 | `connect` | `bool` | `cizgi` | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir |
@@ -278,34 +326,34 @@ Komut: `core.intersect_point` — `KESİŞİMNOKTA`
 ```python
 cad.intersect_point(
     method: str,
-    first: list[int],
-    second: list[list[int]],
-    third: list[list[int]],
-    fourth: list[list[int]],
+    first: Coord,
+    second: Coord,
+    third: Coord,
+    fourth: Coord,
     first_angle: float,
     second_angle: float,
     first_distance: float,
     second_distance: float,
     side: str,
-    side_point: list[list[int]],
-    intersection: list[list[int]],
+    side_point: Coord,
+    intersection: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `method` | `str` | `yontem` | dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru |
-| `first` | `list[int]` | `birinci` | Birinci bilinen nokta [mm, Sağa (Y) önce] |
-| `second` | `list[list[int]]` | `ikinci` | İkinci bilinen nokta [mm, Sağa (Y) önce] |
-| `third` | `list[list[int]]` | `ucuncu` | İkinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
-| `fourth` | `list[list[int]]` | `dorduncu` | İkinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Birinci bilinen nokta [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci bilinen nokta [mm, Sağa (Y) önce] |
+| `third` | `Coord` | `ucuncu` | İkinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
+| `fourth` | `Coord` | `dorduncu` | İkinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
 | `first_angle` | `float` | `birinci_aci` | Birinci noktadan okunan doğrultu |
 | `second_angle` | `float` | `ikinci_aci` | İkinci noktadan okunan doğrultu |
 | `first_distance` | `float` | `birinci_mesafe` | Birinci noktadan ölçülen uzaklık (m) |
 | `second_distance` | `float` | `ikinci_mesafe` | İkinci noktadan ölçülen uzaklık (m) |
 | `side` | `str` | `yon` | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
-| `side_point` | `list[list[int]]` | `yon_nokta` | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
-| `intersection` | `list[list[int]]` | `kesisim` | Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce] |
+| `side_point` | `Coord` | `yon_nokta` | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `intersection` | `Coord` | `kesisim` | Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/intersect_point.md)
 
@@ -317,8 +365,8 @@ Komut: `core.point_along` — `ARANOKTA`
 
 ```python
 cad.point_along(
-    first: list[int],
-    second: list[int],
+    first: Coord,
+    second: Coord,
     method: str,
     value: list[float],
     count: int,
@@ -327,8 +375,8 @@ cad.point_along(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `first` | `list[int]` | `birinci` | Doğrunun ilk noktası [mm, Sağa (Y) önce] |
-| `second` | `list[int]` | `ikinci` | Doğrunun ikinci noktası [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Doğrunun ilk noktası [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | Doğrunun ikinci noktası [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | oran: 0 ile 1 arası · mesafe: ilk noktadan metre |
 | `value` | `list[float]` | `deger` | Oran ya da uzaklık; birden çok verilebilir |
 | `count` | `int` | `sayi` | Doğruyu bu kadar eşit parçaya böler |
@@ -343,25 +391,25 @@ Komut: `core.polygon_regular` — `ÇOKGEN`
 
 ```python
 cad.polygon_regular(
-    center: list[int],
+    center: Coord,
     sides: int,
     method: str,
     radius: float,
     side_length: float,
     angle: float,
-    corner: list[list[int]],
+    corner: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[int]` | `merkez` | Çokgenin merkezi [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Çokgenin merkezi [mm, Sağa (Y) önce] |
 | `sides` | `int` | `kenar_sayisi` | Kenar sayısı |
 | `method` | `str` | `yontem` | ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · kenar: kenar uzunluğundan |
 | `radius` | `float` | `yaricap` | ic/dis yönteminin yarıçapı (m) [m] |
 | `side_length` | `float` | `kenar_uzunlugu` | kenar yönteminin uzunluğu (m) [m] |
 | `angle` | `float` | `aci` | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
-| `corner` | `list[list[int]]` | `kose` | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `corner` | `Coord` | `kose` | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/polygon_regular.md)
 
@@ -374,16 +422,16 @@ Komut: `core.break` — `KIR`
 ```python
 cad.break(
     object: list[int],
-    first: list[int],
-    second: list[list[int]],
+    first: Coord,
+    second: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Kırılacak çizgi [kalıcı nesne anahtarı] |
-| `first` | `list[int]` | `birinci` | Kırılacak parçanın ilk noktası [mm, Sağa (Y) önce] |
-| `second` | `list[list[int]]` | `ikinci` | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Kırılacak parçanın ilk noktası [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/break.md)
 
@@ -460,10 +508,10 @@ Komut: `core.align` — `HİZALA`
 ```python
 cad.align(
     object: list[int],
-    source: list[int],
-    target: list[int],
-    source2: list[list[int]],
-    target2: list[list[int]],
+    source: Coord,
+    target: Coord,
+    source2: Coord,
+    target2: Coord,
     scale: bool,
 ) -> int
 ```
@@ -471,10 +519,10 @@ cad.align(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Hizalanacak nesneler [kalıcı nesne anahtarı] |
-| `source` | `list[int]` | `kaynak` | Birinci kaynak nokta [mm, Sağa (Y) önce] |
-| `target` | `list[int]` | `hedef` | Birinci kaynağın gideceği yer [mm, Sağa (Y) önce] |
-| `source2` | `list[list[int]]` | `kaynak2` | İkinci kaynak nokta; verilirse döndürme de yapılır [mm, Sağa (Y) önce] |
-| `target2` | `list[list[int]]` | `hedef2` | İkinci kaynağın gideceği yer [mm, Sağa (Y) önce] |
+| `source` | `Coord` | `kaynak` | Birinci kaynak nokta [mm, Sağa (Y) önce] |
+| `target` | `Coord` | `hedef` | Birinci kaynağın gideceği yer [mm, Sağa (Y) önce] |
+| `source2` | `Coord` | `kaynak2` | İkinci kaynak nokta; verilirse döndürme de yapılır [mm, Sağa (Y) önce] |
+| `target2` | `Coord` | `hedef2` | İkinci kaynağın gideceği yer [mm, Sağa (Y) önce] |
 | `scale` | `bool` | `olcekle` | İki çiftin uzunluk oranıyla ölçekler de |
 
 [Komut sayfası](../komutlar/align.md)
@@ -575,7 +623,7 @@ Komut: `core.paste` — `YAPIŞTIR`
 
 ```python
 cad.paste(
-    point: list[list[int]],
+    point: Coord,
     in_place: bool,
     file: str,
 ) -> int
@@ -583,7 +631,7 @@ cad.paste(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `point` | `list[list[int]]` | `nokta` | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz [mm, Sağa (Y) önce] |
 | `in_place` | `bool` | `yerinde` | Kopyalandığı koordinatlara yapıştırır |
 | `file` | `str` | `dosya` | Okunacak pano dosyası; verilmezse ortak pano dosyası |
 
@@ -615,17 +663,17 @@ Komut: `core.measure_angle` — `AÇIÖLÇ`
 
 ```python
 cad.measure_angle(
-    apex: list[int],
-    first: list[int],
-    second: list[int],
+    apex: Coord,
+    first: Coord,
+    second: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `apex` | `list[int]` | `tepe` | Açının tepe noktası [mm, Sağa (Y) önce] |
-| `first` | `list[int]` | `birinci` | Birinci kolun üzerinde bir nokta [mm, Sağa (Y) önce] |
-| `second` | `list[int]` | `ikinci` | İkinci kolun üzerinde bir nokta [mm, Sağa (Y) önce] |
+| `apex` | `Coord` | `tepe` | Açının tepe noktası [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Birinci kolun üzerinde bir nokta [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci kolun üzerinde bir nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/measure_angle.md)
 
@@ -637,18 +685,18 @@ Komut: `core.stretch` — `ESNET`
 
 ```python
 cad.stretch(
-    window: list[list[int]],
-    start: list[int],
-    end: list[int],
+    window: Coords,
+    start: Coord,
+    end: Coord,
     objects: list[int],
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `window` | `list[list[int]]` | `pencere` | Esnetme penceresinin iki köşesi; içindeki köşeler taşınır [mm, Sağa (Y) önce] |
-| `start` | `list[int]` | `baslangic` | Esnetmenin başlangıç noktası [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | Esnetmenin bitiş noktası [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | Esnetme penceresinin iki köşesi; içindeki köşeler taşınır [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Esnetmenin başlangıç noktası [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Esnetmenin bitiş noktası [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Yalnız bu nesneler esnetilir; verilmezse pencerenin dokunduğu her nesne [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/stretch.md)
@@ -661,14 +709,14 @@ Komut: `core.tracking` — `İZ`
 
 ```python
 cad.tracking(
-    point: list[list[int]],
+    point: Coord,
     delete: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `point` | `list[list[int]]` | `nokta` | İşaretlenecek nokta; yoksa işaretler listelenir [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | İşaretlenecek nokta; yoksa işaretler listelenir [mm, Sağa (Y) önce] |
 | `delete` | `bool` | `sil` | Bütün işaretleri siler |
 
 [Komut sayfası](../komutlar/tracking.md)
@@ -681,20 +729,20 @@ Komut: `core.text` — `METİN`
 
 ```python
 cad.text(
-    points: list[int],
+    points: Coord,
     text: str,
     height: int,
-    end: list[list[int]],
+    end: Coord,
     alignment: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[int]` | `noktalar` | Yazının başlangıç noktası [mm, Sağa (Y) önce] |
+| `points` | `Coord` | `noktalar` | Yazının başlangıç noktası [mm, Sağa (Y) önce] |
 | `text` | `str` | `yazi` | Yazılacak metin |
 | `height` | `int` | `yukseklik` | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
-| `end` | `list[list[int]]` | `bitis` | Taban çizgisinin bitişi; yoksa yatay [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Taban çizgisinin bitişi; yoksa yatay [mm, Sağa (Y) önce] |
 | `alignment` | `str` | `hizalama` | sol, orta, sag veya merkez |
 
 [Komut sayfası](../komutlar/text.md)
@@ -751,14 +799,14 @@ Komut: `core.area` — `ALAN`
 
 ```python
 cad.area(
-    points: list[list[int]],
+    points: Coords,
     rings: list[int],
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Alanın köşe noktaları; kapanış noktası tekrarlanmaz [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Alanın köşe noktaları; kapanış noktası tekrarlanmaz [mm, Sağa (Y) önce] |
 | `rings` | `list[int]` | `bolum` | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
 
 [Komut sayfası](../komutlar/area.md)
@@ -771,14 +819,14 @@ Komut: `core.rectangle` — `DİKDÖRTGEN`
 
 ```python
 cad.rectangle(
-    points: list[list[int]],
+    points: Coords,
     method: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
 
 [Komut sayfası](../komutlar/rectangle.md)
@@ -791,29 +839,29 @@ Komut: `core.circle_draw` — `DAİRE`
 
 ```python
 cad.circle_draw(
-    center: list[list[int]],
-    rim: list[list[int]],
+    center: Coord,
+    rim: Coord,
     method: str,
-    first: list[list[int]],
-    second: list[list[int]],
-    third: list[list[int]],
-    fourth: list[list[int]],
+    first: Coord,
+    second: Coord,
+    third: Coord,
+    fourth: Coord,
     radius: float,
-    side: list[list[int]],
+    side: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[list[int]]` | `merkez` | Dairenin merkezi [mm, Sağa (Y) önce] |
-| `rim` | `list[list[int]]` | `cevre` | Çember üzerinde bir nokta; yarıçapı bu belirler [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Dairenin merkezi [mm, Sağa (Y) önce] |
+| `rim` | `Coord` | `cevre` | Çember üzerinde bir nokta; yarıçapı bu belirler [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde üç nokta · ttr: iki doğruya teğet, verilen yarıçapla |
-| `first` | `list[list[int]]` | `birinci` | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
-| `second` | `list[list[int]]` | `ikinci` | İkinci nokta [mm, Sağa (Y) önce] |
-| `third` | `list[list[int]]` | `ucuncu` | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
-| `fourth` | `list[list[int]]` | `dorduncu` | ttr: ikinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci nokta [mm, Sağa (Y) önce] |
+| `third` | `Coord` | `ucuncu` | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası [mm, Sağa (Y) önce] |
+| `fourth` | `Coord` | `dorduncu` | ttr: ikinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
 | `radius` | `float` | `yaricap` | ttr: teğet dairenin yarıçapı (m) [m] |
-| `side` | `list[list[int]]` | `yon` | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır [mm, Sağa (Y) önce] |
+| `side` | `Coord` | `yon` | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/circle_draw.md)
 
@@ -825,28 +873,28 @@ Komut: `core.arc_draw` — `YAY`
 
 ```python
 cad.arc_draw(
-    center: list[list[int]],
-    start: list[list[int]],
-    end: list[list[int]],
+    center: Coord,
+    start: Coord,
+    end: Coord,
     method: str,
-    through: list[list[int]],
+    through: Coord,
     sweep: float,
     radius: float,
-    side_point: list[list[int]],
+    side_point: Coord,
     side: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[list[int]]` | `merkez` | Yayın merkezi [mm, Sağa (Y) önce] |
-| `start` | `list[list[int]]` | `baslangic` | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler [mm, Sağa (Y) önce] |
-| `end` | `list[list[int]]` | `bitis` | Yayın bitiş noktası; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Yayın merkezi [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Yayın bitiş noktası; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap |
-| `through` | `list[list[int]]` | `uzerinden` | 3n: yayın üzerinden geçtiği nokta [mm, Sağa (Y) önce] |
+| `through` | `Coord` | `uzerinden` | 3n: yayın üzerinden geçtiği nokta [mm, Sağa (Y) önce] |
 | `sweep` | `float` | `supurme` | bma: süpürme açısı |
 | `radius` | `float` | `yaricap` | bby: yarıçap (m) [m] |
-| `side_point` | `list[list[int]]` | `yon_nokta` | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `side_point` | `Coord` | `yon_nokta` | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
 | `side` | `str` | `yon` | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre |
 
 [Komut sayfası](../komutlar/arc_draw.md)
@@ -861,7 +909,7 @@ Komut: `core.vertex_move` — `KÖŞETAŞI`
 cad.vertex_move(
     object: list[int],
     vertex: int,
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -869,7 +917,7 @@ cad.vertex_move(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi taşınacak nesnenin kimliği [kalıcı nesne anahtarı] |
 | `vertex` | `int` | `kose` | Taşınacak köşenin sırası; ilk köşe 1'dir |
-| `point` | `list[int]` | `nokta` | Köşenin yeni yeri [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Köşenin yeni yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_move.md)
 
@@ -883,7 +931,7 @@ Komut: `core.vertex_insert` — `KÖŞEEKLE`
 cad.vertex_insert(
     object: list[int],
     vertex: int,
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -891,7 +939,7 @@ cad.vertex_insert(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşe eklenecek nesnenin kimliği [kalıcı nesne anahtarı] |
 | `vertex` | `int` | `kose` | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir |
-| `point` | `list[int]` | `nokta` | Yeni köşenin yeri [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Yeni köşenin yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_insert.md)
 
@@ -922,16 +970,16 @@ Komut: `core.move` — `TAŞI`
 ```python
 cad.move(
     objects: list[int],
-    start: list[int],
-    end: list[int],
+    start: Coord,
+    end: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `start` | `list[int]` | `baslangic` | Taşımanın başlangıç noktası [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | Taşımanın bitiş noktası [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Taşımanın başlangıç noktası [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Taşımanın bitiş noktası [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/move.md)
 
@@ -944,16 +992,16 @@ Komut: `core.copy` — `KOPYALA`
 ```python
 cad.copy(
     objects: list[int],
-    start: list[int],
-    end: list[list[int]],
+    start: Coord,
+    end: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `start` | `list[int]` | `baslangic` | Kopyalamanın başlangıç noktası [mm, Sağa (Y) önce] |
-| `end` | `list[list[int]]` | `bitis` | Kopyaların geleceği noktalar; her nokta bir kopya [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Kopyalamanın başlangıç noktası [mm, Sağa (Y) önce] |
+| `end` | `Coords` | `bitis` | Kopyaların geleceği noktalar; her nokta bir kopya [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/copy.md)
 
@@ -971,7 +1019,7 @@ cad.array(
     columns: int,
     row_spacing: float,
     column_spacing: float,
-    center: list[int],
+    center: Coord,
     count: int,
     angle: float,
 ) -> int
@@ -985,7 +1033,7 @@ cad.array(
 | `columns` | `int` | `sutun` | Sütun sayısı (dikdörtgen dizi) |
 | `row_spacing` | `float` | `satir_aralik` | Satır aralığı, metre; kuzeye artı |
 | `column_spacing` | `float` | `sutun_aralik` | Sütun aralığı, metre; doğuya artı |
-| `center` | `list[int]` | `merkez` | Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce] |
 | `count` | `int` | `sayi` | Toplam kopya sayısı, özgün dahil (kutupsal dizi) |
 | `angle` | `float` | `aci` | Süpürülecek toplam açı, derece; verilmezse tam tur |
 
@@ -1018,16 +1066,16 @@ Komut: `core.split` — `BÖL`
 ```python
 cad.split(
     object: list[int],
-    points: list[list[int]],
-    point: list[int],
+    points: Coords,
+    point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Kesilecek nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `points` | `list[list[int]]` | `noktalar` | Kesme çizgisinin iki noktası; arayüzde çizilir [mm, Sağa (Y) önce] |
-| `point` | `list[int]` | `nokta` | Bölme noktası (tek çizgi; eski biçim) [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Kesme çizgisinin iki noktası; arayüzde çizilir [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Bölme noktası (tek çizgi; eski biçim) [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/split.md)
 
@@ -1041,7 +1089,7 @@ Komut: `core.trim` — `BUDA`
 cad.trim(
     object: list[int],
     boundary: list[int],
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -1049,7 +1097,7 @@ cad.trim(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı] |
 | `boundary` | `list[int]` | `sinir` | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı] |
-| `point` | `list[int]` | `nokta` | Atılacak parçanın üzerindeki bir nokta [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Atılacak parçanın üzerindeki bir nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/trim.md)
 
@@ -1063,7 +1111,7 @@ Komut: `core.extend` — `UZAT`
 cad.extend(
     object: list[int],
     boundary: list[int],
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -1071,7 +1119,7 @@ cad.extend(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı] |
 | `boundary` | `list[int]` | `sinir` | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı] |
-| `point` | `list[int]` | `nokta` | Uzatılacak ucun yakınında bir nokta [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Uzatılacak ucun yakınında bir nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/extend.md)
 
@@ -1084,7 +1132,7 @@ Komut: `core.chamfer` — `PAH`
 ```python
 cad.chamfer(
     object: list[int],
-    point: list[int],
+    point: Coord,
     distance: float,
 ) -> int
 ```
@@ -1092,7 +1140,7 @@ cad.chamfer(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi kesilecek nesnenin kimliği [kalıcı nesne anahtarı] |
-| `point` | `list[int]` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
 | `distance` | `float` | `mesafe` | Köşeden her iki kenar boyunca kesilecek mesafe, metre |
 
 [Komut sayfası](../komutlar/chamfer.md)
@@ -1106,7 +1154,7 @@ Komut: `core.fillet` — `YUVARLA`
 ```python
 cad.fillet(
     object: list[int],
-    point: list[int],
+    point: Coord,
     radius: float,
 ) -> int
 ```
@@ -1114,7 +1162,7 @@ cad.fillet(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi yuvarlatılacak nesnenin kimliği [kalıcı nesne anahtarı] |
-| `point` | `list[int]` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
 | `radius` | `float` | `yaricap` | Yuvarlatma yarıçapı, metre |
 
 [Komut sayfası](../komutlar/fillet.md)
@@ -1149,7 +1197,7 @@ Komut: `core.match_style` — `STİLKOPYALA`
 cad.match_style(
     source: list[int],
     objects: list[int],
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -1157,7 +1205,7 @@ cad.match_style(
 |---|---|---|---|
 | `source` | `list[int]` | `kaynak` | Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne [kalıcı nesne anahtarı] |
 | `objects` | `list[int]` | `nesneler` | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `point` | `list[int]` | `nokta` | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/match_style.md)
 
@@ -1170,18 +1218,18 @@ Komut: `core.rotate` — `DÖNDÜR`
 ```python
 cad.rotate(
     objects: list[int],
-    center: list[int],
+    center: Coord,
     angle: float,
-    angle_point: list[list[int]],
+    angle_point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `center` | `list[int]` | `merkez` | Döndürme merkezi [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Döndürme merkezi [mm, Sağa (Y) önce] |
 | `angle` | `float` | `aci` | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir |
-| `angle_point` | `list[list[int]]` | `aci_nokta` | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `angle_point` | `Coord` | `aci_nokta` | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/rotate.md)
 
@@ -1194,18 +1242,18 @@ Komut: `core.scale` — `ÖLÇEKLE`
 ```python
 cad.scale(
     objects: list[int],
-    center: list[int],
+    center: Coord,
     factor: float,
-    factor_point: list[list[int]],
+    factor_point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `center` | `list[int]` | `merkez` | Ölçekleme merkezi; bu nokta yerinde kalır [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Ölçekleme merkezi; bu nokta yerinde kalır [mm, Sağa (Y) önce] |
 | `factor` | `float` | `carpan` | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir |
-| `factor_point` | `list[list[int]]` | `carpan_nokta` | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `factor_point` | `Coord` | `carpan_nokta` | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/scale.md)
 
@@ -1218,16 +1266,16 @@ Komut: `core.mirror` — `AYNALA`
 ```python
 cad.mirror(
     objects: list[int],
-    start: list[int],
-    end: list[int],
+    start: Coord,
+    end: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `start` | `list[int]` | `baslangic` | Ayna ekseninin ilk noktası [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | Ayna ekseninin ikinci noktası [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Ayna ekseninin ilk noktası [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Ayna ekseninin ikinci noktası [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/mirror.md)
 
@@ -1239,15 +1287,15 @@ Komut: `core.measure` — `ÖLÇ`
 
 ```python
 cad.measure(
-    start: list[int],
-    end: list[int],
+    start: Coord,
+    end: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `start` | `list[int]` | `baslangic` | Ölçümün ilk noktası [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | Ölçümün ikinci noktası [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Ölçümün ilk noktası [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Ölçümün ikinci noktası [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/measure.md)
 
@@ -1277,13 +1325,13 @@ Komut: `core.coordinate` — `KOORDİNAT`
 
 ```python
 cad.coordinate(
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `point` | `list[int]` | `nokta` | Okunacak nokta [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Okunacak nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/coordinate.md)
 
@@ -1295,15 +1343,15 @@ Komut: `core.pan` — `KAYDIR`
 
 ```python
 cad.pan(
-    start: list[int],
-    end: list[int],
+    start: Coord,
+    end: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `start` | `list[int]` | `baslangic` | Kaydırmanın tutulacağı nokta [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | O noktanın taşınacağı yer [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Kaydırmanın tutulacağı nokta [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | O noktanın taşınacağı yer [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/pan.md)
 
@@ -1337,17 +1385,17 @@ Komut: `core.sector` — `DİLİM`
 
 ```python
 cad.sector(
-    center: list[int],
-    start: list[int],
-    end: list[int],
+    center: Coord,
+    start: Coord,
+    end: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[int]` | `merkez` | Dilimin merkezi [mm, Sağa (Y) önce] |
-| `start` | `list[int]` | `baslangic` | İlk kenarın ucu; yarıçapı bu belirler [mm, Sağa (Y) önce] |
-| `end` | `list[int]` | `bitis` | İkinci kenarın yönü; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Dilimin merkezi [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | İlk kenarın ucu; yarıçapı bu belirler [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | İkinci kenarın yönü; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/sector.md)
 
@@ -1359,17 +1407,17 @@ Komut: `core.annulus` — `HALKA`
 
 ```python
 cad.annulus(
-    center: list[int],
-    inner: list[int],
-    outer: list[int],
+    center: Coord,
+    inner: Coord,
+    outer: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[int]` | `merkez` | Halkanın merkezi [mm, Sağa (Y) önce] |
-| `inner` | `list[int]` | `ic` | İç çember üzerinde bir nokta [mm, Sağa (Y) önce] |
-| `outer` | `list[int]` | `dis` | Dış çember üzerinde bir nokta [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Halkanın merkezi [mm, Sağa (Y) önce] |
+| `inner` | `Coord` | `ic` | İç çember üzerinde bir nokta [mm, Sağa (Y) önce] |
+| `outer` | `Coord` | `dis` | Dış çember üzerinde bir nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/annulus.md)
 
@@ -1381,11 +1429,11 @@ Komut: `core.ellipse_draw` — `ELİPS`
 
 ```python
 cad.ellipse_draw(
-    center: list[list[int]],
-    first: list[list[int]],
-    second: list[list[int]],
+    center: Coord,
+    first: Coord,
+    second: Coord,
     method: str,
-    second_end: list[list[int]],
+    second_end: Coord,
     start: float,
     end: float,
 ) -> int
@@ -1393,11 +1441,11 @@ cad.ellipse_draw(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `center` | `list[list[int]]` | `merkez` | Elipsin merkezi [mm, Sağa (Y) önce] |
-| `first` | `list[list[int]]` | `birinci` | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu [mm, Sağa (Y) önce] |
-| `second` | `list[list[int]]` | `ikinci` | İkinci eksenin uzaklığı; eksene dik ölçülür [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Elipsin merkezi [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci eksenin uzaklığı; eksene dik ölçülür [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | merkez: merkez + eksen ucu · eksen: eksenin iki ucu |
-| `second_end` | `list[list[int]]` | `ikinci_uc` | eksen: birinci eksenin öteki ucu [mm, Sağa (Y) önce] |
+| `second_end` | `Coord` | `ikinci_uc` | eksen: birinci eksenin öteki ucu [mm, Sağa (Y) önce] |
 | `start` | `float` | `baslangic` | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine |
 | `end` | `float` | `bitis` | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte |
 
@@ -1411,7 +1459,7 @@ Komut: `core.spline` — `SPLINE`
 
 ```python
 cad.spline(
-    points: list[list[int]],
+    points: Coords,
     degree: int,
     closed: bool,
 ) -> int
@@ -1419,7 +1467,7 @@ cad.spline(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Kontrol noktaları [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Kontrol noktaları [mm, Sağa (Y) önce] |
 | `degree` | `int` | `derece` | Eğrinin derecesi, 1–15; varsayılan 3 |
 | `closed` | `bool` | `kapali` | Son noktadan ilkine kapansın mı; varsayılan hayır |
 
@@ -1433,7 +1481,7 @@ Komut: `core.hatch` — `TARAMA`
 
 ```python
 cad.hatch(
-    points: list[list[int]],
+    points: Coords,
     objects: list[int],
     pattern: str,
     angle: float,
@@ -1444,7 +1492,7 @@ cad.hatch(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Sınır köşeleri, nesne seçmek yerine; en az üç nokta [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Sınır köşeleri, nesne seçmek yerine; en az üç nokta [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar= [kalıcı nesne anahtarı] |
 | `pattern` | `str` | `desen` | Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID |
 | `angle` | `float` | `aci` | Desenin dönme açısı, derece; varsayılan 0 |
@@ -1462,7 +1510,7 @@ Komut: `core.block` — `BLOK`
 ```python
 cad.block(
     name: str,
-    base: list[int],
+    base: Coord,
     objects: list[int],
     note: str,
 ) -> int
@@ -1471,7 +1519,7 @@ cad.block(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `name` | `str` | `ad` | Bloğun adı; Türkçe katlanmış hâliyle benzersiz |
-| `base` | `list[int]` | `taban` | Taban noktası: referansların yerleştirildiği nokta [mm, Sağa (Y) önce] |
+| `base` | `Coord` | `taban` | Taban noktası: referansların yerleştirildiği nokta [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Bloğa girecek nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
 | `note` | `str` | `aciklama` | Serbest açıklama |
 
@@ -1486,7 +1534,7 @@ Komut: `core.insert` — `BLOKEKLE`
 ```python
 cad.insert(
     name: str,
-    point: list[int],
+    point: Coord,
     scale: float,
     scale_y: float,
     angle: float,
@@ -1500,7 +1548,7 @@ cad.insert(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `name` | `str` | `ad` | Yerleştirilecek bloğun adı |
-| `point` | `list[int]` | `nokta` | Ekleme noktası [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Ekleme noktası [mm, Sağa (Y) önce] |
 | `scale` | `float` | `olcek` | Ölçek; eksi değer x'te aynalar; varsayılan 1 |
 | `scale_y` | `float` | `olcek_y` | Y ölçeği, farklıysa; varsayılan olcek |
 | `angle` | `float` | `aci` | Dönme açısı, derece; varsayılan 0 |
@@ -1519,12 +1567,12 @@ Komut: `core.dimension` — `ÖLÇÜ`
 
 ```python
 cad.dimension(
-    first: list[int],
-    second: list[int],
-    position: list[int],
+    first: Coord,
+    second: Coord,
+    position: Coord,
     type: str,
-    apex: list[list[int]],
-    end: list[list[int]],
+    apex: Coord,
+    end: Coord,
     style: str,
     text: str,
     catalog: str,
@@ -1533,12 +1581,12 @@ cad.dimension(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `first` | `list[int]` | `birinci` | Birinci nokta; açısal ölçüde birinci kolun ucu [mm, Sağa (Y) önce] |
-| `second` | `list[int]` | `ikinci` | İkinci nokta; açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce] |
-| `position` | `list[int]` | `konum` | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Birinci nokta; açısal ölçüde birinci kolun ucu [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci nokta; açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce] |
+| `position` | `Coord` | `konum` | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
-| `apex` | `list[list[int]]` | `tepe` | Açısal ölçünün tepe noktası [mm, Sağa (Y) önce] |
-| `end` | `list[list[int]]` | `bitis` | Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce] |
+| `apex` | `Coord` | `tepe` | Açısal ölçünün tepe noktası [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce] |
 | `style` | `str` | `stil` | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
 | `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
@@ -1553,7 +1601,7 @@ Komut: `core.leader` — `LİDER`
 
 ```python
 cad.leader(
-    points: list[list[int]],
+    points: Coords,
     text: str,
     style: str,
     catalog: str,
@@ -1562,7 +1610,7 @@ cad.leader(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Okun ucundan yazının yanına köşeler [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Okun ucundan yazının yanına köşeler [mm, Sağa (Y) önce] |
 | `text` | `str` | `metin` | Son köşenin yanına yazılacak metin |
 | `style` | `str` | `stil` | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
@@ -1603,7 +1651,7 @@ Komut: `core.guide` — `KILAVUZ`
 cad.guide(
     direction: str,
     value: int,
-    point: list[list[int]],
+    point: Coord,
     type: str,
     delete: bool,
 ) -> int
@@ -1613,7 +1661,7 @@ cad.guide(
 |---|---|---|---|
 | `direction` | `str` | `yon` | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir |
 | `value` | `int` | `deger` | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
-| `point` | `list[list[int]]` | `nokta` | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | doğru: iki yöne sonsuz · ışın: noktadan ileriye |
 | `delete` | `bool` | `sil` | Verilen yerdeki kılavuzu siler |
 
@@ -1702,7 +1750,7 @@ Komut: `core.select` — `SEÇ`
 ```python
 cad.select(
     mode: str,
-    points: list[list[int]],
+    points: Coords,
     type: str,
     objects: list[int],
     layer: str,
@@ -1715,7 +1763,7 @@ cad.select(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `mode` | `str` | `mod` | TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON |
-| `points` | `list[list[int]]` | `noktalar` | Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS… |
 | `objects` | `list[int]` | `nesneler` | NESNE modunda nesne kimlikleri [kalıcı nesne anahtarı] |
 | `layer` | `str` | `katman` | KATMAN modunda katman adı |
@@ -1864,7 +1912,7 @@ cad.layout_item(
     text: str,
     text_height: float,
     scale: int,
-    window: list[list[int]],
+    window: Coords,
     grid: str,
     grid_spacing: int,
     locked: bool,
@@ -1892,7 +1940,7 @@ cad.layout_item(
 | `text` | `str` | `metin` | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür |
 | `text_height` | `float` | `yazi` | Yazı yüksekliği [kâğıt mm] |
 | `scale` | `int` | `olcek` | Harita öğesinin ölçeği 1:N; 0 kapsama uyar |
-| `window` | `list[list[int]]` | `pencere` | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] |
+| `window` | `Coords` | `pencere` | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] |
 | `grid` | `str` | `izgara` | Harita öğesinin koordinat ızgarası |
 | `grid_spacing` | `int` | `izgara_aralik` | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir |
 | `locked` | `bool` | `kilit` | Öğeyi taşımaya kapatır |
@@ -2255,8 +2303,8 @@ Komut: `core.print` — `YAZDIR`
 
 ```python
 cad.print(
-    window: list[list[int]],
-    center: list[int],
+    window: Coords,
+    center: Coord,
     scale: int,
     layout: str,
     file: str,
@@ -2280,8 +2328,8 @@ cad.print(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `window` | `list[list[int]]` | `pencere` | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır [mm, Sağa (Y) önce] |
-| `center` | `list[int]` | `merkez` | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır [mm, Sağa (Y) önce] |
 | `scale` | `int` | `olcek` | Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği |
 | `layout` | `str` | `yerlesim` | Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden gelir; pencere, merkez, olcek ve profil ile birlikte verilmez |
 | `file` | `str` | `dosya` | PDF yazılacak dosya; yazici ile birlikte verilmez |
@@ -2423,13 +2471,13 @@ Komut: `islem.alan_duzenle` — `ALANDÜZENLE`
 cad.adjust_area(
     objects: list[int],
     scope: str,
-    window: list[list[int]],
+    window: Coords,
     layer: str,
     area: float,
     mode: str,
     edge: int,
     vertex: int,
-    point: list[int],
+    point: Coord,
 ) -> int
 ```
 
@@ -2437,13 +2485,13 @@ cad.adjust_area(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
-| `window` | `list[list[int]]` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `area` | `float` | `alan` | Hedef alan, metrekare |
 | `mode` | `str` | `mod` | Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi |
 | `edge` | `int` | `kenar` | Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar |
 | `vertex` | `int` | `kose` | Çekilecek köşe; mod=kose |
-| `point` | `list[int]` | `nokta` | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/alan_duzenle.md)
 
@@ -2457,7 +2505,7 @@ Komut: `islem.uzunluk_yaz` — `UZUNLUKYAZ`
 cad.label_length(
     objects: list[int],
     scope: str,
-    window: list[list[int]],
+    window: Coords,
     layer: str,
     unit: str,
     decimals: int,
@@ -2475,7 +2523,7 @@ cad.label_length(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
-| `window` | `list[list[int]]` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `unit` | `str` | `birim` | Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre |
 | `decimals` | `int` | `ondalik` | Virgülden sonraki basamak sayısı; varsayılan 2 |
@@ -2499,9 +2547,9 @@ Komut: `islem.kose_numarala` — `KÖŞENUMARALA`
 cad.number_vertices(
     objects: list[int],
     scope: str,
-    window: list[list[int]],
+    window: Coords,
     layer: str,
-    start: list[int],
+    start: Coord,
     direction: str,
     prefix: str,
     digits: int,
@@ -2518,9 +2566,9 @@ cad.number_vertices(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
-| `window` | `list[list[int]]` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
-| `start` | `list[int]` | `baslangic` | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe [mm, Sağa (Y) önce] |
 | `direction` | `str` | `yon` | Sayım yönü (ters / saat); varsayılan ters |
 | `prefix` | `str` | `onek` | Numaranın önüne gelen yazı (örnek: A, K-) |
 | `digits` | `int` | `basamak` | Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0 |
@@ -2543,7 +2591,7 @@ Komut: `islem.bag_coz` — `BAĞÇÖZ`
 cad.detach(
     objects: list[int],
     scope: str,
-    window: list[list[int]],
+    window: Coords,
     layer: str,
 ) -> int
 ```
@@ -2552,7 +2600,7 @@ cad.detach(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
-| `window` | `list[list[int]]` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 
 [Komut sayfası](../komutlar/bag_coz.md)
@@ -2567,7 +2615,7 @@ Komut: `islem.bagla` — `BAĞLA`
 cad.attach(
     objects: list[int],
     scope: str,
-    window: list[list[int]],
+    window: Coords,
     layer: str,
     source: list[int],
     attach_to: str,
@@ -2583,7 +2631,7 @@ cad.attach(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
-| `window` | `list[list[int]]` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `source` | `list[int]` | `kaynak` | Yazıların bağlanacağı nesne (çizgi ya da alan) [kalıcı nesne anahtarı] |
 | `attach_to` | `str` | `bag` | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar |
@@ -2603,7 +2651,7 @@ Komut: `core.fit` — `OTURT`
 
 ```python
 cad.fit(
-    points: list[list[int]],
+    points: Coords,
     scale_locked: bool,
     crs: str,
 ) -> int
@@ -2611,7 +2659,7 @@ cad.fit(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Kontrol çiftleri: yerel, harita, yerel, harita... [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Kontrol çiftleri: yerel, harita, yerel, harita... [mm, Sağa (Y) önce] |
 | `scale_locked` | `bool` | `olcek_kilitli` | Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez |
 | `crs` | `str` | `sistem` | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 |
 
@@ -2625,16 +2673,16 @@ Komut: `core.stakeout` — `APLİKASYON`
 
 ```python
 cad.stakeout(
-    station: list[int],
-    backsight: list[list[int]],
+    station: Coord,
+    backsight: Coord,
     objects: list[int],
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `station` | `list[int]` | `istasyon` | Aletin durduğu nokta [mm, Sağa (Y) önce] |
-| `backsight` | `list[list[int]]` | `baglama` | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür [mm, Sağa (Y) önce] |
+| `station` | `Coord` | `istasyon` | Aletin durduğu nokta [mm, Sağa (Y) önce] |
+| `backsight` | `Coord` | `baglama` | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/stakeout.md)
@@ -2667,12 +2715,12 @@ Komut: `geodesy.traverse` — `POLİGON`
 
 ```python
 cad.traverse(
-    start: list[int],
-    backsight: list[int],
+    start: Coord,
+    backsight: Coord,
     angle: list[float],
     distance: list[float],
-    end: list[list[int]],
-    end_backsight: list[list[int]],
+    end: Coord,
+    end_backsight: Coord,
     tolerance_class: str,
     first_number: int,
     distribution: str,
@@ -2682,12 +2730,12 @@ cad.traverse(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `start` | `list[int]` | `baslangic` | Başlangıç istasyonu (bilinen) [mm, Sağa (Y) önce] |
-| `backsight` | `list[int]` | `baglama` | Başlangıçtaki bağlama noktası (bilinen) [mm, Sağa (Y) önce] |
+| `start` | `Coord` | `baslangic` | Başlangıç istasyonu (bilinen) [mm, Sağa (Y) önce] |
+| `backsight` | `Coord` | `baglama` | Başlangıçtaki bağlama noktası (bilinen) [mm, Sağa (Y) önce] |
 | `angle` | `list[float]` | `aci` | Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla |
 | `distance` | `list[float]` | `kenar` | Her istasyondan sonraki kenar (m) [m] |
-| `end` | `list[list[int]]` | `bitis` | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır [mm, Sağa (Y) önce] |
-| `end_backsight` | `list[list[int]]` | `bitis_baglama` | Bitişteki bağlama noktası; açı kapanması için gerekir [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır [mm, Sağa (Y) önce] |
+| `end_backsight` | `Coord` | `bitis_baglama` | Bitişteki bağlama noktası; açı kapanması için gerekir [mm, Sağa (Y) önce] |
 | `tolerance_class` | `str` | `sinif` | Tolerans sınıfı; katalogdan okunur |
 | `first_number` | `int` | `ilk_no` | İlk istasyonun nokta numarası; varsayılan 1 |
 | `distribution` | `str` | `dagitim` | Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı |
@@ -2721,14 +2769,14 @@ Komut: `core.split_parcel` — `İFRAZ`
 
 ```python
 cad.split_parcel(
-    points: list[list[int]],
+    points: Coords,
     objects: list[int],
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `list[list[int]]` | `noktalar` | Ayırma çizgisinin iki ucu [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Ayırma çizgisinin iki ucu [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Ayrılacak parsel; yoksa etkin seçim [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/split_parcel.md)
@@ -2741,7 +2789,7 @@ Komut: `core.split_area` — `ALANİFRAZ`
 
 ```python
 cad.split_area(
-    direction: list[list[int]],
+    direction: Coords,
     objects: list[int],
     area: int,
     tolerance: int,
@@ -2750,7 +2798,7 @@ cad.split_area(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `direction` | `list[list[int]]` | `yon` | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) [mm, Sağa (Y) önce] |
+| `direction` | `Coords` | `yon` | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) [mm, Sağa (Y) önce] |
 | `objects` | `list[int]` | `nesneler` | Ayrılacak parsel; yoksa etkin seçim [kalıcı nesne anahtarı] |
 | `area` | `int` | `alan` | Ayrılacak alan, mm² (400 m² = 400000000) |
 | `tolerance` | `int` | `tolerans` | Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) |

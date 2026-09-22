@@ -125,6 +125,14 @@ public:
     /// empty.
     void showPythonConsole(const QString& source = {});
 
+    /// Types into the Python prompt without sending, so a probe can photograph
+    /// the completion popup and the signature hint in the states a user sees
+    /// them in. Same reason `runScriptLine` is public.
+    void typeIntoPythonPrompt(const QString& source);
+
+    /// The Python prompt's signature strip, for the probe that photographs it.
+    QWidget* pythonSignatureHint() const;
+
     /// The other three windows, public for the same reason as the designer:
     /// `KENTOS_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing

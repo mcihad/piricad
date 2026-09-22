@@ -14,6 +14,7 @@
 // right answer for a plugin; a five-line batch job is not worth leaving for.
 #pragma once
 
+#include "kentos_cad/app/python_api_info.hpp"
 #include "kentos_cad/app/theme.hpp"
 
 #include <QPlainTextEdit>
@@ -21,10 +22,14 @@
 #include <QWidget>
 
 class QCompleter;
-class QStringListModel;
+class QStandardItemModel;
 class QTextDocument;
 
 namespace kentos::app {
+
+/// The signature strip the editor floats under the cursor; defined in the .cpp
+/// because it is painted, not assembled, and nothing outside constructs one.
+class SignatureHint;
 
 /// The shell's command client; declared rather than included, because only the
 /// console's constructor needs the type.
@@ -54,6 +59,10 @@ public:
     /// here, which is the same rule the surface itself follows (5.10).
     void setApiNames(const QStringList& names);
 
+    /// The keywords of every callable, so `points=` inside `cad.line(...)` is
+    /// tinted as the argument it is rather than as an ordinary name.
+    void setArgumentNames(const QStringList& names);
+
     void setTheme(ThemeMode mode);
 
 protected:
@@ -63,6 +72,7 @@ protected:
 private:
     ThemeMode theme_{ThemeMode::Dark};
     QStringList api_;
+    QStringList args_;
 };
 
 /// A Python source editor: line numbers, indentation, completion, one gutter.
@@ -77,8 +87,9 @@ public:
     /// widget must not reach into.
     explicit ScriptEditor(QWidget* parent = nullptr);
 
-    /// The names offered by completion and tinted by the highlighter.
-    void setApiNames(const QStringList& names);
+    /// The surface this build exposes: what completion offers, what the
+    /// highlighter tints, and what the signature hint reads.
+    void setApi(QVector<PythonCallable> api);
 
     /// Makes plain Enter SEND rather than open a line, which is what a console
     /// prompt wants and what a file editor must not do. Shift+Enter still opens a
@@ -88,6 +99,10 @@ public:
     /// Steps through what has been sent, for Up and Down at a console prompt.
     /// Empty when there is nothing to recall.
     void setHistory(const QStringList& entries) { history_ = entries; }
+
+    /// The signature strip, for a probe that photographs it. It is a window of
+    /// its own, so a grab of the shell does not contain it.
+    QWidget* signatureHint() const;
 
     /// Paints the line-number gutter. Public because the gutter widget is a
     /// plain `QWidget` whose `paintEvent` forwards here — the shape Qt's own
@@ -111,6 +126,9 @@ protected:
     /// Tab, Enter, Up and Down — the four keys a code editor owes its writer.
     void keyPressEvent(QKeyEvent* event) override;
 
+    /// Puts the signature hint away when the editor stops being typed in.
+    void focusOutEvent(QFocusEvent* event) override;
+
 private:
     void updateGutterWidth();
     void highlightCurrentLine();
@@ -119,14 +137,59 @@ private:
     /// cursor rather than appending to it.
     void insertCompletion(const QString& completion);
 
-    /// The word being typed, for the completer. Stops at a `.` only when the dot
-    /// is not part of `cad.` — completing `cad.li` must offer `cad.line`.
-    QString wordUnderCursor() const;
+    /// Where the cursor is, as far as completion is concerned.
+    struct Context
+    {
+        /// What is being typed after the last `.`, or the whole bare word.
+        QString prefix;
+
+        /// What owns it: `cad`, `cad.doc`, `cad.viewport`, or empty for a name
+        /// with no owner at all.
+        QString owner;
+
+        /// The callable whose parentheses the cursor is inside, empty when it is
+        /// not inside any. This is what makes `points=` offerable and what the
+        /// signature hint reads.
+        QString call;
+
+        /// Which argument of `call` the cursor is on, counting the commas at the
+        /// call's own bracket depth. -1 when not in a call.
+        int argumentIndex{-1};
+
+        /// The keywords already written in this call, so completion does not
+        /// offer a second `points=`.
+        QStringList used;
+    };
+
+    /// Reads the source to the LEFT of the cursor and answers the three questions
+    /// completion has: what is being typed, what owns it, and what call it is in.
+    ///
+    /// A READING, NOT A PARSE. It walks backwards over brackets and strings and
+    /// stops at the first thing it understands. Python's real grammar is
+    /// CPython's, and a second one here — even a partial one — would be a second
+    /// answer to "what is this text" (CLAUDE.md 5.11).
+    Context contextAt() const;
+
+    /// Fills the popup for `where`, and hides it when there is nothing to offer.
+    void offerCompletions(const Context& where);
+
+    /// Shows or hides the signature hint for `where`.
+    void updateSignatureHint(const Context& where);
+
+    /// The callable named `name`, or null.
+    const PythonCallable* callable(const QString& name) const;
+
+    /// The names the buffer itself defines: assignments, `def`, `class`, `for`
+    /// targets and imports. Offered alongside the API, because half of what a
+    /// person types is a name they wrote three lines up.
+    QStringList localNames() const;
 
     QWidget* gutter_{nullptr};
+    SignatureHint* hint_{nullptr};
     PythonHighlighter* highlighter_{nullptr};
     QCompleter* completer_{nullptr};
-    QStringListModel* words_{nullptr};
+    class QStandardItemModel* words_{nullptr};
+    QVector<PythonCallable> api_;
     ThemeMode theme_{ThemeMode::Dark};
 
     bool submitOnEnter_{false};
@@ -157,6 +220,17 @@ public:
 
     /// Focuses the prompt, for the menu action and the shortcut.
     void focusPrompt();
+
+    /// The prompt's signature strip, for the probe.
+    QWidget* promptHint() const;
+
+    /// Types `source` into the prompt one KEY AT A TIME, without sending it.
+    ///
+    /// Real key events and not `setPlainText`, because what is being exercised is
+    /// what happens BETWEEN the keys: completion fires on a keystroke and the
+    /// signature hint follows the cursor. A probe that set the text would
+    /// photograph a box with words in it and prove nothing.
+    void typeIntoPrompt(const QString& source);
 
     /// Types `source` into the prompt and sends it, as if the user had.
     ///

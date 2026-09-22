@@ -542,4 +542,121 @@ TEST_CASE("PYTHON: the registry's English names are unique and importable")
     }
 }
 
+// ---- the value types and the viewport -------------------------------------
+
+TEST_CASE("PYTHON: Point and Box are the program's own types")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    auto report = runner.run_text(R"(
+p = cad.Point(east=485320150, north=4310220400)
+assert p.east == 485320150
+assert p.north == 4310220400
+
+# Indexable and iterable in the order the command line and the journal use:
+# east first. `list(p)` and a hand-written pair are the same two numbers.
+assert list(p) == [485320150, 4310220400]
+assert p[0] == p.east and p[1] == p.north
+assert len(p) == 2
+
+q = cad.Point(east=485320150, north=4310220400)
+assert p == q and hash(p) == hash(q)
+assert cad.Point(east=0, north=0) != p
+
+# Metres, not millimetres: a distance is a measurement and the drawing's unit is
+# what a user reads off a pafta.
+a = cad.Point(east=0, north=0)
+b = cad.Point(east=3000, north=4000)
+assert abs(a.distance_to(b) - 5.0) < 1e-9
+
+box = cad.Box(min_east=0, min_north=0, max_east=10000, max_north=20000)
+assert box.width == 10000 and box.height == 20000
+assert box.center == cad.Point(east=5000, north=10000)
+assert box.contains(cad.Point(east=0, north=0))
+assert not box.contains(cad.Point(east=-1, north=0))
+assert not box.is_empty()
+assert len(box.corners) == 4
+assert list(box) == [0, 0, 10000, 20000]
+
+# An empty box is a real state, not an error.
+assert cad.Box(min_east=1, min_north=1, max_east=0, max_north=0).is_empty()
+)",
+                                  "tipler");
+
+    CHECK(report.ok());
+}
+
+TEST_CASE("PYTHON: a Point may be passed where a coordinate is expected")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // A read hands back Points; a command takes them. Making the user spell
+    // `list(p)` would be one more thing to remember for no reason.
+    auto report = runner.run_text(R"(
+a = cad.Point(east=485320150, north=4310220400)
+b = cad.Point(east=485370150, north=4310250400)
+cad.line(points=[a, b])
+)",
+                                  "nokta argümanı");
+
+    REQUIRE(report.ok());
+    CHECK(rig.doc.live_entity_count() == 1);
+}
+
+TEST_CASE("PYTHON: the viewport says when there is no window")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // A HEADLESS RUN HAS NO VIEW and saying so is the whole point. Inventing a
+    // rectangle would put the next drawing somewhere nobody is looking, which is
+    // the same reason `core.view_info` refuses rather than guessing.
+    REQUIRE(runner.run_text("assert cad.viewport.exists() is False", "pencere yok").ok());
+    CHECK_FALSE(runner.run_text("cad.viewport.bbox()", "pencere yok, kutu istendi").ok());
+}
+
+TEST_CASE("PYTHON: the viewport answers with values, not a report")
+{
+    Rig rig;
+
+    // The same hook `GÖRÜNÜMBİLGİSİ` reads. One source, two presentations: the
+    // command writes a sentence a person reads, this hands back numbers a script
+    // computes with (CLAUDE.md 5.10 is about second LISTS, not second views).
+    rig.bus.on_view_query = [] {
+        command::ViewInfo v;
+        v.window       = core::Box2{485300000, 4310200000, 485500000, 4310300000};
+        v.centre       = core::Point2{485400000, 4310250000};
+        v.scale        = 1000;
+        v.mm_per_pixel = 42.5;
+        v.width_px     = 1880;
+        v.height_px    = 1058;
+        v.crs          = "TUREF/TM36";
+        return v;
+    };
+
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+    auto report = runner.run_text(R"(
+assert cad.viewport.exists()
+
+bbox = cad.viewport.bbox()
+assert isinstance(bbox, cad.Box)
+assert bbox.min_east == 485300000 and bbox.max_north == 4310300000
+assert bbox.width == 200000 and bbox.height == 100000
+
+assert cad.viewport.center() == cad.Point(east=485400000, north=4310250000)
+assert cad.viewport.scale() == 1000
+assert abs(cad.viewport.mm_per_pixel() - 42.5) < 1e-9
+assert cad.viewport.size_px() == (1880, 1058)
+assert cad.viewport.crs() == "TUREF/TM36"
+
+# And the box composes with the types: a drawing fitted to what is on screen.
+assert bbox.contains(cad.viewport.center())
+)",
+                                  "görünüm");
+
+    CHECK(report.ok());
+}
+
 #endif // KENTOS_HAVE_PYTHON

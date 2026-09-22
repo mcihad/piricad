@@ -43,4 +43,16 @@ struct Host
 /// for the agent surface, from the same registry, and neither is checked in.
 void bind_commands(Host& host, pybind11::object& cad);
 
+/// Registers `cad.Point` and `cad.Box`.
+///
+/// THE CORE TYPES THEMSELVES, bound rather than mirrored: `cad.Point` IS
+/// `core::Point2`, so a value that crosses into Python and back is the same
+/// fixed-point pair it started as. A parallel Python-side class would be a second
+/// definition of a coordinate, and the first rounding between them would be a
+/// parcel in the wrong place (CLAUDE.md 2.4).
+void bind_types(pybind11::object& cad);
+
+/// Registers `cad.viewport`.
+void bind_viewport(Host& host, pybind11::object& cad);
+
 } // namespace kentos::script::detail
