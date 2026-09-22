@@ -6,6 +6,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <array>
+#include <filesystem>
 
 namespace kentos::script {
 namespace {
@@ -56,6 +57,29 @@ core::Result<Sandbox> sandbox_from_name(std::string_view name)
     return core::err(core::ErrorCode::InvalidArgument, "Bilinmeyen kum havuzu seviyesi: '" +
                                                            std::string(name) +
                                                            "'. Beklenen: güvenli, proje, tam.");
+}
+
+bool path_within_root(std::string_view root, std::string_view path)
+{
+    if (root.empty()) return false;
+
+    const std::filesystem::path root_path{root};
+    const std::filesystem::path want{path};
+
+    std::error_code ec;
+    const std::filesystem::path base = std::filesystem::weakly_canonical(root_path, ec);
+    if (ec) return false;
+    const std::filesystem::path target = std::filesystem::weakly_canonical(want, ec);
+    if (ec) return false;
+
+    // Component by component rather than by string prefix, because `/proj` is a
+    // string prefix of `/project-secrets` and is not a parent of it.
+    auto b = base.begin();
+    auto t = target.begin();
+    for (; b != base.end(); ++b, ++t) {
+        if (t == target.end() || *t != *b) return false;
+    }
+    return true;
 }
 
 std::uint64_t script_identity(std::string_view text) noexcept

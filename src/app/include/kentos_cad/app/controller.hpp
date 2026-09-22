@@ -25,8 +25,8 @@
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
-#if KENTOS_HAVE_LUA
-#include "kentos_cad/script/lua_runner.hpp"
+#if KENTOS_HAVE_PYTHON
+#include "kentos_cad/script/python_runner.hpp"
 #endif
 
 #include <QObject>
@@ -347,11 +347,11 @@ private:
     std::optional<kentos::domain::geodesy::CrsService> crs_;
     script::JsonRunner runner_;
 
-#if KENTOS_HAVE_LUA
+#if KENTOS_HAVE_PYTHON
     // The second host. Both are installed behind one BETİK and chosen by the
-    // file's extension, so a user with a `.lua` and a `.json` beside each other
-    // does not have to tell the program which is which (see script/lua_runner.hpp).
-    script::LuaRunner lua_runner_;
+    // file's extension, so a user with a `.py` and a `.json` beside each other
+    // does not have to tell the program which is which (script/python_runner.hpp).
+    script::PythonRunner python_runner_;
 #endif
 
     std::unique_ptr<command::Session> session_;

@@ -191,10 +191,9 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 | GPU canvas (`KENTOS_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `KENTOS_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
 | GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
-| Python (`KENTOS_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
 
-Lua artık eksik değil: `KENTOS_WITH_LUA=ON` ile gömülü Lua 5.4 betik motoru derlenir —
-bkz. [Lua betikleri](../betik/lua.md).
+Python artık eksik değil: `KENTOS_WITH_PYTHON=ON` ile gömülü CPython 3.14 betik motoru
+derlenir — bkz. [Python betikleri](../betik/python.md).
 
 ## Seçimlik yapılandırma seçenekleri
 
@@ -213,22 +212,29 @@ Varsayılanları üç türlüdür:
 
 | Seçenek | Ne açar | Makinede gereken |
 |---|---|---|
-| `KENTOS_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
+| `KENTOS_WITH_PYTHON` | Gömülü Python betik motoru | CPython 3.14 ve geliştirme başlıkları. pybind11 sabitlenmiş commit'ten iner |
 | `KENTOS_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları. Ön ayarlar talep eder |
 | `KENTOS_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
 | `KENTOS_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
 | `KENTOS_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
 | `KENTOS_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
 
-### Lua
+### Python
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_LUA=ON
+cmake --preset dev -DKENTOS_WITH_PYTHON=ON
 cmake --build --preset dev
 ```
 
-Makinede Lua kurulu olması gerekmez: kaynak, sabitlenmiş commit'ten indirilip
-projeyle birlikte derlenir. İlk yapılandırma bu yüzden ağ ister.
+Makinede CPython 3.14 ve geliştirme başlıkları kurulu olmalıdır: bir yorumlayıcı,
+sabitlenmiş bir commit'ten derlenecek bir kütüphane değildir. pybind11 kurulu değilse
+sabitlenmiş commit'ten iner, yani ilk yapılandırma ağ ister.
+
+| Sistem | Paket |
+|---|---|
+| macOS | `brew install python@3.14` |
+| Debian / Ubuntu | `apt install python3.14-dev` |
+| Windows | `winget install Python.Python.3.14` |
 
 ### GPU canvas
 

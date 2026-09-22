@@ -1,16 +1,16 @@
 # Script Engine — Rules
 
-> Scope: `/src/script` (target `kentos_script`) + the future optional Python module  |  Depends on: `kentos_command` only (→ `kentos_core`)  |  Source: kentoscad.md §3, §4.1–§4.3, §2.5, §2.6, §10.1, §10.4
+> Scope: `/src/script` (target `kentos_script`) + the optional Python module package  |  Depends on: `kentos_command` only (→ `kentos_core`)  |  Source: kentoscad.md §3, §4.1–§4.3, §2.5, §2.6, §10.1, §10.4
 
 ## Hard Rules
 
-R1. Every state mutation from a script MUST go through `h.komut(...)` → `Bus::dispatch` in `kentos_cad/command/bus.hpp`, so undo, validation and journalling run automatically (§4.3).
+R1. Every state mutation from a script MUST go through the host's one write call — `cad.run(...)` in Python, the `cmd` entry of a JSON step — reaching `Bus::dispatch` in `kentos_cad/command/bus.hpp`, so undo, validation and journalling run automatically (§4.3). (This supersedes the former wording, which named the removed Lua host's `h.komut(...)`.)
 R2. `/src/script` MUST link only `kentos_command`. No `/src/app`, `/src/io`, `/src/domain`, `/src/render`, no Qt (canon dependency graph).
-R3. Two hosts ship today and they are ONE architecture: `kentos_cad/script/json_runner.hpp` replays a JSON command array, and `kentos_cad/script/lua_runner.hpp` runs a Lua chunk behind `KENTOS_WITH_LUA`. Both dispatch through the same `Bus`, parse command text with the same `Parser`, run inside one batch and return the same `RunReport`; `BETİK` chooses between them by file extension. Python lands in Phase 2. A third host MUST add a language and nothing else — what is common to all of them lives in `kentos_cad/script/host.hpp` and `kentos_cad/script/sandbox.hpp`, never copied.
+R3. Two hosts ship and they are ONE architecture: `kentos_cad/script/json_runner.hpp` replays a JSON command array, and `kentos_cad/script/python_runner.hpp` runs CPython behind `KENTOS_WITH_PYTHON`. Both dispatch through the same `Bus`, parse command text with the same `Parser`, run inside one batch and return the same `RunReport`; `BETİK` chooses between them by file extension. A further host MUST add a language and nothing else — what is common to all of them lives in `kentos_cad/script/host.hpp` and `kentos_cad/script/sandbox.hpp`, never copied. (This supersedes the former wording, which named the removed Lua host and put Python in Phase 2.)
 R4. Script text MUST be parsed by the `Parser` object in `kentos_cad/command/parser.hpp` — the same grammar instance the command line uses (§3, implementation note).
-R5. Layer roles are fixed (§4.1): every expression evaluator, style rule, label expression and area calculator MUST be Lua (sol2); plugins, batch processing and data pipelines MUST be Python (pybind11). A hot-path evaluator written in Python is a defect.
-R6. Lua and Python MUST sit behind `KENTOS_WITH_LUA` / `KENTOS_WITH_PYTHON`, both defaulting to `OFF`; `kentos_cad` MUST build, start and pass all tests with both OFF (§4.2, "optional module"). Build-option mechanics: see `.claude/build.md`.
-R7. CPython MUST be pinned to 3.12 and shipped embedded inside the optional Python module package — never in the base installer — resolved relative to the install root (§4.2; `.claude/build.md` R23).
+R5. Layer roles are fixed (§4.1, as amended): every expression evaluator, style rule, label expression and area calculator MUST be the COMPILED expression engine in `kentos_cad/command/parser.hpp`; plugins, batch processing, data pipelines and macros MUST be Python (pybind11). A per-feature evaluator written in Python is a defect, and now with no faster script language behind it to fall back on. (This supersedes the former wording, which gave the hot path to Lua.)
+R6. Python MUST sit behind `KENTOS_WITH_PYTHON`, defaulting to `OFF`; `kentos_cad` MUST build, start and pass all tests with it OFF (§4.2, "optional module"). Build-option mechanics: see `.claude/build.md`.
+R7. CPython MUST be pinned to 3.14 and shipped embedded inside the optional Python module package — never in the base installer — resolved relative to the install root (§4.2, as amended; `.claude/build.md` R23). (3.14 supersedes the 3.12 this rule pinned: it is the version pybind11 3.0+ supports and the one §4.2 now names.)
 R8. `pip` packages MUST install into an isolated venv under the project data directory, never into the embedded interpreter's own `site-packages` (§4.2).
 R9. Read APIs MAY be rich and direct, but MUST return values or const views only — `Mm`, `Point2`, `Box2`, `EntityId`, `Value`, const spans. Write APIs are `h.komut()` and nothing else (§4.3).
 R10. Every binding signature exposed to a script MUST be free of `Document&`, `Document*`, `Layer&`, `Layer*` and any non-const core reference (§4.3).
@@ -28,7 +28,7 @@ R21. Script errors MUST propagate as `Result<T>` / `Error{code,message}` with ac
 
 ## Absolute Prohibitions
 
-P1. NEVER call Python on a per-feature hot path — label expression, style rule, or per-object evaluation callback. Use Lua (§4.1, §10.4).
+P1. NEVER call Python on a per-feature hot path — label expression, style rule, or per-object evaluation callback. Use the compiled expression engine of `kentos_cad/command/parser.hpp` (§4.1 as amended, §10.4). (This supersedes "Use Lua": there is no second script language to escape to, which makes the prohibition sharper rather than softer.)
 P2. NEVER use, probe, or fall back to the system Python interpreter or system `site-packages` (§4.2).
 P3. NEVER give a script a path that bypasses validation, the transaction boundary, or the journal — including "fast" internal helpers (§2.6).
 P4. NEVER hand a script a raw pointer, mutable reference, iterator, or non-const span into `Document`, `Layer`, or the SoA polyline store (§4.3).
@@ -39,13 +39,13 @@ P8. NEVER touch the filesystem or network at `güvenli`; NEVER touch anything ou
 P9. NEVER `#include <Q...>` or any `/src/domain`, `/src/io`, `/src/render` header inside `/src/script` (canon dependency graph).
 P10. NEVER let a script register, redefine, or shadow a command outside `Registry`, and NEVER let it construct a `Transaction` directly.
 P11. NEVER ignore or reset a `std::stop_token` request; cancellation is not advisory.
-P12. NEVER expose raw memory addresses, `id()`-style handles, `ctypes`, or FFI escape hatches from the Python or Lua binding surface.
+P12. NEVER expose raw memory addresses, `id()`-style handles, `ctypes`, or FFI escape hatches from the Python binding surface. This is about what the BINDINGS offer: CPython's own `ctypes` is in the one interpreter and cannot be taken away, which R11's levels state plainly rather than pretending otherwise.
 P13. NEVER put the Python layer in the base installer; it ships only as the separate downloadable module package (§4.2, `.claude/build.md` R23).
 P14. NEVER let a script drive AI providers or emit AI-produced coordinates — see `.claude/ai.md` (§5.2).
 
 ## Definitions of Done
 
-- [ ] Builds and tests green with `KENTOS_WITH_LUA=OFF` and `KENTOS_WITH_PYTHON=OFF`.
+- [ ] Builds and tests green with `KENTOS_WITH_PYTHON=OFF`, and green again with it ON.
 - [ ] New binding has zero non-const core types in its signature (grep-checkable).
 - [ ] New script entry point takes a sandbox level parameter and a `std::stop_token`.
 - [ ] Journal shows exactly one undo step per script block; bulk case shows one validation pass.

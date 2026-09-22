@@ -42,12 +42,10 @@
       "description": "Exact arithmetic, straight skeleton for setbacks — KENTOS_WITH_CGAL",
       "dependencies": [{ "name": "cgal", "version>=": "5.6" }]
     },
-    "lua": {
-      "description": "Embedded hot-path script layer — KENTOS_WITH_LUA",
-      "dependencies": [
-        { "name": "lua", "version>=": "5.4.6" },
-        { "name": "sol2", "version>=": "3.3.0" }
-      ]
+    "python": {
+      "$comment": "CPython itself is FOUND and not pinned here: it is an interpreter with a standard library and a build measured in tens of minutes, so cmake/KentOSCadDependencies.cmake asks find_package for 3.14 and names the platform package when it is absent.",
+      "description": "Embedded Python script host — KENTOS_WITH_PYTHON. Linked; licence recorded in /NOTICE.",
+      "dependencies": [{ "name": "pybind11", "version>=": "3.0.0" }]
     },
     "clipper": {
       "description": "Polygon boolean and offset",

@@ -1005,11 +1005,11 @@ void ImportWizard::probeFinished()
         // assumption is wrong — so the first sentence is the heading and the
         // rest is the instruction under it. That is the shape a banner has, and
         // the shape an error should have: what happened, then how to fix it.
-        const QString whole = QString::fromStdString(line.text).trimmed();
-        const int stop      = whole.indexOf(QStringLiteral(". "));
-        const QString title = stop > 0 ? whole.left(stop + 1) : whole;
-        const QString rest  = stop > 0 ? whole.mid(stop + 2).trimmed() : QString();
-        auto* notice        = new Banner(tone, title, rest, this);
+        const QString whole  = QString::fromStdString(line.text).trimmed();
+        const qsizetype stop = whole.indexOf(QStringLiteral(". "));
+        const QString title  = stop > 0 ? whole.left(stop + 1) : whole;
+        const QString rest   = stop > 0 ? whole.mid(stop + 2).trimmed() : QString();
+        auto* notice         = new Banner(tone, title, rest, this);
         notice->applyTheme(mode_);
         notices_->addWidget(notice);
     }

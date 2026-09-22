@@ -47,8 +47,7 @@ else()
 endif()
 option(KENTOS_WITH_GEOS     "Enable GEOS overlay operations"        OFF)
 option(KENTOS_WITH_CGAL     "Enable CGAL exact arithmetic"          OFF)
-option(KENTOS_WITH_LUA      "Enable the embedded Lua hot path"      OFF)
-option(KENTOS_WITH_PYTHON   "Enable the optional Python module"     OFF)
+option(KENTOS_WITH_PYTHON   "Enable the embedded Python script host" OFF)
 # ---- the two halves of the GPU canvas: ON once their toolchain is found ------
 #
 # CLAUDE.md Article 8.1's removal condition, met. The 5M-polygon question it was

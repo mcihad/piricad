@@ -52,6 +52,16 @@ struct SinCos
 {
     double sin{0.0}; ///< sine of the angle
     double cos{1.0}; ///< cosine of the angle; 1 for the default zero angle
+
+    /// Two turns are the same turn when both components match exactly.
+    ///
+    /// EXACTLY, and not within a tolerance, because this answers "is this the
+    /// same spec" and not "is this the same angle". The pair is derived from one
+    /// integer angle by one deterministic routine in this header, so two specs
+    /// built from the same input agree bit for bit — and a caller asking whether
+    /// two ANGLES are close should compare the angles it started from, where the
+    /// tolerance has units and a meaning.
+    friend bool operator==(const SinCos&, const SinCos&) = default;
 };
 
 namespace detail {

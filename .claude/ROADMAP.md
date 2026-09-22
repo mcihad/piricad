@@ -52,13 +52,14 @@ sudo apt install qt6-shadertools-dev       # qsb, for baking the shader packs
 sudo apt install libfreetype-dev libharfbuzz-dev
 ```
 
-Lua, sol2, msdfgen and stb_rect_pack are fetched from pinned commits, so the
-first configure with `KENTOS_WITH_LUA=ON` or `KENTOS_WITH_TEXT=ON` needs the
-network. `qsb` is NOT on `PATH` on any platform — `scripts/doctor.sh` asks Qt
+pybind11, msdfgen and stb_rect_pack are fetched from pinned commits, so the
+first configure with `KENTOS_WITH_PYTHON=ON` or `KENTOS_WITH_TEXT=ON` needs the
+network. CPython itself is FOUND, not fetched: install `python@3.14` /
+`python3.14-dev` first. `qsb` is NOT on `PATH` on any platform — `scripts/doctor.sh` asks Qt
 where its own tools live.
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_RHI=ON -DKENTOS_WITH_TEXT=ON -DKENTOS_WITH_LUA=ON
+cmake --preset dev -DKENTOS_WITH_RHI=ON -DKENTOS_WITH_TEXT=ON -DKENTOS_WITH_PYTHON=ON
 cmake --build --preset dev
 ```
 

@@ -159,37 +159,30 @@ Currently linked
                           (CLAUDE.md 5.16). stb has no releases and never has
                           had; upstream's own instruction is to pin a commit.
 
-  Lua                     MIT                   5.4.8     6e22fedb
-                          The embedded script language of kentoscad.md §4.1, behind
-                          KENTOS_WITH_LUA. Lua and not Python for the hot path:
-                          an expression that runs per feature runs millions of
-                          times on a cadastral sheet, and .claude/script.md R5
-                          makes a Python evaluator there a defect.
-
-                          Built from the OFFICIAL repository, which ships no
-                          CMakeLists — upstream distributes a makefile and expects
-                          embedders to compile the 32 library sources themselves,
-                          which is what cmake/KentOSCadDependencies.cmake does. The
-                          four programs in that tree (lua.c, luac.c, onelua.c,
-                          ltests.c) are excluded by name rather than by glob.
-
-                          Compiled with -fno-fast-math -ffp-contract=off like
-                          everything else: a Lua number is a double, and CLAUDE.md
-                          Article 2.5 has no third-party exception.
-
-  sol2                    MIT                   v3.5.0    9190880c
-                          The C++ binding layer over Lua, header-only, linked
+  pybind11                BSD-3-Clause          v3.1.0    97bf890d
+                          The C++ binding layer over CPython, header-only, linked
                           PRIVATE into kentos_script behind the pimpl in
-                          lua_runner.hpp — nothing that includes that header pays
-                          for <sol/sol.hpp>.
+                          python_runner.hpp — nothing that includes that header
+                          pays for <pybind11/embed.h>, which drags in Python.h and
+                          every macro CPython defines.
 
-                          v3.5.0 and not the v3.3.1 that /vcpkg.json's floor
-                          names: 3.3.1's optional<T&>::emplace calls a `construct`
-                          member the specialisation does not have. Nobody
-                          instantiates it, which is why it shipped — and GCC 15
-                          diagnoses errors in uninstantiated template bodies, so
-                          it stops the build on a current toolchain. CLAUDE.md
-                          5.14 forbids the -Wno- that would hide it.
+                          v3.1.0 and not 2.x: pybind11 3.0.0 is the release that
+                          added support for Python 3.14 and 3.14t, and 3.0 is also
+                          where multi-phase init landed. Embedding carries no
+                          documented limitation on 3.14.
+
+  CPython                 PSF-2.0               3.14      (system)
+                          The interpreter of kentoscad.md §4.2, behind
+                          KENTOS_WITH_PYTHON. Found rather than pinned: a SHA
+                          works for a library we compile, and CPython is a build
+                          measured in tens of minutes. The shipped optional module
+                          package carries its own runtime (.claude/build.md R23);
+                          a development build compiles against the platform's
+                          headers, which is how every embedder builds.
+
+                          PSF-2.0 is GPLv3-compatible and is not copyleft, so
+                          linking the interpreter puts no condition on this tree
+                          beyond the attribution in this file.
 
   doctest                 MIT                   v2.4.12   1da23a3e
                           The unit-test framework, linked into kentos_tests.

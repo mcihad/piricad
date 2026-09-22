@@ -141,12 +141,13 @@ betik dosyası açmaya çalışırsanız reddedilir.
 
 ### Bu sürümdeki betik dili
 
-Bugün betik motoru yalnız JSON komut dizisi anlar. İfade, döngü ve koşul yoktur.
+Varsayılan yapıda betik motoru yalnız JSON komut dizisi anlar. İfade, döngü ve koşul
+yoktur.
 
-Faz 2'de iki dil gelecek: hızlı yol için gömülü **Lua** (etiket ifadeleri, stil kuralları,
-alan hesapları) ve ekosistem için **Python** (eklentiler, toplu işleme, veri boru
-hatları). İkisi de aynı komut veri yolunu kullanacak, dolayısıyla bugün yazdığınız
-mantık geçerliliğini koruyacak. Ayrıntı: `CLAUDE.md` Article 8.3.
+`KENTOS_WITH_PYTHON=ON` ile derlenen yapıda `.py` uzantılı bir dosya gömülü **Python**
+motoruna gider: değişken, döngü, koşul ve fonksiyon. Aynı komut veri yolunu kullanır,
+dolayısıyla bu sayfadaki her kural orada da geçerlidir. Ayrıntı:
+[Python betikleri](../betik/python.md).
 
 ## Hatalar
 

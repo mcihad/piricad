@@ -43,6 +43,20 @@ std::string_view sandbox_name(Sandbox level) noexcept;
 /// `guvenli` finds `güvenli` exactly as a command name folds (CLAUDE.md 5.6).
 core::Result<Sandbox> sandbox_from_name(std::string_view name);
 
+/// True when `path` resolves inside `root`, which is the whole of what `proje`
+/// permits (`.claude/script.md` P8).
+///
+/// RESOLVED ON BOTH SIDES before comparing, and that is the entire point:
+/// `proje/../../etc/passwd` is a path inside the project directory spelled as
+/// text and outside it in fact, and a string prefix test says yes to it. An empty
+/// root denies everything rather than permitting everything — a jail with no walls
+/// is not a jail.
+///
+/// IT LIVES HERE AND NOT IN A HOST because every host needs it and it is a
+/// SECURITY check: two copies drift, and the copy that drifts is the one nobody
+/// is reading when it stops resolving `..`.
+bool path_within_root(std::string_view root, std::string_view path);
+
 /// The identity of a script, for the consent record of `.claude/script.md` R12.
 ///
 /// A hash of the script TEXT, not of its path: consent is given to a script, and

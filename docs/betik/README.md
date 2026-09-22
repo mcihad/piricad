@@ -234,22 +234,20 @@ Bu sayfanın anlattığı JSON biçimi düz bir komut dizisidir: değişken, dö
 fonksiyon yoktur. Beş yerine beş yüz çizgi çizmek gerektiğinde beş yüz satır yazmanız
 gerekir.
 
-Bunun için gömülü **Lua** motoru vardır — `KENTOS_WITH_LUA=ON` ile derlenir ve
+Bunun için gömülü **Python** motoru vardır — `KENTOS_WITH_PYTHON=ON` ile derlenir ve
 varsayılan yapıda kapalıdır:
 
-```lua
-for i = 0, 4 do
-    h.komut(string.format("ÇİZGİ 485320.150,%.3f 485370.150,%.3f", 4310220.400 + i,
-                          4310220.400 + i))
-end
+```python
+for i in range(5):
+    y = 4310220.400 + i
+    cad.run(f"ÇİZGİ 485320.150,{y:.3f} 485370.150,{y:.3f}")
 ```
 
-Aynı komut veri yolunu kullanır: bu sayfadaki her kural Lua betiği için de geçerlidir.
-Ayrıntı: [Lua betikleri](lua.md).
+Aynı komut veri yolunu kullanır: bu sayfadaki her kural Python betiği için de geçerlidir.
+Ayrıntı: [Python betikleri](python.md).
 
-Üçüncü bir katman, **Python** (isteğe bağlı modül), Faz 2'de gelecek: eklentiler, toplu
-işleme, veri boru hatları ve bilimsel analiz için. Nesne başına çalışan bir ifade orada
-değil Lua'da yazılır. Ayrıntı: `CLAUDE.md` Article 8.3.
+Nesne başına çalışan bir ifade — bir etiket, bir stil kuralı, bir alan hesabı — oraya
+yazılmaz; onun yeri komut satırının kendi ifade motorudur.
 
 ## Sırada ne var
 

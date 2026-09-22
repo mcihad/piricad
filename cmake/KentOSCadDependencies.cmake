@@ -68,23 +68,16 @@ set(KENTOS_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0.
 set(KENTOS_DEP_LIBPQXX_REPO   https://github.com/jtv/libpqxx.git)
 set(KENTOS_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
 
-# Lua and sol2, the hot-path script layer of kentoscad.md §4.1. Both are MIT, which
-# is GPLv3-compatible; both are recorded in /NOTICE.
+# pybind11, the binding layer of the Python module (kentoscad.md §4.2,
+# `.claude/script.md` R5). BSD-3, which is GPLv3-compatible; recorded in /NOTICE.
 #
-# The OFFICIAL Lua repository, which ships no CMakeLists — the build below is
-# ours, and that is normal for Lua: upstream distributes a makefile and expects
-# embedders to compile the 32 library sources themselves.
-set(KENTOS_DEP_LUA_REPO       https://github.com/lua/lua.git)
-set(KENTOS_DEP_LUA_SHA        6e22fedb74cf0c9b6656e9fce8b7331db847c605)  # v5.4.8
-
-set(KENTOS_DEP_SOL2_REPO      https://github.com/ThePhD/sol2.git)
-# v3.5.0, not the v3.3.1 that vcpkg.json's floor names: 3.3.1's
-# `optional<T&>::emplace` calls a `construct` member the specialisation does not
-# have. It is dead code nobody instantiates, which is why it shipped — and GCC 15
-# diagnoses errors in uninstantiated template bodies, so it stops the build on
-# every modern toolchain. Not silenceable either: CLAUDE.md 5.14 forbids the
-# `-Wno-` that would hide it, and a SYSTEM include suppresses warnings, not errors.
-set(KENTOS_DEP_SOL2_SHA       9190880c593dfb018ccf5cc9729ab87739709862)  # v3.5.0
+# v3.1.0 AND NOT 2.x, because the version is what makes CPython 3.14 reachable:
+# pybind11 3.0.0 is the release that added "Support Python 3.14, 3.14t, GraalPy,
+# and PyPy 3.11", and 3.0 is also where multi-phase init and sub-interpreter
+# support landed. Embedding (`pybind11/embed.h`) carries no documented limitation
+# on 3.14.
+set(KENTOS_DEP_PYBIND11_REPO  https://github.com/pybind/pybind11.git)
+set(KENTOS_DEP_PYBIND11_SHA   97bf890db679505a14dfe547a5e77bb2bd05dc90)  # v3.1.0
 
 # The text stack of kentoscad.md §9.4 and `.claude/render.md` R8. FreeType and
 # HarfBuzz come from the system: both are already on every machine that has Qt,
@@ -265,7 +258,7 @@ if(KENTOS_WITH_CDT)
     # removed compatibility below 3.5 and refuses to configure it at all. The
     # library is fine; its build file is from before that change. So the source is
     # fetched and the include directory is used directly, which is the same shape
-    # this file already uses for Lua, sol2 and the stb header drop.
+    # this file already uses for the stb header drop.
     if(NOT KENTOS_FETCH_DEPENDENCIES)
         message(FATAL_ERROR
             "KENTOS_WITH_CDT=ON but KENTOS_FETCH_DEPENDENCIES=OFF.\n"
@@ -513,98 +506,51 @@ if(KENTOS_WITH_QPDF)
 endif()
 
 
-# ----------------------------------------------------------------- Lua + sol2 --
+# ----------------------------------------------------------------- python ----
 #
-# `.claude/script.md` R5 fixes the layer roles: every expression evaluator, style
-# rule, label expression and area calculator is Lua, because those run per feature
-# and a cadastral sheet has millions of them. R6 keeps it behind this option,
-# defaulting OFF, and requires the application to build, start and pass its tests
-# with the option off.
-if(KENTOS_WITH_LUA)
-    # LUA IS C. The project declares `LANGUAGES CXX` because everything we write
-    # is C++, and a target of `.c` files under that has no linker language at all
-    # — the configure fails with "cannot determine linker language", after the
-    # download. Enabled HERE rather than at the top so a build without the option
-    # still needs no C compiler.
-    enable_language(C)
-
-    # NEITHER PROJECT IS ADDED AS A SUBDIRECTORY, and `SOURCE_SUBDIR` pointing at
-    # a directory that does not exist is the documented way to say so:
-    # FetchContent populates the source and skips `add_subdirectory()`.
+# The ecosystem layer of kentoscad.md §4.2: plugins, batch jobs and data
+# pipelines (`.claude/script.md` R5). Behind `KENTOS_WITH_PYTHON`, defaulting
+# OFF, and R6 requires the application to build, start and pass its tests with
+# the option off.
+if(KENTOS_WITH_PYTHON)
+    # CPYTHON IS FOUND, NOT FETCHED, and that is the one place this block departs
+    # from every other entry in this file. A pinned SHA works for a library we
+    # compile; CPython is an interpreter with a standard library, a configure
+    # script of its own and a build measured in tens of minutes, and building it
+    # inside our tree would make every configure of this option a CPython build.
     #
-    #   Lua ships no CMakeLists at all, so there is nothing to add.
-    #   sol2 ships one, but it is a header-only library whose CMakeLists exists to
-    #   build its tests, examples and single-header generator. Adding it would pull
-    #   a Lua search, a Catch2 fetch and a set of options into our build to obtain
-    #   one include directory.
-    if(NOT KENTOS_FETCH_DEPENDENCIES)
+    # WHICH PYTHON, AND WHAT P2/P4 ACTUALLY FORBID. `.claude/script.md` P2 forbids
+    # probing or falling back to the system interpreter AT RUNTIME, and
+    # `.claude/build.md` P4 forbids linking a system-provided Python into a
+    # SHIPPED build. Neither is about the headers and the import library a
+    # development build compiles against: those are how every embedder builds.
+    # What the shipped, optional module package must carry is its OWN runtime
+    # (`.claude/build.md` R23), which is a packaging step and not this one — and
+    # the runner resolves its home relative to the install root rather than from
+    # the environment (`script.md` R7).
+    #
+    # `Development.Embed` and not `Development`: we embed an interpreter, we do
+    # not build an extension module, and asking for the full component on a
+    # system with no shared library fails for a reason that does not apply.
+    find_package(Python3 3.14 COMPONENTS Interpreter Development.Embed QUIET)
+    if(NOT Python3_FOUND)
         message(FATAL_ERROR
-            "KENTOS_WITH_LUA=ON but KENTOS_FETCH_DEPENDENCIES=OFF.\n"
-            "  Lua 5.4 and sol2 are fetched from pinned commits; allow the download,\n"
-            "  or configure with -DKENTOS_WITH_LUA=OFF.")
+            "KENTOS_WITH_PYTHON=ON but CPython 3.14 with its development headers "
+            "was not found.\n"
+            "  macOS:   brew install python@3.14\n"
+            "  Debian:  apt install python3.14-dev\n"
+            "  Windows: winget install Python.Python.3.14\n"
+            "  Or configure with -DKENTOS_WITH_PYTHON=OFF.")
     endif()
+    message(STATUS "  python: sistemden (CPython ${Python3_VERSION})")
 
-    message(STATUS "  lua:  sabitlenmiş kaynaktan (${KENTOS_DEP_LUA_SHA})")
-    FetchContent_Declare(lua
-        GIT_REPOSITORY ${KENTOS_DEP_LUA_REPO}
-        GIT_TAG        ${KENTOS_DEP_LUA_SHA}
-        GIT_SHALLOW    FALSE
-        SOURCE_SUBDIR  cmake-yok        # deliberately absent: populate, do not add
-        SYSTEM
-        EXCLUDE_FROM_ALL)
-
-    message(STATUS "  sol2: sabitlenmiş kaynaktan (${KENTOS_DEP_SOL2_SHA})")
-    FetchContent_Declare(sol2
-        GIT_REPOSITORY ${KENTOS_DEP_SOL2_REPO}
-        GIT_TAG        ${KENTOS_DEP_SOL2_SHA}
-        GIT_SHALLOW    FALSE
-        SOURCE_SUBDIR  cmake-yok
-        SYSTEM
-        EXCLUDE_FROM_ALL)
-
-    FetchContent_MakeAvailable(lua sol2)
-
-    # LISTED, not globbed. The repository's root also holds `lua.c`, `luac.c`,
-    # `onelua.c` and `ltests.c`; the first three are separate programs with their
-    # own `main`, and the fourth compiles only with the test harness's `LUA_USER_H`.
-    # A glob picks all four up and the link fails on duplicate symbols — after the
-    # download, which is the worst place to find out.
-    set(KENTOS_LUA_SOURCES
-        lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c ldebug.c
-        ldo.c ldump.c lfunc.c lgc.c linit.c liolib.c llex.c lmathlib.c lmem.c
-        loadlib.c lobject.c lopcodes.c loslib.c lparser.c lstate.c lstring.c
-        lstrlib.c ltable.c ltablib.c ltm.c lundump.c lutf8lib.c lvm.c lzio.c)
-    list(TRANSFORM KENTOS_LUA_SOURCES PREPEND "${lua_SOURCE_DIR}/")
-
-    add_library(kentos_lua STATIC ${KENTOS_LUA_SOURCES})
-    target_include_directories(kentos_lua SYSTEM PUBLIC "${lua_SOURCE_DIR}")
-    set_target_properties(kentos_lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-    # CLAUDE.md Article 2.5 says EVERY translation unit in every configuration,
-    # and a Lua number is a double: an interpreter built with contraction on would
-    # be a second arithmetic in the same process, which is exactly what §7.3
-    # forbids. Third-party code is not an exception to a bit-identity requirement.
-    if(NOT MSVC)
-        target_compile_options(kentos_lua PRIVATE -fno-fast-math -ffp-contract=off)
-    else()
-        target_compile_options(kentos_lua PRIVATE /fp:precise)
-    endif()
-
-    if(UNIX)
-        # POSIX gives Lua `os.time` at full resolution and `popen`; `LUA_USE_DLOPEN`
-        # is what `package.loadlib` needs. Neither is reachable below the `tam`
-        # sandbox, which never opens those libraries (`.claude/script.md` P8).
-        target_compile_definitions(kentos_lua PRIVATE LUA_USE_POSIX LUA_USE_DLOPEN)
-        target_link_libraries(kentos_lua PRIVATE ${CMAKE_DL_LIBS} m)
-    endif()
-
-    add_library(kentos_sol2 INTERFACE)
-    target_include_directories(kentos_sol2 SYSTEM INTERFACE "${sol2_SOURCE_DIR}/include")
-    target_link_libraries(kentos_sol2 INTERFACE kentos_lua)
-
-    # sol2 reads Lua's version from the headers, but says so explicitly here so a
-    # mismatch is a configure error rather than a runtime surprise.
-    target_compile_definitions(kentos_sol2 INTERFACE SOL_ALL_SAFETIES_ON=1)
+    # pybind11 the ordinary way: the system package when it is there, the pinned
+    # commit when it is not.
+    kentos_dependency(pybind11
+        REPO ${KENTOS_DEP_PYBIND11_REPO}
+        SHA  ${KENTOS_DEP_PYBIND11_SHA}
+        PACKAGE pybind11
+        VERSION 3.0)
 endif()
 
 

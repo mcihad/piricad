@@ -43,8 +43,7 @@ probe "HarfBuzz (yazı)"  "pkg-config --modversion harfbuzz"    "NO CAPTIONS ARE
 probe "GDAL"             "gdal-config --version"               "no format I/O"
 probe "PROJ"             "pkg-config --modversion proj"        "no coordinate transformation"
 probe "GEOS"             "geos-config --version"               "no overlay operations"
-probe "Lua 5.4"          "pkg-config --modversion lua5.4"      "no hot-path script layer"
-probe "Python 3"         "python3 --version | cut -d' ' -f2"   "no ecosystem script layer"
+probe "Python 3.14"      "python3.14 --version | cut -d' ' -f2" "no script host"
 probe "clang-format"     "clang-format --version | head -1"    "make format unavailable"
 probe "clang-tidy"       "clang-tidy --version | head -1"      "make tidy unavailable"
 echo

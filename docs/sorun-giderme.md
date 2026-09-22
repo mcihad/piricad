@@ -427,11 +427,14 @@ yazılmaz, panel yine dolar.
 **Çözüm.** `qt6-shadertools` paketini kurun veya `-DKENTOS_WITH_RHI=OFF` ile
 yapılandırın. Bu sürümde GPU arka ucu zaten kapalıdır.
 
-### `KENTOS_WITH_LUA=ON but the Lua host is a Phase-2 deliverable`
+### `KENTOS_WITH_PYTHON=ON but CPython 3.14 ... was not found`
 
-**Sebep.** Henüz gelmemiş bir bileşen açılmaya çalışılmış.
+**Sebep.** Python betik motoru açılmış ama makinede CPython 3.14 ve geliştirme
+başlıkları yok.
 
-**Çözüm.** Seçeneği kapalı bırakın.
+**Çözüm.** Yapılandırmanın yazdığı paketi kurun (`brew install python@3.14`,
+`apt install python3.14-dev`, `winget install Python.Python.3.14`) ya da
+`-DKENTOS_WITH_PYTHON=OFF` ile yapılandırın.
 
 ### Qt bulunamıyor
 

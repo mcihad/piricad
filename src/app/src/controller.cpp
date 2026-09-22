@@ -57,9 +57,9 @@ Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
       prints_(bus_, document_, this), ai_(bus_, this), providers_(bus_, nullptr, this),
       templates_(bus_, this), runner_(bus_, script::Sandbox::Project)
-#if KENTOS_HAVE_LUA
+#if KENTOS_HAVE_PYTHON
       ,
-      lua_runner_(bus_, script::Sandbox::Project)
+      python_runner_(bus_, script::Sandbox::Project)
 #endif
 {
     command::register_builtin_commands(registry_);
@@ -95,13 +95,13 @@ Controller::Controller(QObject* parent)
         if (auto st = document_.set_crs(crs_->resolve(document_.crs().id()), discard); !st)
             command::log_warn("başlangıç koordinat sistemi çözülemedi: " + st.error().message);
     }
-#if KENTOS_HAVE_LUA
+#if KENTOS_HAVE_PYTHON
     // `proje` for both hosts, and the project directory is the working directory
     // until a document has a path of its own. A jail with no walls denies
     // everything (`.claude/script.md` P8), which is the safe direction to be wrong
     // in while the document-path wiring lands.
-    lua_runner_.set_project_root(std::filesystem::current_path().string());
-    script::install(bus_, runner_, lua_runner_);
+    python_runner_.set_project_root(std::filesystem::current_path().string());
+    script::install(bus_, runner_, python_runner_);
 #else
     script::install(bus_, runner_);
 #endif

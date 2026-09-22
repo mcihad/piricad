@@ -6,6 +6,49 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — gömülü Python 3.14: `kentos.cad` ve tek gömülü dil
+
+`BETİK` artık `.py` uzantılı bir dosyayı gömülü CPython 3.14 ile çalıştırıyor
+(`KENTOS_WITH_PYTHON=ON`, varsayılan kapalı). Değişken, döngü, koşul, fonksiyon —
+ve JSON betiğinin her kuralı aynen geçerli: tek komut veri yolu, tek dilbilgisi,
+tek işlem, tek geri alma adımı, aynı `{kind:"meta"}` günlük kaydı.
+
+- **`cad.run("ÇİZGİ 0,0 10,10")` tek yazma yoludur.** Çizime dokunan başka
+  bağlantı yok; doğrulama, geri alma ve günlük oraya bağlı. Okuma çağrıları
+  (`cad.layers()`, `cad.entity_count()`, `cad.setting()`) yalnız **değer**
+  döndürür — çizimin içine tutamak verilmez.
+- **API'deki her ad İngilizce.** Program ve komutlar Türkçe kalır; bir Python
+  modülü her Python kütüphanesinin yazıldığı dilde okunur.
+- **`print` komut satırına düşer.** Pencereli bir uygulamanın terminali yoktur;
+  ilerlemesini bildiren betik boşluğa bildirmiş olurdu.
+- **İptal gerçekten durdurur.** Yorumlayıcı en geç 5 ms'de el değiştirir, durdurma
+  isteği o an kesme olarak iner. Betik kesmeyi `except BaseException` ile yutsa
+  bile çalıştırma iptal sayılır ve geri alınır.
+- **Kum havuzu dürüstçe anlatıldı.** CPython kafese konamaz — `os`, `socket`,
+  `ctypes` tek yorumlayıcının içindedir ve Python'un kendi belgeleri bir Python
+  kum havuzunun başarılabilir olmadığını söyler. Seviye; bağlamaların kapsamını,
+  yorumlayıcının yalıtımını (`PYTHONPATH`/`PYTHONHOME` okunmaz, betiğin dizini
+  `sys.path`'e girmez), `tam` için istenen onayı ve günlüğe düşen kaydı yönetir.
+  Veremeyeceği sözü vermeyen bir kural, veren bir kuraldan iyidir.
+
+### Kaldırıldı — gömülü Lua
+
+Lua 5.4 + sol2 ağaçtan silindi: `lua_runner.*`, `KENTOS_WITH_LUA`, sabitlenmiş
+commit'ler, testi ve sayfası. **Bu, `kentoscad.md` §4.1'in iki betik dilli hâlini
+geçersiz kılar.**
+
+Eski gerekçe — "Python'u etiket ifadesi için her satırda çağıramazsınız" — hâlâ
+doğru. Yanlış olan, ondan **ikinci bir betik dili** sonucunu çıkarmaktı. Nesne
+başına çalışan bir ifadenin doğru yeri komut satırının kendi **derlenmiş ifade
+motorudur**: deterministik, tahsissiz ve zaten programın tek dilbilgisi. İkinci
+bir betik dili ise öğrenilecek ikinci bir söz dizimi, belgelenecek ikinci bir API
+ve bakılacak ikinci bir sandbox demekti — kullanıcı karşılığında bir şey
+kazanmadan.
+
+`CLAUDE.md` Article 8.2 ve 8.3, `script.md` R1/R3/R5/R6/R7/P1/P12 ve `build.md`
+R12/R23 aynı değişiklikte tadil edildi; her biri neyi geçersiz kıldığını yazıyor.
+
+
 ### Düzeltildi — içe aktarma penceresinde rütbe: en sessiz şey en önemliydi
 
 Bu pencere bir "dosya seç" penceresi değil, bir **beyan denetimi**: bir DXF ne

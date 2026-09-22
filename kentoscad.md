@@ -161,22 +161,27 @@ AutoCAD'in komut satırı 40 yıllık rafinasyondur; kullanıcılar oradan gelec
 
 ## 4. Script Motoru
 
-### 4.1 İki Katmanlı Yaklaşım (Öneri)
+### 4.1 Tek Gömülü Dil ve Derlenmiş Sıcak Yol
 
-Tek bir dil her ihtiyacı karşılamıyor. İki katman kullanın:
+**Bu madde, iki betik dilli eski hâlini geçersiz kılar.** Eskiden burada iki katman vardı — sıcak yol için gömülü **Lua (sol2)** veya **QuickJS-ng**, ekosistem için **Python (pybind11)** — ve gerekçesi şuydu: "Python'u etiket ifadesi için her satırda çağıramazsınız." O gerekçe hâlâ doğrudur. Yanlış olan, ondan **ikinci bir betik dili** sonucunu çıkarmaktı.
 
-| Katman                    | Dil                                | Nerede                                                                                   | Neden                                                                 |
-| ------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Gömülü / sıcak yol**    | **Lua (sol2)** veya **QuickJS-ng** | İfade değerlendirici, stil kuralları, etiket ifadeleri, alan hesaplayıcı, hafif makrolar | ~200 KB, milisaniyede binlerce çağrı, tam sandbox, ek kurulum yok     |
-| **Ekosistem / otomasyon** | **Python (pybind11)**              | Eklentiler, toplu işleme, veri boru hatları, bilimsel analiz                             | CBS dünyasının ortak dili. QGIS/ArcPy bilen herkes ilk günden üretken |
+Sıcak yolun doğru cevabı bir betik dili değil, **komut satırının kendi ifade motorudur** (`src/command/parser.hpp`): derlenmiş, deterministik, tahsissiz ve zaten programın tek dilbilgisi. Nesne başına çalışan bir ifadeyi Lua'ya vermek, aynı işi ikinci bir dilde bir daha anlatmak, ikinci bir ayrıştırıcı sınırı taşımak ve kullanıcıya iki söz dizimi öğretmek demekti — hepsi §3'ün "tek gramer" ilkesine ve §13'ün öğrenilebilirlik hedefine karşıdır.
 
-**Neden ikisi de:** Python'u etiket ifadesi için her satırda çağıramazsınız — GIL ve çağrı maliyeti öldürür. Lua'yı da NumPy/GDAL/scikit-learn ekosistemi yerine koyamazsınız.
+Dolayısıyla tek gömülü dil vardır:
+
+| Katman                    | Nasıl                                 | Nerede                                                                                    | Neden                                                                 |
+| ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Sıcak yol**             | **Derlenmiş ifade motoru** (C++)      | İfade değerlendirici, stil kuralları, etiket ifadeleri, alan hesaplayıcı                  | Nesne başına çalışır; bir paftada milyonlarca kez. Yorumlayıcı maliyeti yok, GIL yok, tek gramer |
+| **Ekosistem / otomasyon** | **Python (pybind11)**, gömülü CPython | Eklentiler, toplu işleme, veri boru hatları, bilimsel analiz, makro                        | CBS dünyasının ortak dili. QGIS/ArcPy bilen herkes ilk günden üretken |
+
+**Neden tek dil:** İkinci bir betik dili, öğrenilecek ikinci bir söz dizimi, belgelenecek ikinci bir API, bakılacak ikinci bir sandbox ve senkron tutulacak ikinci bir bağlama yüzeyidir. Bunların hiçbirinin karşılığında kullanıcı bir şey kazanmıyordu: sıcak yola zaten betik yazmıyordu, otomasyonu da Python'da yazmak istiyordu.
 
 ### 4.2 Python Entegrasyon Notları
 
 - **Opsiyonel modül olarak dağıtın.** Çekirdek uygulama Python olmadan da çalışsın. Kurulum boyutunu 150 MB şişirmeyin.
 - Uzun süren script'i **ayrı thread veya ayrı süreçte** çalıştırın; UI donmasın, iptal edilebilsin (`stop_token`).
-- Sürüm sabitleyin (örn. CPython 3.12) ve gömülü olarak dağıtın. Sistem Python'una asla güvenmeyin — Linux dağıtımları arasındaki farklar destek kâbusudur.
+- Sürüm sabitleyin (**CPython 3.14**) ve gömülü olarak dağıtın. Sistem Python'una asla güvenmeyin — Linux dağıtımları arasındaki farklar destek kâbusudur. (Bu, 3.12 yazan eski hâli geçersiz kılar; 3.14, pybind11 3.0+ ile desteklenen güncel sürümdür.)
+- Python API'sindeki **her ad İngilizcedir** — modül, fonksiyon ve anahtar kelime. Program Türkçedir ve komut adları Türkçe kalır; bir Python modülü ise her Python kütüphanesinin yazıldığı dilde okunur. Yarısı Türkçe bir API ikisinin de en kötüsüdür.
 - `pip` ekosistemine izin veriyorsanız izole bir sanal ortamda tutun.
 
 ### 4.3 Script API Tasarımı
@@ -398,7 +403,7 @@ Clang: -O2 -fno-fast-math -ffp-contract=off -flto=thin -fvisibility=hidden
   /command        # komut veri yolu, kayıt, ayrıştırıcı, günlük, işlem
   /io             # GDAL sarmalayıcı, kendi format, DWG/DXF
   /render         # GPU pipeline (QRhi)
-  /script         # Lua/QuickJS host + Python bağlamaları
+  /script         # JSON çalıştırıcı + gömülü Python host
   /ai             # sağlayıcı soyutlaması, araç şeması üretimi, RAG
   /domain
     /geodesy /cadastre /planning /surface
@@ -487,9 +492,7 @@ Clang: -O2 -fno-fast-math -ffp-contract=off -flto=thin -fvisibility=hidden
 
 | Kütüphane              | Lisans      | Not                                |
 | ---------------------- | ----------- | ---------------------------------- |
-| **sol2 + Lua**         | MIT         | Gömülü sıcak yol script'i          |
-| **QuickJS-ng** (alt.)  | MIT         | JS tercih ederseniz                |
-| **pybind11 + CPython** | BSD-3 / PSF | Ekosistem katmanı, opsiyonel modül |
+| **pybind11 + CPython** | BSD-3 / PSF | Tek gömülü dil, opsiyonel modül (§4.1) |
 
 ### 9.6 AI
 
@@ -587,7 +590,7 @@ Bu, komut merkezli mimarinin özel maliyetidir; ihmal edilirse tüm avantajı ye
 - **Komut gönderimi tahsissiz olmalı.** Sıcak yolda `std::function` ve `shared_ptr` kullanmayın; argümanları küçük bir POD union veya arena'ya yazın
 - **Toplu iş modu.** Script 100 bin nesne yaratıyorsa her komut için ayrı doğrulama + ayrı undo kaydı yapmayın. `TOPLU_BASLA` / `TOPLU_BITIR` ile tek işlem, tek doğrulama geçişi
 - **Günlük yazımı asenkron.** Komut günlüğü ayrı thread'de diske yazılsın; kullanıcı beklemesin
-- **Script sıcak yolu için Lua.** Etiket ifadesi her nesne için çalışır; Python'un çağrı maliyeti burada kabul edilemez
+- **Sıcak yol için derlenmiş ifade motoru.** Etiket ifadesi her nesne için çalışır; bir yorumlayıcının çağrı maliyeti burada kabul edilemez — Python'unki de, Lua'nınki de (§4.1)
 - **AI çağrıları tamamen asenkron.** Model yanıtı beklenirken uygulama tam işlevsel kalmalı, iptal edilebilmeli
 
 ### 10.5 Hesaplama ve Ölçüm
@@ -622,7 +625,7 @@ Komut veri yolu ve kaydı · coroutine etkileşim modeli · günlük/undo/redo �
 > Komut altyapısı Faz 1'de olmalı, sonraya bırakılamaz. Sonradan eklenmesi tüm kodun yeniden yazılması demektir.
 
 ### Faz 2 — CAD + Haritacılık + Script (12-20 ay) → **İlk sürüm**
-Tam çizim/düzenleme · ölçülendirme · blok/xref · tarama · DXF/DWG çift yönlü · **Lua ifade motoru** · **Python eklenti API'si** · makro kaydı ve oynatma · jeodezik hesap ve dengeleme · total station / GNSS aktarımı · BÖHHBÜY nesne kataloğu · paftalama ve çıktı.
+Tam çizim/düzenleme · ölçülendirme · blok/xref · tarama · DXF/DWG çift yönlü · **Python eklenti API'si** · makro kaydı ve oynatma · jeodezik hesap ve dengeleme · total station / GNSS aktarımı · BÖHHBÜY nesne kataloğu · paftalama ve çıktı.
 
 ### Faz 3 — İmar/Planlama + AI (18-28 ay) → **Ticari değerin merkezi**
 MPYY gösterim kütüphanesi · plan çizim ve otomatik kontrol · PlanGML export + XSD doğrulama · e-Plan dosya seti · 3194/18. madde parselasyon ve DOP · TKGM MEGSİS entegrasyonu · **AI komut üretimi (önizleme + onay)** · **mevzuat RAG'ı** · yerel model desteği.

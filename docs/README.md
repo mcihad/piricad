@@ -188,7 +188,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [İşlem araçları](islem/README.md) | Araçlar paneli; kapsam, asenkron çalışma ve Durdur, çıktı katmanı; araç listesi |
 | [Bağlı nesneler](islem/bagli-nesneler.md) | Kaynağını izleyen yazılar: uzunluk ve köşe numarası nasıl taşınır, yenilenir, çözülür |
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
-| [Lua betikleri](betik/lua.md) | Döngü, koşul ve hesapla betik yazma; `h` API'si |
+| [Python betikleri](betik/python.md) | Döngü, koşul ve hesapla betik yazma; `kentos.cad` API'si |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
 | [KentOSCad proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |

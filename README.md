@@ -59,7 +59,7 @@ Büyük harf dönüşümü Türkçe kurallarına göre yapılır (`i` → `İ`, 
 | `src/core` | Qt'siz çekirdek: sabit-nokta koordinat, SoA geometri, doküman |
 | `src/command` | Komut veri yolu, kayıt, coroutine, işlem, günlük, **tek ayrıştırıcı** |
 | `src/render` | Sahne kurulumu, görünüm dönüşümü, arka uç arayüzü |
-| `src/script` | Betik motoru (Faz 0: JSON; Faz 2: Lua + Python) |
+| `src/script` | Betik motoru: JSON çalıştırıcı + gömülü Python (`KENTOS_WITH_PYTHON`) |
 | `src/app` | Qt Widgets kabuğu |
 | `src/io` `src/ai` `src/domain` `src/plugin-api` | Faz 1–3 |
 | `data/` | Mevzuat katalogları, CRS gridleri, mevzuat korpusu — **veri, kod değil** |

@@ -270,9 +270,9 @@ int main(int argc, char** argv)
     parser.addHelpOption();
     parser.addVersionOption();
 
-    QCommandLineOption scriptOption({QStringLiteral("b"), QStringLiteral("betik")},
-                                    QStringLiteral("Açılışta çalıştırılacak JSON betiği."),
-                                    QStringLiteral("dosya"));
+    QCommandLineOption scriptOption(
+        {QStringLiteral("b"), QStringLiteral("betik")},
+        QStringLiteral("Açılışta çalıştırılacak betik (.json veya .py)."), QStringLiteral("dosya"));
     parser.addOption(scriptOption);
     parser.process(app);
 
