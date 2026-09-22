@@ -611,7 +611,7 @@ void MapCanvas::buildGrips()
             if (drag_grip_.corner >= 1 &&
                 core::grip_preview(doc, e, static_cast<std::size_t>(drag_grip_.corner - 1), to,
                                    buf))
-                addEmitRuns(batch, buf, 0, 0);
+                addEmitRuns(batch, buf);
         } else if (e < table.size() && table.visible(e)) {
             const core::RingSpan span = geom.rings_of(table.slot[e]);
             const std::size_t batch   = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
@@ -1392,24 +1392,29 @@ core::Point2 MapCanvas::cursorWorld() const
 }
 
 void MapCanvas::addWorldRun(std::size_t batch, std::span<const core::Mm> xs,
-                            std::span<const core::Mm> ys, bool closed, core::Mm dx, core::Mm dy)
+                            std::span<const core::Mm> ys, bool closed, const core::Xform& map)
 {
     if (xs.size() < 2) return;
     std::vector<render::ScreenPointF> run;
     run.reserve(xs.size());
+    // THROUGH THE TRANSFORM, not along an offset. A ghost used to slide: the
+    // helper took a `dx, dy`, so the only thing it could preview was a move, and
+    // a turn or a scale previewed as a slide promises the wrong result to the
+    // hand that is aiming with it. `core::transformed` is the function the verb
+    // itself applies (core/transform.hpp).
     for (std::size_t v = 0; v < xs.size(); ++v)
-        run.push_back(render::to_f(view_.to_screen(core::Point2{xs[v] + dx, ys[v] + dy})));
+        run.push_back(
+            render::to_f(view_.to_screen(core::transformed(map, core::Point2{xs[v], ys[v]}))));
     addRun(batch, run, closed);
 }
 
-void MapCanvas::addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, core::Mm dx,
-                            core::Mm dy)
+void MapCanvas::addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, const core::Xform& map)
 {
     for (std::size_t r = 0; r < buf.run_total(); ++r)
-        addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, dx, dy);
+        addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, map);
 }
 
-void MapCanvas::addGhost(std::size_t batch, core::Mm dx, core::Mm dy)
+void MapCanvas::addGhost(std::size_t batch, const core::Xform& map)
 {
     const core::Document& doc      = controller_.document();
     const core::EntityTable& table = doc.entities();
@@ -1418,24 +1423,26 @@ void MapCanvas::addGhost(std::size_t batch, core::Mm dx, core::Mm dy)
     for (core::EntityId e : controller_.selectedSlots()) {
         if (e >= table.size() || !table.visible(e)) continue;
         // A caption travels as the box around its letters (`text_quad`), a curve
-        // as its drawn form, a polyline as its rings.
+        // as its drawn form, a polyline as its rings. The DRAWN form is what a
+        // ghost shows, and mapping its vertices is right for all four
+        // transforms: a turned or mirrored circle is the turned or mirrored
+        // outline, and a scaled one is the outline scaled about the same centre.
         if (std::array<core::Point2, 4> quad; core::text_quad(doc, e, quad)) {
             std::vector<render::ScreenPointF> run;
             for (const core::Point2 corner : quad)
-                run.push_back(
-                    render::to_f(view_.to_screen(core::Point2{corner.x + dx, corner.y + dy})));
+                run.push_back(render::to_f(view_.to_screen(core::transformed(map, corner))));
             addRun(batch, run, true);
             if (table.kind[e] == core::kPolylineKind) continue;
         }
         buf.clear();
         if (core::entity_outline(doc, e, buf)) {
-            addEmitRuns(batch, buf, dx, dy);
+            addEmitRuns(batch, buf, map);
             continue;
         }
         const core::RingSpan span = geom.rings_of(table.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
             addWorldRun(batch, geom.ring_xs(r), geom.ring_ys(r),
-                        geom.ring_role[r] != core::RingRole::Open, dx, dy);
+                        geom.ring_role[r] != core::RingRole::Open, map);
     }
 }
 
@@ -1644,7 +1651,7 @@ void MapCanvas::buildOverlay()
                         curve_scratch_y_.clear();
                         core::circle_outline(centre, fixed_radius, curve_scratch_x_,
                                              curve_scratch_y_);
-                        addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                        addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
                     }
                 }
                 addRun(batch,
@@ -1673,7 +1680,7 @@ void MapCanvas::buildOverlay()
                     curve_scratch_x_.clear();
                     curve_scratch_y_.clear();
                     core::circle_outline(centre, radius, curve_scratch_x_, curve_scratch_y_);
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
                 }
             }
             // The points already fixed, as the run that made them: a diameter's
@@ -1761,7 +1768,7 @@ void MapCanvas::buildOverlay()
                     curve_scratch_y_.clear();
                     core::arc_outline(centre, radius, first, last, curve_scratch_x_,
                                       curve_scratch_y_);
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false, 0, 0);
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
                 }
             }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
@@ -1793,7 +1800,7 @@ void MapCanvas::buildOverlay()
                 curve_scratch_x_.clear();
                 curve_scratch_y_.clear();
                 core::ellipse_outline(centre, major, minor, curve_scratch_x_, curve_scratch_y_);
-                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
             }
             addRun(batch,
                    {render::to_f(view_.to_screen(centre)), render::to_f(view_.to_screen(major))},
@@ -1815,7 +1822,7 @@ void MapCanvas::buildOverlay()
             if (controls.size() >= 2)
                 core::spline_points(controls, def, 16, curve_scratch_x_, curve_scratch_y_);
             if (curve_scratch_x_.size() >= 2)
-                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, def.closed, 0, 0);
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, def.closed);
             // The control polygon, faint, so the hand sees what it is steering.
             std::vector<render::ScreenPointF> polygon;
             for (const core::Point2& p : controls)
@@ -1842,7 +1849,7 @@ void MapCanvas::buildOverlay()
                     if (auto slot = scratch.append(rings, payload)) {
                         core::EmitBuffer buf;
                         core::dimension_outline(scratch, slot.value(), buf);
-                        addEmitRuns(batch, buf, 0, 0);
+                        addEmitRuns(batch, buf);
                     }
                 }
             }
@@ -1854,7 +1861,7 @@ void MapCanvas::buildOverlay()
                 core::EmitBuffer buf;
                 if (core::expand_block_definition(controller_.document(), cursorWorld(),
                                                   decoded.value(), buf))
-                    addEmitRuns(batch, buf, 0, 0);
+                    addEmitRuns(batch, buf);
             }
         } else if (shape == command::RubberShape::AreaEdit) {
             // THE FACE AT THE WANTED AREA. The edge or the corner in hand follows
@@ -1874,7 +1881,7 @@ void MapCanvas::buildOverlay()
                     xs.push_back(p.x);
                     ys.push_back(p.y);
                 }
-                addWorldRun(lit, xs, ys, true, 0, 0);
+                addWorldRun(lit, xs, ys, true);
                 if (look_.dynamic_input) {
                     const render::ScreenPointF at = toScreenF(to);
                     std::string text              = core::format_square_metres(ghost.area);
@@ -1929,7 +1936,7 @@ void MapCanvas::buildOverlay()
                         curve_scratch_x_.push_back(c.x);
                         curve_scratch_y_.push_back(c.y);
                     }
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
                 }
             }
             // The arm from the centre, so the size being set is readable as a
@@ -1959,12 +1966,34 @@ void MapCanvas::buildOverlay()
                        false);
             }
         } else if (shape == command::RubberShape::Ghost) {
-            // THE OBJECTS THEMSELVES, carried by the cursor's offset from the base
-            // point: where TAŞI will put them and where KOPYALA's next copy lands.
-            const core::Point2 at = cursorWorld();
-            const core::Mm dx     = at.x - session->prompt().rubber_origin.x;
-            const core::Mm dy     = at.y - session->prompt().rubber_origin.y;
-            addGhost(batch, dx, dy);
+            // THE OBJECTS THEMSELVES, under the transform the cursor implies:
+            // where TAŞI will put them, how far round DÖNDÜR will turn them, how
+            // much bigger ÖLÇEKLE will make them, which way AYNALA will flip
+            // them. The verb says WHICH transform in the payload and
+            // `core::ghost_xform` turns the cursor into it — the same call the
+            // verb makes when it takes the answer, so the ghost is the result
+            // rather than a guess at it.
+            //
+            // A payload-less ghost is a move, which is what every one of them
+            // was before the four kinds existed.
+            core::GhostSpec spec{};
+            if (auto decoded = core::decode_ghost_spec(session->prompt().rubber_payload))
+                spec = decoded.value();
+
+            const core::Point2 base = session->prompt().rubber_origin;
+            const core::Xform step  = core::ghost_xform(spec.kind, base, cursorWorld());
+
+            // REPEATED FOR A COMMAND THAT REPEATS ITS STEP. Only a translation
+            // composes with itself by simple multiples; the other three are
+            // previewed once, which is all any of them applies.
+            addGhost(batch, step);
+            if (step.kind == core::Xform::Kind::Translate)
+                for (std::int64_t copy = 2; copy <= spec.copies; ++copy) {
+                    core::Xform further = step;
+                    further.dx          = step.dx * copy;
+                    further.dy          = step.dy * copy;
+                    addGhost(batch, further);
+                }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (const auto& chain = session->prompt().rubber_chain; !chain.empty()) {
             // THE WHOLE SHAPE SO FAR, not only its newest edge. A command whose

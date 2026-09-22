@@ -33,6 +33,7 @@ parsel bit bit başladığı yere döner — bu programda test edilen bir davran
 ```text
 DÖNDÜR
 DÖNDÜR nesneler=<k> merkez=<n> aci=<derece>
+DÖNDÜR nesneler=<k> merkez=<n>              # açıyı fareyle gösterirsiniz
 ```
 
 ## Parametreler
@@ -41,7 +42,8 @@ DÖNDÜR nesneler=<k> merkez=<n> aci=<derece>
 |---|---|
 | `nesneler` | Döndürülecek nesnelerin kimlikleri. Verilmezse etkin seçim |
 | `merkez` | Döndürme merkezi; bu nokta yerinde kalır |
-| `aci` | Dönme açısı, derece. Artı yön saat yönünün tersi |
+| `aci` | Dönme açısı, derece. Artı yön saat yönünün tersi. Verilmezse sorulur |
+| `aci_nokta` | Açının gösterildiği nokta; `aci` verilmişse sorulmaz |
 
 ## Örnekler
 
@@ -62,7 +64,16 @@ DÖNDÜR nesneler=1 merkez=0,0 aci=-30
 
 ### Arayüz
 
-Nesneleri seçin, `DÖNDÜR` yazın, merkezi tıklayın, sonra açıyı yazın.
+Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
+**Döndür**'ü seçin (ya da `DÖNDÜR` yazın), merkezi tıklayın — ve sonra **açıyı
+fareyle gösterin**.
+
+**Nesneler imlecin altında döner.** Hayalet, komutun uygulayacağı dönüşümün
+kendisiyle çizilir (`core::transformed`), yani gördüğünüz duruş tıklayınca
+oluşacak duruştur. İmlecin merkeze göre doğrultusu açıdır: doğuya doğru 0
+derece, kuzeye doğru 90. Okumayı imlecin yanındaki yazı söyler.
+
+Açıyı yazmak isterseniz `aci=` verin; o zaman komut hiçbir şey sormaz.
 
 ### Betik
 

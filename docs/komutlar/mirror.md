@@ -65,8 +65,15 @@ AYNALA nesneler=1 baslangic=0,0 bitis=100,0
 
 ### Arayüz
 
-Nesneleri seçin, `AYNALA` yazın, ayna ekseninin iki noktasını tıklayın.
-İki tıklama arasında eksen kesikli çizgiyle gösterilir.
+Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
+**Aynala**'yı seçin (ya da `AYNALA` yazın), ayna ekseninin iki noktasını
+tıklayın.
+
+**Nesneler ikinci tıklamaya kadar aynalanmış hâlde görünür.** Eskiden yalnız
+eksen kesikli bir çizgi olarak çiziliyordu — yani komutun tek derdi olan şey,
+nesnelerin hangi tarafa nasıl düştüğü, olup bittikten sonra görülüyordu. Hayalet
+komutun uygulayacağı dönüşümün kendisiyle çizilir, yani gördüğünüz yansıma
+tıklayınca oluşacak yansımadır.
 
 ### Betik
 

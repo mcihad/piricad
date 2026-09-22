@@ -20,6 +20,7 @@
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/core/transform.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/scene.hpp"
@@ -376,16 +377,19 @@ private:
     /// empty one when no such prompt is up (core/area_edit.hpp).
     core::AreaGhost areaGhost() const;
 
-    /// Appends one run of document points, shifted by `(dx, dy)`, to an overlay batch.
+    /// Appends one run of document points, mapped through `map`, to an overlay
+    /// batch. The default is the identity, which is what every caller but the
+    /// ghost wants.
     void addWorldRun(std::size_t batch, std::span<const core::Mm> xs, std::span<const core::Mm> ys,
-                     bool closed, core::Mm dx, core::Mm dy);
+                     bool closed, const core::Xform& map = {});
 
-    /// Appends every run of an outline buffer, shifted, to an overlay batch.
-    void addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, core::Mm dx, core::Mm dy);
+    /// Appends every run of an outline buffer, mapped, to an overlay batch.
+    void addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, const core::Xform& map = {});
 
-    /// The selected objects' outlines shifted by `(dx, dy)`: the ghost TAŞI and
-    /// KOPYALA carry under the cursor.
-    void addGhost(std::size_t batch, core::Mm dx, core::Mm dy);
+    /// The selected objects' outlines under `map`: the ghost TAŞI, KOPYALA,
+    /// DÖNDÜR, ÖLÇEKLE and AYNALA carry under the cursor. `map` is the verb's own
+    /// transform, so what is drawn is the result rather than a guess at it.
+    void addGhost(std::size_t batch, const core::Xform& map);
 
     /// Draws the drafting guides across the whole canvas, under everything else.
     ///

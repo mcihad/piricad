@@ -905,7 +905,7 @@ void MainWindow::buildActions()
     actBlock_  = modifyTool(Glyph::Duplicate, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
                                 "referans koyar  ·  kısaltma: BLK"));
-    actInsert_ = drawTool(Glyph::Copy, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
+    actInsert_ = drawTool(Glyph::BlockInsert, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
                           tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
                              "yerleştirir  ·  kısaltma: BE"));
     drawingTools_->addAction(actInsert_);
@@ -1048,12 +1048,12 @@ void MainWindow::buildActions()
                             tr("KOPYALA — seçili nesnelerin kopyasını koyar"));
     actRotate_ = modifyTool(Glyph::Rotate, tr("Döndür"), QStringLiteral("DÖNDÜR"),
                             tr("DÖNDÜR — seçili nesneleri bir merkez etrafında döndürür"));
-    actScale_  = modifyTool(Glyph::Rotate, tr("Ölçekle"), QStringLiteral("ÖLÇEKLE"),
+    actScale_  = modifyTool(Glyph::Scale, tr("Ölçekle"), QStringLiteral("ÖLÇEKLE"),
                             tr("ÖLÇEKLE — seçili nesneleri bir merkeze göre büyütür/küçültür"));
-    actMirror_ = modifyTool(Glyph::Rotate, tr("Aynala"), QStringLiteral("AYNALA"),
+    actMirror_ = modifyTool(Glyph::Mirror, tr("Aynala"), QStringLiteral("AYNALA"),
                             tr("AYNALA — seçili nesneleri bir eksende yansıtır"));
     actArray_ =
-        modifyTool(Glyph::Copy, tr("Dizi"), QStringLiteral("DİZİ"),
+        modifyTool(Glyph::Array, tr("Dizi"), QStringLiteral("DİZİ"),
                    tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
     actExtend_   = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
                               tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
@@ -1977,7 +1977,12 @@ void MainWindow::buildToolBox()
     toolBox_->addTool(actTrim_);
     toolBox_->addTool(actCombine_);
     toolBox_->addTool(actSplit_);
-    toolBox_->addTool(actMove_);
+    // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
+    // TAŞI was in the column; KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA and DİZİ lived in
+    // the `Değiştir` menu alone — and three of them have just been given a ghost
+    // that turns, scales and flips under the cursor, which is a thing you cannot
+    // discover from a menu (§2.6a).
+    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_});
     toolBox_->addTool(actStretch_);
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();

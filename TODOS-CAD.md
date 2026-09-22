@@ -875,6 +875,37 @@ Rapor: "daha sonra da nokta araçları."
 - [x] **Belgeler**: dört sayfaya "ekranda kalır" bölümleri, `intersect_point.md`'ye sorulan yan ve
   `yon_nokta` satırı; `make reference`.
 
+## Düzenleme fiilleri ve hayalet önizleme (2026-09-22)
+
+Rapor: "senin dediklerini yapalım ama hayalet önizleme kusursuz olmalı."
+
+- [x] **`Xform` `core/transform.hpp`'ye çıktı** (`core::Xform`, `core::transformed`). Fiil belgeyi,
+  tuval hayaleti aynı fonksiyonla yazıyor; ayrışma yapısal olarak imkânsız. Eskiden hayalet
+  `dx, dy` alıyordu, yani önizleyebildiği tek şey bir kaydırmaydı.
+- [x] **`addWorldRun` / `addEmitRuns` / `addGhost` dönüşüm alıyor**, öteleme değil. Varsayılan
+  birim dönüşüm, yani hayalet dışındaki bütün çağıranlar değişmedi.
+- [x] **`core::GhostSpec` + `core::ghost_xform`**: fiil hangi dönüşümün önizlendiğini yükte söylüyor,
+  imleci dönüşüme çeviren tek fonksiyon hem fiil hem tuval tarafından çağrılıyor. Dört tür:
+  Translate (TAŞI/KOPYALA), Rotate (DÖNDÜR), Scale (ÖLÇEKLE), Mirror (AYNALA).
+- [x] **DÖNDÜR ve ÖLÇEKLE fareyle**: `aci_nokta` ve `carpan_nokta` (yeni nokta parametreleri).
+  Açı imlecin doğrultusu, çarpan imlecin metre cinsinden uzaklığı — AutoCAD'in sürükleme kuralı.
+  Sayı argümanla geldiyse soru yok.
+- [x] **AYNALA aynalanmış hayalet** gösteriyor; eskiden yalnız eksen çizgisiydi, yani komutun tek
+  derdi olan şey olup bittikten sonra görülüyordu.
+- [x] **Altı fiil araç kutusunda** (§2.6a): TAŞI'nın kartında KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA, DİZİ.
+  Kart artık 9 aile 46 üye, hepsi probe'dan geçiyor.
+- [x] **Dört yeni ikon**: `Scale`, `Mirror`, `Array`, `BlockInsert`. `Rotate` yalnız DÖNDÜR'ün,
+  `Copy` yalnız KOPYALA'nın.
+- [x] **Testler**: `test_geometry.cpp`'de üç vaka (dört dönüşüm tek fonksiyondan; imlecin dönüşüme
+  çevrilmesi — kuzeye bakmak çeyrek tur, 3-4-5 ile çarpan 5; yük gidip gelmesi);
+  `test_command.cpp`'de beş bölüm (her fiilin kendi hayalet türünü adlandırması, işaret edilen
+  açının çeyrek tur vermesi, işaret edilen çarpanın iki kat yapması, sayı verilince soru
+  sormaması). 1009 birim testi, 57 ctest.
+- [x] **Gerçek olaylarla görsel**: dönen hayalet (57 grad), büyüyen hayalet, aynalanmış hayalet.
+- [ ] **DİZİ'nin hayaleti yok.** Satır/sütun sayıları ve aralıkları yazıyla veriliyor, yani imlecin
+  tamamlayacağı bir şey yok; `GhostSpec::copies` alanı ötelemeli tekrar için hazır duruyor ama
+  aralığı fareyle veren bir yol eklenmedi. Eklenirse `DİZİ` de kopyalarını önizler.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

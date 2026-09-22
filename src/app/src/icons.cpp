@@ -325,6 +325,45 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         grip(p, QPointF(20.4, 9.6), c);
         break;
 
+    case Glyph::Scale:
+        // A SMALL SQUARE GROWING INTO A LARGE ONE about a fixed corner, which is
+        // what the command does about its centre.
+        p.setPen(stroke(c, 1.4));
+        p.drawRect(QRectF(4.0, 13.0, 7.0, 7.0));
+        p.setPen(stroke(c, 1.8));
+        p.drawRect(QRectF(4.0, 4.6, 15.4, 15.4));
+        grip(p, QPointF(4.0, 20.0), c);
+        break;
+
+    case Glyph::Mirror:
+        // A SHAPE AND ITS REFLECTION, with the axis between them: the one thing
+        // the command is about is which way round things end up.
+        p.setPen(stroke(c, 1.6));
+        p.drawPolyline(QPolygonF({QPointF(3.4, 6.0), QPointF(9.4, 12.0), QPointF(3.4, 18.0)}));
+        p.drawPolyline(QPolygonF({QPointF(20.6, 6.0), QPointF(14.6, 12.0), QPointF(20.6, 18.0)}));
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(12.0, 3.2), QPointF(12.0, 20.8));
+        break;
+
+    case Glyph::Array:
+        // A GRID OF SMALL SQUARES: rows and columns, which is what the command
+        // asks for.
+        p.setPen(stroke(c, 1.3));
+        for (const qreal y : {5.0, 11.0, 17.0})
+            for (const qreal x : {5.0, 11.0, 17.0})
+                p.drawRect(QRectF(x - 1.9, y - 1.9, 3.8, 3.8));
+        break;
+
+    case Glyph::BlockInsert:
+        // A SQUARE DROPPED ONTO AN INSERTION CROSS: a symbol defined once and
+        // placed many times, which is what a block is.
+        p.setPen(stroke(c, 1.2));
+        p.drawLine(QPointF(4.0, 18.6), QPointF(14.0, 18.6));
+        p.drawLine(QPointF(9.0, 13.6), QPointF(9.0, 23.0));
+        p.setPen(stroke(c, 1.7));
+        p.drawRect(QRectF(9.0, 3.6, 11.4, 11.4));
+        break;
+
     case Glyph::Copy:
         // Two offset outlines: the original and its duplicate.
         p.setPen(stroke(c, 1.5));

@@ -5,6 +5,7 @@
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/transform.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -8030,5 +8031,106 @@ TEST_CASE("KESİŞİMNOKTA mesafe: iki çözümden hangisi SORULUYOR")
                                   Origin::CommandLine)
                     .ok());
         CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+}
+
+TEST_CASE("Düzenleme fiilleri: hayalet komutun kendi dönüşümünü taşıyor")
+{
+    // THE GHOST USED TO BE A SLIDE WHATEVER THE VERB WAS. `TAŞI` and `KOPYALA`
+    // had one; `DÖNDÜR`, `ÖLÇEKLE` and `AYNALA` had none at all, and had they
+    // been given the old one it would have shown the objects sliding sideways
+    // while the command turned them. What is asserted here is that each verb
+    // names its own kind, so the canvas draws the result and not a guess.
+    const auto ghost_kind = [](const Session& session) {
+        const auto spec = core::decode_ghost_spec(session.prompt().rubber_payload);
+        REQUIRE(spec.has_value());
+        return spec->kind;
+    };
+
+    {
+        // TAŞI — a translation, as it always was, but now said out loud.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        auto started = f.bus.begin_interactive("TAŞI nesneler=1");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::Ghost);
+        CHECK(ghost_kind(session) == core::GhostKind::Translate);
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // AYNALA — mirrored while the axis is aimed, which is the one thing the
+        // command is about.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        auto started = f.bus.begin_interactive("AYNALA nesneler=1");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::Ghost);
+        CHECK(ghost_kind(session) == core::GhostKind::Mirror);
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // DÖNDÜR — the angle can be POINTED at, with the objects turning under
+        // the cursor. It used to be typed and nothing else was offered.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 10,0 20,0", Origin::CommandLine).ok());
+        auto started = f.bus.begin_interactive("DÖNDÜR nesneler=1");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok()); // merkez
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "aci_nokta");
+        CHECK(session.prompt().kind == ParamKind::Point);
+        CHECK(ghost_kind(session) == core::GhostKind::Rotate);
+
+        // Pointing due north is a quarter turn, so the line along the east axis
+        // ends up along the north one.
+        REQUIRE(session.supply(Value::point(core::Point2{0, 10'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_x, core::Mm{0});
+        CHECK_EQ(box.max_x, core::Mm{0});
+        CHECK_EQ(box.min_y, core::Mm{10'000});
+        CHECK_EQ(box.max_y, core::Mm{20'000});
+    }
+    {
+        // ÖLÇEKLE — the factor can be pointed at: the cursor's distance from the
+        // centre in metres, which is how every CAD reads a dragged scale.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 10,0 20,0", Origin::CommandLine).ok());
+        auto started = f.bus.begin_interactive("ÖLÇEKLE nesneler=1");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "carpan_nokta");
+        CHECK(ghost_kind(session) == core::GhostKind::Scale);
+
+        REQUIRE(session.supply(Value::point(core::Point2{2'000, 0})).ok()); // 2 m = ×2
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_x, core::Mm{20'000});
+        CHECK_EQ(box.max_x, core::Mm{40'000});
+    }
+    {
+        // AND A RUN THAT WAS GIVEN ITS NUMBER ASKS NOTHING MORE, which is what
+        // keeps every journal line written before the gesture existed replayable
+        // (Article 1.4). Both verbs, both roads.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 10,0 20,0", Origin::CommandLine).ok());
+        REQUIRE(
+            f.bus.execute_line("DÖNDÜR nesneler=1 merkez=0,0 aci=90", Origin::CommandLine).ok());
+        REQUIRE(
+            f.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2", Origin::CommandLine).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_y, core::Mm{20'000});
+        CHECK_EQ(box.max_y, core::Mm{40'000});
     }
 }

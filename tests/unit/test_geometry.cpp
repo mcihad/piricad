@@ -8,6 +8,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/transform.hpp"
+#include "kentos_cad/core/trig.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
@@ -1332,4 +1333,103 @@ TEST_CASE("Yay kılavuzu: yük gidip geliyor")
     std::vector<std::uint8_t> bad = bytes;
     bad[0]                        = 9;
     CHECK_FALSE(decode_arc_guide(bad).has_value());
+}
+
+// ---------------------------------------------------------------------------
+// core/transform.hpp — the one transform, and the ghost the cursor completes.
+//
+// The ghost used to be a TRANSLATION whatever the verb was, so a turn or a scale
+// either had no preview or would have shown the objects sliding sideways while
+// the command turned them. A preview that promises the wrong transform is worse
+// than none: the user aims with it. These cases are the guarantee that the
+// canvas and the verb arrive at the same `Xform` from the same cursor.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Dönüşüm: dört tür tek fonksiyondan uygulanıyor")
+{
+    using namespace kentos::core;
+
+    const Point2 p{10'000, 0};
+
+    Xform move;
+    move.kind = Xform::Kind::Translate;
+    move.dx   = 5'000;
+    move.dy   = -2'000;
+    CHECK_EQ(transformed(move, p), (Point2{15'000, -2'000}));
+
+    // A quarter turn about the origin is exact: the four axes are integer-exact
+    // in `sin_cos_udeg`.
+    Xform turn;
+    turn.kind = Xform::Kind::Rotate;
+    turn.base = Point2{0, 0};
+    turn.turn = sin_cos_udeg(90 * kUDegPerDegree);
+    CHECK_EQ(transformed(turn, p), (Point2{0, 10'000}));
+
+    Xform bigger;
+    bigger.kind   = Xform::Kind::Scale;
+    bigger.base   = Point2{0, 0};
+    bigger.factor = 2.5;
+    CHECK_EQ(transformed(bigger, p), (Point2{25'000, 0}));
+
+    // Mirrored in the north axis: east becomes west.
+    Xform flip;
+    flip.kind   = Xform::Kind::Mirror;
+    flip.base   = Point2{0, 0};
+    flip.axis_b = Point2{0, 10'000};
+    CHECK_EQ(transformed(flip, p), (Point2{-10'000, 0}));
+}
+
+TEST_CASE("Hayalet: imleç dönüşüme çevriliyor")
+{
+    using namespace kentos::core;
+
+    const Point2 base{0, 0};
+
+    // TRANSLATE — the cursor is where the base point goes.
+    const Xform slide = ghost_xform(GhostKind::Translate, base, Point2{7'000, -3'000});
+    CHECK(slide.kind == Xform::Kind::Translate);
+    CHECK_EQ(slide.dx, Mm{7'000});
+    CHECK_EQ(slide.dy, Mm{-3'000});
+
+    // ROTATE — the cursor's direction from the base, counter-clockwise from
+    // east, in whole micro-degrees. Due north is a quarter turn exactly.
+    CHECK_EQ(ghost_turn_udeg(base, Point2{0, 10'000}), 90 * kUDegPerDegree);
+    CHECK_EQ(ghost_turn_udeg(base, Point2{10'000, 0}), 0);
+    const Xform turn = ghost_xform(GhostKind::Rotate, base, Point2{0, 10'000});
+    CHECK(turn.kind == Xform::Kind::Rotate);
+    // And the turn it carries IS that angle: a point due east goes due north.
+    CHECK_EQ(transformed(turn, Point2{5'000, 0}), (Point2{0, 5'000}));
+
+    // SCALE — the cursor's distance from the base, in metres. Two metres out is
+    // twice the size, which is how every CAD reads a dragged scale.
+    CHECK(std::abs(ghost_factor(base, Point2{2'000, 0}) - 2.0) < 1e-12);
+    CHECK(std::abs(ghost_factor(base, Point2{3'000, 4'000}) - 5.0) < 1e-12);
+    CHECK_EQ(ghost_factor(base, base), 0.0);
+    const Xform bigger = ghost_xform(GhostKind::Scale, base, Point2{2'000, 0});
+    CHECK_EQ(transformed(bigger, Point2{10'000, 0}), (Point2{20'000, 0}));
+
+    // MIRROR — the cursor is the axis's second point.
+    const Xform flip = ghost_xform(GhostKind::Mirror, base, Point2{0, 10'000});
+    CHECK(flip.kind == Xform::Kind::Mirror);
+    CHECK_EQ(transformed(flip, Point2{4'000, 1'000}), (Point2{-4'000, 1'000}));
+}
+
+TEST_CASE("Hayalet yükü: gidip geliyor")
+{
+    using namespace kentos::core;
+
+    const GhostSpec spec{.kind = GhostKind::Rotate, .copies = 3};
+    const std::vector<std::uint8_t> bytes = encode_ghost_spec(spec);
+    REQUIRE_EQ(bytes.size(), std::size_t{9});
+    const auto back = decode_ghost_spec(bytes);
+    REQUIRE(back.has_value());
+    CHECK_EQ(back.value(), spec);
+
+    CHECK_FALSE(decode_ghost_spec(std::vector<std::uint8_t>{}).has_value());
+    std::vector<std::uint8_t> bad_kind = bytes;
+    bad_kind[0]                        = 9;
+    CHECK_FALSE(decode_ghost_spec(bad_kind).has_value());
+    // A ghost of no copies is not a ghost.
+    std::vector<std::uint8_t> none = encode_ghost_spec(GhostSpec{.copies = 0});
+    CHECK_FALSE(decode_ghost_spec(none).has_value());
 }

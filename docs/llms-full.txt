@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 97 (86 tanesi onay ister)
-- Katalog parmak izi: `4235461345922827928`
+- Katalog parmak izi: `12695613777266614370`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1035,7 +1035,8 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `merkez` | string | evet | Döndürme merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `aci` | number | evet | Dönme açısı, derece; artı yön saat yönünün tersi (sayı) |
+| `aci` | number | hayır | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir (sayı) |
+| `aci_nokta` | string | hayır | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_scale` — Ölçekle
 
@@ -1049,7 +1050,8 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `merkez` | string | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `carpan` | number | evet | Ölçek çarpanı; sıfırdan büyük (sayı) |
+| `carpan` | number | hayır | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir (sayı) |
+| `carpan_nokta` | string | hayır | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_sector` — Daire Dilimi
 

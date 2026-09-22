@@ -37,37 +37,33 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
 
-/// What is being done to the coordinates. A description rather than a function,
-/// because a curve has to ask questions a `Point2 -> Point2` map cannot answer:
-/// how its radius changes, and whether its sweep is reversed.
-struct Xform
-{
-    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror };
-
-    Kind kind{Kind::Translate};
-    core::Mm dx{0};
-    core::Mm dy{0};
-    core::Point2 base{};
-    core::Point2 axis_b{};
-    core::SinCos turn{};
-    double factor{1.0};
-};
+/// `Xform` AND ITS APPLICATION MOVED TO `core` (core/transform.hpp), because the
+/// canvas needs the same description to draw the ghost that promises what the
+/// click will do. Two callers, one transform, no drift. The names stay short
+/// here so the bodies below read as they did.
+using Xform = core::Xform;
 
 core::Point2 apply(const Xform& x, core::Point2 p)
 {
-    switch (x.kind) {
-    case Xform::Kind::Translate: return core::translated(p, x.dx, x.dy);
-    case Xform::Kind::Rotate: return core::rotated_about(p, x.base, x.turn);
-    case Xform::Kind::Scale: return core::scaled_about(p, x.base, x.factor);
-    case Xform::Kind::Mirror: return core::mirrored_in_line(p, x.base, x.axis_b);
-    }
-    return p;
+    return core::transformed(x, p);
+}
+
+/// The ghost a verb asks for: WHICH transform the cursor is completing, so the
+/// canvas draws the result rather than a slide.
+PointOptions ghost(core::GhostKind kind, core::Point2 base, std::int64_t copies = 1)
+{
+    return PointOptions{
+        .rubber_band    = true,
+        .rubber_origin  = base,
+        .rubber_shape   = RubberShape::Ghost,
+        .rubber_payload = core::encode_ghost_spec(core::GhostSpec{.kind = kind, .copies = copies})};
 }
 
 /// How a curve's radius changes. Only scaling touches it: moving, turning and
@@ -520,15 +516,12 @@ Task<void> run_move(Context& ctx)
     // — the ghost every CAD shows — so where they will land is seen, not
     // inferred from a line.
     auto to = co_await ctx.point("bitis", "Taşımanın bitiş noktası",
-                                 PointOptions{.rubber_band   = true,
-                                              .rubber_origin = *from,
-                                              .rubber_shape  = RubberShape::Ghost});
+                                 ghost(core::GhostKind::Translate, *from));
     if (!to) co_return;
 
-    Xform x;
-    x.kind = Xform::Kind::Translate;
-    x.dx   = to->x - from->x;
-    x.dy   = to->y - from->y;
+    // THE SAME CALL THE GHOST MADE. The offset was worked out here and the ghost
+    // worked it out again in the canvas; one call means the two cannot differ.
+    const Xform x = core::ghost_xform(core::GhostKind::Translate, *from, *to);
 
     if (!apply_all(ctx, slots, x)) co_return;
 
@@ -557,13 +550,8 @@ Task<void> run_copy(Context& ctx)
     std::vector<core::Point2> placed;
     while (auto to = co_await ctx.point(
                "bitis", placed.empty() ? "Kopyanın geleceği nokta" : "Sonraki kopyanın yeri",
-               PointOptions{.rubber_band   = true,
-                            .rubber_origin = *from,
-                            .rubber_shape  = RubberShape::Ghost})) {
-        Xform x;
-        x.kind = Xform::Kind::Translate;
-        x.dx   = to->x - from->x;
-        x.dy   = to->y - from->y;
+               ghost(core::GhostKind::Translate, *from))) {
+        const Xform x = core::ghost_xform(core::GhostKind::Translate, *from, *to);
 
         for (core::EntityId slot : slots) {
             auto made = clone_one(ctx, slot, x);
@@ -712,23 +700,47 @@ Task<void> run_rotate(Context& ctx)
     std::vector<core::EntityId> slots;
     if (!co_await gather(ctx, requested, slots, "DÖNDÜR nesneler=1 merkez=0,0 aci=90")) co_return;
 
+    // WHETHER THE ANGLE CAME WITH THE INVOCATION, read before anything is
+    // awaited: a branch on whether a value was given, not on which client gave
+    // it (command.md P10). A run that was handed `aci` asks nothing more, which
+    // keeps every line written before the gesture existed replayable.
+    const bool angle_given = ctx.has_argument("aci");
+
     auto centre = co_await ctx.point("merkez", "Döndürme merkezi");
     if (!centre) co_return;
 
-    auto degrees = co_await ctx.number("aci", "Dönme açısı (derece, saat yönünün tersine)");
-    if (!degrees) co_return;
+    double degrees = 0.0;
+    if (angle_given) {
+        degrees = ctx.argument("aci").as_number();
+    } else {
+        // POINTED, WITH THE OBJECTS TURNING UNDER THE CURSOR. The angle used to
+        // be typed and nothing else was offered, so turning a building onto a
+        // measured bearing meant working the number out first and finding out
+        // afterwards whether it was the one you wanted. The cursor's direction
+        // from the centre IS the angle — degrees counter-clockwise from east,
+        // which is what this parameter has always meant — and the ghost turns
+        // with it.
+        auto at = co_await ctx.point("aci_nokta", "Dönme açısı: yeni doğrultuyu gösterin",
+                                     ghost(core::GhostKind::Rotate, *centre));
+        if (!at) co_return;
+        degrees = static_cast<double>(core::ghost_turn_udeg(*centre, *at)) /
+                  static_cast<double>(core::kUDegPerDegree);
+        // NOT PART OF THE RECORD: the gesture is HOW the angle was chosen and
+        // `aci` is what the angle IS (Article 1.4).
+        ctx.record("aci_nokta", Value{});
+    }
 
     Xform x;
     x.kind = Xform::Kind::Rotate;
     x.base = *centre;
-    x.turn = core::sin_cos_udeg(static_cast<core::UDeg>(
-        std::llround(*degrees * static_cast<double>(core::kUDegPerDegree))));
+    x.turn = core::sin_cos_udeg(
+        static_cast<core::UDeg>(std::llround(degrees * static_cast<double>(core::kUDegPerDegree))));
 
     if (!apply_all(ctx, slots, x)) co_return;
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("merkez", Value::point(*centre));
-    ctx.record("aci", Value::number(*degrees));
+    ctx.record("aci", Value::number(degrees));
     ctx.echo(std::to_string(slots.size()) + " nesne döndürüldü.");
 }
 
@@ -741,11 +753,26 @@ Task<void> run_scale(Context& ctx)
     if (!co_await gather(ctx, requested, slots, "ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2"))
         co_return;
 
+    const bool factor_given = ctx.has_argument("carpan");
+
     auto centre = co_await ctx.point("merkez", "Ölçekleme merkezi");
     if (!centre) co_return;
 
-    auto factor = co_await ctx.number("carpan", "Ölçek çarpanı");
-    if (!factor) co_return;
+    std::optional<double> factor;
+    if (factor_given) {
+        factor = ctx.argument("carpan").as_number();
+    } else {
+        // POINTED, WITH THE OBJECTS GROWING UNDER THE CURSOR. The factor is the
+        // cursor's distance from the centre in METRES — two metres out is twice
+        // the size — which is how every CAD reads a dragged scale, and the ghost
+        // is the size it will be.
+        auto at = co_await ctx.point("carpan_nokta", "Ölçek çarpanı: merkezden uzaklık (m)",
+                                     ghost(core::GhostKind::Scale, *centre));
+        if (!at) co_return;
+        factor = core::ghost_factor(*centre, *at);
+        // As above: the gesture is not the answer, the factor is.
+        ctx.record("carpan_nokta", Value{});
+    }
 
     if (*factor <= 0.0) {
         // A negative factor is refused rather than quietly becoming a half turn:
@@ -780,8 +807,11 @@ Task<void> run_mirror(Context& ctx)
     auto a = co_await ctx.point("baslangic", "Ayna ekseninin ilk noktası");
     if (!a) co_return;
 
+    // MIRRORED WHILE IT IS AIMED. The axis used to be drawn as a plain line, so
+    // the one thing the command is about — which way round the objects end up —
+    // was invisible until it had happened.
     auto b = co_await ctx.point("bitis", "Ayna ekseninin ikinci noktası",
-                                PointOptions{.rubber_band = true, .rubber_origin = *a});
+                                ghost(core::GhostKind::Mirror, *a));
     if (!b) co_return;
 
     if (a->x == b->x && a->y == b->y) {
@@ -789,10 +819,7 @@ Task<void> run_mirror(Context& ctx)
         co_return;
     }
 
-    Xform x;
-    x.kind   = Xform::Kind::Mirror;
-    x.base   = *a;
-    x.axis_b = *b;
+    const Xform x = core::ghost_xform(core::GhostKind::Mirror, *a, *b);
 
     if (!apply_all(ctx, slots, x)) co_return;
 
@@ -893,8 +920,11 @@ KENTOS_COMMAND(rotate)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim"},
                 Param::point("merkez", "Döndürme merkezi"),
-                Param::number("aci", Arity::exactly(1),
-                              "Dönme açısı, derece; artı yön saat yönünün tersi"),
+                Param::number("aci", Arity::optional(),
+                              "Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse "
+                              "yeni doğrultu gösterilir"),
+                Param::points("aci_nokta", Arity::optional(),
+                              "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -915,7 +945,11 @@ KENTOS_COMMAND(scale)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim"},
                 Param::point("merkez", "Ölçekleme merkezi; bu nokta yerinde kalır"),
-                Param::number("carpan", Arity::exactly(1), "Ölçek çarpanı; sıfırdan büyük"),
+                Param::number("carpan", Arity::optional(),
+                              "Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık "
+                              "gösterilir"),
+                Param::points("carpan_nokta", Arity::optional(),
+                              "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -6,6 +6,47 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — hayalet önizleme artık komutun kendi dönüşümü
+
+Hayalet, fiil ne olursa olsun bir **öteleme**ydi: tuvalin yardımcısı `dx, dy`
+alıyordu, yani önizleyebildiği tek şey bir kaydırmaydı. `TAŞI` ve `KOPYALA`'da
+doğruydu; `DÖNDÜR`, `ÖLÇEKLE` ve `AYNALA`'da ise hiç yoktu — ve eskisi verilseydi
+komut nesneleri döndürürken hayalet onları yana kaydırıyor gösterecekti. Yanlış
+dönüşümü vaat eden bir önizleme, hiç önizleme olmamasından kötüdür: kullanıcı
+onunla nişan alır.
+
+`Xform` — dört dönüşümü tek yerde anlatan yapı — `core/transform.hpp`'ye çıktı.
+Fiil belgeyi onunla yazıyor, tuval hayaleti onunla çiziyor: `core::transformed`
+tek fonksiyon, yani ikisi **yapısal olarak** ayrışamaz. Tuvalin `addWorldRun`,
+`addEmitRuns` ve `addGhost` yardımcıları artık öteleme değil dönüşüm alıyor.
+
+Hangi dönüşümün önizlendiğini fiil söylüyor (`core::GhostSpec`, yükte), imleci
+dönüşüme çeviren de tek fonksiyon (`core::ghost_xform`) — fiil cevabı alırken
+onu çağırıyor, tuval her fare hareketinde. Hayaletin kusursuz olması bundan.
+
+### Eklendi — DÖNDÜR ve ÖLÇEKLE fareyle
+
+İkisinin de sayısı yalnız yazılabiliyordu. Artık verilmezse **gösterilir**:
+
+- **`DÖNDÜR`**: imlecin merkeze göre doğrultusu açıdır (doğu 0, kuzey 90 derece)
+  ve nesneler imlecin altında döner.
+- **`ÖLÇEKLE`**: imlecin merkeze **metre** cinsinden uzaklığı çarpandır — iki
+  metre dışarısı iki kat — ve nesneler imlecin altında büyür.
+
+`aci=` ya da `carpan=` yazan için hiçbir şey değişmedi ve komut fazladan soru
+sormuyor; eski günlük satırları aynen oynuyor. Türetilen sayı kayda `aci` ve
+`carpan` olarak yazılıyor, jest yazılmıyor: bir soruya iki cevap olmaz.
+
+### Eklendi — altı düzenleme fiili araç kutusuna girdi, ve yedi ikon ayrıldı
+
+Kolonda yalnız `TAŞI` vardı; `KOPYALA`, `DÖNDÜR`, `ÖLÇEKLE`, `AYNALA` ve `DİZİ`
+sadece `Değiştir` menüsündeydi — üçüne yeni verilen hayaleti bir menüden keşfetmek
+mümkün değil (§2.6a). Altısı tek kartta.
+
+İkonlar: `DÖNDÜR`, `ÖLÇEKLE` ve `AYNALA` aynı dönen oku taşıyordu, `KOPYALA` ile
+`BLOKEKLE` aynı iki-çerçeveyi. Dört yeni glif (`Scale`, `Mirror`, `Array`,
+`BlockInsert`) ile her fiil kendi markasını aldı.
+
 ### Düzeltildi — nokta araçları: sabitlenen referans ekranda kalıyor
 
 Beş aracın dördünde tek bir ortak boşluk vardı. Bir komut önce bir **referans**

@@ -31,6 +31,7 @@ işaret yazan kullanıcıya itaat etmek yerine söylemek gerekir — aynalamak i
 ```text
 ÖLÇEKLE
 ÖLÇEKLE nesneler=<k> merkez=<n> carpan=<sayı>
+ÖLÇEKLE nesneler=<k> merkez=<n>               # çarpanı fareyle gösterirsiniz
 ```
 
 ## Parametreler
@@ -39,7 +40,8 @@ işaret yazan kullanıcıya itaat etmek yerine söylemek gerekir — aynalamak i
 |---|---|
 | `nesneler` | Ölçeklenecek nesnelerin kimlikleri. Verilmezse etkin seçim |
 | `merkez` | Ölçekleme merkezi; bu nokta yerinde kalır |
-| `carpan` | Ölçek çarpanı; sıfırdan büyük olmalı |
+| `carpan` | Ölçek çarpanı; sıfırdan büyük olmalı. Verilmezse sorulur |
+| `carpan_nokta` | Çarpanın gösterildiği nokta; `carpan` verilmişse sorulmaz |
 
 ## Örnekler
 
@@ -60,7 +62,16 @@ SEÇ
 
 ### Arayüz
 
-Nesneleri seçin, `ÖLÇEKLE` yazın, merkezi tıklayın, çarpanı yazın.
+Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
+**Ölçekle**'yi seçin (ya da `ÖLÇEKLE` yazın), merkezi tıklayın — ve sonra
+**çarpanı fareyle gösterin**.
+
+**Nesneler imlecin altında büyür.** Hayalet, komutun uygulayacağı dönüşümün
+kendisiyle çizilir, yani gördüğünüz boy tıklayınca oluşacak boydur. Çarpan,
+imlecin merkeze **metre** cinsinden uzaklığıdır: iki metre dışarısı iki kat,
+yarım metre dışarısı yarısı. Her CAD sürüklenen ölçeği böyle okur.
+
+Çarpanı yazmak isterseniz `carpan=` verin; o zaman komut hiçbir şey sormaz.
 
 ### Betik
 

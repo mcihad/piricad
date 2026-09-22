@@ -680,7 +680,8 @@ Seçilen nesneleri bir merkez etrafında döndürür.
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim |
 | `merkez` | point | 1 | Döndürme merkezi |
-| `aci` | number | 1 | Dönme açısı, derece; artı yön saat yönünün tersi |
+| `aci` | number | isteğe bağlı | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir |
+| `aci_nokta` | point_list | isteğe bağlı | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz |
 
 Ayrıntılı kullanım: [DÖNDÜR](rotate.md)
 
@@ -692,7 +693,8 @@ Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim |
 | `merkez` | point | 1 | Ölçekleme merkezi; bu nokta yerinde kalır |
-| `carpan` | number | 1 | Ölçek çarpanı; sıfırdan büyük |
+| `carpan` | number | isteğe bağlı | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir |
+| `carpan_nokta` | point_list | isteğe bağlı | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz |
 
 Ayrıntılı kullanım: [ÖLÇEKLE](scale.md)
 
@@ -4964,12 +4966,16 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "aci": {
           "type": "number",
-          "description": "Dönme açısı, derece; artı yön saat yönünün tersi (sayı)"
+          "description": "Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir (sayı)"
+        },
+        "aci_nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
       },
       "required": [
-        "merkez",
-        "aci"
+        "merkez"
       ],
       "additionalProperties": false
     },
@@ -5010,12 +5016,16 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "carpan": {
           "type": "number",
-          "description": "Ölçek çarpanı; sıfırdan büyük (sayı)"
+          "description": "Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir (sayı)"
+        },
+        "carpan_nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
       },
       "required": [
-        "merkez",
-        "carpan"
+        "merkez"
       ],
       "additionalProperties": false
     },

@@ -147,6 +147,17 @@ enum class Glyph {
     PointAlong,     ///< a line with dots spaced along it: ARANOKTA
     PerpOffset,     ///< a baseline with a right-angle tick out to a dot: DİKAYAK
     Survey,         ///< a station with two rays and a dot on one: ALIM
+
+    // ---- the edit verbs, which shared two marks between five tools -----------
+    //
+    // `DÖNDÜR`, `ÖLÇEKLE` and `AYNALA` all wore the turning arrow, and `KOPYALA`
+    // shared the two-outlines mark with `BLOKEKLE`. Each of the five does a
+    // different thing to the same objects, which is exactly when an icon has to
+    // say which.
+    Scale,       ///< a small square growing into a large one: ÖLÇEKLE
+    Mirror,      ///< a shape and its reflection across a dashed axis: AYNALA
+    Array,       ///< a grid of small squares: DİZİ
+    BlockInsert, ///< a square dropped onto an insertion cross: BLOKEKLE
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant
