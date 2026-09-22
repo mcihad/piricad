@@ -87,6 +87,10 @@ basılı tutup karttan seçin. İki noktayı tıklayın; aradaki kılavuz fareyi
 Sonra komut satırı oran (ya da `yontem=mesafe` verdiyseniz uzaklık) ister ve
 odak kendiliğinden oraya geçer. Sağ tık ya da **Esc** bitirir.
 
+**Kazıklanan doğru ekranda kalır** okumaları yazarken. O doğru çizimin nesnesi
+değil, komutun hatırladığı iki noktadır; eskiden verildiği anda ekrandan
+kayboluyordu.
+
 ### Betik
 
 ```json

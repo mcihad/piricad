@@ -10,7 +10,7 @@ Kaybolan bir köşe üç şekilde geri kurulabilir ve `KESİŞİMNOKTA` üçün�
 | `yontem` | Ne verir | Ne ister |
 |---|---|---|
 | `dogrultu` (varsayılan) | İki bilinen noktadan okunan iki doğrultunun kesişimi | iki nokta, iki açı |
-| `mesafe` | İki bilinen noktadan ölçülen iki uzaklığın kesişimi | iki nokta, iki uzaklık, `yon` |
+| `mesafe` | İki bilinen noktadan ölçülen iki uzaklığın kesişimi | iki nokta, iki uzaklık, `yon` (ya da gösterilen nokta) |
 | `dogru` | İki doğrunun — sınırların uzatılmış hâlinin — kesişimi | dört nokta |
 
 `dogru` doğruları **sonsuz** kabul eder: iki sınırın kesişeceği köşeyi verir,
@@ -22,6 +22,12 @@ parçalar birbirine değmese de. Bir ifrazda taş taşı gitmiş köşe tam budu
 Hangisini istediğinizi **`yon`** söyler: `sol` ya da `sag`, birinci→ikinci
 yönüne göre. Sessizce biri seçilmez — bir sınırı yolun yanlış tarafına koymanın
 yolu tam olarak budur.
+
+**Yazmazsanız komut sorar.** İki çözüm de ekranda işaretlenir, imlece yakın olan
+halkayla vurgulanır ve tıkladığınız o olur; `yon` bulunan yandan türetilip
+günlüğe yazılır, yani aynı satır yeniden oynatıldığında aynı noktayı verir.
+Önceden bu soru yoktu: `yon` yalnız yazıyla verilebiliyordu ve verilmediğinde
+`sol` varsayılıyordu — yani iki çözümden biri fareyle hiç seçilemiyordu.
 
 Hesap, komut satırındaki [`kes(...)`](komut-satiri.md#nokta-fonksiyonları) nokta
 fonksiyonuyla **aynı** hesaptır: aynı cevap, aynı çözüm seçimi ve aynı Türkçe
@@ -72,6 +78,13 @@ Kesişim noktası yerleştirildi.
 basılı tutup karttan seçin. Yöntem `yontem=` ile verilir; verilmezse
 `dogrultu`dur. Komut ne istediğini sırayla sorar ve yazı isteyen her istemde odak
 komut satırına geçer.
+
+**Bilinen noktalar ekranda kalır.** Uzaklığı ya da doğrultuyu yazarken ilk
+nokta — ve ikincisi verildiyse o da — işaretli durur. Bu noktalar çizimin nesnesi
+değil, komutun hatırladığı şeylerdir; eskiden verildikleri anda ekrandan
+kayboluyor ve okuma görünmeyen bir şeye göre yazılıyordu.
+
+`mesafe`'de son adım iki çözümden hangisini istediğinizi göstermenizdir.
 
 ### Betik
 

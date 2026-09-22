@@ -62,8 +62,12 @@ enum class RubberShape : std::uint8_t {
                    ///< yontem=3n
     CircleBuild,   ///< the circle the chain's fixed points and the cursor make, by the
                    ///< construction `rubber_payload` names: DAİRE yontem=2n|3n|ttr
-    ArcBuild       ///< the arc the chain's fixed points and the cursor make, by the construction
+    ArcBuild,      ///< the arc the chain's fixed points and the cursor make, by the construction
                    ///< `rubber_payload` names: YAY yontem=3n|devam|bby
+    Fixed,     ///< the reference the run has already fixed, with NOTHING following the cursor: the
+               ///< baseline of DİKAYAK, the station of ALIM, the line of ARANOKTA
+    Candidates ///< the answers this pick chooses between, marked; the one nearest the cursor is
+               ///< the one it will take: KESİŞİMNOKTA yontem=mesafe
 };
 
 struct Prompt
@@ -76,6 +80,15 @@ struct Prompt
     RubberShape rubber_shape{RubberShape::Line}; ///< what it draws between the two
 
     /// The points this run has already fixed, oldest first, `rubber_origin` last.
+    ///
+    /// For `RubberShape::Fixed` this is the WHOLE of the preview: a command that
+    /// fixes a reference and then asks for NUMBERS — a baseline and then tape
+    /// readings off it, a station and then an angle — had nothing on screen while
+    /// those numbers were typed, because the reference is not a document object
+    /// and the cursor is not answering anything. The user was aiming at a
+    /// baseline they could no longer see.
+    ///
+    /// For `RubberShape::Candidates` it is the answers the pick chooses between.
     ///
     /// A command that writes its geometry only once it is complete — ALAN cannot
     /// add a two-vertex face to the document, because no such face is valid — has

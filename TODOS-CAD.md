@@ -848,6 +848,33 @@ Rapor: "şimdi yay hatalarını düzelt, aynı sorunlar."
 - [x] **Belgeler**: `arc_draw.md`'ye "Kılavuz: her yöntemde yayın kendisi" tablosu, `yon`/`yon_nokta`
   satırları, kart adımları; `make reference` (dört üretilmiş dosya, 6.14).
 
+## Nokta araçları (2026-09-22)
+
+Rapor: "daha sonra da nokta araçları."
+
+- [x] **Ortak boşluk: sayı sorulurken referans kayboluyordu.** Yeni `RubberShape::Fixed` sabitlenmiş
+  olanı çiziyor, imleci izleyen hiçbir şey çizmiyor, ve imleç tuvalin dışındayken de çiziliyor
+  (yazan el fareyi orada bırakır). DİKAYAK'ta taban + `ayak` sonrası ayak noktası; ALIM'da istasyon
+  + bağlama; ARANOKTA'da doğru; KESİŞİMNOKTA'da bilinen noktalar.
+- [x] **`ctx.number` / `ctx.integer` kılavuz alabiliyor.** Bir kılavuz yalnız noktaya ait değil —
+  istemin kendisine ait.
+- [x] **`KESİŞİMNOKTA yontem=mesafe` yanı soruyor** (yeni `yon_nokta` parametresi, yeni
+  `RubberShape::Candidates`): iki çözüm işaretli, imlece yakın olan vurgulu, `yon` türetilip
+  günlüğe yazılıyor. `yon` verilmişse soru yok — eski satırlar aynen oynuyor.
+- [x] **Yöntemler karta girdi** (§2.6a): Kesişim — iki mesafeden / iki doğrudan, Ara Nokta —
+  mesafeden. Kart artık 40 üye; `tool-flyouts` probe'u hepsini çalıştırıyor.
+- [x] **Dört yeni ikon**: `PointIntersect`, `PointAlong`, `PerpOffset`, `Survey`. `ÖLÇÜ` cetvelini,
+  `LİDER` imlecini geri aldı.
+- [x] **DİKAYAK'ın lastik bandı** — bu satır "Bilinsin" listesinde bekliyordu ve kapandı: taban
+  çizgisi ve ayak noktası okumalar yazılırken duruyor. Sayı istemine imleç izleyen bir bant
+  takılmadı, çünkü o soruyu fare cevaplamıyor.
+- [x] **Testler**: `test_command.cpp`'de iki bölüm (üç aracın `Fixed` zinciri ve ayak noktasının
+  eklenmesi; `mesafe`'nin iki adayı, kuzey/güney seçimi ve `yon` verilince soru sormaması).
+  1005 birim testi, 57 ctest.
+- [x] **Gerçek olaylarla görsel**: DİKAYAK'ın duran tabanı ve `mesafe`'nin iki işaretli adayı.
+- [x] **Belgeler**: dört sayfaya "ekranda kalır" bölümleri, `intersect_point.md`'ye sorulan yan ve
+  `yon_nokta` satırı; `make reference`.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

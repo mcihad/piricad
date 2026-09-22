@@ -285,6 +285,46 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         break;
     }
 
+    case Glyph::PointIntersect:
+        // TWO CROSSING LINES AND THE DOT WHERE THEY MEET, which is the whole of
+        // what the command answers whichever of its three methods was used.
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(3.4, 6.4), QPointF(20.6, 15.6));
+        p.drawLine(QPointF(3.4, 15.6), QPointF(20.6, 6.4));
+        grip(p, QPointF(12.0, 11.0), c);
+        break;
+
+    case Glyph::PointAlong:
+        // A LINE WITH DOTS SPACED ALONG IT: the station pegs this command places.
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(3.2, 12.0), QPointF(20.8, 12.0));
+        for (const qreal x : {7.6, 12.0, 16.4})
+            grip(p, QPointF(x, 12.0), c);
+        break;
+
+    case Glyph::PerpOffset:
+        // A BASELINE, A RIGHT-ANGLE TICK OFF IT, AND THE DOT AT THE END: the two
+        // tape readings a Turkish field book takes, drawn as they are measured.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(3.2, 17.2), QPointF(20.8, 17.2));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(14.0, 17.2), QPointF(14.0, 6.4));
+        // The square that says the corner is a right angle.
+        p.drawLine(QPointF(14.0, 14.4), QPointF(11.2, 14.4));
+        p.drawLine(QPointF(11.2, 14.4), QPointF(11.2, 17.2));
+        grip(p, QPointF(14.0, 6.4), c);
+        break;
+
+    case Glyph::Survey:
+        // THE INSTRUMENT AND TWO RAYS OFF IT, with a dot on the one being read:
+        // a station, its backsight and a shot.
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(5.2, 18.0), QPointF(20.4, 9.6));
+        p.drawLine(QPointF(5.2, 18.0), QPointF(19.2, 18.0));
+        grip(p, QPointF(5.2, 18.0), c);
+        grip(p, QPointF(20.4, 9.6), c);
+        break;
+
     case Glyph::Copy:
         // Two offset outlines: the original and its duplicate.
         p.setPen(stroke(c, 1.5));

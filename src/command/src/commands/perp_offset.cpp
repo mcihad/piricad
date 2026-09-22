@@ -73,14 +73,37 @@ Task<void> run(Context& ctx)
         if (firsts != seconds) co_return;
     }
 
+    // THE BASELINE STAYS ON SCREEN while the readings are typed. It is not a
+    // document object — it is two points the run remembers — so once the second
+    // one was given it left the screen entirely, and the user was typing `ayak`
+    // and `boy` against a baseline they could no longer see. `RubberShape::Fixed`
+    // is the preview for a question the mouse is not answering.
+    const std::vector<core::Point2> baseline{*a, *b};
+
     std::vector<core::Point2> placed;
     while (true) {
         // THE PAIR IS TWO ANSWERS, not one string to be split. A number is a
         // number in this program — an expression, a unit, a sign — and asking for
         // "30 -5" as text would have put a second parser in this file (5.11).
-        auto foot = co_await ctx.number("ayak", "Ayak: taban üzerinde ilk noktadan uzaklık (m)");
+        auto foot = co_await ctx.number("ayak", "Ayak: taban üzerinde ilk noktadan uzaklık (m)",
+                                        PointOptions{.rubber_band   = true,
+                                                     .rubber_origin = *a,
+                                                     .rubber_shape  = RubberShape::Fixed,
+                                                     .rubber_chain  = baseline});
         if (!foot) break;
-        auto offset = co_await ctx.number("boy", "Boy: dik uzaklık (m, sol pozitif)");
+
+        // AND ONCE THE FOOT IS KNOWN it joins the picture, because the offset is
+        // measured from THERE and that is the thing the next number is about.
+        std::vector<core::Point2> with_foot = baseline;
+        if (core::Point2 on_base{};
+            core::perpendicular_offset(*a, *b, core::mm_from_metres(*foot), 0, on_base))
+            with_foot.push_back(on_base);
+
+        auto offset = co_await ctx.number("boy", "Boy: dik uzaklık (m, sol pozitif)",
+                                          PointOptions{.rubber_band   = true,
+                                                       .rubber_origin = *a,
+                                                       .rubber_shape  = RubberShape::Fixed,
+                                                       .rubber_chain  = std::move(with_foot)});
         if (!offset) break;
 
         core::Point2 at{};

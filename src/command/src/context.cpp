@@ -110,17 +110,27 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
 }
 
-InputAwaiter<double> Context::number(std::string param, std::string message)
+InputAwaiter<double> Context::number(std::string param, std::string message, PointOptions o)
 {
     Param p = Param::number(param, Arity::exactly(1));
     Prompt prompt{.message = std::move(message), .kind = ParamKind::Number, .param = param};
+    prompt.has_rubber_band = o.rubber_band;
+    prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_shape    = o.rubber_shape;
+    prompt.rubber_chain    = std::move(o.rubber_chain);
+    prompt.rubber_payload  = std::move(o.rubber_payload);
     return InputAwaiter<double>(session_, std::move(p), std::move(prompt), &to_number);
 }
 
-InputAwaiter<std::int64_t> Context::integer(std::string param, std::string message)
+InputAwaiter<std::int64_t> Context::integer(std::string param, std::string message, PointOptions o)
 {
     Param p = Param::integer(param, Arity::exactly(1));
     Prompt prompt{.message = std::move(message), .kind = ParamKind::Integer, .param = param};
+    prompt.has_rubber_band = o.rubber_band;
+    prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_shape    = o.rubber_shape;
+    prompt.rubber_chain    = std::move(o.rubber_chain);
+    prompt.rubber_payload  = std::move(o.rubber_payload);
     return InputAwaiter<std::int64_t>(session_, std::move(p), std::move(prompt), &to_integer);
 }
 

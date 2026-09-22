@@ -6,6 +6,50 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — nokta araçları: sabitlenen referans ekranda kalıyor
+
+Beş aracın dördünde tek bir ortak boşluk vardı. Bir komut önce bir **referans**
+sabitliyor — taban çizgisi, istasyon, kazıklanacak doğru, bilinen noktalar — sonra
+o referansa göre **sayı** soruyor. Referans çizimin nesnesi değil, komutun
+hatırladığı noktalar; bu yüzden verildiği anda ekrandan kayboluyor ve okuma
+görünmeyen bir şeye göre yazılıyordu.
+
+Yeni `RubberShape::Fixed` sabitlenmiş olanı çiziyor ve imleci izleyen hiçbir şey
+çizmiyor — fare o soruyu cevaplamadığı için doğru önizleme bu. İmleç tuvalin
+dışındayken de çiziliyor, çünkü yazan bir el fareyi oraya bırakır.
+
+- **DİKAYAK**: taban çizgisi duruyor, ve `ayak` yazıldığı anda **ayak noktası** da
+  işaretleniyor — `boy` tam oradan ölçülür.
+- **ALIM**: istasyon duruyor, `baglama` verildiyse bağlama doğrultusuyla birlikte.
+- **ARANOKTA**: kazıklanan doğru duruyor.
+- **KESİŞİMNOKTA**: bilinen noktalar duruyor.
+
+Bunun için `ctx.number` ve `ctx.integer` da kılavuz alabiliyor artık: bir kılavuz
+yalnız noktaya ait değil.
+
+### Düzeltildi — KESİŞİMNOKTA `mesafe`: iki çözümden hangisi artık SORULUYOR
+
+`bby`'dekinin aynısı. Komutun üstündeki not "kullanıcı hangisini istediğini
+söyler" diyordu ama `yon` yalnız argümandan okunuyor ve yoksa `sol`
+varsayılıyordu — iki kesişimden biri fareyle hiç seçilemiyordu. Bir sınırı yolun
+yanlış tarafına koymanın yolu tam olarak bu.
+
+Şimdi yeni `RubberShape::Candidates` ile iki çözüm de ekranda işaretleniyor,
+imlece yakın olan halkayla vurgulanıyor ve tıkladığınız o oluyor; `yon` bulunan
+yandan türetilip günlüğe yazılıyor, yani satır yeniden oynatıldığında aynı
+noktayı veriyor.
+
+### Eklendi — yöntemler karta girdi, ve nokta ailesinin beş aracı beş ikon
+
+`KESİŞİMNOKTA`'nın üç yönteminden ve `ARANOKTA`'nın ikisinden yalnız varsayılanı
+karttan erişilebiliyordu — yani iki tape ölçüsünden sınır kurma işi ancak yöntemi
+yazarak yapılabiliyordu (§2.6a). Karta üç üye eklendi: **Kesişim — iki mesafeden**,
+**Kesişim — iki doğrudan**, **Ara Nokta — mesafeden**.
+
+İkonlar da ayrıldı: `NOKTA`, `KESİŞİMNOKTA` ve `ARANOKTA` üçü de sade noktayı
+taşıyordu; `DİKAYAK` `ÖLÇÜ`'nün cetvelini, `ALIM` ise `LİDER`'in imlecini ödünç
+almıştı. Dört yeni glif geldi ve ödünç alınan iki marka sahiplerine döndü.
+
 ### Düzeltildi — YAY: üç yöntem yayı önizlemiyordu, `bby` ise yanı hiç sormuyordu
 
 Aynı hastalık, beşinin üçünde.

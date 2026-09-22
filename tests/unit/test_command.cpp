@@ -7899,3 +7899,136 @@ TEST_CASE("YAY: her yöntem yayın kendisini önizliyor, ve bby yanı soruyor")
         CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
     }
 }
+
+TEST_CASE("Nokta araçları: sabitlenen referans ekranda kalıyor")
+{
+    // A COMMAND THAT FIXES A REFERENCE AND THEN ASKS FOR NUMBERS had nothing on
+    // screen while those numbers were typed: a baseline, a station and a line are
+    // what the run remembers, not document objects, so each one left the screen
+    // the moment it was given and the reading was typed against nothing.
+    {
+        // DİKAYAK — the baseline, and the foot once `ayak` is answered.
+        Fixture f;
+        auto started = f.bus.begin_interactive("DİKAYAK");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "ayak");
+        CHECK(session.prompt().kind == ParamKind::Number);
+        CHECK(session.prompt().has_rubber_band);
+        CHECK(session.prompt().rubber_shape == RubberShape::Fixed);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+
+        REQUIRE(session.supply(Value::number(30.0)).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "boy");
+        CHECK(session.prompt().rubber_shape == RubberShape::Fixed);
+        // The baseline AND the foot the offset is measured from.
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{3});
+        CHECK_EQ(session.prompt().rubber_chain[2], (core::Point2{30'000, 0}));
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // ALIM — the station, and the backsight with it when there is one.
+        Fixture f;
+        auto started = f.bus.begin_interactive("ALIM baglama=0,100");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "aci");
+        CHECK(session.prompt().rubber_shape == RubberShape::Fixed);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        CHECK_EQ(session.prompt().rubber_chain[0], (core::Point2{0, 0}));
+        CHECK_EQ(session.prompt().rubber_chain[1], (core::Point2{0, 100'000}));
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+    {
+        // ARANOKTA — the line being pegged.
+        Fixture f;
+        auto started = f.bus.begin_interactive("ARANOKTA");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "deger");
+        CHECK(session.prompt().rubber_shape == RubberShape::Fixed);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        session.cancel();
+        (void)f.bus.finish(session);
+    }
+}
+
+TEST_CASE("KESİŞİMNOKTA mesafe: iki çözümden hangisi SORULUYOR")
+{
+    // The note in this command always said "the user says which", and the code
+    // did not: `yon` was read from the arguments and defaulted to `sol`, so from
+    // the interface one of the two crossings was unreachable by mouse.
+    //
+    // Two circles, radius 50 m about (0,0) and 50 m about (80,0), cross at
+    // (40, ±30) — the 3-4-5 triangle again, so both answers are exact.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("KESİŞİMNOKTA yontem=mesafe");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{80'000, 0})).ok());
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "yon_nokta");
+        CHECK(session.prompt().kind == ParamKind::Point);
+        CHECK(session.prompt().rubber_shape == RubberShape::Candidates);
+        REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+        // Both answers offered, and they are the two the arithmetic gives.
+        for (const core::Point2& p : session.prompt().rubber_chain) {
+            CHECK_EQ(p.x, core::Mm{40'000});
+            const bool north_or_south = p.y == core::Mm{30'000} || p.y == core::Mm{-30'000};
+            CHECK(north_or_south);
+        }
+
+        // Pointing NORTH takes the northern crossing — and the other one is now
+        // reachable the same way, which it was not before.
+        REQUIRE(session.supply(Value::point(core::Point2{40'000, 25'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_y, core::Mm{30'000});
+        CHECK_EQ(box.min_x, core::Mm{40'000});
+    }
+    {
+        // Pointing SOUTH takes the southern one.
+        Fixture f;
+        auto started = f.bus.begin_interactive("KESİŞİMNOKTA yontem=mesafe");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{80'000, 0})).ok());
+        REQUIRE(session.supply(Value::number(50.0)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{40'000, -25'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.min_y, core::Mm{-30'000});
+    }
+    {
+        // AND A RUN THAT WAS GIVEN `yon` ASKS NOTHING MORE, which keeps every
+        // line written before the gesture existed replayable (Article 1.4).
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("KESİŞİMNOKTA yontem=mesafe birinci=0,0 birinci_mesafe=50 "
+                                  "ikinci=80,0 ikinci_mesafe=50 yon=sag",
+                                  Origin::CommandLine)
+                    .ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+}

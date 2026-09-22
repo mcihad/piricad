@@ -36,6 +36,20 @@ namespace {
 
 // ------------------------------------------------------ KESİŞİMNOKTA ----
 
+/// A guide that draws only what the run has already fixed.
+///
+/// The three methods here fix known points and then ask for NUMBERS against
+/// them — two distances, two directions — and those points are not document
+/// objects, so once given they left the screen and the reading was typed against
+/// nothing. See `RubberShape::Fixed`.
+PointOptions fixed_at(core::Point2 origin, std::vector<core::Point2> chain)
+{
+    return PointOptions{.rubber_band   = true,
+                        .rubber_origin = origin,
+                        .rubber_shape  = RubberShape::Fixed,
+                        .rubber_chain  = std::move(chain)};
+}
+
 Task<void> run_intersect(Context& ctx)
 {
     // The method decides what is asked for next, so it is read first. A word the
@@ -61,26 +75,63 @@ Task<void> run_intersect(Context& ctx)
         if (!d) co_return;
         found = line_crossing(*a, *b, *c, *d);
     } else if (is("mesafe")) {
-        auto r1 = co_await ctx.number("birinci_mesafe", "Birinci noktadan ölçülen uzaklık (m)");
+        // WHETHER THE SIDE CAME WITH THE INVOCATION, read before anything is
+        // awaited: a branch on whether a value was given, not on which client
+        // gave it (command.md P10).
+        const bool side_given = ctx.has_argument("yon");
+
+        auto r1 = co_await ctx.number("birinci_mesafe", "Birinci noktadan ölçülen uzaklık (m)",
+                                      fixed_at(*a, {*a}));
         if (!r1) co_return;
-        auto b = co_await ctx.point("ikinci", "İkinci bilinen nokta");
+        auto b = co_await ctx.point("ikinci", "İkinci bilinen nokta", fixed_at(*a, {*a}));
         if (!b) co_return;
-        auto r2 = co_await ctx.number("ikinci_mesafe", "İkinci noktadan ölçülen uzaklık (m)");
+        auto r2 = co_await ctx.number("ikinci_mesafe", "İkinci noktadan ölçülen uzaklık (m)",
+                                      fixed_at(*a, {*a, *b}));
         if (!r2) co_return;
 
-        // TWO ANSWERS, AND THE USER SAYS WHICH. `sol` and `sağ` are read as the
-        // side of the direction first→second, which is the same side
-        // `core::circle_intersection` calls left.
+        // TWO ANSWERS, AND THE USER SAYS WHICH — which is what the note here has
+        // always claimed and what the code did not do: `yon` was read from the
+        // arguments and defaulted to `sol`, so from the interface one of the two
+        // crossings was unreachable by mouse. Now both are marked and the nearer
+        // one to the cursor is the one that will be taken.
         std::string side = "sol";
-        if (const Value v = ctx.argument("yon"); !v.empty()) side = v.as_text();
+        if (side_given) {
+            side = ctx.argument("yon").as_text();
+        } else {
+            auto left  = distance_crossing(*a, *r1, *b, *r2, Side::Left);
+            auto right = distance_crossing(*a, *r1, *b, *r2, Side::Right);
+            if (!left) {
+                ctx.session().fail(left.error());
+                co_return;
+            }
+            std::vector<core::Point2> both{left.value()};
+            if (right && right.value() != left.value()) both.push_back(right.value());
+
+            auto pointed = co_await ctx.point("yon_nokta",
+                                              "İki çözümden hangisi: istediğiniz noktayı gösterin",
+                                              PointOptions{.rubber_band   = true,
+                                                           .rubber_origin = *a,
+                                                           .rubber_shape  = RubberShape::Candidates,
+                                                           .rubber_chain  = both});
+            if (!pointed) co_return;
+
+            const double to_left = core::distance_metres(*pointed, left.value());
+            const double to_right =
+                right ? core::distance_metres(*pointed, right.value()) : to_left + 1.0;
+            side = to_right < to_left ? "sag" : "sol";
+            ctx.record("yon", Value::text(side));
+            ctx.record("yon_nokta", Value{});
+        }
         found = distance_crossing(*a, *r1, *b, *r2,
                                   core::turkish_key_equals(side, "sag") ? Side::Right : Side::Left);
     } else {
-        auto angle_a = co_await ctx.number("birinci_aci", "Birinci noktadan okunan doğrultu");
+        auto angle_a = co_await ctx.number("birinci_aci", "Birinci noktadan okunan doğrultu",
+                                           fixed_at(*a, {*a}));
         if (!angle_a) co_return;
-        auto b = co_await ctx.point("ikinci", "İkinci bilinen nokta");
+        auto b = co_await ctx.point("ikinci", "İkinci bilinen nokta", fixed_at(*a, {*a}));
         if (!b) co_return;
-        auto angle_b = co_await ctx.number("ikinci_aci", "İkinci noktadan okunan doğrultu");
+        auto angle_b = co_await ctx.number("ikinci_aci", "İkinci noktadan okunan doğrultu",
+                                           fixed_at(*a, {*a, *b}));
         if (!angle_b) co_return;
 
         const core::AngleConvention convention = ctx.session().bus().angle_convention();
@@ -147,9 +198,19 @@ Task<void> run_along(Context& ctx)
     if (const Value v = ctx.argument("yontem"); !v.empty())
         by_metres = core::turkish_key_equals(v.as_text(), "mesafe");
 
+    // THE LINE STAYS ON SCREEN while the readings are typed. It is two points the
+    // run remembers rather than a document object, so it left the screen the
+    // moment it was given and the user was pegging a centreline they could no
+    // longer see.
+    const std::vector<core::Point2> along{*a, *b};
+
     while (true) {
-        auto reading = co_await ctx.number("deger", by_metres ? "İlk noktadan uzaklık (m)"
-                                                              : "Oran (0 ile 1 arası)");
+        auto reading = co_await ctx.number(
+            "deger", by_metres ? "İlk noktadan uzaklık (m)" : "Oran (0 ile 1 arası)",
+            PointOptions{.rubber_band   = true,
+                         .rubber_origin = *a,
+                         .rubber_shape  = RubberShape::Fixed,
+                         .rubber_chain  = along});
         if (!reading) break;
 
         auto at = by_metres ? along_distance(*a, *b, *reading) : along_ratio(*a, *b, *reading);
@@ -194,6 +255,9 @@ KENTOS_COMMAND(intersect_point)
                               "İkinci noktadan ölçülen uzaklık (m)"),
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
                               "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre"),
+                Param::points("yon_nokta", Arity::optional(),
+                              "mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse "
+                              "sorulmaz"),
                 Param::points("kesisim", Arity::optional(), "Bulunan nokta; günlüğe yazılır"),
             },
         .undo  = UndoPolicy::SingleTransaction,

@@ -80,12 +80,28 @@ Task<void> run(Context& ctx)
         if (firsts != seconds) co_return;
     }
 
+    // THE STATION STAYS ON SCREEN while the field book is typed, and the
+    // backsight with it when there is one. Neither is a document object — they
+    // are what the run remembers — so the instrument's own position left the
+    // screen the moment it was given, and every angle after that was read
+    // against something invisible. `RubberShape::Fixed` is the preview for a
+    // question the mouse is not answering.
+    std::vector<core::Point2> setup{*station};
+    if (const Value v = ctx.argument("baglama"); !v.empty() && !v.as_points().empty())
+        setup.push_back(v.as_points().front());
+    const auto standing = [&setup, &station] {
+        return PointOptions{.rubber_band   = true,
+                            .rubber_origin = *station,
+                            .rubber_shape  = RubberShape::Fixed,
+                            .rubber_chain  = setup};
+    };
+
     std::vector<core::Point2> shot;
     while (true) {
-        auto angle = co_await ctx.number("aci", relative ? "Açı: bağlamadan itibaren okunan açı"
-                                                         : "Semt açısı");
+        auto angle = co_await ctx.number(
+            "aci", relative ? "Açı: bağlamadan itibaren okunan açı" : "Semt açısı", standing());
         if (!angle) break;
-        auto distance = co_await ctx.number("kenar", "Kenar: alete olan uzaklık (m)");
+        auto distance = co_await ctx.number("kenar", "Kenar: alete olan uzaklık (m)", standing());
         if (!distance) break;
         if (*distance < 0.0) {
             ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,

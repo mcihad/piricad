@@ -108,6 +108,11 @@ ALIM 0,0 aci=0 kenar=50 aci=100 kenar=50 aci=200 kenar=50 aci=300 kenar=50 cizgi
 **Çizim > Alım** menüsünden ya da araç kutusundaki **Nokta** düğmesini basılı
 tutup açılan karttan **Alım**'ı seçin.
 
+**İstasyon ekranda kalır**, ve `baglama` verdiyseniz bağlama doğrultusu da:
+karne yazılırken aletin durduğu yer işaretli durur. İkisi de çizimin nesnesi
+değil, komutun hatırladığı noktalardır; eskiden istasyon verildiği anda ekrandan
+kayboluyor ve her açı görünmeyen bir şeye göre okunuyordu.
+
 1. İstasyona tıklayın (nokta yakalama açıkken mevcut nirengiye yakalar).
 2. Komut satırı **açı** ister ve odak kendiliğinden oraya geçer; okumayı yazın.
 3. Ardından **kenar** ister; onu da yazın. Nokta hemen çizime düşer.

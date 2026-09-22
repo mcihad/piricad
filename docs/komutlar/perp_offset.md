@@ -106,6 +106,12 @@ basılı tutup açılan karttan **Dik Ayak**'ı seçin.
 
 1. Taban çizgisinin ilk noktasına tıklayın.
 2. İkinci noktasına tıklayın — aradaki kılavuz fareyi izler.
+
+**Taban çizgisi ekranda kalır.** Okumaları yazarken taban görünür durur, ve
+`ayak`'ı yazdığınız anda dik inilecek **ayak noktası** da işaretlenir — `boy` tam
+olarak oradan ölçülür. Taban çizgisi çizimin nesnesi değil, komutun hatırladığı
+iki noktadır; eskiden ikinci nokta verildiği anda ekrandan kayboluyor ve okumalar
+görünmeyen bir tabana göre yazılıyordu.
 3. Komut satırı **ayak** ister ve odak kendiliğinden oraya geçer; sayıyı yazıp
    Enter'a basın.
 4. Ardından **boy** ister; onu da yazın. Nokta hemen çizime düşer.

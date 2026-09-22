@@ -136,6 +136,17 @@ enum class Glyph {
     Ellipse, ///< an ellipse with its two axes: ELİPS
     Annulus, ///< two concentric circles: HALKA
     Sector,  ///< a wedge cut from a circle: DAİRE DİLİMİ
+
+    // ---- the point family, five tools that wore three marks ------------------
+    //
+    // `NOKTA`, `KESİŞİMNOKTA` and `ARANOKTA` all wore the plain point; `DİKAYAK`
+    // borrowed the ruler that belongs to `ÖLÇÜ` and `ALIM` the locator that
+    // belongs to `LİDER`. A card shows labels, but the four that are not the
+    // family's face are still picked from a list of icons.
+    PointIntersect, ///< two crossing lines with a dot where they meet: KESİŞİMNOKTA
+    PointAlong,     ///< a line with dots spaced along it: ARANOKTA
+    PerpOffset,     ///< a baseline with a right-angle tick out to a dot: DİKAYAK
+    Survey,         ///< a station with two rays and a dot on one: ALIM
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

@@ -867,20 +867,21 @@ void MainWindow::buildActions()
                               "kısaltma: HLK"));
     drawingTools_->addAction(actAnnulus_);
 
-    actIntersect_ = drawTool(Glyph::Point, tr("Kesişim Noktası"), QStringLiteral("KESİŞİMNOKTA"),
-                             tr("KESİŞİMNOKTA — iki doğrultu, iki uzaklık ya da iki doğrunun "
-                                "kesişimi; yöntem yontem= ile  ·  kısaltma: KSN"));
+    actIntersect_ =
+        drawTool(Glyph::PointIntersect, tr("Kesişim Noktası"), QStringLiteral("KESİŞİMNOKTA"),
+                 tr("KESİŞİMNOKTA — iki doğrultu, iki uzaklık ya da iki doğrunun "
+                    "kesişimi; yöntem yontem= ile  ·  kısaltma: KSN"));
     drawingTools_->addAction(actIntersect_);
-    actAlong_ = drawTool(Glyph::Point, tr("Ara Nokta"), QStringLiteral("ARANOKTA"),
+    actAlong_ = drawTool(Glyph::PointAlong, tr("Ara Nokta"), QStringLiteral("ARANOKTA"),
                          tr("ARANOKTA — doğru üzerinde oran, uzaklık ya da sayi= ile eşit "
                             "bölme  ·  kısaltma: ARN"));
     drawingTools_->addAction(actAlong_);
-    actSurvey_ = drawTool(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
+    actSurvey_ = drawTool(Glyph::Survey, tr("Alım"), QStringLiteral("ALIM"),
                           tr("ALIM — istasyon, sonra açı ve kenar çiftleri; bağlama verilirse "
                              "açılar ondan itibaren  ·  kısaltma: ALM"));
     drawingTools_->addAction(actSurvey_);
     actPerpOffset_ =
-        drawTool(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
+        drawTool(Glyph::PerpOffset, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
                  tr("DİKAYAK — taban çizgisi, sonra ayak ve boy çiftleri; A→B yönünde SOL "
                     "pozitiftir  ·  kısaltma: DA"));
     drawingTools_->addAction(actPerpOffset_);
@@ -1499,7 +1500,7 @@ void MainWindow::buildMenus()
     draw->addAction(commandAction(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
                                   tr("ALIM — istasyondan okunan açı ve kenarlardan nokta "
                                      "hesaplar  ·  kısaltma: ALM")));
-    draw->addAction(commandAction(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
+    draw->addAction(commandAction(Glyph::PerpOffset, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
                                   tr("DİKAYAK — taban çizgisine göre dik ayak ve dik boy vererek "
                                      "nokta yerleştirir  ·  kısaltma: DA")));
     draw->addAction(commandAction(Glyph::Line, tr("Kılavuz"), QStringLiteral("KILAVUZ"),
@@ -1940,7 +1941,28 @@ void MainWindow::buildToolBox()
     // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
     // canvas and a point computed from a baseline are the same kind of thing to
     // a surveyor, and the second is what a tape survey produces all day.
-    toolBox_->addFamily({actPoint_, actPerpOffset_, actSurvey_, actIntersect_, actAlong_});
+    // AND THE METHODS, under the tool they belong to. `KESİŞİMNOKTA` has three
+    // and `ARANOKTA` two, and only the default of each was reachable from the
+    // card — so the two-distance intersection, which is how a boundary is
+    // recovered from two tape measurements, could be run only by typing its
+    // method (§2.6a: a tool that arrives brings its UI with it).
+    toolBox_->addFamily({
+        actPoint_,
+        actPerpOffset_,
+        actSurvey_,
+        actIntersect_,
+        methodTool(Glyph::PointIntersect, tr("Kesişim — iki mesafeden"),
+                   QStringLiteral("KESİŞİMNOKTA yontem=mesafe"),
+                   tr("İki bilinen noktadan ölçülen iki uzaklık; iki çözümden birini "
+                      "gösterirsiniz")),
+        methodTool(Glyph::PointIntersect, tr("Kesişim — iki doğrudan"),
+                   QStringLiteral("KESİŞİMNOKTA yontem=dogru"),
+                   tr("İki doğrunun her birinden iki nokta")),
+        actAlong_,
+        methodTool(Glyph::PointAlong, tr("Ara Nokta — mesafeden"),
+                   QStringLiteral("ARANOKTA yontem=mesafe"),
+                   tr("Oran değil, ilk noktadan metre cinsinden uzaklık")),
+    });
     toolBox_->addTool(actText_);
     toolBox_->addFamily({actInsert_, actBlock_});
     toolBox_->addFamily({actDimension_, actLeader_});

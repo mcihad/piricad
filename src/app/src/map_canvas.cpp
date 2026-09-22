@@ -1565,7 +1565,8 @@ void MapCanvas::buildOverlay()
     // Rubber band for the running interactive command. It runs to the SNAPPED
     // point when an aid has fired, because that is where the segment will land.
     if (auto* session = controller_.session();
-        session && session->waiting() && session->prompt().has_rubber_band && cursor_valid_) {
+        session && session->waiting() && session->prompt().has_rubber_band &&
+        (cursor_valid_ || session->prompt().rubber_shape == command::RubberShape::Fixed)) {
         const auto from = view_.to_screen(session->prompt().rubber_origin);
 
         QPointF to = cursor_;
@@ -1689,6 +1690,56 @@ void MapCanvas::buildOverlay()
                        false);
             } else {
                 addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+            }
+        } else if (shape == command::RubberShape::Fixed) {
+            // WHAT THE RUN HAS ALREADY FIXED, and nothing else. No line to the
+            // cursor, because the cursor is not answering this question: these
+            // are the commands that fix a reference and then ask for NUMBERS,
+            // and the reference is not a document object — so once it was given
+            // it left the screen and the user was aiming at a baseline they
+            // could no longer see. Drawn even when the pointer is off the canvas,
+            // which is where a hand that is typing leaves it.
+            const auto& chain = session->prompt().rubber_chain;
+            if (chain.size() >= 2) {
+                std::vector<render::ScreenPointF> run;
+                run.reserve(chain.size());
+                for (const core::Point2& p : chain)
+                    run.push_back(render::to_f(view_.to_screen(p)));
+                addRun(batch, run, false);
+            }
+            // Each fixed point marked, so a reference of ONE — a station with no
+            // backsight yet — is visible too.
+            for (const core::Point2& p : chain) {
+                const render::ScreenPointF at = render::to_f(view_.to_screen(p));
+                addCircle(batch, at.x, at.y, 4.0f);
+            }
+        } else if (shape == command::RubberShape::Candidates) {
+            // THE ANSWERS THIS PICK CHOOSES BETWEEN. Two known distances cross at
+            // TWO points and two known directions at one; which of the two was
+            // meant is not in the numbers, so the user points at it. Both are
+            // marked and the one that will be taken — the nearer — is ringed
+            // again and joined to the cursor, so the choice is visible before the
+            // click rather than after it.
+            const auto& chain           = session->prompt().rubber_chain;
+            const core::Point2 at       = cursorWorld();
+            const core::Point2* nearest = nullptr;
+            double best                 = 0.0;
+            for (const core::Point2& p : chain) {
+                const auto to_it = core::distance_squared(at, p);
+                if (nearest == nullptr || to_it < best) {
+                    nearest = &p;
+                    best    = to_it;
+                }
+            }
+            for (const core::Point2& p : chain) {
+                const render::ScreenPointF on = render::to_f(view_.to_screen(p));
+                addCircle(batch, on.x, on.y, 4.0f);
+            }
+            if (nearest != nullptr) {
+                const render::ScreenPointF on = render::to_f(view_.to_screen(*nearest));
+                const std::size_t lit         = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                addCircle(lit, on.x, on.y, 8.0f);
+                addRun(lit, {on, toScreenF(to)}, false);
             }
         } else if (shape == command::RubberShape::ArcBuild) {
             // THE ARC THE CLICK WILL MAKE, by the construction the command named,
@@ -1944,7 +1995,8 @@ void MapCanvas::buildOverlay()
         // result and undo. The length and the bearing belong on the line while it
         // is being dragged — that is what every CAD calls dynamic input, and what
         // a surveyor setting out a 12 cm step needs to see the step working.
-        if (look_.dynamic_input && shape != command::RubberShape::AreaEdit) {
+        if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
+            shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

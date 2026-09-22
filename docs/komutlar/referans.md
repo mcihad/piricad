@@ -204,6 +204,7 @@ Ayrıntılı kullanım: [ALIM](survey_polar.md)
 | `birinci_mesafe` | number | isteğe bağlı | Birinci noktadan ölçülen uzaklık (m) |
 | `ikinci_mesafe` | number | isteğe bağlı | İkinci noktadan ölçülen uzaklık (m) |
 | `yon` | text | isteğe bağlı | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
+| `yon_nokta` | point_list | isteğe bağlı | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz |
 | `kesisim` | point_list | isteğe bağlı | Bulunan nokta; günlüğe yazılır |
 
 Ayrıntılı kullanım: [KESİŞİMNOKTA](intersect_point.md)
@@ -3238,6 +3239,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "sag"
           ],
           "description": "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin)"
+        },
+        "yon_nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "kesisim": {
           "type": "string",

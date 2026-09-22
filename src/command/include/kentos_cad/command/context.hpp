@@ -141,8 +141,20 @@ public:
 
     // ---- input, source-agnostic ----
     InputAwaiter<Point2> point(std::string param, std::string message, PointOptions o = {});
-    InputAwaiter<double> number(std::string param, std::string message);
-    InputAwaiter<std::int64_t> integer(std::string param, std::string message);
+
+    /// Asks for a number, and — with `o` — says what the canvas should keep on
+    /// screen while it is typed.
+    ///
+    /// A GUIDE IS NOT ONLY FOR A POINT. The commands that take tape readings fix
+    /// a reference first and then ask for numbers against it: a baseline and
+    /// then `ayak`/`boy`, a station and then an angle and a side. That reference
+    /// is not a document object, so once it was given it left the screen and the
+    /// user was typing readings against a baseline they could no longer see.
+    /// `RubberShape::Fixed` draws what is fixed and nothing that follows the
+    /// cursor, which is the honest preview for a question the mouse is not
+    /// answering.
+    InputAwaiter<double> number(std::string param, std::string message, PointOptions o = {});
+    InputAwaiter<std::int64_t> integer(std::string param, std::string message, PointOptions o = {});
     /// Asks for a word. `choices` are the words a client may OFFER — the blocks
     /// in the drawing, the patterns in the catalogue — never a restriction on
     /// what is acceptable (`Prompt::choices`).
