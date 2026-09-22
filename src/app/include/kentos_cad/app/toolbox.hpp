@@ -21,6 +21,7 @@
 #include <QWidget>
 
 class QAction;
+class QFocusEvent;
 class QToolButton;
 class QVBoxLayout;
 
@@ -182,10 +183,29 @@ public:
     const QVector<QToolButton*>& buttons() const noexcept { return buttons_; }
 
 protected:
-    /// Fills the column and draws the 1 px rule along its right edge.
+    /// Fills the column, draws the 1 px rule along its right edge, and rings the
+    /// tool the keyboard is on when the keyboard is here.
     void paintEvent(QPaintEvent* event) override;
 
+    /// Puts the ring on the tool that is RUNNING when Tab arrives, so the ring
+    /// and the light never say different things.
+    void focusInEvent(QFocusEvent* event) override;
+
+    /// Takes the ring away again.
+    void focusOutEvent(QFocusEvent* event) override;
+
+    /// The column is ONE tab stop and the arrow keys move inside it: ↑/↓ walk the
+    /// tools, Home/End jump, Space and Enter run the one under the ring, → opens
+    /// a family's card. Without this the column was mouse-only furniture — every
+    /// command in it is reachable from the menus and the command line, so it was
+    /// never a CLAUDE.md 5.15 breach, but it did not meet 6.9 either.
+    void keyPressEvent(QKeyEvent* event) override;
+
 private:
+    /// The next enabled button `by` steps from `start`, wrapping; -1 when the
+    /// column holds no enabled button at all.
+    int stepFrom(int start, int by) const;
+
     /// The one card, reused by every family: two cards can never be open at once
     /// and a widget per family would be a widget per family to re-theme.
     ToolFlyout* flyout_{nullptr};
@@ -198,6 +218,11 @@ private:
     /// Where the next tool goes: the index the stretch and the chips sit at, so
     /// everything added later lands ABOVE them and they stay at the foot.
     int chipsSpacer_{0};
+
+    /// The button the keyboard is on, an index into `buttons_`. Only drawn while
+    /// the column has the focus; kept across a focus loss so Tab and Shift+Tab
+    /// through the window return the user where they were.
+    int focused_{-1};
     ThemeMode theme_ = ThemeMode::Dark;
 };
 

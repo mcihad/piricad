@@ -234,6 +234,36 @@ görünmez olmaları, yokmuş gibi davranmaktan daha kötü olurdu.
 En altta iki kutu: üstteki **çizim rengi**, alttaki **dolgu rengi**. İçi boş bir
 alt kutu "dolgu yok" demektir.
 
+### Klavyeyle ve ekran okuyucuyla
+
+Araç kutusu **tek bir Tab durağıdır**: Tab ile kolona gelirsiniz, içinde ok
+tuşlarıyla gezersiniz. Her düğmeye ayrı bir Tab durağı verilseydi menü şeridiyle
+tuval arasında otuz durak olurdu; araç paletlerinin ve araç çubuklarının her
+yerdeki davranışı budur.
+
+| Tuş | Ne yapar |
+|---|---|
+| **Tab** | Kolona girer. Ok halkası **o an çalışan** aracın üstünde belirir |
+| **↑ / ↓** | Bir üstteki / alttaki araca geçer; pasif araçları atlar, uçtan başa döner |
+| **Home / End** | İlk / son araca gider |
+| **Boşluk** ya da **Enter** | Halkadaki aracı çalıştırır — farenin yaptığı işin aynısı |
+| **→** | Bir aile düğmesinin kartını açar. Kart ok tuşlarıyla gezilir, **Enter** seçer, **Esc** kapatır |
+
+Halka yalnız klavye odağında çizilir; fareyle bir araca basmak odağı tuvalden
+almaz, çünkü komut çalışırken Esc'in ve ok tuşlarının yeri tuvaldir.
+
+Ekran okuyucu (VoiceOver, NVDA, Orca) her düğmeyi **adıyla ve ipucuyla** okur ve
+çalışan aracı "işaretli" diye söyler. Bir düğmeye erişilebilirlik katmanından
+basmak — VoiceOver'da **Ctrl+Option+Boşluk** — aracı gerçekten **çalıştırır**.
+
+> Bu, 0.1.0'a kadar böyle değildi: düğmeler `checkable` olduğu için macOS
+> erişilebilirlik katmanı basışı bir "geçiş"e eşliyor, düğme yanıyor ve komut
+> çalışmıyordu. Ekran okuyucu kullanan biri için her çizim aracı yanıp hiçbir şey
+> yapmıyordu. Ayrıntı için değişiklik günlüğüne bakın.
+
+Ailedeki her araç ayrıca **Çiz** menüsünde durur ve komut satırından adıyla
+çağrılabilir; klavye yolu bunlarla da tamdır.
+
 ## Doküman sekmeleri
 
 Tuvalin üstünde, 30 piksel. Her açık çizim bir sekmedir. Etkin sekme üst kenarındaki

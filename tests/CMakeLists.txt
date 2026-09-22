@@ -220,6 +220,23 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(os-clipboard PROPERTIES TIMEOUT 120)
 
+    # AND THE ROAD A SCREEN READER TAKES. `tool-reach` walks the actions,
+    # `real-mouse` and `tool-flyouts` send mouse events, `os-clicks` needs a
+    # person at the machine — not one of them goes through `QAccessibleInterface`,
+    # and that is where the hole was: Qt answers a CHECKABLE tool button's press
+    # with `QAbstractButton::toggle()`, which sets the checked flag without ever
+    # emitting `clicked`, so `QAction::triggered` never fired. Every draw tool lit
+    # up under VoiceOver and did nothing. This drives every button in the column
+    # through its accessible action interface and asserts the ACTION FIRED — the
+    # light is no proof, because the exclusive group supplies it on its own.
+    add_test(NAME tool-accessible
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_ACCESS_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(tool-accessible PROPERTIES TIMEOUT 180)
+
     add_test(NAME tool-answerable
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen

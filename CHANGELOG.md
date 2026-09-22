@@ -28,15 +28,41 @@ açıyor, seçilen üye `yanan YAY yontem=3n` olarak yanıyor ve sıradaki nokta
 soruyor; BLOKEKLE blok yokken açıklıyor; çizgiye tıklayıp **⌫** basınca
 `1 nesne silindi.`
 
-### Bilinsin — araç düğmeleri erişilebilirlik katmanında komut çalıştırmıyor
+### Düzeltildi — ekran okuyucuyla basılan araç düğmesi artık komutu çalıştırıyor
 
-Aynı deneme bir açık buldu ve düzeltmesi bu partide değil: kolon düğmeleri
-`checkable` olduğu için macOS erişilebilirlik katmanı AXPress'i `setChecked`'e
-eşliyor, `triggered` çıkmıyor, komut çalışmıyor. Ekran okuyucu kullanan biri
-için düğme yanar ve hiçbir şey olmaz. Komutlar komut satırından ve menüden
-erişilebilir olduğu için mouse-only bir yetenek değil (5.15), ama 6.9'un
-erişilebilirlik şartını karşılamıyor. `TODOS-CAD.md` kanıtıyla birlikte
-taşıyor.
+Bir önceki maddede bulunan açık kapandı. Kolon düğmeleri `checkable`'dır, çünkü
+kolonun işi hangi komutun çalıştığını söylemektir; Qt ise `checkable` bir düğmeyi
+erişilebilirlik katmanına `QAccessible::CheckBox` diye verir ve ilk sunduğu eylem
+`Toggle` olur — o da `QAbstractButton::toggle()`, yani `clicked` yaymadan sadece
+işaret kutusunu çevirir. `QAction::triggered` yalnız `clicked`'den çıkar. Sonuç:
+**düğme yanıyor, komut çalışmıyor.** Ekran okuyucu kullanan biri için her çizim
+aracı yanıp hiçbir şey yapmıyordu.
+
+Artık kolonun kendi düğme türü var (`ToolButton`) ve ona verilen erişilebilirlik
+arayüzü (`ToolButtonAccessible`) **her eylemi `click()`'e bağlıyor** — farenin
+gittiği yolun aynısı, yani hem komutu çalıştırır hem ışığı yerine koyar. Yanma
+davranışının hiçbiri değişmedi: eylem hâlâ `checkable`, hâlâ `drawingTools_`
+içinde ve `syncToolSelection` hâlâ onu işaretliyor. Ağaç da hâlâ "işaretli" diyor;
+yanan düğmenin sesli karşılığı odur.
+
+Gerçek macOS erişilebilirlik basışıyla doğrulandı. Öncesi tek satırdı —
+`isaretlendi METİN`. Sonrası: `tetiklendi METİN` → `yanan METİN` →
+`oturum core.text bekliyor=1` → `istem Yazının başlangıç noktası`.
+
+Aynı partide **klavye yolu**: araç kutusu artık tek bir Tab durağı, içinde ok
+tuşlarıyla gezilir, **Boşluk/Enter** aracı çalıştırır, **→** aile kartını açar
+(kart zaten ok tuşlarına, Enter'a ve Esc'e cevap veriyordu; eksik olan onu
+faresiz açmanın yoluydu). Odak halkası yalnız klavye odağında çizilir (`ui.md`
+R31) ve düğmeler `Qt::NoFocus` kalır, çünkü fareyle bir araca basmak odağı
+tuvalden almamalı. Her düğme `accessibleName` ve `accessibleDescription` taşıyor
+(R22); aile düğmesi açıklamasında aile olduğunu da söylüyor, çünkü köşe işareti
+bir resimdir ve ekran okuyucu onu göremez.
+
+Kapıyı `tool-accessible` ctest'i tutuyor (`KENTOS_ACCESS_PROBE`): kolondaki her
+düğme **erişilebilirlik eylem arayüzünden** sürülüyor ve iddia "bir şey oldu"
+değil, **eylemin tetiklendiği**. Ayrım açığın kendisidir: özel `QActionGroup`
+düğmeyi kendi başına yakar, yani yanan düğme komutun çalıştığının kanıtı hiç
+olmamıştır. Düzeltme geri alınarak sınandı: eski davranışta 19 iddia kırmızı.
 
 ### Düzeltildi — araç kutusu gerçek kullanımda: ışık, kılavuz, alan, blok, silme
 

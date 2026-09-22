@@ -717,16 +717,23 @@ yedi bölümle bunları sürekli tutuyor.
   eyleminin işaretlendiği görüldü. Bu yüzden sürücü `scripts/os-tikla.c` (CGEventPost) oldu:
   fiziksel farenin geçtiği yol. Bir sonraki okuyucu `osascript` ile "araçlar çalışmıyor" sonucuna
   varmasın diye yazılıyor.
-- [ ] **ERİŞİLEBİLİRLİK AÇIĞI (yeni, bu denemede bulundu).** Araç kolonundaki düğmeler
-  `checkable` olduğu için macOS erişilebilirlik katmanı onları "geçiş kutusu" sayıyor: AXPress
-  eylemi `setChecked` yapıyor, `triggered` çıkmıyor, **komut çalışmıyor**. Kanıt: gerçek fareyle
+- [x] **ERİŞİLEBİLİRLİK AÇIĞI (bulundu ve kapandı).** Araç kolonundaki düğmeler `checkable`
+  olduğu için macOS erişilebilirlik katmanı onları "geçiş kutusu" sayıyordu: AXPress eylemi
+  `setChecked` yapıyor, `triggered` çıkmıyor, **komut çalışmıyordu**. Kanıt: gerçek fareyle
   `olay bas QToolButton/ÇİZGİ` + `tetiklendi ÇİZGİ` çıkarken, erişilebilirlik basışında yalnız
-  `isaretlendi METİN` çıkıyor, ne olay ne tetikleme var. Ekran okuyucu kullanan biri için her
-  çizim aracı yanıp hiçbir şey yapmıyor demek. Komutlar komut satırından ve menüden erişilebilir
-  olduğu için 5.15 ihlali değil, ama 6.9'un klavye/erişilebilirlik şartını karşılamıyor.
-  Düzeltmesi bu partinin kapsamı dışında: ya düğmelerin erişilebilir "press" eylemi kendi
-  eylemini tetikleyecek şekilde verilmeli, ya da yanma `checkable` dışında bir yolla taşınmalı —
-  ikisi de kolonun bütününü ilgilendirir ve kendi testini ister.
+  `isaretlendi METİN` çıkıyordu. Seçilen yol ikisinden birincisi: kolonun kendi düğme türü
+  (`ToolButton`) ve ona verilen erişilebilirlik arayüzü (`ToolButtonAccessible`) **her eylemi
+  `click()`'e** bağlıyor — farenin yolu. Yanma `checkable` üstünde kaldı, çünkü ağacın
+  "işaretli" demesi yanan düğmenin sesli karşılığıdır. Aynı partide klavye yolu da geldi: kolon
+  tek Tab durağı, ok tuşları gezer, Boşluk/Enter çalıştırır, → aile kartını açar. Gerçek macOS
+  basışıyla doğrulandı (`tetiklendi METİN` → `oturum core.text bekliyor=1`), kapısı
+  `tool-accessible` ctest'i (`KENTOS_ACCESS_PROBE`), eski davranışta 19 iddia kırmızı.
+- [ ] **Aile kartının kendisi erişilebilirlik ağacında yok.** `ToolFlyout` elle çizilir, yani
+  satırları birer widget değil; ekran okuyucu kartı açabilir (→ ya da köşe işareti) ama
+  içindeki on üyeyi okuyamaz. `ui.md` R22'nin "her elle çizilen widget `QAccessibleInterface`
+  uygular" şartı. Üyelerin hepsi **Çiz** menüsünde ve komut satırında olduğu için 5.15 ihlali
+  değil; kartın kendi arayüzü ayrı bir iştir ve kendi testini ister. Aynı soru `MapCanvas`,
+  `ColourChips` ve `DataGrid` için de açık.
 - [~] **İşletim sistemi düzeyinde tıklama** (Cocoa'nın gerçek olayları) ile aynı probe: Qt'nin
   sentezlediği olaylar ile gerçek olaylar arasında bir fark varsa yalnız orada görünür. Bu makinede
   yapılamadı: `osascript`'in erişilebilirlik (assistive access) izni yok (`-1719`), `cliclick` ve

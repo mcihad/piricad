@@ -7,8 +7,12 @@
 #include <functional>
 #include <utility>
 
+#include <QAccessible>
+#include <QAccessibleWidget>
 #include <QAction>
+#include <QActionEvent>
 #include <QApplication>
+#include <QFocusEvent>
 #include <QFontMetrics>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -101,16 +105,155 @@ QFont readoutFont()
     return face;
 }
 
+/// THE COLUMN'S BUTTON, and it exists for one reason: a screen reader has to be
+/// able to run a tool.
+///
+/// A tool button is CHECKABLE, because the column's job is to say which command
+/// is running (`syncToolSelection`). Qt answers a checkable button's
+/// accessibility with `QAccessible::CheckBox`, and the first action it offers is
+/// `Toggle` — which is implemented as `QAbstractButton::toggle()`, and that sets
+/// the checked flag WITHOUT emitting `clicked`. A `QAction` fires `triggered`
+/// from `clicked` and from nothing else, so the accessible press lit the button
+/// and the command never ran. It was measured rather than argued: with real
+/// CGEvent clicks the log reads `olay bas QToolButton/ÇİZGİ` then
+/// `tetiklendi ÇİZGİ`; with an accessibility press it reads `isaretlendi METİN`
+/// and nothing else — a lit button that draws nothing, on every draw tool, for
+/// every user of VoiceOver, NVDA or Orca.
+///
+/// So the column owns its button type, and `ToolButtonAccessible` below answers
+/// EVERY accessible action with `click()` — the same road a mouse takes, which
+/// both runs the command and moves the light. Nothing about the lit state
+/// changes: the action stays checkable, stays in `drawingTools_`, and
+/// `syncToolSelection` still sets it.
+class ToolButton : public QToolButton
+{
+public:
+    explicit ToolButton(QWidget* parent) : QToolButton(parent) {}
+
+    /// Puts `action` on the face and says so in the accessibility tree.
+    ///
+    /// Used instead of `setDefaultAction` everywhere the face is set, because
+    /// Qt copies the action's text, icon and tool tip onto the button and does
+    /// NOT copy its accessible name — so a family button whose face had changed
+    /// would have announced the tool it no longer was.
+    void setFace(QAction* action)
+    {
+        setDefaultAction(action);
+        announce();
+    }
+
+    /// Opens the family this button holds. Does nothing on a plain tool.
+    virtual void openFamily() {}
+
+    /// Whether this button holds a family, for the column's keyboard road.
+    virtual bool holdsFamily() const { return false; }
+
+protected:
+    /// The announcement follows whatever action is on the face, including the
+    /// changes Qt delivers as events (an enable, a retranslate).
+    void actionEvent(QActionEvent* event) override
+    {
+        QToolButton::actionEvent(event);
+        announce();
+    }
+
+    /// Names this button for a screen reader (`ui.md` R22).
+    ///
+    /// The name is the tool's name and the description is its tool tip, both
+    /// already translated on the action — so there is no second copy of either
+    /// to drift from the flyout and the menu (CLAUDE.md 5.10).
+    virtual void announce()
+    {
+        const QAction* face = defaultAction();
+        if (face == nullptr) return;
+        setAccessibleName(face->text());
+        setAccessibleDescription(face->toolTip());
+    }
+};
+
+/// What the accessibility layer is handed for a tool button.
+///
+/// It is deliberately NOT a subclass of Qt's `QAccessibleToolButton`: that class
+/// lives in a private header, and the one thing that has to change is the one
+/// thing it decides — `doAction`. `QAccessibleWidget` is public API, already
+/// implements `QAccessibleActionInterface`, and already answers name,
+/// description, rect and parent from the widget.
+///
+/// The CHECKED STATE IS STILL REPORTED. A screen reader announcing "Çizgi,
+/// işaretli" is the spoken form of the lit button, and the column's whole job is
+/// to say which command is running — so the role stays `CheckBox` and `state()`
+/// carries `checked`. What changes is only what a PRESS does.
+class ToolButtonAccessible : public QAccessibleWidget
+{
+public:
+    explicit ToolButtonAccessible(ToolButton* button)
+        : QAccessibleWidget(button, QAccessible::CheckBox)
+    {}
+
+    QAccessible::Role role() const override
+    {
+        return button()->isCheckable() ? QAccessible::CheckBox : QAccessible::PushButton;
+    }
+
+    QAccessible::State state() const override
+    {
+        QAccessible::State reported = QAccessibleWidget::state();
+        reported.checkable          = button()->isCheckable();
+        reported.checked            = button()->isChecked();
+        return reported;
+    }
+
+    /// PRESS FIRST, because a platform that offers only one action picks the
+    /// first it recognises, and `Press` is the one that means "do the thing".
+    /// `Toggle` is still offered for a checkable tool, because a client that
+    /// looks for a check box's action by name has to find it.
+    QStringList actionNames() const override
+    {
+        if (!button()->isEnabled()) return {};
+        QStringList names{pressAction()};
+        if (button()->isCheckable()) names << toggleAction();
+        return names;
+    }
+
+    /// EVERY ACTION IS A CLICK. This is the whole fix: `click()` is the road the
+    /// mouse takes, so it runs the command AND leaves the light where a mouse
+    /// would have left it. Qt's own answer for `Toggle` is `toggle()`, which
+    /// moves the light and runs nothing.
+    void doAction(const QString& name) override
+    {
+        if (!button()->isEnabled() || !actionNames().contains(name)) return;
+        button()->click();
+    }
+
+    QStringList keyBindingsForAction(const QString&) const override { return {}; }
+
+private:
+    ToolButton* button() const { return static_cast<ToolButton*>(object()); }
+};
+
+/// Hands `ToolButtonAccessible` to Qt for the column's buttons and NOTHING else.
+///
+/// `key` is the class name Qt walked up to; our buttons declare no `Q_OBJECT`, so
+/// they arrive as `QToolButton` like every other one in the program — the cast is
+/// what tells them apart. Returning null lets Qt carry on to its own factory, so
+/// every other tool button in the shell keeps the stock interface.
+QAccessibleInterface* toolButtonInterface(const QString& key, QObject* object)
+{
+    if (key != QLatin1String("QToolButton")) return nullptr;
+    auto* button = dynamic_cast<ToolButton*>(object);
+    return button == nullptr ? nullptr : new ToolButtonAccessible(button);
+}
+
 /// A tool button that holds a family: it paints the corner mark and turns a held
 /// press into a flyout instead of a command.
 ///
 /// No `Q_OBJECT` on purpose — it declares no signal of its own and talks to the
 /// column through a callback, which keeps it out of `moc`'s way in a `.cpp`.
-class FamilyButton : public QToolButton
+class FamilyButton : public ToolButton
 {
 public:
     FamilyButton(QWidget* parent, std::function<void(FamilyButton*)> open)
-        : QToolButton(parent), open_(std::move(open))
+        : ToolButton(parent), open_(std::move(open))
     {
         hold_.setSingleShot(true);
         hold_.setInterval(kHoldMs);
@@ -127,7 +270,24 @@ public:
         update();
     }
 
+    /// The card, opened without a mouse. The column's Right arrow lands here.
+    void openFamily() override { open_(this); }
+
+    bool holdsFamily() const override { return true; }
+
 protected:
+    /// SAYS IT HOLDS A FAMILY, because the corner mark is a picture and a screen
+    /// reader cannot see it. Without this, ten of the eleven tools behind these
+    /// buttons were invisible to a user who never sees the wedge.
+    void announce() override
+    {
+        ToolButton::announce();
+        const QAction* face = defaultAction();
+        if (face == nullptr) return;
+        setAccessibleDescription(ToolBox::tr("%1  ·  araç ailesi: sağ ok tuşu ailenin kartını açar")
+                                     .arg(face->toolTip()));
+    }
+
     void mousePressEvent(QMouseEvent* event) override
     {
         held_  = false;
@@ -488,6 +648,28 @@ ToolBox::ToolBox(QWidget* parent) : QWidget(parent)
     setObjectName(QStringLiteral("toolBox"));
     setFixedWidth(kColumn);
 
+    // ONCE PER PROCESS, and here rather than in `main` because the column is what
+    // knows the class exists. `QAccessible` keeps the factories in a list and
+    // asks the LAST one first, so this is consulted before Qt's own.
+    static const bool registered = [] {
+        QAccessible::installFactory(&toolButtonInterface);
+        return true;
+    }();
+    (void)registered;
+
+    // ONE TAB STOP FOR THE WHOLE COLUMN, and arrow keys inside it — the pattern
+    // every tool palette and every toolbar uses. The alternative, a focus policy
+    // on each button, would have put thirty stops between the menu bar and the
+    // canvas for every Tab press the program will ever see.
+    //
+    // The buttons stay `Qt::NoFocus` (`addTool`): clicking a tool must not take
+    // the keyboard off the canvas, which is where Esc and the arrow keys belong
+    // while a command is running.
+    setFocusPolicy(Qt::TabFocus);
+    setAccessibleName(tr("Araç kutusu"));
+    setAccessibleDescription(tr("Çizim ve düzenleme araçları — yukarı/aşağı ok tuşları gezer, "
+                                "Boşluk ya da Enter aracı çalıştırır, sağ ok aile kartını açar"));
+
     column_ = new QVBoxLayout(this);
     column_->setContentsMargins(0, kTopPad, 1, kChipsPad);
     column_->setSpacing(kGap);
@@ -509,9 +691,9 @@ ToolBox::ToolBox(QWidget* parent) : QWidget(parent)
 
 void ToolBox::addTool(QAction* action)
 {
-    auto* button = new QToolButton(this);
+    auto* button = new ToolButton(this);
     button->setObjectName(QStringLiteral("toolBoxButton"));
-    button->setDefaultAction(action);
+    button->setFace(action);
     button->setIconSize(QSize(kIcon, kIcon));
     button->setFixedSize(kButton, kButton);
     button->setAutoRaise(true);
@@ -544,7 +726,7 @@ void ToolBox::addFamily(const QVector<QAction*>& family)
     // heap `Connection` in a `destroyed` handler that had already freed it.
     QObject::connect(flyout_, &ToolFlyout::chosen, button, [button, family](QAction* member) {
         if (!family.contains(member)) return;
-        button->setDefaultAction(member);
+        button->setFace(member);
         member->trigger();
     });
 
@@ -554,7 +736,7 @@ void ToolBox::addFamily(const QVector<QAction*>& family)
     // plainly is, and the family would look like a mouse-only grouping.
     for (QAction* member : family)
         QObject::connect(member, &QAction::toggled, button, [button, member](bool on) {
-            if (on && button->defaultAction() != member) button->setDefaultAction(member);
+            if (on && button->defaultAction() != member) button->setFace(member);
         });
 
     button->setObjectName(QStringLiteral("toolBoxButton"));
@@ -563,7 +745,7 @@ void ToolBox::addFamily(const QVector<QAction*>& family)
     // card. A probe that could not tell them apart had to press everything to
     // find out, which starts nineteen commands to open four cards.
     button->setProperty("kentos.family", true);
-    button->setDefaultAction(family.front());
+    button->setFace(family.front());
     button->setIconSize(QSize(kIcon, kIcon));
     button->setFixedSize(kButton, kButton);
     button->setAutoRaise(true);
@@ -613,6 +795,107 @@ void ToolBox::paintEvent(QPaintEvent*)
     QPainter p(this);
     p.fillRect(rect(), t.bgPanel);
     p.fillRect(QRect(width() - 1, 0, 1, height()), t.lineHard);
+
+    // WHERE THE KEYBOARD IS, and only when the keyboard is here (`ui.md` R31: a
+    // focus ring is for keyboard focus and nothing else). It is drawn by the
+    // column rather than as a `:focus` rule on the button, because the buttons
+    // stay `Qt::NoFocus` — the focus is on the column and the ring says which
+    // tool Enter would run. Three pixels out, so it sits in the column's own air
+    // and the button paints over none of it.
+    if (hasFocus() && focused_ >= 0 && focused_ < buttons_.size()) {
+        const QRectF ring = QRectF(buttons_[focused_]->geometry()).adjusted(-2.5, -2.5, 2.5, 2.5);
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(t.accent, 1.0));
+        p.drawRoundedRect(ring, 6.0, 6.0);
+    }
+}
+
+int ToolBox::stepFrom(int start, int by) const
+{
+    // Skips what a hand would skip. A Faz 2 placeholder is in the column on
+    // purpose — hiding it would be worse than showing it disabled (`arayuz.md`) —
+    // but landing the keyboard on one would be a dead stop nobody can act on.
+    const int count = static_cast<int>(buttons_.size());
+    if (count == 0) return -1;
+    for (int tried = 0; tried < count; ++tried) {
+        start = ((start + by) % count + count) % count;
+        if (buttons_[start]->isEnabled()) return start;
+    }
+    return -1;
+}
+
+void ToolBox::focusInEvent(QFocusEvent* event)
+{
+    // ARRIVES ON THE TOOL IN THE HAND. Tabbing into the column and being put on
+    // whatever was highlighted last time would make the ring say one thing while
+    // the lit button says another; the tool that is RUNNING is the one a user is
+    // thinking about.
+    if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason)
+        for (int i = 0; i < buttons_.size(); ++i)
+            if (buttons_[i]->isChecked()) {
+                focused_ = i;
+                break;
+            }
+    if (focused_ < 0 || focused_ >= buttons_.size() || !buttons_[focused_]->isEnabled())
+        focused_ = stepFrom(-1, 1);
+    update();
+    QWidget::focusInEvent(event);
+}
+
+void ToolBox::focusOutEvent(QFocusEvent* event)
+{
+    update();
+    QWidget::focusOutEvent(event);
+}
+
+void ToolBox::keyPressEvent(QKeyEvent* event)
+{
+    if (buttons_.isEmpty() || focused_ < 0) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Down:
+        focused_ = stepFrom(focused_, 1);
+        update();
+        return;
+    case Qt::Key_Up:
+        focused_ = stepFrom(focused_, -1);
+        update();
+        return;
+    case Qt::Key_Home:
+        focused_ = stepFrom(-1, 1);
+        update();
+        return;
+    case Qt::Key_End:
+        // BACKWARDS FROM THE TOP, which wraps to the bottom. Stepping back from
+        // the last index would land on the one before it.
+        focused_ = stepFrom(0, -1);
+        update();
+        return;
+    case Qt::Key_Right:
+        // THE CARD, WITHOUT A MOUSE. Ten of the eleven family members are behind
+        // it, and the card itself already answers arrow keys, Enter and Esc
+        // (`ToolFlyout::keyPressEvent`) — so this is the last link in a road that
+        // was otherwise complete and unreachable.
+        if (auto* tool = dynamic_cast<ToolButton*>(buttons_[focused_]);
+            tool != nullptr && tool->holdsFamily()) {
+            tool->openFamily();
+            return;
+        }
+        break;
+    case Qt::Key_Space:
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+        // `click()`, the same call the accessible press makes and the same one a
+        // real mouse release ends in — one road into a tool, whoever asks.
+        buttons_[focused_]->click();
+        return;
+    default: break;
+    }
+    QWidget::keyPressEvent(event);
 }
 
 } // namespace kentos::app

@@ -347,6 +347,23 @@ public:
     /// evidence. A picture is left at the end.
     int probeOsClicks();
 
+    /// `KENTOS_ACCESS_PROBE`: the tool column reached the way a SCREEN READER
+    /// reaches it. Returns the failure count.
+    ///
+    /// This is the probe the accessibility hole got past, and it got past
+    /// everything: `tool-reach` walks the actions, `real-mouse` and `tool-flyouts`
+    /// send mouse events, `os-clicks` needs a person at the machine. None of them
+    /// goes through `QAccessibleInterface`, which is the road VoiceOver, NVDA and
+    /// Orca take — and on that road Qt answers a checkable tool button's press
+    /// with `toggle()`, which lights the button and runs nothing.
+    ///
+    /// So every button in the column is driven here through its accessible action
+    /// interface, and the assertion is not that something happened but that the
+    /// ACTION FIRED: an exclusive `QActionGroup` lights a button on its own, so a
+    /// lit button has never been proof that a command ran. The keyboard road is
+    /// checked in the same pass, with real key events into the column.
+    int probeAccessible();
+
     /// The window as the user sees it: `grab()` with the live GPU canvas pasted
     /// over the canvas widget, which `grab()` alone leaves blank under QRhi.
     QImage probePicture();

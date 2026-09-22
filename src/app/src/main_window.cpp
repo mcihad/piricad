@@ -51,6 +51,8 @@
 #include <limits>
 #include <span>
 
+#include <QAccessible>
+#include <QAccessibleActionInterface>
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
@@ -4188,6 +4190,191 @@ int MainWindow::probeOsClicks()
     (void)probePicture().save(into + QStringLiteral("/os-son.png"));
     say(QStringLiteral("bitti nesne=%1 yanan=%2").arg(count_before).arg(lit_before));
     return 0;
+}
+
+int MainWindow::probeAccessible()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[erişim] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+
+    const QString press  = QAccessibleActionInterface::pressAction();
+    const QString toggle = QAccessibleActionInterface::toggleAction();
+
+    const auto name_of = [](const QAction* action) {
+        const QString word = action->property(kToolCommand).toString();
+        return word.isEmpty() ? action->text() : word;
+    };
+
+    // NOTHING ARMED, AND NOT THIS ACTION. An exclusive `QActionGroup` refuses to
+    // re-trigger the action that is already checked, so pressing a lit tool would
+    // report a failure that is Qt's rule rather than this program's defect. The
+    // group is parked somewhere else before every press.
+    const auto park = [this](QAction* notThis) {
+        if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
+        controller_->cancelInteractive();
+        QAction* elsewhere = notThis == actSelect_ ? actLine_ : actSelect_;
+        elsewhere->setChecked(true);
+        QCoreApplication::processEvents();
+    };
+
+    // ---- 1. WHAT THE TREE SAYS ABOUT EVERY BUTTON --------------------------
+    //
+    // `ui.md` R22: an interactive widget carries an `accessibleName` and an
+    // `accessibleDescription`. Qt copies an action's text and tool tip onto a
+    // button but copies neither of those, so a column of buttons can be perfectly
+    // labelled on screen and silent to a screen reader.
+    for (QToolButton* button : toolBox_->buttons()) {
+        QAction* face = button->defaultAction();
+        if (face == nullptr) continue;
+        const QString who = name_of(face);
+
+        QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(button);
+        check(iface != nullptr, QStringLiteral("%1: erişilebilirlik arayüzü var").arg(who));
+        if (iface == nullptr) continue;
+
+        check(!iface->text(QAccessible::Name).trimmed().isEmpty(),
+              QStringLiteral("%1: erişilebilir adı var").arg(who));
+        check(!iface->text(QAccessible::Description).trimmed().isEmpty(),
+              QStringLiteral("%1: erişilebilir açıklaması var").arg(who));
+
+        QAccessibleActionInterface* actions = iface->actionInterface();
+        check(actions != nullptr, QStringLiteral("%1: eylem arayüzü var").arg(who));
+        if (actions == nullptr) continue;
+
+        check(actions->actionNames().contains(press),
+              QStringLiteral("%1: \"%2\" eylemi sunuluyor").arg(who, press));
+        if (button->isCheckable())
+            check(actions->actionNames().contains(toggle),
+                  QStringLiteral("%1: \"%2\" eylemi sunuluyor").arg(who, toggle));
+
+        // THE LIGHT IS STILL SPOKEN. A screen reader saying "işaretli" is the
+        // spoken form of the lit button, and the column's whole job is to say
+        // which command is running — so the fix may not buy the press by
+        // throwing the checked state away.
+        if (button->isCheckable()) {
+            park(face);
+            face->setChecked(true);
+            QCoreApplication::processEvents();
+            check(iface->state().checkable && iface->state().checked,
+                  QStringLiteral("%1: yanan düğme ağaçta da işaretli").arg(who));
+        }
+    }
+
+    // ---- 2. THE PRESS RUNS THE COMMAND -------------------------------------
+    //
+    // THE ASSERTION IS `triggered`, NOT THE LIGHT. That distinction is the whole
+    // defect: the exclusive group checks an action when Qt toggles the button, so
+    // the column lit up exactly as it does for a mouse while `runCommand` was
+    // never called. Measured on this machine with real CGEvent clicks the log
+    // read `olay bas QToolButton/ÇİZGİ` then `tetiklendi ÇİZGİ`; with an
+    // accessibility press it read `isaretlendi METİN` and stopped there.
+    for (QToolButton* button : toolBox_->buttons()) {
+        QAction* face = button->defaultAction();
+        if (face == nullptr) continue;
+        QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(button);
+        if (iface == nullptr || iface->actionInterface() == nullptr) continue;
+        const QString who = name_of(face);
+
+        for (const QString& what : iface->actionInterface()->actionNames()) {
+            park(face);
+
+            int fired = 0;
+            const QMetaObject::Connection on =
+                connect(face, &QAction::triggered, this, [&fired] { ++fired; });
+            iface->actionInterface()->doAction(what);
+            QCoreApplication::processEvents();
+            disconnect(on);
+
+            check(fired > 0, QStringLiteral("%1: \"%2\" komutu çalıştırdı").arg(who, what));
+        }
+    }
+
+    // ---- 3. AND THE KEYBOARD, WITH REAL KEY EVENTS -------------------------
+    //
+    // The buttons are `Qt::NoFocus` so that clicking a tool does not take the
+    // keyboard off the canvas; the column itself is the tab stop and the arrow
+    // keys move inside it. A user with no mouse reaches every tool here.
+    park(nullptr);
+    toolBox_->setFocus(Qt::TabFocusReason);
+    QCoreApplication::processEvents();
+    check(toolBox_->hasFocus(), QStringLiteral("araç kolonu Tab ile odak alıyor"));
+
+    const auto typeInto = [this](int key) {
+        QKeyEvent down(QEvent::KeyPress, key, Qt::NoModifier);
+        QCoreApplication::sendEvent(toolBox_, &down);
+        QKeyEvent up(QEvent::KeyRelease, key, Qt::NoModifier);
+        QCoreApplication::sendEvent(toolBox_, &up);
+        QCoreApplication::processEvents();
+    };
+
+    // HOME AND END LAND ON THE ENDS, and Space runs what they landed on. Asked
+    // of the ACTION rather than of a highlight, because a ring drawn in the wrong
+    // place looks exactly like one drawn in the right place — and an off-by-one
+    // here is a key that quietly skips a tool. The first draft of this column had
+    // one: End stepped back from the last index and stopped one short of it.
+    const auto pressWith = [&](std::initializer_list<int> keys, QToolButton* expected,
+                               const QString& what) {
+        QAction* face = expected->defaultAction();
+        park(face);
+        toolBox_->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+
+        int fired = 0;
+        const QMetaObject::Connection on =
+            connect(face, &QAction::triggered, this, [&fired] { ++fired; });
+        for (const int key : keys)
+            typeInto(key);
+        typeInto(Qt::Key_Space);
+        disconnect(on);
+
+        check(fired > 0, QStringLiteral("%1: %2 çalıştı").arg(what, name_of(face)));
+    };
+
+    QToolButton* firstTool = nullptr;
+    QToolButton* lastTool  = nullptr;
+    for (QToolButton* button : toolBox_->buttons()) {
+        if (!button->isEnabled() || button->defaultAction() == nullptr) continue;
+        if (firstTool == nullptr) firstTool = button;
+        lastTool = button;
+    }
+
+    if (firstTool == nullptr || lastTool == nullptr) {
+        check(false, QStringLiteral("kolonda etkin araç var"));
+    } else {
+        pressWith({Qt::Key_Home}, firstTool, QStringLiteral("Home ilk araca gidiyor"));
+        pressWith({Qt::Key_End}, lastTool, QStringLiteral("End son araca gidiyor"));
+        pressWith({Qt::Key_Home, Qt::Key_Down, Qt::Key_Up}, firstTool,
+                  QStringLiteral("↓ sonra ↑ başlanan yere dönüyor"));
+    }
+
+    // AND THE CARD, which holds ten of the eleven family members. It answers
+    // arrow keys and Enter already; what was missing was any way to OPEN it
+    // without a mouse.
+    {
+        park(nullptr);
+        toolBox_->setFocus(Qt::TabFocusReason);
+        typeInto(Qt::Key_Home);
+
+        bool opened = false;
+        for (int step = 0; step < toolBox_->buttons().size() && !opened; ++step) {
+            typeInto(Qt::Key_Right);
+            QWidget* popup = QApplication::activePopupWidget();
+            opened         = popup != nullptr && popup->property("kentos.rows").isValid();
+            if (!opened) typeInto(Qt::Key_Down);
+        }
+        check(opened, QStringLiteral("sağ ok tuşu aile kartını açtı"));
+        if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
+        QCoreApplication::processEvents();
+    }
+
+    controller_->cancelInteractive();
+    QCoreApplication::processEvents();
+    return failures;
 }
 
 int MainWindow::probeFlyouts()
