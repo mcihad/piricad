@@ -75,8 +75,8 @@ KENTOS_COMMAND(pan)
         .category = Category::View,
         .params =
             {
-                Param::point("baslangic", "Kaydırmanın tutulacağı nokta"),
-                Param::point("bitis", "O noktanın taşınacağı yer"),
+                Param::point("baslangic", "Kaydırmanın tutulacağı nokta").en("start"),
+                Param::point("bitis", "O noktanın taşınacağı yer").en("end"),
             },
         .undo  = UndoPolicy::None,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::Transparent |
@@ -95,8 +95,9 @@ KENTOS_COMMAND(zoom)
         .category = Category::View,
         .params =
             {
-                Param::text("mod", Arity::optional(), "KAPSAM | ÇARPAN | SIFIRLA"),
-                Param::number("carpan", Arity::optional(), "ÇARPAN modunda ölçek katsayısı"),
+                Param::text("mod", Arity::optional(), "KAPSAM | ÇARPAN | SIFIRLA").en("mode"),
+                Param::number("carpan", Arity::optional(), "ÇARPAN modunda ölçek katsayısı")
+                    .en("factor"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Scriptable | Flags::AiAccessible | Flags::Transparent | Flags::ReadOnly,

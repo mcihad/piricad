@@ -242,23 +242,33 @@ KENTOS_COMMAND(intersect_point)
         .params =
             {
                 Param::choice("yontem", Arity::optional(), {"dogrultu", "mesafe", "dogru"},
-                              "dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru"),
-                Param::point("birinci", "Birinci bilinen nokta"),
-                Param::points("ikinci", Arity::optional(), "İkinci bilinen nokta"),
-                Param::points("ucuncu", Arity::optional(), "İkinci doğrunun ilk noktası"),
-                Param::points("dorduncu", Arity::optional(), "İkinci doğrunun ikinci noktası"),
-                Param::number("birinci_aci", Arity::optional(), "Birinci noktadan okunan doğrultu"),
-                Param::number("ikinci_aci", Arity::optional(), "İkinci noktadan okunan doğrultu"),
+                              "dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru")
+                    .en("method"),
+                Param::point("birinci", "Birinci bilinen nokta").en("first"),
+                Param::points("ikinci", Arity::optional(), "İkinci bilinen nokta").en("second"),
+                Param::points("ucuncu", Arity::optional(), "İkinci doğrunun ilk noktası")
+                    .en("third"),
+                Param::points("dorduncu", Arity::optional(), "İkinci doğrunun ikinci noktası")
+                    .en("fourth"),
+                Param::number("birinci_aci", Arity::optional(), "Birinci noktadan okunan doğrultu")
+                    .en("first_angle"),
+                Param::number("ikinci_aci", Arity::optional(), "İkinci noktadan okunan doğrultu")
+                    .en("second_angle"),
                 Param::number("birinci_mesafe", Arity::optional(),
-                              "Birinci noktadan ölçülen uzaklık (m)"),
+                              "Birinci noktadan ölçülen uzaklık (m)")
+                    .en("first_distance"),
                 Param::number("ikinci_mesafe", Arity::optional(),
-                              "İkinci noktadan ölçülen uzaklık (m)"),
+                              "İkinci noktadan ölçülen uzaklık (m)")
+                    .en("second_distance"),
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
-                              "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre"),
+                              "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre")
+                    .en("side"),
                 Param::points("yon_nokta", Arity::optional(),
                               "mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse "
-                              "sorulmaz"),
-                Param::points("kesisim", Arity::optional(), "Bulunan nokta; günlüğe yazılır"),
+                              "sorulmaz")
+                    .en("side_point"),
+                Param::points("kesisim", Arity::optional(), "Bulunan nokta; günlüğe yazılır")
+                    .en("intersection"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -277,14 +287,17 @@ KENTOS_COMMAND(point_along)
         .category = Category::Draw,
         .params =
             {
-                Param::point("birinci", "Doğrunun ilk noktası"),
-                Param::point("ikinci", "Doğrunun ikinci noktası"),
+                Param::point("birinci", "Doğrunun ilk noktası").en("first"),
+                Param::point("ikinci", "Doğrunun ikinci noktası").en("second"),
                 Param::choice("yontem", Arity::optional(), {"oran", "mesafe"},
-                              "oran: 0 ile 1 arası · mesafe: ilk noktadan metre"),
+                              "oran: 0 ile 1 arası · mesafe: ilk noktadan metre")
+                    .en("method"),
                 Param::number("deger", Arity::at_least(0),
-                              "Oran ya da uzaklık; birden çok verilebilir"),
+                              "Oran ya da uzaklık; birden çok verilebilir")
+                    .en("value"),
                 Param::integer_range("sayi", Arity::optional(), 2, 1000,
-                                     "Doğruyu bu kadar eşit parçaya böler"),
+                                     "Doğruyu bu kadar eşit parçaya böler")
+                    .en("count"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

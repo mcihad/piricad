@@ -195,9 +195,11 @@ KENTOS_COMMAND(copy_clip)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Panoya alınacak nesneler; verilmezse seçim kullanılır"},
+                      "Panoya alınacak nesneler; verilmezse seçim kullanılır"}
+                    .en("objects"),
                 Param::text("dosya", Arity::optional(),
-                            "Panonun yazılacağı dosya; verilmezse ortak pano dosyası"),
+                            "Panonun yazılacağı dosya; verilmezse ortak pano dosyası")
+                    .en("file"),
             },
         // NOT `SingleTransaction`: a copy changes nothing in the drawing, so it
         // leaves no undo step. It is a `File` command because what it does is
@@ -220,9 +222,11 @@ KENTOS_COMMAND(cut)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Kesilecek nesneler; verilmezse seçim kullanılır"},
+                      "Kesilecek nesneler; verilmezse seçim kullanılır"}
+                    .en("objects"),
                 Param::text("dosya", Arity::optional(),
-                            "Panonun yazılacağı dosya; verilmezse ortak pano dosyası"),
+                            "Panonun yazılacağı dosya; verilmezse ortak pano dosyası")
+                    .en("file"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -242,11 +246,14 @@ KENTOS_COMMAND(paste)
         .params =
             {
                 Param::points("nokta", Arity::optional(),
-                              "Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz"),
+                              "Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz")
+                    .en("point"),
                 Param::boolean("yerinde", Arity::optional(),
-                               "Kopyalandığı koordinatlara yapıştırır"),
+                               "Kopyalandığı koordinatlara yapıştırır")
+                    .en("in_place"),
                 Param::text("dosya", Arity::optional(),
-                            "Okunacak pano dosyası; verilmezse ortak pano dosyası"),
+                            "Okunacak pano dosyası; verilmezse ortak pano dosyası")
+                    .en("file"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

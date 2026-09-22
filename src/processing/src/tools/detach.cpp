@@ -42,9 +42,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id    = "islem.bag_coz",
-        .names = {"BAĞÇÖZ", "BAGCOZ", "DETACH", "BÇ", "BC"},
-        .title = "Yazının bağını çöz",
+        .id     = "islem.bag_coz",
+        .python = "detach",
+        .names  = {"BAĞÇÖZ", "BAGCOZ", "DETACH", "BÇ", "BC"},
+        .title  = "Yazının bağını çöz",
         .summary = "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne "
                    "bundan sonra tek başına taşınır.",
         .group         = "Etiketleme",

@@ -168,9 +168,11 @@ KENTOS_COMMAND(contour)
         .params =
             {
                 Param::integer("aralik", Arity::optional(),
-                               "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m)"),
+                               "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m)")
+                    .en("interval"),
                 Param::text("katman", Arity::optional(),
-                            "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI"),
+                            "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI")
+                    .en("layer"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

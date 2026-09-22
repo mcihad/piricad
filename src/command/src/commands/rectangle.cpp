@@ -146,10 +146,12 @@ KENTOS_COMMAND(rectangle)
             {
                 Param::points("noktalar", Arity{2, 3},
                               "2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı "
-                              "kenarın geçtiği nokta"),
+                              "kenarın geçtiği nokta")
+                    .en("points"),
                 Param::choice("yontem", Arity::optional(), {"2n", "3n"},
                               "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve "
-                              "yükseklik, döndürülmüş"),
+                              "yükseklik, döndürülmüş")
+                    .en("method"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

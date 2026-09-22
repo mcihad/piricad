@@ -379,10 +379,12 @@ KENTOS_COMMAND(chamfer)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Köşesi kesilecek nesnenin kimliği"},
-                Param::point("nokta", "İşlem yapılacak köşe"),
+                      "Köşesi kesilecek nesnenin kimliği"}
+                    .en("object"),
+                Param::point("nokta", "İşlem yapılacak köşe").en("point"),
                 Param::number("mesafe", Arity::exactly(1),
-                              "Köşeden her iki kenar boyunca kesilecek mesafe, metre"),
+                              "Köşeden her iki kenar boyunca kesilecek mesafe, metre")
+                    .en("distance"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -401,9 +403,11 @@ KENTOS_COMMAND(fillet)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Köşesi yuvarlatılacak nesnenin kimliği"},
-                Param::point("nokta", "İşlem yapılacak köşe"),
-                Param::number("yaricap", Arity::exactly(1), "Yuvarlatma yarıçapı, metre"),
+                      "Köşesi yuvarlatılacak nesnenin kimliği"}
+                    .en("object"),
+                Param::point("nokta", "İşlem yapılacak köşe").en("point"),
+                Param::number("yaricap", Arity::exactly(1), "Yuvarlatma yarıçapı, metre")
+                    .en("radius"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

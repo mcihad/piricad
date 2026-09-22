@@ -146,10 +146,12 @@ KENTOS_COMMAND(attribute)
         .params =
             {
                 Param::text("ad", Arity::optional(),
-                            "Öznitelik kimliği; yoksa tanımlı sütunlar listelenir"),
-                Param::integer("nesne", Arity::optional(), "Nesnenin kalıcı kimliği"),
+                            "Öznitelik kimliği; yoksa tanımlı sütunlar listelenir")
+                    .en("name"),
+                Param::integer("nesne", Arity::optional(), "Nesnenin kalıcı kimliği").en("object"),
                 Param::text("deger", Arity::optional(),
-                            "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır"),
+                            "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır")
+                    .en("value"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,
@@ -319,20 +321,25 @@ KENTOS_COMMAND(column)
         .params =
             {
                 Param::text("kimlik", Arity::optional(),
-                            "Sütun kimliği; yoksa tanımlı sütunlar listelenir"),
+                            "Sütun kimliği; yoksa tanımlı sütunlar listelenir")
+                    .en("id"),
                 Param::text("tur", Arity::optional(),
-                            "tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod"),
-                Param::text("ad", Arity::optional(), "Panelde görünen Türkçe ad"),
-                Param::text("aciklama", Arity::optional(), "Tek satırlık açıklama"),
-                Param::boolean("zorunlu", Arity::optional(), "Her satır bir değer taşımalı mı"),
-                Param::text("katalog", Arity::optional(),
-                            "Yalnız 'kod' türü için: katalog kimliği"),
+                            "tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod")
+                    .en("type"),
+                Param::text("ad", Arity::optional(), "Panelde görünen Türkçe ad").en("name"),
+                Param::text("aciklama", Arity::optional(), "Tek satırlık açıklama").en("note"),
+                Param::boolean("zorunlu", Arity::optional(), "Her satır bir değer taşımalı mı")
+                    .en("required"),
+                Param::text("katalog", Arity::optional(), "Yalnız 'kod' türü için: katalog kimliği")
+                    .en("catalog"),
                 Param::integer("basamak", Arity::optional(),
-                               "Yalnız 'ondalik' için: noktadan sonraki basamak sayısı"),
+                               "Yalnız 'ondalik' için: noktadan sonraki basamak sayısı")
+                    .en("digits"),
                 Param::text("katman", Arity::optional(),
-                            "Sütunu yalnız bu katmana tanımlar; yoksa proje geneli"),
-                Param::boolean("sil", Arity::optional(),
-                               "Sütunu ve içindeki bütün değerleri siler"),
+                            "Sütunu yalnız bu katmana tanımlar; yoksa proje geneli")
+                    .en("layer"),
+                Param::boolean("sil", Arity::optional(), "Sütunu ve içindeki bütün değerleri siler")
+                    .en("delete"),
             },
         // NOT undoable, and for the same reason a layer is not: the schema is what
         // rows are addressed against, and undoing a declaration would invalidate

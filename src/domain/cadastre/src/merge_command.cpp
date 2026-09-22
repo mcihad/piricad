@@ -199,7 +199,8 @@ KENTOS_COMMAND(merge)
         .title    = "Tevhit",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek parseller; yoksa etkin seçim"}},
+                         "Birleştirilecek parseller; yoksa etkin seçim"}
+                         .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Komşu parselleri tek parselde birleştirir (tevhit).",

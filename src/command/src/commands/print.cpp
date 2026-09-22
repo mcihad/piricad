@@ -343,49 +343,66 @@ KENTOS_COMMAND(print)
             {
                 Param::points("pencere", Arity{0, 2},
                               "Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da "
-                              "verilmezse tıklatılır"),
+                              "verilmezse tıklatılır")
+                    .en("window"),
                 // OPTIONAL, and it has to be spelled out: `Param::point` takes
                 // no arity and defaults to "exactly one", which made a print
                 // with two corners refuse for want of a centre.
                 Param{"merkez", ParamKind::Point, Arity::optional(),
-                      "Kâğıdın ortalanacağı nokta; pencere yerine kullanılır"},
+                      "Kâğıdın ortalanacağı nokta; pencere yerine kullanılır"}
+                    .en("center"),
                 Param::integer("olcek", Arity::optional(),
                                "Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, "
-                               "verilmezse projenin plan ölçeği"),
+                               "verilmezse projenin plan ölçeği")
+                    .en("scale"),
                 Param::text("yerlesim", Arity::optional(),
                             "Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). "
                             "Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden "
                             "gelir; pencere, merkez, olcek ve profil ile birlikte "
                             "verilmez")
-                    .renamed_from("pafta"),
+                    .renamed_from("pafta")
+                    .en("layout"),
                 Param::text("dosya", Arity::optional(),
-                            "PDF yazılacak dosya; yazici ile birlikte verilmez"),
+                            "PDF yazılacak dosya; yazici ile birlikte verilmez")
+                    .en("file"),
                 Param::text("yazici", Arity::optional(),
-                            "Yazıcının adı; \"\" sistem varsayılanı. dosya ile birlikte verilmez"),
+                            "Yazıcının adı; \"\" sistem varsayılanı. dosya ile birlikte verilmez")
+                    .en("printer"),
                 Param::text("profil", Arity::optional(),
-                            "Yazdırma profili; verilmezse varsayılan profil"),
+                            "Yazdırma profili; verilmezse varsayılan profil")
+                    .en("profile"),
                 Param::text("kagit", Arity::optional(),
-                            "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile)"),
+                            "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile)")
+                    .en("paper"),
                 Param::integer("genislik", Arity::optional(),
-                               "ozel kâğıdın eni, milimetre (dikey duruşta)"),
+                               "ozel kâğıdın eni, milimetre (dikey duruşta)")
+                    .en("width"),
                 Param::integer("yukseklik", Arity::optional(),
-                               "ozel kâğıdın boyu, milimetre (dikey duruşta)"),
-                Param::text("yon", Arity::optional(), "dikey ya da yatay"),
-                Param::integer("dpi", Arity::optional(), "Çözünürlük, inç başına nokta (72–4800)"),
-                Param::integer("kenar", Arity::optional(), "Dört yandaki kenar boşluğu, milimetre"),
-                Param::text("baslik", Arity::optional(), "PDF belge başlığı"),
-                Param::text("yazar", Arity::optional(), "PDF yazar alanı"),
+                               "ozel kâğıdın boyu, milimetre (dikey duruşta)")
+                    .en("height"),
+                Param::text("yon", Arity::optional(), "dikey ya da yatay").en("orientation"),
+                Param::integer("dpi", Arity::optional(), "Çözünürlük, inç başına nokta (72–4800)")
+                    .en("dpi"),
+                Param::integer("kenar", Arity::optional(), "Dört yandaki kenar boşluğu, milimetre")
+                    .en("margin"),
+                Param::text("baslik", Arity::optional(), "PDF belge başlığı").en("title"),
+                Param::text("yazar", Arity::optional(), "PDF yazar alanı").en("author"),
                 Param::text("sifre", Arity::optional(),
-                            "PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz"),
+                            "PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz")
+                    .en("password"),
                 Param::text("sahip_sifresi", Arity::optional(),
-                            "PDF izinlerini değiştirme şifresi (sahip şifresi); günlüğe yazılmaz"),
+                            "PDF izinlerini değiştirme şifresi (sahip şifresi); günlüğe yazılmaz")
+                    .en("owner_password"),
                 Param::boolean("yazdirilabilir", Arity::optional(),
                                "Şifreli PDF: sahip şifresi olmayan yazdırabilir mi; "
-                               "varsayılan evet"),
+                               "varsayılan evet")
+                    .en("printable"),
                 Param::boolean("kopyalanabilir", Arity::optional(),
-                               "Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet"),
+                               "Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet")
+                    .en("copyable"),
                 Param::boolean("degistirilebilir", Arity::optional(),
-                               "Şifreli PDF: belge değiştirilebilir mi; varsayılan evet"),
+                               "Şifreli PDF: belge değiştirilebilir mi; varsayılan evet")
+                    .en("modifiable"),
             },
         // Writes a file or drives a printer and touches no entity: nothing to
         // undo, nothing to journal as a document mutation.
@@ -411,16 +428,23 @@ KENTOS_COMMAND(print_profile)
         .category = Category::File,
         .params =
             {
-                Param::text("islem", Arity::exactly(1), "listele, ekle, sil ya da varsayilan"),
-                Param::text("ad", Arity::optional(), "Profilin adı (ekle, sil, varsayilan)"),
+                Param::text("islem", Arity::exactly(1), "listele, ekle, sil ya da varsayilan")
+                    .en("action"),
+                Param::text("ad", Arity::optional(), "Profilin adı (ekle, sil, varsayilan)")
+                    .en("name"),
                 Param::text("kagit", Arity::optional(),
-                            "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4"),
-                Param::integer("genislik", Arity::optional(), "ozel kâğıdın eni, milimetre"),
-                Param::integer("yukseklik", Arity::optional(), "ozel kâğıdın boyu, milimetre"),
-                Param::text("yon", Arity::optional(), "dikey ya da yatay; varsayılan dikey"),
-                Param::integer("dpi", Arity::optional(), "Çözünürlük; varsayılan 300"),
+                            "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4")
+                    .en("paper"),
+                Param::integer("genislik", Arity::optional(), "ozel kâğıdın eni, milimetre")
+                    .en("width"),
+                Param::integer("yukseklik", Arity::optional(), "ozel kâğıdın boyu, milimetre")
+                    .en("height"),
+                Param::text("yon", Arity::optional(), "dikey ya da yatay; varsayılan dikey")
+                    .en("orientation"),
+                Param::integer("dpi", Arity::optional(), "Çözünürlük; varsayılan 300").en("dpi"),
                 Param::integer("kenar", Arity::optional(),
-                               "Kenar boşluğu, milimetre; varsayılan 10"),
+                               "Kenar boşluğu, milimetre; varsayılan 10")
+                    .en("margin"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,

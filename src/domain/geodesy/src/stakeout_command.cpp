@@ -180,11 +180,13 @@ KENTOS_COMMAND(stakeout)
         .category = Category::Query,
         .params =
             {
-                Param::point("istasyon", "Aletin durduğu nokta"),
+                Param::point("istasyon", "Aletin durduğu nokta").en("station"),
                 Param::points("baglama", Arity::optional(),
-                              "Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür"),
+                              "Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür")
+                    .en("backsight"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar"},
+                      "Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar"}
+                    .en("objects"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,

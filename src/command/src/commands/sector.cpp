@@ -182,9 +182,10 @@ KENTOS_COMMAND(sector)
         .category = Category::Draw,
         .params =
             {
-                Param::point("merkez", "Dilimin merkezi"),
-                Param::point("baslangic", "İlk kenarın ucu; yarıçapı bu belirler"),
-                Param::point("bitis", "İkinci kenarın yönü; süpürme saat yönünün tersinedir"),
+                Param::point("merkez", "Dilimin merkezi").en("center"),
+                Param::point("baslangic", "İlk kenarın ucu; yarıçapı bu belirler").en("start"),
+                Param::point("bitis", "İkinci kenarın yönü; süpürme saat yönünün tersinedir")
+                    .en("end"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -202,9 +203,9 @@ KENTOS_COMMAND(annulus)
         .category = Category::Draw,
         .params =
             {
-                Param::point("merkez", "Halkanın merkezi"),
-                Param::point("ic", "İç çember üzerinde bir nokta"),
-                Param::point("dis", "Dış çember üzerinde bir nokta"),
+                Param::point("merkez", "Halkanın merkezi").en("center"),
+                Param::point("ic", "İç çember üzerinde bir nokta").en("inner"),
+                Param::point("dis", "Dış çember üzerinde bir nokta").en("outer"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

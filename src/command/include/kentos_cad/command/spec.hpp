@@ -93,6 +93,27 @@ struct Param
     {}
 
     std::string name; ///< Turkish, matching the script/CLI keyword
+
+    /// THE SAME PARAMETER'S NAME IN ENGLISH, for the Python surface only.
+    ///
+    /// WHY A SECOND NAME AT ALL, when Article 2.6 is Turkish-first. Because the
+    /// Python API is read and written by programmers in the language every Python
+    /// library is written in, and `cad.line(noktalar=[...])` is the worst of both
+    /// — a Turkish keyword nobody can type without a Turkish keyboard, inside an
+    /// English function call. The command line, the manual and the journal keep
+    /// the Turkish name; only `kentos.cad` uses this one (kentoscad.md §4.2).
+    ///
+    /// DECLARED HERE AND NOT IN A TABLE, and that distinction is the whole design.
+    /// A table keyed by the Turkish word would have to answer `kenar` once, and
+    /// `kenar` is a page MARGIN in `core.layout`, a measured DISTANCE in
+    /// `geodesy.traverse` and an EDGE index in `islem.alan_duzenle`. Only the
+    /// declaration site knows which. A table would also be a second list to keep
+    /// in step, which is what CLAUDE.md 5.10 is about.
+    ///
+    /// Empty is a defect on a `Scriptable` or `AiAccessible` command and
+    /// `scripts/ci-gate-python-api.sh` fails the build for it.
+    std::string english;
+
     ParamKind kind{ParamKind::Text};
     Arity arity{Arity::exactly(1)};
     std::string help; ///< one line, shown by the CLI and fed to the AI schema
@@ -165,6 +186,14 @@ struct Param
     Param&& renamed_from(std::string old_name) &&
     {
         was = std::move(old_name);
+        return std::move(*this);
+    }
+
+    /// Names this parameter in English, for the Python keyword. Chained onto a
+    /// factory: `Param::point("merkez", "Dairenin merkezi").en("center")`.
+    Param&& en(std::string name_in_english) &&
+    {
+        english = std::move(name_in_english);
         return std::move(*this);
     }
 };
@@ -279,9 +308,40 @@ using CommandFn = Task<void> (*)(Context&);
 /// bindings, the AI tool schema, the menu and toolbar actions and the generated
 /// reference are all produced from it (Article 1.7, 5.10). Nothing about a command
 /// is written down twice.
+/// What this command is called in `kentos.cad`.
+///
+/// `core.line` is `line`; another namespace keeps its own with an underscore, so
+/// `geodesy.traverse` is `geodesy_traverse`; and a spec that declares
+/// `CommandSpec::python` gets that instead.
+///
+/// IT LIVES IN `/src/command` AND NOT IN THE PYTHON HOST, because two callers
+/// need it and one of them is built when Python is not: `kentos_docgen` writes
+/// `docs/python/referans.md` in every configuration, or the freshness gate would
+/// pass or fail depending on a build option (Article 6.14).
+std::string python_callable_name(const struct CommandSpec& spec);
+
 struct CommandSpec
 {
-    std::string id;                 ///< stable, namespaced: "core.line"
+    std::string id; ///< stable, namespaced: "core.line"
+
+    /// THE NAME OF THIS COMMAND'S PYTHON CALLABLE, when the id does not give one.
+    ///
+    /// The `kentos.cad` surface is projected from `Registry`, and the function
+    /// name is derived from the id: `core.line` becomes `cad.line`, and a
+    /// namespace other than `core` is kept with an underscore, so
+    /// `geodesy.traverse` would become `cad.geodesy_traverse`. That rule is
+    /// complete and collision-free, and for 111 of the 117 commands it also
+    /// produces an ENGLISH name, because their ids are English.
+    ///
+    /// The exceptions are the commands whose id is Turkish — `islem.uzunluk_yaz`,
+    /// `islem.kose_numarala` — and no rule of grammar turns those into English.
+    /// The Python API is English throughout (kentoscad.md §4.2), so they name
+    /// their callable here: `label_length`, `number_vertices`.
+    ///
+    /// NOT A SECOND IDENTITY. The command id stays what it always was and is what
+    /// the journal records; this is one more projection of it, beside the menu
+    /// label and the tool name, and it is never resolved against.
+    std::string python;
     std::vector<std::string> names; ///< Turkish primary, English equivalent, abbreviations
     /// The human Turkish label: `Blok Ekle`, `Yazdırma Profili`, `Eşyükselti`.
     ///

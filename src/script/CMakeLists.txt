@@ -10,6 +10,7 @@
 
 add_library(kentos_script STATIC
     src/json_runner.cpp
+    src/python_doc.cpp
     src/sandbox.cpp
 )
 
@@ -30,7 +31,7 @@ if(KENTOS_WITH_PYTHON)
             "-DKENTOS_WITH_PYTHON=OFF.")
     endif()
 
-    target_sources(kentos_script PRIVATE src/python_runner.cpp)
+    target_sources(kentos_script PRIVATE src/python_runner.cpp src/python_api.cpp)
 
     # PRIVATE, and that is the point of the pimpl in python_runner.hpp: nothing
     # that includes the header pays for <pybind11/embed.h> — which drags in

@@ -203,9 +203,10 @@ KENTOS_COMMAND(split_parcel)
                 // unbounded `nesneler` first, the cutting line's second point was
                 // swallowed as an object id and İFRAZ waited forever for a point
                 // it had already been given.
-                Param::points("noktalar", Arity{0, 2}, "Ayırma çizgisinin iki ucu"),
+                Param::points("noktalar", Arity{0, 2}, "Ayırma çizgisinin iki ucu").en("points"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Ayrılacak parsel; yoksa etkin seçim"},
+                      "Ayrılacak parsel; yoksa etkin seçim"}
+                    .en("objects"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

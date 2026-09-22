@@ -152,14 +152,17 @@ KENTOS_COMMAND(perp_offset)
         .category = Category::Draw,
         .params =
             {
-                Param::point("baslangic", "Taban çizgisinin ilk noktası (A)"),
-                Param::point("bitis", "Taban çizgisinin ikinci noktası (B)"),
+                Param::point("baslangic", "Taban çizgisinin ilk noktası (A)").en("start"),
+                Param::point("bitis", "Taban çizgisinin ikinci noktası (B)").en("end"),
                 Param::number("ayak", Arity::at_least(0),
-                              "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir"),
+                              "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir")
+                    .en("chainage"),
                 Param::number("boy", Arity::at_least(0),
-                              "Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir"),
+                              "Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir")
+                    .en("offset"),
                 Param::boolean("cizgi", Arity::optional(),
-                               "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir"),
+                               "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir")
+                    .en("connect"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

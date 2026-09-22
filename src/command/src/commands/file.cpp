@@ -310,8 +310,10 @@ KENTOS_COMMAND(exportstyle)
         .category = Category::File,
         .params =
             {
-                Param::text("katman", Arity::exactly(1), "Stili aktarılacak katmanın adı"),
-                Param::text("dosya", Arity::exactly(1), "Yazılacak .qml dosyasının yolu"),
+                Param::text("katman", Arity::exactly(1), "Stili aktarılacak katmanın adı")
+                    .en("layer"),
+                Param::text("dosya", Arity::exactly(1), "Yazılacak .qml dosyasının yolu")
+                    .en("file"),
             },
         // Writes a file and touches no entity, so there is nothing to undo and
         // nothing to journal as a document mutation.
@@ -373,7 +375,8 @@ KENTOS_COMMAND(open)
         .title    = "Aç",
         .category = Category::File,
         .params   = {Param::text("dosya", Arity::exactly(1),
-                                 "Açılacak KentOSCad proje dosyasının yolu (.pcad)")},
+                                 "Açılacak KentOSCad proje dosyasının yolu (.pcad)")
+                         .en("file")},
         // Opening replaces the document, so there is nothing to undo back INTO —
         // the previous drawing is gone the moment the new one is on screen, which
         // is what every CAD and GIS application this product's users know does.
@@ -400,7 +403,8 @@ KENTOS_COMMAND(save)
         .title    = "Kaydet",
         .category = Category::File,
         .params   = {Param::text("dosya", Arity::optional(),
-                                 "Hedef yol; verilmezse çizimin bağlı olduğu dosyaya yazılır")},
+                                 "Hedef yol; verilmezse çizimin bağlı olduğu dosyaya yazılır")
+                         .en("file")},
         // Saving does not change the document, so it is not an undo step and it
         // does not go through a transaction. ReadOnly is how the bus is told.
         .undo    = UndoPolicy::None,
@@ -420,12 +424,13 @@ KENTOS_COMMAND(saveas)
         .names    = {"FARKLIKAYDET", "SAVEAS", "FKAYDET"},
         .title    = "Farklı Kaydet",
         .category = Category::File,
-        .params = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")},
-        .undo   = UndoPolicy::None,
-        .flags  = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
-        .summary = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
-        .run     = &run_save_as,
-        .effect  = Effect::Query | Effect::FileWrite,
+        .params   = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")
+                         .en("file")},
+        .undo     = UndoPolicy::None,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .summary  = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
+        .run      = &run_save_as,
+        .effect   = Effect::Query | Effect::FileWrite,
     };
 }
 
@@ -438,15 +443,18 @@ KENTOS_COMMAND(import)
         .category = Category::File,
         .params =
             {
-                Param::text("dosya", Arity::exactly(1), "İçe aktarılacak dosyanın yolu"),
+                Param::text("dosya", Arity::exactly(1), "İçe aktarılacak dosyanın yolu").en("file"),
                 Param::text("bicim", Arity::optional(),
-                            "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur"),
+                            "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur")
+                    .en("format"),
                 Param::text("katmanlar", Arity::optional(),
                             "Yalnızca bu katmanlar okunur, virgülle ayrılır; "
-                            "verilmezse tümü"),
+                            "verilmezse tümü")
+                    .en("layers"),
                 Param::text("alanlar", Arity::optional(),
                             "Sütun olarak okunacak öznitelik alanları, virgülle; "
-                            "* hepsi; verilmezse alan okunmaz"),
+                            "* hepsi; verilmezse alan okunmaz")
+                    .en("fields"),
             },
         // io.md R17: one transaction, one undo entry, and a failure leaves the
         // document byte for byte as it was.
@@ -467,11 +475,13 @@ KENTOS_COMMAND(exportfile)
         .category = Category::File,
         .params =
             {
-                Param::text("dosya", Arity::exactly(1), "Yazılacak dosyanın yolu"),
+                Param::text("dosya", Arity::exactly(1), "Yazılacak dosyanın yolu").en("file"),
                 Param::text("bicim", Arity::optional(),
-                            "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur"),
+                            "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur")
+                    .en("format"),
                 Param::integer("surum", Arity::optional(),
-                               "DXF sürümü: 2000, 2004, 2007 (varsayılan), 2010, 2013, 2018"),
+                               "DXF sürümü: 2000, 2004, 2007 (varsayılan), 2010, 2013, 2018")
+                    .en("version"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,

@@ -119,12 +119,14 @@ KENTOS_COMMAND(points)
         .category = Category::File,
         .params =
             {
-                Param::text("dosya", Arity::exactly(1), "Nokta listesi dosyasının yolu"),
-                Param::text("yon", Arity::optional(), "oku (varsayılan) | yaz"),
+                Param::text("dosya", Arity::exactly(1), "Nokta listesi dosyasının yolu").en("file"),
+                Param::text("yon", Arity::optional(), "oku (varsayılan) | yaz").en("mode"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar"},
+                      "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar"}
+                    .en("objects"),
                 Param::text("eksen", Arity::optional(),
-                            "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY"),
+                            "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY")
+                    .en("axis_order"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

@@ -229,11 +229,16 @@ KENTOS_COMMAND(symbol)
         .params =
             {
                 Param::text("paket", Arity::optional(),
-                            "Yüklenecek gösterim paketinin dosya yolu"), // ui-label
+                            "Yüklenecek gösterim paketinin dosya yolu") // ui-label
+                    .en("package"),
                 Param::text("grup", Arity::optional(),
-                            "Gezilecek grup yolu, düzeyler '>' ile ayrılır"),
-                Param::text("ara", Arity::optional(), "Etikette, kimlikte ve grup yolunda arar"),
-                Param::text("kod", Arity::optional(), "Tek bir gösterimin ayrıntısı"), // ui-label
+                            "Gezilecek grup yolu, düzeyler '>' ile ayrılır")
+                    .en("group"),
+                Param::text("ara", Arity::optional(), "Etikette, kimlikte ve grup yolunda arar")
+                    .en("search"),
+                Param::text("kod", Arity::optional(),
+                            "Tek bir gösterimin ayrıntısı") // ui-label
+                    .en("code"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

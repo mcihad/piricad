@@ -100,10 +100,12 @@ KENTOS_COMMAND(spline)
         .category = Category::Draw,
         .params =
             {
-                Param::points("noktalar", Arity::at_least(2), "Kontrol noktaları"),
-                Param::integer("derece", Arity::optional(), "Eğrinin derecesi, 1–15; varsayılan 3"),
+                Param::points("noktalar", Arity::at_least(2), "Kontrol noktaları").en("points"),
+                Param::integer("derece", Arity::optional(), "Eğrinin derecesi, 1–15; varsayılan 3")
+                    .en("degree"),
                 Param::boolean("kapali", Arity::optional(),
-                               "Son noktadan ilkine kapansın mı; varsayılan hayır"),
+                               "Son noktadan ilkine kapansın mı; varsayılan hayır")
+                    .en("closed"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

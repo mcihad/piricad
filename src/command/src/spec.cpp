@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/spec.hpp"
 
+#include <algorithm>
+
 #include "kentos_cad/core/text.hpp"
 
 namespace kentos::command {
@@ -180,6 +182,23 @@ Effect effect_of(const CommandSpec& spec, const Args& args)
     // A WORD NOBODY DECLARED. The validator will refuse it in a moment, but
     // until it does the cautious answer is the command's worst case.
     return effect_of(spec);
+}
+
+std::string python_callable_name(const CommandSpec& spec)
+{
+    if (!spec.python.empty()) return spec.python;
+
+    const std::size_t dot = spec.id.find('.');
+    if (dot == std::string::npos) return spec.id;
+
+    // `core` IS THE DEFAULT NAMESPACE and drops out, which is what a Python
+    // package does with the module everything lives in. Keeping it would put
+    // `core_` in front of 111 of the 117 names in order to disambiguate six.
+    if (spec.id.compare(0, dot, "core") == 0) return spec.id.substr(dot + 1);
+
+    std::string out = spec.id;
+    std::replace(out.begin(), out.end(), '.', '_');
+    return out;
 }
 
 } // namespace kentos::command

@@ -8134,3 +8134,21 @@ TEST_CASE("Düzenleme fiilleri: hayalet komutun kendi dönüşümünü taşıyor
         CHECK_EQ(box.max_y, core::Mm{40'000});
     }
 }
+
+TEST_CASE("KOMUT: hiçbir ajan istemcisi yorumlayıcıya ulaşamaz")
+{
+    Registry reg;
+    register_builtin_commands(reg);
+
+    // CLAUDE.md 5.24, made checkable. `core.script` runs whatever a file
+    // contains, and with an interpreter embedded that is arbitrary code with the
+    // user's own filesystem and network — every step of 5.7's preview-and-approval
+    // model skipped by a program the model wrote rather than by a command it
+    // proposed.
+    //
+    // The bit was already absent when this test was written; the test is here so
+    // that adding it becomes a failing build rather than a review comment.
+    const CommandSpec* script = reg.by_id("core.script");
+    REQUIRE(script != nullptr);
+    CHECK_FALSE(has_flag(script->flags, Flags::AiAccessible));
+}

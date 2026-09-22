@@ -259,14 +259,19 @@ KENTOS_COMMAND(guide)
         .params =
             {
                 Param::text("yon", Arity::optional(),
-                            "yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir"),
+                            "yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir")
+                    .en("direction"),
                 Param::integer("deger", Arity::optional(),
-                               "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa"),
+                               "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa")
+                    .en("value"),
                 Param::points("nokta", Arity::optional(),
-                              "Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa"),
+                              "Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa")
+                    .en("point"),
                 Param::choice("tur", Arity::optional(), {"dogru", "isin"},
-                              "doğru: iki yöne sonsuz · ışın: noktadan ileriye"),
-                Param::boolean("sil", Arity::optional(), "Verilen yerdeki kılavuzu siler"),
+                              "doğru: iki yöne sonsuz · ışın: noktadan ileriye")
+                    .en("type"),
+                Param::boolean("sil", Arity::optional(), "Verilen yerdeki kılavuzu siler")
+                    .en("delete"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

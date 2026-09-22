@@ -145,9 +145,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id    = "islem.bagla",
-        .names = {"BAĞLA", "BAGLA", "ATTACH", "BĞ", "BG"},
-        .title = "Yazıyı nesneye bağla",
+        .id     = "islem.bagla",
+        .python = "attach",
+        .names  = {"BAĞLA", "BAGLA", "ATTACH", "BĞ", "BG"},
+        .title  = "Yazıyı nesneye bağla",
         .summary = "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: "
                    "nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.",
         .group   = "Etiketleme",
@@ -155,20 +156,27 @@ private:
         .applies = Applies::Texts,
         .params =
             {
-                ToolParam::object("kaynak", "Yazıların bağlanacağı nesne (çizgi ya da alan)"),
+                ToolParam::object("kaynak", "Yazıların bağlanacağı nesne (çizgi ya da alan)")
+                    .en("source"),
                 ToolParam::choice("bag", "Neye bağlanacağı: en yakın kenar ya da en yakın köşe",
-                                  {"kenar", "kose"}, "kenar"),
+                                  {"kenar", "kose"}, "kenar")
+                    .en("attach_to"),
                 ToolParam::choice("tur",
                                   "Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur",
-                                  {"sabit", "uzunluk"}, "sabit"),
+                                  {"sabit", "uzunluk"}, "sabit")
+                    .en("type"),
                 ToolParam::choice("birim", "Uzunluğun birimi (tur=uzunluk)",
-                                  {"metre", "santimetre", "milimetre", "kilometre"}, "metre"),
+                                  {"metre", "santimetre", "milimetre", "kilometre"}, "metre")
+                    .en("unit"),
                 ToolParam::integer("ondalik", "Virgülden sonraki basamak sayısı (tur=uzunluk)", 2,
-                                   0, 6),
+                                   0, 6)
+                    .en("decimals"),
                 ToolParam::text("bicim",
-                                "Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk)"),
+                                "Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk)")
+                    .en("format"),
                 ToolParam::choice("ayrac", "Ondalık ayracı (tur=uzunluk)", {"virgul", "nokta"},
-                                  "virgul"),
+                                  "virgul")
+                    .en("decimal_separator"),
             },
         .output        = OutputShape::InPlace,
         .output_suffix = "",

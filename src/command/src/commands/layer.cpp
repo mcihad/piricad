@@ -81,12 +81,14 @@ KENTOS_COMMAND(layer)
         .params =
             {
                 Param::text("ad", Arity::exactly(1),
-                            "Katman adı; yoksa oluşturulur ve aktif yapılır"),
+                            "Katman adı; yoksa oluşturulur ve aktif yapılır")
+                    .en("name"),
                 Param::text("grup", Arity::optional(),
-                            "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök"),
-                Param::boolean("gorunur", Arity::optional(), "Katmanın görünürlüğü"),
-                Param::boolean("kilitli", Arity::optional(), "Katmanın kilit durumu"),
-                Param::integer("renk", Arity::optional(), "Çizim rengi, 0xAARRGGBB"),
+                            "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök")
+                    .en("group"),
+                Param::boolean("gorunur", Arity::optional(), "Katmanın görünürlüğü").en("visible"),
+                Param::boolean("kilitli", Arity::optional(), "Katmanın kilit durumu").en("locked"),
+                Param::integer("renk", Arity::optional(), "Çizim rengi, 0xAARRGGBB").en("color"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -43,6 +43,9 @@ import kentos.cad          # kentos.cad.run(...)
 from kentos import cad     # cad.run(...)
 ```
 
+`cad` iki şey taşır: **her komut için bir fonksiyon** (üretilmiş) ve `cad.doc` altında
+çizimden **okuma** çağrıları.
+
 ### İsimler neden İngilizce
 
 Program Türkçedir, komutlar Türkçedir, bu el kitabı Türkçedir. Python API'si değildir:
@@ -80,35 +83,84 @@ ana kadar yapılan her şey geri alınır. Yakalarsanız — aşağıya bakın.
 
 ### Çizimi değiştirmenin başka yolu yoktur
 
-`cad.run` dışında çizime dokunan hiçbir bağlantı yoktur — bilerek. Çizimi değiştiren her
-şey komut olmak zorundadır, çünkü doğrulama, geri alma ve günlük oraya bağlıdır. Bir
-betiğin çizime "kısa yoldan" ulaşabilmesi, o üçünü atlayabilmesi demek olurdu.
+`cad.run` ve aşağıdaki üretilmiş çağrılar dışında çizime dokunan hiçbir bağlantı yoktur —
+bilerek. İkisi de aynı komut veri yoluna gider. Çizimi değiştiren her şey komut olmak
+zorundadır, çünkü doğrulama, geri alma ve günlük oraya bağlıdır. Bir betiğin çizime
+"kısa yoldan" ulaşabilmesi, o üçünü atlayabilmesi demek olurdu.
+
+## Her komut bir fonksiyon
+
+`cad.run("ÇİZGİ 0,0 10,10")` komut satırına yazdığınızın aynısıdır. Bunun yanında her
+komutun **kendi Python fonksiyonu** vardır:
+
+```python
+cad.line(points=[[485320150, 4310220400], [485370150, 4310250400]])
+cad.circle_draw(center=[485400000, 4310230000], rim=[485410000, 4310230000])
+cad.polygon_regular(center=[485450000, 4310230000], sides=6, method="ic", radius=8.0)
+```
+
+Bu fonksiyonlar **elle yazılmadı; komut kaydından üretiliyor.** Programa bugün eklenen bir
+komut bugün bir Python fonksiyonudur; güncellenmesi gereken ikinci bir liste yoktur.
+
+| | `cad.run(...)` | `cad.<komut>(...)` |
+|---|---|---|
+| Ad | Türkçe komut adı | İngilizce fonksiyon adı |
+| Parametre | Komut satırı dilbilgisi | İngilizce anahtar kelime |
+| Koordinat | **metre** | **milimetre tam sayı** |
+| Hata | çalışma anında | bilinmeyen anahtar hemen reddedilir |
+
+Fonksiyon adı komut kimliğinden gelir: `core.line` → `cad.line`, `core.circle_draw` →
+`cad.circle_draw`. `core` dışındaki kimlikler İngilizce adlarını kendileri bildirir —
+`islem.uzunluk_yaz` → `cad.label_length`, `geodesy.traverse` → `cad.traverse`.
+
+Anahtar kelimeler **yalnız İngilizcedir** ve konumsal argüman yoktur:
+
+```python
+cad.line(noktalar=[[0, 0], [1, 1]])   # HATA: "points" bekleniyor
+cad.line([[0, 0], [1, 1]])            # HATA: yalnız anahtar kelime
+```
+
+Bir komutun neyi kabul ettiğini her zaman Python'un kendisine sorabilirsiniz:
+
+```python
+help(cad.line)
+print(cad.__all__)          # bütün komut fonksiyonlarının adları
+```
+
+Tam liste: [Python API referansı](../python/referans.md). O sayfa da bu fonksiyonlar da
+komut kaydından üretilir; yanında `docs/python/kentos_cad.pyi` tip taslağı vardır ve
+programın dışında betik yazan bir düzenleyici onu okuyup tamamlama yapabilir.
 
 ## Okuma
 
 Hepsi **değer** döndürür: sayı, metin, liste. Hiçbiri çizimin içine tutamak vermez.
 
+Çizime dair okumalar `cad.doc` altındadır. Bunun sebebi teknik ve önemlidir: `cad`'in üst
+düzeyi **üretilen komutlara** aittir ve o küme kendiliğinden büyür. Oraya elle bir ad
+koymak, aynı adı taşıyan bir komut eklendiği gün sessizce ezilmek demektir — nitekim
+`KATMANLAR` ve `AYAR` gerçek komutlardır.
+
 | Çağrı | Döndürdüğü |
 |---|---|
-| `cad.layers()` | Katman adlarının listesi, çizimdeki sırayla |
-| `cad.layer_count()` | Katman sayısı |
-| `cad.active_layer()` | Etkin katmanın adı |
-| `cad.entity_count()` | Çizimdeki canlı nesne sayısı |
-| `cad.selection_count()` | Seçili nesne sayısı |
-| `cad.crs()` | Koordinat sisteminin kimliği, örneğin `TUREF/TM30` |
-| `cad.setting(kimlik)` | Bir ayarın değeri — `bool`, `int` ya da `str` olarak |
+| `cad.doc.layers()` | Katman adlarının listesi, çizimdeki sırayla |
+| `cad.doc.layer_count()` | Katman sayısı |
+| `cad.doc.active_layer()` | Etkin katmanın adı |
+| `cad.doc.entity_count()` | Çizimdeki canlı nesne sayısı |
+| `cad.doc.selection_count()` | Seçili nesne sayısı |
+| `cad.doc.crs()` | Koordinat sisteminin kimliği, örneğin `TUREF/TM30` |
+| `cad.doc.setting(kimlik)` | Bir ayarın değeri — `bool`, `int` ya da `str` olarak |
 | `cad.sandbox()` | Bu çalıştırmanın kum havuzu seviyesi |
 
 ```python
-for ad in cad.layers():
-    print(ad, cad.entity_count())
+for ad in cad.doc.layers():
+    print(ad, cad.doc.entity_count())
 
-if cad.setting("core.arayuz.dinamik_girdi"):
+if cad.doc.setting("core.arayuz.dinamik_girdi"):
     cad.run("TERCİH core.arayuz.dinamik_girdi hayır")
 ```
 
 `cad.setting` değeri **olduğu tipte** döndürür: mantıksal bir ayar `bool` olarak gelir,
-metin `str`, sayı `int`. Hepsini metin olarak döndürmek `if cad.setting(...)` yazan
+metin `str`, sayı `int`. Hepsini metin olarak döndürmek `if cad.doc.setting(...)` yazan
 herkesi yanıltırdı.
 
 ## `print` nereye yazar
@@ -116,7 +168,7 @@ herkesi yanıltırdı.
 Doğrudan komut satırına:
 
 ```python
-print("Toplam nesne:", cad.entity_count())
+print("Toplam nesne:", cad.doc.entity_count())
 ```
 
 Pencereli bir uygulamanın terminali yoktur; ilerlemesini `print` ile bildiren bir betik
@@ -197,7 +249,7 @@ vermiş olurdu.
 
 ```python
 metin = cad.read_file("olcum.txt")
-cad.write_file("rapor.txt", f"Toplam: {cad.entity_count()}")
+cad.write_file("rapor.txt", f"Toplam: {cad.doc.entity_count()}")
 ```
 
 Yol **çözülerek** denetlenir. `../../etc/passwd` yazarak dışarı çıkamazsınız: metin

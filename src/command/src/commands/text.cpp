@@ -206,15 +206,18 @@ KENTOS_COMMAND(text)
         .category = Category::Draw,
         .params =
             {
-                Param::point("noktalar", "Yazının başlangıç noktası"),
-                Param::text("yazi", Arity::exactly(1), "Yazılacak metin"),
+                Param::point("noktalar", "Yazının başlangıç noktası").en("points"),
+                Param::text("yazi", Arity::exactly(1), "Yazılacak metin").en("text"),
                 Param::integer("yukseklik", Arity::optional(),
-                               "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı"),
+                               "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı")
+                    .en("height"),
                 // A point list with optional arity, because Param::point takes no
                 // Arity and is therefore always required — and a mandatory end
                 // point would make every horizontal caption two clicks.
-                Param::points("bitis", Arity::optional(), "Taban çizgisinin bitişi; yoksa yatay"),
-                Param::text("hizalama", Arity::optional(), "sol, orta, sag veya merkez"),
+                Param::points("bitis", Arity::optional(), "Taban çizgisinin bitişi; yoksa yatay")
+                    .en("end"),
+                Param::text("hizalama", Arity::optional(), "sol, orta, sag veya merkez")
+                    .en("alignment"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -245,12 +248,16 @@ KENTOS_COMMAND(edittext)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Düzenlenecek yazılar; verilmezse seçim"},
-                Param::text("yazi", Arity::optional(), "Yeni metin; verilmezse değişmez"),
+                      "Düzenlenecek yazılar; verilmezse seçim"}
+                    .en("objects"),
+                Param::text("yazi", Arity::optional(), "Yeni metin; verilmezse değişmez")
+                    .en("text"),
                 Param::integer("yukseklik", Arity::optional(),
-                               "Yeni yükseklik, zeminde milimetre; verilmezse değişmez"),
+                               "Yeni yükseklik, zeminde milimetre; verilmezse değişmez")
+                    .en("height"),
                 Param::text("hizalama", Arity::optional(),
-                            "sol, orta, sag veya merkez; verilmezse değişmez"),
+                            "sol, orta, sag veya merkez; verilmezse değişmez")
+                    .en("alignment"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

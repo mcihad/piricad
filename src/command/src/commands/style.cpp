@@ -1054,26 +1054,37 @@ KENTOS_COMMAND(style)
         .params =
             {
                 Param::text("katman", Arity::exactly(1),
-                            "Stilin yazılacağı katmanın adı; katman var olmalı"),
-                Param::text("paket", Arity::optional(), "Stil kataloğu paketinin dosya yolu"),
+                            "Stilin yazılacağı katmanın adı; katman var olmalı")
+                    .en("layer"),
+                Param::text("paket", Arity::optional(), "Stil kataloğu paketinin dosya yolu")
+                    .en("package"),
                 Param::integer("olcek_min", Arity::optional(),
-                               "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N)"),
+                               "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N)")
+                    .en("scale_min"),
                 Param::integer("olcek_max", Arity::optional(),
-                               "Bu ölçek paydasından daha uzakta çizilmez"),
+                               "Bu ölçek paydasından daha uzakta çizilmez")
+                    .en("scale_max"),
                 Param::text("sinifla", Arity::optional(),
                             "Sınıflandırmada kullanılacak öznitelik; her nesne kendi "
-                            "değerine göre stillenir"),
+                            "değerine göre stillenir")
+                    .en("classify_by"),
                 Param::text("kod", Arity::optional(),
-                            "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir"),
+                            "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir")
+                    .en("code"),
                 Param::integer("olcek", Arity::optional(),
-                               "Ölçek paydası (1:N); 0 = ölçekten bağımsız"),
-                Param::integer("renk", Arity::optional(), "Çizgi rengi, 0xAARRGGBB"),
+                               "Ölçek paydası (1:N); 0 = ölçekten bağımsız")
+                    .en("scale"),
+                Param::integer("renk", Arity::optional(), "Çizgi rengi, 0xAARRGGBB").en("color"),
                 Param::integer("kalinlik", Arity::optional(),
-                               "Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm)"),
-                Param::integer("dolgu", Arity::optional(), "Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz"),
-                Param::integer("sira", Arity::optional(), "Çizim sırası; büyük olan üste gelir"),
+                               "Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm)")
+                    .en("line_width"),
+                Param::integer("dolgu", Arity::optional(), "Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz")
+                    .en("fill"),
+                Param::integer("sira", Arity::optional(), "Çizim sırası; büyük olan üste gelir")
+                    .en("order"),
                 Param::boolean("sifirla", Arity::optional(),
-                               "Stili siler; nesneler katman varsayılanına döner"),
+                               "Stili siler; nesneler katman varsayılanına döner")
+                    .en("reset"),
 
                 // The symbol layer. Every parameter below describes ONE layer of
                 // a symbol; `ekle` is what turns a series of invocations into a
@@ -1081,50 +1092,70 @@ KENTOS_COMMAND(style)
                 // a boundary of another colour, and a repeated glyph on top.
                 Param::text("tip", Arity::optional(),
                             "Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, "
-                            "cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci"),
+                            "cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci")
+                    .en("layer_type"),
                 Param::boolean("ekle", Arity::optional(),
-                               "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir"),
+                               "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir")
+                    .en("add"),
                 Param::text("sekil", Arity::optional(),
                             "İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, "
-                            "ok, yarim-daire, besgen, altigen, cizik"),
+                            "ok, yarim-daire, besgen, altigen, cizik")
+                    .en("shape"),
                 Param::text("yerlesim", Arity::optional(),
-                            "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta"),
+                            "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta")
+                    .en("placement"),
                 Param::text("birim", Arity::optional(),
-                            "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"),
+                            "Ölçülerin birimi: kagit (µm), zemin (mm), piksel")
+                    .en("unit"),
                 Param::text("boyut_birim", Arity::optional(),
-                            "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir"),
+                            "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir")
+                    .en("size_unit"),
                 Param::text("aralik_birim", Arity::optional(),
-                            "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir"),
+                            "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir")
+                    .en("spacing_unit"),
                 Param::text("aralik_y_birim", Arity::optional(),
-                            "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir"),
+                            "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir")
+                    .en("spacing_y_unit"),
                 Param::text("kaydirma_birim", Arity::optional(),
-                            "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir"),
+                            "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir")
+                    .en("offset_unit"),
                 Param::integer("boyut", Arity::optional(),
-                               "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden"),
+                               "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden")
+                    .en("size"),
                 Param::integer("aralik", Arity::optional(),
-                               "Çizgi boyunca ya da desende birinci eksende aralık"),
+                               "Çizgi boyunca ya da desende birinci eksende aralık")
+                    .en("spacing"),
                 Param::integer("aralik_y", Arity::optional(),
-                               "Nokta deseninde ikinci eksen; verilmezse kare desen"),
+                               "Nokta deseninde ikinci eksen; verilmezse kare desen")
+                    .en("spacing_y"),
                 Param::integer("aci", Arity::optional(),
-                               "Desen açısı ya da işaretçi dönüklüğü, mikro derece"),
+                               "Desen açısı ya da işaretçi dönüklüğü, mikro derece")
+                    .en("angle"),
                 Param::integer("kaydirma", Arity::optional(),
-                               "Geometriden dik kaydırma, `birim` cinsinden"),
+                               "Geometriden dik kaydırma, `birim` cinsinden")
+                    .en("offset"),
                 Param::integer("faz", Arity::optional(),
                                "İlk işaretçinin çizgi boyunca kaç birim ileride "
-                               "başlayacağı; verilmezse aralığın yarısı"),
+                               "başlayacağı; verilmezse aralığın yarısı")
+                    .en("phase"),
                 Param::text("faz_birim", Arity::optional(),
-                            "Yalnız `faz` için birim; verilmezse `birim` geçerlidir"),
+                            "Yalnız `faz` için birim; verilmezse `birim` geçerlidir")
+                    .en("phase_unit"),
                 Param::integer("saydamlik", Arity::optional(),
-                               "Katman saydamlığı 0-255; 255 tam opak"),
+                               "Katman saydamlığı 0-255; 255 tam opak")
+                    .en("opacity"),
                 Param::text("desen", Arity::optional(),
                             "Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak "
-                            "çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)"),
+                            "çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)")
+                    .en("pattern"),
                 Param::text("yazi", Arity::optional(),
-                            "yazi-isaretci katmanının yazdığı sabit metin"),
+                            "yazi-isaretci katmanının yazdığı sabit metin")
+                    .en("text"),
                 Param::text("alan", Arity::optional(),
                             "Nesneden alınacak parametreler, virgülle: "
                             "sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. "
-                            "Sütun yoksa tanımlanır"),
+                            "Sütun yoksa tanımlanır")
+                    .en("fields"),
 
             },
         .undo    = UndoPolicy::SingleTransaction,

@@ -417,23 +417,31 @@ KENTOS_COMMAND(arc_draw)
                 // THE DEFAULT METHOD'S THREE POINTS COME FIRST: positional
                 // arguments bind in declaration order, and `YAY 0,0 50,0 0,50`
                 // is the form every page, script and journal already uses.
-                Param::points("merkez", Arity::optional(), "Yayın merkezi"),
+                Param::points("merkez", Arity::optional(), "Yayın merkezi").en("center"),
                 Param::points("baslangic", Arity::optional(),
-                              "Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler"),
+                              "Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler")
+                    .en("start"),
                 Param::points("bitis", Arity::optional(),
-                              "Yayın bitiş noktası; süpürme saat yönünün tersinedir"),
+                              "Yayın bitiş noktası; süpürme saat yönünün tersinedir")
+                    .en("end"),
                 Param::choice("yontem", Arity::optional(), {"merkez", "3n", "bma", "bby", "devam"},
                               "merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: "
                               "başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve "
-                              "yarıçap"),
-                Param::points("uzerinden", Arity::optional(), "3n: yayın üzerinden geçtiği nokta"),
-                Param::number("supurme", Arity::optional(), "bma: süpürme açısı"),
-                Param::number("yaricap", Arity::optional(), "bby: yarıçap (m)").measured_in("m"),
+                              "yarıçap")
+                    .en("method"),
+                Param::points("uzerinden", Arity::optional(), "3n: yayın üzerinden geçtiği nokta")
+                    .en("through"),
+                Param::number("supurme", Arity::optional(), "bma: süpürme açısı").en("sweep"),
+                Param::number("yaricap", Arity::optional(), "bby: yarıçap (m)")
+                    .measured_in("m")
+                    .en("radius"),
                 Param::points("yon_nokta", Arity::optional(),
                               "bby: yayın hangi yandan geçeceği gösterilen nokta; yon "
-                              "verilmişse sorulmaz"),
+                              "verilmişse sorulmaz")
+                    .en("side_point"),
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
-                              "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre"),
+                              "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre")
+                    .en("side"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

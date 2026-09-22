@@ -298,11 +298,14 @@ KENTOS_COMMAND(block)
         .params =
             {
                 Param::text("ad", Arity::exactly(1),
-                            "Bloğun adı; Türkçe katlanmış hâliyle benzersiz"),
-                Param::point("taban", "Taban noktası: referansların yerleştirildiği nokta"),
+                            "Bloğun adı; Türkçe katlanmış hâliyle benzersiz")
+                    .en("name"),
+                Param::point("taban", "Taban noktası: referansların yerleştirildiği nokta")
+                    .en("base"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Bloğa girecek nesneler; yoksa etkin seçim"},
-                Param::text("aciklama", Arity::optional(), "Serbest açıklama"),
+                      "Bloğa girecek nesneler; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::text("aciklama", Arity::optional(), "Serbest açıklama").en("note"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -320,19 +323,25 @@ KENTOS_COMMAND(insert)
         .category = Category::Draw,
         .params =
             {
-                Param::text("ad", Arity::exactly(1), "Yerleştirilecek bloğun adı"),
-                Param::point("nokta", "Ekleme noktası"),
+                Param::text("ad", Arity::exactly(1), "Yerleştirilecek bloğun adı").en("name"),
+                Param::point("nokta", "Ekleme noktası").en("point"),
                 Param::number("olcek", Arity::optional(),
-                              "Ölçek; eksi değer x'te aynalar; varsayılan 1"),
-                Param::number("olcek_y", Arity::optional(),
-                              "Y ölçeği, farklıysa; varsayılan olcek"),
-                Param::number("aci", Arity::optional(), "Dönme açısı, derece; varsayılan 0"),
-                Param::integer("sutun", Arity::optional(), "Dizi sütun sayısı; varsayılan 1"),
-                Param::integer("satir", Arity::optional(), "Dizi satır sayısı; varsayılan 1"),
+                              "Ölçek; eksi değer x'te aynalar; varsayılan 1")
+                    .en("scale"),
+                Param::number("olcek_y", Arity::optional(), "Y ölçeği, farklıysa; varsayılan olcek")
+                    .en("scale_y"),
+                Param::number("aci", Arity::optional(), "Dönme açısı, derece; varsayılan 0")
+                    .en("angle"),
+                Param::integer("sutun", Arity::optional(), "Dizi sütun sayısı; varsayılan 1")
+                    .en("columns"),
+                Param::integer("satir", Arity::optional(), "Dizi satır sayısı; varsayılan 1")
+                    .en("rows"),
                 Param::integer("sutun_aralik", Arity::optional(),
-                               "Sütunlar arası, milimetre, döndürülmüş eksende"),
+                               "Sütunlar arası, milimetre, döndürülmüş eksende")
+                    .en("column_spacing"),
                 Param::integer("satir_aralik", Arity::optional(),
-                               "Satırlar arası, milimetre, döndürülmüş eksende"),
+                               "Satırlar arası, milimetre, döndürülmüş eksende")
+                    .en("row_spacing"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

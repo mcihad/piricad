@@ -21,9 +21,11 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/script/python_runner.hpp"
 
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <thread>
 
 using namespace kentos;
@@ -266,19 +268,19 @@ TEST_CASE("PYTHON: a read binding returns a value of the right Python type")
     // R9: values only. What comes back is an int, a list and a str, never a handle
     // a later command could invalidate.
     auto report = runner.run_text(R"(
-before = cad.entity_count()
+before = cad.doc.entity_count()
 cad.run("ÇİZGİ 485320150,4310220400 485370150,4310250400")
-assert cad.entity_count() == before + 1, "sayım yanlış"
-assert isinstance(cad.layers(), list), "layers() liste değil"
-assert isinstance(cad.crs(), str), "crs() metin değil"
-assert isinstance(cad.layer_count(), int), "layer_count() tamsayı değil"
-assert isinstance(cad.selection_count(), int)
-assert isinstance(cad.active_layer(), str)
+assert cad.doc.entity_count() == before + 1, "sayım yanlış"
+assert isinstance(cad.doc.layers(), list), "layers() liste değil"
+assert isinstance(cad.doc.crs(), str), "crs() metin değil"
+assert isinstance(cad.doc.layer_count(), int), "layer_count() tamsayı değil"
+assert isinstance(cad.doc.selection_count(), int)
+assert isinstance(cad.doc.active_layer(), str)
 assert cad.sandbox() == "güvenli"
 
 # A setting arrives as the type it IS, which is the whole reason `setting` does
 # not hand everything back as a string.
-assert isinstance(cad.setting("core.arayuz.dinamik_girdi"), bool)
+assert isinstance(cad.doc.setting("core.arayuz.dinamik_girdi"), bool)
 )",
                                   "okuma");
 
@@ -399,6 +401,145 @@ except BaseException:
 
     CHECK_FALSE(report.ok());
     CHECK(rig.doc.live_entity_count() == 0);
+}
+
+// ---- the projected surface (CLAUDE.md 5.10, 5.20) ---------------------------
+
+TEST_CASE("PYTHON: every command is a callable, generated from the registry")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // ONE CALLABLE PER COMMAND, and the count is the registry's, not a list's.
+    // The point of the projection is that nobody maintains this number.
+    std::size_t scriptable = 0;
+    for (const CommandSpec& spec : rig.reg.all())
+        if (spec.run != nullptr && has_flag(spec.flags, Flags::Scriptable)) ++scriptable;
+    REQUIRE(scriptable > 80);
+
+    auto report = runner.run_text("import kentos.cad\n"
+                                  "assert len(cad.__all__) == " +
+                                      std::to_string(scriptable) +
+                                      ", f'{len(cad.__all__)} callables'\n"
+                                      "assert 'line' in cad.__all__\n"
+                                      "assert callable(cad.line)\n",
+                                  "projeksiyon");
+
+    CHECK(report.ok());
+}
+
+TEST_CASE("PYTHON: a generated callable draws, with English keywords")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    auto report = runner.run_text(R"(
+cad.run("KATMAN PARSEL")
+cad.line(points=[[485320150, 4310220400], [485370150, 4310250400]])
+cad.circle_draw(center=[485400000, 4310230000], rim=[485410000, 4310230000])
+)",
+                                  "üretilmiş çağrı");
+
+    REQUIRE(report.ok());
+    CHECK(rig.doc.live_entity_count() == 2);
+
+    // R1 AGAIN, AND IT IS THE WHOLE POINT: a generated callable is not a second
+    // way in. It builds an `Invocation` and dispatches it, so the journal cannot
+    // tell it from the command line — which is what makes Article 6.4's equality
+    // proof hold with Python in it.
+    REQUIRE(rig.journal.entries().size() == 3);
+    CHECK(rig.journal.entries()[1].command_id == "core.line");
+    CHECK(rig.journal.entries()[2].command_id == "core.circle_draw");
+}
+
+TEST_CASE("PYTHON: the Turkish keyword is not the Python keyword")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // THE API IS ENGLISH AND ONLY ENGLISH. Accepting `noktalar=` as well would be
+    // two names for one argument in one call, which is the thing `Param::english`
+    // exists to avoid rather than to double.
+    CHECK_FALSE(runner.run_text("cad.line(noktalar=[[0,0],[1,1]])", "türkçe anahtar").ok());
+    CHECK(rig.doc.live_entity_count() == 0);
+
+    // And the refusal SAYS WHAT IS ACCEPTED, because the reader is at a prompt
+    // with the answer one line away (script.md R21).
+    auto refused = runner.run_text("cad.line(noktalar=[[0,0],[1,1]])", "türkçe anahtar");
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("points") != std::string::npos);
+}
+
+TEST_CASE("PYTHON: a generated callable takes keywords only")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // A command's parameters are a SET; the command line has never had a
+    // positional order for them. Inventing one here would be a second grammar and
+    // it would reorder silently the day a parameter is added (CLAUDE.md 5.11).
+    auto refused = runner.run_text("cad.line([[0,0],[1,1]])", "konumsal");
+    CHECK_FALSE(refused.ok());
+    CHECK(rig.doc.live_entity_count() == 0);
+}
+
+TEST_CASE("PYTHON: True is a boolean and not the integer one")
+{
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    // In Python `isinstance(True, int)` is true, so a converter that asked about
+    // integers first would turn every yes/no argument into 1. `core.layer` takes
+    // `gorunur` as a boolean; this passes only if the order is right.
+    auto report = runner.run_text(R"(
+cad.layer(name="GİZLİ")
+cad.layer_visibility(action="gizle", layer="GİZLİ")
+)",
+                                  "mantıksal");
+    CHECK(report.ok());
+}
+
+TEST_CASE("PYTHON: the registry's English names are unique and importable")
+{
+    Rig rig;
+
+    // THE GATE THAT THE SHELL GATE CANNOT BE. `ci-gate-python-api.sh` reads the
+    // SOURCE and so it sees a declaration at a time; only the assembled registry
+    // can say whether two parameters of ONE command ended up with one English
+    // word, or whether two commands claim one callable name.
+    std::set<std::string> callables;
+    for (const CommandSpec& spec : rig.reg.all()) {
+        if (spec.run == nullptr || !has_flag(spec.flags, Flags::Scriptable)) continue;
+
+        std::set<std::string> keywords;
+        for (const Param& p : spec.params) {
+            INFO(spec.id << " / " << p.name);
+            REQUIRE_FALSE(p.english.empty());
+
+            // A valid Python identifier, and never one of the words that would
+            // make the call a SyntaxError.
+            CHECK(p.english.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_") ==
+                  std::string::npos);
+            CHECK_FALSE(std::isdigit(static_cast<unsigned char>(p.english.front())) != 0);
+            CHECK(p.english != "class");
+            CHECK(p.english != "from");
+            CHECK(p.english != "import");
+            CHECK(p.english != "lambda");
+            CHECK(p.english != "None");
+
+            CHECK(keywords.insert(p.english).second);
+        }
+
+        const std::string fn = command::python_callable_name(spec);
+        INFO(spec.id << " -> " << fn);
+        CHECK(callables.insert(fn).second);
+
+        // AND IT IS ENGLISH, which the derivation gives for an English id and a
+        // `CommandSpec::python` gives for a Turkish one. The check a machine CAN
+        // make is that the name never carries a Turkish letter — the rest is the
+        // reviewer's, and Article 6.15 says so.
+        CHECK(fn.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_") == std::string::npos);
+    }
 }
 
 #endif // KENTOS_HAVE_PYTHON

@@ -2,6 +2,7 @@
 #include "kentos_cad/script/python_runner.hpp"
 
 #include "kentos_cad/core/text.hpp"
+#include "python_impl.hpp"
 
 #include <pybind11/embed.h>
 
@@ -95,7 +96,11 @@ void ensure_interpreter()
 
 struct PythonRunner::Impl
 {
-    explicit Impl(command::Bus& b, Sandbox s) : bus(b), sandbox(s) {}
+    explicit Impl(command::Bus& b, Sandbox s)
+        : bus(b), sandbox(s), host{b, commands, [this](core::ErrorCode code, std::string message) {
+                                       fail(code, std::move(message));
+                                   }}
+    {}
 
     command::Bus& bus;
     Sandbox sandbox;
@@ -111,6 +116,17 @@ struct PythonRunner::Impl
     /// (`.claude/script.md` R21).
     core::Error pending{ErrorCode::None, {}};
     bool has_pending{false};
+
+    /// WHAT A GENERATED CALLABLE TALKS TO, and it lives HERE and not in
+    /// `build_module` for a reason worth the sentence: every projected command
+    /// captures this by reference, and those lambdas outlive the call that built
+    /// them — they are held by the Python module until the interpreter drops it.
+    /// A `Host` on `build_module`'s stack would be a dangling reference the first
+    /// time a script called `cad.line(...)`, and it would look like memory
+    /// corruption rather than like a lifetime mistake.
+    ///
+    /// Declared after `commands` because it binds a reference to it.
+    detail::Host host;
 
     /// What `print()` has written since the last newline.
     ///
@@ -180,8 +196,15 @@ py::object PythonRunner::Impl::build_module()
     py::object package = module_type("kentos");
     py::object cad     = module_type("kentos.cad");
 
+    // THE DRAWING'S OWN READS LIVE ON A SECOND OBJECT, `cad.doc`. The reason is
+    // written out at the reads themselves: the top level of `cad` belongs to the
+    // projection, and anything hand-written up there is a collision waiting for
+    // the command that happens to share its name.
+    py::object doc = module_type("kentos.cad.doc");
+
     package.attr("cad")     = cad;
     package.attr("__all__") = py::make_tuple("cad");
+    cad.attr("doc")         = doc;
 
     // ---- the one write path (R1, R4) ----------------------------------------
     //
@@ -216,52 +239,64 @@ py::object PythonRunner::Impl::build_module()
         py::name("run"), py::scope(cad),
         py::doc("Dispatch one command line through the bus. Returns the operation count."));
 
-    // ---- reads: VALUES ONLY (R9, R10, P4) -----------------------------------
+    // ---- reads: VALUES ONLY, on their own object (R9, R10, P4) --------------
+    //
+    // WHY `cad.doc` AND NOT `cad`. The top level of `cad` belongs to the
+    // PROJECTION: one callable per registered command, and that set grows without
+    // anyone editing this file. A hand-written name up there is a collision
+    // waiting for the command that happens to be called the same thing — and it
+    // waited about ten minutes: `core.layers` and `core.setting` are both real
+    // commands, so `cad.layers` and `cad.setting` were quietly replaced by them
+    // and a script asking the document for its layer names got a command's
+    // operation count instead.
+    //
+    // The fix is structural rather than a rename: anything hand-written lives
+    // where the generator does not reach, and `bind_commands` refuses to shadow
+    // what is already there rather than winning silently.
     //
     // Not one of these hands back a `Document&`, a `Layer*`, an iterator or a
     // non-const span. A script that held a reference into the document would hold
     // it across a command that reallocates the store, and that is a crash with a
     // script's name on it.
-
-    cad.attr("layers") = py::cpp_function(
+    doc.attr("layers") = py::cpp_function(
         [this] {
             py::list names;
             for (const core::Layer& layer : bus.document().layers())
                 names.append(py::str(layer.name));
             return names;
         },
-        py::name("layers"), py::scope(cad), py::doc("The layer names, in document order."));
+        py::name("layers"), py::scope(doc), py::doc("The layer names, in document order."));
 
-    cad.attr("layer_count") = py::cpp_function(
+    doc.attr("layer_count") = py::cpp_function(
         [this] { return bus.document().layer_table().size(); }, py::name("layer_count"),
-        py::scope(cad), py::doc("How many layers the document has."));
+        py::scope(doc), py::doc("How many layers the document has."));
 
-    cad.attr("active_layer") = py::cpp_function(
+    doc.attr("active_layer") = py::cpp_function(
         [this]() -> std::string {
             const core::LayerId id             = bus.active_layer();
             const std::vector<core::Layer>& ls = bus.document().layers();
             if (id >= ls.size()) return {};
             return ls[id].name;
         },
-        py::name("active_layer"), py::scope(cad),
+        py::name("active_layer"), py::scope(doc),
         py::doc("The active layer's name, empty when there is none."));
 
-    cad.attr("entity_count") = py::cpp_function(
+    doc.attr("entity_count") = py::cpp_function(
         [this] { return bus.document().live_entity_count(); }, py::name("entity_count"),
-        py::scope(cad), py::doc("How many live entities the document holds."));
+        py::scope(doc), py::doc("How many live entities the document holds."));
 
-    cad.attr("selection_count") =
+    doc.attr("selection_count") =
         py::cpp_function([this] { return bus.selection().size(); }, py::name("selection_count"),
-                         py::scope(cad), py::doc("How many entities are selected."));
+                         py::scope(doc), py::doc("How many entities are selected."));
 
-    cad.attr("crs") =
+    doc.attr("crs") =
         py::cpp_function([this] { return bus.document().crs().id(); }, py::name("crs"),
-                         py::scope(cad), py::doc("The document's coordinate reference system id."));
+                         py::scope(doc), py::doc("The document's coordinate reference system id."));
 
     // A setting as the Python type it actually is, rather than everything as a
     // string: `if cad.setting("ızgara.acik"):` is what a user will write, and it
     // only reads correctly if a Bool arrives as a bool.
-    cad.attr("setting") = py::cpp_function(
+    doc.attr("setting") = py::cpp_function(
         [this](const std::string& id) -> py::object {
             const core::SettingValue v = bus.setting(id);
             switch (v.type()) {
@@ -273,7 +308,7 @@ py::object PythonRunner::Impl::build_module()
             }
             return py::none();
         },
-        py::name("setting"), py::scope(cad), py::arg("id"),
+        py::name("setting"), py::scope(doc), py::arg("id"),
         py::doc("One session setting, as bool, str or int."));
 
     // ---- the filesystem, and only where the sandbox opens it (P8) -----------
@@ -314,6 +349,18 @@ py::object PythonRunner::Impl::build_module()
     cad.attr("sandbox") = py::cpp_function(
         [this] { return std::string(sandbox_name(sandbox)); }, py::name("sandbox"), py::scope(cad),
         py::doc("The sandbox level this run is under: güvenli, proje or tam."));
+
+    // ---- and then every command, projected from `Registry` -------------------
+    //
+    // ONE CALLABLE PER COMMAND, built here rather than written anywhere: a
+    // command registered today is `cad.<name>(...)` today. This is the same act
+    // `ai::build_catalog` performs for the agent surface, from the same registry,
+    // and neither catalogue is checked in (CLAUDE.md 5.10, 5.20).
+    //
+    // AFTER the hand-written names above, so a projected name can never quietly
+    // replace `run`, `layers` or `setting` — `bind_commands` would overwrite one,
+    // and a test walks the registry to prove none collides.
+    detail::bind_commands(host, cad);
 
     return package;
 }
@@ -384,9 +431,10 @@ core::Result<RunReport> PythonRunner::run_text(std::string_view source, std::str
             // resolve, then ALSO handed to the script's own globals, so a one-line
             // script needs no import at all. A one-liner typed at an evaluator
             // should not have to open with an import.
-            py::dict modules      = py::module_::import("sys").attr("modules");
-            modules["kentos"]     = package;
-            modules["kentos.cad"] = cad;
+            py::dict modules          = py::module_::import("sys").attr("modules");
+            modules["kentos"]         = package;
+            modules["kentos.cad"]     = cad;
+            modules["kentos.cad.doc"] = cad.attr("doc");
 
             py::dict globals;
             globals["__builtins__"] = py::module_::import("builtins");

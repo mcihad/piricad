@@ -610,20 +610,27 @@ KENTOS_COMMAND(select)
             {
                 Param::text("mod", Arity::optional(),
                             "TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | "
-                            "ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON"),
+                            "ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON")
+                    .en("mode"),
                 Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
                               "Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama "
-                              "noktası"),
+                              "noktası")
+                    .en("points"),
                 Param::text("tur", Arity::optional(),
-                            "Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…"),
+                            "Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…")
+                    .en("type"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "NESNE modunda nesne kimlikleri"},
-                Param::text("katman", Arity::optional(), "KATMAN modunda katman adı"),
-                Param::text("islem", Arity::optional(), "DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE"),
+                      "NESNE modunda nesne kimlikleri"}
+                    .en("objects"),
+                Param::text("katman", Arity::optional(), "KATMAN modunda katman adı").en("layer"),
+                Param::text("islem", Arity::optional(), "DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE")
+                    .en("action"),
                 Param::number("tolerans", Arity::optional(),
-                              "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı"),
+                              "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı")
+                    .en("tolerance"),
                 Param::number("sira", Arity::optional(),
-                              "NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki"),
+                              "NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki")
+                    .en("order"),
             },
         // R43: a selection is not document state, so it is not undoable and not
         // journalled as a mutation. ReadOnly is how that is said to the bus — the

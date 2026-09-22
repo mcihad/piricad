@@ -238,8 +238,10 @@ KENTOS_COMMAND(set_layer)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::text("katman", Arity::exactly(1), "Hedef katmanın adı; yoksa oluşturulur"),
+                      "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::text("katman", Arity::exactly(1), "Hedef katmanın adı; yoksa oluşturulur")
+                    .en("layer"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -258,14 +260,17 @@ KENTOS_COMMAND(match_style)
         .params =
             {
                 Param{"kaynak", ParamKind::Selection, Arity::optional(),
-                      "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne"},
+                      "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne"}
+                    .en("source"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"},
+                      "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
                 // OPTIONAL: only asked for when `kaynak` was not given, which is
                 // the tool-column road. A script that names its source never sees
                 // this prompt and must not be required to answer it.
                 Param{"nokta", ParamKind::Point, Arity::optional(),
-                      "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde"},
+                      "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde"}
+                    .en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

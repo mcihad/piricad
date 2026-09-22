@@ -242,11 +242,13 @@ KENTOS_COMMAND(stretch)
         .params =
             {
                 Param::points("pencere", Arity{2, 2},
-                              "Esnetme penceresinin iki köşesi; içindeki köşeler taşınır"),
-                Param::point("baslangic", "Esnetmenin başlangıç noktası"),
-                Param::point("bitis", "Esnetmenin bitiş noktası"),
+                              "Esnetme penceresinin iki köşesi; içindeki köşeler taşınır")
+                    .en("window"),
+                Param::point("baslangic", "Esnetmenin başlangıç noktası").en("start"),
+                Param::point("bitis", "Esnetmenin bitiş noktası").en("end"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Yalnız bu nesneler esnetilir; verilmezse pencerenin dokunduğu her nesne"},
+                      "Yalnız bu nesneler esnetilir; verilmezse pencerenin dokunduğu her nesne"}
+                    .en("objects"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

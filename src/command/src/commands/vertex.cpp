@@ -383,10 +383,12 @@ KENTOS_COMMAND(vertex_move)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Köşesi taşınacak nesnenin kimliği"},
+                      "Köşesi taşınacak nesnenin kimliği"}
+                    .en("object"),
                 Param::integer("kose", Arity::exactly(1),
-                               "Taşınacak köşenin sırası; ilk köşe 1'dir"),
-                Param::point("nokta", "Köşenin yeni yeri"),
+                               "Taşınacak köşenin sırası; ilk köşe 1'dir")
+                    .en("vertex"),
+                Param::point("nokta", "Köşenin yeni yeri").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -405,10 +407,12 @@ KENTOS_COMMAND(vertex_insert)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Köşe eklenecek nesnenin kimliği"},
+                      "Köşe eklenecek nesnenin kimliği"}
+                    .en("object"),
                 Param::integer("kose", Arity::exactly(1),
-                               "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir"),
-                Param::point("nokta", "Yeni köşenin yeri"),
+                               "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir")
+                    .en("vertex"),
+                Param::point("nokta", "Yeni köşenin yeri").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

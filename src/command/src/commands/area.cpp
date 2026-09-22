@@ -136,9 +136,11 @@ KENTOS_COMMAND(area)
         .params =
             {
                 Param::points("noktalar", Arity::at_least(3),
-                              "Alanın köşe noktaları; kapanış noktası tekrarlanmaz"),
+                              "Alanın köşe noktaları; kapanış noktası tekrarlanmaz")
+                    .en("points"),
                 Param::integer("bolum", Arity::at_least(0),
-                               "Halka uzunlukları: ilki dış sınır, sonrakiler delik"),
+                               "Halka uzunlukları: ilki dış sınır, sonrakiler delik")
+                    .en("rings"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -240,24 +240,31 @@ KENTOS_COMMAND(circle_draw)
                 // coordinate of `DAİRE 50,50 100,50` — the form every page,
                 // script and journal already uses. The other methods name their
                 // points, which is what a method with four of them wants anyway.
-                Param::points("merkez", Arity::optional(), "Dairenin merkezi"),
+                Param::points("merkez", Arity::optional(), "Dairenin merkezi").en("center"),
                 Param::points("cevre", Arity::optional(),
-                              "Çember üzerinde bir nokta; yarıçapı bu belirler"),
+                              "Çember üzerinde bir nokta; yarıçapı bu belirler")
+                    .en("rim"),
                 Param::choice("yontem", Arity::optional(), {"merkez", "2n", "3n", "ttr"},
                               "merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde "
-                              "üç nokta · ttr: iki doğruya teğet, verilen yarıçapla"),
+                              "üç nokta · ttr: iki doğruya teğet, verilen yarıçapla")
+                    .en("method"),
                 Param::points("birinci", Arity::optional(),
                               "2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk "
-                              "noktası"),
-                Param::points("ikinci", Arity::optional(), "İkinci nokta"),
+                              "noktası")
+                    .en("first"),
+                Param::points("ikinci", Arity::optional(), "İkinci nokta").en("second"),
                 Param::points("ucuncu", Arity::optional(),
                               "3n: üçüncü nokta · ttr: ikinci "
-                              "doğrunun ilk noktası"),
-                Param::points("dorduncu", Arity::optional(), "ttr: ikinci doğrunun ikinci noktası"),
+                              "doğrunun ilk noktası")
+                    .en("third"),
+                Param::points("dorduncu", Arity::optional(), "ttr: ikinci doğrunun ikinci noktası")
+                    .en("fourth"),
                 Param::number("yaricap", Arity::optional(), "ttr: teğet dairenin yarıçapı (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("radius"),
                 Param::points("yon", Arity::optional(),
-                              "ttr: dairenin geleceği köşe; dört çözümden en yakını alınır"),
+                              "ttr: dairenin geleceği köşe; dört çözümden en yakını alınır")
+                    .en("side"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -653,13 +653,17 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params =
             {
                 Param::text("katman", Arity::optional(),
-                            "Hangi katmanda aranacağı; verilmezse bütün çizim"),
+                            "Hangi katmanda aranacağı; verilmezse bütün çizim")
+                    .en("layer"),
                 Param::text("alan", Arity::optional(),
-                            "Öznitelik sütunu; verilirse o sütunu taşıyan nesneler"),
+                            "Öznitelik sütunu; verilirse o sütunu taşıyan nesneler")
+                    .en("field"),
                 Param::text("deger", Arity::optional(),
-                            "Sütunun eşit olması istenen değer; yalnız 'alan' ile birlikte"),
+                            "Sütunun eşit olması istenen değer; yalnız 'alan' ile birlikte")
+                    .en("value"),
                 Param::integer_range("sinir", Arity::optional(), 1, 1000,
-                                     "En çok kaç nesne bildirileceği; varsayılan 200"),
+                                     "En çok kaç nesne bildirileceği; varsayılan 200")
+                    .en("limit"),
             },
         .undo  = UndoPolicy::None,
         .flags = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
@@ -715,12 +719,15 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params =
             {
                 Param::text("sorgu", Arity::exactly(1),
-                            "Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir"),
+                            "Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir")
+                    .en("query"),
                 Param::choice("alan", Arity::optional(), {"hepsi", "ad", "ozet"},
-                              "Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet"),
+                              "Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet")
+                    .en("field"),
                 Param::integer_range("sinir", Arity::optional(), 1, 200,
                                      "En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme "
-                                     "sayısı her hâlde bildirilir"),
+                                     "sayısı her hâlde bildirilir")
+                    .en("limit"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
@@ -739,8 +746,10 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params =
             {
                 Param::choice("islem", Arity::exactly(1), {"listele", "goster"},
-                              "Ne yapılacağı: listele ya da goster"),
-                Param::text("sablon", Arity::optional(), "Şablonun kimliği; goster için gerekir"),
+                              "Ne yapılacağı: listele ya da goster")
+                    .en("action"),
+                Param::text("sablon", Arity::optional(), "Şablonun kimliği; goster için gerekir")
+                    .en("template"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,

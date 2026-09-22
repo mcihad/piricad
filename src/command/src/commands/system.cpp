@@ -133,12 +133,13 @@ KENTOS_COMMAND(help)
         .names    = {"YARDIM", "HELP", "?"},
         .title    = "Komut Listesi",
         .category = Category::System,
-        .params   = {Param::text("komut", Arity::optional(), "Ayrıntısı istenen komut adı")},
-        .undo     = UndoPolicy::None,
-        .flags    = Flags::Scriptable | Flags::ReadOnly,
-        .summary  = "Komut listesini veya tek bir komutun ayrıntısını gösterir.",
-        .run      = &run_help,
-        .effect   = Effect::Query,
+        .params =
+            {Param::text("komut", Arity::optional(), "Ayrıntısı istenen komut adı").en("command")},
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Komut listesini veya tek bir komutun ayrıntısını gösterir.",
+        .run     = &run_help,
+        .effect  = Effect::Query,
     };
 }
 
@@ -149,14 +150,19 @@ KENTOS_COMMAND(script)
         .names    = {"BETİK", "BETIK", "SCRIPT"},
         .title    = "Betik Çalıştır",
         .category = Category::Script,
-        .params = {Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")},
+        .params = {Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")
+                       .en("file")},
         .undo    = UndoPolicy::Custom,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Bir betik dosyasını komut veri yolu üzerinden çalıştırır.",
         .run     = &run_script,
         // A SCRIPT IS WHATEVER IT CONTAINS. Nothing here can narrow that, so the
         // worst case is every effect a command in it could have — which is also
-        // why an agent may not run one (5.22).
+        // why THIS COMMAND CARRIES NO `AiAccessible` BIT and never will
+        // (CLAUDE.md 5.24). An agent proposes commands, which are previewable,
+        // validated and journalled one at a time; a script is none of those
+        // things until it has already run, and with an interpreter embedded it is
+        // arbitrary code with the user's own filesystem and network.
         .effect = Effect::Query | Effect::ViewChange | Effect::DocumentEdit | Effect::FileRead |
                   Effect::FileWrite | Effect::ExternalWrite | Effect::SettingsChange,
     };

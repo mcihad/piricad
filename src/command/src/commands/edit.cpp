@@ -118,7 +118,8 @@ KENTOS_COMMAND(erase)
         .title    = "Sil",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}},
+                         "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                         .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Seçilen nesneleri siler.",

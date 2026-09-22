@@ -182,19 +182,25 @@ KENTOS_COMMAND(ellipse_draw)
         .category = Category::Draw,
         .params =
             {
-                Param::points("merkez", Arity::optional(), "Elipsin merkezi"),
+                Param::points("merkez", Arity::optional(), "Elipsin merkezi").en("center"),
                 Param::points("birinci", Arity::optional(),
-                              "merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu"),
+                              "merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu")
+                    .en("first"),
                 Param::points("ikinci", Arity::optional(),
-                              "İkinci eksenin uzaklığı; eksene dik ölçülür"),
+                              "İkinci eksenin uzaklığı; eksene dik ölçülür")
+                    .en("second"),
                 Param::choice("yontem", Arity::optional(), {"merkez", "eksen"},
-                              "merkez: merkez + eksen ucu · eksen: eksenin iki ucu"),
-                Param::points("ikinci_uc", Arity::optional(), "eksen: birinci eksenin öteki ucu"),
+                              "merkez: merkez + eksen ucu · eksen: eksenin iki ucu")
+                    .en("method"),
+                Param::points("ikinci_uc", Arity::optional(), "eksen: birinci eksenin öteki ucu")
+                    .en("second_end"),
                 Param::number("baslangic", Arity::optional(),
                               "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat "
-                              "yönünün tersine"),
+                              "yönünün tersine")
+                    .en("start"),
                 Param::number("bitis", Arity::optional(),
-                              "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte"),
+                              "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte")
+                    .en("end"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

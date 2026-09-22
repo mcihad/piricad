@@ -232,18 +232,22 @@ KENTOS_COMMAND(hatch)
                 // the bus hands positional values to the first unsatisfied
                 // parameter, and a selection is never typed as a point.
                 Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
-                              "Sınır köşeleri, nesne seçmek yerine; en az üç nokta"),
+                              "Sınır köşeleri, nesne seçmek yerine; en az üç nokta")
+                    .en("points"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar="},
+                      "Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar="}
+                    .en("objects"),
                 Param::text("desen", Arity::optional(),
-                            "Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID"),
-                Param::number("aci", Arity::optional(),
-                              "Desenin dönme açısı, derece; varsayılan 0"),
-                Param::number(
-                    "olcek", Arity::optional(),
-                    "Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)"),
+                            "Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID")
+                    .en("pattern"),
+                Param::number("aci", Arity::optional(), "Desenin dönme açısı, derece; varsayılan 0")
+                    .en("angle"),
+                Param::number("olcek", Arity::optional(),
+                              "Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)")
+                    .en("scale"),
                 Param::text("katalog", Arity::optional(),
-                            "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu"),
+                            "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu")
+                    .en("catalog"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

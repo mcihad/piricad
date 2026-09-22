@@ -333,13 +333,17 @@ KENTOS_COMMAND(split_area)
         .params =
             {
                 Param::points("yon", Arity{0, 2},
-                              "Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır)"),
+                              "Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır)")
+                    .en("direction"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Ayrılacak parsel; yoksa etkin seçim"},
+                      "Ayrılacak parsel; yoksa etkin seçim"}
+                    .en("objects"),
                 Param::integer("alan", Arity::optional(),
-                               "Ayrılacak alan, mm² (400 m² = 400000000)"),
+                               "Ayrılacak alan, mm² (400 m² = 400000000)")
+                    .en("area"),
                 Param::integer("tolerans", Arity::optional(),
-                               "Kabul toleransı, mm²; varsayılan 10000 (0,01 m²)"),
+                               "Kabul toleransı, mm²; varsayılan 10000 (0,01 m²)")
+                    .en("tolerance"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

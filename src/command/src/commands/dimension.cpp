@@ -319,19 +319,26 @@ KENTOS_COMMAND(dimension)
         .category = Category::Draw,
         .params =
             {
-                Param::point("birinci", "Birinci nokta; açısal ölçüde birinci kolun ucu"),
-                Param::point("ikinci", "İkinci nokta; açısal ölçüde ikinci kolun ucu"),
-                Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta"),
+                Param::point("birinci", "Birinci nokta; açısal ölçüde birinci kolun ucu")
+                    .en("first"),
+                Param::point("ikinci", "İkinci nokta; açısal ölçüde ikinci kolun ucu").en("second"),
+                Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta")
+                    .en("position"),
                 Param::text("tur", Arity::optional(),
                             "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, "
-                            "yay"),
-                Param::points("tepe", Arity::optional(), "Açısal ölçünün tepe noktası"),
-                Param::points("bitis", Arity::optional(), "Yay uzunluğu ölçüsünün bitiş noktası"),
+                            "yay")
+                    .en("type"),
+                Param::points("tepe", Arity::optional(), "Açısal ölçünün tepe noktası").en("apex"),
+                Param::points("bitis", Arity::optional(), "Yay uzunluğu ölçüsünün bitiş noktası")
+                    .en("end"),
                 Param::text("stil", Arity::optional(),
-                            "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI"),
-                Param::text("metin", Arity::optional(), "Ölçülen değer yerine yazılacak metin"),
+                            "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI")
+                    .en("style"),
+                Param::text("metin", Arity::optional(), "Ölçülen değer yerine yazılacak metin")
+                    .en("text"),
                 Param::text("katalog", Arity::optional(),
-                            "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"),
+                            "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+                    .en("catalog"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -350,13 +357,16 @@ KENTOS_COMMAND(leader)
         .category = Category::Draw,
         .params =
             {
-                Param::points("noktalar", Arity::at_least(2),
-                              "Okun ucundan yazının yanına köşeler"),
-                Param::text("metin", Arity::optional(), "Son köşenin yanına yazılacak metin"),
+                Param::points("noktalar", Arity::at_least(2), "Okun ucundan yazının yanına köşeler")
+                    .en("points"),
+                Param::text("metin", Arity::optional(), "Son köşenin yanına yazılacak metin")
+                    .en("text"),
                 Param::text("stil", Arity::optional(),
-                            "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25"),
+                            "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25")
+                    .en("style"),
                 Param::text("katalog", Arity::optional(),
-                            "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"),
+                            "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+                    .en("catalog"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

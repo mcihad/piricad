@@ -69,7 +69,8 @@ KENTOS_COMMAND(polyline)
         .title    = "Çoklu Çizgi",
         .category = Category::Draw,
         .params   = {Param::points("noktalar", Arity::at_least(2),
-                                   "Çoklu çizginin köşe noktaları; hepsi tek nesne olur")},
+                                   "Çoklu çizginin köşe noktaları; hepsi tek nesne olur")
+                         .en("points")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Birden çok noktadan TEK bir çizgi nesnesi çizer.",

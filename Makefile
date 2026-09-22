@@ -114,9 +114,10 @@ tidy: build ## Run clang-tidy over the compile database
 doctor: ## Report what this machine can and cannot build
 	@scripts/doctor.sh
 
-reference: $(BUILD)/CMakeCache.txt ## Regenerate the four generated docs (references, llms.txt, llms-full.txt)
+reference: $(BUILD)/CMakeCache.txt ## Regenerate the six generated docs (references, llms.txt, llms-full.txt, Python API + stub)
 	@$(CMAKE) --build $(BUILD) --target kentos_docgen --parallel $(JOBS) >/dev/null
-	@$(BIN)/kentos_docgen docs/komutlar/referans.md docs/nesneler/referans.md docs/llms.txt docs/llms-full.txt
+	@mkdir -p docs/python
+	@$(BIN)/kentos_docgen docs/komutlar/referans.md docs/nesneler/referans.md docs/llms.txt docs/llms-full.txt docs/python/referans.md docs/python/kentos_cad.pyi
 
 docs: reference ## Regenerate generated docs and check the manual
 	@scripts/ci-gate-docs.sh

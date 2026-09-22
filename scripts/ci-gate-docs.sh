@@ -117,8 +117,11 @@ else
         tmp_kinds="$(mktemp)"
         tmp_llms="$(mktemp)"
         tmp_llms_full="$(mktemp)"
-        trap 'rm -f "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full"' EXIT
-        if "$docgen" "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full" >/dev/null 2>&1; then
+        tmp_py="$(mktemp)"
+        tmp_pyi="$(mktemp)"
+        trap 'rm -f "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full" "$tmp_py" "$tmp_pyi"' EXIT
+        if "$docgen" "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full" "$tmp_py" "$tmp_pyi" \
+               >/dev/null 2>&1; then
             if ! diff -q "$reference" "$tmp" >/dev/null; then
                 echo "docs: docs/komutlar/referans.md is stale or hand-edited -> docs/komutlar/referans.md:1  (run: make reference)" >&2
                 fail=1
@@ -146,14 +149,20 @@ else
             # fingerprint inside llms.txt moves when the smallest declared field
             # of any command moves, so this diff IS the rule the maintainer asked
             # for rather than a promise about it.
-            for pair in "llms.txt:$tmp_llms" "llms-full.txt:$tmp_llms_full"; do
+            # AND THE PYTHON SURFACE, held to the same standard for the same
+            # reason (CLAUDE.md 6.15). A Python user reads `referans.md` and a
+            # Python editor reads `kentos_cad.pyi`; both describe a surface that
+            # is built at run time from the registry, so a stale one is a
+            # description of a program that no longer exists.
+            for pair in "llms.txt:$tmp_llms" "llms-full.txt:$tmp_llms_full" \
+                        "python/referans.md:$tmp_py" "python/kentos_cad.pyi:$tmp_pyi"; do
                 name="${pair%%:*}"
                 fresh="${pair#*:}"
                 have="$docs/$name"
                 if [[ ! -f "$have" ]]; then
                     echo "docs: generated $name missing -> docs/$name:1  (run: make reference)" >&2
                     fail=1
-                elif ! head -n1 "$have" | grep -q 'ÜRETİLMİŞ DOSYA'; then
+                elif ! head -n2 "$have" | grep -q 'ÜRETİLMİŞ DOSYA'; then
                     echo "docs: $name lost its do-not-edit header -> docs/$name:1" >&2
                     fail=1
                 elif ! diff -q "$have" "$fresh" >/dev/null; then
@@ -169,7 +178,7 @@ else
         # checked at all and the gate reported OK. A gate that cannot measure
         # must say so loudly; `make check` builds before it runs the gates, so
         # the only way to reach this is to run the gate on a tree with no build.
-        echo "docs: kentos_docgen is not built, so the four generated artefacts could not be" >&2
+        echo "docs: kentos_docgen is not built, so the six generated artefacts could not be" >&2
         echo "docs:   verified. Build it first (make build) — a freshness check that silently" >&2
         echo "docs:   skips is a freshness check that has never run." >&2
         fail=1

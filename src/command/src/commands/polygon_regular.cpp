@@ -232,20 +232,26 @@ KENTOS_COMMAND(polygon_regular)
         .category = Category::Draw,
         .params =
             {
-                Param::point("merkez", "Çokgenin merkezi"),
-                Param::integer_range("kenar_sayisi", Arity::exactly(1), 3, 1024, "Kenar sayısı"),
+                Param::point("merkez", "Çokgenin merkezi").en("center"),
+                Param::integer_range("kenar_sayisi", Arity::exactly(1), 3, 1024, "Kenar sayısı")
+                    .en("sides"),
                 Param::choice("yontem", Arity::optional(), {"ic", "dis", "kenar"},
                               "ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · "
-                              "kenar: kenar uzunluğundan"),
+                              "kenar: kenar uzunluğundan")
+                    .en("method"),
                 Param::number("yaricap", Arity::optional(), "ic/dis yönteminin yarıçapı (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("radius"),
                 Param::number("kenar_uzunlugu", Arity::optional(), "kenar yönteminin uzunluğu (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("side_length"),
                 Param::number("aci", Arity::optional(),
-                              "İlk köşenin merkeze göre doğrultusu; varsayılan 0"),
+                              "İlk köşenin merkeze göre doğrultusu; varsayılan 0")
+                    .en("angle"),
                 Param::points("kose", Arity::optional(),
                               "Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap "
-                              "verilmişse sorulmaz"),
+                              "verilmişse sorulmaz")
+                    .en("corner"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

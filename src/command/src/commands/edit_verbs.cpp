@@ -450,11 +450,13 @@ KENTOS_COMMAND(break_line)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Kırılacak çizgi"},
-                Param::point("birinci", "Kırılacak parçanın ilk noktası"),
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Kırılacak çizgi"}.en(
+                    "object"),
+                Param::point("birinci", "Kırılacak parçanın ilk noktası").en("first"),
                 Param::points("ikinci", Arity::optional(),
                               "Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan "
-                              "böler"),
+                              "böler")
+                    .en("second"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -475,11 +477,13 @@ KENTOS_COMMAND(join_lines)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Uç uca eklenecek çizgiler"},
+                      "Uç uca eklenecek çizgiler"}
+                    .en("object"),
                 Param::number("tolerans", Arity::optional(),
                               "Uçların değmiş sayılması için en büyük açıklık (m); varsayılan "
                               "0,001")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("tolerance"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -499,14 +503,19 @@ KENTOS_COMMAND(lengthen)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Uzunluğu değişecek çizgi"},
+                      "Uzunluğu değişecek çizgi"}
+                    .en("object"),
                 Param::number("delta", Arity::optional(), "Eklenecek uzunluk (m); eksi kısaltır")
-                    .measured_in("m"),
-                Param::number("yuzde", Arity::optional(), "İstenen uzunluk, şimdikinin yüzdesi"),
+                    .measured_in("m")
+                    .en("delta"),
+                Param::number("yuzde", Arity::optional(), "İstenen uzunluk, şimdikinin yüzdesi")
+                    .en("percent"),
                 Param::number("toplam", Arity::optional(), "İstenen toplam uzunluk (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("total"),
                 Param::choice("uc", Arity::optional(), {"son", "bas"},
-                              "Hangi uç hareket eder; varsayılan son"),
+                              "Hangi uç hareket eder; varsayılan son")
+                    .en("which_end"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

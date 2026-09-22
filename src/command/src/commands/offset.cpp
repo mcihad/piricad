@@ -142,11 +142,13 @@ KENTOS_COMMAND(offset)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Ofseti alınacak nesneler; yoksa etkin seçim"},
+                      "Ofseti alınacak nesneler; yoksa etkin seçim"}
+                    .en("objects"),
                 Param::integer("mesafe", Arity::optional(),
-                               "Ofset mesafesi, milimetre; eksi değer içeri"),
-                Param::text("kose", Arity::optional(),
-                            "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"),
+                               "Ofset mesafesi, milimetre; eksi değer içeri")
+                    .en("distance"),
+                Param::text("kose", Arity::optional(), "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi")
+                    .en("corner"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

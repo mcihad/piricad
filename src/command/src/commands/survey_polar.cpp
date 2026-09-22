@@ -159,18 +159,22 @@ KENTOS_COMMAND(survey_polar)
         .category = Category::Draw,
         .params =
             {
-                Param::point("istasyon", "Aletin durduğu bilinen nokta"),
+                Param::point("istasyon", "Aletin durduğu bilinen nokta").en("station"),
                 // OPTIONAL, so a station with no backsight is not two keystrokes
                 // longer. `Param::point` is exactly one; a point that may be
                 // absent is declared the way `APLİKASYON` declares its own.
                 Param::points("baglama", Arity::optional(),
-                              "Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır"),
+                              "Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır")
+                    .en("backsight"),
                 Param::number("aci", Arity::at_least(0), "Okunan açı; kenar ile sırayla eşleşir")
-                    .measured_in("oturumun açı birimi"),
+                    .measured_in("oturumun açı birimi")
+                    .en("angle"),
                 Param::number("kenar", Arity::at_least(0), "Alete olan uzaklık (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("distance"),
                 Param::boolean("cizgi", Arity::optional(),
-                               "Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir"),
+                               "Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir")
+                    .en("connect"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

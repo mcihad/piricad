@@ -112,8 +112,9 @@ KENTOS_COMMAND(tracking)
         .params =
             {
                 Param::points("nokta", Arity::optional(),
-                              "İşaretlenecek nokta; yoksa işaretler listelenir"),
-                Param::boolean("sil", Arity::optional(), "Bütün işaretleri siler"),
+                              "İşaretlenecek nokta; yoksa işaretler listelenir")
+                    .en("point"),
+                Param::boolean("sil", Arity::optional(), "Bütün işaretleri siler").en("delete"),
             },
         // NOT UNDOABLE and not journalled as a mutation: a mark is a session aid,
         // exactly as a snap mode is (`MOD`). `ReadOnly` is what says so to the

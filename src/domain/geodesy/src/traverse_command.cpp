@@ -455,29 +455,38 @@ KENTOS_COMMAND(traverse)
 {
     return CommandSpec{
         .id       = "geodesy.traverse",
+        .python   = "traverse",
         .names    = {"POLİGON", "POLIGON", "TRAVERSE", "PLG"},
         .title    = "Poligon Hesabı",
         .category = Category::Draw,
         .params =
             {
-                Param::point("baslangic", "Başlangıç istasyonu (bilinen)"),
-                Param::point("baglama", "Başlangıçtaki bağlama noktası (bilinen)"),
+                Param::point("baslangic", "Başlangıç istasyonu (bilinen)").en("start"),
+                Param::point("baglama", "Başlangıçtaki bağlama noktası (bilinen)").en("backsight"),
                 Param::number("aci", Arity::at_least(0),
-                              "Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla"),
+                              "Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla")
+                    .en("angle"),
                 Param::number("kenar", Arity::at_least(0), "Her istasyondan sonraki kenar (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("distance"),
                 Param::points("bitis", Arity::optional(),
-                              "Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır"),
+                              "Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır")
+                    .en("end"),
                 Param::points("bitis_baglama", Arity::optional(),
-                              "Bitişteki bağlama noktası; açı kapanması için gerekir"),
+                              "Bitişteki bağlama noktası; açı kapanması için gerekir")
+                    .en("end_backsight"),
                 Param::choice("sinif", Arity::optional(), {"ana", "ara", "tamamlayici"},
-                              "Tolerans sınıfı; katalogdan okunur"),
+                              "Tolerans sınıfı; katalogdan okunur")
+                    .en("tolerance_class"),
                 Param::integer("ilk_no", Arity::optional(),
-                               "İlk istasyonun nokta numarası; varsayılan 1"),
+                               "İlk istasyonun nokta numarası; varsayılan 1")
+                    .en("first_number"),
                 Param::choice("dagitim", Arity::optional(), {"esit", "kenar"},
-                              "Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı"),
+                              "Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı")
+                    .en("distribution"),
                 Param::boolean("cizgi", Arity::optional(),
-                               "Güzergâhı çizgiyle bağlar; varsayılan evet"),
+                               "Güzergâhı çizgiyle bağlar; varsayılan evet")
+                    .en("connect"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

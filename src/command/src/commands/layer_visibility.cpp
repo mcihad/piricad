@@ -194,10 +194,12 @@ KENTOS_COMMAND(layer_visibility)
             {
                 Param::text("islem", Arity::exactly(1),
                             "goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) "
-                            "ya da tersine"),
+                            "ya da tersine")
+                    .en("action"),
                 Param::text("katman", Arity::optional(),
                             "Katman adı; goster, gizle ve yalniz için gerekir, tersine için "
-                            "isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez"),
+                            "isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez")
+                    .en("layer"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

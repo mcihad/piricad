@@ -6,6 +6,51 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — `kentos.cad`: her komut bir Python fonksiyonu
+
+`cad.run("ÇİZGİ 0,0 10,10")` yanına her komutun kendi fonksiyonu geldi:
+
+```python
+cad.line(points=[[485320150, 4310220400], [485370150, 4310250400]])
+cad.circle_draw(center=[485400000, 4310230000], rim=[485410000, 4310230000])
+```
+
+Bu fonksiyonlar **elle yazılmadı; komut kaydından üretiliyor.** Programa bugün
+eklenen bir komut bugün bir Python fonksiyonudur — güncellenecek ikinci bir
+bağlama listesi yok (CLAUDE.md 5.10, 5.20).
+
+- **Parametrelere İngilizce ad eklendi** (`Param::en`, `ToolParam::en`): 485
+  bildirim, hepsi bildirim yerinde. Türkçe adın yanında, ona göre anahtarlanmış
+  bir tabloda değil — çünkü `kenar`, `core.layout`'ta sayfa boşluğu,
+  `geodesy.traverse`'de ölçülen kenar, `islem.alan_duzenle`'de kenar sırasıdır.
+  Tek cevap veren bir tablo iki yerde yanılırdı.
+- **Fonksiyon adı kimlikten türüyor:** `core.line` → `cad.line`. Kimliği Türkçe
+  olan altı komut kendi İngilizce adını bildiriyor (`CommandSpec::python`):
+  `islem.uzunluk_yaz` → `cad.label_length`.
+- **Yalnız anahtar kelime, yalnız İngilizce.** Konumsal argüman yok: komutun
+  parametreleri bir KÜME, komut satırının onlar için bir sırası hiç olmadı.
+- **Okumalar `cad.doc` altına taşındı.** `cad`'in üst düzeyi üretime ait ve o
+  küme kendiliğinden büyüyor; `KATMANLAR` ile `AYAR` gerçek komutlar olduğu için
+  `cad.layers` ve `cad.setting` sessizce eziliyordu — çizimden katman adı isteyen
+  bir betik komutun işlem sayısını alıyordu. Artık projeksiyon var olan bir adı
+  ezmeyi reddediyor ve nedenini söylüyor.
+- **Beşinci ve altıncı üretilmiş çıktı:** `docs/python/referans.md` (her komutun
+  imzası, anahtarları, türleri) ve `docs/python/kentos_cad.pyi` (düzenleyici
+  tamamlaması için tip taslağı). İkisi de Python KAPALIYKEN de üretiliyor —
+  yapılandırmaya bağlı bir tazelik denetimi hiç çalışmamış demektir.
+- **Yeni kapı `ci-gate-python-api.sh`:** İngilizce adı olmayan, geçerli bir Python
+  tanımlayıcısı olmayan ya da Python'un ayrılmış sözcüğü olan bir parametre
+  yapıyı kırar. Kapının göremediğini — bir komutun iki parametresinin aynı
+  İngilizce sözcüğe düşmesi, iki komutun aynı fonksiyon adını istemesi — kurulu
+  kaydı dolaşan bir birim testi yakalıyor.
+
+Kural tadilleri: **CLAUDE.md 6.15** (bir komut Python karşılığı ve dökümanı
+olmadan bitmez), **5.24** (Python çalıştırma yolu hiçbir ajan istemcisine
+açılmaz; `core.script`'in `AiAccessible` taşımadığını bir test sabitliyor), ve
+6.14 / 5.18 / 5.20 altı üretilmiş çıktıya göre güncellendi. `script.md`
+R9/R9a/R11a/P15, `docs.md` R18a.
+
+
 ### Eklendi — gömülü Python 3.14: `kentos.cad` ve tek gömülü dil
 
 `BETİK` artık `.py` uzantılı bir dosyayı gömülü CPython 3.14 ile çalıştırıyor

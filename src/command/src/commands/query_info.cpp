@@ -252,7 +252,8 @@ KENTOS_COMMAND(entity_info)
         .title    = "Nesne Bilgisi",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Bilgisi istenen nesneler"}},
+                         "Bilgisi istenen nesneler"}
+                         .en("objects")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect |
                  Flags::AiAccessible,
@@ -274,9 +275,9 @@ KENTOS_COMMAND(measure_angle)
         .category = Category::Query,
         .params =
             {
-                Param::point("tepe", "Açının tepe noktası"),
-                Param::point("birinci", "Birinci kolun üzerinde bir nokta"),
-                Param::point("ikinci", "İkinci kolun üzerinde bir nokta"),
+                Param::point("tepe", "Açının tepe noktası").en("apex"),
+                Param::point("birinci", "Birinci kolun üzerinde bir nokta").en("first"),
+                Param::point("ikinci", "İkinci kolun üzerinde bir nokta").en("second"),
             },
         .undo  = UndoPolicy::None,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect |

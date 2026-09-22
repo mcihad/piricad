@@ -160,11 +160,14 @@ KENTOS_COMMAND(fit)
         .params =
             {
                 Param::points("noktalar", Arity{4, 0xFFFFFFFFu},
-                              "Kontrol çiftleri: yerel, harita, yerel, harita..."),
+                              "Kontrol çiftleri: yerel, harita, yerel, harita...")
+                    .en("points"),
                 Param::boolean("olcek_kilitli", Arity::optional(),
-                               "Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez"),
+                               "Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez")
+                    .en("scale_locked"),
                 Param::text("sistem", Arity::optional(),
-                            "Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36"),
+                            "Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36")
+                    .en("crs"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Scriptable | Flags::AiAccessible,

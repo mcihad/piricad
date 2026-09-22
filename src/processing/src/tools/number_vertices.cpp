@@ -146,9 +146,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id    = "islem.kose_numarala",
-        .names = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
-        .title = "Köşeleri numarala",
+        .id     = "islem.kose_numarala",
+        .python = "number_vertices",
+        .names  = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
+        .title  = "Köşeleri numarala",
         .summary = "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak "
                    "sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, "
                    "köşe taşınınca izler.",
@@ -158,23 +159,29 @@ private:
         .params =
             {
                 ToolParam::point("baslangic",
-                                 "Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe"),
-                ToolParam::choice("yon", "Sayım yönü", {"ters", "saat"}, "ters"),
-                ToolParam::text("onek", "Numaranın önüne gelen yazı (örnek: A, K-)"),
+                                 "Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe")
+                    .en("start"),
+                ToolParam::choice("yon", "Sayım yönü", {"ters", "saat"}, "ters").en("direction"),
+                ToolParam::text("onek", "Numaranın önüne gelen yazı (örnek: A, K-)").en("prefix"),
                 ToolParam::integer("basamak",
                                    "Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır",
-                                   0, 0, 12),
-                ToolParam::text("dolgu", "Basamak dolgusu", "0"),
-                ToolParam::integer("ilk", "İlk köşenin numarası", 1, 0, 1000000000),
-                ToolParam::text("sonek", "Numaranın arkasına gelen yazı"),
+                                   0, 0, 12)
+                    .en("digits"),
+                ToolParam::text("dolgu", "Basamak dolgusu", "0").en("pad"),
+                ToolParam::integer("ilk", "İlk köşenin numarası", 1, 0, 1000000000)
+                    .en("first_number"),
+                ToolParam::text("sonek", "Numaranın arkasına gelen yazı").en("suffix"),
                 ToolParam::integer("yukseklik",
                                    "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm",
-                                   0, 0, 100000000),
+                                   0, 0, 100000000)
+                    .en("height"),
                 ToolParam::integer("bosluk",
                                    "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı", 0, 0,
-                                   100000000),
+                                   100000000)
+                    .en("gap"),
                 ToolParam::boolean("bagla", "Numarayı köşesine bağla: köşe taşınınca numara izler",
-                                   true),
+                                   true)
+                    .en("attach"),
             },
         .output        = OutputShape::NewEntities,
         .output_suffix = "kose",

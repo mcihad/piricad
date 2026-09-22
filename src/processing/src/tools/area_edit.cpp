@@ -205,6 +205,7 @@ public:
 private:
     const ToolSpec spec_{
         .id      = "islem.alan_duzenle",
+        .python  = "adjust_area",
         .names   = {"ALANDÜZENLE", "ALANDUZENLE", "ADJUSTAREA", "ADZ"},
         .title   = "Alanı düzenle",
         .summary = "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp "
@@ -214,15 +215,19 @@ private:
         .applies = Applies::Faces,
         .params =
             {
-                ToolParam::number("alan", "Hedef alan, metrekare"),
-                ToolParam::choice("mod", "Nasıl getirileceği", {"hepsi", "kenar", "kose"}, "hepsi"),
+                ToolParam::number("alan", "Hedef alan, metrekare").en("area"),
+                ToolParam::choice("mod", "Nasıl getirileceği", {"hepsi", "kenar", "kose"}, "hepsi")
+                    .en("mode"),
                 ToolParam::integer_optional(
                     "kenar", "Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar", 1,
-                    1000000),
-                ToolParam::integer_optional("kose", "Çekilecek köşe; mod=kose", 1, 1000000),
+                    1000000)
+                    .en("edge"),
+                ToolParam::integer_optional("kose", "Çekilecek köşe; mod=kose", 1, 1000000)
+                    .en("vertex"),
                 ToolParam::point(
                     "nokta", "Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, "
-                             "komut satırı hedefe tam oturtur"),
+                             "komut satırı hedefe tam oturtur")
+                    .en("point"),
             },
         .output        = OutputShape::InPlace,
         .output_suffix = "",

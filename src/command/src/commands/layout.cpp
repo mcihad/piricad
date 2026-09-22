@@ -1242,44 +1242,60 @@ KENTOS_COMMAND(layout)
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "ad", "sayfa", "sayfaekle", "sayfasil",
                                "sayfacogalt", "sayfatasi", "denetle", "atlas", "rapor"},
-                              "Ne yapılacağı"),
-                Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
-                Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
+                              "Ne yapılacağı")
+                    .en("action"),
+                Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir")
+                    .en("name"),
+                Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı")
+                    .en("new_name"),
                 Param::text("kagit", Arity::optional(),
-                            "A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4)"),
+                            "A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4)")
+                    .en("paper"),
                 Param::integer_range("genislik", Arity::optional(), 1, 10000,
                                      "ozel kâğıt için sayfa genişliği")
-                    .measured_in("kâğıt mm"),
+                    .measured_in("kâğıt mm")
+                    .en("width"),
                 Param::integer_range("yukseklik", Arity::optional(), 1, 10000,
                                      "ozel kâğıt için sayfa yüksekliği")
-                    .measured_in("kâğıt mm"),
+                    .measured_in("kâğıt mm")
+                    .en("height"),
                 Param::choice("yon", Arity::optional(), {"dikey", "yatay"},
-                              "Sayfa yönü (varsayılan dikey)"),
+                              "Sayfa yönü (varsayılan dikey)")
+                    .en("orientation"),
                 Param::integer_range("kenar", Arity::optional(), 0, 200,
                                      "Kenar boşluğu (varsayılan 10)")
-                    .measured_in("kâğıt mm"),
+                    .measured_in("kâğıt mm")
+                    .en("margin"),
                 Param::integer_range("dpi", Arity::optional(), 72, 4800,
-                                     "Çıktı çözünürlüğü (varsayılan 300)"),
+                                     "Çıktı çözünürlüğü (varsayılan 300)")
+                    .en("dpi"),
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Hangi sayfa (1'den başlar). sayfa işleminde verilmezse "
-                                     "bütün sayfalar değişir"),
+                                     "bütün sayfalar değişir")
+                    .en("page"),
                 Param::integer_range("yeni_sira", Arity::optional(), 1, 10000,
-                                     "sayfatasi için sayfanın gideceği sıra"),
+                                     "sayfatasi için sayfanın gideceği sıra")
+                    .en("new_order"),
                 Param::text("katman", Arity::optional(),
                             "atlas: hangi katmanın nesneleri için bir sayfa basılacak; "
-                            "'yok' atlası kapatır"),
+                            "'yok' atlası kapatır")
+                    .en("layer"),
                 Param::text("sirala", Arity::optional(),
                             "atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik "
-                            "sütunu; verilmezse nesne anahtarı"),
+                            "sütunu; verilmezse nesne anahtarı")
+                    .en("sort_by"),
                 Param::text("grup", Arity::optional(),
                             "rapor: bölümlerin oluşturulacağı öznitelik sütunu (ada_no gibi); "
-                            "verilmezse tek bölüm"),
+                            "verilmezse tek bölüm")
+                    .en("group_by"),
                 Param::integer_range("kenar_payi", Arity::optional(), 0, 200,
                                      "atlas: nesnenin çevresinde bırakılacak pay, yüzde "
-                                     "(varsayılan 10)"),
+                                     "(varsayılan 10)")
+                    .en("margin_percent"),
                 Param::boolean("tek_dosya", Arity::optional(),
                                "atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı "
-                               "(varsayılan evet)"),
+                               "(varsayılan evet)")
+                    .en("single_file"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -1320,58 +1336,82 @@ KENTOS_COMMAND(layout_item)
         .params =
             {
                 Param::choice("islem", Arity::exactly(1),
-                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad"}, "Ne yapılacağı"),
+                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad"}, "Ne yapılacağı")
+                    .en("action"),
                 Param::text("yerlesim", Arity::optional(),
                             "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez")
-                    .renamed_from("pafta"),
+                    .renamed_from("pafta")
+                    .en("layout"),
                 Param::text("ad", Arity::optional(),
-                            "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir"),
+                            "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir")
+                    .en("name"),
                 Param::choice("tur", Arity::optional(),
                               {"harita", "metin", "olcek", "kuzey", "lejant", "resim", "sekil",
                                "tablo", "grafik"},
-                              "islem=ekle için öğe türü"),
+                              "islem=ekle için öğe türü")
+                    .en("type"),
                 Param::number("x", Arity::optional(), "Sol kenardan uzaklık")
-                    .measured_in("kâğıt mm"),
+                    .measured_in("kâğıt mm")
+                    .en("x"),
                 Param::number("y", Arity::optional(), "ÜST kenardan uzaklık")
-                    .measured_in("kâğıt mm"),
-                Param::number("genislik", Arity::optional(), "Genişlik").measured_in("kâğıt mm"),
-                Param::number("yukseklik", Arity::optional(), "Yükseklik").measured_in("kâğıt mm"),
+                    .measured_in("kâğıt mm")
+                    .en("y"),
+                Param::number("genislik", Arity::optional(), "Genişlik")
+                    .measured_in("kâğıt mm")
+                    .en("width"),
+                Param::number("yukseklik", Arity::optional(), "Yükseklik")
+                    .measured_in("kâğıt mm")
+                    .en("height"),
                 Param::text("metin", Arity::optional(),
                             "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer "
-                            "tutucuları çizim anında çözülür"),
-                Param::number("yazi", Arity::optional(), "Yazı yüksekliği").measured_in("kâğıt mm"),
+                            "tutucuları çizim anında çözülür")
+                    .en("text"),
+                Param::number("yazi", Arity::optional(), "Yazı yüksekliği")
+                    .measured_in("kâğıt mm")
+                    .en("text_height"),
                 Param::integer_range("olcek", Arity::optional(), 0, 100000000,
-                                     "Harita öğesinin ölçeği 1:N; 0 kapsama uyar"),
+                                     "Harita öğesinin ölçeği 1:N; 0 kapsama uyar")
+                    .en("scale"),
                 Param::points("pencere", Arity{0, 2},
                               "Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki "
                               "kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve "
                               "seçmek bu satırı yazar")
-                    .measured_in("ZEMİN koordinatı — kâğıt değil"),
+                    .measured_in("ZEMİN koordinatı — kâğıt değil")
+                    .en("window"),
                 Param::choice("izgara", Arity::optional(), {"yok", "arti", "cizgi", "centik"},
-                              "Harita öğesinin koordinat ızgarası"),
+                              "Harita öğesinin koordinat ızgarası")
+                    .en("grid"),
                 Param::integer_range("izgara_aralik", Arity::optional(), 0, 1000000000,
-                                     "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir"),
-                Param::boolean("kilit", Arity::optional(), "Öğeyi taşımaya kapatır"),
-                Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer"),
+                                     "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir")
+                    .en("grid_spacing"),
+                Param::boolean("kilit", Arity::optional(), "Öğeyi taşımaya kapatır").en("locked"),
+                Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer")
+                    .en("frame"),
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
-                                     "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
-                Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı"),
+                                     "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir")
+                    .en("page"),
+                Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı")
+                    .en("new_name"),
                 Param::integer_range("satir_siniri", Arity::optional(), 0, 100000,
                                      "Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır "
-                                     "sığıyorsa o kadar"),
+                                     "sığıyorsa o kadar")
+                    .en("max_rows"),
                 Param::text("sutunlar", Arity{0, 64},
                             "Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar "
                             "birden çok kez yazılır. Verilmezse katmanın bütün sütunları, "
-                            "'hepsi' listeyi boşaltır"),
-                Param::text(
-                    "katmanlar", Arity{0, 64},
-                    "Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez "
-                    "yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır"),
+                            "'hepsi' listeyi boşaltır")
+                    .en("fields"),
+                Param::text("katmanlar", Arity{0, 64},
+                            "Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez "
+                            "yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır")
+                    .en("layers"),
                 Param::text("harita", Arity::optional(),
                             "Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk "
-                            "harita. 'ilk' bağı kaldırır"),
+                            "harita. 'ilk' bağı kaldırır")
+                    .en("map"),
                 Param::integer_range("sira", Arity::optional(), -1000, 1000,
-                                     "Çizim sırası; büyük olan üstte"),
+                                     "Çizim sırası; büyük olan üstte")
+                    .en("order"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -1404,12 +1444,15 @@ KENTOS_COMMAND(layout_template)
         .params =
             {
                 Param::choice("islem", Arity::exactly(1), {"listele", "kaydet", "uygula", "sil"},
-                              "Ne yapılacağı"),
-                Param::text("ad", Arity::optional(), "Şablonun adı; listele dışında gerekir"),
+                              "Ne yapılacağı")
+                    .en("action"),
+                Param::text("ad", Arity::optional(), "Şablonun adı; listele dışında gerekir")
+                    .en("name"),
                 Param::text("yerlesim", Arity::optional(),
                             "kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). "
                             "uygula: kurulacak yerleşimin adı (verilmezse şablonun adı)")
-                    .renamed_from("pafta"),
+                    .renamed_from("pafta")
+                    .en("layout"),
             },
         .undo = UndoPolicy::SingleTransaction,
         // NOT `AiAccessible`, for the reason `ÇIKTIYERLEŞİMİ` gives: a sheet carries a

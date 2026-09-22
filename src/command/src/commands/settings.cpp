@@ -241,8 +241,10 @@ KENTOS_COMMAND(setting)
         .category = Category::System,
         .params =
             {
-                Param::text("ad", Arity::optional(), "Ayar adı veya kimliği; yoksa liste"),
-                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+                Param::text("ad", Arity::optional(), "Ayar adı veya kimliği; yoksa liste")
+                    .en("name"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur")
+                    .en("value"),
             },
         // One command = one undo step (§2.5). Declared here so the policy is right
         // the day the document owns the store; today the store is the seam above.
@@ -270,8 +272,10 @@ KENTOS_COMMAND(mode)
         .category = Category::System,
         .params =
             {
-                Param::text("ad", Arity::optional(), "Mod adı veya kimliği; yoksa liste"),
-                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+                Param::text("ad", Arity::optional(), "Mod adı veya kimliği; yoksa liste")
+                    .en("name"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur")
+                    .en("value"),
             },
         // Transient by R39: not undoable, not journalled as a document mutation.
         // ReadOnly is the flag that says so to the bus, exactly as TERCİH does.
@@ -295,8 +299,10 @@ KENTOS_COMMAND(preference)
         .category = Category::System,
         .params =
             {
-                Param::text("ad", Arity::optional(), "Tercih adı veya kimliği; yoksa liste"),
-                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+                Param::text("ad", Arity::optional(), "Tercih adı veya kimliği; yoksa liste")
+                    .en("name"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur")
+                    .en("value"),
             },
         // R43: an application preference is not document state, so it is not
         // undoable and not journalled as a document mutation. ReadOnly says exactly

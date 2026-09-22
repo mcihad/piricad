@@ -613,14 +613,17 @@ KENTOS_COMMAND(split)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Kesilecek nesneler; yoksa etkin seçim"},
+                      "Kesilecek nesneler; yoksa etkin seçim"}
+                    .en("object"),
                 Param::points("noktalar", Arity{0, 2},
-                              "Kesme çizgisinin iki noktası; arayüzde çizilir"),
+                              "Kesme çizgisinin iki noktası; arayüzde çizilir")
+                    .en("points"),
                 // THE LEGACY FORM, kept because it is written into journals and
                 // into scripts already: one open line split at a point on it.
                 // Nothing collects it interactively any more.
                 Param{"nokta", ParamKind::Point, Arity::optional(),
-                      "Bölme noktası (tek çizgi; eski biçim)"},
+                      "Bölme noktası (tek çizgi; eski biçim)"}
+                    .en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -639,10 +642,12 @@ KENTOS_COMMAND(trim)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::optional(),
-                      "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"},
+                      "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"}
+                    .en("object"),
                 Param{"sinir", ParamKind::Selection, Arity::optional(),
-                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"},
-                Param::point("nokta", "Atılacak parçanın üzerindeki bir nokta"),
+                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"}
+                    .en("boundary"),
+                Param::point("nokta", "Atılacak parçanın üzerindeki bir nokta").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -661,10 +666,12 @@ KENTOS_COMMAND(extend)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity::optional(),
-                      "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"},
+                      "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"}
+                    .en("object"),
                 Param{"sinir", ParamKind::Selection, Arity::optional(),
-                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"},
-                Param::point("nokta", "Uzatılacak ucun yakınında bir nokta"),
+                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"}
+                    .en("boundary"),
+                Param::point("nokta", "Uzatılacak ucun yakınında bir nokta").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

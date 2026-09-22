@@ -81,7 +81,15 @@ const char* applies_name(Applies one) noexcept;
 /// bus knows only the value's kind.
 struct ToolParam
 {
-    std::string name;                                  ///< ASCII, the CLI keyword
+    std::string name; ///< ASCII, the CLI keyword
+
+    /// The same parameter in English, for the `kentos.cad` Python keyword.
+    ///
+    /// It travels onto the generated `command::Param` with the word list and the
+    /// range, for the reason those do: declared once here, projected everywhere
+    /// (CLAUDE.md 5.10). See `command::Param::english` for why the API is English
+    /// at all when everything else about this program is Turkish first.
+    std::string english;
     command::ParamKind kind{command::ParamKind::Text}; ///< what shape of value
     std::string help;                                  ///< one Turkish line
     std::string fallback;             ///< the value when not given, as text; empty = none
@@ -112,6 +120,14 @@ struct ToolParam
     /// is picked from the scene; at the command line it is `ad=<kimlik>`. The
     /// runner puts the object's snapshot in `ToolInput::references`.
     static ToolParam object(std::string name, std::string help);
+
+    /// Names this parameter in English, for the Python keyword. Chained onto a
+    /// factory: `ToolParam::integer("ondalik", "...", 2).en("decimals")`.
+    ToolParam&& en(std::string name_in_english) &&
+    {
+        english = std::move(name_in_english);
+        return std::move(*this);
+    }
 };
 
 /// What a tool produces.
@@ -127,9 +143,15 @@ enum class OutputShape : std::uint8_t {
 struct ToolSpec
 {
     std::string id; ///< stable, namespaced: `islem.uzunluk_yaz`
+
+    /// The name of this tool's Python callable. REQUIRED here, unlike on a
+    /// command, because every tool id is Turkish and the `kentos.cad` surface is
+    /// English (`command::CommandSpec::python`).
+    std::string python;
     std::vector<std::string>
-        names;           ///< Turkish, ASCII-folded, English, abbreviation — the command's names
-    std::string title;   ///< the tree row: `Çizgi uzunluğu yaz`
+        names;         ///< Turkish, ASCII-folded, English, abbreviation — the command's names
+    std::string title; ///< the tree row: `Çizgi uzunluğu yaz`
+
     std::string summary; ///< one Turkish sentence
     std::string group;   ///< the tree branch: `Etiketleme`
     /// The mark the tree row wears, by NAME, so the Qt-free module never

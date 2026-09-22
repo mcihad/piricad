@@ -196,12 +196,15 @@ KENTOS_COMMAND(database)
             {
                 Param::text("islem", Arity::exactly(1),
                             "baglan | kes | tablolar | katmanyaz | projekaydet | projeac | "
-                            "projeler | projesil"),
+                            "projeler | projesil")
+                    .en("action"),
                 Param::text("hedef", Arity::optional(),
                             "baglan: bağlantı dizesi; katmanyaz: tablo adı; proje işlemleri: "
-                            "proje adı"),
+                            "proje adı")
+                    .en("target"),
                 Param::text("katman", Arity::optional(),
-                            "katmanyaz: yazılacak katman; yoksa etkin katman"),
+                            "katmanyaz: yazılacak katman; yoksa etkin katman")
+                    .en("layer"),
             },
         // Nothing here is undoable. Writing outward changes no entity, and
         // `projeac` REPLACES the document exactly as `AÇ` does: there is nothing

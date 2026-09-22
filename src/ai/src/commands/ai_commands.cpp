@@ -197,9 +197,11 @@ std::vector<CommandSpec> detail::ai_command_specs()
         .params =
             {
                 Param::choice("islem", Arity::exactly(1), {"uygula", "reddet", "durum", "listele"},
-                              "Ne yapılacağı: uygula, reddet, durum ya da listele"),
+                              "Ne yapılacağı: uygula, reddet, durum ya da listele")
+                    .en("action"),
                 Param::text("oneri", Arity::optional(),
-                            "Öneri kimliği; uygula, reddet ve durum için gerekir"),
+                            "Öneri kimliği; uygula, reddet ve durum için gerekir")
+                    .en("suggestion"),
             },
         // NOT `SingleTransaction`: applying a plan opens a BATCH inside the
         // application, so this command's own transaction would be a second one
@@ -240,12 +242,15 @@ std::vector<CommandSpec> detail::ai_command_specs()
                                "izin", "sina"},
                               "Ne yapılacağı: baslat, durdur, durum, belirtec (yeni belirteç "
                               "üretir), istemciler, iptal (bir istemcinin yetkisini kaldırır), "
-                              "izin (geri verir) ya da sina (bağlantıyı sınar)"),
+                              "izin (geri verir) ya da sina (bağlantıyı sınar)")
+                    .en("action"),
                 Param::integer_range("port", Arity::optional(), 1024, 65535,
-                                     "Yalnız bu başlatma için port; verilmezse ayardaki port"),
+                                     "Yalnız bu başlatma için port; verilmezse ayardaki port")
+                    .en("port"),
                 Param::text("ad", Arity::optional(),
                             "İstemcinin adı; iptal ve izin için gerekir. Adları islem=istemciler "
-                            "ile görün"),
+                            "ile görün")
+                    .en("name"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,

@@ -605,7 +605,8 @@ KENTOS_COMMAND(explode)
         .title    = "Patlat",
         .category = Category::Modify,
         .params   = {Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Patlatılacak nesneler"}},
+                         "Patlatılacak nesneler"}
+                         .en("object")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine "
@@ -624,14 +625,18 @@ KENTOS_COMMAND(align)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Hizalanacak nesneler"},
-                Param::point("kaynak", "Birinci kaynak nokta"),
-                Param::point("hedef", "Birinci kaynağın gideceği yer"),
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Hizalanacak nesneler"}
+                    .en("object"),
+                Param::point("kaynak", "Birinci kaynak nokta").en("source"),
+                Param::point("hedef", "Birinci kaynağın gideceği yer").en("target"),
                 Param::points("kaynak2", Arity::optional(),
-                              "İkinci kaynak nokta; verilirse döndürme de yapılır"),
-                Param::points("hedef2", Arity::optional(), "İkinci kaynağın gideceği yer"),
+                              "İkinci kaynak nokta; verilirse döndürme de yapılır")
+                    .en("source2"),
+                Param::points("hedef2", Arity::optional(), "İkinci kaynağın gideceği yer")
+                    .en("target2"),
                 Param::boolean("olcekle", Arity::optional(),
-                               "İki çiftin uzunluk oranıyla ölçekler de"),
+                               "İki çiftin uzunluk oranıyla ölçekler de")
+                    .en("scale"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -651,16 +656,21 @@ KENTOS_COMMAND(divide)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Bölünecek nesne"},
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Bölünecek nesne"}.en(
+                    "object"),
                 Param::integer_range("sayi", Arity::optional(), 2, 10000,
-                                     "Kaç eşit parçaya bölünecek"),
+                                     "Kaç eşit parçaya bölünecek")
+                    .en("count"),
                 Param::number("aralik", Arity::optional(),
                               "Sabit aralık (m); başlangıçtan itibaren yürür")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("spacing"),
                 Param::text("blok", Arity::optional(),
-                            "Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı"),
+                            "Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı")
+                    .en("block"),
                 Param::boolean("hizala", Arity::optional(),
-                               "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir"),
+                               "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir")
+                    .en("align"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -680,14 +690,16 @@ KENTOS_COMMAND(pedit)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Düzenlenecek çizgiler"},
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Düzenlenecek çizgiler"}
+                    .en("object"),
                 Param::choice("islem", Arity::optional(), {"kapat", "ac", "ters", "sadelestir"},
                               "kapat: kapalı alana çevir · ac: aç · ters: yönünü çevir · "
-                              "sadelestir: yakın köşeleri at"),
+                              "sadelestir: yakın köşeleri at")
+                    .en("action"),
                 Param::number("tolerans", Arity::optional(),
                               "sadelestir: bu uzaklıktan yakın köşeler atılır (m)")
-                    .measured_in("m"),
+                    .measured_in("m")
+                    .en("tolerance"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

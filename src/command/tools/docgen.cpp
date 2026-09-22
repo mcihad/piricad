@@ -15,6 +15,7 @@
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
 #include "kentos_cad/processing/registry.hpp"
+#include "kentos_cad/script/python_doc.hpp"
 
 #include <cstdio>
 #include <exception>
@@ -254,6 +255,35 @@ int run(int argc, char** argv)
         }
         full << kentos::ai::llms_full_txt(reg);
         (void)std::fprintf(stdout, "docgen: llms-full.txt -> %s\n", argv[4]);
+    }
+
+    // THE PYTHON SURFACE, AS A REFERENCE AND AS A TYPE STUB. Same registry, same
+    // run, for the reason the two documents above give: a surface and its
+    // description that can be regenerated separately are a surface and a
+    // description that will disagree (CLAUDE.md 6.14, and this is Article 6.15's
+    // half of it).
+    //
+    // Written in EVERY configuration, including one built without Python.
+    // `kentos_script` compiles `python_doc.cpp` unconditionally, so the freshness
+    // check does not depend on a build option — a gate that passes on one machine
+    // and fails on another has not checked anything.
+    if (argc >= 6) {
+        std::ofstream py(argv[5], std::ios::out | std::ios::binary);
+        if (!py) {
+            (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[5]);
+            return 1;
+        }
+        py << kentos::script::python_reference(reg);
+        (void)std::fprintf(stdout, "docgen: Python referansı -> %s\n", argv[5]);
+    }
+    if (argc >= 7) {
+        std::ofstream stub(argv[6], std::ios::out | std::ios::binary);
+        if (!stub) {
+            (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[6]);
+            return 1;
+        }
+        stub << kentos::script::python_stub(reg);
+        (void)std::fprintf(stdout, "docgen: Python tip taslağı -> %s\n", argv[6]);
     }
     return 0;
 }

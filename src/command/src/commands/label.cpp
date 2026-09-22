@@ -357,7 +357,7 @@ KENTOS_COMMAND(label)
         .category = Category::Draw,
         .params =
             {
-                Param::text("katman", Arity::exactly(1), "Etiketlenecek katmanın adı"),
+                Param::text("katman", Arity::exactly(1), "Etiketlenecek katmanın adı").en("layer"),
                 // OPTIONAL NOW, because a parameterised symbol already says what
                 // to write and where. Left required, the bus refused the command
                 // before its body could look at the layer's slots (Article 1.3:
@@ -366,14 +366,17 @@ KENTOS_COMMAND(label)
                 // layer prompts exactly as it did.
                 Param::text("bicim", Arity::optional(),
                             "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. "
-                            "Sembol alan bildiriyorsa gerekmez"),
+                            "Sembol alan bildiriyorsa gerekmez")
+                    .en("format"),
                 Param::text("hedef", Arity::optional(),
-                            "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"),
-                Param::integer("yukseklik", Arity::optional(),
-                               "Yazı yüksekliği, zemin milimetresi"),
+                            "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'")
+                    .en("target_layer"),
+                Param::integer("yukseklik", Arity::optional(), "Yazı yüksekliği, zemin milimetresi")
+                    .en("height"),
                 Param::integer("kaydirma", Arity::optional(),
                                "Nesnenin ortasından dikey kaydırma, zemin milimetresi; "
-                               "artı yukarı"),
+                               "artı yukarı")
+                    .en("offset"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

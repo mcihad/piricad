@@ -107,6 +107,7 @@ target_link_libraries(kentos_docgen PRIVATE
     kentos_command
     kentos_processing
     kentos_ai
+    kentos_script
     kentos_domain_geodesy
     kentos_domain_cadastre
     kentos_domain_surface

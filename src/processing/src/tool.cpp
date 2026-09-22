@@ -19,13 +19,17 @@ std::vector<command::Param> shared_params()
     using command::ParamKind;
     return {
         Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-              "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"},
+              "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"}
+            .en("objects"),
         Param::text("kapsam", Arity{0, 1},
-                    "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"),
+                    "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır")
+            .en("scope"),
         Param::points("pencere", Arity{0, 2},
-                      "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"),
+                      "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir")
+            .en("window"),
         Param::text("katman", Arity{0, 1},
-                    "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"),
+                    "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman")
+            .en("layer"),
     };
 }
 
@@ -150,6 +154,7 @@ command::CommandSpec ToolSpec::to_command_spec() const
     // the reference; one that makes new objects is an analysis.
     spec.category =
         output == OutputShape::InPlace ? command::Category::Modify : command::Category::Processing;
+    spec.python = python;
     spec.params = shared_params();
     for (const ToolParam& p : params) {
         // Every tool parameter is optional at the bus: the tool applies its
@@ -169,6 +174,7 @@ command::CommandSpec ToolSpec::to_command_spec() const
         // them, the generated schema had no `enum` and every tool body checked
         // its own words a second time (CLAUDE.md 5.10). `Param` carries both.
         const auto carry = [&p](command::Param out) {
+            out.english = p.english;
             out.choices = p.choices;
             out.low     = p.low;
             out.high    = p.high;

@@ -151,9 +151,11 @@ KENTOS_COMMAND(reproject)
         .params =
             {
                 Param::text("hedef", Arity::exactly(1),
-                            "Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36"),
+                            "Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36")
+                    .en("target"),
                 Param::text("kaynak", Arity::optional(),
-                            "Kaynak sistem; yoksa çizimin kendi koordinat sistemi"),
+                            "Kaynak sistem; yoksa çizimin kendi koordinat sistemi")
+                    .en("source"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

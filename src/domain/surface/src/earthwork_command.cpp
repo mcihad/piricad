@@ -138,7 +138,8 @@ KENTOS_COMMAND(earthwork)
         .title    = "Hacim Hesabı",
         .category = Category::Query,
         .params   = {Param::integer("kot", Arity::exactly(1),
-                                    "Karşılaştırma kotu, milimetre (845 m = 845000)")},
+                                    "Karşılaştırma kotu, milimetre (845 m = 845000)")
+                         .en("elevation")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.",

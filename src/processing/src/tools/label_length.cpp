@@ -118,9 +118,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id    = "islem.uzunluk_yaz",
-        .names = {"UZUNLUKYAZ", "UZUNLUKYAZ", "LABELLENGTH", "UZY"},
-        .title = "Kenar uzunluklarını yaz",
+        .id     = "islem.uzunluk_yaz",
+        .python = "label_length",
+        .names  = {"UZUNLUKYAZ", "UZUNLUKYAZ", "LABELLENGTH", "UZY"},
+        .title  = "Kenar uzunluklarını yaz",
         .summary = "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir "
                    "yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.",
         .group   = "Etiketleme",
@@ -129,25 +130,34 @@ private:
         .params =
             {
                 ToolParam::choice("birim", "Uzunluğun yazılacağı birim",
-                                  {"metre", "santimetre", "milimetre", "kilometre"}, "metre"),
-                ToolParam::integer("ondalik", "Virgülden sonraki basamak sayısı", 2, 0, 6),
+                                  {"metre", "santimetre", "milimetre", "kilometre"}, "metre")
+                    .en("unit"),
+                ToolParam::integer("ondalik", "Virgülden sonraki basamak sayısı", 2, 0, 6)
+                    .en("decimals"),
                 ToolParam::text(
-                    "bicim", "Yazının kalıbı; {} sayının yerini tutar (örnek: \"{} m\", \"L={}\")"),
-                ToolParam::choice("ayrac", "Ondalık ayracı", {"virgul", "nokta"}, "virgul"),
+                    "bicim", "Yazının kalıbı; {} sayının yerini tutar (örnek: \"{} m\", \"L={}\")")
+                    .en("format"),
+                ToolParam::choice("ayrac", "Ondalık ayracı", {"virgul", "nokta"}, "virgul")
+                    .en("decimal_separator"),
                 ToolParam::choice("taraf", "Yazının kenarın hangi yanına düşeceği",
-                                  {"otomatik", "sol", "sag", "dis", "ic"}, "otomatik"),
+                                  {"otomatik", "sol", "sag", "dis", "ic"}, "otomatik")
+                    .en("side"),
                 ToolParam::integer("yukseklik",
                                    "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm",
-                                   0, 0, 100000000),
+                                   0, 0, 100000000)
+                    .en("height"),
                 ToolParam::integer("bosluk",
                                    "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı", 0, 0,
-                                   100000000),
+                                   100000000)
+                    .en("gap"),
                 ToolParam::integer("enaz", "Bundan kısa kenarlara yazı yazılmaz, milimetre", 0, 0,
-                                   1000000000),
+                                   1000000000)
+                    .en("min_length"),
                 ToolParam::boolean("bagla",
                                    "Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk "
                                    "yeniden yazılır",
-                                   true),
+                                   true)
+                    .en("attach"),
             },
         .output        = OutputShape::NewEntities,
         .output_suffix = "uzunluk",

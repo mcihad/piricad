@@ -433,7 +433,8 @@ KENTOS_COMMAND(combine)
         .title    = "Birleştir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}},
+                         "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}
+                         .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek "

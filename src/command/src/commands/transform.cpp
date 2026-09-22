@@ -841,9 +841,10 @@ KENTOS_COMMAND(move)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::point("baslangic", "Taşımanın başlangıç noktası"),
-                Param::point("bitis", "Taşımanın bitiş noktası"),
+                      "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::point("baslangic", "Taşımanın başlangıç noktası").en("start"),
+                Param::point("bitis", "Taşımanın bitiş noktası").en("end"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -862,10 +863,12 @@ KENTOS_COMMAND(copy_objects)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::point("baslangic", "Kopyalamanın başlangıç noktası"),
+                      "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::point("baslangic", "Kopyalamanın başlangıç noktası").en("start"),
                 Param::points("bitis", Arity::at_least(1),
-                              "Kopyaların geleceği noktalar; her nokta bir kopya"),
+                              "Kopyaların geleceği noktalar; her nokta bir kopya")
+                    .en("end"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -885,21 +888,30 @@ KENTOS_COMMAND(array_objects)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim"},
+                      "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
                 Param::text("mod", Arity::optional(),
-                            "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi"),
-                Param::integer("satir", Arity::optional(), "Satır sayısı (dikdörtgen dizi)"),
-                Param::integer("sutun", Arity::optional(), "Sütun sayısı (dikdörtgen dizi)"),
+                            "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi")
+                    .en("mode"),
+                Param::integer("satir", Arity::optional(), "Satır sayısı (dikdörtgen dizi)")
+                    .en("rows"),
+                Param::integer("sutun", Arity::optional(), "Sütun sayısı (dikdörtgen dizi)")
+                    .en("columns"),
                 Param::number("satir_aralik", Arity::optional(),
-                              "Satır aralığı, metre; kuzeye artı"),
+                              "Satır aralığı, metre; kuzeye artı")
+                    .en("row_spacing"),
                 Param::number("sutun_aralik", Arity::optional(),
-                              "Sütun aralığı, metre; doğuya artı"),
+                              "Sütun aralığı, metre; doğuya artı")
+                    .en("column_spacing"),
                 Param{"merkez", ParamKind::Point, Arity::optional(),
-                      "Dizinin merkezi (kutupsal dizi)"},
+                      "Dizinin merkezi (kutupsal dizi)"}
+                    .en("center"),
                 Param::integer("sayi", Arity::optional(),
-                               "Toplam kopya sayısı, özgün dahil (kutupsal dizi)"),
+                               "Toplam kopya sayısı, özgün dahil (kutupsal dizi)")
+                    .en("count"),
                 Param::number("aci", Arity::optional(),
-                              "Süpürülecek toplam açı, derece; verilmezse tam tur"),
+                              "Süpürülecek toplam açı, derece; verilmezse tam tur")
+                    .en("angle"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -918,13 +930,16 @@ KENTOS_COMMAND(rotate)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::point("merkez", "Döndürme merkezi"),
+                      "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::point("merkez", "Döndürme merkezi").en("center"),
                 Param::number("aci", Arity::optional(),
                               "Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse "
-                              "yeni doğrultu gösterilir"),
+                              "yeni doğrultu gösterilir")
+                    .en("angle"),
                 Param::points("aci_nokta", Arity::optional(),
-                              "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz"),
+                              "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz")
+                    .en("angle_point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -943,13 +958,16 @@ KENTOS_COMMAND(scale)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::point("merkez", "Ölçekleme merkezi; bu nokta yerinde kalır"),
+                      "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::point("merkez", "Ölçekleme merkezi; bu nokta yerinde kalır").en("center"),
                 Param::number("carpan", Arity::optional(),
                               "Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık "
-                              "gösterilir"),
+                              "gösterilir")
+                    .en("factor"),
                 Param::points("carpan_nokta", Arity::optional(),
-                              "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz"),
+                              "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz")
+                    .en("factor_point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -968,9 +986,10 @@ KENTOS_COMMAND(mirror)
         .params =
             {
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim"},
-                Param::point("baslangic", "Ayna ekseninin ilk noktası"),
-                Param::point("bitis", "Ayna ekseninin ikinci noktası"),
+                      "Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim"}
+                    .en("objects"),
+                Param::point("baslangic", "Ayna ekseninin ilk noktası").en("start"),
+                Param::point("bitis", "Ayna ekseninin ikinci noktası").en("end"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

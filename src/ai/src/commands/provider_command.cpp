@@ -260,30 +260,39 @@ CommandSpec detail::provider_command_spec()
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "varsayilan", "dene"},
                               "Ne yapılacağı: listele, ekle, sil, varsayilan ya da dene "
-                              "(bağlantıyı dener)"),
+                              "(bağlantıyı dener)")
+                    .en("action"),
                 Param::text("ad", Arity::optional(),
-                            "Profilin adı; ekle, sil, varsayilan ve dene için gerekir"),
+                            "Profilin adı; ekle, sil, varsayilan ve dene için gerekir")
+                    .en("name"),
                 Param::choice("lehce", Arity::optional(), dialect_words(),
                               "Uç noktanın konuştuğu telli dil; ekle için, varsayılan "
-                              "openai_chat"),
+                              "openai_chat")
+                    .en("dialect"),
                 Param::text("adres", Arity::optional(),
                             "Uç noktanın adresi: http:// ya da https:// ile başlar, satıcının "
-                            "ön eki dahil"),
+                            "ön eki dahil")
+                    .en("endpoint"),
                 Param::text("yol", Arity::optional(),
                             "Adresin altındaki uç nokta; '/' ile başlar: /chat/completions, "
-                            "/messages, /api/chat"),
-                Param::text("model", Arity::optional(), "Model kimliği, uç noktanın yazdığı gibi"),
+                            "/messages, /api/chat")
+                    .en("path"),
+                Param::text("model", Arity::optional(), "Model kimliği, uç noktanın yazdığı gibi")
+                    .en("model"),
                 // THE NAME OF THE ENTRY, NEVER THE KEY (CLAUDE.md 5.21, ai.md
                 // P11). The help says so, because the box's label is the only
                 // warning a user reads before pasting.
                 Param::text("anahtar_ref", Arity::optional(),
                             "Anahtarı tutan kaydın adı — anahtar zincirindeki kayıt ya da bir "
                             "ortam değişkeni (örnek: DEEPSEEK_API_KEY). Anahtarın kendisi "
-                            "buraya yazılmaz"),
+                            "buraya yazılmaz")
+                    .en("key_ref"),
                 Param::integer_range("baglam", Arity::optional(), 0, 100000000,
-                                     "Bağlam penceresi, jeton; 0 bilinmiyor demektir"),
+                                     "Bağlam penceresi, jeton; 0 bilinmiyor demektir")
+                    .en("context"),
                 Param::integer_range("azami", Arity::optional(), 0, 10000000, // ui-label
-                                     "Çıktı jeton sınırı; 0 demek 'bu alanı hiç gönderme'"),
+                                     "Çıktı jeton sınırı; 0 demek 'bu alanı hiç gönderme'")
+                    .en("max_tokens"),
                 // NO DECLARED RANGE, and that is deliberate: the bus checks a
                 // range with `as_int()` (validation.cpp), which truncates 2.5 to
                 // 2 and -0.5 to 0 — so a declared 0–2 on a real number would
@@ -291,13 +300,16 @@ CommandSpec detail::provider_command_spec()
                 // the profile in the refusal (`ProviderProfiles::upsert`).
                 Param::number("sicaklik", Arity::optional(),
                               "Örnekleme sıcaklığı, 0 ile 2 arasında; verilmezse hiç "
-                              "gönderilmez"),
+                              "gönderilmez")
+                    .en("temperature"),
                 Param::boolean("akis", Arity::optional(),
-                               "Cevap parça parça mı istensin; varsayılan evet"),
-                Param::boolean("dusunme", Arity::optional(),
-                               "Modelin düşünme metni gösterilsin mi"),
+                               "Cevap parça parça mı istensin; varsayılan evet")
+                    .en("stream"),
+                Param::boolean("dusunme", Arity::optional(), "Modelin düşünme metni gösterilsin mi")
+                    .en("thinking"),
                 Param::boolean("araclar", Arity::optional(),
-                               "Uç noktaya araç kataloğu gönderilsin mi; varsayılan evet"),
+                               "Uç noktaya araç kataloğu gönderilsin mi; varsayılan evet")
+                    .en("tools"),
             },
         // Touches no entity: the profiles are application state kept in the
         // user's configuration directory (model.md R39), so there is nothing to

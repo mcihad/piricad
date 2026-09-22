@@ -239,7 +239,8 @@ KENTOS_COMMAND(to_area)
         .title    = "Alana Çevir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}},
+                         "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}
+                         .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Uç uca değen çizgileri tek bir kapalı alana çevirir.",
