@@ -700,9 +700,13 @@ yedi bölümle bunları sürekli tutuyor.
   karşılaştırma tablosu.
 - [x] **Kart probe'u** (`tool-flyouts` ctest) "çalıştı"yı üç hâlle tanımlıyor: bekleyen oturum,
   yanan düğme ya da dökümde cevap. `BLOKEKLE`'nin reddi üçüncüsü.
-- [ ] **İşletim sistemi düzeyinde tıklama** (`osascript` System Events) ile aynı probe: Qt'nin
-  sentezlediği olaylar ile Cocoa'nın gerçek olayları arasında bir fark varsa yalnız orada görünür.
-  `cliclick` kurulu değil; System Events ile denenecek.
+- [~] **İşletim sistemi düzeyinde tıklama** (Cocoa'nın gerçek olayları) ile aynı probe: Qt'nin
+  sentezlediği olaylar ile gerçek olaylar arasında bir fark varsa yalnız orada görünür. Bu makinede
+  yapılamadı: `osascript`'in erişilebilirlik (assistive access) izni yok (`-1719`), `cliclick` ve
+  `pyobjc/Quartz` kurulu değil. İzin bir sistem güvenlik ayarıdır ve yalnız kullanıcı verir: Sistem
+  Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik'te terminale izin verilirse `osascript -e 'tell
+  application "System Events" to click at {x, y}'` ile sürülür; probe'un kendisi (`probeRealMouse`)
+  zaten gerçek pencerede, gerçek hit-test ile çalışıyor ve yeşil.
 
 ## Doğrulama (her pakette)
 
