@@ -55,7 +55,11 @@ enum class RubberShape : std::uint8_t {
     Dimension, ///< the dimension the chain's picks and the cursor's line location make: ÖLÇÜ
     Block,     ///< the block definition `rubber_payload` names, placed at the cursor: BLOKEKLE
     Ghost, ///< the selected objects carried by the cursor's offset from the origin: TAŞI, KOPYALA
-    AreaEdit ///< a face with one edge or corner following the cursor to a wanted area: ALANDÜZENLE
+    AreaEdit, ///< a face with one edge or corner following the cursor to a wanted area: ALANDÜZENLE
+    Polygon,  ///< the regular polygon a centre, the cursor and `rubber_payload`'s side count and
+              ///< fit make: ÇOKGEN
+    EdgeRectangle ///< the rectangle the chain's edge and the cursor's depth make: DİKDÖRTGEN
+                  ///< yontem=3n
 };
 
 struct Prompt

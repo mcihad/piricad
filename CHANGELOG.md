@@ -6,6 +6,49 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çokgen araçları komple elden geçti: kılavuz, soru sırası, işaretle boy verme
+
+Kullanıcının raporu: "döndürülmüş dikdörtgen çiziyor ama çizerken kılavuz yok;
+düzgün çokgen ile ilgili hiçbir aksiyon yok, hiçbir şey yapılamıyor, kılavuz da
+yok; dıştan ve kenardan çokgen de aynı; kenar sayısını girebileceğim bir yer
+yok." Dördü de gerçek işletim sistemi olaylarıyla yeniden üretildi ve düzeltildi.
+
+**Kılavuz artık şeklin kendisi, ve şekli çizecek fonksiyondan geliyor.** Yeni
+`core/polygon.hpp` iki çağıranın ortak cevabı: `ÇOKGEN` halkayı onunla kuruyor,
+tuval kılavuzu onunla çiziyor. İkinci bir yoldan hesaplanan kılavuz, kolay
+durumlarda komutla aynı çıkıp aritmetiğin ilginç olduğu yerde ayrışır — dıştan
+bir çokgenin ağzı, normaline izdüşen bir üçüncü nokta — ve kullanıcı bir şekil
+görüp başka bir şekil alır.
+
+- **`DİKDÖRTGEN yontem=3n`** üçüncü noktayı zincirsiz bir `Ring` önizlemesiyle
+  soruyordu: bir başlangıç ve bir imleç, yani iki nokta, yani çizilecek hiçbir
+  şey. Araç doğru çiziyor ama yolda hiçbir şey göstermiyordu. Yeni
+  `RubberShape::EdgeRectangle` kenarı alıp **döndürülmüş dikdörtgenin dört
+  köşesini** çiziyor.
+- **`ÇOKGEN`'in soru sırası değişti.** Eskiden merkez → kenar sayısı → boy;
+  tıkladıktan sonra ekran boş kalıyor ve soru altta tek satır metin oluyordu.
+  Şimdi **kenar sayısı en başta** soruluyor — ekranda bakacak bir şey yokken,
+  soru tek olayken — odak kendiliğinden komut satırına geçiyor. Merkez
+  konduktan sonra çokgen fareyi izliyor.
+- **Boy artık işaret edilerek verilebiliyor.** `yaricap=` yazan için hiçbir şey
+  değişmedi ve komut fazladan soru sormuyor. Elinde sayı olmayan ise yerini
+  gösteriyor: `ic`'te bir köşenin, `dis`'te bir kenarın geçtiği nokta — tek
+  tıklamada hem yarıçap hem dönüş, canlı önizlemeyle. `dis`'te imlecin altından
+  **kenar** geçiyor (yarım adım), çünkü ölçü ağızdan veriliyor.
+- **`yontem=kenar`** kenar uzunluğunu yazıyla alıyor (bir kenar uzunluğu
+  merkezden işaret edilemez; imlecin uzaklığı yarıçaptır), sonra fare yalnız
+  **çeviriyor** — yazılan boyda çokgen, imlecin verdiği açıda, önizlemeli.
+- **Yeni `kose` parametresi**: işaret edilen nokta betikten de verilebilir.
+  Ondan türeyen yarıçap ve açı `yaricap`/`aci` olarak günlüğe yazılıyor, nokta
+  kendisi yazılmıyor — aynı soruya iki cevap olmaz (Article 1.4).
+
+### Düzeltildi — boş bir argüman günlüğe `null` olarak yazılmıyor
+
+`Empty` bir değer "hiçbir şey kabul edilmedi" demek; günlük onu `"kose":null`
+diye yazıyordu, yani bir cevapsızlığı cevap olarak. Aynı işi yapan iki istemci
+bu yüzden farklı satır yazıyordu. `Args::erase` geldi ve `journal_entry` boş
+argümanı düşürüyor.
+
 ### Eklendi — gerçek işletim sistemi olaylarıyla sürülen probe
 
 `KENTOS_OSCLICK_PROBE=<dizin>` pencereyi açık tutar, her araç düğmesinin ve

@@ -3,6 +3,7 @@
 
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/grips.hpp"
+#include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <filesystem>
@@ -7492,4 +7493,185 @@ TEST_CASE("SEÇ ÇOKGENPENCERE, ÇOKGEN'in tek anlamlı yazımıdır")
             word);
         CHECK_MESSAGE(f.bus.selection().size() == std::size_t{1}, word);
     }
+}
+
+TEST_CASE("ÇOKGEN: soru sırası, işaret edilen boy ve her adımda kılavuz")
+{
+    // THE ORDER OF THE QUESTIONS IS PART OF THE TOOL. A user pressed this and
+    // reported "nothing happens, and there is nowhere to enter the side count":
+    // the centre was asked for first, so the click was answered by a line of
+    // text asking for a number while the canvas showed nothing at all. The side
+    // count now comes first, before there is anything on screen to look at.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("ÇOKGEN");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "kenar_sayisi");
+        CHECK(session.prompt().kind == ParamKind::Integer);
+        CHECK_FALSE(session.prompt().has_rubber_band);
+
+        REQUIRE(session.supply(Value::integer(6)).ok());
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "merkez");
+        CHECK(session.prompt().kind == ParamKind::Point);
+
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+
+        // AND THEN A PLACE, NOT A NUMBER, with the polygon itself previewed. The
+        // guide carries the side count and the fit, because those are the two
+        // facts the canvas cannot see; the size is left at zero, which is what
+        // says "the cursor's own distance sets it".
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "kose");
+        CHECK(session.prompt().kind == ParamKind::Point);
+        CHECK(session.prompt().has_rubber_band);
+        CHECK(session.prompt().rubber_shape == RubberShape::Polygon);
+        CHECK_EQ(session.prompt().rubber_origin, (core::Point2{0, 0}));
+        const auto guide = core::decode_polygon_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK_EQ(guide->sides, std::int64_t{6});
+        CHECK(guide->fit == core::PolygonFit::Inscribed);
+        CHECK_EQ(guide->circumradius, core::Mm{0});
+
+        // Pointing 10 m due north is a circumradius of 10 m and a turn of zero
+        // under semt — an inscribed hexagon whose first corner is the point that
+        // was clicked.
+        REQUIRE(session.supply(Value::point(core::Point2{0, 10'000})).ok());
+        REQUIRE(session.finished());
+        REQUIRE(f.bus.finish(session).ok());
+
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{6});
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{0, 10'000}));
+    }
+
+    // A CIRCUMSCRIBED POLYGON'S FLAT PASSES UNDER THE CURSOR. The user is sizing
+    // by the edge, so the edge is what they are pointing at — and the preview
+    // and the command apply the same half-step, or the guide would promise a
+    // flat where a corner lands.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("ÇOKGEN yontem=dis");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::integer(4)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+
+        REQUIRE(session.waiting());
+        const auto guide = core::decode_polygon_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->fit == core::PolygonFit::Circumscribed);
+
+        REQUIRE(session.supply(Value::point(core::Point2{0, 10'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+
+        // A square sized by its flat: the inradius is 10 m, so the box is 20 m
+        // across and the north edge passes exactly through the point clicked.
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.max_y, core::Mm{10'000});
+        CHECK_EQ(box.min_y, core::Mm{-10'000});
+        CHECK_EQ(box.max_x, core::Mm{10'000});
+        CHECK_EQ(box.min_x, core::Mm{-10'000});
+    }
+
+    // UNDER `kenar` THE SIZE IS TYPED and the cursor is left the rotation, which
+    // it can give. A side length cannot be pointed at from the centre — the
+    // distance to the cursor is a radius — and a guide that called it a side
+    // length would draw the lie.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("ÇOKGEN yontem=kenar");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::integer(6)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().param == "kenar_uzunlugu");
+        CHECK(session.prompt().kind == ParamKind::Number);
+        REQUIRE(session.supply(Value::number(10.0)).ok());
+
+        // Now the size is settled, so the guide is handed it and the cursor only
+        // turns the shape.
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().rubber_shape == RubberShape::Polygon);
+        const auto guide = core::decode_polygon_guide(session.prompt().rubber_payload);
+        REQUIRE(guide.has_value());
+        CHECK(guide->fit == core::PolygonFit::Side);
+        CHECK_EQ(guide->circumradius, core::Mm{10'000}); // a hexagon's side is its radius
+
+        REQUIRE(session.supply(Value::point(core::Point2{0, 5'000})).ok());
+        REQUIRE(f.bus.finish(session).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+        // The pointed distance did NOT become the size: 5 m from the centre, and
+        // the hexagon is still the 10 m one that was typed.
+        const core::Box2 box = f.doc.entity_extent(0);
+        CHECK_EQ(box.max_y, core::Mm{10'000});
+    }
+
+    // A RUN THAT WAS GIVEN ITS SIZE ASKS NOTHING MORE, which is what keeps every
+    // journal line written before the gesture existed replayable (Article 1.4).
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("ÇOKGEN yaricap=10");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.supply(Value::integer(4)).ok());
+        REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.finished()); // no third question
+        REQUIRE(f.bus.finish(session).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+
+    // ESC AT THE FIRST QUESTION LEAVES NOTHING, and the undo stack empty with it.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("ÇOKGEN");
+        REQUIRE(started.ok());
+        Session& session = *started.value();
+        REQUIRE(session.waiting());
+        session.cancel();
+        REQUIRE(f.bus.finish(session).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+        CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+    }
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=3n: üçüncü nokta dikdörtgeni önizliyor")
+{
+    // The user's report was that the rotated rectangle draws but shows no guide
+    // while drawing. It asked for the third point under a `Ring` preview with no
+    // chain — an origin and a cursor, and two points enclose nothing — so the
+    // tool worked and showed nothing, which from the chair is a tool that does
+    // not work.
+    Fixture f;
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN yontem=3n");
+    REQUIRE(started.ok());
+    Session& session = *started.value();
+
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().rubber_shape == RubberShape::Line); // an edge is a line
+
+    REQUIRE(session.supply(Value::point(core::Point2{10'000, 0})).ok());
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().has_rubber_band);
+    CHECK(session.prompt().rubber_shape == RubberShape::EdgeRectangle);
+    REQUIRE_EQ(session.prompt().rubber_chain.size(), std::size_t{2});
+    CHECK_EQ(session.prompt().rubber_chain[0], (core::Point2{0, 0}));
+    CHECK_EQ(session.prompt().rubber_chain[1], (core::Point2{10'000, 0}));
+
+    REQUIRE(session.supply(Value::point(core::Point2{40'000, 3'000})).ok());
+    REQUIRE(f.bus.finish(session).ok());
+
+    const core::Box2 box = f.doc.entity_extent(0);
+    CHECK_EQ(box.min_y, core::Mm{0});
+    CHECK_EQ(box.max_y, core::Mm{3'000});
+    CHECK_EQ(box.max_x, core::Mm{10'000}); // the depth, not a corner
 }

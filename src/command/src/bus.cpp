@@ -813,6 +813,17 @@ void Bus::journal_entry(const Session& session)
     // fractional check, and a word, a point or a selection is left exactly as it
     // arrived. Nothing about the value changes — `25` and `25.0` are one number,
     // and the record now says so the same way whoever asked.
+    // AND NOT AT ALL WHEN IT IS EMPTY. An `Empty` value means "nothing was
+    // accepted" — that is the documented meaning, and it is what a command
+    // writes to take back an answer it asked for but did not build its result
+    // from (ÇOKGEN's pointed corner) or refused outright (`want_objects`). The
+    // record used to print it as `"kose":null`, which is a non-answer written as
+    // an answer: it made two clients doing the same job write different lines,
+    // and a replay would hand the body a key it has to know to ignore.
+    for (const Param& p : session.spec().params)
+        if (const Value* held = e.args.find(p.name); held != nullptr && held->empty())
+            e.args.erase(p.name);
+
     for (const Param& p : session.spec().params) {
         const Value* held = e.args.find(p.name);
         if (held == nullptr) continue;

@@ -174,6 +174,17 @@ public:
     /// values, in the order the command itself declares them.
     void reorder_like(std::span<const std::string> names);
 
+    /// Drops `name`, if it is there. Does nothing when it is absent.
+    ///
+    /// WHAT THIS IS FOR: a command that ASKED for something and then decided the
+    /// answer is not part of what defines its result. ÇOKGEN's pointed corner is
+    /// the case — the awaiter writes every answer under the name it was given,
+    /// but the point is a GESTURE whose radius and turn are what the shape is
+    /// made of, and both are recorded in their own right. Left in, the record
+    /// would carry two answers to one question, and a journal line would read
+    /// `"kose":null` — a non-answer written as an answer (Article 1.4).
+    void erase(std::string_view name);
+
     /// Renames `from` to `to` IN PLACE, keeping the argument's position. Used by
     /// the bus for a `Param::was` retired name, so that an old journal line's
     /// spelling reaches the body — and the journal it writes — under the current

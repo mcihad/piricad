@@ -366,6 +366,15 @@ void Args::set(std::string name, Value v)
     items_.emplace_back(std::move(name), std::move(v));
 }
 
+void Args::erase(std::string_view name)
+{
+    for (auto it = items_.begin(); it != items_.end(); ++it)
+        if (it->first == name) {
+            items_.erase(it);
+            return;
+        }
+}
+
 void Args::reorder_like(std::span<const std::string> names)
 {
     // A STABLE PARTITION BY DECLARED POSITION. An argument the spec does not name

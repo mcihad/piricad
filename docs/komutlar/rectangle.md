@@ -69,6 +69,12 @@ eğik bir sınırın üzerindeki bir duvar. Üçüncü nokta bir köşe **değil
 milimetre kayan bir kullanıcı paralelkenar değil dikdörtgen alır. Üçüncü nokta
 kenarın üzerindeyse yükseklik sıfırdır ve komut reddeder.
 
+**Kılavuz her iki yöntemde de şeklin kendisidir.** `2n`'de ilk köşeden itibaren
+dikdörtgen, `3n`'de kenar sabitlendikten sonra **döndürülmüş dikdörtgenin dört
+köşesi** fareyi izler — köşeleri, tıklayınca onları üretecek olan fonksiyonun
+kendisinden gelir (`core::edge_rectangle_corners`), yani gördüğünüz şekil
+oluşacak şekildir.
+
 ## Sözdizimi
 
 ```text
@@ -92,6 +98,11 @@ ya da açılı bir dörtgen çizmek [`ALAN`](area.md) işidir.
 
 **Arayüzden.** Araç kutusundan dikdörtgen aracını seçin, bir köşeye tıklayın,
 karşı köşeye tıklayın. Kare için ikinci tıklamada **Ctrl** basılı tutun.
+
+**Döndürülmüş dikdörtgen arayüzden.** Araç kutusundaki dikdörtgen düğmesini
+basılı tutun (ya da köşesindeki işarete tıklayın) ve karttan **Dikdörtgen —
+döndürülmüş**'ü seçin. Bir kenarın iki köşesini tıklayın; üçüncü tıklamaya kadar
+dikdörtgenin tamamı fareyi izler ve yüksekliği gösterir.
 
 **Komut satırından.** 40 m × 20 m bir yapı adası:
 

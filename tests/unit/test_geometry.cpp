@@ -10,7 +10,9 @@
 #include "kentos_cad/core/transform.hpp"
 
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/polygon.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -18,6 +20,7 @@
 #include "kentos_cad/core/offset.hpp"
 
 #include <algorithm>
+#include <array>
 
 using namespace kentos::core;
 
@@ -1000,4 +1003,129 @@ TEST_CASE("simplify_ring: kapalı halkada dikiş de sadeleşir")
     // keeps its last point because it is an end.
     CHECK(closed.size() <= open.size());
     CHECK_EQ(open.back(), (Point2{0, 50'000}));
+}
+
+// ---------------------------------------------------------------------------
+// core/polygon.hpp — the corners both the command and its guide are drawn from.
+//
+// The point of these is that there is ONE answer. The canvas draws the guide
+// with the same function ÇOKGEN builds the ring with, so a case that passes here
+// passes for the preview and for the document at once; before the split was
+// removed, the two could disagree and only the document was ever checked.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Düzgün çokgen: üç yöntem tek çevrel yarıçapa iner")
+{
+    using namespace kentos::core;
+
+    // A HEXAGON'S SIDE EQUALS ITS CIRCUMRADIUS. The one identity a regular
+    // polygon has that needs no trigonometry to state, so it is the case that
+    // catches a wrong factor rather than a wrong rounding.
+    CHECK_EQ(polygon_circumradius(10.0, 6, PolygonFit::Inscribed), 10.0);
+    CHECK(std::abs(polygon_circumradius(10.0, 6, PolygonFit::Side) - 10.0) < 1e-12);
+
+    // A SQUARE'S FLAT IS ITS CIRCUMRADIUS OVER root two.
+    CHECK(std::abs(polygon_circumradius(10.0, 4, PolygonFit::Circumscribed) -
+                   10.0 * std::sqrt(2.0)) < 1e-9);
+
+    // AND THE TWO CONVERSIONS ARE INVERSES, which is what lets the interactive
+    // gesture hand over a distance and the record keep the measurement its own
+    // parameter is named after (Article 1.4).
+    for (const std::int64_t sides : {3, 4, 5, 6, 8, 12, 60, 1024})
+        for (const PolygonFit fit :
+             {PolygonFit::Inscribed, PolygonFit::Circumscribed, PolygonFit::Side}) {
+            const double r = polygon_circumradius(12.5, sides, fit);
+            CHECK(std::abs(polygon_measurement(r, sides, fit) - 12.5) < 1e-9);
+        }
+
+    // Out of range answers zero rather than dividing by a meaningless cosine.
+    CHECK_EQ(polygon_circumradius(10.0, 2, PolygonFit::Inscribed), 0.0);
+    CHECK_EQ(polygon_circumradius(10.0, 1025, PolygonFit::Inscribed), 0.0);
+    CHECK_EQ(polygon_circumradius(0.0, 6, PolygonFit::Inscribed), 0.0);
+    CHECK_EQ(polygon_circumradius(-1.0, 6, PolygonFit::Inscribed), 0.0);
+}
+
+TEST_CASE("Düzgün çokgen: köşeler ve dönüş yönü")
+{
+    using namespace kentos::core;
+
+    // A SQUARE AT ZERO under semt: the four axes are integer-exact in
+    // `sin_cos_udeg`, so nothing here is within a millimetre of right — it is
+    // right.
+    const std::vector<Point2> square =
+        regular_polygon_corners(Point2{0, 0}, 4, 50.0, 0.0, AngleRule::Semt);
+    REQUIRE_EQ(square.size(), std::size_t{4});
+    CHECK_EQ(square[0], (Point2{0, 50'000}));
+    CHECK_EQ(square[1], (Point2{-50'000, 0}));
+    CHECK_EQ(square[2], (Point2{0, -50'000}));
+    CHECK_EQ(square[3], (Point2{50'000, 0}));
+
+    // THE RING WINDS ONE WAY WHICHEVER RULE IS IN FORCE (model.md R11): under
+    // matematik a turn of zero starts due east, and the walk is still the same
+    // direction around the shape.
+    const std::vector<Point2> math =
+        regular_polygon_corners(Point2{0, 0}, 4, 50.0, 0.0, AngleRule::Matematik);
+    REQUIRE_EQ(math.size(), std::size_t{4});
+    CHECK_EQ(math[0], (Point2{50'000, 0}));
+    CHECK_EQ(math[1], (Point2{0, 50'000}));
+
+    // A HALF-STEP IS HALF A SIDE'S SHARE OF THE TURN, which is the offset
+    // between "a corner points there" and "a flat points there".
+    CHECK(std::abs(polygon_half_step_turns(4) - 0.125) < 1e-15);
+    CHECK_EQ(polygon_half_step_turns(2), 0.0);
+
+    // Nothing is appended for a shape that has none.
+    std::vector<Point2> none;
+    regular_polygon_corners(Point2{0, 0}, 2, 50.0, 0.0, AngleRule::Semt, none);
+    regular_polygon_corners(Point2{0, 0}, 5, 0.0, 0.0, AngleRule::Semt, none);
+    CHECK(none.empty());
+}
+
+TEST_CASE("Kenar üzerine dikdörtgen: üçüncü nokta yüksekliği verir")
+{
+    using namespace kentos::core;
+
+    // The edge runs east along y = 0; the third point is 3 m north of it and
+    // well past its end, because what it gives is the DEPTH and not a corner.
+    std::array<Point2, 4> four{};
+    REQUIRE(edge_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, Point2{40'000, 3'000}, four));
+    CHECK_EQ(four[0], (Point2{0, 0}));
+    CHECK_EQ(four[1], (Point2{10'000, 0}));
+    CHECK_EQ(four[2], (Point2{10'000, 3'000}));
+    CHECK_EQ(four[3], (Point2{0, 3'000}));
+
+    // A ROTATED EDGE stays a rectangle: the offset is along the edge's normal,
+    // so the two new corners are the old two plus one vector.
+    REQUIRE(
+        edge_rectangle_corners(Point2{0, 0}, Point2{6'000, 8'000}, Point2{-4'000, 3'000}, four));
+    CHECK_EQ(four[2] - four[1], four[3] - four[0]);
+    // 3-4-5: the point is exactly 5 m from the edge's line.
+    CHECK_EQ(four[3], (Point2{-4'000, 3'000}));
+
+    // The two cases that enclose nothing are refused rather than drawn.
+    CHECK_FALSE(edge_rectangle_corners(Point2{0, 0}, Point2{0, 0}, Point2{1, 1}, four));
+    CHECK_FALSE(edge_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, Point2{5'000, 0}, four));
+}
+
+TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
+{
+    using namespace kentos::core;
+
+    const PolygonGuide guide{.sides = 7, .fit = PolygonFit::Circumscribed, .circumradius = 12'345};
+    const std::vector<std::uint8_t> bytes = encode_polygon_guide(guide);
+    REQUIRE_EQ(bytes.size(), std::size_t{17});
+    const auto back = decode_polygon_guide(bytes);
+    REQUIRE(back.has_value());
+    CHECK_EQ(back.value(), guide);
+
+    // A payload that is not one is refused rather than read as a shape: the
+    // canvas draws nothing instead of drawing rubbish.
+    CHECK_FALSE(decode_polygon_guide(std::vector<std::uint8_t>{}).has_value());
+    CHECK_FALSE(decode_polygon_guide(std::vector<std::uint8_t>(16, 0)).has_value());
+    std::vector<std::uint8_t> bad_fit = bytes;
+    bad_fit[8]                        = 9;
+    CHECK_FALSE(decode_polygon_guide(bad_fit).has_value());
+    std::vector<std::uint8_t> bad_sides = bytes;
+    bad_sides[0]                        = 1; // one side is not a polygon
+    CHECK_FALSE(decode_polygon_guide(bad_sides).has_value());
 }

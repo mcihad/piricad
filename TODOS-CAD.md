@@ -742,6 +742,41 @@ yedi bölümle bunları sürekli tutuyor.
   yapıldı; üstteki iki satır sonucu yazıyor.** `osascript`'in `click at`'i yetmedi (erişilebilirlik
   basışı, fare olayı değil); sürücü `scripts/os-tikla.c` + `scripts/os-tikla.sh`.
 
+## Çokgen araçları elden geçti — gerçek fareyle (2026-09-22)
+
+Kullanıcının ikinci raporu: "döndürülmüş dikdörtgen çiziyor ama kılavuz yok; düzgün çokgende hiçbir
+aksiyon yok; dıştan/kenardan aynı; kenar sayısını girecek yer yok; polygon araçlarını komple elden
+geçir." Hepsi `KENTOS_OSCLICK_PROBE` + `scripts/os-tikla.sh` ile gerçek olaylarla doğrulandı.
+
+- [x] **Ortak geometri `core/polygon.hpp`'ye çıktı**: `regular_polygon_corners`,
+  `polygon_circumradius`/`polygon_measurement` (birbirinin tersi), `polygon_half_step_turns`,
+  `edge_rectangle_corners`, `PolygonGuide` yükü. Komut ve tuval kılavuzu **tek** cevabı paylaşıyor;
+  `circle.hpp`'nin `circle_outline` için zaten uyduğu kural (CLAUDE.md 5.16, 5.10).
+- [x] **`DİKDÖRTGEN yontem=3n` kılavuzu**: `RubberShape::EdgeRectangle`, zincir {ilk, ikinci},
+  imleç yüksekliği veriyor; dört köşe çiziliyor. Eski hâli zincirsiz `Ring`'di — iki nokta, çizilecek
+  hiçbir şey yok.
+- [x] **`ÇOKGEN` soru sırası**: kenar sayısı → merkez → (boy/yön). Kenar sayısı ilk sırada, çünkü
+  düğmeye basıldığı anda ekranda bakacak bir şey yok ve odak komut satırına geçiyor.
+- [x] **Boy işaret edilerek**: `ic` köşe, `dis` kenar (yarım adım), `kenar` yazıyla boy + fareyle
+  dönüş. `RubberShape::Polygon` + `PolygonGuide` yükü (kenar sayısı, yöntem, sabit yarıçap).
+- [x] **Yeni `kose` parametresi** (nokta, 0..1); türeyen `yaricap`/`aci` günlüğe yazılıyor, `kose`
+  yazılmıyor. `yaricap` argümanla geldiyse komut hiçbir şey sormuyor — eski günlük satırları aynen
+  oynuyor (`insa-yontemleri.txt` altın fikstürü değişmedi).
+- [x] **`Args::erase` ve günlükten boş argümanın düşmesi**: `"kose":null` bir cevapsızlığı cevap
+  olarak yazıyordu ve aynı işi yapan iki istemciyi ayırıyordu.
+- [x] **Testler**: `test_geometry.cpp`'de dört yeni vaka (üç yöntemin tek yarıçapa inmesi ve
+  terslerinin birbirini götürmesi, köşeler ve dönüş yönü iki kuralda, kenar üstüne dikdörtgen 3-4-5,
+  kılavuz yükünün gidip gelmesi ve bozuk yükün reddi); `test_command.cpp`'de soru sırası, `dis`
+  yarım adımı, `kenar`ın sabit boyu, argümanla gelen boyun soru sormaması, ESC'te boş undo;
+  `DİKDÖRTGEN 3n` önizleme zinciri; `test_proof.cpp`'de ÇOKGEN eşitlik kanıtı işaret edilen jeste
+  göre yazıldı (üç istemci aynı işi yapıyor: `aci=0` üçünde de var).
+- [x] **Gerçek olaylarla görsel doğrulama**: altıgen (`ic`), sekizgen (`dis`, kenar imlecin altından
+  geçiyor), beşgen (`kenar`, yazılan 8 m sabit kalıp imleçle dönüyor), döndürülmüş dikdörtgen (dört
+  köşe fareyi izliyor). Dördünün karesi de alındı.
+- [x] **Belgeler**: `polygon_regular.md`'ye "Fareyle: boyu göstererek" bölümü, `kose` satırı, yeni
+  arayüz sırası ve yeni hata; `rectangle.md`'ye iki yöntemin kılavuzu ve döndürülmüş dikdörtgenin
+  arayüz adımları; `make reference` (dört üretilmiş dosya, 6.14).
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

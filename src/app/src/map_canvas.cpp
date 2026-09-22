@@ -15,6 +15,7 @@
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -1718,6 +1719,79 @@ void MapCanvas::buildOverlay()
                                              static_cast<float>(look_.hint_px), false, text});
                     guide_label_ = text;
                 }
+            }
+        } else if (shape == command::RubberShape::Polygon) {
+            // THE POLYGON THE CLICK WILL MAKE, from the very function that will
+            // make it (`core::regular_polygon_corners`). A guide computed a
+            // second way agrees with the command on the easy cases and diverges
+            // exactly where the arithmetic is interesting, and the user then
+            // sees one shape and gets another.
+            //
+            // The side count and the fit are what the canvas cannot see, so
+            // ÇOKGEN sends them in the payload. Under `kenar` it sends the
+            // settled size too and the cursor turns the shape; otherwise the
+            // cursor's own distance from the centre is the size.
+            if (auto decoded = core::decode_polygon_guide(session->prompt().rubber_payload)) {
+                const core::PolygonGuide guide = decoded.value();
+                const core::Point2 centre      = session->prompt().rubber_origin;
+                const core::Point2 at          = cursorWorld();
+                const core::AngleRule rule     = look_.angle.rule;
+
+                const double reach = core::mm_to_metres(core::segment_length(centre, at));
+                double circumradius =
+                    guide.circumradius != 0 ? core::mm_to_metres(guide.circumradius)
+                    : guide.fit == core::PolygonFit::Circumscribed
+                        ? core::polygon_circumradius(reach, guide.sides,
+                                                     core::PolygonFit::Circumscribed)
+                        : reach;
+
+                // A CIRCUMSCRIBED POLYGON'S FLAT PASSES UNDER THE CURSOR, not a
+                // corner: the same half-step ÇOKGEN applies, so the guide and
+                // the command put the edge in the same place.
+                const double pointed = core::direction_turns(centre, at, rule);
+                const double half    = core::polygon_half_step_turns(guide.sides);
+                const double start =
+                    guide.fit == core::PolygonFit::Circumscribed
+                        ? (rule == core::AngleRule::Semt ? pointed + half : pointed - half)
+                        : pointed;
+
+                const std::vector<core::Point2> corners =
+                    core::regular_polygon_corners(centre, guide.sides, circumradius, start, rule);
+                if (corners.size() >= 3) {
+                    curve_scratch_x_.clear();
+                    curve_scratch_y_.clear();
+                    for (const core::Point2& c : corners) {
+                        curve_scratch_x_.push_back(c.x);
+                        curve_scratch_y_.push_back(c.y);
+                    }
+                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+                }
+            }
+            // The arm from the centre, so the size being set is readable as a
+            // distance and not only as a shape.
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::EdgeRectangle &&
+                   session->prompt().rubber_chain.size() >= 2) {
+            // THE ROTATED RECTANGLE the third click will make. This branch is
+            // why the shape exists: the command used to preview it as a `Ring`
+            // with no chain, which is an origin and a cursor, and two points
+            // enclose nothing — so the tool drew correctly and showed nothing.
+            const auto& chain     = session->prompt().rubber_chain;
+            const core::Point2 at = cursorWorld();
+            std::array<core::Point2, 4> four{};
+            if (core::edge_rectangle_corners(chain[0], chain[1], at, four)) {
+                std::vector<render::ScreenPointF> run;
+                run.reserve(four.size());
+                for (const core::Point2& c : four)
+                    run.push_back(render::to_f(view_.to_screen(c)));
+                addRun(batch, run, true);
+            } else {
+                // On the edge, where there is no rectangle yet: the edge itself,
+                // so the hand still sees what it has fixed.
+                addRun(batch,
+                       {render::to_f(view_.to_screen(chain[0])),
+                        render::to_f(view_.to_screen(chain[1]))},
+                       false);
             }
         } else if (shape == command::RubberShape::Ghost) {
             // THE OBJECTS THEMSELVES, carried by the cursor's offset from the base

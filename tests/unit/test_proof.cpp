@@ -1588,20 +1588,28 @@ TEST_CASE("PROOF: ÇOKGEN gui, komut satırı ve betikten aynı belgeyi ve aynı
     // Article 6.4 for `core.polygon_regular`. A square on the axes: four sides,
     // `yontem=ic` with a 10 m radius and no turn, so the corners are the four
     // points a protractor would give and every one of them is exact.
+    //
+    // THE HAND POINTS, and that is the gesture this proof has to cover. A GUI
+    // run with no `yaricap` in the line asks for a place instead of a number:
+    // the distance from the centre is the radius and the direction is the turn,
+    // both in one click. Pointing due NORTH is a turn of zero under semt, which
+    // is what the other two clients get by default — so `aci=0` is written
+    // into their lines to make the three do the SAME job rather than three jobs
+    // that happen to look alike.
     Rig gui;
     {
         auto started = gui.bus.begin_interactive("ÇOKGEN yontem=ic", Origin::Gui);
         REQUIRE(started.ok());
         auto& session = *started.value();
-        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
-        CHECK(session.supply(Value::integer(4)).ok());
-        CHECK(session.supply(Value::number(10.0)).ok());
+        CHECK(session.supply(Value::integer(4)).ok());                     // kenar_sayisi
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());      // merkez
+        CHECK(session.supply(Value::point(core::Point2{0, 10'000})).ok()); // kose: 10 m, kuzey
         REQUIRE(gui.bus.finish(session).ok());
     }
 
     Rig cli;
     REQUIRE(cli.bus
-                .execute_line("ÇOKGEN yontem=ic merkez=0,0 kenar_sayisi=4 yaricap=10",
+                .execute_line("ÇOKGEN yontem=ic merkez=0,0 kenar_sayisi=4 yaricap=10 aci=0",
                               Origin::CommandLine)
                 .ok());
 
@@ -1611,7 +1619,8 @@ TEST_CASE("PROOF: ÇOKGEN gui, komut satırı ve betikten aynı belgeyi ve aynı
         auto r = runner.run_text(R"({
             "ad": "Çokgen kanıtı",
             "komutlar": [ {"cmd": "core.polygon_regular", "args": {
-                "yontem": "ic", "merkez": [0, 0], "kenar_sayisi": 4, "yaricap": 10 }} ]
+                "yontem": "ic", "merkez": [0, 0], "kenar_sayisi": 4, "yaricap": 10,
+                "aci": 0 }} ]
         })");
         if (!r.ok()) FAIL_WITH("ÇOKGEN betiği", r.error().message);
     }

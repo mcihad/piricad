@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 97 (86 tanesi onay ister)
-- Katalog parmak izi: `8044795711004116516`
+- Katalog parmak izi: `15950275662318248431`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -950,6 +950,7 @@ Onay ister.
 | `yaricap` | number | hayır | ic/dis yönteminin yarıçapı (m) [m] (sayı) |
 | `kenar_uzunlugu` | number | hayır | kenar yönteminin uzunluğu (m) [m] (sayı) |
 | `aci` | number | hayır | İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı) |
+| `kose` | string | hayır | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_polyline` — Çoklu Çizgi
 

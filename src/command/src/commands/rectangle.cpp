@@ -23,8 +23,10 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/text.hpp"
+
+#include <array>
 
 #include <string>
 #include <vector>
@@ -65,34 +67,33 @@ Task<void> run(Context& ctx)
                                          "Kenarın iki köşesi aynı nokta; bir kenar tanımlamıyor."));
             co_return;
         }
+        // THE GUIDE SHOWS THE RECTANGLE, and this is a fix a user's report
+        // forced: it used to ask for this point under a `Ring` preview with no
+        // chain, which is an origin and a cursor — two points, and two points
+        // draw nothing. Pressing "rotated rectangle" therefore gave a tool that
+        // drew correctly and showed nothing on the way, which from the chair is
+        // a tool that does not work. `EdgeRectangle` is handed the edge and
+        // draws the four corners this command is about to make, from the very
+        // function that makes them (core/polygon.hpp).
         auto across = co_await ctx.point("noktalar", "Karşı kenarın geçtiği nokta",
                                          PointOptions{.rubber_band   = true,
                                                       .rubber_origin = *second,
-                                                      .rubber_shape  = RubberShape::Ring});
+                                                      .rubber_shape  = RubberShape::EdgeRectangle,
+                                                      .rubber_chain  = {*first, *second}});
         if (!across) co_return;
 
         // THE THIRD POINT GIVES THE DEPTH, not a corner: it is projected onto
         // the edge's own normal, so a hand that is a few millimetres off still
-        // gets a rectangle rather than a parallelogram. `closest_point_on_line`
-        // is what says how far off the edge it is.
-        core::Point2 foot{};
-        double t = 0.0;
-        if (!core::closest_point_on_line(*first, *second, *across, foot, t)) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::InvalidArgument, "Kenar doğrultusu hesaplanamadı."));
-            co_return;
-        }
-        const core::Mm dx = across->x - foot.x;
-        const core::Mm dy = across->y - foot.y;
-        if (dx == 0 && dy == 0) {
+        // gets a rectangle rather than a parallelogram.
+        std::array<core::Point2, 4> four{};
+        if (!core::edge_rectangle_corners(*first, *second, *across, four)) {
             ctx.session().fail(
                 core::err(core::ErrorCode::InvalidArgument,
                           "Üçüncü nokta kenarın üzerinde; dikdörtgenin yüksekliği sıfır olamaz."));
             co_return;
         }
 
-        corners = {*first, *second, core::Point2{second->x + dx, second->y + dy},
-                   core::Point2{first->x + dx, first->y + dy}};
+        corners.assign(four.begin(), four.end());
         ctx.record("yontem", Value::text(how));
     } else {
         if (first->x == second->x || first->y == second->y) {

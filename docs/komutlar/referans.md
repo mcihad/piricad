@@ -234,6 +234,7 @@ Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da ken
 | `yaricap` | number | isteğe bağlı | ic/dis yönteminin yarıçapı (m) |
 | `kenar_uzunlugu` | number | isteğe bağlı | kenar yönteminin uzunluğu (m) |
 | `aci` | number | isteğe bağlı | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
+| `kose` | point_list | isteğe bağlı | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz |
 
 Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
 
@@ -4668,6 +4669,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "aci": {
           "type": "number",
           "description": "İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı)"
+        },
+        "kose": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
       },
       "required": [

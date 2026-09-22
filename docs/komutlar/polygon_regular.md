@@ -19,6 +19,23 @@ Merkez ve kenar sayısından düzgün bir çokgen çizer. Boyutu üç şekilde v
 okunur (varsayılan grad, kuzeyden saat yönünde). Verilmezse 0'dır, yani ilk köşe
 kuzeydedir.
 
+### Fareyle: boyu göstererek
+
+Komut satırından `yaricap=` yazarsanız sayı sizde demektir ve komut başka bir
+şey sormaz. Elinizde sayı yoksa **yerini gösterirsiniz**: merkezi tıkladıktan
+sonra çokgen fareyi izler, ikinci tıklama hem boyu hem dönüşü verir.
+
+| `yontem` | İkinci tıklama neyi gösterir | Kılavuz |
+|---|---|---|
+| `ic` | Bir **köşenin** geçtiği nokta — merkeze uzaklığı çevrel yarıçaptır | Çokgen, köşesi imlecin altında |
+| `dis` | Bir **kenarın** geçtiği nokta — merkeze uzaklığı iç yarıçaptır | Çokgen, kenarı imlecin altında |
+| `kenar` | Yalnız **yön** — uzunluk yazıyla verilir | Yazılan boyda çokgen, imlecin çevirdiği açıda |
+
+Kılavuz, çokgeni çizecek olan fonksiyonun kendisiyle çizilir
+(`core::regular_polygon_corners`), yani gördüğünüz şekil tıklayınca oluşacak
+şekildir. Gösterdiğiniz yerden türeyen yarıçap ve açı günlüğe `yaricap` ve `aci`
+olarak yazılır: aynı satır yeniden oynatıldığında aynı çokgeni verir.
+
 Köşeler `core::sin_cos_udeg`'den gelir ve dört ana eksende tam sayıdır: 0°'de
 bir kare köşelerini milimetrenin üstüne koyar, bir milimetre yanına değil (§7.3).
 
@@ -42,6 +59,13 @@ güzergâhtır ve o ad [POLİGON](traverse.md) komutuna aittir.
 ÇOKGEN <merkez> <kenar_sayisi> yontem=kenar kenar_uzunlugu=<m> [aci=<açı>]
 ```
 
+Boy verilmediğinde komut onun yerine bir nokta ister; o noktayı `kose=` ile
+yazıyla da verebilirsiniz:
+
+```text
+ÇOKGEN <merkez> <kenar_sayisi> kose=<nokta> [yontem=ic|dis]
+```
+
 ## Parametreler
 
 | Parametre | Tip | Adet | Açıklama |
@@ -52,6 +76,7 @@ güzergâhtır ve o ad [POLİGON](traverse.md) komutuna aittir.
 | `yaricap` | sayı | 0..1 | `ic`/`dis` yönteminin yarıçapı (m) |
 | `kenar_uzunlugu` | sayı | 0..1 | `kenar` yönteminin uzunluğu (m) |
 | `aci` | sayı | 0..1 | İlk köşenin doğrultusu; varsayılan 0 |
+| `kose` | nokta | 0..1 | Boyun ve yönün gösterildiği nokta; `yaricap` verilmişse sorulmaz |
 
 ## Örnekler
 
@@ -90,9 +115,22 @@ Ağzı 50 metre olan bir kare (dıştan) köşelerine 70,711 metre uzanır:
 ### Arayüz
 
 **Çizim > Düzgün Çokgen** menüsünden ya da araç kutusundaki **Dikdörtgen**
-düğmesini basılı tutup açılan karttan **Düzgün Çokgen**'i seçin. Merkezi
-tıklayın; komut kenar sayısını ve ardından yarıçapı (ya da `yontem=kenar`
-verdiyseniz kenar uzunluğunu) ister ve odak kendiliğinden komut satırına geçer.
+düğmesini basılı tutup (ya da köşesindeki işarete tıklayıp) açılan karttan
+**Düzgün Çokgen**'i seçin. Kartta ayrıca **Çokgen — dıştan** ve **Çokgen —
+kenardan** vardır; ikisi aynı komutu `yontem=dis` ve `yontem=kenar` ile başlatır.
+
+Sıra şöyledir:
+
+1. **Kenar sayısı** sorulur — düğmeye bastığınız anda, ekranda bakacak bir şey
+   yokken. Odak kendiliğinden komut satırına geçer; sayıyı yazıp **Enter**.
+2. **Merkez** sorulur; tuvale tıklayın.
+3. Bundan sonra **çokgen fareyi izler**. İkinci tıklama boyu ve dönüşü verir
+   (`yontem=kenar` ise önce kenar uzunluğu yazılır, sonra fare yalnız çevirir).
+
+Kenar sayısının komut satırında sorulması bilinçli: eskiden önce merkez
+isteniyordu, tıklamadan sonra ekranda hiçbir şey görünmüyordu ve soru altta tek
+satır metin olarak kalıyordu — kullanıcının "hiçbir şey olmuyor, kenar sayısını
+girecek yer yok" dediği hâl buydu.
 
 ### Betik
 
@@ -117,6 +155,7 @@ gövde çalışmadan önce denetlenir.
 |---|---|---|
 | `'core.polygon_regular': 'kenar_sayisi' parametresi 3 ile 1024 arasında olmalı` | Kenar sayısı aralık dışında | 3–1024 arası bir sayı verin |
 | `Yarıçap ya da kenar uzunluğu sıfır ya da eksi olamaz.` | Ölçü sıfır ya da eksi | Artı bir değer verin |
+| `Nokta merkezle aynı yerde; çokgenin boyu sıfır olamaz.` | Gösterilen nokta merkezin üstünde | Merkezden uzakta bir yer gösterin |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

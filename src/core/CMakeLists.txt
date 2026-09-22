@@ -29,6 +29,7 @@ add_library(kentos_core STATIC
     src/json.cpp
     src/layer.cpp
     src/pick.cpp
+    src/polygon.cpp
     src/settings.cpp
     src/snap.cpp
     src/spatial_index.cpp
