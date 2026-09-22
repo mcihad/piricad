@@ -188,6 +188,21 @@ Task<void> run_insert(Context& ctx)
     std::vector<std::string> defined;
     for (const core::BlockDef& d : ctx.document().blocks().all())
         defined.push_back(d.name);
+
+    // NOTHING TO PLACE IS SAID FIRST, not after a name is typed. With no block in
+    // the drawing this sat at "Yerleştirilecek bloğun adı" with an empty list of
+    // choices — a question with no possible answer — and the refusal that
+    // explained what a block IS came only after the user guessed a name. A user
+    // who has never defined one reads that prompt as a tool that does nothing,
+    // and said so — they could not tell what it was for.
+    if (defined.empty()) {
+        ctx.echo("Bu çizimde tanımlı blok yok, yerleştirilecek bir şey de yok. Blok, bir kez "
+                 "çizilip çok kez yerleştirilen bir semboldür (rögar kapağı, direk, ağaç): önce "
+                 "nesneleri seçip BLOK ad=<isim> ile tanımlayın, sonra BLOKEKLE onları istediğiniz "
+                 "her yere koyar.");
+        co_return;
+    }
+
     auto name = co_await ctx.text("ad", "Yerleştirilecek bloğun adı", defined);
     if (!name || name->empty()) co_return;
     const core::BlockId block = ctx.document().blocks().find(*name);

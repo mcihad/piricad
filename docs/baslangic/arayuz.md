@@ -356,6 +356,7 @@ işaretten sonra kesişim, tek bir izi yener. Ayrıntısı
 | **Shift** (basılı) | Bir komut nokta beklerken yüzey normalini **tuttuğunuz sürece** açar |
 | **Ctrl** (basılı) | Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
+| **Del** ya da **⌫** | Seçili nesneleri siler (`SİL`). Mac klavyesinde ⌦ tuşu çoğu zaman yoktur; ⌫ (Backspace) da siler |
 | **Shift + sağ tık** | Bir komut nokta beklerken imleçteki noktayı **izleme için işaretler** ([`İZ`](../komutlar/tracking.md)) |
 
 #### Hangi modlar açık

@@ -195,6 +195,7 @@ Controller::~Controller()
         jobThread_ = nullptr;
     }
     session_.reset();
+    armedLine_.clear();
     journal_.close_sink();
 }
 
@@ -404,6 +405,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                 }
                 auto done = bus_.finish(*session_);
                 session_.reset();
+                armedLine_.clear();
                 if (!done) {
                     emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
                 } else if (!done.value().message.empty()) {
@@ -526,7 +528,8 @@ void Controller::beginInteractive(const QString& line, command::Origin origin)
         return;
     }
 
-    session_ = std::move(started.value());
+    session_   = std::move(started.value());
+    armedLine_ = line.trimmed();
     settleSession();
 }
 
@@ -557,6 +560,7 @@ void Controller::settleSession()
         const bool asked = asked_;
         asked_           = false;
         session_.reset();
+        armedLine_.clear();
         emit promptChanged(QString());
         emit interactiveFinished(id, mutated, !asked);
     } else if (session_->waiting()) {
@@ -660,6 +664,7 @@ void Controller::cancelInteractive()
     const bool dismissed = !finishing_ || !asked_;
     asked_               = false;
     session_.reset();
+    armedLine_.clear();
     emit promptChanged(QString());
     emit interactiveFinished(id, mutated, dismissed);
     settle();

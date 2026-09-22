@@ -673,6 +673,37 @@ Plan belgesinin her satırı TODOS'a karşı okundu; TODOS'a hiç girmemiş üç
 - [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
   `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
 
+## Gerçek kullanım raporu — Mac, gerçek fare (2026-09-22)
+
+Kullanıcının kendi Mac'inde derleyip çizerken bildirdiği altı şikâyet. Her biri önce
+`KENTOS_REALMOUSE_PROBE` ile gerçek pencerede kırmızı üretildi, sonra düzeltildi; probe artık
+yedi bölümle bunları sürekli tutuyor.
+
+- [x] **"Yeni çizim öğeleri seçilince menüde seçili kalmıyor / seçim bırakılıyor."** Kök neden
+  `syncToolSelection`: yöntem araçlarının düğmesi `YAY yontem=3n` gibi TAM SATIR taşıyor, senkron
+  bu satırı komut adı diye `Registry`'de arıyor, bulamıyor, hiçbir düğmeyi yakmıyordu. `Controller`
+  kurduğu satırı `armedLine()` olarak tutuyor; eşleşme önce tam satır, sonra ilk sözcük. Işık ilk
+  tıklamadan sonra da duruyor.
+- [x] **"Çizerken kılavuz çizgileri gözükmüyor."** Aynı kök: yanmayan araçta lastik bant da
+  kuruluyordu ama kullanıcı aracın düştüğünü sanıp bırakıyordu. Probe yöntem aracında ilk
+  tıklamadan sonra kılavuzun (`buildTracking` + lastik bant) var olduğunu doğruluyor.
+- [x] **"Alan ölçme çalışmıyor."** Probe alanın İÇİNE tıklıyor (`ring_contains`), `alan: 200,00 m²
+  çevre: 60,000 m` cevabını alıyor. Komut doğru; kullanıcının derlemesi dökümün en alta kaymadığı
+  önceki sürümdü. Bu sürümde döküm yeni satırı izliyor.
+- [x] **"Blok ekle ne işe yarıyor bilmiyorum."** `BLOKEKLE` çizimde tanımlı blok yokken önden
+  açıklıyor: ne olduğu, nasıl tanımlanır (`BLOK ad=`), sonra ne yapar. Boş seçici açılmıyor.
+- [x] **"Sahnedeki objeleri Mac'te nasıl sileceğimi anlamadım."** `SİL` = **Del** ya da **⌫**;
+  komut satırı odaktayken ⌫ karakter siler, nesne silmez (probe iki hâli de sınıyor). Araç ipucu
+  ve `arayuz.md` tablosu yazıyor.
+- [x] **"Çoklu çizgi aracı ile çizgi aracı aynı."** Fark üç yerde: iki ipucu, `ÇİZGİ`'nin bitiş
+  satırı ("2 çizgi çizildi, her biri ayrı nesne (tek nesne için ÇOKLUÇİZGİ)"), `line.md`'de
+  karşılaştırma tablosu.
+- [x] **Kart probe'u** (`tool-flyouts` ctest) "çalıştı"yı üç hâlle tanımlıyor: bekleyen oturum,
+  yanan düğme ya da dökümde cevap. `BLOKEKLE`'nin reddi üçüncüsü.
+- [ ] **İşletim sistemi düzeyinde tıklama** (`osascript` System Events) ile aynı probe: Qt'nin
+  sentezlediği olaylar ile Cocoa'nın gerçek olayları arasında bir fark varsa yalnız orada görünür.
+  `cliclick` kurulu değil; System Events ile denenecek.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

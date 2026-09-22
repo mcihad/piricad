@@ -6,6 +6,42 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — araç kutusu gerçek kullanımda: ışık, kılavuz, alan, blok, silme
+
+Mac'te gerçek fareyle çalışan bir kullanıcının raporu: "yeni çizim öğeleri
+seçilince menüde seçili kalmıyor, çizerken kılavuz çizgileri gözükmüyor, alan
+ölçme çalışmıyor, blok ekle anlamsız, nesneleri nasıl sileceğimi anlamadım,
+çoklu çizgi ile çizgi aynı." Beşi de `KENTOS_REALMOUSE_PROBE` ile gerçek
+pencerede kırmızı olarak yeniden üretildi, sonra yeşile döndü.
+
+- **Yöntem araçları düğmesini yakmıyordu.** `YAY yontem=3n` gibi bir üye
+  seçilince `syncToolSelection` düğmenin taşıdığı **tam satırı** komut adı
+  diye çözmeye kalkıyor, bulamıyor ve hiçbir düğmeyi yakmıyordu; kullanıcı
+  bunu "seçim bırakılıyor" diye görüyordu. `Controller` artık kurduğu satırı
+  (`armedLine()`) tutuyor; eşleşme önce tam satıra, sonra ilk sözcüğe bakıyor.
+  Işık ilk tıklamadan sonra da kalıyor ve lastik bant/kılavuz o araçta da
+  çiziliyor.
+- **`BLOKEKLE` çizimde blok yokken açıklıyor.** Eskiden boş bir seçici
+  açılıyor ve ne istendiği anlaşılmıyordu. Şimdi önden söylüyor: blok bir kez
+  çizilip çok kez yerleştirilen bir semboldür (rögar, direk, ağaç); önce
+  nesneleri seçip `BLOK ad=<isim>` ile tanımlayın, `BLOKEKLE` onları
+  yerleştirir.
+- **Mac'te silme.** `SİL` artık **Del**'in yanında **⌫ (Backspace)** ile de
+  çalışıyor — Mac klavyelerinin çoğunda Del tuşu yok. Komut satırına yazarken
+  ⌫ karakter siler, nesne değil. `arayuz.md` tablosuna satır eklendi.
+- **`ÇİZGİ` ile `ÇOKLUÇİZGİ` arasındaki fark** artık üç yerde söyleniyor:
+  iki düğmenin ipucunda, `ÇİZGİ`'nin bitiş satırında ("2 çizgi çizildi, her
+  biri ayrı nesne (tek nesne için ÇOKLUÇİZGİ)") ve `line.md`'deki karşılaştırma
+  tablosunda. Üç tıklama iki komutta aynı görüntüyü verir; fark nesne
+  sayısındadır ve bir parçaya tıklayınca ne seçildiğinde.
+- **`ALANÖLÇ` fareyle** — probe bir alanın içine tıklayarak `alan: 200,00 m²
+  çevre: 60,000 m` cevabını aldı; ölçüm çalışıyor, önceki sürüm cevabı
+  dökümde en alta yazıyor ve döküm oraya kaymıyordu (bir önceki değişiklikte
+  düzeltildi). Sorun kullanıcının elindeki eski derlemeydi.
+- **Kart probe'unun "çalıştı" ölçütü** artık üç hâli sayıyor: soru bekleyen
+  oturum, yanan düğme, **ya da dökümde bir cevap**. `BLOKEKLE`'nin önden reddi
+  bu üçüncüsü; eski ölçüt onu "kart bir şey yapmadı" diye okuyordu.
+
 ### Düzeltildi — sadeleştirme elle yazılmıştı, artık Clipper2'nin
 
 Planın adını verdiği 237 tanımlayıcı ağaçta tek tek arandı; 225'i vardı ve

@@ -49,7 +49,20 @@ Task<void> run(Context& ctx)
 
     // Record the run exactly as it happened, so replaying the journal from any
     // client reproduces it vertex for vertex (kentoscad.md §2.2).
-    if (drawn.size() >= 2) ctx.record("noktalar", Value::points(std::move(drawn)));
+    if (drawn.size() < 2) co_return; // ESC after the first point: nothing drawn
+    const std::size_t segments = drawn.size() - 1;
+    ctx.record("noktalar", Value::points(std::move(drawn)));
+
+    // SAY WHAT WAS MADE, because the one thing that separates this tool from
+    // ÇOKLUÇİZGİ is invisible on the canvas: three clicks give two objects here
+    // and one object there, and the two drawings look identical until the user
+    // tries to select the run and gets a piece of it. Naming the other tool at
+    // the moment the difference is born is the cheapest place to teach it.
+    if (segments == 1)
+        ctx.echo("1 çizgi çizildi.");
+    else
+        ctx.echo(std::to_string(segments) +
+                 " çizgi çizildi, her biri ayrı nesne (tek nesne için ÇOKLUÇİZGİ).");
 }
 
 } // namespace

@@ -81,6 +81,10 @@ public:
     runLineResult(const QString& line, command::Origin origin = command::Origin::CommandLine);
     void runCommand(const QString& line); ///< toolbar / menu — same road as a script
 
+    /// The line that armed the running session, or empty. Read by
+    /// `MainWindow::syncToolSelection` to light the exact button pressed.
+    const QString& armedLine() const noexcept { return armedLine_; }
+
     /// Dispatches a fully built invocation. This is `Bus::dispatch`, the same
     /// overload the JSON runner and the AI use (`.claude/command.md` R2): the
     /// canvas needs it because a rubber-band box carries `Point2` values that must
@@ -351,6 +355,10 @@ private:
 #endif
 
     std::unique_ptr<command::Session> session_;
+    /// The exact line the running session was started with (`YAY yontem=3n`),
+    /// empty when nothing is armed. The tool column lights the button whose line
+    /// this is: five buttons send `core.arc_draw`, and only the line says which.
+    QString armedLine_;
 
     /// The worker running `session_`'s job, or null. Owned through Qt parenting;
     /// waited on before the session goes.

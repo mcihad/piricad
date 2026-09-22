@@ -11,6 +11,25 @@ iki segment, dört nokta verirseniz üç segment oluşur.
 Her segment ayrı bir nesnedir — tek tek silinebilir, tek tek seçilebilir. Ama komutun
 tamamı **tek bir geri alma adımıdır**.
 
+### `ÇOKLUÇİZGİ` ile farkı
+
+Üç tıklama iki komutta da aynı görüntüyü verir; fark tuvalde değil, nesne sayısındadır.
+Komut bittiğinde yazdığı satır bunu söyler: `2 çizgi çizildi, her biri ayrı nesne (tek nesne
+için ÇOKLUÇİZGİ).`
+
+| | `ÇİZGİ` | [`ÇOKLUÇİZGİ`](polyline.md) |
+|---|---|---|
+| Üç tıklama sonucu | **2 nesne** — iki ayrı doğru parçası | **1 nesne** — iki köşeli tek çizgi |
+| Bir parçaya tıklayınca | Yalnız o parça seçilir | Bütün hat seçilir |
+| Tek parçayı silmek | `SİL` ile doğrudan | `KIR` ya da `BÖL` gerekir |
+| Bir hat olarak taşımak, stil vermek | Önce hepsini seçmek gerekir | Bir tıkla |
+| Dışa aktarmada | Her parça ayrı bir LineString | Tek çok köşeli LineString |
+| Geri alma | Komutun tamamı tek adım | Komutun tamamı tek adım |
+| Ne zaman | Birbiriyle ilgisiz doğrular: kesit çizgileri, yardımcı çizgiler, aplikasyon eksenleri | Bir hat: yol kenarı, dere, imar hattı, bina cephesi |
+
+Bir hattı `ÇİZGİ` ile çizmişseniz [`UÇUCA`](join.md) parçaları tek çoklu çizgiye birleştirir;
+tersi için [`PATLAT`](explode.md) çoklu çizgiyi parçalarına ayırır.
+
 Çizgiler aktif katmana çizilir. Aktif katmanı durum çubuğunun sağında görür, `KATMAN`
 komutuyla değiştirirsiniz.
 

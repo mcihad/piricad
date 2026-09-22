@@ -769,7 +769,8 @@ void MainWindow::buildActions()
 
     actLine_ = new QAction(tr("Çizgi"), this);
     actLine_->setCheckable(true);
-    actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
+    actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer; her parça AYRI nesne, tek tek "
+                            "seçilir (bütünü tek nesne için ÇOKLUÇİZGİ)  ·  kısaltma: Ç, L"));
     actLine_->setData(static_cast<int>(Glyph::Line));
     actLine_->setProperty(kToolCommand, QStringLiteral("ÇİZGİ"));
     actLine_->setProperty(kToolRepeats, true); // the archetypal repeating draw tool
@@ -828,7 +829,8 @@ void MainWindow::buildActions()
     drawingTools_->addAction(actRegular_);
 
     actPolyline_ = drawTool(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"),
-                            tr("ÇOKLUÇİZGİ — çok köşeli TEK çizgi nesnesi  ·  kısaltma: ÇÇ"));
+                            tr("ÇOKLUÇİZGİ — çok köşeli TEK çizgi nesnesi; bir tıkla bütünü "
+                               "seçilir (parçaları ayrı nesne için ÇİZGİ)  ·  kısaltma: ÇÇ"));
     drawingTools_->addAction(actPolyline_);
     actArc_ = drawTool(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"),
                        tr("YAY — merkez ve iki uçtan yay çizer; süpürme saat yönünün "
@@ -910,14 +912,22 @@ void MainWindow::buildActions()
 
     // ---- düzenleme ----
     actErase_ = new QAction(tr("Sil"), this);
-    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler  ·  Del"));
+    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler  ·  Del / ⌫"));
     actErase_->setData(static_cast<int>(Glyph::Erase));
 
     // Del, the key every drawing program deletes with. A WINDOW shortcut rather
     // than one the canvas handles, so it works with the focus in the layer list
     // or the attribute table too — the selection is the same selection whichever
     // panel the user is looking at.
-    actErase_->setShortcut(QKeySequence::Delete);
+    // BOTH DELETE KEYS, because a Mac keyboard has only one of them.
+    // `QKeySequence::Delete` is ⌦ (forward delete), which on a Mac laptop is
+    // fn+⌫ and on most Mac keyboards does not exist as a key at all; the key a
+    // Mac user presses to delete is ⌫ (backspace). Bound only to the first, SİL
+    // was unreachable from the keyboard on a Mac, and the user said as much: they
+    // could not work out how to delete anything. A text field that has focus
+    // consumes ⌫ before the
+    // shortcut sees it, so typing in the command line is unaffected.
+    actErase_->setShortcuts({QKeySequence(QKeySequence::Delete), QKeySequence(Qt::Key_Backspace)});
     actErase_->setShortcutContext(Qt::WindowShortcut);
     addAction(actErase_);
 
@@ -3675,7 +3685,7 @@ int MainWindow::probeRealMouse()
     QToolButton* lineButton = nullptr;
     for (QToolButton* button : toolBox_->buttons())
         if (QAction* face = button->defaultAction();
-            face != nullptr && face->property(kToolCommand).toString() == QLatin1String("ÇİZGİ"))
+            face != nullptr && face->property(kToolCommand).toString() == QStringLiteral("ÇİZGİ"))
             lineButton = button;
     // The face follows the last member used, so ask for the family by membership.
     if (lineButton == nullptr)
@@ -3767,6 +3777,17 @@ int MainWindow::probeRealMouse()
         }
         (void)picture.save(into + QStringLiteral("/cizgi-kilavuz.png"));
     }
+    /// The same composite — window plus the live canvas — under another name,
+    /// for the pictures the later sections leave behind.
+    const auto shoot = [this, shooting, &into](const char* name) {
+        if (!shooting) return;
+        QImage picture = grab().toImage();
+        if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
+            QPainter painter(&picture);
+            painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
+        }
+        (void)picture.save(into + QLatin1Char('/') + QLatin1String(name) + QStringLiteral(".png"));
+    };
 
     onCanvas(QEvent::MouseButtonPress, second, Qt::LeftButton);
     onCanvas(QEvent::MouseButtonRelease, second, Qt::LeftButton);
@@ -3777,6 +3798,194 @@ int MainWindow::probeRealMouse()
     check(controller_->document().live_entity_count() > 0,
           QStringLiteral("fareyle çizilen çizgi belgeye girdi (%1 nesne)")
               .arg(controller_->document().live_entity_count()));
+
+    // ---- 4. A METHOD TOOL, PRESSED: it must LIGHT and it must GUIDE ------------
+    //
+    // The user's report: a newly chosen draw tool does not stay highlighted in
+    // the column, and no live guide follows the mouse while drawing with it. A
+    // method tool carries a whole line (`YAY yontem=3n`); the
+    // column has to light THAT button while it runs — not the plain YAY, and not
+    // the select arrow — and the canvas has to draw the guide from the first
+    // point exactly as it does for a bare YAY.
+    {
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+
+        QAction* method = nullptr;
+        for (QAction* action : drawingTools_->actions())
+            if (action->property(kToolCommand).toString() == QLatin1String("YAY yontem=3n"))
+                method = action;
+        check(method != nullptr, QStringLiteral("YAY yontem=3n aracı kolonda var"));
+        if (method != nullptr) {
+            method->trigger();
+            QCoreApplication::processEvents();
+
+            const command::Session* live = controller_->session();
+            check(live != nullptr && live->waiting(),
+                  QStringLiteral("yöntem aracı komutu kolladı"));
+            QAction* lit = drawingTools_->checkedAction();
+            check(lit == method, QStringLiteral("yanan düğme yöntem aracının kendisi (yanan: %1)")
+                                     .arg(lit == nullptr ? QStringLiteral("hiç")
+                                                         : lit->property(kToolCommand).toString()));
+
+            // FIRST POINT BY MOUSE, then the guide has to follow to the second.
+            onCanvas(QEvent::MouseMove, first, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, first, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, first, Qt::LeftButton);
+            live = controller_->session();
+            check(live != nullptr && live->waiting() && live->prompt().has_rubber_band,
+                  QStringLiteral("yöntem aracı ikinci nokta için kılavuz istiyor"));
+            // AND IT IS STILL LIT after the click — a click that dropped the
+            // highlight is the "selection gets dropped" the user described.
+            check(drawingTools_->checkedAction() == method,
+                  QStringLiteral("ilk tıklamadan sonra düğme hâlâ yanıyor"));
+            onCanvas(QEvent::MouseMove, second, Qt::NoButton);
+            if (!canvas_->grabCanvas().isNull())
+                check(canvas_->guideVertexCountForProbe() > 0,
+                      QStringLiteral("yöntem aracının kılavuzu fareyi izliyor"));
+            shoot("yontem-araci-yaniyor");
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+        }
+    }
+
+    // ---- 5. ALANÖLÇ FROM THE TOOL COLUMN, BY MOUSE ---------------------------
+    //
+    // "area measurement does not work", the user said. The tool is a
+    // `modifyTool`: press it, click the
+    // parcel, right-click. The answer has to land in the transcript.
+    {
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        runScriptLine(QStringLiteral("ALAN 0,0 20,0 20,10 0,10"));
+        endCommand();
+        runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        QCoreApplication::processEvents();
+
+        QAction* measure = nullptr;
+        for (QAction* action : drawingTools_->actions())
+            if (action->property(kToolCommand).toString() == QStringLiteral("ALANÖLÇ"))
+                measure = action;
+        check(measure != nullptr, QStringLiteral("ALANÖLÇ aracı kolonda var"));
+        if (measure != nullptr) {
+            const QString before = transcript_->toPlainText();
+            measure->trigger();
+            QCoreApplication::processEvents();
+            const command::Session* live = controller_->session();
+            check(live != nullptr && live->waiting(), QStringLiteral("ALANÖLÇ nesne bekliyor"));
+            check(drawingTools_->checkedAction() == measure,
+                  QStringLiteral("ALANÖLÇ düğmesi yanıyor"));
+
+            // CLICK INSIDE THE PARCEL — the way a hand points at an area — then the
+            // right button says "those, go". A user does not aim at an edge to
+            // mean a face.
+            const core::Point2 on_edge{10'000, 5'000};
+            const render::ScreenPoint px = canvas_->view().to_screen(on_edge);
+            const QPointF edge(px.x, px.y);
+            onCanvas(QEvent::MouseMove, edge, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, edge, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, edge, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonPress, edge, Qt::RightButton);
+            onCanvas(QEvent::MouseButtonRelease, edge, Qt::RightButton);
+            QCoreApplication::processEvents();
+
+            const QString after_text = transcript_->toPlainText().mid(before.size());
+            check(after_text.contains(QStringLiteral("alan")),
+                  QStringLiteral("ALANÖLÇ fareyle cevap verdi: %1")
+                      .arg(after_text.trimmed().right(80)));
+            shoot("alanolc-cevap");
+        }
+    }
+
+    // ---- 6. BLOKEKLE WITH NO BLOCKS ----------------------------------------
+    //
+    // The user could not tell what Blok Ekle was for and called it pointless.
+    // With no block defined, pressing it must SAY what a block is and what to do
+    // first — not
+    // sit at a blank name prompt.
+    {
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+        const QString before = transcript_->toPlainText();
+        runScriptLine(QStringLiteral("BLOKEKLE"));
+        QCoreApplication::processEvents();
+        const command::Session* live = controller_->session();
+        const QString said           = transcript_->toPlainText().mid(before.size());
+        check(!(live != nullptr && live->waiting()),
+              QStringLiteral("blok yokken BLOKEKLE boş bir isim istemiyle beklemiyor"));
+        check(said.contains(QStringLiteral("BLOK")),
+              QStringLiteral("blok yokken ne yapılacağı söyleniyor: %1").arg(said.trimmed()));
+        shoot("blokekle-aciklama");
+        controller_->cancelInteractive();
+    }
+
+    // ---- 7. ⌫ DELETES ON A MAC, AND DOES NOT WHILE TYPING -------------------
+    //
+    // The user, on a Mac, could not work out how to delete objects at all. A Mac
+    // keyboard has ⌫ and, on most models, no ⌦; SİL was bound to ⌦ alone. The key
+    // goes to the CANVAS here, the way a hand's does after clicking a parcel —
+    // and then to the command line, where it must edit text and delete nothing.
+    {
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 0,30 20,30"));
+        endCommand();
+        runScriptLine(QStringLiteral("SEÇ SON"));
+        QCoreApplication::processEvents();
+        const std::size_t before = controller_->document().live_entity_count();
+        check(controller_->bus().selection().size() == 1, QStringLiteral("silinecek nesne seçili"));
+
+        canvas_->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        // ASSERTED ONLY WHERE A WINDOW CAN BE ACTIVE. A `WindowShortcut` is
+        // matched against the ACTIVE window, and the offscreen platform never
+        // activates one — so there the key reaches the canvas and no shortcut
+        // fires, which is the platform's absence rather than the binding's. Run
+        // with a real window and this is the check that matters; the binding
+        // itself is asserted below on both.
+        if (isActiveWindow()) {
+            QKeyEvent press(QEvent::KeyPress, Qt::Key_Backspace, Qt::NoModifier);
+            QKeyEvent release(QEvent::KeyRelease, Qt::Key_Backspace, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas_, &press);
+            QCoreApplication::sendEvent(canvas_, &release);
+            QCoreApplication::processEvents();
+            check(controller_->document().live_entity_count() == before - 1,
+                  QStringLiteral("⌫ tuvalde seçili nesneyi sildi (%1 → %2)")
+                      .arg(before)
+                      .arg(controller_->document().live_entity_count()));
+        } else {
+            (void)std::fprintf(stdout, "[fare] BEKLEMEDE: etkin pencere yok (offscreen); ⌫'nin "
+                                       "sildiği ancak gerçek pencerede sınanır\n");
+        }
+        check(actErase_->shortcuts().contains(QKeySequence(Qt::Key_Backspace)),
+              QStringLiteral("SİL, ⌫ tuşuna bağlı"));
+        check(actErase_->shortcuts().contains(QKeySequence(QKeySequence::Delete)),
+              QStringLiteral("SİL, Del tuşuna da bağlı"));
+
+        // AND NOT WHILE TYPING. Focus in the command line, a character and a ⌫:
+        // the character goes, the drawing stays.
+        runScriptLine(QStringLiteral("SEÇ SON"));
+        QCoreApplication::processEvents();
+        const std::size_t still = controller_->document().live_entity_count();
+        commandLine_->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        // NO FOCUS WIDGET WITHOUT AN ACTIVE WINDOW, which is the offscreen case:
+        // sending a key to a null receiver is a crash, not a test. Where there is
+        // one, a character and a ⌫ go in and the drawing must be untouched.
+        if (QWidget* typing = QApplication::focusWidget(); typing != nullptr) {
+            QKeyEvent letter(QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, QStringLiteral("x"));
+            QCoreApplication::sendEvent(typing, &letter);
+            QKeyEvent back(QEvent::KeyPress, Qt::Key_Backspace, Qt::NoModifier);
+            QCoreApplication::sendEvent(typing, &back);
+            QCoreApplication::processEvents();
+            check(controller_->document().live_entity_count() == still,
+                  QStringLiteral("komut satırında ⌫ yazıyı düzeltir, nesne silmez"));
+        } else {
+            (void)std::fprintf(stdout, "[fare] BEKLEMEDE: odak alan widget yok (offscreen); komut "
+                                       "satırındaki ⌫ ancak gerçek pencerede sınanır\n");
+        }
+        canvas_->setFocus(Qt::OtherFocusReason);
+    }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
@@ -3916,6 +4125,7 @@ int MainWindow::probeFlyouts()
                       QStringLiteral("%1: %2. üye için kart açılmadı").arg(label).arg(i + 1));
                 break;
             }
+            const qsizetype transcript_before = transcript_->toPlainText().size();
             choose(live, i);
             ++members;
 
@@ -3925,12 +4135,16 @@ int MainWindow::probeFlyouts()
                 armed == nullptr ? QString() : armed->property(kToolCommand).toString();
             // WHAT "IT RAN" MEANS. A modal draw tool suspends on its first
             // question and the session is waiting; one that works on the
-            // selection finishes on the spot and lights its button. Either is
-            // the tool having run; neither happening is the card doing nothing.
+            // selection finishes on the spot and lights its button; and one
+            // that has nothing to work on — BLOKEKLE in a drawing with no
+            // block — declines out loud, which puts a line in the transcript.
+            // Any of the three is the tool having run; none of them happening
+            // is the card doing nothing.
             const command::Session* running = controller_->session();
+            const bool answered             = transcript_->toPlainText().size() > transcript_before;
             const bool started =
                 (running != nullptr && (running->waiting() || running->working())) ||
-                (armed != nullptr && armed->isChecked());
+                (armed != nullptr && armed->isChecked()) || answered;
             check(!word.isEmpty() && started,
                   QStringLiteral("%1 > %2. üye (%3) çalıştı").arg(label).arg(i + 1).arg(word));
         }
@@ -4663,17 +4877,35 @@ void MainWindow::syncToolSelection()
 
     QAction* lit = nullptr;
     if (running) {
-        for (QAction* action : drawingTools_->actions()) {
-            const QVariant carried = action->property(kToolCommand);
-            if (!carried.isValid()) continue;
+        // THE LINE THAT ARMED IT FIRST. Five buttons send `core.arc_draw` — YAY
+        // and its four methods — so the command id alone cannot say which one the
+        // hand pressed, and matching the first id lit the plain YAY while "Yay —
+        // üç nokta" ran. The controller remembers the exact line a button sent,
+        // and a button whose whole line is that line is the one that is running.
+        const QString armed = controller_->armedLine();
+        if (!armed.isEmpty())
+            for (QAction* action : drawingTools_->actions())
+                if (action->property(kToolCommand).toString() == armed) {
+                    lit = action;
+                    break;
+                }
 
-            const command::CommandSpec* spec =
-                controller_->registry().resolve(carried.toString().toStdString());
-            if (spec && spec->id == running->id) {
-                lit = action;
-                break;
+        // THEN THE COMMAND, by its FIRST WORD. A button's property may be a whole
+        // line (`YAY yontem=3n`); resolving all of it as a name found nothing, so
+        // no method tool ever lit and the select arrow lit instead — which, from
+        // the chair, is a tool that gets selected and then dropped.
+        if (lit == nullptr)
+            for (QAction* action : drawingTools_->actions()) {
+                const QVariant carried = action->property(kToolCommand);
+                if (!carried.isValid()) continue;
+                const QString word = carried.toString().section(QLatin1Char(' '), 0, 0);
+                const command::CommandSpec* spec =
+                    controller_->registry().resolve(word.toStdString());
+                if (spec && spec->id == running->id) {
+                    lit = action;
+                    break;
+                }
             }
-        }
     }
 
     // Nothing drawing — or a command no tool button sends, such as one typed at
