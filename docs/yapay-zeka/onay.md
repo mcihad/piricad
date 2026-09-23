@@ -18,8 +18,10 @@ Her yapay zeka turu aynı sırayı izler. Hiçbir adım atlanmaz, hiçbiri yer d
 3. **Doğrulama** — katı şema: tanınmayan araç, tanımlı olmayan parametre, bozuk argüman
    doğrudan reddedilir.
 4. **Önizleme** — dizi bir öneri olur, komut satırlarıyla birlikte görünür.
-5. **Açık onay** — insan uygular ya da reddeder.
-6. **Tek işlem** — onaylanan dizi tek bir toplu işte uygulanır.
+5. **Karar** — bilgisayar başındaki kişi kartta uygular ya da reddeder; ya da o kişinin
+   **önceden seçtiği onay politikası** izin veriyorsa öneri hemen uygulanır
+   ([aşağıda](#onay-politikası-ayarı-ve-otomatik)).
+6. **Tek işlem** — uygulanan dizi tek bir toplu işte uygulanır.
 7. **Denetim kaydı** — karar, hangisi olursa, dosyaya yazılır.
 
 Bir dış ajan için de aynı sıra geçerlidir; tek fark, ilk üç adımın ajanın kendi
@@ -130,15 +132,19 @@ yazılır. Programın yaptığı en ilginç ret, iz bırakmadan geçmez.
 
 ## Öneri kartı: kararın verildiği yer
 
-Bir öneri açıldığında kart, onu açan cevabın altında görünür
-([Yapay Zeka paneli](sohbet.md)). Kesik çizgili bir kenarı ve **ÖNERİ** rozeti vardır;
-şunları gösterir:
+Sohbetteki modelin açtığı bir önerinin kartı, onu açan cevabın altında görünür
+([Yapay Zeka paneli](sohbet.md)). Bir **MCP istemcisinin** açtığı öneri de aynı panelde,
+istemcinin adını söyleyen bir bildirimle ve aynı kartla görünür; panel kapalıysa açılır
+ve kartın düğmelerine kaydırılır. Kartın kesik çizgili bir kenarı ve **ÖNERİ** rozeti
+vardır; şunları gösterir:
 
 | Kartta ne var | Ne söyler |
 |---|---|
 | Başlık | `Öneri p0f3a1c7b9e4d2856 · 2 adım` ve önerinin durumu |
 | Komut satırları | Uygulanacak satırların **tamamı**, sizin de yazabileceğiniz hâlleriyle |
 | `Koordinat kaynağı` | Adımlardaki konumların hangi tutamaklardan geldiği; göreli noktalarda tutamak ve ölçü (kayıtta `konum_kaynagi`) |
+| `Varsayımlar` | İstemcinin öneriyi hazırlarken yaptığını bildirdiği varsayımlar, kendi sözleriyle (kayıtta `varsayimlar`) |
+| `Onay bekliyor` | Onay politikanızın bu öneriyi neden size bıraktığı, ör. `Her değişiklikte onay isteniyor.` |
 | `İsteyen` | İstemcinin adı, varsa modelin kimliği |
 | Uyarı şeridi | Çizim öneriden sonra değiştiyse: `Öneri 12 numaralı sürüme göre hazırlandı, çizim şimdi 14.` |
 | **Reddet** / **Uygula** | Kararın kendisi. `Uygula` karttaki tek birincil düğmedir |
@@ -147,9 +153,11 @@ Uyarı şeridi göründüğünde adımlar, hazırlandıkları çizimden **başka
 uygulanacak demektir: içlerindeki nesne anahtarları hâlâ geçerli olabilir ama artık
 başka bir şeyi gösteriyor olabilir. Uygulamadan önce satırları gözden geçirin.
 
-Kart, programda bir insan kararının girebildiği **tek yerdir**: onay nesnesini
-üretebilen tek çağıran odur ve bunu bir CI kapısı denetler. Bir öneri artık defterde
-yoksa kart bunu söyler ve düğmeleri kapatır.
+Onay nesnesini üretebilen **iki** çağıran vardır ve üçüncüsü bir CI kapısıyla engellenir:
+kart — bir kişinin kararı — ve onay politikası yolu — aynı kişinin önceden, kendisi için
+verdiği karar. Onay politikanız bir öneriyi uyguladıysa kart bunu söyler:
+`Öneri onay politikanızla uygulandı — tek Ctrl+Z ile geri alınır.` Bir öneri artık
+defterde yoksa kart bunu söyler ve düğmeleri kapatır.
 
 ## Kararı kim verdi: `core.ai.sorumlu`
 
@@ -222,22 +230,22 @@ Her satır bir JSON nesnesidir ve her karar alındığı anda **diske yazılıp 
 | `kayit` | Kaydın kimliği: `d` ve on altı onaltılık hane |
 | `oneri` | Kararın verildiği önerinin kimliği |
 | `zaman_utc_ms` | Kararın zamanı, UTC |
-| `karar` | `uygula`, `reddet`, `geri_cek` ya da `koordinat_reddi` |
+| `karar` | `uygula`, `reddet` ya da `koordinat_reddi` |
 | `kullanici` | Bilgisayar başındaki kişi: kararı veren. `core.ai.sorumlu` ayarından gelir |
-| `karar_veren` | Kararı **ne** verdi: bugün her zaman `insan` |
+| `karar_veren` | Kararı **ne** verdi: kartta tıklayan kişi için `insan`, onay politikası için `politika:otomatik` ya da `politika:riskli_islemlerde` |
 | `onay_politikasi` | Karar anında yürürlükte olan onay politikası |
 | `isteyen` | İsteyen istemcinin adı ve belirtecinin **parmak izi** |
 | `model` | Modelin kimliği ve sürümü; düz bir MCP istemcisinde boş kalır |
 | `uc_nokta` | Sağlayıcı ve uç nokta, ya da istemcinin bildirdiği ad |
 | `istem` | Ne istendiği, istemcinin kendi ifadesiyle |
 | `komutlar` | Komut satırları, çalışacakları hâliyle |
+| `varsayimlar` | İstemcinin bildirdiği varsayımlar; yoksa alan yazılmaz |
 | `sonuc` | Uygulandığında ne olduğu ya da neden uygulanmadığı |
 | `olusan_nesneler` | Onaylanan önerinin oluşturduğu **kalıcı nesne anahtarları** |
 
-`karar_veren` bugün **her satırda** `insan` yazar, çünkü bu sürümde kararı yalnız bir
-insan verebilir. Yine de yazılıyor: hiçbir şey söylemeyen bir kayıt, kuralın değiştiği
-günden sonra yazılmış bir kayıttan **ayırt edilemez** — ve "otomatik işlem insan
-tıklaması gibi yazılmasın" o zaman geriye dönük olarak denetlenemez olurdu.
+`karar_veren` kararı kimin verdiğini **her satırda açıkça** yazar: kartta tıklayan bir
+kişi `insan`, onay politikanız `politika:<değer>`. Otomatik bir uygulama hiçbir zaman bir
+insan tıklaması gibi yazılmaz; ikisi aylar sonra da birbirinden ayırt edilir.
 
 `onay_politikasi` kararın **hangi kural altında** verildiğini söyler. Bir karar ancak
 verildiği kurala karşı açıklanabilir, ve o ayar kayıt okunana kadar iki kez değişmiş
@@ -258,7 +266,8 @@ yanlış bir olgudur.
 **reddettiğidir**. Koordinat reddi de yazılır ve `karar` alanı `koordinat_reddi` olur.
 
 Geri çekilen bir öneri — istemci bağlantıyı kapattığında — defterde `geri_cekildi`
-durumuna geçer; kendi denetim satırını yazması **Faz 3'ün kalan işlerindendir**
+durumuna geçer; kendi denetim satırını (`karar: geri_cek`) yazması **Faz 3'ün kalan
+işlerindendir**
 (`.claude/ai.md` R27). Geri
 çekilmiş bir öneri hiç uygulanmadığı için çizimde de izi yoktur.
 
@@ -301,37 +310,83 @@ onay, hukuki olarak savunulamayan bir onaydır.
 
 ## Onay zorlanamaz
 
-Onayın program içinde tek bir kapısı vardır ve o kapıdan geçen şey **bir insanın
-tıklamasıdır**. Onay nesnesi bir argümanla, bir başlıkla, bir belirteçle ya da bir
-ayarla üretilemez: yapıcısı özeldir, tek bir üretici işlevi vardır ve o işlevin tek bir
-çağıranı olduğu **CI kapısıyla denetlenir**. İkinci bir çağıran belirirse derleme kırılır.
+Onayın program içinde tek bir kapısı vardır ve oradan yalnız iki şey geçer: **bir kişinin
+kartta tıklaması**, ya da **o kişinin Ayarlar penceresinde kendisi için seçtiği onay
+politikası**. Onay nesnesi bir argümanla, bir başlıkla, bir belirteçle ya da bir
+istemcinin istediği bir ayarla üretilemez: yapıcısı özeldir, tek bir üretici işlevi
+vardır ve o işlevin iki çağıranı olduğu **CI kapısıyla denetlenir**. Üçüncü bir çağıran
+belirirse derleme kırılır.
 
-"Güven kipi", "hep onayla" ya da "bir daha sorma" diye bir ayar yoktur ve eklenemez
-(`CLAUDE.md` 5.7).
+Politika bir "güven kipi" değildir: onu yalnız bilgisayar başındaki kişi seçer, hiçbir
+istemci değiştiremez ([aşağıda](#bir-istemci-kendi-iznini-genişletemez)), ve politikanın
+verdiği her karar denetim kaydına politikanın adıyla yazılır (`CLAUDE.md` 5.7).
 
 ## Onay politikası ayarı ve `otomatik`
 
-`Seçenekler ▸ Çalışma Davranışı` sayfasında bir **onay politikası** vardır ve üç değeri
-olur:
+`Seçenekler ▸ Çalışma Davranışı` sayfasında **Yapay Zeka** başlığı altında üç ayar
+vardır. Pencerede okunur adlarıyla görünürler; `TERCİH` komutu ve günlük değer adını
+yazar.
 
-| Değer | Ne zaman onay sorulur |
-|---|---|
-| `her_degisiklikte` | Her plan için. **Öntanımlı budur ve yükseltmede değişmez.** |
-| `riskli_islemlerde` | Yalnız üzerine yazma ve bu makinenin dışına çıkan işler; geri alınabilir düzenleme sorulmaz |
-| `otomatik` | Yetki kapsamı içindeki ve girdileri tam olan iş onay beklemeden yürür |
+**Onay politikası** (`core.ai.onay_politikasi`):
+
+| Pencerede | Değer | Ne olur |
+|---|---|---|
+| Her değişiklikte onay iste | `her_degisiklikte` | Her öneri kartta sizi bekler. **Öntanımlı budur ve yükseltmede değişmez.** |
+| Yalnız riskli işlemlerde onay iste | `riskli_islemlerde` | Geri alınabilir çizim değişiklikleri hemen uygulanır; var olan bir dosyanın üstüne yazmak ve bu makinenin dışına yazmak (yazdırmak) onay bekler |
+| Otomatik uygula (yetki kapsamı içinde) | `otomatik` | Yetki kapsamı içindeki ve girdileri tam olan öneri hemen uygulanır |
+
+Politika bir öneriyi uyguladığında istemciye bu **söylenir**: sohbetteki model
+`UYGULANDI` yanıtını alır ve onay beklemeden işin sonraki adımına geçer; bir MCP
+istemcisinin yanıtında `durum: uygulandi` ve `_meta` içinde
+`cad.kentos/approval: policy-applied` yazar; döküm satırı
+`(onay politikasıyla uygulandı — politika:otomatik)` der. Bekleyen bir önerinin yanıtı
+ise bekleme sebebini söyler. Böylece `otomatik` seçen biri için birkaç adımlık bir iş,
+arada kart tıklanmadan tek istekte biter; her öneri yine tek Ctrl+Z ile geri alınır.
 
 **Hiçbir modda olmayan şeyler** — ve bunlar modun seçimiyle değişmez:
 
-- **Kapsam dışındaki iş hiçbir modda yürümez.** Kapsam dışı olmak onayla açılabilecek bir
-  şey değildir; `otomatik` bile onu açmaz.
-- **Girdisi eksik bir plan yürümez**; ortada onaylanacak bir şey yoktur.
-- **Her karar denetim kaydına yazılır**, hangi politikanın verdiğiyle birlikte. Otomatik
-  bir işlem, insan tıklaması gibi kaydedilmez.
+- **Kapsam dışındaki iş hiçbir modda yürümez ve kart açmaz.** Bir MCP istemcisi bu
+  makinenin dışına yazan bir iş (bir yazdırma) isterse öneri açılmaz, istemciye sebebiyle
+  reddedilir; kapsam dışı olmak onayla açılabilecek bir şey değildir. Programın kendi
+  sohbeti sizin adınıza çalıştığı için yazdırma **önerebilir**; o öneri politikanızın
+  istediği onayı bekler (`otomatik` dışında).
+- **Girdisi eksik bir çağrı öneri olmaz**; zorunlu parametresi eksik bir çağrı daha
+  öneri açılmadan, eksik parametrenin adıyla reddedilir.
+- **Her karar denetim kaydına yazılır**, hangi politikanın verdiğiyle birlikte
+  (`karar_veren`). Otomatik bir işlem, insan tıklaması gibi kaydedilmez.
 - **Onay, kartta okunan adımlara bağlıdır.** Kart çizildikten sonra eklenen bir adım
   uygulanmaz.
 - **Ayarı yalnız siz değiştirebilirsiniz.** Bir ajan kendi politikasını genişletemez.
 
 Okuma ve görünüm her üç modda da doğrudan çalışır — onlar zaten hiçbir şeyi değiştirmez.
+
+**Soru politikası** (`core.ai.soru_politikasi`):
+
+| Pencerede | Değer | Model ne yapar |
+|---|---|---|
+| Sonucu değiştiren belirsizlikte sor | `etkili_belirsizlikte_sor` | Hangi nesne, hangi katman, hangi ölçü gibi sonucu değiştirecek bir belirsizlikte işe başlamadan tek bir soru sorar |
+| Yalnız zorunlu bilgi eksikse sor | `yalniz_zorunlu` | Yalnız sonucu belirleyen bir bilgi hiçbir yerden çıkarılamıyorsa sorar; geri kalanında makul varsayımla ilerler. **Öntanımlı** |
+| Sormadan varsayımla ilerle | `varsayimla_ilerle` | Soru sormadan ilerler |
+
+Soru sormak modelin işidir; programın işi, seçtiğiniz kuralı sohbetteki modele ve MCP
+istemcilerine **aynı sözlerle** söylemektir (sohbette sistem metninde, MCP'de
+`server/discover` yanıtının `instructions` alanında ve `_meta` içindeki
+`cad.kentos/policy`de). Model varsayım yaptığında onu yazan çağrının `varsayimlar`
+alanına yazar; varsayımlar kartta, yanıtta, döküm satırında ve denetim kaydında görünür.
+Hiçbir modda koordinat, koordinat sistemi ya da hedef nesne gibi sonucu belirleyen bir
+bilgi uydurulmaz — model onu bulamıyorsa durur ve eksik olanı söyler.
+
+**Üzerine yazma** (`core.ai.uzerine_yazma`) — bir önerinin yazacağı dosya zaten varsa:
+
+| Pencerede | Değer | Ne olur |
+|---|---|---|
+| Sor | `sor` | Öneri onayınızı bekler, onay politikası `otomatik` olsa bile |
+| Yeni bir ad üret | `yeni_ad_uret` | Dosyanın üstüne yazılmaz; öneri ` (2)`, ` (3)` … ekli boş bir ada çevrilir ve yanıtta söylenir. **Öntanımlı** |
+| Üzerine yaz | `izin_ver` | Üstüne yazılabilir; onay politikası geçerlidir |
+
+Bugün bir ajanın ulaşabildiği dosya yazan işler **yerleşim şablonu kaydı**
+(`İŞŞABLONU islem=kaydet`) ve **PDF çıktısıdır** (`YAZDIR dosya=`); `KAYDET`,
+`FARKLIKAYDET` ve `DIŞAAKTAR` ajana kapalıdır.
 
 ## Bir istemci kendi iznini genişletemez
 
@@ -349,8 +404,8 @@ ise **yetkidir** — kimin neyi yapabileceğini belirler:
 | `core.mcp.otomatik` | Dinleyicinin kendiliğinden açılıp açılmadığı |
 
 Bunları **yalnız bilgisayar başındaki kullanıcı** değiştirir. Bir istemci — bir ajan, bir
-betik, sohbetteki model — değiştiremez; denemesi adıyla reddedilir ve ret denetim kaydına
-girer. Aynı kural `MCPSUNUCU` ve `YAPAYZEKAMODELİ` komutlarının **tamamı** için geçerlidir:
+betik, sohbetteki model — değiştiremez; denemesi adıyla reddedilir. Reddin denetim kaydına
+da yazılması **Faz 3'ün kalan işlerindendir**; bugün ret istemciye ve günlüğe yazılır. Aynı kural `MCPSUNUCU` ve `YAPAYZEKAMODELİ` komutlarının **tamamı** için geçerlidir:
 bir ajanın kendi kapısını açması ya da kendi anahtar referansını yönetmesi, hangi argümanla
 olursa olsun bir yetki genişletmesidir.
 

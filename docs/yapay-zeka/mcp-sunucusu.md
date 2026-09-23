@@ -150,22 +150,43 @@ anda çalışır ve sonucunu döndürür. Sonuçta hem insanın okuyacağı Tür
 istemcinin okuyacağı yapılandırılmış veri bulunur, ve varsa yeni **tutamaklar** adlarıyla
 sayılır.
 
-**Çizimi ya da diski değiştiren bir araç çağrıldığında hiçbir şey yapılmaz.** Çağrı bir
-öneri kaydı açar ve istemciye hemen cevap verilir: önerinin kimliği, durumu ve
-uygulanacak **komut satırlarının tamamı**. Cevap bunu Türkçe olarak da söyler:
+**Çizimi ya da diski değiştiren bir araç çağrısı bir öneri kaydı açar** ve istemciye
+hemen cevap verilir: önerinin kimliği, durumu ve uygulanacak **komut satırlarının
+tamamı**. Önerinin ne olduğunu kullanıcının onay politikası belirler
+([Onay ve denetim](onay.md)); cevap hangisinin olduğunu Türkçe söyler. Öntanımlı
+politikada öneri bekler:
 
 ```text
 Öneri kaydı açıldı: p0f3a1c7b9e4d2856 (durum: beklemede).
 Uygulanacak komut satırları:
   KATMAN ad="YOL KENARI"
-Çizim değişmedi. Bu satırlar, bilgisayar başındaki harita mühendisi kartta uygulayana
-ya da onun önceden kurduğu onay politikası izin verene kadar uygulanmaz; uygulanırsa
-tamamı tek bir işlem ve tek `Ctrl+Z` olur.
+Çizim değişmedi. Kullanıcının onay politikası bu öneriyi bilgisayar başındaki harita
+mühendisine bıraktı: kartta uygulayana kadar uygulanmaz; uygulanırsa tamamı tek bir
+işlem ve tek `Ctrl+Z` olur.
+Onay bekleme sebebi: Her değişiklikte onay isteniyor.
 ```
 
-Önerinin durumu `uygulandi` ise cevap bunu açıkça söyler — kullanıcının önceden kurduğu
-onay politikası izin vermiştir — ve yine ekler: **uygulayan sen değilsin.** İstemci
-hiçbir hâlde uygulamaz ([Onay ve denetim](onay.md)).
+Öneri, programın **Yapay Zeka** panelinde istemcinin adını söyleyen bir bildirimle ve
+**Reddet / Uygula** düğmeli kartla görünür; panel kapalıysa açılır.
+
+Kullanıcı `otomatik` seçtiyse öneri hemen uygulanır ve cevap bunu açıkça söyler —
+`BU SATIRLAR UYGULANDI`, `durum: uygulandi`, `_meta` içinde
+`cad.kentos/approval: policy-applied` — ve yine ekler: **uygulayan sen değilsin.**
+İstemci hiçbir hâlde kendisi uygulamaz. `_meta.plan` ile uzatılmak istenen öneri zaten
+uygulanmışsa yeni adım yeni bir öneri olarak açılır ve cevap bunu söyler; çok adımlı bir
+iş böylece ikinci çağrıda kırılmaz.
+
+**Kapsam dışı iş öneri açmaz.** Bu makinenin dışına yazan bir iş (bir yazdırma) bir MCP
+istemcisinin kapsamında değildir; çağrı sebebiyle reddedilir ve karta hiç gelmez.
+
+**Kuralları sunucu söyler.** `server/discover` cevabının `instructions` alanı, sabit
+kuralların ardından kullanıcının seçtiği onay, soru ve üzerine yazma kurallarını — sohbetteki
+modele söylenen sözlerle — taşır; `_meta` içindeki `cad.kentos/policy` aynı üçünü değer
+adlarıyla verir (`onay`, `soru`, `uzerine_yazma`).
+
+**Varsayımlarınızı yazın.** Yazan her aracın şemasında isteğe bağlı bir `varsayimlar`
+alanı vardır: çağrıyı hazırlarken yaptığınız varsayımlar, her biri tek cümle. Komuta
+gitmez; kartta, cevapta ve denetim kaydında görünür. Okuyan araçlarda bu alan yoktur.
 
 Akışı dinleyen bir istemci, cevaptan önce bir bildirim de alır:
 

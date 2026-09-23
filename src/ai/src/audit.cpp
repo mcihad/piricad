@@ -53,6 +53,13 @@ core::Json AuditRecord::to_json() const
         out.set("konum_kaynagi", std::move(from));
     }
 
+    if (!assumptions.empty()) {
+        core::Json noted = core::Json::array({});
+        for (const std::string& one : assumptions)
+            noted.push(core::Json::string(one));
+        out.set("varsayimlar", std::move(noted));
+    }
+
     if (!outcome.empty()) out.set("sonuc", core::Json::string(outcome));
 
     if (!created.empty()) {

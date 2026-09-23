@@ -38,6 +38,7 @@
 #include <QCommandLineParser>
 #include <QCompleter>
 #include <QDir>
+#include <QDockWidget>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
@@ -1211,6 +1212,15 @@ int main(int argc, char** argv)
 
         later([&window] { window.openSettings(); });
         later([shot] { shot(QStringLiteral("4-secenekler"), QApplication::activeWindow()); });
+        // THE AI POLICIES as a person reads them: readable choices, not the
+        // setting words (TODOS A-03).
+        later([&window] { window.openSettingsSection(QStringLiteral("Çalışma Davranışı")); });
+        later([&window, shot] {
+            // The window itself, not whichever is active: a modeless window
+            // behind a stolen focus is still the one on the screen.
+            shot(QStringLiteral("4c-yapay-zeka-politikasi"),
+                 window.findChild<kentos::app::SettingsDialog*>());
+        });
         // The plot page, because the print profiles live on it and a table
         // nobody has photographed is a table nobody has looked at.
         later([&window] { window.openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
@@ -2586,23 +2596,52 @@ int main(int argc, char** argv)
             check(literal.contains("isError") || literal.contains("tutamak"),
                   "koordinat literali reddedilmedi");
 
-            // 6. AND THE PERSON'S DECISION IS WHAT APPLIES IT — THROUGH THE CARD.
-            //    The probe builds the same `SuggestionCard` the panel does and
-            //    presses its `Uygula`, because that widget is the only thing in
-            //    the program that can mint an `ai::Approval` (ai.md P15). A
-            //    probe that called a service method instead would be proving a
-            //    path no user has.
+            // 6. AND THE PERSON'S DECISION IS WHAT APPLIES IT — THROUGH THE CARD
+            //    THE WINDOW PUT UP. An MCP client's plan had no card anywhere in
+            //    the program, and this probe used to build one of its own —
+            //    which proved a path no user had. It now finds the card the chat
+            //    dock shows for the plan and presses its `Uygula`, the only thing
+            //    in the program that can mint an `ai::Approval` for a person
+            //    (ai.md P15, TODOS A-03).
             const std::vector<const kentos::ai::Plan*> open =
                 controller->aiService().plans().pending();
+            check(!open.empty(), "bekleyen öneri yok");
             if (!open.empty()) {
-                const QString plan = QString::fromStdString(open.front()->id);
-                kentos::app::SuggestionCard card(controller->aiService(), plan);
-                check(card.pending(), "öneri kartı bekleyen öneriyi bulamadı");
-                const auto decided = card.probeApply();
-                check(decided.ok(), "onaylanan öneri uygulanamadı");
-                check(!card.pending(), "karar verilen kart hâlâ bekliyor");
-                check(controller->document().find_layer("AJAN") != kentos::core::kNoLayer,
-                      "onaydan sonra katman yok");
+                const QString plan                 = QString::fromStdString(open.front()->id);
+                kentos::app::SuggestionCard* shown = nullptr;
+                for (auto* card : window.findChildren<kentos::app::SuggestionCard*>())
+                    if (card->planId() == plan) shown = card;
+                check(shown != nullptr, "MCP önerisi için pencerede kart yok");
+                if (shown != nullptr) {
+                    // A PICTURE OF IT, when the probe is given a folder: the card
+                    // as the person at the workstation sees it, before the click.
+                    if (const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_MCP_PROBE"));
+                        into.size() > 1) {
+                        QDir().mkpath(into);
+                        // The transcript scrolls after its layout has run.
+                        for (int i = 0; i < 5; ++i)
+                            QCoreApplication::processEvents();
+                        if (const auto* dock =
+                                window.findChild<QDockWidget*>(QStringLiteral("chatDock"))) {
+                            const QRect at = dock->geometry();
+                            (void)std::fprintf(
+                                stdout, "[mcp] sohbet paneli görünür=%d yüzen=%d %dx%d+%d+%d\n",
+                                dock->isVisible() ? 1 : 0, dock->isFloating() ? 1 : 0, at.width(),
+                                at.height(), at.x(), at.y());
+                        }
+                        const QRect card = shown->geometry();
+                        (void)std::fprintf(stdout, "[mcp] kart %dx%d görünür=%d\n", card.width(),
+                                           card.height(), shown->isVisible() ? 1 : 0);
+                        (void)window.grab().save(into + QStringLiteral("/mcp-onerisi-kart.png"));
+                    }
+                    check(shown->isVisible(), "MCP önerisinin kartı görünmüyor");
+                    check(shown->pending(), "öneri kartı bekleyen öneriyi bulamadı");
+                    const auto decided = shown->probeApply();
+                    check(decided.ok(), "onaylanan öneri uygulanamadı");
+                    check(!shown->pending(), "karar verilen kart hâlâ bekliyor");
+                    check(controller->document().find_layer("AJAN") != kentos::core::kNoLayer,
+                          "onaydan sonra katman yok");
+                }
             }
 
             // 6b. A DRAWING CAN BE ASKED FOR WITHOUT A COORDINATE IN IT. The view's

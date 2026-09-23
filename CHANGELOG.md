@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yapay zekanın onay ve soru ayarları uçtan uca çalışıyor (A-03)
+
+- **Otomatik uygulama doğruyu söylüyor.** Onay politikası `otomatik` iken uygulanan bir
+  öneri için sohbetteki model artık "Uygulanmadı" yerine `UYGULANDI` yanıtını alıyor ve
+  işin sonraki adımına onay beklemeden geçiyor; MCP yanıtında `durum: uygulandi` ve
+  `_meta` `cad.kentos/approval: policy-applied`; döküm satırı ve kart da "onay
+  politikanızla uygulandı" diyor. Denetim kaydında `karar_veren: politika:otomatik` —
+  otomatik bir uygulama artık insan tıklaması gibi yazılmıyor.
+- **MCP önerileri kişinin önüne geliyor.** Bir MCP istemcisinin önerisi için programda
+  hiç kart yoktu; öntanımlı politikada kimse onaylayamıyordu. Artık Yapay Zeka panelinde
+  istemcinin adıyla ve Reddet/Uygula düğmeli kartla görünüyor; panel kapalıysa yerine
+  oturtularak açılıyor.
+- **Çok adımlı MCP işi kırılmıyor.** `_meta.plan` ile uzatılmak istenen öneri zaten
+  uygulanmışsa yeni adım yeni bir öneri oluyor (eskiden ret dönüyordu).
+- **Soru politikası modele söyleniyor.** Onay, soru ve üzerine yazma kuralları sohbetin
+  sistem metnine ve MCP `server/discover` yanıtına aynı sözlerle ekleniyor
+  (`ai::policy_rules`); yazan her aracın şemasında isteğe bağlı `varsayimlar` alanı var ve
+  bildirilen varsayımlar kartta, yanıtta, dökümde ve denetim kaydında görünüyor.
+- **Üzerine yazma algılanıyor.** Yerleşim şablonu kaydı ve PDF çıktısı var olan bir
+  dosyaya denk gelirse `sor` onay istiyor (otomatik modda bile), `yeni_ad_uret` ` (2)`
+  ekli bir ad veriyor ve söylüyor.
+- **Kapsam dışı iş kart açmıyor**, sebebiyle reddediliyor; bekleyen önerinin kartı neden
+  beklediğini söylüyor.
+- **Ayarlar penceresi okunur seçenekler gösteriyor** ("Her değişiklikte onay iste" …);
+  değer adları `TERCİH` ve günlükte aynı kalıyor (`SettingSpec::labels`).
+- Sohbet paneli, yerleşim kaydı onu yüzen bırakmışsa her açılışta yerine oturuyor.
+
 ### Eklendi — BUDA ve UZAT çitle, tıklananı tutarak ve sınırı uzatarak (C-04 tamam)
 
 - **Çitle** (`yontem=çit`, `cit=`): çizilen bir çitin geçtiği her parça tek seferde

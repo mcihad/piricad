@@ -40,10 +40,23 @@ struct CompiledArguments
     command::Args args;                     ///< what the command takes
     std::vector<std::string> handles;       ///< every handle the arguments named
     std::vector<std::string> constructions; ///< `@….0 + doğu 10000, kuzey 0 mm`, for the audit
+    std::vector<std::string> assumptions;   ///< what the caller says it assumed (`kAssumptions`)
     std::string refusal;                    ///< non-empty when it could not be compiled
     bool coordinate_literal{false};         ///< a number arrived where a position belongs
     bool protocol_fault{false};             ///< the refusal is the client's schema mistake
 };
+
+/// THE ONE FIELD THE PROJECTION ADDS to every tool that changes something: the
+/// assumptions the caller made to compose the call, one sentence each — a
+/// default it chose, a reading of an ambiguous request. It is not a command
+/// parameter and never reaches the bus; it reaches the card, the answer and the
+/// audit record, so work that went ahead on an assumption says which
+/// (TODOS A-03, `core.ai.soru_politikasi`).
+inline constexpr const char* kAssumptions = "varsayimlar";
+
+/// At most this many, each at most `kAssumptionChars` bytes: a note, not an essay.
+inline constexpr std::size_t kMaxAssumptions  = 12;
+inline constexpr std::size_t kAssumptionChars = 400;
 
 /// The largest offset a relative point may carry, in millimetres, east or north:
 /// a thousand kilometres, which is past the edge of any Turkish projection zone.

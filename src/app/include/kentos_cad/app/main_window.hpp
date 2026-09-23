@@ -131,6 +131,11 @@ public:
     /// empty.
     void showPythonConsole(const QString& source = {});
 
+    /// Opens the chat dock where it belongs — docked on the right unless the
+    /// person floated it on purpose — and brings it forward. Every road that
+    /// opens it comes here: the tool bar, an outside client's suggestion.
+    void showChat();
+
     /// Types into the Python prompt without sending, so a probe can photograph
     /// the completion popup and the signature hint in the states a user sees
     /// them in. Same reason `runScriptLine` is public.

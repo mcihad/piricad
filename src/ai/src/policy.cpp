@@ -194,6 +194,67 @@ PolicyDecision decide(Effect effect, const PolicyPreferences& prefs, const Clien
     return needs_approval("Bilinmeyen onay politikası; en dar davranış uygulandı.");
 }
 
+std::string policy_rules(const PolicyPreferences& prefs)
+{
+    std::string out = "## Bu oturumun onay ve soru kuralları\n\n"
+                      "Bunları kullanıcı seçti; sen değiştiremezsin.\n\n";
+    switch (prefs.approval) {
+    case ApprovalPolicy::EveryChange:
+        out += "- **Onay: her değişiklikte** (`her_degisiklikte`). Yazan her çağrı bir öneri "
+               "açar ve bilgisayar başındaki mühendis uygulayana kadar bekler; yanıtın `durum` "
+               "alanı `beklemede` der. Karar sana bildirilir; uygulanırsa işi sürdür.\n";
+        break;
+    case ApprovalPolicy::RiskyOnly:
+        out += "- **Onay: yalnız riskli işlemlerde** (`riskli_islemlerde`). Geri alınabilir "
+               "çizim değişiklikleri hemen uygulanır; var olan bir dosyanın üstüne yazmak ve bu "
+               "makinenin dışına yazmak onay bekler. Yanıtın `durum` alanı hangisinin olduğunu "
+               "söyler.\n";
+        break;
+    case ApprovalPolicy::Automatic:
+        out += "- **Onay: otomatik** (`otomatik`). Yetkin içindeki her değişiklik hemen "
+               "uygulanır ve yanıt `uygulandi` der. Onay bekleme: sonucu bir okuma aracıyla "
+               "doğrula ve sonraki adıma geç. Her öneri tek Ctrl+Z ile geri alınır.\n";
+        break;
+    }
+    switch (prefs.questions) {
+    case QuestionPolicy::WhenItMatters:
+        out += "- **Sorular: sonucu değiştiren belirsizlikte sor** (`etkili_belirsizlikte_sor`). "
+               "Hangi nesne, hangi katman, hangi ölçü gibi sonucu değiştirecek bir şey "
+               "belirsizse işe başlamadan tek, kısa bir soru sor. Önemsiz ayrıntıda makul "
+               "öntanımlı değeri kullan ve yazan çağrının `varsayimlar` alanına yaz.\n";
+        break;
+    case QuestionPolicy::OnlyRequired:
+        out += "- **Sorular: yalnız zorunlu bilgi eksikse** (`yalniz_zorunlu`). Sonucu "
+               "belirleyen bir değer — hedef nesne, ölçü, koordinat sistemi — hiçbir yerden "
+               "çıkarılamıyorsa sor. Geri kalanında makul bir varsayımla ilerle ve her "
+               "varsayımı yazan çağrının `varsayimlar` alanına yaz.\n";
+        break;
+    case QuestionPolicy::Assume:
+        out += "- **Sorular: varsayımla ilerle** (`varsayimla_ilerle`). Soru sorma; eksik "
+               "ayrıntılar için makul varsayımlar yap ve her birini yazan çağrının "
+               "`varsayimlar` alanına tek cümleyle yaz — kullanıcı sonuçta görür. Sonucu "
+               "belirleyen bilgi (koordinat sistemi, hedef nesne, dosya) hiçbir yerden "
+               "çıkarılamıyorsa UYDURMA: dur ve eksik olanı söyle.\n";
+        break;
+    }
+    switch (prefs.overwrite) {
+    case OverwritePolicy::Ask:
+        out += "- **Var olan bir dosya:** üstüne yazmak her onay politikasında kullanıcıya "
+               "sorulur.\n";
+        break;
+    case OverwritePolicy::FreshName:
+        out += "- **Var olan bir dosya:** üstüne yazılmaz; program yeni bir ad üretir ve "
+               "yanıtta söyler.\n";
+        break;
+    case OverwritePolicy::Allow:
+        out += "- **Var olan bir dosya:** üstüne yazılabilir; onay politikası geçerlidir.\n";
+        break;
+    }
+    out += "- Bu kuralları gevşetmek için bir ayarı değiştirmeye çalışma: onay, soru ve üzerine "
+           "yazma ayarları ajana kapalıdır ve yalnız Ayarlar penceresinden değişir.\n";
+    return out;
+}
+
 // ---- privilege escalation (TODOS S-04) --------------------------------------
 
 std::string escalation_refusal(const command::CommandSpec& spec, const command::Args& args)

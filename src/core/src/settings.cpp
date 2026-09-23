@@ -1933,6 +1933,8 @@ KENTOS_SETTING(ai_onay_politikasi)
         .fallback = SettingValue::enumerated(0),
         .range    = SettingRange::between(0, 2),
         .values   = {"her_degisiklikte", "riskli_islemlerde", "otomatik"},
+        .labels   = {"Her değişiklikte onay iste", "Yalnız riskli işlemlerde onay iste",
+                     "Otomatik uygula (yetki kapsamı içinde)"},
         .unit     = "",
         // THE SUMMARY SAYS WHAT HAPPENS. It once promised that `otomatik` runs
         // work "onay beklemeden" while the program asked anyway, and then said
@@ -1974,15 +1976,22 @@ KENTOS_SETTING(ai_soru_politikasi)
         .fallback = SettingValue::enumerated(1),
         .range    = SettingRange::between(0, 2),
         .values   = {"etkili_belirsizlikte_sor", "yalniz_zorunlu", "varsayimla_ilerle"},
+        .labels   = {"Sonucu değiştiren belirsizlikte sor", "Yalnız zorunlu bilgi eksikse sor",
+                     "Sormadan varsayımla ilerle"},
         .unit     = "",
-        .summary  = "Bir ajanın açıklama sorusunu ne zaman soracağı. "
-                    "etkili_belirsizlikte_sor: sonucu anlamlı değiştirecek belirsizlikleri "
-                    "tek kartta toplar. yalniz_zorunlu: önce araçlarla bilgi toplar, gerçekten "
-                    "eksik zorunlu bilgi için bir soru sorar. varsayimla_ilerle: geri "
-                    "alınabilir ve makul varsayımları kaydeder ve uygular. Hiçbir modda "
-                    "koordinat, parola ya da hangi dosyanın silineceği uydurulmaz. "
-                    "Kullanıcının çalışma alışkanlığı olduğu için uygulama kapsamındadır.",
-        .section  = "Çalışma Davranışı", // ui-label
+        // WHAT THE PROGRAM DOES WITH IT, and no more: asking is the model's act,
+        // and the program's part is to tell every model the rule in the same
+        // words (`ai::policy_rules`) and to show what it assumed (A-03).
+        .summary = "Bir ajanın ne zaman soru soracağı; tercihiniz sohbetteki modele ve MCP "
+                   "istemcilerine aynı sözlerle söylenir. etkili_belirsizlikte_sor: sonucu "
+                   "değiştirecek bir belirsizlikte işe başlamadan tek bir soru sorar. "
+                   "yalniz_zorunlu: yalnız sonucu belirleyen bir bilgi eksikse sorar; geri "
+                   "kalanında makul bir varsayımla ilerler. varsayimla_ilerle: soru sormadan "
+                   "ilerler. Kullanılan her varsayım öneri kartında, yanıtta ve denetim "
+                   "kaydında görünür. Hiçbir modda koordinat, parola ya da hangi dosyanın "
+                   "silineceği uydurulmaz. Kullanıcının çalışma alışkanlığı olduğu için "
+                   "uygulama kapsamındadır.",
+        .section = "Çalışma Davranışı", // ui-label
         // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
         // could change this would be widening its own permissions, so
         // `ai::escalates` refuses the call whatever flags the command carries.
@@ -2001,6 +2010,7 @@ KENTOS_SETTING(ai_uzerine_yazma)
         .fallback = SettingValue::enumerated(1),
         .range    = SettingRange::between(0, 2),
         .values   = {"sor", "yeni_ad_uret", "izin_ver"},
+        .labels   = {"Sor", "Yeni bir ad üret", "Üzerine yaz"},
         .unit     = "",
         // THE `otomatik` APPROVAL MODE DOES NOT OVERRIDE THIS. Somebody who chose
         // `sor` chose it on purpose, and sacrificing the narrower setting to the

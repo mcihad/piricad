@@ -82,6 +82,11 @@ struct AuditRecord
     /// is never "the model said so".
     std::vector<std::string> sources;
 
+    /// WHAT THE CLIENT SAID IT ASSUMED to compose the plan (`kAssumptions`),
+    /// under the question policy in force. Written so "why did it pick 5 m" has
+    /// an answer that is not a guess (TODOS A-03).
+    std::vector<std::string> assumptions;
+
     /// One JSONL line. `sürüm` first, because a file without a version is a file
     /// that cannot be read by a later program (.claude/io.md P5).
     core::Json to_json() const;

@@ -45,17 +45,19 @@ public:
     /// The names the folder holds, sorted. Read by the menu and the manager.
     QStringList names() const;
 
+    /// The file a template of that name lives in. Refuses a name that would
+    /// escape the folder — a template called `../../etc/passwd` is a name, not a
+    /// path, and treating it as one is how a settings folder becomes a weapon.
+    /// Public for the overwrite policy, which asks whether a save would land on
+    /// a template that is already there (TODOS A-03).
+    core::Result<QString> pathFor(const QString& name) const;
+
 signals:
     /// A template was saved or removed; the menu rebuilds from `names()`.
     void changed();
 
 private:
     command::Task<core::Result<std::string>> handle(command::LayoutTemplateRequest request);
-
-    /// The file a template of that name lives in. Refuses a name that would
-    /// escape the folder — a template called `../../etc/passwd` is a name, not a
-    /// path, and treating it as one is how a settings folder becomes a weapon.
-    core::Result<QString> pathFor(const QString& name) const;
 
     command::Bus& bus_;
     QString folder_;

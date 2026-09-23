@@ -23,6 +23,7 @@
 #pragma once
 
 #include "kentos_cad/ai/plan.hpp"
+#include "kentos_cad/ai/policy.hpp"
 #include "kentos_cad/ai/tool.hpp"
 
 #include "kentos_cad/command/bus.hpp"
@@ -103,8 +104,15 @@ public:
                                                     const command::Args& args,
                                                     const std::string& requester) = 0;
 
-    /// Files a plan and shows it to the person at the workstation. Returns the
-    /// plan's id. Applies nothing.
+    /// The approval, question and overwrite policies the person has set, as the
+    /// engine reads them — so the server can tell a client the rules it works
+    /// under (`policy_rules`) in the same words the chat is told.
+    virtual PolicyPreferences preferences() const = 0;
+
+    /// Files a plan and shows it to the person at the workstation, or — when
+    /// the approval policy the person set beforehand allows it — applies it at
+    /// once (`decide_by_policy`). Returns the plan's id; the plan's state says
+    /// which of the two happened. Refuses work outside the requester's scope.
     ///
     /// `Plan::requester` carries the label here: it is part of the record, so a
     /// second parameter would be a second place for one fact.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/ai/catalog.hpp"
 
+#include "kentos_cad/ai/arguments.hpp"
+
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
@@ -268,6 +270,24 @@ Json input_schema_for(const command::CommandSpec& spec, Style style)
     }
     if (spec.params.empty()) properties = Json::object({});
 
+    // THE ONE FIELD THE PROJECTION ADDS, on every tool that changes something:
+    // the caller's assumptions, which reach the card, the answer and the audit
+    // record and never the command (`kAssumptions`, TODOS A-03).
+    if (!has_flag(spec.flags, command::Flags::NoEffect)) {
+        Json item;
+        item.set("type", Json::string("string"));
+        Json noted;
+        noted.set("type", Json::string("array"));
+        noted.set("items", std::move(item));
+        noted.set("maxItems", Json::integer(static_cast<std::int64_t>(kMaxAssumptions)));
+        noted.set("description",
+                  Json::string("Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: "
+                               "seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl "
+                               "okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim "
+                               "kaydına yazılır. Varsayım yapmadıysan boş bırak."));
+        properties.set(kAssumptions, std::move(noted));
+    }
+
     Json out;
     out.set("type", Json::string("object"));
     out.set("properties", std::move(properties));
@@ -317,10 +337,14 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style)
             text += ")";
         }
     }
+    // WHETHER A CALL APPLIES IS THE USER'S CHOICE, not the tool's, so the text
+    // says what decides it rather than a fixed answer that one of the policies
+    // makes false: under `otomatik` the same call is applied at once.
     text += tool.mutates
-                ? "\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut "
-                  "satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar "
-                  "bekler."
+                ? "\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, "
+                  "kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da "
+                  "bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin "
+                  "olduğunu söyler."
                 : "\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.";
     tool.description = std::move(text);
 
@@ -339,7 +363,9 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style)
     Json meta;
     meta.set("cad.kentos/commandId", Json::string(spec.id));
     meta.set("cad.kentos/category", Json::string(command::category_name(spec.category)));
-    meta.set("cad.kentos/approval", Json::string(tool.mutates ? "user-required" : "none"));
+    // `policy`: the user's approval policy decides — a card, or at once. What
+    // happened to a call is in its answer (`cad.kentos/approval` there).
+    meta.set("cad.kentos/approval", Json::string(tool.mutates ? "policy" : "none"));
     Json aliases = Json::array({});
     for (const std::string& name : spec.names)
         aliases.push(Json::string(name));

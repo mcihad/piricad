@@ -62,6 +62,14 @@ core::Json Plan::to_json() const
         out.set("yeni_surum", core::Json::integer(static_cast<std::int64_t>(applied_revision)));
     if (!undo_label.empty()) out.set("geri_alma", core::Json::string(undo_label));
     if (!decided_by.empty()) out.set("karar_veren", core::Json::string(decided_by));
+    if (state == PlanState::Pending && !waiting_reason.empty())
+        out.set("bekleme_gerekcesi", core::Json::string(waiting_reason));
+    if (const std::vector<std::string> noted = assumptions(); !noted.empty()) {
+        core::Json list = core::Json::array({});
+        for (const std::string& one : noted)
+            list.push(core::Json::string(one));
+        out.set("varsayimlar", std::move(list));
+    }
     if (!outputs.empty()) {
         core::Json files = core::Json::array({});
         for (const std::string& one : outputs)
@@ -84,7 +92,13 @@ core::Json Plan::to_json() const
     // one — which is exactly what M-06 forbids, and the reason `yazilan_dosyalar`
     // is only ever filled once the batch has closed.
     const char* note = "Bu önerinin durumu yukarıda; uygulama kararı kullanıcıya aittir.";
-    if (state == PlanState::Pending)
+    if (state == PlanState::Applied && decided_by.starts_with("politika"))
+        note = "Bu öneri kullanıcının önceden seçtiği onay politikasıyla uygulandı "
+               "(`karar_veren`). Tamamı tek bir işlem; tek Ctrl+Z ile geri alınır.";
+    else if (state == PlanState::Applied)
+        note = "Bu öneri bilgisayar başındaki mühendis onaylayınca uygulandı. Tamamı tek bir "
+               "işlem; tek Ctrl+Z ile geri alınır.";
+    else if (state == PlanState::Pending)
         note = "Bu öneri uygulanmadı. Çizimi değiştirmek için bilgisayar başındaki "
                "mühendisin onaylaması gerekir; onaylanırsa tamamı tek bir işlem ve tek "
                "Ctrl+Z olur.";
@@ -93,6 +107,15 @@ core::Json Plan::to_json() const
                "sürüm, uyarılar — ancak durum 'uygulandi' olduğunda tamamdır. Yarım bir "
                "çıktı bitmiş sayılmaz.";
     out.set("aciklama", core::Json::string(note));
+    return out;
+}
+
+std::vector<std::string> Plan::assumptions() const
+{
+    std::vector<std::string> out;
+    for (const PlanStep& step : steps)
+        for (const std::string& one : step.assumptions)
+            if (std::ranges::find(out, one) == out.end()) out.push_back(one);
     return out;
 }
 

@@ -400,6 +400,35 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const Json
         }
     }
 
+    // THE ASSUMPTIONS, on a tool that changes something (`kAssumptions`): a list
+    // of sentences, or one sentence. Anything else is the client's mistake and is
+    // said so, like any other wrongly shaped argument.
+    const bool mutates = !command::has_flag(spec.flags, command::Flags::NoEffect);
+    if (const Json* noted = arguments.find(kAssumptions); mutates && noted != nullptr) {
+        const auto take = [&out](const std::string& one) {
+            if (one.empty() || out.assumptions.size() >= kMaxAssumptions) return;
+            out.assumptions.push_back(
+                one.size() <= kAssumptionChars ? one : one.substr(0, kAssumptionChars) + "…");
+        };
+        if (noted->is_string()) {
+            take(noted->as_string());
+        } else if (noted->is_array()) {
+            for (const Json& one : noted->as_array()) {
+                if (!one.is_string()) {
+                    out.protocol_fault = true;
+                    out.refusal =
+                        "`varsayimlar` bir metin listesi olmalı; gelen: " + one.dump() + ".";
+                    return out;
+                }
+                take(one.as_string());
+            }
+        } else if (!noted->is_null()) {
+            out.protocol_fault = true;
+            out.refusal = "`varsayimlar` bir metin listesi olmalı; gelen: " + noted->dump() + ".";
+            return out;
+        }
+    }
+
     // AN UNDECLARED ARGUMENT IS REFUSED HERE, with its name. The bus refuses one
     // too (command.md P15) and the published schema closes the object
     // (`additionalProperties: false`), but a refusal from three layers down does
@@ -407,6 +436,7 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const Json
     for (const auto& [key, value] : arguments.as_object()) {
         (void)value;
         if (key == "_meta") continue;
+        if (mutates && key == kAssumptions) continue;
         bool declared = false;
         for (const command::Param& param : spec.params)
             if (param.name == key) declared = true;

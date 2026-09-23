@@ -18,10 +18,12 @@
 // by a socket).
 #include "kentos_test.hpp"
 
+#include "kentos_cad/ai/arguments.hpp"
 #include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/ai/clients.hpp"
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/ai/mcp.hpp"
+#include "kentos_cad/ai/policy_path.hpp"
 
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -56,6 +58,15 @@ struct FakeDispatcher final : ai::Dispatcher
     ai::PlanStore plans;
     std::uint64_t rev{7};
 
+    /// THE REAL POLICY ROAD, when a case asks for it: the gate, the audit log
+    /// and `ai::decide_by_policy` exactly as `AiService` wires them, with a
+    /// runner that changes nothing — what is under test is the decision and
+    /// what the client is told, not the drawing.
+    bool apply_by_policy{false};
+    std::vector<std::string> audit_lines;
+    ai::AuditLog audit{[this](const std::string& line) { audit_lines.push_back(line); }};
+    ai::Gate gate{plans, audit, [](const ai::Plan&) { return core::ok(); }};
+
     /// Every requester label `run_read_only` was called with, in order. A read
     /// that arrived without one would mint into the wrong client's store.
     std::vector<std::string> asked_by;
@@ -89,6 +100,10 @@ struct FakeDispatcher final : ai::Dispatcher
         return out;
     }
 
+    ai::PolicyPreferences preferences() const override { return prefs; }
+
+    ai::PolicyPreferences prefs; ///< what the person chose; the default until a test says
+
     core::Result<std::string> propose(ai::Plan plan) override
     {
         // THE CONTRACT THE ENGINE RELIES ON, implemented here because the
@@ -116,7 +131,20 @@ struct FakeDispatcher final : ai::Dispatcher
             }
             return target;
         }
-        return plans.add(std::move(plan));
+        const std::string filed = plans.add(std::move(plan));
+        if (apply_by_policy)
+            if (ai::Plan* held = plans.find(filed); held != nullptr) {
+                auto effect = command::Effect::None;
+                for (const ai::PlanStep& step : held->steps)
+                    if (const command::CommandSpec* spec = reg.by_id(step.command_id))
+                        effect = effect | command::effect_of(*spec, step.args);
+                ai::ClientScope scope;
+                scope.client = held->requester;
+                auto decided = ai::decide_by_policy(gate, *held, prefs, scope, effect, "sınama", 0);
+                if (decided && !decided.value().applied)
+                    held->waiting_reason = decided.value().reason;
+            }
+        return filed;
     }
 
     std::string existing_plan(const std::string& key, const std::string& requester) const override
@@ -692,9 +720,19 @@ TEST_CASE("server/discover zorunlu alanların tamamını döner")
     REQUIRE(instructions != nullptr);
     const std::string& text = instructions->as_string();
     CHECK(text.find("TUTAMAĞI") != std::string::npos);
-    CHECK(text.find("UYGULANMAZ") != std::string::npos);
+    CHECK(text.find("BİR ÖNERİ AÇAR") != std::string::npos);
     CHECK(text.find("MİLİMETREDİR") != std::string::npos);
     CHECK(text.find("DOĞU ÖNCE") != std::string::npos);
+
+    // AND THE RULES THE PERSON CHOSE, in the words the chat is told (A-03): the
+    // default policy, so a write waits for the engineer.
+    CHECK(text.find("Bu oturumun onay ve soru kuralları") != std::string::npos);
+    CHECK(text.find("her_degisiklikte") != std::string::npos);
+    const Json* discovered = result.find("_meta");
+    REQUIRE(discovered != nullptr);
+    const Json* policy = discovered->find("cad.kentos/policy");
+    REQUIRE(policy != nullptr);
+    CHECK_EQ(policy->find("onay")->as_string(), std::string("her_degisiklikte"));
 }
 
 TEST_CASE("tools/list parmak izini ve her aracın dört annotation'ını taşır")
@@ -1831,4 +1869,126 @@ TEST_CASE("M-06: uygulanmakta olan bir öneri bitmiş görünmez")
     // plan would read as work still going.
     plans.report_progress(id, 99);
     CHECK_EQ(plans.find(id)->done_steps, 2u);
+}
+
+// ============================================================================
+// A-03 — the approval policy the person chose, on the MCP road
+// ============================================================================
+
+TEST_CASE("A-03: otomatik politikada yazan çağrı UYGULANIR ve yanıt bunu söyler")
+{
+    Rig f;
+    f.disp.prefs.approval  = ai::ApprovalPolicy::Automatic;
+    f.disp.apply_by_policy = true;
+    ai::McpServer server   = f.server();
+
+    Json arguments;
+    arguments.set("noktalar", Json::string(f.points_handle()));
+    const ai::HttpOutcome out = server.handle(tool_call("core_line", std::move(arguments)).view());
+    REQUIRE_EQ(out.status, 200);
+
+    const Json result = result_of(out);
+    CHECK_FALSE(is_error(result));
+    const std::string text = text_of(result);
+    // NOT "çizim değişmedi": under `otomatik` that sentence was a lie about the
+    // drawing the client is working on.
+    CHECK(text.find("BU SATIRLAR UYGULANDI") != std::string::npos);
+    CHECK(text.find("Çizim değişmedi") == std::string::npos);
+
+    const Json* structured = result.find("structuredContent");
+    REQUIRE(structured != nullptr);
+    CHECK_EQ(structured->find("durum")->as_string(), std::string("uygulandi"));
+    CHECK_EQ(structured->find("karar_veren")->as_string(), std::string("politika:otomatik"));
+    const Json* meta = result.find("_meta");
+    REQUIRE(meta != nullptr);
+    CHECK_EQ(meta->find("cad.kentos/approval")->as_string(), std::string("policy-applied"));
+
+    // THE AUDIT RECORD SAYS THE POLICY DECIDED, never a person (S-06).
+    REQUIRE_EQ(f.disp.audit_lines.size(), 1u);
+    CHECK(f.disp.audit_lines.front().find("\"karar_veren\":\"politika:otomatik\"") !=
+          std::string::npos);
+}
+
+TEST_CASE("A-03: her değişiklikte politikasında yazan çağrı bekler ve sebebini söyler")
+{
+    Rig f;
+    f.disp.apply_by_policy = true; ///< the default policy: `her_degisiklikte`
+    ai::McpServer server   = f.server();
+
+    Json arguments;
+    arguments.set("noktalar", Json::string(f.points_handle()));
+    const Json result =
+        result_of(server.handle(tool_call("core_line", std::move(arguments)).view()));
+    const std::string text = text_of(result);
+    CHECK(text.find("Çizim değişmedi") != std::string::npos);
+    CHECK(text.find("Onay bekleme sebebi: Her değişiklikte onay isteniyor.") != std::string::npos);
+    CHECK_EQ(result.find("_meta")->find("cad.kentos/approval")->as_string(),
+             std::string("user-required"));
+    CHECK(f.disp.audit_lines.empty()); ///< nothing decided yet
+}
+
+TEST_CASE("A-03: uygulanmış bir öneriye eklenen adım yeni bir öneri olarak açılır")
+{
+    // UNDER `otomatik` a sequence composed one call at a time outran its own
+    // approval: the second call named a plan that was already applied, and was
+    // refused — so every multi-call job failed at its second step.
+    Rig f;
+    f.disp.prefs.approval  = ai::ApprovalPolicy::Automatic;
+    f.disp.apply_by_policy = true;
+    ai::McpServer server   = f.server();
+
+    Json first_args;
+    first_args.set("noktalar", Json::string(f.points_handle()));
+    const Json first =
+        result_of(server.handle(tool_call("core_line", std::move(first_args)).view()));
+    const std::string first_id = first.find("structuredContent")->find("oneri")->as_string();
+
+    Json second_args;
+    second_args.set("noktalar", Json::string(f.points_handle()));
+    Json meta;
+    meta.set("plan", Json::string(first_id));
+    const Json second = result_of(
+        server.handle(tool_call("core_line", std::move(second_args), std::move(meta)).view()));
+    CHECK_FALSE(is_error(second));
+    const std::string text = text_of(second);
+    CHECK(text.find("zaten uygulanmıştı") != std::string::npos);
+    const std::string second_id = second.find("structuredContent")->find("oneri")->as_string();
+    CHECK(second_id != first_id);
+    CHECK_EQ(second.find("structuredContent")->find("durum")->as_string(),
+             std::string("uygulandi"));
+}
+
+TEST_CASE("A-03: bildirilen varsayımlar yanıta, öneriye ve denetim kaydına taşınır")
+{
+    Rig f;
+    f.disp.prefs.approval  = ai::ApprovalPolicy::Automatic;
+    f.disp.prefs.questions = ai::QuestionPolicy::Assume;
+    f.disp.apply_by_policy = true;
+    ai::McpServer server   = f.server();
+
+    Json arguments;
+    arguments.set("noktalar", Json::string(f.points_handle()));
+    Json noted = Json::array({});
+    noted.push(Json::string("Katman söylenmediği için etkin katmana çizildi."));
+    arguments.set(ai::kAssumptions, std::move(noted));
+    const Json result =
+        result_of(server.handle(tool_call("core_line", std::move(arguments)).view()));
+    CHECK_FALSE(is_error(result));
+
+    const std::string text = text_of(result);
+    CHECK(text.find("Katman söylenmediği için etkin katmana çizildi.") != std::string::npos);
+    const Json* listed = result.find("structuredContent")->find("varsayimlar");
+    REQUIRE(listed != nullptr);
+    CHECK_EQ(listed->as_array().size(), 1u);
+    REQUIRE_EQ(f.disp.audit_lines.size(), 1u);
+    CHECK(f.disp.audit_lines.front().find("\"varsayimlar\"") != std::string::npos);
+
+    // A READING TOOL takes no assumptions: there is nothing for them to explain,
+    // and the field is refused like any other the schema does not declare.
+    Json read;
+    read.set(ai::kAssumptions, Json::string("hiçbiri"));
+    const Json refused =
+        error_of(server.handle(tool_call("katmanlari_listele", std::move(read)).view()));
+    REQUIRE(refused.find("message") != nullptr);
+    CHECK(refused.find("message")->as_string().find("varsayimlar") != std::string::npos);
 }

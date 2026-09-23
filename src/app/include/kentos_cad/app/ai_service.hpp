@@ -30,6 +30,7 @@
 #include "kentos_cad/ai/gate.hpp"
 #include "kentos_cad/ai/handles.hpp"
 #include "kentos_cad/ai/plan.hpp"
+#include "kentos_cad/ai/policy_path.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 
@@ -111,6 +112,7 @@ public:
     core::Result<ai::ToolOutcome> run_read_only(const std::string& command_id,
                                                 const command::Args& args,
                                                 const std::string& requester) override;
+    ai::PolicyPreferences preferences() const override;
     core::Result<std::string> propose(ai::Plan plan) override;
     std::string existing_plan(const std::string& key, const std::string& requester) const override;
     core::Result<ai::Plan> plan_state(const std::string& id,
@@ -125,6 +127,26 @@ public:
     /// compiler: a tool call is checked against the command it names.
     const command::Registry& registry() const { return bus_.registry(); }
 
+    /// WHERE A STEP WOULD WRITE, for the overwrite policy (`core.ai.uzerine_yazma`).
+    ///
+    /// A step that writes a named file answers with the file's path and the
+    /// argument that names it; `by_name` when that argument is a NAME the file
+    /// is made from (a layout template) rather than the path itself. The shell
+    /// installs this, because only the shell knows where a template lives.
+    struct WriteTarget
+    {
+        QString path;        ///< the file the step would write
+        std::string param;   ///< the argument that decides it
+        bool by_name{false}; ///< `param` is a name the path is made from
+    };
+
+    /// Answers where a step would write, or nothing for a step that writes no
+    /// named file.
+    using WriteTargets = std::function<std::optional<WriteTarget>(const ai::PlanStep&)>;
+
+    /// Installs the answer; the shell's controller does, once.
+    void setWriteTargets(WriteTargets targets) { write_targets_ = std::move(targets); }
+
 signals:
     /// A client has proposed something and a person has to look at it. The shell
     /// raises the suggestion card; nothing is applied until it is answered.
@@ -138,14 +160,20 @@ private:
     /// Runs an approved plan: one batch, one undo entry, all or nothing.
     core::Status applyPlan(const ai::Plan& plan);
 
-    /// Offers the plan to the user's standing approval policy, and says whether
-    /// it was applied.
+    /// Offers the plan to the user's standing approval policy, and says what it
+    /// decided and why.
     ///
-    /// `false` IS THE ORDINARY ANSWER and not a failure: under the default
+    /// NOT APPLIED IS THE ORDINARY ANSWER and not a failure: under the default
     /// `her_degisiklikte` every plan waits for a person, so a user who never
     /// touched the setting sees exactly the behaviour they always saw. See
     /// `ai::decide_by_policy` for why the second road is safe (CLAUDE.md 5.23).
-    core::Result<bool> applyByPolicy(const ai::Plan& plan);
+    /// Before deciding it settles the overwrite question: with `yeni_ad_uret` a
+    /// step that would write over a file is given a fresh name, and said so.
+    core::Result<ai::PolicyOutcome> applyByPolicy(ai::Plan& plan);
+
+    /// Whether a step would write over a file that is there, after giving it a
+    /// fresh name when the overwrite policy asks for one.
+    bool resolveOverwrites(ai::Plan& plan, ai::OverwritePolicy overwrite);
 
     /// Mints handles from a read command's structured report, so the client can
     /// point at what it just learned (dispatcher.hpp explains why this is the
@@ -171,6 +199,8 @@ private:
     /// `tools/list` would be work nobody asked for; the fingerprint says when it
     /// is stale (`mutable` because `catalog()` is a const accessor that may have
     /// to rebuild).
+    WriteTargets write_targets_;
+
     mutable ai::Catalog catalog_{};
     mutable std::uint64_t catalog_fingerprint_{0};
 

@@ -65,11 +65,17 @@ std::string preamble()
   `core_circle_draw` `{"merkez": "@m", "cevre": {"taban": "@m", "dogu": 3000}}`. Bir nesneyi 5 m
   doğuya taşımak: `core_move` `{"nesneler": "@n", "baslangic": {"taban": "@m"},
   "bitis": {"taban": "@m", "dogu": 5000}}`.
-- **Yazan araçlar çağrıldığında uygulamaz.** Belgeyi ya da diski değiştiren bir araç
-  çağrısı bir ÖNERİ kaydı açar, uygulanacak komut satırlarını döndürür ve bilgisayar
-  başındaki harita mühendisi uygulayana kadar bekler. Onaylanan bir öneri tek bir
-  işlemdir ve tek `Ctrl+Z` ile geri alınır. Kadastro ve imar çıktısı hukuki belgedir;
-  imzayı yapay zeka atamaz.
+- **Yazan araçlar bir öneri açar.** Belgeyi ya da diski değiştiren bir araç çağrısı bir
+  ÖNERİ kaydı açar ve uygulanacak komut satırlarını döndürür. Öneri, kullanıcının
+  önceden seçtiği onay politikasına göre ya bilgisayar başındaki harita mühendisinin
+  onayını bekler ya da hemen uygulanır; yanıtın `durum` alanı hangisinin olduğunu
+  söyler. Uygulanan bir öneri tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır.
+  Kadastro ve imar çıktısı hukuki belgedir; imzayı yapay zeka atamaz.
+- **Varsayımlarını söyle.** Yazan her aracın `varsayimlar` alanı vardır: çağrıyı
+  hazırlarken yaptığın varsayımlar, her biri tek cümle. Komuta gitmez; kullanıcıya
+  gösterilir ve denetim kaydına yazılır. Ne zaman soracağını, ne zaman varsayımla
+  ilerleyeceğini kullanıcının soru politikası belirler; o kurallar sana ayrıca
+  söylenir.
 - **Hiçbir şeyi değiştirmeyen araçlar** (`no_effect`) doğrudan çalışır ve sonucunu
   döndürür: katman listesi, öznitelik şeması, sorgu, seçim, görünüm bilgisi.
 
@@ -83,7 +89,8 @@ std::string preamble()
 5. `secimi_al` — kullanıcının o anki seçimi, nesne tutamağı olarak.
 6. `nesne_noktalari` — nesnelerin merkez, köşe, uç, kutu ya da kenar ortası noktaları,
    nokta tutamağı olarak.
-7. Bir yazma aracı — tutamaklar ve göreli noktalarla; dönen öneriyi kullanıcı uygular.
+7. Bir yazma aracı — tutamaklar ve göreli noktalarla; dönen önerinin `durum`u uygulanıp
+   uygulanmadığını söyler.
 
 )";
 }

@@ -186,4 +186,15 @@ const char* approval_policy_name(ApprovalPolicy p);
 const char* question_policy_name(QuestionPolicy p);
 const char* overwrite_policy_name(OverwritePolicy p);
 
+/// WHAT A MODEL IS TOLD ABOUT THE POLICIES IN FORCE, in Turkish: whether its
+/// writes wait or apply at once, when to ask and when to go on, what to do
+/// about a file that is already there — and that it cannot change any of it.
+///
+/// THE SAME WORDS FOR BOTH CLIENTS. The chat's system prompt and the MCP
+/// server's instructions carry this text, so a model inside the program and an
+/// agent outside it work to one rule (TODOS A-03). It is the question policy's
+/// whole effect: asking is the model's act, and the program's part is to say,
+/// truthfully, what the person chose.
+std::string policy_rules(const PolicyPreferences& prefs);
+
 } // namespace kentos::ai

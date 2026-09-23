@@ -8,10 +8,11 @@ Gate::Gate(PlanStore& plans, AuditLog& audit, Runner runner)
 {}
 
 Approval Gate::approve(std::string plan_id, std::string operator_name, Decision decision,
-                       std::int64_t utc_ms, std::string policy, std::uint64_t content)
+                       std::int64_t utc_ms, std::string policy, std::uint64_t content,
+                       std::string decided_by)
 {
     return Approval(std::move(plan_id), std::move(operator_name), decision, utc_ms,
-                    std::move(policy), content);
+                    std::move(policy), content, std::move(decided_by));
 }
 
 core::Status Gate::decide(const Approval& approval)
@@ -53,13 +54,16 @@ core::Status Gate::decide(const Approval& approval)
     record.utc_ms        = approval.utc_ms();
     record.policy        = approval.policy();
 
-    // WHO OR WHAT DECIDED. An `Approval` can only be made by the suggestion card
-    // (`Gate::approve`, one caller, enforced by `scripts/ci-gate-ai.sh`), so
-    // reaching this line means a person clicked. `Plan::decided_by` is left as
-    // the seam for the day a policy may decide instead; until then it is empty
-    // and the record says `insan` — out loud, so the two can be told apart
-    // afterwards (TODOS S-06).
-    record.decided_by = plan->decided_by.empty() ? std::string("insan") : plan->decided_by;
+    // WHO OR WHAT DECIDED. An `Approval` is made by two callers and no third
+    // (`scripts/ci-gate-ai.sh`): the suggestion card, for a person, and the
+    // policy road, which names the policy (`Approval::decided_by`). An automatic
+    // application must never read as though somebody clicked (TODOS S-06), so
+    // the person's case says `insan` out loud and the plan carries the same word
+    // back to the client.
+    record.decided_by =
+        approval.decided_by().empty() ? std::string("insan") : approval.decided_by();
+    plan->decided_by   = record.decided_by;
+    record.assumptions = plan->assumptions();
     for (const PlanStep& step : plan->steps) {
         record.commands.push_back(step.line);
         for (const std::string& handle : step.handles)

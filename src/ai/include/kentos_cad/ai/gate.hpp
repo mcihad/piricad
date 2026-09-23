@@ -89,18 +89,25 @@ public:
     /// decision was made UNDER (TODOS S-06).
     const std::string& policy() const noexcept { return policy_; }
 
+    /// WHAT DECIDED, when it was not a person: `politika:<word>` from the policy
+    /// road (`decide_by_policy`). Empty for the card, which the record then
+    /// names `insan` — the two must never read alike (TODOS S-06).
+    const std::string& decided_by() const noexcept { return decided_by_; }
+
 private:
     friend class Gate;
 
     Approval(std::string plan_id, std::string operator_name, Decision decision, std::int64_t utc_ms,
-             std::string policy, std::uint64_t content)
+             std::string policy, std::uint64_t content, std::string decided_by)
         : plan_id_(std::move(plan_id)), operator_(std::move(operator_name)),
-          policy_(std::move(policy)), content_(content), decision_(decision), utc_ms_(utc_ms)
+          policy_(std::move(policy)), decided_by_(std::move(decided_by)), content_(content),
+          decision_(decision), utc_ms_(utc_ms)
     {}
 
     std::string plan_id_;
     std::string operator_;
     std::string policy_;
+    std::string decided_by_;
     std::uint64_t content_{0};
     Decision decision_{Decision::Reject};
     std::int64_t utc_ms_{0};
@@ -133,7 +140,8 @@ public:
     /// `content` is `Plan::content_fingerprint()` as the card read it. Zero means
     /// the caller is not making that claim; see `Approval::content`.
     Approval approve(std::string plan_id, std::string operator_name, Decision decision,
-                     std::int64_t utc_ms, std::string policy = {}, std::uint64_t content = 0);
+                     std::int64_t utc_ms, std::string policy = {}, std::uint64_t content = 0,
+                     std::string decided_by = {});
 
     /// Applies or rejects, writes the audit record, and settles the plan.
     ///

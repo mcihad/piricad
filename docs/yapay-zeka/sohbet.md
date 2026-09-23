@@ -115,7 +115,18 @@ olmuyordu; kalan her adımı yeniden istemek zorundaydınız.
 
 **Bu otomatik uygulama değildir.** Burada hiçbir şey uygulanmaz — kararı siz zaten
 verdiniz — devam eden **konuşmadır**. Modelin bundan sonra isteyeceği her çizim adımı
-yine bir öneri ve yine bir kart olur.
+yine bir öneri olur ve onay politikanıza göre ya kart ya da hemen uygulama olur.
+
+### Onay politikanız `otomatik` ise
+
+`Seçenekler ▸ Çalışma Davranışı` sayfasında onay politikasını **Otomatik uygula**
+seçtiyseniz, modelin yetki kapsamındaki önerileri kart beklemeden uygulanır: model
+`UYGULANDI` yanıtını alır, sonucu bir okuma aracıyla doğrular ve işin sonraki adımına
+kendiliğinden geçer. Kart yine görünür ve `Öneri onay politikanızla uygulandı` der; her
+öneri tek Ctrl+Z ile geri alınır ve denetim kaydına `karar_veren: politika:otomatik`
+yazılır. **Soru politikanız** da modele söylenir: modelin ne zaman soracağı, ne zaman
+varsayımla ilerleyeceği ondan gelir, ve yaptığı her varsayım kartta **Varsayımlar**
+altında görünür ([Onay ve denetim](onay.md)).
 
 **Reddet** dediğinizde tur harcanmaz. Ret konuşmaya yazılır — model bir sonraki
 mesajınızda görür — ama model o anda söz almaz: az önce hayır demiş birine cevap

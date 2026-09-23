@@ -1110,3 +1110,16 @@ TEST_CASE("S-03: bir ayarın özeti programın YAPTIĞI şeyi anlatır")
     CHECK_EQ(spec.fallback.as_enum(), 0u);
     CHECK(spec.summary.find("öntanımlı budur") != std::string::npos);
 }
+
+TEST_CASE("Okunur seçenek adları değerlerle aynı sayıda; yetki ayarlarında boş değil")
+{
+    // THE SETTINGS WINDOW SHOWS `labels` and writes `values` by index, so a list
+    // one short would write the wrong word for the last choice. The settings
+    // that decide who may do what carry readable names (TODOS A-03).
+    for (const kentos::core::SettingSpec& spec : kentos::core::builtin_settings().all()) {
+        INFO(spec.id);
+        if (!spec.labels.empty()) CHECK_EQ(spec.labels.size(), spec.values.size());
+        if (spec.authority && spec.type == kentos::core::SettingType::Enum)
+            CHECK_FALSE(spec.labels.empty());
+    }
+}

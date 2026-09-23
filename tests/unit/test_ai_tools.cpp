@@ -523,14 +523,14 @@ TEST_CASE("Öneri defteri: ekle, adım ekle, tek karar")
 
     ai::Plan plan;
     plan.requester = "sınama istemcisi";
-    plan.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}, {}});
     const std::string id = plans.add(std::move(plan));
     REQUIRE(plans.find(id) != nullptr);
     CHECK_EQ(plans.find(id)->state, ai::PlanState::Pending);
 
     // A SEQUENCE THAT ONE APPROVAL APPLIES (ai.md R4): the agent composes, the
     // person decides once.
-    REQUIRE(plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=YOL", {}, {}}).ok());
+    REQUIRE(plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=YOL", {}, {}, {}}).ok());
     CHECK_EQ(plans.find(id)->steps.size(), std::size_t{2});
     CHECK_EQ(plans.pending().size(), std::size_t{1});
 
@@ -540,11 +540,11 @@ TEST_CASE("Öneri defteri: ekle, adım ekle, tek karar")
     // ONE DECISION PER PLAN. A second would mean either applying something twice
     // or recording two answers to one question.
     CHECK(!plans.settle(id, ai::PlanState::Rejected).ok());
-    CHECK(!plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=X", {}, {}}).ok());
+    CHECK(!plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=X", {}, {}, {}}).ok());
 
     // The answer a client receives says, every time, that nothing was applied.
     ai::Plan second;
-    second.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}});
+    second.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}, {}});
     const std::string open = plans.add(std::move(second));
     const core::Json told  = plans.find(open)->to_json();
     CHECK_EQ(told.find("durum")->as_string(), std::string("beklemede"));
@@ -591,8 +591,8 @@ TEST_CASE("Onay kapısı: uygulanan öneri tek adım, reddedilen hiçbir şey")
     ai::Plan plan;
     plan.requester = "sınama";
     plan.prompt    = "iki çizgi çiz";
-    plan.steps.push_back(ai::PlanStep{"core.line", first, "ÇİZGİ 0,0 5,0", {}, {}});
-    plan.steps.push_back(ai::PlanStep{"core.line", second, "ÇİZGİ 0,1 5,1", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", first, "ÇİZGİ 0,0 5,0", {}, {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", second, "ÇİZGİ 0,1 5,1", {}, {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::size_t undo_before  = f.undo.undo_depth();
@@ -672,7 +672,7 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     first.set("ad", Value::text("ONAYLANAN"));
     ai::Plan plan;
     plan.requester = "Ajan A";
-    plan.steps.push_back(ai::PlanStep{"core.layer", first, "KATMAN ad=ONAYLANAN", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.layer", first, "KATMAN ad=ONAYLANAN", {}, {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     // THE CARD READS THE PLAN and remembers what it drew.
@@ -683,8 +683,8 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     // person has already read the card.
     Args sneaked;
     sneaked.set("ad", Value::text("OKUNMAYAN"));
-    REQUIRE(plans.append_for(id, "Ajan A",
-                             ai::PlanStep{"core.layer", sneaked, "KATMAN ad=OKUNMAYAN", {}, {}}));
+    REQUIRE(plans.append_for(
+        id, "Ajan A", ai::PlanStep{"core.layer", sneaked, "KATMAN ad=OKUNMAYAN", {}, {}, {}}));
     CHECK_NE(plans.find(id)->content_fingerprint(), as_drawn);
 
     // THE APPROVAL IS REFUSED, not trimmed: the honest answer is a fresh card
@@ -714,7 +714,7 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     Args third;
     third.set("ad", Value::text("İDDİASIZ"));
     ai::Plan other;
-    other.steps.push_back(ai::PlanStep{"core.layer", third, "KATMAN ad=İDDİASIZ", {}, {}});
+    other.steps.push_back(ai::PlanStep{"core.layer", third, "KATMAN ad=İDDİASIZ", {}, {}, {}});
     const std::string loose = plans.add(std::move(other));
     CHECK(gate.decide(gate.approve(loose, "Mühendis", ai::Decision::Apply, 1700000000002)));
 }
@@ -736,7 +736,7 @@ TEST_CASE("Onay kapısı: ret de kayda geçer, çizim değişmez")
     Args args;
     args.set("ad", Value::text("OLMAYACAK"));
     ai::Plan plan;
-    plan.steps.push_back(ai::PlanStep{"core.layer", args, "KATMAN ad=OLMAYACAK", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.layer", args, "KATMAN ad=OLMAYACAK", {}, {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::uint64_t before = f.doc.content_hash();
@@ -783,8 +783,8 @@ TEST_CASE("Onay kapısı: uygulama reddedilirse hiçbir adım kalmaz")
     Args bad; // one point where two are declared: the bus refuses it before the body runs
 
     ai::Plan plan;
-    plan.steps.push_back(ai::PlanStep{"core.line", good, "ÇİZGİ 0,0 5,0", {}, {}});
-    plan.steps.push_back(ai::PlanStep{"core.line", bad, "ÇİZGİ 9,9", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", good, "ÇİZGİ 0,0 5,0", {}, {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", bad, "ÇİZGİ 9,9", {}, {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::uint64_t before  = f.doc.content_hash();

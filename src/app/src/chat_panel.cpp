@@ -10,6 +10,7 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/ai/llmstxt.hpp"
+#include "kentos_cad/ai/policy.hpp"
 #include "kentos_cad/ai/redact.hpp"
 #include "kentos_cad/command/registry.hpp"
 
@@ -505,6 +506,7 @@ std::string ChatPanel::requesterLabel() const
 QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
 {
     ai::Plan plan;
+    plan.in_app    = true; ///< this program's own chat, for the person at the keyboard
     plan.requester = requesterLabel();
     plan.model     = turn_ != nullptr ? turn_->message().model : std::string();
     if (const ai::ProviderProfile* profile = chosen(); profile != nullptr)
@@ -548,7 +550,15 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
     // one card, one decision and one undo entry (ai.md R4).
     auto filed = service_.propose(std::move(plan));
     if (!filed) {
-        emit said(QString::fromStdString(filed.error().message));
+        // REFUSED BEFORE FILING — out of scope, or an escalation. Every call of
+        // the turn is answered with the reason, so the model is not left
+        // believing its writes are waiting on a card that does not exist.
+        const std::string why = filed.error().message;
+        for (const ai::Block& call : calls)
+            if (const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
+                tool != nullptr && tool->mutates)
+                chat_->add(ai::tool_result_message(call, why, true));
+        emit said(QString::fromStdString(why));
         return {};
     }
 
@@ -557,6 +567,45 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
     // only; what became of it is asked of the store, which is the only thing
     // that knows.
     if (!filed_.contains(id)) filed_.push_back(id);
+
+    // WHAT BECAME OF IT, read back from the plan: under a policy that applies at
+    // once the model must hear "applied" — telling it "waiting for the engineer"
+    // was a flat lie about the drawing it is working on, and it stopped the job
+    // at the first step for a card nobody had to press (A-03).
+    std::string told;
+    bool failed                         = false;
+    const core::Result<ai::Plan> result = service_.plan_state(filed.value(), requesterLabel());
+    const ai::PlanState state           = result ? result.value().state : ai::PlanState::Pending;
+    if (state == ai::PlanState::Applied) {
+        told = "Öneri " + filed.value() +
+               " kullanıcının önceden seçtiği onay politikasıyla UYGULANDI (" +
+               result.value().decided_by + "). Tek bir işlem; tek Ctrl+Z ile geri alınır.";
+        if (result.value().applied_revision != 0)
+            told +=
+                " Çizimin yeni sürümü: " + std::to_string(result.value().applied_revision) + ".";
+        for (const std::string& one : result.value().outputs)
+            told += "\nYazılan dosya: " + one;
+        for (const std::string& one : result.value().warnings)
+            told += "\nUyarı: " + one;
+        told += "\nSonucu bir okuma aracıyla doğrula; iş sürüyorsa sonraki adıma geç.";
+    } else if (state == ai::PlanState::Failed || state == ai::PlanState::Rejected) {
+        failed = true;
+        told   = "Öneri " + filed.value() + " uygulanamadı: " +
+               (result ? result.value().refusal : std::string("sebep bildirilmedi.")) +
+               " Çizim değişmedi.";
+    } else {
+        told = "Öneri " + filed.value() +
+               " olarak kaydedildi. Uygulanmadı: bilgisayar başındaki mühendis onaylayana kadar "
+               "çizim değişmez.";
+        if (result && !result.value().waiting_reason.empty())
+            told += " Onay bekleme sebebi: " + result.value().waiting_reason;
+        told += " Durumu 'oneri_durumu' ile sorabilirsiniz.";
+    }
+    if (result && !result.value().assumptions().empty()) {
+        told += "\nKullanıcıya gösterilen varsayımların:";
+        for (const std::string& one : result.value().assumptions())
+            told += "\n- " + one;
+    }
     for (const ai::Block& call : calls) {
         const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
         // READS AND UNKNOWN NAMES BELONG TO `runReadTools`, and the two sets
@@ -565,13 +614,7 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
         // as none: the provider cannot tell which one the model should believe
         // (A-04: "her tool-call kimliği doğru tek sonuç alır").
         if (tool == nullptr || !tool->mutates) continue;
-        chat_->add(ai::tool_result_message(
-            call,
-            "Öneri " + filed.value() +
-                " olarak kaydedildi. Uygulanmadı: bilgisayar başındaki mühendis "
-                "onaylayana kadar çizim değişmez. Durumu 'oneri_durumu' ile "
-                "sorabilirsiniz.",
-            false));
+        chat_->add(ai::tool_result_message(call, told, failed));
     }
     return id;
 }
@@ -634,7 +677,16 @@ void ChatPanel::finishTurn(int status, const QString& trouble)
         }
 
         const int reads = runReadTools(calls);
-        if (reads > 0 && filed.isEmpty()) {
+        // APPLIED BY THE POLICY, THE TURN GOES ON: there is no card to wait for,
+        // and a job of several steps is finished in one request — which is what
+        // the person asked for when they chose `otomatik` (A-03).
+        bool settled = false;
+        if (!filed.isEmpty())
+            if (const core::Result<ai::Plan> state =
+                    service_.plan_state(filed.toStdString(), requesterLabel());
+                state && state.value().state != ai::PlanState::Pending)
+                settled = true;
+        if ((reads > 0 && filed.isEmpty()) || settled) {
             if (++round_ < maxRounds()) {
                 sendRound();
                 return;
@@ -652,6 +704,64 @@ void ChatPanel::finishTurn(int status, const QString& trouble)
     refreshControls();
     refreshMeter();
     transcript_->bumped();
+}
+
+void ChatPanel::showClientSuggestion(const QString& planId)
+{
+    const core::Result<ai::Plan> state = service_.plan_state(planId.toStdString(), std::string());
+    if (!state || state.value().in_app) return;
+    const ai::Plan& plan = state.value();
+
+    const QString who = QString::fromStdString(plan.requester);
+    const auto steps  = static_cast<int>(plan.steps.size());
+    QString lines;
+    for (const ai::PlanStep& step : plan.steps)
+        lines += QStringLiteral("\n    ") + QString::fromStdString(step.line);
+    for (const std::string& one : plan.assumptions())
+        lines += QStringLiteral("\n    ") + tr("varsayım: %1").arg(QString::fromStdString(one));
+
+    MessageBubble* bubble = client_cards_.value(planId);
+    if (bubble == nullptr) {
+        bubble = new MessageBubble(Speaker::Notice, this);
+        transcript_->append(bubble);
+        client_cards_.insert(planId, bubble);
+    }
+
+    if (plan.state == ai::PlanState::Pending) {
+        // THE CARD LISTS THE LINES; the notice only says whose they are, so the
+        // buttons are not pushed out of a short dock by the same lines twice.
+        bubble->setNote(tr("%1 bir öneri gönderdi (%2 adım). Uygulamak ya da reddetmek sizin "
+                           "kararınız.")
+                            .arg(who)
+                            .arg(steps),
+                        Tone::Accent);
+        auto* card = new SuggestionCard(service_, planId, bubble);
+        connect(card, &SuggestionCard::settled, this, [this](const QString& id, bool applied) {
+            emit said(applied ? tr("Öneri %1 uygulandı.").arg(id)
+                              : tr("Öneri %1 reddedildi.").arg(id));
+        });
+        bubble->setFooter(card);
+    } else if (plan.state == ai::PlanState::Applied) {
+        bubble->setNote(tr("%1 önerisi %2, onay politikanızla uygulandı (%3 adım); tek Ctrl+Z "
+                           "ile geri alınır:%4")
+                            .arg(who, planId)
+                            .arg(steps)
+                            .arg(lines),
+                        Tone::Ok);
+        bubble->setFooter(nullptr);
+    } else {
+        bubble->setNote(tr("%1 önerisi %2: %3. %4")
+                            .arg(who, planId, QString::fromUtf8(ai::plan_state_name(plan.state)),
+                                 QString::fromStdString(plan.refusal)),
+                        Tone::Warn);
+        bubble->setFooter(nullptr);
+    }
+    bubble->applyTheme(theme_);
+    // TO THE CARD, whatever the reader was looking at: a suggestion from outside
+    // is not a line in an ongoing conversation that may be scrolled past, it is
+    // a decision somebody is waiting on — and in a short dock it sat below the
+    // fold with its buttons out of sight.
+    transcript_->toEnd();
 }
 
 std::span<const ai::Message> ChatPanel::probeMessages() const
@@ -869,6 +979,10 @@ std::string ChatPanel::systemPrompt() const
         out += "- CRS: " + view->crs + "\n";
     }
     out += "\n- Belge sürümü: " + std::to_string(service_.revision()) + "\n";
+
+    // THE RULES THE PERSON CHOSE, in the words an outside agent is told too: do
+    // writes wait or apply at once, when to ask and when to go on (A-03).
+    out += "\n" + ai::policy_rules(service_.preferences());
     return out;
 }
 

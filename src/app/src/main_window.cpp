@@ -1361,14 +1361,13 @@ void MainWindow::buildActions()
     // different things that must not share a picture.
     actAi_ = new QAction(tr("Yapay Zeka"), this);
     actAi_->setData(static_cast<int>(Glyph::Chat));
-    actAi_->setToolTip(tr("Yapay zeka sohbeti — model komut önerir, uygulayan sizsiniz"));
+    actAi_->setToolTip(tr("Yapay zeka sohbeti — model komut önerir; ne zaman uygulanacağını "
+                          "onay politikanız belirler (Ayarlar ▸ Çalışma Davranışı)"));
     actAi_->setStatusTip(actAi_->toolTip());
     actAi_->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+A")));
     actAi_->setProperty(kToolCommand, QStringLiteral("ÖNERİ"));
     connect(actAi_, &QAction::triggered, this, [this] {
-        if (chatDock_ == nullptr) return;
-        chatDock_->show();
-        chatDock_->raise();
+        showChat();
         if (chatPanel_ != nullptr) chatPanel_->refreshProfiles();
     });
 
@@ -2423,6 +2422,27 @@ void MainWindow::buildPanels()
     connect(&controller_->providerService(), &ProviderService::profilesChanged, chatPanel_,
             &ChatPanel::refreshProfiles);
     connect(chatPanel_, &ChatPanel::said, this, &MainWindow::onEcho);
+
+    // AN OUTSIDE CLIENT'S SUGGESTION REACHES THE PERSON. An MCP client's plan
+    // had no card anywhere in the program, so under the default policy nobody
+    // could apply it: the client was told to wait for an engineer who was never
+    // shown anything. It goes in the chat dock — opened if closed — with the
+    // same card the chat's own suggestions use (TODOS A-03).
+    connect(&controller_->aiService(), &AiService::suggestionFiled, this,
+            [this](const QString& id) {
+                if (chatPanel_ == nullptr) return;
+                const core::Result<ai::Plan> held =
+                    controller_->aiService().plan_state(id.toStdString(), std::string());
+                if (!held || held.value().in_app) return;
+                chatPanel_->showClientSuggestion(id);
+                if (held.value().state == ai::PlanState::Pending) {
+                    showChat();
+                    // TALL ENOUGH TO READ THE CARD: a dock squeezed under the
+                    // layers showed the notice's first line and hid its buttons.
+                    if (chatDock_ != nullptr && chatDock_->height() < height() / 2)
+                        resizeDocks({chatDock_}, {height() / 2}, Qt::Vertical);
+                }
+            });
 
     chatHeader_ = new PanelHeader(this);
     chatHeader_->addTab(tr("Yapay Zeka"), static_cast<int>(Glyph::Chat));
@@ -5760,6 +5780,22 @@ void MainWindow::onDocumentChanged()
         journalView_->appendPlainText(QString::fromStdString(e.to_json(false).dump()));
 
     canvas_->update();
+}
+
+void MainWindow::showChat()
+{
+    if (chatDock_ == nullptr) return;
+    // PUT IT BACK WHERE IT BELONGS BEFORE SHOWING IT, the repair
+    // `showPythonConsole` makes: a saved layout can leave the dock floating
+    // somewhere the person never chose, and a suggestion card opened in a
+    // stray window is a card nobody sees. A deliberate float is respected —
+    // this reaches only a dock that is floating AND hidden.
+    if (chatDock_->isFloating() && !chatDock_->isVisible()) {
+        chatDock_->setFloating(false);
+        addDockWidget(Qt::RightDockWidgetArea, chatDock_);
+    }
+    chatDock_->show();
+    chatDock_->raise();
 }
 
 void MainWindow::showPythonConsole(const QString& source)

@@ -229,6 +229,13 @@ struct SettingSpec
     SettingValue fallback{};               ///< the declared default; "default" is a keyword
     SettingRange range{};                  ///< scalar range; ignored for Text
     std::vector<std::string> values;       ///< Enum value names, index order
+
+    /// WHAT A PERSON READS for each of `values`, same order — empty to show the
+    /// value names themselves. The settings window shows these and still writes
+    /// the value name, so a journal, a script and `TERCİH` keep the one
+    /// spelling. A setting that decides who may do what must not be a list of
+    /// `her_degisiklikte`-shaped words (TODOS A-03).
+    std::vector<std::string> labels;
     std::string unit;    ///< "mm", "µderece", "‰", "sn" — empty when unitless
     std::string summary; ///< one line, Turkish, and it justifies the scope (R40)
 

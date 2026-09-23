@@ -10,6 +10,7 @@
 // registry (.claude/test.md: a protocol is proved by a function, not a socket).
 #include "kentos_test.hpp"
 
+#include "kentos_cad/ai/arguments.hpp"
 #include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/ai/llmstxt.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -201,17 +202,23 @@ TEST_CASE("Her araç dört annotation taşır ve onay kuralını söyler")
              {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"})
             CHECK(notes->find(key) != nullptr);
 
-        // And the description says whether calling it does anything, because an
-        // agent that does not know its write will wait for a person reads the
-        // silence as a failure and tries again.
-        CHECK(tool.description.find(tool.mutates ? "UYGULAMAZ" : "değiştirmez") !=
+        // And the description says what decides whether calling it does
+        // anything — the user's approval policy — because an agent that does not
+        // know its write may wait for a person reads the silence as a failure and
+        // tries again, and one told "never applies" is lied to under `otomatik`.
+        CHECK(tool.description.find(tool.mutates ? "onay politikasına" : "değiştirmez") !=
               std::string::npos);
+        // A WRITING TOOL TAKES THE CALLER'S ASSUMPTIONS, the one field the
+        // projection adds (A-03); a reading tool does not.
+        const core::Json* props = tool.input_schema.find("properties");
+        REQUIRE(props != nullptr);
+        CHECK_EQ(props->find(ai::kAssumptions) != nullptr, tool.mutates);
 
         const core::Json* meta = entry.find("_meta");
         REQUIRE(meta != nullptr);
         const core::Json* approval = meta->find("cad.kentos/approval");
         REQUIRE(approval != nullptr);
-        CHECK_EQ(approval->as_string(), std::string(tool.mutates ? "user-required" : "none"));
+        CHECK_EQ(approval->as_string(), std::string(tool.mutates ? "policy" : "none"));
     }
 }
 
@@ -221,8 +228,8 @@ TEST_CASE("llms.txt şemanın anlatamadığını anlatır ve üretilmiş olduğu
     const std::string index = ai::llms_txt(f.reg);
 
     CHECK(index.find(ai::kGeneratedNotice) == 0);
-    for (const char* must :
-         {"milimetre", "Sağa (Y)", "Yukarı (X)", "tutamak", "uygulamaz", "2026-07-28", "Ctrl+Z"})
+    for (const char* must : {"milimetre", "Sağa (Y)", "Yukarı (X)", "tutamak", "onay politikasına",
+                             "varsayimlar", "2026-07-28", "Ctrl+Z"})
         CHECK(index.find(must) != std::string::npos);
 
     // The fingerprint travels with it, so a stale copy is detectable.

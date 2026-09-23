@@ -13,7 +13,9 @@ uygulama kararının neden yalnız öneri kartında verildiğini bileceksiniz.
 
 **Öneri** (İngilizcesi *suggestion*), bir yapay zeka istemcisinin çizimde yapılmasını
 istediği işin **kaydıdır**: bir kimlik, bir durum ve uygulanacak **komut satırları**.
-Öneri açıldığı anda hiçbir şey uygulanmaz.
+Öneri açıldığı anda — onay politikanız `otomatik` değilse — hiçbir şey uygulanmaz;
+`otomatik` ise yetki kapsamındaki öneri hemen uygulanır ve durumu `uygulandi` olur
+([Onay ve denetim](../yapay-zeka/onay.md)).
 
 `ÖNERİ` bu defteri okur ve kararın sonucunu taşır:
 

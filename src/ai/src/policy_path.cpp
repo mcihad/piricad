@@ -29,29 +29,41 @@
 
 namespace kentos::ai {
 
-core::Result<bool> decide_by_policy(Gate& gate, const Plan& plan, const PolicyPreferences& prefs,
-                                    const ClientScope& scope, command::Effect effect,
-                                    const std::string& operator_name, std::int64_t utc_ms)
+std::string policy_decider(ApprovalPolicy policy)
+{
+    return std::string("politika:") + approval_policy_name(policy);
+}
+
+core::Result<PolicyOutcome> decide_by_policy(Gate& gate, const Plan& plan,
+                                             const PolicyPreferences& prefs,
+                                             const ClientScope& scope, command::Effect effect,
+                                             const std::string& operator_name, std::int64_t utc_ms,
+                                             bool overwrites)
 {
     // THE ENGINE ANSWERS FIRST, and its answer is the whole decision: this file
     // adds no judgement of its own. `decide` is pure and tested apart from any
     // model (`test_ai_policy.cpp`).
-    const PolicyDecision verdict = decide(effect, prefs, scope);
+    const PolicyDecision verdict = decide(effect, prefs, scope, {}, overwrites);
+    PolicyOutcome out;
+    out.verdict = verdict.verdict;
+    out.reason  = verdict.reason;
 
-    // ANYTHING BUT `Allow` GOES TO A PERSON. `ApprovalRequired` is the ordinary
-    // case, `InputRequired` means the plan is not finished, and `Deny` is out of
-    // scope and can never become an approval however the preferences are set.
-    if (verdict.verdict != Verdict::Allow) return false;
+    // ANYTHING BUT `Allow` IS NOT APPLIED HERE. `ApprovalRequired` goes to a
+    // person, `InputRequired` means the plan is not finished, and `Deny` is out
+    // of scope and can never become an approval however the preferences are set.
+    if (verdict.verdict != Verdict::Allow) return out;
 
     // THE APPROVAL IS BOUND TO THESE EXACT STEPS, the same way the card binds to
-    // what it drew. A plan that grew between the policy reading it and the gate
-    // running it is refused by `Gate::decide`, not applied (S-04).
-    const Approval approval =
-        gate.approve(plan.id, operator_name, Decision::Apply, utc_ms,
-                     approval_policy_name(prefs.approval), plan.content_fingerprint());
+    // what it drew, and it NAMES THE POLICY: an automatic application must never
+    // read as a click (S-06). A plan that grew between the policy reading it and
+    // the gate running it is refused by `Gate::decide`, not applied (S-04).
+    const Approval approval = gate.approve(
+        plan.id, operator_name, Decision::Apply, utc_ms, approval_policy_name(prefs.approval),
+        plan.content_fingerprint(), policy_decider(prefs.approval));
 
     if (core::Status ran = gate.decide(approval); !ran) return ran.error();
-    return true;
+    out.applied = true;
+    return out;
 }
 
 } // namespace kentos::ai

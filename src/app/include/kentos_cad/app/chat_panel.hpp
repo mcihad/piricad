@@ -30,6 +30,8 @@
 #include "kentos_cad/ai/dialect.hpp"
 #include "kentos_cad/ai/provider.hpp"
 
+#include <QHash>
+#include <QPointer>
 #include <QString>
 #include <QStringList>
 #include <QWidget>
@@ -98,6 +100,15 @@ public:
 
     /// Forgets the conversation — messages, attachments and accounting.
     void newChat();
+
+    /// A SUGGESTION FROM OUTSIDE — an MCP client's plan — put in front of the
+    /// person: a notice naming the client and what it asks, and the card to
+    /// apply or reject it; or, when the person's policy already applied it, a
+    /// notice saying so. The chat's own plans get their card with the turn
+    /// that made them, so this passes them over. A plan extended after its card
+    /// went up gets a fresh card: the old one would apply what it no longer
+    /// shows (TODOS A-03).
+    void showClientSuggestion(const QString& planId);
 
     /// The transcript, for the probe.
     Transcript* transcript() const noexcept { return transcript_; }
@@ -179,6 +190,10 @@ private:
     /// ids are kept; what became of each is asked of the plan store, which is
     /// the only thing that knows.
     QStringList filed_;
+
+    /// The notices put up for outside clients' plans, by plan id, so a plan
+    /// extended after its card went up replaces its card rather than adding one.
+    QHash<QString, QPointer<MessageBubble>> client_cards_;
 
     /// Which of `filed_` are applied right now, as a readable list. Empty when
     /// this conversation has changed nothing.

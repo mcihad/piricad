@@ -68,6 +68,8 @@ struct PlanStep
     /// The relative points among them: the base handle and the dimension it was
     /// moved by (`@….0 + doğu 10000, kuzey 0 mm`), for the audit record.
     std::vector<std::string> constructions;
+    /// What the client says it assumed to compose this step (`kAssumptions`).
+    std::vector<std::string> assumptions;
 };
 
 /// A whole suggestion.
@@ -81,6 +83,12 @@ struct Plan
     /// token's fingerprint; for the chat it is the provider and model. It reaches
     /// the audit record and never a credential (ai.md P11).
     std::string requester;
+
+    /// FILED BY THIS PROGRAM'S OWN CHAT, for the person at the keyboard. Its
+    /// scope may reach outward acts (a print) — with the approval its policy
+    /// asks for — where an outside client's may not; and its card is shown by
+    /// the chat itself, not by the window's MCP road.
+    bool in_app{false};
 
     std::string prompt;   ///< the request the steps came from, as the client stated it
     std::string model;    ///< model identity and version, when there is one
@@ -110,9 +118,19 @@ struct Plan
     /// printed with one broken map link did print.
     std::vector<std::string> warnings;
 
-    /// Which policy decided, and why. Empty when a person decided, in which case
-    /// the audit record names them instead (S-06).
+    /// Who or what decided: `insan` for a person at the card, `politika:<word>`
+    /// for the approval policy the user set beforehand (S-06). Empty until it
+    /// was decided.
     std::string decided_by;
+
+    /// WHY IT IS WAITING, when the policy was asked and said a person must
+    /// decide — the engine's own reason (`PolicyDecision::reason`), for the card
+    /// and for the client. A plan that waits without saying why reads as a plan
+    /// that is stuck.
+    std::string waiting_reason;
+
+    /// Every step's assumptions, in step order, without repeats.
+    std::vector<std::string> assumptions() const;
 
     // ---- how far it has got, and why asking twice is safe (TODOS M-06) ------
 

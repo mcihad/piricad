@@ -177,13 +177,16 @@ yüzeyini sunar. Üç şeyi bilmeden çağrı yapmayın.
    `gorunum_bilgisi`, `katmanlari_listele`, `oznitelik_semasi`, `sorgula`, `secimi_al`.
    Bir tutamak alındığı çizim sürümüne bağlıdır; çizim değişirse yeniden okuyun.
 
-2. YAZAN BİR ARAÇ ÇAĞRILDIĞINDA UYGULANMAZ. Çizimi ya da diski değiştiren bir araç
-   çağrısı bir ÖNERİ kaydı açar, uygulanacak komut satırlarını döndürür ve bilgisayar
-   başındaki harita mühendisi uygulayana kadar hiçbir şey değişmez. Öneri uygulanırsa
-   tamamı tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Kadastro ve imar çıktısı
-   hukuki belgedir; imzayı yapay zeka atamaz. Bunu atlayan bir yol, bir başlık ya da
-   bir ayar yoktur. Bir diziyi tek uygulamada toplamak için `_meta` içinde `plan`
-   alanına bekleyen önerinin kimliğini verin.
+2. YAZAN BİR ARAÇ BİR ÖNERİ AÇAR. Çizimi ya da diski değiştiren bir araç çağrısı bir
+   ÖNERİ kaydı açar ve uygulanacak komut satırlarını döndürür. Öneri, kullanıcının
+   önceden seçtiği onay politikasına göre ya bilgisayar başındaki harita mühendisinin
+   onayını bekler ya da hemen uygulanır; yanıtın `durum` alanı ve `_meta` içindeki
+   `cad.kentos/approval` (`user-required` / `policy-applied`) hangisinin olduğunu
+   söyler. Uygulanan öneri tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Kadastro
+   ve imar çıktısı hukuki belgedir; imzayı yapay zeka atamaz. Politikayı istemci
+   değiştiremez. Bir diziyi tek uygulamada toplamak için `_meta` içinde `plan` alanına
+   bekleyen önerinin kimliğini verin. Yaptığınız varsayımları yazan çağrının
+   `varsayimlar` alanına yazın; kullanıcıya gösterilir ve denetim kaydına girer.
 
 3. BİRİM TAM SAYI MİLİMETREDİR. Bütün koordinatlar `int64` sabit noktalı milimetre;
    ondalık yoktur, 485320.15 metre `485320150` demektir. Alan milimetrekaredir. Eksen
@@ -399,8 +402,18 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
     Json result;
     result.set("supportedVersions", std::move(versions));
     result.set("capabilities", std::move(capabilities));
-    result.set("instructions", Json::string(info_.instructions.empty() ? default_instructions()
-                                                                       : info_.instructions));
+    // THE RULES THE PERSON CHOSE, appended to the fixed ones: whether a write
+    // waits or applies at once, when to ask, what to do about a file that is
+    // there. The same words the chat is told (`policy_rules`, TODOS A-03).
+    const PolicyPreferences prefs = dispatcher_.preferences();
+    result.set("instructions", Json::string((info_.instructions.empty() ? default_instructions()
+                                                                        : info_.instructions) +
+                                            "\n\n" + policy_rules(prefs)));
+    Json policy;
+    policy.set("onay", Json::string(approval_policy_name(prefs.approval)));
+    policy.set("soru", Json::string(question_policy_name(prefs.questions)));
+    policy.set("uzerine_yazma", Json::string(overwrite_policy_name(prefs.overwrite)));
+    meta.set("cad.kentos/policy", std::move(policy));
     // Five minutes. The discovery answer changes only when the build or the
     // command catalogue does, and the fingerprint travels with it so a client
     // that cached it longer can still tell.
@@ -638,6 +651,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     step.line          = render_line(*spec, compiled.args);
     step.handles       = compiled.handles;
     step.constructions = compiled.constructions;
+    step.assumptions   = compiled.assumptions;
 
     // A CLIENT MAY COMPOSE A SEQUENCE ONE APPROVAL APPLIES (ai.md R4), by naming
     // a pending plan in `_meta`. Two spellings are read; see `kPlanMetaKey`.
@@ -658,6 +672,19 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         if (const Json* asked = rpc.meta.find(kIdempotencyMetaKey);
             asked != nullptr && asked->is_string())
             once = asked->as_string();
+
+    // A SEQUENCE THAT OUTRAN ITS OWN APPROVAL. Under a policy that applies at
+    // once, the plan a client means to extend may already be applied — a
+    // sequence composed one call at a time becomes a sequence of plans, each
+    // its own undo step. That is said, not refused: refusing it made every
+    // multi-call job fail at its second call under `otomatik` (A-03).
+    std::string continued_from;
+    if (!target.empty())
+        if (core::Result<Plan> held = dispatcher_.plan_state(target, out.audit.requester);
+            held && held.value().state == PlanState::Applied) {
+            continued_from = target;
+            target.clear();
+        }
 
     Plan plan;
     // THE CONTRACT THIS RELIES ON, stated where it is used: `Dispatcher::propose`
@@ -728,26 +755,49 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
 
     std::string text = std::string("Öneri ") + what + ": " + plan_id + " (durum: " +
                        plan_state_name(state ? state.value().state : PlanState::Pending) + ").";
+    if (!continued_from.empty())
+        text += "\nÖneri " + continued_from +
+                " zaten uygulanmıştı; bu adım onu genişletmedi, yeni bir öneri olarak açıldı.";
     text += "\nUygulanacak komut satırları:";
     for (const std::string& line : lines)
         text += "\n  " + line;
+    if (state && !state.value().assumptions().empty()) {
+        text += "\nBildirdiğin varsayımlar (kullanıcıya gösterilir ve denetim kaydına yazılır):";
+        for (const std::string& one : state.value().assumptions())
+            text += "\n  - " + one;
+    }
     // WHAT ACTUALLY HAPPENED, not what usually happens. Since §5.2.1 was amended
     // a plan may already have been applied by the user's standing policy before
     // this answer is built — and telling that client "çizim değişmedi" would be a
     // flat lie about the drawing it is working on. The state decides the
     // sentence; the client never applies either way (ai.md R24).
     const PlanState said_state = state ? state.value().state : PlanState::Pending;
-    if (said_state == PlanState::Applied)
+    bool failed                = false;
+    if (said_state == PlanState::Applied) {
         text += "\nBU SATIRLAR UYGULANDI: kullanıcının önceden kurduğu onay politikası "
                 "izin verdi (denetim kaydına hangi politikanın verdiği yazıldı). Tamamı "
-                "tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Uygulayan sen değilsin.";
-    else if (said_state == PlanState::Running)
+                "tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Uygulayan sen değilsin. "
+                "Sonucu bir okuma aracıyla doğrula; iş sürüyorsa sonraki adımı yeni bir "
+                "çağrıyla iste.";
+        if (state && state.value().applied_revision != 0)
+            text +=
+                "\nÇizimin yeni sürümü: " + std::to_string(state.value().applied_revision) + ".";
+    } else if (said_state == PlanState::Running) {
         text += "\nBu satırlar ŞU AN uygulanıyor; henüz bitmedi. Sonucu `ÖNERİ islem=durum` "
                 "ile sorun.";
-    else
-        text += "\nÇizim değişmedi. Bu satırlar, bilgisayar başındaki harita mühendisi "
-                "kartta uygulayana ya da onun önceden kurduğu onay politikası izin verene "
-                "kadar uygulanmaz; uygulanırsa tamamı tek bir işlem ve tek `Ctrl+Z` olur.";
+    } else if (said_state == PlanState::Failed) {
+        failed = true;
+        text += "\nUYGULANAMADI: " +
+                (state && !state.value().refusal.empty() ? state.value().refusal
+                                                         : std::string("sebep bildirilmedi.")) +
+                " Çizim değişmedi.";
+    } else {
+        text += "\nÇizim değişmedi. Kullanıcının onay politikası bu öneriyi bilgisayar "
+                "başındaki harita mühendisine bıraktı: kartta uygulayana kadar uygulanmaz; "
+                "uygulanırsa tamamı tek bir işlem ve tek `Ctrl+Z` olur.";
+        if (state && !state.value().waiting_reason.empty())
+            text += "\nOnay bekleme sebebi: " + state.value().waiting_reason;
+    }
 
     Json structured = state ? state.value().to_json() : Json::object({});
     if (!state) {
@@ -761,16 +811,28 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         structured.set("tutamaklar", std::move(used));
     }
 
+    // WHAT DECIDED THIS CALL, said per call: `policy-applied` when the user's
+    // standing policy applied it, `user-required` while it waits for a person.
     Json meta;
     meta.set("cad.kentos/commandId", Json::string(command_id));
     meta.set(kPlanMetaKey, Json::string(plan_id));
-    meta.set("cad.kentos/approval", Json::string("user-required"));
+    const char* decided = "user-required";
+    if (said_state == PlanState::Applied)
+        decided = "policy-applied";
+    else if (failed)
+        decided = "failed";
+    meta.set("cad.kentos/approval", Json::string(decided));
 
-    out.before.push_back(message_frame(
-        "info",
-        "Öneri " + plan_id + " açıldı ve uygulanmadı; karar bilgisayar başındaki mühendise ait."));
+    std::string frame = "Öneri " + plan_id +
+                        " açıldı ve uygulanmadı; karar bilgisayar başındaki "
+                        "mühendise ait.";
+    if (said_state == PlanState::Applied)
+        frame = "Öneri " + plan_id + " kullanıcının onay politikasıyla uygulandı.";
+    else if (failed)
+        frame = "Öneri " + plan_id + " uygulanamadı; çizim değişmedi.";
+    out.before.push_back(message_frame("info", frame));
     out.payload = rpc_result(
-        rpc.id, call_result(std::move(text), std::move(structured), false, std::move(meta)));
+        rpc.id, call_result(std::move(text), std::move(structured), failed, std::move(meta)));
     return out;
 }
 

@@ -3,7 +3,10 @@
 //
 // Every case here is a sentence out of TODOS §7.1: the user wrote what the three
 // approval modes must do, and these are those rows.
+#include "kentos_cad/ai/gate.hpp"
+#include "kentos_cad/ai/plan.hpp"
 #include "kentos_cad/ai/policy.hpp"
+#include "kentos_cad/ai/policy_path.hpp"
 
 #include "kentos_cad/core/settings.hpp"
 
@@ -350,4 +353,115 @@ TEST_CASE("S-05: yetkisiz uygulama yakalanır, yetkili uygulama reddedilmez")
     const kentos::ai::PolicyDecision fallback =
         decide(Effect::DocumentEdit, with(ApprovalPolicy::EveryChange), mine);
     CHECK_EQ(fallback.verdict, Verdict::ApprovalRequired);
+}
+
+// ============================================================================
+// A-03 — the policy road end to end, and what a model is told
+// ============================================================================
+
+namespace {
+
+/// A gate over a real store and audit log, with a runner that changes nothing
+/// and counts how often it was asked.
+struct Road
+{
+    kentos::ai::PlanStore plans;
+    std::vector<std::string> lines;
+    kentos::ai::AuditLog audit{[this](const std::string& line) { lines.push_back(line); }};
+    int runs{0};
+    kentos::ai::Gate gate{plans, audit, [this](const kentos::ai::Plan&) {
+                              ++runs;
+                              return kentos::core::ok();
+                          }};
+
+    std::string file()
+    {
+        kentos::ai::Plan plan;
+        plan.requester = "sınama";
+        plan.steps.push_back(kentos::ai::PlanStep{"core.line", {}, "ÇİZGİ 0,0 10,10", {}, {}, {}});
+        return plans.add(std::move(plan));
+    }
+};
+
+} // namespace
+
+TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politikayı yazar")
+{
+    using kentos::command::Effect;
+    {
+        // THE DEFAULT: a person decides, and the reason says so.
+        Road road;
+        const std::string id = road.file();
+        PolicyPreferences prefs;
+        auto outcome = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
+                                                    ClientScope{}, Effect::DocumentEdit, "kişi", 0);
+        REQUIRE(outcome.ok());
+        CHECK_FALSE(outcome.value().applied);
+        CHECK(outcome.value().verdict == Verdict::ApprovalRequired);
+        CHECK(outcome.value().reason == "Her değişiklikte onay isteniyor.");
+        CHECK_EQ(road.runs, 0);
+        CHECK(road.plans.find(id)->state == kentos::ai::PlanState::Pending);
+    }
+    {
+        // `otomatik`: applied once, and the record and the plan both name the
+        // policy — never `insan` (S-06).
+        Road road;
+        const std::string id = road.file();
+        PolicyPreferences prefs;
+        prefs.approval = ApprovalPolicy::Automatic;
+        auto outcome   = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
+                                                      ClientScope{}, Effect::DocumentEdit, "kişi", 0);
+        REQUIRE(outcome.ok());
+        CHECK(outcome.value().applied);
+        CHECK_EQ(road.runs, 1);
+        CHECK(road.plans.find(id)->state == kentos::ai::PlanState::Applied);
+        CHECK(road.plans.find(id)->decided_by == "politika:otomatik");
+        REQUIRE_EQ(road.lines.size(), 1u);
+        CHECK(road.lines.front().find("\"karar_veren\":\"politika:otomatik\"") !=
+              std::string::npos);
+    }
+    {
+        // A CARD CLICK is `insan`, on the record and on the plan.
+        Road road;
+        const std::string id = road.file();
+        const auto approval =
+            road.gate.approve(id, "kişi", kentos::ai::Decision::Apply, 0, "her_degisiklikte",
+                              road.plans.find(id)->content_fingerprint());
+        REQUIRE(road.gate.decide(approval).ok());
+        CHECK(road.plans.find(id)->decided_by == "insan");
+        CHECK(road.lines.front().find("\"karar_veren\":\"insan\"") != std::string::npos);
+    }
+    {
+        // OVERWRITING is asked even under `otomatik` when the person chose `sor`.
+        Road road;
+        const std::string id = road.file();
+        PolicyPreferences prefs;
+        prefs.approval  = ApprovalPolicy::Automatic;
+        prefs.overwrite = OverwritePolicy::Ask;
+        auto outcome    = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
+                                                       ClientScope{}, Effect::FileWrite, "kişi", 0,
+                                                       /*overwrites=*/true);
+        REQUIRE(outcome.ok());
+        CHECK_FALSE(outcome.value().applied);
+        CHECK(outcome.value().reason.find("üstüne yazar") != std::string::npos);
+    }
+}
+
+TEST_CASE("A-03: modele söylenen kurallar seçilen politikayı ve soru tercihini anlatır")
+{
+    PolicyPreferences prefs;
+    std::string rules = kentos::ai::policy_rules(prefs);
+    CHECK(rules.find("her_degisiklikte") != std::string::npos);
+    CHECK(rules.find("yalniz_zorunlu") != std::string::npos);
+    CHECK(rules.find("değiştiremezsin") != std::string::npos);
+
+    prefs.approval  = ApprovalPolicy::Automatic;
+    prefs.questions = kentos::ai::QuestionPolicy::Assume;
+    rules           = kentos::ai::policy_rules(prefs);
+    CHECK(rules.find("Onay bekleme") != std::string::npos);
+    CHECK(rules.find("varsayimlar") != std::string::npos);
+    CHECK(rules.find("UYDURMA") != std::string::npos); ///< what decides the result is not invented
+
+    prefs.questions = kentos::ai::QuestionPolicy::WhenItMatters;
+    CHECK(kentos::ai::policy_rules(prefs).find("işe başlamadan") != std::string::npos);
 }

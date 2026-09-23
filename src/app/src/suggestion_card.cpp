@@ -104,6 +104,29 @@ SuggestionCard::SuggestionCard(AiService& service, const QString& planId, QWidge
         column->addWidget(trace);
     }
 
+    // WHAT THE CLIENT ASSUMED to compose it, in its own words (`varsayimlar`):
+    // work that goes ahead on an assumption says which, before the person
+    // approves it and in the record after (TODOS A-03).
+    if (const std::vector<std::string> noted = plan->assumptions(); !noted.empty()) {
+        QStringList lines;
+        for (const std::string& one : noted)
+            lines << QStringLiteral("• ") + QString::fromStdString(one);
+        auto* assumed =
+            new QLabel(tr("Varsayımlar:\n%1").arg(lines.join(QStringLiteral("\n"))), this);
+        assumed->setObjectName(QStringLiteral("formHelp"));
+        assumed->setWordWrap(true);
+        column->addWidget(assumed);
+    }
+
+    // AND WHY IT WAITS, when the policy was asked and gave it to a person.
+    if (pending_ && !plan->waiting_reason.empty()) {
+        auto* why = new QLabel(
+            tr("Onay bekliyor: %1").arg(QString::fromStdString(plan->waiting_reason)), this);
+        why->setObjectName(QStringLiteral("formHelp"));
+        why->setWordWrap(true);
+        column->addWidget(why);
+    }
+
     auto* who = new QLabel(
         tr("İsteyen: %1%2")
             .arg(plan->requester.empty() ? tr("(bilinmiyor)")
@@ -223,7 +246,12 @@ void SuggestionCard::showOutcome(bool applied, const QString& trouble)
         outcome_->setText(tr("Öneri uygulanamadı: %1 Çizimde hiçbir şey değişmedi.").arg(trouble));
         outcome_->setProperty("tone", QStringLiteral("danger"));
     } else if (applied) {
-        outcome_->setText(tr("Öneri %1 — tek Ctrl+Z ile geri alınır.").arg(state));
+        // SAID WHO DECIDED: a card for a plan the person's policy applied must
+        // not read as though somebody clicked it (S-06).
+        const bool by_policy = plan != nullptr && plan->decided_by.starts_with("politika");
+        outcome_->setText(by_policy ? tr("Öneri onay politikanızla uygulandı — tek Ctrl+Z ile "
+                                         "geri alınır.")
+                                    : tr("Öneri %1 — tek Ctrl+Z ile geri alınır.").arg(state));
         outcome_->setProperty("tone", QStringLiteral("accent"));
     } else {
         outcome_->setText(tr("Öneri %1. Çizimde hiçbir şey değişmedi.").arg(state));

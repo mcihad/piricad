@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/controller.hpp"
+
+#include "kentos_cad/core/text.hpp"
 #include "kentos_cad/script/python_doc.hpp"
 
 #include "kentos_cad/app/ai_transport.hpp"
@@ -21,6 +23,7 @@
 #include <QClipboard>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QStandardPaths>
@@ -64,6 +67,31 @@ Controller::Controller(QObject* parent)
 #endif
 {
     command::register_builtin_commands(registry_);
+
+    // WHERE AN AGENT'S STEP WOULD WRITE, for the overwrite policy
+    // (`core.ai.uzerine_yazma`, TODOS A-03). Only the files an agent can reach:
+    // a layout template saved by name, and a print written to a named PDF. The
+    // shell answers because only the shell knows where a template lives.
+    ai_.setWriteTargets([this](const ai::PlanStep& step) -> std::optional<AiService::WriteTarget> {
+        const auto text = [&step](const char* name) {
+            const command::Value* v = step.args.find(name);
+            return v != nullptr && v->kind() == command::Value::Kind::Text ? v->as_text()
+                                                                           : std::string();
+        };
+        if (step.command_id == "core.layout_template") {
+            if (!core::turkish_key_equals(text("islem"), "kaydet") || text("ad").empty())
+                return std::nullopt;
+            auto path = templates_.pathFor(QString::fromStdString(text("ad")));
+            if (!path) return std::nullopt;
+            return AiService::WriteTarget{.path = path.value(), .param = "ad", .by_name = true};
+        }
+        if (step.command_id == "core.print" && !text("dosya").empty())
+            return AiService::WriteTarget{
+                .path    = QFileInfo(QString::fromStdString(text("dosya"))).absoluteFilePath(),
+                .param   = "dosya",
+                .by_name = false};
+        return std::nullopt;
+    });
 
     // The domain modules own commands too, and `/src/command` may not name them
     // (Article 3.2). `/src/app` depends on everything, so this is the one place

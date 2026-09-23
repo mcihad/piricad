@@ -412,6 +412,7 @@ core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog,
     step.args          = std::move(compiled.args);
     step.handles       = std::move(compiled.handles);
     step.constructions = std::move(compiled.constructions);
+    step.assumptions   = std::move(compiled.assumptions);
     step.line          = render_line(*spec, step.args);
     return step;
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/ai_service.hpp"
 
+#include "kentos_cad/ai/arguments.hpp"
+
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/ai/policy.hpp"
 #include "kentos_cad/ai/policy_path.hpp"
@@ -170,17 +172,8 @@ static std::string policy_operator(const core::Settings& settings)
                           : user.toStdString() + " (işletim sistemi kullanıcısı)";
 }
 
-core::Result<bool> AiService::applyByPolicy(const ai::Plan& plan)
+ai::PolicyPreferences AiService::preferences() const
 {
-    // WHAT THIS PLAN WOULD LEAVE CHANGED, from its own steps — never guessed
-    // from a command's name (`command::effect_of`, C-02).
-    auto effect = command::Effect::None;
-    for (const ai::PlanStep& step : plan.steps) {
-        const command::CommandSpec* spec = bus_.registry().by_id(step.command_id);
-        if (spec == nullptr) return false; // unknown step: a person decides
-        effect = effect | command::effect_of(*spec, step.args);
-    }
-
     ai::PolicyPreferences prefs;
     prefs.approval =
         ai::approval_policy_from(appSettings().get("core.ai.onay_politikasi").as_text());
@@ -188,15 +181,84 @@ core::Result<bool> AiService::applyByPolicy(const ai::Plan& plan)
         ai::question_policy_from(appSettings().get("core.ai.soru_politikasi").as_text());
     prefs.overwrite =
         ai::overwrite_policy_from(appSettings().get("core.ai.uzerine_yazma").as_text());
+    return prefs;
+}
+
+bool AiService::resolveOverwrites(ai::Plan& plan, ai::OverwritePolicy overwrite)
+{
+    if (!write_targets_) return false;
+    bool overwrites = false;
+    for (ai::PlanStep& step : plan.steps) {
+        const std::optional<WriteTarget> target = write_targets_(step);
+        if (!target || !QFileInfo::exists(target->path)) continue;
+        if (overwrite != ai::OverwritePolicy::FreshName) {
+            overwrites = true;
+            continue;
+        }
+
+        // A FRESH NAME: the argument that decides the file, with ` (2)`, ` (3)`
+        // … before its extension, until it names a file that is not there. The
+        // line the person reads is rendered again, so the card and the record
+        // say the name that will actually be written.
+        const command::Value* was = step.args.find(target->param);
+        if (was == nullptr || was->kind() != command::Value::Kind::Text) {
+            overwrites = true;
+            continue;
+        }
+        const QString given = QString::fromStdString(was->as_text());
+        const QFileInfo info(given);
+        const QString dot  = target->by_name || info.suffix().isEmpty()
+                                 ? QString()
+                                 : QStringLiteral(".") + info.suffix();
+        const QString stem = dot.isEmpty() ? given : given.left(given.size() - dot.size());
+        bool renamed       = false;
+        for (int n = 2; n < 1000 && !renamed; ++n) {
+            const QString candidate = stem + QStringLiteral(" (%1)").arg(n) + dot;
+            ai::PlanStep trial      = step;
+            trial.args.set(target->param, command::Value::text(candidate.toStdString()));
+            const std::optional<WriteTarget> there = write_targets_(trial);
+            if (!there || QFileInfo::exists(there->path)) continue;
+            step.args = std::move(trial.args);
+            if (const command::CommandSpec* spec = bus_.registry().by_id(step.command_id))
+                step.line = ai::render_line(*spec, step.args);
+            plan.warnings.push_back("'" + given.toStdString() +
+                                    "' zaten vardı; üzerine yazılmadı, yeni ad: '" +
+                                    candidate.toStdString() + "'.");
+            renamed = true;
+        }
+        if (!renamed) overwrites = true;
+    }
+    return overwrites;
+}
+
+core::Result<ai::PolicyOutcome> AiService::applyByPolicy(ai::Plan& plan)
+{
+    // WHAT THIS PLAN WOULD LEAVE CHANGED, from its own steps — never guessed
+    // from a command's name (`command::effect_of`, C-02).
+    auto effect = command::Effect::None;
+    for (const ai::PlanStep& step : plan.steps) {
+        const command::CommandSpec* spec = bus_.registry().by_id(step.command_id);
+        if (spec == nullptr) // unknown step: a person decides
+            return ai::PolicyOutcome{.verdict = ai::Verdict::ApprovalRequired,
+                                     .reason  = "Tanınmayan bir adım var; karar kişinin.",
+                                     .applied = false};
+        effect = effect | command::effect_of(*spec, step.args);
+    }
+
+    const ai::PolicyPreferences prefs = preferences();
+    const bool overwrites             = resolveOverwrites(plan, prefs.overwrite);
 
     // THE REQUESTER'S SCOPE. A client reaches only what a client may reach; the
     // person at the keyboard is unscoped and their own clicks do not come
-    // through here at all.
+    // through here at all. The program's own chat works for that person, so it
+    // may ASK for an outward act — a print — which then waits for the approval
+    // its policy names; an outside client may not ask at all.
     ai::ClientScope scope;
-    scope.client = plan.requester;
+    scope.client             = plan.requester;
+    scope.may_write_external = plan.in_app;
 
     return ai::decide_by_policy(*gate_, plan, prefs, scope, effect, policy_operator(appSettings()),
-                                QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
+                                QDateTime::currentDateTimeUtc().toMSecsSinceEpoch(), overwrites);
 }
 
 core::Status AiService::applyPlan(const ai::Plan& plan)
@@ -256,8 +318,10 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
     if (ai::Plan* filed = plans_.find(plan.id); filed != nullptr) {
         filed->applied_revision = bus_.document().revision();
         filed->outputs          = std::move(wrote);
-        filed->warnings         = std::move(notes);
-        filed->undo_label       = "Yapay zeka önerisi";
+        // APPENDED, not replaced: a fresh name given before the decision
+        // (`resolveOverwrites`) is a warning the client must still read.
+        filed->warnings.insert(filed->warnings.end(), notes.begin(), notes.end());
+        filed->undo_label = "Yapay zeka önerisi";
     }
     return core::ok();
 }
@@ -460,7 +524,6 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
     }
 
     const std::string filed = plans_.add(std::move(plan));
-    emit suggestionFiled(QString::fromStdString(filed));
 
     // ---- THE SECOND SANCTIONED ROAD (§5.2.1, CLAUDE.md 5.7) ----------------
     //
@@ -472,24 +535,52 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
     // AND THE POLICY IS THEIRS ALONE: every authority setting is refused to an
     // agent one layer below (`ai::escalates`, CLAUDE.md 5.23), which is what
     // makes this road safe rather than a trust mode.
-    if (const ai::Plan* held = plans_.find(filed); held != nullptr) {
-        if (auto applied = applyByPolicy(*held); !applied)
-            command::log_error(applied.error().message);
-        else if (applied.value())
+    std::string said_how = "öneri — uygulanmadı";
+    if (ai::Plan* held = plans_.find(filed); held != nullptr) {
+        auto decided = applyByPolicy(*held);
+        if (!decided) {
+            // THE GATE OR THE RUNNER REFUSED: the plan is `Failed` with the
+            // reason, and the client reads both from its state.
+            command::log_error(decided.error().message);
+            said_how = "otomatik uygulanamadı: " + decided.error().message;
             emit suggestionSettled(QString::fromStdString(filed));
+        } else if (decided.value().applied) {
+            said_how =
+                "onay politikasıyla uygulandı — " + ai::policy_decider(preferences().approval);
+            emit suggestionSettled(QString::fromStdString(filed));
+        } else if (decided.value().verdict == ai::Verdict::Deny) {
+            // OUT OF SCOPE IS REFUSED HERE, NOT FILED. A card would put work the
+            // client may not ask for in front of a person as though it could be
+            // approved — and approving it would widen the client's scope, which
+            // nothing may do (CLAUDE.md 5.23).
+            const std::string why = decided.value().reason;
+            (void)plans_.settle(filed, ai::PlanState::Rejected, why);
+            emit suggestionSettled(QString::fromStdString(filed));
+            return core::err(core::ErrorCode::Unsupported,
+                             why + " Bu öneri açılmadı; bu işi bilgisayar başındaki kişi "
+                                   "kendisi yapabilir.");
+        } else {
+            held->waiting_reason = decided.value().reason;
+            said_how             = "öneri — onay bekliyor: " + decided.value().reason;
+        }
     }
+
+    // ANNOUNCED ONCE IT IS DECIDED: the shell puts a card up for a plan that
+    // waits and a notice for one the policy applied, and a card raised before
+    // the policy ran would be a card for a plan that is already in the drawing.
+    emit suggestionFiled(QString::fromStdString(filed));
 
     // SAID ON THE TRANSCRIPT TOO, because a suggestion that arrived while the
     // user was looking at the drawing must not be a silent modal surprise: the
-    // line is the same one the card shows, and it stays in the transcript after
-    // the card is answered.
+    // line is the same one the card shows, and it says what became of it.
     const ai::Plan* held = plans_.find(filed);
     if (held != nullptr) {
-        std::string said = "Yapay zeka önerisi " + filed +
-                           " (öneri — uygulanmadı): " + std::to_string(held->steps.size()) +
-                           " adım";
+        std::string said = "Yapay zeka önerisi " + filed + " (" + said_how +
+                           "): " + std::to_string(held->steps.size()) + " adım";
         for (const ai::PlanStep& step : held->steps)
             said += "\n    " + step.line;
+        for (const std::string& one : held->assumptions())
+            said += "\n    varsayım: " + one;
         bus_.echo(said);
     }
     return filed;

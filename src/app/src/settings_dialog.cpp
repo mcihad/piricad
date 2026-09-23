@@ -1436,11 +1436,17 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
         break;
     }
     case SettingType::Enum: {
+        // THE READABLE NAME IS SHOWN, THE VALUE NAME IS WRITTEN (`SettingSpec::
+        // labels`): the person reads "Her değişiklikte onay iste", and TERCİH,
+        // the journal and a script keep `her_degisiklikte`.
         auto* box = new ComboBox(line);
-        for (const std::string& value : spec.values)
-            box->addItem(QString::fromStdString(value));
-        connect(box, &QComboBox::currentTextChanged, this, [this, &spec](const QString& text) {
-            if (!loading_ && !text.isEmpty()) write(spec, text);
+        for (std::size_t i = 0; i < spec.values.size(); ++i) {
+            const std::string& shown =
+                i < spec.labels.size() && !spec.labels[i].empty() ? spec.labels[i] : spec.values[i];
+            box->addItem(QString::fromStdString(shown), QString::fromStdString(spec.values[i]));
+        }
+        connect(box, &QComboBox::currentIndexChanged, this, [this, &spec, box](int index) {
+            if (!loading_ && index >= 0) write(spec, box->itemData(index).toString());
         });
         editor = box;
         break;
