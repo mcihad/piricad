@@ -88,7 +88,8 @@ ucudur, elips ne kadar basık olsa da. DXF ve DWG de böyle sayar.
 ### Arayüz
 
 **Çizim ▸ Elips**. Merkezi tıklayın, birinci eksenin ucunu, sonra ikinci eksenin
-uzaklığını.
+uzaklığını. Üçüncü tıklamadan önce kılavuz elipsin kendisini çizer; `baslangic=` ve
+`bitis=` ile kısmi elips istendiyse bütün elipsi değil, çizilecek parçayı gösterir.
 
 ### Betik
 

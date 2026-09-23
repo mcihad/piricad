@@ -261,6 +261,17 @@ gezilir, **Enter** ile seçilir, **Esc** ile kapanır.
 Ailedeki her araç ayrıca **Çiz** menüsünde kendi kalemiyle durur ve kendi adıyla
 komut satırından çağrılabilir; aile düğmesi bir kısayoldur, tek yol değildir.
 
+**Araç, yöntemiyle birlikte elde kalır.** Bir şekli bitirdiğinizde araç aynı yöntemle
+yeniden kurulur — karttan **Daire — üç nokta**'yı seçtiyseniz de, komut satırına
+`DAİRE yontem=3n` yazdıysanız da bir sonraki daire üç noktalıdır. Komut satırında
+yazdığınız ayarlar da korunur (`yaricap=`, `kenar_sayisi=`, `aci=`, `derece=`,
+`yon=` gibi); noktalar korunmaz, çünkü her şekil kendi noktalarını ister.
+
+**Kılavuz, tıklamanın çizeceği nesnedir.** Her çizim yönteminde imleci gezdirirken
+görünen kesikli şekil — daire, yay, elips, çokgen, dikdörtgen, spline, çizgi ve alan
+— belgeye yazılacak nesnenin kendisidir: aynı hesapla ve belgenin nesneyi çizdiği
+sıklıkta çizilir. Bu, her yöntem için her derlemede otomatik olarak sınanır.
+
 Faz 2'de gelecek araçlar pasiftir ve hangi fazda geleceklerini ipucunda yazarlar —
 görünmez olmaları, yokmuş gibi davranmaktan daha kötü olurdu.
 

@@ -16,6 +16,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -30,17 +31,6 @@
 
 namespace kentos::command {
 namespace {
-
-/// The radius `centre`->`p` implies, rounded to the millimetre the record stores.
-core::Mm radius_between(core::Point2 centre, core::Point2 p)
-{
-    // Metres before squaring: the square of a TM3 coordinate difference in
-    // millimetres leaves the 53-bit mantissa long before it leaves int64
-    // (core.md R3). `double` is transient and never stored.
-    const double dx = core::mm_to_metres(p.x - centre.x);
-    const double dy = core::mm_to_metres(p.y - centre.y);
-    return core::mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(core::kMmPerMetre));
-}
 
 Task<void> run(Context& ctx)
 {
@@ -236,7 +226,15 @@ Task<void> run(Context& ctx)
                                                  .rubber_origin = *a,
                                                  .rubber_shape  = RubberShape::Line});
         if (!c) co_return;
-        auto wanted = co_await ctx.number("yaricap", "Yarıçap (m)");
+        // THE CHORD STAYS ON SCREEN while its radius is typed: a number prompt
+        // with nothing drawn left the user aiming at two points they could no
+        // longer see.
+        auto wanted = co_await ctx.number("yaricap", "Yarıçap (m)",
+                                          PointOptions{.rubber_band   = true,
+                                                       .rubber_origin = *c,
+                                                       .rubber_base   = false,
+                                                       .rubber_shape  = RubberShape::Fixed,
+                                                       .rubber_chain  = {*a, *c}});
         if (!wanted) co_return;
 
         const core::Mm r = core::mm_from_metres(*wanted);
@@ -272,10 +270,12 @@ Task<void> run(Context& ctx)
             // other was unreachable by mouse — although the note above it said
             // the user points at the side. Now they do, with the arc following
             // the cursor from one side of the chord to the other.
+            // A CHOICE OF SIDE, not a point aimed from the start (`rubber_base`).
             auto pointed =
                 co_await ctx.point("yon_nokta", "Yayın hangi yandan geçeceğini gösterin",
                                    PointOptions{.rubber_band    = true,
                                                 .rubber_origin  = *a,
+                                                .rubber_base    = false,
                                                 .rubber_shape   = RubberShape::ArcBuild,
                                                 .rubber_chain   = ends,
                                                 .rubber_payload = core::encode_arc_guide(guide)});
@@ -320,7 +320,7 @@ Task<void> run(Context& ctx)
                                                  .rubber_shape  = RubberShape::Circle});
     if (!start) co_return;
 
-    const core::Mm radius = radius_between(*centre, *start);
+    const core::Mm radius = core::radius_through(*centre, *start);
     if (radius <= 0) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Başlangıç noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
@@ -331,41 +331,33 @@ Task<void> run(Context& ctx)
     // given on a plan. The end is computed from the sweep rather than pointed
     // at, because a sweep of 47,5000 grad is not a point anybody can click.
     if (is("bma")) {
-        auto sweep = co_await ctx.number("supurme", "Süpürme açısı");
+        // THE SWEEP CAN BE SHOWN. A sweep of 47,5000 grad is not a point anybody
+        // can click, so it is typed — and a sweep of "about to that kerb" is not
+        // a number anybody has, so it can be pointed at too: the arc follows the
+        // cursor round the centre with its sweep written on it, and the click
+        // answers with that sweep (`Prompt::pick_sweep`). This prompt used to be
+        // a bare number with nothing on the canvas at all.
+        auto sweep = co_await ctx.number("supurme", "Süpürme açısı — yazın ya da gösterin",
+                                         PointOptions{.rubber_band   = true,
+                                                      .rubber_origin = *centre,
+                                                      .rubber_shape  = RubberShape::ArcSweep,
+                                                      .rubber_chain  = {*start},
+                                                      .pick_sweep    = true});
         if (!sweep) co_return;
 
+        // ONE ANSWER FOR THE GUIDE AND THE ARC: `core::arc_by_sweep`, signed and
+        // not folded, in the session's sense and stored in the model's.
         const core::AngleConvention convention = ctx.session().bus().angle_convention();
-        const double from_turns = core::direction_turns(*centre, *start, convention.rule);
-
-        // SIGNED, AND NOT FOLDED INTO ONE TURN. `turns_from_udeg` folds into
-        // [0, 1), which is right for a DIRECTION and wrong for a SWEEP: a
-        // highway curve of −100 grad turns the other way, and folded it would
-        // turn the same way by 300.
-        const double by_turns =
-            static_cast<double>(core::udeg_from_angle(*sweep, convention.unit)) /
-            static_cast<double>(core::kUDegFullCircle);
-        if (by_turns == 0.0) {
+        core::Mm swept_radius                  = 0;
+        core::Point2 first{};
+        core::Point2 last{};
+        if (!core::arc_by_sweep(*centre, *start, *sweep, convention, swept_radius, first, last)) {
             ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                          "Süpürme açısı sıfır olamaz; yay bir noktaya iner."));
             co_return;
         }
-
-        // THE SWEEP IS IN THE SESSION'S SENSE; THE ARC IS STORED IN THE MODEL'S.
-        // A positive sweep means clockwise under semt — which is what a surveyor
-        // means by one — and counter-clockwise under matematik. An arc is stored
-        // counter-clockwise from start to end (core/arc.hpp), so a clockwise
-        // sweep is the same arc with its ends the other way round. Getting this
-        // wrong does not draw a slightly different arc: it draws the other
-        // three quarters of the circle.
-        const double to_turns       = from_turns + by_turns;
-        const core::Point2 computed = *centre + core::polar_offset_turns(core::mm_to_metres(radius),
-                                                                         to_turns, convention.rule);
-
-        const bool ccw_in_drawing =
-            convention.rule == core::AngleRule::Matematik ? by_turns > 0.0 : by_turns < 0.0;
-        auto made = ctx.transaction().add_arc(ctx.active_layer(), *centre, radius,
-                                              ccw_in_drawing ? *start : computed,
-                                              ccw_in_drawing ? computed : *start);
+        const auto made =
+            ctx.transaction().add_arc(ctx.active_layer(), *centre, swept_radius, first, last);
         if (!made) {
             ctx.session().fail(made.error());
             co_return;

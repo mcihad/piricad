@@ -24,6 +24,49 @@ bool asks_retract(const Registry& registry, std::string_view line)
     return spec != nullptr && spec->id == "core.undo";
 }
 
+std::string rearm_line(const Registry& registry, std::string_view line)
+{
+    // The words of the line as typed, a quoted caption kept whole.
+    std::vector<std::string_view> words;
+    std::size_t i = 0;
+    while (i < line.size()) {
+        while (i < line.size() && (line[i] == ' ' || line[i] == '\t'))
+            ++i;
+        if (i >= line.size()) break;
+        const std::size_t from = i;
+        bool quoted            = false;
+        while (i < line.size() && (quoted || (line[i] != ' ' && line[i] != '\t'))) {
+            if (line[i] == '"') quoted = !quoted;
+            ++i;
+        }
+        words.push_back(line.substr(from, i - from));
+    }
+    if (words.empty()) return {};
+    const CommandSpec* spec = registry.resolve(words.front());
+    if (spec == nullptr || spec->names.empty()) return {};
+
+    // THE PRIMARY NAME, so the line matches the button that carries the same
+    // method (`DR yontem=3n` is the tool `DAİRE yontem=3n`).
+    std::string out = spec->names.front();
+    for (std::size_t w = 1; w < words.size(); ++w) {
+        const std::string_view word = words[w];
+        const std::size_t eq        = word.find('=');
+        if (eq == std::string_view::npos || eq == 0) continue; ///< positional: a place
+        const std::string key = core::turkish_fold_key(word.substr(0, eq));
+        for (const Param& p : spec->params) {
+            if (core::turkish_fold_key(p.name) != key) continue;
+            if (p.kind == ParamKind::Point || p.kind == ParamKind::PointList ||
+                p.kind == ParamKind::Selection)
+                break;
+            out += ' ';
+            out += p.name;
+            out += word.substr(eq);
+            break;
+        }
+    }
+    return out;
+}
+
 const char* session_state_name(SessionState s)
 {
     switch (s) {
@@ -122,7 +165,7 @@ core::Status Session::supply(Value v)
     // number it wants; a prompt that takes a distance by pointing says so and is
     // let through (`Prompt::pick_distance`).
     if ((prompt_.kind == ParamKind::Number || prompt_.kind == ParamKind::Integer) &&
-        v.kind() == Value::Kind::Point && !prompt_.pick_distance)
+        v.kind() == Value::Kind::Point && !prompt_.pick_distance && !prompt_.pick_sweep)
         return core::err(core::ErrorCode::InvalidArgument,
                          "\"" + prompt_.message +
                              "\" bir sayı bekliyor; tıklamak yerine komut satırına yazın.");

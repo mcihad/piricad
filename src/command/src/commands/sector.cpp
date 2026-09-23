@@ -24,20 +24,11 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/units.hpp"
 
-#include <cmath>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
-
-/// The radius `centre`->`p` implies, rounded to the millimetre the record stores.
-core::Mm radius_between(core::Point2 centre, core::Point2 p)
-{
-    const double dx = core::mm_to_metres(p.x - centre.x);
-    const double dy = core::mm_to_metres(p.y - centre.y);
-    return core::mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(core::kMmPerMetre));
-}
 
 std::vector<core::Point2> zip(const std::vector<core::Mm>& xs, const std::vector<core::Mm>& ys)
 {
@@ -61,7 +52,7 @@ Task<void> run_sector(Context& ctx)
                                                  .rubber_shape  = RubberShape::Circle});
     if (!start) co_return;
 
-    const core::Mm radius = radius_between(*centre, *start);
+    const core::Mm radius = core::radius_through(*centre, *start);
     if (radius <= 0) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "İlk kenar merkezle aynı yerde; yarıçap sıfır olamaz.");
@@ -132,8 +123,8 @@ Task<void> run_annulus(Context& ctx)
                                                  .rubber_chain  = {*inner}});
     if (!outer) co_return;
 
-    core::Mm r_in  = radius_between(*centre, *inner);
-    core::Mm r_out = radius_between(*centre, *outer);
+    core::Mm r_in  = core::radius_through(*centre, *inner);
+    core::Mm r_out = core::radius_through(*centre, *outer);
 
     // GIVEN IN EITHER ORDER. A user who clicks the outside first has not made a
     // mistake, and refusing them would be pedantry: the smaller radius is the

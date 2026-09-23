@@ -6,6 +6,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/session.hpp"
 
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/units.hpp"
@@ -121,6 +122,17 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_
         const core::Point2 at = snap_value(session, prompt, std::move(v), up_front).as_point();
         return Value::number(core::mm_to_metres(core::segment_length(prompt.rubber_origin, at)));
     }
+    // AN ANGLE SHOWN RATHER THAN TYPED (`Prompt::pick_sweep`): the click is
+    // snapped like any other, and what is handed on and journalled is the sweep
+    // it makes from the start round the centre — the number the prompt asked
+    // for, so a replay re-supplies the number and draws the same arc.
+    if (prompt.pick_sweep && prompt.kind == ParamKind::Number && v.kind() == Value::Kind::Point &&
+        !prompt.rubber_chain.empty()) {
+        const core::Point2 at = snap_value(session, prompt, std::move(v), up_front).as_point();
+        return Value::number(core::arc_sweep_toward(prompt.rubber_origin,
+                                                    prompt.rubber_chain.front(), at,
+                                                    session.bus().angle_convention()));
+    }
     return snap_value(session, prompt, std::move(v), up_front);
 }
 
@@ -161,6 +173,7 @@ InputAwaiter<double> Context::number(std::string param, std::string message, Poi
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
     prompt.pick_distance   = o.pick_distance;
+    prompt.pick_sweep      = o.pick_sweep;
     return InputAwaiter<double>(session_, std::move(p), std::move(prompt), &to_number);
 }
 

@@ -19,6 +19,7 @@
 // declares even when the measured ends round to a millimetre either side of it.
 #pragma once
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -123,6 +124,24 @@ struct ArcGuide
 /// written to a file.
 std::vector<std::uint8_t> encode_arc_guide(const ArcGuide& guide);
 std::optional<ArcGuide> decode_arc_guide(std::span<const std::uint8_t> bytes);
+
+/// The sweep from `start` round `centre` to the direction of `toward`, as YAY
+/// `bma` is answered when its end is SHOWN rather than typed: an angle written
+/// in `convention.unit`, counted in the convention's own positive sense —
+/// clockwise under semt, counter-clockwise under matematik — in (0, one turn).
+/// Zero when `toward` lies along the start direction or on the centre, which
+/// sweeps nothing (and which `arc_by_sweep` refuses).
+double arc_sweep_toward(Point2 centre, Point2 start, Point2 toward,
+                        AngleConvention convention) noexcept;
+
+/// YAY `bma`: the arc from `start` round `centre` through `sweep`, an angle
+/// written under `convention` and SIGNED — a negative sweep turns the other
+/// way, and is not folded into a positive one — in the form the document
+/// stores: counter-clockwise from `first` to `last`. One function for the
+/// command and for the guide that previews a shown sweep. False for a zero
+/// sweep or a start on the centre.
+bool arc_by_sweep(Point2 centre, Point2 start, double sweep, AngleConvention convention, Mm& radius,
+                  Point2& first, Point2& last) noexcept;
 
 /// Which of the two arcs of a given radius joining `a` and `b` the point
 /// `toward` asks for: true for the one `yon=sag` names.

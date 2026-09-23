@@ -99,19 +99,20 @@ bool offset_line(Point2 p, Point2 q, Mm by, Point2& op, Point2& oq) noexcept
     return true;
 }
 
-/// The distance between two points in millimetres, computed in metres.
-///
-/// Metres before squaring: the square of a TM3 coordinate difference in
-/// millimetres leaves the 53-bit mantissa long before it leaves int64, and
-/// translating to the first point is what keeps the operands small (core.md R3).
+/// The distance between two points in millimetres: `radius_through`'s.
 Mm span(Point2 a, Point2 b) noexcept
 {
-    const double dx = mm_to_metres(b.x - a.x);
-    const double dy = mm_to_metres(b.y - a.y);
-    return mm_round(std::sqrt(dx * dx + dy * dy) * kMmPerMetre);
+    return radius_through(a, b);
 }
 
 } // namespace
+
+Mm radius_through(Point2 centre, Point2 p) noexcept
+{
+    const double dx = mm_to_metres(p.x - centre.x);
+    const double dy = mm_to_metres(p.y - centre.y);
+    return mm_round(std::sqrt(dx * dx + dy * dy) * kMmPerMetre);
+}
 
 bool tangent_circle_centre(Point2 a1, Point2 a2, Point2 b1, Point2 b2, Mm radius, Point2 near,
                            Point2& centre) noexcept
@@ -181,7 +182,9 @@ bool circle_from_guide(const CircleGuide& guide, std::span<const Point2> chain, 
         if (chain.size() < 2) return false;
         return circumcircle(chain[0], chain[1], cursor, centre, radius) && radius > 0;
     case CircleBuild::Tangent:
-        if (chain.size() < 4) return false;
+        // No radius yet — DAİRE ttr shows the two lines while it asks for one —
+        // is no circle, not a circle of no size.
+        if (chain.size() < 4 || guide.radius <= 0) return false;
         radius = guide.radius;
         return tangent_circle_centre(chain[0], chain[1], chain[2], chain[3], guide.radius, cursor,
                                      centre);

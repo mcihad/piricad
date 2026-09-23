@@ -8270,7 +8270,8 @@ TEST_CASE("ÇOKGEN: soru sırası, işaret edilen boy ve her adımda kılavuz")
         REQUIRE(guide.has_value());
         CHECK_EQ(guide->sides, std::int64_t{6});
         CHECK(guide->fit == core::PolygonFit::Inscribed);
-        CHECK_EQ(guide->circumradius, core::Mm{0});
+        CHECK_EQ(guide->measured, 0.0);
+        CHECK_FALSE(guide->angle_given);
 
         // Pointing 10 m due north is a circumradius of 10 m and a turn of zero
         // under semt — an inscribed hexagon whose first corner is the point that
@@ -8340,7 +8341,7 @@ TEST_CASE("ÇOKGEN: soru sırası, işaret edilen boy ve her adımda kılavuz")
         const auto guide = core::decode_polygon_guide(session.prompt().rubber_payload);
         REQUIRE(guide.has_value());
         CHECK(guide->fit == core::PolygonFit::Side);
-        CHECK_EQ(guide->circumradius, core::Mm{10'000}); // a hexagon's side is its radius
+        CHECK_EQ(guide->measured, 10.0); // the typed side, which the corners are made from
 
         REQUIRE(session.supply(Value::point(core::Point2{0, 5'000})).ok());
         REQUIRE(f.bus.finish(session).ok());

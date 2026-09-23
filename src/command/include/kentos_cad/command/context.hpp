@@ -118,6 +118,10 @@ struct PointOptions
     /// integer parameter is in a declared unit the canvas does not know.
     bool pick_distance{false};
 
+    /// A click answers this number with the angle it sweeps from the chain's
+    /// start round `rubber_origin`. See `Prompt::pick_sweep`.
+    bool pick_sweep{false};
+
     /// The newest point of the run may be taken back. See `Prompt::can_retract`;
     /// the body learns of it through `Context::took_back`.
     bool can_retract{false};

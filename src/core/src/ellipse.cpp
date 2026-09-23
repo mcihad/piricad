@@ -39,6 +39,28 @@ Point2 ellipse_minor_of(const RingGeometry& geom, std::uint32_t slot)
     return vertex_at(geom, slot, 2);
 }
 
+bool ellipse_minor_end(Point2 centre, Point2 major, Point2 reach, Point2& minor) noexcept
+{
+    // The first axis as a vector, and the perpendicular to it.
+    const auto ax      = static_cast<double>(major.x - centre.x);
+    const auto ay      = static_cast<double>(major.y - centre.y);
+    const double a_len = std::sqrt(ax * ax + ay * ay);
+    if (!(a_len > 0.0)) return false;
+
+    // How far `reach` lies ACROSS the first axis: its component perpendicular
+    // to it. A point along the first axis gives a second axis of zero, which
+    // is a line and not an ellipse.
+    const auto rx       = static_cast<double>(reach.x - centre.x);
+    const auto ry       = static_cast<double>(reach.y - centre.y);
+    const double across = (rx * -ay + ry * ax) / a_len;
+    const double b      = across < 0.0 ? -across : across;
+    if (b < 1.0) return false;
+
+    // The perpendicular unit vector, scaled to that distance.
+    minor = Point2{centre.x + mm_round(-ay / a_len * b), centre.y + mm_round(ax / a_len * b)};
+    return true;
+}
+
 void ellipse_outline(Point2 centre, Point2 major, Point2 minor, std::vector<Mm>& xs,
                      std::vector<Mm>& ys)
 {

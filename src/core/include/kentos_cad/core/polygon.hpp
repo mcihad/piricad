@@ -107,25 +107,57 @@ bool edge_rectangle_corners(Point2 first, Point2 second, Point2 across,
 /// What a polygon guide needs beyond the points it is handed.
 ///
 /// The canvas is given a centre and a cursor; the side count and the fit are the
-/// two facts it cannot see, and under `kenar` the size is already fixed by a
-/// typed length so the cursor sets only the rotation. Carried through
+/// two facts it cannot see. Under `kenar` the size is already fixed by a typed
+/// length, so the cursor sets only the rotation; with `aci` given the rotation
+/// is fixed, so the cursor sets only the size. Carried through
 /// `Prompt::rubber_payload`, which exists for exactly this (`command/input.hpp`).
 struct PolygonGuide
 {
     std::int64_t sides{kPolygonMinSides};
     PolygonFit fit{PolygonFit::Inscribed};
 
-    /// The circumradius in millimetres when it is already known, 0 when the
-    /// cursor's distance from the centre is what sets it.
-    Mm circumradius{0};
+    /// The fit's own measurement in metres — what `yaricap` or
+    /// `kenar_uzunlugu` holds — when it is already settled, 0 when the cursor's
+    /// distance from the centre sets it. The MEASUREMENT and not the
+    /// circumradius, because the command derives its corners from what it
+    /// records, and a millimetre-rounded circumradius is not what it records.
+    double measured{0.0};
+
+    /// Whether the first vertex's direction was given (`aci`) rather than
+    /// pointed at, and that direction in micro-degrees under the session's
+    /// convention — the form a typed `aci` takes on its way in.
+    bool angle_given{false};
+    std::int64_t angle_udeg{0};
 
     friend constexpr bool operator==(const PolygonGuide&, const PolygonGuide&) = default;
 };
 
-/// Fixed 17-byte layout: sides (int64, little end first), fit (uint8),
-/// circumradius (int64). Fixed rather than versioned because a guide lives for
-/// the length of one prompt and is never written to a file.
+/// Fixed 26-byte layout: sides (int64, little end first), fit (uint8), measured
+/// (the IEEE-754 bits of a double), angle_given (uint8), angle_udeg (int64).
+/// Fixed rather than versioned because a guide lives for the length of one
+/// prompt and is never written to a file.
 std::vector<std::uint8_t> encode_polygon_guide(const PolygonGuide& guide);
 std::optional<PolygonGuide> decode_polygon_guide(std::span<const std::uint8_t> bytes);
+
+/// What pointing at a place makes of a polygon guide: the numbers ÇOKGEN
+/// records for it, and the corners those numbers draw.
+struct PolygonPick
+{
+    double measured{0.0}; ///< the fit's measurement, metres — what the size parameter records
+    bool angle_pointed{false}; ///< the rotation came from the point, and `aci` records it
+    double angle{0.0};         ///< that rotation, in the convention's unit
+    std::vector<Point2> corners; ///< counter-clockwise in the drawing, as ÇOKGEN writes them
+};
+
+/// The polygon that pointing at `at` makes, for the command and its guide alike.
+///
+/// THE CORNERS COME FROM WHAT IS RECORDED. The measurement is the one the size
+/// parameter records, and a pointed rotation is quantised to the micro-degree
+/// the way `aci` is read back (`angle_from_turns`, `udeg_from_angle`) — so the
+/// polygon the guide shows, the polygon the click writes and the polygon a
+/// replay of its journal line draws are one polygon, to the millimetre. False
+/// when `at` is the centre or the guide's side count is out of range.
+bool polygon_from_guide(const PolygonGuide& guide, Point2 centre, Point2 at,
+                        AngleConvention convention, PolygonPick& out);
 
 } // namespace kentos::core

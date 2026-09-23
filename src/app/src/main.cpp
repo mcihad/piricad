@@ -1513,6 +1513,47 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14i-uzat-yay"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // YAY bma, THE SWEEP SHOWN (TODOS C-02): centre and start fixed, the arc
+        // follows the cursor clockwise from north with its sweep written on it.
+        later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YAY yontem=bma"));
+            window.runScriptLine(QStringLiteral("0,0"));
+            window.runScriptLine(QStringLiteral("0,10"));
+        });
+        later([hover] { hover({8'000, -6'000}); });
+        later([&window, shot] { shot(QStringLiteral("14l-yay-bma-supurme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // DAİRE ttr: both lines stay on screen while the radius is typed, and the
+        // fillet then follows the cursor from corner to corner.
+        later([scene] { scene(QStringLiteral("ALAN -4,-7 22,-7 22,17 -4,17")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("DAİRE yontem=ttr"));
+            window.runScriptLine(QStringLiteral("0,0"));
+            window.runScriptLine(QStringLiteral("20,0"));
+            window.runScriptLine(QStringLiteral("0,-5"));
+            window.runScriptLine(QStringLiteral("0,15"));
+        });
+        later([hover] { hover({9'000, 8'000}); });
+        later([&window, shot] { shot(QStringLiteral("14m-daire-ttr-yaricap"), &window); });
+        later([&window] { window.runScriptLine(QStringLiteral("3")); });
+        later([hover] { hover({6'000, 5'000}); });
+        later([&window, shot] { shot(QStringLiteral("14n-daire-ttr-yon"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
+        // polygon — the ghost stays at 25 grad wherever the hand goes.
+        later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKGEN aci=25"));
+            window.runScriptLine(QStringLiteral("5"));
+            window.runScriptLine(QStringLiteral("0,0"));
+        });
+        later([hover] { hover({9'000, 3'000}); });
+        later([&window, shot] { shot(QStringLiteral("14o-cokgen-aci"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // HİZALA — the objects turned under the cursor by the second pair.
         later([scene] { scene(QStringLiteral("ALAN 0,0 10,0 10,6 0,6")); });
         later([&window] {

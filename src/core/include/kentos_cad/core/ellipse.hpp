@@ -38,6 +38,14 @@ Point2 ellipse_major_of(const RingGeometry& geom, std::uint32_t slot);
 /// The end of its second (minor) axis.
 Point2 ellipse_minor_of(const RingGeometry& geom, std::uint32_t slot);
 
+/// The second axis end a point `reach` gives an ellipse whose centre and first
+/// axis end are fixed: the second axis is taken PERPENDICULAR to the first, at
+/// the distance `reach` lies ACROSS it — which is how ELİPS reads its third
+/// click and how its guide previews it, from this one function. False when the
+/// first axis is zero or `reach` lies on its line (a second axis under a
+/// millimetre), which are the two cases that draw no ellipse.
+bool ellipse_minor_end(Point2 centre, Point2 major, Point2 reach, Point2& minor) noexcept;
+
 /// Appends the DRAWN form: a closed run of vertices, counter-clockwise from the
 /// major axis, WITHOUT a repeated closing vertex.
 void ellipse_outline(Point2 centre, Point2 major, Point2 minor, std::vector<Mm>& xs,

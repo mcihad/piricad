@@ -64,6 +64,8 @@ enum class RubberShape : std::uint8_t {
                    ///< construction `rubber_payload` names: DAİRE yontem=2n|3n|ttr
     ArcBuild,      ///< the arc the chain's fixed points and the cursor make, by the construction
                    ///< `rubber_payload` names: YAY yontem=3n|devam|bby
+    ArcSweep,      ///< the arc from the chain's start round the origin through the angle the
+                   ///< cursor sweeps, with the sweep written on it: YAY yontem=bma
     Fixed,      ///< the reference the run has already fixed, with NOTHING following the cursor: the
                 ///< baseline of DİKAYAK, the station of ALIM, the line of ARANOKTA
     Candidates, ///< the answers this pick chooses between, marked; the one nearest the cursor is
@@ -124,9 +126,9 @@ struct Prompt
     /// add a two-vertex face to the document, because no such face is valid — has
     /// nothing on screen to show the work so far, and `rubber_origin` alone shows
     /// only the newest segment. Every click then appeared to erase the one before
-    /// it and the shape arrived all at once on completion. A command that commits
-    /// as it goes (ÇİZGİ) leaves this empty: its segments are already in the
-    /// document, and drawing them twice is what a preview must not do.
+    /// it and the shape arrived all at once on completion. ÇİZGİ writes its run
+    /// only when the run ends too, so a wrong corner can be taken back
+    /// (`can_retract`), and it hands its run here like the others.
     std::vector<Point2> rubber_chain{};
 
     /// The words that would answer this prompt, when the set is known and
@@ -153,6 +155,13 @@ struct Prompt
     /// and drawn by the kind's own outline, so the preview is the future
     /// drawing. Empty for every other shape.
     std::vector<std::uint8_t> rubber_payload{};
+
+    /// AN ANGLE THE MOUSE CAN GIVE. Set on the prompt for a swept angle — YAY
+    /// `bma`'s — that a click answers with the sweep from `rubber_chain`'s start
+    /// round `rubber_origin` to the click, in the session's unit and positive
+    /// sense (`core::arc_sweep_toward`), the way every CAD lets an included
+    /// angle be typed OR shown. The body is handed the number either way.
+    bool pick_sweep{false};
 
     /// A NUMBER THE MOUSE CAN GIVE. Set on a prompt for a distance in metres —
     /// a chamfer, a fillet radius, an offset — that a click answers with its

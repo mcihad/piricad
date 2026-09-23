@@ -4527,6 +4527,33 @@ int MainWindow::probeRealMouse()
               QStringLiteral("günlük düzeltilmiş çalışmayı yazdı: üç köşe, sonuncusu (40; 60)"));
     }
 
+    // ---- 7c. A TYPED METHOD COMES BACK AS ITSELF ------------------------------
+    //
+    // `DAİRE yontem=3n` typed at the command line, three rim points, and the
+    // tool that re-arms must be the three-point one: it used to be the family's
+    // first button, the centre-and-rim circle (TODOS C-02).
+    {
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+        controller_->runLine(QStringLiteral("DAİRE yontem=3n"), command::Origin::CommandLine);
+        QCoreApplication::processEvents();
+        controller_->supplyPoint(core::Point2{0, 70'000});
+        controller_->supplyPoint(core::Point2{10'000, 70'000});
+        controller_->supplyPoint(core::Point2{5'000, 76'000});
+        for (int wait = 0; wait < 20 && controller_->session() == nullptr; ++wait)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+        const command::Session* again = controller_->session();
+        const QString asked           = again != nullptr && again->waiting()
+                                            ? QString::fromStdString(again->prompt().message)
+                                            : QString();
+        check(asked == QStringLiteral("Çember üzerinde birinci nokta"),
+              QStringLiteral("yazılan DAİRE yontem=3n üç noktalı olarak yeniden kuruldu (istem: "
+                             "\"%1\")")
+                  .arg(asked));
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
+
     // ---- 8. THE TOOL STAYS IN THE HAND AFTER A DRAW -------------------------
     //
     // The user's report: "after drawing, the default tool gets selected again".
@@ -6168,6 +6195,22 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated, bool dis
             return;
         }
 
+    // A METHOD NO BUTTON CARRIES comes back as the line itself — `YAY
+    // yontem=bby yon=sag` typed at the command line has no tool of its own, and
+    // walking on to the family's first button put the plain one back (TODOS
+    // C-02). Only for a tool that repeats at all: the loop below is what knows.
+    const bool carries_method = armed.contains(QLatin1Char(' '));
+    if (carries_method)
+        for (const QAction* action : drawingTools_->actions()) {
+            if (!action->property(kToolRepeats).toBool() || !action->isEnabled()) continue;
+            const QString word =
+                action->property(kToolCommand).toString().section(QLatin1Char(' '), 0, 0);
+            const command::CommandSpec* spec = controller_->registry().resolve(word.toStdString());
+            if (spec == nullptr || spec->id != id.toStdString()) continue;
+            rearmLine(armed);
+            return;
+        }
+
     for (QAction* action : drawingTools_->actions()) {
         if (!action->property(kToolRepeats).toBool()) continue;
 
@@ -6213,6 +6256,20 @@ void MainWindow::rearm(QAction* action, const QString& id)
         [this, action, ticket] {
             if (controller_->sessionsBegun() != ticket || controller_->session() != nullptr) return;
             action->trigger();
+        },
+        Qt::QueuedConnection);
+}
+
+void MainWindow::rearmLine(const QString& line)
+{
+    // The same queued, stand-down-if-anything-started re-arm as `rearm`, for a
+    // line rather than a button.
+    const std::uint64_t ticket = controller_->sessionsBegun();
+    QMetaObject::invokeMethod(
+        this,
+        [this, line, ticket] {
+            if (controller_->sessionsBegun() != ticket || controller_->session() != nullptr) return;
+            controller_->beginInteractive(line);
         },
         Qt::QueuedConnection);
 }

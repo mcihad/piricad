@@ -67,14 +67,18 @@ Result<SplineDef> spline_of(const RingGeometry& geom, std::uint32_t slot);
 /// in nano units. Empty when `controls < degree + 1`.
 std::vector<std::int64_t> uniform_clamped_knots(std::size_t controls, int degree);
 
+/// How densely the kind draws a spline: points per non-empty knot span. Named
+/// so the canvas's guide samples the curve the kind draws, not one like it.
+inline constexpr int kSplineSamplesPerSpan = 16;
+
 /// Appends the DRAWN form: `samples_per_span` points on every non-empty knot
 /// span, the curve's end included exactly once. Empty when the definition does
 /// not fit the control points (the validate refused it on the way in).
 void spline_points(std::span<const Point2> controls, const SplineDef& def, int samples_per_span,
                    std::vector<Mm>& xs, std::vector<Mm>& ys);
 
-/// The drawn form of the slot at the kind's density (16 per span), and whether
-/// it closes.
+/// The drawn form of the slot at the kind's density (`kSplineSamplesPerSpan`),
+/// and whether it closes.
 bool spline_outline(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm>& xs,
                     std::vector<Mm>& ys);
 

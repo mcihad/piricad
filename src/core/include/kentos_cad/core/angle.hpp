@@ -144,6 +144,17 @@ constexpr std::int64_t udeg_from_angle(double value, AngleUnit unit) noexcept
     return mm_round(value * udeg_per_angle_unit(unit));
 }
 
+/// `turns` of a full turn written in `unit`: the inverse of the conversion a
+/// typed angle goes through (`udeg_from_angle`, then `turns_from_udeg`). A
+/// command that derives an angle from a gesture records it this way, and a
+/// replay reads the number back through those two — so the derived angle is
+/// quantised by the same pair before it is drawn, or the drawing and its replay
+/// would sit half a micro-degree apart.
+constexpr double angle_from_turns(double turns, AngleUnit unit) noexcept
+{
+    return turns * static_cast<double>(kUDegFullCircle) / udeg_per_angle_unit(unit);
+}
+
 /// A whole number of turns from micro-degrees, as a fraction in [0, 1) — the
 /// unit-free form a report converts to grad, degree or radian in one multiply.
 constexpr double turns_from_udeg(std::int64_t udeg) noexcept

@@ -18,6 +18,7 @@
 
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/snap.hpp"
@@ -426,6 +427,10 @@ private:
     /// Draws the measurements the session has left (`addMeasureMark`) and drops
     /// the ones the drawing has since moved on from.
     void buildMeasureMarks();
+
+    /// Appends the runs of a drawing prompt's ghost (`command::ghost_outline`) —
+    /// the object the next click makes — to an overlay batch.
+    void addGhost(std::size_t batch, const std::vector<command::GhostRun>& runs);
 
     /// Appends one run of document points, mapped through `map`, to an overlay
     /// batch. The default is the identity, which is what every caller but the

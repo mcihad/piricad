@@ -569,6 +569,10 @@ private slots:
     /// standing selection first for a tool that begins by asking for objects.
     void rearm(QAction* action, const QString& id);
 
+    /// Starts a typed tool again by its line (`command::rearm_line`) — a method
+    /// that no button carries. Queued and standing down like `rearm`.
+    void rearmLine(const QString& line);
+
     void onInteractiveFinished(const QString& id, bool mutated, bool dismissed);
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);

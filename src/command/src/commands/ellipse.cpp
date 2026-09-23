@@ -82,41 +82,11 @@ Task<void> run(Context& ctx)
         }
     }
 
-    auto reach = co_await ctx.point("ikinci", "İkinci eksenin uzaklığı",
-                                    PointOptions{.rubber_band   = true,
-                                                 .rubber_origin = *centre,
-                                                 .rubber_shape  = RubberShape::Ellipse,
-                                                 .rubber_chain  = {*major}});
-    if (!reach) co_return;
-
-    // The first axis as a vector, and the perpendicular to it.
-    const auto ax      = static_cast<double>(major->x - centre->x);
-    const auto ay      = static_cast<double>(major->y - centre->y);
-    const double a_len = std::sqrt(ax * ax + ay * ay);
-
-    // How far the third click reached, measured ACROSS the first axis: the
-    // component perpendicular to it. Clicking along the first axis therefore
-    // gives a second axis of zero, and the command says so rather than drawing a
-    // line and calling it an ellipse.
-    const auto rx       = static_cast<double>(reach->x - centre->x);
-    const auto ry       = static_cast<double>(reach->y - centre->y);
-    const double across = (rx * -ay + ry * ax) / a_len;
-
-    const double b = across < 0.0 ? -across : across;
-    if (b < 1.0) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "İkinci eksen sıfır: üçüncü nokta birinci eksenin üzerinde. "
-                   "Eksene dik bir yer seçin.");
-        co_return;
-    }
-
-    // The perpendicular unit vector, scaled to that distance.
-    const core::Point2 minor{centre->x + core::mm_round(-ay / a_len * b),
-                             centre->y + core::mm_round(ax / a_len * b)};
-
     // A PARTIAL ellipse when both angles are given: the sweep, counter-clockwise
     // from the first axis in the ellipse's own parameter (core/ellipse.hpp), is
-    // the kind's payload; a whole one carries none.
+    // the kind's payload; a whole one carries none. Read BEFORE the third point
+    // is asked for, so the guide draws the arc that will be made — it used to
+    // draw the whole ellipse and the click then made a piece of it.
     const Value from = ctx.argument("baslangic");
     const Value to   = ctx.argument("bitis");
     if (from.empty() != to.empty()) {
@@ -139,6 +109,27 @@ Task<void> run(Context& ctx)
             co_return;
         }
         payload = core::encode_ellipse_arc(arc);
+    }
+
+    auto reach = co_await ctx.point("ikinci", "İkinci eksenin uzaklığı",
+                                    PointOptions{.rubber_band    = true,
+                                                 .rubber_origin  = *centre,
+                                                 .rubber_shape   = RubberShape::Ellipse,
+                                                 .rubber_chain   = {*major},
+                                                 .rubber_payload = payload});
+    if (!reach) co_return;
+
+    // THE SECOND AXIS, perpendicular to the first at the distance the third
+    // click reached ACROSS it — `core::ellipse_minor_end`, the one arithmetic
+    // the guide draws with. Clicking along the first axis gives a second axis
+    // of zero, and the command says so rather than drawing a line and calling
+    // it an ellipse.
+    core::Point2 minor{};
+    if (!core::ellipse_minor_end(*centre, *major, *reach, minor)) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İkinci eksen sıfır: üçüncü nokta birinci eksenin üzerinde. "
+                   "Eksene dik bir yer seçin.");
+        co_return;
     }
 
     const core::Point2 def[3]{*centre, *major, minor};

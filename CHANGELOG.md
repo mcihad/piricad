@@ -6,6 +6,34 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — kılavuz tıklamanın çizeceği nesne; yöntem araç tekrarında korunuyor (C-02)
+
+- **Hayalet, nesnenin kendisi.** Daire, yay, elips, çokgen, dikdörtgen, spline, çizgi
+  ve alan kılavuzları artık tek bir hesaptan (`command::ghost_outline`) ve nesnenin
+  belgede çizildiği sıklıkta çiziliyor; her yöntemde tıklamanın yazdığı nesnenin
+  kılavuzla nokta nokta aynı olduğu her derlemede sınanıyor. Tuvaldeki beş ayrı
+  yarıçap hesabı, elipsin ikinci ekseni, çokgenin dönüşü ve spline'ın örnekleme
+  sabiti komutlarla ortak çekirdek fonksiyonlarına taşındı.
+- **ÇOKGEN `aci=` verilince kılavuz dönmüyor.** Kılavuz imlece dönüyor, tıklama ise
+  çokgeni `aci`'de çiziyordu; artık kılavuz da o açıda durur, fare yalnız boyunu
+  değiştirir. İşaretlenen açı kaydedildiği gibi mikro-dereceye yuvarlanıp köşeler
+  ondan hesaplanıyor; çizim ile günlükten oynatması milimetresine kadar aynı.
+- **YAY `bma`'nın süpürmesi gösterilebiliyor.** Süpürme istemi eskiden ekranda hiçbir
+  şey göstermeyen bir sayıydı; artık yay imlecin doğrultusuna kadar süpürülür, açı
+  oturumun biriminde yanında yazar ve tıklama o açıyı verir.
+- **Sabitlenen başvurular ekranda kalıyor.** DAİRE `ttr`'de birinci doğru ikinci
+  çizilirken, iki doğru da yarıçap yazılırken görünüyor; YAY `bby`'de yarıçap
+  yazılırken kiriş görünüyor. Kısmi elipsin kılavuzu bütün elipsi değil çizilecek
+  parçayı gösteriyor.
+- **Yazılan yöntem araç tekrarında korunuyor.** Komut satırına `DAİRE yontem=3n`
+  yazıldığında bir sonraki daire merkez-çevre dairesine dönüyordu; artık yöntem ve
+  ayarlar (`yaricap=`, `kenar_sayisi=`, `aci=`, `yon=` …) korunuyor, noktalar
+  korunmuyor (`command::rearm_line`).
+- Kanıt: `tests/unit/test_draw_methods.cpp` — 22 yöntemde hayalet = nesne (başsız ve
+  görünümlü), işaretlenen = yazılan = oynatılan; `KENTOS_SHOT_DIR` kareleri
+  `14l-yay-bma-supurme`, `14m-daire-ttr-yaricap`, `14n-daire-ttr-yon`,
+  `14o-cokgen-aci`; gerçek pencere probunda yazılan yöntemin yeniden kurulması.
+
 ### Düzeltildi — çizerken yanlış son nokta çizimi kaybettirmeden geri alınıyor (C-02)
 
 - **⌫, Ctrl+Z ve `G` yalnız son noktayı geri alıyor.** `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN` ve

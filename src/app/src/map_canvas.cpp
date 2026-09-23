@@ -4,6 +4,7 @@
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/command/aids.hpp"
+#include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/area_edit.hpp"
@@ -1376,6 +1377,18 @@ core::Point2 MapCanvas::cursorWorld() const
                                : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 }
 
+void MapCanvas::addGhost(std::size_t batch, const std::vector<command::GhostRun>& runs)
+{
+    for (const command::GhostRun& ghost : runs) {
+        if (ghost.points.size() < 2) continue;
+        std::vector<render::ScreenPointF> run;
+        run.reserve(ghost.points.size());
+        for (const core::Point2& p : ghost.points)
+            run.push_back(render::to_f(view_.to_screen(p)));
+        addRun(batch, run, ghost.closed);
+    }
+}
+
 void MapCanvas::addWorldRun(std::size_t batch, std::span<const core::Mm> xs,
                             std::span<const core::Mm> ys, bool closed, const core::Xform& map)
 {
@@ -1805,55 +1818,21 @@ void MapCanvas::buildOverlay()
 
         const std::size_t batch          = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
         const command::RubberShape shape = session->prompt().rubber_shape;
-        const std::size_t guide_before   = overlay_.batches[batch].xs.size();
+        // The bus's, not the look's copy: ÇOKGEN measures its rotation under it,
+        // and a ghost must be the object the command makes.
+        const core::AngleConvention convention = controller_.bus().angle_convention();
+        const std::size_t guide_before         = overlay_.batches[batch].xs.size();
 
         if (shape == command::RubberShape::Circle || shape == command::RubberShape::Arc) {
-            // THE CURVE ITSELF. Drawn by the same code the document is drawn with
-            // (`core::circle_outline`), so what the guide promises and what the
-            // command produces cannot drift apart — a preview computed a second
-            // way is a preview that is eventually wrong.
+            // THE CURVE ITSELF — the circle through the cursor, or YAY's arc once
+            // its first end is fixed — from `command::ghost_outline`, which draws
+            // it with the kind's own outline and the radius the command will
+            // compute. What the guide promises and what the command produces
+            // cannot drift apart: it is one computation, and a test proves it.
             const core::Point2 centre = session->prompt().rubber_origin;
-            const core::Point2 rim =
-                snap_preview_valid_ ? snap_preview_.point
-                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
-
-            const double dx       = core::mm_to_metres(rim.x - centre.x);
-            const double dy       = core::mm_to_metres(rim.y - centre.y);
-            const core::Mm radius = core::mm_round(std::sqrt(dx * dx + dy * dy) *
-                                                   static_cast<double>(core::kMmPerMetre));
-
-            // An ARC guide once the first end is fixed: `rubber_chain` carries it,
-            // so the guide sweeps from there to the cursor exactly as the command
-            // will. Before that — and for DAİRE throughout — the guide is the
-            // whole circle, because what is being chosen at that moment IS a
-            // radius, and a radius is a circle.
-            const auto& chain = session->prompt().rubber_chain;
-            const bool arc    = shape == command::RubberShape::Arc && !chain.empty();
-
-            const core::Mm draw_radius = arc ? [&] {
-                const double ax = core::mm_to_metres(chain.front().x - centre.x);
-                const double ay = core::mm_to_metres(chain.front().y - centre.y);
-                return core::mm_round(std::sqrt(ax * ax + ay * ay) *
-                                      static_cast<double>(core::kMmPerMetre));
-            }()
-                                             : radius;
-
-            if (draw_radius > 0) {
-                curve_scratch_x_.clear();
-                curve_scratch_y_.clear();
-                if (arc)
-                    core::arc_outline(centre, draw_radius, chain.front(), rim, curve_scratch_x_,
-                                      curve_scratch_y_);
-                else
-                    core::circle_outline(centre, draw_radius, curve_scratch_x_, curve_scratch_y_);
-
-                std::vector<render::ScreenPointF> run;
-                run.reserve(curve_scratch_x_.size());
-                for (std::size_t v = 0; v < curve_scratch_x_.size(); ++v)
-                    run.push_back(render::to_f(
-                        view_.to_screen(core::Point2{curve_scratch_x_[v], curve_scratch_y_[v]})));
-                addRun(batch, run, !arc);
-            }
+            const auto& chain         = session->prompt().rubber_chain;
+            const bool arc            = shape == command::RubberShape::Arc && !chain.empty();
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
 
             // WHAT IS ALREADY FIXED STAYS DRAWN. For HALKA the chain holds the
             // inner rim point, and the ring being made is the TWO circles: with
@@ -1863,10 +1842,7 @@ void MapCanvas::buildOverlay()
             // than as a bare arc.
             if (!chain.empty()) {
                 if (!arc) {
-                    const double cx             = core::mm_to_metres(chain.front().x - centre.x);
-                    const double cy             = core::mm_to_metres(chain.front().y - centre.y);
-                    const core::Mm fixed_radius = core::mm_round(
-                        std::sqrt(cx * cx + cy * cy) * static_cast<double>(core::kMmPerMetre));
+                    const core::Mm fixed_radius = core::radius_through(centre, chain.front());
                     if (fixed_radius > 0) {
                         curve_scratch_x_.clear();
                         curve_scratch_y_.clear();
@@ -1886,39 +1862,34 @@ void MapCanvas::buildOverlay()
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::CircleBuild) {
             // THE CIRCLE THE CLICK WILL MAKE, by the construction the command
-            // named, from the function the command builds it with
-            // (`core::circle_from_guide`).
+            // named (`command::ghost_outline` over `core::circle_from_guide`).
             //
             // These three methods used to preview a LINE — or, for `ttr`, nothing
             // at all. `ttr` is the one where it matters most: four circles of the
             // radius are tangent to both lines, the user picks one by pointing at
             // a corner, and until now they found out which after the click.
-            if (auto decoded = core::decode_circle_guide(session->prompt().rubber_payload)) {
-                core::Point2 centre{};
-                core::Mm radius = 0;
-                if (core::circle_from_guide(decoded.value(), session->prompt().rubber_chain,
-                                            cursorWorld(), centre, radius)) {
-                    curve_scratch_x_.clear();
-                    curve_scratch_y_.clear();
-                    core::circle_outline(centre, radius, curve_scratch_x_, curve_scratch_y_);
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
-                }
-            }
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
+
             // The points already fixed, as the run that made them: a diameter's
-            // first end, the two rim points, the two tangent lines. Without them
-            // the guide would be a circle floating free of what fixed it.
-            if (const auto& chain = session->prompt().rubber_chain; chain.size() == 4) {
+            // first end, the two rim points — and for `ttr` the two tangent lines
+            // AS FAR AS THEY ARE FIXED, from the first one's second point to the
+            // radius prompt, so neither leaves the screen while the other is
+            // aimed and the fillet is typed against both.
+            const auto guide   = core::decode_circle_guide(session->prompt().rubber_payload);
+            const bool tangent = guide && guide->build == core::CircleBuild::Tangent;
+            const auto& chain  = session->prompt().rubber_chain;
+            if (tangent && chain.size() >= 2)
                 addRun(batch,
                        {render::to_f(view_.to_screen(chain[0])),
                         render::to_f(view_.to_screen(chain[1]))},
                        false);
+            if (tangent && chain.size() >= 4)
                 addRun(batch,
                        {render::to_f(view_.to_screen(chain[2])),
                         render::to_f(view_.to_screen(chain[3]))},
                        false);
-            } else {
+            else
                 addRun(batch, {render::to_f(from), toScreenF(to)}, false);
-            }
         } else if (shape == command::RubberShape::Fixed) {
             // WHAT THE RUN HAS ALREADY FIXED, and nothing else. No line to the
             // cursor, because the cursor is not answering this question: these
@@ -1999,84 +1970,72 @@ void MapCanvas::buildOverlay()
                 guide_label_ = text;
             }
         } else if (shape == command::RubberShape::ArcBuild) {
-            // THE ARC THE CLICK WILL MAKE, by the construction the command named,
-            // from the function the command builds it with
-            // (`core::arc_from_guide`).
+            // THE ARC THE CLICK WILL MAKE, by the construction the command named
+            // (`command::ghost_outline` over `core::arc_from_guide`).
             //
             // Three of YAY's methods previewed a straight LINE, which is the one
             // shape the answer is not; `bby` never even asked which side the
             // curve goes. A curve that is shown as a line is a curve the user
             // finds out about after the click.
-            if (auto decoded = core::decode_arc_guide(session->prompt().rubber_payload)) {
-                core::Point2 centre{};
-                core::Mm radius = 0;
-                core::Point2 first{};
-                core::Point2 last{};
-                if (core::arc_from_guide(decoded.value(), session->prompt().rubber_chain,
-                                         cursorWorld(), centre, radius, first, last)) {
-                    curve_scratch_x_.clear();
-                    curve_scratch_y_.clear();
-                    core::arc_outline(centre, radius, first, last, curve_scratch_x_,
-                                      curve_scratch_y_);
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::ArcSweep &&
+                   !session->prompt().rubber_chain.empty()) {
+            // YAY bma, THE SWEEP SHOWN: the arc from the start round the centre
+            // to the cursor's direction, the two radii that bound it, and the
+            // sweep written at the cursor in the session's unit — which is the
+            // number the click answers with (`Prompt::pick_sweep`).
+            const core::Point2 centre = session->prompt().rubber_origin;
+            const core::Point2 start  = session->prompt().rubber_chain.front();
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
+            addRun(batch,
+                   {render::to_f(view_.to_screen(centre)), render::to_f(view_.to_screen(start))},
+                   false);
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+            if (look_.dynamic_input) {
+                const double sweep =
+                    core::arc_sweep_toward(centre, start, cursorWorld(), convention);
+                if (sweep > 0.0) {
+                    const double turns = sweep * core::udeg_per_angle_unit(convention.unit) /
+                                         static_cast<double>(core::kUDegFullCircle);
+                    const std::string text        = core::angle_text(turns, convention.unit);
+                    const render::ScreenPointF at = toScreenF(to);
+                    overlay_.labels.push_back(
+                        render::OverlayLabel{tokens_->readout.rgba(), at.x + 12.0F, at.y - 10.0F,
+                                             static_cast<float>(look_.hint_px), false, text});
+                    guide_label_ = text;
                 }
             }
-            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::Rectangle) {
-            // THE FACE, not its diagonal. A rectangle previewed as one line tells
-            // the user nothing about what the next click will make, and with the
-            // diagonal lock held it is the difference between seeing a square and
-            // finding out you drew one.
-            const render::ScreenPointF a = render::to_f(from);
-            const render::ScreenPointF b = toScreenF(to);
-            addRun(batch, {{a.x, a.y}, {b.x, a.y}, {b.x, b.y}, {a.x, b.y}}, true);
+            // THE FACE, not its diagonal: the four corners DİKDÖRTGEN will write,
+            // in world coordinates (`command::ghost_outline`). A rectangle
+            // previewed as one line tells the user nothing about what the next
+            // click will make, and with the diagonal lock held it is the
+            // difference between seeing a square and finding out you drew one.
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
         } else if (shape == command::RubberShape::Ellipse &&
                    !session->prompt().rubber_chain.empty()) {
-            // THE ELLIPSE the third click will make: the first axis is fixed (the
-            // chain), the cursor's reach ACROSS it is the second — the same
-            // arithmetic ELİPS does with the click (commands/ellipse.cpp).
+            // THE ELLIPSE the third click will make — or the piece of it, when
+            // the run was given its sweep: the first axis is fixed (the chain),
+            // and the cursor's reach ACROSS it is the second, by the function
+            // ELİPS reads the click with (`core::ellipse_minor_end`).
             const core::Point2 centre = session->prompt().rubber_origin;
             const core::Point2 major  = session->prompt().rubber_chain.front();
-            const core::Point2 reach  = cursorWorld();
-            const auto ax             = static_cast<double>(major.x - centre.x);
-            const auto ay             = static_cast<double>(major.y - centre.y);
-            const double a_len        = std::sqrt(ax * ax + ay * ay);
-            const auto rx             = static_cast<double>(reach.x - centre.x);
-            const auto ry             = static_cast<double>(reach.y - centre.y);
-            const double across       = a_len > 0.0 ? std::abs((rx * -ay + ry * ax) / a_len) : 0.0;
-            if (across >= 1.0) {
-                const core::Point2 minor{centre.x + core::mm_round(-ay / a_len * across),
-                                         centre.y + core::mm_round(ax / a_len * across)};
-                curve_scratch_x_.clear();
-                curve_scratch_y_.clear();
-                core::ellipse_outline(centre, major, minor, curve_scratch_x_, curve_scratch_y_);
-                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
-            }
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
             addRun(batch,
                    {render::to_f(view_.to_screen(centre)), render::to_f(view_.to_screen(major))},
                    false);
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::Curve) {
-            // THE CURVE through the control points so far and the cursor, drawn
-            // by the kind's own evaluator over the degree SPLINE will use.
-            std::vector<core::Point2> controls = session->prompt().rubber_chain;
-            controls.push_back(cursorWorld());
-            core::SplineDef def;
-            if (auto decoded = core::decode_spline(session->prompt().rubber_payload))
-                def = decoded.value();
-            def.degree     = static_cast<std::uint8_t>(std::clamp<std::size_t>(
-                def.degree, 1, std::max<std::size_t>(1, controls.size() - 1)));
-            def.knots_nano = core::uniform_clamped_knots(controls.size(), def.degree);
-            curve_scratch_x_.clear();
-            curve_scratch_y_.clear();
-            if (controls.size() >= 2)
-                core::spline_points(controls, def, 16, curve_scratch_x_, curve_scratch_y_);
-            if (curve_scratch_x_.size() >= 2)
-                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, def.closed);
+            // THE CURVE through the control points so far and the cursor, over
+            // the degree SPLINE will use and at the kind's own density
+            // (`command::ghost_outline`).
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
             // The control polygon, faint, so the hand sees what it is steering.
             std::vector<render::ScreenPointF> polygon;
-            for (const core::Point2& p : controls)
+            for (const core::Point2& p : session->prompt().rubber_chain)
                 polygon.push_back(render::to_f(view_.to_screen(p)));
+            polygon.push_back(toScreenF(to));
             addRun(batch, polygon, false);
         } else if (shape == command::RubberShape::Dimension &&
                    session->prompt().rubber_chain.size() >= 2) {
@@ -2144,51 +2103,13 @@ void MapCanvas::buildOverlay()
             }
         } else if (shape == command::RubberShape::Polygon) {
             // THE POLYGON THE CLICK WILL MAKE, from the very function that will
-            // make it (`core::regular_polygon_corners`). A guide computed a
-            // second way agrees with the command on the easy cases and diverges
-            // exactly where the arithmetic is interesting, and the user then
-            // sees one shape and gets another.
-            //
-            // The side count and the fit are what the canvas cannot see, so
-            // ÇOKGEN sends them in the payload. Under `kenar` it sends the
-            // settled size too and the cursor turns the shape; otherwise the
-            // cursor's own distance from the centre is the size.
-            if (auto decoded = core::decode_polygon_guide(session->prompt().rubber_payload)) {
-                const core::PolygonGuide guide = decoded.value();
-                const core::Point2 centre      = session->prompt().rubber_origin;
-                const core::Point2 at          = cursorWorld();
-                const core::AngleRule rule     = look_.angle.rule;
-
-                const double reach = core::mm_to_metres(core::segment_length(centre, at));
-                double circumradius =
-                    guide.circumradius != 0 ? core::mm_to_metres(guide.circumradius)
-                    : guide.fit == core::PolygonFit::Circumscribed
-                        ? core::polygon_circumradius(reach, guide.sides,
-                                                     core::PolygonFit::Circumscribed)
-                        : reach;
-
-                // A CIRCUMSCRIBED POLYGON'S FLAT PASSES UNDER THE CURSOR, not a
-                // corner: the same half-step ÇOKGEN applies, so the guide and
-                // the command put the edge in the same place.
-                const double pointed = core::direction_turns(centre, at, rule);
-                const double half    = core::polygon_half_step_turns(guide.sides);
-                const double start =
-                    guide.fit == core::PolygonFit::Circumscribed
-                        ? (rule == core::AngleRule::Semt ? pointed + half : pointed - half)
-                        : pointed;
-
-                const std::vector<core::Point2> corners =
-                    core::regular_polygon_corners(centre, guide.sides, circumradius, start, rule);
-                if (corners.size() >= 3) {
-                    curve_scratch_x_.clear();
-                    curve_scratch_y_.clear();
-                    for (const core::Point2& c : corners) {
-                        curve_scratch_x_.push_back(c.x);
-                        curve_scratch_y_.push_back(c.y);
-                    }
-                    addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true);
-                }
-            }
+            // make it (`core::polygon_from_guide`, through
+            // `command::ghost_outline`) and under the bus's own angle convention.
+            // A guide computed a second way agrees with the command on the easy
+            // cases and diverges exactly where the arithmetic is interesting —
+            // this one turned towards the cursor while ÇOKGEN, handed `aci`,
+            // drew the polygon at `aci`.
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
             // The arm from the centre, so the size being set is readable as a
             // distance and not only as a shape.
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
@@ -2198,18 +2119,13 @@ void MapCanvas::buildOverlay()
             // why the shape exists: the command used to preview it as a `Ring`
             // with no chain, which is an origin and a cursor, and two points
             // enclose nothing — so the tool drew correctly and showed nothing.
-            const auto& chain     = session->prompt().rubber_chain;
-            const core::Point2 at = cursorWorld();
-            std::array<core::Point2, 4> four{};
-            if (core::edge_rectangle_corners(chain[0], chain[1], at, four)) {
-                std::vector<render::ScreenPointF> run;
-                run.reserve(four.size());
-                for (const core::Point2& c : four)
-                    run.push_back(render::to_f(view_.to_screen(c)));
-                addRun(batch, run, true);
+            const auto ghost = command::ghost_outline(session->prompt(), cursorWorld(), convention);
+            if (!ghost.empty()) {
+                addGhost(batch, ghost);
             } else {
                 // On the edge, where there is no rectangle yet: the edge itself,
                 // so the hand still sees what it has fixed.
+                const auto& chain = session->prompt().rubber_chain;
                 addRun(batch,
                        {render::to_f(view_.to_screen(chain[0])),
                         render::to_f(view_.to_screen(chain[1]))},
@@ -2713,7 +2629,7 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::MeasureRun &&
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
             shape != command::RubberShape::Corner && shape != command::RubberShape::Break &&
-            shape != command::RubberShape::TrimFence) {
+            shape != command::RubberShape::TrimFence && shape != command::RubberShape::ArcSweep) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

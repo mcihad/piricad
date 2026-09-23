@@ -439,6 +439,12 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                 }
                 session_ = std::move(started.value());
                 ++sessionsBegun_;
+                // WHAT COMES BACK WHEN IT ENDS: the method and its settings,
+                // not the points (`command::rearm_line`). A typed
+                // `DAİRE yontem=3n` re-armed as the centre-and-rim circle,
+                // because nothing but a button remembered a method.
+                armedLine_ =
+                    QString::fromStdString(command::rearm_line(registry_, trimmed.toStdString()));
                 if (!session_->finished()) {
                     settleSession();
                     return command::DispatchResult{};

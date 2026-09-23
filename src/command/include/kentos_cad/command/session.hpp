@@ -51,6 +51,17 @@ class Registry;
 /// whole of it back, which is the one thing the user did not mean.
 bool asks_retract(const Registry& registry, std::string_view line);
 
+/// The line that starts a typed tool AGAIN when its run ends: the command's
+/// primary name and every keyword argument of `line` that is not a place — the
+/// method and its settings travel, the points and the objects do not.
+/// `DAİRE yontem=3n birinci=0,0` comes back as `DAİRE yontem=3n`, and
+/// `ÇOKGEN kenar_sayisi=6 yontem=dis merkez=0,0` as `ÇOKGEN kenar_sayisi=6
+/// yontem=dis`. A button carries its whole line already; a line typed at the
+/// command line had nothing that remembered it, so a re-armed DAİRE was always
+/// the centre-and-rim one (TODOS C-02). Empty when the first word names no
+/// command.
+std::string rearm_line(const Registry& registry, std::string_view line);
+
 /// The command bus; see bus.hpp. Declared rather than included because the bus
 /// includes this header.
 class Bus;

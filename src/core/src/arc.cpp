@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/trig.hpp"
 
@@ -312,6 +313,51 @@ std::optional<ArcGuide> decode_arc_guide(std::span<const std::uint8_t> bytes)
     guide.build = static_cast<ArcBuild>(bytes[0]);
     std::memcpy(&guide.radius, bytes.data() + 1, sizeof(guide.radius));
     return guide;
+}
+
+double arc_sweep_toward(Point2 centre, Point2 start, Point2 toward,
+                        AngleConvention convention) noexcept
+{
+    if (toward == centre || start == centre) return 0.0;
+    // Turns grow in the convention's own positive sense (`direction_turns`), so
+    // the difference is the sweep that sense makes, folded into one turn.
+    double by = direction_turns(centre, toward, convention.rule) -
+                direction_turns(centre, start, convention.rule);
+    if (by < 0.0) by += 1.0;
+    if (!(by > 0.0) || by >= 1.0) return 0.0;
+    return angle_from_turns(by, convention.unit);
+}
+
+bool arc_by_sweep(Point2 centre, Point2 start, double sweep, AngleConvention convention, Mm& radius,
+                  Point2& first, Point2& last) noexcept
+{
+    radius = radius_through(centre, start);
+    if (radius <= 0) return false;
+
+    // SIGNED, AND NOT FOLDED INTO ONE TURN. `turns_from_udeg` folds into
+    // [0, 1), which is right for a DIRECTION and wrong for a SWEEP: a highway
+    // curve of −100 grad turns the other way, and folded it would turn the same
+    // way by 300. The sweep is rounded to the micro-degree first, the one
+    // rounding a typed angle goes through (`udeg_from_angle`).
+    const double by_turns = static_cast<double>(udeg_from_angle(sweep, convention.unit)) /
+                            static_cast<double>(kUDegFullCircle);
+    if (by_turns == 0.0) return false;
+
+    const double from_turns = direction_turns(centre, start, convention.rule);
+    const Point2 computed =
+        centre + polar_offset_turns(mm_to_metres(radius), from_turns + by_turns, convention.rule);
+
+    // THE SWEEP IS IN THE CONVENTION'S SENSE; THE ARC IS STORED IN THE MODEL'S.
+    // A positive sweep is clockwise under semt — what a surveyor means by one —
+    // and counter-clockwise under matematik. An arc is stored counter-clockwise
+    // from start to end, so a clockwise sweep is the same arc with its ends the
+    // other way round. Getting this wrong does not draw a slightly different
+    // arc: it draws the other three quarters of the circle.
+    const bool ccw_in_drawing =
+        convention.rule == AngleRule::Matematik ? by_turns > 0.0 : by_turns < 0.0;
+    first = ccw_in_drawing ? start : computed;
+    last  = ccw_in_drawing ? computed : start;
+    return true;
 }
 
 bool arc_radius_side(Point2 a, Point2 b, Point2 toward) noexcept

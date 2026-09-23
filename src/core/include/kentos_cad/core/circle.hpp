@@ -45,6 +45,16 @@ Point2 circle_centre_of(const RingGeometry& geom, std::uint32_t slot);
 /// no view and a kind must not need one to describe itself.
 inline constexpr std::size_t kCircleSegments = 128;
 
+/// The radius `centre`->`p` implies, rounded to the millimetre a record stores.
+///
+/// ONE ARITHMETIC FOR EVERY RADIUS THAT IS POINTED AT — DAİRE's rim, YAY's
+/// first end, a sector's edge, and the canvas guides that preview them. There
+/// were five copies of it; a guide computed a second way is a guide that is
+/// eventually wrong. Metres before squaring: the square of a TM3 coordinate
+/// difference in millimetres leaves the 53-bit mantissa long before it leaves
+/// int64 (core.md R3).
+Mm radius_through(Point2 centre, Point2 p) noexcept;
+
 /// Appends the DRAWN form of a circle — a 128-gon, without a repeated closing
 /// vertex, counter-clockwise from due east.
 ///

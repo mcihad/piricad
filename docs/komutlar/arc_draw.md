@@ -146,13 +146,21 @@ büyür: bırakacağınız yay tam olarak gördüğünüz yaydır.
 Yakalama açıkken üç nokta da mevcut nesnelere oturur ([`MOD`](mode.md)).
 
 Öteki dört yöntem aynı düğmenin **kartında**: düğmeyi basılı tutun ya da
-köşesindeki işarete tıklayın. `bby`'de yarıçapı yazdıktan sonra komut yayın
-hangi yandan geçeceğini sorar; imleci kirişin bir yanından öbürüne geçirdikçe yay
-taraf değiştirir. Aynı karttaki **Daire Dilimi** ayrı bir şekildir ve artık kendi
-ikonunu taşır.
+köşesindeki işarete tıklayın. `bby`'de yarıçapı yazarken iki uç arasındaki kiriş
+ekranda kalır; yarıçapı yazdıktan sonra komut yayın hangi yandan geçeceğini sorar,
+ve imleci kirişin bir yanından öbürüne geçirdikçe yay taraf değiştirir. Aynı
+karttaki **Daire Dilimi** ayrı bir şekildir ve artık kendi ikonunu taşır.
 
-Araç kalıcıdır: bir yayı bitirdiğinizde `YAY` yeniden kurulur. Aracı bırakmak için
-**Esc**'e basın.
+`bma`'da merkezi ve başlangıcı verdikten sonra komut **süpürme açısını** ister
+(`Süpürme açısı — yazın ya da gösterin`). Açıyı yazabilir ya da **gösterebilirsiniz**:
+yay, başlangıçtan imlecinizin doğrultusuna kadar oturumun açı yönünde — öntanımlı
+`semt`'te saat yönünde — süpürülür ve süpürme imlecin yanında oturumun biriminde
+yazar. Tıkladığınızda o açı, yazmışsınız gibi kaydedilir. Doğudaki bir noktaya
+kuzeyden bakan bir başlangıçla tıklamak `100 grad` demektir.
+
+Araç kalıcıdır: bir yayı bitirdiğinizde `YAY` **aynı yöntemle** yeniden kurulur;
+komut satırına `YAY yontem=bby yon=sag` yazdıysanız bir sonraki yay da öyledir.
+Aracı bırakmak için **Esc**'e basın.
 
 ### Betik
 

@@ -139,14 +139,33 @@ Task<void> run(Context& ctx)
                                                   .rubber_origin = *a1,
                                                   .rubber_shape  = RubberShape::Line});
         if (!a2) co_return;
-        auto b1 = co_await ctx.point("ucuncu", "İkinci doğrunun ilk noktası");
-        if (!b1) co_return;
-        auto b2 = co_await ctx.point("dorduncu", "İkinci doğrunun ikinci noktası",
+        // WHAT IS FIXED STAYS DRAWN. The first line left the screen the moment
+        // the second was asked for, and both left it while the radius was typed
+        // — so the user aimed the second line, and then typed a fillet, against
+        // references they could no longer see.
+        auto b1 = co_await ctx.point("ucuncu", "İkinci doğrunun ilk noktası",
                                      PointOptions{.rubber_band   = true,
-                                                  .rubber_origin = *b1,
-                                                  .rubber_shape  = RubberShape::Line});
+                                                  .rubber_origin = *a2,
+                                                  .rubber_base   = false,
+                                                  .rubber_shape  = RubberShape::Fixed,
+                                                  .rubber_chain  = {*a1, *a2}});
+        if (!b1) co_return;
+        const std::vector<std::uint8_t> no_circle_yet = core::encode_circle_guide(
+            core::CircleGuide{.build = core::CircleBuild::Tangent, .radius = 0});
+        auto b2 = co_await ctx.point("dorduncu", "İkinci doğrunun ikinci noktası",
+                                     PointOptions{.rubber_band    = true,
+                                                  .rubber_origin  = *b1,
+                                                  .rubber_shape   = RubberShape::CircleBuild,
+                                                  .rubber_chain   = {*a1, *a2, *b1},
+                                                  .rubber_payload = no_circle_yet});
         if (!b2) co_return;
-        auto wanted = co_await ctx.number("yaricap", "Yarıçap (m)");
+        auto wanted = co_await ctx.number("yaricap", "Yarıçap (m)",
+                                          PointOptions{.rubber_band    = true,
+                                                       .rubber_origin  = *b2,
+                                                       .rubber_base    = false,
+                                                       .rubber_shape   = RubberShape::CircleBuild,
+                                                       .rubber_chain   = {*a1, *a2, *b1, *b2},
+                                                       .rubber_payload = no_circle_yet});
         if (!wanted) co_return;
         const core::Mm r = core::mm_from_metres(*wanted);
         if (r <= 0) {
@@ -160,10 +179,14 @@ Task<void> run(Context& ctx)
         // quadrant they make, and the user chooses by pointing at a corner: the
         // fillet follows the cursor from quadrant to quadrant so the junction is
         // right before the click, not after it.
+        // A CHOICE OF CORNER, not a point aimed from one: no length and bearing
+        // from the first line's start is written on it, and no direction lock
+        // pulls it (`rubber_base`).
         auto near = co_await ctx.point(
             "yon", "Dairenin geleceği köşeyi gösterin",
             PointOptions{.rubber_band    = true,
                          .rubber_origin  = *a1,
+                         .rubber_base    = false,
                          .rubber_shape   = RubberShape::CircleBuild,
                          .rubber_chain   = {*a1, *a2, *b1, *b2},
                          .rubber_payload = core::encode_circle_guide(

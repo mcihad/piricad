@@ -19,7 +19,6 @@ constexpr std::uint16_t kFlagRational = 1u << 2;
 constexpr std::uint16_t kFlagHasFit   = 1u << 3;
 constexpr std::uint16_t kFlagPlanar   = 1u << 4;
 constexpr std::uint16_t kFlagLinear   = 1u << 5;
-constexpr int kSamplesPerSpan         = 16;
 constexpr int kMaxDegree              = 15;
 constexpr std::size_t kMaxControls    = 100000;
 
@@ -405,7 +404,7 @@ bool spline_outline(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm
         }
         return false;
     }
-    spline_points(controls, def.value(), kSamplesPerSpan, xs, ys);
+    spline_points(controls, def.value(), kSplineSamplesPerSpan, xs, ys);
     return def.value().closed;
 }
 

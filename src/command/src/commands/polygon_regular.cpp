@@ -51,15 +51,6 @@
 namespace kentos::command {
 namespace {
 
-/// `turns` written in `unit`, the inverse of the conversion a typed `aci` goes
-/// through. Recorded rather than the turn itself, because the parameter is
-/// declared in the user's angle unit and a replay reads it back through
-/// `udeg_from_angle` (core/angle.hpp).
-double angle_from_turns(double turns, core::AngleUnit unit) noexcept
-{
-    return turns * static_cast<double>(core::kUDegFullCircle) / core::udeg_per_angle_unit(unit);
-}
-
 Task<void> run(Context& ctx)
 {
     std::string how = "ic";
@@ -116,28 +107,35 @@ Task<void> run(Context& ctx)
         }
     }
 
-    double start_turns   = 0.0;
-    bool angle_from_hand = false;
-    if (const Value v = ctx.argument("aci"); !v.empty())
-        start_turns = core::turns_from_udeg(core::udeg_from_angle(v.as_number(), convention.unit));
+    double start_turns      = 0.0;
+    bool angle_from_hand    = false;
+    double pointed_angle    = 0.0;
+    const Value given_angle = ctx.argument("aci");
+    if (!given_angle.empty())
+        start_turns =
+            core::turns_from_udeg(core::udeg_from_angle(given_angle.as_number(), convention.unit));
+
+    std::vector<core::Point2> corners;
 
     // The one pointed answer. It is asked when the size still has to come from
     // somewhere, and — under `kenar`, whose size is already typed — when the
     // rotation does. A run whose size AND angle both arrived as arguments asks
     // nothing, which is the scripted and the replayed path.
-    const bool want_point =
-        !size_given && (fit != core::PolygonFit::Side || !ctx.has_argument("aci"));
+    const bool want_point = !size_given && (fit != core::PolygonFit::Side || given_angle.empty());
     if (want_point) {
-        const core::PolygonGuide guide{
-            .sides = *sides,
-            .fit   = fit,
-            // Under `kenar` the size is settled, so the guide draws a polygon of
-            // that size turning under the cursor; otherwise the cursor's own
-            // distance is the size and the guide is handed none.
-            .circumradius =
-                fit == core::PolygonFit::Side
-                    ? core::mm_from_metres(core::polygon_circumradius(measured, *sides, fit))
-                    : core::Mm{0}};
+        // ONE ANSWER FOR THE GUIDE AND THE CLICK: `core::polygon_from_guide`
+        // draws the ghost under the cursor and makes the corners below, from
+        // the numbers this run records. Under `kenar` the size is settled and
+        // the cursor only turns the shape; with `aci` given the rotation is
+        // settled and the cursor only sizes it — which the guide used to ignore,
+        // turning the ghost towards the cursor while the click drew it at `aci`.
+        core::PolygonGuide guide{.sides    = *sides,
+                                 .fit      = fit,
+                                 .measured = fit == core::PolygonFit::Side ? measured : 0.0};
+        if (!given_angle.empty()) {
+            guide.angle_given = true;
+            guide.angle_udeg  = core::udeg_from_angle(given_angle.as_number(), convention.unit);
+        }
 
         const char* asked = fit == core::PolygonFit::Side
                                 ? "Çokgenin yönü: bir köşenin geçtiği nokta"
@@ -153,33 +151,16 @@ Task<void> run(Context& ctx)
                                             .rubber_payload = core::encode_polygon_guide(guide)});
         if (!at) co_return;
 
-        const double reach = core::mm_to_metres(core::segment_length(*centre, *at));
-        if (!(reach > 0.0)) {
+        core::PolygonPick pick;
+        if (!core::polygon_from_guide(guide, *centre, *at, convention, pick)) {
             ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                          "Nokta merkezle aynı yerde; çokgenin boyu sıfır olamaz."));
             co_return;
         }
-
-        const double pointed = core::direction_turns(*centre, *at, convention.rule);
-        if (!ctx.has_argument("aci")) {
-            // A CIRCUMSCRIBED POLYGON'S FLAT PASSES UNDER THE CURSOR, not a
-            // corner: the user is sizing by the edge, so the edge is what they
-            // are pointing at. `aci` names the FIRST VERTEX, which is half a
-            // side's turn away from an edge midpoint.
-            const double half = core::polygon_half_step_turns(*sides);
-            start_turns =
-                fit == core::PolygonFit::Circumscribed
-                    ? (convention.rule == core::AngleRule::Semt ? pointed + half : pointed - half)
-                    : pointed;
-            angle_from_hand = true;
-        }
-
-        if (!size_given && fit != core::PolygonFit::Side)
-            measured = core::polygon_measurement(
-                fit == core::PolygonFit::Circumscribed
-                    ? core::polygon_circumradius(reach, *sides, core::PolygonFit::Circumscribed)
-                    : reach,
-                *sides, fit);
+        measured        = pick.measured;
+        corners         = std::move(pick.corners);
+        angle_from_hand = pick.angle_pointed;
+        pointed_angle   = pick.angle;
 
         // NOT PART OF THE RECORD. The awaiter writes whatever it resolved under
         // the name it was given, and this point is a GESTURE, not an input the
@@ -187,17 +168,16 @@ Task<void> run(Context& ctx)
         // just above, both recorded below. A line carrying both the point and
         // the numbers would have two answers to one question (Article 1.4).
         ctx.record("kose", Value{});
+    } else {
+        const double circumradius = core::polygon_circumradius(measured, *sides, fit);
+        if (!(circumradius > 0.0)) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Yarıçap ya da kenar uzunluğu sıfır ya da eksi olamaz."));
+            co_return;
+        }
+        corners = core::regular_polygon_corners(*centre, *sides, circumradius, start_turns,
+                                                convention.rule);
     }
-
-    const double circumradius = core::polygon_circumradius(measured, *sides, fit);
-    if (!(circumradius > 0.0)) {
-        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                     "Yarıçap ya da kenar uzunluğu sıfır ya da eksi olamaz."));
-        co_return;
-    }
-
-    std::vector<core::Point2> corners =
-        core::regular_polygon_corners(*centre, *sides, circumradius, start_turns, convention.rule);
 
     std::vector<core::RingGeometry::RingInput> rings{
         core::RingGeometry::RingInput{corners, core::RingRole::Exterior, 0}};
@@ -215,8 +195,7 @@ Task<void> run(Context& ctx)
     ctx.record("kenar_sayisi", Value::integer(*sides));
     ctx.record(size_param, Value::number(measured));
     if (!is("ic")) ctx.record("yontem", Value::text(how));
-    if (angle_from_hand)
-        ctx.record("aci", Value::number(angle_from_turns(start_turns, convention.unit)));
+    if (angle_from_hand) ctx.record("aci", Value::number(pointed_angle));
 
     ctx.echo(std::to_string(*sides) + " kenarlı çokgen çizildi.");
 }

@@ -125,7 +125,11 @@ Sıra şöyledir:
    yokken. Odak kendiliğinden komut satırına geçer; sayıyı yazıp **Enter**.
 2. **Merkez** sorulur; tuvale tıklayın.
 3. Bundan sonra **çokgen fareyi izler**. İkinci tıklama boyu ve dönüşü verir
-   (`yontem=kenar` ise önce kenar uzunluğu yazılır, sonra fare yalnız çevirir).
+   (`yontem=kenar` ise önce kenar uzunluğu yazılır, sonra fare yalnız çevirir;
+   `aci=` verildiyse çokgen o açıda durur, fare yalnız boyunu değiştirir).
+
+Kılavuz tıklamanın çizeceği çokgendir: köşeler, kaydedilecek boy ve açıdan
+hesaplanır, yani günlükten yeniden oynatılan çizim de milimetresine kadar aynıdır.
 
 Kenar sayısının komut satırında sorulması bilinçli: eskiden önce merkez
 isteniyordu, tıklamadan sonra ekranda hiçbir şey görünmüyordu ve soru altta tek

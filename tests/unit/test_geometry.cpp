@@ -1114,9 +1114,13 @@ TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
 {
     using namespace kentos::core;
 
-    const PolygonGuide guide{.sides = 7, .fit = PolygonFit::Circumscribed, .circumradius = 12'345};
+    const PolygonGuide guide{.sides       = 7,
+                             .fit         = PolygonFit::Circumscribed,
+                             .measured    = 12.345,
+                             .angle_given = true,
+                             .angle_udeg  = 40'500'000};
     const std::vector<std::uint8_t> bytes = encode_polygon_guide(guide);
-    REQUIRE_EQ(bytes.size(), std::size_t{17});
+    REQUIRE_EQ(bytes.size(), std::size_t{26});
     const auto back = decode_polygon_guide(bytes);
     REQUIRE(back.has_value());
     CHECK_EQ(back.value(), guide);
@@ -1131,6 +1135,12 @@ TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
     std::vector<std::uint8_t> bad_sides = bytes;
     bad_sides[0]                        = 1; // one side is not a polygon
     CHECK_FALSE(decode_polygon_guide(bad_sides).has_value());
+    std::vector<std::uint8_t> bad_flag = bytes;
+    bad_flag[17]                       = 2; // a flag is a flag
+    CHECK_FALSE(decode_polygon_guide(bad_flag).has_value());
+    PolygonGuide negative = guide;
+    negative.measured     = -1.0; // a size is not negative
+    CHECK_FALSE(decode_polygon_guide(encode_polygon_guide(negative)).has_value());
 }
 
 // ---------------------------------------------------------------------------

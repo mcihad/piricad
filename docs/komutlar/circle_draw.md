@@ -155,11 +155,20 @@ işarete tıklayın. Kartta **Daire — çapın iki ucu**, **Daire — üç nokt
 **Daire — iki doğruya teğet** vardır; aynı karttaki **Elips** ve **Halka** ayrı
 şekillerdir ve artık kendi ikonlarını taşırlar.
 
+**İki doğruya teğet**te (`ttr`) birinci doğru, ikinci doğruyu çizerken ekranda
+kalır; yarıçapı yazarken iki doğru da görünür. Yarıçaptan sonra dairenin hangi
+köşeye geleceğini gösterirsiniz: aynı yarıçapta iki doğruya teğet dört daire vardır
+ve kılavuz, imlecin bulunduğu köşedekini çizer — tıklayınca o daire yazılır.
+
+Her yöntemde kılavuz çizilecek dairenin kendisidir; tıklayınca belgeye giren daire,
+kılavuzda gördüğünüz dairedir.
+
 Yakalama açıkken hem merkez hem çember noktası mevcut nesnelere oturur —
 [`MOD`](mode.md) ile hangi yakalamaların açık olduğunu ayarlayabilirsiniz.
 
-Araç kalıcıdır: bir daireyi bitirdiğinizde `DAİRE` yeniden kurulur ve bir sonrakini
-çizebilirsiniz. Aracı bırakmak için **Esc**'e basın.
+Araç kalıcıdır: bir daireyi bitirdiğinizde `DAİRE` **aynı yöntemle** yeniden kurulur
+ve bir sonrakini çizebilirsiniz — komut satırına `DAİRE yontem=3n` yazdıysanız bir
+sonraki daire de üç noktalıdır. Aracı bırakmak için **Esc**'e basın.
 
 ### Betik
 
