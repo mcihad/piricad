@@ -140,6 +140,7 @@ Tek tek komutlar:
 | `SORGULA` | [Koşula uyan nesneleri sayma](komutlar/query.md) |
 | `SEÇİMBİLGİSİ` | [O anki seçimi okuma](komutlar/selection_info.md) |
 | `GÖRÜNÜMBİLGİSİ` | [Ekranda görünen alan](komutlar/view_info.md) |
+| `NESNENOKTALARI` | [Bir nesnenin merkezi, köşeleri ve uçları](komutlar/object_points.md) |
 | `ARAÇARA` | [Araç kataloğunda arama](komutlar/tool_search.md) |
 | `İŞŞABLONU` | [İş şablonları](komutlar/job_template.md) |
 | `ÖNERİ` | [Bekleyen yapay zeka önerileri](komutlar/suggestion.md) |

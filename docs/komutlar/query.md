@@ -97,14 +97,12 @@ KATMAN ad=PARSEL
 SORGULA katman=PARSEL
 ```
 
-Olmayan bir katman adı hata değil, cevaptır:
-
-```
-SORGULA katman=YOKBÖYLE
-```
+Olmayan bir katman adı bir **hatadır** ve ne yapılacağını söyler — "o katmanda nesne
+yok" cevabıyla karışmasın diye. Bir ajan da aynı cümleyi hata olarak alır:
 
 ```text
-Katman yok: 'YOKBÖYLE'. KATMANLAR ile listeyi alın.
+SORGULA katman=YOKBÖYLE
+Hata: Katman yok: 'YOKBÖYLE'. KATMANLAR ile listeyi alın.
 ```
 
 Bir öznitelik değeriyle aramak — önce sütunu tanımlayın, sonra sorun:

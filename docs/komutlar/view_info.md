@@ -28,6 +28,11 @@ dikdörtgeni bir **pencere tutamağı** olarak alır. Bu, sayıları okunabilen 
 türüdür ve sebebi açıktır: bunlar ekranın kendi köşeleridir, çizimin içeriği değil
 ([Onay ve denetim](../yapay-zeka/onay.md)).
 
+Ekranın **ortası** da ayrıca bir **nokta tutamağı** olarak gelir ("görünümün ortası").
+Kullanıcı bir yer söylemediğinde bir ajanın yeni çizimi oraya yapması bu yüzdendir:
+"bir altıgen çiz" isteği, merkezi bu tutamak olan bir [`ÇOKGEN`](polygon_regular.md)
+önerisine dönüşür.
+
 ## Adlar
 
 | Ad | Tür |

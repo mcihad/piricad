@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/ai/chat.hpp"
 
+#include "kentos_cad/ai/arguments.hpp"
+#include "kentos_cad/command/registry.hpp"
+
 #include "kentos_cad/ai/redact.hpp"
 
 namespace kentos::ai {
@@ -13,63 +16,6 @@ constexpr std::int64_t kBytesPerToken = 4;
 
 constexpr std::string_view kBase64Alphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/// Whether `text` is a handle reference: `@` + sixteen lower-case hex digits,
-/// optionally `.N` for one element of a list.
-///
-/// THE SHAPE ONLY. `HandleStore::resolve` (handles.hpp) is what turns one into
-/// coordinates, and it lives with the session that minted it; here the question
-/// is merely whether the model wrote a reference where the schema demanded one,
-/// which is what makes a coordinate literal impossible rather than merely
-/// forbidden (CLAUDE.md 5.8).
-bool is_handle_ref(std::string_view text)
-{
-    if (text.size() < 17 || text.front() != '@') return false;
-    for (std::size_t i = 1; i < 17; ++i) {
-        const char ch  = text[i];
-        const bool hex = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
-        if (!hex) return false;
-    }
-    if (text.size() == 17) return true;
-    if (text[17] != '.' || text.size() == 18) return false;
-    for (std::size_t i = 18; i < text.size(); ++i)
-        if (text[i] < '0' || text[i] > '9') return false;
-    return true;
-}
-
-/// Whether this property's schema demands a handle — recognised by a `pattern`
-/// anchored on `@`, which is the one `catalog.cpp` writes for a point, a point
-/// list and a selection under `Style::Agent`.
-bool demands_handle(const Json& schema)
-{
-    const Json* pattern = schema.find("pattern");
-    if (pattern == nullptr || !pattern->is_string()) return false;
-    return pattern->as_string().rfind("^@", 0) == 0;
-}
-
-/// The readable half of a plan step: what one argument looks like on a command
-/// line. The CANONICAL line is rendered by the command layer when the plan is
-/// applied; this is what a person reads in the preview.
-std::string readable_value(const Json& value)
-{
-    switch (value.type()) {
-    case Json::Type::String: return value.as_string();
-    case Json::Type::Bool: return value.as_bool() ? "evet" : "hayır";
-    case Json::Type::Int:
-    case Json::Type::Double: return value.dump();
-    case Json::Type::Array: {
-        std::string out;
-        for (const Json& item : value.as_array()) {
-            if (!out.empty()) out += ",";
-            out += readable_value(item);
-        }
-        return out;
-    }
-    case Json::Type::Null:
-    case Json::Type::Object: break;
-    }
-    return value.dump();
-}
 
 /// Appends `text` to the last block of `kind`, opening one when there is none.
 /// Returns the block, so a caller can attach a payload to it.
@@ -422,7 +368,9 @@ std::vector<Block> TurnAssembler::tool_calls() const
 
 // --------------------------------------------------------- the tool-call loop --
 
-core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog)
+core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog,
+                                     const command::Registry& registry, const HandleStore& handles,
+                                     std::uint64_t revision)
 {
     if (call.kind != BlockKind::ToolCall)
         return core::err(core::ErrorCode::InvalidArgument, "Bu blok bir araç çağrısı değil.");
@@ -431,6 +379,11 @@ core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog)
     if (tool == nullptr)
         return core::err(core::ErrorCode::NotFound,
                          "Bu sürümde böyle bir araç yok: '" + call.tool_name + "'.");
+    const command::CommandSpec* spec = registry.by_id(tool->command_id);
+    if (spec == nullptr)
+        return core::err(core::ErrorCode::NotFound, "'" + call.tool_name +
+                                                        "' kayıtlı olmayan bir komuta bakıyor: '" +
+                                                        tool->command_id + "'.");
 
     const std::string text = call.arguments.empty() ? "{}" : call.arguments;
     auto parsed            = Json::parse(text);
@@ -438,78 +391,28 @@ core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog)
         return core::err(core::ErrorCode::ParseError,
                          "'" + call.tool_name +
                              "' çağrısının argümanları okunamadı: " + parsed.error().message);
-    const Json& args_json = parsed.value();
-    if (!args_json.is_object())
+    if (!parsed.value().is_object())
         return core::err(core::ErrorCode::ParseError,
                          "'" + call.tool_name + "' çağrısının argümanları bir nesne değil.");
 
-    const Json* properties = tool->input_schema.find("properties");
+    // THE COMPILER THE MCP SERVER USES (`ai/arguments.hpp`). This road used to
+    // copy a handle's TEXT into the argument, where a command expecting points
+    // found a word — so the chat could draw nothing and could not act on a
+    // selection. The handle is resolved here, against the store the chat's own
+    // read tools minted into, at the document's revision now.
+    CompiledArguments compiled = compile_arguments(*spec, parsed.value(), handles, revision);
+    if (!compiled.refusal.empty())
+        return core::err(compiled.coordinate_literal || compiled.protocol_fault
+                             ? core::ErrorCode::ValidationFailed
+                             : core::ErrorCode::InvalidArgument,
+                         std::move(compiled.refusal));
 
     PlanStep step;
-    step.command_id  = tool->command_id;
-    std::string line = tool->title;
-
-    for (const auto& [name, value] : args_json.as_object()) {
-        // A NULL IS AN ABSENT ARGUMENT, not a value. Several models write one for
-        // an optional parameter they decided not to use.
-        if (value.is_null()) continue;
-
-        const Json* schema = properties != nullptr ? properties->find(name) : nullptr;
-        if (schema == nullptr)
-            // AI.MD R19: an undeclared parameter is a hard reject, not something
-            // to drop quietly — the bus refuses it too (command.md P15), and a
-            // model told nothing would keep writing it.
-            return core::err(core::ErrorCode::ValidationFailed, "'" + tool->name + "' aracının '" +
-                                                                    name +
-                                                                    "' diye bir parametresi yok.");
-
-        command::Value out;
-        if (demands_handle(*schema)) {
-            // THE COORDINATE DEFENCE (CLAUDE.md 5.8, ai.md R9/R10). This
-            // parameter is a position, and a position may only arrive as a handle
-            // minted by a read tool. A number, a pair of numbers or a list of
-            // them is refused HERE, while the arguments are still JSON and before
-            // any `Args` exists — which is what makes R10's "before validation"
-            // literally true.
-            if (!value.is_string() || !is_handle_ref(value.as_string()))
-                return core::err(core::ErrorCode::ValidationFailed,
-                                 "'" + name +
-                                     "' bir konum: yalnızca bir okuma aracının döndürdüğü "
-                                     "tutamak (@…) yazılabilir, koordinat yazılamaz. Gelen: " +
-                                     value.dump());
-            step.handles.push_back(value.as_string());
-            out = command::Value::text(value.as_string());
-        } else {
-            switch (value.type()) {
-            case Json::Type::String: out = command::Value::text(value.as_string()); break;
-            case Json::Type::Bool: out = command::Value::boolean(value.as_bool()); break;
-            case Json::Type::Int: out = command::Value::integer(value.as_int()); break;
-            case Json::Type::Double: out = command::Value::number(value.as_double()); break;
-            case Json::Type::Array: {
-                command::Value::Ints ids;
-                for (const Json& item : value.as_array()) {
-                    if (!item.is_int())
-                        return core::err(core::ErrorCode::ValidationFailed,
-                                         "'" + name +
-                                             "' listesi yalnızca tam sayı anahtar taşıyabilir; "
-                                             "koordinat bir tutamakla verilir.");
-                    ids.push_back(item.as_int());
-                }
-                out = command::Value::ids(std::move(ids));
-                break;
-            }
-            case Json::Type::Object:
-                return core::err(core::ErrorCode::ValidationFailed,
-                                 "'" + name + "' için nesne değer verilemez.");
-            case Json::Type::Null: continue;
-            }
-        }
-
-        step.args.set(name, std::move(out));
-        line += " " + name + "=" + readable_value(value);
-    }
-
-    step.line = std::move(line);
+    step.command_id    = tool->command_id;
+    step.args          = std::move(compiled.args);
+    step.handles       = std::move(compiled.handles);
+    step.constructions = std::move(compiled.constructions);
+    step.line          = render_line(*spec, step.args);
     return step;
 }
 

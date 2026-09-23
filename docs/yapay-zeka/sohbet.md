@@ -214,12 +214,15 @@ bir önizleme olarak göstermek. O, sonraki bir fazın işidir (`.claude/ai.md` 
 
 ## Aynı iş, komut satırından
 
-Panel komut veri yolunun bir istemcisidir; ayrıcalığı yoktur. Modelin ilk soracağı üç
-soruyu kendiniz de sorabilirsiniz:
+Panel komut veri yolunun bir istemcisidir; ayrıcalığı yoktur. Modelin ilk soracağı
+soruları kendiniz de sorabilirsiniz — burada bir parsel katmanı ve bir parsel ile:
 
 ```
+KATMAN ad=PARSEL
+ALAN 0,0 20,0 20,10 0,10
 KATMANLAR
 SORGULA katman=PARSEL
+NESNENOKTALARI nesneler=1
 GÖRÜNÜMBİLGİSİ
 ```
 

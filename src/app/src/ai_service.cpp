@@ -317,6 +317,16 @@ core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& comman
     outcome.report     = ran.value().report;
     outcome.mutated    = ran.value().mutated;
     outcome.minted     = mintFrom(outcome.report, command_id, requester);
+
+    // WHAT A HANDLE WAS MINTED FROM STAYS HERE. A field whose name starts with
+    // `_` is for the dispatcher — the coordinates behind a point handle — and is
+    // taken out of the answer before it reaches a client (ai.md P9).
+    if (outcome.report.is_object()) {
+        core::Json kept = core::Json::object({});
+        for (const auto& [key, value] : outcome.report.as_object())
+            if (key.empty() || key.front() != '_') kept.set(key, value);
+        outcome.report = std::move(kept);
+    }
     return outcome;
 }
 
@@ -336,6 +346,42 @@ std::vector<std::string> AiService::mintFrom(const core::Json& report, const std
         for (const core::Json& entry : keys->as_array())
             if (entry.is_int()) list.push_back(entry.as_int());
         if (!list.empty()) minted.push_back(handles.mint_entities(std::move(list), tool, at).id);
+    }
+
+    // A CENTRE becomes a POINT handle: the one position every drawing request
+    // can start from when the user named none — "in the middle of what I am
+    // looking at". Computed from the window, so its provenance says so.
+    if (const core::Json* centre = report.find("merkez_mm");
+        centre != nullptr && centre->is_array() && centre->as_array().size() == 2)
+        minted.push_back(handles
+                             .mint_points({core::Point2{centre->as_array()[0].as_int(),
+                                                        centre->as_array()[1].as_int()}},
+                                          tool, at, ai::Provenance::Computed, "görünümün ortası")
+                             .id);
+
+    // POINTS A READ TOOL FOUND ON OBJECTS — their centres, corners, ends — become
+    // one point handle, `.N` counting them in the order the labels name them.
+    if (const core::Json* coords = report.find("_noktalar_mm");
+        coords != nullptr && coords->is_array()) {
+        std::vector<core::Point2> list;
+        for (const core::Json& pair : coords->as_array())
+            if (pair.is_array() && pair.as_array().size() == 2)
+                list.push_back(
+                    core::Point2{pair.as_array()[0].as_int(), pair.as_array()[1].as_int()});
+        std::vector<std::string> names;
+        if (const core::Json* labels = report.find("etiketler");
+            labels != nullptr && labels->is_array())
+            for (const core::Json& one : labels->as_array())
+                names.push_back(one.is_string() ? one.as_string() : std::string());
+        const core::Json* from = report.find("_kaynak");
+        const bool computed = from != nullptr && from->is_string() && from->as_string() == "hesap";
+        if (!list.empty())
+            minted.push_back(
+                handles
+                    .mint_points(std::move(list), tool, at,
+                                 computed ? ai::Provenance::Computed : ai::Provenance::Document, {},
+                                 std::move(names))
+                    .id);
     }
 
     // A RECTANGLE becomes a window handle. This is the maintainer's "corner

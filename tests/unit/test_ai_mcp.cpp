@@ -992,11 +992,14 @@ TEST_CASE("Koordinat yazmak isError ile reddedilir ve denetim için işaretlenir
 
         const Json result = result_of(out);
         CHECK(is_error(result));
-        // The message names the read tool that mints such a handle, because a
-        // refusal a client cannot act on is a refusal it will simply retry.
+        // The message names the read tools that mint a POINT handle, and the
+        // relative form that measures from one, because a refusal a client
+        // cannot act on is a refusal it will simply retry.
         const std::string text = text_of(result);
-        CHECK(text.find("TUTAMAK") != std::string::npos);
-        CHECK(text.find("sorgula") != std::string::npos);
+        CHECK(text.find("KONUM") != std::string::npos);
+        CHECK(text.find("gorunum_bilgisi") != std::string::npos);
+        CHECK(text.find("nesne_noktalari") != std::string::npos);
+        CHECK(text.find("taban") != std::string::npos);
 
         // REPORTED SO THE APPLICATION CAN AUDIT-LOG IT. R10 requires the
         // rejection to be recorded, not merely answered, and a sans-IO engine

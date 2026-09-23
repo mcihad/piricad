@@ -29,6 +29,10 @@ constexpr ReadToolName kReadToolNames[] = {
     {"core.query", "sorgula"},
     {"core.selection_info", "secimi_al"},
     {"core.view_info", "gorunum_bilgisi"},
+    // Not one R11 names, but the read tool that mints POINT handles: named in the
+    // register of the five it is used beside, so a model reading `gorunum_bilgisi`
+    // and `sorgula` finds `nesne_noktalari` where it would look.
+    {"core.object_points", "nesne_noktalari"},
     {"core.corpus_search", "mevzuat_ara"},
 };
 
@@ -57,6 +61,47 @@ Json handle_schema(const char* what)
             Json::string(std::string(what) +
                          " — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). "
                          "Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."));
+    return out;
+}
+
+/// A position MEASURED FROM A HANDLE: the base a read tool supplied and a
+/// dimension from it, east and north in millimetres — the CAD user's `@10,0`.
+/// The one thing it cannot be is a coordinate from nowhere: its base is a handle.
+Json relative_schema()
+{
+    Json mm = Json::object({});
+    mm.set("type", Json::string("integer"));
+
+    Json east = mm;
+    east.set("description", Json::string("tabandan doğuya (Sağa), milimetre; batı eksi"));
+    Json north = mm;
+    north.set("description", Json::string("tabandan kuzeye (Yukarı), milimetre; güney eksi"));
+
+    Json properties = Json::object({});
+    properties.set("taban", handle_schema("taban noktası"));
+    properties.set("dogu", std::move(east));
+    properties.set("kuzey", std::move(north));
+
+    Json out = Json::object({});
+    out.set("type", Json::string("object"));
+    out.set("properties", std::move(properties));
+    out.set("required", Json::array({Json::string("taban")}));
+    out.set("additionalProperties", Json::boolean(false));
+    out.set("description",
+            Json::string("Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", "
+                         "\"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."));
+    return out;
+}
+
+/// One position: a handle, or a handle moved by a dimension.
+Json position_schema(const char* what)
+{
+    Json out = Json::object({});
+    out.set("anyOf", Json::array({handle_schema(what), relative_schema()}));
+    out.set("description",
+            Json::string(std::string(what) +
+                         " — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli "
+                         "nokta. Koordinat yazılamaz."));
     return out;
 }
 
@@ -90,12 +135,25 @@ Json schema_for(const command::Param& param, Style style)
 
     switch (param.kind) {
     case command::ParamKind::Point:
-        out = agent ? handle_schema("nokta") : literal_point_schema();
+        out = agent ? position_schema("nokta") : literal_point_schema();
         break;
 
     case command::ParamKind::PointList: {
         if (agent) {
-            out = handle_schema("nokta listesi");
+            // ONE HANDLE FOR THE WHOLE LIST — the corners a read tool found — or
+            // the list itself, each corner a handle or a point measured from one.
+            // The second is how a polygon is said round a centre.
+            Json list = Json::object({});
+            list.set("type", Json::string("array"));
+            list.set("items", position_schema("köşe"));
+            if (param.arity.min > 0) list.set("minItems", Json::integer(param.arity.min));
+            if (param.arity.max != 0xFFFFFFFFu)
+                list.set("maxItems", Json::integer(param.arity.max));
+            out.set("anyOf", Json::array({handle_schema("nokta listesi"), std::move(list)}));
+            out.set("description",
+                    Json::string("nokta listesi — bir okuma aracının tek tutamağı, ya da her "
+                                 "elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli "
+                                 "nokta olan dizi. Koordinat yazılamaz."));
             break;
         }
         out.set("type", Json::string("array"));

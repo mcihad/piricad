@@ -60,6 +60,8 @@ struct HandleValue
     Provenance provenance{Provenance::Document}; ///< where its numbers came from
     std::string tool;                            ///< which tool minted it
     std::uint64_t revision{0};                   ///< the document revision it was read at
+    std::string label; ///< what it is, in words a model reasons with: `görünümün ortası`
+    std::vector<std::string> labels; ///< for Points: what each `.N` is, in order
 
     std::vector<core::Point2> points;   ///< for Points
     std::vector<std::int64_t> entities; ///< for Entities, persistent keys
@@ -94,7 +96,8 @@ public:
     /// Mints a handle over points read out of the document.
     const HandleValue& mint_points(std::vector<core::Point2> points, std::string tool,
                                    std::uint64_t revision,
-                                   Provenance provenance = Provenance::Document);
+                                   Provenance provenance = Provenance::Document,
+                                   std::string label = {}, std::vector<std::string> labels = {});
 
     /// Mints a handle over persistent entity keys.
     const HandleValue& mint_entities(std::vector<std::int64_t> keys, std::string tool,

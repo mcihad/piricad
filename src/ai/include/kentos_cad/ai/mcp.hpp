@@ -35,6 +35,7 @@
 // first gets `-Wmismatched-tags` on the definition that follows, and a warning
 // is a defect here (CLAUDE.md 6.3). Defining it first makes the later spelling a
 // mere reference to a known type. The real fix belongs in `dispatcher.hpp`.
+#include "kentos_cad/ai/arguments.hpp"
 #include "kentos_cad/ai/catalog.hpp"
 
 #include "kentos_cad/ai/clients.hpp"
@@ -194,14 +195,9 @@ private:
     };
 
     // What compiling one tool call's arguments produced.
-    struct Compiled
-    {
-        command::Args args;
-        std::vector<std::string> handles; // which handles the arguments came from
-        std::string refusal;              // non-empty when it could not be compiled
-        bool coordinate_literal{false};   // a number arrived where a handle belongs
-        bool protocol_fault{false};       // the refusal is the client's schema mistake
-    };
+    /// One call's arguments, compiled by the compiler every agent road shares
+    /// (`ai/arguments.hpp`).
+    using Compiled = CompiledArguments;
 
     Answer fault(const core::Json& id, int code, std::string message,
                  core::Json data = core::Json::null()) const;

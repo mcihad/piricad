@@ -60,8 +60,13 @@ core::Status Gate::decide(const Approval& approval)
     // and the record says `insan` — out loud, so the two can be told apart
     // afterwards (TODOS S-06).
     record.decided_by = plan->decided_by.empty() ? std::string("insan") : plan->decided_by;
-    for (const PlanStep& step : plan->steps)
+    for (const PlanStep& step : plan->steps) {
         record.commands.push_back(step.line);
+        for (const std::string& handle : step.handles)
+            record.sources.push_back(handle);
+        for (const std::string& built : step.constructions)
+            record.sources.push_back(built);
+    }
 
     if (approval.decision() == Decision::Reject) {
         record.decision = "reddet";

@@ -31,11 +31,17 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -260,6 +266,221 @@ Task<void> run_selection_info(Context& ctx)
 
     ctx.echo(selection.empty() ? "Seçim boş."
                                : std::to_string(selection.size()) + " nesne seçili.");
+    co_return;
+}
+
+// ------------------------------------------------ NESNENOKTALARI ----------
+
+/// One point this tool reports, and what it is.
+struct NamedPoint
+{
+    core::Point2 at;
+    std::string label;
+};
+
+/// Where the middle of an open run is, measured along it: the point a drafter
+/// means by "the middle of this line", which is not its vertices' average.
+core::Point2 halfway_along(const std::vector<core::Point2>& run)
+{
+    double total = 0.0;
+    for (std::size_t i = 0; i + 1 < run.size(); ++i)
+        total += std::hypot(static_cast<double>(run[i + 1].x - run[i].x),
+                            static_cast<double>(run[i + 1].y - run[i].y));
+    double left = total / 2.0;
+    for (std::size_t i = 0; i + 1 < run.size(); ++i) {
+        const double len = std::hypot(static_cast<double>(run[i + 1].x - run[i].x),
+                                      static_cast<double>(run[i + 1].y - run[i].y));
+        if (len >= left && len > 0.0) {
+            const double t = left / len;
+            return core::Point2{
+                run[i].x + core::mm_round(t * static_cast<double>(run[i + 1].x - run[i].x)),
+                run[i].y + core::mm_round(t * static_cast<double>(run[i + 1].y - run[i].y))};
+        }
+        left -= len;
+    }
+    return run.empty() ? core::Point2{} : run.back();
+}
+
+/// The centre of mass of a face, its holes subtracted, whatever way its rings
+/// were wound. Computed about the first vertex so a TUREF-scale coordinate is
+/// never squared (core.md R3).
+std::optional<core::Point2> face_centroid(const core::RingGeometry& geom, core::RingSpan span)
+{
+    if (span.count == 0) return std::nullopt;
+    const auto ox = static_cast<double>(geom.ring_xs(span.first)[0]);
+    const auto oy = static_cast<double>(geom.ring_ys(span.first)[0]);
+    double area   = 0.0;
+    double mx     = 0.0;
+    double my     = 0.0;
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        if (geom.ring_role[r] == core::RingRole::Open) continue;
+        const auto xs = geom.ring_xs(r);
+        const auto ys = geom.ring_ys(r);
+        double a      = 0.0;
+        double cx     = 0.0;
+        double cy     = 0.0;
+        for (std::size_t i = 0; i < xs.size(); ++i) {
+            const std::size_t j = (i + 1) % xs.size();
+            const double x0     = static_cast<double>(xs[i]) - ox;
+            const double y0     = static_cast<double>(ys[i]) - oy;
+            const double x1     = static_cast<double>(xs[j]) - ox;
+            const double y1     = static_cast<double>(ys[j]) - oy;
+            const double cross  = x0 * y1 - x1 * y0;
+            a += cross;
+            cx += (x0 + x1) * cross;
+            cy += (y0 + y1) * cross;
+        }
+        // AN EXTERIOR ADDS AND A HOLE SUBTRACTS, whichever way each was drawn.
+        const double sign =
+            (geom.ring_role[r] == core::RingRole::Interior) == (a > 0.0) ? -1.0 : 1.0;
+        area += sign * a;
+        mx += sign * cx;
+        my += sign * cy;
+    }
+    if (area == 0.0) return std::nullopt;
+    return core::Point2{core::mm_round(ox + mx / (3.0 * area)),
+                        core::mm_round(oy + my / (3.0 * area))};
+}
+
+Task<void> run_object_points(Context& ctx)
+{
+    const core::Document& doc = ctx.document();
+    const std::string asked   = ctx.argument("tur").as_text().empty() ? std::string("merkez")
+                                                                      : ctx.argument("tur").as_text();
+    const Value given         = ctx.argument("nesneler");
+    Value::Ints keys          = given.as_ids();
+    if (keys.empty() && given.kind() == Value::Kind::Int) keys.push_back(given.as_int());
+    if (keys.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Hangi nesnenin noktaları? `nesneler` verin: `sorgula` ya da `secimi_al` "
+                   "tutamağı.");
+        co_return;
+    }
+
+    const core::RingGeometry& geom = doc.geometry();
+    std::vector<NamedPoint> points;
+    bool measured = false; ///< a centre, a middle or a box: computed, not read
+
+    for (const std::int64_t raw : keys) {
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+        if (e == core::kNoEntity || !doc.alive(e)) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            co_return;
+        }
+        const std::uint32_t slot  = doc.entities().slot[e];
+        const core::KindId kind   = doc.entities().kind[e];
+        const core::RingSpan span = geom.rings_of(slot);
+        const std::string who     = "nesne " + std::to_string(raw);
+        const core::Box2 box      = doc.entities().box_of(e);
+
+        std::vector<std::vector<core::Point2>> rings;
+        std::vector<bool> closed;
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            std::vector<core::Point2> ring;
+            const auto xs = geom.ring_xs(r);
+            const auto ys = geom.ring_ys(r);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                ring.push_back(core::Point2{xs[v], ys[v]});
+            rings.push_back(std::move(ring));
+            closed.push_back(geom.ring_role[r] != core::RingRole::Open);
+        }
+        const bool curve =
+            kind == core::kCircleKind || kind == core::kArcKind || kind == core::kEllipseKind;
+        const bool is_run = kind == core::kPolylineKind && !rings.empty() && !closed.front();
+
+        if (asked == "merkez") {
+            measured        = true;
+            core::Point2 at = box.centre();
+            if (kind == core::kCircleKind)
+                at = core::circle_centre_of(geom, slot);
+            else if (kind == core::kArcKind)
+                at = core::arc_centre_of(geom, slot);
+            else if (kind == core::kEllipseKind)
+                at = core::ellipse_centre_of(geom, slot);
+            else if (kind == core::kPointKind && !rings.empty() && !rings.front().empty())
+                at = rings.front().front();
+            else if (is_run)
+                at = halfway_along(rings.front());
+            else if (kind == core::kPolylineKind)
+                if (auto c = face_centroid(geom, span)) at = *c;
+            points.push_back({at, who + ": merkez"});
+        } else if (asked == "kutu") {
+            measured = true;
+            points.push_back({{box.min_x, box.min_y}, who + ": kutu güneybatı"});
+            points.push_back({{box.max_x, box.min_y}, who + ": kutu güneydoğu"});
+            points.push_back({{box.max_x, box.max_y}, who + ": kutu kuzeydoğu"});
+            points.push_back({{box.min_x, box.max_y}, who + ": kutu kuzeybatı"});
+        } else if (asked == "koseler") {
+            if (curve) {
+                // A CURVE'S CORNERS are the points a drafter snaps to on it: the
+                // grips, which is what KÖŞETAŞI numbers too.
+                const std::vector<core::GripPoint> grips = core::entity_grips(doc, e);
+                for (std::size_t i = 0; i < grips.size(); ++i)
+                    points.push_back({grips[i].at, who + ": tutamak " + std::to_string(i + 1)});
+            } else {
+                std::size_t n = 0;
+                for (const auto& ring : rings)
+                    for (const core::Point2& p : ring)
+                        points.push_back({p, who + ": köşe " + std::to_string(++n)});
+            }
+        } else if (asked == "uclar") {
+            if (kind == core::kArcKind) {
+                points.push_back({core::arc_start_of(geom, slot), who + ": başlangıç"});
+                points.push_back({core::arc_end_of(geom, slot), who + ": bitiş"});
+            } else if (is_run) {
+                for (std::size_t r = 0; r < rings.size(); ++r) {
+                    if (rings[r].empty() || closed[r]) continue;
+                    points.push_back({rings[r].front(), who + ": başlangıç"});
+                    points.push_back({rings[r].back(), who + ": bitiş"});
+                }
+            } else {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           who + " kapalı bir şekil; ucu yoktur. Köşeleri için tur=koseler.");
+                co_return;
+            }
+        } else if (asked == "orta_noktalar") {
+            measured      = true;
+            std::size_t n = 0;
+            for (std::size_t r = 0; r < rings.size(); ++r) {
+                const auto& ring  = rings[r];
+                std::size_t edges = ring.size();
+                if (!closed[r] && edges != 0) --edges; // an open run has one edge fewer
+                for (std::size_t i = 0; i < edges; ++i) {
+                    const core::Point2 a = ring[i];
+                    const core::Point2 b = ring[(i + 1) % ring.size()];
+                    points.push_back({core::Point2{a.x + (b.x - a.x) / 2, a.y + (b.y - a.y) / 2},
+                                      who + ": kenar " + std::to_string(++n) + " ortası"});
+                }
+            }
+        }
+    }
+
+    if (points.empty()) {
+        ctx.refuse(core::ErrorCode::NotFound, "Bu nesnelerde '" + asked + "' noktası yok.");
+        co_return;
+    }
+
+    // THE COORDINATES GO TO THE DISPATCHER, NOT TO THE MODEL. `_noktalar_mm` is
+    // what a handle is minted from and is taken out of the answer before it
+    // leaves (ai.md P9: the drawing is not dumped into a prompt); the labels are
+    // what a model reads, in the order the handle's `.N` counts them.
+    Json coords = Json::array({});
+    Json labels = Json::array({});
+    for (const NamedPoint& one : points) {
+        coords.push(Json::array({Json::integer(one.at.x), Json::integer(one.at.y)}));
+        labels.push(Json::string(one.label));
+    }
+    Json report;
+    report.set("_noktalar_mm", std::move(coords));
+    report.set("_kaynak", Json::string(measured ? "hesap" : "cizim"));
+    report.set("etiketler", std::move(labels));
+    report.set("adet", Json::integer(static_cast<std::int64_t>(points.size())));
+    ctx.report(std::move(report));
+
+    ctx.echo(std::to_string(points.size()) + " nokta: " + points.front().label +
+             (points.size() > 1 ? " … " + points.back().label : std::string()) + ".");
     co_return;
 }
 
@@ -683,6 +904,30 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .flags    = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.",
         .run      = &run_selection_info,
+    });
+
+    specs.push_back(CommandSpec{
+        .id       = "core.object_points",
+        .names    = {"NESNENOKTALARI", "OBJECTPOINTS", "NNK"},
+        .title    = "Nesne Noktaları",
+        .category = command::Category::Query,
+        .params =
+            {
+                Param{"nesneler", command::ParamKind::Selection, Arity{1, 0xFFFFFFFFu},
+                      "Noktaları istenen nesneler"}
+                    .en("objects"),
+                Param::choice("tur", Arity::optional(),
+                              {"merkez", "koseler", "uclar", "kutu", "orta_noktalar"},
+                              "Hangi noktalar: merkez (alanın ağırlık merkezi, çizginin "
+                              "uzunluk ortası, dairenin merkezi), köşeler, uçlar, kutunun "
+                              "köşeleri ya da kenar ortaları; varsayılan merkez")
+                    .en("which"),
+            },
+        .undo  = UndoPolicy::None,
+        .flags = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını "
+                   "bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.",
+        .run = &run_object_points,
     });
 
     specs.push_back(CommandSpec{

@@ -100,6 +100,50 @@ TEST_CASE("Okuma araçları hem insana hem makineye cevap veriyor")
     CHECK(field(layers.report, "crs") != nullptr);
 }
 
+TEST_CASE("NESNENOKTALARI merkezi, köşeleri, uçları ve kutuyu adlarıyla verir")
+{
+    Rig f;
+    f.must("ALAN 0,0 40,0 40,30 0,30");       // 1: a parcel
+    f.must("ÇOKLUÇİZGİ 0,50 10,50 10,60");    // 2: a bent line, 20 m long
+    f.must("DAİRE merkez=100,0 cevre=103,0"); // 3: a circle
+
+    const auto points = [&f](const char* line) {
+        const DispatchResult ran = f.must(line);
+        std::vector<core::Point2> out;
+        if (const core::Json* list = field(ran.report, "_noktalar_mm"); list != nullptr)
+            for (const core::Json& pair : list->as_array())
+                out.push_back(
+                    core::Point2{pair.as_array()[0].as_int(), pair.as_array()[1].as_int()});
+        return out;
+    };
+
+    // THE CENTRE A DRAFTER MEANS: a face's centre of mass, a line's middle along
+    // its length (not the average of its vertices), a circle's centre.
+    CHECK_EQ(points("NESNENOKTALARI nesneler=1"), (std::vector<core::Point2>{{20000, 15000}}));
+    CHECK_EQ(points("NESNENOKTALARI nesneler=2"), (std::vector<core::Point2>{{10000, 50000}}));
+    CHECK_EQ(points("NESNENOKTALARI nesneler=3"), (std::vector<core::Point2>{{100000, 0}}));
+
+    CHECK_EQ(points("NESNENOKTALARI nesneler=1 tur=koseler").size(), std::size_t{4});
+    CHECK_EQ(points("NESNENOKTALARI nesneler=2 tur=uclar"),
+             (std::vector<core::Point2>{{0, 50000}, {10000, 60000}}));
+    CHECK_EQ(points("NESNENOKTALARI nesneler=1 tur=kutu"),
+             (std::vector<core::Point2>{{0, 0}, {40000, 0}, {40000, 30000}, {0, 30000}}));
+    CHECK_EQ(points("NESNENOKTALARI nesneler=1 tur=orta_noktalar"),
+             (std::vector<core::Point2>{{20000, 0}, {40000, 15000}, {20000, 30000}, {0, 15000}}));
+
+    // Named, in the order the handle's `.N` counts them.
+    const DispatchResult named = f.must("NESNENOKTALARI nesneler=1 tur=koseler");
+    const core::Json* labels   = field(named.report, "etiketler");
+    REQUIRE(labels != nullptr);
+    CHECK_EQ(labels->as_array()[1].as_string(), std::string("nesne 1: köşe 2"));
+
+    // A closed shape has no ends, and says what to ask for instead.
+    const std::string why =
+        REFUSED(f.bus.execute_line("NESNENOKTALARI nesneler=1 tur=uclar", command::Origin::Test));
+    CHECK(why.find("tur=koseler") != std::string::npos);
+    CHECK_FALSE(f.bus.execute_line("NESNENOKTALARI nesneler=9", command::Origin::Test).ok());
+}
+
 TEST_CASE("SORGULA sayıyı dürüst verir, listeyi sınırlar")
 {
     Rig f;
@@ -479,14 +523,14 @@ TEST_CASE("Öneri defteri: ekle, adım ekle, tek karar")
 
     ai::Plan plan;
     plan.requester = "sınama istemcisi";
-    plan.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}});
     const std::string id = plans.add(std::move(plan));
     REQUIRE(plans.find(id) != nullptr);
     CHECK_EQ(plans.find(id)->state, ai::PlanState::Pending);
 
     // A SEQUENCE THAT ONE APPROVAL APPLIES (ai.md R4): the agent composes, the
     // person decides once.
-    REQUIRE(plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=YOL", {}}).ok());
+    REQUIRE(plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=YOL", {}, {}}).ok());
     CHECK_EQ(plans.find(id)->steps.size(), std::size_t{2});
     CHECK_EQ(plans.pending().size(), std::size_t{1});
 
@@ -496,11 +540,11 @@ TEST_CASE("Öneri defteri: ekle, adım ekle, tek karar")
     // ONE DECISION PER PLAN. A second would mean either applying something twice
     // or recording two answers to one question.
     CHECK(!plans.settle(id, ai::PlanState::Rejected).ok());
-    CHECK(!plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=X", {}}).ok());
+    CHECK(!plans.append(id, ai::PlanStep{"core.layer", Args{}, "KATMAN ad=X", {}, {}}).ok());
 
     // The answer a client receives says, every time, that nothing was applied.
     ai::Plan second;
-    second.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}});
+    second.steps.push_back(ai::PlanStep{"core.line", Args{}, "ÇİZGİ @abc.0 @abc.1", {}, {}});
     const std::string open = plans.add(std::move(second));
     const core::Json told  = plans.find(open)->to_json();
     CHECK_EQ(told.find("durum")->as_string(), std::string("beklemede"));
@@ -547,8 +591,8 @@ TEST_CASE("Onay kapısı: uygulanan öneri tek adım, reddedilen hiçbir şey")
     ai::Plan plan;
     plan.requester = "sınama";
     plan.prompt    = "iki çizgi çiz";
-    plan.steps.push_back(ai::PlanStep{"core.line", first, "ÇİZGİ 0,0 5,0", {}});
-    plan.steps.push_back(ai::PlanStep{"core.line", second, "ÇİZGİ 0,1 5,1", {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", first, "ÇİZGİ 0,0 5,0", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", second, "ÇİZGİ 0,1 5,1", {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::size_t undo_before  = f.undo.undo_depth();
@@ -628,7 +672,7 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     first.set("ad", Value::text("ONAYLANAN"));
     ai::Plan plan;
     plan.requester = "Ajan A";
-    plan.steps.push_back(ai::PlanStep{"core.layer", first, "KATMAN ad=ONAYLANAN", {}});
+    plan.steps.push_back(ai::PlanStep{"core.layer", first, "KATMAN ad=ONAYLANAN", {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     // THE CARD READS THE PLAN and remembers what it drew.
@@ -640,7 +684,7 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     Args sneaked;
     sneaked.set("ad", Value::text("OKUNMAYAN"));
     REQUIRE(plans.append_for(id, "Ajan A",
-                             ai::PlanStep{"core.layer", sneaked, "KATMAN ad=OKUNMAYAN", {}}));
+                             ai::PlanStep{"core.layer", sneaked, "KATMAN ad=OKUNMAYAN", {}, {}}));
     CHECK_NE(plans.find(id)->content_fingerprint(), as_drawn);
 
     // THE APPROVAL IS REFUSED, not trimmed: the honest answer is a fresh card
@@ -670,7 +714,7 @@ TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil"
     Args third;
     third.set("ad", Value::text("İDDİASIZ"));
     ai::Plan other;
-    other.steps.push_back(ai::PlanStep{"core.layer", third, "KATMAN ad=İDDİASIZ", {}});
+    other.steps.push_back(ai::PlanStep{"core.layer", third, "KATMAN ad=İDDİASIZ", {}, {}});
     const std::string loose = plans.add(std::move(other));
     CHECK(gate.decide(gate.approve(loose, "Mühendis", ai::Decision::Apply, 1700000000002)));
 }
@@ -692,7 +736,7 @@ TEST_CASE("Onay kapısı: ret de kayda geçer, çizim değişmez")
     Args args;
     args.set("ad", Value::text("OLMAYACAK"));
     ai::Plan plan;
-    plan.steps.push_back(ai::PlanStep{"core.layer", args, "KATMAN ad=OLMAYACAK", {}});
+    plan.steps.push_back(ai::PlanStep{"core.layer", args, "KATMAN ad=OLMAYACAK", {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::uint64_t before = f.doc.content_hash();
@@ -739,8 +783,8 @@ TEST_CASE("Onay kapısı: uygulama reddedilirse hiçbir adım kalmaz")
     Args bad; // one point where two are declared: the bus refuses it before the body runs
 
     ai::Plan plan;
-    plan.steps.push_back(ai::PlanStep{"core.line", good, "ÇİZGİ 0,0 5,0", {}});
-    plan.steps.push_back(ai::PlanStep{"core.line", bad, "ÇİZGİ 9,9", {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", good, "ÇİZGİ 0,0 5,0", {}, {}});
+    plan.steps.push_back(ai::PlanStep{"core.line", bad, "ÇİZGİ 9,9", {}, {}});
     const std::string id = plans.add(std::move(plan));
 
     const std::uint64_t before  = f.doc.content_hash();

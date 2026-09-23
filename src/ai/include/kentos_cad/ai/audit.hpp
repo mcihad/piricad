@@ -75,6 +75,13 @@ struct AuditRecord
     /// the setting may have changed twice since.
     std::string policy;
 
+    /// WHERE EACH POSITION CAME FROM: every handle the steps used, and each
+    /// relative point as its base and the dimension it was moved by
+    /// (`@….0 + doğu 10000, kuzey 0 mm`). "Why is this corner here" is the
+    /// question a cadastral audit asks first, and CLAUDE.md 5.8 says the answer
+    /// is never "the model said so".
+    std::vector<std::string> sources;
+
     /// One JSONL line. `sürüm` first, because a file without a version is a file
     /// that cannot be read by a later program (.claude/io.md P5).
     core::Json to_json() const;

@@ -24,6 +24,7 @@
 #pragma once
 
 #include "kentos_cad/ai/dialect.hpp"
+#include "kentos_cad/ai/handles.hpp"
 #include "kentos_cad/ai/plan.hpp"
 #include "kentos_cad/ai/tool.hpp"
 
@@ -35,6 +36,10 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+namespace kentos::command {
+class Registry; ///< where a tool call finds the command it names
+} // namespace kentos::command
 
 namespace kentos::ai {
 
@@ -284,11 +289,14 @@ private:
 ///
 /// THIS IS THE STRICT SCHEMA CHECK ai.md R19 REQUIRES — an unknown tool, an
 /// undeclared parameter or a malformed argument is a HARD REJECT — and it is the
-/// coordinate defence of R9/R10 at the same time: where the agent-facing schema
-/// declared a handle (`catalog.cpp`, `Style::Agent`), a number or a list is
-/// refused outright, so a coordinate a model invented can never become an `Args`.
+/// coordinate defence of R9/R10 at the same time, in the compiler the MCP server
+/// shares (`compile_arguments`): a position is a handle from `handles`, or a
+/// handle moved by a stated dimension, and never a number a model wrote. The
+/// handles are resolved at `revision`, so the step holds the points they name.
 /// It DISPATCHES NOTHING; the returned step goes to the approval path.
-core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog);
+core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog,
+                                     const command::Registry& registry, const HandleStore& handles,
+                                     std::uint64_t revision);
 
 /// The message that carries one tool's outcome back to the model. `failed` marks
 /// a refusal, which every dialect can express and which a model needs in order to

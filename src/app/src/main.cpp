@@ -46,6 +46,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPainter>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
@@ -2222,6 +2223,106 @@ int main(int argc, char** argv)
                 check(!card.pending(), "karar verilen kart hâlâ bekliyor");
                 check(controller->document().find_layer("AJAN") != kentos::core::kNoLayer,
                       "onaydan sonra katman yok");
+            }
+
+            // 6b. A DRAWING CAN BE ASKED FOR WITHOUT A COORDINATE IN IT. The view's
+            //     centre comes back as a POINT handle, and a square is said round
+            //     it by dimensions — which is what an agent could not do at all
+            //     while no read tool minted a point handle.
+            {
+                const QByteArray viewed =
+                    post(base,
+                         envelope("tools/call",
+                                  "{\"name\":\"gorunum_bilgisi\",\"arguments\":{}," + meta + "}"),
+                         "tools/call", "gorunum_bilgisi", &status);
+                say("view centre", status, viewed);
+                const QRegularExpressionMatch centre =
+                    QRegularExpression(
+                        QStringLiteral(R"re("tutamak":"(@[0-9a-f]{16})","tur":"nokta")re"))
+                        .match(QString::fromUtf8(viewed));
+                check(centre.hasMatch(), "gorunum_bilgisi nokta tutamağı basmadı");
+                check(viewed.contains("görünümün ortası") ||
+                          viewed.contains("g\\u00f6r\\u00fcn\\u00fcm\\u00fcn ortas\\u0131"),
+                      "merkez tutamağı adıyla bildirilmedi");
+                if (centre.hasMatch()) {
+                    const QString h   = centre.captured(1);
+                    const auto corner = [&h](int e, int n) {
+                        return QStringLiteral(R"({"taban":"%1","dogu":%2,"kuzey":%3})")
+                            .arg(h)
+                            .arg(e)
+                            .arg(n);
+                    };
+                    const QString args = QStringLiteral(R"({"noktalar":[%1,%2,%3,%4]})")
+                                             .arg(corner(-10000, -10000), corner(10000, -10000),
+                                                  corner(10000, 10000), corner(-10000, 10000));
+                    const std::size_t pending = controller->aiService().plans().pending().size();
+                    const QByteArray square =
+                        post(base,
+                             envelope("tools/call",
+                                      QByteArray("{\"name\":\"core_area\",\"arguments\":") +
+                                          args.toUtf8() + "," + meta + "}"),
+                             "tools/call", "core_area", &status);
+                    say("relative square", status, square);
+                    check(status == 200 && !square.contains("\"isError\":true"),
+                          "göreli köşelerle alan önerilemedi");
+                    const auto filed = controller->aiService().plans().pending();
+                    check(filed.size() == pending + 1, "göreli kare bir öneri açmadı");
+                    if (filed.size() == pending + 1) {
+                        const kentos::ai::Plan* plan = filed.back();
+                        const auto corners = plan->steps.front().args.get("noktalar").as_points();
+                        const std::optional<kentos::command::ViewInfo> view =
+                            controller->aiService().view();
+                        check(corners.size() == 4, "önerinin dört köşesi yok");
+                        if (view && corners.size() == 4) {
+                            check(corners[0] == kentos::core::Point2{view->centre.x - 10000,
+                                                                     view->centre.y - 10000},
+                                  "göreli köşe merkezden ölçülmedi");
+                            check(corners[2] == kentos::core::Point2{view->centre.x + 10000,
+                                                                     view->centre.y + 10000},
+                                  "karşı köşe merkezden ölçülmedi");
+                        }
+                        check(plan->steps.front().constructions.size() == 4,
+                              "göreli köşelerin kaynağı kayda geçmedi");
+                        // Taken back off the screen the way a client that left
+                        // would take it: nothing here may decide it (ai.md P15).
+                        controller->aiService().withdraw(plan->id, plan->requester);
+                    }
+                }
+            }
+
+            // 6c. AND AN OBJECT'S OWN POINTS: a query's objects, then their centres.
+            {
+                controller->runLine(QStringLiteral("ALAN 485340,4310230 485350,4310230 "
+                                                   "485350,4310240 485340,4310240"),
+                                    kentos::command::Origin::Gui);
+                const QByteArray found = post(
+                    base,
+                    envelope("tools/call", "{\"name\":\"sorgula\",\"arguments\":{}," + meta + "}"),
+                    "tools/call", "sorgula", &status);
+                say("query objects", status, found);
+                const QRegularExpressionMatch objects =
+                    QRegularExpression(
+                        QStringLiteral(R"re("tutamak":"(@[0-9a-f]{16})","tur":"nesne")re"))
+                        .match(QString::fromUtf8(found));
+                check(objects.hasMatch(), "sorgula nesne tutamağı basmadı");
+                if (objects.hasMatch()) {
+                    const QByteArray points =
+                        post(base,
+                             envelope("tools/call",
+                                      QByteArray("{\"name\":\"nesne_noktalari\",\"arguments\":{"
+                                                 "\"nesneler\":\"") +
+                                          objects.captured(1).toUtf8() + "\",\"tur\":\"merkez\"}," +
+                                          meta + "}"),
+                             "tools/call", "nesne_noktalari", &status);
+                    say("object points", status, points);
+                    check(status == 200 && !points.contains("\"isError\":true"),
+                          "nesne_noktalari çalışmadı");
+                    check(QRegularExpression(QStringLiteral(R"re("tur":"nokta")re"))
+                              .match(QString::fromUtf8(points))
+                              .hasMatch(),
+                          "nesne_noktalari nokta tutamağı basmadı");
+                    check(!points.contains("_noktalar_mm"), "koordinat listesi istemciye sızdı");
+                }
             }
 
             // 7. THE HEADER RULES REACH THE SOCKET: a mismatch is 400.

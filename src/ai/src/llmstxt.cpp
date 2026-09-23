@@ -34,10 +34,33 @@ std::string preamble()
 - **Türkçe adlar katlanır.** `GİZLE`, `gizle`, `GIZLE` ve `gızle` aynı sözcüktür; i/ı
   ve büyük/küçük ayrımı ad çözümlemede yok sayılır. Her komutun Türkçe birincil adı,
   ASCII karşılığı, İngilizce karşılığı ve kısaltması vardır.
-- **Koordinat uyduramazsınız.** Nokta, nokta listesi ya da nesne seçimi isteyen bir
-  parametre yalnız **tutamak** kabul eder: bir okuma aracının döndürdüğü
-  `@0123456789abcdef.3` biçiminde bir dize. Sayı yazmak reddedilir — konum her zaman
-  bir araç sonucundan gelir, modelin metninden değil.
+- **Koordinat uyduramazsınız, ama çizebilirsiniz.** Nokta ya da nokta listesi isteyen
+  bir parametreye sayı yazmak reddedilir; konum her zaman bir araç sonucundan gelir.
+  Bir KONUM iki biçimde yazılır:
+  - bir **tutamak**: bir okuma aracının döndürdüğü `@0123456789abcdef` ya da listenin bir
+    elemanı için `@0123456789abcdef.3`;
+  - bir tutamaktan **ölçüyle** uzaklaşan **göreli nokta**:
+    `{"taban": "@0123456789abcdef.0", "dogu": 10000, "kuzey": -5000}` — tabanın 10 m
+    doğusu, 5 m güneyi. Ölçüler tam sayı milimetredir; batı ve güney eksidir.
+  Nokta listesi (bir çokgenin köşeleri) ya tek bir tutamaktır ya da her elemanı bir
+  tutamak veya göreli nokta olan bir dizidir. Uzunluk, yarıçap, mesafe gibi ÖLÇÜLER
+  düz sayıdır (`yaricap`, `mesafe`, `kenar_uzunlugu`).
+- **Konum nereden gelir.** `gorunum_bilgisi` ekranın ortasını ("görünümün ortası") bir
+  nokta tutamağı olarak verir; kullanıcı bir yer söylemediyse yeni çizim oraya yapılır.
+  `nesne_noktalari` bir nesnenin merkezini, köşelerini, uçlarını, kutusunu ya da kenar
+  ortalarını verir; nesnenin kendisi `sorgula` ya da `secimi_al` tutamağıyla seçilir.
+  Tutamağın koordinatlarını görmezsiniz; `ad` ve `noktalar` alanları hangisinin ne
+  olduğunu söyler. Çizim her değiştiğinde tutamaklar eskir; okuma aracını yeniden
+  çağırın.
+- **Örnek: ekranın ortasına 20 m kenarlı kare.** `gorunum_bilgisi` → dönen nokta
+  tutamağı `@m` ise `core_area` şu argümanla:
+  `{"noktalar": [{"taban": "@m", "dogu": -10000, "kuzey": -10000},
+  {"taban": "@m", "dogu": 10000, "kuzey": -10000}, {"taban": "@m", "dogu": 10000,
+  "kuzey": 10000}, {"taban": "@m", "dogu": -10000, "kuzey": 10000}]}`.
+- **Örnek: 10 m yarıçaplı altıgen.** `core_polygon_regular` şu argümanla:
+  `{"merkez": {"taban": "@m"}, "kenar_sayisi": 6, "yaricap": 10000}`. Bir nesneyi 5 m
+  doğuya taşımak: `core_move` `{"nesneler": "@n", "baslangic": {"taban": "@m"},
+  "bitis": {"taban": "@m", "dogu": 5000}}`.
 - **Yazan araçlar çağrıldığında uygulamaz.** Belgeyi ya da diski değiştiren bir araç
   çağrısı bir ÖNERİ kaydı açar, uygulanacak komut satırlarını döndürür ve bilgisayar
   başındaki harita mühendisi uygulayana kadar bekler. Onaylanan bir öneri tek bir
@@ -48,12 +71,15 @@ std::string preamble()
 
 ## Sıra
 
-1. `gorunum_bilgisi` — ekranda hangi alanı görüyorsunuz, hangi ölçekte, hangi CRS'te.
+1. `gorunum_bilgisi` — ekranda hangi alanı görüyorsunuz, hangi ölçekte, hangi CRS'te;
+   ekranın ortası bir nokta tutamağı olarak gelir.
 2. `katmanlari_listele` — katmanlar, geometri türleri, nesne sayıları.
 3. `oznitelik_semasi` — bir katmanın öznitelik alanları ve tipleri.
-4. `sorgula` — koşula uyan nesneler; sonuç sayısı sınırlıdır, tutamak döndürür.
-5. `secimi_al` — kullanıcının o anki seçimi, tutamak olarak.
-6. Bir yazma aracı — tutamaklarla; dönen öneriyi kullanıcı uygular.
+4. `sorgula` — koşula uyan nesneler; sonuç sayısı sınırlıdır, nesne tutamağı döndürür.
+5. `secimi_al` — kullanıcının o anki seçimi, nesne tutamağı olarak.
+6. `nesne_noktalari` — nesnelerin merkez, köşe, uç, kutu ya da kenar ortası noktaları,
+   nokta tutamağı olarak.
+7. Bir yazma aracı — tutamaklar ve göreli noktalarla; dönen öneriyi kullanıcı uygular.
 
 )";
 }
@@ -110,15 +136,21 @@ std::string llms_full_txt(const command::Registry& registry)
         for (const auto& [name, schema] : properties->as_object()) {
             const core::Json* type = schema.find("type");
             const core::Json* help = schema.find("description");
-            bool required          = false;
+            // A POSITION IS ONE OF TWO SHAPES (`anyOf`), which has no single
+            // `type`; the table names what it is instead of printing `?`.
+            std::string kind = type != nullptr && type->is_string() ? type->as_string() : "?";
+            if (type == nullptr && schema.find("anyOf") != nullptr)
+                kind = name == "noktalar" || (help != nullptr && help->is_string() &&
+                                              help->as_string().starts_with("nokta listesi"))
+                           ? "nokta listesi (tutamak ya da konum dizisi)"
+                           : "konum (tutamak ya da göreli nokta)";
+            bool required = false;
             if (const core::Json* list = tool.input_schema.find("required");
                 list != nullptr && list->is_array()) {
                 for (const core::Json& entry : list->as_array())
                     if (entry.is_string() && entry.as_string() == name) required = true;
             }
-            out += "| `" + name + "` | " +
-                   (type != nullptr && type->is_string() ? type->as_string() : "?") + " | " +
-                   (required ? "evet" : "hayır") + " | " +
+            out += "| `" + name + "` | " + kind + " | " + (required ? "evet" : "hayır") + " | " +
                    (help != nullptr && help->is_string() ? help->as_string() : "") + " |\n";
         }
         out += "\n";

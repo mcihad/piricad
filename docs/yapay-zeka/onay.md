@@ -43,14 +43,35 @@ Dolayısıyla bir model oraya sayı **yazamaz**: ret, argümanlar hâlâ JSON ik
 bir kod sıralaması dikkati değil, harfi harfine doğru bir ifade olur.
 
 **Tutamağı yalnız okuma araçları üretir** ve okuma araçları çizimi okur: `secimi_al`
-kullanıcının seçtiğini, `sorgula` eşleşenleri, `gorunum_bilgisi` pencerenin köşelerini
-verir. Sayılar çizimin kendi sayılarıdır.
+kullanıcının seçtiğini, `sorgula` eşleşenleri **nesne** olarak verir; `gorunum_bilgisi`
+pencerenin köşelerini ve ortasını, [`nesne_noktalari`](../komutlar/object_points.md) bir
+nesnenin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını **nokta**
+olarak verir. Sayılar çizimin ve ekranın kendi sayılarıdır.
+
+### Göreli nokta: bir tutamaktan ölçüyle
+
+Bir ajan yeni bir şey çizerken köşeleri çizimde henüz yoktur. Onları bir tutamaktan
+**ölçüyle** söyler — bir CAD kullanıcısının `@10,0` yazması gibi:
+
+```text
+{"taban": "@0f3a1c7b9e4d2856.0", "dogu": 10000, "kuzey": -5000}
+```
+
+Bu, tabanın 10 m doğusu ve 5 m güneyidir. Ölçüler tam sayı milimetredir; batı ve güney
+eksidir. Bir çokgenin köşeleri böyle bir dizidir: "ekranın ortasına 20 m'lik kare"
+isteği, `gorunum_bilgisi`nin "görünümün ortası" tutamağından ±10 m'lik dört köşedir.
+Uzunluk, yarıçap ve mesafe gibi ölçüler düz sayıdır; bir konum ise hiçbir zaman düz
+sayı değildir: tabanı her zaman bir tutamaktır.
+
+Öneri kartında her konumun nereden geldiği görünür ve **denetim kaydına** yazılır:
+hangi tutamak, ve göreli bir noktaysa hangi ölçüyle
+(`@0f3a1c7b9e4d2856.0 + doğu 10000, kuzey -5000 mm`).
 
 ### Üç tür tutamak
 
 | Tür | Ne taşır | Kim üretir |
 |---|---|---|
-| nokta | Bir ya da daha çok koordinat | Okuma araçları |
+| nokta | Bir ya da daha çok koordinat | `gorunum_bilgisi` (görünümün ortası), `nesne_noktalari` |
 | nesne | Kalıcı nesne anahtarları | `sorgula`, `secimi_al` |
 | pencere | Bir dikdörtgen | `gorunum_bilgisi`, `sorgula`'nın kapsayan kutusu |
 
@@ -117,7 +138,7 @@ Bir öneri açıldığında kart, onu açan cevabın altında görünür
 |---|---|
 | Başlık | `Öneri p0f3a1c7b9e4d2856 · 2 adım` ve önerinin durumu |
 | Komut satırları | Uygulanacak satırların **tamamı**, sizin de yazabileceğiniz hâlleriyle |
-| `Koordinat kaynağı` | Adımlardaki konumların hangi tutamaklardan geldiği |
+| `Koordinat kaynağı` | Adımlardaki konumların hangi tutamaklardan geldiği; göreli noktalarda tutamak ve ölçü (kayıtta `konum_kaynagi`) |
 | `İsteyen` | İstemcinin adı, varsa modelin kimliği |
 | Uyarı şeridi | Çizim öneriden sonra değiştiyse: `Öneri 12 numaralı sürüme göre hazırlandı, çizim şimdi 14.` |
 | **Reddet** / **Uygula** | Kararın kendisi. `Uygula` karttaki tek birincil düğmedir |

@@ -8,6 +8,7 @@
 // examples anywhere — the pages are the source.
 #include "kentos_test.hpp"
 
+#include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/json.hpp"
@@ -65,6 +66,9 @@ struct Rig
         domain::cadastre::register_cadastre_commands(reg);
         domain::surface::register_surface_commands(reg);
         processing::register_processing_commands(reg);
+        // And the agent's read tools, whose pages print command lines too: a
+        // page is checked whoever its command is written for.
+        ai::register_ai_commands(reg);
         bus.on_echo = [](std::string_view) {}; // transcript output is not the subject
     }
 };

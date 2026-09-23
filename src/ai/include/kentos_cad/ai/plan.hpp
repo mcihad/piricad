@@ -65,6 +65,9 @@ struct PlanStep
     command::Args args;     ///< arguments with every handle already resolved
     std::string line;       ///< the command line a person reads, e.g. `ÇİZGİ 0,0 10,10`
     std::vector<std::string> handles; ///< which handles the arguments came from
+    /// The relative points among them: the base handle and the dimension it was
+    /// moved by (`@….0 + doğu 10000, kuzey 0 mm`), for the audit record.
+    std::vector<std::string> constructions;
 };
 
 /// A whole suggestion.

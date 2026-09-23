@@ -121,6 +121,10 @@ public:
     ai::HandleStore& handles(const std::string& requester) override;
     const ai::Catalog& catalog() const override;
 
+    /// The registry the catalogue is projected from, for the chat's step
+    /// compiler: a tool call is checked against the command it names.
+    const command::Registry& registry() const { return bus_.registry(); }
+
 signals:
     /// A client has proposed something and a person has to look at it. The shell
     /// raises the suggestion card; nothing is applied until it is answered.

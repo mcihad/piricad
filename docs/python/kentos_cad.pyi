@@ -1935,6 +1935,18 @@ def selection_info(
     Komut: core.selection_info (SEÇİMBİLGİSİ)
     """
 
+def object_points(
+    *,
+    objects: list[int] = ...,
+    which: str = ...,
+) -> int:
+    """Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.
+
+    Komut: core.object_points (NESNENOKTALARI)
+        objects — Noktaları istenen nesneler [kalıcı nesne anahtarı]
+        which — Hangi noktalar: merkez (alanın ağırlık merkezi, çizginin uzunluk ortası, dairenin merkezi), köşeler, uçlar, kutunun köşeleri ya da kenar ortaları; varsayılan merkez
+    """
+
 def view_info(
     *,
 ) -> int:

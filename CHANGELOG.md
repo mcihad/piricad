@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yapay zekâ artık çizebiliyor
+
+Sohbet ve MCP ajanı hiçbir şey çizemiyordu, ve iki ayrı sebepten:
+
+- **Hiçbir okuma aracı nokta tutamağı basmıyordu.** Bir konum yalnız tutamakla
+  verilebiliyor, ama tutamaklar yalnız nesneler ve pencere için basılıyordu. Her çizim
+  komutu nokta istediği için model tek bir çizgi bile öneremiyordu; bir nesneyi taşımak
+  için bile iki nokta gerekiyordu. Artık `gorunum_bilgisi` ekranın ortasını, yeni
+  [`nesne_noktalari`](docs/komutlar/object_points.md) (NESNENOKTALARI) bir nesnenin
+  merkezini, köşelerini, uçlarını, kutusunu ve kenar ortalarını nokta tutamağı olarak
+  veriyor.
+- **Sohbet tutamağı çözmüyordu.** Sohbetin yazma adımları tutamağın *metnini*
+  argümana yazıyordu; nokta bekleyen komut bir sözcük buluyordu. Sohbet ile MCP artık
+  tek bir argüman derleyicisini paylaşıyor.
+
+Bir ajan yeni köşeleri bir tutamaktan **ölçüyle** söyleyebiliyor:
+`{"taban": "@….0", "dogu": 10000, "kuzey": 0}` tabanın 10 m doğusudur. "Ekranın ortasına
+altıgen" ya da "parseli 5 m doğuya taşı" böyle ifade ediliyor. Koordinat yazmak hâlâ
+reddediliyor; her konumun kaynağı — tutamak ve ölçü — öneri kartında ve denetim
+kaydında (`konum_kaynagi`) duruyor. CLAUDE.md 5.8 bu okumaya göre güncellendi (bir ölçü
+koordinat değildir; kaynağı §5.2'nin `ofset_hesapla`sı). Değerlendirme seti çizim
+vakalarıyla 20 senaryoya çıktı.
+
 ### Düzeltildi — Python konsolunda ipucu ve liste satırı örtmüyor
 
 İmza ipucu ile tamamlama listesi pencerenin alt kenarındaki istemde birbirinin ve

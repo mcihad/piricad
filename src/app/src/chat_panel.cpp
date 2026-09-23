@@ -443,7 +443,10 @@ int ChatPanel::runReadTools(const std::vector<ai::Block>& calls)
         }
         if (tool->mutates) continue;
 
-        auto step = ai::plan_step_for(call, service_.catalog());
+        // THE CHAT'S OWN HANDLES, at the drawing's revision now: the read tools
+        // this conversation ran minted into the same store.
+        auto step = ai::plan_step_for(call, service_.catalog(), service_.registry(),
+                                      service_.handles(requesterLabel()), service_.revision());
         if (!step) {
             // A REFUSED CALL GOES BACK TO THE MODEL AS A FAILURE, not into the
             // void: a model that is not told its argument was rejected asks the
@@ -519,7 +522,10 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
         const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
         if (tool != nullptr && !tool->mutates) continue;
 
-        auto step = ai::plan_step_for(call, service_.catalog());
+        // THE CHAT'S OWN HANDLES, at the drawing's revision now: the read tools
+        // this conversation ran minted into the same store.
+        auto step = ai::plan_step_for(call, service_.catalog(), service_.registry(),
+                                      service_.handles(requesterLabel()), service_.revision());
         if (!step) {
             refusals.push_back(QString::fromStdString(step.error().message));
             chat_->add(ai::tool_result_message(call, step.error().message, true));

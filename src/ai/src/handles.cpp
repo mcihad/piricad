@@ -74,7 +74,8 @@ std::string HandleStore::next_id(HandleKind kind)
 }
 
 const HandleValue& HandleStore::mint_points(std::vector<core::Point2> points, std::string tool,
-                                            std::uint64_t revision, Provenance provenance)
+                                            std::uint64_t revision, Provenance provenance,
+                                            std::string label, std::vector<std::string> labels)
 {
     HandleValue value;
     value.id         = next_id(HandleKind::Points);
@@ -83,6 +84,8 @@ const HandleValue& HandleStore::mint_points(std::vector<core::Point2> points, st
     value.tool       = std::move(tool);
     value.revision   = revision;
     value.points     = std::move(points);
+    value.label      = std::move(label);
+    value.labels     = std::move(labels);
 
     // THE OLDEST GOES WHEN THE STORE IS FULL. A client that queries in a loop
     // and never draws would otherwise hold every result it ever asked for, and a
@@ -193,9 +196,18 @@ core::Json HandleStore::describe(const HandleValue& value)
     out.set("arac", core::Json::string(value.tool));
     out.set("surum", core::Json::integer(static_cast<std::int64_t>(value.revision)));
 
+    // WHAT IT IS, IN WORDS, so a model can pick the right `.N` without being
+    // handed the numbers: "görünümün ortası", "nesne 3: köşe 2".
+    if (!value.label.empty()) out.set("ad", core::Json::string(value.label));
     switch (value.kind) {
     case HandleKind::Points:
         out.set("adet", core::Json::integer(static_cast<std::int64_t>(value.points.size())));
+        if (!value.labels.empty()) {
+            core::Json names = core::Json::array({});
+            for (const std::string& one : value.labels)
+                names.push(core::Json::string(one));
+            out.set("noktalar", std::move(names));
+        }
         break;
     case HandleKind::Entities:
         out.set("adet", core::Json::integer(static_cast<std::int64_t>(value.entities.size())));

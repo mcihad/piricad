@@ -262,6 +262,63 @@
    "komutlar": [
     "ETİKET katman=PARSEL bicim=\"{ada_no}/{parsel_no}\""
    ]
+  },
+  {
+   "id": "altigen-ciz",
+   "istek": "Merkezi 20,15 olan, 10 metre yarıçaplı bir altıgen çiz.",
+   "terimler": [
+    "çokgen",
+    "yarıçap"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "ÇOKGEN merkez=20,15 kenar_sayisi=6 yaricap=10"
+   ]
+  },
+  {
+   "id": "kare-ciz",
+   "istek": "Parsel katmanına 20 metrelik bir kare çiz.",
+   "terimler": [
+    "parsel",
+    "kare"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL"
+   ],
+   "komutlar": [
+    "ALAN 0,0 20,0 20,20 0,20"
+   ]
+  },
+  {
+   "id": "dogu-tasi",
+   "istek": "Bu parseli 5 metre doğuya taşı.",
+   "terimler": [
+    "parsel",
+    "taşı"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ALAN 0,0 40,0 40,30 0,30"
+   ],
+   "komutlar": [
+    "TAŞI nesneler=1 baslangic=0,0 bitis=5,0"
+   ]
+  },
+  {
+   "id": "merkeze-daire",
+   "istek": "Parselin ortasına 3 metre yarıçaplı bir daire koy.",
+   "terimler": [
+    "parsel",
+    "daire",
+    "merkez"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ALAN 0,0 40,0 40,30 0,30"
+   ],
+   "komutlar": [
+    "DAİRE merkez=20,15 cevre=23,15"
+   ]
   }
  ]
 }

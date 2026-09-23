@@ -112,13 +112,31 @@ TEST_CASE("Ajan şemasında koordinat YAZILAMAZ; insan şemasında yazılır")
     REQUIRE(line != nullptr);
 
     // CLAUDE.md 5.8 and ai.md R9/R10/P2 as a TYPE rather than a check: where a
-    // point is declared, the agent-facing schema accepts a handle string and
-    // nothing else, so a model has no way to express a number it invented.
+    // point list is declared, the agent-facing schema offers a handle string, or
+    // a list whose every element is a handle or a point MEASURED FROM one — and
+    // no branch anywhere takes a bare number, so a model has no way to express a
+    // coordinate it invented.
     const ai::ToolDef agent = ai::tool_for(*line, ai::Style::Agent);
     const core::Json* pts   = property_of(agent, "noktalar");
     REQUIRE(pts != nullptr);
-    CHECK_EQ(type_of(pts), std::string("string"));
-    CHECK(pts->find("pattern") != nullptr);
+    const core::Json* any = pts->find("anyOf");
+    REQUIRE(any != nullptr);
+    REQUIRE_EQ(any->as_array().size(), std::size_t{2});
+    CHECK_EQ(type_of(&any->as_array()[0]), std::string("string"));
+    CHECK(any->as_array()[0].find("pattern") != nullptr);
+    CHECK_EQ(type_of(&any->as_array()[1]), std::string("array"));
+    const core::Json* corner = any->as_array()[1].find("items");
+    REQUIRE(corner != nullptr);
+    const core::Json* forms = corner->find("anyOf");
+    REQUIRE(forms != nullptr);
+    CHECK_EQ(type_of(&forms->as_array()[0]), std::string("string")); ///< a handle
+    CHECK_EQ(type_of(&forms->as_array()[1]), std::string("object")); ///< measured from one
+    const core::Json* base = forms->as_array()[1].find("properties")->find("taban");
+    REQUIRE(base != nullptr);
+    CHECK(base->find("pattern") != nullptr); ///< and its base is a handle too
+    // NOWHERE A NUMBER THAT IS A POSITION: the only integers are the offsets.
+    const std::string dumped = pts->dump();
+    CHECK(dumped.find("\"minItems\":2,\"maxItems\":2") == std::string::npos);
 
     // The same command, described for a person: two integers in millimetres,
     // easting first (model.md R37a). The command line and the reference are read

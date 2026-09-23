@@ -201,6 +201,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.attr_schema`](#cadattr_schema) | `core.attr_schema` | `ÖZNİTELİKŞEMASI` | Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler. |
 | [`cad.query`](#cadquery) | `core.query` | `SORGULA` | Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir. |
 | [`cad.selection_info`](#cadselection_info) | `core.selection_info` | `SEÇİMBİLGİSİ` | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
+| [`cad.object_points`](#cadobject_points) | `core.object_points` | `NESNENOKTALARI` | Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır. |
 | [`cad.view_info`](#cadview_info) | `core.view_info` | `GÖRÜNÜMBİLGİSİ` | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
 | [`cad.context`](#cadcontext) | `core.context` | `BAĞLAM` | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
 | [`cad.tool_search`](#cadtool_search) | `core.tool_search` | `ARAÇARA` | Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır. |
@@ -2920,6 +2921,26 @@ cad.selection_info() -> int
 ```
 
 [Komut sayfası](../komutlar/selection_info.md)
+
+### `cad.object_points`
+
+Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.
+
+Komut: `core.object_points` — `NESNENOKTALARI`
+
+```python
+cad.object_points(
+    objects: list[int],
+    which: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Noktaları istenen nesneler [kalıcı nesne anahtarı] |
+| `which` | `str` | `tur` | Hangi noktalar: merkez (alanın ağırlık merkezi, çizginin uzunluk ortası, dairenin merkezi), köşeler, uçlar, kutunun köşeleri ya da kenar ortaları; varsayılan merkez |
+
+[Komut sayfası](../komutlar/object_points.md)
 
 ### `cad.view_info`
 

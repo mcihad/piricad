@@ -18,10 +18,33 @@
 - **Türkçe adlar katlanır.** `GİZLE`, `gizle`, `GIZLE` ve `gızle` aynı sözcüktür; i/ı
   ve büyük/küçük ayrımı ad çözümlemede yok sayılır. Her komutun Türkçe birincil adı,
   ASCII karşılığı, İngilizce karşılığı ve kısaltması vardır.
-- **Koordinat uyduramazsınız.** Nokta, nokta listesi ya da nesne seçimi isteyen bir
-  parametre yalnız **tutamak** kabul eder: bir okuma aracının döndürdüğü
-  `@0123456789abcdef.3` biçiminde bir dize. Sayı yazmak reddedilir — konum her zaman
-  bir araç sonucundan gelir, modelin metninden değil.
+- **Koordinat uyduramazsınız, ama çizebilirsiniz.** Nokta ya da nokta listesi isteyen
+  bir parametreye sayı yazmak reddedilir; konum her zaman bir araç sonucundan gelir.
+  Bir KONUM iki biçimde yazılır:
+  - bir **tutamak**: bir okuma aracının döndürdüğü `@0123456789abcdef` ya da listenin bir
+    elemanı için `@0123456789abcdef.3`;
+  - bir tutamaktan **ölçüyle** uzaklaşan **göreli nokta**:
+    `{"taban": "@0123456789abcdef.0", "dogu": 10000, "kuzey": -5000}` — tabanın 10 m
+    doğusu, 5 m güneyi. Ölçüler tam sayı milimetredir; batı ve güney eksidir.
+  Nokta listesi (bir çokgenin köşeleri) ya tek bir tutamaktır ya da her elemanı bir
+  tutamak veya göreli nokta olan bir dizidir. Uzunluk, yarıçap, mesafe gibi ÖLÇÜLER
+  düz sayıdır (`yaricap`, `mesafe`, `kenar_uzunlugu`).
+- **Konum nereden gelir.** `gorunum_bilgisi` ekranın ortasını ("görünümün ortası") bir
+  nokta tutamağı olarak verir; kullanıcı bir yer söylemediyse yeni çizim oraya yapılır.
+  `nesne_noktalari` bir nesnenin merkezini, köşelerini, uçlarını, kutusunu ya da kenar
+  ortalarını verir; nesnenin kendisi `sorgula` ya da `secimi_al` tutamağıyla seçilir.
+  Tutamağın koordinatlarını görmezsiniz; `ad` ve `noktalar` alanları hangisinin ne
+  olduğunu söyler. Çizim her değiştiğinde tutamaklar eskir; okuma aracını yeniden
+  çağırın.
+- **Örnek: ekranın ortasına 20 m kenarlı kare.** `gorunum_bilgisi` → dönen nokta
+  tutamağı `@m` ise `core_area` şu argümanla:
+  `{"noktalar": [{"taban": "@m", "dogu": -10000, "kuzey": -10000},
+  {"taban": "@m", "dogu": 10000, "kuzey": -10000}, {"taban": "@m", "dogu": 10000,
+  "kuzey": 10000}, {"taban": "@m", "dogu": -10000, "kuzey": 10000}]}`.
+- **Örnek: 10 m yarıçaplı altıgen.** `core_polygon_regular` şu argümanla:
+  `{"merkez": {"taban": "@m"}, "kenar_sayisi": 6, "yaricap": 10000}`. Bir nesneyi 5 m
+  doğuya taşımak: `core_move` `{"nesneler": "@n", "baslangic": {"taban": "@m"},
+  "bitis": {"taban": "@m", "dogu": 5000}}`.
 - **Yazan araçlar çağrıldığında uygulamaz.** Belgeyi ya da diski değiştiren bir araç
   çağrısı bir ÖNERİ kaydı açar, uygulanacak komut satırlarını döndürür ve bilgisayar
   başındaki harita mühendisi uygulayana kadar bekler. Onaylanan bir öneri tek bir
@@ -32,17 +55,20 @@
 
 ## Sıra
 
-1. `gorunum_bilgisi` — ekranda hangi alanı görüyorsunuz, hangi ölçekte, hangi CRS'te.
+1. `gorunum_bilgisi` — ekranda hangi alanı görüyorsunuz, hangi ölçekte, hangi CRS'te;
+   ekranın ortası bir nokta tutamağı olarak gelir.
 2. `katmanlari_listele` — katmanlar, geometri türleri, nesne sayıları.
 3. `oznitelik_semasi` — bir katmanın öznitelik alanları ve tipleri.
-4. `sorgula` — koşula uyan nesneler; sonuç sayısı sınırlıdır, tutamak döndürür.
-5. `secimi_al` — kullanıcının o anki seçimi, tutamak olarak.
-6. Bir yazma aracı — tutamaklarla; dönen öneriyi kullanıcı uygular.
+4. `sorgula` — koşula uyan nesneler; sonuç sayısı sınırlıdır, nesne tutamağı döndürür.
+5. `secimi_al` — kullanıcının o anki seçimi, nesne tutamağı olarak.
+6. `nesne_noktalari` — nesnelerin merkez, köşe, uç, kutu ya da kenar ortası noktaları,
+   nokta tutamağı olarak.
+7. Bir yazma aracı — tutamaklar ve göreli noktalarla; dönen öneriyi kullanıcı uygular.
 
 ## Araç yüzeyi
 
-- Araç sayısı: 97 (86 tanesi onay ister)
-- Katalog parmak izi: `6903685909296370047`
+- Araç sayısı: 98 (86 tanesi onay ister)
+- Katalog parmak izi: `18432835359062360190`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -67,10 +93,10 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesne` | string | hayır | Hizalanacak nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `kaynak` | string | evet | Birinci kaynak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `hedef` | string | evet | Birinci kaynağın gideceği yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `kaynak2` | string | hayır | İkinci kaynak nokta; verilirse döndürme de yapılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `hedef2` | string | hayır | İkinci kaynağın gideceği yer — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynak` | konum (tutamak ya da göreli nokta) | evet | Birinci kaynak nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `hedef` | konum (tutamak ya da göreli nokta) | evet | Birinci kaynağın gideceği yer — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `kaynak2` | konum (tutamak ya da göreli nokta) | hayır | İkinci kaynak nokta; verilirse döndürme de yapılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `hedef2` | konum (tutamak ya da göreli nokta) | hayır | İkinci kaynağın gideceği yer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `olcekle` | boolean | hayır | İki çiftin uzunluk oranıyla ölçekler de (evet/hayır) |
 
 ### `core_annulus` — Halka
@@ -83,9 +109,9 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Halkanın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ic` | string | evet | İç çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `dis` | string | evet | Dış çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | evet | Halkanın merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ic` | konum (tutamak ya da göreli nokta) | evet | İç çember üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `dis` | konum (tutamak ya da göreli nokta) | evet | Dış çember üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_arc_draw` — Yay
 
@@ -97,14 +123,14 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | hayır | Yayın merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | hayır | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | hayır | Yayın bitiş noktası; süpürme saat yönünün tersinedir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | Yayın merkezi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yayın bitiş noktası; süpürme saat yönünün tersinedir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yontem` | string | hayır | merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap (metin) |
-| `uzerinden` | string | hayır | 3n: yayın üzerinden geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `uzerinden` | konum (tutamak ya da göreli nokta) | hayır | 3n: yayın üzerinden geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `supurme` | number | hayır | bma: süpürme açısı (sayı) |
 | `yaricap` | number | hayır | bby: yarıçap (m) [m] (sayı) |
-| `yon_nokta` | string | hayır | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yon_nokta` | konum (tutamak ya da göreli nokta) | hayır | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yon` | string | hayır | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre (metin) |
 
 ### `core_area` — Alan
@@ -117,7 +143,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `bolum` | array | hayır | Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı) |
 
 ### `core_array` — Dizi
@@ -136,7 +162,7 @@ Onay ister.
 | `sutun` | integer | hayır | Sütun sayısı (dikdörtgen dizi) (tam sayı) |
 | `satir_aralik` | number | hayır | Satır aralığı, metre; kuzeye artı (sayı) |
 | `sutun_aralik` | number | hayır | Sütun aralığı, metre; doğuya artı (sayı) |
-| `merkez` | string | hayır | Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı) |
 | `aci` | number | hayır | Süpürülecek toplam açı, derece; verilmezse tam tur (sayı) |
 
@@ -165,7 +191,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `ad` | string | evet | Bloğun adı; Türkçe katlanmış hâliyle benzersiz (metin) |
-| `taban` | string | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `taban` | konum (tutamak ya da göreli nokta) | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aciklama` | string | hayır | Serbest açıklama (metin) |
 
@@ -180,8 +206,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesne` | string | hayır | Kırılacak çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `birinci` | string | evet | Kırılacak parçanın ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | hayır | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | konum (tutamak ya da göreli nokta) | evet | Kırılacak parçanın ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | hayır | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_chamfer` — Pah
 
@@ -194,7 +220,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesne` | string | evet | Köşesi kesilecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı) |
 
 ### `core_circle_draw` — Daire
@@ -207,15 +233,15 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | hayır | Dairenin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `cevre` | string | hayır | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | Dairenin merkezi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `cevre` | konum (tutamak ya da göreli nokta) | hayır | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yontem` | string | hayır | merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde üç nokta · ttr: iki doğruya teğet, verilen yarıçapla (metin) |
-| `birinci` | string | hayır | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | hayır | İkinci nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ucuncu` | string | hayır | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `dorduncu` | string | hayır | ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | konum (tutamak ya da göreli nokta) | hayır | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | hayır | İkinci nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `ucuncu` | konum (tutamak ya da göreli nokta) | hayır | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `dorduncu` | konum (tutamak ya da göreli nokta) | hayır | ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yaricap` | number | hayır | ttr: teğet dairenin yarıçapı (m) [m] (sayı) |
-| `yon` | string | hayır | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yon` | konum (tutamak ya da göreli nokta) | hayır | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_combine` — Birleştir
 
@@ -263,7 +289,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nokta` | string | evet | Okunacak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Okunacak nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_copy` — Kopyala
 
@@ -276,8 +302,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | Kopyalamanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Kopyalamanın başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_copy_clip` — Panoya Kopyala
 
@@ -315,12 +341,12 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `birinci` | string | evet | Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | evet | İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `konum` | string | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | konum (tutamak ya da göreli nokta) | evet | Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | evet | İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `konum` | konum (tutamak ya da göreli nokta) | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay (metin) |
-| `tepe` | string | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | hayır | Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tepe` | konum (tutamak ya da göreli nokta) | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `stil` | string | hayır | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin) |
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
@@ -378,11 +404,11 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | hayır | Elipsin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `birinci` | string | hayır | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | hayır | İkinci eksenin uzaklığı; eksene dik ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | Elipsin merkezi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `birinci` | konum (tutamak ya da göreli nokta) | hayır | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | hayır | İkinci eksenin uzaklığı; eksene dik ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yontem` | string | hayır | merkez: merkez + eksen ucu · eksen: eksenin iki ucu (metin) |
-| `ikinci_uc` | string | hayır | eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci_uc` | konum (tutamak ya da göreli nokta) | hayır | eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
 | `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
 
@@ -434,7 +460,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | hayır | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | evet | Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_fillet` — Yuvarla
 
@@ -447,7 +473,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesne` | string | evet | Köşesi yuvarlatılacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yaricap` | number | evet | Yuvarlatma yarıçapı, metre (sayı) |
 
 ### `core_fit` — Oturt (Helmert)
@@ -460,7 +486,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Kontrol çiftleri: yerel, harita, yerel, harita... — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Kontrol çiftleri: yerel, harita, yerel, harita... — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `olcek_kilitli` | boolean | hayır | Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez (evet/hayır) |
 | `sistem` | string | hayır | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 (metin) |
 
@@ -476,7 +502,7 @@ Onay ister.
 |---|---|---|---|
 | `yon` | string | hayır | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir (metin) |
 | `deger` | integer | hayır | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı) |
-| `nokta` | string | hayır | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `tur` | string | hayır | doğru: iki yöne sonsuz · ışın: noktadan ileriye (metin) |
 | `sil` | boolean | hayır | Verilen yerdeki kılavuzu siler (evet/hayır) |
 
@@ -490,7 +516,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | hayır | Sınır köşeleri, nesne seçmek yerine; en az üç nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Sınır köşeleri, nesne seçmek yerine; en az üç nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar= — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `desen` | string | hayır | Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID (metin) |
 | `aci` | number | hayır | Desenin dönme açısı, derece; varsayılan 0 (sayı) |
@@ -508,7 +534,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `ad` | string | evet | Yerleştirilecek bloğun adı (metin) |
-| `nokta` | string | evet | Ekleme noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Ekleme noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `olcek` | number | hayır | Ölçek; eksi değer x'te aynalar; varsayılan 1 (sayı) |
 | `olcek_y` | number | hayır | Y ölçeği, farklıysa; varsayılan olcek (sayı) |
 | `aci` | number | hayır | Dönme açısı, derece; varsayılan 0 (sayı) |
@@ -528,17 +554,17 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `yontem` | string | hayır | dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru (metin) |
-| `birinci` | string | evet | Birinci bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | hayır | İkinci bilinen nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ucuncu` | string | hayır | İkinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `dorduncu` | string | hayır | İkinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | konum (tutamak ya da göreli nokta) | evet | Birinci bilinen nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | hayır | İkinci bilinen nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `ucuncu` | konum (tutamak ya da göreli nokta) | hayır | İkinci doğrunun ilk noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `dorduncu` | konum (tutamak ya da göreli nokta) | hayır | İkinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `birinci_aci` | number | hayır | Birinci noktadan okunan doğrultu (sayı) |
 | `ikinci_aci` | number | hayır | İkinci noktadan okunan doğrultu (sayı) |
 | `birinci_mesafe` | number | hayır | Birinci noktadan ölçülen uzaklık (m) (sayı) |
 | `ikinci_mesafe` | number | hayır | İkinci noktadan ölçülen uzaklık (m) (sayı) |
 | `yon` | string | hayır | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin) |
-| `yon_nokta` | string | hayır | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `kesisim` | string | hayır | Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yon_nokta` | konum (tutamak ya da göreli nokta) | hayır | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `kesisim` | konum (tutamak ya da göreli nokta) | hayır | Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_job_template` — İş Şablonu
 
@@ -659,7 +685,7 @@ Onay ister.
 | `metin` | string | hayır | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür (metin) |
 | `yazi` | number | hayır | Yazı yüksekliği [kâğıt mm] (sayı) |
 | `olcek` | integer | hayır | Harita öğesinin ölçeği 1:N; 0 kapsama uyar (tam sayı) |
-| `pencere` | string | hayır | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `izgara` | string | hayır | Harita öğesinin koordinat ızgarası (metin) |
 | `izgara_aralik` | integer | hayır | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir (tam sayı) |
 | `kilit` | boolean | hayır | Öğeyi taşımaya kapatır (evet/hayır) |
@@ -696,7 +722,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Okun ucundan yazının yanına köşeler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Okun ucundan yazının yanına köşeler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `metin` | string | hayır | Son köşenin yanına yazılacak metin (metin) |
 | `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
@@ -727,7 +753,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_match_style` — Stil Kopyala
 
@@ -741,7 +767,7 @@ Onay ister.
 |---|---|---|---|
 | `kaynak` | string | hayır | Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nesneler` | string | hayır | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | hayır | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_measure` — Ölç
 
@@ -753,8 +779,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `baslangic` | string | evet | Ölçümün ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_measure_angle` — Açı Ölç
 
@@ -766,9 +792,9 @@ Doğrudan çalışır.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `tepe` | string | evet | Açının tepe noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `birinci` | string | evet | Birinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | evet | İkinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tepe` | konum (tutamak ya da göreli nokta) | evet | Açının tepe noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `birinci` | konum (tutamak ya da göreli nokta) | evet | Birinci kolun üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | evet | İkinci kolun üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_measure_area` — Alan Ölç
 
@@ -805,8 +831,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | Ayna ekseninin ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Ayna ekseninin ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Ayna ekseninin ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Ayna ekseninin ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_move` — Taşı
 
@@ -819,8 +845,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | Taşımanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Taşımanın bitiş noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Taşımanın başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Taşımanın bitiş noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_offset` — Ofset
 
@@ -846,8 +872,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_paste` — Yapıştır
 
@@ -859,7 +885,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nokta` | string | hayır | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yerinde` | boolean | hayır | Kopyalandığı koordinatlara yapıştırır (evet/hayır) |
 | `dosya` | string | hayır | Okunacak pano dosyası; verilmezse ortak pano dosyası (metin) |
 
@@ -887,8 +913,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `baslangic` | string | evet | Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
 | `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı) |
 | `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
@@ -903,8 +929,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `birinci` | string | evet | Doğrunun ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | evet | Doğrunun ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | konum (tutamak ya da göreli nokta) | evet | Doğrunun ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | evet | Doğrunun ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yontem` | string | hayır | oran: 0 ile 1 arası · mesafe: ilk noktadan metre (metin) |
 | `deger` | number | hayır | Oran ya da uzaklık; birden çok verilebilir (sayı) |
 | `sayi` | integer | hayır | Doğruyu bu kadar eşit parçaya böler (tam sayı) |
@@ -919,7 +945,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Yerleştirilecek noktalar — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Yerleştirilecek noktalar — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_points` — Nokta Listesi
 
@@ -946,13 +972,13 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Çokgenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | evet | Çokgenin merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `kenar_sayisi` | integer | evet | Kenar sayısı (tam sayı) |
 | `yontem` | string | hayır | ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · kenar: kenar uzunluğundan (metin) |
 | `yaricap` | number | hayır | ic/dis yönteminin yarıçapı (m) [m] (sayı) |
 | `kenar_uzunlugu` | number | hayır | kenar yönteminin uzunluğu (m) [m] (sayı) |
 | `aci` | number | hayır | İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı) |
-| `kose` | string | hayır | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kose` | konum (tutamak ya da göreli nokta) | hayır | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_polyline` — Çoklu Çizgi
 
@@ -964,7 +990,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_print` — Yazdır
 
@@ -976,8 +1002,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `pencere` | string | hayır | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `merkez` | string | hayır | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `olcek` | integer | hayır | Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği (tam sayı) |
 | `yerlesim` | string | hayır | Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden gelir; pencere, merkez, olcek ve profil ile birlikte verilmez (metin) |
 | `dosya` | string | hayır | PDF yazılacak dosya; yazici ile birlikte verilmez (metin) |
@@ -1007,7 +1033,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yontem` | string | hayır | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin) |
 
 ### `core_reproject` — Dönüştür
@@ -1034,9 +1060,9 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `merkez` | string | evet | Döndürme merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | evet | Döndürme merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `aci` | number | hayır | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir (sayı) |
-| `aci_nokta` | string | hayır | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `aci_nokta` | konum (tutamak ya da göreli nokta) | hayır | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_scale` — Ölçekle
 
@@ -1049,9 +1075,9 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `merkez` | string | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `carpan` | number | hayır | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir (sayı) |
-| `carpan_nokta` | string | hayır | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `carpan_nokta` | konum (tutamak ya da göreli nokta) | hayır | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_sector` — Daire Dilimi
 
@@ -1063,9 +1089,9 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Dilimin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | konum (tutamak ya da göreli nokta) | evet | Dilimin merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_set_layer` — Katmana Ata
 
@@ -1090,7 +1116,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Kontrol noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Kontrol noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `derece` | integer | hayır | Eğrinin derecesi, 1–15; varsayılan 3 (tam sayı) |
 | `kapali` | boolean | hayır | Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır) |
 
@@ -1105,8 +1131,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesne` | string | hayır | Kesilecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `noktalar` | string | hayır | Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | hayır | Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_split_area` — Alana Göre İfraz
 
@@ -1118,7 +1144,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `yon` | string | hayır | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yon` | konum (tutamak ya da göreli nokta) | hayır | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `alan` | integer | hayır | Ayrılacak alan, mm² (400 m² = 400000000) (tam sayı) |
 | `tolerans` | integer | hayır | Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) (tam sayı) |
@@ -1133,7 +1159,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | hayır | Ayırma çizgisinin iki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Ayırma çizgisinin iki ucu — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_stakeout` — Aplikasyon
@@ -1146,8 +1172,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `istasyon` | string | evet | Aletin durduğu nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baglama` | string | hayır | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `istasyon` | konum (tutamak ya da göreli nokta) | evet | Aletin durduğu nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `baglama` | konum (tutamak ya da göreli nokta) | hayır | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_stretch` — Esnet
@@ -1160,9 +1186,9 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `pencere` | string | evet | Esnetme penceresinin iki köşesi; içindeki köşeler taşınır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | Esnetmenin başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Esnetmenin bitiş noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | evet | Esnetme penceresinin iki köşesi; içindeki köşeler taşınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Esnetmenin başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Esnetmenin bitiş noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Yalnız bu nesneler esnetilir; verilmezse pencerenin dokunduğu her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_style` — Stil
@@ -1231,8 +1257,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `istasyon` | string | evet | Aletin durduğu bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baglama` | string | hayır | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `istasyon` | konum (tutamak ya da göreli nokta) | evet | Aletin durduğu bilinen nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `baglama` | konum (tutamak ya da göreli nokta) | hayır | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `aci` | number | hayır | Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] (sayı) |
 | `kenar` | number | hayır | Alete olan uzaklık (m) [m] (sayı) |
 | `cizgi` | boolean | hayır | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir (evet/hayır) |
@@ -1262,10 +1288,10 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Yazının başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Yazının başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yazi` | string | evet | Yazılacak metin (metin) |
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı) |
-| `bitis` | string | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `hizalama` | string | hayır | sol, orta, sag veya merkez (metin) |
 
 ### `core_to_area` — Alana Çevir
@@ -1316,7 +1342,7 @@ Doğrudan çalışır.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nokta` | string | hayır | İşaretlenecek nokta; yoksa işaretler listelenir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | İşaretlenecek nokta; yoksa işaretler listelenir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `sil` | boolean | hayır | Bütün işaretleri siler (evet/hayır) |
 
 ### `core_trim` — Buda
@@ -1331,7 +1357,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | hayır | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | string | evet | Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_vertex_insert` — Köşe Ekle
 
@@ -1345,7 +1371,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | evet | Köşe eklenecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kose` | integer | evet | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir (tam sayı) |
-| `nokta` | string | evet | Yeni köşenin yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Yeni köşenin yeri — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_vertex_move` — Köşe Taşı
 
@@ -1359,7 +1385,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | evet | Köşesi taşınacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kose` | integer | evet | Taşınacak köşenin sırası; ilk köşe 1'dir (tam sayı) |
-| `nokta` | string | evet | Köşenin yeni yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | evet | Köşenin yeni yeri — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `core_zoom` — Yakınlaş
 
@@ -1384,12 +1410,12 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `baslangic` | string | evet | Başlangıç istasyonu (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baglama` | string | evet | Başlangıçtaki bağlama noktası (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Başlangıç istasyonu (bilinen) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `baglama` | konum (tutamak ya da göreli nokta) | evet | Başlangıçtaki bağlama noktası (bilinen) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `aci` | number | hayır | Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla (sayı) |
 | `kenar` | number | hayır | Her istasyondan sonraki kenar (m) [m] (sayı) |
-| `bitis` | string | hayır | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis_baglama` | string | hayır | Bitişteki bağlama noktası; açı kapanması için gerekir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bitis_baglama` | konum (tutamak ya da göreli nokta) | hayır | Bitişteki bağlama noktası; açı kapanması için gerekir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `sinif` | string | hayır | Tolerans sınıfı; katalogdan okunur (metin) |
 | `ilk_no` | integer | hayır | İlk istasyonun nokta numarası; varsayılan 1 (tam sayı) |
 | `dagitim` | string | hayır | Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı (metin) |
@@ -1418,13 +1444,13 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
-| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 | `alan` | number | hayır | Hedef alan, metrekare (sayı) |
 | `mod` | string | hayır | Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi (metin) |
 | `kenar` | integer | hayır | Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar (tam sayı) |
 | `kose` | integer | hayır | Çekilecek köşe; mod=kose (tam sayı) |
-| `nokta` | string | hayır | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 
 ### `islem_bag_coz` — BAĞÇÖZ
 
@@ -1438,7 +1464,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
-| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 
 ### `islem_bagla` — BAĞLA
@@ -1453,7 +1479,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
-| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 | `kaynak` | string | hayır | Yazıların bağlanacağı nesne (çizgi ya da alan) — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bag` | string | hayır | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar (metin) |
@@ -1475,9 +1501,9 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
-| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
-| `baslangic` | string | hayır | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yon` | string | hayır | Sayım yönü (ters / saat); varsayılan ters (metin) |
 | `onek` | string | hayır | Numaranın önüne gelen yazı (örnek: A, K-) (metin) |
 | `basamak` | integer | hayır | Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0 (tam sayı) |
@@ -1500,7 +1526,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
-| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 | `birim` | string | hayır | Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre (metin) |
 | `ondalik` | integer | hayır | Virgülden sonraki basamak sayısı; varsayılan 2 (tam sayı) |
@@ -1522,6 +1548,19 @@ Doğrudan çalışır.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
+
+### `nesne_noktalari` — Nesne Noktaları
+
+Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.
+Komut: NESNENOKTALARI (OBJECTPOINTS, NNK)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | evet | Noktaları istenen nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tur` | string | hayır | Hangi noktalar: merkez (alanın ağırlık merkezi, çizginin uzunluk ortası, dairenin merkezi), köşeler, uçlar, kutunun köşeleri ya da kenar ortaları; varsayılan merkez (metin) |
 
 ### `oznitelik_semasi` — Öznitelik Şeması
 

@@ -15,11 +15,14 @@
 // dialect is therefore decoded twice — once whole, once one byte at a time.
 #include "kentos_test.hpp"
 
+#include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/ai/chat.hpp"
 #include "kentos_cad/ai/dialect.hpp"
+#include "kentos_cad/ai/handles.hpp"
 #include "kentos_cad/ai/provider.hpp"
 #include "kentos_cad/ai/redact.hpp"
 #include "kentos_cad/ai/sse.hpp"
+#include "kentos_cad/command/registry.hpp"
 
 using namespace kentos;
 using kentos::core::Json;
@@ -806,42 +809,79 @@ TEST_CASE("Akıştan toplanan ileti blokları ve saklı yükü taşır")
     CHECK(body.find("EqoBCkgIARABGAIiQL2K5xWPzvQ==") != std::string::npos);
 }
 
-TEST_CASE("Araç çağrısı plan adımına çevrilir; koordinat yazılamaz")
+TEST_CASE("Araç çağrısı plan adımına çevrilir; tutamak çözülür, koordinat yazılamaz")
 {
-    const ai::Catalog catalog = one_tool_catalog();
+    command::Registry registry;
+    command::register_builtin_commands(registry);
+    const ai::Catalog catalog = ai::build_catalog(registry);
 
-    const core::Result<ai::PlanStep> good =
-        ai::plan_step_for(ai::tool_call_block("call_1", "core_line",
-                                              "{\"baslangic\":\"@0123456789abcdef\",\"adet\":2}"),
-                          catalog);
+    ai::HandleStore handles;
+    const std::uint64_t now  = 7;
+    const std::string two    = handles.mint_points({{0, 0}, {10000, 0}}, "sorgula", now).id;
+    const std::string centre = handles
+                                   .mint_points({{5000, 5000}}, "gorunum_bilgisi", now,
+                                                ai::Provenance::Computed, "görünümün ortası")
+                                   .id;
+    const auto step = [&](const std::string& tool, const std::string& args, std::uint64_t at = 7) {
+        return ai::plan_step_for(ai::tool_call_block("c", tool, args), catalog, registry, handles,
+                                 at);
+    };
+
+    // A HANDLE BECOMES THE POINTS IT NAMES. This road used to copy the handle's
+    // TEXT into the argument, where a command expecting points found a word — so
+    // the chat could draw nothing at all.
+    const core::Result<ai::PlanStep> good = step("core_line", "{\"noktalar\":\"" + two + "\"}");
     REQUIRE(good.ok());
     CHECK(good.value().command_id == "core.line");
-    CHECK(good.value().args.get("adet").as_int() == 2);
+    CHECK_EQ(good.value().args.get("noktalar").as_points(),
+             (std::vector<core::Point2>{{0, 0}, {10000, 0}}));
     REQUIRE(good.value().handles.size() == 1);
-    CHECK(good.value().handles.front() == "@0123456789abcdef");
+    CHECK(good.value().handles.front() == two);
     CHECK(good.value().line.rfind("ÇİZGİ", 0) == 0);
 
+    // A RELATIVE POINT: a base the drawing gave and a DIMENSION from it. This is
+    // how a square is said round the middle of the screen.
+    const auto around = [&](int e, int n) {
+        return "{\"taban\":\"" + centre + "\",\"dogu\":" + std::to_string(e) +
+               ",\"kuzey\":" + std::to_string(n) + "}";
+    };
+    const core::Result<ai::PlanStep> square =
+        step("core_area", "{\"noktalar\":[" + around(-1000, -1000) + "," + around(1000, -1000) +
+                              "," + around(1000, 1000) + "," + around(-1000, 1000) + "]}");
+    REQUIRE(square.ok());
+    CHECK_EQ(square.value().args.get("noktalar").as_points(),
+             (std::vector<core::Point2>{{4000, 4000}, {6000, 4000}, {6000, 6000}, {4000, 6000}}));
+    // Each corner names where it came from, for the audit record.
+    REQUIRE_EQ(square.value().constructions.size(), std::size_t{4});
+    CHECK(square.value().constructions.front().find(centre) != std::string::npos);
+    CHECK(square.value().constructions.front().find("doğu -1000") != std::string::npos);
+
     // CLAUDE.md 5.8 AND ai.md R9/R10: a coordinate may not originate in model
-    // text. Where the agent schema declared a handle, a number, a pair of
-    // numbers or a plausible-looking string is refused BEFORE any `Args` exists.
-    const core::Result<ai::PlanStep> pair = ai::plan_step_for(
-        ai::tool_call_block("call_2", "core_line", "{\"baslangic\":[485000,4512000]}"), catalog);
+    // text. A number, a pair of numbers or a plausible-looking string is refused
+    // BEFORE any `Args` exists — relative points or not.
+    const core::Result<ai::PlanStep> pair = step("core_line", "{\"noktalar\":[[485000,4512000]]}");
     CHECK(pair.ok() == false);
     CHECK(pair.error().code == core::ErrorCode::ValidationFailed);
-    CHECK(pair.error().message.find("tutamak") != std::string::npos);
+    CHECK(pair.error().message.find("KONUM") != std::string::npos);
+    CHECK(step("core_line", "{\"noktalar\":\"485000,4512000\"}").ok() == false);
+    CHECK(step("core_line", "{\"noktalar\":[{\"taban\":[485000,4512000]}]}").ok() == false);
 
-    const core::Result<ai::PlanStep> text = ai::plan_step_for(
-        ai::tool_call_block("call_3", "core_line", "{\"baslangic\":\"485000,4512000\"}"), catalog);
-    CHECK(text.ok() == false);
+    // A relative point is a base and two offsets, and nothing else; its offset is
+    // a dimension, not a way to write a coordinate from nowhere.
+    CHECK(step("core_line", "{\"noktalar\":[{\"taban\":\"" + centre + "\",\"x\":5}]}").ok() ==
+          false);
+    CHECK(
+        step("core_line", "{\"noktalar\":[{\"taban\":\"" + centre + "\",\"dogu\":5000000000000}]}")
+            .ok() == false);
+
+    // A HANDLE IS ONLY AS TRUE AS THE DRAWING IT WAS READ FROM.
+    CHECK(step("core_line", "{\"noktalar\":\"" + two + "\"}", 8).ok() == false);
 
     // ai.md R19: an unknown tool, an undeclared parameter and a malformed
     // argument list are each a HARD reject, not something to drop quietly.
-    CHECK(ai::plan_step_for(ai::tool_call_block("c", "core_line", "{\"bilinmeyen\":1}"), catalog)
-              .ok() == false);
-    CHECK(ai::plan_step_for(ai::tool_call_block("c", "yok_boyle_arac", "{}"), catalog).ok() ==
-          false);
-    CHECK(ai::plan_step_for(ai::tool_call_block("c", "core_line", "{bozuk"), catalog).ok() ==
-          false);
+    CHECK(step("core_line", "{\"bilinmeyen\":1}").ok() == false);
+    CHECK(step("yok_boyle_arac", "{}").ok() == false);
+    CHECK(step("core_line", "{bozuk").ok() == false);
 
     // The outcome goes back as a tool-result message, which is all this layer
     // does with it: nothing here dispatches anything (ai.md R3, P1).
