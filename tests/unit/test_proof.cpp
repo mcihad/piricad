@@ -1694,6 +1694,7 @@ void prove_verb(const VerbProof& v)
     Rig gui;
     lay_out(gui);
     const std::size_t depth = gui.undo.undo_depth();
+    const std::size_t laid  = gui.journal.entries().size(); ///< a SEÇ in the setup writes none
     {
         auto started = gui.bus.begin_interactive(v.name, Origin::Gui);
         REQUIRE_MESSAGE(started.ok(), v.name);
@@ -1737,7 +1738,7 @@ void prove_verb(const VerbProof& v)
     // AND THE EDIT ACTUALLY HAPPENED. Three clients agreeing that nothing
     // occurred would satisfy every check above — so the verb's own journal line
     // has to be there, on top of the setup's.
-    const bool ran = gui.journal.entries().size() > v.setup.size();
+    const bool ran = gui.journal.entries().size() > laid;
     CHECK_MESSAGE(ran, v.name);
     if (ran) CHECK_MESSAGE(gui.journal.entries().back().command_id == std::string(v.id), v.name);
 }
@@ -1755,6 +1756,49 @@ TEST_CASE("PROOF: KIR gui, komut satırı ve betikten aynı belgeyi ve aynı gü
          .typed    = "KIR nesne=1 birinci=30,0 ikinci=70,0",
          .scripted = R"({"ad":"KIR","komutlar":[{"cmd":"core.break","args":{
                     "nesne":[1],"birinci":[30000,0],"ikinci":[70000,0]}}]})"});
+}
+
+TEST_CASE("PROOF: BUDA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // QUICK MODE: nothing chosen, so every object near the one clicked cuts it,
+    // and the middle of the line goes. The GUI clicks once and presses Enter;
+    // the run records `hepsi`, the object and the click, which is what the
+    // other two roads say in the first place.
+    prove_verb(
+        {.name = "BUDA",
+         .id   = "core.trim",
+         .setup = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
+         .objects  = {},
+         .answers  = {Value::point(core::Point2{50'000, 0}), Value{}},
+         .typed    = "BUDA hepsi=evet nesne=1 nokta=50,0",
+         .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "hepsi":true,"nesne":[1],"nokta":[[50000,0]]}}]})"});
+
+    // NAMED EDGES, the highlighted ones, and a circle trimmed to the arc left.
+    prove_verb(
+        {.name = "BUDA",
+         .id   = "core.trim",
+         .setup = {"DAİRE merkez=0,0 cevre=10,0", "ÇOKLUÇİZGİ 0,-20 0,20", "SEÇ NESNE nesneler=2"},
+         .objects  = {},
+         .answers  = {Value::point(core::Point2{-10'000, 0}), Value{}},
+         .typed    = "BUDA sinir=2 nesne=1 nokta=-10,0",
+         .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "sinir":[2],"nesne":[1],"nokta":[[-10000,0]]}}]})"});
+}
+
+TEST_CASE("PROOF: UZAT gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // An arc's end carried round its circle to a line, in quick mode. The click
+    // is ON the arc's end: without a view there is no pick aperture, so the GUI
+    // road picks only what lies exactly under the point.
+    prove_verb({.name     = "UZAT",
+                .id       = "core.extend",
+                .setup    = {"YAY 0,0 10,0 0,10", "ÇOKLUÇİZGİ -5,-20 -5,20"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{0, 10'000}), Value{}},
+                .typed    = "UZAT hepsi=evet nesne=1 nokta=0,10",
+                .scripted = R"({"ad":"UZAT","komutlar":[{"cmd":"core.extend","args":{
+                    "hepsi":true,"nesne":[1],"nokta":[[0,10000]]}}]})"});
 }
 
 TEST_CASE("PROOF: UZUNLUK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")

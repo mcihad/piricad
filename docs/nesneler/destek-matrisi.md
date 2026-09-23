@@ -30,8 +30,8 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
 | [Çok parçalı alan](#cokparca) | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ |
-| [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | — | — | — | ✓ | ✓ |
-| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | — | — | ✗ | ✓ | ✓ |
+| [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✗ | ✗ | ✓ | — | — | — | ✓ | ✓ |
+| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | — | — | ✗ | ✓ | ✓ |
 | [Elips](#elips) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ◐ | — | — | — | ✓ | ✓ |
 | [Spline](#spline) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | — | — | ✗ | ✓ | ✓ |
 | [Tarama](#tarama) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✗ | ✗ | ✗ | — | ✓ | ✓ |
@@ -41,7 +41,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Lider](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
-238 hücre: 142 destekli, 4 kısmi, 40 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
+238 hücre: 145 destekli, 4 kısmi, 37 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
@@ -105,8 +105,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
+| Uzat | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | YAYLIÇİZGİ paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
@@ -127,7 +127,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 açık bir çizgi değil. |
@@ -153,7 +153,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✓ destekli | kesildi: 62.832 m → 31.416 m; sonuç: YAY |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -175,8 +175,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✓ destekli | kesildi: 78.540 m → 52.360 m; sonuç: YAY |
+| Uzat | ✓ destekli | uzadı: 78.540 m → 88.671 m; sonuç: YAY |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ✓ destekli | 1 paralel (YAY), kaynak korundu |
@@ -197,7 +197,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -219,8 +219,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
+| Uzat | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | SPLINE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
@@ -241,7 +241,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -351,8 +351,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır. |
+| Uzat | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ✗ yok | Nesne 1: Bir açıklamanın (ölçü, lider) paraleli olmaz; ölçtüğü çizginin paralelini alın. |

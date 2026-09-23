@@ -47,8 +47,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
-| [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
-| [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
+| [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
+| [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
 | [`core.chamfer`](chamfer.md) | Pah | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
 | [`core.fillet`](fillet.md) | Yuvarla | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
 | [`core.set_layer`](set_layer.md) | Katmana Ata | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
@@ -609,25 +609,27 @@ Ayrıntılı kullanım: [BÖL](split.md)
 
 ### `core.trim` — BUDA (Buda)
 
-Bir çizgiyi kestiği sınır çizgisine kadar budar.
+Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | isteğe bağlı | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan |
-| `sinir` | selection | isteğe bağlı | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri |
-| `nokta` | point | 1 | Atılacak parçanın üzerindeki bir nokta |
+| `nesne` | selection | en az 0 | Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne |
+| `sinir` | selection | en az 0 | Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne |
+| `hepsi` | bool | isteğe bağlı | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
+| `nokta` | point_list | en az 0 | Atılacak her parçanın üzerinde bir nokta, sırayla |
 
 Ayrıntılı kullanım: [BUDA](trim.md)
 
 ### `core.extend` — UZAT (Uzat)
 
-Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | isteğe bağlı | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan |
-| `sinir` | selection | isteğe bağlı | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri |
-| `nokta` | point | 1 | Uzatılacak ucun yakınında bir nokta |
+| `nesne` | selection | en az 0 | Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne |
+| `sinir` | selection | en az 0 | Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne |
+| `hepsi` | bool | isteğe bağlı | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
+| `nokta` | point_list | en az 0 | Uzatılacak her ucun yakınında bir nokta, sırayla |
 
 Ayrıntılı kullanım: [UZAT](extend.md)
 
@@ -4337,57 +4339,72 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_extend",
     "title": "Uzat",
-    "description": "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.\nKomut: UZAT (EXTEND, UZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.\nKomut: UZAT (EXTEND, UZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "nesne": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "sinir": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "hepsi": {
+          "type": "boolean",
+          "description": "Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır)"
         },
         "nokta": {
           "anyOf": [
             {
               "type": "string",
               "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
             },
             {
-              "type": "object",
-              "properties": {
-                "taban": {
-                  "type": "string",
-                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
-                },
-                "dogu": {
-                  "type": "integer",
-                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
-                },
-                "kuzey": {
-                  "type": "integer",
-                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
-                }
-              },
-              "required": [
-                "taban"
-              ],
-              "additionalProperties": false,
-              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              }
             }
           ],
-          "description": "Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Uzatılacak her ucun yakınında bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         }
       },
-      "required": [
-        "nokta"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {
@@ -9656,57 +9673,72 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_trim",
     "title": "Buda",
-    "description": "Bir çizgiyi kestiği sınır çizgisine kadar budar.\nKomut: BUDA (TRIM, BD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.\nKomut: BUDA (TRIM, BD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "nesne": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "sinir": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "hepsi": {
+          "type": "boolean",
+          "description": "Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır)"
         },
         "nokta": {
           "anyOf": [
             {
               "type": "string",
               "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
             },
             {
-              "type": "object",
-              "properties": {
-                "taban": {
-                  "type": "string",
-                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
-                },
-                "dogu": {
-                  "type": "integer",
-                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
-                },
-                "kuzey": {
-                  "type": "integer",
-                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
-                }
-              },
-              "required": [
-                "taban"
-              ],
-              "additionalProperties": false,
-              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              }
             }
           ],
-          "description": "Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Atılacak her parçanın üzerinde bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         }
       },
-      "required": [
-        "nokta"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {

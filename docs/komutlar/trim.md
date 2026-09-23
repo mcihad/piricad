@@ -1,25 +1,46 @@
-# BUDA — Çizgiyi Sınıra Kadar Budama
+# BUDA — Parçayı Kesme Sınırlarına Kadar Budama
 
-Sınırı aşan bir çizgiyi kestiği yere kadar kısaltması gereken herkes için; bu
-sayfayı bitirdiğinizde budamayı arayüzden, komut satırından ve betikten yapmayı
-bileceksiniz.
+Bir çizginin, yayın ya da dairenin sınırları aşan parçasını atması gereken herkes
+için; bu sayfayı bitirdiğinizde budamayı arayüzden, komut satırından ve betikten
+yapmayı bileceksiniz.
 
 ## Ne yapar
 
-`BUDA`, bir çizginin ucunu, **kestiği sınır çizgisine** kadar geri çeker.
+`BUDA`, **tıkladığınız parçayı** atar. Parça, tıkladığınız yerin iki yanındaki ilk
+kesme sınırlarının arasında kalan bölümdür:
 
-**Hangi ucun atılacağını verdiğiniz nokta söyler**: atmak istediğiniz parçanın
-üzerine yakın bir yer gösterin. Bu, her çizim programının çalışma biçimidir —
-gitmesini istediğiniz parçayı gösterirsiniz.
+- İki yanında da sınır varsa **ortadaki parça** gider ve nesne ikiye ayrılır. İlk
+  parça nesnenin kendisi olarak kalır — kimliği, katmanı, stili ve öznitelikleri
+  onunla gider; ikinci parça aynı katmanda, aynı stil ve özniteliklerle yeni bir
+  nesne olur.
+- Yalnız bir yanında sınır varsa o yandaki **uç** gider.
+- **Daire** ancak iki yerinden kesilince budanır: tek kesim bir çemberi açar ama
+  ondan bir şey çıkarmaz. İki kesimin arasındaki parça gider, kalan bölüm bir
+  **yay** olur.
 
-Kesişme **sınır çizgisinin üzerinde** olmalıdır, uzantısında değil. İki sınırın
-uzatılsalardı buluşacakları yere budanmış bir çizgi, var olmayan bir yere budanmış
-demektir.
+Kalan her şey kendi türünde kalır. Budanan yay, aynı merkezli ve aynı yarıçaplı bir
+yaydır; bir yaya ya da daireye budanan çizgi **eğrinin üzerinde** biter, eğrinin
+ekranda çizildiği kirişlerin üzerinde değil. Kesişimler kapalı biçimde hesaplanır ve
+milimetreye bir kez yuvarlanır, bu yüzden aynı işlem her bilgisayarda aynı noktayı
+verir.
 
-`BUDA` yalnız **açık çizgilerle** çalışır. Yayı bir çizgiye budamak gerçek bir
-işlemdir ama bu komut değildir: çember-doğru kesişimi ister, ve bir yayı kirişi
-gibi işleyen bir komut yol kurbunu kirişin yaydan sapması kadar kaydırırdı. Bu
-kaba bir çizim değil, **yanlış** bir çizimdir.
+`BUDA` açık çizgilerde (`ÇİZGİ`, `ÇOKLUÇİZGİ`), yaylarda ve dairelerde çalışır.
+Kapalı bir alanın (`ALAN`) bir parçası budanmaz; alanı ikiye ayırmak
+[`BÖL`](split.md)'ün işidir. Elips ve spline bugün budanmaz: kesişimleri yinelemeli
+bir çözüm ister, ve o çözümü getirecek kütüphaneyle birlikte (TODOS C-01)
+budanabilecekler.
+
+### Kesme sınırları
+
+Hangi nesnelerin keseceği şu sırayla belirlenir:
+
+1. `sinir=` ile verilen nesneler;
+2. bunlar yoksa komuttan önce **seçtiğiniz** nesneler;
+3. o da yoksa **hızlı budama**: tıkladığınız nesnenin yakınındaki her görünür çizgi,
+   yay ve daire. `hepsi=evet` bunu açıkça ister.
+
+Bir nesne kendi kendini kesmez. Her şeyi seçip `BUDA`'ya bastığınızda her nesne,
+ötekiler tarafından kesilir.
 
 ## Adlar
 
@@ -33,48 +54,63 @@ kaba bir çizim değil, **yanlış** bir çizimdir.
 ## Sözdizimi
 
 ```text
-BUDA nesne=<k> sinir=<k> nokta=<n>
+BUDA [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
 ```
 
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
-| `nesne` | Budanacak çizginin kimliği |
-| `sinir` | Sınır çizgisinin kimliği |
-| `nokta` | Atılacak parçanın üzerinde bir nokta |
+| `nokta` | Atılacak her parçanın üzerinde bir nokta; birden çok verilebilir, sırayla işlenir |
+| `nesne` | Her noktanın budadığı nesne, aynı sırayla; verilmezse noktanın altındaki nesne |
+| `sinir` | Kesme sınırları; verilmezse seçim, o da yoksa hızlı budama |
+| `hepsi` | `evet`: tıklanan nesnenin yakınındaki her nesne sınırdır |
 
 ## Örnekler
 
 ### Komut satırı
 
+İki yolu kesen bir çizginin ortasını atmak — `2` ve `3` yollar, `1` çizgi:
+
 ```text
-BUDA nesne=1 sinir=2 nokta=485390,4310200
+BUDA sinir=2 sinir=3 nesne=1 nokta=50,0
 ```
 
 ```text
-Çizgi sınıra kadar budandı.
+1 parça budandı.
+```
+
+Aynı iki yolu kesen iki çizginin daha ortası, hızlı budamayla tek satırda:
+
+```text
+BUDA hepsi=evet nokta=50,10 50,-10
+```
+
+```text
+2 parça budandı.
 ```
 
 ### Arayüz
 
-**İki çizgiyi** seçin, sol araç kutusundaki **Buda** düğmesine basın, sonra atmak
-istediğiniz parçayı tıklayın.
+Sol araç kutusundaki **Buda** düğmesine basın ya da `BUDA` yazın. Komut satırı
+`Atılacak parçaya tıklayın — Enter: bitir` der.
 
-Hangisinin budanacağını **tıklama** söyler: tıkladığınız noktaya daha yakın olan
-çizgi budanır, diğeri sınır olur. Seçim sırası kullanılmaz, çünkü seçim listesi
-tıklama sırasını değil nesne kimliğini takip eder — "önce seçtiğim" demek "önce
-çizdiğim" demek olurdu.
+- Önceden nesne seçtiyseniz sınırlar onlardır ve vurgulu kalırlar.
+- Seçim yoksa hızlı budama çalışır: imlecin altındaki nesneyi yakınındaki her şey
+  keser.
 
-İmleç bir çizginin üzerinde gezinirken **atılacak parça** kırmızı ve kesikli, kalacak
-çizgi vurgulu, sınır da kesikli çizilir; imleci öteki çizgiye götürünce önizleme de
-ona geçer. Gördüğünüz, tıklamanın yapacağının kendisidir.
+İmleci bir nesnenin üzerinde gezdirin: **atılacak parça** kırmızı ve kesikli,
+**kalacak bölüm** vurgu renginde çizilir. Gördüğünüz, tıklamanın yapacağının
+kendisidir; tuval önizlemeyi komutun kullandığı hesapla çizer. Tıklayın: parça gider
+ve komut bir sonrakini bekler. İstediğiniz kadar parçayı art arda tıklayın, bitince
+**Enter**'a ya da sağ tuşa basın.
 
-Komut satırından `BUDA nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
+Tıklama bir **konum değil, bir seçimdir**. Nesne yakalama, ızgara ve dik mod
+tıklamayı kaydırmaz; bir kesişimin yakınına tıklamak parçayı kesişimin tam üstüne
+çekip belirsizleştirmez.
 
-Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
-yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
-Nesneleri önceden seçtiyseniz sorulmaz.
+**Esc** komutu Enter gibi bitirir: o ana kadar budananlar budanmış kalır. Hiç
+tıklamadan Esc'e basarsanız hiçbir şey olmaz.
 
 ### Betik
 
@@ -84,9 +120,11 @@ Nesneleri önceden seçtiyseniz sorulmaz.
     { "cmd": "core.line",
       "args": { "noktalar": [[485300000, 4310200000], [485400000, 4310200000]] } },
     { "cmd": "core.line",
-      "args": { "noktalar": [[485380000, 4310190000], [485380000, 4310210000]] } },
+      "args": { "noktalar": [[485330000, 4310190000], [485330000, 4310210000]] } },
+    { "cmd": "core.line",
+      "args": { "noktalar": [[485370000, 4310190000], [485370000, 4310210000]] } },
     { "cmd": "core.trim",
-      "args": { "nesne": [1], "sinir": [2], "nokta": [485390000, 4310200000] } }
+      "args": { "sinir": [2, 3], "nesne": [1], "nokta": [[485350000, 4310200000]] } }
   ]
 }
 ```
@@ -96,23 +134,44 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Geri alma
 
-`BUDA` tek bir geri alma adımıdır; [`GERİAL`](undo.md) atılan parçayı geri getirir.
+Bir `BUDA` çalışmasının bütün tıklamaları **tek** geri alma adımıdır;
+[`GERİAL`](undo.md) atılan parçaların hepsini birden geri getirir. Esc ile bitirilen
+çalışma da tek adımdır.
 
 ## Betikten kullanım
 
-Betikten çağrıldığında `nesne`, `sinir` ve `nokta` verilmelidir.
+Betikten `nokta` verilmelidir; betiğin tıklayacak bir eli yoktur. `nesne`
+verilmezse her nokta **tam altındaki** nesneyi budar: betiğin ekranı, dolayısıyla
+seçim açıklığı yoktur ve nokta nesnenin üzerinde olmalıdır. Güvenli yol `nesne`'yi
+vermektir.
+
+Günlüğe sınırlar (ya da `hepsi`), budanan nesneler ve noktalar yazılır; yeniden
+oynatılan satır aynı parçaları atar. `hepsi` ile yazılan bir satır, oynatıldığı
+çizimdeki yakın nesneleri yeniden okur — kaydedildiği çizimde yaptığını yapar.
+Python'dan `cad.trim(boundary=[2, 3], object=[1], point=[[485350000, 4310200000]])`
+olarak çağrılır.
 
 ## Hatalar
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Bu uç sınır çizgisini kesmiyor; budanacak bir şey yok.` | Çizgi sınırı kesmiyor | Kesişen bir sınır verin ya da [`UZAT`](extend.md) kullanın |
+| `Bu nesneyi sınırlardan hiçbiri kesmiyor; atılacak bir parça yok.` | Sınırlar nesneyi kesmiyor | Kesen bir sınır verin ya da [`UZAT`](extend.md) ile sınıra ulaştırın |
+| `Kapalı bir şekil ancak iki yerinden kesilince budanır; sınırlar onu N yerinden kesiyor.` | Daire tek yerden kesiliyor ya da hiç kesilmiyor | Daireyi iki yerden kesen sınırlar verin |
+| `Tıklanan parça bütün nesne; budanınca geriye bir şey kalmıyor. Silmek için SİL kullanın.` | Kesişim nesnenin tam ucunda, tıklanan parça nesnenin tamamı | Silmek istiyorsanız [`SİL`](erase.md) |
+| `Tıklanan nokta bir kesişimin tam üstünde; hangi parçanın atılacağını söylemek için parçanın içine tıklayın.` | Verilen nokta kesişimin kendisi | Parçanın içinden bir nokta verin |
+| `Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın ya da dairenin atılacak parçasına tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
+| `Nesne N kapalı bir alan; alanın bir parçası budanmaz. Alanı ikiye ayırmak için BÖL kullanın.` | Kapalı bir alan tıklandı | [`BÖL`](split.md) kullanın |
+| `Nesne N bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır.` | Elips, spline, nokta, metin ya da delikli alan | Çizgi, yay ya da daire seçin |
+| `BUDA için kesecek sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Hızlı budamada yakında kesecek nesne yok | Bir sınır çizin ya da `sinir=` verin |
+| `BUDA için kesecek sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Seçili ya da verilen tek sınır, budanan nesnenin kendisi | Başka bir nesneyi sınır seçin |
+| `BUDA: hiçbir parça gösterilmedi. Atılacak parçaya tıklayın ya da BUDA nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir parçaya tıklayın ya da `nokta` verin |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
-| `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
-| `Nesne N bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.` | Daire, yay ya da nokta verildi | Yalnız çizgi seçin |
-| `Nesne N açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır.` | Kapalı alan verildi | Açık bir çizgi seçin |
+| `Nesne bulunamadı veya silinmiş: N` | `nesne` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
+| `Sınır nesnesi bulunamadı veya silinmiş: N` | `sinir` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
+| `'K' katmanı kilitli; üzerindeki nesne düzenlenemez. Kilidi KATMAN ad=K kilitli=hayır ile açın.` | Nesne kilitli bir katmanda | Katmanın kilidini açın |
 
 ## İlgili
 
-- [`UZAT`](extend.md) — kısaltmak yerine uzatır
-- [`BÖL`](split.md) — bir noktadan ikiye ayırır
+- [`UZAT`](extend.md) — kısaltmak yerine sınıra kadar uzatır
+- [`KIR`](break.md) — iki nokta arasını sınır olmadan atar
+- [`BÖL`](split.md) — bir kesme çizgisiyle ikiye ayırır

@@ -7774,8 +7774,9 @@ void MainWindow::probeToolsByHand()
         {"TAŞI", {20'000, 15'000}, {}, {5'000, 5'000}, {25'000, 20'000}, nullptr},
         // Inside the face; then a cut line straight through it.
         {"BÖL", {20'000, 15'000}, {}, {20'000, -5'000}, {20'000, 35'000}, nullptr},
-        // The two crossing lines; then the piece to discard.
-        {"BUDA", {60'000, 35'000}, {70'000, 20'000}, {60'000, 38'000}, {}, nullptr},
+        // Nothing chosen, so every line near the one clicked cuts it (the quick
+        // trim): the click is the piece to discard, and Enter ends the run.
+        {"BUDA", {60'000, 35'000}, {}, {}, {}, nullptr},
         // Inside the face; then a distance typed at the command line.
         {"OFSET", {20'000, 15'000}, {}, {}, {}, "5"},
     };

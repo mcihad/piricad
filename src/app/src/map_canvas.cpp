@@ -11,6 +11,7 @@
 #include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/corner.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/grips.hpp"
@@ -24,7 +25,7 @@
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/trim_end.hpp"
+#include "kentos_cad/core/trim_curve.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/snap_marker.hpp"
 
@@ -2275,51 +2276,44 @@ void MapCanvas::buildOverlay()
                 }
             }
         } else if (shape == command::RubberShape::Trim) {
-            // WHAT THE CLICK WILL DO TO THE LINE UNDER IT: for BUDA the piece it
-            // throws away, in the ink of a destructive action and dashed; for
-            // UZAT the reach it adds, dashed in the accent; the boundary marked,
-            // so it is clear which line cuts which. With two lines selected the
-            // cursor decides which one is edited, as the command decides it
-            // (`core::picks_first`), and the edit is `core::trim_end` — the call
-            // BUDA and UZAT make with the click.
+            // WHAT THE CLICK WILL DO TO THE OBJECT UNDER IT: for BUDA the piece it
+            // throws away, in the ink of a destructive action and dashed; for UZAT
+            // the reach it adds, dashed in the accent. The object is the one the
+            // click would pick and the edges are the run's (`core::cutting_edges`),
+            // and the edit is `core::trim_curve` / `core::extend_curve` — the calls
+            // BUDA and UZAT make with the click. A line, an arc and a circle alike.
             if (auto decoded = core::decode_trim_guide(session->prompt().rubber_payload)) {
                 const core::Document& doc = controller_.document();
-                const auto open_run       = [&doc](std::int64_t key) {
-                    std::vector<core::Point2> run;
-                    const core::EntityId e =
-                        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
-                    if (e == core::kNoEntity || !doc.alive(e)) return run;
-                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
-                    if (span.count != 1) return run;
-                    const auto xs = doc.geometry().ring_xs(span.first);
-                    const auto ys = doc.geometry().ring_ys(span.first);
-                    for (std::size_t v = 0; v < xs.size(); ++v)
-                        run.push_back(core::Point2{xs[v], ys[v]});
-                    return run;
-                };
-                const std::vector<core::Point2> a = open_run(decoded.value().first);
-                const std::vector<core::Point2> b = open_run(decoded.value().second);
-                const core::Point2 at             = cursorWorld();
-                if (a.size() >= 2 && b.size() >= 2) {
-                    const bool first = !decoded.value().paired || core::picks_first(a, b, at);
-                    const std::vector<core::Point2>& target = first ? a : b;
-                    const std::vector<core::Point2>& edge   = first ? b : a;
-                    if (auto made = core::trim_end(target, edge, at, decoded.value().extend)) {
-                        const auto add = [this](std::size_t into,
-                                                const std::vector<core::Point2>& pts) {
-                            curve_scratch_x_.clear();
-                            curve_scratch_y_.clear();
-                            for (const core::Point2& p : pts) {
-                                curve_scratch_x_.push_back(p.x);
-                                curve_scratch_y_.push_back(p.y);
-                            }
+                const core::Point2 at     = cursorWorld();
+                const core::EntityId e =
+                    core::pick_nearest(doc, at, controller_.bus().aid_settings().pick_radius);
+                const std::optional<core::CurvePath> path =
+                    e == core::kNoEntity ? std::nullopt : core::path_of(doc, e);
+                // A closed polyline is an area: BUDA refuses it, so nothing is shown.
+                const bool area =
+                    path && path->closed && doc.entities().kind[e] == core::kPolylineKind;
+                if (path && !area) {
+                    const std::vector<core::CurvePath> edges =
+                        core::cutting_edges(doc, e, decoded.value().every, decoded.value().keys);
+                    const auto add = [this](std::size_t into, const core::CurvePath& piece) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        core::path_outline(piece, curve_scratch_x_, curve_scratch_y_);
+                        if (curve_scratch_x_.size() >= 2)
                             addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
-                        };
-                        add(nextBatch(tokens_->accent.rgba(), 1.0f, true), edge);
-                        add(nextBatch(tokens_->accent.rgba(), 1.5f, false), made.value().run);
-                        add(decoded.value().extend ? nextBatch(tokens_->accent.rgba(), 2.5f, true)
-                                                   : nextBatch(tokens_->danger.rgba(), 2.5f, true),
-                            made.value().changed);
+                    };
+                    if (decoded.value().extend) {
+                        // The object as it is, solid, and the reach alone dashed:
+                        // drawn over the extended whole, the dashes vanish into it.
+                        if (auto reach = core::extend_curve(*path, edges, at)) {
+                            add(nextBatch(tokens_->accent.rgba(), 1.5f, false), *path);
+                            add(nextBatch(tokens_->accent.rgba(), 2.5f, true), reach.value().added);
+                        }
+                    } else if (auto cut = core::trim_curve(*path, edges, at)) {
+                        const std::size_t kept = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                        for (const core::CurvePath& piece : cut.value().kept)
+                            add(kept, piece);
+                        add(nextBatch(tokens_->danger.rgba(), 2.5f, true), cut.value().removed);
                     }
                 }
             }

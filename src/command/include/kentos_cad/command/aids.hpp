@@ -145,7 +145,8 @@ bool aimed_from_origin(const Prompt& p) noexcept;
 /// corner makes a rectangle with no width or no height — refused by every
 /// command that asks for one, so a user with dik mod on could not drag a
 /// window at all. Kutupsal izleme still applies there: at half a right angle it
-/// is what draws a square.
+/// is what draws a square. And with no aid at all for a pick
+/// (`RubberShape::Trim`): the click names a piece, not a point.
 AidSettings aids_for(const AidSettings& set, const Prompt& p);
 
 } // namespace kentos::command

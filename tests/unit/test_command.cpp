@@ -4982,9 +4982,9 @@ TEST_CASE("nesneler verilmişse hiç sorulmaz: betik yolu değişmedi")
 
 TEST_CASE("seçim komutun alabileceğinden çoksa SORAR; fazlasını adlayan betik reddedilir")
 {
-    // BUDA takes exactly two lines. Handed three highlighted, it used to refuse on
-    // the spot — "en fazla 2 nesne" — so the button was dead until the user went
-    // and cleared the selection by hand. It now asks for the ones it wants, and
+    // KIR takes one line. Handed three highlighted, it used to refuse on the spot
+    // — "en fazla 1 nesne" — so the button was dead until the user went and
+    // cleared the selection by hand. It now asks for the ones it wants, and
     // says why. A script cannot answer the question, so it is told exactly what
     // it was told before; and neither road is followed by the raw "zorunlu
     // parametre" line a post-run validation used to add after the sentence.
@@ -5006,13 +5006,13 @@ TEST_CASE("seçim komutun alabileceğinden çoksa SORAR; fazlasını adlayan bet
     {
         // A HAND: the tool asks, and the question says how many are highlighted
         // and how many it takes.
-        auto started = f.bus.begin_interactive("BUDA", Origin::Gui);
+        auto started = f.bus.begin_interactive("KIR", Origin::Gui);
         REQUIRE(started.ok());
         auto& session = *started.value();
         REQUIRE(session.waiting());
         CHECK(session.prompt().kind == ParamKind::Selection);
         CHECK(session.prompt().message.find("3 nesne seçili") != std::string::npos);
-        CHECK(session.prompt().message.find("2 nesne") != std::string::npos);
+        CHECK(session.prompt().message.find("1 nesne") != std::string::npos);
 
         // Esc is a cancel, not the refusal the script gets.
         session.cancel();
@@ -5021,12 +5021,12 @@ TEST_CASE("seçim komutun alabileceğinden çoksa SORAR; fazlasını adlayan bet
         CHECK(done.value().message == "İptal edildi");
     }
     {
-        // A SCRIPT names what it means, and three named where two are taken is
+        // A SCRIPT names what it means, and three named where one is taken is
         // refused with the sentence only — never followed by the raw "zorunlu
         // parametre" line a post-run validation used to add after it.
         said.clear();
         const std::string why =
-            REFUSED(f.bus.execute_line("BUDA nesne=1 nesne=2 nesne=3 nokta=5,0", Origin::Script));
+            REFUSED(f.bus.execute_line("KIR nesne=1 nesne=2 nesne=3 birinci=5,0", Origin::Script));
         INFO(why);
         CHECK(why.find("en fazla") != std::string::npos);
         CHECK(why.find("zorunlu") == std::string::npos);
@@ -6123,11 +6123,11 @@ TEST_CASE("BUDA kesişmeyen sınırı reddeder ve hiçbir şeyi değiştirmez")
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
-TEST_CASE("BUDA ve BÖL eğriyi reddeder")
+TEST_CASE("BÖL eğriyi reddeder; BUDA daireyi ancak kesen bir sınırla budar")
 {
-    // Trimming an arc to a line is a real operation and it is NOT this one: it
-    // needs the circle-line intersection, and treating an arc as its chord would
-    // move a road curve by however much the chord misses the arc.
+    // Splitting a circle at a point is not an operation: one cut opens a ring
+    // without making two of anything. Trimming it is, but only between two meets
+    // — and a boundary that never reaches the circle meets it nowhere.
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("DAİRE merkez=0,0 cevre=10,0", Origin::Test).ok());
@@ -6135,7 +6135,226 @@ TEST_CASE("BUDA ve BÖL eğriyi reddeder")
     const std::uint64_t before = f.doc.content_hash();
 
     REQUIRE_FALSE(f.bus.execute_line("BÖL nesne=1 nokta=5,0", Origin::Test).ok());
-    REQUIRE_FALSE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=5,0", Origin::Test).ok());
+    const std::string why =
+        REFUSED(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=-10,0", Origin::Test));
+    CHECK(why.find("iki yerinden") != std::string::npos);
+    CHECK_EQ(f.doc.content_hash(), before);
+}
+
+namespace {
+
+/// Vertex `at` of the first ring of the object with persistent key `key`.
+core::Point2 ring_vertex(const core::Document& doc, std::uint64_t key, std::size_t at)
+{
+    const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+    REQUIRE(e != core::kNoEntity);
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+    return doc.geometry().vertex(span.first, at);
+}
+
+core::KindId kind_of(const core::Document& doc, std::uint64_t key)
+{
+    const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+    REQUIRE(e != core::kNoEntity);
+    return doc.entities().kind[e];
+}
+
+} // namespace
+
+TEST_CASE("BUDA iki sınır arasındaki orta parçayı atar; kalan iki parça iki nesne olur")
+{
+    // THE CASE THE OLD BUDA COULD NOT DO: a line crossing two roads loses the
+    // stretch between them. The first piece keeps the object — its key, layer
+    // and style — and the second is a new object drawn like it.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok()); // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 70,-20 70,20", Origin::Test).ok()); // 3
+
+    auto trimmed = f.bus.execute_line("BUDA sinir=2 sinir=3 nesne=1 nokta=50,0", Origin::Test);
+    if (!trimmed) FAIL_WITH("BUDA", trimmed.error().message);
+    REQUIRE(trimmed.ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{4});
+    CHECK_EQ(ring_vertex(f.doc, 1, 0), (core::Point2{0, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 4, 0), (core::Point2{70'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 4, 1), (core::Point2{100'000, 0}));
+    const core::EntityId first  = f.doc.slot_of(static_cast<core::EntityKey>(1U));
+    const core::EntityId second = f.doc.slot_of(static_cast<core::EntityKey>(4U));
+    CHECK_EQ(f.doc.entities().layer[second], f.doc.entities().layer[first]);
+    CHECK_EQ(f.doc.entities().style[second], f.doc.entities().style[first]);
+}
+
+TEST_CASE("BUDA yayı doğruyla budar ve kalan YAY olarak kalır")
+{
+    // An arc trimmed to a line is still an arc — the same centre and radius, a
+    // shorter sweep — and it stops ON the line, at the circle's meet, not at a
+    // chord the arc happens to be drawn with.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("YAY 0,0 10,0 -10,0", Origin::Test).ok());    // 1, upper half
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,-20 0,20", Origin::Test).ok()); // 2
+
+    REQUIRE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=-7.07,7.07", Origin::Test).ok());
+    CHECK(kind_of(f.doc, 1) == core::kArcKind);
+    CHECK_EQ(ring_vertex(f.doc, 1, 0), (core::Point2{0, 0}));      ///< centre
+    CHECK_EQ(ring_vertex(f.doc, 1, 2), (core::Point2{10'000, 0})); ///< start kept
+    CHECK_EQ(ring_vertex(f.doc, 1, 3), (core::Point2{0, 10'000})); ///< end on the line
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+}
+
+TEST_CASE("BUDA daireyi iki kesimden budar; kalan parça yay olur")
+{
+    // A circle cut in two places is the arc that is left: a different kind, so a
+    // new object drawn like the circle, and the circle goes.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("DAİRE merkez=0,0 cevre=10,0", Origin::Test).ok()); // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,-20 0,20", Origin::Test).ok());       // 2
+
+    auto trimmed = f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=-10,0", Origin::Test);
+    if (!trimmed) FAIL_WITH("BUDA", trimmed.error().message);
+    REQUIRE(trimmed.ok());
+
+    const core::EntityId circle = f.doc.slot_of(static_cast<core::EntityKey>(1U));
+    CHECK((circle == core::kNoEntity || !f.doc.alive(circle)));
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{2});
+    CHECK(kind_of(f.doc, 3) == core::kArcKind);
+    CHECK_EQ(ring_vertex(f.doc, 3, 0), (core::Point2{0, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 3, 2), (core::Point2{0, -10'000})); ///< the right half,
+    CHECK_EQ(ring_vertex(f.doc, 3, 3), (core::Point2{0, 10'000}));  ///< counter-clockwise
+}
+
+TEST_CASE("BUDA çizgiyi dairenin ÜZERİNDE bitirir, kirişinde değil")
+{
+    // The circle is drawn with chords; a trim against the chords would stop the
+    // line a few millimetres short of the real curve. 6 m off a 10 m circle's
+    // centre the meet is exactly 8 m along: sqrt(100 - 36).
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ -20,6 20,6", Origin::Test).ok());       // 1
+    REQUIRE(f.bus.execute_line("DAİRE merkez=0,0 cevre=10,0", Origin::Test).ok()); // 2
+
+    REQUIRE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=15,6", Origin::Test).ok());
+    CHECK_EQ(ring_vertex(f.doc, 1, 0), (core::Point2{-20'000, 6'000}));
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{8'000, 6'000}));
+}
+
+TEST_CASE("UZAT yayın ucunu çemberi boyunca sınıra taşır")
+{
+    // A quarter arc from east to north, and a boundary at x = -5: the arc's end
+    // goes on round its own circle to 120°, where x = -5 and y = 5·√3.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("YAY 0,0 10,0 0,10", Origin::Test).ok());       // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ -5,-20 -5,20", Origin::Test).ok()); // 2
+
+    auto extended = f.bus.execute_line("UZAT nesne=1 sinir=2 nokta=1,9.9", Origin::Test);
+    if (!extended) FAIL_WITH("UZAT", extended.error().message);
+    REQUIRE(extended.ok());
+    CHECK(kind_of(f.doc, 1) == core::kArcKind);
+    CHECK_EQ(ring_vertex(f.doc, 1, 2), (core::Point2{10'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 1, 3), (core::Point2{-5'000, 8'660}));
+}
+
+TEST_CASE("BUDA ve UZAT noktasız bir betiğe ne eksik olduğunu söyler")
+{
+    // A script cannot click: without `nokta` it is told so in the words the
+    // page lists (docs/komutlar/trim.md, extend.md), and nothing changes.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok());
+    const std::uint64_t before = f.doc.content_hash();
+
+    const std::string trim = REFUSED(f.bus.execute_line("BUDA hepsi=evet", Origin::Script));
+    CHECK(trim.find("BUDA: hiçbir parça gösterilmedi.") != std::string::npos);
+    const std::string reach = REFUSED(f.bus.execute_line("UZAT hepsi=evet", Origin::Script));
+    CHECK(reach.find("UZAT: hiçbir uç gösterilmedi.") != std::string::npos);
+    CHECK_EQ(f.doc.content_hash(), before);
+}
+
+TEST_CASE("BUDA hızlı modda: seçim yokken yakındaki her nesne sınırdır")
+{
+    // AutoCAD's quick trim: with nothing chosen as a boundary, every object near
+    // the one clicked cuts it. `hepsi=evet` is how a script says the same, and
+    // what the run records, so a replay re-reads the drawing it is replayed into.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok()); // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 70,-20 70,20", Origin::Test).ok()); // 3
+
+    REQUIRE(f.bus.execute_line("BUDA hepsi=evet nokta=50,0", Origin::Test).ok());
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 4, 0), (core::Point2{70'000, 0}));
+    CHECK(f.journal.entries().back().args.find("hepsi") != nullptr);
+
+    // THE PAGE'S EXAMPLE, as printed (docs/komutlar/trim.md): two pieces in one
+    // line, and one sentence for both.
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,10 100,10", Origin::Test).ok());   // 5
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,-10 100,-10", Origin::Test).ok()); // 6
+    said.clear();
+    REQUIRE(f.bus.execute_line("BUDA hepsi=evet nokta=50,10 50,-10", Origin::Test).ok());
+    CHECK(said.find("2 parça budandı.") != std::string::npos);
+    CHECK_EQ(ring_vertex(f.doc, 5, 1), (core::Point2{30'000, 10'000}));
+    CHECK_EQ(ring_vertex(f.doc, 6, 1), (core::Point2{30'000, -10'000}));
+}
+
+TEST_CASE("BUDA'nın bütün tıklamaları TEK geri alma adımıdır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,10 100,10", Origin::Test).ok());  // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 40,-20 40,20", Origin::Test).ok()); // 3
+    const std::uint64_t before = f.doc.content_hash();
+
+    auto started = f.bus.begin_interactive("BUDA", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value::point(core::Point2{90'000, 0})).ok());
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value::point(core::Point2{90'000, 10'000})).ok());
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value{}).ok());
+    auto done = f.bus.finish(s);
+    if (!done) FAIL_WITH("BUDA", done.error().message);
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{40'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 2, 1), (core::Point2{40'000, 10'000}));
+
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+
+    // Esc before any click is a cancel: nothing was done, and nothing is said
+    // but that.
+    {
+        auto idle = f.bus.begin_interactive("BUDA", Origin::Gui);
+        REQUIRE(idle.ok());
+        idle.value()->cancel();
+        const auto none = f.bus.finish(*idle.value());
+        REQUIRE(none.ok());
+        CHECK(none.value().message == "İptal edildi");
+        CHECK_EQ(f.doc.content_hash(), before);
+    }
+
+    // Esc ends the run the way Enter does, as every CAD's TRIM does: what was
+    // trimmed stays trimmed, and the run is still one undo step.
+    const std::size_t depth = f.undo.undo_depth();
+    auto again              = f.bus.begin_interactive("BUDA", Origin::Gui);
+    REQUIRE(again.ok());
+    Session& esc = *again.value();
+    REQUIRE(esc.supply(Value::point(core::Point2{90'000, 0})).ok());
+    esc.cancel();
+    REQUIRE(f.bus.finish(esc).ok());
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{40'000, 0}));
+    CHECK_EQ(f.undo.undo_depth(), depth + 1);
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -7259,7 +7478,7 @@ TEST_CASE("İZ işaretleri hizmet ettikleri komut bitince silinir; şeffaf komut
     REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
     CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{2});
-    REQUIRE_FALSE(f.bus.execute_line("BUDA nesne=99", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("KIR nesne=99", Origin::Test).ok());
     CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{2});
     REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 5,5", Origin::Test).ok());
     CHECK(f.bus.tracking_marks().empty());
@@ -8541,10 +8760,11 @@ TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı d
 {
     // THE DEFECT THIS PINS, measured before it was named: BUDA on a circle wrote
     // "bu komut yalnız çizgilerle çalışır" to the transcript, ended its body, and
-    // the bus reported SUCCESS. A person read the sentence; a JSON script carried
-    // on, an agent's plan was told its step happened, and `cad.trim(...)`
-    // returned instead of raising. The support matrix listed 38 such cells
-    // (docs/nesneler/destek-matrisi.md, "Sessiz retler").
+    // the bus reported SUCCESS. (BUDA trims a circle now — TODOS C-04 — so the
+    // list below keeps the edits a circle still cannot take.) A person read the sentence; a JSON
+    // script carried on, an agent's plan was told its step happened, and `cad.trim(...)` returned
+    // instead of raising. The support matrix listed 38 such cells (docs/nesneler/destek-matrisi.md,
+    // "Sessiz retler").
     //
     // A refusal is an ERROR: the dispatch fails, the message says why, and the
     // document is exactly what it was.
@@ -8554,9 +8774,9 @@ TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı d
     const std::uint64_t before = f.doc.content_hash();
 
     for (const char* line :
-         {"BUDA nesne=1 sinir=2 nokta=-10,0", "UZAT nesne=1 sinir=2 nokta=10,0",
-          "BÖL nesne=1 nokta=10,0", "KIR nesne=1 birinci=10,0 ikinci=0,10",
-          "YUVARLA nesne=1 nokta=10,0 yaricap=1", "PAH nesne=1 nokta=10,0 mesafe=1"}) {
+         {"UZAT nesne=1 sinir=2 nokta=10,0", "BÖL nesne=1 nokta=10,0",
+          "KIR nesne=1 birinci=10,0 ikinci=0,10", "YUVARLA nesne=1 nokta=10,0 yaricap=1",
+          "PAH nesne=1 nokta=10,0 mesafe=1"}) {
         INFO(line);
         auto result = f.bus.execute_line(line, Origin::Test);
         REQUIRE_FALSE(result.ok());

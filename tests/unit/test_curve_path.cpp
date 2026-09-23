@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// A curve walked piece by piece, and where two curves meet (TODOS C-01, C-04).
+//
+// Every expected point below is a closed form a surveyor can check by hand —
+// a 3-4-5 triangle, a 30-60-90 one — and is asserted to the millimetre, because
+// a trim that stops a millimetre off the boundary leaves a gap a topology check
+// then reports as a defect (§7.3).
+#include "kentos_test.hpp"
+
+#include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/trim_curve.hpp"
+
+#include <array>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+using namespace kentos::core;
+
+namespace {
+
+CurvePath segment(Point2 a, Point2 b)
+{
+    CurvePath p;
+    p.pieces.push_back(PathPiece{.from = a, .to = b});
+    return p;
+}
+
+CurvePath circle(Point2 c, Mm r)
+{
+    CurvePath p;
+    const Point2 seam{c.x + r, c.y};
+    p.pieces.push_back(PathPiece{.kind       = PathPiece::Kind::Arc,
+                                 .from       = seam,
+                                 .to         = seam,
+                                 .centre     = c,
+                                 .radius     = r,
+                                 .sweep_udeg = kUDegFullCircle});
+    p.closed = true;
+    return p;
+}
+
+CurvePath ring(std::vector<Point2> corners)
+{
+    CurvePath p;
+    for (std::size_t i = 0; i < corners.size(); ++i)
+        p.pieces.push_back(PathPiece{.from = corners[i], .to = corners[(i + 1) % corners.size()]});
+    p.closed = true;
+    return p;
+}
+
+} // namespace
+
+TEST_CASE("CURVE: iki doğru parçası tek noktada kesişir")
+{
+    const auto cuts =
+        path_crossings(segment({0, 0}, {100'000, 0}), segment({40'000, -20'000}, {40'000, 20'000}));
+    REQUIRE_EQ(cuts.size(), 1u);
+    CHECK_EQ(cuts[0].point, (Point2{40'000, 0}));
+    CHECK_EQ(cuts[0].at.piece, 0u);
+    CHECK(cuts[0].at.t == doctest::Approx(0.4));
+    CHECK_FALSE(cuts[0].touching);
+}
+
+TEST_CASE("CURVE: doğru daireyi iki yerde keser, sırası doğru boyuncadır")
+{
+    // 6 m off the centre of a 10 m circle: x = ±sqrt(100 - 36) = ±8.
+    const auto cuts =
+        path_crossings(segment({-20'000, 6'000}, {20'000, 6'000}), circle({0, 0}, 10'000));
+    REQUIRE_EQ(cuts.size(), 2u);
+    CHECK_EQ(cuts[0].point, (Point2{-8'000, 6'000}));
+    CHECK_EQ(cuts[1].point, (Point2{8'000, 6'000}));
+}
+
+TEST_CASE("CURVE: teğet bir doğru daireye tek noktada DOKUNUR")
+{
+    const auto cuts =
+        path_crossings(segment({-20'000, 10'000}, {20'000, 10'000}), circle({0, 0}, 10'000));
+    REQUIRE_EQ(cuts.size(), 1u);
+    CHECK_EQ(cuts[0].point, (Point2{0, 10'000}));
+    CHECK(cuts[0].touching);
+}
+
+TEST_CASE("CURVE: iki daire iki yerde kesişir")
+{
+    // Centres 12 m apart, both 10 m: the meets are at x = 6, y = ±8.
+    const auto cuts = path_crossings(circle({0, 0}, 10'000), circle({12'000, 0}, 10'000));
+    REQUIRE_EQ(cuts.size(), 2u);
+    // Walked counter-clockwise from the first circle's seam at (10, 0): the
+    // upper meet comes first.
+    CHECK_EQ(cuts[0].point, (Point2{6'000, 8'000}));
+    CHECK_EQ(cuts[1].point, (Point2{6'000, -8'000}));
+}
+
+TEST_CASE("CURVE: çakışan iki doğru bir NOKTA değildir; köşedeki kesişim bir kez sayılır")
+{
+    // A shared stretch is not a point, and is not reported as an arbitrary one.
+    CHECK(path_crossings(segment({0, 0}, {10'000, 0}), segment({5'000, 0}, {15'000, 0})).empty());
+
+    // A diagonal through the corner of an L meets both legs there — once.
+    CurvePath l;
+    l.pieces.push_back(PathPiece{.from = {0, 0}, .to = {10'000, 0}});
+    l.pieces.push_back(PathPiece{.from = {10'000, 0}, .to = {10'000, 10'000}});
+    const auto cuts = path_crossings(l, segment({5'000, -5'000}, {15'000, 5'000}));
+    REQUIRE_EQ(cuts.size(), 1u);
+    CHECK_EQ(cuts[0].point, (Point2{10'000, 0}));
+}
+
+TEST_CASE("CURVE: kapalı yolun bir parçası dikişin üstünden sarar")
+{
+    // From the middle of the west edge to the middle of the south one: past the
+    // corner where the ring starts and ends.
+    const CurvePath square = ring({{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}});
+    const CurvePath part =
+        sub_path(square, PathPlace{.piece = 3, .t = 0.5}, PathPlace{.piece = 0, .t = 0.5});
+    CHECK(path_vertices(part) == std::vector<Point2>{{0, 5'000}, {0, 0}, {5'000, 0}});
+}
+
+TEST_CASE("CURVE: dairenin dikişi aşan parçası TEK yaydır")
+{
+    // A quarter before the seam to a quarter after: the east half, as one arc
+    // swept 180° from the south point — not two arcs meeting at the seam.
+    const CurvePath half = sub_path(circle({0, 0}, 10'000), PathPlace{.piece = 0, .t = 0.75},
+                                    PathPlace{.piece = 0, .t = 0.25});
+    REQUIRE_EQ(half.pieces.size(), 1u);
+    CHECK(half.pieces[0].kind == PathPiece::Kind::Arc);
+    CHECK_EQ(half.pieces[0].from, (Point2{0, -10'000}));
+    CHECK_EQ(half.pieces[0].to, (Point2{0, 10'000}));
+    CHECK_EQ(half.pieces[0].sweep_udeg, kUDegFullCircle / 2);
+}
+
+TEST_CASE("CURVE: doğrunun ucu daireye doğrultusunda uzar")
+{
+    const std::array<CurvePath, 1> edges{circle({0, 0}, 10'000)};
+    auto reach = extend_curve(segment({-20'000, 0}, {-15'000, 0}), edges, Point2{-15'500, 0});
+    REQUIRE(reach.ok());
+    CHECK(path_vertices(reach.value().extended) == std::vector<Point2>{{-20'000, 0}, {-10'000, 0}});
+    CHECK(path_vertices(reach.value().added) == std::vector<Point2>{{-15'000, 0}, {-10'000, 0}});
+}
+
+TEST_CASE("CURVE: kesişmeyen budama ve tek yerden kesilen kapalı şekil söylenerek reddedilir")
+{
+    const std::array<CurvePath, 1> far{segment({80'000, -20'000}, {80'000, 20'000})};
+    auto none = trim_curve(segment({0, 0}, {50'000, 0}), far, Point2{40'000, 0});
+    REQUIRE_FALSE(none.ok());
+    CHECK(none.error().message.find("kesmiyor") != std::string::npos);
+
+    // A line that only touches the circle cuts it in one place.
+    const std::array<CurvePath, 1> tangent{segment({-20'000, 10'000}, {20'000, 10'000})};
+    auto once = trim_curve(circle({0, 0}, 10'000), tangent, Point2{-10'000, 0});
+    REQUIRE_FALSE(once.ok());
+    CHECK(once.error().message.find("1 yerinden") != std::string::npos);
+
+    // A closed shape has no end to extend.
+    auto closed = extend_curve(circle({0, 0}, 10'000), far, Point2{10'000, 0});
+    REQUIRE_FALSE(closed.ok());
+}
+
+TEST_CASE("CURVE: budama önizlemesinin baytları gidip gelir, bozuğu reddedilir")
+{
+    const TrimGuide guide{.extend = true, .every = false, .keys = {3, 7, 42}};
+    auto back = decode_trim_guide(encode_trim_guide(guide));
+    REQUIRE(back.ok());
+    CHECK(back.value().extend);
+    CHECK_FALSE(back.value().every);
+    CHECK(back.value().keys == std::vector<std::int64_t>{3, 7, 42});
+
+    std::vector<std::uint8_t> bytes = encode_trim_guide(guide);
+    bytes.pop_back();
+    CHECK_FALSE(decode_trim_guide(bytes).ok());
+    CHECK_FALSE(decode_trim_guide(std::vector<std::uint8_t>{}).ok());
+}

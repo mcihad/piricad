@@ -127,8 +127,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`cad.combine`](#cadcombine) | `core.combine` | `BİRLEŞTİR` | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri çizilen bir kesme çizgisiyle böler. |
-| [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
-| [`cad.extend`](#cadextend) | `core.extend` | `UZAT` | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
+| [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
+| [`cad.extend`](#cadextend) | `core.extend` | `UZAT` | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
 | [`cad.chamfer`](#cadchamfer) | `core.chamfer` | `PAH` | Bir köşeyi düz bir kenarla keser (pah kırar). |
 | [`cad.fillet`](#cadfillet) | `core.fillet` | `YUVARLA` | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
 | [`cad.set_layer`](#cadset_layer) | `core.set_layer` | `KATMANAT` | Seçilen nesneleri başka bir katmana taşır. |
@@ -1088,7 +1088,7 @@ cad.split(
 
 ### `cad.trim`
 
-Bir çizgiyi kestiği sınır çizgisine kadar budar.
+Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.
 
 Komut: `core.trim` — `BUDA`
 
@@ -1096,21 +1096,23 @@ Komut: `core.trim` — `BUDA`
 cad.trim(
     object: list[int],
     boundary: list[int],
-    point: Coord,
+    every_edge: bool,
+    point: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı] |
-| `boundary` | `list[int]` | `sinir` | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı] |
-| `point` | `Coord` | `nokta` | Atılacak parçanın üzerindeki bir nokta [mm, Sağa (Y) önce] |
+| `object` | `list[int]` | `nesne` | Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne [kalıcı nesne anahtarı] |
+| `boundary` | `list[int]` | `sinir` | Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı] |
+| `every_edge` | `bool` | `hepsi` | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
+| `point` | `Coords` | `nokta` | Atılacak her parçanın üzerinde bir nokta, sırayla [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/trim.md)
 
 ### `cad.extend`
 
-Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.
 
 Komut: `core.extend` — `UZAT`
 
@@ -1118,15 +1120,17 @@ Komut: `core.extend` — `UZAT`
 cad.extend(
     object: list[int],
     boundary: list[int],
-    point: Coord,
+    every_edge: bool,
+    point: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı] |
-| `boundary` | `list[int]` | `sinir` | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı] |
-| `point` | `Coord` | `nokta` | Uzatılacak ucun yakınında bir nokta [mm, Sağa (Y) önce] |
+| `object` | `list[int]` | `nesne` | Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne [kalıcı nesne anahtarı] |
+| `boundary` | `list[int]` | `sinir` | Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı] |
+| `every_edge` | `bool` | `hepsi` | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
+| `point` | `Coords` | `nokta` | Uzatılacak her ucun yakınında bir nokta, sırayla [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/extend.md)
 

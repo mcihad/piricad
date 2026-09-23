@@ -72,7 +72,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `556722247807462659`
+- Katalog parmak izi: `6231691581833795565`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -468,7 +468,7 @@ Onay ister.
 
 ### `core_extend` — Uzat
 
-Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.
 Komut: UZAT (EXTEND, UZ)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -476,9 +476,10 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | hayır | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | konum (tutamak ya da göreli nokta) | evet | Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `nesne` | string | hayır | Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sinir` | string | hayır | Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `hepsi` | boolean | hayır | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır) |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Uzatılacak her ucun yakınında bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_fillet` — Yuvarla
 
@@ -1373,7 +1374,7 @@ Doğrudan çalışır.
 
 ### `core_trim` — Buda
 
-Bir çizgiyi kestiği sınır çizgisine kadar budar.
+Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.
 Komut: BUDA (TRIM, BD)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -1381,9 +1382,10 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | hayır | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | konum (tutamak ya da göreli nokta) | evet | Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `nesne` | string | hayır | Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sinir` | string | hayır | Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `hepsi` | boolean | hayır | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır) |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Atılacak her parçanın üzerinde bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_vertex_insert` — Köşe Ekle
 

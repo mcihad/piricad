@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — BUDA ve UZAT yaylarda, dairelerde ve çok sınırla çalışıyor (C-04)
+
+- **Tıklanan parça gidiyor:** iki sınırın arasındaki orta parça da artık atılabiliyor;
+  nesne ikiye ayrılıyor, ikinci parça aynı katman, stil ve özniteliklerle yeni nesne
+  oluyor.
+- **Eğriler:** yay bir çizgiyle budanınca yay olarak kalıyor; daire iki yerinden
+  kesilince kalan bölüm yay oluyor; bir çizgi yaya ya da daireye eğrinin gerçek
+  kesişiminde duruyor, kirişte değil. `UZAT` bir yayın ucunu kendi çemberi boyunca
+  taşıyor. Kesişimler kapalı biçimde hesaplanıyor (`core::path_crossings`,
+  `core::trim_curve`, `core::extend_curve`).
+- **Sınırlar:** `sinir=` ile birden çok sınır; yoksa seçim; o da yoksa **hızlı
+  budama** — tıklanan nesnenin yakınındaki her nesne keser (`hepsi=evet`).
+- **Arayüz:** düğmeye basınca doğrudan parçaya tıklanıyor; art arda tıklamalar tek
+  çalışmada ve **tek geri alma adımında** toplanıyor, Enter ya da Esc bitiriyor.
+  Önizleme imlecin altındaki nesnenin atılacak parçasını (ya da eklenecek uzantısını)
+  komutun kullandığı hesapla çiziyor. Tıklama bir seçim olduğu için yakalama ve ızgara
+  onu kaydırmıyor.
+- **Betik:** `nokta` birden çok nokta alıyor, `nesne` her noktanın nesnesini adlıyor;
+  eski `BUDA nesne=1 sinir=2 nokta=…` satırları aynı sonucu veriyor.
+- Kapalı alanın parçası hâlâ budanmıyor (`BÖL`); elips ve spline C-01'in yinelemeli
+  çözümüyle gelecek.
+
 ### Değişti — ESNET, KIR, BUDA/UZAT ve HİZALA sonucu önceden gösteriyor
 
 - **ESNET:** başlangıç noktası sorulurken pencere tuvalde kalıyor; bitiş noktasında

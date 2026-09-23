@@ -82,8 +82,8 @@ Tek tek komutlar:
 | `DİZİ` | [Nesne çoğaltma dizisi](komutlar/array.md) |
 | `BÖL` | [Kesme çizgisiyle bölme](komutlar/split.md) |
 | `BİRLEŞTİR` | [Alan ve çizgi birleştirme](komutlar/combine.md) |
-| `BUDA` | [Çizgiyi sınıra budama](komutlar/trim.md) |
-| `UZAT` | [Çizgiyi sınıra uzatma](komutlar/extend.md) |
+| `BUDA` | [Parçayı kesme sınırlarına kadar budama](komutlar/trim.md) |
+| `UZAT` | [Ucu sınıra kadar uzatma](komutlar/extend.md) |
 | `PAH` | [Köşe pahı kırma](komutlar/chamfer.md) |
 | `YUVARLA` | [Köşe yuvarlatma](komutlar/fillet.md) |
 | `KATMANAT` | [Nesneyi başka katmana taşıma](komutlar/set_layer.md) |

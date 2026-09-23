@@ -136,6 +136,18 @@ AidSettings aids_for(const AidSettings& set, const Prompt& p)
 {
     AidSettings out = set;
     if (p.rubber_shape == RubberShape::Rectangle) out.ortho = false;
+    // A PICK IS NOT A POSITION. BUDA's and UZAT's click names the piece under
+    // it; an object snap would carry it onto the nearest corner or crossing —
+    // on a trim, the one place that names no piece — and a grid node can lie
+    // off the object altogether.
+    if (p.rubber_shape == RubberShape::Trim) {
+        out.modes          = core::SnapNone;
+        out.ortho          = false;
+        out.normal_lock    = false;
+        out.polar_step     = 0;
+        out.tracking_reach = 0;
+        out.step           = 0;
+    }
     return out;
 }
 

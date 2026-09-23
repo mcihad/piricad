@@ -15,11 +15,12 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/corner.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trim_end.hpp"
+#include "kentos_cad/core/trim_curve.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -320,29 +321,60 @@ TEST_CASE("BUDA/UZAT: atılacak parça ve eklenecek uzantı imleç üzerindeyken
     CHECK_FALSE(s.prompt().rubber_base); ///< nothing is aimed from its origin
     auto guide = core::decode_trim_guide(s.prompt().rubber_payload);
     REQUIRE(guide.ok());
-    CHECK(guide.value().paired);
     CHECK_FALSE(guide.value().extend);
+    CHECK_FALSE(guide.value().every); ///< the selection is the edges
+    CHECK(guide.value().keys == std::vector<std::int64_t>{1, 2});
 
-    // THE CURSOR NEAR THE LINE'S EAST END: the line is the one edited, and what
-    // the canvas marks as going is the piece past the boundary.
-    const std::vector<core::Point2> line{{0, 0}, {10'000, 0}};
-    const std::vector<core::Point2> edge{{7'000, -5'000}, {7'000, 5'000}};
-    const core::Point2 cursor{9'000, 200};
-    CHECK(core::picks_first(line, edge, cursor));
-    auto shown = core::trim_end(line, edge, cursor, false);
+    // THE CURSOR ON THE LINE'S EAST END: the canvas asks what the click asks —
+    // the object under it, the run's edges, `trim_curve` — and marks the piece
+    // past the boundary as going.
+    const core::Point2 cursor{9'000, 0};
+    const core::EntityId line = core::pick_nearest(r.doc, cursor, r.bus.aid_settings().pick_radius);
+    REQUIRE(line == r.doc.slot_of(static_cast<core::EntityKey>(1U)));
+    const auto path = core::path_of(r.doc, line);
+    REQUIRE(path.has_value());
+    const auto edges = core::cutting_edges(r.doc, line, guide.value().every, guide.value().keys);
+    CHECK_EQ(edges.size(), 1u); ///< the line never cuts itself
+    auto shown = core::trim_curve(*path, edges, cursor);
     REQUIRE(shown.ok());
-    CHECK(shown.value().changed == std::vector<core::Point2>{{7'000, 0}, {10'000, 0}});
+    CHECK(core::path_vertices(shown.value().removed) ==
+          std::vector<core::Point2>{{7'000, 0}, {10'000, 0}});
 
     REQUIRE(s.supply(Value::point(cursor)).ok());
+    REQUIRE(s.waiting()); ///< the next piece, until Enter
+    REQUIRE(s.supply(Value{}).ok());
     REQUIRE(r.bus.finish(s).ok());
     CHECK_EQ(vertex_of(r.doc, 1, 1), (core::Point2{7'000, 0})); ///< what was shown is what went
 
-    // UZAT: the reach it adds, from the end to the boundary.
-    const std::vector<core::Point2> short_line{{0, 0}, {5'000, 0}};
-    auto reach = core::trim_end(short_line, edge, core::Point2{4'500, 0}, true);
+    // UZAT: the reach it adds, from the end to the boundary, and the run's own
+    // edit leaves the line exactly where the preview drew it.
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,2 5,2", Origin::Test).ok()); // 3, short of it
+    REQUIRE(r.bus.execute_line("SEÇ TEMİZLE", Origin::Test).ok());
+    auto extending = r.bus.begin_interactive("UZAT", Origin::Gui);
+    REQUIRE(extending.ok());
+    Session& x = *extending.value();
+    REQUIRE(x.waiting());
+    auto reach_guide = core::decode_trim_guide(x.prompt().rubber_payload);
+    REQUIRE(reach_guide.ok());
+    CHECK(reach_guide.value().extend);
+    CHECK(reach_guide.value().every); ///< nothing selected: every object near it
+
+    const core::Point2 near_end{4'500, 2'000};
+    const core::EntityId short_line = r.doc.slot_of(static_cast<core::EntityKey>(3U));
+    const auto short_path           = core::path_of(r.doc, short_line);
+    REQUIRE(short_path.has_value());
+    auto reach = core::extend_curve(
+        *short_path,
+        core::cutting_edges(r.doc, short_line, reach_guide.value().every, reach_guide.value().keys),
+        near_end);
     REQUIRE(reach.ok());
-    CHECK(reach.value().changed == std::vector<core::Point2>{{5'000, 0}, {7'000, 0}});
-    CHECK(reach.value().run.back() == core::Point2{7'000, 0});
+    CHECK(core::path_vertices(reach.value().added) ==
+          std::vector<core::Point2>{{5'000, 2'000}, {7'000, 2'000}});
+
+    REQUIRE(x.supply(Value::point(near_end)).ok());
+    REQUIRE(x.supply(Value{}).ok());
+    REQUIRE(r.bus.finish(x).ok());
+    CHECK_EQ(vertex_of(r.doc, 3, 1), (core::Point2{7'000, 2'000}));
 }
 
 TEST_CASE("Tabanı olmayan bir önizleme DİK kilidini saptırmaz")

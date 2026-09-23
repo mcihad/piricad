@@ -289,7 +289,10 @@ kilitlenecek bir yöne sahip değildir.
   çalışır.
 - **Bir şeyin ölçülmediği nokta** — `BUDA`/`UZAT`'ta atılacak parçayı gösteren
   tıklama, `ESNET`'in ötelemesinin başlangıcı, `HİZALA`'nın ikinci kaynağı — bir
-  önceki noktaya göre verilmez; oraya yön kilidi uygulanmaz.
+  önceki noktaya göre verilmez; oraya yön kilidi uygulanmaz. `BUDA` ve `UZAT`'ın
+  tıklaması bir konum değil bir seçim olduğu için orada nesne yakalama, ızgara ve
+  adım da uygulanmaz: yakalama tıklamayı bir kesişimin üstüne çekip hangi parçanın
+  kastedildiğini belirsizleştirirdi.
 
 ### Tolerans ve ekran
 

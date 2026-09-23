@@ -1331,10 +1331,10 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("11-izleme"), &window); });
 
         // AND A REFUSAL, as the person at the workstation meets it. A circle handed
-        // to BUDA is declined, and the decline is an ERROR now: the transcript and
-        // the status line both say "Hata:" and the sentence. It used to arrive as
-        // a line of commentary after a success, which is what a script, an agent
-        // and Python were told (TODOS F-01).
+        // to UZAT is declined — it has no end to carry — and the decline is an
+        // ERROR now: the transcript and the status line both say "Hata:" and the
+        // sentence. It used to arrive as a line of commentary after a success,
+        // which is what a script, an agent and Python were told (TODOS F-01).
         later([&window] {
             window.runScriptLine(QStringLiteral("YENİ"));
             window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
@@ -1345,7 +1345,7 @@ int main(int argc, char** argv)
         });
         later([&window] { window.showTranscript(); });
         later(
-            [&window] { window.runScriptLine(QStringLiteral("BUDA nesne=1 sinir=2 nokta=10,0")); });
+            [&window] { window.runScriptLine(QStringLiteral("UZAT nesne=1 sinir=2 nokta=10,0")); });
         later([&window, shot] { shot(QStringLiteral("12-ret"), &window); });
 
         // THE PREVIEWS A HAND AIMS BY. Each tool is started the way a button
@@ -1429,16 +1429,46 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14e-kir-onizleme"), &window); });
         later([&window] { window.cancelCommand(); });
 
-        // BUDA — the piece past the boundary, marked as going, under the cursor.
+        // BUDA — nothing chosen, so every line near the one under the cursor
+        // cuts it: the middle between two roads, marked as going.
         later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0")); });
         later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 6,-6 6,6"));
             window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 14,-6 14,6"));
             window.endCommand();
-            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
             window.runScriptLine(QStringLiteral("BUDA"));
         });
-        later([hover] { hover({18'000, 300}); });
+        // Within the pick aperture (core.secim.tolerans, 6 px): the click is a
+        // pick, and no snap carries a far cursor onto the line any more.
+        later([hover] { hover({10'000, 60}); });
         later([&window, shot] { shot(QStringLiteral("14f-buda-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // BUDA on a circle: the half on the cursor's side goes, the arc left stays.
+        later([scene] { scene(QStringLiteral("DAİRE merkez=10,0 cevre=16,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 10,-9 10,9"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("BUDA"));
+        });
+        later([hover] { hover({4'100, 500}); });
+        later([&window, shot] { shot(QStringLiteral("14h-buda-daire"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // UZAT on an arc: its end carried on round its own circle to the line.
+        later([scene] { scene(QStringLiteral("YAY 0,0 10,0 0,10")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ -5,-4 -5,14"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("UZAT"));
+        });
+        later([hover] { hover({1'000, 9'900}); });
+        later([&window, shot] { shot(QStringLiteral("14i-uzat-yay"), &window); });
         later([&window] { window.cancelCommand(); });
 
         // HİZALA — the objects turned under the cursor by the second pair.

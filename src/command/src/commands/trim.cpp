@@ -15,15 +15,21 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trim_end.hpp"
+#include "kentos_cad/core/trim_curve.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <optional>
+#include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace kentos::command {
@@ -427,127 +433,252 @@ Task<void> run_split(Context& ctx)
 
 // ----------------------------------------------------------- BUDA / UZAT ----
 
-/// Shared body: `keep_start` says which side of the cut survives a trim, and
-/// `extend` says whether the end is being pushed out instead of pulled back.
+/// Writes `path` into `slot` in place, so its key, layer, style and attributes
+/// stay with it (model.md R4, R28): a polyline takes the path's vertices, an arc
+/// its one arc. False, having refused, when the kind cannot hold the path.
+bool write_path(Context& ctx, core::EntityId slot, const core::CurvePath& path)
+{
+    const core::KindId kind = ctx.document().entities().kind[slot];
+    if (kind == core::kPolylineKind) return write_run(ctx, slot, core::path_vertices(path));
+    if (kind == core::kArcKind && path.pieces.size() == 1 &&
+        path.pieces[0].kind == core::PathPiece::Kind::Arc) {
+        const core::PathPiece& arc = path.pieces[0];
+        const std::vector<core::Point2> ring{
+            arc.centre, core::Point2{arc.centre.x + arc.radius, arc.centre.y}, arc.from, arc.to};
+        const core::RingGeometry::RingInput input{ring, core::RingRole::Open, 0};
+        if (auto st = ctx.transaction().set_kind_geometry(slot, {&input, 1}, {}); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+        return true;
+    }
+    ctx.refuse(core::ErrorCode::Unsupported, "Kalan parça bu nesnenin türünde yazılamıyor.");
+    return false;
+}
+
+/// A new object holding `path`, drawn like `like`: its layer, its style and
+/// every attribute cell — a trimmed road is still that road on both sides of
+/// the gap (the rule BÖL keeps for both halves of a face).
+bool add_like(Context& ctx, core::EntityId like, const core::CurvePath& path)
+{
+    const core::Document& doc = ctx.document();
+    const core::LayerId layer = doc.entities().layer[like];
+    const bool one_arc =
+        path.pieces.size() == 1 && path.pieces[0].kind == core::PathPiece::Kind::Arc;
+    const bool all_straight = std::ranges::all_of(path.pieces, [](const core::PathPiece& p) {
+        return p.kind == core::PathPiece::Kind::Segment;
+    });
+    if (!one_arc && !all_straight) {
+        ctx.refuse(core::ErrorCode::Unsupported, "Kalan parça bir çizgi ya da tek bir yay değil.");
+        return false;
+    }
+    const core::PathPiece& arc = path.pieces[0];
+    auto made = one_arc ? ctx.transaction().add_arc(layer, arc.centre, arc.radius, arc.from, arc.to)
+                        : ctx.transaction().add_polyline(layer, core::path_vertices(path));
+    if (!made) {
+        ctx.refuse(made.error());
+        return false;
+    }
+    if (const core::StyleId style = doc.entities().style[like]; style != core::kByLayerStyle)
+        if (const auto st = ctx.transaction().set_entity_style(made.value(), style); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+    const core::AttrTable& table = doc.attributes();
+    for (std::size_t c = 0; c < table.columns(); ++c) {
+        const auto col = static_cast<core::AttrId>(c);
+        auto had       = doc.attribute(col, like);
+        if (!had || !had.value().present) continue;
+        if (const auto st = ctx.transaction().set_attribute(col, made.value(), had.value()); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+    }
+    return true;
+}
+
+/// The ids a selection argument holds, whichever shape it arrived in.
+std::vector<std::int64_t> ids_of(const Value& v)
+{
+    std::vector<std::int64_t> out = v.as_ids();
+    if (out.empty() && v.kind() == Value::Kind::Int) out.push_back(v.as_int());
+    return out;
+}
+
+/// Shared body. THE CUTTING EDGES first — named (`sinir`), highlighted, or with
+/// neither every object near the one clicked, which is how every CAD's quick
+/// trim reads an empty selection — and then THE PIECES, one click each: the
+/// piece clicked goes (BUDA) or the end clicked reaches the nearest edge (UZAT),
+/// on a line, an arc or a circle. Every click lands in the same transaction, so
+/// the whole run is one undo step (TODOS C-04).
 Task<void> run_cut(Context& ctx, bool extend)
 {
-    const char* verb = extend ? "UZAT" : "BUDA";
+    const char* verb          = extend ? "UZAT" : "BUDA";
+    const core::Document& doc = ctx.document();
+    Bus& bus                  = ctx.session().bus();
 
-    Value target_arg = ctx.argument("nesne");
-    Value edge_arg   = ctx.argument("sinir");
-
-    // TWO SELECTED OBJECTS ARE THE PAIR, AND THE CLICK SAYS WHICH IS WHICH.
-    //
-    // Without this the tool column's Buda button was dead: it sends the bare
-    // command, so both arguments were always empty and the only outcome was the
-    // "hem düzenlenecek çizgi hem sınır çizgisi gerekir" line, whatever was
-    // selected. Filling them from the selection in order is not an option either —
-    // `Selection::keys()` is sorted by key, not by the order the user clicked, so
-    // "the first one is the target" would mean "whichever was drawn first", which
-    // is not something the user said.
-    //
-    // The point resolves it, and it is the gesture every drawing program already
-    // trains: you click the piece you want GONE. So the click is taken first, and
-    // whichever of the two selected lines it lands nearer is the one being cut.
-    const bool from_selection = target_arg.empty() && edge_arg.empty();
-    std::vector<std::int64_t> pair;
-    if (from_selection) {
-        if (!co_await want_objects(ctx, "nesne",
-                                   std::string(verb) +
-                                       " için iki çizgi seçin — düzenlenecek ve sınır — "
-                                       "sonra Enter'a basın",
-                                   pair, 2))
-            co_return;
-
-        if (pair.size() != 2) {
-            ctx.refuse(core::ErrorCode::InvalidArgument,
-                       std::string(verb) +
-                           " tam iki çizgi ister: düzenlenecek olan ve sınır. Seçili: " +
-                           std::to_string(pair.size()) + ". Ya da " + verb +
-                           " nesne=1 sinir=2 nokta=5,0 yazın.");
+    std::vector<std::int64_t> edge_keys;
+    bool every = false;
+    if (const Value all = ctx.argument("hepsi"); !all.empty() && all.as_bool()) {
+        every = true;
+    } else if (const Value bound = ctx.argument("sinir"); !bound.empty()) {
+        edge_keys = ids_of(bound);
+    } else {
+        for (const core::EntityKey k : bus.selection().keys())
+            edge_keys.push_back(static_cast<std::int64_t>(core::raw(k)));
+        every = edge_keys.empty();
+    }
+    const auto invalid = [&ctx](std::span<const std::int64_t> keys) {
+        const auto bad = std::ranges::find_if(keys, [](std::int64_t key) { return key <= 0; });
+        if (bad == keys.end()) return false;
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(*bad) + ". Kimlikler 1'den başlar.");
+        return true;
+    };
+    if (invalid(edge_keys)) co_return;
+    for (const std::int64_t key : edge_keys) {
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+        if (e == core::kNoEntity || !doc.alive(e)) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Sınır nesnesi bulunamadı veya silinmiş: " + std::to_string(key));
             co_return;
         }
-    } else if (target_arg.empty() || edge_arg.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   std::string(verb) +
-                       " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
-                       "Örnek: " +
-                       verb + " nesne=1 sinir=2 nokta=5,0");
-        co_return;
     }
 
-    const auto one_id = [&](const Value& v) {
-        return v.kind() == Value::Kind::IdList
-                   ? (v.as_ids().size() == 1 ? v.as_ids()[0] : std::int64_t{0})
-                   : v.as_int();
+    // ONE CLICK, ONE EDIT. The object is the one named for this click, or the one
+    // under it — the same pick a click selects with — and the edges are the run's.
+    std::vector<std::int64_t> targets;
+    std::vector<core::Point2> picks;
+    const auto one = [&](core::Point2 pick, std::int64_t named) -> bool {
+        core::EntityId slot = core::kNoEntity;
+        if (named > 0)
+            slot = doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(named)));
+        else
+            slot = core::pick_nearest(doc, pick, bus.aid_settings().pick_radius);
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            std::string why;
+            if (named > 0)
+                why = "Nesne bulunamadı veya silinmiş: " + std::to_string(named);
+            else if (extend)
+                why = "Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin ya da yayın ucuna "
+                      "tıklayın.";
+            else
+                why = "Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın ya da "
+                      "dairenin atılacak parçasına tıklayın.";
+            ctx.refuse(core::ErrorCode::NotFound, std::move(why));
+            return false;
+        }
+        const auto key = static_cast<std::int64_t>(core::raw(doc.key_of(slot)));
+        if (const auto st = doc.editable(slot); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+        const core::KindId kind                   = doc.entities().kind[slot];
+        const std::optional<core::CurvePath> path = core::path_of(doc, slot);
+        if (!path) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(key) +
+                           " bu komutun işleyebileceği bir tür değil; " + verb +
+                           " çizgi, yay ve dairelerde çalışır.");
+            return false;
+        }
+        if (path->closed && kind == core::kPolylineKind) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(key) +
+                           (extend ? " kapalı bir alan; ucu olmayan bir şekil uzatılmaz."
+                                   : " kapalı bir alan; alanın bir parçası budanmaz. Alanı "
+                                     "ikiye ayırmak için BÖL kullanın."));
+            return false;
+        }
+        const std::vector<core::CurvePath> edges = core::cutting_edges(doc, slot, every, edge_keys);
+        if (edges.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       std::string(verb) +
+                           (extend ? " için ulaşılacak sınır yok: " : " için kesecek sınır yok: ") +
+                           (every ? "tıklanan nesnenin yakınında başka bir çizgi, yay ya da "
+                                    "daire yok."
+                                  : "sınır olarak verilen nesneler tıklanan nesnenin kendisi "
+                                    "ya da çizgi, yay veya daire değil."));
+            return false;
+        }
+
+        if (extend) {
+            auto reach = core::extend_curve(*path, edges, pick);
+            if (!reach) {
+                ctx.refuse(reach.error());
+                return false;
+            }
+            if (!write_path(ctx, slot, reach.value().extended)) return false;
+        } else {
+            auto cut = core::trim_curve(*path, edges, pick);
+            if (!cut) {
+                ctx.refuse(cut.error());
+                return false;
+            }
+            const std::vector<core::CurvePath>& kept = cut.value().kept;
+            if (kind == core::kCircleKind) {
+                // A CIRCLE CUT IS THE ARC THAT IS LEFT: a different kind, so a
+                // new object drawn like the circle, and the circle goes.
+                if (!add_like(ctx, slot, kept.front())) return false;
+                if (const auto st = ctx.transaction().erase_entity(slot); !st) {
+                    ctx.refuse(st.error());
+                    return false;
+                }
+            } else {
+                if (!write_path(ctx, slot, kept.front())) return false;
+                if (kept.size() > 1 && !add_like(ctx, slot, kept[1])) return false;
+            }
+        }
+        targets.push_back(key);
+        picks.push_back(pick);
+        return true;
     };
 
-    // ASKED BEFORE THE PAIR IS SETTLED when it came from the selection, because
-    // the answer is what settles it — and with the answer DRAWN as the cursor
-    // moves: the piece a trim throws away marked as going, the reach an
-    // extension adds drawn as coming, from `core::trim_end`, the edit this body
-    // makes with the click. With two lines selected the cursor also decides
-    // which of them is edited, and the preview follows that decision too.
-    core::TrimGuide guide{.extend = extend};
-    if (from_selection) {
-        guide.paired = true;
-        guide.first  = pair[0];
-        guide.second = pair[1];
+    const Value given = ctx.argument("nokta");
+    if (!given.empty()) {
+        const std::vector<std::int64_t> named = ids_of(ctx.argument("nesne"));
+        if (invalid(named)) co_return;
+        const Value::Points& points = given.as_points();
+        for (std::size_t i = 0; i < points.size(); ++i)
+            if (!one(points[i], i < named.size() ? named[i] : 0)) co_return;
     } else {
-        guide.first  = one_id(target_arg);
-        guide.second = one_id(edge_arg);
-    }
-    auto at = co_await ctx.point("nokta", extend ? "Uzatılacak uç" : "Atılacak parça",
-                                 PointOptions{.rubber_band    = true,
-                                              .rubber_base    = false,
-                                              .rubber_shape   = RubberShape::Trim,
-                                              .rubber_payload = core::encode_trim_guide(guide)});
-    if (!at) co_return;
-
-    std::int64_t target_id = 0;
-    std::int64_t edge_id   = 0;
-    if (from_selection) {
-        core::EntityId a = core::kNoEntity;
-        core::EntityId b = core::kNoEntity;
-        std::vector<core::Point2> a_pts;
-        std::vector<core::Point2> b_pts;
-        if (!open_run(ctx, pair[0], a, a_pts)) co_return;
-        if (!open_run(ctx, pair[1], b, b_pts)) co_return;
-
-        const bool first_is_target = core::picks_first(a_pts, b_pts, *at);
-        target_id                  = first_is_target ? pair[0] : pair[1];
-        edge_id                    = first_is_target ? pair[1] : pair[0];
-
-        // RECORDED AS THE IDS IT RESOLVED, so a replay cuts the same line with the
-        // same boundary whatever the selection holds then (model.md R43).
-        target_arg = Value::ids({target_id});
-        edge_arg   = Value::ids({edge_id});
-    } else {
-        target_id = one_id(target_arg);
-        edge_id   = one_id(edge_arg);
+        // THE CLICKS, until Enter: each drawn before it is made — the piece that
+        // goes marked as going, the reach an extension adds drawn as coming —
+        // by the functions this body edits with (`core::trim_curve`,
+        // `core::extend_curve`), against the same edges.
+        const core::TrimGuide guide{.extend = extend, .every = every, .keys = edge_keys};
+        while (auto at = co_await ctx.point(
+                   "nokta",
+                   extend ? "Uzatılacak uca tıklayın — Enter: bitir"
+                          : "Atılacak parçaya tıklayın — Enter: bitir",
+                   PointOptions{.rubber_band    = true,
+                                .rubber_base    = false,
+                                .rubber_shape   = RubberShape::Trim,
+                                .rubber_payload = core::encode_trim_guide(guide)}))
+            if (!one(*at, 0)) co_return;
     }
 
-    core::EntityId target = core::kNoEntity;
-    core::EntityId edge   = core::kNoEntity;
-    std::vector<core::Point2> pts;
-    std::vector<core::Point2> edge_pts;
-    if (!open_run(ctx, target_id, target, pts)) co_return;
-    if (!open_run(ctx, edge_id, edge, edge_pts)) co_return;
-
-    auto edit = core::trim_end(pts, edge_pts, *at, extend);
-    if (!edit) {
-        ctx.refuse(edit.error());
+    if (picks.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string(verb) +
+                       (extend ? ": hiçbir uç gösterilmedi. Uzatılacak uca"
+                               : ": hiçbir parça gösterilmedi. Atılacak parçaya") +
+                       " tıklayın ya da " + verb + " nokta=<nokta> yazın.");
         co_return;
     }
-    const std::vector<core::Point2>& out = edit.value().run;
 
-    if (!write_run(ctx, target, out)) co_return;
-
-    // The shape they arrived in; see the note in BÖL.
-    ctx.record("nesne", target_arg);
-    ctx.record("sinir", edge_arg);
-    ctx.record("nokta", Value::point(*at));
-    ctx.echo(extend ? "Çizgi sınıra uzatıldı." : "Çizgi sınıra kadar budandı.");
+    // WHAT WAS DONE, in the words a replay reads: the edges as ids — or `hepsi`,
+    // which a replay re-reads from the drawing it is replayed into, exactly as the
+    // run read it — and each click with the object it edited.
+    if (every)
+        ctx.record("hepsi", Value::boolean(true));
+    else
+        ctx.record("sinir", Value::ids(edge_keys));
+    ctx.record("nesne", Value::ids(targets));
+    ctx.record("nokta", Value::points(picks));
+    ctx.echo(extend ? std::to_string(picks.size()) + " uç sınıra uzatıldı."
+                    : std::to_string(picks.size()) + " parça budandı.");
 }
 
 Task<void> run_trim(Context& ctx)
@@ -600,17 +731,25 @@ KENTOS_COMMAND(trim)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::optional(),
-                      "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"}
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne"}
                     .en("object"),
-                Param{"sinir", ParamKind::Selection, Arity::optional(),
-                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"}
+                Param{"sinir", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin "
+                      "yakınındaki her nesne"}
                     .en("boundary"),
-                Param::point("nokta", "Atılacak parçanın üzerindeki bir nokta").en("point"),
+                Param::boolean("hepsi", Arity::optional(),
+                               "Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir "
+                               "yokken öntanımlı)")
+                    .en("every_edge"),
+                Param::points("nokta", Arity{0, 0xFFFFFFFFu},
+                              "Atılacak her parçanın üzerinde bir nokta, sırayla")
+                    .en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir çizgiyi kestiği sınır çizgisine kadar budar.",
+        .summary = "Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve "
+                   "dairede çalışır.",
         .run     = &run_trim,
     };
 }
@@ -624,17 +763,25 @@ KENTOS_COMMAND(extend)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::optional(),
-                      "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"}
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne"}
                     .en("object"),
-                Param{"sinir", ParamKind::Selection, Arity::optional(),
-                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"}
+                Param{"sinir", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin "
+                      "yakınındaki her nesne"}
                     .en("boundary"),
-                Param::point("nokta", "Uzatılacak ucun yakınında bir nokta").en("point"),
+                Param::boolean("hepsi", Arity::optional(),
+                               "Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir "
+                               "yokken öntanımlı)")
+                    .en("every_edge"),
+                Param::points("nokta", Arity{0, 0xFFFFFFFFu},
+                              "Uzatılacak her ucun yakınında bir nokta, sırayla")
+                    .en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.",
+        .summary = "Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, "
+                   "yayınkini çemberi boyunca.",
         .run     = &run_extend,
     };
 }

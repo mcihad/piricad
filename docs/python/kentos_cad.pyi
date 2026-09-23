@@ -669,28 +669,32 @@ def trim(
     *,
     object: list[int] = ...,
     boundary: list[int] = ...,
-    point: Coord = ...,
+    every_edge: bool = ...,
+    point: Coords = ...,
 ) -> int:
-    """Bir çizgiyi kestiği sınır çizgisine kadar budar.
+    """Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.
 
     Komut: core.trim (BUDA)
-        object — Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı]
-        boundary — Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı]
-        point — Atılacak parçanın üzerindeki bir nokta [mm, Sağa (Y) önce]
+        object — Budanan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne [kalıcı nesne anahtarı]
+        boundary — Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı]
+        every_edge — Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı)
+        point — Atılacak her parçanın üzerinde bir nokta, sırayla [mm, Sağa (Y) önce]
     """
 
 def extend(
     *,
     object: list[int] = ...,
     boundary: list[int] = ...,
-    point: Coord = ...,
+    every_edge: bool = ...,
+    point: Coords = ...,
 ) -> int:
-    """Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+    """Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.
 
     Komut: core.extend (UZAT)
-        object — Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan [kalıcı nesne anahtarı]
-        boundary — Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri [kalıcı nesne anahtarı]
-        point — Uzatılacak ucun yakınında bir nokta [mm, Sağa (Y) önce]
+        object — Uzatılan nesneler, tıklama sırasıyla; yoksa her tıklamanın altındaki nesne [kalıcı nesne anahtarı]
+        boundary — Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı]
+        every_edge — Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı)
+        point — Uzatılacak her ucun yakınında bir nokta, sırayla [mm, Sağa (Y) önce]
     """
 
 def chamfer(

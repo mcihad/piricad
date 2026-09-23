@@ -1,21 +1,31 @@
-# UZAT — Çizgiyi Sınıra Uzatma
+# UZAT — Ucu Sınıra Kadar Uzatma
 
-Sınıra yetişmeyen bir çizgiyi oraya kadar uzatması gereken herkes için; bu sayfayı
-bitirdiğinizde uzatmayı arayüzden, komut satırından ve betikten yapmayı
+Sınıra yetişmeyen bir çizgiyi ya da yayı oraya kadar uzatması gereken herkes için;
+bu sayfayı bitirdiğinizde uzatmayı arayüzden, komut satırından ve betikten yapmayı
 bileceksiniz.
 
 ## Ne yapar
 
-`UZAT`, bir çizginin ucunu, **kendi doğrultusunda**, verilen sınır çizgisine
-ulaşana kadar ileri taşır.
+`UZAT`, tıkladığınız yere **yakın olan ucu**, kendi yolunda ilerleterek ulaştığı
+ilk sınıra kadar taşır:
 
-**Hangi ucun uzayacağını verdiğiniz nokta söyler**: uzatmak istediğiniz uca yakın
-bir yer gösterin.
+- Bir **çizginin** ucu kendi doğrultusunda ilerler; çizginin yönü değişmez.
+- Bir **yayın** ucu kendi çemberi boyunca ilerler; merkez ve yarıçap aynı kalır.
+  Yay, kendi üstüne dolanacak kadar uzatılmaz.
 
-Çizginin yönü değişmez; yalnız uç noktası kendi doğrultusu üzerinde ileri gider.
-Kesişme sınır çizgisinin **üzerinde** olmalıdır.
+Ulaşılan nokta sınırın **üzerindedir**: bir yaya ya da daireye uzatılan çizgi,
+eğrinin gerçek kesişiminde durur, çizildiği kirişlerde değil.
 
-`UZAT` yalnız **açık çizgilerle** çalışır ([`BUDA`](trim.md) sayfasındaki sebeple).
+`UZAT` açık çizgilerde ve yaylarda çalışır. Daire ve kapalı alanın ucu yoktur, bu
+yüzden uzatılmazlar. Elips ve spline bugün uzatılmaz; [`BUDA`](trim.md)
+sayfasındaki sebeple, yinelemeli çözümü getirecek kütüphaneyle (TODOS C-01)
+uzatılabilecekler.
+
+### Sınırlar
+
+Sınırlar [`BUDA`](trim.md)'daki sırayla belirlenir: `sinir=` ile verilenler, yoksa
+seçtikleriniz, o da yoksa tıkladığınız nesnenin yakınındaki her görünür çizgi, yay
+ve daire (`hepsi=evet`).
 
 ## Adlar
 
@@ -29,42 +39,56 @@ Kesişme sınır çizgisinin **üzerinde** olmalıdır.
 ## Sözdizimi
 
 ```text
-UZAT nesne=<k> sinir=<k> nokta=<n>
+UZAT [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
 ```
 
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
-| `nesne` | Uzatılacak çizginin kimliği |
-| `sinir` | Sınır çizgisinin kimliği |
-| `nokta` | Uzatılacak ucun yakınında bir nokta |
+| `nokta` | Uzatılacak her ucun yakınında bir nokta; birden çok verilebilir, sırayla işlenir |
+| `nesne` | Her noktanın uzattığı nesne, aynı sırayla; verilmezse noktanın altındaki nesne |
+| `sinir` | Ulaşılacak sınırlar; verilmezse seçim, o da yoksa yakındaki her nesne |
+| `hepsi` | `evet`: tıklanan nesnenin yakınındaki her nesne sınırdır |
 
 ## Örnekler
 
 ### Komut satırı
 
+`1` çizgisini `2` sınırına kadar uzatmak — nokta, uzatılacak uca yakın:
+
 ```text
-UZAT nesne=1 sinir=2 nokta=485350,4310200
+UZAT nesne=1 sinir=2 nokta=50,0
 ```
 
 ```text
-Çizgi sınıra uzatıldı.
+1 uç sınıra uzatıldı.
+```
+
+Doğudan kuzeye çeyrek bir yayın (`1`) ucunu, çemberi boyunca x = −5'teki çizgiye
+(`2`) taşımak; yay 120°'de, (−5; 8,660) noktasında durur:
+
+```text
+UZAT nesne=1 sinir=2 nokta=1,9.9
+```
+
+```text
+1 uç sınıra uzatıldı.
 ```
 
 ### Arayüz
 
-**İki çizgiyi** seçin, `UZAT` yazın, sonra uzatmak istediğiniz uca yakın bir yeri
-tıklayın.
+Sol araç kutusundaki **Uzat** düğmesine basın ya da `UZAT` yazın. Komut satırı
+`Uzatılacak uca tıklayın — Enter: bitir` der. Önceden nesne seçtiyseniz sınırlar
+onlardır; seçim yoksa imlecin altındaki nesnenin yakınındaki her şey sınırdır.
 
-Hangisinin uzatılacağını **tıklama** söyler: tıkladığınız noktaya daha yakın olan
-çizgi uzatılır, diğeri sınır olur. İmleç gezinirken **eklenecek uzantı** sınıra
-kadar kesikli çizilir; uzatılacak uç, imlece yakın olan uçtur. Komut satırından
-`UZAT nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
+İmleci bir ucun yakınında gezdirin: nesnenin uzatılmış hâli vurgu renginde,
+**eklenecek uzantı** sınıra kadar kesikli çizilir. Tıklayın; komut bir sonraki ucu
+bekler. Bitince **Enter**'a ya da sağ tuşa basın; **Esc** de o ana kadar
+uzatılanları tutarak bitirir.
 
-Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
-yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
-Nesneleri önceden seçtiyseniz sorulmaz.
+Tıklama bir konum değil, bir seçimdir: nesne yakalama, ızgara ve dik mod tıklamayı
+kaydırmaz.
 
 ### Betik
 
@@ -76,7 +100,7 @@ Nesneleri önceden seçtiyseniz sorulmaz.
     { "cmd": "core.line",
       "args": { "noktalar": [[485380000, 4310190000], [485380000, 4310210000]] } },
     { "cmd": "core.extend",
-      "args": { "nesne": [1], "sinir": [2], "nokta": [485350000, 4310200000] } }
+      "args": { "sinir": [2], "nesne": [1], "nokta": [[485350000, 4310200000]] } }
   ]
 }
 ```
@@ -86,23 +110,36 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Geri alma
 
-`UZAT` tek bir geri alma adımıdır.
+Bir `UZAT` çalışmasının bütün tıklamaları **tek** geri alma adımıdır;
+[`GERİAL`](undo.md) hepsini birden geri alır.
 
 ## Betikten kullanım
 
-Betikten çağrıldığında `nesne`, `sinir` ve `nokta` verilmelidir.
+Betikten `nokta` verilmelidir. `nesne` verilmezse her nokta **tam altındaki**
+nesneyi uzatır — betiğin seçim açıklığı yoktur; güvenli yol `nesne`'yi vermektir.
+Günlüğe sınırlar (ya da `hepsi`), uzatılan nesneler ve noktalar yazılır. Python'dan
+`cad.extend(boundary=[2], object=[1], point=[[485350000, 4310200000]])` olarak
+çağrılır.
 
 ## Hatalar
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Bu uç, sınır çizgisine uzatılarak ulaşamıyor: kesişme yok.` | Doğrultu sınırı kesmiyor | Doğrultunun kestiği bir sınır verin |
+| `Bu uç, sınırlara uzatılarak ulaşamıyor: kesişme yok.` | Çizginin doğrultusu hiçbir sınırı kesmiyor | Doğrultunun kestiği bir sınır verin |
+| `Bu yayın ucu, sınırlara çemberi boyunca uzatılarak ulaşamıyor: kesişme yok.` | Yayın çemberi, uzatılabileceği bölümde hiçbir sınırı kesmiyor | Çemberin kestiği bir sınır verin |
+| `Kapalı bir şeklin ucu yok; uzatılacak bir şey yok.` | Daire tıklandı | Açık bir çizgi ya da yay seçin |
+| `Nesne N kapalı bir alan; ucu olmayan bir şekil uzatılmaz.` | Kapalı alan tıklandı | Açık bir çizgi seçin |
+| `Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin ya da yayın ucuna tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
+| `Nesne N bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır.` | Elips, spline, nokta, metin ya da delikli alan | Çizgi ya da yay seçin |
+| `UZAT için ulaşılacak sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Yakında ulaşılacak nesne yok | Bir sınır çizin ya da `sinir=` verin |
+| `UZAT için ulaşılacak sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Verilen tek sınır, uzatılan nesnenin kendisi | Başka bir nesneyi sınır seçin |
+| `UZAT: hiçbir uç gösterilmedi. Uzatılacak uca tıklayın ya da UZAT nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir uca tıklayın ya da `nokta` verin |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
-| `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
-| `Nesne N bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.` | Daire, yay ya da nokta verildi | Yalnız çizgi seçin |
-| `Nesne N açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır.` | Kapalı alan verildi | Açık bir çizgi seçin |
+| `Nesne bulunamadı veya silinmiş: N` | `nesne` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
+| `Sınır nesnesi bulunamadı veya silinmiş: N` | `sinir` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
+| `'K' katmanı kilitli; üzerindeki nesne düzenlenemez. Kilidi KATMAN ad=K kilitli=hayır ile açın.` | Nesne kilitli bir katmanda | Katmanın kilidini açın |
 
 ## İlgili
 
-- [`BUDA`](trim.md) — uzatmak yerine kısaltır
-- [`BÖL`](split.md)
+- [`BUDA`](trim.md) — uzatmak yerine sınırda keser
+- [`UZUNLUK`](lengthen.md) — bir sınıra değil, verilen bir boya uzatır
