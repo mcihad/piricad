@@ -33,7 +33,11 @@ YİNELE
 
 ### Komut satırı
 
+Bir çizgi çizin, geri alın, sonra yineleyin:
+
 ```
+ÇİZGİ 0,0 100,0
+GERİAL
 YİNELE
 ```
 
@@ -53,16 +57,16 @@ Yinelenecek bir şey olmadığında düğme ve menü öğesi pasifleşir.
 
 ### Betik
 
+Betik adımı olarak `YİNELE` şöyle yazılır:
+
 ```json
-{
-  "ad": "Geri al ve yinele",
-  "komutlar": [
-    { "cmd": "core.line", "args": { "noktalar": [[0,0],[10000,0]] } },
-    { "cmd": "core.undo", "args": {} },
-    { "cmd": "core.redo", "args": {} }
-  ]
-}
+{ "cmd": "core.redo", "args": {} }
 ```
+
+[`GERİAL`](undo.md) için geçen kural bunun için de geçerlidir: betik bir şey çizdikten
+sonra çağrılırsa hata döner, çünkü betik bitmeden onun geri alma adımı yoktur. Henüz
+hiçbir şey çizmemiş bir betikte, ya da Python konsolunda tek başına yazılan
+`cad.redo()`, komut satırındaki `YİNELE` ile aynıdır.
 
 ## Geri alma
 
@@ -92,5 +96,6 @@ Bu, bütün çizim programlarında geçerli olan standart davranıştır.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Yinelenecek işlem yok` | Yineleme yığını boş | Ya hiç geri alma yapılmamış ya da araya yeni bir düzenleme girmiş |
+| `Düzenleme yapmış bir toplu işin içinde yinelenemez: …` | Bir betik bir şey çizdikten sonra `core.redo` çağırdı | Adımı betikten çıkarın; yinelemeyi betik bittikten sonra yapın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

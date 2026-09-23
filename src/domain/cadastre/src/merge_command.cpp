@@ -67,8 +67,9 @@ Task<void> run(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
     if (requested.size() < 2) {
-        ctx.echo("Tevhit en az iki parsel ister. Seçili: " + std::to_string(requested.size()) +
-                 ". Birleştirilecek parselleri seçin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Tevhit en az iki parsel ister. Seçili: " + std::to_string(requested.size()) +
+                       ". Birleştirilecek parselleri seçin.");
         co_return;
     }
 
@@ -80,14 +81,16 @@ Task<void> run(Context& ctx)
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return; // the bus rolls the whole transaction back
         }
 
         core::Polygon poly;
         if (!polygon_of(doc, slot, poly)) {
-            ctx.echo("Nesne " + std::to_string(raw) +
-                     " kapalı bir alan değil; tevhit yalnız alanlar üzerinde çalışır.");
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(raw) +
+                           " kapalı bir alan değil; tevhit yalnız alanlar üzerinde çalışır.");
             co_return;
         }
         parcels.push_back(std::move(poly));
@@ -100,12 +103,13 @@ Task<void> run(Context& ctx)
 
     auto merged = core::polygon_boolean(subject, clip, core::BooleanOp::Union);
     if (!merged) {
-        ctx.echo(merged.error().message);
+        ctx.refuse(merged.error());
         co_return;
     }
 
     if (merged.value().empty()) {
-        ctx.echo("Birleşme sonucu boş çıktı; parseller bir alan kapatmıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Birleşme sonucu boş çıktı; parseller bir alan kapatmıyor.");
         co_return;
     }
 
@@ -113,8 +117,9 @@ Task<void> run(Context& ctx)
     // not adjoin is not a tevhit. Saying so is the honest answer; drawing two
     // parcels and calling them one would produce a record TKGM would reject.
     if (merged.value().size() > 1) {
-        ctx.echo("Bu parseller bitişik değil: birleşme " + std::to_string(merged.value().size()) +
-                 " ayrı parça veriyor. Tevhit yalnız komşu parseller içindir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu parseller bitişik değil: birleşme " + std::to_string(merged.value().size()) +
+                       " ayrı parça veriyor. Tevhit yalnız komşu parseller içindir.");
         co_return;
     }
 
@@ -128,7 +133,7 @@ Task<void> run(Context& ctx)
 
     auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
 
@@ -164,7 +169,7 @@ Task<void> run(Context& ctx)
         if (!shared.present) continue;
 
         if (auto st = ctx.transaction().set_attribute(col, created.value(), shared); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }
@@ -172,7 +177,7 @@ Task<void> run(Context& ctx)
     // ---- and the originals go ----
     for (core::EntityId slot : slots) {
         if (auto st = ctx.transaction().erase_entity(slot); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }

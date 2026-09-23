@@ -98,6 +98,8 @@ günlüğe düşer ve tek adımda geri alınır.
 {
   "ad": "Ada numarasını düzelt",
   "komutlar": [
+    { "cmd": "core.text",
+      "args": { "noktalar": [[485320000,4310220000]], "yazi": "PARSEL 12", "yukseklik": 3000 } },
     { "cmd": "core.select", "args": { "mod": "NESNE", "nesneler": [1] } },
     { "cmd": "core.edittext", "args": { "yazi": "ADA 128", "yukseklik": 4000 } }
   ]

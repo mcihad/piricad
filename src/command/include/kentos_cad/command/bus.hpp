@@ -507,6 +507,13 @@ public:
 
     bool in_batch() const noexcept { return batch_ != nullptr; }
 
+    /// True once an open batch holds an edit. GERİAL and YİNELE read it: an undo
+    /// under a batch that has already edited reaches the step BELOW the batch —
+    /// work done before the script — and the batch's close then empties the redo
+    /// stack, so that work is lost. Before the first edit there is nothing for it
+    /// to cut across, and a console line that only undoes stays an honest undo.
+    bool batch_has_edits() const noexcept;
+
     // ---- accessors ----
     core::Document& document() noexcept { return doc_; }
 

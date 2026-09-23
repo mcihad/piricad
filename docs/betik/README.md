@@ -165,13 +165,19 @@ Sekiz komut, on iki nesne, iki katman — ve tek bir **Ctrl+Z**.
 
 Depoda çalışan bir örnek daha var: [`tests/journal/ornek-parsel.json`](../../tests/journal/ornek-parsel.json).
 
-## Örnek: bir katmanı temizlemek
+## Örnek: yardımcı çizgileri silmek
+
+Betik bir parsel ve iki yardımcı çizgi çizer, sonra yalnız yardımcıları kimlikleriyle
+siler; parsel kalır:
 
 ```json
 {
   "ad": "Yardımcı çizgileri sil",
   "komutlar": [
-    { "cmd": "core.erase", "args": { "nesneler": [12, 13, 14] } }
+    { "cmd": "core.area", "args": { "noktalar": [[0,0],[20000,0],[20000,15000],[0,15000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,7500],[20000,7500]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[10000,0],[10000,15000]] } },
+    { "cmd": "core.erase", "args": { "nesneler": [2, 3] } }
   ]
 }
 ```

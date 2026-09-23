@@ -100,6 +100,8 @@ Nesneleri önceden seçtiyseniz sorulmaz.
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line",
+      "args": { "noktalar": [[485300000, 4310200000], [485360000, 4310200000]] } },
     { "cmd": "core.split",
       "args": { "nesne": [1], "nokta": [485330000, 4310200000] } }
   ]

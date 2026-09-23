@@ -29,7 +29,7 @@ Task<void> run(Context& ctx)
     if (const Value v = ctx.argument("grup"); !v.empty()) {
         auto st = ctx.transaction().set_layer_group(id, v.as_text());
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ctx.record("grup", v);
@@ -38,7 +38,7 @@ Task<void> run(Context& ctx)
     if (const Value v = ctx.argument("gorunur"); !v.empty()) {
         auto st = ctx.transaction().set_layer_visible(id, v.as_bool());
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ctx.record("gorunur", v);
@@ -47,7 +47,7 @@ Task<void> run(Context& ctx)
     if (const Value v = ctx.argument("kilitli"); !v.empty()) {
         auto st = ctx.transaction().set_layer_locked(id, v.as_bool());
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ctx.record("kilitli", v);
@@ -59,7 +59,7 @@ Task<void> run(Context& ctx)
             static_cast<std::uint32_t>(v.as_int(static_cast<std::int64_t>(appearance.rgba)));
         auto st = ctx.transaction().set_layer_appearance(id, appearance);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ctx.record("renk", v);

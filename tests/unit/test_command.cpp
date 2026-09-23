@@ -1116,10 +1116,10 @@ TEST_CASE("SEÇ: çokgen ve kesen çokgen, kutunun alamayacağı şekli alır")
     CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the first and the middle
 
     // Fewer than three corners is no polygon.
-    const auto refused =
-        f.bus.execute_line("SEÇ mod=ÇOKGEN noktalar=0,0 noktalar=10,10", Origin::CommandLine);
-    CHECK(refused.ok());                                ///< it says so rather than failing
-    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< and changes nothing
+    const std::string refused = REFUSED(
+        f.bus.execute_line("SEÇ mod=ÇOKGEN noktalar=0,0 noktalar=10,10", Origin::CommandLine));
+    CHECK(refused.find("üç köşe") != std::string::npos); ///< refused, and it says why
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2});  ///< and changes nothing
 }
 
 TEST_CASE("SEÇ: ÇİT çizdiği hattın kestiği her şeyi alır")
@@ -1145,7 +1145,7 @@ TEST_CASE("SEÇ: ÇİT çizdiği hattın kestiği her şeyi alır")
     CHECK_EQ(f.bus.selection().size(), std::size_t{1}); ///< only the face
 
     // Fewer than two points is no fence.
-    REQUIRE(f.bus.execute_line("SEÇ mod=ÇİT noktalar=0,0", Origin::CommandLine).ok());
+    REFUSED(f.bus.execute_line("SEÇ mod=ÇİT noktalar=0,0", Origin::CommandLine));
     CHECK_EQ(f.bus.selection().size(), std::size_t{1});
 }
 
@@ -2583,6 +2583,28 @@ TEST_CASE("an interactive run that is cancelled at the first point is a clean no
     CHECK_EQ(f.journal.size(), std::size_t{0}); // nothing happened, nothing logged
 }
 
+TEST_CASE("nesne isteminde Esc bir ret değil, iptaldir")
+{
+    // `want_objects` answers an empty pick with a refusal, and a refusal is an
+    // error. Esc is not an empty pick: the cancel settles the session after the
+    // body has run, so the user who changed their mind is told "İptal edildi"
+    // and not an error about the objects they never meant to give.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+
+    auto started = f.bus.begin_interactive("BÖL");
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting()); ///< nothing selected, so it asks which object
+    session.cancel();
+
+    auto done = f.bus.finish(session);
+    REQUIRE(done.ok());
+    CHECK(!done.value().mutated);
+    CHECK_EQ(done.value().message, "İptal edildi");
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+}
+
 TEST_CASE("error messages name what was expected and what arrived")
 {
     Fixture f;
@@ -2714,6 +2736,81 @@ TEST_CASE("a batch collapses many commands into a single undo step")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("toplu işte reddedilen komut yalnız kendi düzenlemesini geri sarar")
+{
+    // A COMMAND IN A BATCH SHARES THE BATCH'S TRANSACTION, and a failure used to
+    // roll back THAT — every edit the batch had made so far, by every command
+    // before it — while those commands stayed in the journal as done. A JSON
+    // script aborts on the first error, so it never showed; a Python script that
+    // catches the error and goes on did: its earlier lines vanished and its later
+    // ones landed, half a script. Refusals report as errors now (TODOS F-01), so
+    // the path is common; the rollback stops at the failed command's own edits.
+    Fixture f;
+    REQUIRE(f.bus.begin_batch("Betik").ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Script).ok());
+    REFUSED(f.bus.execute_line("SİL nesneler=99", Origin::Script));
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1}); ///< the first line survives
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,5 10,5", Origin::Script).ok());
+    REQUIRE(f.bus.end_batch().ok());
+
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+
+    // And one that fails AFTER writing takes back its own writes, not the batch's.
+    REQUIRE(f.bus.begin_batch("Betik").ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Script).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 20,0 30,0", Origin::Script).ok());
+    const std::uint64_t before = f.doc.content_hash();
+    // Two good ids and a missing one: the erase of 1 and 2 is written before 99
+    // is found missing, and all of it — only it — goes back.
+    const auto keys       = f.doc.entities().key;
+    const std::string ids = std::to_string(core::raw(keys[keys.size() - 2])) + " " +
+                            std::to_string(core::raw(keys.back())) + " 99";
+    REFUSED(f.bus.execute_line("SİL nesneler=" + ids, Origin::Script));
+    CHECK_EQ(f.doc.content_hash(), before);
+    REQUIRE(f.bus.end_batch().ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+}
+
+TEST_CASE("GERİAL ve YİNELE düzenleme yapmış bir toplu işte reddedilir; öncesindeki iş kaybolmaz")
+{
+    // A BATCH IS ONE UNDO STEP THAT DOES NOT EXIST YET. Its entry is pushed when
+    // it closes, so GERİAL inside it cannot reach the batch's own edits — what it
+    // reaches is the entry BELOW, the work the user did before the script ran,
+    // while the batch's transaction is still open over the same document. The
+    // close then pushes the batch and empties the redo stack, and that earlier
+    // work is gone with no way back. The manual's "Çiz ve geri al" script looked
+    // like it undid its own line; it did nothing, silently, because the refusal
+    // reported success (TODOS F-01).
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok()); ///< the user's work
+    REQUIRE_EQ(f.undo.undo_depth(), std::size_t{1});
+
+    REQUIRE(f.bus.begin_batch("Betik").ok());
+    CHECK(f.bus.execute_line("ÇİZGİ 0,5 10,5", Origin::Script).ok());
+    const std::string undo = REFUSED(f.bus.execute_line("GERİAL", Origin::Script));
+    CHECK(undo.find("toplu") != std::string::npos);
+    const std::string redo = REFUSED(f.bus.execute_line("YİNELE", Origin::Script));
+    CHECK(redo.find("toplu") != std::string::npos);
+    f.bus.abort_batch();
+
+    // The user's line is still there, and still undoable as the step it was.
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+
+    // BEFORE ITS FIRST EDIT a batch has nothing to cut across: a Python console
+    // line that only says `cad.undo()` is the command line's GERİAL, and the
+    // batch closes with no step of its own, so the redo stack survives it.
+    REQUIRE(f.bus.begin_batch("Konsol").ok());
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Script).ok());
+    REQUIRE(f.bus.end_batch().ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    REQUIRE(f.bus.execute_line("YİNELE", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+}
+
 TEST_CASE("erase is undoable and reports a missing entity")
 {
     Fixture f;
@@ -2728,8 +2825,8 @@ TEST_CASE("erase is undoable and reports a missing entity")
     CHECK(f.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 
-    auto missing = f.bus.execute_line("SİL nesneler=99", Origin::Test);
-    CHECK(missing.ok()); // reported to the transcript, nothing applied
+    const std::string missing = REFUSED(f.bus.execute_line("SİL nesneler=99", Origin::Test));
+    CHECK(missing.find("99") != std::string::npos); // an error naming the id, nothing applied
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 }
 
@@ -2841,7 +2938,7 @@ TEST_CASE("YARDIM sayfayı açtırır, ama metni her istemciye yine yazar")
 
     // An unknown name opens nothing: there is no page for a command that is not
     // there, and the error is the whole answer.
-    REQUIRE(f.bus.execute_line("YARDIM komut=YOKBÖYLEBİRŞEY", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("YARDIM komut=YOKBÖYLEBİRŞEY", Origin::Test));
     CHECK_EQ(opened.size(), std::size_t{2});
 }
 
@@ -3469,7 +3566,7 @@ TEST_CASE("KÖŞEEKLE açık çizginin son ucundan sonra köşe eklemeyi reddede
     const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
     const std::size_t before  = f.doc.geometry().ring_xs(span.first).size();
 
-    REQUIRE(f.bus.execute_line("KÖŞEEKLE nesne=1 kose=2 nokta=5,5", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞEEKLE nesne=1 kose=2 nokta=5,5", Origin::Test));
 
     const core::RingSpan after = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
     CHECK_EQ(f.doc.geometry().ring_xs(after.first).size(), before);
@@ -3484,12 +3581,12 @@ TEST_CASE("KÖŞETAŞI olmayan köşeyi ve silinmiş nesneyi reddeder")
     const core::Mm2 before = f.doc.geometry().area_of(f.doc.entities().slot[0]);
 
     // Corner 9 of a four-corner parsel: refused, nothing written.
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=9 nokta=1,1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=9 nokta=1,1", Origin::Test));
     CHECK_EQ(f.doc.geometry().area_of(f.doc.entities().slot[0]), before);
 
     // And an entity that is gone stays gone.
     REQUIRE(f.bus.execute_line("SİL nesneler=1", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=1,1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=1,1", Origin::Test));
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
@@ -3594,7 +3691,7 @@ TEST_CASE("ALANAÇEVİR kapanmayan zinciri reddeder ve hiçbir şeyi değiştirm
     REQUIRE(f.bus.execute_line("ÇİZGİ 60,45 0,45", Origin::Test).ok()); // no fourth side
 
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3", Origin::Test));
 
     // Refused whole: the three lines are still three lines. A half-applied
     // conversion would be the partial edit Article 1.6 forbids.
@@ -3610,7 +3707,7 @@ TEST_CASE("ALANAÇEVİR birbirine değmeyen çizgileri reddeder")
     REQUIRE(f.bus.execute_line("ÇİZGİ 500,500 560,500", Origin::Test).ok()); // far away
 
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2", Origin::Test));
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
     CHECK_EQ(f.doc.content_hash(), before);
 }
@@ -3622,7 +3719,7 @@ TEST_CASE("ALANAÇEVİR zaten kapalı bir alanı reddeder")
     REQUIRE(f.bus.execute_line("ALAN 0,0 60,0 60,45 0,45", Origin::Test).ok());
 
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -3736,7 +3833,7 @@ TEST_CASE("DAİRE: aynı yere iki nokta reddedilir")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("DAİRE merkez=100,100 cevre=100,100", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("DAİRE merkez=100,100 cevre=100,100", Origin::Test));
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
@@ -3782,17 +3879,17 @@ TEST_CASE("KÖŞETAŞI dairenin merkezini taşır ve çeyrek tutamağıyla yarı
 
     const std::uint64_t before = f.doc.content_hash();
     said.clear();
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=6 nokta=200,200", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=6 nokta=200,200", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK(said.find("6. tutamağı yok; 5 tutamağı var") != std::string::npos);
 
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=100,100", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=100,100", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before); // a radius of zero is refused
 
-    REQUIRE(f.bus.execute_line("KÖŞEEKLE nesne=1 kose=1 nokta=200,200", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞEEKLE nesne=1 kose=1 nokta=200,200", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -3828,7 +3925,7 @@ TEST_CASE("KÖŞETAŞI elipsin eksenini çevirir; ikinci eksen dik kalır")
 
     // On the first axis there is no second: refused, nothing moves.
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=3 nokta=0,9", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=3 nokta=0,9", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK_EQ(f.doc.entities().kind[e], core::kEllipseKind);
 }
@@ -4131,7 +4228,7 @@ TEST_CASE("OFSET seçim boşken sebebini söyler")
     std::string said;
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
-    REQUIRE(f.bus.execute_line("OFSET mesafe=1000", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("OFSET mesafe=1000", Origin::Test));
     CHECK(said.find("nesne yok") != std::string::npos);
 }
 
@@ -4201,7 +4298,7 @@ TEST_CASE("ELİPS: eksen üzerindeki üçüncü nokta reddedilir")
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
     REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=5,0", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=5,0", Origin::Test));
 
     // A zero second axis is a line, not an ellipse, and drawing one would put a
     // record in the file that nothing downstream can draw.
@@ -4261,7 +4358,7 @@ TEST_CASE("DİLİM: merkezle çakışan kenar reddedilir")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("DİLİM merkez=0,0 baslangic=0,0 bitis=0,10", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("DİLİM merkez=0,0 baslangic=0,0 bitis=0,10", Origin::Test));
     CHECK(f.doc.live_entity_count() == 0);
 }
 
@@ -4292,7 +4389,7 @@ TEST_CASE("HALKA: iç ve dış ters verilse de çalışır, eşitse reddedilir")
     CHECK(f.doc.live_entity_count() == 1);
 
     // Zero width is not a ring.
-    REQUIRE(f.bus.execute_line("HALKA merkez=0,0 ic=5,0 dis=5,0", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("HALKA merkez=0,0 ic=5,0 dis=5,0", Origin::Test));
     CHECK(f.doc.live_entity_count() == 1);
 }
 
@@ -4345,7 +4442,7 @@ TEST_CASE("KILAVUZ: olmayan yerde silme isteği sebebini söyler")
     std::string said;
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
-    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=9999 sil=evet", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("KILAVUZ yon=yatay deger=9999 sil=evet", Origin::Test));
     CHECK(said.find("kılavuz yok") != std::string::npos);
 }
 
@@ -4620,7 +4717,7 @@ TEST_CASE("BİRLEŞTİR: alanla çizgi karışık verilirse adıyla reddeder")
     REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=20,0 30,0", Origin::Test).ok());
 
-    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test));
 
     CHECK(f.doc.live_entity_count() == 2); // nothing happened
     CHECK(said.find("hem alan hem çizgi") != std::string::npos);
@@ -4632,7 +4729,7 @@ TEST_CASE("BİRLEŞTİR: tek nesneyle çalışmaz")
     REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
 
-    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("BİRLEŞTİR nesneler=1", Origin::Test));
     CHECK(f.doc.live_entity_count() == 1);
 }
 
@@ -4718,9 +4815,11 @@ TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata 
     // take, so it refuses on the selection rather than on a prompt.
     CHECK(!session.waiting());
 
-    auto done = f.bus.finish(session);
-    CHECK(done.ok()); // a refusal, not an error
-    CHECK(said.find("en fazla 2 nesne") != std::string::npos);
+    // The refusal IS the error, and the error is the sentence — not the raw
+    // "zorunlu parametre" line a post-run validation would have added after it.
+    const std::string why = REFUSED(f.bus.finish(session));
+    CHECK(why.find("en fazla 2 nesne") != std::string::npos);
+    CHECK(why.find("zorunlu") == std::string::npos);
     CHECK(said.find("zorunlu") == std::string::npos);
 }
 
@@ -5048,8 +5147,7 @@ TEST_CASE("YAY: merkezle çakışan uç reddedilir")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("YAY merkez=100,100 baslangic=100,100 bitis=100,130", Origin::Test)
-                .ok());
+    REFUSED(f.bus.execute_line("YAY merkez=100,100 baslangic=100,100 bitis=100,130", Origin::Test));
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
@@ -5083,7 +5181,7 @@ TEST_CASE("KÖŞETAŞI yayın ucunu taşır ve yarıçapı yeniden kurar; ALANA�
     CHECK_EQ(f.doc.entities().kind[e], core::kArcKind);
 
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -5205,10 +5303,10 @@ TEST_CASE("ÖLÇEKLE negatif ya da sıfır çarpanı reddeder")
     REQUIRE(f.bus.execute_line("ALAN 0,0 60,0 60,45 0,45", Origin::Test).ok());
     const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=-1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=-1", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 
-    REQUIRE(f.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=0", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=0", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -5578,7 +5676,7 @@ TEST_CASE("ALANÖLÇ seçimi kullanır ve boş seçimi açıklar")
 
     // Nothing selected and no ids: the tool would ASK on the canvas; here, with
     // nobody to answer, it says so the way every modify tool does.
-    REQUIRE(f.bus.execute_line("ALANÖLÇ", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("ALANÖLÇ", Origin::Test));
     CHECK(said.find("İşlem yapılacak nesne yok") != std::string::npos);
     CHECK(said.find("ALANÖLÇ nesneler=1") != std::string::npos);
 
@@ -5696,15 +5794,12 @@ TEST_CASE("DİZİ geri alınır ve anlamsız girdiyi reddeder")
     const std::uint64_t before = f.doc.content_hash();
 
     // One row and one column is not an array.
-    REQUIRE(f.bus
-                .execute_line("DİZİ nesneler=1 satir=1 sutun=1 satir_aralik=5 sutun_aralik=5",
-                              Origin::Test)
-                .ok());
+    REFUSED(f.bus.execute_line("DİZİ nesneler=1 satir=1 sutun=1 satir_aralik=5 sutun_aralik=5",
+                               Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 
     // A polar array of one is not an array either.
-    REQUIRE(
-        f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=1", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=1", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), before);
 
     REQUIRE(f.bus
@@ -5751,7 +5846,7 @@ TEST_CASE("BÖL uçtan bölmeyi reddeder")
     REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
     const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("BÖL nesne=1 nokta=0,0", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("BÖL nesne=1 nokta=0,0", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 }
@@ -5813,7 +5908,7 @@ TEST_CASE("BUDA kesişmeyen sınırı reddeder ve hiçbir şeyi değiştirmez")
     REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 80,-20 80,20", Origin::Test).ok());
     const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=40,0", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=40,0", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -5828,8 +5923,8 @@ TEST_CASE("BUDA ve BÖL eğriyi reddeder")
     REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 40,-20 40,20", Origin::Test).ok());
     const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("BÖL nesne=1 nokta=5,0", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=5,0", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("BÖL nesne=1 nokta=5,0", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("BUDA nesne=1 sinir=2 nokta=5,0", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -5907,7 +6002,7 @@ TEST_CASE("YUVARLA kapalı alanı reddeder")
     REQUIRE(f.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
     const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 
@@ -5924,7 +6019,7 @@ TEST_CASE("PAH komşu kenardan uzun kesimi reddeder")
     const std::uint64_t before = f.doc.content_hash();
 
     // 30 m off a 20 m edge: refused, and nothing is written.
-    REQUIRE(f.bus.execute_line("PAH nesne=1 nokta=0,0 mesafe=30", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("PAH nesne=1 nokta=0,0 mesafe=30", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -5936,7 +6031,7 @@ TEST_CASE("PAH açık çizginin ucunu köşe saymaz")
     const std::uint64_t before = f.doc.content_hash();
 
     // (20,0) is an END: one edge meets it and there is nothing to cut across.
-    REQUIRE(f.bus.execute_line("PAH nesne=1 nokta=20,0 mesafe=2", Origin::Test).ok());
+    REQUIRE_FALSE(f.bus.execute_line("PAH nesne=1 nokta=20,0 mesafe=2", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
 
@@ -6153,7 +6248,7 @@ TEST_CASE("Yeni türler: SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ ve LİDER kendi
         CHECK_EQ(fills, 2u);
     }
     // An unknown pattern is refused with the catalogue's names.
-    (void)f.bus.execute_line("TARAMA noktalar=0,0 1,0 1,1 desen=YOK", Origin::Test);
+    said += REFUSED(f.bus.execute_line("TARAMA noktalar=0,0 1,0 1,1 desen=YOK", Origin::Test));
     CHECK(said.find("Tanınmayan tarama deseni") != std::string::npos);
 
     run("KATMAN ad=SEMBOL");
@@ -6167,13 +6262,13 @@ TEST_CASE("Yeni türler: SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ ve LİDER kendi
     CHECK_EQ(f.doc.blocks().at(0).members.size(), 2u);
     CHECK_EQ(kind_count(core::kBlockReferenceKind), 1u);
     CHECK_EQ(f.doc.live_entity_count(), before_block + 1); // +2 members +1 ref −2 originals
-    (void)f.bus.execute_line("BLOK ad=KAPAK taban=0,0 nesneler=1", Origin::Test);
+    said += REFUSED(f.bus.execute_line("BLOK ad=KAPAK taban=0,0 nesneler=1", Origin::Test));
     CHECK(said.find("zaten var") != std::string::npos);
 
     run("BLOKEKLE ad=KAPAK nokta=220,300 olcek=2 aci=90");
     run("BLOKEKLE ad=KAPAK nokta=240,300 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000");
     CHECK_EQ(kind_count(core::kBlockReferenceKind), 3u);
-    (void)f.bus.execute_line("BLOKEKLE ad=YOK nokta=0,0", Origin::Test);
+    said += REFUSED(f.bus.execute_line("BLOKEKLE ad=YOK nokta=0,0", Origin::Test));
     CHECK(said.find("adında blok yok") != std::string::npos);
 
     run("ÖLÇÜ birinci=0,400 ikinci=12.5,400 konum=0,403");
@@ -6399,7 +6494,7 @@ TEST_CASE("NESNEBİLGİ silinmiş nesneyi söyler, çökmez")
     REQUIRE(f.bus.execute_line("SİL nesneler=1", Origin::Test).ok());
 
     said.clear();
-    REQUIRE(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test).ok());
+    said += REFUSED(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test));
     CHECK(said.find("silinmiş") != std::string::npos);
 }
 
@@ -6607,10 +6702,8 @@ TEST_CASE("ESNET boş pencereyi ve dejenere pencereyi söyler")
 
     // A window past the drawing: nothing to move, and it says what a window has
     // to do rather than reporting success.
-    REQUIRE(f.bus
-                .execute_line("ESNET pencere=100,100 pencere=110,110 baslangic=0,0 bitis=5,0",
-                              Origin::Test)
-                .ok());
+    said += REFUSED(f.bus.execute_line(
+        "ESNET pencere=100,100 pencere=110,110 baslangic=0,0 bitis=5,0", Origin::Test));
     CHECK(said.find("esnetilecek köşe yok") != std::string::npos);
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1}); ///< the ALAN only
 
@@ -6631,10 +6724,8 @@ TEST_CASE("ESNET kilitli katmanı atlar ve kaç nesne atladığını söyler")
     std::string said;
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
 
-    REQUIRE(
-        f.bus
-            .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0", Origin::Test)
-            .ok());
+    said += REFUSED(f.bus.execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0",
+                                       Origin::Test));
     // Counted and said: a silent skip is a stretch that looks like it worked.
     CHECK(said.find("kilitli") != std::string::npos);
 
@@ -6716,7 +6807,7 @@ TEST_CASE("kilidi açılınca düzenleme yeniden çalışır")
     REQUIRE(f.bus.execute_line("KATMAN ad=TAPU kilitli=evet", Origin::Test).ok());
 
     const std::uint64_t locked_state = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test).ok());
+    REFUSED(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test));
     CHECK_EQ(f.doc.content_hash(), locked_state); ///< said no, did nothing
 
     // The refusal names the way to lift it, and what it names has to work.
@@ -7488,7 +7579,7 @@ TEST_CASE("SEÇ ÇOKGENPENCERE, ÇOKGEN'in tek anlamlı yazımıdır")
     REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 50,50 60,60", Origin::Test).ok());
 
     for (const char* word : {"ÇOKGENPENCERE", "COKGENPENCERE", "ÇOKGEN", "WP"}) {
-        REQUIRE(f.bus.execute_line("SEÇ HİÇBİRİ", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("SEÇ TEMİZLE", Origin::Test).ok());
         REQUIRE_MESSAGE(
             f.bus.execute_line(std::string("SEÇ ") + word + " 0,0 20,0 0,20", Origin::Test).ok(),
             word);
@@ -8151,4 +8242,32 @@ TEST_CASE("KOMUT: hiçbir ajan istemcisi yorumlayıcıya ulaşamaz")
     const CommandSpec* script = reg.by_id("core.script");
     REQUIRE(script != nullptr);
     CHECK_FALSE(has_flag(script->flags, Flags::AiAccessible));
+}
+
+TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı değil")
+{
+    // THE DEFECT THIS PINS, measured before it was named: BUDA on a circle wrote
+    // "bu komut yalnız çizgilerle çalışır" to the transcript, ended its body, and
+    // the bus reported SUCCESS. A person read the sentence; a JSON script carried
+    // on, an agent's plan was told its step happened, and `cad.trim(...)`
+    // returned instead of raising. The support matrix listed 38 such cells
+    // (docs/nesneler/destek-matrisi.md, "Sessiz retler").
+    //
+    // A refusal is an ERROR: the dispatch fails, the message says why, and the
+    // document is exactly what it was.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("DAİRE merkez=0,0 cevre=10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,-20 0,20", Origin::Test).ok());
+    const std::uint64_t before = f.doc.content_hash();
+
+    for (const char* line :
+         {"BUDA nesne=1 sinir=2 nokta=-10,0", "UZAT nesne=1 sinir=2 nokta=10,0",
+          "BÖL nesne=1 nokta=10,0", "KIR nesne=1 birinci=10,0 ikinci=0,10",
+          "YUVARLA nesne=1 nokta=10,0 yaricap=1", "PAH nesne=1 nokta=10,0 mesafe=1"}) {
+        INFO(line);
+        auto result = f.bus.execute_line(line, Origin::Test);
+        REQUIRE_FALSE(result.ok());
+        CHECK_FALSE(result.error().message.empty());
+        CHECK_EQ(f.doc.content_hash(), before);
+    }
 }

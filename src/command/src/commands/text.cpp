@@ -76,12 +76,12 @@ Task<void> run(Context& ctx)
     const std::array<core::Point2, 2> baseline{*anchor_point, end};
     auto created = ctx.transaction().add_polyline(ctx.active_layer(), baseline);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
 
     if (auto st = ctx.transaction().set_text(created.value(), *content, height, anchor); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return; // the bus rolls the whole transaction back, baseline included
     }
 
@@ -113,7 +113,8 @@ Task<void> run_edit(Context& ctx)
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
         targets.push_back(slot);
@@ -125,7 +126,8 @@ Task<void> run_edit(Context& ctx)
         }
 
     if (targets.empty()) {
-        ctx.echo("Düzenlenecek yazı yok. Bir yazı seçin ya da nesneler= ile verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Düzenlenecek yazı yok. Bir yazı seçin ya da nesneler= ile verin.");
         co_return;
     }
 
@@ -137,7 +139,8 @@ Task<void> run_edit(Context& ctx)
     const Value align   = ctx.argument("hizalama");
 
     if (content.empty() && tall.empty() && align.empty()) {
-        ctx.echo("Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.");
         co_return;
     }
 
@@ -158,14 +161,16 @@ Task<void> run_edit(Context& ctx)
         std::string words =
             content.empty() ? std::string(doc.texts().text(slot)) : content.as_text();
         if (words.empty()) {
-            ctx.echo("Boş bir yazı bir yazı değildir; silmek için SİL kullanın.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Boş bir yazı bir yazı değildir; silmek için SİL kullanın.");
             co_return;
         }
 
         core::Mm height = doc.texts().height(slot);
         if (!tall.empty()) {
             if (tall.as_int() <= 0) {
-                ctx.echo("Yazı yüksekliği sıfırdan büyük olmalı.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Yazı yüksekliği sıfırdan büyük olmalı.");
                 co_return;
             }
             height = static_cast<core::Mm>(tall.as_int());
@@ -175,14 +180,14 @@ Task<void> run_edit(Context& ctx)
             align.empty() ? doc.texts().anchor(slot) : anchor_from(align.as_text());
 
         if (auto st = ctx.transaction().set_text(e, words, height, anchor); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return; // the bus rolls the whole transaction back
         }
         ++written;
     }
 
     if (written == 0) {
-        ctx.echo("Seçimde yazı taşıyan nesne yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Seçimde yazı taşıyan nesne yok.");
         co_return;
     }
 

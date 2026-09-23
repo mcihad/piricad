@@ -300,7 +300,8 @@ Task<void> run(Context& ctx)
     }
 
     if (texts.empty()) {
-        ctx.echo("'" + *source_name + "' katmanında etiketlenecek bir şey bulunamadı.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "'" + *source_name + "' katmanında etiketlenecek bir şey bulunamadı.");
         co_return;
     }
 

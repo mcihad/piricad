@@ -34,7 +34,10 @@ GERİAL
 
 ### Komut satırı
 
+Bir çizgi çizin, sonra geri alın:
+
 ```
+ÇİZGİ 0,0 100,0
 GERİAL
 ```
 
@@ -55,18 +58,31 @@ Geri alınacak bir şey kalmadığında düğme ve menü öğesi pasifleşir.
 
 ### Betik
 
+Betiğin tamamı **tek** bir geri alma adımıdır: betik bittiğinde tek `GERİAL`, kaç komut
+çalıştırdıysa hepsini birlikte kaldırır. Bu betik iki çizgi çizer; ardından yazılan bir
+`GERİAL` ikisini de götürür:
+
 ```json
 {
-  "ad": "Çiz ve geri al",
+  "ad": "Tek adımda iki çizgi",
   "komutlar": [
     { "cmd": "core.line", "args": { "noktalar": [[0,0],[10000,0]] } },
-    { "cmd": "core.undo", "args": {} }
+    { "cmd": "core.line", "args": { "noktalar": [[0,5000],[10000,5000]] } }
   ]
 }
 ```
 
-Bir betiğin içinde `core.undo` kullanmak nadiren gerekir, çünkü betiğin tamamı zaten tek
-bir geri alma adımıdır.
+Betik adımı olarak `GERİAL` şöyle yazılır:
+
+```json
+{ "cmd": "core.undo", "args": {} }
+```
+
+Bu adım betiğin **kendi** çizdiklerini geri alamaz: betik bitmeden onun geri alma
+adımı yoktur. Betik bir şey çizdikten sonra çağrılırsa hata döner ve betik orada durur,
+çünkü uzanabileceği tek adım betikten **önce** yaptığınız iştir — ve betik bitince o iş
+geri getirilemez biçimde kaybolurdu. Henüz hiçbir şey çizmemiş bir betikte, ya da Python
+konsolunda tek başına yazılan `cad.undo()`, komut satırındaki `GERİAL` ile aynıdır.
 
 ## Geri alma
 
@@ -100,5 +116,6 @@ aldığınıza artık dönemezsiniz. Bu bütün CAD ve çizim programlarında b�
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Geri alınacak işlem yok` | Geri alma yığını boş | Normaldir; geri alınacak bir şey yapılmamış |
+| `Düzenleme yapmış bir toplu işin içinde geri alınamaz: …` | Bir betik bir şey çizdikten sonra `core.undo` çağırdı | Adımı betikten çıkarın; betik bittikten sonra tek `GERİAL` betiğin tamamını geri alır |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

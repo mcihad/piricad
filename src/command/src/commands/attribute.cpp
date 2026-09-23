@@ -82,22 +82,25 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = ctx.document().attributes();
     const core::AttrId col       = table.find(name.as_text());
     if (col == core::kNoAttr) {
-        ctx.echo("Bilinmeyen öznitelik: '" + name.as_text() +
-                 "'. Tanımlı olanları görmek için argümansız ÖZNİTELİK yazın.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Bilinmeyen öznitelik: '" + name.as_text() +
+                       "'. Tanımlı olanları görmek için argümansız ÖZNİTELİK yazın.");
         co_return;
     }
 
     const Value target = ctx.argument("nesne");
     if (target.empty()) {
-        ctx.echo("Hangi nesne? Kullanım: ÖZNİTELİK <ad> <nesne-kimliği> [deger]");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Hangi nesne? Kullanım: ÖZNİTELİK <ad> <nesne-kimliği> [deger]");
         co_return;
     }
 
     const auto key            = static_cast<core::EntityKey>(target.as_int());
     const core::EntityId slot = ctx.document().slot_of(key);
     if (slot == core::kNoEntity) {
-        ctx.echo("Bilinmeyen nesne: " + std::to_string(target.as_int()) +
-                 ". Nesne kimliklerini SEÇ ile görebilirsiniz.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Bilinmeyen nesne: " + std::to_string(target.as_int()) +
+                       ". Nesne kimliklerini SEÇ ile görebilirsiniz.");
         co_return;
     }
 
@@ -105,7 +108,7 @@ Task<void> run(Context& ctx)
     if (value.empty()) {
         auto had = ctx.document().attribute(col, slot);
         if (!had) {
-            ctx.echo(had.error().message);
+            ctx.refuse(had.error());
             co_return;
         }
         ctx.echo(name.as_text() + " [" + std::to_string(target.as_int()) +
@@ -115,13 +118,13 @@ Task<void> run(Context& ctx)
 
     auto parsed = parse_for(table.column(col)->spec(), value.as_text());
     if (!parsed) {
-        ctx.echo(parsed.error().message);
+        ctx.refuse(parsed.error());
         co_return;
     }
 
     auto before = ctx.document().attribute(col, slot);
     if (auto st = ctx.transaction().set_attribute(col, slot, parsed.value()); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 
@@ -193,7 +196,7 @@ Task<void> run_column(Context& ctx)
     if (ctx.argument("sil").as_bool()) {
         auto dropped = ctx.transaction().drop_attribute(column);
         if (!dropped) {
-            ctx.echo(dropped.error().message);
+            ctx.refuse(dropped.error());
             co_return;
         }
         ctx.record("kimlik", id);
@@ -231,8 +234,9 @@ Task<void> run_column(Context& ctx)
         if (!type.empty()) {
             const auto wanted = core::attr_type_from_name(type.as_text());
             if (!wanted) {
-                ctx.echo("Bilinmeyen öznitelik türü: '" + type.as_text() +
-                         "'. Beklenen: " + kTypeWords + ".");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Bilinmeyen öznitelik türü: '" + type.as_text() +
+                               "'. Beklenen: " + kTypeWords + ".");
                 co_return;
             }
             next.type = *wanted;
@@ -240,7 +244,7 @@ Task<void> run_column(Context& ctx)
 
         auto amended = ctx.transaction().amend_attribute(column, next);
         if (!amended) {
-            ctx.echo(amended.error().message);
+            ctx.refuse(amended.error());
             co_return;
         }
 
@@ -257,14 +261,16 @@ Task<void> run_column(Context& ctx)
 
     // ---- declare ----
     if (type.empty()) {
-        ctx.echo(std::string("Kullanım: SÜTUN <kimlik> <tur>. Türler: ") + kTypeWords + ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string("Kullanım: SÜTUN <kimlik> <tur>. Türler: ") + kTypeWords + ".");
         co_return;
     }
 
     const std::string word = type.as_text();
     const auto wanted      = core::attr_type_from_name(word);
     if (!wanted) {
-        ctx.echo("Bilinmeyen öznitelik türü: '" + word + "'. Beklenen: " + kTypeWords + ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bilinmeyen öznitelik türü: '" + word + "'. Beklenen: " + kTypeWords + ".");
         co_return;
     }
 
@@ -292,7 +298,7 @@ Task<void> run_column(Context& ctx)
 
     auto made = ctx.transaction().declare_attribute(spec);
     if (!made) {
-        ctx.echo(made.error().message);
+        ctx.refuse(made.error());
         co_return;
     }
 

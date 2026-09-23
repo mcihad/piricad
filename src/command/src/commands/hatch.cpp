@@ -91,8 +91,9 @@ Task<void> run(Context& ctx)
                                 .rubber_chain  = typed}))
             typed.push_back(*p);
         if (typed.size() < 3) {
-            ctx.echo("Tarama sınırı en az üç nokta ister; verilen " + std::to_string(typed.size()) +
-                     ".");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Tarama sınırı en az üç nokta ister; verilen " +
+                           std::to_string(typed.size()) + ".");
             co_return;
         }
         if (typed.size() > 1 && typed.front() == typed.back()) typed.pop_back();
@@ -105,22 +106,26 @@ Task<void> run(Context& ctx)
         std::uint16_t part = 0;
         for (const std::int64_t raw : requested) {
             if (raw <= 0) {
-                ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                         ". Kimlikler 1'den başlar.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                               ". Kimlikler 1'den başlar.");
                 co_return;
             }
             const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
             const core::EntityId slot = ctx.document().slot_of(key);
             if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-                ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
                 co_return;
             }
             const std::size_t before = rings.size();
             boundary_of(ctx.document(), slot, part, store, rings);
             if (rings.size() == before) {
-                ctx.echo("Nesne " + std::to_string(raw) +
-                         " kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı "
-                         "çoklu çizgi olmalı.");
+                ctx.refuse(
+                    core::ErrorCode::InvalidArgument,
+                    "Nesne " + std::to_string(raw) +
+                        " kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı "
+                        "çoklu çizgi olmalı.");
                 co_return;
             }
             ++part;
@@ -140,13 +145,14 @@ Task<void> run(Context& ctx)
     if (const Value k = ctx.argument("katalog"); !k.empty()) configured = k.as_text();
     const std::string path = resolve_catalog_path(configured);
     if (path.empty()) {
-        ctx.echo("Tarama deseni kataloğu bulunamadı: '" + configured +
-                 "'. TERCİH desen_kataloğu ile yolunu kurun ya da katalog= verin.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Tarama deseni kataloğu bulunamadı: '" + configured +
+                       "'. TERCİH desen_kataloğu ile yolunu kurun ya da katalog= verin.");
         co_return;
     }
     auto catalog = load_hatch_patterns(path);
     if (!catalog) {
-        ctx.echo(catalog.error().message);
+        ctx.refuse(catalog.error());
         co_return;
     }
     const HatchPattern* pattern = catalog.value().find(wanted);
@@ -154,8 +160,8 @@ Task<void> run(Context& ctx)
         std::string known;
         for (const HatchPattern& p : catalog.value().patterns)
             known += (known.empty() ? "" : ", ") + p.id;
-        ctx.echo("Tanınmayan tarama deseni: '" + wanted + "'. Katalogdaki desenler: " + known +
-                 ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Tanınmayan tarama deseni: '" + wanted +
+                                                         "'. Katalogdaki desenler: " + known + ".");
         co_return;
     }
 
@@ -169,7 +175,7 @@ Task<void> run(Context& ctx)
         static_cast<double>(ctx.session().bus().project_settings().get("core.plan.olcek").as_int());
     if (const Value s = ctx.argument("olcek"); !s.empty()) scale = s.as_number();
     if (!(scale > 0.0)) {
-        ctx.echo("Tarama ölçeği sıfırdan büyük olmalı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Tarama ölçeği sıfırdan büyük olmalı.");
         co_return;
     }
 
@@ -187,7 +193,7 @@ Task<void> run(Context& ctx)
     const std::vector<std::uint8_t> payload = core::encode_hatch(def);
     auto created = ctx.transaction().add_kind(layer, core::kHatchKind, rings, payload);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
     // Resolved AT COMMIT (model.md R14): the layer's ink is what the hatch is
@@ -197,7 +203,7 @@ Task<void> run(Context& ctx)
         ink = ctx.document().layers()[layer].appearance.rgba;
     const core::StyleId style = ctx.transaction().intern_symbol(hatch_symbol(def, ink));
     if (auto st = ctx.transaction().set_entity_style(created.value(), style); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

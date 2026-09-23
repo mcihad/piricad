@@ -87,9 +87,14 @@ Nesneleri seçin, `DİZİ` yazın, sorulan değerleri girin.
 
 ### Betik
 
+Betik önce 10 m × 8 m bir alan çizer, sonra onu 3 satır × 4 sütunluk bir diziye
+çoğaltır:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.area",
+      "args": { "noktalar": [[0,0],[10000,0],[10000,8000],[0,8000]] } },
     { "cmd": "core.array",
       "args": { "nesneler": [1], "satir": 3, "sutun": 4,
                 "satir_aralik": 20, "sutun_aralik": 15 } }

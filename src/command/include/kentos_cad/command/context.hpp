@@ -185,7 +185,30 @@ public:
 
     /// Writes a line to the transcript. Never a dialog: a command body must be
     /// runnable headless (kentoscad.md §14 journal replay).
+    ///
+    /// NOT FOR A REFUSAL. A line on the transcript reaches a person at the command
+    /// line and nobody else: the bus still reports the dispatch as a success, so a
+    /// script carries on, an agent's plan is told its step happened and
+    /// `cad.trim(...)` returns instead of raising. Refuse with `refuse`.
     void echo(std::string message) const;
+
+    /// Ends the command as a FAILURE carrying `message`, which is what a refusal
+    /// is. The bus rolls the transaction back and returns the error, so every
+    /// client learns it the same way: the command line prints it, a JSON script
+    /// stops and rolls back, `cad.<name>(...)` raises, an agent's step fails.
+    ///
+    /// WHY THIS EXISTS, measured: the support matrix found 38 cells where a
+    /// command wrote its refusal to the transcript with `echo`, ended its body,
+    /// and the bus reported success — a refusal a person could read and an
+    /// automated client could not see (`docs/nesneler/destek-matrisi.md`,
+    /// TODOS A-07: a partial failure is never presented as a success).
+    ///
+    /// The body still returns afterwards; this records the outcome, it does not
+    /// unwind the coroutine.
+    void refuse(core::ErrorCode code, std::string message) const;
+
+    /// The same, for an error something else already produced.
+    void refuse(core::Error error) const;
 
     /// Records the effective value of a parameter so the journal entry replays
     /// identically no matter which client supplied it.

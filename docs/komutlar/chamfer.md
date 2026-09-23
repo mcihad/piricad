@@ -67,6 +67,9 @@ Köşeye pah kırıldı.
 ```json
 {
   "komutlar": [
+    { "cmd": "core.polyline",
+      "args": { "noktalar": [[485300000, 4310260000], [485300000, 4310200000],
+                             [485360000, 4310200000]] } },
     { "cmd": "core.chamfer",
       "args": { "nesne": [1], "nokta": [485300000, 4310200000], "mesafe": 5 } }
   ]

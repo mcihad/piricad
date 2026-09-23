@@ -167,7 +167,8 @@ Task<void> run_query(Context& ctx)
     if (!layer_name.empty()) {
         layer = doc.find_layer(layer_name);
         if (layer == core::kNoLayer) {
-            ctx.echo("Katman yok: '" + layer_name + "'. KATMANLAR ile listeyi alın.");
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Katman yok: '" + layer_name + "'. KATMANLAR ile listeyi alın.");
             co_return;
         }
     }
@@ -175,7 +176,8 @@ Task<void> run_query(Context& ctx)
     const core::AttrTable& attrs = doc.attributes();
     const core::AttrId column    = field.empty() ? core::kNoAttr : attrs.find(field);
     if (!field.empty() && column == core::kNoAttr) {
-        ctx.echo("Öznitelik sütunu yok: '" + field + "'. ÖZNİTELİKŞEMASI ile listeyi alın.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Öznitelik sütunu yok: '" + field + "'. ÖZNİTELİKŞEMASI ile listeyi alın.");
         co_return;
     }
 

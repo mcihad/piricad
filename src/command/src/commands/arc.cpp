@@ -322,7 +322,8 @@ Task<void> run(Context& ctx)
 
     const core::Mm radius = radius_between(*centre, *start);
     if (radius <= 0) {
-        ctx.echo("Başlangıç noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Başlangıç noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
         co_return;
     }
 
@@ -385,13 +386,14 @@ Task<void> run(Context& ctx)
     if (!end) co_return;
 
     if (end->x == centre->x && end->y == centre->y) {
-        ctx.echo("Bitiş noktası merkezle aynı yerde; yayın nereye kadar gideceği belirsiz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bitiş noktası merkezle aynı yerde; yayın nereye kadar gideceği belirsiz.");
         co_return;
     }
 
     auto created = ctx.transaction().add_arc(ctx.active_layer(), *centre, radius, *start, *end);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

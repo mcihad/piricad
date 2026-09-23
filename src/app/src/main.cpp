@@ -1302,6 +1302,24 @@ int main(int argc, char** argv)
         later([&window] { window.showTranscript(); });
         later([&window, shot] { shot(QStringLiteral("11-izleme"), &window); });
 
+        // AND A REFUSAL, as the person at the workstation meets it. A circle handed
+        // to BUDA is declined, and the decline is an ERROR now: the transcript and
+        // the status line both say "Hata:" and the sentence. It used to arrive as
+        // a line of commentary after a success, which is what a script, an agent
+        // and Python were told (TODOS F-01).
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YENİ"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("DAİRE merkez=0,0 cevre=10,0"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ -15,0 15,0"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window] { window.showTranscript(); });
+        later(
+            [&window] { window.runScriptLine(QStringLiteral("BUDA nesne=1 sinir=2 nokta=10,0")); });
+        later([&window, shot] { shot(QStringLiteral("12-ret"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

@@ -35,14 +35,16 @@ Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return false;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return false;
         }
         slots.push_back(slot);
@@ -94,7 +96,7 @@ Task<void> run_set_layer(Context& ctx)
     if (!name) co_return;
 
     if (name->empty()) {
-        ctx.echo("Katman adı boş olamaz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Katman adı boş olamaz.");
         co_return;
     }
 
@@ -103,14 +105,14 @@ Task<void> run_set_layer(Context& ctx)
     // reason the drawing cares about.
     const core::LayerId layer = ctx.transaction().ensure_layer(*name);
     if (layer == core::kNoLayer) {
-        ctx.echo("Katman oluşturulamadı: " + *name);
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Katman oluşturulamadı: " + *name);
         co_return;
     }
 
     for (core::EntityId slot : slots) {
         auto st = ctx.transaction().set_entity_layer(slot, layer);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return; // the bus rolls the whole transaction back
         }
     }
@@ -141,8 +143,9 @@ Task<void> run_match_style(Context& ctx)
         // clicked, so it is not something the user said. Clicking the object to
         // copy FROM is the gesture every drawing program already trains.
         if (slots.size() < 2) {
-            ctx.echo("Stili kopyalanacak kaynak nesne belirtilmedi. Kaynağı ve hedefleri "
-                     "birlikte seçin ya da STİLKOPYALA kaynak=1 nesneler=2 yazın.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Stili kopyalanacak kaynak nesne belirtilmedi. Kaynağı ve hedefleri "
+                       "birlikte seçin ya da STİLKOPYALA kaynak=1 nesneler=2 yazın.");
             co_return;
         }
 
@@ -159,7 +162,8 @@ Task<void> run_match_style(Context& ctx)
             }
         }
         if (best < 0.0) {
-            ctx.echo("Seçili nesnelerin hiçbirinin kenarı yok; kaynak belirlenemedi.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Seçili nesnelerin hiçbirinin kenarı yok; kaynak belirlenemedi.");
             co_return;
         }
 
@@ -179,15 +183,17 @@ Task<void> run_match_style(Context& ctx)
             : source_arg.as_int();
 
     if (source_id <= 0) {
-        ctx.echo("Geçersiz kaynak kimliği: " + std::to_string(source_id) +
-                 ". Kimlikler 1'den başlar.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz kaynak kimliği: " + std::to_string(source_id) +
+                       ". Kimlikler 1'den başlar.");
         co_return;
     }
 
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(source_id));
     const core::EntityId source = ctx.document().slot_of(key);
     if (source == core::kNoEntity || !ctx.document().alive(source)) {
-        ctx.echo("Kaynak nesne bulunamadı veya silinmiş: " + std::to_string(source_id));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Kaynak nesne bulunamadı veya silinmiş: " + std::to_string(source_id));
         co_return;
     }
 
@@ -215,7 +221,7 @@ Task<void> run_match_style(Context& ctx)
 
         auto st = ctx.transaction().set_entity_style(slot, style);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ++changed;

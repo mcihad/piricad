@@ -120,9 +120,15 @@ köşe aynı komuttur ve komut günlüğüne aynı satır olarak düşer.
 
 ### Betik
 
+Betik önce 2. köşesi yanlış ölçülmüş bir parsel çizer, sonra o köşeyi doğru yerine
+taşır:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.area",
+      "args": { "noktalar": [[485300000,4310200000],[485359500,4310200400],
+                             [485360000,4310245000],[485300000,4310245000]] } },
     { "cmd": "core.vertex_move",
       "args": { "nesne": [1], "kose": 2, "nokta": [485360000, 4310200000] } }
   ]

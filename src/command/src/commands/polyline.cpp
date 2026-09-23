@@ -44,14 +44,15 @@ Task<void> run(Context& ctx)
     }
 
     if (points.size() < 2) {
-        ctx.echo("Bir çoklu çizgi en az iki nokta ister; " + std::to_string(points.size()) +
-                 " nokta verildi.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Bir çoklu çizgi en az iki nokta ister; " +
+                                                         std::to_string(points.size()) +
+                                                         " nokta verildi.");
         co_return;
     }
 
     auto created = ctx.transaction().add_polyline(ctx.active_layer(), points);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

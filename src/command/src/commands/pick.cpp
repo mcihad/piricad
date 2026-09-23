@@ -208,9 +208,10 @@ Task<void> run_select(Context& ctx)
     Mode mode = Mode::Report;
     if (const Value v = ctx.argument("mod"); !v.empty()) {
         if (!parse_mode(v.as_text(), mode)) {
-            ctx.echo("Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
-                     "NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
-                     v.as_text() + "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
+                       "NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
+                           v.as_text() + "'");
             co_return;
         }
     } else if (!ctx.argument("nesneler").empty()) {
@@ -228,8 +229,9 @@ Task<void> run_select(Context& ctx)
     Op op = Op::Replace;
     if (const Value v = ctx.argument("islem"); !v.empty()) {
         if (!parse_op(v.as_text(), op)) {
-            ctx.echo("Beklenen işlem: DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE. Girilen: '" + v.as_text() +
-                     "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Beklenen işlem: DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE. Girilen: '" +
+                           v.as_text() + "'");
             co_return;
         }
     }
@@ -299,7 +301,9 @@ Task<void> run_select(Context& ctx)
             supplied.push_back(*next);
         }
         if (supplied.size() < (closed ? 3u : 2u)) {
-            ctx.echo(closed ? "Seçim çokgeni en az üç köşe ister." : "Çit en az iki nokta ister.");
+            ctx.refuse(core::ErrorCode::InvalidArgument, closed
+                                                             ? "Seçim çokgeni en az üç köşe ister."
+                                                             : "Çit en az iki nokta ister.");
             co_return;
         }
     } else if (mode == Mode::Point && supplied.empty()) {
@@ -310,8 +314,9 @@ Task<void> run_select(Context& ctx)
 
     const auto need_points = [&](std::size_t n) -> bool {
         if (supplied.size() >= n) return true;
-        ctx.echo(std::string("'") + mode_name(mode) + "' " + std::to_string(n) +
-                 " nokta bekliyor. Girilen: " + std::to_string(supplied.size()) + " nokta.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string("'") + mode_name(mode) + "' " + std::to_string(n) +
+                       " nokta bekliyor. Girilen: " + std::to_string(supplied.size()) + " nokta.");
         return false;
     };
 
@@ -377,18 +382,21 @@ Task<void> run_select(Context& ctx)
     case Mode::Objects: {
         const Value v = ctx.argument("nesneler");
         if (v.empty()) {
-            ctx.echo("'NESNE' en az bir nesne kimliği bekliyor. Örnek: SEÇ NESNE nesneler=1");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'NESNE' en az bir nesne kimliği bekliyor. Örnek: SEÇ NESNE nesneler=1");
             co_return;
         }
         for (std::int64_t raw : v.as_ids()) {
             if (raw <= 0) {
-                ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                         ". Kimlikler 1'den başlar.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                               ". Kimlikler 1'den başlar.");
                 co_return;
             }
             const auto key = static_cast<EntityKey>(static_cast<std::uint64_t>(raw));
             if (doc.slot_of(key) == core::kNoEntity) {
-                ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
                 co_return;
             }
             picked.push_back(key);
@@ -399,14 +407,15 @@ Task<void> run_select(Context& ctx)
     case Mode::Layer: {
         const Value v = ctx.argument("katman");
         if (v.empty()) {
-            ctx.echo("'KATMAN' bir katman adı bekliyor. Örnek: SEÇ mod=KATMAN katman=\"PARSEL\"");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'KATMAN' bir katman adı bekliyor. Örnek: SEÇ mod=KATMAN katman=\"PARSEL\"");
             co_return;
         }
 
         const std::string wanted       = v.as_text();
         const core::LayerId layer_slot = doc.find_layer(wanted);
         if (layer_slot == core::kNoLayer) {
-            ctx.echo("Katman bulunamadı: " + wanted);
+            ctx.refuse(core::ErrorCode::NotFound, "Katman bulunamadı: " + wanted);
             co_return;
         }
 
@@ -442,7 +451,8 @@ Task<void> run_select(Context& ctx)
         if (const Value n = ctx.argument("sira"); !n.empty()) {
             const double asked = n.as_number();
             if (asked < 1.0) {
-                ctx.echo("'sira' 1'den küçük olamaz; 1 en yakın nesnedir.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "'sira' 1'den küçük olamaz; 1 en yakın nesnedir.");
                 co_return;
             }
             want = static_cast<std::size_t>(asked);
@@ -457,8 +467,9 @@ Task<void> run_select(Context& ctx)
         std::vector<core::EntityId> under;
         core::pick_all(doc, aim, radius, under);
         if (want > under.size()) {
-            ctx.echo("O noktada " + std::to_string(under.size()) + " nesne var; " +
-                     std::to_string(want) + ". istendi.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "O noktada " + std::to_string(under.size()) + " nesne var; " +
+                           std::to_string(want) + ". istendi.");
             co_return;
         }
         picked.push_back(doc.key_of(under[want - 1]));

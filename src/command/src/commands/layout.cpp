@@ -370,6 +370,10 @@ Task<void> run_layout(Context& ctx)
         }
 
         const Layout* settled = bus.document().layouts().find(*named);
+        // NOT A REFUSAL. The edit above went through, and this is the state it
+        // left: `katman=yok` is how an atlas is turned off, and a sheet that was
+        // never pointed at a layer simply is not one. Failing here would roll
+        // back the very change the user asked for.
         if (settled == nullptr || settled->atlas.coverage_layer.empty()) {
             ctx.echo("'" + *named + "' bir atlas değil.");
             co_return;
@@ -414,10 +418,11 @@ Task<void> run_layout(Context& ctx)
         }
 
         if (found->atlas.coverage_layer.empty()) {
-            ctx.echo("'" + *named +
-                     "' bir kapsama katmanına nişanlanmamış; rapor neyi bölümleyeceğini "
-                     "bilemez. Önce: ÇIKTIYERLEŞİMİ islem=atlas ad=" +
-                     *named + " katman=<katman>");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'" + *named +
+                           "' bir kapsama katmanına nişanlanmamış; rapor neyi bölümleyeceğini "
+                           "bilemez. Önce: ÇIKTIYERLEŞİMİ islem=atlas ad=" +
+                           *named + " katman=<katman>");
             co_return;
         }
 

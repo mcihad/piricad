@@ -164,7 +164,8 @@ Task<void> run(Context& ctx)
             } else if (!core::turkish_iequals(kind, "dogru") &&
                        !core::turkish_iequals(kind, "doğru") &&
                        !core::turkish_iequals(kind, "line")) {
-                ctx.echo("Beklenen tür: doğru | ışın. Girilen: '" + kind + "'");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Beklenen tür: doğru | ışın. Girilen: '" + kind + "'");
                 co_return;
             }
         }
@@ -172,7 +173,7 @@ Task<void> run(Context& ctx)
         const std::int64_t math = core::math_udeg_from_angle(
             typed_angle, core::AngleConvention{typed_unit, convention.rule});
         if (auto st = ctx.transaction().add_angled_guide(at, math, ray); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
 
@@ -204,14 +205,16 @@ Task<void> run(Context& ctx)
         } else if (!core::turkish_iequals(typed, "yatay") &&
                    !core::turkish_iequals(typed, "horizontal") &&
                    !core::turkish_iequals(typed, "y")) {
-            ctx.echo("Beklenen yön: yatay | düşey | bir açı (örn. yon=45g). Girilen: '" + typed +
-                     "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Beklenen yön: yatay | düşey | bir açı (örn. yon=45g). Girilen: '" + typed +
+                           "'");
             co_return;
         }
     }
 
     if (value.empty()) {
-        ctx.echo("Kılavuzun koordinatı eksik. Örnek: KILAVUZ yon=yatay deger=4310220.5");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kılavuzun koordinatı eksik. Örnek: KILAVUZ yon=yatay deger=4310220.5");
         co_return;
     }
     const auto coordinate = static_cast<core::Mm>(value.as_int());
@@ -222,11 +225,12 @@ Task<void> run(Context& ctx)
         constexpr core::Mm kReach = 500;
         const std::size_t hit     = ctx.document().guides().nearest(axis, coordinate, kReach);
         if (hit >= ctx.document().guides().size()) {
-            ctx.echo("Orada " + axis_name(axis) + " kılavuz yok: " + metres(coordinate));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Orada " + axis_name(axis) + " kılavuz yok: " + metres(coordinate));
             co_return;
         }
         if (auto st = ctx.transaction().remove_guide(hit); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return; // the bus rolls the transaction back
         }
 
@@ -238,7 +242,7 @@ Task<void> run(Context& ctx)
     }
 
     if (auto st = ctx.transaction().add_guide(axis, coordinate); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

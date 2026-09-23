@@ -166,12 +166,14 @@ SEÇ TÜMÜ
 
 ### Bir katmandaki her şey
 
+Yukarıda çizdiğiniz üç kenarın hepsi `SINIR` katmanındadır:
+
 ```
-SEÇ KATMAN katman="ADAKENARI"
+SEÇ KATMAN katman="SINIR"
 ```
 
 ```text
-126 nesne bulundu (DEĞİŞTİR). Seçimde 126 nesne var: 17, 18, 19, …
+3 nesne bulundu (DEĞİŞTİR). Seçimde 3 nesne var: 1, 2, 3
 ```
 
 Katman panelinde bir katmana **sağ tıklayıp Tümünü seç** dediğinizde çalışan

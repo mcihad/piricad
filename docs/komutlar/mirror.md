@@ -77,9 +77,13 @@ tıklayınca oluşacak yansımadır.
 
 ### Betik
 
+Betik önce bir çizgi çizer, sonra onu başlangıç noktasından kuzeye giden eksene göre
+aynalar:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[10000,0],[20000,0]] } },
     { "cmd": "core.mirror",
       "args": { "nesneler": [1],
                 "baslangic": [0, 0], "bitis": [0, 100000] } }

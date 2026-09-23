@@ -103,9 +103,15 @@ alan aynı komuttur ve komut günlüğüne aynı satır olarak düşer.
 
 ### Betik
 
+Komut satırındaki örneğin aynısı: dört kenar ayrı ayrı çizilir, sonra alana çevrilir.
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[485300000,4310200000],[485360000,4310200000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[485360000,4310200000],[485360000,4310245000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[485360000,4310245000],[485300000,4310245000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[485300000,4310245000],[485300000,4310200000]] } },
     { "cmd": "core.to_area", "args": { "nesneler": [1, 2, 3, 4] } }
   ]
 }

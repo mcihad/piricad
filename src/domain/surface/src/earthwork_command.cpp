@@ -58,13 +58,15 @@ std::string metres(core::Mm v)
 Task<void> run(Context& ctx)
 {
     if (!domain::surface::available()) {
-        ctx.echo("Üçgenleme bu yapıda yok; hacim hesaplanamaz. KENTOS_WITH_CDT=ON ile derleyin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Üçgenleme bu yapıda yok; hacim hesaplanamaz. KENTOS_WITH_CDT=ON ile derleyin.");
         co_return;
     }
 
     const Value given = ctx.argument("kot");
     if (given.empty()) {
-        ctx.echo("Karşılaştırma kotu eksik. Örnek: HACİM kot=845000 (845 m)");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Karşılaştırma kotu eksik. Örnek: HACİM kot=845000 (845 m)");
         co_return;
     }
     const auto level = static_cast<core::Mm>(given.as_int());
@@ -73,7 +75,8 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = doc.attributes();
     const core::AttrId kot       = table.find("kot");
     if (kot == core::kNoAttr) {
-        ctx.echo("Çizimde 'kot' sütunu yok. Kotlu bir nokta listesini NOKTALAR ile okuyun.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Çizimde 'kot' sütunu yok. Kotlu bir nokta listesini NOKTALAR ile okuyun.");
         co_return;
     }
 
@@ -103,14 +106,15 @@ Task<void> run(Context& ctx)
     }
 
     if (levels.size() < 3) {
-        ctx.echo("Kotlu nokta sayısı yetersiz: " + std::to_string(levels.size()) +
-                 ". Hacim hesabı en az üç kotlu nokta ister.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kotlu nokta sayısı yetersiz: " + std::to_string(levels.size()) +
+                       ". Hacim hesabı en az üç kotlu nokta ister.");
         co_return;
     }
 
     auto computed = domain::surface::earthwork(levels, level);
     if (!computed) {
-        ctx.echo(computed.error().message);
+        ctx.refuse(computed.error());
         co_return;
     }
     const domain::surface::Earthwork& work = computed.value();

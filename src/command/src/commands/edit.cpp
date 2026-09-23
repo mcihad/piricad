@@ -39,7 +39,8 @@ Task<void> run_erase(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
         if (requested.empty()) {
-            ctx.echo("Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1");
             co_return;
         }
     }
@@ -47,19 +48,21 @@ Task<void> run_erase(Context& ctx)
     std::size_t removed = 0;
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya zaten silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya zaten silinmiş: " + std::to_string(raw));
             co_return;
         }
         auto st = ctx.transaction().erase_entity(slot);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ++removed;
@@ -78,14 +81,36 @@ Task<void> run_erase(Context& ctx)
     ctx.echo(std::to_string(removed) + " nesne silindi.");
 }
 
+/// NOT AFTER A BATCH HAS EDITED. A batch is one undo step that does not exist
+/// until it closes, so an undo inside it cannot reach the batch's own edits: it
+/// reaches the entry below — the work done before the script ran — and applies
+/// it under the batch's open transaction. The close then pushes the batch, which
+/// empties the redo stack, and that earlier work is gone with no way back. The
+/// manual's "Çiz ve geri al" script looked like it undid its own line; it undid
+/// nothing, and the silent refusal hid which of the two it was (TODOS F-01).
+///
+/// Before the batch's first edit there is nothing to cut across: a console line
+/// that only undoes is the same GERİAL as the command line's, and a batch that
+/// ends with no edit of its own pushes no step and leaves the redo stack alone.
+bool refuse_inside_batch(Context& ctx, const char* verb)
+{
+    if (!ctx.session().bus().batch_has_edits()) return false;
+    ctx.refuse(core::ErrorCode::Unsupported,
+               std::string("Düzenleme yapmış bir toplu işin içinde ") + verb +
+                   ": toplu iş bittiğinde tek bir geri alma adımı olur. Onu bittikten "
+                   "sonra GERİAL ile bütünüyle geri alabilirsiniz.");
+    return true;
+}
+
 Task<void> run_undo(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
     std::string label;
+    if (refuse_inside_batch(ctx, "geri alınamaz")) co_return;
 
     auto st = bus.undo_stack().undo(bus.document(), &label);
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 
@@ -97,10 +122,11 @@ Task<void> run_redo(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
     std::string label;
+    if (refuse_inside_batch(ctx, "yinelenemez")) co_return;
 
     auto st = bus.undo_stack().redo(bus.document(), &label);
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

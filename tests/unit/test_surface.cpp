@@ -177,7 +177,7 @@ TEST_CASE("EŞYÜKSELTİ: kotsuz nokta sıfır sayılmaz")
     r.said.clear();
     // Two points, neither levelled: a sea-level point in the middle of a hillside
     // would drag every contour around it, so an unlevelled point is left out.
-    REQUIRE(r.bus.execute_line("EŞYÜKSELTİ aralik=1000", Origin::Test).ok());
+    r.said += REFUSED(r.bus.execute_line("EŞYÜKSELTİ aralik=1000", Origin::Test));
     CHECK(r.said.find("yetersiz") != std::string::npos);
 }
 

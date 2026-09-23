@@ -27,8 +27,9 @@ Task<void> run(Context& ctx)
     std::int64_t degree = 3;
     if (const Value given = ctx.argument("derece"); !given.empty()) degree = given.as_int();
     if (degree < 1 || degree > 15) {
-        ctx.echo("Spline derecesi 1 ile 15 arasında olmalı; verilen " + std::to_string(degree) +
-                 ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Spline derecesi 1 ile 15 arasında olmalı; verilen " + std::to_string(degree) +
+                       ".");
         co_return;
     }
     bool closed = false;
@@ -57,8 +58,9 @@ Task<void> run(Context& ctx)
     }
 
     if (points.size() < 2) {
-        ctx.echo("Bir spline en az iki kontrol noktası ister; " + std::to_string(points.size()) +
-                 " nokta verildi.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bir spline en az iki kontrol noktası ister; " + std::to_string(points.size()) +
+                       " nokta verildi.");
         co_return;
     }
     if (static_cast<std::size_t>(degree) + 1 > points.size()) {
@@ -78,7 +80,7 @@ Task<void> run(Context& ctx)
         ctx.active_layer(), core::kSplineKind,
         std::span<const core::RingGeometry::RingInput>(&ring, 1), payload);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

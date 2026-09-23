@@ -89,7 +89,8 @@ Task<void> run(Context& ctx)
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
         targets.push_back(slot);
@@ -104,8 +105,9 @@ Task<void> run(Context& ctx)
             if (doc.alive(e) && doc.entities().kind[e] == core::kPointKind) targets.push_back(e);
 
     if (targets.empty()) {
-        ctx.echo("Aplike edilecek nokta yok. NOKTALAR ile bir liste okuyun, NOKTA ile çizin "
-                 "ya da nesne seçin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Aplike edilecek nokta yok. NOKTALAR ile bir liste okuyun, NOKTA ile çizin "
+                   "ya da nesne seçin.");
         co_return;
     }
 

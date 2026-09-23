@@ -81,8 +81,10 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 `\n` iki karakteri satır kırar, çünkü MPYY'nin `yapılaşma koşulu` gösterimi iki
 satırdır: çizginin üstünde TAKS değeri, altında KAKS değeri.
 
+Yukarıdaki `YAPI` parselinin iki sayısı, tek etikette iki satır:
+
 ```
-ETİKET katman=PARSEL bicim="{taks}\n{kaks}" yukseklik=3800
+ETİKET katman=YAPI bicim="{taks}\n{kaks}" yukseklik=3800
 ```
 
 Betikte gerçek satır sonu yazılabildiği için kaçışa gerek yoktur; bu, satır
@@ -121,10 +123,17 @@ gösterir.
 - **`ETİKET`** sayıları yazar. Her sayı sıradan bir yazı nesnesi olur: taşınır,
   yeniden stillenir, kendi katmanında kapatılır, `.pcad` ve DXF'e olduğu gibi gider.
 
+Boş bir çizimde, tek bir imar parseliyle:
+
+<!-- örnek: yeni çizim -->
+
 ```
 KATMAN ad=IMAR
 SÜTUN kimlik=taks tur=metin
 SÜTUN kimlik=kaks tur=metin
+ALAN noktalar=485300,4310200 485330,4310200 485330,4310230 485300,4310230
+ÖZNİTELİK ad=taks nesne=1 deger="0.35"
+ÖZNİTELİK ad=kaks nesne=1 deger="1.05"
 
 STİL katman=IMAR tip=merkez-isaretci sekil=daire birim=zemin boyut=26000
 STİL katman=IMAR ekle=evet tip=merkez-isaretci sekil=cizik aci=90000000 birim=zemin boyut=22000
@@ -157,12 +166,17 @@ gerekir: **etiket, sonradan değişen bir özniteliği takip etmez.** Komutu yen
 
 ### Komut satırı
 
-Ada/parsel numarası:
+Örnekler boş bir çizimle, tek bir parselle başlar. Ada/parsel numarası:
+
+<!-- örnek: yeni çizim -->
 
 ```
 KATMAN ad=PARSEL
 SÜTUN kimlik=ada tur=tam_sayi
 SÜTUN kimlik=parsel tur=tam_sayi
+ALAN noktalar=485300,4310200 485330,4310200 485330,4310230 485300,4310230
+ÖZNİTELİK ad=ada nesne=1 deger=1284
+ÖZNİTELİK ad=parsel nesne=1 deger=7
 ETİKET katman=PARSEL bicim="{ada}/{parsel}"
 ```
 
@@ -172,6 +186,8 @@ yazıyı `ETİKET` yazar; ikisi de nesnenin ortasına geldiği için üst üste 
 ```
 SÜTUN kimlik=taks tur=metin
 SÜTUN kimlik=kaks tur=metin
+ÖZNİTELİK ad=taks nesne=1 deger="0.40"
+ÖZNİTELİK ad=kaks nesne=1 deger="1.20"
 STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=daire birim=zemin boyut=22000 renk=4289396768 kalinlik=400
 ETİKET katman=PARSEL bicim="{taks}/{kaks}" yukseklik=3000
 ```

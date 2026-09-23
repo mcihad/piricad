@@ -712,9 +712,10 @@ Task<void> run(Context& ctx)
         parts.push_back(one);
 
         if (parts.size() > 3 || parts.front().empty()) {
-            ctx.echo("'alan' biçimi: sütun[:özellik[:tür]] — örnek alan=kod:yazi:metin. "
-                     "Gelen: '" +
-                     token + "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'alan' biçimi: sütun[:özellik[:tür]] — örnek alan=kod:yazi:metin. "
+                       "Gelen: '" +
+                           token + "'");
             co_return;
         }
 
@@ -724,8 +725,9 @@ Task<void> run(Context& ctx)
         if (parts.size() >= 2 && !parts[1].empty()) {
             const auto what = core::symbol_property_from_name(parts[1]);
             if (!what) {
-                ctx.echo("Bilinmeyen özellik: '" + parts[1] +
-                         "'. Beklenen: yazi, renk, dolgu, kalinlik, boyut, aci, saydamlik.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Bilinmeyen özellik: '" + parts[1] +
+                               "'. Beklenen: yazi, renk, dolgu, kalinlik, boyut, aci, saydamlik.");
                 co_return;
             }
             binding.what = *what;
@@ -734,8 +736,9 @@ Task<void> run(Context& ctx)
         if (parts.size() >= 3 && !parts[2].empty()) {
             const auto type = core::attr_type_from_name(parts[2]);
             if (!type) {
-                ctx.echo("Bilinmeyen alan türü: '" + parts[2] +
-                         "'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin, kod.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Bilinmeyen alan türü: '" + parts[2] +
+                               "'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin, kod.");
                 co_return;
             }
             binding.type = *type;
@@ -755,7 +758,7 @@ Task<void> run(Context& ctx)
             spec.name_tr = binding.field;
             spec.type    = binding.type;
             if (auto made = ctx.transaction().declare_attribute(std::move(spec)); !made) {
-                ctx.echo(made.error().message);
+                ctx.refuse(made.error());
                 co_return;
             }
         }

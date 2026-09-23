@@ -678,11 +678,12 @@ TEST_CASE("R41: AYAR tercihe, TERCİH proje ayarına dokunamaz")
 {
     Rig rig;
 
-    CHECK(rig.line("AYAR tema koyu").ok()); // the command runs; the write is refused
+    rig.echoed +=
+        REFUSED(rig.line("AYAR tema koyu")); // refused, and it names the scope that owns it
     CHECK(mentions(rig.echoed, "uygulama"));
     CHECK(mentions(rig.echoed, "core.arayuz.tema"));
 
-    CHECK(rig.line("TERCİH koordinat_hassasiyeti 2").ok());
+    rig.echoed += REFUSED(rig.line("TERCİH koordinat_hassasiyeti 2"));
     CHECK(mentions(rig.echoed, "proje"));
 
     // and the refusal actually refused: the value is still whatever AYAR set.
@@ -733,11 +734,11 @@ TEST_CASE("AYAR: aralık dışı değer kırpılır ve kullanıcıya söylenir")
     CHECK(mentions(rig.echoed, "= 6"));
 }
 
-TEST_CASE("AYAR: bilinmeyen ayar adı komutu düşürmez, yol gösterir")
+TEST_CASE("AYAR: bilinmeyen ayar adı hata olarak döner ve yol gösterir")
 {
     Rig rig;
 
-    CHECK(rig.line("AYAR bilinmeyen_ayar 3").ok());
+    rig.echoed += REFUSED(rig.line("AYAR bilinmeyen_ayar 3"));
     CHECK(mentions(rig.echoed, "Bilinmeyen ayar"));
     CHECK(mentions(rig.echoed, "bilinmeyen_ayar"));
 }
@@ -754,7 +755,7 @@ TEST_CASE("AYAR: geçersiz değer reddedilir, eski değer yerinde kalır")
     CHECK(mentions(rig.echoed, "= santimetre"));
     CHECK(rig.bus.project_settings().is_explicit("core.cizim.birim"));
 
-    CHECK(rig.line("AYAR cizim_birimi fersah").ok());
+    rig.echoed += REFUSED(rig.line("AYAR cizim_birimi fersah"));
     CHECK(mentions(rig.echoed, "milimetre, santimetre, metre"));
 
     CHECK(rig.line("AYAR cizim_birimi").ok());
@@ -876,20 +877,22 @@ TEST_CASE("R41: her kapsamın bir komutu var — oturum ayarları artık ulaşı
 
     // The scope box refuses a foreign scope in both directions (R39): MOD may not
     // write a project setting and AYAR may not write a session one. The refusal is
-    // a guiding message rather than a dropped command — the same deliberate choice
-    // "AYAR: bilinmeyen ayar adı komutu düşürmez" records above — so the assertion
+    // an ERROR whose sentence names the scope that owns the setting, so a script
+    // stops there and an agent is told the write did not happen (TODOS F-01). This
+    // supersedes the earlier choice to report it as a successful command with a
+    // guiding line in the transcript — the success was the defect. The assertion
     // is that nothing was written and the message names the right scope.
-    CHECK(r.line("MOD koordinat_sistemi TUREF/TM33").ok());
+    r.echoed += REFUSED(r.line("MOD koordinat_sistemi TUREF/TM33"));
     CHECK(mentions(r.echoed, "proje"));
     CHECK(!r.bus.project_settings().is_explicit("core.crs.id"));
 
     // kutupsal_aci is untouched above, so is_explicit here reports the refusal and
     // not the legitimate MOD write two lines up.
-    CHECK(r.line("AYAR kutupsal_açı 30000000").ok());
+    r.echoed += REFUSED(r.line("AYAR kutupsal_açı 30000000"));
     CHECK(mentions(r.echoed, "oturum"));
     CHECK(!r.bus.session_settings().is_explicit("core.yakalama.kutupsal_aci"));
 
-    CHECK(r.line("TERCİH ızgaraya_yakala evet").ok());
+    r.echoed += REFUSED(r.line("TERCİH ızgaraya_yakala evet"));
     CHECK(mentions(r.echoed, "oturum"));
 }
 
@@ -915,7 +918,7 @@ TEST_CASE("P0-1: açı kuralı MOD ile değişir, semt varsayılandır, kısa ad
     CHECK(mentions(r.echoed, "matematik"));
 
     // A project command may not write a session aid, and says which scope owns it.
-    CHECK(r.line("AYAR kural semt").ok());
+    r.echoed += REFUSED(r.line("AYAR kural semt"));
     CHECK(mentions(r.echoed, "oturum"));
     CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{1});
 
@@ -923,7 +926,7 @@ TEST_CASE("P0-1: açı kuralı MOD ile değişir, semt varsayılandır, kısa ad
     CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{0});
 
     // An unknown rule is refused by the catalogue, and the value stays.
-    CHECK(r.line("MOD kural saatyönü").ok());
+    r.echoed += REFUSED(r.line("MOD kural saatyönü"));
     CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{0});
 }
 
@@ -957,7 +960,7 @@ TEST_CASE("R40: tolerans proje kapsamındadır — ifraz sonucunu değiştirir")
 
     // The same setting cannot be written as a per-machine preference: `TERCİH` cannot
     // reach into the project box, and if it could the tolerance would vary by machine.
-    CHECK(r.line("TERCİH düğüm_toleransı 20").ok());
+    r.echoed += REFUSED(r.line("TERCİH düğüm_toleransı 20"));
     CHECK(mentions(r.echoed, "proje"));
     CHECK(!r.bus.app_settings().is_explicit("core.topoloji.dugum_toleransi"));
 }

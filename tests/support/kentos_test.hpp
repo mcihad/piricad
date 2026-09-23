@@ -107,3 +107,30 @@ void report_pending();
 /// runs the two halves into one unreadable line; this puts them on separate lines
 /// and pins the location to the call site rather than to this header.
 #define FAIL_WITH(what, detail) ADD_FAIL_CHECK_AT(__FILE__, __LINE__, what, "\n        ", detail)
+
+namespace kentos_test {
+
+/// The sentence a refused call returned, after asserting that it WAS refused.
+///
+/// A command that declines — a circle handed to BUDA, an object that is not
+/// there — returns an ERROR, and its sentence is that error's message. It used to
+/// write the sentence to the transcript and report success, which is how a
+/// script, an agent and Python came to believe that work had been done
+/// (TODOS F-01). A case that checks the wording checks it here, on the value a
+/// client actually receives, rather than on the transcript.
+///
+/// Fatal on success: whatever the case asserts next is about a refusal that did
+/// not happen.
+template<class Result> std::string refusal_of(const Result& result, const char* file, int line)
+{
+    if (result.ok()) {
+        ADD_FAIL_AT(file, line, "reddedilmesi gereken çağrı başarı döndü");
+        return {};
+    }
+    return result.error().message;
+}
+
+} // namespace kentos_test
+
+/// Asserts `expr` was refused and yields its sentence; see `refusal_of`.
+#define REFUSED(expr) ::kentos_test::refusal_of((expr), __FILE__, __LINE__)

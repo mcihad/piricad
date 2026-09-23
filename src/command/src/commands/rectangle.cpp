@@ -97,8 +97,9 @@ Task<void> run(Context& ctx)
         ctx.record("yontem", Value::text(how));
     } else {
         if (first->x == second->x || first->y == second->y) {
-            ctx.echo("Bu iki köşe bir alan kapatmaz: karşı köşenin hem doğusu hem kuzeyi "
-                     "ilkinden farklı olmalı.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu iki köşe bir alan kapatmaz: karşı köşenin hem doğusu hem kuzeyi "
+                       "ilkinden farklı olmalı.");
             co_return;
         }
 
@@ -117,7 +118,7 @@ Task<void> run(Context& ctx)
 
     auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

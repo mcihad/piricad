@@ -64,9 +64,13 @@ Nesneleri seçin ve komut satırına `KATMANAT katman=PARSEL` yazın.
 
 ### Betik
 
+Betik önce iki çizgi çizer, sonra ikisini birlikte `PARSEL` katmanına taşır:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[20000,0]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,5000],[20000,5000]] } },
     { "cmd": "core.set_layer", "args": { "nesneler": [1, 2], "katman": "PARSEL" } }
   ]
 }

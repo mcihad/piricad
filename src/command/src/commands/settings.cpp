@@ -110,15 +110,16 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
     if (index == core::kNoSetting) {
         // One unknown-setting message, written once, in core.
         auto probe = store.lookup(name.as_text());
-        ctx.echo(probe.error().message);
+        ctx.refuse(probe.error());
         co_return;
     }
 
     const SettingSpec& spec = store.catalogue().at(index);
     if (spec.scope != scope) {
-        ctx.echo("'" + spec.id + "' ayarı " + core::setting_scope_label(spec.scope) +
-                 " kapsamındadır; bu komut " + core::setting_scope_label(scope) +
-                 " ayarlarını yönetir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "'" + spec.id + "' ayarı " + core::setting_scope_label(spec.scope) +
+                       " kapsamındadır; bu komut " + core::setting_scope_label(scope) +
+                       " ayarlarını yönetir.");
         co_return;
     }
 
@@ -140,7 +141,7 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
         core::turkish_iequals(value.as_text(), "default")) {
         const SettingValue before = store.get(spec.id);
         if (auto st = store.reset(spec.id); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         // A reset is a change like any other, so whoever owns persistence has to
@@ -156,7 +157,7 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
 
     auto parsed = core::parse_setting(spec, value.as_text());
     if (!parsed) {
-        ctx.echo(parsed.error().message);
+        ctx.refuse(parsed.error());
         co_return;
     }
 
@@ -186,7 +187,7 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
         core::Crs resolved = bus.on_crs_resolve ? bus.on_crs_resolve(parsed.value().as_text())
                                                 : core::Crs(std::string(parsed.value().as_text()));
         if (auto st = ctx.transaction().set_crs(resolved); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }
@@ -198,7 +199,7 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
             bus.on_setting_changed(spec.id, scope);
     }
     if (!change) {
-        ctx.echo(change.error().message);
+        ctx.refuse(change.error());
         co_return;
     }
 

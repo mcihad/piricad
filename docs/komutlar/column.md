@@ -93,9 +93,10 @@ düzenlenemez — çünkü o katmandaki bir nesnenin **taşıyacağı** alanlar�
 Katman adı **Türkçe katlanarak** karşılaştırılır: `Enerji` ile `ENERJİ` aynı katmandır.
 
 Bir sütunun kapsamı sonradan da değiştirilebilir; yanlışlıkla proje geneline
-tanımlanmış bir alan tek komutla yerine oturur:
+tanımlanmış bir alan (birinci satır) tek komutla yerine oturur (ikinci satır):
 
 ```
+SÜTUN kimlik=direk tur=uzunluk
 SÜTUN kimlik=direk katman=ENERJİ
 ```
 
@@ -129,9 +130,10 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 ## Sütunu düzenlemek
 
 Var olan bir kimlikle çağrılan `SÜTUN` yeni bir sütun tanımlamaz, **var olanı
-düzenler**:
+düzenler**. Birinci satır sütunu tanımlar, ikincisi onu düzenler:
 
 ```
+SÜTUN kimlik=oran tur=ondalik basamak=2
 SÜTUN kimlik=oran ad="Ölçülen Oran" aciklama="Arazide ölçülen oran" zorunlu=evet
 ```
 

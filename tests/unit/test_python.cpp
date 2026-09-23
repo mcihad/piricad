@@ -178,6 +178,54 @@ assert "BÖYLEBİRKOMUTYOK" in caught or "komut" in caught.lower()
     CHECK(rig.undo.undo_depth() == 1);
 }
 
+TEST_CASE("PYTHON: a caught refusal takes back its own edits and no one else's")
+{
+    // A refusal is an error now (TODOS F-01), so `cad.run` raises on one, and a
+    // script may catch it. What the catch must not do is decide the fate of the
+    // lines before it: the refused command shares the script's transaction, and
+    // rolling THAT back would drop the first line while the journal still said
+    // it was drawn.
+    Rig rig;
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    auto report = runner.run_text(R"(
+cad.run("ÇİZGİ 0,0 10,0")
+try:
+    cad.run("SİL nesneler=99")
+except Exception as hata:
+    caught = str(hata)
+cad.run("ÇİZGİ 0,5 10,5")
+assert "99" in caught
+)",
+                                  "yakalanan ret");
+
+    REQUIRE(report.ok());
+    CHECK(rig.doc.live_entity_count() == 2);
+    CHECK(rig.undo.undo_depth() == 1);
+}
+
+TEST_CASE("PYTHON: cad.undo() on its own is the command line's GERİAL")
+{
+    // docs/komutlar/undo.md says so, and this is where it is held to it. A console
+    // line runs in a batch; one that only undoes has nothing to cut across, closes
+    // with no step of its own, and leaves the redo stack for cad.redo().
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    script::PythonRunner runner(rig.bus, script::Sandbox::Safe);
+
+    REQUIRE(runner.run_text("cad.undo()", "konsol").ok());
+    CHECK(rig.doc.live_entity_count() == 0);
+    REQUIRE(runner.run_text("cad.redo()", "konsol").ok());
+    CHECK(rig.doc.live_entity_count() == 1);
+
+    // After the script has drawn, the same call is refused, and the script's own
+    // line goes with the failed run rather than the user's earlier one.
+    auto mixed = runner.run_text("cad.run('ÇİZGİ 0,5 10,5')\ncad.undo()", "karışık");
+    CHECK_FALSE(mixed.ok());
+    CHECK(rig.doc.live_entity_count() == 1);
+    CHECK(rig.undo.undo_depth() == 1);
+}
+
 TEST_CASE("PYTHON: the run records its host and sandbox level in the journal")
 {
     Rig rig;

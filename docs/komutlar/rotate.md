@@ -77,9 +77,13 @@ Açıyı yazmak isterseniz `aci=` verin; o zaman komut hiçbir şey sormaz.
 
 ### Betik
 
+Betik önce 10 m bir çizgi çizer, sonra onu başlangıç noktası çevresinde 90 derece
+döndürür:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[10000,0]] } },
     { "cmd": "core.rotate",
       "args": { "nesneler": [1], "merkez": [0, 0], "aci": 90 } }
   ]

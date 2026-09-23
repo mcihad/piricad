@@ -61,5 +61,17 @@ if ! diff -q "$page" "$scratch/matris.md" >/dev/null; then
     exit 1
 fi
 
+# A SILENT REFUSAL IS A FAILURE OF ITS OWN, not a cell to be regenerated. The
+# table listing one would pass the freshness diff the moment somebody ran
+# `make kapsam` — so the section must say none exist. A command that refuses
+# returns the refusal as an error (`Context::refuse`); writing it to the
+# transcript and reporting success lies to every client that is not a person.
+if ! grep -A2 '^## Sessiz retler' "$page" | grep -q '^Yok:'; then
+    echo "kapsam: destek matrisinde SESSİZ RET var -> $page (## Sessiz retler)" >&2
+    echo "kapsam:   Bir komut reddini transkripte yazıp başarı bildiriyor. Reddi" >&2
+    echo "kapsam:   ctx.refuse(...) ile hata olarak döndürün." >&2
+    exit 1
+fi
+
 summary="$(grep -m1 ' hücre: ' "$page")"
 echo "kapsam: OK — $summary"

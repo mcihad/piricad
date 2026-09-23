@@ -129,8 +129,9 @@ Task<void> run(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
     if (requested.size() != 1) {
-        ctx.echo("Alana göre ifraz tek parsel üzerinde çalışır. Seçili: " +
-                 std::to_string(requested.size()) + ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Alana göre ifraz tek parsel üzerinde çalışır. Seçili: " +
+                       std::to_string(requested.size()) + ".");
         co_return;
     }
 
@@ -148,7 +149,8 @@ Task<void> run(Context& ctx)
     const auto dy       = static_cast<double>(second->y - first->y);
     const double length = std::sqrt(dx * dx + dy * dy);
     if (length <= 0.0) {
-        ctx.echo("Yön çizgisinin iki ucu aynı yerde; ayırma yönü belirsiz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Yön çizgisinin iki ucu aynı yerde; ayırma yönü belirsiz.");
         co_return;
     }
     const double ux = dx / length;
@@ -156,12 +158,13 @@ Task<void> run(Context& ctx)
 
     const Value wanted = ctx.argument("alan");
     if (wanted.empty()) {
-        ctx.echo("Ayrılacak alan eksik. Örnek: ALANİFRAZ alan=400000000 (400 m², mm² olarak)");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ayrılacak alan eksik. Örnek: ALANİFRAZ alan=400000000 (400 m², mm² olarak)");
         co_return;
     }
     const auto target = static_cast<core::Mm2>(wanted.as_int());
     if (target <= 0) {
-        ctx.echo("Ayrılacak alan sıfırdan büyük olmalı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Ayrılacak alan sıfırdan büyük olmalı.");
         co_return;
     }
 
@@ -174,21 +177,24 @@ Task<void> run(Context& ctx)
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(requested.front()));
     const core::EntityId slot = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(requested.front()));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(requested.front()));
         co_return;
     }
 
     core::Polygon parcel;
     if (!polygon_of(doc, slot, parcel)) {
-        ctx.echo("Nesne " + std::to_string(requested.front()) +
-                 " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(requested.front()) +
+                       " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
         co_return;
     }
 
     const core::Mm2 whole = abs_area(core::ring_area(parcel.exterior));
     if (target >= whole) {
-        ctx.echo("İstenen alan (" + square_metres(target) + ") parselin tamamından (" +
-                 square_metres(whole) + ") küçük olmalı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "İstenen alan (" + square_metres(target) +
+                                                         ") parselin tamamından (" +
+                                                         square_metres(whole) + ") küçük olmalı.");
         co_return;
     }
 
@@ -227,7 +233,7 @@ Task<void> run(Context& ctx)
         auto side = core::polygon_boolean({parcel}, {half_plane(*first, ux, uy, mid, reach)},
                                           core::BooleanOp::Intersection);
         if (!side) {
-            ctx.echo(side.error().message);
+            ctx.refuse(side.error());
             co_return;
         }
 
@@ -240,7 +246,8 @@ Task<void> run(Context& ctx)
     }
 
     if (kept.empty()) {
-        ctx.echo("Bu yönde istenen alan ayrılamıyor: parsel çizgiyi kesmiyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu yönde istenen alan ayrılamıyor: parsel çizgiyi kesmiyor.");
         co_return;
     }
 
@@ -249,16 +256,17 @@ Task<void> run(Context& ctx)
         // REFUSED RATHER THAN ROUNDED. A target that cannot be met in this
         // direction is a fact about the parcel, and drawing a boundary that misses
         // it by more than the tolerance would put a wrong number on a tapu.
-        ctx.echo("İstenen alana bu yönde ulaşılamadı. İstenen: " + square_metres(target) +
-                 ", en yakın: " + square_metres(achieved) + ", tolerans: " +
-                 square_metres(tolerance) + ". Yönü değiştirin ya da toleransı büyütün.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İstenen alana bu yönde ulaşılamadı. İstenen: " + square_metres(target) +
+                       ", en yakın: " + square_metres(achieved) + ", tolerans: " +
+                       square_metres(tolerance) + ". Yönü değiştirin ya da toleransı büyütün.");
         co_return;
     }
 
     // ---- the remainder ----
     auto rest = core::polygon_boolean({parcel}, kept, core::BooleanOp::Difference);
     if (!rest) {
-        ctx.echo(rest.error().message);
+        ctx.refuse(rest.error());
         co_return;
     }
 
@@ -293,16 +301,16 @@ Task<void> run(Context& ctx)
     };
 
     if (auto st = emit(kept, "ayrılan"); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
     if (auto st = emit(rest.value(), "kalan"); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 
     if (auto st = ctx.transaction().erase_entity(slot); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

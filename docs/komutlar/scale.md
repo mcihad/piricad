@@ -75,9 +75,13 @@ yarım metre dışarısı yarısı. Her CAD sürüklenen ölçeği böyle okur.
 
 ### Betik
 
+Betik önce 10 m bir çizgi çizer, sonra onu başlangıç noktasına göre iki katına
+büyütür:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[10000,0]] } },
     { "cmd": "core.scale",
       "args": { "nesneler": [1], "merkez": [0, 0], "carpan": 2 } }
   ]

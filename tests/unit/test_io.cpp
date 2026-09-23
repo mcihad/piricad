@@ -353,15 +353,15 @@ TEST_CASE("NOKTALAR: yon=yaz nesneler= ile bir nesnenin köşeleri yazılır")
     CHECK(rows.front().find("PARSEL") != std::string::npos);
 
     // Without `yon=yaz` the argument is refused before anything is written.
-    auto misuse = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" nesneler=1", Origin::Test);
-    CHECK(r.transcript.find("yalnız yon=yaz") != std::string::npos);
-    (void)misuse;
+    const std::string misuse =
+        REFUSED(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" nesneler=1", Origin::Test));
+    CHECK(misuse.find("yalnız yon=yaz") != std::string::npos);
 
     // A key that names nothing is a refusal, not an empty file.
-    auto missing = r.bus.execute_line(
-        "NOKTALAR dosya=\"" + dir.file("yok.txt") + "\" yon=yaz nesneler=99", Origin::Test);
-    CHECK(r.transcript.find("Nesne bulunamadı") != std::string::npos);
-    (void)missing;
+    const std::string missing = REFUSED(r.bus.execute_line(
+        "NOKTALAR dosya=\"" + dir.file("yok.txt") + "\" yon=yaz nesneler=99", Origin::Test));
+    CHECK(missing.find("Nesne bulunamadı") != std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(dir.file("yok.txt")));
 }
 
 TEST_CASE("NOKTALAR: birden çok nesne anahtar yinelenerek yazılır, virgülle değil")

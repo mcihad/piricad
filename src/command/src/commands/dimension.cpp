@@ -43,13 +43,14 @@ std::optional<GroundStyle> style_for(Context& ctx)
     if (const Value k = ctx.argument("katalog"); !k.empty()) configured = k.as_text();
     const std::string path = resolve_catalog_path(configured);
     if (path.empty()) {
-        ctx.echo("Ölçü stili kataloğu bulunamadı: '" + configured +
-                 "'. TERCİH ölçü_stilleri ile yolunu kurun ya da katalog= verin.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Ölçü stili kataloğu bulunamadı: '" + configured +
+                       "'. TERCİH ölçü_stilleri ile yolunu kurun ya da katalog= verin.");
         return std::nullopt;
     }
     auto catalog = load_dimension_styles(path);
     if (!catalog) {
-        ctx.echo(catalog.error().message);
+        ctx.refuse(catalog.error());
         return std::nullopt;
     }
     std::string wanted = "ISO-25";
@@ -59,7 +60,8 @@ std::optional<GroundStyle> style_for(Context& ctx)
         std::string known;
         for (const DimensionStyle& s : catalog.value().styles)
             known += (known.empty() ? "" : ", ") + s.id;
-        ctx.echo("Tanınmayan ölçü stili: '" + wanted + "'. Katalogdaki stiller: " + known + ".");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Tanınmayan ölçü stili: '" + wanted + "'. Katalogdaki stiller: " + known + ".");
         return std::nullopt;
     }
 
@@ -130,8 +132,9 @@ Task<void> run_dimension(Context& ctx)
         else if (core::turkish_key_equals(w, "yay") || core::turkish_key_equals(w, "arclength"))
             type = core::DimensionType::ArcLength;
         else {
-            ctx.echo("Tanınmayan ölçü türü: '" + w +
-                     "'. Türler: hizali, dogrusal, yaricap, cap, acisal, koordinat, yay.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Tanınmayan ölçü türü: '" + w +
+                           "'. Türler: hizali, dogrusal, yaricap, cap, acisal, koordinat, yay.");
             co_return;
         }
     }
@@ -194,7 +197,7 @@ Task<void> run_dimension(Context& ctx)
     if (!where) co_return;
 
     if (*p1 == *p2) {
-        ctx.echo("İki nokta aynı; ölçülecek bir uzunluk yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "İki nokta aynı; ölçülecek bir uzunluk yok.");
         co_return;
     }
 
@@ -202,12 +205,14 @@ Task<void> run_dimension(Context& ctx)
     // one layout every client of a dimension shares (core/dimension.hpp).
     core::DimensionLayout layout;
     if (!core::dimension_layout(def, picks, *where, style->text_height, layout)) {
-        ctx.echo(angular ? "Açının tepe noktası kolların ucuyla aynı olamaz."
-                         : "Ölçü bu noktalarla kurulamıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   angular ? "Açının tepe noktası kolların ucuyla aynı olamaz."
+                           : "Ölçü bu noktalarla kurulamıyor.");
         co_return;
     }
     if (def.measurement == 0 && def.override_text.empty()) {
-        ctx.echo("Ölçü sıfır çıktı; noktalar ölçülecek bir uzunluk ya da açı vermiyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ölçü sıfır çıktı; noktalar ölçülecek bir uzunluk ya da açı vermiyor.");
         co_return;
     }
     const std::string text = core::dimension_text(def, drawing_unit(ctx));
@@ -223,13 +228,13 @@ Task<void> run_dimension(Context& ctx)
     auto created =
         ctx.transaction().add_kind(ctx.active_layer(), core::kDimensionKind, rings, payload);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
     if (auto st = ctx.transaction().set_text(created.value(), text, style->text_height,
                                              core::TextAnchor::MiddleCentre);
         !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 
@@ -260,7 +265,8 @@ Task<void> run_leader(Context& ctx)
         previous = *next;
     }
     if (points.size() < 2) {
-        ctx.echo("Bir lider en az iki nokta ister: okun ucu ve yazının yanı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bir lider en az iki nokta ister: okun ucu ve yazının yanı.");
         co_return;
     }
 
@@ -276,7 +282,7 @@ Task<void> run_leader(Context& ctx)
         ctx.active_layer(), core::kLeaderKind,
         std::span<const core::RingGeometry::RingInput>(&ring, 1), payload);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
 
@@ -290,13 +296,13 @@ Task<void> run_leader(Context& ctx)
         const auto base = core::dimension_baseline(start, 1.0, 0.0, style->text_height, words);
         auto caption    = ctx.transaction().add_polyline(ctx.active_layer(), base);
         if (!caption) {
-            ctx.echo(caption.error().message);
+            ctx.refuse(caption.error());
             co_return;
         }
         if (auto st = ctx.transaction().set_text(caption.value(), words, style->text_height,
                                                  core::TextAnchor::BaselineLeft);
             !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }

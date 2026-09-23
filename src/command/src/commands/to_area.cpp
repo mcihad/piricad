@@ -61,14 +61,16 @@ bool collect(Context& ctx, const std::vector<std::int64_t>& ids, std::vector<Str
 
     for (std::int64_t raw : ids) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             return false;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             return false;
         }
 
@@ -76,21 +78,24 @@ bool collect(Context& ctx, const std::vector<std::int64_t>& ids, std::vector<Str
         // for an arc its two ends — not a run of boundary points. Chaining them
         // would build a face out of numbers that never described one.
         if (doc.entities().kind[slot] != core::kPolylineKind) {
-            ctx.echo("Nesne " + std::to_string(raw) +
-                     " bir eğri; eğri çizgi gibi birleştirilemez.");
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(raw) +
+                           " bir eğri; eğri çizgi gibi birleştirilemez.");
             return false;
         }
 
         const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
         if (span.count != 1) {
-            ctx.echo("Nesne " + std::to_string(raw) +
-                     " tek parçalı bir çizgi değil; ALANAÇEVİR yalnız açık çizgileri "
-                     "birleştirir.");
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(raw) +
+                           " tek parçalı bir çizgi değil; ALANAÇEVİR yalnız açık çizgileri "
+                           "birleştirir.");
             return false;
         }
         if (doc.geometry().ring_role[span.first] != core::RingRole::Open) {
-            ctx.echo("Nesne " + std::to_string(raw) +
-                     " zaten kapalı bir alan. Kapalı bir alan yeniden çevrilmez.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(raw) +
+                           " zaten kapalı bir alan. Kapalı bir alan yeniden çevrilmez.");
             return false;
         }
 
@@ -123,8 +128,9 @@ Task<void> run(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
         if (requested.empty()) {
-            ctx.echo("Çevrilecek çizgi belirtilmedi ve seçim boş. "
-                     "Örnek: ALANAÇEVİR nesneler=1 nesneler=2");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çevrilecek çizgi belirtilmedi ve seçim boş. "
+                       "Örnek: ALANAÇEVİR nesneler=1 nesneler=2");
             co_return;
         }
     }
@@ -133,7 +139,8 @@ Task<void> run(Context& ctx)
     if (!collect(ctx, requested, strands)) co_return;
 
     if (strands.size() < 2 && (strands.empty() || strands.front().points.size() < 3)) {
-        ctx.echo("Bir alan kapatmak için en az üç köşe gerekir; verilen çizgiler yetmiyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bir alan kapatmak için en az üç köşe gerekir; verilen çizgiler yetmiyor.");
         co_return;
     }
 
@@ -172,18 +179,20 @@ Task<void> run(Context& ctx)
         }
 
         if (!advanced) {
-            ctx.echo("Çizgiler tek bir zincir oluşturmuyor: " + std::to_string(joined) + " / " +
-                     std::to_string(strands.size()) +
-                     " çizgi birleşti, kalanların ucu zincire değmiyor. Uçları "
-                     "yakalama açıkken yeniden çizin ya da düğüm toleransını büyütün.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çizgiler tek bir zincir oluşturmuyor: " + std::to_string(joined) + " / " +
+                           std::to_string(strands.size()) +
+                           " çizgi birleşti, kalanların ucu zincire değmiyor. Uçları "
+                           "yakalama açıkken yeniden çizin ya da düğüm toleransını büyütün.");
             co_return;
         }
     }
 
     // The chain has to come back to where it started, or it is not a boundary.
     if (!within(ring.front(), ring.back(), tol)) {
-        ctx.echo("Zincir kapanmıyor: ilk köşe ile son köşe birbirine değmiyor. "
-                 "Kapalı bir alan için uçların buluşması gerekir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Zincir kapanmıyor: ilk köşe ile son köşe birbirine değmiyor. "
+                   "Kapalı bir alan için uçların buluşması gerekir.");
         co_return;
     }
 
@@ -192,8 +201,9 @@ Task<void> run(Context& ctx)
     if (ring.size() > 1 && within(ring.front(), ring.back(), tol)) ring.pop_back();
 
     if (ring.size() < 3) {
-        ctx.echo("Bir alan en az üç köşe ister; zincir " + std::to_string(ring.size()) +
-                 " köşe bıraktı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Bir alan en az üç köşe ister; zincir " +
+                                                         std::to_string(ring.size()) +
+                                                         " köşe bıraktı.");
         co_return;
     }
 
@@ -201,7 +211,7 @@ Task<void> run(Context& ctx)
     auto created = ctx.transaction().add_area(ctx.active_layer(), {&face, 1});
     if (!created) {
         // A ring that crosses itself is refused here, and the message names it.
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

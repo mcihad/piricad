@@ -55,9 +55,10 @@ Task<void> run(Context& ctx)
     // then the command would have to guess which one was short.
     const Value::Points given = ctx.argument("noktalar").as_points();
     if (given.size() < 4 || (given.size() % 2) != 0) {
-        ctx.echo("OTURT nokta ÇİFTLERİ ister: yerel, harita, yerel, harita... "
-                 "En az iki çift (dört nokta) gerekir. Verilen: " +
-                 std::to_string(given.size()) + " nokta.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "OTURT nokta ÇİFTLERİ ister: yerel, harita, yerel, harita... "
+                   "En az iki çift (dört nokta) gerekir. Verilen: " +
+                       std::to_string(given.size()) + " nokta.");
         co_return;
     }
 
@@ -71,7 +72,7 @@ Task<void> run(Context& ctx)
 
     auto fitted = domain::geodesy::fit_helmert(control, locked);
     if (!fitted) {
-        ctx.echo(fitted.error().message);
+        ctx.refuse(fitted.error());
         co_return;
     }
     const domain::geodesy::Helmert2D& fit = fitted.value();
@@ -127,7 +128,7 @@ Task<void> run(Context& ctx)
 
         if (rings.empty()) continue;
         if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return; // the bus rolls the whole drawing back
         }
         ++touched;
@@ -136,7 +137,7 @@ Task<void> run(Context& ctx)
     // ---- and say where it now is ----
     if (const Value target = ctx.argument("sistem"); !target.empty()) {
         if (auto st = ctx.transaction().set_crs(core::Crs(target.as_text())); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }

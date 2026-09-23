@@ -63,7 +63,8 @@ Task<void> run_sector(Context& ctx)
 
     const core::Mm radius = radius_between(*centre, *start);
     if (radius <= 0) {
-        ctx.echo("İlk kenar merkezle aynı yerde; yarıçap sıfır olamaz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İlk kenar merkezle aynı yerde; yarıçap sıfır olamaz.");
         co_return;
     }
 
@@ -75,7 +76,8 @@ Task<void> run_sector(Context& ctx)
     if (!end) co_return;
 
     if (end->x == centre->x && end->y == centre->y) {
-        ctx.echo("İkinci kenar merkezle aynı yerde; dilimin nereye kadar gideceği belirsiz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İkinci kenar merkezle aynı yerde; dilimin nereye kadar gideceği belirsiz.");
         co_return;
     }
 
@@ -89,14 +91,15 @@ Task<void> run_sector(Context& ctx)
     ring.push_back(*centre);
 
     if (ring.size() < 3) {
-        ctx.echo("Bu iki kenar bir dilim kapatmıyor: süpürme sıfır.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu iki kenar bir dilim kapatmıyor: süpürme sıfır.");
         co_return;
     }
 
     const core::RingGeometry::RingInput input{ring, core::RingRole::Exterior, 0};
     auto created = ctx.transaction().add_area(ctx.active_layer(), {&input, 1});
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 
@@ -138,11 +141,13 @@ Task<void> run_annulus(Context& ctx)
     if (r_in > r_out) std::swap(r_in, r_out);
 
     if (r_in <= 0) {
-        ctx.echo("İç yarıçap sıfır: bu bir halka değil, daire. DAİRE komutunu kullanın.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İç yarıçap sıfır: bu bir halka değil, daire. DAİRE komutunu kullanın.");
         co_return;
     }
     if (r_in == r_out) {
-        ctx.echo("İki çember aynı: halkanın genişliği sıfır olamaz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İki çember aynı: halkanın genişliği sıfır olamaz.");
         co_return;
     }
 
@@ -162,7 +167,7 @@ Task<void> run_annulus(Context& ctx)
 
     auto created = ctx.transaction().add_area(ctx.active_layer(), {rings, 2});
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return;
     }
 

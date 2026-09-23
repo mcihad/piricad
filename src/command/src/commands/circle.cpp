@@ -86,7 +86,8 @@ Task<void> run(Context& ctx)
         if (!second) co_return;
 
         if (!built(core::CircleBuild::Diameter, {*first}, *second, centre, radius)) {
-            ctx.echo("Çapın iki ucu aynı nokta; yarıçap sıfır olamaz.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çapın iki ucu aynı nokta; yarıçap sıfır olamaz.");
             co_return;
         }
         ctx.record("birinci", Value::point(*first));
@@ -203,7 +204,8 @@ Task<void> run(Context& ctx)
         if (!rim) co_return;
 
         if (!built(core::CircleBuild::Centre, {*middle}, *rim, centre, radius)) {
-            ctx.echo("Çember noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çember noktası merkezle aynı yerde; yarıçap sıfır olamaz.");
             co_return;
         }
 
@@ -217,7 +219,7 @@ Task<void> run(Context& ctx)
 
     auto created = ctx.transaction().add_circle(ctx.active_layer(), centre, radius);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
     if (!is("merkez")) ctx.record("yontem", Value::text(how));

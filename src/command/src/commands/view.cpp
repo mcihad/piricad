@@ -29,7 +29,8 @@ Task<void> run(Context& ctx)
 
     if (mode != "KAPSAM" && mode != "EXTENTS" && mode != "ÇARPAN" && mode != "CARPAN" &&
         mode != "FACTOR" && mode != "SIFIRLA" && mode != "RESET") {
-        ctx.echo("Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA. Girilen: '" + mode + "'");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA. Girilen: '" + mode + "'");
         co_return;
     }
 

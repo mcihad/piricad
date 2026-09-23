@@ -668,8 +668,12 @@ core::Result<DispatchResult> Bus::finish(Session& session)
                              "' komutu hâlâ çalışıyor; bitmesini bekleyin ya da "
                              "durdurun.");
 
+    // THIS COMMAND'S EDITS, not the transaction's: inside a batch the two differ,
+    // and the edits before the mark belong to commands that already succeeded.
+    const std::size_t mark = session.transaction_mark();
+
     if (session.state() == SessionState::Failed) {
-        session.transaction().rollback();
+        session.transaction().rollback_to(mark);
         return session.error();
     }
 
@@ -678,7 +682,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     result.label      = spec.summary.empty() ? spec.id : spec.summary;
 
     const bool read_only  = has_flag(spec.flags, Flags::ReadOnly);
-    const std::size_t ops = session.transaction().size();
+    const std::size_t ops = session.transaction().size() - mark;
 
     // ESC before anything was drawn: nothing happened, so nothing is validated,
     // journalled or undoable. A command that merely produced no geometry is NOT
@@ -724,7 +728,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     if (!declined) {
         ValidationRequest req{spec, session.resolved(), session.input().origin(), doc_};
         if (auto st = validator_.run(req); !st) {
-            session.transaction().rollback(); // no partial application, ever (§2.5)
+            session.transaction().rollback_to(mark); // no partial application, ever (§2.5)
             return st.error();
         }
     }
@@ -854,6 +858,11 @@ void Bus::document_replaced()
         (void)batch_->release();
         batch_revision_at_start_ = doc_.revision();
     }
+}
+
+bool Bus::batch_has_edits() const noexcept
+{
+    return batch_ != nullptr && !batch_->empty();
 }
 
 core::Status Bus::begin_batch(std::string label)

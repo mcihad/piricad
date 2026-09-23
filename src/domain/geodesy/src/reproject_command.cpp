@@ -37,14 +37,16 @@ namespace {
 Task<void> run(Context& ctx)
 {
     if (!domain::geodesy::Transform::available()) {
-        ctx.echo("PROJ bu yapıda yok; koordinat dönüşümü yapılamaz. "
-                 "KENTOS_WITH_PROJ=ON ile derleyin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "PROJ bu yapıda yok; koordinat dönüşümü yapılamaz. "
+                   "KENTOS_WITH_PROJ=ON ile derleyin.");
         co_return;
     }
 
     const Value target_arg = ctx.argument("hedef");
     if (target_arg.empty()) {
-        ctx.echo("Hedef koordinat sistemi eksik. Örnek: DÖNÜŞTÜR hedef=EPSG:5256");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Hedef koordinat sistemi eksik. Örnek: DÖNÜŞTÜR hedef=EPSG:5256");
         co_return;
     }
 
@@ -56,8 +58,9 @@ Task<void> run(Context& ctx)
     const std::string target = target_arg.as_text();
 
     if (source.empty()) {
-        ctx.echo("Çizimin koordinat sistemi tanımsız. Önce AYAR koordinat_sistemi ile "
-                 "söyleyin, ya da DÖNÜŞTÜR kaynak= ile verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Çizimin koordinat sistemi tanımsız. Önce AYAR koordinat_sistemi ile "
+                   "söyleyin, ya da DÖNÜŞTÜR kaynak= ile verin.");
         co_return;
     }
     if (source == target) {
@@ -67,16 +70,17 @@ Task<void> run(Context& ctx)
 
     auto built = domain::geodesy::Transform::between(source, target);
     if (!built) {
-        ctx.echo(built.error().message);
+        ctx.refuse(built.error());
         co_return;
     }
     const domain::geodesy::Transform& transform = built.value();
 
     if (!transform.projected_both_ways()) {
-        ctx.echo("Bu dönüşümün bir ucu coğrafi (derece). Çizim geometrisi tam sayı "
-                 "milimetredir ve derece o birime sığmaz: 29,830716° en yakın "
-                 "'milimetreye' yuvarlandığında nokta yüz metre kayar. Projeksiyonlu "
-                 "bir hedef seçin (örnek: EPSG:5256).");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu dönüşümün bir ucu coğrafi (derece). Çizim geometrisi tam sayı "
+                   "milimetredir ve derece o birime sığmaz: 29,830716° en yakın "
+                   "'milimetreye' yuvarlandığında nokta yüz metre kayar. Projeksiyonlu "
+                   "bir hedef seçin (örnek: EPSG:5256).");
         co_return;
     }
 
@@ -107,7 +111,7 @@ Task<void> run(Context& ctx)
                 moved.push_back(core::Point2{xs[v], ys[v]});
 
             if (auto st = transform.forward(std::span<core::Point2>(moved)); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return; // the bus rolls the whole drawing back
             }
 
@@ -118,7 +122,7 @@ Task<void> run(Context& ctx)
 
         if (rings.empty()) continue;
         if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ++touched;
@@ -128,7 +132,7 @@ Task<void> run(Context& ctx)
     // CRS still names the old system is worse than one never transformed: every
     // reader downstream would trust the label.
     if (auto st = ctx.transaction().set_crs(core::Crs(target)); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

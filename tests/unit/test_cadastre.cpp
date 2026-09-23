@@ -88,7 +88,7 @@ TEST_CASE("TEVHİT: bitişik olmayan parseller reddedilir")
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("ALAN noktalar=100,0 110,0 110,10 100,10", Origin::Test).ok());
 
-    REQUIRE(r.bus.execute_line("TEVHİT nesneler=1 2", Origin::Test).ok());
+    r.said += REFUSED(r.bus.execute_line("TEVHİT nesneler=1 2", Origin::Test));
 
     // Drawing two parcels and calling them one would produce a record TKGM would
     // reject, so the command says so and changes nothing.
@@ -200,7 +200,8 @@ TEST_CASE("İFRAZ: parseli kesmeyen çizgi reddedilir")
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
 
-    REQUIRE(r.bus.execute_line("İFRAZ nesneler=1 noktalar=100,100 200,200", Origin::Test).ok());
+    r.said +=
+        REFUSED(r.bus.execute_line("İFRAZ nesneler=1 noktalar=100,100 200,200", Origin::Test));
 
     CHECK(r.doc.live_entity_count() == 1);
     CHECK(r.said.find("kesmiyor") != std::string::npos);
@@ -298,8 +299,8 @@ TEST_CASE("ALANİFRAZ: parselden büyük bir alan istemek reddedilir")
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
 
     r.said.clear();
-    REQUIRE(
-        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=500000000", Origin::Test).ok());
+    r.said += REFUSED(
+        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=500000000", Origin::Test));
 
     CHECK(r.doc.live_entity_count() == 1);
     CHECK(r.said.find("küçük olmalı") != std::string::npos);

@@ -71,6 +71,9 @@ Köşe yuvarlatıldı.
 ```json
 {
   "komutlar": [
+    { "cmd": "core.polyline",
+      "args": { "noktalar": [[485300000, 4310260000], [485300000, 4310200000],
+                             [485360000, 4310200000]] } },
     { "cmd": "core.fillet",
       "args": { "nesne": [1], "nokta": [485300000, 4310200000], "yaricap": 8 } }
   ]

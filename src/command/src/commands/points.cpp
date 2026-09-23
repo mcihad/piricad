@@ -33,7 +33,8 @@ Task<void> run(Context& ctx)
 {
     const Value path = ctx.argument("dosya");
     if (path.empty()) {
-        ctx.echo("Hangi dosya? Kullanım: NOKTALAR dosya=\"olcu.txt\" [yon=oku|yaz]");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Hangi dosya? Kullanım: NOKTALAR dosya=\"olcu.txt\" [yon=oku|yaz]");
         co_return;
     }
 
@@ -46,7 +47,8 @@ Task<void> run(Context& ctx)
             writing = true;
         } else if (!core::turkish_iequals(typed, "oku") && !core::turkish_iequals(typed, "read") &&
                    !core::turkish_iequals(typed, "ice")) {
-            ctx.echo("Beklenen yön: oku | yaz. Girilen: '" + typed + "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Beklenen yön: oku | yaz. Girilen: '" + typed + "'");
             co_return;
         }
     }
@@ -57,8 +59,9 @@ Task<void> run(Context& ctx)
         if (core::turkish_iequals(typed, "XY")) {
             swapped = true;
         } else if (!core::turkish_iequals(typed, "YX")) {
-            ctx.echo("Beklenen eksen sırası: YX (Türkiye'de olağan olan) veya XY. Girilen: '" +
-                     typed + "'");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Beklenen eksen sırası: YX (Türkiye'de olağan olan) veya XY. Girilen: '" +
+                           typed + "'");
             co_return;
         }
     }
@@ -69,14 +72,16 @@ Task<void> run(Context& ctx)
     std::vector<std::int64_t> owners;
     if (const Value given = ctx.argument("nesneler"); !given.empty()) {
         if (!writing) {
-            ctx.echo("nesneler yalnız yon=yaz ile verilir: köşeleri yazılacak nesneler.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "nesneler yalnız yon=yaz ile verilir: köşeleri yazılacak nesneler.");
             co_return;
         }
         owners = given.as_ids();
         for (std::int64_t raw : owners) {
             if (raw <= 0) {
-                ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                         ". Kimlikler 1'den başlar.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                               ". Kimlikler 1'den başlar.");
                 co_return;
             }
         }
@@ -84,7 +89,8 @@ Task<void> run(Context& ctx)
 
     Bus& bus = ctx.session().bus();
     if (!bus.on_file_request) {
-        ctx.echo("Dosya motoru bağlı değil; bu ortamda nokta listesi okunup yazılamaz.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Dosya motoru bağlı değil; bu ortamda nokta listesi okunup yazılamaz.");
         co_return;
     }
 
@@ -98,7 +104,7 @@ Task<void> run(Context& ctx)
 
     auto done = co_await bus.on_file_request(std::move(request));
     if (!done) {
-        ctx.echo(done.error().message);
+        ctx.refuse(done.error());
         co_return; // the bus rolls the whole import back
     }
 

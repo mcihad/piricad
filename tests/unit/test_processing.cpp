@@ -47,6 +47,18 @@ struct Rig
         auto r = bus.execute_line(line, Origin::Test);
         if (!r) FAIL_WITH(line, r.error().message);
     }
+
+    /// A line that must be REFUSED. A refusal is an error, and its sentence
+    /// joins `said` so the case reads the wording where it always has.
+    void refuse(const char* line)
+    {
+        auto r = bus.execute_line(line, Origin::Test);
+        if (r) {
+            FAIL_WITH(line, "reddedilmesi gerekirken başarı döndü");
+            return;
+        }
+        said.append(r.error().message).append("\n");
+    }
 };
 
 /// One caption of the document: its text and where its centre sits.
@@ -225,13 +237,13 @@ TEST_CASE("İŞLEM: kapsam — seçim, görünüm penceresi ve bütün proje; uy
 
     // A window needs its two corners.
     f.said.clear();
-    f.run("UZUNLUKYAZ kapsam=gorunum");
+    f.refuse("UZUNLUKYAZ kapsam=gorunum");
     CHECK(captions_of(f.doc).empty());
     CHECK(f.said.find("görünümün iki köşesini ister") != std::string::npos);
 
     // Nothing in scope fits: said, and nothing drawn.
     f.said.clear();
-    f.run("UZUNLUKYAZ nesneler=3");
+    f.refuse("UZUNLUKYAZ nesneler=3");
     CHECK(captions_of(f.doc).empty());
     CHECK(f.said.find("uygun nesne yok") != std::string::npos);
 }
@@ -489,14 +501,14 @@ TEST_CASE(
     // Refusals leave the parcel alone.
     const std::uint64_t before = f.doc.content_hash();
     f.said.clear();
-    f.run("ALANDÜZENLE nesneler=1 alan=0");
+    f.refuse("ALANDÜZENLE nesneler=1 alan=0");
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK(f.said.find("sıfırdan büyük") != std::string::npos);
-    f.run("ALANDÜZENLE nesneler=1 alan=1500 mod=kenar kenar=9");
+    f.refuse("ALANDÜZENLE nesneler=1 alan=1500 mod=kenar kenar=9");
     CHECK_EQ(f.doc.content_hash(), before);
     f.run("ÇİZGİ 100,100 110,100");
     f.said.clear();
-    f.run("ALANDÜZENLE nesneler=2 alan=1500");
+    f.refuse("ALANDÜZENLE nesneler=2 alan=1500");
     CHECK(f.said.find("uygun nesne yok") != std::string::npos);
 
     // The spec: a modify command, in place, no output layer.
@@ -695,7 +707,7 @@ TEST_CASE(
     // Without a source: refused by name, nothing changes.
     const std::uint64_t before = f.doc.content_hash();
     f.said.clear();
-    f.run("BAĞLA nesneler=2");
+    f.refuse("BAĞLA nesneler=2");
     CHECK_EQ(f.doc.content_hash(), before);
     CHECK(f.said.find("kaynak=<kimlik>") != std::string::npos);
 

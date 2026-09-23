@@ -191,7 +191,8 @@ Task<void> run_tool(Context& ctx)
 {
     const ProcessingTool* tool = find_tool(ctx.session().spec().id);
     if (tool == nullptr) {
-        ctx.echo("Bu komuta bağlı bir işlem aracı yok: " + ctx.session().spec().id);
+        ctx.refuse(core::ErrorCode::Internal,
+                   "Bu komuta bağlı bir işlem aracı yok: " + ctx.session().spec().id);
         co_return;
     }
     const ToolSpec& spec      = tool->spec();
@@ -200,7 +201,7 @@ Task<void> run_tool(Context& ctx)
     // ---- parameters first, so a typo fails before anyone is asked to point ----
     ToolInput input;
     if (const std::string why = resolve_params(ctx, spec, input.args); !why.empty()) {
-        ctx.echo(why);
+        ctx.refuse(core::ErrorCode::InvalidArgument, why);
         co_return;
     }
     // ---- the objects the tool's OBJECT parameters name, snapshotted too ----
@@ -212,7 +213,8 @@ Task<void> run_tool(Context& ctx)
         const core::EntityId e =
             doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
         if (e == core::kNoEntity || !doc.alive(e)) {
-            ctx.echo("'" + p.name + "' nesnesi bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "'" + p.name + "' nesnesi bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
         input.references.push_back(snapshot(doc, e, classify(doc, e)));
@@ -237,7 +239,8 @@ Task<void> run_tool(Context& ctx)
         else if (core::turkish_key_equals(w, "proje") || core::turkish_key_equals(w, "project"))
             scope = "proje";
         else {
-            ctx.echo("Tanınmayan kapsam: '" + w + "'. Kapsamlar: secili, gorunum, proje.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Tanınmayan kapsam: '" + w + "'. Kapsamlar: secili, gorunum, proje.");
             co_return;
         }
     }
@@ -250,14 +253,16 @@ Task<void> run_tool(Context& ctx)
             co_return;
         for (const std::int64_t raw : ids) {
             if (raw <= 0) {
-                ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                         ". Kimlikler 1'den başlar.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                               ". Kimlikler 1'den başlar.");
                 co_return;
             }
             const core::EntityId e =
                 doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
             if (e == core::kNoEntity || !doc.alive(e)) {
-                ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
                 co_return;
             }
             slots.push_back(e);
@@ -265,8 +270,9 @@ Task<void> run_tool(Context& ctx)
     } else if (scope == "gorunum") {
         const Value window = ctx.argument("pencere");
         if (window.as_points().size() < 2) {
-            ctx.echo("gorunum kapsamı görünümün iki köşesini ister: pencere=<x1,y1> <x2,y2>. "
-                     "Arayüzden çalıştırıldığında pencere görünümden alınır.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "gorunum kapsamı görünümün iki köşesini ister: pencere=<x1,y1> <x2,y2>. "
+                       "Arayüzden çalıştırıldığında pencere görünümden alınır.");
             co_return;
         }
         const core::Point2 a = window.as_points()[0];
@@ -298,14 +304,15 @@ Task<void> run_tool(Context& ctx)
              {Applies::Points, Applies::Lines, Applies::Faces, Applies::Curves, Applies::Texts})
             if (applies_to(spec.applies, one))
                 takes += (takes.empty() ? "" : ", ") + std::string(applies_name(one));
-        ctx.echo("Kapsamda bu araca uygun nesne yok (" + std::to_string(slots.size()) +
-                 " nesne bakıldı). Araç şunlara uygulanır: " + takes + ".");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Kapsamda bu araca uygun nesne yok (" + std::to_string(slots.size()) +
+                       " nesne bakıldı). Araç şunlara uygulanır: " + takes + ".");
         co_return;
     }
 
     // ---- the tool's own questions, on the bus thread, before the worker ----
     if (auto asked = co_await tool->interact(ctx, input); !asked) {
-        if (asked.error().code != core::ErrorCode::Cancelled) ctx.echo(asked.error().message);
+        if (asked.error().code != core::ErrorCode::Cancelled) ctx.refuse(asked.error());
         co_return;
     }
 
@@ -326,7 +333,7 @@ Task<void> run_tool(Context& ctx)
         co_return;
     }
     if (!status) {
-        ctx.echo(status.error().message);
+        ctx.refuse(status.error());
         co_return;
     }
 
@@ -348,18 +355,18 @@ Task<void> run_tool(Context& ctx)
             core::dimension_baseline(c.centre, c.dir_x, c.dir_y, c.height, c.text);
         auto created = ctx.transaction().add_polyline(layer, base);
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             co_return;
         }
         if (auto st = ctx.transaction().set_text(created.value(), c.text, c.height,
                                                  core::TextAnchor::MiddleCentre);
             !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         if (c.attach)
             if (auto st = ctx.transaction().set_attachment(created.value(), *c.attach); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
         ++made;
@@ -376,7 +383,7 @@ Task<void> run_tool(Context& ctx)
             created = ctx.transaction().add_polyline(layer, p.points);
         }
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             co_return;
         }
         ++made;
@@ -393,7 +400,7 @@ Task<void> run_tool(Context& ctx)
                                                      doc.texts().height(doc.entities().slot[e]),
                                                      doc.texts().anchor(doc.entities().slot[e]));
                 !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
         if (!r.rings.empty()) {
@@ -402,13 +409,13 @@ Task<void> run_tool(Context& ctx)
             for (const InputEntity::Ring& ring : r.rings)
                 rings.push_back(core::RingGeometry::RingInput{ring.points, ring.role, 0});
             if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
         }
         if (r.detach) {
             if (auto st = ctx.transaction().clear_attachment(e); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
             // THE BRANCH OWNS ITS OWN COPY. `r` is a reference into the tool's
@@ -416,7 +423,7 @@ Task<void> run_tool(Context& ctx)
             // test on `r.attach` is not a fact that survives to the read of it.
         } else if (const std::optional<core::Attachment> attach = r.attach; attach) {
             if (auto st = ctx.transaction().set_attachment(e, *attach); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
         }

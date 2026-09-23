@@ -104,14 +104,16 @@ Task<void> run_measure_area(Context& ctx)
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
 

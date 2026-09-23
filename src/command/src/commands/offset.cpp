@@ -59,7 +59,8 @@ Task<void> run(Context& ctx)
     }
 
     if (distance == 0) {
-        ctx.echo("Ofset mesafesi sıfır olamaz. Kaç metre paralel istediğinizi yazın.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ofset mesafesi sıfır olamaz. Kaç metre paralel istediğinizi yazın.");
         co_return;
     }
 
@@ -70,15 +71,17 @@ Task<void> run(Context& ctx)
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return; // the bus rolls the whole transaction back
         }
 
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
 
@@ -98,7 +101,7 @@ Task<void> run(Context& ctx)
 
             auto parallel = core::offset_ring(points, closed, distance, join);
             if (!parallel) {
-                ctx.echo(parallel.error().message);
+                ctx.refuse(parallel.error());
                 co_return;
             }
 
@@ -114,7 +117,7 @@ Task<void> run(Context& ctx)
                 const core::RingGeometry::RingInput input{ring.points, core::RingRole::Exterior, 0};
                 auto created = ctx.transaction().add_area(ctx.active_layer(), {&input, 1});
                 if (!created) {
-                    ctx.echo(created.error().message);
+                    ctx.refuse(created.error());
                     co_return;
                 }
                 ++made;

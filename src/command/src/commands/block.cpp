@@ -58,7 +58,8 @@ Task<void> run_block(Context& ctx)
     auto name = co_await ctx.text("ad", "Bloğun adı");
     if (!name || name->empty()) co_return;
     if (ctx.document().blocks().find(*name) != core::kNoBlock) {
-        ctx.echo("'" + *name + "' adında bir blok zaten var; blok adları benzersizdir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "'" + *name + "' adında bir blok zaten var; blok adları benzersizdir.");
         co_return;
     }
 
@@ -73,18 +74,20 @@ Task<void> run_block(Context& ctx)
     std::vector<core::EntityId> slots;
     for (const std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
         if (auto st = ctx.document().editable(slot); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         slots.push_back(slot);
@@ -95,7 +98,7 @@ Task<void> run_block(Context& ctx)
 
     auto block = ctx.transaction().add_block(*name, description, *base);
     if (!block) {
-        ctx.echo(block.error().message);
+        ctx.refuse(block.error());
         co_return;
     }
 
@@ -127,13 +130,13 @@ Task<void> run_block(Context& ctx)
         auto member = ctx.transaction().add_kind(doc.entities().layer[e], doc.entities().kind[e],
                                                  rings, payload, block.value());
         if (!member) {
-            ctx.echo(member.error().message);
+            ctx.refuse(member.error());
             co_return;
         }
         const core::EntityId m = member.value();
         if (const core::StyleId st = doc.entities().style[e]; st != core::kByLayerStyle)
             if (auto s = ctx.transaction().set_entity_style(m, st); !s) {
-                ctx.echo(s.error().message);
+                ctx.refuse(s.error());
                 co_return;
             }
         if (doc.texts().has(gslot))
@@ -141,7 +144,7 @@ Task<void> run_block(Context& ctx)
                                                     doc.texts().height(gslot),
                                                     doc.texts().anchor(gslot));
                 !s) {
-                ctx.echo(s.error().message);
+                ctx.refuse(s.error());
                 co_return;
             }
         const core::AttrTable& attrs = doc.attributes();
@@ -151,12 +154,12 @@ Task<void> run_block(Context& ctx)
             if (auto s =
                     ctx.transaction().set_attribute(static_cast<core::AttrId>(c), m, cell.value());
                 !s) {
-                ctx.echo(s.error().message);
+                ctx.refuse(s.error());
                 co_return;
             }
         }
         if (auto s = ctx.transaction().erase_entity(e); !s) {
-            ctx.echo(s.error().message);
+            ctx.refuse(s.error());
             co_return;
         }
     }
@@ -165,7 +168,7 @@ Task<void> run_block(Context& ctx)
     ref.block   = block.value();
     auto placed = place(ctx, *base, ref);
     if (!placed) {
-        ctx.echo(placed.error().message);
+        ctx.refuse(placed.error());
         co_return;
     }
 
@@ -196,10 +199,12 @@ Task<void> run_insert(Context& ctx)
     // who has never defined one reads that prompt as a tool that does nothing,
     // and said so — they could not tell what it was for.
     if (defined.empty()) {
-        ctx.echo("Bu çizimde tanımlı blok yok, yerleştirilecek bir şey de yok. Blok, bir kez "
-                 "çizilip çok kez yerleştirilen bir semboldür (rögar kapağı, direk, ağaç): önce "
-                 "nesneleri seçip BLOK ad=<isim> ile tanımlayın, sonra BLOKEKLE onları istediğiniz "
-                 "her yere koyar.");
+        ctx.refuse(
+            core::ErrorCode::NotFound,
+            "Bu çizimde tanımlı blok yok, yerleştirilecek bir şey de yok. Blok, bir kez "
+            "çizilip çok kez yerleştirilen bir semboldür (rögar kapağı, direk, ağaç): önce "
+            "nesneleri seçip BLOK ad=<isim> ile tanımlayın, sonra BLOKEKLE onları istediğiniz "
+            "her yere koyar.");
         co_return;
     }
 
@@ -210,9 +215,10 @@ Task<void> run_insert(Context& ctx)
         std::string known;
         for (const core::BlockDef& d : ctx.document().blocks().all())
             known += (known.empty() ? "" : ", ") + d.name;
-        ctx.echo("'" + *name + "' adında blok yok." +
-                 (known.empty() ? " Çizimde tanımlı blok yok; önce BLOK ile tanımlayın."
-                                : " Tanımlı bloklar: " + known + "."));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "'" + *name + "' adında blok yok." +
+                       (known.empty() ? " Çizimde tanımlı blok yok; önce BLOK ile tanımlayın."
+                                      : " Tanımlı bloklar: " + known + "."));
         co_return;
     }
 
@@ -221,7 +227,8 @@ Task<void> run_insert(Context& ctx)
     double sy = sx;
     if (const Value s = ctx.argument("olcek_y"); !s.empty()) sy = s.as_number();
     if (sx == 0.0 || sy == 0.0) {
-        ctx.echo("Blok ölçeği sıfır olamaz; aynalamak için eksi bir ölçek verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Blok ölçeği sıfır olamaz; aynalamak için eksi bir ölçek verin.");
         co_return;
     }
     double angle_deg = 0.0;
@@ -232,7 +239,8 @@ Task<void> run_insert(Context& ctx)
     if (const Value c = ctx.argument("sutun"); !c.empty()) columns = c.as_int();
     if (const Value r = ctx.argument("satir"); !r.empty()) rows = r.as_int();
     if (columns < 1 || rows < 1 || columns > 65535 || rows > 65535) {
-        ctx.echo("Dizi en az 1×1, en çok 65535×65535 olabilir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Dizi en az 1×1, en çok 65535×65535 olabilir.");
         co_return;
     }
     core::Mm column_spacing = 0;
@@ -240,8 +248,9 @@ Task<void> run_insert(Context& ctx)
     if (const Value c = ctx.argument("sutun_aralik"); !c.empty()) column_spacing = c.as_int();
     if (const Value r = ctx.argument("satir_aralik"); !r.empty()) row_spacing = r.as_int();
     if ((columns > 1 && column_spacing == 0) || (rows > 1 && row_spacing == 0)) {
-        ctx.echo("Birden çok sütun ya da satır için aralık (milimetre) verin: sutun_aralik= ve "
-                 "satir_aralik=.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Birden çok sütun ya da satır için aralık (milimetre) verin: sutun_aralik= ve "
+                   "satir_aralik=.");
         co_return;
     }
 
@@ -265,7 +274,7 @@ Task<void> run_insert(Context& ctx)
 
     auto placed = place(ctx, *at, ref);
     if (!placed) {
-        ctx.echo(placed.error().message);
+        ctx.refuse(placed.error());
         co_return;
     }
 

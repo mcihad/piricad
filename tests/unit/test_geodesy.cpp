@@ -693,7 +693,7 @@ TEST_CASE("DÖNÜŞTÜR: coğrafi hedef gerekçesiyle reddedilir")
     // EPSG:4326 is WGS84 in degrees. Rounding 29.83° to the nearest millimetre
     // moves the point about a hundred metres, so this must refuse rather than
     // quietly destroy the drawing.
-    REQUIRE(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:4326", Origin::Test).ok());
+    r.said += REFUSED(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:4326", Origin::Test));
 
     CHECK(r.said.find("coğrafi") != std::string::npos);
     CHECK(r.doc.content_hash() == before);

@@ -105,8 +105,12 @@ noktalarını mevcut köşelere `UÇ` ile yakalayabilirsiniz.
 
 ```json
 {
-  "ad": "Yol genişlemesi",
+  "ad": "Sağ uçları 5 m doğuya çek",
   "komutlar": [
+    { "cmd": "core.area",
+      "args": { "noktalar": [[0,0],[20000,0],[20000,10000],[0,10000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,-3000],[20000,-3000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,13000],[20000,13000]] } },
     { "cmd": "core.stretch", "args": {
         "nesneler": [1, 2, 3],
         "pencere": [[15000, -5000], [25000, 15000]],

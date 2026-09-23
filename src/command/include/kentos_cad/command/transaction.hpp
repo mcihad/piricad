@@ -250,6 +250,14 @@ public:
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 
+    /// Reverts the edits made after `mark` — a `size()` read earlier — newest
+    /// first, and keeps the ones before it. A command inside a batch writes into
+    /// the batch's transaction, and when it fails, what goes back is that
+    /// command's own edits: the ones before it belong to commands that succeeded
+    /// and are already in the journal (CLAUDE.md 1.6 is about the failed command
+    /// being whole, not about taking its neighbours with it).
+    void rollback_to(std::size_t mark);
+
     /// Hands the inverse record over to the undo stack and clears it.
     std::vector<Op> release();
 

@@ -291,8 +291,20 @@ yoktur; `tolerans=` bunun içindir.
 
 **Sebep.** Geri alma yığını boş.
 
-**Çözüm.** Hata değildir. Geri alınacak bir düzenleme yapılmamış demektir. `YAKINLAŞ`,
-`YARDIM` ve boş katman yaratmak geri alma adımı bırakmaz.
+**Çözüm.** Kaygılanacak bir şey yoktur: geri alınacak bir düzenleme yapılmamış demektir.
+`YAKINLAŞ`, `YARDIM` ve boş katman yaratmak geri alma adımı bırakmaz. Bir betik bu
+cevabı hata olarak alır ve orada durur, çünkü istediği geri alma gerçekleşmemiştir.
+
+### `Düzenleme yapmış bir toplu işin içinde geri alınamaz: …`
+
+Aynısı `yinelenemez` ile de gelir.
+
+**Sebep.** Bir betik ya da toplu iş bir şey çizdikten sonra `core.undo` veya `core.redo`
+çağırdı. Betik bitmeden onun geri alma adımı yoktur; geri alma, betikten **önce**
+yaptığınız işe uzanır ve betik bitince o iş geri getirilemez biçimde kaybolurdu.
+
+**Çözüm.** Adımı betikten çıkarın. Betik bittikten sonra tek `GERİAL` betiğin tamamını
+geri alır. Bkz. [Geri alma](komutlar/undo.md).
 
 ### `Yinelenecek işlem yok`
 

@@ -16,11 +16,17 @@
 #include "kentos_cad/domain/surface/commands.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
+#if KENTOS_HAVE_PYTHON
+#include "kentos_cad/script/python_runner.hpp"
+#endif
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace kentos;
@@ -37,10 +43,18 @@ struct Rig
     Journal journal;
     UndoStack undo;
     Bus bus{doc, reg, journal, undo};
+#if KENTOS_HAVE_PYTHON
+    // The manual's PYTHON lines run against a real interpreter when the build
+    // carries one, through the same hook the program installs.
+    script::PythonRunner python{bus, script::Sandbox::Safe};
+#endif
 
     Rig()
     {
         register_builtin_commands(reg);
+#if KENTOS_HAVE_PYTHON
+        script::install(bus, python);
+#endif
 
         // The manual and the golden scenarios may name ANY command the program
         // ships, and a domain module owns some of them: `/src/command` may not
@@ -82,7 +96,16 @@ struct Block
     std::string language;
     std::string body;
     std::size_t line{0};
+    std::string section; ///< the `## ` heading the block sits under
+    bool fresh{false};   ///< a `kFreshDrawing` marker stands between it and the last block
 };
+
+/// Written on a line of its own, the page's examples from there on start from an
+/// empty drawing — what a page says in words when an example section begins
+/// "boş bir çizimde". An HTML comment, so the reader sees the sentence and not
+/// the marker; it resets state and sets nothing up, so every object an example
+/// uses is still drawn by a line the reader can see.
+constexpr std::string_view kFreshDrawing = "<!-- örnek: yeni çizim -->";
 
 std::vector<Block> fenced_blocks(const std::string& text)
 {
@@ -90,14 +113,20 @@ std::vector<Block> fenced_blocks(const std::string& text)
     std::istringstream in(text);
     std::string line;
     std::size_t lineno = 0;
+    std::string section;
+    bool fresh = false;
 
     while (std::getline(in, line)) {
         ++lineno;
+        if (line.rfind("## ", 0) == 0) section = line.substr(3);
+        if (line == kFreshDrawing) fresh = true;
         if (line.rfind("```", 0) != 0) continue;
 
         Block block;
         block.language = line.substr(3);
         block.line     = lineno + 1;
+        block.section  = section;
+        block.fresh    = std::exchange(fresh, false);
 
         while (std::getline(in, line)) {
             ++lineno;
@@ -141,6 +170,13 @@ bool is_out_of_scope(const CommandSpec& spec)
 {
     if (spec.id == "core.script") return true;
 
+#if !KENTOS_HAVE_PYTHON
+    // PYTHON needs an interpreter behind `Bus::on_run_python`. The rig attaches
+    // one when the build has it; a build without one refuses the command, which
+    // is the truth about that build and says nothing about the manual.
+    if (spec.id == "core.python") return true;
+#endif
+
     // File commands need a FileService, and this rig deliberately has none: a doc
     // check must not write to the working directory, and a manual page should be
     // able to say `STİLAKTAR KONUT konut.qml` — which is what a user types —
@@ -180,12 +216,26 @@ std::string trim(const std::string& s)
 
 TEST_CASE("DOKÜMAN: kılavuzda yazan her komut satırı çalışır")
 {
-    Rig rig;
     std::size_t checked = 0;
 
     for (const auto& page : markdown_pages()) {
+        // ONE DRAWING PER PAGE, in the order the page is read. A reader follows
+        // one page, not the whole manual, so `nesneler=1` on a page means the
+        // first object THAT PAGE drew. A single drawing shared by every page made
+        // the object behind a number depend on which pages sort before it — and,
+        // while a refusal still reported success, let an example operate on
+        // nothing at all and pass (TODOS F-01).
+        auto rig = std::make_unique<Rig>();
         for (const auto& block : fenced_blocks(read_file(page))) {
+            if (block.fresh) rig = std::make_unique<Rig>();
             if (!block.language.empty()) continue; // ``` with no language = command lines
+
+            // A SYNTAX BLOCK IS GRAMMAR, NOT AN EXAMPLE (docs.md R7). For most
+            // commands its `<nokta>` placeholders already keep it out; for one
+            // that takes no argument — GERİAL — the skeleton and a runnable line
+            // are the same word, and running it on a page that has drawn nothing
+            // yet would test the page's order rather than its examples.
+            if (block.section == "Sözdizimi") continue;
 
             std::istringstream lines(block.body);
             std::string raw;
@@ -197,11 +247,11 @@ TEST_CASE("DOKÜMAN: kılavuzda yazan her komut satırı çalışır")
                 if (line.empty() || is_illustration(line)) continue;
 
                 // Only lines that start with a registered command name are input.
-                const CommandSpec* spec = rig.reg.resolve(first_word(line));
+                const CommandSpec* spec = rig->reg.resolve(first_word(line));
                 if (!spec || is_out_of_scope(*spec)) continue;
                 if (line == first_word(line) && needs_arguments(*spec)) continue;
 
-                auto result = rig.bus.execute_line(line, Origin::Test);
+                auto result = rig->bus.execute_line(line, Origin::Test);
                 if (!result) {
                     FAIL_WITH(line.c_str(), page.filename().string() + ":" +
                                                 std::to_string(block.line + offset - 1) + " — " +

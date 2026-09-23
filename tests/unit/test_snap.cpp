@@ -706,7 +706,7 @@ TEST_CASE("SEÇİM: KATMAN modu yalnız o katmanı alır, gizli olanı almaz")
     // selection, because "no such layer" and "that layer is empty" are different
     // answers to the user.
     rig.echoed.clear();
-    (void)rig.line("SEÇ mod=KATMAN katman=YOKBÖYLE");
+    rig.echoed += REFUSED(rig.line("SEÇ mod=KATMAN katman=YOKBÖYLE"));
     CHECK(rig.echoed.find("Katman bulunamadı") != std::string::npos);
 }
 
@@ -1003,17 +1003,26 @@ TEST_CASE("YAKALAMA: ÖLÇ'ün ikinci noktası da yakalanıyor")
     if (!rig.line("ÇİZGİ noktalar=0,0 20,0")) FAIL("ÇİZGİ");
     if (!rig.line("ÇİZGİ noktalar=0,10 20,10")) FAIL("ÇİZGİ 2");
 
-    // Both aims are 20 cm off a real corner. `with_view()` puts the aperture at
-    // the declared tolerance in millimetres, which the fixture sets wide enough.
-    if (!rig.line("AYAR core.yakalama.tolerans 400")) FAIL("AYAR tolerans");
-    rig.bus.aids().set_view_scale(1.0);
+    // The aperture is the tolerance in PIXELS times the view's millimetres per
+    // pixel: 100 px at 4 mm/px reaches 40 cm, and both aims are within 30 cm of
+    // a real corner. The tolerance is an application preference, so TERCİH sets
+    // it. This line used to be `AYAR ... 400`: the wrong scope and past the
+    // range, refused both ways — and the refusal reported success, so it set
+    // nothing for as long as it stood here.
+    if (!rig.line("TERCİH core.yakalama.tolerans 100")) FAIL("TERCİH tolerans");
+    rig.with_view(4.0);
 
-    auto measured = rig.line("ÖLÇ baslangic=0.2,0.2 bitis=20.2,10.2");
+    // THE TWO ENDS ARE OFF BY DIFFERENT AMOUNTS. The aims this case used to take,
+    // (0.2,0.2) and (20.2,10.2), are 22,361 m apart whether or not anything
+    // snapped, so the assertion below could not fail. These are 22,048 m apart
+    // as typed, and only snapping both ends makes it 22,361.
+    auto measured = rig.line("ÖLÇ baslangic=0.2,0.2 bitis=19.9,10.1");
     if (!measured) FAIL_WITH("ÖLÇ", measured.error().message);
 
     // The transcript reports the distance between the points the command actually
     // took, so exactly 20 m by 10 m is the assertion that both ends snapped.
     CHECK(rig.echoed.find("22,361") != std::string::npos);
+    CHECK(rig.echoed.find("22,048") == std::string::npos);
 }
 
 TEST_CASE("YAKALAMA: yüzey normali kilidi sayfaya değil, YÜZEYE dik çizer")
@@ -1194,11 +1203,11 @@ TEST_CASE("SEÇİM: SEÇ NOKTA sira= üstteki nesnenin altına iner")
     // selecting nothing — "there is no third one" and "the third one is empty"
     // are different answers.
     rig.echoed.clear();
-    (void)rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=9");
+    rig.echoed += REFUSED(rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=9"));
     CHECK(rig.echoed.find("9. istendi") != std::string::npos);
 
     rig.echoed.clear();
-    (void)rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=0");
+    rig.echoed += REFUSED(rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=0"));
     CHECK(rig.echoed.find("1'den küçük olamaz") != std::string::npos);
 }
 
@@ -1284,7 +1293,7 @@ TEST_CASE("YAZIDÜZENLE: var olan bir yazıyı yerinde değiştirir")
     if (!bare.line("ÇİZGİ noktalar=0,0 10,0")) FAIL("ÇİZGİ");
     if (!bare.line("SEÇ mod=TÜMÜ")) FAIL("SEÇ TÜMÜ");
     bare.echoed.clear();
-    (void)bare.line("YAZIDÜZENLE yazi=\"olmaz\"");
+    bare.echoed += REFUSED(bare.line("YAZIDÜZENLE yazi=\"olmaz\""));
     CHECK(bare.echoed.find("yazı taşıyan nesne yok") != std::string::npos);
 }
 
@@ -1430,12 +1439,12 @@ TEST_CASE("SEÇ: seçim belge durumu değildir")
 TEST_CASE("SEÇ: hatalı mod ve işlem beklenen ile girileni söyler")
 {
     Rig r;
-    CHECK(r.line("SEÇ OLMAYAN").ok()); // reported to the transcript, not an error
+    r.echoed += REFUSED(r.line("SEÇ OLMAYAN")); // an error, and it says what was expected
     CHECK(r.echoed.find("Beklenen mod") != std::string::npos);
     CHECK(r.echoed.find("OLMAYAN") != std::string::npos);
 
     r.echoed.clear();
-    CHECK(r.line("SEÇ TÜMÜ islem=BİLİNMEYEN").ok());
+    r.echoed += REFUSED(r.line("SEÇ TÜMÜ islem=BİLİNMEYEN"));
     CHECK(r.echoed.find("Beklenen işlem") != std::string::npos);
 }
 
@@ -1453,7 +1462,7 @@ TEST_CASE("SİL: argüman verilmezse etkin seçimi siler")
     CHECK(r.bus.selection().empty());
 
     r.echoed.clear();
-    CHECK(r.line("SİL").ok());
+    r.echoed += REFUSED(r.line("SİL"));
     CHECK(r.echoed.find("seçim boş") != std::string::npos);
 }
 

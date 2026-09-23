@@ -6,6 +6,40 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — reddedilen komut artık hata döner (TODOS F-01)
+
+Bir komut işi reddettiğinde — daireyi budamak, olmayan bir nesneyi silmek, proje
+ayarını `MOD` ile yazmak — nedenini transkripte yazıp çıkıyor ve komut veri yoluna
+**başarı** bildiriyordu. Komut satırındaki kişi cümleyi okuyordu; betik, yapay zekâ,
+MCP ve Python ise işin yapıldığını sanıyordu. Artık ret bir hatadır: aynı cümle hata
+olarak döner, betik o satırda durur, komutun yaptığı her şey geri sarılır. Arayüzde
+transkript ve durum satırı `Hata:` ile yazar. 47 dosyada 353 ret noktası
+`Context::refuse` ile hata kanalına taşındı; rapor, liste, boş arama sonucu ve iptal
+olduğu gibi kaldı. Sessizliğin sakladıkları:
+
+- **Betikteki `GERİAL` betikten önceki işi siliyordu.** Betik bir şey çizdikten sonra
+  çağrılan `core.undo`, betiğin kendi adımına uzanamadığı için kullanıcının betikten
+  önceki son işini geri alıyordu; betik bitince yineleme yığını boşaldığından o iş geri
+  gelmiyordu. Artık reddedilir. Henüz bir şey çizmemiş bir betikte ve Python
+  konsolunda tek başına `cad.undo()` eskisi gibi çalışır.
+- **Toplu işte başarısız bir komut, öncekilerin işini de geri sarıyordu** — günlük
+  onları yapılmış gösterirken. `try/except` ile devam eden bir Python betiği yarım
+  kalıyordu. Artık yalnız başarısız komutun kendi düzenlemeleri geri alınır.
+- **Kılavuzdaki ~40 örnek hiç çalışmıyordu:** var olmayan nesneler, olmayan katmanlar,
+  geri alınacak işi olmayan `GERİAL`. Kılavuz testi bütün sayfaları tek bir ortak
+  çizimde koşuyor ve ret sessiz olduğu için "geçiyordu". Artık her sayfa kendi
+  çiziminde, sırasıyla koşuyor; örnekler kendi nesnelerini çiziyor. PYTHON örnekleri
+  gerçek yorumlayıcıyla koşuyor.
+- **İki test hiçbir şey ölçmüyordu.** Yakalama testinin kurulum satırı (`AYAR` ile bir
+  uygulama tercihi, üstelik sınır dışı) hiç çalışmamıştı ve ölçtüğü mesafe yakalansa da
+  yakalanmasa da aynıydı; bir seçim testi olmayan `SEÇ HİÇBİRİ` kipiyle seçimi
+  temizlediğini sanıyordu.
+
+Davranış değişikliği: yanlış kapsamdaki ya da bilinmeyen bir ayarı yazmak
+(`AYAR tema koyu`, `MOD koordinat_sistemi …`) ve boş yığında `GERİAL`/`YİNELE` artık
+betiğe hata döner. [Destek matrisi](docs/nesneler/destek-matrisi.md) sessiz ret
+listesini boş gösteriyor; `scripts/ci-gate-kapsam.sh` bir tane bile görürse kırmızı.
+
 ### Eklendi — ölçülen destek matrisi (TODOS F-01)
 
 [Destek matrisi](docs/nesneler/destek-matrisi.md), hangi düzenleme işleminin hangi

@@ -70,6 +70,14 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 ### Komut satırı
 
+Örnekler bir parsel ve iki sütun üzerinde çalışır; önce onları kurun:
+
+```
+ALAN 0,0 20,0 20,15 0,15
+SÜTUN kimlik=ada_no tur=tam_sayi
+SÜTUN kimlik=gosterim tur=metin
+```
+
 Tanımlı sütunları görün:
 
 ```
@@ -112,12 +120,17 @@ yazma yolu değildir, komutun bir istemcisidir.
 {
   "ad": "İki parsele öznitelik yaz",
   "komutlar": [
+    { "cmd": "core.area", "args": { "noktalar": [[0,0],[20000,0],[20000,15000],[0,15000]] } },
+    { "cmd": "core.area", "args": { "noktalar": [[20000,0],[40000,0],[40000,15000],[20000,15000]] } },
+
     { "cmd": "core.column",    "args": { "kimlik": "ada_no",    "tur": "tam_sayi" } },
     { "cmd": "core.column",    "args": { "kimlik": "parsel_no", "tur": "tam_sayi" } },
     { "cmd": "core.column",    "args": { "kimlik": "gosterim",  "tur": "metin" } },
 
     { "cmd": "core.attribute", "args": { "ad": "ada_no",    "nesne": 1, "deger": "1234" } },
     { "cmd": "core.attribute", "args": { "ad": "parsel_no", "nesne": 1, "deger": "7" } },
+    { "cmd": "core.attribute", "args": { "ad": "ada_no",    "nesne": 2, "deger": "1234" } },
+    { "cmd": "core.attribute", "args": { "ad": "parsel_no", "nesne": 2, "deger": "8" } },
     { "cmd": "core.attribute", "args": { "ad": "gosterim",  "nesne": 1,
                                          "deger": "TOPLU KONUT ALANI" } }
   ]

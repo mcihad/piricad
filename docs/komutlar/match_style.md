@@ -79,9 +79,14 @@ Nesneleri önceden seçtiyseniz sorulmaz.
 
 ### Betik
 
+Betik önce üç çizgi çizer, sonra birincinin stilini öbür ikisine kopyalar:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[20000,0]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,5000],[20000,5000]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,10000],[20000,10000]] } },
     { "cmd": "core.match_style", "args": { "kaynak": [1], "nesneler": [2, 3] } }
   ]
 }

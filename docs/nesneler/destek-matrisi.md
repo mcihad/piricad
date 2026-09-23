@@ -46,51 +46,7 @@ nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
 
-38 hücrede komut işlemi **reddetti ama veri yoluna başarı bildirdi**: reddini
-transkripte bir cümle olarak yazdı ve gövdesini bitirdi. Komut satırındaki kişi
-cümleyi okur; bir betik, yapay zekâ, MCP ve Python ise işlemin yapıldığını sanır ve
-kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
-
-| Tür | İşlem | Komut | Transkripte yazılan |
-|---|---|---|---|
-| Yaylı çoklu çizgi (DXF şişkinliği) | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Uzat | `core.extend` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Yuvarla | `core.fillet` | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Pah | `core.chamfer` | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Yaylı çoklu çizgi (DXF şişkinliği) | Uç uca | `core.join` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Delikli alan | Kes (BUDA) | `core.trim` | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
-| Delikli alan | Böl | `core.split` | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
-| Delikli alan | Kır | `core.break` | Nesne 1 açık bir çizgi değil. |
-| Delikli alan | Yuvarla | `core.fillet` | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
-| Delikli alan | Pah | `core.chamfer` | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
-| Daire | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Daire | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Daire | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yay | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yay | Uzat | `core.extend` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yay | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yay | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Yay | Uç uca | `core.join` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Elips | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Elips | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Elips | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Spline | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Spline | Uzat | `core.extend` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Spline | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Spline | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Spline | Uç uca | `core.join` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Tarama | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Tarama | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Tarama | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Tarama | Yuvarla | `core.fillet` | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Tarama | Pah | `core.chamfer` | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Lider | Kes (BUDA) | `core.trim` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Lider | Uzat | `core.extend` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Lider | Böl | `core.split` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Lider | Kır | `core.break` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Lider | Uç uca | `core.join` | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+Yok: reddeden her komut reddini hata olarak döndürüyor.
 
 ## Kanıt
 
@@ -149,14 +105,14 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 320.000 m²) üretildi — paralel değil tampon |
-| Yuvarla | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Pah | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Uç uca | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Yuvarla | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Pah | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Ölç | ✓ destekli | çevre 108.540 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -171,13 +127,13 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 açık bir çizgi değil. |
+| Böl | ✗ yok | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 açık bir çizgi değil. |
 | Paralel (OFSET) | ◐ kısmi | 1 delikli alandan 2 ayrı nesne (ÇOKLUÇİZGİ) çıktı, 0 delik kaldı — delik ilişkisi kayboldu |
-| Yuvarla | ✗ yok | SESSİZ RET — Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
-| Pah | ✗ yok | SESSİZ RET — Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
+| Yuvarla | ✗ yok | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
+| Pah | ✗ yok | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
 | Ölç | ✓ destekli | çevre 440.000 m, alan 7600.000 m² — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
@@ -197,10 +153,10 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | DAİRE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
@@ -219,14 +175,14 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 478.489 m²) üretildi — paralel değil tampon |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Ölç | ✓ destekli | çevre 78.540 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -241,10 +197,10 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | ELİPS paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
@@ -263,14 +219,14 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 218.880 m²) üretildi — paralel değil tampon |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Ölç | ✓ destekli | çevre 44.334 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -285,13 +241,13 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ✓ destekli | 1 paralel (ÇOKLUÇİZGİ), kaynak korundu |
-| Yuvarla | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Pah | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Yuvarla | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Pah | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
 | Ölç | ✓ destekli | çevre 100.000 m, alan 600.000 m² — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
@@ -395,14 +351,14 @@ kalan adımlara devam eder. Ret bir hata olarak dönmelidir.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Uzat | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Böl | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Kır | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kes (BUDA) | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 48.280 m²) üretildi — paralel değil tampon |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | SESSİZ RET — Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Ölç | ✓ destekli | çevre 12.071 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 

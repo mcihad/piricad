@@ -210,10 +210,11 @@ Task<void> run(Context& ctx)
     }
 
     if (moved == 0) {
-        ctx.echo(locked > 0 ? "Pencerede esnetilecek köşe yok; " + std::to_string(locked) +
-                                  " nesne kilitli katmanda."
-                            : "Pencerede esnetilecek köşe yok. Pencere, taşınacak köşelerin "
-                              "üzerinden geçmelidir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   locked > 0 ? "Pencerede esnetilecek köşe yok; " + std::to_string(locked) +
+                                    " nesne kilitli katmanda."
+                              : "Pencerede esnetilecek köşe yok. Pencere, taşınacak köşelerin "
+                                "üzerinden geçmelidir.");
         co_return;
     }
 

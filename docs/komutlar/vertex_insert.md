@@ -101,9 +101,15 @@ köşe aynı komuttur ve komut günlüğüne aynı satır olarak düşer.
 
 ### Betik
 
+Betik önce bir parsel çizer, sonra güney kenarının ortasına, kenarı 5 m güneye
+çeken bir köşe ekler:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.area",
+      "args": { "noktalar": [[485300000,4310200000],[485360000,4310200000],
+                             [485360000,4310245000],[485300000,4310245000]] } },
     { "cmd": "core.vertex_insert",
       "args": { "nesne": [1], "kose": 1, "nokta": [485330000, 4310195000] } }
   ]

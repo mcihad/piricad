@@ -34,25 +34,29 @@ bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot, std::vector<c
     const core::Document& doc = ctx.document();
 
     if (id <= 0) {
-        ctx.echo("Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
         return false;
     }
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
     slot           = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return false;
     }
     if (doc.entities().kind[slot] != core::kPolylineKind) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.");
         return false;
     }
 
     const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
     if (span.count != 1 || doc.geometry().ring_role[span.first] != core::RingRole::Open) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır.");
         return false;
     }
 
@@ -71,7 +75,7 @@ bool write_run(Context& ctx, core::EntityId slot, const std::vector<core::Point2
     const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
     auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
     return true;
@@ -160,14 +164,15 @@ bool split_run_at(Context& ctx, core::EntityId slot, const std::vector<core::Poi
     double along        = 0.0;
     core::Point2 foot{};
     if (!locate_on(pts, at, segment, along, foot)) {
-        ctx.echo("Çizgide bölünecek kenar yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Çizgide bölünecek kenar yok.");
         return false;
     }
 
     // A split AT an end produces a zero-length piece, which is not a line. Told
     // rather than silently producing a record the geometry layer would refuse.
     if ((segment == 0 && along <= 0.0) || (segment + 2 == pts.size() && along >= 1.0)) {
-        ctx.echo("Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
         return false;
     }
 
@@ -182,7 +187,8 @@ bool split_run_at(Context& ctx, core::EntityId slot, const std::vector<core::Poi
     tail.insert(tail.end(), pts.begin() + static_cast<std::ptrdiff_t>(segment) + 1, pts.end());
 
     if (head.size() < 2 || tail.size() < 2) {
-        ctx.echo("Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
         return false;
     }
 
@@ -190,7 +196,7 @@ bool split_run_at(Context& ctx, core::EntityId slot, const std::vector<core::Poi
 
     auto made = ctx.transaction().add_polyline(ctx.document().entities().layer[slot], tail);
     if (!made) {
-        ctx.echo(made.error().message);
+        ctx.refuse(made.error());
         return false;
     }
 
@@ -198,7 +204,7 @@ bool split_run_at(Context& ctx, core::EntityId slot, const std::vector<core::Poi
         style != core::kByLayerStyle) {
         auto st = ctx.transaction().set_entity_style(made.value(), style);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             return false;
         }
     }
@@ -252,7 +258,7 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
 
         auto part = core::polygon_boolean({face}, {side}, core::BooleanOp::Intersection);
         if (!part) {
-            ctx.echo(part.error().message);
+            ctx.refuse(part.error());
             return false;
         }
         for (core::Polygon& piece : part.value())
@@ -272,13 +278,13 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
 
         auto created = ctx.transaction().add_area(layer, rings);
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             return false;
         }
         if (style != core::kByLayerStyle) {
             auto st = ctx.transaction().set_entity_style(created.value(), style);
             if (!st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 return false;
             }
         }
@@ -292,7 +298,7 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
             auto had       = ctx.document().attribute(col, slot);
             if (!had || !had.value().present) continue;
             if (auto st = ctx.transaction().set_attribute(col, created.value(), had.value()); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 return false;
             }
         }
@@ -300,7 +306,7 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
     }
 
     if (auto st = ctx.transaction().erase_entity(slot); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
     return true;
@@ -325,8 +331,10 @@ Task<void> run_split(Context& ctx)
     if (const Value at_arg = ctx.argument("nokta");
         !at_arg.empty() && ctx.argument("noktalar").empty()) {
         if (chosen.size() != 1) {
-            ctx.echo("`nokta` ile tek nesne bölünür; " + std::to_string(chosen.size()) +
-                     " nesne verildi. Birden çok nesne için `noktalar` ile kesme çizgisi verin.");
+            ctx.refuse(
+                core::ErrorCode::InvalidArgument,
+                "`nokta` ile tek nesne bölünür; " + std::to_string(chosen.size()) +
+                    " nesne verildi. Birden çok nesne için `noktalar` ile kesme çizgisi verin.");
             co_return;
         }
         core::EntityId slot = core::kNoEntity;
@@ -354,7 +362,8 @@ Task<void> run_split(Context& ctx)
     if (!second) co_return;
 
     if (first->x == second->x && first->y == second->y) {
-        ctx.echo("Kesme çizgisinin iki ucu aynı nokta; bir doğrultu belirtmiyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kesme çizgisinin iki ucu aynı nokta; bir doğrultu belirtmiyor.");
         co_return;
     }
 
@@ -368,7 +377,8 @@ Task<void> run_split(Context& ctx)
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return;
         }
 
@@ -395,7 +405,8 @@ Task<void> run_split(Context& ctx)
     }
 
     if (cut_lines == 0 && cut_faces == 0) {
-        ctx.echo("Kesme çizgisi seçilen nesnelerin hiçbirinden geçmiyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kesme çizgisi seçilen nesnelerin hiçbirinden geçmiyor.");
         co_return;
     }
 
@@ -467,17 +478,19 @@ Task<void> run_cut(Context& ctx, bool extend)
             co_return;
 
         if (pair.size() != 2) {
-            ctx.echo(std::string(verb) +
-                     " tam iki çizgi ister: düzenlenecek olan ve sınır. Seçili: " +
-                     std::to_string(pair.size()) + ". Ya da " + verb +
-                     " nesne=1 sinir=2 nokta=5,0 yazın.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       std::string(verb) +
+                           " tam iki çizgi ister: düzenlenecek olan ve sınır. Seçili: " +
+                           std::to_string(pair.size()) + ". Ya da " + verb +
+                           " nesne=1 sinir=2 nokta=5,0 yazın.");
             co_return;
         }
     } else if (target_arg.empty() || edge_arg.empty()) {
-        ctx.echo(std::string(verb) +
-                 " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
-                 "Örnek: " +
-                 verb + " nesne=1 sinir=2 nokta=5,0");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string(verb) +
+                       " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
+                       "Örnek: " +
+                       verb + " nesne=1 sinir=2 nokta=5,0");
         co_return;
     }
 
@@ -571,8 +584,9 @@ Task<void> run_cut(Context& ctx, bool extend)
     }
 
     if (!found) {
-        ctx.echo(extend ? "Bu uç, sınır çizgisine uzatılarak ulaşamıyor: kesişme yok."
-                        : "Bu uç sınır çizgisini kesmiyor; budanacak bir şey yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   extend ? "Bu uç, sınır çizgisine uzatılarak ulaşamıyor: kesişme yok."
+                          : "Bu uç sınır çizgisini kesmiyor; budanacak bir şey yok.");
         co_return;
     }
 

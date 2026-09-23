@@ -73,9 +73,13 @@ Bırakmak için Esc.
 
 ### Betik
 
+Betik önce iki alan çizer, sonra ikisini birlikte ölçer:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.area", "args": { "noktalar": [[0,0],[20000,0],[20000,10000],[0,10000]] } },
+    { "cmd": "core.area", "args": { "noktalar": [[30000,0],[40000,0],[40000,10000],[30000,10000]] } },
     { "cmd": "core.measure_area", "args": { "nesneler": [1, 2] } }
   ]
 }

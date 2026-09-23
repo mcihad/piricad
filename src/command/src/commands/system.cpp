@@ -17,7 +17,7 @@ Task<void> run_help(Context& ctx)
     if (const Value v = ctx.argument("komut"); !v.empty()) {
         const CommandSpec* spec = bus.registry().resolve(v.as_text());
         if (!spec) {
-            ctx.echo("Bilinmeyen komut: '" + v.as_text() + "'");
+            ctx.refuse(core::ErrorCode::NotFound, "Bilinmeyen komut: '" + v.as_text() + "'");
             co_return;
         }
         ctx.record("komut", v);
@@ -113,7 +113,7 @@ Task<void> run_script(Context& ctx)
 
     Bus& bus = ctx.session().bus();
     if (!bus.on_run_script) {
-        ctx.echo("Betik motoru bağlı değil.");
+        ctx.refuse(core::ErrorCode::Unsupported, "Betik motoru bağlı değil.");
         co_return;
     }
 
@@ -134,7 +134,8 @@ Task<void> run_python(Context& ctx)
         // SAYS WHICH BUILD, because the option is the whole difference and a user
         // who typed the command deserves the sentence that ends their search
         // rather than "not connected" (`.claude/script.md` R21).
-        ctx.echo("Bu yapıda Python yok. KENTOS_WITH_PYTHON=ON ile derleyin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Bu yapıda Python yok. KENTOS_WITH_PYTHON=ON ile derleyin.");
         co_return;
     }
 

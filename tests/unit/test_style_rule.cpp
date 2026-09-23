@@ -290,7 +290,8 @@ TEST_CASE("SEMBOL PARAMETRESİ: alan bildiren yazı katmanı sütunu da tanımla
     // An unknown type is refused by name rather than silently taken as text.
     std::string said;
     rig.bus.on_echo = [&said](std::string_view s) { said.append(s); };
-    (void)rig.bus.execute_line("STİL katman=YAPI tip=yazi-isaretci alan=x:yazi:zart", Origin::Test);
+    said += REFUSED(
+        rig.bus.execute_line("STİL katman=YAPI tip=yazi-isaretci alan=x:yazi:zart", Origin::Test));
     CHECK(said.find("Bilinmeyen alan türü") != std::string::npos);
 }
 
@@ -379,11 +380,12 @@ TEST_CASE("SEMBOL PARAMETRESİ: sürülen özellik önce karar verir, sonra yaza
     // A malformed token is named rather than quietly ignored, and so is a word
     // that resolves to no property.
     said.clear();
-    (void)rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=nitelik:zart", Origin::Test);
+    said +=
+        REFUSED(rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=nitelik:zart", Origin::Test));
     CHECK(said.find("Bilinmeyen özellik") != std::string::npos);
 
     said.clear();
-    (void)rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=a:b:c:d", Origin::Test);
+    said += REFUSED(rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=a:b:c:d", Origin::Test));
     CHECK(said.find("'alan' biçimi") != std::string::npos);
 }
 

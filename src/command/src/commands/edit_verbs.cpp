@@ -44,17 +44,20 @@ bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot, std::vector<c
     const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
     slot                      = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return false;
     }
     if (doc.entities().kind[slot] != core::kPolylineKind) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.");
         return false;
     }
     const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
     if (span.count != 1 || doc.geometry().ring_role[span.first] != core::RingRole::Open) {
-        ctx.echo("Nesne " + std::to_string(id) + " açık bir çizgi değil.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Nesne " + std::to_string(id) + " açık bir çizgi değil.");
         return false;
     }
     const auto xs = doc.geometry().ring_xs(span.first);
@@ -71,7 +74,7 @@ bool write_run(Context& ctx, core::EntityId slot, const std::vector<core::Point2
     const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
     auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
     return true;

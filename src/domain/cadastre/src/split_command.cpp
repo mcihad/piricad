@@ -83,8 +83,8 @@ Task<void> run(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
     if (requested.size() != 1) {
-        ctx.echo("İfraz tek parsel üzerinde çalışır. Seçili: " + std::to_string(requested.size()) +
-                 ".");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "İfraz tek parsel üzerinde çalışır. Seçili: " +
+                                                         std::to_string(requested.size()) + ".");
         co_return;
     }
 
@@ -96,7 +96,8 @@ Task<void> run(Context& ctx)
     if (!second) co_return;
 
     if (first->x == second->x && first->y == second->y) {
-        ctx.echo("Ayırma çizgisinin iki ucu aynı yerde; kesme yönü belirsiz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ayırma çizgisinin iki ucu aynı yerde; kesme yönü belirsiz.");
         co_return;
     }
 
@@ -104,14 +105,16 @@ Task<void> run(Context& ctx)
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(requested.front()));
     const core::EntityId slot = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(requested.front()));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(requested.front()));
         co_return;
     }
 
     core::Polygon parcel;
     if (!polygon_of(doc, slot, parcel)) {
-        ctx.echo("Nesne " + std::to_string(requested.front()) +
-                 " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(requested.front()) +
+                       " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
         co_return;
     }
 
@@ -126,7 +129,7 @@ Task<void> run(Context& ctx)
         const core::Polygon side = core::half_plane(*first, *second, box, left);
         auto part = core::polygon_boolean({parcel}, {side}, core::BooleanOp::Intersection);
         if (!part) {
-            ctx.echo(part.error().message);
+            ctx.refuse(part.error());
             co_return;
         }
         for (core::Polygon& piece : part.value())
@@ -134,8 +137,9 @@ Task<void> run(Context& ctx)
     }
 
     if (pieces.size() < 2) {
-        ctx.echo("Bu çizgi parseli kesmiyor: ifraz için çizginin parselin içinden geçmesi "
-                 "gerekir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu çizgi parseli kesmiyor: ifraz için çizginin parselin içinden geçmesi "
+                   "gerekir.");
         co_return;
     }
 
@@ -151,7 +155,7 @@ Task<void> run(Context& ctx)
 
         auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             co_return;
         }
 
@@ -160,7 +164,7 @@ Task<void> run(Context& ctx)
             auto had       = doc.attribute(col, slot);
             if (!had || !had.value().present) continue;
             if (auto st = ctx.transaction().set_attribute(col, created.value(), had.value()); !st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return;
             }
         }
@@ -169,7 +173,7 @@ Task<void> run(Context& ctx)
     }
 
     if (auto st = ctx.transaction().erase_entity(slot); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

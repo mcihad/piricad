@@ -76,7 +76,8 @@ Task<void> run(Context& ctx)
         if (!major) co_return;
 
         if (major->x == centre->x && major->y == centre->y) {
-            ctx.echo("Birinci eksenin ucu merkezle aynı yerde; elipsin ekseni sıfır olamaz.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Birinci eksenin ucu merkezle aynı yerde; elipsin ekseni sıfır olamaz.");
             co_return;
         }
     }
@@ -103,8 +104,9 @@ Task<void> run(Context& ctx)
 
     const double b = across < 0.0 ? -across : across;
     if (b < 1.0) {
-        ctx.echo("İkinci eksen sıfır: üçüncü nokta birinci eksenin üzerinde. "
-                 "Eksene dik bir yer seçin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "İkinci eksen sıfır: üçüncü nokta birinci eksenin üzerinde. "
+                   "Eksene dik bir yer seçin.");
         co_return;
     }
 
@@ -118,7 +120,8 @@ Task<void> run(Context& ctx)
     const Value from = ctx.argument("baslangic");
     const Value to   = ctx.argument("bitis");
     if (from.empty() != to.empty()) {
-        ctx.echo("Kısmi elips için baslangic= ve bitis= birlikte verilir (derece).");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kısmi elips için baslangic= ve bitis= birlikte verilir (derece).");
         co_return;
     }
     std::vector<std::uint8_t> payload;
@@ -131,7 +134,8 @@ Task<void> run(Context& ctx)
         };
         const core::EllipseArc arc{norm(from.as_number()), norm(to.as_number())};
         if (arc.start_udeg == arc.end_udeg) {
-            ctx.echo("Başlangıç ve bitiş açısı aynı; tam elips için ikisini de vermeyin.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Başlangıç ve bitiş açısı aynı; tam elips için ikisini de vermeyin.");
             co_return;
         }
         payload = core::encode_ellipse_arc(arc);
@@ -144,7 +148,7 @@ Task<void> run(Context& ctx)
         ctx.active_layer(), core::kEllipseKind,
         std::span<const core::RingGeometry::RingInput>(&ring, 1), payload);
     if (!created) {
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
     if (!from.empty()) {

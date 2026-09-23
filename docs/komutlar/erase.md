@@ -74,16 +74,21 @@ SEÇ NOKTA 5,0 tolerans=1
 SİL
 ```
 
-Tek nesneyi kimliğiyle silin:
+Tek nesneyi kimliğiyle silin. Kimlikler hiçbir zaman yeniden kullanılmaz: az önce
+silinen çizgi 1 numaralıydı, yeni çizilen 2 numaradır:
 
 ```
-SİL nesneler=1
+ÇİZGİ 0,5 10,5
+SİL nesneler=2
 ```
 
 Üç nesne birden silin:
 
 ```
-SİL nesneler=1 nesneler=2 nesneler=3
+ÇİZGİ 0,10 10,10
+ÇİZGİ 0,15 10,15
+ÇİZGİ 0,20 10,20
+SİL nesneler=3 nesneler=4 nesneler=5
 ```
 
 Silmeyi geri alın:

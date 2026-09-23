@@ -528,10 +528,16 @@ Transaction::SettleReport Transaction::settle_attachments()
 
 void Transaction::rollback()
 {
+    rollback_to(0);
+}
+
+void Transaction::rollback_to(std::size_t mark)
+{
     // Newest first: the inverse of a sequence is the reversed sequence of inverses.
-    for (auto it = inverse_.rbegin(); it != inverse_.rend(); ++it)
-        (void)doc_.apply(*it);
-    inverse_.clear();
+    while (inverse_.size() > mark) {
+        (void)doc_.apply(inverse_.back());
+        inverse_.pop_back();
+    }
 }
 
 std::vector<core::Op> Transaction::release()

@@ -40,8 +40,9 @@ std::string metres(core::Mm v)
 Task<void> run(Context& ctx)
 {
     if (!domain::surface::available()) {
-        ctx.echo("Üçgenleme bu yapıda yok; eş yükselti eğrisi çizilemez. "
-                 "KENTOS_WITH_CDT=ON ile derleyin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Üçgenleme bu yapıda yok; eş yükselti eğrisi çizilemez. "
+                   "KENTOS_WITH_CDT=ON ile derleyin.");
         co_return;
     }
 
@@ -49,7 +50,9 @@ Task<void> run(Context& ctx)
     core::Mm interval = 1000; // one metre, the interval a 1/1000 sheet usually carries
     if (!given.empty()) interval = static_cast<core::Mm>(given.as_int());
     if (interval <= 0) {
-        ctx.echo("Eş yükselti aralığı sıfırdan büyük olmalı. Örnek: EŞYÜKSELTİ aralik=500 (0,5 m)");
+        ctx.refuse(
+            core::ErrorCode::InvalidArgument,
+            "Eş yükselti aralığı sıfırdan büyük olmalı. Örnek: EŞYÜKSELTİ aralik=500 (0,5 m)");
         co_return;
     }
 
@@ -57,7 +60,8 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = doc.attributes();
     const core::AttrId kot       = table.find("kot");
     if (kot == core::kNoAttr) {
-        ctx.echo("Çizimde 'kot' sütunu yok. Kotlu bir nokta listesini NOKTALAR ile okuyun.");
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Çizimde 'kot' sütunu yok. Kotlu bir nokta listesini NOKTALAR ile okuyun.");
         co_return;
     }
 
@@ -91,14 +95,15 @@ Task<void> run(Context& ctx)
     }
 
     if (levels.size() < 3) {
-        ctx.echo("Kotlu nokta sayısı yetersiz: " + std::to_string(levels.size()) +
-                 ". Yüzey en az üç kotlu nokta ister.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kotlu nokta sayısı yetersiz: " + std::to_string(levels.size()) +
+                       ". Yüzey en az üç kotlu nokta ister.");
         co_return;
     }
 
     auto traced = domain::surface::trace_contours(levels, interval);
     if (!traced) {
-        ctx.echo(traced.error().message);
+        ctx.refuse(traced.error());
         co_return;
     }
     if (traced.value().empty()) {
@@ -135,14 +140,14 @@ Task<void> run(Context& ctx)
         auto created = is_face ? ctx.transaction().add_area(layer, rings)
                                : ctx.transaction().add_polyline(layer, c.path);
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             co_return; // the bus rolls the whole set back
         }
 
         if (auto st = ctx.transaction().set_attribute(height_column, created.value(),
                                                       core::attr_mm(c.height));
             !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
         ++drawn;

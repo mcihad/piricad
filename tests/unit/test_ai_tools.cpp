@@ -125,11 +125,12 @@ TEST_CASE("SORGULA sayıyı dürüst verir, listeyi sınırlar")
     CHECK(!f.bus.execute_line("SORGULA katman=YOL sinir=0", Origin::Test).ok());
     CHECK(!f.bus.execute_line("SORGULA katman=YOL sinir=9999", Origin::Test).ok());
 
-    // An unknown layer is a sentence, not a crash, and names the tool that
-    // lists the real ones.
-    const DispatchResult missing = f.must("SORGULA katman=YOKBÖYLE");
-    REQUIRE_FALSE(missing.lines.empty());
-    CHECK(missing.lines.front().find("KATMANLAR") != std::string::npos);
+    // An unknown layer is an ERROR, not a crash and not an empty answer that
+    // reads as "no objects there" — and its sentence names the tool that lists
+    // the real ones, so an agent knows what to call next.
+    const std::string missing =
+        REFUSED(f.bus.execute_line("SORGULA katman=YOKBÖYLE", Origin::Test));
+    CHECK(missing.find("KATMANLAR") != std::string::npos);
 }
 
 TEST_CASE("GÖRÜNÜMBİLGİSİ pencere yoksa uydurmuyor")

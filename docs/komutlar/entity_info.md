@@ -89,10 +89,15 @@ kendiliğinden açılır** — cevabın kapalı bir çekmeceye yazılmaması iç
 
 ### Betik
 
+Betik önce yan yana üç parsel çizer, sonra üçünün bilgisini ister:
+
 ```json
 {
   "ad": "Parsel bilgisi",
   "komutlar": [
+    { "cmd": "core.area", "args": { "noktalar": [[0,0],[20000,0],[20000,15000],[0,15000]] } },
+    { "cmd": "core.area", "args": { "noktalar": [[20000,0],[40000,0],[40000,15000],[20000,15000]] } },
+    { "cmd": "core.area", "args": { "noktalar": [[40000,0],[60000,0],[60000,15000],[40000,15000]] } },
     { "cmd": "core.entity_info", "args": { "nesneler": [1, 2, 3] } }
   ]
 }

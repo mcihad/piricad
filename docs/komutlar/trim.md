@@ -77,6 +77,10 @@ Nesneleri önceden seçtiyseniz sorulmaz.
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line",
+      "args": { "noktalar": [[485300000, 4310200000], [485400000, 4310200000]] } },
+    { "cmd": "core.line",
+      "args": { "noktalar": [[485380000, 4310190000], [485380000, 4310210000]] } },
     { "cmd": "core.trim",
       "args": { "nesne": [1], "sinir": [2], "nokta": [485390000, 4310200000] } }
   ]

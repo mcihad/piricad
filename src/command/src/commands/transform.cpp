@@ -169,7 +169,7 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
     if (kind == core::kArcPolylineKind) {
         auto def = core::arc_polyline_of(g, gslot);
         if (!def) {
-            ctx.echo(def.error().message);
+            ctx.refuse(def.error());
             return false;
         }
         core::ArcPolyline ap      = def.value();
@@ -181,7 +181,8 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
             a.centre = apply(x, a.centre);
             a.radius = apply_radius(x, a.radius);
             if (a.radius <= 0) {
-                ctx.echo("Ölçekleme bir yay kenarı sıfır yarıçapa indiriyor.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Ölçekleme bir yay kenarı sıfır yarıçapa indiriyor.");
                 return false;
             }
             if (reverses(x)) {
@@ -202,7 +203,7 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
     } else if (kind == core::kHatchKind) {
         auto def = core::hatch_of(g, gslot);
         if (!def) {
-            ctx.echo(def.error().message);
+            ctx.refuse(def.error());
             return false;
         }
         core::HatchDef h = def.value();
@@ -218,13 +219,13 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
         if (auto s = ctx.transaction().set_entity_style(
                 slot, ctx.transaction().intern_symbol(hatch_symbol(h, ink)));
             !s) {
-            ctx.echo(s.error().message);
+            ctx.refuse(s.error());
             return false;
         }
     } else if (kind == core::kBlockReferenceKind) {
         auto def = core::block_reference_of(g, gslot);
         if (!def) {
-            ctx.echo(def.error().message);
+            ctx.refuse(def.error());
             return false;
         }
         core::BlockReference ref = def.value();
@@ -241,7 +242,7 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
     } else if (kind == core::kDimensionKind) {
         auto def = core::dimension_of(g, gslot);
         if (!def) {
-            ctx.echo(def.error().message);
+            ctx.refuse(def.error());
             return false;
         }
         core::DimensionDef d = def.value();
@@ -263,14 +264,14 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
                                                     doc.texts().height(gslot),
                                                     doc.texts().anchor(gslot));
                 !s) {
-                ctx.echo(s.error().message);
+                ctx.refuse(s.error());
                 return false;
             }
         }
     } else if (kind == core::kLeaderKind) {
         auto def = core::leader_of(g, gslot);
         if (!def) {
-            ctx.echo(def.error().message);
+            ctx.refuse(def.error());
             return false;
         }
         core::LeaderDef l = def.value();
@@ -282,7 +283,7 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
 
     auto st = ctx.transaction().set_kind_geometry(slot, input, payload);
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
     return true;
@@ -301,7 +302,8 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
         const core::Point2 centre = apply(x, core::circle_centre_of(g, gslot));
         const core::Mm radius     = apply_radius(x, core::circle_radius_of(g, gslot));
         if (radius <= 0) {
-            ctx.echo("Ölçekleme daireyi sıfır yarıçapa indiriyor.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Ölçekleme daireyi sıfır yarıçapa indiriyor.");
             return false;
         }
         const core::Point2 pts[2]{centre, core::Point2{centre.x + radius, centre.y}};
@@ -309,7 +311,7 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
                                                  core::RingRole::Open, 0};
         auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             return false;
         }
         return true;
@@ -321,7 +323,8 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
         core::Point2 start        = apply(x, core::arc_start_of(g, gslot));
         core::Point2 end          = apply(x, core::arc_end_of(g, gslot));
         if (radius <= 0) {
-            ctx.echo("Ölçekleme yayı sıfır yarıçapa indiriyor.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Ölçekleme yayı sıfır yarıçapa indiriyor.");
             return false;
         }
         // A reflection turns the plane inside out, so the arc that swept
@@ -337,7 +340,7 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
                                                  core::RingRole::Open, 0};
         auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             return false;
         }
         return true;
@@ -366,7 +369,7 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
 
     auto st = ctx.transaction().set_geometry(slot, input);
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
     return true;
@@ -478,14 +481,16 @@ Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
-                     ". Kimlikler 1'den başlar.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Geçersiz nesne kimliği: " + std::to_string(raw) +
+                           ". Kimlikler 1'den başlar.");
             co_return false;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-            ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
             co_return false;
         }
         slots.push_back(slot);
@@ -556,7 +561,7 @@ Task<void> run_copy(Context& ctx)
         for (core::EntityId slot : slots) {
             auto made = clone_one(ctx, slot, x);
             if (!made) {
-                ctx.echo(made.error().message);
+                ctx.refuse(made.error());
                 co_return; // the bus rolls the whole transaction back
             }
         }
@@ -599,8 +604,8 @@ Task<void> run_array(Context& ctx)
         if (!count) co_return;
 
         if (*count < 2) {
-            ctx.echo("Kutupsal dizi en az iki nesne ister; " + std::to_string(*count) +
-                     " istendi.");
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Kutupsal dizi en az iki nesne ister; " +
+                                                             std::to_string(*count) + " istendi.");
             co_return;
         }
 
@@ -625,7 +630,7 @@ Task<void> run_array(Context& ctx)
             for (core::EntityId slot : slots) {
                 auto copy = clone_one(ctx, slot, x);
                 if (!copy) {
-                    ctx.echo(copy.error().message);
+                    ctx.refuse(copy.error());
                     co_return;
                 }
                 ++made;
@@ -646,11 +651,12 @@ Task<void> run_array(Context& ctx)
         if (!cols) co_return;
 
         if (*rows < 1 || *cols < 1) {
-            ctx.echo("Satır ve sütun sayısı en az bir olmalı.");
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Satır ve sütun sayısı en az bir olmalı.");
             co_return;
         }
         if (*rows == 1 && *cols == 1) {
-            ctx.echo("Tek satır ve tek sütun bir dizi değildir; kopya üretilmedi.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Tek satır ve tek sütun bir dizi değildir; kopya üretilmedi.");
             co_return;
         }
 
@@ -674,7 +680,7 @@ Task<void> run_array(Context& ctx)
                 for (core::EntityId slot : slots) {
                     auto copy = clone_one(ctx, slot, x);
                     if (!copy) {
-                        ctx.echo(copy.error().message);
+                        ctx.refuse(copy.error());
                         co_return;
                     }
                     ++made;
@@ -778,7 +784,8 @@ Task<void> run_scale(Context& ctx)
         // A negative factor is refused rather than quietly becoming a half turn:
         // "scale by minus one" and "mirror" are different intentions, and a user
         // who typed the wrong sign should be told rather than obeyed.
-        ctx.echo("Ölçek çarpanı sıfırdan büyük olmalı; aynalamak için AYNALA kullanın.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ölçek çarpanı sıfırdan büyük olmalı; aynalamak için AYNALA kullanın.");
         co_return;
     }
 
@@ -815,7 +822,8 @@ Task<void> run_mirror(Context& ctx)
     if (!b) co_return;
 
     if (a->x == b->x && a->y == b->y) {
-        ctx.echo("Ayna ekseni tek noktadan geçemez; iki farklı nokta verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Ayna ekseni tek noktadan geçemez; iki farklı nokta verin.");
         co_return;
     }
 

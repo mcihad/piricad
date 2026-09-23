@@ -62,13 +62,15 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
     const core::Document& doc = ctx.document();
 
     if (raw <= 0) {
-        ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) + ". Kimlikler 1'den başlar.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(raw) + ". Kimlikler 1'den başlar.");
         return false;
     }
     const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
     const core::EntityId slot = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
         return false;
     }
 
@@ -77,9 +79,10 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
     // Said rather than skipped, because silently dropping one of the objects the
     // user selected is how a merge loses a parcel.
     if (doc.entities().kind[slot] != core::kPolylineKind) {
-        ctx.echo("Nesne " + std::to_string(raw) +
-                 " bir eğri ya da nokta; BİRLEŞTİR çizgiler ve alanlar üzerinde çalışır. "
-                 "Önce DÖNÜŞTÜR ile çizgiye çevirin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(raw) +
+                       " bir eğri ya da nokta; BİRLEŞTİR çizgiler ve alanlar üzerinde çalışır. "
+                       "Önce DÖNÜŞTÜR ile çizgiye çevirin.");
         return false;
     }
 
@@ -89,7 +92,8 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
     const core::RingGeometry& geom = doc.geometry();
     const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
     if (span.count == 0) {
-        ctx.echo("Nesne " + std::to_string(raw) + " boş; birleştirilecek geometrisi yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Nesne " + std::to_string(raw) + " boş; birleştirilecek geometrisi yok.");
         return false;
     }
 
@@ -109,7 +113,8 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
     if (open) {
         out.run = vertices(span.first);
         if (out.run.size() < 2) {
-            ctx.echo("Nesne " + std::to_string(raw) + " tek noktadan ibaret; çizgi değil.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(raw) + " tek noktadan ibaret; çizgi değil.");
             return false;
         }
         return true;
@@ -124,7 +129,8 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
             out.face.holes.push_back(std::move(ring));
     }
     if (out.face.exterior.size() < 3) {
-        ctx.echo("Nesne " + std::to_string(raw) + " kapalı bir alan kapatmıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Nesne " + std::to_string(raw) + " kapalı bir alan kapatmıyor.");
         return false;
     }
     return true;
@@ -193,7 +199,7 @@ bool carry_attributes(Context& ctx, const std::vector<Piece>& pieces, core::Enti
         if (!shared.present) continue;
 
         if (auto st = ctx.transaction().set_attribute(col, made, shared); !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             return false;
         }
     }
@@ -211,11 +217,12 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
 
     auto merged = core::polygon_boolean(subject, clip, core::BooleanOp::Union);
     if (!merged) {
-        ctx.echo(merged.error().message);
+        ctx.refuse(merged.error());
         co_return false;
     }
     if (merged.value().empty()) {
-        ctx.echo("Birleşme sonucu boş çıktı; seçilen nesneler bir alan kapatmıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Birleşme sonucu boş çıktı; seçilen nesneler bir alan kapatmıyor.");
         co_return false;
     }
 
@@ -236,13 +243,13 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
 
         auto created = ctx.transaction().add_area(layer, rings);
         if (!created) {
-            ctx.echo(created.error().message);
+            ctx.refuse(created.error());
             co_return false;
         }
         if (style != core::kByLayerStyle) {
             auto st = ctx.transaction().set_entity_style(created.value(), style);
             if (!st) {
-                ctx.echo(st.error().message);
+                ctx.refuse(st.error());
                 co_return false;
             }
         }
@@ -256,7 +263,7 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
     for (Piece& p : pieces) {
         auto st = ctx.transaction().erase_entity(p.entity);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return false;
         }
     }
@@ -336,11 +343,12 @@ Task<bool> combine_runs(Context& ctx, std::vector<Piece>& pieces, std::string& s
         }
 
         if (!advanced) {
-            ctx.echo("Çizgiler tek bir zincir oluşturmuyor: " + std::to_string(joined) + " / " +
-                     std::to_string(pieces.size()) +
-                     " çizgi birleşti, kalanların ucu zincire değmiyor. Uçları yakalama "
-                     "açıkken yeniden çizin ya da düğüm toleransını büyütün "
-                     "(AYAR düğüm_toleransı).");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çizgiler tek bir zincir oluşturmuyor: " + std::to_string(joined) + " / " +
+                           std::to_string(pieces.size()) +
+                           " çizgi birleşti, kalanların ucu zincire değmiyor. Uçları yakalama "
+                           "açıkken yeniden çizin ya da düğüm toleransını büyütün "
+                           "(AYAR düğüm_toleransı).");
             co_return false;
         }
     }
@@ -350,14 +358,14 @@ Task<bool> combine_runs(Context& ctx, std::vector<Piece>& pieces, std::string& s
     // the document still resolves. The others go.
     const core::RingGeometry::RingInput ring{chain, core::RingRole::Open, 0};
     if (auto st = ctx.transaction().set_geometry(pieces.front().entity, {&ring, 1}); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return false;
     }
 
     for (std::size_t i = 1; i < pieces.size(); ++i) {
         auto st = ctx.transaction().erase_entity(pieces[i].entity);
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return false;
         }
     }
@@ -383,8 +391,9 @@ Task<void> run(Context& ctx)
         co_return;
 
     if (requested.size() < 2) {
-        ctx.echo("BİRLEŞTİR en az iki nesne ister. Seçili: " + std::to_string(requested.size()) +
-                 ". Birleştirilecek alanları ya da uç uca değen çizgileri seçin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "BİRLEŞTİR en az iki nesne ister. Seçili: " + std::to_string(requested.size()) +
+                       ". Birleştirilecek alanları ya da uç uca değen çizgileri seçin.");
         co_return;
     }
 
@@ -405,10 +414,11 @@ Task<void> run(Context& ctx)
         if (p.is_face) ++faces;
 
     if (faces != 0 && faces != pieces.size()) {
-        ctx.echo("Seçimde hem alan hem çizgi var (" + std::to_string(faces) + " alan, " +
-                 std::to_string(pieces.size() - faces) +
-                 " çizgi). BİRLEŞTİR ya yalnız alanları ya yalnız çizgileri birleştirir; "
-                 "çizgileri önce ALANAÇEVİR ile alana çevirin.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Seçimde hem alan hem çizgi var (" + std::to_string(faces) + " alan, " +
+                       std::to_string(pieces.size() - faces) +
+                       " çizgi). BİRLEŞTİR ya yalnız alanları ya yalnız çizgileri birleştirir; "
+                       "çizgileri önce ALANAÇEVİR ile alana çevirin.");
         co_return;
     }
 

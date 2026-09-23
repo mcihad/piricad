@@ -59,25 +59,29 @@ bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
                                              : given.as_int();
 
     if (id <= 0) {
-        ctx.echo("Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
         return false;
     }
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
     slot           = doc.slot_of(key);
     if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return false;
     }
     if (doc.entities().kind[slot] != core::kPolylineKind) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.");
         return false;
     }
 
     const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
     if (span.count != 1) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır.");
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır.");
         return false;
     }
 
@@ -176,8 +180,9 @@ Task<void> run_corner(Context& ctx, bool fillet)
 
     const Value given = ctx.argument("nesne");
     if (given.empty()) {
-        ctx.echo(std::string(verb) + " için nesne belirtilmedi. Örnek: " + verb +
-                 " nesne=1 nokta=10,10 " + (fillet ? "yaricap=3" : "mesafe=3"));
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string(verb) + " için nesne belirtilmedi. Örnek: " + verb +
+                       " nesne=1 nokta=10,10 " + (fillet ? "yaricap=3" : "mesafe=3"));
         co_return;
     }
 
@@ -193,14 +198,16 @@ Task<void> run_corner(Context& ctx, bool fillet)
 
     std::size_t at = 0;
     if (!pick_corner(pts, closed, *at_pt, at)) {
-        ctx.echo("Burada iki kenarın buluştuğu bir köşe yok. Açık bir çizginin uçları köşe "
-                 "değildir; iki kenarın buluştuğu bir noktayı gösterin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Burada iki kenarın buluştuğu bir köşe yok. Açık bir çizginin uçları köşe "
+                   "değildir; iki kenarın buluştuğu bir noktayı gösterin.");
         co_return;
     }
 
     Corner c;
     if (!measure_corner(pts, at, c)) {
-        ctx.echo("Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.");
         co_return;
     }
 
@@ -210,7 +217,8 @@ Task<void> run_corner(Context& ctx, bool fillet)
     if (!size) co_return;
 
     if (*size <= 0.0) {
-        ctx.echo(std::string(fillet ? "Yarıçap" : "Mesafe") + " sıfırdan büyük olmalı.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   std::string(fillet ? "Yarıçap" : "Mesafe") + " sıfırdan büyük olmalı.");
         co_return;
     }
 
@@ -227,13 +235,15 @@ Task<void> run_corner(Context& ctx, bool fillet)
     }
 
     if (tangent <= 0) {
-        ctx.echo("Bu köşe için hesaplanan kesim sıfır ya da negatif çıkıyor.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu köşe için hesaplanan kesim sıfır ya da negatif çıkıyor.");
         co_return;
     }
     if (tangent >= c.edge1 || tangent >= c.edge2) {
-        ctx.echo("Kesim komşu kenardan uzun: kenarlar " + std::to_string(c.edge1 / 1000) +
-                 " m ve " + std::to_string(c.edge2 / 1000) + " m, gereken " +
-                 std::to_string(tangent / 1000) + " m. Daha küçük bir değer verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Kesim komşu kenardan uzun: kenarlar " + std::to_string(c.edge1 / 1000) +
+                       " m ve " + std::to_string(c.edge2 / 1000) + " m, gereken " +
+                       std::to_string(tangent / 1000) + " m. Daha küçük bir değer verin.");
         co_return;
     }
 
@@ -259,7 +269,7 @@ Task<void> run_corner(Context& ctx, bool fillet)
         const core::RingGeometry::RingInput ring{out, role_of(ctx, slot), 0};
         auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     } else {
@@ -275,9 +285,10 @@ Task<void> run_corner(Context& ctx, bool fillet)
         // curve segments (model.md R9-R12). Refusing says so; producing an open
         // line where a parcel used to be would quietly destroy the face.
         if (closed) {
-            ctx.echo("Kapalı bir alanın köşesi yuvarlatılamaz: sonuç bir kısmı yay olan bir "
-                     "sınır olurdu ve bu belge modelinde halka köşe noktalarından oluşur. "
-                     "Düz kenarla kesmek için PAH kullanın.");
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Kapalı bir alanın köşesi yuvarlatılamaz: sonuç bir kısmı yay olan bir "
+                       "sınır olurdu ve bu belge modelinde halka köşe noktalarından oluşur. "
+                       "Düz kenarla kesmek için PAH kullanın.");
             co_return;
         }
 
@@ -289,7 +300,8 @@ Task<void> run_corner(Context& ctx, bool fillet)
         leg2.insert(leg2.end(), pts.begin() + static_cast<std::ptrdiff_t>(at) + 1, pts.end());
 
         if (leg1.size() < 2 || leg2.size() < 2) {
-            ctx.echo("Bu köşe yuvarlatılınca kenarlardan biri tek noktaya iniyor.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu köşe yuvarlatılınca kenarlardan biri tek noktaya iniyor.");
             co_return;
         }
 
@@ -298,20 +310,20 @@ Task<void> run_corner(Context& ctx, bool fillet)
         const core::RingGeometry::RingInput ring{leg1, core::RingRole::Open, 0};
         auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
         if (!st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
 
         auto second = ctx.transaction().add_polyline(ctx.document().entities().layer[slot], leg2);
         if (!second) {
-            ctx.echo(second.error().message);
+            ctx.refuse(second.error());
             co_return;
         }
         if (const core::StyleId style = ctx.document().entities().style[slot];
             style != core::kByLayerStyle) {
             auto styled = ctx.transaction().set_entity_style(second.value(), style);
             if (!styled) {
-                ctx.echo(styled.error().message);
+                ctx.refuse(styled.error());
                 co_return;
             }
         }
@@ -323,7 +335,8 @@ Task<void> run_corner(Context& ctx, bool fillet)
         // is still no trigonometric call anywhere in this file.
         const double half_sin = std::sqrt((1.0 - c.cos_theta) * 0.5);
         if (half_sin <= 0.0) {
-            ctx.echo("Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.");
             co_return;
         }
 
@@ -346,7 +359,7 @@ Task<void> run_corner(Context& ctx, bool fillet)
         auto made = ctx.transaction().add_arc(ctx.document().entities().layer[slot], centre, want,
                                               start, end);
         if (!made) {
-            ctx.echo(made.error().message);
+            ctx.refuse(made.error());
             co_return;
         }
     }

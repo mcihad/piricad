@@ -79,9 +79,12 @@ bırakılmamış olan çizilmez.
 
 ### Betik
 
+Betik önce 20 m bir çizgi çizer, sonra onun bir kopyasını 50 m doğuya koyar:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[20000,0]] } },
     { "cmd": "core.copy",
       "args": { "nesneler": [1],
                 "baslangic": [0, 0], "bitis": [50000, 0] } }

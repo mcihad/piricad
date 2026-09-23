@@ -62,8 +62,9 @@ Task<void> run(Context& ctx)
     }
 
     if (built.back().points.size() < 3) {
-        ctx.echo("Bir alan en az üç köşe ister; " + std::to_string(built.back().points.size()) +
-                 " nokta verildi.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bir alan en az üç köşe ister; " + std::to_string(built.back().points.size()) +
+                       " nokta verildi.");
         co_return;
     }
 
@@ -78,9 +79,11 @@ Task<void> run(Context& ctx)
         for (std::size_t i = 0; i < counts.size(); ++i) {
             const auto n = counts[i] > 0 ? static_cast<std::size_t>(counts[i]) : 0;
             if (n < 3 || at + n > recorded.size()) {
-                ctx.echo("'bolum' değerleri nokta listesiyle uyuşmuyor: " +
-                         std::to_string(recorded.size()) + " nokta verildi, " +
-                         "halka uzunlukları toplamı bunu aşıyor ya da üçten kısa bir halka var.");
+                ctx.refuse(
+                    core::ErrorCode::InvalidArgument,
+                    "'bolum' değerleri nokta listesiyle uyuşmuyor: " +
+                        std::to_string(recorded.size()) + " nokta verildi, " +
+                        "halka uzunlukları toplamı bunu aşıyor ya da üçten kısa bir halka var.");
                 co_return;
             }
             RingBuild r;
@@ -91,9 +94,10 @@ Task<void> run(Context& ctx)
             at += n;
         }
         if (at != recorded.size()) {
-            ctx.echo("'bolum' değerleri nokta listesini tam kapatmıyor: " +
-                     std::to_string(recorded.size()) + " noktanın " + std::to_string(at) +
-                     " tanesi halkalara dağıtıldı.");
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'bolum' değerleri nokta listesini tam kapatmıyor: " +
+                           std::to_string(recorded.size()) + " noktanın " + std::to_string(at) +
+                           " tanesi halkalara dağıtıldı.");
             co_return;
         }
         built = std::move(split);
@@ -108,7 +112,7 @@ Task<void> run(Context& ctx)
     if (!created) {
         // The geometry layer refuses a zero-area ring, a hole that escapes its
         // exterior and a ring that crosses itself. Its message names which.
-        ctx.echo(created.error().message);
+        ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
 

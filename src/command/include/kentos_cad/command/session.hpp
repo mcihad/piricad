@@ -119,6 +119,11 @@ public:
         return document_revision_at_start_;
     }
 
+    /// How many edits the transaction held when this command began: zero for a
+    /// transaction of its own, the batch's count so far for a borrowed one. The
+    /// edits past it are this command's, and only those go back on a failure.
+    std::size_t transaction_mark() const noexcept { return transaction_mark_; }
+
     /// Arguments as actually resolved, in declaration order. This is what the
     /// journal records, so a replay reproduces the run bit for bit.
     const Args& resolved() const noexcept { return resolved_; }
@@ -211,6 +216,7 @@ private:
     std::vector<std::string> runs_begun_{};
     core::Error error_{};
     std::uint64_t document_revision_at_start_{0};
+    std::size_t transaction_mark_{0};
 
     bool client_driven_{false};
     Job* job_{nullptr};

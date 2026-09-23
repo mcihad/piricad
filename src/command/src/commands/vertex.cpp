@@ -147,30 +147,34 @@ bool resolve_entity(Context& ctx, core::EntityId& out, bool corners_only)
 {
     const Value given = ctx.argument("nesne");
     if (given.empty()) {
-        ctx.echo("Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2");
         return false;
     }
 
     std::int64_t id   = 0;
     std::size_t count = 0;
     if (!single_id(given, id, count)) {
-        ctx.echo("Bir seferde tek nesne düzenlenir; " + std::to_string(count) + " nesne verildi.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Bir seferde tek nesne düzenlenir; " +
+                                                         std::to_string(count) + " nesne verildi.");
         return false;
     }
     if (id <= 0) {
-        ctx.echo("Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
         return false;
     }
 
     const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
     const core::EntityId slot = ctx.document().slot_of(key);
     if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
-        ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return false;
     }
 
     if (auto st = ctx.document().editable(slot); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         return false;
     }
 
@@ -179,9 +183,10 @@ bool resolve_entity(Context& ctx, core::EntityId& out, bool corners_only)
     // one more would leave a record that is no longer a curve at all. Moving one
     // is another matter: every kind names its grips (core/grips.hpp).
     if (corners_only && ctx.document().entities().kind[slot] != core::kPolylineKind) {
-        ctx.echo("Nesne " + std::to_string(id) +
-                 " bir eğri; eğrinin arasına köşe eklenemez. Tutamaklarını KÖŞETAŞI ile "
-                 "taşıyabilirsiniz.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Nesne " + std::to_string(id) +
+                       " bir eğri; eğrinin arasına köşe eklenemez. Tutamaklarını KÖŞETAŞI ile "
+                       "taşıyabilirsiniz.");
         return false;
     }
 
@@ -201,8 +206,9 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
 {
     const auto grips = core::entity_grips(ctx.document(), slot);
     if (corner < 1 || static_cast<std::size_t>(corner) > grips.size()) {
-        ctx.echo("Bu nesnenin " + std::to_string(corner) + ". tutamağı yok; " +
-                 std::to_string(grips.size()) + " tutamağı var.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu nesnenin " + std::to_string(corner) + ". tutamağı yok; " +
+                       std::to_string(grips.size()) + " tutamağı var.");
         co_return;
     }
     const auto index        = static_cast<std::size_t>(corner - 1);
@@ -214,7 +220,7 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
 
     auto edit = core::move_grip(ctx.document(), slot, index, *to);
     if (!edit) {
-        ctx.echo(edit.error().message);
+        ctx.refuse(edit.error());
         co_return;
     }
     core::GripEdit& g = edit.value();
@@ -235,14 +241,14 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
 
     const auto inputs = g.inputs();
     if (auto st = ctx.transaction().set_kind_geometry(slot, inputs, g.payload); !st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
     if (!text.empty()) {
         if (auto st =
                 ctx.transaction().set_text(slot, text, height, core::TextAnchor::MiddleCentre);
             !st) {
-            ctx.echo(st.error().message);
+            ctx.refuse(st.error());
             co_return;
         }
     }
@@ -259,13 +265,14 @@ bool resolve_corner(Context& ctx, std::int64_t& out)
 {
     const Value given = ctx.argument("kose");
     if (given.empty()) {
-        ctx.echo("Köşe numarası belirtilmedi. İlk köşe 1'dir.");
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Köşe numarası belirtilmedi. İlk köşe 1'dir.");
         return false;
     }
 
     std::size_t count = 0;
     if (!single_id(given, out, count)) {
-        ctx.echo("Tek bir köşe numarası beklenir; " + std::to_string(count) + " değer verildi.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Tek bir köşe numarası beklenir; " + std::to_string(count) + " değer verildi.");
         return false;
     }
     return true;
@@ -287,8 +294,9 @@ Task<void> run_move(Context& ctx)
     Rings rings       = read_rings(ctx.document(), slot);
     const Where where = locate(rings, corner);
     if (!where.found) {
-        ctx.echo("Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
-                 std::to_string(rings.vertex_count()) + " köşesi var.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
+                       std::to_string(rings.vertex_count()) + " köşesi var.");
         co_return;
     }
 
@@ -307,7 +315,7 @@ Task<void> run_move(Context& ctx)
         // A ring that now crosses itself, or a hole that has escaped its exterior,
         // is refused by the geometry layer and the message names which. The bus
         // rolls the transaction back, so the corner does not half-move.
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 
@@ -329,8 +337,9 @@ Task<void> run_insert(Context& ctx)
     Rings rings       = read_rings(ctx.document(), slot);
     const Where where = locate(rings, corner);
     if (!where.found) {
-        ctx.echo("Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
-                 std::to_string(rings.vertex_count()) + " köşesi var.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
+                       std::to_string(rings.vertex_count()) + " köşesi var.");
         co_return;
     }
 
@@ -342,8 +351,9 @@ Task<void> run_insert(Context& ctx)
     const bool closed                     = rings.roles[where.ring] != core::RingRole::Open;
 
     if (!closed && where.at + 1 >= ring.size()) {
-        ctx.echo("Son köşeden sonra kenar yok: açık bir çizgide " + std::to_string(corner) +
-                 ". köşe uçtur. Araya köşe eklemek için ondan önceki bir köşe verin.");
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Son köşeden sonra kenar yok: açık bir çizgide " + std::to_string(corner) +
+                       ". köşe uçtur. Araya köşe eklemek için ondan önceki bir köşe verin.");
         co_return;
     }
 
@@ -360,7 +370,7 @@ Task<void> run_insert(Context& ctx)
 
     auto st = write_rings(ctx, slot, rings);
     if (!st) {
-        ctx.echo(st.error().message);
+        ctx.refuse(st.error());
         co_return;
     }
 

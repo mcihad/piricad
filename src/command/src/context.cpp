@@ -164,16 +164,16 @@ InputAwaiter<Value::Ints> Context::objects(std::string param, std::string messag
 Task<bool> want_objects(Context& ctx, std::string param, std::string message,
                         std::vector<std::int64_t>& out, std::size_t most, std::string example)
 {
-    // A refusal must leave NOTHING behind. The awaiter records whatever it
-    // resolved under the parameter it was given, and it does that before the
-    // caller has had a chance to judge the count — so a BÖL that is handed three
-    // lines and says "one at a time" would otherwise leave three ids sitting in
-    // `nesne`, which post-run validation rejects with a second message about
-    // arity that the user can do nothing with. An empty Value reads as "absent"
-    // to `check_against_spec`, which is the truth: nothing was accepted.
+    // A refusal must leave NOTHING behind, and it is an ERROR: the caller's
+    // command fails with this sentence, which is what a script, an agent and
+    // Python are told (TODOS F-01). The awaiter records whatever it resolved
+    // under the parameter it was given, before the caller has judged the count,
+    // so the record is cleared as well — a BÖL handed three lines and told "one
+    // at a time" must not leave three ids sitting in `nesne` for anything that
+    // reads the resolved bundle afterwards.
     const auto refuse = [&ctx, &param](std::string why) {
         ctx.record(param, Value{});
-        ctx.echo(std::move(why));
+        ctx.refuse(core::ErrorCode::InvalidArgument, std::move(why));
         return false;
     };
 
@@ -211,8 +211,11 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
     auto picked = co_await ctx.objects(param, std::move(message));
     if (!picked || picked->empty()) {
         // Said for BOTH clients, without asking which one this is (Article 1.2):
-        // a user who pressed Esc reads it as confirmation, and a script that
-        // forgot its argument reads it as the reason nothing happened.
+        // a script that forgot its argument is told why nothing happened, and a
+        // user who confirmed an empty pick reads the same sentence. A user who
+        // pressed Esc is told "İptal edildi" instead, by the bus — the cancel
+        // settles the session after this line runs, and that is the truth about
+        // what they did.
         co_return refuse("İşlem yapılacak nesne yok: seçim boş ve '" + param + "' verilmedi." +
                          (example.empty() ? std::string{} : "\n  Örnek: " + example));
     }
@@ -248,6 +251,16 @@ core::LayerId Context::active_layer() const
 void Context::echo(std::string message) const
 {
     session_.bus().echo(message);
+}
+
+void Context::refuse(core::ErrorCode code, std::string message) const
+{
+    refuse(core::Error{code, std::move(message)});
+}
+
+void Context::refuse(core::Error error) const
+{
+    session_.fail(std::move(error));
 }
 
 void Context::record(std::string param, Value v)

@@ -156,7 +156,7 @@ Task<void> run_entity_info(Context& ctx)
     }
 
     if (told == 0) {
-        ctx.echo("Bilgisi verilecek nesne bulunamadı.");
+        ctx.refuse(core::ErrorCode::NotFound, "Bilgisi verilecek nesne bulunamadı.");
         co_return;
     }
 

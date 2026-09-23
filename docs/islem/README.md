@@ -108,6 +108,7 @@ Bir araç betikte komut kimliğiyle çağrılır; `nesneler` ya da `kapsam` veri
 {
   "ad": "Kenar uzunlukları",
   "komutlar": [
+    { "cmd": "core.area", "args": { "noktalar": [[0,0],[20000,0],[20000,15000],[0,15000]] } },
     { "cmd": "islem.uzunluk_yaz",
       "args": { "kapsam": "proje", "birim": "metre", "ondalik": 2, "katman": "UZUNLUK" } }
   ]

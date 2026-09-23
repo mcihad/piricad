@@ -75,9 +75,14 @@ Nesneleri önceden seçtiyseniz sorulmaz.
 
 ### Betik
 
+Betik önce iki çizgi çizer, sonra ikisini birlikte 100 m doğuya ve 50 m kuzeye
+taşır:
+
 ```json
 {
   "komutlar": [
+    { "cmd": "core.line", "args": { "noktalar": [[0,0],[20000,0]] } },
+    { "cmd": "core.line", "args": { "noktalar": [[0,5000],[20000,5000]] } },
     { "cmd": "core.move",
       "args": { "nesneler": [1, 2],
                 "baslangic": [0, 0], "bitis": [100000, 50000] } }
