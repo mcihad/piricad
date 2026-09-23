@@ -26,21 +26,30 @@ Task<void> run(Context& ctx)
 {
     std::vector<core::Point2> points;
 
-    auto p1 = co_await ctx.point("noktalar", "İlk nokta");
-    if (!p1) co_return; // ESC before anything was drawn
-
-    points.push_back(*p1);
-    core::Point2 previous = *p1;
-
     // The whole run is drawn at the end, so the guide carries every vertex fixed
     // so far — otherwise each click would appear to erase the one before it, the
-    // way it did for ALAN before `rubber_chain` existed (input.hpp).
-    while (
-        auto next = co_await ctx.point(
-            "noktalar", "Sonraki nokta",
-            PointOptions{.rubber_band = true, .rubber_origin = previous, .rubber_chain = points})) {
-        points.push_back(*next);
-        previous = *next;
+    // way it did for ALAN before `rubber_chain` existed (input.hpp). The newest
+    // vertex can be taken back (⌫, Ctrl+Z, `U`) without losing the rest; taking
+    // back the first asks for it again (TODOS C-02).
+    while (points.empty()) {
+        auto p1 = co_await ctx.point("noktalar", "İlk nokta");
+        if (!p1) co_return; // ESC before anything was drawn
+        points.push_back(*p1);
+
+        for (;;) {
+            auto next = co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al",
+                                           PointOptions{.rubber_band   = true,
+                                                        .rubber_origin = points.back(),
+                                                        .rubber_chain  = points,
+                                                        .can_retract   = true});
+            if (next) {
+                points.push_back(*next);
+                continue;
+            }
+            if (!ctx.took_back()) break;
+            points.pop_back();
+            if (points.empty()) break;
+        }
     }
 
     if (points.size() < 2) {

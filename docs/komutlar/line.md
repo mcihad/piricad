@@ -106,7 +106,20 @@ menüsünü kullanın. Durum çubuğu `İlk nokta` ister; harita alanına sol t�
 Sonraki istek `Sonraki nokta` olur ve son noktadan imlecinize kesikli bir kılavuz çizgi
 uzanır. İstediğiniz kadar nokta tıklayın.
 
-Bitirmek için **Esc**'e basın veya sağ tıklayın.
+Bitirmek için **Enter**'a ya da **Esc**'e basın veya sağ tıklayın. Parçalar siz
+tıkladıkça tuvalde görünür ve komut bittiğinde her biri ayrı bir nesne olarak çizime
+yazılır; Esc de o ana kadar çizileni tutarak bitirir.
+
+**Yanlış bir noktayı geri almak.** Çizerken **⌫** (Backspace) ya da **Ctrl+Z**'ye basın,
+veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur). Yalnız **son nokta**
+geri alınır: çizimin geri kalanı tuvalde kalır, kılavuz bir önceki noktadan yeniden uzanır
+ve komut o noktayı yeniden ister. Arka arkaya basarak birkaç nokta geri gidebilirsiniz; ilk
+noktayı da geri alırsanız komut `İlk nokta`yı yeniden sorar. Geri alınan nokta günlüğe
+yazılmaz — günlükte, çizmek istediğiniz çizim kalır.
+
+**Çalışmanın kendi noktaları yakalanır.** Henüz belgede olmayan noktalar da uç nokta
+olarak, aralarındaki parçalar orta, yakın, dik ve kesişim olarak yakalanır. Bir sınırı
+başladığı noktada kapatmak için imleci ilk noktaya götürmeniz yeter.
 
 Fareyle tıklamak yerine, komut çalışırken komut satırına koordinat da yazabilirsiniz
 (**Ctrl+9** ile açılır). Komutun bakış açısından ikisi arasında hiçbir fark yoktur.
@@ -143,6 +156,9 @@ ve tıpatıp aynı günlük satırını üretir. Bu, her derlemede otomatik olar
 
 Komutun tamamı tek bir geri alma adımıdır. Dört noktalı bir çizgi üç segment yaratır ama
 tek `GERİAL` ile üçü birden kalkar.
+
+**Çizerken** Ctrl+Z komutu değil yalnız son noktayı geri alır (bkz. yukarıda **Arayüz**);
+komut bittikten sonra Ctrl+Z bütün çizgiyi kaldırır.
 
 ```
 GERİAL

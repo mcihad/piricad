@@ -94,9 +94,15 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     return cache_;
 }
 
+PendingRun pending_run(const Prompt& p) noexcept
+{
+    if (!p.can_retract) return {};
+    return PendingRun{.corners = p.rubber_chain, .edges = p.rubber_shape != RubberShape::Curve};
+}
+
 core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings& s,
                                     core::Point2 aim, bool has_base, core::Point2 base,
-                                    std::span<const core::Point2> marks) const
+                                    std::span<const core::Point2> marks, PendingRun run) const
 {
     core::SnapQuery q;
     q.aim        = aim;
@@ -123,6 +129,10 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     // nobody has.
     q.tracking       = marks;
     q.tracking_reach = s.tracking_reach;
+
+    // AND THE RUN BEING DRAWN, so a boundary closes onto its own first corner.
+    q.pending       = run.corners;
+    q.pending_edges = run.edges;
 
     return core::snap(doc, q);
 }

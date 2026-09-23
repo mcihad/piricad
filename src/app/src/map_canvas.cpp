@@ -135,6 +135,15 @@ void MapCanvas::zoomToExtents()
     update();
 }
 
+void MapCanvas::zoomToBox(const core::Box2& box)
+{
+    if (box.empty()) return;
+    view_.fit(box, 0.08);
+    publishViewScale();
+    emit viewChanged();
+    update();
+}
+
 void MapCanvas::zoomBy(double factor)
 {
     view_.zoom_at(render::ScreenPoint{width() * 0.5, height() * 0.5}, factor);
@@ -333,8 +342,15 @@ void MapCanvas::updateSnapPreview()
         asking ? command::aimed_from_origin(session->prompt()) : drag_grip_.valid();
     const core::Point2 base = asking ? session->prompt().rubber_origin : drag_grip_.base;
 
-    const core::SnapResult r =
-        bus.aids().resolve(controller_.document(), aids, aim, has_base, base);
+    // AND THE SAME MARKS AND THE SAME RUN: the tracking marks the user left, and
+    // the corners of the run in progress (`command::pending_run`) — the first
+    // corner of an ALAN is not in the document yet, and closing on it is the
+    // most common snap a parcel boundary has. The command resolves the click
+    // with both; a marker that left them out promised a different point.
+    const command::PendingRun run =
+        asking ? command::pending_run(session->prompt()) : command::PendingRun{};
+    const core::SnapResult r = bus.aids().resolve(controller_.document(), aids, aim, has_base, base,
+                                                  bus.tracking_marks(), run);
     if (r.mode == core::SnapNone) return;
 
     snap_preview_       = r;

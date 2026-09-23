@@ -429,6 +429,7 @@ işaretsiz gönderilemiyor.
 | **Ctrl** (basılı) | Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
 | **Del** ya da **⌫** | Seçili nesneleri siler (`SİL`). Mac klavyesinde ⌦ tuşu çoğu zaman yoktur; ⌫ (Backspace) da siler |
+| **⌫** (çizerken) | Çizgi, çoklu çizgi, alan ya da spline nokta beklerken yalnız **son noktayı** geri alır; hiçbir nesne silinmez |
 | **Shift + sağ tık** | Bir komut nokta beklerken imleçteki noktayı **izleme için işaretler** ([`İZ`](../komutlar/tracking.md)) |
 
 #### Hangi modlar açık
@@ -854,7 +855,8 @@ yapabilecekleriniz:
 | Komut satırına yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
-| **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele |
+| **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele. Çizgi, çoklu çizgi, alan ya da spline çizerken Ctrl+Z yalnız son noktayı geri alır |
+| **⌫** | Seçili nesneleri siler; çizerken yalnız son noktayı geri alır. Komut satırı boşken de çalışır |
 | **Ctrl+A** / **Ctrl+Shift+A** | Tümünü seç / seçimi temizle |
 | **F3** / **F8** / **F10** / **F9** | Nesne yakalama / dik mod / yüzey normali / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |

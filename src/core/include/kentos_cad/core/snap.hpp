@@ -276,6 +276,18 @@ struct SnapQuery
     /// Zero switches tracking off however the mask is set — the same "no reach,
     /// no aid" contract `radius`, `grid_step` and `polar_step` keep.
     Mm tracking_reach{0};
+
+    /// THE RUN BEING DRAWN, which is not in the document yet: the corners
+    /// ÇİZGİ, ÇOKLUÇİZGİ, ALAN and SPLINE hold until the run ends. Each is
+    /// offered as UÇ, so a boundary can be closed onto its own first corner and
+    /// a line drawn back to where it started — exactly as it could while ÇİZGİ
+    /// wrote each segment at once.
+    std::span<const Point2> pending{};
+
+    /// Whether the straight pieces between `pending` corners are drawn edges
+    /// (ÇİZGİ, ÇOKLUÇİZGİ, ALAN) that ORTA, YAKIN, DİK and KESİŞİM may land on,
+    /// or only a control polygon (SPLINE), whose corners alone are real.
+    bool pending_edges{false};
 };
 
 /// What the engine decided, and why. `mode` is SnapNone when nothing applied and

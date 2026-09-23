@@ -861,11 +861,15 @@ private:
     QAction* actTopology_{nullptr};
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};
+    /// ⌫: the run's last point while ÇİZGİ, ÇOKLUÇİZGİ, ALAN or SPLINE is
+    /// drawing, SİL otherwise — one key, two answers, never both.
+    QAction* actBackspace_{nullptr};
     QAction* actLayer_{nullptr};
     QAction* actZoomExtents_{nullptr};
     QAction* actZoomIn_{nullptr};
     QAction* actZoomOut_{nullptr};
     QAction* actUndo_{nullptr};
+    bool canUndo_{false}; ///< the stack's answer; Ctrl+Z also retracts a point mid-run
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
     QAction* actDatabase_{nullptr};

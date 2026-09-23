@@ -6149,7 +6149,7 @@ core::Point2 ring_vertex(const core::Document& doc, std::uint64_t key, std::size
     const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
     REQUIRE(e != core::kNoEntity);
     const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
-    return doc.geometry().vertex(span.first, at);
+    return doc.geometry().vertex(span.first, static_cast<std::uint32_t>(at));
 }
 
 core::KindId kind_of(const core::Document& doc, std::uint64_t key)

@@ -38,6 +38,7 @@ add_executable(kentos_tests
     unit/test_preview.cpp
     unit/test_colour.cpp
     unit/test_curve_path.cpp
+    unit/test_draw_methods.cpp
     unit/test_processing.cpp
     unit/test_ai_catalog.cpp
     unit/test_ai_policy.cpp

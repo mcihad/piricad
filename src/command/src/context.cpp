@@ -53,7 +53,7 @@ namespace {
 
 /// The aids proper: object snap, grid, direction locks and tracking, on a point
 /// or a run of them. Anything else passes through untouched.
-Value snap_value(Session& session, const Prompt& prompt, Value v)
+Value snap_value(Session& session, const Prompt& prompt, Value v, bool up_front)
 {
     // Only a point is aimed; a number, a name or a flag is typed exactly.
     if (v.kind() != Value::Kind::Point && v.kind() != Value::Kind::PointList) return v;
@@ -77,9 +77,14 @@ Value snap_value(Session& session, const Prompt& prompt, Value v)
 
     const core::Document& doc = bus.document();
 
+    // THE RUN'S OWN CORNERS for a single point ANSWERED at a run's prompt; a
+    // whole list handed over at once, and a point that came with the invocation,
+    // are resolved against the aids alone (`apply_input_aids`).
+    const PendingRun run =
+        v.kind() == Value::Kind::Point && !up_front ? pending_run(prompt) : PendingRun{};
     const auto resolve = [&](core::Point2 aim, bool has_base, core::Point2 base) {
         const core::SnapResult r =
-            bus.aids().resolve(doc, set, aim, has_base, base, bus.tracking_marks());
+            bus.aids().resolve(doc, set, aim, has_base, base, bus.tracking_marks(), run);
         bus.aids().remember(r);
         return r.point;
     };
@@ -104,7 +109,7 @@ Value snap_value(Session& session, const Prompt& prompt, Value v)
 
 } // namespace
 
-Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
+Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_front)
 {
     // A DISTANCE SHOWN RATHER THAN TYPED (`Prompt::pick_distance`): the click is
     // snapped like any other — a chamfer taken to a corner of the next parcel
@@ -113,10 +118,10 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
     // number, which is what the command asked for.
     if (prompt.pick_distance && prompt.kind == ParamKind::Number &&
         v.kind() == Value::Kind::Point) {
-        const core::Point2 at = snap_value(session, prompt, std::move(v)).as_point();
+        const core::Point2 at = snap_value(session, prompt, std::move(v), up_front).as_point();
         return Value::number(core::mm_to_metres(core::segment_length(prompt.rubber_origin, at)));
     }
-    return snap_value(session, prompt, std::move(v));
+    return snap_value(session, prompt, std::move(v), up_front);
 }
 
 Context::Context(Session& session, Transaction& tx, const core::Document& doc)
@@ -136,7 +141,13 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.rubber_shape    = o.rubber_shape;
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
+    prompt.can_retract     = o.can_retract;
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
+}
+
+bool Context::took_back() noexcept
+{
+    return session_.take_retract();
 }
 
 InputAwaiter<double> Context::number(std::string param, std::string message, PointOptions o)

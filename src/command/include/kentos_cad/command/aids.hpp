@@ -77,6 +77,20 @@ struct AidSettings
     core::Mm step{0};
 };
 
+/// The run a prompt is in the middle of, for the snap (`SnapQuery::pending`):
+/// the corners of ÇİZGİ, ÇOKLUÇİZGİ, ALAN and SPLINE fixed so far — a prompt
+/// that may take its newest point back (`Prompt::can_retract`) is such a run —
+/// and whether the pieces between them are drawn edges or a spline's control
+/// polygon.
+struct PendingRun
+{
+    std::span<const core::Point2> corners; ///< fixed so far, oldest first
+    bool edges{false};                     ///< the pieces between them are drawn
+};
+
+/// The run `p` is in the middle of; empty for any other prompt.
+PendingRun pending_run(const Prompt& p) noexcept;
+
 class InputAids
 {
 public:
@@ -110,9 +124,10 @@ public:
     /// `marks` are the points marked for tracking (`Bus::tracking_marks`), newest
     /// last. Passed in rather than read from anywhere: this object has no bus,
     /// and the marks are session state that belongs to one.
+    /// `run` is the run the prompt is in the middle of (`pending_run`).
     core::SnapResult resolve(const core::Document& doc, const AidSettings& s, core::Point2 aim,
                              bool has_base, core::Point2 base,
-                             std::span<const core::Point2> marks = {}) const;
+                             std::span<const core::Point2> marks = {}, PendingRun run = {}) const;
 
     /// The last aid that fired, for the canvas marker. Session state, drawn only
     /// (model.md R43); nothing downstream may treat it as an input.

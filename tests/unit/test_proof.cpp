@@ -174,6 +174,64 @@ TEST_CASE("PROOF: gui, command line and script produce identical state and journ
     CHECK(scr.journal.entries().at(0).origin == Origin::Script);
 }
 
+TEST_CASE("PROOF: geri alınan köşe hiçbir yolda kalmaz — arayüz, komut satırı, betik, oynatma")
+{
+    // TODOS C-02. A corner the user took back is gone from the drawing AND from
+    // the record: the GUI run below clicks a wrong corner, takes it back with ⌫
+    // and carries on, and the journal it leaves is the journal of the run the
+    // user meant — byte for byte the line a typed ÇİZGİ and a script leave.
+    constexpr core::Point2 kWrong{485900000, 4310900000};
+
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÇİZGİ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(kP0)).ok());
+        CHECK(session.supply(Value::point(kP1)).ok());
+        CHECK(session.supply(Value::point(kWrong)).ok());
+        CHECK(session.retract().ok());
+        CHECK(session.supply(Value::point(kP2)).ok());
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    CHECK(cli.bus
+              .execute_line("ÇİZGİ 485320.150,4310220.400 485370.150,4310250.400 "
+                            "485440.861,4310321.111",
+                            Origin::CommandLine)
+              .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        CHECK(runner
+                  .run_text(R"({"ad":"Kanıt","komutlar":[{"cmd":"core.line","args":{
+                    "noktalar":[[485320150,4310220400],[485370150,4310250400],
+                                [485440861,4310321111]]}}]})")
+                  .ok());
+    }
+
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{2});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    // AND THE JOURNAL REPLAYS TO THE SAME DRAWING, KEYS INCLUDED: the run was
+    // held until it ended, so no key was burned on the corner that was taken
+    // back (keys are never reused, and a burned one would shift every key after
+    // it on replay).
+    Rig replay;
+    for (const auto& e : gui.journal.entries()) {
+        auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        CHECK(r.ok());
+    }
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+    CHECK(replay.doc.slot_of(static_cast<core::EntityKey>(2)) != core::kNoEntity);
+}
+
 TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı belge, aynı günlük")
 {
     // TODOS-CAD P0-6. The polar form is the one coordinate whose meaning depends

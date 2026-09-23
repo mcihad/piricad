@@ -42,19 +42,30 @@ Task<void> run(Context& ctx)
     preview.closed                                  = closed;
     const std::vector<std::uint8_t> preview_payload = core::encode_spline(preview);
 
-    auto p1 = co_await ctx.point("noktalar", "İlk kontrol noktası");
-    if (!p1) co_return;
-    points.push_back(*p1);
-    core::Point2 previous = *p1;
+    // The newest control point can be taken back (⌫, Ctrl+Z, `U`) without
+    // losing the rest; taking back the first asks for it again (TODOS C-02).
+    while (points.empty()) {
+        auto p1 = co_await ctx.point("noktalar", "İlk kontrol noktası");
+        if (!p1) co_return;
+        points.push_back(*p1);
 
-    while (auto next = co_await ctx.point("noktalar", "Sonraki kontrol noktası",
-                                          PointOptions{.rubber_band    = true,
-                                                       .rubber_origin  = previous,
-                                                       .rubber_shape   = RubberShape::Curve,
-                                                       .rubber_chain   = points,
-                                                       .rubber_payload = preview_payload})) {
-        points.push_back(*next);
-        previous = *next;
+        for (;;) {
+            auto next =
+                co_await ctx.point("noktalar", "Sonraki kontrol noktası — ⌫: son noktayı geri al",
+                                   PointOptions{.rubber_band    = true,
+                                                .rubber_origin  = points.back(),
+                                                .rubber_shape   = RubberShape::Curve,
+                                                .rubber_chain   = points,
+                                                .rubber_payload = preview_payload,
+                                                .can_retract    = true});
+            if (next) {
+                points.push_back(*next);
+                continue;
+            }
+            if (!ctx.took_back()) break;
+            points.pop_back();
+            if (points.empty()) break;
+        }
     }
 
     if (points.size() < 2) {

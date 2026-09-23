@@ -15,16 +15,37 @@ namespace {
 
 Task<void> run(Context& ctx)
 {
-    auto p1 = co_await ctx.point("noktalar", "İlk nokta");
-    if (!p1) co_return; // ESC / arguments exhausted
+    // THE RUN IS HELD UNTIL IT ENDS: every segment is on the canvas as it is
+    // drawn (`rubber_chain`), and each is written as its own object when the run
+    // is over. Written as it went, a wrong corner could only be undone with the
+    // whole drawing — and taking one object back would have burned its key,
+    // which is never reused, so the journal would replay to different keys
+    // (TODOS C-02). ⌫, Ctrl+Z and `U` take the newest corner back; the snap
+    // still finds the run's own corners (`SnapQuery::pending`).
+    Value::Points drawn;
+    while (drawn.empty()) {
+        auto p1 = co_await ctx.point("noktalar", "İlk nokta");
+        if (!p1) co_return; // ESC / arguments exhausted
+        drawn.push_back(*p1);
 
-    Value::Points drawn{*p1};
-    core::Point2 previous = *p1;
+        for (;;) {
+            auto p2 = co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al",
+                                         PointOptions{.rubber_band   = true,
+                                                      .rubber_origin = drawn.back(),
+                                                      .rubber_chain  = drawn,
+                                                      .can_retract   = true});
+            if (p2) {
+                drawn.push_back(*p2);
+                continue;
+            }
+            if (!ctx.took_back()) break;
+            drawn.pop_back(); ///< back to the first point asks for it again
+            if (drawn.empty()) break;
+        }
+    }
 
-    while (auto p2 =
-               co_await ctx.point("noktalar", "Sonraki nokta",
-                                  PointOptions{.rubber_band = true, .rubber_origin = previous})) {
-        const std::array<core::Point2, 2> segment{previous, *p2};
+    for (std::size_t i = 0; i + 1 < drawn.size(); ++i) {
+        const std::array<core::Point2, 2> segment{drawn[i], drawn[i + 1]};
 
         auto created = ctx.transaction().add_polyline(ctx.active_layer(), segment);
         if (!created) {
@@ -42,9 +63,6 @@ Task<void> run(Context& ctx)
             ctx.session().fail(created.error());
             co_return;
         }
-
-        drawn.push_back(*p2);
-        previous = *p2;
     }
 
     // Record the run exactly as it happened, so replaying the journal from any

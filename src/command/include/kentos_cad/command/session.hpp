@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace kentos::command {
@@ -40,6 +41,15 @@ enum class SessionState : std::uint8_t {
 
 /// Stable machine name, for messages and tests.
 const char* session_state_name(SessionState s);
+
+class Registry;
+
+/// Whether `line`, typed at a prompt that can take its newest point back
+/// (`Prompt::can_retract`), asks for exactly that: `G` or `GERİ`, or one of
+/// `GERİAL`'s own names (`U`, `UNDO`) — the `U` every CAD takes inside LINE.
+/// Undoing the COMMAND there would first write the run out and then take the
+/// whole of it back, which is the one thing the user did not mean.
+bool asks_retract(const Registry& registry, std::string_view line);
 
 /// The command bus; see bus.hpp. Declared rather than included because the bus
 /// includes this header.
@@ -71,6 +81,22 @@ public:
     /// exactly as it would at the end of a script's argument list.
     void cancel();
 
+    /// TAKES THE NEWEST POINT OF THE RUN BACK, at a prompt that allows it
+    /// (`Prompt::can_retract`): the point leaves the resolved record, and the
+    /// command is resumed with an empty answer it tells from an end by
+    /// `take_retract` — so it drops the point and asks again. Refused, with a
+    /// sentence, at any other prompt.
+    core::Status retract();
+
+    /// Whether the last empty answer was a retraction; true once.
+    bool take_retract() noexcept
+    {
+        const bool was = retracted_;
+        retracted_     = false;
+        return was;
+    }
+
+    /// Where the command is in its life; see `SessionState`.
     SessionState state() const noexcept { return state_; }
 
     bool waiting() const noexcept { return state_ == SessionState::Waiting; }
@@ -193,6 +219,8 @@ public:
 private:
     void resume_once();
 
+    bool retracted_{false}; ///< the last empty answer was `retract`
+
     Bus& bus_;
     const CommandSpec* spec_;
     std::unique_ptr<InputSource> input_;
@@ -250,14 +278,15 @@ template<class T> std::optional<T> InputAwaiter<T>::await_resume()
 {
     if (cancelled_) return std::nullopt;
 
-    Value v = ready_ ? std::move(*ready_) : session_.take_supplied();
+    const bool up_front = ready_.has_value(); ///< came with the invocation (`apply_input_aids`)
+    Value v             = ready_ ? std::move(*ready_) : session_.take_supplied();
     if (v.empty()) return std::nullopt;
 
     // The input aids run BEFORE the value is recorded, so the journal keeps the
     // point that was actually drawn rather than the one that was aimed at. A
     // replay then re-supplies a resolved point, and every rule in the snap engine
     // is idempotent so re-resolving it changes nothing (core/snap.hpp).
-    v = apply_input_aids(session_, prompt_, std::move(v));
+    v = apply_input_aids(session_, prompt_, std::move(v), up_front);
 
     session_.record_awaited(param_.name, v);
     return conv_(v);

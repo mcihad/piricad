@@ -111,6 +111,15 @@ tıklamayı bitirmeden önce kapanacak alanı bütün olarak görürsünüz. Kı
 izlemedir: alan belgeye ancak **Enter** ile yazılır, çünkü iki köşeli bir halka alan
 değildir.
 
+**Yanlış bir köşeyi geri almak.** Çizerken **⌫** (Backspace) ya da **Ctrl+Z**'ye basın,
+veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur). Yalnız **son köşe**
+geri alınır: öteki köşeler ve kapanacak alanın kılavuzu yerinde kalır, komut o köşeyi
+yeniden ister. İlk köşeyi de geri alırsanız komut `Alanın ilk köşesi`ni yeniden sorar.
+Geri alınan köşe günlüğe yazılmaz.
+
+Henüz belgede olmayan köşeler de uç nokta olarak, aralarındaki kenarlar orta, yakın,
+dik ve kesişim olarak yakalanır.
+
 Arayüzün ayrıcalığı yoktur: fareyle çizdiğiniz alan ile komut satırına yazdığınız alan
 aynı komuttur ve komut günlüğüne aynı satır olarak düşer.
 
@@ -145,6 +154,8 @@ metredir. İkisi aynı noktayı gösterir, sadece birim bildirimi farklıdır.
 
 `ALAN` **tek bir geri alma adımıdır**. Delikli bir alan çizdiyseniz `GERİAL` dış sınırı
 ve deliği birlikte kaldırır; delik ayrı bir nesne olmadığı için ayrı geri alınamaz.
+
+**Çizerken** Ctrl+Z alanı değil yalnız son köşeyi geri alır (bkz. **Arayüz**).
 
 ```
 GERİAL

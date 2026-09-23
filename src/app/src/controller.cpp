@@ -341,6 +341,16 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
     // answer is converted to that and handed over. Nothing about which client is
     // asking enters into it (Article 1.2).
     if (session_ && session_->waiting()) {
+        // `G`, `GERİ` OR `U` BETWEEN TWO POINTS TAKES THE LAST ONE BACK. `U` is
+        // `GERİAL`'s own name, and read as a command it wrote the run out and then
+        // undid all of it — the drawing lost for the one wrong corner the user
+        // meant (TODOS C-02). Asked before the registry is, for that reason.
+        if (session_->prompt().can_retract &&
+            command::asks_retract(registry_, trimmed.toStdString())) {
+            retractPoint();
+            return command::DispatchResult{};
+        }
+
         // THE FIRST WORD DECIDES. A word the registry knows is a COMMAND: a
         // transparent one (`YAKINLAŞ KAPSAM`) runs beside the waiting command; any
         // other finishes the waiting one first — the way Enter finishes it — and
@@ -720,6 +730,24 @@ void Controller::supplyValue(command::Value value)
     }
 
     settleSession();
+}
+
+bool Controller::canRetract() const
+{
+    return session_ && session_->waiting() && session_->prompt().can_retract;
+}
+
+bool Controller::retractPoint()
+{
+    if (!canRetract()) return false;
+    const auto st = session_->retract();
+    if (!st) {
+        emit echoed(tr("Hata: %1").arg(QString::fromStdString(st.error().message)));
+        return false;
+    }
+    emit echoed(tr("Son nokta geri alındı."));
+    settleSession();
+    return true;
 }
 
 void Controller::cancelInteractive()

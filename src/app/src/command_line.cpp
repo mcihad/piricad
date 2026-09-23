@@ -14,6 +14,7 @@
 #include <QCompleter>
 #include <QIcon>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QPainter>
 #include <QPixmap>
 #include <QStringListModel>
@@ -246,9 +247,27 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
         else
             clear();
         return;
+    case Qt::Key_Backspace:
+        // NOTHING TO ERASE HERE, SO THE RUN'S LAST POINT: a user who typed
+        // `@10,0` and Enter has the focus in this line, and ⌫ is the key their
+        // hand reaches for when the corner went wrong (TODOS C-02).
+        if (text().isEmpty() && controller_.retractPoint()) return;
+        break;
     default: break;
     }
     QLineEdit::keyPressEvent(event);
+}
+
+bool CommandLine::event(QEvent* event)
+{
+    if (event->type() == QEvent::ShortcutOverride && text().isEmpty()) {
+        const auto* key = static_cast<QKeyEvent*>(event);
+        if (key->matches(QKeySequence::Undo) || key->matches(QKeySequence::Redo)) {
+            event->ignore(); ///< not ours: the window's GERİAL and YİNELE take it
+            return false;
+        }
+    }
+    return QLineEdit::event(event);
 }
 
 } // namespace kentos::app

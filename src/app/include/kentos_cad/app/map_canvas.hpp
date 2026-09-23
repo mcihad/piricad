@@ -153,6 +153,11 @@ public:
 
     void zoomToExtents();
 
+    /// Frames `box` the way KAPSAM frames the drawing, publishing the new scale
+    /// to the aids — a probe that must see what it draws, at the scale a hand
+    /// would draw it at, goes through here rather than past the aperture.
+    void zoomToBox(const core::Box2& box);
+
     /// Keeps what a measurement measured on the canvas (`Bus::on_measure_mark`):
     /// the run with its lengths, the face with its area, the angle, the point
     /// with its coordinates. They stay until the drawing changes or Esc is

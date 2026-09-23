@@ -81,8 +81,15 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
     /// Handles history, completion and Esc. Esc cancels the RUNNING COMMAND
-    /// rather than clearing the text, which is what a CAD user's hand expects.
+    /// rather than clearing the text, which is what a CAD user's hand expects,
+    /// and ⌫ on an empty line takes the run's newest point back.
     void keyPressEvent(QKeyEvent* event) override;
+
+    /// Lets Ctrl+Z and its redo reach the window when nothing is typed. The line
+    /// edit claims both for its own text history, so with the focus here —
+    /// which is almost always — Ctrl+Z put the last command's text back into the
+    /// line instead of undoing the drawing.
+    bool event(QEvent* event) override;
 
 private:
     void submit();

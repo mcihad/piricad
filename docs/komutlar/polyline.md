@@ -67,6 +67,17 @@ sırayla tıklayın, bitirmek için **Esc**.
 Çizerken o ana kadar verdiğiniz **bütün** köşeler kesikli kılavuzla birbirine
 bağlanır, yani hattın alacağı biçimi tıklarken görürsünüz.
 
+**Yanlış bir köşeyi geri almak.** Çizerken **⌫** (Backspace) ya da **Ctrl+Z**'ye basın,
+veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur). Yalnız **son nokta**
+geri alınır: çizimin geri kalanı tuvalde kalır, kılavuz bir önceki noktadan yeniden uzanır
+ve komut o noktayı yeniden ister. Arka arkaya basarak birkaç nokta geri gidebilirsiniz; ilk
+noktayı da geri alırsanız komut `İlk nokta`yı yeniden sorar. Geri alınan nokta günlüğe
+yazılmaz — günlükte, çizmek istediğiniz çizim kalır.
+
+**Çalışmanın kendi noktaları yakalanır.** Henüz belgede olmayan noktalar da uç nokta
+olarak, aralarındaki parçalar orta, yakın, dik ve kesişim olarak yakalanır. Bir sınırı
+başladığı noktada kapatmak için imleci ilk noktaya götürmeniz yeter.
+
 ### Betik
 
 ```json
@@ -88,6 +99,8 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 `ÇOKLUÇİZGİ` tek bir geri alma adımıdır; kaç köşesi olursa olsun tek
 [`GERİAL`](undo.md) hattın tamamını kaldırır. `ÇİZGİ` de tek adımdır ama
 ürettiği bütün parçaları birden kaldırır.
+
+**Çizerken** Ctrl+Z hattı değil yalnız son köşeyi geri alır (bkz. **Arayüz**).
 
 ## Betikten kullanım
 

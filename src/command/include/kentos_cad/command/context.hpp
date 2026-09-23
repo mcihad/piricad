@@ -41,7 +41,17 @@ class Session;
 ///
 /// A non-point value is returned untouched. See `kentos_cad/command/aids.hpp` for
 /// why a client with no view gets no object snap.
-Value apply_input_aids(Session& session, const Prompt& prompt, Value v);
+///
+/// `up_front` says the value came WITH the invocation — typed after the command's
+/// name, a script's argument, an agent's call — rather than as an answer at the
+/// prompt. Such a value was written before the run existed, so it is resolved
+/// against the aids alone and never against the run's own corners
+/// (`SnapQuery::pending`), exactly as a whole list handed over at once is: at a
+/// view where the aperture is metres wide, `ÇOKLUÇİZGİ 0,0 20,0 20,12` would
+/// otherwise have pulled its third corner onto its second. It is a property of
+/// the ANSWER, not of the client — the same line from any client is resolved
+/// the same way.
+Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_front = false);
 
 /// Awaits one input value. Fast path: if the source already holds the value
 /// (script / CLI / AI / batch) the coroutine never suspends and never allocates.
@@ -107,6 +117,10 @@ struct PointOptions
     /// metres. See `Prompt::pick_distance`. Read by `Context::number` only: an
     /// integer parameter is in a declared unit the canvas does not know.
     bool pick_distance{false};
+
+    /// The newest point of the run may be taken back. See `Prompt::can_retract`;
+    /// the body learns of it through `Context::took_back`.
+    bool can_retract{false};
 };
 
 class Context;
@@ -254,6 +268,11 @@ public:
     void warn(std::string note) const;
 
     Session& session() noexcept { return session_; }
+
+    /// WHETHER THE LAST POINT PROMPT WAS ANSWERED WITH "TAKE ONE BACK" rather
+    /// than with an end: both reach the body as an empty answer, and a run loop
+    /// asks this to tell them apart. True once per retraction.
+    bool took_back() noexcept;
 
 private:
     Session& session_;

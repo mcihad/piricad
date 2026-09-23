@@ -330,6 +330,25 @@ satırına koordinat yazabilirsiniz. İkisi de aynı kapıya çıkar:
 Komut çalışırken şeffaf bir komut yazarsanız (`YAKINLAŞ` gibi) araya girer, görünümü
 değiştirir ve çalışan komut kaldığı yerden devam eder.
 
+**Son noktayı geri almak.** `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN` ya da `SPLINE` bir sonraki noktayı
+beklerken `G` yazıp Enter'a basarsanız yalnız son nokta geri alınır ve komut onu yeniden
+ister; `GERİ`, `U` ve `GERİAL` de bu istemde aynı şeyi yapar. Boş satırda **⌫** da
+aynıdır:
+
+```
+ÇİZGİ                          ← Enter
+0,0                            ← Enter
+10,0                           ← Enter
+99,99                          ← Enter — yanlış nokta
+G                              ← Enter — 99,99 geri alındı, çizgi 10,0'dan devam eder
+10,10                          ← Enter
+                               ← Enter, iki çizgi yazılır
+```
+
+Komutla birlikte yazdığınız noktalar (`ÇİZGİ 0,0 10,0 10,10`) yakalama yardımcılarından
+geçer ama çalışmanın kendi noktalarına çekilmez; onlar çalışma başlamadan yazılmış kesin
+değerlerdir.
+
 ## Geçmiş
 
 | Tuş | İşlev |

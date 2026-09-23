@@ -981,6 +981,31 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
             }
         }
 
+        // THE RUN BEING DRAWN (`SnapQuery::pending`): its corners as UÇ, and —
+        // when they are drawn edges — its pieces for ORTA, YAKIN, DİK and
+        // KESİŞİM, as the document's own edges are. Not an entity, so the marker
+        // names none.
+        for (const Point2& corner : q.pending)
+            if ((object_modes & SnapEndpoint) != 0)
+                offer(best[priority_index(SnapEndpoint)], corner, kNoEntity, q.aim, limit);
+        if (q.pending_edges)
+            for (std::size_t v = 0; v + 1 < q.pending.size(); ++v) {
+                const Point2 a = q.pending[v];
+                const Point2 b = q.pending[v + 1];
+                if (a == b || !segment_touches_box(a, b, aperture)) continue;
+                if ((object_modes & SnapMidpoint) != 0)
+                    offer(best[priority_index(SnapMidpoint)],
+                          Point2{(a.x + b.x) / 2, (a.y + b.y) / 2}, kNoEntity, q.aim, limit);
+                if ((object_modes & SnapNearest) != 0)
+                    offer(best[priority_index(SnapNearest)], closest_point_on_segment(a, b, q.aim),
+                          kNoEntity, q.aim, limit);
+                if ((object_modes & SnapPerpendicular) != 0 && q.has_base && q.base != b)
+                    offer(best[priority_index(SnapPerpendicular)],
+                          closest_point_on_segment(a, b, q.base), kNoEntity, q.aim, limit);
+                if ((object_modes & SnapIntersection) != 0 && near.size() < kMaxNearSegments)
+                    near.push_back(NearSegment{a, b, kNoEntity});
+            }
+
         // PARALEL: a ray leaving the last point in the direction of a nearby edge.
         //
         // This is how a çekme mesafesi, a road edge and an ifraz cut are actually

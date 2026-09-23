@@ -54,7 +54,14 @@ Arka arkaya birkaç kez yazarak birkaç işlem geri gidebilirsiniz.
 **Ctrl+Z**, **Düzen** araç çubuğundaki **Geri Al** düğmesi veya **Düzen > Geri Al**
 menüsü.
 
-Geri alınacak bir şey kalmadığında düğme ve menü öğesi pasifleşir.
+**Çizerken** — [`ÇİZGİ`](line.md), [`ÇOKLUÇİZGİ`](polyline.md), [`ALAN`](area.md) ya da
+[`SPLINE`](spline.md) nokta beklerken — Ctrl+Z ve **Geri Al** komutu değil yalnız **son
+noktayı** geri alır; çizimin geri kalanı yerinde kalır. Aynı iş komut satırında `G`, `GERİ`
+ya da `U` yazılarak, tuvalde **⌫** ile yapılır. Komut bittikten sonra Ctrl+Z çizimin
+tamamını kaldırır.
+
+Geri alınacak bir şey kalmadığında düğme ve menü öğesi pasifleşir; çizerken geri
+alınacak bir nokta varsa etkin kalır.
 
 ### Betik
 

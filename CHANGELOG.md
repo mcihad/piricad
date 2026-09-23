@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çizerken yanlış son nokta çizimi kaybettirmeden geri alınıyor (C-02)
+
+- **⌫, Ctrl+Z ve `G` yalnız son noktayı geri alıyor.** `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN` ve
+  `SPLINE` nokta beklerken ⌫ (Backspace), Ctrl+Z, **Geri Al** düğmesi ya da komut satırına
+  yazılan `G`/`GERİ`/`U` son noktayı geri alıyor; çizimin geri kalanı tuvalde kalıyor ve
+  komut o noktayı yeniden istiyor. Eskiden ⌫ çalışmayı yazıp `SİL`'i başlatıyor, Ctrl+Z ve
+  `U` ise çalışmayı yazıp **tamamını** geri alıyordu. Geri alınan nokta günlüğe yazılmıyor;
+  arayüzden, komut satırından ve betikten aynı çizim ve bayt bayt aynı günlük satırı
+  (`PROOF: geri alınan köşe hiçbir yolda kalmaz`).
+- **`ÇİZGİ` çalışmayı bitince yazıyor.** Parçalar tıkladıkça tuvalde görünüyor, çalışma
+  Enter, sağ tık ya da Esc ile bitince her biri ayrı nesne olarak yazılıyor —
+  `ÇOKLUÇİZGİ` gibi. Böylece geri alınan bir parça kalıcı bir anahtar harcamıyor ve günlük
+  aynı anahtarlarla yeniden oynuyor.
+- **Çalışmanın kendi noktaları yakalanıyor.** Henüz belgede olmayan köşeler uç nokta,
+  aralarındaki parçalar orta/yakın/dik/kesişim olarak yakalanıyor; bir sınır başladığı
+  köşede kapatılabiliyor. Komutla birlikte yazılan noktalar (`ÇOKLUÇİZGİ 0,0 20,0 20,12`)
+  çalışmanın kendi köşelerine çekilmiyor.
+- **Tuvaldeki yakalama işareti tıklamanın gideceği noktayı gösteriyor.** Önizleme izleme
+  işaretlerini hiç hesaba katmıyordu; artık komutun kullandığı işaretlerle ve çalışmayla
+  aynı çağrıyı yapıyor.
+- **Komut satırındayken Ctrl+Z çizimi geri alıyor.** Satır boşken Ctrl+Z satırın kendi
+  metin geçmişine gidip son komutun metnini geri getiriyordu; artık `GERİAL`'e ulaşıyor.
+
 ### Düzeltildi — yapay zekanın onay ve soru ayarları uçtan uca çalışıyor (A-03)
 
 - **Otomatik uygulama doğruyu söylüyor.** Onay politikası `otomatik` iken uygulanan bir

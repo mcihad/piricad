@@ -40,25 +40,36 @@ Task<void> run(Context& ctx)
     // vertices in each ring, in order. Absent means "one exterior ring".
     const Value breaks = ctx.argument("bolum");
 
-    auto p1 = co_await ctx.point("noktalar", "Alanın ilk köşesi");
-    if (!p1) co_return; // ESC before anything was drawn
-
-    built.push_back(RingBuild{{*p1}, core::RingRole::Exterior});
-    recorded.push_back(*p1);
-    core::Point2 previous = *p1;
-
     // The face reaches the document in one `add_area` at the end, because a ring
     // of one or two vertices is not a face and the geometry layer is right to
     // refuse it. So the corners fixed so far are handed to the prompt: they are
-    // the only record of the work in progress that any client can show.
-    while (auto p2 = co_await ctx.point("noktalar", "Sonraki köşe",
-                                        PointOptions{.rubber_band   = true,
-                                                     .rubber_origin = previous,
-                                                     .rubber_shape  = RubberShape::Ring,
-                                                     .rubber_chain  = built.back().points})) {
-        built.back().points.push_back(*p2);
-        recorded.push_back(*p2);
-        previous = *p2;
+    // the only record of the work in progress that any client can show. The
+    // newest corner can be taken back (⌫, Ctrl+Z, `U`) without losing the rest
+    // (TODOS C-02).
+    built.push_back(RingBuild{{}, core::RingRole::Exterior});
+    while (built.back().points.empty()) {
+        auto p1 = co_await ctx.point("noktalar", "Alanın ilk köşesi");
+        if (!p1) co_return; // ESC before anything was drawn
+        built.back().points.push_back(*p1);
+        recorded.push_back(*p1);
+
+        for (;;) {
+            auto p2 = co_await ctx.point("noktalar", "Sonraki köşe — ⌫: son köşeyi geri al",
+                                         PointOptions{.rubber_band   = true,
+                                                      .rubber_origin = built.back().points.back(),
+                                                      .rubber_shape  = RubberShape::Ring,
+                                                      .rubber_chain  = built.back().points,
+                                                      .can_retract   = true});
+            if (p2) {
+                built.back().points.push_back(*p2);
+                recorded.push_back(*p2);
+                continue;
+            }
+            if (!ctx.took_back()) break;
+            built.back().points.pop_back();
+            recorded.pop_back();
+            if (built.back().points.empty()) break;
+        }
     }
 
     if (built.back().points.size() < 3) {

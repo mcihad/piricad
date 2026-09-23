@@ -169,6 +169,16 @@ public:
 
     void cancelInteractive();
 
+    /// Whether the running command's prompt can take its newest point back
+    /// (`Prompt::can_retract`) — ÇİZGİ, ÇOKLUÇİZGİ, ALAN and SPLINE between two
+    /// points. ⌫ and Ctrl+Z ask this before they reach for SİL and GERİAL.
+    bool canRetract() const;
+
+    /// TAKES THE NEWEST POINT BACK and leaves the rest of the run on the canvas
+    /// (`Session::retract`). The same for a key, a menu and a typed `G`/`U`; false
+    /// when the prompt has nothing to take back.
+    bool retractPoint();
+
     /// FINISHES the running command the way the right mouse button means it: the
     /// open-ended shape closes on what it has, and the tool that started it stays
     /// armed for the next one. The same unwinding as `cancelInteractive` — the

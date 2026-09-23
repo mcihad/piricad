@@ -162,6 +162,14 @@ struct Prompt
     /// and then refuse the click that pointed at it. The body is handed the
     /// number either way and cannot tell which it was (Article 1.2).
     bool pick_distance{false};
+
+    /// THE NEWEST POINT MAY BE TAKEN BACK. Set on the prompt for the next corner
+    /// of a run — ÇİZGİ, ÇOKLUÇİZGİ, ALAN, SPLINE — where a wrong click must not
+    /// cost the whole drawing: ⌫, Ctrl+Z, or `U`, `G`, `geri` typed at the prompt
+    /// retract that one point and ask again (`Session::retract`, TODOS C-02).
+    /// `rubber_chain` then holds the run's corners, which the snap offers as the
+    /// run's own endpoints (`command::pending_run`).
+    bool can_retract{false};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

@@ -4,8 +4,25 @@
 #include "kentos_cad/command/job.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+
+#include "kentos_cad/core/text.hpp"
 
 namespace kentos::command {
+
+bool asks_retract(const Registry& registry, std::string_view line)
+{
+    while (!line.empty() && (line.front() == ' ' || line.front() == '\t'))
+        line.remove_prefix(1);
+    while (!line.empty() && (line.back() == ' ' || line.back() == '\t'))
+        line.remove_suffix(1);
+    if (line.empty() || line.find_first_of(" \t") != std::string_view::npos) return false;
+
+    const std::string word = core::turkish_fold_key(line);
+    if (word == core::turkish_fold_key("GERİ") || word == core::turkish_fold_key("G")) return true;
+    const CommandSpec* spec = registry.resolve(line);
+    return spec != nullptr && spec->id == "core.undo";
+}
 
 const char* session_state_name(SessionState s)
 {
@@ -138,6 +155,26 @@ core::Status Session::supply(Value v)
         if (task_.done() && state_ == SessionState::Running) state_ = SessionState::Completed;
     }
     return core::ok();
+}
+
+core::Status Session::retract()
+{
+    if (state_ != SessionState::Waiting || !prompt_.can_retract)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Bu istemde geri alınacak bir nokta yok.");
+
+    // OUT OF THE RECORD TOO, so the journal keeps the run as it stands: the
+    // point was recorded when it was given (`record_awaited`), and a run the
+    // user corrected must replay corrected.
+    if (const Value* had = resolved_.find(prompt_.param);
+        had != nullptr && had->kind() == Value::Kind::PointList) {
+        Value::Points run = had->as_points();
+        if (!run.empty()) run.pop_back();
+        resolved_.set(prompt_.param, Value::points(std::move(run)));
+    }
+
+    retracted_ = true;
+    return supply(Value{});
 }
 
 bool Session::park_job(std::coroutine_handle<> h, Job& job)

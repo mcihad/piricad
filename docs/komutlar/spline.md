@@ -53,6 +53,14 @@ SPLINE noktalar=40,0 50,10 60,0 50,-10 derece=2 kapali=evet
 
 **Çizim ▸ Spline**. Kontrol noktalarını sırayla tıklayın, bitirmek için Enter.
 
+**Yanlış bir kontrol noktasını geri almak.** Çizerken **⌫** (Backspace) ya da **Ctrl+Z**'ye
+basın, veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur). Yalnız **son
+kontrol noktası** geri alınır; eğrinin geri kalanı tuvalde kalır ve komut o noktayı
+yeniden ister. Geri alınan nokta günlüğe yazılmaz.
+
+Henüz belgede olmayan kontrol noktaları uç nokta olarak yakalanır; aralarındaki düz
+parçalar eğrinin üzerinde olmadığı için yakalanmaz.
+
 ### Betik
 
 ```json
@@ -67,7 +75,8 @@ SPLINE noktalar=40,0 50,10 60,0 50,-10 derece=2 kapali=evet
 
 ## Geri alma
 
-Tek adımdır: `GERİAL` eğriyi kaldırır.
+Tek adımdır: `GERİAL` eğriyi kaldırır. **Çizerken** Ctrl+Z eğriyi değil yalnız son kontrol
+noktasını geri alır (bkz. **Arayüz**).
 
 ## Betikten kullanım
 

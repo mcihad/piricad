@@ -950,9 +950,23 @@ void MainWindow::buildActions()
     // could not work out how to delete anything. A text field that has focus
     // consumes ⌫ before the
     // shortcut sees it, so typing in the command line is unaffected.
-    actErase_->setShortcuts({QKeySequence(QKeySequence::Delete), QKeySequence(Qt::Key_Backspace)});
+    //
+    // ⌫ IS ITS OWN ACTION NOW, because between two points of a run it means
+    // "not that corner" and nothing else: bound to SİL, it wrote the drawing
+    // out and started asking which objects to delete (TODOS C-02). The button
+    // stays SİL whatever is running — a press on it is a request to erase.
+    actErase_->setShortcut(QKeySequence(QKeySequence::Delete));
     actErase_->setShortcutContext(Qt::WindowShortcut);
     addAction(actErase_);
+
+    actBackspace_ = new QAction(tr("Son noktayı geri al ya da sil"), this);
+    actBackspace_->setShortcut(QKeySequence(Qt::Key_Backspace));
+    actBackspace_->setShortcutContext(Qt::WindowShortcut);
+    addAction(actBackspace_);
+    connect(actBackspace_, &QAction::triggered, this, [this] {
+        if (controller_->retractPoint()) return;
+        actErase_->trigger();
+    });
 
     actErase_->setProperty(kToolCommand, QStringLiteral("SİL"));
     connect(actErase_, &QAction::triggered, this, [this] {
@@ -1179,11 +1193,16 @@ void MainWindow::buildActions()
 
     actUndo_ = new QAction(tr("Geri Al"), this);
     actUndo_->setShortcut(QKeySequence::Undo);
-    actUndo_->setToolTip(tr("GERİAL — son işlemi geri alır"));
+    actUndo_->setToolTip(
+        tr("GERİAL — son işlemi geri alır; çizerken yalnız son noktayı  ·  Ctrl+Z"));
     actUndo_->setData(static_cast<int>(Glyph::Undo));
     actUndo_->setProperty(kToolCommand, QStringLiteral("GERİAL"));
-    connect(actUndo_, &QAction::triggered, this,
-            [this] { controller_->runCommand(QStringLiteral("GERİAL")); });
+    // BETWEEN TWO POINTS, THE POINT. GERİAL there wrote the run out and undid
+    // all of it, so one wrong corner cost the whole boundary (TODOS C-02).
+    connect(actUndo_, &QAction::triggered, this, [this] {
+        if (controller_->retractPoint()) return;
+        controller_->runCommand(QStringLiteral("GERİAL"));
+    });
 
     actRedo_ = new QAction(tr("Yinele"), this);
     actRedo_->setShortcut(QKeySequence::Redo);
@@ -3165,6 +3184,7 @@ void MainWindow::probeSurfaceNormal()
     // obvious: its normal is 135 or 315, and nothing else is within 40 degrees.
     runScriptLine(QStringLiteral("KATMAN ad=SINIR"));
     runScriptLine(QStringLiteral("ÇİZGİ 0,0 40,40"));
+    endCommand(); ///< a run is written when it ends (TODOS C-02)
     canvas_->zoomToExtents();
     QCoreApplication::processEvents();
 
@@ -3498,6 +3518,7 @@ void MainWindow::probeSchemaPage()
     // take: the row's stored value used to be painted under the editor, so the
     // old text and the typed one sat on top of each other.
     runScriptLine(QStringLiteral("ÇİZGİ 0,0 10,10"));
+    endCommand(); ///< a run is written when it ends (TODOS C-02)
     runScriptLine(QStringLiteral("SEÇ nesneler=1"));
     QCoreApplication::processEvents();
     // SIZED BEFORE IT IS ASKED. The panel lives in a dock that may be collapsed
@@ -4336,6 +4357,16 @@ int MainWindow::probeRealMouse()
     // goes to the CANVAS here, the way a hand's does after clicking a parcel —
     // and then to the command line, where it must edit text and delete nothing.
     {
+        // A WINDOW THAT CAN TAKE A SHORTCUT. Started from a terminal the window
+        // is not the key window, and a `WindowShortcut` matches only the active
+        // one — so it is asked for once and waited for briefly. Where the
+        // platform refuses (offscreen), the checks below say BEKLEMEDE.
+        if (!isActiveWindow()) {
+            raise();
+            activateWindow();
+            for (int wait = 0; wait < 40 && !isActiveWindow(); ++wait)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+        }
         controller_->cancelInteractive();
         QCoreApplication::processEvents();
         runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
@@ -4368,8 +4399,8 @@ int MainWindow::probeRealMouse()
             (void)std::fprintf(stdout, "[fare] BEKLEMEDE: etkin pencere yok (offscreen); ⌫'nin "
                                        "sildiği ancak gerçek pencerede sınanır\n");
         }
-        check(actErase_->shortcuts().contains(QKeySequence(Qt::Key_Backspace)),
-              QStringLiteral("SİL, ⌫ tuşuna bağlı"));
+        check(actBackspace_->shortcut() == QKeySequence(Qt::Key_Backspace),
+              QStringLiteral("⌫ bağlı: çizerken son noktayı geri alır, değilse SİL"));
         check(actErase_->shortcuts().contains(QKeySequence(QKeySequence::Delete)),
               QStringLiteral("SİL, Del tuşuna da bağlı"));
 
@@ -4396,6 +4427,104 @@ int MainWindow::probeRealMouse()
                                        "satırındaki ⌫ ancak gerçek pencerede sınanır\n");
         }
         canvas_->setFocus(Qt::OtherFocusReason);
+    }
+
+    // ---- 7b. BETWEEN TWO POINTS ⌫, CTRL+Z AND `G` TAKE THE LAST ONE BACK -----
+    //
+    // One wrong corner used to cost the whole run: ⌫ wrote it out and started
+    // SİL, Ctrl+Z wrote it out and undid all of it (TODOS C-02). The key where a
+    // window can be active, the action where it cannot; the typed word on both.
+    {
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        // At the scale a hand draws a 40 m run at: the aperture is centimetres
+        // there, and a probe clicking a zoomed-out view would be measuring the
+        // snap rather than the key.
+        canvas_->zoomToBox(core::Box2{-5'000, 50'000, 45'000, 95'000});
+        QCoreApplication::processEvents();
+        const std::size_t before     = controller_->document().live_entity_count();
+        const std::size_t journalled = controller_->bus().journal().entries().size();
+        const auto corners           = [this] {
+            const command::Session* live = controller_->session();
+            return live != nullptr && live->waiting() ? live->prompt().rubber_chain.size()
+                                                                : std::size_t{0};
+        };
+        const auto press = [this](int key, Qt::KeyboardModifiers mods, QAction* action) {
+            if (isActiveWindow()) {
+                canvas_->setFocus(Qt::OtherFocusReason);
+                QKeyEvent down(QEvent::KeyPress, key, mods);
+                QKeyEvent up(QEvent::KeyRelease, key, mods);
+                QCoreApplication::sendEvent(canvas_, &down);
+                QCoreApplication::sendEvent(canvas_, &up);
+            } else {
+                action->trigger();
+            }
+            QCoreApplication::processEvents();
+        };
+        const core::Point2 wrong{40'000, 90'000};
+        const core::Point2 right{40'000, 60'000};
+        (void)std::fprintf(stdout, "[fare] geri alma tuşları %s\n",
+                           isActiveWindow() ? "gerçek kısayol yolundan (etkin pencere)"
+                                            : "eylem üzerinden (etkin pencere yok)");
+
+        controller_->beginInteractive(QStringLiteral("ÇOKLUÇİZGİ"));
+        controller_->supplyPoint(core::Point2{0, 60'000});
+        controller_->supplyPoint(core::Point2{20'000, 60'000});
+        controller_->supplyPoint(wrong);
+        QCoreApplication::processEvents();
+        check(corners() == 3, QStringLiteral("çalışmada üç köşe var (%1)").arg(corners()));
+
+        press(Qt::Key_Backspace, Qt::NoModifier, actBackspace_);
+        check(corners() == 2,
+              QStringLiteral("⌫ yalnız son köşeyi geri aldı (%1 köşe kaldı)").arg(corners()));
+        check(controller_->document().live_entity_count() == before,
+              QStringLiteral("⌫ ne sildi ne yazdı: çalışma sürüyor"));
+
+        controller_->supplyPoint(wrong);
+        QCoreApplication::processEvents();
+        check(actUndo_->isEnabled(), QStringLiteral("çalışma ortasında Geri Al etkin"));
+        press(Qt::Key_Z, Qt::ControlModifier, actUndo_);
+        check(corners() == 2,
+              QStringLiteral("Ctrl+Z yalnız son köşeyi geri aldı (%1 köşe kaldı)").arg(corners()));
+
+        controller_->supplyPoint(wrong);
+        controller_->runLine(QStringLiteral("G"), command::Origin::CommandLine);
+        QCoreApplication::processEvents();
+        check(
+            corners() == 2,
+            QStringLiteral("G yazmak yalnız son köşeyi geri aldı (%1 köşe kaldı)").arg(corners()));
+        controller_->supplyPoint(wrong);
+        controller_->runLine(QStringLiteral("U"), command::Origin::CommandLine);
+        QCoreApplication::processEvents();
+        check(corners() == 2,
+              QStringLiteral("U yazmak GERİAL değil, son köşeyi geri aldı (%1)").arg(corners()));
+
+        // AND ⌫ IN AN EMPTY COMMAND LINE, which is where the focus is after a
+        // typed `@10,0`. Not a shortcut: the line's own key handler, so a real
+        // key event reaches it with or without an active window.
+        controller_->supplyPoint(wrong);
+        QCoreApplication::processEvents();
+        commandLine_->clear();
+        {
+            QKeyEvent back(QEvent::KeyPress, Qt::Key_Backspace, Qt::NoModifier);
+            QCoreApplication::sendEvent(commandLine_, &back);
+            QCoreApplication::processEvents();
+        }
+        check(corners() == 2,
+              QStringLiteral("boş komut satırında ⌫ son köşeyi geri aldı (%1 köşe kaldı)")
+                  .arg(corners()));
+        shoot("son-nokta-geri");
+
+        controller_->supplyPoint(right);
+        controller_->finishInteractive();
+        QCoreApplication::processEvents();
+        check(controller_->document().live_entity_count() == before + 1,
+              QStringLiteral("düzeltilen çalışma tek çoklu çizgi olarak yazıldı"));
+        const auto& entries = controller_->bus().journal().entries();
+        const command::Value* run =
+            entries.size() == journalled + 1 ? entries.back().args.find("noktalar") : nullptr;
+        check(run != nullptr && run->as_points().size() == 3 && run->as_points().back() == right,
+              QStringLiteral("günlük düzeltilmiş çalışmayı yazdı: üç köşe, sonuncusu (40; 60)"));
     }
 
     // ---- 8. THE TOOL STAYS IN THE HAND AFTER A DRAW -------------------------
@@ -5137,6 +5266,7 @@ int MainWindow::probeAnswerable()
     runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
     runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
     runScriptLine(QStringLiteral("ÇİZGİ 100,100 110,105"));
+    endCommand(); ///< a run is written when it ends (TODOS C-02)
     runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=99,99 111,106"));
     runScriptLine(QStringLiteral("BLOK ad=OK taban=100,100"));
     runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
@@ -5959,6 +6089,10 @@ void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
 
+    // The first line of a new drawing has nothing on the stack to undo, and a
+    // disabled action takes no shortcut: Ctrl+Z has to be live for the point.
+    actUndo_->setEnabled(canUndo_ || controller_->canRetract());
+
     // WHERE THE KEYBOARD GOES WHEN THE MOUSE CANNOT ANSWER.
     //
     // A command waiting for a POINT or for OBJECTS is answered by pointing, and
@@ -6085,7 +6219,8 @@ void MainWindow::rearm(QAction* action, const QString& id)
 
 void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
 {
-    actUndo_->setEnabled(canUndo);
+    canUndo_ = canUndo;
+    actUndo_->setEnabled(canUndo_ || controller_->canRetract());
     actRedo_->setEnabled(canRedo);
 }
 
@@ -7430,6 +7565,7 @@ void MainWindow::probeToolBox()
         runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
         runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
         runScriptLine(QStringLiteral("ÇİZGİ 100,0 120,10"));
+        endCommand(); ///< a run is written when it ends (TODOS C-02)
     };
 
     // THE TRANSCRIPT, not the `echoed` signal. Several buttons answer through
@@ -7901,6 +8037,7 @@ void MainWindow::probeToolsByHand()
         runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
         runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
         runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
+        endCommand(); ///< a run is written when it ends (TODOS C-02)
         canvas_->zoomToExtents();
         QCoreApplication::processEvents();
     };
@@ -8069,6 +8206,7 @@ void MainWindow::probeToolsByHand()
     scene();
     // Keys run on across scenes, so the member is found by WHERE it is.
     runScriptLine(QStringLiteral("ÇİZGİ 100,100 110,105"));
+    endCommand(); ///< a run is written when it ends (TODOS C-02)
     runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=99,99 111,106"));
     runScriptLine(QStringLiteral("BLOK ad=OK taban=100,100"));
     for (const Ghost& g : ghosts) {
