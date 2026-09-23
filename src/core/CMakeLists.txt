@@ -33,6 +33,7 @@ add_library(kentos_core STATIC
     src/offset.cpp
     src/parallel.cpp
     src/planar.cpp
+    src/cleanup.cpp
     src/json.cpp
     src/layer.cpp
     src/pick.cpp

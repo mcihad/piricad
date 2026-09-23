@@ -1063,8 +1063,9 @@ void MainWindow::buildActions()
     // NOT a `modifyTool`: the check runs on the whole drawing when nothing is
     // selected, and refusing an empty selection would refuse its most useful form.
     actTopology_ = new QAction(tr("Topoloji Denetimi"), this);
-    actTopology_->setToolTip(tr("TOPOLOJİ — kendini kesen sınır, sıfır alan ve örtüşen "
-                                "parselleri raporlar; hiçbir şeyi düzeltmez"));
+    actTopology_->setToolTip(tr("TOPOLOJİ — kendini kesen sınır, sıfır alan, örtüşen parsel, "
+                                "yinelenen ve boş nesne, tekrarlanan köşe ve çizgi ağındaki "
+                                "boşlukları raporlar; hiçbir şeyi düzeltmez"));
     actTopology_->setData(static_cast<int>(Glyph::Topology));
     actTopology_->setObjectName(QStringLiteral("toolAction.TOPOLOJİ"));
     connect(actTopology_, &QAction::triggered, this,
@@ -1780,6 +1781,18 @@ void MainWindow::buildMenus()
     modify->addAction(actEdgeKind_);
     modify->addAction(actToArea_);
     modify->addAction(actTextEdit_);
+    modify->addSeparator();
+    // TEMİZLE: what the drawing holds twice or for nothing — found and selected
+    // first, repaired only when asked, in one undo step (TODOS C-09).
+    modify->addAction(commandAction(Glyph::Erase, tr("Temizle — bul"), QStringLiteral("TEMİZLE"),
+                                    tr("TEMİZLE — yinelenen, boş ve tekrarlanan köşeli nesneleri "
+                                       "bulur, seçer ve işaretler; hiçbir şeyi değiştirmez  ·  "
+                                       "kısaltma: TMZ")));
+    modify->addAction(commandAction(Glyph::Erase, tr("Temizle — onar"),
+                                    QStringLiteral("TEMİZLE islem=onar"),
+                                    tr("TEMİZLE islem=onar — yinelenenleri ve boş nesneleri "
+                                       "siler, tekrarlanan köşeleri çıkarır; değişen alanları "
+                                       "önce/sonra söyler, tek adımda geri alınır")));
 
     // A MENU OF THEIR OWN, because they are a different kind of thing. Each of
     // these is an act with a regulation behind it, and grouping them says so; the

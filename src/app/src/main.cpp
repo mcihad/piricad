@@ -1742,6 +1742,25 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("17c-alan-uret"), &window); });
         later([&window] { window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE")); });
 
+        // TEMİZLE (TODOS C-09): a parcel drawn twice, one with a corner a survey
+        // recorded twice, a line a double click left 3 mm long. `bul` selects
+        // and marks them and changes nothing.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,10 0,10")); });
+        later([&window] {
+            for (const char* line :
+                 {"ALAN 0,0 20,0 20,10 0,10", "ALAN 30,0 40,0 40.009,0.009 40,10 30,10",
+                  "ÇİZGİ 50,5 50,5.003", "ÇİZGİ 44,12 56,12"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            window.runScriptLine(QStringLiteral("TEMİZLE"));
+        });
+        later([&window, shot] { shot(QStringLiteral("17d-temizle-bul"), &window); });
+        later([&window] { window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE")); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

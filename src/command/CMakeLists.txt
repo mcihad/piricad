@@ -73,6 +73,7 @@ add_library(kentos_command STATIC
     src/commands/system.cpp
     src/commands/to_area.cpp
     src/commands/boundary.cpp
+    src/commands/cleanup.cpp
     src/commands/transform.cpp
     src/commands/trim.cpp
     src/commands/vertex.cpp

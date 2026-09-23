@@ -12,9 +12,11 @@
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
+#include "kentos_cad/core/cleanup.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/trig.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
 
 #include <algorithm>
 #include <array>
@@ -605,4 +607,154 @@ TEST_CASE("SINIR: sınır kümesi verilirse yalnız onlar sayılır")
     CHECK_EQ(r.doc.entity_area(r.slot(6)), Mm2{100'000'000});
     r.run("SINIR nokta=5,5 nesneler=1 nesneler=2 nesneler=3 nesneler=4");
     CHECK_EQ(r.doc.entity_area(r.slot(7)), Mm2{200'000'000});
+}
+
+// ================================================================ TEMİZLE ===
+
+TEST_CASE(
+    "TEMİZLE: yinelenen, boş ve tekrarlanan köşeli nesneler bulunur; bul hiçbir şeyi değiştirmez")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");            // 1
+    r.run("ALAN 20,10 0,10 0,0 20,0");            // 2: the same parcel from another corner
+    r.run("ALAN 30,0 40,0 40,0.004 40,10 30,10"); // 3: a corner 4 mm from the one before
+    r.run("ÇİZGİ 50,0 50,0.003");                 // 4: a line of 3 mm: nothing, at 1 cm tolerance
+    r.run("ÇİZGİ 60,0 70,0");                     // 5
+    r.run("ÇİZGİ 70,0 60,0");                     // 6: the same line drawn back
+    r.run("ALAN 0,0 20,0 20,10 0,10");            // 7: parcel 1 a third time
+    const std::uint64_t before = r.doc.content_hash();
+
+    const auto found = find_redundant(r.doc, {}, 10);
+    REQUIRE_EQ(found.size(), std::size_t{5});
+    const auto count = [&found](RedundancyKind k) {
+        return std::ranges::count_if(found, [k](const Redundancy& x) { return x.kind == k; });
+    };
+    CHECK_EQ(count(RedundancyKind::Duplicate), 3); // 2, 6 and 7
+    CHECK_EQ(count(RedundancyKind::Empty), 1);     // 4
+    CHECK_EQ(count(RedundancyKind::RepeatedVertex), 1);
+    // A duplicate is reported against the oldest copy.
+    for (const Redundancy& x : found)
+        if (x.kind == RedundancyKind::Duplicate && x.entity == r.slot(7))
+            CHECK_EQ(x.kept, r.slot(1));
+
+    r.run("TEMİZLE");
+    CHECK_EQ(r.doc.content_hash(), before); // bul changes nothing
+    CHECK(r.said.find("Temizlik (bütün çizim): 3 yinelenen, 1 boş nesne, 1 nesnede 1 tekrarlanan "
+                      "köşe. Seçildi ve işaretlendi.") != std::string::npos);
+    CHECK_EQ(r.bus.selection().size(), std::size_t{5});
+    CHECK_EQ(r.marks.size(), std::size_t{5});
+}
+
+TEST_CASE(
+    "TEMİZLE onar: tek adımda siler ve düzeltir, alanı önce/sonra söyler, veri taşıyanı silmez")
+{
+    {
+        Rig r;
+        r.run("ALAN 0,0 20,0 20,10 0,10");                // 1
+        r.run("ALAN 0,0 20,0 20,10 0,10");                // 2: a copy
+        r.run("ALAN 30,0 40,0 40.009,0.009 40,10 30,10"); // 3: a corner 9 mm from the last
+        r.run("ÇİZGİ 50,0 50,0.003");                     // 4: nothing
+        const std::uint64_t before = r.doc.content_hash();
+
+        r.run("TEMİZLE islem=onar");
+        CHECK_FALSE(r.doc.alive(r.slot(2)));
+        CHECK_FALSE(r.doc.alive(r.slot(4)));
+        CHECK_EQ(r.doc.geometry()
+                     .ring_count[r.doc.geometry().rings_of(r.doc.entities().slot[r.slot(3)]).first],
+                 4u);
+        CHECK(r.said.find("Temizlik onarıldı (bütün çizim): 2 nesne silindi, 1 nesneden 1 köşe "
+                          "çıkarıldı; değişen alanlar önce 100,05 m², sonra 100,00 m².") !=
+              std::string::npos);
+        CHECK(r.said.find("Nesne 3: 1 köşe çıkarıldı; alan önce 100,05 m², sonra 100,00 m².") !=
+              std::string::npos);
+        CHECK(r.said.find("Nesne 2 silindi (aynısı nesne 1 duruyor, alanı 200,00 m²).") !=
+              std::string::npos);
+        CHECK(r.said.find("Nesne 4 silindi (hiçbir şey çizmiyordu).") != std::string::npos);
+
+        // One undo step brings every one of them back.
+        r.run("GERİAL");
+        CHECK_EQ(r.doc.content_hash(), before);
+    }
+    {
+        // A copy that carries data its twin lacks is kept, and named.
+        Rig r;
+        r.run("ALAN 0,0 20,0 20,10 0,10"); // 1
+        r.run("ALAN 0,0 20,0 20,10 0,10"); // 2: a copy
+        r.run("ALAN 0,0 20,0 20,10 0,10"); // 3: a copy that holds an attribute
+        r.run("SÜTUN kimlik=ada tur=metin");
+        r.run("ÖZNİTELİK ada 3 1284");
+        r.run("TEMİZLE islem=onar");
+        CHECK_FALSE(r.doc.alive(r.slot(2)));
+        CHECK(r.doc.alive(r.slot(3)));
+        CHECK(r.said.find("Nesne 3 silinmedi: öznitelik taşıyor") != std::string::npos);
+    }
+}
+
+TEST_CASE("TOPOLOJİ: aynı çekirdekten yinelenen, boş, tekrarlanan köşe ve çizgi ağı boşluğu")
+{
+    NEEDS_NETWORK();
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10"); // 1
+    r.run("ALAN 0,0 20,0 20,10 0,10"); // 2: a copy
+    r.run("ÇİZGİ 50,0 50,0.003");      // 3: nothing
+    r.run("ÇİZGİ 60,0 70,0");          // 4
+    r.run("ÇİZGİ 70,0 70,10");         // 5
+    r.run("ÇİZGİ 70,10 60,10");        // 6
+    r.run("ÇİZGİ 60,10 60,0.5");       // 7: stops 50 cm short of the corner
+    kentos::domain::cadastre::register_cadastre_commands(r.reg);
+    r.run("TOPOLOJİ");
+    CHECK(r.said.find("Nesne 2, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar siler).") !=
+          std::string::npos);
+    CHECK(r.said.find("Nesne 3: uzunluğu yok, hiçbir şey çizmiyor.") != std::string::npos);
+    CHECK(r.said.find("açık uç, en yakın çizgiye 50 cm (boşluk).") != std::string::npos);
+    // The copies also overlap, as the pairwise check has always said.
+    CHECK(r.said.find("örtüşüyor") != std::string::npos);
+}
+
+TEST_CASE("TOPOLOJİ: kılavuzdaki çizgi ağı örneği kelimesi kelimesine")
+{
+    NEEDS_NETWORK();
+    Rig r;
+    kentos::domain::cadastre::register_cadastre_commands(r.reg);
+    r.run("ÇİZGİ 60,0 70,0");
+    r.run("ÇİZGİ 70,0 70,10");
+    r.run("ÇİZGİ 70,10 60,10");
+    r.run("ÇİZGİ 60,10 60,0.5");
+    r.run("ÇİZGİ 60,0 70,0");
+    r.said.clear();
+    r.run("TOPOLOJİ");
+    // Word for word what docs/komutlar/topology.md prints.
+    CHECK_EQ(r.said, std::string("Topoloji denetimi (bütün çizim): 2 kusur.\n"
+                                 "  Nesne 5, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar "
+                                 "siler).\n"
+                                 "  Nesne 1: açık uç, en yakın çizgiye 50 cm (boşluk).\n"
+                                 "  Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.\n"));
+}
+
+TEST_CASE("TEMİZLE: kılavuzdaki örnek kelimesi kelimesine; bul'un seçtiğini onar onarır")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("ALAN 30,0 40,0 40.009,0.009 40,10 30,10");
+    r.run("ÇİZGİ 50,0 50,0.003");
+    r.said.clear();
+    r.run("TEMİZLE");
+    // The copies are now the selection, and their originals are not in it:
+    // the repair still knows what they are copies of.
+    r.run("TEMİZLE islem=onar");
+    CHECK_EQ(
+        r.said,
+        std::string("Temizlik (bütün çizim): 1 yinelenen, 1 boş nesne, 1 nesnede 1 tekrarlanan "
+                    "köşe. Seçildi ve işaretlendi.\n"
+                    "  Nesne 2, nesne 1'in aynısı (aynı tür, aynı katman, aynı köşeler).\n"
+                    "  Nesne 3: 1 köşe bir öncekiyle aynı yerde.\n"
+                    "  Nesne 4 hiçbir şey çizmiyor (uzunluğu ya da alanı yok).\n"
+                    "  Onarmak için: TEMİZLE islem=onar\n"
+                    "Temizlik onarıldı (3 nesne): 2 nesne silindi, 1 nesneden 1 köşe "
+                    "çıkarıldı; değişen alanlar önce 100,05 m², sonra 100,00 m².\n"
+                    "  Nesne 2 silindi (aynısı nesne 1 duruyor, alanı 200,00 m²).\n"
+                    "  Nesne 3: 1 köşe çıkarıldı; alan önce 100,05 m², sonra 100,00 m².\n"
+                    "  Nesne 4 silindi (hiçbir şey çizmiyordu).\n"));
+    CHECK(r.doc.alive(r.slot(1)));
 }

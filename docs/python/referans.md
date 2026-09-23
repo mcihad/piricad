@@ -125,6 +125,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.edge_kind`](#cadedge_kind) | `core.edge_kind` | `KENARTÜRÜ` | Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur. |
 | [`cad.to_area`](#cadto_area) | `core.to_area` | `ALANAÇEVİR` | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`cad.boundary`](#cadboundary) | `core.boundary` | `SINIR` | İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir. |
+| [`cad.cleanup`](#cadcleanup) | `core.cleanup` | `TEMİZLE` | Yinelenen, boş ve tekrarlanan köşeli nesneleri bulur; istenirse tek adımda onarır ve değişen alanları önce/sonra raporlar. |
 | [`cad.move`](#cadmove) | `core.move` | `TAŞI` | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
@@ -200,7 +201,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.merge`](#cadmerge) | `core.merge` | `TEVHİT` | Komşu parselleri tek parselde birleştirir (tevhit). |
 | [`cad.split_parcel`](#cadsplit_parcel) | `core.split_parcel` | `İFRAZ` | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
 | [`cad.split_area`](#cadsplit_area) | `core.split_area` | `ALANİFRAZ` | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
-| [`cad.topology`](#cadtopology) | `core.topology` | `TOPOLOJİ` | Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar. |
+| [`cad.topology`](#cadtopology) | `core.topology` | `TOPOLOJİ` | Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. |
 | [`cad.contour`](#cadcontour) | `core.contour` | `EŞYÜKSELTİ` | Kotlu noktalardan eş yükselti eğrileri çizer. |
 | [`cad.earthwork`](#cadearthwork) | `core.earthwork` | `HACİM` | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
 | [`cad.layers`](#cadlayers) | `core.layers` | `KATMANLAR` | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
@@ -1061,6 +1062,26 @@ cad.boundary(
 | `objects` | `list[int]` | `nesneler` | Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/boundary.md)
+
+### `cad.cleanup`
+
+Yinelenen, boş ve tekrarlanan köşeli nesneleri bulur; istenirse tek adımda onarır ve değişen alanları önce/sonra raporlar.
+
+Komut: `core.cleanup` — `TEMİZLE`
+
+```python
+cad.cleanup(
+    objects: list[int],
+    action: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Bakılacak nesneler; yoksa seçim, o da boşsa bütün çizim [kalıcı nesne anahtarı] |
+| `action` | `str` | `islem` | bul: bulur, seçer ve işaretler, hiçbir şeyi değiştirmez · onar: yinelenenleri ve boş nesneleri siler, tekrarlanan köşeleri çıkarır |
+
+[Komut sayfası](../komutlar/cleanup.md)
 
 ### `cad.move`
 
@@ -3076,7 +3097,7 @@ cad.split_area(
 
 ### `cad.topology`
 
-Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
 
 Komut: `core.topology` — `TOPOLOJİ`
 

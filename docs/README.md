@@ -78,6 +78,7 @@ Tek tek komutlar:
 | `ALANÜRET` | [Çizgilerden alan üretme](komutlar/alan_uret.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
 | `SINIR` | [Kapalı bölgenin sınırını çıkarma](komutlar/boundary.md) |
+| `TEMİZLE` | [Yinelenen ve boş nesneleri temizleme](komutlar/cleanup.md) |
 | `TAŞI` | [Nesne taşıma](komutlar/move.md) |
 | `KOPYALA` | [Nesne çoğaltma](komutlar/copy.md) |
 | `DÖNDÜR` | [Nesne döndürme](komutlar/rotate.md) |

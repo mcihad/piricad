@@ -46,6 +46,7 @@ namespace kentos::command {
     X(edge_kind)                                                                                   \
     X(to_area)                                                                                     \
     X(boundary)                                                                                    \
+    X(cleanup)                                                                                     \
     X(move)                                                                                        \
     X(copy_objects)                                                                                \
     X(array_objects)                                                                               \

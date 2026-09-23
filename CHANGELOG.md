@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — yinelenen ve boş nesneler: TEMİZLE; TOPOLOJİ aynı çekirdekte (C-09 tamam)
+
+- **TEMİZLE** (`core.cleanup`, Değiştir menüsü): yinelenen (aynı tür, aynı katman, aynı
+  köşeler — ters ya da başka köşeden çizilmiş olsa da), boş (uzunluğu ya da alanı
+  olmayan) ve tekrarlanan köşeli nesneleri bulur. `islem=bul` hiçbir şeyi
+  değiştirmez: bulduklarını seçer ve tuvalde işaretler. `islem=onar` tek geri alma
+  adımında onarır ve nesne nesne söyler: silinenler, kopyası duran asıl, köşesi
+  çıkarılan her alanın alanı önce/sonra. Öznitelik taşıyan ya da ona yazı bağlı kopya
+  silinmez, adıyla söylenir. Kopyanın aslı seçim dışında da aranır.
+- **TOPOLOJİ** yinelenen ve boş nesneleri, tekrarlanan köşeleri (`core::find_redundant`,
+  TEMİZLE'nin bulucusu) ve çizgi ağındaki boşlukları (SINIR/ALANÜRET'in ağı) da
+  raporluyor; yeri belli olanları tuvalde işaretliyor.
+- Üst üste binen çizgiler en eski nesnenin adıyla anılıyor.
+
 ### Eklendi — çizgi ağından alan üretme: ALANÜRET (C-09, 2. aşama)
 
 - **ALANÜRET** (`islem.alan_uret`, Araçlar ▸ Geometri): kapsamdaki çizgilerin kapattığı

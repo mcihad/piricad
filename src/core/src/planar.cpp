@@ -555,10 +555,14 @@ std::vector<OpenEnd> measure_open_ends(const std::vector<Prepared>& pieces,
         OpenEnd end;
         end.at = at;
         candidates.clear();
+        bool sourced = false; // the oldest source that ends here, when copies overlap
         for (std::size_t j = 0; j < pieces.size(); ++j) {
             const Prepared& p = pieces[j];
             if (ends_at(p.piece, at)) {
-                if (p.bridge < 0) end.source = p.source;
+                if (p.bridge < 0 && (!sourced || p.source < end.source)) {
+                    end.source = p.source;
+                    sourced    = true;
+                }
                 continue;
             }
             const Nearest n = nearest_on(p.piece, at);
@@ -1056,15 +1060,21 @@ struct Network::Impl
                 p.piece.from = from;
                 p.piece.to   = to;
             }
+            // The OLDEST source when copies overlap, so an edge drawn twice is
+            // named by the object that was there first, whatever order the
+            // arrangement merged them in.
+            bool sourced = false;
             for (const std::uint32_t i : h->curve().data()) {
                 if (pieces[i].bridge >= 0) {
-                    p.bridge = pieces[i].bridge;
+                    if (!sourced) p.bridge = pieces[i].bridge;
                     continue;
                 }
-                p.source      = pieces[i].source;
-                p.approximate = pieces[i].approximate;
-                p.bridge      = -1;
-                break;
+                if (!sourced || pieces[i].source < p.source) {
+                    p.source      = pieces[i].source;
+                    p.approximate = pieces[i].approximate;
+                }
+                p.bridge = -1;
+                sourced  = true;
             }
             out.push_back(p);
         }

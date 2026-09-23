@@ -653,6 +653,18 @@ def boundary(
         objects — Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı]
     """
 
+def cleanup(
+    *,
+    objects: list[int] = ...,
+    action: str = ...,
+) -> int:
+    """Yinelenen, boş ve tekrarlanan köşeli nesneleri bulur; istenirse tek adımda onarır ve değişen alanları önce/sonra raporlar.
+
+    Komut: core.cleanup (TEMİZLE)
+        objects — Bakılacak nesneler; yoksa seçim, o da boşsa bütün çizim [kalıcı nesne anahtarı]
+        action — bul: bulur, seçer ve işaretler, hiçbir şeyi değiştirmez · onar: yinelenenleri ve boş nesneleri siler, tekrarlanan köşeleri çıkarır
+    """
+
 def move(
     *,
     objects: list[int] = ...,
@@ -2081,7 +2093,7 @@ def topology(
     *,
     objects: list[int] = ...,
 ) -> int:
-    """Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
+    """Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
 
     Komut: core.topology (TOPOLOJİ)
         objects — Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim [kalıcı nesne anahtarı]

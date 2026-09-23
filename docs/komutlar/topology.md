@@ -10,9 +10,26 @@ ve **rapor eder**:
 | **Sınır kendini kesiyor** | Halka kendi üzerinden geçiyor; alanı belirsiz |
 | **Alanı sıfır** | Halka hiçbir şey çevrelemiyor |
 | **Örtüşüyor** | İki parsel aynı zemini talep ediyor; örtüşen alan yazılır |
+| **Yinelenen** | Aynı tür, aynı katman, aynı köşelerle ikinci kez çizilmiş nesne; hangisinin aynısı olduğu yazılır |
+| **Uzunluğu yok** | Bütün köşeleri düğüm toleransı içinde tek noktada duran çizgi; hiçbir şey çizmez |
+| **Tekrarlanan köşe** | Bir öncekiyle düğüm toleransı içinde aynı yerde duran köşeler; kaç tane olduğu yazılır |
+| **Boşluk** | Bir **çizgi ağında** bir ucun başka bir çizgiye değmeden durduğu yer; genişliği yazılır |
 
 Dört bin parselli bir paftada bunların hiçbiri bakışta görünmez — komut bunun
-için vardır.
+için vardır. Yeri belli olan kusurlar (yinelenen, uzunluğu yok, tekrarlanan köşe,
+boşluk) tuvalde de işaretlenir.
+
+### Aynı çekirdek
+
+Yinelenen, uzunluğu olmayan ve tekrarlanan köşeli nesneler [`TEMİZLE`](cleanup.md)'nin
+bulduğuyla aynı bulucudan gelir; çizgi ağındaki boşluklar [`SINIR`](boundary.md) ve
+[`ALANÜRET`](alan_uret.md)'in kapatmayı reddettiği boşluklarla aynı ağdan. Denetim ile
+onarım aynı nesneleri aynı gerekçeyle görür. Boşluk yalnız açık çizgilerde aranır; bir
+ucun kendi çizgisi, az önce kestiği çizgi ya da kendi zincirinden uzun bir mesafe
+boşluk sayılmaz. İki ucu birbirini gören bir boşluk bir kez yazılır.
+
+Birbirine projenin düğüm toleransından (`core.topoloji.dugum_toleransi`, varsayılan
+1 cm) yakın iki köşe aynı köşe sayılır.
 
 ### Hiçbir şeyi düzeltmez
 
@@ -65,6 +82,24 @@ Topoloji denetimi (bütün çizim): 1 kusur.
   Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.
 ```
 
+Bir çizgi ağında köşesine 50 cm varmayan bir kenar ve iki kez çizilmiş bir çizgi:
+
+```text
+ÇİZGİ 60,0 70,0
+ÇİZGİ 70,0 70,10
+ÇİZGİ 70,10 60,10
+ÇİZGİ 60,10 60,0.5
+ÇİZGİ 60,0 70,0
+TOPOLOJİ
+```
+
+```text
+Topoloji denetimi (bütün çizim): 2 kusur.
+  Nesne 5, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar siler).
+  Nesne 1: açık uç, en yakın çizgiye 50 cm (boşluk).
+  Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.
+```
+
 ### Arayüz
 
 Sol araç kutusundaki **Topoloji Denetimi** düğmesi. Seçim boşken bütün çizimi
@@ -99,6 +134,8 @@ yazar.
 
 ## İlgili
 
+- [TEMİZLE](cleanup.md) — yinelenenleri ve boş nesneleri bulur, istenirse onarır
+- [SINIR](boundary.md) — kapalı bölgenin sınırını çıkarır, açık uçları gösterir
 - [TEVHİT](merge.md) — parsel birleştirme
 - [İFRAZ](split_parcel.md) — parsel ayırma
 - [ALANÖLÇ](measure_area.md) — alan ve çevre

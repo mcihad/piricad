@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/domain/cadastre/topology.hpp"
 
+#include "kentos_cad/core/cleanup.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
+#include "kentos_cad/core/planar.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include <algorithm>
+#include <set>
 #include <string>
 
 namespace kentos::domain::cadastre {
@@ -74,7 +79,7 @@ bool self_intersecting(const core::Polygon& poly)
 } // namespace
 
 std::vector<Defect> check_topology(const core::Document& doc,
-                                   const std::vector<core::EntityKey>& keys)
+                                   const std::vector<core::EntityKey>& keys, core::Mm tolerance)
 {
     std::vector<Defect> found;
 
@@ -151,6 +156,74 @@ std::vector<Defect> check_topology(const core::Document& doc,
         }
     }
 
+    // ---- what TEMİZLE repairs, found by the finder it repairs with ----
+    const auto key_of = [&doc](core::EntityId e) { return doc.entities().key[e]; };
+    for (const core::Redundancy& r : core::find_redundant(doc, slots, tolerance)) {
+        switch (r.kind) {
+        case core::RedundancyKind::Duplicate:
+            found.push_back(
+                Defect{DefectKind::Duplicate, key_of(r.entity), key_of(r.kept), 0, 0, r.at, {}, 0});
+            break;
+        case core::RedundancyKind::Empty:
+            // A face of no area is already a ZeroArea defect above.
+            if (core::Polygon poly; polygon_of(doc, r.entity, poly)) break;
+            found.push_back(Defect{DefectKind::ZeroLength,
+                                   key_of(r.entity),
+                                   core::EntityKey::None,
+                                   0,
+                                   0,
+                                   r.at,
+                                   {},
+                                   0});
+            break;
+        case core::RedundancyKind::RepeatedVertex:
+            found.push_back(Defect{DefectKind::RepeatedVertex,
+                                   key_of(r.entity),
+                                   core::EntityKey::None,
+                                   0,
+                                   r.vertices,
+                                   r.at,
+                                   {},
+                                   0});
+            break;
+        }
+    }
+
+    // ---- the gaps of a line network, found by the network SINIR builds ----
+    //
+    // LINES ONLY. An open run that should meet another and stops short is the
+    // defect a boundary-line layer has; a face is closed by definition and its
+    // neighbours are checked pairwise above.
+    if (core::network_available()) {
+        std::vector<core::NetworkPiece> pieces;
+        for (const core::EntityId e : slots) {
+            const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+            bool open                 = span.count > 0;
+            for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+                open = open && doc.geometry().ring_role[r] == core::RingRole::Open;
+            if (!open) continue;
+            std::vector<core::NetworkPiece> own = core::network_pieces(doc, e, e);
+            pieces.insert(pieces.end(), own.begin(), own.end());
+        }
+        if (!pieces.empty()) {
+            if (auto net = core::Network::build(pieces, tolerance)) {
+                std::vector<core::OpenEnd> ends = net.value().open_ends();
+                std::ranges::stable_sort(ends, [](const core::OpenEnd& a, const core::OpenEnd& b) {
+                    return a.distance < b.distance;
+                });
+                std::set<core::Point2> used; // an end in one gap only
+                for (const core::OpenEnd& end : ends) {
+                    if (!end.has_nearest || used.contains(end.at) || used.contains(end.nearest))
+                        continue;
+                    used.insert(end.at);
+                    used.insert(end.nearest);
+                    found.push_back(Defect{DefectKind::Gap, key_of(end.source),
+                                           core::EntityKey::None, 0, 0, end.at, end.nearest,
+                                           end.distance});
+                }
+            }
+        }
+    }
     return found;
 }
 
@@ -171,6 +244,29 @@ std::string describe(const core::Document& doc, const Defect& d)
         if (frac.size() < 2) frac = "0" + frac;
         return "Nesne " + std::to_string(first) + " ile " + std::to_string(second) +
                " örtüşüyor: " + std::to_string(cm2 / 100) + "," + frac + " m².";
+    }
+    case DefectKind::Duplicate:
+        return "Nesne " + std::to_string(first) + ", nesne " + std::to_string(second) +
+               "'in aynısı (yinelenen; TEMİZLE islem=onar siler).";
+    case DefectKind::ZeroLength:
+        return "Nesne " + std::to_string(first) + ": uzunluğu yok, hiçbir şey çizmiyor.";
+    case DefectKind::RepeatedVertex:
+        return "Nesne " + std::to_string(first) + ": " + std::to_string(d.count) +
+               " köşe bir öncekiyle aynı yerde.";
+    case DefectKind::Gap: {
+        // Centimetres below a metre, metres to two decimals above it.
+        const core::Mm a = d.distance;
+        std::string width;
+        if (a < 1000) {
+            width = a % 10 == 0 ? std::to_string(a / 10) + " cm" : std::to_string(a) + " mm";
+        } else {
+            const core::Mm cm = (a + 5) / 10;
+            std::string frac  = std::to_string(cm % 100);
+            if (frac.size() < 2) frac = "0" + frac;
+            width = std::to_string(cm / 100) + "," + frac + " m";
+        }
+        return "Nesne " + std::to_string(first) + ": açık uç, en yakın çizgiye " + width +
+               " (boşluk).";
     }
     }
     return "Bilinmeyen kusur.";
@@ -200,7 +296,9 @@ Task<void> run_topology(Context& ctx)
             keys.push_back(k);
 
     const core::Document& doc = ctx.document();
-    const auto found          = domain::cadastre::check_topology(doc, keys);
+    const core::Mm tolerance =
+        ctx.session().bus().project_settings().get("core.topoloji.dugum_toleransi").as_length();
+    const auto found = domain::cadastre::check_topology(doc, keys, tolerance);
 
     // WHAT WAS CHECKED, always. "No defects" is only reassuring if the user knows
     // how much was looked at; a report that says nothing about scope is a report
@@ -217,6 +315,23 @@ Task<void> run_topology(Context& ctx)
         "Topoloji denetimi (" + scope + "): " + std::to_string(found.size()) + " kusur.";
     for (const domain::cadastre::Defect& d : found)
         said += "\n  " + domain::cadastre::describe(doc, d);
+
+    // WHERE A DEFECT HAS A PLACE, the canvas shows it: a gap as the line across
+    // it, a copy or a repeat as a point. View state, never recorded.
+    for (const domain::cadastre::Defect& d : found) {
+        using Kind = domain::cadastre::DefectKind;
+        if (d.kind == Kind::Gap) {
+            ctx.mark(MeasureMark{
+                .shape = MeasureMark::Shape::Gap, .points = {d.at, d.to}, .labels = {"boşluk"}});
+        } else if (d.kind == Kind::Duplicate || d.kind == Kind::ZeroLength ||
+                   d.kind == Kind::RepeatedVertex) {
+            std::string label = "tekrarlanan köşe";
+            if (d.kind == Kind::Duplicate) label = "yinelenen";
+            if (d.kind == Kind::ZeroLength) label = "boş";
+            ctx.mark(MeasureMark{
+                .shape = MeasureMark::Shape::Point, .points = {d.at}, .labels = {label}});
+        }
+    }
 
     // IT REPORTS, IT NEVER REPAIRS. A boundary is measured data; only the
     // surveyor decides what a defect means and only they can sign the result
@@ -239,8 +354,9 @@ KENTOS_COMMAND(topology)
                          .en("objects")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary  = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.",
-        .run      = &run_topology,
+        .summary = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş "
+                   "nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.",
+        .run = &run_topology,
     };
 }
 
