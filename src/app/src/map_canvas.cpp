@@ -2672,6 +2672,40 @@ void MapCanvas::buildOverlay()
                 }
             }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::EdgeArc) {
+            // THE EDGE BENT THROUGH THE CURSOR, the rest of the object as it is:
+            // `core::path_with_arc_edge`, the call KENARTÜRÜ makes with the click
+            // — and the radius it would have, beside the cursor (TODOS C-07).
+            if (auto decoded = core::decode_edge_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::EntityId e    = doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                const auto path =
+                    e != core::kNoEntity && doc.alive(e) ? core::path_of(doc, e) : std::nullopt;
+                if (path) {
+                    const auto bent =
+                        core::path_with_arc_edge(*path, decoded.value().edge, cursorWorld());
+                    if (bent) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        core::path_outline(bent.value(), curve_scratch_x_, curve_scratch_y_);
+                        addWorldRun(nextBatch(tokens_->accent.rgba(), 1.5f, false),
+                                    curve_scratch_x_, curve_scratch_y_, bent.value().closed);
+                        if (look_.dynamic_input) {
+                            const render::ScreenPointF c = toScreenF(to);
+                            const std::string text =
+                                "yarıçap " +
+                                trimmed(static_cast<double>(
+                                            bent.value().pieces[decoded.value().edge].radius) /
+                                            1000.0,
+                                        3) +
+                                " m";
+                            addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                            guide_label_ = text;
+                        }
+                    }
+                }
+            }
         } else if (shape == command::RubberShape::MeasureRun) {
             // THE RUN MEASURED SO FAR AND THE NEXT SEGMENT TO THE CURSOR, each
             // segment's length written on it and the running total at the
@@ -2893,7 +2927,7 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
             shape != command::RubberShape::Corner && shape != command::RubberShape::Break &&
             shape != command::RubberShape::TrimFence && shape != command::RubberShape::ArcSweep &&
-            shape != command::RubberShape::PairCorner) {
+            shape != command::RubberShape::PairCorner && shape != command::RubberShape::EdgeArc) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

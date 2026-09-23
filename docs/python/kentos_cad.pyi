@@ -581,6 +581,40 @@ def vertex_insert(
         point — Yeni köşenin yeri [mm, Sağa (Y) önce]
     """
 
+def vertex_delete(
+    *,
+    object: list[int] = ...,
+    vertex: int = ...,
+    at: Coord = ...,
+    shared_point: Coord = ...,
+) -> int:
+    """Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
+
+    Komut: core.vertex_delete (KÖŞESİL)
+        object — Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri birlikte silinir [kalıcı nesne anahtarı]
+        vertex — Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da kaynak
+        at — Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce]
+        shared_point — Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte silinir [mm, Sağa (Y) önce]
+    """
+
+def edge_kind(
+    *,
+    object: list[int] = ...,
+    edge: int = ...,
+    at: Coord = ...,
+    kind: str = ...,
+    point: Coord = ...,
+) -> int:
+    """Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
+
+    Komut: core.edge_kind (KENARTÜRÜ)
+        object — Kenarı değişecek nesnenin kimliği [kalıcı nesne anahtarı]
+        edge — Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer
+        at — Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce]
+        kind — yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın öbür türü
+        point — tur=yay için yayın geçeceği nokta [mm, Sağa (Y) önce]
+    """
+
 def to_area(
     *,
     objects: list[int] = ...,

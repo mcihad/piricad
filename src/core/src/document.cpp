@@ -550,6 +550,43 @@ Status Document::set_kind_geometry(EntityId e, std::span<const RingGeometry::Rin
     return ok();
 }
 
+Status Document::set_kind_geometry(EntityId e, KindId kind,
+                                   std::span<const RingGeometry::RingInput> rings,
+                                   std::span<const std::uint8_t> payload, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e))
+        return err(ErrorCode::InvalidArgument,
+                   "Silinmiş nesnenin geometrisi değiştirilemez: " + std::to_string(e));
+    if (auto st = editable(e); !st) return st;
+    const KindSpec* spec = builtin_kinds().find(kind);
+    if (spec == nullptr)
+        return err(ErrorCode::Unsupported,
+                   "Bu yapının tanımadığı bir türe dönüştürülemez: " + std::to_string(kind));
+    if (spec->validate != nullptr)
+        if (auto st = spec->validate(rings, payload); !st) return st;
+
+    auto slot = geometry_.append(rings, payload);
+    if (!slot) return slot.error();
+
+    const std::uint32_t was = entities_.slot[e];
+    const KindId was_kind   = entities_.kind[e];
+    entities_.slot[e]       = slot.value();
+    entities_.kind[e]       = kind;
+    carry_text(was, slot.value());
+    carry_attributes(was, slot.value());
+    refresh_box(e);
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetKindGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    undo_out.kind_arg      = was_kind;
+    return ok();
+}
+
 Status Document::set_kind_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out)
 {
     if (e >= entities_.size())
@@ -977,6 +1014,30 @@ Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
     undo_out.kind          = Op::Kind::SetGeometry;
     undo_out.entity        = e;
     undo_out.geometry_slot = was;
+    return ok();
+}
+
+Status Document::restore_kind_geometry(EntityId e, std::uint32_t slot, KindId kind, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (slot >= geometry_.slot_count())
+        return err(ErrorCode::InvalidArgument,
+                   "Bilinmeyen geometri yuvası: " + std::to_string(slot));
+
+    const std::uint32_t was = entities_.slot[e];
+    const KindId was_kind   = entities_.kind[e];
+    entities_.slot[e]       = slot;
+    entities_.kind[e]       = kind;
+
+    refresh_box(e);
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetKindGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    undo_out.kind_arg      = was_kind;
     return ok();
 }
 
@@ -1417,6 +1478,8 @@ Status Document::apply(const Op& op, Op* undo_out)
         return ok();
     }
     case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);
+    case Op::Kind::SetKindGeometry:
+        return restore_kind_geometry(op.entity, op.geometry_slot, op.kind_arg, inverse);
     case Op::Kind::SetEntityLayer: return set_entity_layer(op.entity, op.layer, inverse);
     case Op::Kind::AttachForeign:
         return attach_foreign(op.entity, op.str_arg, op.bytes_arg, inverse);

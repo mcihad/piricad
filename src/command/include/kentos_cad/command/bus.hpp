@@ -958,6 +958,10 @@ private:
     core::Result<DispatchResult> run_to_completion(Session& session);
     void journal_entry(const Session& session);
 
+    /// Says what followed a commit: dependents re-placed, re-worded, erased
+    /// with their source, or left behind on a locked layer.
+    void say_settled(const Transaction::SettleReport& settled) const;
+
     core::Document& doc_;
     Registry& reg_;
     Journal& journal_;

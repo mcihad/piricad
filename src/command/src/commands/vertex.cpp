@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// core.vertex_move (KÖŞETAŞI), core.vertex_insert (KÖŞEEKLE) — corner editing.
+// core.vertex_move (KÖŞETAŞI), core.vertex_insert (KÖŞEEKLE), core.vertex_delete
+// (KÖŞESİL), core.edge_kind (KENARTÜRÜ) — corner and edge editing.
 //
 // A drawing is not finished when it is drawn. A parsel corner lands on the wrong
 // monument, a road edge needs a bend the surveyor did not measure the first time,
@@ -22,11 +23,15 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/command/path_edit.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/spline.hpp"
+#include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
@@ -36,6 +41,16 @@
 
 namespace kentos::command {
 namespace {
+
+/// Millimetres as the metres a user reads, three decimals, Turkish comma.
+std::string metres_text(core::Mm value)
+{
+    const auto whole = static_cast<std::uint64_t>(value < 0 ? -value : value);
+    std::string frac = std::to_string(whole % 1000);
+    while (frac.size() < 3)
+        frac.insert(frac.begin(), '0');
+    return (value < 0 ? "-" : "") + std::to_string(whole / 1000) + "," + frac + " m";
+}
 
 /// One entity's geometry, unpacked into something that can be edited and handed
 /// straight back to `set_geometry`.
@@ -208,9 +223,14 @@ bool resolve_entity(const Context& ctx, const Value& given, core::EntityId& out,
 /// Returns false when the command is over. On success `object` holds the ids
 /// to record and `corner` the 1-based corner — the grip moved, or the corner
 /// the new one follows.
-Task<bool> pick_corner(Context& ctx, bool insert, Value& object, core::EntityId& slot,
+/// What the corner is picked for: it decides what the click asks and which
+/// feature it names — a grip to move, an edge to split, a corner to take out.
+enum class Purpose : std::uint8_t { Move, Insert, Delete };
+
+Task<bool> pick_corner(Context& ctx, Purpose purpose, Value& object, core::EntityId& slot,
                        std::int64_t& corner)
 {
+    const bool insert         = purpose == Purpose::Insert;
     const core::Document& doc = ctx.document();
     Bus& bus                  = ctx.session().bus();
 
@@ -223,8 +243,10 @@ Task<bool> pick_corner(Context& ctx, bool insert, Value& object, core::EntityId&
     const Value numbered = ctx.argument("kose");
     std::optional<core::Point2> pointed;
     if (object.empty() || numbered.empty()) {
-        pointed = co_await ctx.point("yer", insert ? "Köşe eklenecek kenara tıklayın"
-                                                   : "Taşınacak köşeye tıklayın");
+        const char* ask = "Taşınacak köşeye tıklayın";
+        if (purpose == Purpose::Insert) ask = "Köşe eklenecek kenara tıklayın";
+        if (purpose == Purpose::Delete) ask = "Silinecek köşeye tıklayın";
+        pointed = co_await ctx.point("yer", ask);
         if (!pointed) {
             if (object.empty())
                 ctx.refuse(core::ErrorCode::InvalidArgument,
@@ -272,8 +294,23 @@ Task<bool> pick_corner(Context& ctx, bool insert, Value& object, core::EntityId&
         ctx.refuse(core::ErrorCode::InvalidArgument, "Köşe numarası belirtilmedi. İlk köşe 1'dir.");
         co_return false;
     }
-    const std::optional<std::size_t> found =
+    std::optional<std::size_t> found =
         insert ? core::nearest_edge(doc, slot, *pointed) : core::nearest_grip(doc, slot, *pointed);
+    if (purpose == Purpose::Delete) {
+        // A CORNER, never a handle that is not one: an arc's midpoint is a bend.
+        found.reset();
+        double best      = -1.0;
+        const auto grips = core::entity_grips(doc, slot);
+        for (std::size_t i = 0; i < grips.size(); ++i) {
+            if (grips[i].role != core::GripRole::Vertex && grips[i].role != core::GripRole::Control)
+                continue;
+            const double d = core::distance_squared(grips[i].at, *pointed);
+            if (best < 0.0 || d < best) {
+                best  = d;
+                found = i;
+            }
+        }
+    }
     if (!found) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    insert ? "Bu nesnenin köşe eklenecek bir kenarı yok."
@@ -570,7 +607,7 @@ Task<void> run_move(Context& ctx)
     Value object;
     core::EntityId slot = core::kNoEntity;
     std::int64_t corner = 0;
-    if (!co_await pick_corner(ctx, false, object, slot, corner)) co_return;
+    if (!co_await pick_corner(ctx, Purpose::Move, object, slot, corner)) co_return;
 
     if (ctx.document().entities().kind[slot] != core::kPolylineKind) {
         co_await move_grip_of(ctx, slot, object, corner);
@@ -622,7 +659,7 @@ Task<void> run_insert(Context& ctx)
     Value object;
     core::EntityId slot = core::kNoEntity;
     std::int64_t corner = 0;
-    if (!co_await pick_corner(ctx, true, object, slot, corner)) co_return;
+    if (!co_await pick_corner(ctx, Purpose::Insert, object, slot, corner)) co_return;
 
     // Checked BEFORE the new place is asked for, with the edit the command will
     // make, so a corner that has no edge after it is refused at once rather than
@@ -667,6 +704,395 @@ Task<void> run_insert(Context& ctx)
     ctx.record("nokta", Value::point(*at));
 }
 
+// ============================================================================
+// KÖŞESİL — a corner taken out
+// ============================================================================
+
+/// Takes corner `index` — as `core::entity_grips` numbers it — out of `slot`:
+/// a polyline's corner from its ring, an arc polyline's corner with the two
+/// edges that met there made one, a spline's control point. `note` gets what
+/// else the object had to give up. False, having refused, when the kind has
+/// no corners to lose or too few would remain.
+bool delete_vertex_of(Context& ctx, core::EntityId slot, std::int64_t key, std::size_t index,
+                      std::string& note)
+{
+    const core::Document& doc = ctx.document();
+    const core::KindId kind   = doc.entities().kind[slot];
+
+    if (kind == core::kPolylineKind) {
+        Rings rings       = read_rings(doc, slot);
+        const Where where = locate(rings, static_cast<std::int64_t>(index) + 1);
+        if (!where.found) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu nesnenin " + std::to_string(index + 1) + ". köşesi yok; " +
+                           std::to_string(rings.vertex_count()) + " köşesi var.");
+            return false;
+        }
+        std::vector<core::Point2>& ring = rings.points[where.ring];
+        const bool open                 = rings.roles[where.ring] == core::RingRole::Open;
+        if (ring.size() <= (open ? 2U : 3U)) {
+            ctx.refuse(core::ErrorCode::ValidationFailed,
+                       open ? "Bir çizgi en az iki köşeyle kalır; bu köşe silinemez."
+                            : "Kapalı bir şekil en az üç köşeyle kalır; bu köşe silinemez.");
+            return false;
+        }
+        ring.erase(ring.begin() + static_cast<std::ptrdiff_t>(where.at));
+        if (const auto st = write_rings(ctx, slot, rings); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+        return true;
+    }
+
+    if (kind == core::kArcPolylineKind) {
+        const auto grips = core::entity_grips(doc, slot);
+        if (index >= grips.size() || grips[index].role != core::GripRole::Vertex) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu tutamak bir köşe değil, bir yayın ortası; silmek için yayın ucundaki "
+                       "köşeyi gösterin.");
+            return false;
+        }
+        const auto path = core::path_of(doc, slot);
+        if (!path) {
+            ctx.refuse(core::ErrorCode::Unsupported, "Bu nesnenin yolu okunamıyor.");
+            return false;
+        }
+        auto without = core::path_without_vertex(*path, index);
+        if (!without) {
+            ctx.refuse(without.error());
+            return false;
+        }
+        if (!rewrite_path(ctx, slot, without.value())) return false;
+        if (core::path_record(without.value()).kind != kind)
+            note = "; yay kalmadığı için düz çoklu çizgi oldu";
+        return true;
+    }
+
+    if (kind == core::kSplineKind) {
+        Rings rings = read_rings(doc, slot);
+        auto def    = core::decode_spline(doc.geometry().payload_of(doc.entities().slot[slot]));
+        if (!def || rings.points.empty()) {
+            ctx.refuse(core::ErrorCode::Unsupported, "Bu spline okunamıyor.");
+            return false;
+        }
+        std::vector<core::Point2>& controls = rings.points[0];
+        if (index >= controls.size()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu spline'ın " + std::to_string(index + 1) + ". kontrol noktası yok.");
+            return false;
+        }
+        if (controls.size() <= 2) {
+            ctx.refuse(core::ErrorCode::ValidationFailed,
+                       "Bir spline en az iki kontrol noktasıyla kalır; bu nokta silinemez.");
+            return false;
+        }
+        core::SplineDef& d = def.value();
+        const bool uniform = d.knots_nano.empty() ||
+                             d.knots_nano == core::uniform_clamped_knots(controls.size(), d.degree);
+        controls.erase(controls.begin() + static_cast<std::ptrdiff_t>(index));
+        if (!d.weights_nano.empty())
+            d.weights_nano.erase(d.weights_nano.begin() + static_cast<std::ptrdiff_t>(index));
+        // The fit points no longer describe the curve, as when a control point
+        // moves (`core::move_grip`).
+        rings.points.resize(1);
+        rings.roles.resize(1);
+        rings.parts.resize(1);
+        d.has_fit = false;
+        if (static_cast<std::size_t>(d.degree) + 1 > controls.size()) {
+            d.degree = static_cast<std::uint8_t>(controls.size() - 1);
+            note     = "; derecesi " + std::to_string(d.degree) + " oldu";
+        }
+        if (!d.knots_nano.empty())
+            d.knots_nano = core::uniform_clamped_knots(controls.size(), d.degree);
+        if (!uniform) note += "; düğüm dizisi eşit aralıklı olarak yeniden kuruldu";
+        const core::RingGeometry::RingInput ring{controls, rings.roles[0], rings.parts[0]};
+        if (auto st = ctx.transaction().set_kind_geometry(slot, {&ring, 1}, core::encode_spline(d));
+            !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+        return true;
+    }
+
+    ctx.refuse(core::ErrorCode::Unsupported,
+               "Nesne " + std::to_string(key) +
+                   "'in köşesi silinemez: tanımı köşelerinden oluşmuyor (daire, yay, elips, ölçü, "
+                   "blok ya da yazı). Tutamaklarını KÖŞETAŞI ile taşıyabilirsiniz.");
+    return false;
+}
+
+/// KÖŞESİL at a place several objects share: the corner two parcels have in
+/// common comes out of both, so neither is left pointing at a corner the other
+/// no longer has.
+void delete_shared(Context& ctx, const std::vector<std::int64_t>& ids, bool named,
+                   core::Point2 from, std::size_t locked)
+{
+    const core::Document& doc = ctx.document();
+    std::vector<std::pair<core::EntityId, std::int64_t>> holders;
+    std::vector<std::size_t> at;
+    for (const std::int64_t id : ids) {
+        const core::EntityId slot =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)));
+        if (slot == core::kNoEntity || !doc.alive(slot) || !doc.editable(slot)) continue;
+        const auto grips = core::entity_grips(doc, slot);
+        std::optional<std::size_t> found;
+        for (std::size_t i = 0; i < grips.size() && !found; ++i)
+            if (grips[i].at == from && (grips[i].role == core::GripRole::Vertex ||
+                                        grips[i].role == core::GripRole::Control))
+                found = i;
+        if (!found) {
+            if (named) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Nesne " + std::to_string(id) + "'in bu noktada köşesi yok.");
+                return;
+            }
+            continue;
+        }
+        holders.emplace_back(slot, id);
+        at.push_back(*found);
+    }
+    if (holders.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Bu noktada seçili nesnelerin köşesi yok.");
+        return;
+    }
+    std::vector<std::int64_t> did;
+    for (std::size_t k = 0; k < holders.size(); ++k) {
+        std::string note;
+        if (!delete_vertex_of(ctx, holders[k].first, holders[k].second, at[k], note)) return;
+        did.push_back(holders[k].second);
+    }
+    ctx.record("nesne", Value::ids(did));
+    ctx.record("kaynak", Value::point(from));
+    ctx.record("kose", Value{});
+    ctx.record("yer", Value{});
+    ctx.echo(std::to_string(did.size()) +
+             (did.size() > 1 ? " nesnenin ortak köşesi silindi" : " köşe silindi") +
+             (locked > 0 ? ", " + std::to_string(locked) + " nesne kilitli katmanda atlandı" : "") +
+             ".");
+}
+
+Task<void> run_delete(Context& ctx)
+{
+    // MANY OBJECTS, OR A PLACE: the shared corner, as KÖŞETAŞI reads it.
+    std::vector<std::int64_t> ids = ids_of(ctx.argument("nesne"));
+    const bool named              = !ids.empty();
+    if (!named) {
+        const auto keys = ctx.session().bus().selection().keys();
+        if (keys.size() > 1)
+            for (const auto key : keys)
+                ids.push_back(static_cast<std::int64_t>(core::raw(key)));
+    }
+    if (ids.size() > 1 || !ctx.argument("kaynak").empty()) {
+        const core::Document& doc = ctx.document();
+        const Bus& bus            = ctx.session().bus();
+        std::size_t locked        = 0;
+        std::vector<core::GripPoint> places;
+        for (const std::int64_t id : ids) {
+            const core::EntityId slot =
+                id > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)))
+                       : core::kNoEntity;
+            if (slot == core::kNoEntity || !doc.alive(slot)) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+                co_return;
+            }
+            if (const auto st = doc.editable(slot); !st) {
+                if (named) {
+                    ctx.refuse(core::Error{st.error().code, "Nesne " + std::to_string(id) + ": " +
+                                                                st.error().message});
+                    co_return;
+                }
+                ++locked;
+                continue;
+            }
+            for (const core::GripPoint& g : core::entity_grips(doc, slot))
+                if (g.role == core::GripRole::Vertex || g.role == core::GripRole::Control)
+                    places.push_back(g);
+        }
+        std::optional<core::Point2> from;
+        if (const Value k = ctx.argument("kaynak"); !k.empty()) from = k.as_point();
+        if (!from) {
+            auto pointed = co_await ctx.point("yer", "Silinecek ortak köşeye tıklayın");
+            if (!pointed) co_return;
+            double best = -1.0;
+            for (const core::GripPoint& g : places) {
+                const double d = core::distance_squared(g.at, *pointed);
+                if (best < 0.0 || d < best) {
+                    best = d;
+                    from = g.at;
+                }
+            }
+            const auto reach = static_cast<double>(bus.aid_settings().pick_radius);
+            if (!from || best > reach * reach) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Orada seçili nesnelerin bir köşesi yok. Bir köşeye tıklayın.");
+                co_return;
+            }
+        }
+        delete_shared(ctx, ids, named, *from, locked);
+        co_return;
+    }
+
+    Value object;
+    core::EntityId slot = core::kNoEntity;
+    std::int64_t corner = 0;
+    if (!co_await pick_corner(ctx, Purpose::Delete, object, slot, corner)) co_return;
+    const auto key = static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)));
+    std::string note;
+    if (corner < 1 ||
+        !delete_vertex_of(ctx, slot, key, static_cast<std::size_t>(corner - 1), note)) {
+        if (corner < 1)
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Köşe numaraları 1'den başlar.");
+        co_return;
+    }
+    ctx.record("nesne", Value::ids({key}));
+    ctx.record("kose", Value::integer(corner));
+    ctx.record("yer", Value{});
+    ctx.echo("Köşe silindi" + note + ".");
+}
+
+// ============================================================================
+// KENARTÜRÜ — a straight edge made an arc, or an arc made straight
+// ============================================================================
+
+Task<void> run_edge_kind(Context& ctx)
+{
+    const core::Document& doc = ctx.document();
+    const Bus& bus            = ctx.session().bus();
+
+    // WHICH OBJECT AND WHICH EDGE: named, a single highlighted object, or one
+    // click on the edge — which names both.
+    std::vector<std::int64_t> ids = ids_of(ctx.argument("nesne"));
+    if (ids.empty()) {
+        const auto keys = bus.selection().keys();
+        if (keys.size() == 1) ids.push_back(static_cast<std::int64_t>(core::raw(keys[0])));
+    }
+    std::optional<std::int64_t> numbered;
+    if (const Value k = ctx.argument("kenar"); !k.empty()) {
+        std::int64_t n    = 0;
+        std::size_t count = 0;
+        if (single_id(k, n, count)) numbered = n;
+    }
+    std::optional<core::Point2> pointed;
+    if (ids.empty() || !numbered) {
+        pointed = co_await ctx.point("yer", "Türü değişecek kenara tıklayın");
+        if (!pointed) {
+            if (ids.empty())
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Kenarı değişecek nesne belirtilmedi. Örnek: KENARTÜRÜ nesne=1 kenar=2 "
+                           "tur=yay nokta=5,3");
+            else
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Kenar numarası belirtilmedi. İlk kenar 1'dir.");
+            co_return;
+        }
+        if (ids.empty()) {
+            const core::EntityId hit =
+                core::pick_nearest(doc, *pointed, bus.aid_settings().pick_radius);
+            if (hit == core::kNoEntity) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Orada kenarı değişecek bir çizgi yok. Bir kenarın üstüne tıklayın.");
+                co_return;
+            }
+            ids.push_back(static_cast<std::int64_t>(core::raw(doc.key_of(hit))));
+        }
+    }
+    if (ids.size() != 1) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Bir seferde tek nesnenin kenarı değişir; " +
+                                                         std::to_string(ids.size()) +
+                                                         " nesne verildi.");
+        co_return;
+    }
+    const std::int64_t key = ids[0];
+    const core::EntityId slot =
+        key > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)))
+                : core::kNoEntity;
+    if (slot == core::kNoEntity || !doc.alive(slot)) {
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(key));
+        co_return;
+    }
+    if (const auto st = doc.editable(slot); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
+    const auto path = core::path_of(doc, slot);
+    if (!path) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   doc.entities().kind[slot] == core::kPolylineKind
+                       ? "Delikli bir alanın kenar türü değiştirilemez: yaylı çoklu çizgi tek "
+                         "halkalıdır."
+                       : "Nesne " + std::to_string(key) +
+                             "'in kenarı yok: kenar türü çizgi, alan, yay ve yaylı çoklu çizgide "
+                             "değişir.");
+        co_return;
+    }
+    std::size_t edge = 0;
+    if (numbered) {
+        if (*numbered < 1 || static_cast<std::size_t>(*numbered) > path->pieces.size()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bu nesnenin " + std::to_string(*numbered) + ". kenarı yok; " +
+                           std::to_string(path->pieces.size()) + " kenarı var.");
+            co_return;
+        }
+        edge = static_cast<std::size_t>(*numbered - 1);
+    } else {
+        edge = core::place_of(*path, *pointed).piece;
+    }
+
+    // WHICH WAY: said, or the other of what the edge is now.
+    bool to_arc = path->pieces[edge].kind == core::PathPiece::Kind::Segment;
+    if (const Value t = ctx.argument("tur"); !t.empty())
+        to_arc = core::turkish_iequals(t.as_text(), "yay");
+
+    core::CurvePath made;
+    std::optional<core::Point2> through;
+    if (to_arc) {
+        const core::Point2 a = path->pieces[edge].from;
+        const core::Point2 b = path->pieces[edge].to;
+        PointOptions aim;
+        aim.rubber_band    = true;
+        aim.rubber_origin  = core::Point2{a.x + (b.x - a.x) / 2, a.y + (b.y - a.y) / 2};
+        aim.rubber_base    = false;
+        aim.rubber_shape   = RubberShape::EdgeArc;
+        aim.rubber_payload = core::encode_edge_guide(
+            core::EdgeGuide{.key = key, .edge = static_cast<std::uint32_t>(edge)});
+        through = co_await ctx.point("nokta", "Yayın geçeceği nokta", std::move(aim));
+        if (!through) co_return;
+        auto bent = core::path_with_arc_edge(*path, edge, *through);
+        if (!bent) {
+            ctx.refuse(bent.error());
+            co_return;
+        }
+        made = std::move(bent.value());
+    } else {
+        auto straight = core::path_with_straight_edge(*path, edge);
+        if (!straight) {
+            ctx.refuse(straight.error());
+            co_return;
+        }
+        made = std::move(straight.value());
+    }
+    const core::KindId was = doc.entities().kind[slot];
+    if (!rewrite_path(ctx, slot, made)) co_return;
+
+    ctx.record("nesne", Value::ids({key}));
+    ctx.record("kenar", Value::integer(static_cast<std::int64_t>(edge) + 1));
+    ctx.record("tur", Value::text(to_arc ? "yay" : "duz"));
+    ctx.record("yer", Value{});
+    if (through) ctx.record("nokta", Value::point(*through));
+
+    const core::KindId now = core::path_record(made).kind;
+    std::string said       = "Kenar düzleştirildi";
+    if (to_arc)
+        said = "Kenar yaya çevrildi (yarıçap " + metres_text(made.pieces[edge].radius) + ")";
+    if (now != was && now == core::kArcPolylineKind)
+        said += "; nesne yaylı çoklu çizgi oldu, kimliği ve öznitelikleri korundu";
+    if (now != was && now == core::kPolylineKind)
+        said += "; yay kalmadığı için düz çoklu çizgi oldu";
+    ctx.echo(said + ".");
+}
+
 } // namespace
 
 KENTOS_COMMAND(vertex_move)
@@ -700,6 +1126,75 @@ KENTOS_COMMAND(vertex_move)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.",
         .run     = &run_move,
+    };
+}
+
+KENTOS_COMMAND(vertex_delete)
+{
+    return CommandSpec{
+        .id       = "core.vertex_delete",
+        .names    = {"KÖŞESİL", "KOSESIL", "DELVERTEX", "KSL"},
+        .title    = "Köşe Sil",
+        .category = Category::Modify,
+        .params =
+            {
+                Param{"nesne", ParamKind::Selection, Arity::at_least(1),
+                      "Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri "
+                      "birlikte silinir"}
+                    .en("object"),
+                Param::integer("kose", Arity::optional(),
+                               "Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da "
+                               "kaynak")
+                    .en("vertex"),
+                Param{"yer", ParamKind::Point, Arity::optional(),
+                      "Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de "
+                      "verilmezse altındaki nesne"}
+                    .en("at"),
+                Param{"kaynak", ParamKind::Point, Arity::optional(),
+                      "Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte "
+                      "silinir"}
+                    .en("shared_point"),
+            },
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; "
+                   "iki kenar tek kenar olur.",
+        .run = &run_delete,
+    };
+}
+
+KENTOS_COMMAND(edge_kind)
+{
+    return CommandSpec{
+        .id       = "core.edge_kind",
+        .names    = {"KENARTÜRÜ", "KENARTURU", "EDGEKIND", "KNT"},
+        .title    = "Kenar Türü",
+        .category = Category::Modify,
+        .params =
+            {
+                Param{"nesne", ParamKind::Selection, Arity::exactly(1),
+                      "Kenarı değişecek nesnenin kimliği"}
+                    .en("object"),
+                Param::integer("kenar", Arity::optional(),
+                               "Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer")
+                    .en("edge"),
+                Param{"yer", ParamKind::Point, Arity::optional(),
+                      "Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de "
+                      "verilmezse altındaki nesne"}
+                    .en("at"),
+                Param::choice("tur", Arity::optional(), {"yay", "duz"},
+                              "yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın "
+                              "öbür türü")
+                    .en("kind"),
+                Param{"nokta", ParamKind::Point, Arity::optional(),
+                      "tur=yay için yayın geçeceği nokta"}
+                    .en("point"),
+            },
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz "
+                   "kenara çevirir; nesnenin kimliği korunur.",
+        .run = &run_edge_kind,
     };
 }
 

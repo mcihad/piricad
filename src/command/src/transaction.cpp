@@ -184,6 +184,16 @@ Status Transaction::set_kind_geometry(EntityId e, std::span<const RingGeometry::
     return core::ok();
 }
 
+Status Transaction::set_kind_geometry(EntityId e, core::KindId kind,
+                                      std::span<const RingGeometry::RingInput> rings,
+                                      std::span<const std::uint8_t> payload)
+{
+    core::Op undo;
+    if (auto st = doc_.set_kind_geometry(e, kind, rings, payload, undo); !st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_kind_payload(EntityId e, std::span<const std::uint8_t> payload)
 {
     core::Op undo;
@@ -410,13 +420,14 @@ Transaction::SettleReport Transaction::settle_attachments()
     // nothing new ends it; the cap is a guard against a cycle the document
     // refused to store but a file might still carry.
     std::vector<EntityId> deps;
+    std::vector<EntityId> stuck; ///< dependents counted in `left`, each once
     for (int round = 0; round < 16; ++round) {
         std::vector<EntityId> moved;
         std::vector<EntityId> erased;
         std::map<EntityId, std::uint32_t> before; // the slot an entity had before this range
         for (std::size_t i = settled_upto_; i < inverse_.size(); ++i) {
             const Op& op = inverse_[i];
-            if (op.kind == Op::Kind::SetGeometry) {
+            if (op.kind == Op::Kind::SetGeometry || op.kind == Op::Kind::SetKindGeometry) {
                 moved.push_back(op.entity);
                 before.emplace(op.entity, op.geometry_slot); // the OLDEST wins
             } else if (op.kind == Op::Kind::SetEntityAlive && op.bool_arg) {
@@ -473,7 +484,17 @@ Transaction::SettleReport Transaction::settle_attachments()
             const std::uint32_t now_slot = ents.slot[src];
             const auto was               = before.find(src);
             for (const EntityId d : deps) {
-                if (!doc_.alive(d) || !doc_.editable(d)) continue;
+                if (!doc_.alive(d)) continue;
+                // A DEPENDENT THAT CANNOT BE EDITED stays where it is — a caption
+                // on a locked layer — and is counted, so the command can say it
+                // is now standing apart from what it describes (TODOS C-07).
+                if (!doc_.editable(d)) {
+                    if (!contains(stuck, d)) {
+                        stuck.push_back(d);
+                        ++rep.left;
+                    }
+                    continue;
+                }
                 const core::Attachment* stored = tab.get(d);
                 if (stored == nullptr) continue;
                 core::Attachment a = *stored;

@@ -43,6 +43,13 @@ struct PathEdit
 /// then.
 bool write_path(Context& ctx, core::EntityId slot, const core::CurvePath& path);
 
+/// Writes `path` into `slot` in place WHATEVER KIND IT NEEDS: a polyline
+/// whose straight edge became an arc is an arc polyline now, and one whose
+/// last arc went straight is a polyline again — keeping its key, layer,
+/// style, attributes and the objects that follow it (model.md R9b, TODOS
+/// C-07). False, having refused, when the document refuses the geometry.
+bool rewrite_path(Context& ctx, core::EntityId slot, const core::CurvePath& path);
+
 /// A new object holding `path`, drawn like `like`: its layer, its style and
 /// every attribute cell. Its key is appended to `keys`. False, having refused,
 /// when the document refuses the geometry.

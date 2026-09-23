@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `5737855970183620580`
+- Araç sayısı: 102 (90 tanesi onay ister)
+- Katalog parmak izi: `6056110288278537139`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -426,6 +426,23 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `kot` | integer | evet | Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_edge_kind` — Kenar Türü
+
+Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
+Komut: KENARTÜRÜ (KENARTURU, EDGEKIND, KNT)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Kenarı değişecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kenar` | integer | hayır | Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer (tam sayı) |
+| `yer` | konum (tutamak ya da göreli nokta) | hayır | Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de verilmezse altındaki nesne — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `tur` | string | hayır | yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın öbür türü (metin) |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | tur=yay için yayın geçeceği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_edittext` — Yazıyı Düzenle
@@ -1488,6 +1505,22 @@ Onay ister.
 | `cit` | konum (tutamak ya da göreli nokta) | hayır | Çitin köşeleri; çitin geçtiği her parça budanır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `tut` | boolean | hayır | Gösterilen parça kalır; iki yanındaki kesimlerin dışında kalan gider (evet/hayır) |
 | `uzanti` | boolean | hayır | Sınırlar kendi yolunda uzatılmış sayılır; nesneye yetişmeyen bir sınır da keser (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_vertex_delete` — Köşe Sil
+
+Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
+Komut: KÖŞESİL (KOSESIL, DELVERTEX, KSL)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri birlikte silinir — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kose` | integer | hayır | Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da kaynak (tam sayı) |
+| `yer` | konum (tutamak ya da göreli nokta) | hayır | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `kaynak` | konum (tutamak ya da göreli nokta) | hayır | Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte silinir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_vertex_insert` — Köşe Ekle

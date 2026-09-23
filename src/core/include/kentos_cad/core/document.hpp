@@ -132,6 +132,7 @@ struct Op
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
         SetText,            ///< entity, str_arg, text_height, text_anchor
         SetGeometry,        ///< entity, geometry_slot
+        SetKindGeometry,    ///< entity, geometry_slot, kind_arg — the kind it had before
         SetEntityLayer,     ///< entity, layer
         AttachForeign,      ///< entity, str_arg (the tag), bytes_arg
         DetachForeign,      ///< entity, str_arg (the tag)
@@ -182,6 +183,9 @@ struct Op
     /// the arena never drops one: the rings this names are still exactly where the
     /// entity left them (see `Document::set_geometry`).
     std::uint32_t geometry_slot{0};
+
+    /// The kind to put back with `geometry_slot`; see `Kind::SetKindGeometry`.
+    KindId kind_arg{0};
 
     /// The guide list as it was before the change; see `Kind::SetGuides`.
     ///
@@ -416,6 +420,16 @@ public:
     Status set_kind_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
                              std::span<const std::uint8_t> payload, Op& undo_out);
 
+    /// The same, when the edit needs ANOTHER KIND to hold it: a polyline whose
+    /// straight edge became an arc is an arc polyline now, and back (model.md
+    /// R9b). The entity keeps its key, layer, style, attributes, caption and
+    /// the objects that follow it — the new kind validates the pair first, and
+    /// the inverse is `Op::SetKindGeometry`, which puts the old kind back with
+    /// the old slot. Refused into or out of a kind this build does not know.
+    Status set_kind_geometry(EntityId e, KindId kind,
+                             std::span<const RingGeometry::RingInput> rings,
+                             std::span<const std::uint8_t> payload, Op& undo_out);
+
     /// Whether `e` is of a kind this build understands. An entity of an unknown
     /// kind is preserved and drawn, and refused by every edit (model.md R26).
     bool kind_known(EntityId e) const noexcept;
@@ -580,6 +594,10 @@ private:
     /// `set_geometry`: it appends nothing, because the rings being restored were
     /// never thrown away.
     Status restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out);
+
+    /// The undo half of the kind-changing `set_kind_geometry`: the slot and the
+    /// kind it had, both put back.
+    Status restore_kind_geometry(EntityId e, std::uint32_t slot, KindId kind, Op& undo_out);
 
     Crs crs_{};
     EntityTable entities_{};

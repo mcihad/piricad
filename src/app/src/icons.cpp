@@ -448,6 +448,27 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawLine(QPointF(15.8, 6.2), QPointF(21.4, 6.2));
         break;
 
+    case Glyph::VertexDelete:
+        // THE CORNER THAT WENT: its two old edges dashed, the one straight edge
+        // left in their place, and the minus that says a corner was taken.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawPolyline(QPolygonF({QPointF(3.0, 19.0), QPointF(12.0, 9.4), QPointF(21.0, 19.0)}));
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(3.0, 19.0), QPointF(21.0, 19.0));
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(15.8, 6.2), QPointF(21.4, 6.2));
+        break;
+
+    case Glyph::EdgeKind:
+        // A STRAIGHT EDGE BOWED INTO AN ARC: the chord it was, dashed, and the
+        // arc through the handle it bends by.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(3.0, 18.0), QPointF(21.0, 18.0));
+        p.setPen(stroke(c, 1.7));
+        p.drawArc(QRectF(3.0, 6.0, 18.0, 24.0), 0, 180 * 16);
+        grip(p, QPointF(12.0, 6.0), c);
+        break;
+
     case Glyph::ToArea: {
         // AN OPEN RUN CLOSING INTO A FACE: three edges drawn, the fourth dashed
         // in, and the face filled faintly behind them.

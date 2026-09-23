@@ -121,6 +121,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.arc_draw`](#cadarc_draw) | `core.arc_draw` | `YAY` | Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer. |
 | [`cad.vertex_move`](#cadvertex_move) | `core.vertex_move` | `KÖŞETAŞI` | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
 | [`cad.vertex_insert`](#cadvertex_insert) | `core.vertex_insert` | `KÖŞEEKLE` | Bir kenarın ortasına yeni köşe ekler. |
+| [`cad.vertex_delete`](#cadvertex_delete) | `core.vertex_delete` | `KÖŞESİL` | Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur. |
+| [`cad.edge_kind`](#cadedge_kind) | `core.edge_kind` | `KENARTÜRÜ` | Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur. |
 | [`cad.to_area`](#cadto_area) | `core.to_area` | `ALANAÇEVİR` | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`cad.move`](#cadmove) | `core.move` | `TAŞI` | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
@@ -953,6 +955,56 @@ cad.vertex_insert(
 | `point` | `Coord` | `nokta` | Yeni köşenin yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_insert.md)
+
+### `cad.vertex_delete`
+
+Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
+
+Komut: `core.vertex_delete` — `KÖŞESİL`
+
+```python
+cad.vertex_delete(
+    object: list[int],
+    vertex: int,
+    at: Coord,
+    shared_point: Coord,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `object` | `list[int]` | `nesne` | Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri birlikte silinir [kalıcı nesne anahtarı] |
+| `vertex` | `int` | `kose` | Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da kaynak |
+| `at` | `Coord` | `yer` | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce] |
+| `shared_point` | `Coord` | `kaynak` | Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte silinir [mm, Sağa (Y) önce] |
+
+[Komut sayfası](../komutlar/vertex_delete.md)
+
+### `cad.edge_kind`
+
+Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
+
+Komut: `core.edge_kind` — `KENARTÜRÜ`
+
+```python
+cad.edge_kind(
+    object: list[int],
+    edge: int,
+    at: Coord,
+    kind: str,
+    point: Coord,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `object` | `list[int]` | `nesne` | Kenarı değişecek nesnenin kimliği [kalıcı nesne anahtarı] |
+| `edge` | `int` | `kenar` | Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer |
+| `at` | `Coord` | `yer` | Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce] |
+| `kind` | `str` | `tur` | yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın öbür türü |
+| `point` | `Coord` | `nokta` | tur=yay için yayın geçeceği nokta [mm, Sağa (Y) önce] |
+
+[Komut sayfası](../komutlar/edge_kind.md)
 
 ### `cad.to_area`
 

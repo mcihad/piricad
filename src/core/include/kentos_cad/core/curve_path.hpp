@@ -32,6 +32,7 @@
 
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -140,6 +141,37 @@ struct PathJoin
 /// Two arcs of one circle meeting end to start become one arc. A closed path
 /// has no ends and is never taken.
 PathJoin join_paths(std::span<const CurvePath> paths, Mm tolerance);
+
+/// `path` with vertex `index` taken out — numbered along the path from its
+/// start, a closed path's vertices one per piece. The two pieces that met there
+/// become one: an arc when both were arcs of one circle turning the same way,
+/// else the straight edge between their far ends. An open path's end takes its
+/// end piece with it. Refused when too few would remain: two vertices for an
+/// open path, three for a closed one (TODOS C-07).
+Result<CurvePath> path_without_vertex(const CurvePath& path, std::size_t index);
+
+/// `path` with piece `edge` bent into the arc that runs from its start through
+/// `through` to its end — the straight edge made a curve (TODOS C-07).
+/// Refused when the three points lie in a line.
+Result<CurvePath> path_with_arc_edge(const CurvePath& path, std::size_t edge, Point2 through);
+
+/// `path` with piece `edge` made straight: its chord. Refused when it already is.
+Result<CurvePath> path_with_straight_edge(const CurvePath& path, std::size_t edge);
+
+/// The payload the edge-bend preview carries (`command::RubberShape::EdgeArc`):
+/// the object by persistent key and the edge being bent, so the canvas can call
+/// `path_with_arc_edge` with the cursor — the call the click makes.
+struct EdgeGuide
+{
+    std::int64_t key{0};   ///< the object, by persistent key
+    std::uint32_t edge{0}; ///< the edge, its piece index along the path
+};
+
+/// The guide as bytes.
+std::vector<std::uint8_t> encode_edge_guide(const EdgeGuide& guide);
+
+/// The guide back, refused when the bytes are not what the encoder writes.
+Result<EdgeGuide> decode_edge_guide(std::span<const std::uint8_t> bytes);
 
 /// How a path is stored: the kind that holds it, its one ring and the kind's
 /// payload. Straight pieces only are a polyline; one arc is an arc and one

@@ -67,6 +67,8 @@ Tek tek komutlar:
 | `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
 | `ESNET` | [Pencere içindeki köşeleri taşıma](komutlar/stretch.md) |
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
+| `KÖŞESİL` | [Köşe silme](komutlar/vertex_delete.md) |
+| `KENARTÜRÜ` | [Kenarı yaya ya da düze çevirme](komutlar/edge_kind.md) |
 | `UZUNLUKYAZ` | [Kenar uzunluklarını yazma](komutlar/uzunluk_yaz.md) |
 | `KÖŞENUMARALA` | [Köşe numaralama](komutlar/kose_numarala.md) |
 | `BAĞLA` | [Yazıyı nesneye bağlama](komutlar/bagla.md) |

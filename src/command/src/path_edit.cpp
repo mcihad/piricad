@@ -36,6 +36,24 @@ bool write_path(Context& ctx, core::EntityId slot, const core::CurvePath& path)
     return true;
 }
 
+bool rewrite_path(Context& ctx, core::EntityId slot, const core::CurvePath& path)
+{
+    const core::PathRecord rec = core::path_record(path);
+    const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
+    core::Status st;
+    if (rec.kind == ctx.document().entities().kind[slot])
+        st = rec.kind == core::kPolylineKind
+                 ? ctx.transaction().set_geometry(slot, {&ring, 1})
+                 : ctx.transaction().set_kind_geometry(slot, {&ring, 1}, rec.payload);
+    else
+        st = ctx.transaction().set_kind_geometry(slot, rec.kind, {&ring, 1}, rec.payload);
+    if (!st) {
+        ctx.refuse(st.error());
+        return false;
+    }
+    return true;
+}
+
 bool add_path_like(Context& ctx, core::EntityId like, const core::CurvePath& path,
                    std::vector<std::int64_t>& keys)
 {

@@ -1215,9 +1215,19 @@ void MainWindow::buildActions()
     actVertexAdd_ = modifyTool(Glyph::VertexAdd, tr("Köşe Ekle"), QStringLiteral("KÖŞEEKLE"),
                                tr("KÖŞEEKLE — kenara tıklayın, yeni köşenin yerini gösterin  ·  "
                                   "kısaltma: KE"));
-    actToArea_    = modifyTool(Glyph::ToArea, tr("Alana Çevir"), QStringLiteral("ALANAÇEVİR"),
-                               tr("ALANAÇEVİR — uç uca değen çizgilerden kapalı bir alan kurar  ·  "
-                                     "kısaltma: ALÇ"));
+    // THE TWO EDITS A CORNER AND AN EDGE STILL LACKED (TODOS C-07): a corner
+    // taken out, and an edge's kind changed — straight to arc and back.
+    actVertexDelete_ =
+        modifyTool(Glyph::VertexDelete, tr("Köşe Sil"), QStringLiteral("KÖŞESİL"),
+                   tr("KÖŞESİL — köşeye tıklayın; iki kenar tek kenar olur. Seçili parsellerin "
+                      "ortak köşesi ikisinden birden silinir  ·  kısaltma: KSL"));
+    actEdgeKind_ =
+        modifyTool(Glyph::EdgeKind, tr("Kenar Türü"), QStringLiteral("KENARTÜRÜ"),
+                   tr("KENARTÜRÜ — kenara tıklayın: düz kenar gösterdiğiniz noktadan geçen yaya, "
+                      "yay düz kenara döner; nesnenin kimliği korunur  ·  kısaltma: KNT"));
+    actToArea_ = modifyTool(Glyph::ToArea, tr("Alana Çevir"), QStringLiteral("ALANAÇEVİR"),
+                            tr("ALANAÇEVİR — uç uca değen çizgilerden kapalı bir alan kurar  ·  "
+                               "kısaltma: ALÇ"));
     actTextEdit_ = modifyTool(Glyph::TextEdit, tr("Yazıyı Düzenle"), QStringLiteral("YAZIDÜZENLE"),
                               tr("YAZIDÜZENLE — yazıyı seçin, yeni metni yazın; eskisi önerilir  "
                                  "·  kısaltma: YZD"));
@@ -1724,6 +1734,8 @@ void MainWindow::buildMenus()
     // generated tail — and nowhere a hand looks for them.
     modify->addAction(actVertexMove_);
     modify->addAction(actVertexAdd_);
+    modify->addAction(actVertexDelete_);
+    modify->addAction(actEdgeKind_);
     modify->addAction(actToArea_);
     modify->addAction(actTextEdit_);
 
@@ -2156,7 +2168,7 @@ void MainWindow::buildToolBox()
                          actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_,
                          actDivide_});
     toolBox_->addFamily({actChamfer_, actChamferAll_, actFillet_, actFilletAll_, actVertexMove_,
-                         actVertexAdd_, actPolylineEdit_});
+                         actVertexAdd_, actVertexDelete_, actEdgeKind_, actPolylineEdit_});
     toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});
     // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
     // TAŞI was in the column; KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA and DİZİ lived in
@@ -4913,6 +4925,57 @@ int MainWindow::probeRealMouse()
               QStringLiteral("kilitli tutamak sebebini söyledi (son söz: \"%1\")").arg(lastSaid()));
         controller_->cancelInteractive();
         runScriptLine(QStringLiteral("KATMAN ad=PROBTAPU kilitli=hayır"));
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+
+        const auto corners = [this](std::int64_t key) {
+            const core::Document& doc = controller_->document();
+            const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            if (e == core::kNoEntity) return std::size_t{0};
+            const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+            return doc.geometry().ring_xs(span.first).size();
+        };
+
+        // KÖŞESİL FROM THE COLUMN: one click on a corner takes it out.
+        fresh({QStringLiteral("ÇOKLUÇİZGİ 0,0 10,0 10,10 20,10")});
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        const std::int64_t run = first_key();
+        actVertexDelete_->trigger();
+        QCoreApplication::processEvents();
+        press(screen({10'000, 0}));
+        release(screen({10'000, 0}));
+        check(corners(run) == 3,
+              QStringLiteral("Köşe Sil: tıklanan köşe silindi (%1 köşe kaldı; son söz: \"%2\")")
+                  .arg(corners(run))
+                  .arg(lastSaid()));
+        controller_->cancelInteractive();
+
+        // KENARTÜRÜ FROM THE COLUMN: the edge clicked, the bend shown, clicked.
+        fresh({QStringLiteral("ALAN 0,0 20,0 20,10 0,10")});
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        const std::int64_t bent = first_key();
+        actEdgeKind_->trigger();
+        QCoreApplication::processEvents();
+        press(screen({10'000, 0}));
+        release(screen({10'000, 0}));
+        const command::Session* bending = controller_->session();
+        check(bending != nullptr && bending->waiting() &&
+                  bending->prompt().rubber_shape == command::RubberShape::EdgeArc,
+              QStringLiteral("Kenar Türü: kenara tıklayınca yayın noktası soruluyor, yay imleci "
+                             "izliyor (son söz: \"%1\")")
+                  .arg(lastSaid()));
+        if (bending != nullptr && bending->waiting()) {
+            press(screen({10'000, -3'000}));
+            release(screen({10'000, -3'000}));
+            const core::Document& doc = controller_->document();
+            const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(bent)));
+            check(e != core::kNoEntity && doc.entities().kind[e] == core::kArcPolylineKind,
+                  QStringLiteral("Kenar Türü: kenar yay oldu, parsel aynı kimlikle yaylı çoklu "
+                                 "çizgi (son söz: \"%1\")")
+                      .arg(lastSaid()));
+        }
+        controller_->cancelInteractive();
         runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
     }
 

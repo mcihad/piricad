@@ -181,6 +181,8 @@ enum class Glyph {
     ToArea,       ///< an open run closing into a filled face: ALANAÇEVİR
     PolylineEdit, ///< a run with its direction arrow: ÇİZGİDÜZENLE
     TextEdit,     ///< a letter with the pencil over it: YAZIDÜZENLE
+    VertexDelete, ///< a bent edge made straight, its corner struck out: KÖŞESİL
+    EdgeKind,     ///< a straight edge bowed into an arc, its chord dashed: KENARTÜRÜ
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

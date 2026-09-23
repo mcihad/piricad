@@ -42,6 +42,8 @@ namespace kentos::command {
     X(arc_draw)                                                                                    \
     X(vertex_move)                                                                                 \
     X(vertex_insert)                                                                               \
+    X(vertex_delete)                                                                               \
+    X(edge_kind)                                                                                   \
     X(to_area)                                                                                     \
     X(move)                                                                                        \
     X(copy_objects)                                                                                \

@@ -94,6 +94,8 @@ enum class RubberShape : std::uint8_t {
                  ///< cursor, each piece it becomes drawn in turn: BÖL yontem=nokta
     PairCorner,  ///< the corner between the two objects `rubber_payload` names, at the size the
                  ///< cursor's distance from the origin shows: YUVARLA, PAH with two objects
+    EdgeArc,     ///< the object `rubber_payload` names with one edge bent through the
+                 ///< cursor: KENARTÜRÜ tur=yay
 };
 
 struct Prompt

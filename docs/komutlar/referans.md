@@ -41,6 +41,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer. |
 | [`core.vertex_move`](vertex_move.md) | Köşe Taşı | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
 | [`core.vertex_insert`](vertex_insert.md) | Köşe Ekle | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
+| [`core.vertex_delete`](vertex_delete.md) | Köşe Sil | `KÖŞESİL`, `KOSESIL`, `DELVERTEX`, `KSL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur. |
+| [`core.edge_kind`](edge_kind.md) | Kenar Türü | `KENARTÜRÜ`, `KENARTURU`, `EDGEKIND`, `KNT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur. |
 | [`core.to_area`](to_area.md) | Alana Çevir | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`core.move`](move.md) | Taşı | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
@@ -534,6 +536,33 @@ Bir kenarın ortasına yeni köşe ekler.
 | `nokta` | point | 1 | Yeni köşenin yeri |
 
 Ayrıntılı kullanım: [KÖŞEEKLE](vertex_insert.md)
+
+### `core.vertex_delete` — KÖŞESİL (Köşe Sil)
+
+Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 1 | Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri birlikte silinir |
+| `kose` | integer | isteğe bağlı | Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da kaynak |
+| `yer` | point | isteğe bağlı | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne |
+| `kaynak` | point | isteğe bağlı | Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte silinir |
+
+Ayrıntılı kullanım: [KÖŞESİL](vertex_delete.md)
+
+### `core.edge_kind` — KENARTÜRÜ (Kenar Türü)
+
+Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Kenarı değişecek nesnenin kimliği |
+| `kenar` | integer | isteğe bağlı | Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer |
+| `yer` | point | isteğe bağlı | Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de verilmezse altındaki nesne |
+| `tur` | text | isteğe bağlı | yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın öbür türü |
+| `nokta` | point | isteğe bağlı | tur=yay için yayın geçeceği nokta |
+
+Ayrıntılı kullanım: [KENARTÜRÜ](edge_kind.md)
 
 ### `core.to_area` — ALANAÇEVİR (Alana Çevir)
 
@@ -4176,6 +4205,128 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "HACIM",
         "EARTHWORK",
         "HCM"
+      ]
+    }
+  },
+  {
+    "name": "core_edge_kind",
+    "title": "Kenar Türü",
+    "description": "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.\nKomut: KENARTÜRÜ (KENARTURU, EDGEKIND, KNT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kenarı değişecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kenar": {
+          "type": "integer",
+          "description": "Değişecek kenarın sırası; ilk kenar 1'dir. Verilmezse yer (tam sayı)"
+        },
+        "yer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Kenarı gösteren nokta: kenar verilmezse en yakın kenar, nesne de verilmezse altındaki nesne — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "tur": {
+          "type": "string",
+          "enum": [
+            "yay",
+            "duz"
+          ],
+          "description": "yay: düz kenar yay olur; duz: yay düz olur. Verilmezse kenarın öbür türü (metin)"
+        },
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "tur=yay için yayın geçeceği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "nesne"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.edge_kind",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "KENARTÜRÜ",
+        "KENARTURU",
+        "EDGEKIND",
+        "KNT"
       ]
     }
   },
@@ -10630,6 +10781,120 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BUDA",
         "TRIM",
         "BD"
+      ]
+    }
+  },
+  {
+    "name": "core_vertex_delete",
+    "title": "Köşe Sil",
+    "description": "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.\nKomut: KÖŞESİL (KOSESIL, DELVERTEX, KSL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşesi silinecek nesne; birden çok nesne verilirse ortak köşeleri birlikte silinir — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kose": {
+          "type": "integer",
+          "description": "Silinecek köşenin sırası; ilk köşe 1'dir. Verilmezse yer ya da kaynak (tam sayı)"
+        },
+        "yer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "kaynak": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Ortak köşenin yeri: verilen nesnelerin o noktadaki köşesi birlikte silinir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "nesne"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.vertex_delete",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "KÖŞESİL",
+        "KOSESIL",
+        "DELVERTEX",
+        "KSL"
       ]
     }
   },

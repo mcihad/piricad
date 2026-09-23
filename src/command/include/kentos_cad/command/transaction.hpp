@@ -124,6 +124,12 @@ public:
     Status set_kind_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
                              std::span<const std::uint8_t> payload);
 
+    /// Replaces the kind, rings and payload together, keeping the entity's
+    /// identity (`Document::set_kind_geometry` with a kind, model.md R9b).
+    Status set_kind_geometry(EntityId e, core::KindId kind,
+                             std::span<const RingGeometry::RingInput> rings,
+                             std::span<const std::uint8_t> payload);
+
     /// What `adopt_from` brought over.
     struct AdoptSummary
     {
@@ -235,6 +241,7 @@ public:
         std::size_t relabelled{0}; ///< dependents whose derived text changed
         std::size_t erased{0};     ///< dependents erased because their source was
         std::size_t reoffset{0};   ///< dependents moved by hand, offset re-measured
+        std::size_t left{0};       ///< dependents that could not follow: not editable (locked)
     };
 
     /// Brings every dependent up to date with what this transaction did to its

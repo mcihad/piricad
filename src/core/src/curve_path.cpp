@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <ranges>
 
 namespace kentos::core {
@@ -689,6 +690,125 @@ PathRecord path_record(const CurvePath& path)
     out.role    = path.closed ? RingRole::Exterior : RingRole::Open;
     out.payload = encode_arc_polyline(def);
     return out;
+}
+
+namespace {
+
+/// The one piece two neighbours make when the vertex between them goes: an
+/// arc when both are arcs of one circle turning the same way, else straight.
+PathPiece merged(const PathPiece& a, const PathPiece& b)
+{
+    if (a.kind == PathPiece::Kind::Arc && b.kind == PathPiece::Kind::Arc && a.centre == b.centre &&
+        a.radius == b.radius && (a.sweep_udeg > 0) == (b.sweep_udeg > 0))
+        return arc_piece(a.centre, a.radius, a.from, b.to, a.sweep_udeg > 0);
+    return PathPiece{.from = a.from, .to = b.to};
+}
+
+} // namespace
+
+Result<CurvePath> path_without_vertex(const CurvePath& path, std::size_t index)
+{
+    const std::size_t n       = path.pieces.size();
+    const std::size_t corners = path.closed ? n : n + 1;
+    if (index >= corners)
+        return err(ErrorCode::InvalidArgument, "Bu nesnenin " + std::to_string(index + 1) +
+                                                   ". köşesi yok; " + std::to_string(corners) +
+                                                   " köşesi var.");
+    if (path.closed ? corners <= 3 : corners <= 2)
+        return err(ErrorCode::ValidationFailed,
+                   path.closed ? "Kapalı bir şekil en az üç köşeyle kalır; bu köşe silinemez."
+                               : "Bir çizgi en az iki köşeyle kalır; bu köşe silinemez.");
+    CurvePath out;
+    out.closed = path.closed;
+    if (!path.closed) {
+        if (index == 0) {
+            out.pieces.assign(path.pieces.begin() + 1, path.pieces.end());
+        } else if (index == n) {
+            out.pieces.assign(path.pieces.begin(), path.pieces.end() - 1);
+        } else {
+            out.pieces.assign(path.pieces.begin(),
+                              path.pieces.begin() + static_cast<std::ptrdiff_t>(index) - 1);
+            out.pieces.push_back(merged(path.pieces[index - 1], path.pieces[index]));
+            out.pieces.insert(out.pieces.end(),
+                              path.pieces.begin() + static_cast<std::ptrdiff_t>(index) + 1,
+                              path.pieces.end());
+        }
+        return out;
+    }
+    // A CLOSED PATH round its seam: the vertex before the first piece is the
+    // last piece's end, and the merged piece closes the ring from there.
+    if (index == 0) {
+        out.pieces.assign(path.pieces.begin() + 1, path.pieces.end() - 1);
+        out.pieces.push_back(merged(path.pieces[n - 1], path.pieces[0]));
+        return out;
+    }
+    out.pieces.assign(path.pieces.begin(),
+                      path.pieces.begin() + static_cast<std::ptrdiff_t>(index) - 1);
+    out.pieces.push_back(merged(path.pieces[index - 1], path.pieces[index]));
+    out.pieces.insert(out.pieces.end(),
+                      path.pieces.begin() + static_cast<std::ptrdiff_t>(index) + 1,
+                      path.pieces.end());
+    return out;
+}
+
+Result<CurvePath> path_with_arc_edge(const CurvePath& path, std::size_t edge, Point2 through)
+{
+    if (edge >= path.pieces.size())
+        return err(ErrorCode::InvalidArgument,
+                   "Bu nesnenin " + std::to_string(edge + 1) + ". kenarı yok; " +
+                       std::to_string(path.pieces.size()) + " kenarı var.");
+    const Point2 a = path.pieces[edge].from;
+    const Point2 b = path.pieces[edge].to;
+    Point2 centre{};
+    Mm radius = 0;
+    if (a == b || !circumcircle(a, through, b, centre, radius) || radius <= 0)
+        return err(ErrorCode::ValidationFailed,
+                   "Yayın geçeceği nokta kenarın doğrultusunda; kenar düz kalır. Noktayı kenarın "
+                   "bir yanında gösterin.");
+    // The arc runs from `a` through `through` to `b`: counter-clockwise when
+    // the three turn left.
+    const double turn = static_cast<double>(through.x - a.x) * static_cast<double>(b.y - a.y) -
+                        static_cast<double>(through.y - a.y) * static_cast<double>(b.x - a.x);
+    CurvePath out    = path;
+    out.pieces[edge] = arc_piece(centre, radius, a, b, turn > 0.0);
+    return out;
+}
+
+Result<CurvePath> path_with_straight_edge(const CurvePath& path, std::size_t edge)
+{
+    if (edge >= path.pieces.size())
+        return err(ErrorCode::InvalidArgument,
+                   "Bu nesnenin " + std::to_string(edge + 1) + ". kenarı yok; " +
+                       std::to_string(path.pieces.size()) + " kenarı var.");
+    if (path.pieces[edge].kind == PathPiece::Kind::Segment)
+        return err(ErrorCode::InvalidArgument, "Bu kenar zaten düz.");
+    if (path.pieces[edge].from == path.pieces[edge].to)
+        return err(ErrorCode::ValidationFailed,
+                   "Tam bir çember düzleştirilemez: iki ucu aynı noktada.");
+    CurvePath out    = path;
+    out.pieces[edge] = PathPiece{.from = path.pieces[edge].from, .to = path.pieces[edge].to};
+    return out;
+}
+
+std::vector<std::uint8_t> encode_edge_guide(const EdgeGuide& guide)
+{
+    // version, edge, key — little-endian as the machine writes it, because the
+    // bytes never leave the process (a prompt to the canvas).
+    std::vector<std::uint8_t> bytes(1 + sizeof(guide.edge) + sizeof(guide.key));
+    bytes[0] = 1;
+    std::memcpy(bytes.data() + 1, &guide.edge, sizeof(guide.edge));
+    std::memcpy(bytes.data() + 1 + sizeof(guide.edge), &guide.key, sizeof(guide.key));
+    return bytes;
+}
+
+Result<EdgeGuide> decode_edge_guide(std::span<const std::uint8_t> bytes)
+{
+    EdgeGuide guide;
+    if (bytes.size() != 1 + sizeof(guide.edge) + sizeof(guide.key) || bytes[0] != 1)
+        return err(ErrorCode::InvalidArgument, "Kenar önizlemesinin baytları tanınmıyor.");
+    std::memcpy(&guide.edge, bytes.data() + 1, sizeof(guide.edge));
+    std::memcpy(&guide.key, bytes.data() + 1 + sizeof(guide.edge), sizeof(guide.key));
+    return guide;
 }
 
 std::vector<Point2> path_vertices(const CurvePath& path)

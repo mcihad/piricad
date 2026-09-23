@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — KÖŞESİL, KENARTÜRÜ ve bağlı yazıların açıklaması (C-07 tamam)
+
+- **`KÖŞESİL`**: köşeye tıklayın, iki kenar tek kenar olur. Çizgi, alan, yaylı çoklu
+  çizgi (aynı çemberin iki yayı tek yay olur) ve spline (derece gerekirse düşer ve
+  söylenir); seçili parsellerin ortak köşesi ikisinden birden silinir.
+- **`KENARTÜRÜ`**: düz kenarı gösterilen noktadan geçen gerçek bir yaya, yayı düz
+  kenara çevirir. Parsel **aynı kimlik, öznitelik ve bağlı yazılarla** yaylı çoklu
+  çizgi olur; geri alma türü de geri getirir (yerinde tür değişimi).
+- **Bağlı yazılar söyleniyor**: bir kaynak taşınınca onu izleyen ölçü yazıları
+  sayılıyor; kilitli katmandaki bir bağlı yazı izleyemediğinde "yerinde kaldı"
+  deniyor.
+- Araç sütununun köşe ailesinde ve **Değiştir** menüsünde **Köşe Sil**, **Kenar
+  Türü**.
+
 ### Eklendi — sıcak tutamak ve ortak köşe (C-07, 2. aşama)
 
 - **Tutamağa tıklamak onu sıcak yapar**: nesne imleci izler, ikinci tıklama köşeyi

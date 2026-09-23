@@ -249,6 +249,8 @@ köşe **hiç kıpırdamaz**, yarım uygulanmış bir taşıma olmaz.
 ## İlgili
 
 - [`KÖŞEEKLE`](vertex_insert.md) — kenarın ortasına yeni köşe ekler
+- [`KÖŞESİL`](vertex_delete.md) — köşeyi siler, iki kenar tek kenar olur
+- [`KENARTÜRÜ`](edge_kind.md) — kenarı yaya ya da düze çevirir
 - [`SEÇ`](select.md) — nesne kimliklerini gösterir
 - [`MOD`](mode.md) — yakalama modlarını açar ve kapatır
 - [`GERİAL`](undo.md) · [`YİNELE`](redo.md)

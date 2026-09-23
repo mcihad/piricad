@@ -987,6 +987,8 @@ private:
     QAction* actPolylineEdit_{nullptr}; ///< ÇİZGİDÜZENLE
     QAction* actVertexMove_{nullptr};   ///< KÖŞETAŞI
     QAction* actVertexAdd_{nullptr};    ///< KÖŞEEKLE
+    QAction* actVertexDelete_{nullptr}; ///< KÖŞESİL
+    QAction* actEdgeKind_{nullptr};     ///< KENARTÜRÜ
     QAction* actToArea_{nullptr};       ///< ALANAÇEVİR
     QAction* actTextEdit_{nullptr};     ///< YAZIDÜZENLE
     QAction* actTraverse_{nullptr};     ///< POLİGON, on both the Çizim and the Harita menu

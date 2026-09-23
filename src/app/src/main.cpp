@@ -1646,6 +1646,17 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("15b-ortak-kose"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // KENARTÜRÜ: a parcel's edge bowed through the cursor, the radius beside
+        // it, before the click that makes it an arc (TODOS C-07).
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,10 0,10")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("KENARTÜRÜ nesne=1 kenar=1 tur=yay"));
+        });
+        later([hover] { hover({10'000, -3'000}); });
+        later([&window, shot] { shot(QStringLiteral("15c-kenar-turu"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

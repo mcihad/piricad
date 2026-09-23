@@ -8,6 +8,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include <algorithm>
 #include <chrono>
 
 namespace kentos::command {
@@ -784,12 +785,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // document (Article 1.2). A source that was erased takes its dependents with
     // it, and that is said, because a deletion the user did not name is the one
     // thing here they should hear about.
-    if (!read_only) {
-        const auto followed = session.transaction().settle_attachments();
-        if (followed.erased != 0 && on_echo)
-            on_echo("Silinen nesnelere bağlı " + std::to_string(followed.erased) +
-                    " nesne de silindi.");
-    }
+    if (!read_only) say_settled(session.transaction().settle_attachments());
 
     result.ops = session.owns_transaction() ? session.transaction().size() : 0;
     // A borrowed transaction belongs to a batch. Its single visible mutation is
@@ -921,12 +917,34 @@ core::Status Bus::begin_batch(std::string label)
     return core::ok();
 }
 
+void Bus::say_settled(const Transaction::SettleReport& settled) const
+{
+    // WHAT FOLLOWED IS SAID, because it happened to objects the user did not
+    // name: captions that re-placed themselves beside a moved edge, a length
+    // re-written, and — the one that matters most — a caption on a locked layer
+    // left standing apart from the edge it describes (TODOS C-07).
+    if (!on_echo) return;
+    if (settled.erased != 0)
+        on_echo("Silinen nesnelere bağlı " + std::to_string(settled.erased) + " nesne de silindi.");
+    if (settled.followed != 0 || settled.relabelled != 0) {
+        std::string said = "Bağlı " +
+                           std::to_string(std::max(settled.followed, settled.relabelled)) +
+                           " yazı kaynağını izledi";
+        if (settled.relabelled != 0)
+            said += "; " + std::to_string(settled.relabelled) + " ölçü yeniden yazıldı";
+        on_echo(said + ".");
+    }
+    if (settled.left != 0)
+        on_echo("Bağlı " + std::to_string(settled.left) +
+                " yazı kilitli katmanda olduğu için kaynağını izleyemedi; yerinde kaldı.");
+}
+
 core::Result<DispatchResult> Bus::end_batch()
 {
     if (!batch_) return core::err(ErrorCode::InvalidArgument, "Açık toplu iş yok");
 
     // The last word on what the batch moved (see `finish`).
-    (void)batch_->settle_attachments();
+    say_settled(batch_->settle_attachments());
 
     DispatchResult result;
     result.command_id = "core.batch";
