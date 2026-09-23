@@ -11,11 +11,18 @@
 // platforms (§7.3). The half-angle identities below exist for that reason and not
 // to save a call.
 //
-// A FILLET'S ARC IS A SEPARATE OBJECT, because a polyline in this model holds
-// vertices and not bulges (model.md R9-R12). That is honest rather than
-// convenient: the arc is a `core.arc` with a real centre and a real radius, so its
-// length and its geometry are exact — a bulge flattened into the polyline would
-// be a curve stored as its own approximation.
+// ON AN OPEN LINE A FILLET'S ARC IS A SEPARATE OBJECT, because a polyline in
+// this model holds vertices and not bulges (model.md R9-R12). That is honest
+// rather than convenient: the arc is a `core.arc` with a real centre and a real
+// radius, so its length and its geometry are exact.
+//
+// A CLOSED SHAPE IS ROUNDED IN PLACE. It used to be refused — "PAH kullanın" —
+// and a rectangle's or a parcel's corner is the corner most often rounded, so
+// the tool looked broken to anyone who tried it with the mouse. Breaking the
+// ring in two would leave a parcel that encloses nothing, so the arc is drawn
+// into the ring (`core::cut_corner`): the object keeps its key, its attributes
+// and what is attached to it, stays a face, and the echo says how far the drawn
+// corner strays from the true arc.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -32,6 +39,16 @@
 
 namespace kentos::command {
 namespace {
+
+/// Millimetres as the metres a user reads, three decimals, Turkish comma.
+std::string metres_text(core::Mm value)
+{
+    const auto whole = static_cast<std::uint64_t>(value < 0 ? -value : value);
+    std::string frac = std::to_string(whole % 1000);
+    while (frac.size() < 3)
+        frac.insert(frac.begin(), '0');
+    return (value < 0 ? "-" : "") + std::to_string(whole / 1000) + "," + frac + " m";
+}
 
 /// The polyline behind one id, its vertices and its ring's role.
 bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
@@ -208,7 +225,13 @@ Task<void> run_corner(Context& ctx, bool fillet)
     ctx.record("nesne", Value::ids({id}));
     ctx.record("nokta", Value::point(*at_pt));
     ctx.record(fillet ? "yaricap" : "mesafe", Value::number(*size));
-    ctx.echo(fillet ? "Köşe yuvarlatıldı." : "Köşeye pah kırıldı.");
+    if (cut.value().rounded)
+        ctx.echo("Köşe yuvarlatıldı (yarıçap " + metres_text(want) +
+                 "). Kapalı şeklin sınırı köşe noktalarından oluştuğu için yay " +
+                 std::to_string(cut.value().edges) + " kenarla çizildi; gerçek yaydan en çok " +
+                 std::to_string(cut.value().deviation) + " mm sapar.");
+    else
+        ctx.echo(fillet ? "Köşe yuvarlatıldı." : "Köşeye pah kırıldı.");
 }
 
 Task<void> run_chamfer(Context& ctx)

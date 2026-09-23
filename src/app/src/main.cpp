@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — application entry point.
 #include "kentos_cad/app/attribute_panel.hpp"
+#include "kentos_cad/app/command_line.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/layout_designer.hpp"
@@ -11,6 +12,7 @@
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/app/toolbox.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
@@ -30,9 +32,11 @@
 #define KENTOS_HAVE_BACKTRACE 0
 #endif
 
+#include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QCompleter>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -42,6 +46,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QLocale>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -1386,6 +1391,20 @@ int main(int argc, char** argv)
         later([hover] { hover({16'000, 0}); });
         later([&window, shot] { shot(QStringLiteral("14-yuvarla-onizleme"), &window); });
 
+        // AND A RECTANGLE'S CORNER, the one most often rounded: it used to be
+        // refused. The preview is the rounded ring, and the click rounds it in
+        // place — one object before, one after.
+        later([scene] { scene(QStringLiteral("DİKDÖRTGEN 0,0 20,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YUVARLA"));
+            window.runScriptLine(QStringLiteral("20,12"));
+        });
+        later([hover] { hover({15'000, 12'000}); });
+        later([&window, shot] { shot(QStringLiteral("14b-yuvarla-dikdortgen"), &window); });
+        later([&window] { window.runScriptLine(QStringLiteral("5")); });
+        later([&window] { window.cancelCommand(); });
+        later([&window, shot] { shot(QStringLiteral("14c-yuvarla-dikdortgen-sonuc"), &window); });
+
         // KÖŞETAŞI: the parcel with its corner on the cursor.
         later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
         later([&window] {
@@ -1503,6 +1522,85 @@ int main(int argc, char** argv)
         later([hover] { hover({8'000, 4'000}); });
         later([&window, shot] { shot(QStringLiteral("24-ofset-sol"), &window); });
         later([&window] { window.cancelCommand(); });
+
+        // RENK: the chips at the foot of the column paint. A parcel is selected,
+        // the fill chip pressed and its menu photographed over the window — the
+        // menu is a popup of its own, so it is composited in where it opened,
+        // on a frame grown to hold it when it hangs past the window's edge.
+        const auto chips = [&window]() -> kentos::app::ColourChips* {
+            const auto* box = window.findChild<kentos::app::ToolBox*>();
+            return box == nullptr ? nullptr : box->chips();
+        };
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ -4,-3 24,-3 24,16"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 21,13"));
+        });
+        later([chips] {
+            kentos::app::ColourChips* c = chips();
+            if (c == nullptr) return;
+            const QPointF at = QRectF(c->chipRect(1)).center();
+            QMouseEvent press(QEvent::MouseButtonPress, at, c->mapToGlobal(at), Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(c, &press);
+        });
+        // A POPUP IS A WINDOW OF ITS OWN, so a window grab leaves it out: it is
+        // painted in where it opened, on a frame grown to hold it when it hangs
+        // past the window's edge.
+        const auto with_popup = [&window, into](const QString& name, QWidget* popup) {
+            const QImage frame  = window_shot(&window);
+            const QPoint origin = window.mapToGlobal(QPoint(0, 0));
+            QRect whole(QPoint(0, 0), frame.size() / frame.devicePixelRatio());
+            QRect card;
+            if (popup != nullptr && popup->isVisible()) {
+                card  = QRect(popup->mapToGlobal(QPoint(0, 0)) - origin, popup->size());
+                whole = whole.united(card);
+            }
+            QImage out(whole.size() * frame.devicePixelRatio(), QImage::Format_ARGB32);
+            out.setDevicePixelRatio(frame.devicePixelRatio());
+            out.fill((window.themeMode() == kentos::app::ThemeMode::Dark
+                          ? kentos::app::darkTokens()
+                          : kentos::app::lightTokens())
+                         .bgApp);
+            QPainter paint(&out);
+            paint.drawImage(-whole.topLeft(), frame);
+            if (!card.isNull()) paint.drawPixmap(card.topLeft() - whole.topLeft(), popup->grab());
+            paint.end();
+            const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
+            (void)std::fprintf(out.save(path) ? stdout : stderr, "[kentos] %s\n", qPrintable(path));
+        };
+        later([&window, with_popup] {
+            auto* menu = window.findChild<QMenu*>(QStringLiteral("colourMenu.fill"));
+            with_popup(QStringLiteral("25-renk-menusu"), menu);
+            if (menu != nullptr) menu->close();
+        });
+        // The pick the menu makes, and one the command line makes: the parcel
+        // green, the line red, and the chips showing the parcel's colours.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("RENK dolgu=yeşil renk=mavi"));
+            window.runScriptLine(QStringLiteral("RENK nesneler=2 renk=kırmızı"));
+        });
+        later([&window, shot] { shot(QStringLiteral("26-renk-uygulandi"), &window); });
+
+        // AND THE MENU ROW'S ROAD, with nothing selected: RENK asks for the
+        // objects, then for the colour — with the colour words offered beside
+        // the command line, so a click answers it.
+        later([&window] {
+            window.cancelCommand();
+            window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            window.runScriptLine(QStringLiteral("RENK"));
+        });
+        later([&window] { window.controller()->supplyObjects({1}); });
+        later([&window, with_popup] {
+            auto* line    = window.findChild<kentos::app::CommandLine*>();
+            QWidget* list = line != nullptr && line->completer() != nullptr
+                                ? line->completer()->popup()
+                                : nullptr;
+            with_popup(QStringLiteral("27-renk-komut-satiri"), list);
+        });
+        later([&window] { window.runScriptLine(QStringLiteral("mavi")); });
+        later([&window, shot] { shot(QStringLiteral("28-renk-mavi"), &window); });
 
         later([] { QApplication::exit(0); });
     }

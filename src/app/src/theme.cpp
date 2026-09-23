@@ -485,6 +485,23 @@ QString themeStyleSheet(ThemeMode mode)
         QComboBox#fieldCombo QAbstractItemView#comboPopup::item:selected {
                                            background: %(hoverRow)s; color: %(text)s; }
 
+        /* The words a waiting command offers, opened from the command line: the
+         * shell's list, as the combo popup above draws it — panel ground, 26 px
+         * rows, the hover wash — so an answer offered by a prompt looks like an
+         * answer offered anywhere else. */
+        /* NO PADDING on the list itself: the completer sizes its popup from the
+         * rows alone, and four pixels round them was a scroll bar on a list that
+         * held every word it had. */
+        QListView#commandChoices         { background: %(panel)s; color: %(text)s;
+                                           border: 1px solid %(border)s; padding: 0px;
+                                           outline: none; selection-background-color: transparent;
+                                           selection-color: %(text)s; }
+        QListView#commandChoices::item   { min-height: 26px; padding: 0px 10px; border: none;
+                                           border-radius: 3px; color: %(text)s; }
+        QListView#commandChoices::item:hover,
+        QListView#commandChoices::item:selected {
+                                           background: %(hoverRow)s; color: %(text)s; }
+
         /* The data-defined mark of the style designer, §8: a `{ }` at the end of a
          * property row, lit in the accent when a column drives the property. */
         QToolButton#bindMark             { background: transparent; border: 1px solid transparent;

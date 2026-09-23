@@ -38,6 +38,22 @@ bir çifttir. Aynı noktayı iki kez işaretlemek bir kez işaretlemektir: bir k
 alıp uzaklaşıp geri dönmek bir iz demektir, ve iki özdeş işaretin kesişimi
 işaretin kendisi olurdu.
 
+### İşaretler hizmet ettikleri komutla gider
+
+Bir işaret, **o sırada çalışan komut için** konur: `ÇİZGİ`'nin ortasında konan
+işaretler o çizgi bitince — tamamlandığında, reddedildiğinde ya da Esc ile
+bırakıldığında — silinir. Hiçbir komut çalışmıyorken konan işaretler **sıradaki
+komutu** bekler ve o komut bitince silinir. Yeni bir çizim ([`YENİ`](new.md))
+eskisinin işaretlerini hiçbir zaman devralmaz.
+
+`İZ` kendisi ve [`YAKINLAŞ`](zoom.md) gibi **şeffaf** komutlar çalışan komutun
+yanında koşar; işaretlere dokunmazlar. Satırı daha çalışmadan reddedilen bir komut
+(örneğin var olmayan bir nesne kimliği) bir şey yapmamıştır; işaretler yerinde
+kalır.
+
+Komut çalışmıyorken **Esc** işaretleri de siler; bunu `İZ sil=evet` ile yapar ve
+kaç işaret silindiğini söyler.
+
 ### Yazılı karşılığı zaten vardı
 
 Aynı noktayı tek satırda yazmak için nokta fonksiyonu `xy(P,Q)` kullanılır
@@ -152,7 +168,8 @@ F3 listesinde **izleme** olarak görünür.
 Geri alınacak bir şey yoktur. Bir işaret **oturum durumudur**: belgeye girmez,
 günlüğe düşmez, geri alma adımı yemez. Bir işaret iskeledir.
 
-`İZ sil=evet` işaretleri temizler.
+`İZ sil=evet` işaretleri temizler; hizmet ettikleri komut bitince de kendiliğinden
+silinirler (yukarıda).
 
 ## Betikten kullanım
 

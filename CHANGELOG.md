@@ -6,6 +6,44 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — RENK: renk kutuları boyuyor
+
+Araç kutusunun altındaki iki renk kutusu "RENK komutu Faz 2" diyordu. Artık
+[`RENK`](docs/komutlar/colour.md) (`core.colour`) seçili nesnelerin çizgi ve dolgu
+rengini değiştiriyor: `#RRGGBB`, `#AARRGGBB`, dokuz renk adı (`kırmızı`, `mavi`, …),
+`katman` (katmanın rengine dönüş) ve dolgu için `yok`. Kutular seçili nesnenin — seçim
+yoksa etkin katmanın — renklerini gösteriyor; tıklamak renk örnekleri, **Başka bir
+renk…**, **Katmanın rengi** ve **Dolgu yok** içeren bir menü açıyor. Seçim yoksa
+komut boyanacak nesneleri soruyor. Dolgu, bir dolgu katmanıyla boyanıyor (düz bir
+çizginin dolgu değeri çizilmiyordu); çok katmanlı sembollerde rengi kilitli katmanlar
+korunuyor; özellikleri yeniden katmanınkiyle aynı olan nesne katmanını izlemeye
+dönüyor. Komut **Değiştir → Renk** menüsünde ve Stil Kopyala ailesinde de var.
+
+### Düzeltildi — YUVARLA dikdörtgen ve alan köşesinde çalışıyor
+
+Kapalı bir şeklin (dikdörtgen, alan, kapalı çizgi) köşesi "Kapalı bir alanın köşesi
+yuvarlatılamaz" diye reddediliyordu; fareyle en çok yuvarlatılan köşe buydu. Artık köşe
+yerinde yuvarlatılıyor: şekil aynı nesne kalıyor (kimlik, öznitelik, bağlı yazılar),
+alan olmaya devam ediyor ve yay, YAY'ın çizildiği noktalarla sınıra işleniyor; komut
+gerçek yaydan en çok kaç mm saptığını söylüyor. Önizleme imlecin yanında
+`yarıçap 5 m` yazıyor.
+
+### Düzeltildi — İZ işaretleri artık kalıcı değil
+
+İki izleme işareti bir kez konunca oturum boyunca, `YENİ`'den sonra bile, bütün
+çizimlerin üstünde izlerini çiziyordu. İşaretler artık hizmet ettikleri komut
+bitince siliniyor; hiçbir komut çalışmıyorken konanlar sıradaki komutla gidiyor ve
+boşta Esc onları da siliyor.
+
+### Düzeltildi — komut satırındaki seçenekler liste olarak geliyor
+
+Seçenek sunan bir istemde (renk, katman adı, …) ilk seçenek satıra seçili yazılıyor,
+soruyu gizliyor ve Enter'a basan kullanıcı vermediği bir cevabı veriyordu. Artık
+seçenekler komutun sırasıyla, temaya uygun bir listede duruyor; bir seçeneğe tıklamak
+cevap, yazmak listeyi daraltıyor; renk adlarının yanında renk örneği var. Liste
+kapanınca klavye yeniden komut satırında. Böyle bir soruda tuvale tıklamak da artık boş
+bir cevap sayılmıyor: soru açık kalıyor ve cevabın yazılması ya da seçilmesi isteniyor.
+
 ### Eklendi — TAMPON: iki yanlı GIS tamponu, ayrı bir araç olarak
 
 [`TAMPON`](docs/komutlar/tampon.md) (`islem.tampon`, Araçlar ▸ Analiz ▸ Tampon bölge)

@@ -97,6 +97,7 @@ enum class Glyph {
     MeasureArea,
     Coordinate,
     StyleCopy,
+    Colour, ///< a tipped bucket and its drop: RENK, the chips' command
     Topology,
 
     // ---- the component standard, `bileşen_standardı.png` ----------------------

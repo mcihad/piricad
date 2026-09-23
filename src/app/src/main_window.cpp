@@ -39,7 +39,9 @@
 #include "kentos_cad/render/backend.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/selection.hpp"
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
@@ -57,6 +59,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QDir>
 #include <QDockWidget>
@@ -88,6 +91,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QWidgetAction>
 
 namespace kentos::app {
 
@@ -303,6 +307,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::selectionChanged, this, [this] {
         attributePanel_->refresh();
         if (toolsPanel_ != nullptr) toolsPanel_->refresh();
+        refreshColourChips();
 
         // Picking a parcel on the map and then hunting for its layer in a list of
         // forty is work the program can do. Only when the whole selection agrees:
@@ -1027,6 +1032,12 @@ void MainWindow::buildActions()
 
     actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
+    // THE CHIPS' COMMAND, ON A ROW OF ITS OWN TOO. The chips are the quick road
+    // for a hand; this is the one a keyboard and a menu reach, and it asks for
+    // the colour on the command line with the colour words offered beside it.
+    actColour_ = modifyTool(Glyph::Colour, tr("Renk"), QStringLiteral("RENK"),
+                            tr("RENK — seçili nesnelerin çizgi ve dolgu rengini değiştirir; katman "
+                               "yazılırsa katmanın rengine döner"));
     // NOT a `modifyTool`: the check runs on the whole drawing when nothing is
     // selected, and refusing an empty selection would refuse its most useful form.
     actTopology_ = new QAction(tr("Topoloji Denetimi"), this);
@@ -1599,6 +1610,7 @@ void MainWindow::buildMenus()
     modify->addSeparator();
     modify->addAction(actSetLayer_);
     modify->addAction(actStyleCopy_);
+    modify->addAction(actColour_);
     modify->addSeparator();
     modify->addAction(actOffset_);
     modify->addSeparator();
@@ -2070,13 +2082,153 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // helpers
-    toolBox_->addFamily({actStyleCopy_, actSetLayer_});
+    toolBox_->addFamily({actStyleCopy_, actColour_, actSetLayer_});
     toolBox_->addTool(actTopology_);
 
-    connect(toolBox_->chips(), &ColourChips::chipActivated, this, [this](int which) {
-        onEcho(which == 0 ? tr("Çizim rengi: katmanın rengi geçerlidir. RENK komutu Faz 2.")
-                          : tr("Dolgu rengi: katmanın dolgusu geçerlidir. RENK komutu Faz 2."));
+    // THE CHIPS PAINT. They answered "RENK komutu Faz 2" for as long as they
+    // existed; a press now opens the colours beside the chip and a pick runs
+    // RENK on what is selected — or, with nothing selected, RENK asks for it.
+    connect(toolBox_->chips(), &ColourChips::chipActivated, this, &MainWindow::openColourMenu);
+    refreshColourChips();
+}
+
+void MainWindow::refreshColourChips()
+{
+    if (toolBox_ == nullptr) return;
+    const core::Document& doc = controller_->document();
+
+    core::EntityId first = core::kNoEntity;
+    int held             = 0;
+    for (const core::EntityKey k : controller_->bus().selection().keys()) {
+        const core::EntityId e = doc.slot_of(k);
+        if (e == core::kNoEntity || !doc.alive(e)) continue;
+        if (first == core::kNoEntity) first = e;
+        ++held;
+    }
+
+    // WHAT IS DRAWN, the way the scene draws it: an object's own style, or its
+    // layer's when it inherits (`core::drawn_symbol`).
+    const core::Symbol sym = first != core::kNoEntity
+                                 ? core::drawn_symbol(doc, first)
+                                 : core::layer_symbol(doc, controller_->bus().active_layer());
+    // THE FILL CHIP SHOWS WHAT IS PAINTED. The scene fills a face only from a
+    // fill layer, so the fill colour a plain line carries is drawn nowhere and
+    // showing it would put a colour on the chip that is not on the sheet.
+    const std::uint32_t stroke = sym.primary().rgba;
+    std::uint32_t fill         = 0;
+    for (const core::SymbolLayer& l : sym.layers)
+        if (l.enabled && core::draws_fill(l.type)) {
+            fill = l.look.fill_rgba;
+            break;
+        }
+
+    ColourChips* chips = toolBox_->chips();
+    chips->setColours(QColor::fromRgba(stroke), fill != 0 ? QColor::fromRgba(fill) : QColor());
+
+    const auto named = [](std::uint32_t rgba) {
+        const std::string_view word = command::colour_word(rgba);
+        const QString hex           = QString::fromStdString(command::colour_hex(rgba));
+        return word.empty()
+                   ? hex
+                   : QStringLiteral("%1 %2").arg(
+                         QString::fromUtf8(word.data(), static_cast<qsizetype>(word.size())), hex);
+    };
+    const QString fillSaid = fill != 0 ? named(fill) : tr("yok");
+    if (held > 0) {
+        chips->setDescriptions(
+            tr("Çizgi rengi: %1 (seçili nesnenin). Tıklayın: seçili %n nesnenin çizgi rengini "
+               "değiştirin.",
+               nullptr, held)
+                .arg(named(stroke)),
+            tr("Dolgu rengi: %1 (seçili nesnenin). Tıklayın: seçili %n nesnenin dolgu rengini "
+               "değiştirin.",
+               nullptr, held)
+                .arg(fillSaid));
+    } else {
+        chips->setDescriptions(
+            tr("Çizgi rengi: %1 (etkin katmanın). Tıklayın: bir renk seçin, sonra boyanacak "
+               "nesnelere tıklayın.")
+                .arg(named(stroke)),
+            tr("Dolgu rengi: %1 (etkin katmanın). Tıklayın: bir renk seçin, sonra boyanacak "
+               "nesnelere tıklayın.")
+                .arg(fillSaid));
+    }
+}
+
+void MainWindow::openColourMenu(int which)
+{
+    const bool fill = which == 1;
+    int held        = 0;
+    for (const core::EntityKey k : controller_->bus().selection().keys())
+        if (const core::EntityId e = controller_->document().slot_of(k);
+            e != core::kNoEntity && controller_->document().alive(e))
+            ++held;
+
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    menu->setObjectName(fill ? QStringLiteral("colourMenu.fill")
+                             : QStringLiteral("colourMenu.stroke"));
+    menu->setAccessibleName(fill ? tr("Dolgu rengi") : tr("Çizgi rengi"));
+
+    // WHAT A PICK WILL PAINT, said before it is made: with a selection it is
+    // the selection, and without one the next thing RENK does is ask.
+    QString heading;
+    if (held > 0)
+        heading = fill ? tr("Seçili %n nesnenin dolgu rengi", nullptr, held)
+                       : tr("Seçili %n nesnenin çizgi rengi", nullptr, held);
+    else
+        heading = fill ? tr("Dolgu rengi — seçin, sonra nesnelere tıklayın")
+                       : tr("Çizgi rengi — seçin, sonra nesnelere tıklayın");
+    menu->addAction(heading)->setEnabled(false);
+
+    // THE SWATCHES ARE RENK'S OWN WORDS (`command::named_colours`): a colour
+    // picked here is the colour `RENK renk=kırmızı` paints, by construction.
+    QVector<SwatchRow::Swatch> swatches;
+    for (const command::NamedColour& n : command::named_colours())
+        swatches.push_back(
+            {QColor::fromRgba(n.rgba),
+             QString::fromUtf8(n.word.data(), static_cast<qsizetype>(n.word.size()))});
+    auto* row = new SwatchRow(swatches, menu);
+    row->applyTheme(theme_);
+    auto* host = new QWidgetAction(menu);
+    host->setDefaultWidget(row);
+    menu->addAction(host);
+    connect(row, &SwatchRow::picked, this, [this, menu, fill, swatches](int i) {
+        menu->close();
+        applyColour(fill, swatches[i].name);
     });
+
+    menu->addSeparator();
+    // THE DIALOG OPENS ON THE COLOUR THE CHIP SHOWS, so "a little darker" is a
+    // nudge and not a search from black.
+    const QColor shown   = toolBox_->chips()->colour(which);
+    const QAction* other = menu->addAction(tr("Başka bir renk…"));
+    connect(other, &QAction::triggered, this, [this, fill, shown] {
+        const QColor picked =
+            QColorDialog::getColor(shown, this, fill ? tr("Dolgu rengi") : tr("Çizgi rengi"),
+                                   QColorDialog::ShowAlphaChannel);
+        if (!picked.isValid()) return;
+        applyColour(fill, QString::fromStdString(command::colour_hex(picked.rgba())));
+    });
+    const QAction* layer = menu->addAction(fill ? tr("Katmanın dolgusu") : tr("Katmanın rengi"));
+    connect(layer, &QAction::triggered, this,
+            [this, fill] { applyColour(fill, QStringLiteral("katman")); });
+    if (fill) {
+        const QAction* none = menu->addAction(tr("Dolgu yok"));
+        connect(none, &QAction::triggered, this,
+                [this] { applyColour(true, QStringLiteral("yok")); });
+    }
+
+    // BESIDE THE CHIP, the way the family cards open beside their buttons.
+    const ColourChips* chips = toolBox_->chips();
+    menu->popup(chips->mapToGlobal(ColourChips::chipRect(which).topRight() + QPoint(8, 0)));
+}
+
+void MainWindow::applyColour(bool fill, const QString& word)
+{
+    controller_->runCommand(
+        QStringLiteral("RENK %1=%2")
+            .arg(fill ? QStringLiteral("dolgu") : QStringLiteral("renk"), word));
 }
 
 void MainWindow::buildPanels()
@@ -4195,6 +4347,74 @@ int MainWindow::probeRealMouse()
         }
     }
 
+    // ---- 7. CORNERS, BY HAND: PAH and YUVARLA ---------------------------------
+    //
+    // The report: "köşe yuvarla mouse ile çalışmıyor". Each tool is pressed as
+    // the column presses it, the corner CLICKED through the hit test and the
+    // size SHOWN with a second click — every step the way a hand takes it — on
+    // an open line and on a closed parcel, the two shapes a corner is cut on.
+    {
+        const auto screen = [this](core::Point2 world) {
+            const auto at = canvas_->view().to_screen(world);
+            return QPointF(at.x, at.y);
+        };
+        const auto click = [&onCanvas](QPointF at) {
+            onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+        };
+        const auto lastSaid = [this] {
+            const QStringList lines = transcript_->toPlainText().split(QLatin1Char('\n'));
+            return lines.isEmpty() ? QString() : lines.back();
+        };
+        const auto byHand = [&](QAction* tool, const QString& shape, core::Point2 corner,
+                                core::Point2 shown, const QString& what) {
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+            runScriptLine(QStringLiteral("SİL"));
+            runScriptLine(shape);
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+
+            const std::uint64_t revision = controller_->document().revision();
+            tool->trigger();
+            QCoreApplication::processEvents();
+            click(screen(corner));
+
+            const command::Session* live = controller_->session();
+            const QString asked          = live != nullptr && live->waiting()
+                                               ? QString::fromStdString(live->prompt().message)
+                                               : QString();
+            check(asked.contains(QStringLiteral("metre")),
+                  QStringLiteral("%1: köşeye tıklayınca boyut soruluyor (istem: \"%2\", son söz: "
+                                 "\"%3\")")
+                      .arg(what, asked, lastSaid()));
+            if (asked.isEmpty()) return;
+
+            click(screen(shown));
+            QCoreApplication::processEvents();
+            check(controller_->document().revision() != revision,
+                  QStringLiteral("%1: gösterilen boyutla köşe kesildi (son söz: \"%2\")")
+                      .arg(what, lastSaid()));
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+        };
+
+        byHand(actFillet_, QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12"), {20'000, 0}, {17'000, 0},
+               QStringLiteral("YUVARLA, açık çizgi"));
+        byHand(actFillet_, QStringLiteral("ALAN 0,0 20,0 20,12 0,12"), {20'000, 12'000},
+               {17'000, 12'000}, QStringLiteral("YUVARLA, kapalı alan"));
+        byHand(actFillet_, QStringLiteral("DİKDÖRTGEN 0,0 20,12"), {20'000, 12'000},
+               {17'000, 12'000}, QStringLiteral("YUVARLA, dikdörtgen"));
+        byHand(actChamfer_, QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12"), {20'000, 0}, {17'000, 0},
+               QStringLiteral("PAH, açık çizgi"));
+        byHand(actChamfer_, QStringLiteral("ALAN 0,0 20,0 20,12 0,12"), {20'000, 12'000},
+               {17'000, 12'000}, QStringLiteral("PAH, kapalı alan"));
+    }
+
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
 }
@@ -5416,6 +5636,7 @@ void MainWindow::onDocumentChanged()
     layerPanel_->refresh();
     attributePanel_->refresh();
     refreshStatus();
+    refreshColourChips();
 
     // Mirroring the journal keeps the architecture visible while using the program.
     journalView_->clear();

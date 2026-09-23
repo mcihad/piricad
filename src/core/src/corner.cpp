@@ -2,9 +2,11 @@
 // KentOSCad — core: cutting a corner off a run. See corner.hpp.
 #include "kentos_cad/core/corner.hpp"
 
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -146,27 +148,6 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
         return cut;
     }
 
-    // A FILLET BREAKS THE LINE IN TWO, and it has to: both tangent points in one
-    // run would draw a straight chord between them AND the arc over it — a lens
-    // where a rounded corner should be. A CLOSED ring therefore cannot be
-    // filleted: the result would be a boundary made partly of a curve, and
-    // producing an open line where a parcel used to be would quietly destroy the
-    // face.
-    if (closed)
-        return err(ErrorCode::Unsupported,
-                   "Kapalı bir alanın köşesi yuvarlatılamaz: sonuç bir kısmı yay olan bir "
-                   "sınır olurdu ve bu belge modelinde halka köşe noktalarından oluşur. "
-                   "Düz kenarla kesmek için PAH kullanın.");
-
-    cut.kept.assign(run.begin(), run.begin() + static_cast<std::ptrdiff_t>(at));
-    cut.kept.push_back(cut.cut_a);
-    cut.second.push_back(cut.cut_b);
-    cut.second.insert(cut.second.end(), run.begin() + static_cast<std::ptrdiff_t>(at) + 1,
-                      run.end());
-    if (cut.kept.size() < 2 || cut.second.size() < 2)
-        return err(ErrorCode::InvalidArgument,
-                   "Bu köşe yuvarlatılınca kenarlardan biri tek noktaya iniyor.");
-
     // The arc's centre sits on the bisector, at r / sin(theta/2) from the vertex.
     // The half-angle sine comes from cos theta by identity, so there is still no
     // trigonometric call anywhere here.
@@ -182,7 +163,6 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
         return len > 0.0 ? Unit{bx / len, by / len} : Unit{};
     }();
 
-    cut.arc    = true;
     cut.radius = size;
     cut.centre = along(v, bis, mm_round(static_cast<double>(size) / half_sin));
     // THE SWEEP IS COUNTER-CLOCKWISE from the first end to the second
@@ -190,6 +170,68 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
     // the corner turns.
     cut.start = cr > 0.0 ? cut.cut_b : cut.cut_a;
     cut.end   = cr > 0.0 ? cut.cut_a : cut.cut_b;
+
+    if (closed) {
+        // A CLOSED RING IS ROUNDED IN PLACE. It cannot be broken in two the way
+        // an open line is — a parcel turned into two lines and an arc encloses
+        // nothing — and a ring here is made of corners (model.md R9-R12), so
+        // the arc is drawn INTO it: the two tangent points and, between them,
+        // the points `arc_outline` draws the same arc with, the routine a YAY is
+        // drawn by. The object stays the object it was — its key, its
+        // attributes, whatever is attached to it — and stays a face, which is
+        // what an ifraz, an area and a buffer need. How far the drawn corner
+        // strays from the true arc is measured and handed back (`deviation`),
+        // so the command can say it rather than hide it.
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        arc_outline(cut.centre, cut.radius, cut.start, cut.end, xs, ys);
+        std::vector<Point2> bend;
+        bend.reserve(xs.size());
+        for (std::size_t i = 0; i < xs.size(); ++i)
+            bend.push_back(Point2{xs[i], ys[i]});
+        // In the RING'S order, from the tangent point toward the previous vertex
+        // to the one toward the next: the arc is counter-clockwise, the ring may
+        // not be.
+        if (cr > 0.0) std::ranges::reverse(bend);
+        if (bend.size() < 2) return err(ErrorCode::InvalidArgument, "Bu köşenin yayı çizilemiyor.");
+        bend.front() = cut.cut_a; // the ends ARE the tangent points, exactly
+        bend.back()  = cut.cut_b;
+
+        cut.kept.reserve(run.size() + bend.size());
+        for (std::size_t i = 0; i < run.size(); ++i) {
+            if (i == at)
+                cut.kept.insert(cut.kept.end(), bend.begin(), bend.end());
+            else
+                cut.kept.push_back(run[i]);
+        }
+
+        // THE WORST CHORD: the midpoint of each drawn edge against the circle.
+        for (std::size_t i = 0; i + 1 < bend.size(); ++i) {
+            const double mx = (mm_to_metres(bend[i].x) + mm_to_metres(bend[i + 1].x)) * 0.5 -
+                              mm_to_metres(cut.centre.x);
+            const double my = (mm_to_metres(bend[i].y) + mm_to_metres(bend[i + 1].y)) * 0.5 -
+                              mm_to_metres(cut.centre.y);
+            const Mm inside = cut.radius - mm_round(std::sqrt(mx * mx + my * my) *
+                                                    static_cast<double>(kMmPerMetre));
+            cut.deviation   = std::max(cut.deviation, inside);
+        }
+        cut.rounded = true;
+        cut.edges   = bend.size() - 1;
+        return cut;
+    }
+
+    // AN OPEN LINE BREAKS IN TWO, and it has to: both tangent points in one run
+    // would draw a straight chord between them AND the arc over it — a lens
+    // where a rounded corner should be. The arc is its own object between them.
+    cut.kept.assign(run.begin(), run.begin() + static_cast<std::ptrdiff_t>(at));
+    cut.kept.push_back(cut.cut_a);
+    cut.second.push_back(cut.cut_b);
+    cut.second.insert(cut.second.end(), run.begin() + static_cast<std::ptrdiff_t>(at) + 1,
+                      run.end());
+    if (cut.kept.size() < 2 || cut.second.size() < 2)
+        return err(ErrorCode::InvalidArgument,
+                   "Bu köşe yuvarlatılınca kenarlardan biri tek noktaya iniyor.");
+    cut.arc = true;
     return cut;
 }
 

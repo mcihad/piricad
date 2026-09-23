@@ -2126,6 +2126,17 @@ void MapCanvas::buildOverlay()
                         doc.geometry().ring_role[span.first] != core::RingRole::Open;
                     const core::Mm size =
                         core::segment_length(session->prompt().rubber_origin, cursorWorld());
+                    // WHAT THE CLICK WILL ANSWER, named: the radius or the cut,
+                    // not a length and a bearing — the bearing of the cursor from
+                    // the corner answers nothing this prompt asks.
+                    if (look_.dynamic_input && size > 0) {
+                        const render::ScreenPointF c = toScreenF(to);
+                        const std::string text = (decoded.value().fillet ? "yarıçap " : "pah ") +
+                                                 trimmed(static_cast<double>(size) / 1000.0, 3) +
+                                                 " m";
+                        addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                        guide_label_ = text;
+                    }
                     if (auto cut = core::cut_corner(run, closed, decoded.value().at, size,
                                                     decoded.value().fillet)) {
                         const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
@@ -2390,7 +2401,8 @@ void MapCanvas::buildOverlay()
         if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
             shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates &&
             shape != command::RubberShape::Angle && shape != command::RubberShape::MeasureRun &&
-            shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel) {
+            shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
+            shape != command::RubberShape::Corner) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point
@@ -3064,6 +3076,14 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             args.set("mod", command::Value::text("TEMİZLE"));
             controller_.runInvocation(
                 command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+        }
+        // And the tracking marks made while nothing was running, the same way:
+        // through `İZ sil=evet`, which says how many it forgot.
+        if (!controller_.bus().tracking_marks().empty()) {
+            command::Args args;
+            args.set("sil", command::Value::boolean(true));
+            controller_.runInvocation(
+                command::Invocation{"core.tracking", std::move(args), command::Origin::Gui});
         }
         update();
         return;

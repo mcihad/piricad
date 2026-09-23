@@ -14,6 +14,7 @@
 #include <QApplication>
 #include <QFocusEvent>
 #include <QFontMetrics>
+#include <QHelpEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -21,6 +22,7 @@
 #include <QScreen>
 #include <QTimer>
 #include <QToolButton>
+#include <QToolTip>
 #include <QVBoxLayout>
 
 namespace kentos::app {
@@ -373,6 +375,10 @@ ColourChips::ColourChips(QWidget* parent) : QWidget(parent)
 {
     setFixedSize(kChip, kChip * 2 + kChipGap);
     setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::TabFocus);
+    setAccessibleName(tr("Çizgi ve dolgu rengi"));
+    setAccessibleDescription(tr("Yukarı/aşağı ok iki kutu arasında gezer; Enter ya da Boşluk "
+                                "odaktaki kutunun renk menüsünü açar"));
     setToolTip(tr("Çizim ve dolgu rengi"));
 }
 
@@ -383,6 +389,17 @@ void ColourChips::setColours(const QColor& stroke, const QColor& fill)
     update();
 }
 
+void ColourChips::setDescriptions(const QString& stroke, const QString& fill)
+{
+    strokeTip_ = stroke;
+    fillTip_   = fill;
+}
+
+QRect ColourChips::chipRect(int which)
+{
+    return {0, which == 0 ? 0 : kChip + kChipGap, kChip, kChip};
+}
+
 void ColourChips::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
@@ -390,26 +407,204 @@ void ColourChips::applyTheme(ThemeMode mode)
     update();
 }
 
-void ColourChips::paintEvent(QPaintEvent*)
+void ColourChips::paintEvent(QPaintEvent* /*event*/)
 {
     const Tokens& t = tokensOf(theme_);
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
 
-    const auto chip = [&](int top, const QColor& fill, const QColor& edge) {
-        const QRectF box(0.5, top + 0.5, kChip - 1, kChip - 1);
+    const auto chip = [&](int which, const QColor& fill, const QColor& edge) {
+        const QRectF box = QRectF(chipRect(which)).adjusted(0.5, 0.5, -0.5, -0.5);
         p.setBrush(fill.isValid() ? QBrush(fill) : QBrush(Qt::NoBrush));
         p.setPen(QPen(edge, 1.0));
         p.drawRoundedRect(box, 3.0, 3.0);
+
+        // NO FILL is a hollow chip crossed by one diagonal, the mark a CAD
+        // palette has always used; hollow alone reads as "not loaded yet".
+        if (!fill.isValid()) p.drawLine(box.bottomLeft(), box.topRight());
     };
 
     chip(0, stroke_.isValid() ? stroke_ : t.accent, t.accentHi);
-    chip(kChip + kChipGap, fill_, t.border);
+    chip(1, fill_, t.border);
+
+    if (hasFocus()) {
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(t.accentEdge, 1.5));
+        p.drawRoundedRect(QRectF(chipRect(focused_)).adjusted(1.5, 1.5, -1.5, -1.5), 2.0, 2.0);
+    }
 }
 
 void ColourChips::mousePressEvent(QMouseEvent* event)
 {
-    emit chipActivated(event->position().y() < kChip ? 0 : 1);
+    focused_ = event->position().y() < kChip ? 0 : 1;
+    emit chipActivated(focused_);
+}
+
+void ColourChips::keyPressEvent(QKeyEvent* event)
+{
+    switch (event->key()) {
+    case Qt::Key_Up:
+    case Qt::Key_Down:
+        focused_ = event->key() == Qt::Key_Up ? 0 : 1;
+        update();
+        return;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    case Qt::Key_Space: emit chipActivated(focused_); return;
+    default: QWidget::keyPressEvent(event);
+    }
+}
+
+bool ColourChips::event(QEvent* event)
+{
+    // EACH CHIP SAYS ITS OWN THING: the colour it shows, whose it is and what a
+    // press does. One tooltip for the pair could only say that they are colours.
+    if (event->type() == QEvent::ToolTip) {
+        const auto* help   = static_cast<QHelpEvent*>(event);
+        const bool upper   = help->pos().y() < kChip;
+        const QString said = upper ? strokeTip_ : fillTip_;
+        if (!said.isEmpty()) {
+            QToolTip::showText(help->globalPos(), said, this, chipRect(upper ? 0 : 1));
+            return true;
+        }
+    }
+    return QWidget::event(event);
+}
+
+// =============================================================================
+// SwatchRow
+// =============================================================================
+
+namespace {
+constexpr int kSwatch    = 20; ///< one swatch, square
+constexpr int kSwatchGap = 5;
+constexpr int kSwatchPad = 10; ///< air round the row, matching a menu row's inset
+} // namespace
+
+SwatchRow::SwatchRow(QVector<Swatch> swatches, QWidget* parent)
+    : QWidget(parent), swatches_(std::move(swatches))
+{
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+    setCursor(Qt::PointingHandCursor);
+    setAccessibleName(tr("Renkler"));
+    setAccessibleDescription(tr("Sol/sağ ok renkler arasında gezer; Enter ya da Boşluk seçer"));
+}
+
+QSize SwatchRow::sizeHint() const
+{
+    const int n = static_cast<int>(swatches_.size());
+    return {kSwatchPad * 2 + n * kSwatch + std::max(0, n - 1) * kSwatchGap,
+            kSwatchPad + kSwatch + kSwatchPad / 2};
+}
+
+void SwatchRow::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+QRectF SwatchRow::swatchRect(int index)
+{
+    return {static_cast<qreal>(kSwatchPad + index * (kSwatch + kSwatchGap)),
+            static_cast<qreal>(kSwatchPad) / 2.0, static_cast<qreal>(kSwatch),
+            static_cast<qreal>(kSwatch)};
+}
+
+int SwatchRow::swatchAt(QPointF at) const
+{
+    for (int i = 0; i < swatches_.size(); ++i)
+        if (swatchRect(i).contains(at)) return i;
+    return -1;
+}
+
+void SwatchRow::moveTo(int index)
+{
+    if (swatches_.isEmpty()) return;
+    focus_ = std::clamp(index, 0, static_cast<int>(swatches_.size()) - 1);
+    update();
+
+    // A SCREEN READER HEARS THE COLOUR, not "Renkler" nine times over.
+    setAccessibleName(swatches_[focus_].name);
+    QAccessibleEvent moved(this, QAccessible::NameChanged);
+    QAccessible::updateAccessibility(&moved);
+}
+
+void SwatchRow::paintEvent(QPaintEvent* /*event*/)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    for (int i = 0; i < swatches_.size(); ++i) {
+        const QRectF box = swatchRect(i).adjusted(0.5, 0.5, -0.5, -0.5);
+        p.setBrush(swatches_[i].colour);
+        p.setPen(QPen(t.border, 1.0));
+        p.drawRoundedRect(box, 3.0, 3.0);
+
+        // Under the pointer, and where the keyboard is: a ring OUTSIDE the
+        // swatch, so the colour itself is never covered by the mark.
+        const bool keyed = hasFocus() && i == focus_;
+        if (i == hover_ || keyed) {
+            p.setBrush(Qt::NoBrush);
+            p.setPen(QPen(keyed ? t.accentEdge : t.text, 1.5));
+            p.drawRoundedRect(box.adjusted(-2.5, -2.5, 2.5, 2.5), 4.5, 4.5);
+        }
+    }
+}
+
+void SwatchRow::mouseMoveEvent(QMouseEvent* event)
+{
+    const int at = swatchAt(event->position());
+    if (at != hover_) {
+        hover_ = at;
+        update();
+    }
+}
+
+void SwatchRow::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton) return;
+    if (const int at = swatchAt(event->position()); at >= 0) emit picked(at);
+}
+
+void SwatchRow::leaveEvent(QEvent* /*event*/)
+{
+    hover_ = -1;
+    update();
+}
+
+void SwatchRow::keyPressEvent(QKeyEvent* event)
+{
+    switch (event->key()) {
+    case Qt::Key_Left: moveTo(focus_ - 1); return;
+    case Qt::Key_Right: moveTo(focus_ + 1); return;
+    case Qt::Key_Home: moveTo(0); return;
+    case Qt::Key_End: moveTo(static_cast<int>(swatches_.size()) - 1); return;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    case Qt::Key_Space:
+        if (!swatches_.isEmpty()) emit picked(focus_);
+        return;
+    default:
+        // Up and Down belong to the menu the row sits in.
+        event->ignore();
+    }
+}
+
+bool SwatchRow::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTip) {
+        const auto* help = static_cast<QHelpEvent*>(event);
+        if (const int at = swatchAt(help->pos()); at >= 0) {
+            QToolTip::showText(help->globalPos(), swatches_[at].name, this,
+                               swatchRect(at).toAlignedRect());
+            return true;
+        }
+        QToolTip::hideText();
+        return true;
+    }
+    return QWidget::event(event);
 }
 
 // =============================================================================

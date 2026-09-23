@@ -54,6 +54,7 @@ namespace kentos::command {
     X(fillet)                                                                                      \
     X(set_layer)                                                                                   \
     X(match_style)                                                                                 \
+    X(colour)                                                                                      \
     X(rotate)                                                                                      \
     X(scale)                                                                                       \
     X(mirror)                                                                                      \

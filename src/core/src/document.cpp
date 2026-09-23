@@ -1407,4 +1407,28 @@ Status Document::apply(const Op& op, Op* undo_out)
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }
 
+Symbol layer_symbol(const Document& doc, LayerId layer)
+{
+    const Layer* l = doc.layer_table().at(layer);
+    if (l == nullptr) return Symbol::of(Appearance{});
+    if (l->style != kByLayerStyle && doc.styles().contains(l->style)) {
+        Symbol stack = doc.styles().symbol_at(l->style);
+        if (!stack.layers.empty()) return stack;
+    }
+    return Symbol::of(l->appearance);
+}
+
+Symbol drawn_symbol(const Document& doc, EntityId e)
+{
+    const StyleId own = doc.entities().style[e];
+    if (own == kByLayerStyle || !doc.styles().contains(own))
+        return layer_symbol(doc, doc.entities().layer[e]);
+
+    // An id interned as a bare appearance reports a one-layer stack; one that
+    // somehow reports none is drawn from its appearance, as the scene does.
+    Symbol stack = doc.styles().symbol_at(own);
+    if (stack.layers.empty()) return Symbol::of(doc.styles().at(own));
+    return stack;
+}
+
 } // namespace kentos::core

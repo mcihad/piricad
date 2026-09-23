@@ -88,6 +88,7 @@ Tek tek komutlar:
 | `YUVARLA` | [Köşe yuvarlatma](komutlar/fillet.md) |
 | `KATMANAT` | [Nesneyi başka katmana taşıma](komutlar/set_layer.md) |
 | `STİLKOPYALA` | [Stili başka nesneye uygulama](komutlar/match_style.md) |
+| `RENK` | [Nesnenin çizgi ve dolgu rengi](komutlar/colour.md) |
 | `STİLAKTAR` | [Stili QGIS'e aktarma](komutlar/exportstyle.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |
 | `SÜTUN` | [Öznitelik sütunu tanımlama](komutlar/column.md) |

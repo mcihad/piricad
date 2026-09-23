@@ -16,12 +16,16 @@
 
 #include <functional>
 
+#include <QColor>
 #include <QRectF>
+#include <QString>
 #include <QVector>
 #include <QWidget>
 
 class QAction;
+class QEvent;
 class QFocusEvent;
+class QKeyEvent;
 class QToolButton;
 class QVBoxLayout;
 
@@ -35,6 +39,12 @@ inline constexpr const char* kToolCommandProperty = "piricad.command";
 
 /// The two colour chips at the foot of the column: draw colour over fill colour,
 /// the pair every CAD program has had at the bottom of its tool palette.
+///
+/// They SHOW what is in hand — the first selected object's colours, or with
+/// nothing selected the active layer's, which is what a new object draws in —
+/// and a press asks for a colour to paint with (`MainWindow::openColourMenu`).
+/// Reached by the keyboard too: Tab lands on them, the arrows move between the
+/// two and Enter or Space opens the one that has focus.
 class ColourChips : public QWidget, public Themed
 {
     Q_OBJECT
@@ -48,6 +58,17 @@ public:
     /// has meant on a CAD tool palette since the beginning.
     void setColours(const QColor& stroke, const QColor& fill);
 
+    /// What each chip says under the pointer: the colour it shows, whose it is,
+    /// and what a press will do.
+    void setDescriptions(const QString& stroke, const QString& fill);
+
+    /// The colour chip `which` (0 stroke, 1 fill) shows; invalid for no fill.
+    QColor colour(int which) const { return which == 0 ? stroke_ : fill_; }
+
+    /// Where chip `which` (0 stroke, 1 fill) sits, in this widget's coordinates —
+    /// what a menu opened from it is anchored to.
+    static QRect chipRect(int which);
+
     void applyTheme(ThemeMode mode) override;
 
 signals:
@@ -58,10 +79,78 @@ protected:
     /// Draws the two 22 px chips, 3 px apart.
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    bool event(QEvent* event) override;
 
 private:
     QColor stroke_;
     QColor fill_;
+    QString strokeTip_;
+    QString fillTip_;
+    int focused_     = 0; ///< the chip Enter opens
+    ThemeMode theme_ = ThemeMode::Dark;
+};
+
+/// One row of colour swatches, the first thing in the chips' menu: a click
+/// paints with that colour.
+///
+/// DRAWN, NOT BUILT FROM BUTTONS. Nine swatches are nine colours and nothing
+/// else — no caption, no role, no hierarchy — so they are not controls of the
+/// component set (`widgets.hpp`) but one control of their own, painted in the
+/// way the chips they belong to are. Each says its name under the pointer and
+/// to a screen reader; the arrows move between them and Enter or Space picks.
+class SwatchRow : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// One colour in the row.
+    struct Swatch
+    {
+        QColor colour; ///< what it paints
+        QString name;  ///< what it is called — the word `RENK` reads
+    };
+
+    /// Builds the row, left to right in the order given.
+    explicit SwatchRow(QVector<Swatch> swatches, QWidget* parent = nullptr);
+
+    /// Every swatch on one line, with the air a menu row has round it.
+    QSize sizeHint() const override;
+
+    /// Repaints the edges and the rings in the theme's tokens.
+    void applyTheme(ThemeMode mode) override;
+
+    /// The swatch under the keyboard, for a screen reader.
+    int current() const noexcept { return focus_; }
+
+signals:
+    /// Swatch `index` was clicked, or chosen with Enter or Space.
+    void picked(int index);
+
+protected:
+    /// Draws the swatches and the ring round the hovered or focused one.
+    void paintEvent(QPaintEvent* event) override;
+    /// Follows the pointer, for the hover ring.
+    void mouseMoveEvent(QMouseEvent* event) override;
+    /// A left release over a swatch picks it.
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    /// Drops the hover ring when the pointer leaves the row.
+    void leaveEvent(QEvent* event) override;
+    /// Left/Right, Home/End move; Enter or Space picks; Up and Down go to the menu.
+    void keyPressEvent(QKeyEvent* event) override;
+    /// Names the swatch under the pointer in a tooltip.
+    bool event(QEvent* event) override;
+
+private:
+    /// The swatch at `at`, or -1 between and around them.
+    int swatchAt(QPointF at) const;
+    static QRectF swatchRect(int index);
+    void moveTo(int index);
+
+    QVector<Swatch> swatches_;
+    int hover_       = -1;
+    int focus_       = 0;
     ThemeMode theme_ = ThemeMode::Dark;
 };
 

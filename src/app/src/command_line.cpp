@@ -5,13 +5,73 @@
 
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/command/colour.hpp"
 
+#include <algorithm>
+
+#include <QAbstractItemView>
+#include <QApplication>
 #include <QCompleter>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QPainter>
+#include <QPixmap>
 #include <QStringListModel>
 
 namespace kentos::app {
+
+namespace {
+
+constexpr int kSwatchPx = 12; ///< the square beside a colour word
+
+/// The words in the field's completer, with a swatch beside each one that
+/// names a colour.
+///
+/// RENK offers `kırmızı`, `mavi`, `siyah`; the list shows the colour next to
+/// the word, so the choice is made by eye. Read with `command::parse_colour`,
+/// the same reader the command uses, so the square is the colour the word
+/// paints. Only while a prompt's choices are shown: a command name is never a
+/// colour, and the inline completion that offers them draws no icons.
+class WordModel : public QStringListModel
+{
+public:
+    using QStringListModel::QStringListModel;
+
+    void show_swatches(bool on)
+    {
+        swatches_ = on;
+        any_      = false;
+        if (!on) return;
+        for (const QString& word : stringList())
+            any_ = any_ || command::parse_colour(word.toStdString()).has_value();
+    }
+
+    QVariant data(const QModelIndex& index, int role) const override
+    {
+        if (role == Qt::DecorationRole && swatches_ && any_) {
+            const QString word = QStringListModel::data(index, Qt::DisplayRole).toString();
+            QPixmap square(kSwatchPx, kSwatchPx);
+            square.fill(Qt::transparent);
+            // A word that names no colour gets an empty square of the same size,
+            // so every word in the list starts at the same column.
+            if (const auto rgba = command::parse_colour(word.toStdString())) {
+                QPainter p(&square);
+                p.setRenderHint(QPainter::Antialiasing, true);
+                p.setPen(QPen(QColor(0, 0, 0, 90), 1.0));
+                p.setBrush(QColor::fromRgba(*rgba));
+                p.drawRoundedRect(QRectF(0.5, 0.5, kSwatchPx - 1.0, kSwatchPx - 1.0), 2.0, 2.0);
+            }
+            return QIcon(square);
+        }
+        return QStringListModel::data(index, role);
+    }
+
+private:
+    bool swatches_ = false;
+    bool any_      = false;
+};
+
+} // namespace
 
 CommandLine::CommandLine(Controller& controller, QWidget* parent)
     : QLineEdit(parent), controller_(controller)
@@ -32,11 +92,26 @@ CommandLine::CommandLine(Controller& controller, QWidget* parent)
     prefixWidth_ = QFontMetrics(face).horizontalAdvance(tr("Komut:")) + 8;
     setTextMargins(prefixWidth_, 0, 0, 0);
 
-    model_     = new QStringListModel(this);
+    model_     = new WordModel(this);
     completer_ = new QCompleter(model_, this);
     completer_->setCaseSensitivity(Qt::CaseInsensitive);
     completer_->setCompletionMode(QCompleter::InlineCompletion);
     setCompleter(completer_);
+
+    // A CLICK ON AN OFFERED WORD ANSWERS THE PROMPT. Read from the row that was
+    // clicked rather than from the line, so it does not depend on whether the
+    // completer has written the word in yet. The keyboard needs nothing: Enter
+    // on a highlighted row completes it and reaches `returnPressed` as usual.
+    connect(completer_->popup(), &QAbstractItemView::clicked, this, [this](const QModelIndex& row) {
+        if (!choosing_ || !row.isValid()) return;
+        // The list was clicked, so this program is the one in front: the line
+        // is given the keyboard back before the answer goes, so the question
+        // that follows can be typed into (see `offerChoices`).
+        window()->activateWindow();
+        setFocus(Qt::PopupFocusReason);
+        setText(row.data().toString());
+        submit();
+    });
 
     refreshCompletions();
 
@@ -76,17 +151,57 @@ void CommandLine::refreshCompletions()
 void CommandLine::offerChoices(const QStringList& words)
 {
     if (words.isEmpty()) {
+        if (choosing_) {
+            choosing_               = false;
+            QAbstractItemView* list = completer_->popup();
+            // THE KEYBOARD COMES BACK HERE when the list goes. A window system
+            // that made the list the active window — the offscreen one does —
+            // activates nothing when it closes, and the next prompt's typing
+            // went nowhere. Only when the list WAS the active window: with no
+            // active window at all the program is in the background, and taking
+            // the focus back would take it from whatever the user went to.
+            const bool held = list->isVisible() && QApplication::activeWindow() == list;
+            list->hide();
+            if (held) {
+                window()->activateWindow();
+                setFocus(Qt::PopupFocusReason);
+            }
+            completer_->setCompletionMode(QCompleter::InlineCompletion);
+            static_cast<WordModel*>(model_)->show_swatches(false);
+        }
         refreshCompletions();
         return;
     }
-    QStringList sorted = words;
-    sorted.sort();
-    model_->setStringList(sorted);
+
+    // IN THE COMMAND'S ORDER. RENK offers `katman` and then its colours in
+    // palette order; sorted, the list opened on `beyaz`.
+    choosing_ = true;
+    model_->setStringList(words);
+    static_cast<WordModel*>(model_)->show_swatches(true);
+    completer_->setCompletionMode(QCompleter::PopupCompletion);
+    completer_->setCompletionPrefix(QString());
+    completer_->setMaxVisibleItems(12);
+
+    // THE SHELL'S LIST, in the field's own face: the words are what would be
+    // typed, so they are set in the type the line uses.
+    QAbstractItemView* list = completer_->popup();
+    list->setObjectName(QStringLiteral("commandChoices"));
+    list->setFont(font());
+    list->setIconSize(QSize(kSwatchPx, kSwatchPx));
+
+    // AS WIDE AS ITS LONGEST WORD, under the words of the line rather than the
+    // whole strip: a list the width of the window reads as a panel, and the
+    // words it holds sat at its far left edge a screen away from the cursor.
+    const QFontMetrics metrics(font());
+    int widest = 0;
+    for (const QString& word : words)
+        widest = std::max(widest, metrics.horizontalAdvance(word));
+    const int width = std::max(180, widest + kSwatchPx + 64);
 
     // SHOWN, not merely available. The point is that a user who does not know
     // the names can see them; a completer that waits to be typed into first has
     // not answered the question.
-    if (completer_ != nullptr) completer_->complete();
+    completer_->complete(QRect(prefixWidth_, 0, width, height()));
 }
 
 void CommandLine::setPrompt(const QString& prompt)

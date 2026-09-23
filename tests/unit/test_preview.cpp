@@ -16,6 +16,7 @@
 #include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/parallel.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -190,6 +191,31 @@ TEST_CASE("Bir sayı isteminde tıklama sıfır değildir: reddedilir ve istem a
     (void)r.bus.finish(s);
 }
 
+TEST_CASE("Bir sözcük isteminde tıklama boş sözcük değildir: reddedilir ve istem açık kalır")
+{
+    // The same defect one kind over: a click at RENK's colour prompt arrived as
+    // the empty string and failed the command with "Tanınmayan renk: ''".
+    Rig r;
+    r.seed();
+    auto started = r.bus.begin_interactive("RENK nesneler=1", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    REQUIRE(s.prompt().kind == ParamKind::Text);
+
+    const auto st = s.supply(Value::point(core::Point2{5'000, 5'000}));
+    REQUIRE_FALSE(st.ok());
+    CHECK(st.error().message.find("bir sözcük bekliyor") != std::string::npos);
+    CHECK(st.error().message.find("listeden seçin") != std::string::npos); ///< RENK offers words
+    CHECK(s.waiting());
+    CHECK(s.prompt().kind == ParamKind::Text);
+
+    REQUIRE(s.supply(Value::text("mavi")).ok()); ///< and the typed answer still works
+    REQUIRE(r.bus.finish(s).ok());
+    const core::EntityId e = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    CHECK_EQ(r.doc.styles().at(r.doc.entities().style[e]).rgba, 0xFF0000FFu);
+}
+
 // =============================================================================
 // PAH and YUVARLA: one click on the corner
 // =============================================================================
@@ -258,14 +284,17 @@ TEST_CASE("YUVARLA: tek tıklama ve yazılan yarıçap; kapalı alanı sebebiyle
         CHECK_EQ(r.doc.live_entity_count(), std::size_t{4});
     }
     {
-        // A PARCEL CORNER cannot be rounded — said, not done.
-        auto started = r.bus.begin_interactive("YUVARLA", Origin::Gui);
+        // A PARCEL CORNER is rounded in place: the parcel stays one object.
+        const std::size_t before = r.doc.live_entity_count();
+        auto started             = r.bus.begin_interactive("YUVARLA", Origin::Gui);
         REQUIRE(started.ok());
         Session& s = *started.value();
         REQUIRE(s.supply(Value::point(core::Point2{50'000, 20'000})).ok());
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().rubber_shape == RubberShape::Corner);
         REQUIRE(s.supply(Value::number(2.0)).ok());
-        const std::string why = REFUSED(r.bus.finish(s));
-        CHECK(why.find("Kapalı bir alanın köşesi yuvarlatılamaz") != std::string::npos);
+        REQUIRE(r.bus.finish(s).ok());
+        CHECK_EQ(r.doc.live_entity_count(), before);
     }
     {
         // A CLICK ON NOTHING says so.
@@ -532,12 +561,35 @@ TEST_CASE("core::cut_corner pahı, yuvarlatmayı ve sınırları hesaplar")
     CHECK(fillet.value().kept.back() == core::Point2{18'000, 0});
     CHECK(fillet.value().second.front() == core::Point2{20'000, 2'000});
 
-    // Too long for the edge, an end, and a closed fillet are all refused.
+    // Too long for the edge and an end are refused.
     CHECK_FALSE(core::cut_corner(run, false, 1, 12'000, false).ok());
     CHECK_FALSE(core::cut_corner(run, false, 0, 1'000, false).ok());
     const std::vector<core::Point2> square{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
-    CHECK_FALSE(core::cut_corner(square, true, 2, 1'000, true).ok());
     CHECK(core::cut_corner(square, true, 2, 1'000, false).ok());
+
+    // A CLOSED RING IS ROUNDED IN PLACE: one ring, the corner replaced by the
+    // two tangent points and the arc drawn between them in the ring's order —
+    // both for a counter-clockwise ring and for its mirror image.
+    for (const bool reversed : {false, true}) {
+        std::vector<core::Point2> ring = square;
+        if (reversed) std::reverse(ring.begin(), ring.end());
+        const std::size_t corner = reversed ? 1 : 2; // (10000, 10000) either way
+        auto round               = core::cut_corner(ring, true, corner, 1'000, true);
+        REQUIRE(round.ok());
+        CHECK_FALSE(round.value().arc);
+        CHECK(round.value().rounded);
+        CHECK(round.value().second.empty());
+        CHECK_EQ(round.value().edges, 16u);
+        CHECK(round.value().deviation <= 2);
+        const auto& kept = round.value().kept;
+        REQUIRE_EQ(kept.size(), square.size() - 1 + 17);
+        CHECK(kept[corner] == round.value().cut_a);
+        CHECK(kept[corner + 16] == round.value().cut_b);
+        // The arc runs FROM the tangent point toward the previous vertex: the
+        // ring does not fold back on itself.
+        CHECK(core::distance_squared(kept[corner], ring[corner - 1]) <
+              core::distance_squared(kept[corner + 16], ring[corner - 1]));
+    }
 
     // The nearest vertex names the corner; an end names nothing.
     CHECK(core::nearest_corner(run, false, {19'000, 1'000}) == std::optional<std::size_t>{1});

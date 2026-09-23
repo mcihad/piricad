@@ -39,7 +39,9 @@ onlar her masaüstünde o masaüstünün alışıldık görünümündedir.
 
 - **Araç kutusu** (sol, dikey, 46 px) — çizim ve düzenleme araçları, beş grup.
   Bir araca basınca komut başlar ve sizden girdi ister. En altta iki renk kutusu:
-  çizim rengi ve dolgu rengi.
+  çizim rengi ve dolgu rengi. Seçili nesnenin — seçim yoksa etkin katmanın —
+  renklerini gösterirler; birine tıklamak renk menüsünü açar ve seçilen renk
+  [`RENK`](../komutlar/colour.md) komutuyla uygulanır.
 - **Araç çubuğu** (üst, yatay, 46 px) — eylemler, yedi grup: dosya · geri/yinele ·
   pano · gezinme · yardımcılar · pencereler · çıktı. Bir düğmeye basmak komutu
   hemen çalıştırır. Sağ ucunda iki salt-okunur okuma vardır: **ÖLÇEK** ve

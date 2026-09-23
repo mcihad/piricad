@@ -685,6 +685,33 @@ core::Result<DispatchResult> Bus::finish(Session& session)
                              "' komutu hâlâ çalışıyor; bitmesini bekleyin ya da "
                              "durdurun.");
 
+    // SCAFFOLDING ENDS WITH THE RUN IT SERVED. Every way out of a command from
+    // here on — done, refused, Esc — forgets the tracking marks, which is what
+    // `clear_tracking` always said the end of a run does and what nothing did:
+    // two marks made once stayed on every drawing after, through YENİ, drawing
+    // their traces across sheets they had nothing to do with. A TRANSPARENT
+    // command (İZ itself, YAKINLAŞ) runs beside the one the marks are for, and
+    // leaves them to it.
+    class EndOfRun
+    {
+    public:
+        EndOfRun(Bus& bus, bool ends) : bus_(bus), ends_(ends) {}
+
+        EndOfRun(const EndOfRun&)            = delete;
+        EndOfRun(EndOfRun&&)                 = delete;
+        EndOfRun& operator=(const EndOfRun&) = delete;
+        EndOfRun& operator=(EndOfRun&&)      = delete;
+
+        ~EndOfRun()
+        {
+            if (ends_) bus_.clear_tracking();
+        }
+
+    private:
+        Bus& bus_;
+        bool ends_;
+    } const end_of_run{*this, !has_flag(spec.flags, Flags::Transparent)};
+
     // THIS COMMAND'S EDITS, not the transaction's: inside a batch the two differ,
     // and the edits before the mark belong to commands that already succeeded.
     const std::size_t mark = session.transaction_mark();

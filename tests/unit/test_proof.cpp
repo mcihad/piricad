@@ -858,6 +858,18 @@ TEST_CASE("YENİ: neyi sıfırlar, neyi bırakır")
     std::filesystem::remove(path);
 }
 
+TEST_CASE("YENİ: yeni çizim eskisinin izleme işaretlerini devralmaz")
+{
+    // Two İZ marks made on one drawing drew their traces across every drawing
+    // opened after it: nothing ever forgot them (see `Bus::finish`).
+    FileRig rig;
+    REQUIRE(rig.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("İZ 0,20", Origin::Test).ok());
+    REQUIRE_EQ(rig.bus.tracking_marks().size(), std::size_t{2});
+    REQUIRE(rig.bus.execute_line("YENİ", Origin::Test).ok());
+    CHECK(rig.bus.tracking_marks().empty());
+}
+
 TEST_CASE("YENİ: betiğin ortasında çalışınca eski belgenin geri alma adımını bırakmaz")
 {
     // A script is ONE merged undo step (§2.5), so a swap in the middle of one
@@ -1816,6 +1828,21 @@ TEST_CASE("PROOF: UÇUCA gui, komut satırı ve betikten aynı belgeyi ve aynı 
                 .typed    = "UÇUCA nesne=1 nesne=2",
                 .scripted = R"({"ad":"UÇUCA","komutlar":[{"cmd":"core.join","args":{
                     "nesne":[1,2]}}]})"});
+}
+
+TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // The colour chip's road: nothing selected, the objects asked for, then the
+    // colour. The GUI answers `#c0392b` in lower case on purpose — the journal
+    // holds the canonical spelling, so the three lines still agree.
+    prove_verb({.name     = "RENK",
+                .id       = "core.colour",
+                .setup    = {"ALAN 0,0 10,0 10,10 0,10", "ÇİZGİ 0,20 10,20"},
+                .objects  = {1, 2},
+                .answers  = {Value::text("#c0392b")},
+                .typed    = "RENK nesneler=1 nesneler=2 renk=#C0392B",
+                .scripted = R"({"ad":"RENK","komutlar":[{"cmd":"core.colour","args":{
+                    "nesneler":[1,2],"renk":"#C0392B"}}]})"});
 }
 
 // ============================================================================

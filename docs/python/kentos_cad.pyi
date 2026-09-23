@@ -747,6 +747,20 @@ def match_style(
         point — Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde [mm, Sağa (Y) önce]
     """
 
+def colour(
+    *,
+    objects: list[int] = ...,
+    color: str = ...,
+    fill: str = ...,
+) -> int:
+    """Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür.
+
+    Komut: core.colour (RENK)
+        objects — Rengi değişecek nesneler; verilmezse etkin seçim, o da boşsa sorulur [kalıcı nesne anahtarı]
+        color — Çizgi rengi: #RRGGBB (ya da saydamlıkla #AARRGGBB) veya katman
+        fill — Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman
+    """
+
 def rotate(
     *,
     objects: list[int] = ...,

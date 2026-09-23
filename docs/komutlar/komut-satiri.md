@@ -26,6 +26,16 @@ veya komut kimliğini yazabilirsiniz — hepsi aynı komuta gider:
 Büyük/küçük harf farkı yoktur; dönüşüm Türkçe kurallarına göre yapılır, yani `çizgi`
 doğru şekilde `ÇİZGİ` olur.
 
+### Bir komut sözcük sorduğunda
+
+Bir komut bir **sözcük** sorduğunda — bir katman adı, bir renk, bir işlem — soru
+satırda yazılı durur ve komutun bildiği cevaplar satırın üstünde bir **liste** olarak
+açılır. Birine **tıklamak** cevaptır; yazmaya başlamak listeyi daraltır, ok tuşları
+listede gezer ve Enter seçer. Renk adlarının yanında renk örneği vardır.
+
+Böyle bir soruda tuvale tıklamak bir cevap değildir: komut soruyu açık tutar ve
+cevabın yazılması ya da listeden seçilmesi gerektiğini söyler.
+
 ## Koordinat girmek
 
 Beş biçim vardır. Hepsi hem komut argümanı olarak hem de bir komut nokta beklerken

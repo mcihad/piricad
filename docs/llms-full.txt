@@ -71,8 +71,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 99 (87 tanesi onay ister)
-- Katalog parmak izi: `10012057689232931916`
+- Araç sayısı: 100 (88 tanesi onay ister)
+- Katalog parmak izi: `2136964893593874589`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -246,6 +246,20 @@ Onay ister.
 | `dorduncu` | konum (tutamak ya da göreli nokta) | hayır | ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yaricap` | number | hayır | ttr: teğet dairenin yarıçapı (m) [m] (sayı) |
 | `yon` | konum (tutamak ya da göreli nokta) | hayır | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+
+### `core_colour` — Renk
+
+Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür.
+Komut: RENK (COLOR, COLOUR, RNK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Rengi değişecek nesneler; verilmezse etkin seçim, o da boşsa sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `renk` | string | hayır | Çizgi rengi: #RRGGBB (ya da saydamlıkla #AARRGGBB) veya katman (metin) |
+| `dolgu` | string | hayır | Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman (metin) |
 
 ### `core_combine` — Birleştir
 

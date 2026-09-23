@@ -37,12 +37,23 @@ public:
     /// Offers `words` instead of the command names, for as long as a command is
     /// waiting for one of them.
     ///
-    /// A prompt for a name — a block, a layer, a pattern — is unanswerable by a
-    /// mouse, and the field's completer already knows how to offer a set. The
-    /// command says which set (`command::Prompt::choices`); an empty list puts
-    /// the command names back, which is what the field offers when nothing is
-    /// running.
+    /// A prompt for a name — a block, a layer, a colour, a pattern — is
+    /// unanswerable by a mouse, and the field's completer already knows how to
+    /// offer a set. The command says which set (`command::Prompt::choices`), in
+    /// the order it wants them read; a click on one ANSWERS the prompt, and
+    /// typing narrows the list. An empty list puts the command names back, which
+    /// is what the field offers when nothing is running.
+    ///
+    /// AS A LIST, NEVER INLINE. The inline completion the command names use
+    /// wrote the first choice into the line, selected: the question — which is
+    /// the placeholder of an EMPTY line — disappeared, and an answer nobody gave
+    /// sat in front of Enter. RENK's colour prompt read "beyaz", and one Enter
+    /// painted the parcel white.
     void offerChoices(const QStringList& words);
+
+    /// True while the field is offering a command's choices rather than the
+    /// command names.
+    bool offeringChoices() const noexcept { return choosing_; }
 
     void applyTheme(ThemeMode mode) override;
 
@@ -84,6 +95,7 @@ private:
     QStringList history_;
     int history_pos_{-1};
     QString prompt_;
+    bool choosing_{false}; ///< the list is a prompt's choices, not the command names
     int prefixWidth_{0};
     ThemeMode theme_{ThemeMode::Dark};
 };

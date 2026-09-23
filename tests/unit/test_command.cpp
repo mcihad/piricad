@@ -5913,8 +5913,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
     // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
     // + PANOYAKOPYALA, KES, YAPIŞTIR
-    // + NESNEBİLGİ, AÇIÖLÇ + ESNET + İZ + PYTHON
-    CHECK_EQ(f.reg.size(), std::size_t{92});
+    // + NESNEBİLGİ, AÇIÖLÇ + ESNET + İZ + PYTHON + RENK
+    CHECK_EQ(f.reg.size(), std::size_t{93});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
@@ -6203,23 +6203,60 @@ TEST_CASE("YUVARLA köşeyi yayla yuvarlatır ve yayı ayrı nesne olarak koyar"
     CHECK_EQ(core::arc_centre_of(f.doc.geometry(), arc).y, core::Mm{5000});
 }
 
-TEST_CASE("YUVARLA kapalı alanı reddeder")
+TEST_CASE("YUVARLA kapalı alanın köşesini yerinde yuvarlatır; nesne aynı nesne kalır")
 {
-    // A filleted boundary is partly a curve, and this model's ring holds vertices
-    // rather than curve segments (R9-R12). Producing an open line where a parcel
-    // used to be would quietly destroy the face, so it is refused instead.
+    // IT USED TO REFUSE, and a parcel's or a rectangle's corner is the one most
+    // often rounded — so the tool looked broken to anyone who tried it with the
+    // mouse. A closed ring cannot be broken in two without enclosing nothing, so
+    // the arc is drawn into it: the same object, the same key, still a face.
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
-    const std::uint64_t before = f.doc.content_hash();
 
-    REQUIRE_FALSE(f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test).ok());
-    CHECK_EQ(f.doc.content_hash(), before);
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view s) { said.append(s); };
+    REQUIRE(f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test).ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 
-    // PAH stays available for a closed face, because a chamfer is all straight.
-    REQUIRE(f.bus.execute_line("PAH nesne=1 nokta=0,0 mesafe=5", Origin::Test).ok());
-    CHECK(f.doc.content_hash() != before);
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(e != core::kNoEntity);
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[e]);
+    REQUIRE_EQ(span.count, 1u);
+    CHECK(f.doc.geometry().ring_role[span.first] != core::RingRole::Open);
+
+    // The corner is gone: every vertex keeps at least the radius's worth of
+    // distance from where it was, and the tangent points are on the edges.
+    const auto xs = f.doc.geometry().ring_xs(span.first);
+    const auto ys = f.doc.geometry().ring_ys(span.first);
+    bool has_a    = false;
+    bool has_b    = false;
+    for (std::size_t v = 0; v < xs.size(); ++v) {
+        CHECK_FALSE((xs[v] == 0 && ys[v] == 0));
+        has_a = has_a || (xs[v] == 5'000 && ys[v] == 0);
+        has_b = has_b || (xs[v] == 0 && ys[v] == 5'000);
+        // Every drawn point lies on the arc, to within a millimetre of rounding,
+        // or is one of the other three corners.
+        const double dx = static_cast<double>(xs[v] - 5'000);
+        const double dy = static_cast<double>(ys[v] - 5'000);
+        if (xs[v] < 5'000 && ys[v] < 5'000)
+            CHECK(std::abs(std::sqrt(dx * dx + dy * dy) - 5'000.0) <= 1.5);
+    }
+    CHECK(has_a);
+    CHECK(has_b);
+    CHECK(said.find("yay 16 kenarla çizildi") != std::string::npos);
+
+    // THE AREA IS THE ROUNDED ONE: the square's 40 x 30 less the corner's
+    // r² - πr²/4, to within what sixteen chords leave.
+    const double expected = 1200.0 - (25.0 - 3.14159265358979 * 25.0 / 4.0);
+    const double got =
+        std::abs(static_cast<double>(f.doc.geometry().area_of(f.doc.entities().slot[e]))) / 1.0e6;
+    CHECK(std::abs(got - expected) < 0.05);
+
+    // And the figure the manual prints (docs/komutlar/fillet.md) is the one
+    // ALANÖLÇ reads.
+    said.clear();
+    REQUIRE(f.bus.execute_line("ALANÖLÇ nesneler=1", Origin::Test).ok());
+    CHECK_MESSAGE(said.find("alan: 1194,60 m²") != std::string::npos, said);
 }
 
 TEST_CASE("PAH komşu kenardan uzun kesimi reddeder")
@@ -7195,6 +7232,37 @@ TEST_CASE("İZ şeffaftır, geri alma adımı yemez ve belgeye dokunmaz")
     // Not in the journal as a document mutation.
     for (const auto& e : f.journal.entries())
         CHECK(e.command_id != "core.tracking");
+}
+
+TEST_CASE("İZ işaretleri hizmet ettikleri komut bitince silinir; şeffaf komutlar dokunmaz")
+{
+    // THE REGRESSION. `clear_tracking` said the end of a run forgets the marks
+    // and nothing called it: two marks made once stayed for the whole session,
+    // through YENİ, and drew their traces across every drawing after.
+    Fixture f;
+
+    // MADE IN THE MIDDLE OF A COMMAND, they last until THAT command ends.
+    auto started = f.bus.begin_interactive("ÇİZGİ", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("YAKINLAŞ KAPSAM", Origin::Test).ok()); // transparent too
+    CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{1});
+    REQUIRE(s.supply(Value::point(core::Point2{20'000, 0})).ok());
+    REQUIRE(f.bus.finish(s).ok());
+    CHECK(f.bus.tracking_marks().empty());
+
+    // MADE WITH NOTHING RUNNING, they wait for the next command and go when it
+    // is done. A line refused before it ever runs — a key that names nothing —
+    // is not that command: nothing was done, and the marks are still wanted.
+    REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
+    CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{2});
+    REQUIRE_FALSE(f.bus.execute_line("BUDA nesne=99", Origin::Test).ok());
+    CHECK_EQ(f.bus.tracking_marks().size(), std::size_t{2});
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 5,5", Origin::Test).ok());
+    CHECK(f.bus.tracking_marks().empty());
 }
 
 TEST_CASE("İZ ile işaretlenen noktalar yakalamaya geçiyor")

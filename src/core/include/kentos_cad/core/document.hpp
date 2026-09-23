@@ -626,4 +626,19 @@ private:
     mutable bool index_stale_{false};
 };
 
+/// The symbol an object on `layer` that inherits everything is drawn with: the
+/// layer's symbol stack when it has one, its plain appearance otherwise — the
+/// two branches the scene builder takes for the ByLayer sentinel.
+///
+/// THE VALUES ARE WHAT IS DRAWN. The renderer reads a style's colours and
+/// widths as they stand and evaluates no cascade (model.md R14), so a command
+/// that gives one object its own style starts from THIS and changes what it was
+/// asked to change; starting from the bare sentinel would draw the object black
+/// and hairline the moment it stopped inheriting.
+Symbol layer_symbol(const Document& doc, LayerId layer);
+
+/// The symbol `e` is drawn with: its own style, or its layer's (above) when it
+/// carries the ByLayer sentinel.
+Symbol drawn_symbol(const Document& doc, EntityId e);
+
 } // namespace kentos::core

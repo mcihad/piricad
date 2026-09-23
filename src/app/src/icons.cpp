@@ -1193,6 +1193,27 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawLine(QPointF(4.2, 19.8), QPointF(6.4, 19.8));
         break;
 
+    case Glyph::Colour:
+        // A bucket tipped to the right and the drop falling from its lip: paint
+        // poured onto what is picked, the mark every drawing program uses for
+        // "give this a colour".
+        p.setPen(stroke(c, 1.6));
+        p.drawPolygon(QPolygonF(
+            {QPointF(4.4, 11.0), QPointF(10.6, 4.8), QPointF(17.2, 11.4), QPointF(11.0, 17.6)}));
+        p.drawLine(QPointF(7.4, 8.0), QPointF(4.6, 5.2));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        {
+            QPainterPath drop;
+            drop.moveTo(18.6, 13.0);
+            drop.quadTo(21.2, 16.6, 21.2, 18.0);
+            drop.quadTo(21.2, 20.2, 18.6, 20.2);
+            drop.quadTo(16.0, 20.2, 16.0, 18.0);
+            drop.quadTo(16.0, 16.6, 18.6, 13.0);
+            p.drawPath(drop);
+        }
+        break;
+
     case Glyph::Topology:
         // Three nodes wired into a closed loop: the topology check.
         p.setPen(stroke(c, 1.5));

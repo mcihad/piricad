@@ -133,6 +133,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.fillet`](#cadfillet) | `core.fillet` | `YUVARLA` | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
 | [`cad.set_layer`](#cadset_layer) | `core.set_layer` | `KATMANAT` | Seçilen nesneleri başka bir katmana taşır. |
 | [`cad.match_style`](#cadmatch_style) | `core.match_style` | `STİLKOPYALA` | Bir nesnenin stilini seçilen nesnelere uygular. |
+| [`cad.colour`](#cadcolour) | `core.colour` | `RENK` | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
 | [`cad.rotate`](#cadrotate) | `core.rotate` | `DÖNDÜR` | Seçilen nesneleri bir merkez etrafında döndürür. |
 | [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
@@ -1214,6 +1215,28 @@ cad.match_style(
 | `point` | `Coord` | `nokta` | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/match_style.md)
+
+### `cad.colour`
+
+Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür.
+
+Komut: `core.colour` — `RENK`
+
+```python
+cad.colour(
+    objects: list[int],
+    color: str,
+    fill: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Rengi değişecek nesneler; verilmezse etkin seçim, o da boşsa sorulur [kalıcı nesne anahtarı] |
+| `color` | `str` | `renk` | Çizgi rengi: #RRGGBB (ya da saydamlıkla #AARRGGBB) veya katman |
+| `fill` | `str` | `dolgu` | Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman |
+
+[Komut sayfası](../komutlar/colour.md)
 
 ### `cad.rotate`
 

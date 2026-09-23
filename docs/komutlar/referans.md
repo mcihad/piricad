@@ -53,6 +53,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.fillet`](fillet.md) | Yuvarla | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
 | [`core.set_layer`](set_layer.md) | Katmana Ata | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
 | [`core.match_style`](match_style.md) | Stil Kopyala | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
+| [`core.colour`](colour.md) | Renk | `RENK`, `COLOR`, `COLOUR`, `RNK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
 | [`core.rotate`](rotate.md) | Döndür | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
 | [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
 | [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
@@ -676,6 +677,18 @@ Bir nesnenin stilini seçilen nesnelere uygular.
 | `nokta` | point | isteğe bağlı | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde |
 
 Ayrıntılı kullanım: [STİLKOPYALA](match_style.md)
+
+### `core.colour` — RENK (Renk)
+
+Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Rengi değişecek nesneler; verilmezse etkin seçim, o da boşsa sorulur |
+| `renk` | text | isteğe bağlı | Çizgi rengi: #RRGGBB (ya da saydamlıkla #AARRGGBB) veya katman |
+| `dolgu` | text | isteğe bağlı | Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman |
+
+Ayrıntılı kullanım: [RENK](colour.md)
 
 ### `core.rotate` — DÖNDÜR (Döndür)
 
@@ -3212,6 +3225,48 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "DAIRE",
         "CIRCLE",
         "DR"
+      ]
+    }
+  },
+  {
+    "name": "core_colour",
+    "title": "Renk",
+    "description": "Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür.\nKomut: RENK (COLOR, COLOUR, RNK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Rengi değişecek nesneler; verilmezse etkin seçim, o da boşsa sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "renk": {
+          "type": "string",
+          "description": "Çizgi rengi: #RRGGBB (ya da saydamlıkla #AARRGGBB) veya katman (metin)"
+        },
+        "dolgu": {
+          "type": "string",
+          "description": "Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.colour",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "RENK",
+        "COLOR",
+        "COLOUR",
+        "RNK"
       ]
     }
   },

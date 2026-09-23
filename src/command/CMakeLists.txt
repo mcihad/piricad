@@ -38,6 +38,7 @@ add_library(kentos_command STATIC
     src/commands/rectangle.cpp
     src/commands/arc.cpp
     src/commands/assign.cpp
+    src/commands/colour.cpp
     src/commands/attribute.cpp
     src/commands/circle.cpp
     src/commands/combine.cpp
@@ -51,6 +52,7 @@ add_library(kentos_command STATIC
     src/commands/pick.cpp
     src/commands/points.cpp
     src/construct.cpp
+    src/colour.cpp
     src/commands/perp_offset.cpp
     src/commands/survey_polar.cpp
     src/commands/intersect_point.cpp

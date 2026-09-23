@@ -731,6 +731,20 @@ private:
     void applyTheme();
     void refreshStatus();
 
+    /// Paints the colour chips with what is in hand: the first selected
+    /// object's stroke and fill, or the active layer's with nothing selected —
+    /// the colours a new object is drawn in.
+    void refreshColourChips();
+
+    /// Opens the menu of chip `which` (0 stroke, 1 fill) beside it: the named
+    /// colours as swatches, any other colour, the layer's, and — for a fill —
+    /// none. Every choice runs `RENK` (`applyColour`).
+    void openColourMenu(int which);
+
+    /// Runs `RENK` with `word` as the stroke or the fill. On the selection when
+    /// there is one; with none, RENK asks for the objects to paint.
+    void applyColour(bool fill, const QString& word);
+
     /// Repaints the status strip's agent cell and the menu entry's wording from
     /// what the listener is actually doing. Called on `McpService::stateChanged`,
     /// so the cell cannot claim a port that is closed.
@@ -829,6 +843,7 @@ private:
     QAction* actMeasureAngle_{nullptr}; ///< AÇIÖLÇ — the angle at this corner
     QAction* actStretch_{nullptr};      ///< ESNET — the window is the vertex filter
     QAction* actStyleCopy_{nullptr};
+    QAction* actColour_{nullptr}; ///< RENK — the colour chips' command, on a menu row too
     QAction* actTopology_{nullptr};
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};

@@ -110,6 +110,17 @@ core::Status Session::supply(Value v)
                          "\"" + prompt_.message +
                              "\" bir sayı bekliyor; tıklamak yerine komut satırına yazın.");
 
+    // NOR IS IT A WORD. A click at a prompt for a word arrived as the empty
+    // string — `as_text` of a coordinate — so pressing the canvas while RENK
+    // asked for a colour failed the command with "Tanınmayan renk: ''", and a
+    // layer name, a caption or a verb took nothing for an answer the same way.
+    if (prompt_.kind == ParamKind::Text && v.kind() == Value::Kind::Point)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "\"" + prompt_.message + "\" bir sözcük bekliyor; tıklamak yerine " +
+                             (prompt_.choices.empty() ? "komut satırına yazın."
+                                                      : "komut satırına yazın ya da listeden "
+                                                        "seçin."));
+
     supplied_ = std::move(v);
     state_    = SessionState::Running;
 
