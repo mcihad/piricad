@@ -36,6 +36,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -118,6 +119,27 @@ PathPlace place_at_length(const CurvePath& path, Mm length);
 /// dropped; a piece that shrinks to nothing is not a piece. A closed path
 /// needs two cuts to come apart — with one it comes back whole, opened there.
 std::vector<CurvePath> split_path(const CurvePath& path, std::vector<PathPlace> cuts);
+
+/// What joining paths end to end makes (`join_paths`).
+struct PathJoin
+{
+    CurvePath chain;                 ///< the joined run, in the first path's direction
+    std::vector<std::size_t> joined; ///< which of the paths it holds, the first first
+    std::size_t bridged{0};          ///< gaps closed with a straight piece
+    Mm widest{0};                    ///< the widest of them, millimetres
+    bool ends_meet{false};           ///< the chain's two ends are within the tolerance
+};
+
+/// Joins open `paths` end to end, starting from the first IN ITS OWN DIRECTION
+/// and taking, again and again, a path one of whose ends lies within
+/// `tolerance` of either end of the chain — turned round when it has to be.
+///
+/// NOTHING IS MOVED TO MAKE A JOIN: two ends that touch exactly share their
+/// point, and a gap inside the tolerance is closed with a straight piece and
+/// counted, so the geometry the user drew is kept and what was added is said.
+/// Two arcs of one circle meeting end to start become one arc. A closed path
+/// has no ends and is never taken.
+PathJoin join_paths(std::span<const CurvePath> paths, Mm tolerance);
 
 /// How a path is stored: the kind that holds it, its one ring and the kind's
 /// payload. Straight pieces only are a polyline; one arc is an arc and one

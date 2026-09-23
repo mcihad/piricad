@@ -2025,6 +2025,20 @@ TEST_CASE("PROOF: UÇUCA gui, komut satırı ve betikten aynı belgeyi ve aynı 
                     "nesne":[1,2]}}]})"});
 }
 
+TEST_CASE("PROOF: UÇUCA çizgi ve yayı yaylı çoklu çizgi yapar; üç yolda aynı")
+{
+    // TODOS C-05: the arc joins as an arc on every road, and the result is the
+    // same new object with the same key.
+    prove_verb({.name = "UÇUCA",
+                .id   = "core.join",
+                .setup = {"ÇOKLUÇİZGİ -10,0 10,0", "YAY merkez=10,5 baslangic=10,0 bitis=10,10"},
+                .objects  = {1, 2},
+                .answers  = {},
+                .typed    = "UÇUCA nesne=1 nesne=2",
+                .scripted = R"({"ad":"UÇUCA","komutlar":[{"cmd":"core.join","args":{
+                    "nesne":[1,2]}}]})"});
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

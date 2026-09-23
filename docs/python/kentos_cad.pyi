@@ -245,12 +245,14 @@ def join(
     *,
     object: list[int] = ...,
     tolerance: float = ...,
+    on_conflict: str = ...,
 ) -> int:
-    """Uçları birbirine değen çizgileri tek bir çizgiye ekler.
+    """Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.
 
     Komut: core.join (UÇUCA)
-        object — Uç uca eklenecek çizgiler [kalıcı nesne anahtarı]
-        tolerance — Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 [m]
+        object — Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler [kalıcı nesne anahtarı]
+        tolerance — Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001. Aradaki boşluk doğru parçasıyla kapatılır ve söylenir [m]
+        on_conflict — ilk: katman, stil ve öznitelikler ilk nesneden, farklar söylenir · reddet: katman ya da öznitelik farklıysa birleştirmez
     """
 
 def lengthen(

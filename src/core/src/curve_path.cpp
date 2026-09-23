@@ -583,6 +583,67 @@ std::vector<CurvePath> split_path(const CurvePath& path, std::vector<PathPlace> 
     return out;
 }
 
+PathJoin join_paths(std::span<const CurvePath> paths, Mm tolerance)
+{
+    PathJoin out;
+    if (paths.empty() || paths.front().closed || paths.front().pieces.empty()) return out;
+    const double reach = static_cast<double>(tolerance) * static_cast<double>(tolerance);
+    std::vector<bool> used(paths.size(), false);
+    used[0] = true;
+    out.joined.push_back(0);
+    std::vector<PathPiece> chain = paths.front().pieces;
+
+    // A gap bridged by a straight piece, counted; none when the ends coincide.
+    const auto bridge = [&out](Point2 from, Point2 to, std::vector<PathPiece>& into) {
+        if (from == to) return;
+        into.push_back(PathPiece{.from = from, .to = to});
+        ++out.bridged;
+        out.widest = std::max(out.widest, segment_length(from, to));
+    };
+
+    bool grew = true;
+    while (grew) {
+        grew = false;
+        for (std::size_t j = 1; j < paths.size(); ++j) {
+            if (used[j] || paths[j].closed || paths[j].pieces.empty()) continue;
+            const Point2 head   = chain.front().from;
+            const Point2 tail   = chain.back().to;
+            const Point2 first  = paths[j].pieces.front().from;
+            const Point2 last   = paths[j].pieces.back().to;
+            const auto touching = [reach](Point2 a, Point2 b) {
+                return distance_squared(a, b) <= reach;
+            };
+            std::vector<PathPiece> added;
+            if (touching(tail, first)) {
+                bridge(tail, first, chain);
+                chain.insert(chain.end(), paths[j].pieces.begin(), paths[j].pieces.end());
+            } else if (touching(tail, last)) {
+                bridge(tail, last, chain);
+                const CurvePath turned = reversed(paths[j]);
+                chain.insert(chain.end(), turned.pieces.begin(), turned.pieces.end());
+            } else if (touching(head, last)) {
+                added = paths[j].pieces;
+                bridge(last, head, added);
+                chain.insert(chain.begin(), added.begin(), added.end());
+            } else if (touching(head, first)) {
+                added = reversed(paths[j]).pieces;
+                bridge(first, head, added);
+                chain.insert(chain.begin(), added.begin(), added.end());
+            } else {
+                continue;
+            }
+            used[j] = true;
+            out.joined.push_back(j);
+            grew = true;
+        }
+    }
+    merge_arcs(chain);
+    out.chain.pieces = std::move(chain);
+    out.ends_meet    = out.joined.size() >= 2 && distance_squared(out.chain.pieces.front().from,
+                                                                  out.chain.pieces.back().to) <= reach;
+    return out;
+}
+
 PathRecord path_record(const CurvePath& path)
 {
     PathRecord out;

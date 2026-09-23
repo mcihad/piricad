@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `13994661256652616238`
+- Katalog parmak izi: `14011123951224376517`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -641,7 +641,7 @@ Doğrudan çalışır.
 
 ### `core_join` — Uç Uca Ekle
 
-Uçları birbirine değen çizgileri tek bir çizgiye ekler.
+Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.
 Komut: UÇUCA (UCUCA, JOIN, UÇE)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -649,8 +649,9 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | hayır | Uç uca eklenecek çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `tolerans` | number | hayır | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 [m] (sayı) |
+| `nesne` | string | hayır | Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tolerans` | number | hayır | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001. Aradaki boşluk doğru parçasıyla kapatılır ve söylenir [m] (sayı) |
+| `cakisma` | string | hayır | ilk: katman, stil ve öznitelikler ilk nesneden, farklar söylenir · reddet: katman ya da öznitelik farklıysa birleştirmez (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_label` — Etiket

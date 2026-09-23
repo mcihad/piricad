@@ -15,6 +15,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   geometriyle birlikte geri getiriyor (`C-05: öznitelik bir geometri düzenlemesinde
   kaybolmaz` testi).
 
+### Eklendi — UÇUCA yay zincirlerini birleştirir; kurallar ve boşluk açık (C-05)
+
+- **`UÇUCA` yayları da ekliyor ve düzleştirmiyor**: çizgi + yay yaylı çoklu çizgi,
+  aynı çemberin uç uca iki yayı tek yay olur; uzunluk korunur.
+- **Hiçbir şey sessizce oynamıyor**: tolerans içindeki boşluk bir doğru parçasıyla
+  kapatılıyor ve söyleniyor ("1 boşluk doğru parçasıyla kapatıldı; en büyüğü 4 mm
+  (tolerans 10 mm)"); eskiden eklenen parçanın ilk köşesi atılıp zincire çekiliyordu.
+- **Kurallar**: sonuç ilk nesnenin yönünde; katman, stil ve öznitelikler ilk
+  nesneden, farklı olanlar adıyla söyleniyor; `cakisma=reddet` fark varsa hiç
+  birleştirmiyor. Kapalı şekil eklenmiyor; uçları buluşan zincir söyleniyor.
+  Kaynak→sonuç kimlik eşlemesi raporlanıyor.
+- **`ÇİZGİDÜZENLE` yaylı çoklu çizgide**: `kapat`, `ac`, `ters` yayları koruyarak
+  çalışıyor; `sadelestir` gerekçesiyle reddediliyor.
+- Destek matrisi 152 → 154; `PROOF: UÇUCA çizgi ve yayı yaylı çoklu çizgi yapar`.
+
 ### Eklendi — KIR yayda, dairede ve yaylı çoklu çizgide (C-05)
 
 - **`KIR` artık yalnız çizgide değil**: yaydan çıkan parça yaydır, kalanlar yaydır;

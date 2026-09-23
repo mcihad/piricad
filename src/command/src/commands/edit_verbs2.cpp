@@ -29,12 +29,14 @@
 // open it, reverse it, thin it out.
 #include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/block_reference.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -570,12 +572,60 @@ Task<void> run_pedit(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
+        // A POLYLINE WHOSE EDGES BEND (TODOS C-05) is closed, opened and turned
+        // round as the path it is, so every arc stays its arc: closing adds a
+        // straight closing edge, opening removes the closing edge, and turning
+        // it round walks each arc the other way. Thinning its vertices would
+        // take the ends out from under its arcs, so that is refused by name.
+        if (doc.entities().kind[slot] == core::kArcPolylineKind) {
+            auto path = core::path_of(doc, slot);
+            if (!path) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "Nesne " + std::to_string(id) +
+                                                 " okunamadı; yaylı çoklu çizginin yayları "
+                                                 "köşelerine uymuyor."));
+                co_return;
+            }
+            core::CurvePath edited = *path;
+            if (is("ters")) {
+                edited = core::reversed(*path);
+            } else if (is("kapat")) {
+                if (!edited.closed) {
+                    const core::Point2 end   = edited.pieces.back().to;
+                    const core::Point2 start = edited.pieces.front().from;
+                    if (end != start)
+                        edited.pieces.push_back(core::PathPiece{.from = end, .to = start});
+                    edited.closed = true;
+                }
+            } else if (is("ac")) {
+                if (edited.closed) {
+                    edited.pieces.pop_back(); ///< the closing edge, bent or straight
+                    edited.closed = false;
+                }
+            } else {
+                ctx.session().fail(core::err(
+                    core::ErrorCode::Unsupported,
+                    "Nesne " + std::to_string(id) +
+                        " yaylı bir çoklu çizgi; sadeleştirmek yaylarının uçlarını atardı. "
+                        "Yayları korumak için sadeleştirmeyin; gerekirse önce PATLAT ile ayırın."));
+                co_return;
+            }
+            if (edited.pieces.empty() || !write_path(ctx, slot, edited)) {
+                if (edited.pieces.empty())
+                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                                 "Açılan şekilde kenar kalmıyor."));
+                co_return;
+            }
+            ++touched;
+            continue;
+        }
         if (doc.entities().kind[slot] != core::kPolylineKind) {
             ctx.session().fail(
                 core::err(core::ErrorCode::Unsupported,
                           std::string("Nesne ") + std::to_string(id) + " bir " +
                               kind_word(doc.entities().kind[slot]) +
-                              "; ÇİZGİDÜZENLE yalnız çizgilerle ve alanlarla çalışır."));
+                              "; ÇİZGİDÜZENLE çizgilerle, yaylı çoklu çizgilerle ve alanlarla "
+                              "çalışır."));
             co_return;
         }
 

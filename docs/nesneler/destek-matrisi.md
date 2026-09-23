@@ -27,11 +27,11 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [Çizgi](#cizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | ✓ |
 | [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✓ | ✓ | ✓ |
-| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
 | [Çok parçalı alan](#cokparca) | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ |
 | [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✗ | ✓ | ✓ | — | — | — | ✓ | ✓ |
-| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✗ | ✓ | ✓ |
+| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | ✓ |
 | [Elips](#elips) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ◐ | — | — | — | ✓ | ✓ |
 | [Spline](#spline) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | — | — | ✗ | ✓ | ✓ |
 | [Tarama](#tarama) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✗ | ✗ | ✗ | — | ✓ | ✓ |
@@ -41,7 +41,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Lider](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
-238 hücre: 152 destekli, 4 kısmi, 30 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
+238 hücre: 154 destekli, 4 kısmi, 28 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
@@ -112,7 +112,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Paralel (OFSET) | ◐ kısmi | YAYLIÇİZGİ paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✓ destekli | iki parça tek YAYLIÇİZGİ oldu, uzunluk korundu |
 | Ölç | ✓ destekli | çevre 108.540 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -182,7 +182,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Paralel (OFSET) | ✓ destekli | 1 paralel (YAY), kaynak korundu |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✓ destekli | iki parça tek YAYLIÇİZGİ oldu, uzunluk korundu |
 | Ölç | ✓ destekli | çevre 78.540 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -226,7 +226,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Paralel (OFSET) | ◐ kısmi | SPLINE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✗ yok | Nesne 1 uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır. |
 | Ölç | ✓ destekli | çevre 44.334 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
@@ -358,7 +358,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Paralel (OFSET) | ✗ yok | Nesne 1: Bir açıklamanın (ölçü, lider) paraleli olmaz; ölçtüğü çizginin paralelini alın. |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
-| Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
+| Uç uca | ✗ yok | Nesne 1 uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır. |
 | Ölç | ✓ destekli | çevre 12.071 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 

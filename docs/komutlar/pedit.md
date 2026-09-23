@@ -18,6 +18,15 @@ Dört küçük işlem, ve başka hiçbir komutun yapmadığı şeyler:
 ölçer; `tolerans=`'tan yakın olan atılır. **Uçlar hiçbir zaman atılmaz** — onlar
 çizginin neye değdiği yerdir.
 
+### Yaylı çoklu çizgi
+
+Kenarları yay olan bir çoklu çizgide (DXF'ten gelen bir bordür, [`UÇUCA`](join.md)
+ile yaya eklenmiş bir çizgi) `kapat`, `ac` ve `ters` **yayları koruyarak**
+çalışır: `kapat` son köşeden ilk köşeye düz bir kapanış kenarı ekler, `ac` kapanış
+kenarını — düz ya da yay — kaldırır, `ters` her yayı öbür yönde yürür; hiçbir yay
+kirişine indirgenmez. `sadelestir` yaylı çoklu çizgide çalışmaz, çünkü köşe atmak
+yayların uçlarını atmak olurdu.
+
 ## Adlar
 
 | Ad | Tür |
@@ -85,7 +94,8 @@ Betiklenebilir ve yapay zekâya açıktır; her parametre için tip ve adet üre
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Sadeleştirme toleransı sıfırdan büyük olmalı.` | Tolerans verilmedi ya da sıfır | Artı bir değer verin |
-| `Nesne N bir daire; ÇİZGİDÜZENLE yalnız çizgilerle ve alanlarla çalışır.` | Eğri seçildi | Bir eğrinin köşesi yoktur |
+| `Nesne N bir daire; ÇİZGİDÜZENLE çizgilerle, yaylı çoklu çizgilerle ve alanlarla çalışır.` | Daire, yay, elips ya da spline seçildi | Bir eğrinin köşesi yoktur |
+| `Nesne N yaylı bir çoklu çizgi; sadeleştirmek yaylarının uçlarını atardı. Yayları korumak için sadeleştirmeyin; gerekirse önce PATLAT ile ayırın.` | Yaylı çoklu çizgiye `sadelestir` | Sadeleştirmeyin ya da önce `PATLAT` ile ayırın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

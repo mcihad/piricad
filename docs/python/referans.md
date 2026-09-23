@@ -99,7 +99,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.point_along`](#cadpoint_along) | `core.point_along` | `ARANOKTA` | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
 | [`cad.polygon_regular`](#cadpolygon_regular) | `core.polygon_regular` | `ÇOKGEN` | Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan. |
 | [`cad.break`](#cadbreak) | `core.break` | `KIR` | Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler. |
-| [`cad.join`](#cadjoin) | `core.join` | `UÇUCA` | Uçları birbirine değen çizgileri tek bir çizgiye ekler. |
+| [`cad.join`](#cadjoin) | `core.join` | `UÇUCA` | Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir. |
 | [`cad.lengthen`](#cadlengthen) | `core.lengthen` | `UZUNLUK` | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
 | [`cad.explode`](#cadexplode) | `core.explode` | `PATLAT` | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
 | [`cad.align`](#cadalign) | `core.align` | `HİZALA` | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
@@ -440,7 +440,7 @@ cad.break(
 
 ### `cad.join`
 
-Uçları birbirine değen çizgileri tek bir çizgiye ekler.
+Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.
 
 Komut: `core.join` — `UÇUCA`
 
@@ -448,13 +448,15 @@ Komut: `core.join` — `UÇUCA`
 cad.join(
     object: list[int],
     tolerance: float,
+    on_conflict: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Uç uca eklenecek çizgiler [kalıcı nesne anahtarı] |
-| `tolerance` | `float` | `tolerans` | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 [m] |
+| `object` | `list[int]` | `nesne` | Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler [kalıcı nesne anahtarı] |
+| `tolerance` | `float` | `tolerans` | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001. Aradaki boşluk doğru parçasıyla kapatılır ve söylenir [m] |
+| `on_conflict` | `str` | `cakisma` | ilk: katman, stil ve öznitelikler ilk nesneden, farklar söylenir · reddet: katman ya da öznitelik farklıysa birleştirmez |
 
 [Komut sayfası](../komutlar/join.md)
 

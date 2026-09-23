@@ -409,3 +409,152 @@ TEST_CASE("C-05: KIR'dan kalan iki parça da öznitelikleri taşır")
     }
     CHECK_EQ(carrying, std::size_t{2});
 }
+
+// =============================================================================
+// UÇUCA
+// =============================================================================
+
+TEST_CASE("C-05: UÇUCA çizgiyle yayı yaylı çoklu çizgi yapar; yay yay kalır, uzunluk korunur")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ -10,0 10,0");
+    r.run("YAY merkez=10,5 baslangic=10,0 bitis=10,10"); ///< a half turn up the east side
+    const core::Mm whole = total_length(live(r.doc));
+    r.run("UÇUCA nesne=1 2");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{1});
+    CHECK(all.front().kind == core::kArcPolylineKind);
+    CHECK(has_arc(all.front().path));
+    CHECK_EQ(total_length(all), whole);
+    // A polyline cannot hold an arc: the result is new, and both keys say so.
+    CHECK(r.reported.dump() == R"([{"kaynak":1,"sonuc":[3]},{"kaynak":2,"sonuc":[3]}])");
+}
+
+TEST_CASE("C-05: UÇUCA bir çemberin uç uca iki yayını tek yay yapar")
+{
+    Rig r;
+    r.run("YAY merkez=0,0 baslangic=10,0 bitis=0,10");
+    r.run("YAY merkez=0,0 baslangic=0,10 bitis=-10,0");
+    r.run("UÇUCA nesne=1 2");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{1});
+    CHECK(all.front().kind == core::kArcKind);
+    CHECK(std::abs(core::path_length(all.front().path) - 31'416) <= 1); ///< a half turn
+}
+
+TEST_CASE("C-05: UÇUCA boşluğu gizlemez — kapatır ve söyler, çizileni oynatmaz")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 10,0");
+    r.run("ÇOKLUÇİZGİ 10.004,0 20,0"); ///< 4 mm short
+    r.run("UÇUCA nesne=1 2 tolerans=0.01");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{1});
+    // Both lines exactly where they were drawn, and the 4 mm bridged.
+    CHECK(core::path_vertices(all.front().path) ==
+          std::vector<core::Point2>{{0, 0}, {10'000, 0}, {10'004, 0}, {20'000, 0}});
+    CHECK(r.echoed.find("1 boşluk doğru parçasıyla kapatıldı; en büyüğü 4 mm (tolerans 10 mm)") !=
+          std::string::npos);
+}
+
+TEST_CASE("C-05: UÇUCA ilk çizginin yönünde birleştirir")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 10,0 0,0");  ///< drawn westwards
+    r.run("ÇOKLUÇİZGİ 10,0 20,0"); ///< drawn eastwards, touching its start
+    r.run("UÇUCA nesne=1 2");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{1});
+    CHECK(core::path_vertices(all.front().path) ==
+          std::vector<core::Point2>{{20'000, 0}, {10'000, 0}, {0, 0}});
+}
+
+TEST_CASE("C-05: UÇUCA'da katman ve öznitelik çatışması kurala bağlıdır")
+{
+    const auto setup = [](Rig& r) {
+        r.run("KATMAN ad=YOL");
+        r.run("ÇOKLUÇİZGİ 0,0 10,0");
+        r.run("KATMAN ad=REFUJ");
+        r.run("ÇOKLUÇİZGİ 10,0 20,0");
+        r.run("SÜTUN kimlik=ad tur=metin");
+        r.run("ÖZNİTELİK ad=ad nesne=1 deger=ATATÜRK");
+        r.run("ÖZNİTELİK ad=ad nesne=2 deger=İNÖNÜ");
+    };
+
+    // THE DEFAULT: the first line's layer and values, and what differed said.
+    Rig keep;
+    setup(keep);
+    keep.run("UÇUCA nesne=1 2");
+    REQUIRE_EQ(keep.doc.live_entity_count(), std::size_t{1});
+    core::EntityId e = 0;
+    while (!keep.doc.alive(e))
+        ++e;
+    CHECK_EQ(keep.doc.entities().layer[e], keep.doc.find_layer("YOL"));
+    auto cell = keep.doc.attribute(keep.doc.attributes().find("ad"), e);
+    REQUIRE(cell.ok());
+    CHECK(cell.value().text == "ATATÜRK");
+    CHECK(keep.echoed.find("başka katmandaydı; sonuç ilk çizginin katmanında (YOL)") !=
+          std::string::npos);
+    CHECK(keep.echoed.find("Öznitelikleri farklıydı: ad") != std::string::npos);
+
+    // `cakisma=reddet`: nothing is joined, and the refusal names the conflicts.
+    Rig strict;
+    setup(strict);
+    const std::uint64_t before = strict.doc.content_hash();
+    auto refused = strict.bus.execute_line("UÇUCA nesne=1 2 cakisma=reddet", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("katman, ad") != std::string::npos);
+    CHECK_EQ(strict.doc.content_hash(), before);
+}
+
+TEST_CASE("C-05: UÇUCA kapalı şekli eklemez; uçları buluşan zinciri söyler")
+{
+    Rig r;
+    r.run("DAİRE merkez=0,0 cevre=10,0");
+    r.run("ÇOKLUÇİZGİ 10,0 20,0");
+    auto refused = r.bus.execute_line("UÇUCA nesne=1 2", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("kapalı") != std::string::npos);
+
+    Rig loop;
+    loop.run("ÇOKLUÇİZGİ 0,0 10,0");
+    loop.run("ÇOKLUÇİZGİ 10,0 10,10");
+    loop.run("ÇOKLUÇİZGİ 10,10 0,0");
+    loop.run("UÇUCA nesne=1 2 3");
+    CHECK(loop.echoed.find("Zincirin iki ucu buluşuyor") != std::string::npos);
+    CHECK_EQ(loop.doc.live_entity_count(), std::size_t{1});
+}
+
+// =============================================================================
+// ÇİZGİDÜZENLE on a polyline whose edges bend
+// =============================================================================
+
+TEST_CASE("C-05: ÇİZGİDÜZENLE yaylı çoklu çizgiyi kapatır, açar ve ters çevirir; yay kalır")
+{
+    Rig r;
+    const std::int64_t kerb         = add_kerb(r);
+    const std::string id            = std::to_string(kerb);
+    const auto the_path             = [&r] { return live(r.doc).front().path; };
+    const core::CurvePath open_path = the_path();
+    REQUIRE_EQ(open_path.pieces.size(), std::size_t{3});
+
+    r.run("ÇİZGİDÜZENLE nesne=" + id + " islem=kapat");
+    core::CurvePath closed = the_path();
+    CHECK(closed.closed);
+    CHECK_EQ(closed.pieces.size(), std::size_t{4}); ///< the straight closing edge
+    CHECK(has_arc(closed));
+    CHECK(live(r.doc).front().kind == core::kArcPolylineKind);
+
+    r.run("ÇİZGİDÜZENLE nesne=" + id + " islem=ac");
+    CHECK(the_path() == open_path); ///< the closing edge gone again, nothing else moved
+
+    r.run("ÇİZGİDÜZENLE nesne=" + id + " islem=ters");
+    const core::CurvePath turned = the_path();
+    CHECK(turned == core::reversed(open_path));
+    CHECK(turned.pieces[1].sweep_udeg < 0); ///< the arc walked the other way
+
+    auto refused = r.bus.execute_line("ÇİZGİDÜZENLE nesne=" + id + " islem=sadelestir tolerans=1",
+                                      Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("yaylarının uçlarını atardı") != std::string::npos);
+}

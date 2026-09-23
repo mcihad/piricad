@@ -5,9 +5,26 @@ nesne hâline getirecek herkes için.
 
 ## Ne yapar
 
-Uçları birbirine **değen** çizgileri tek bir çizgiye ekler. Sıra önemsizdir ve
-ters çizilmiş bir parça gerekirse çevrilir — sayısallaştırılmış bir harita tam
-olarak böyle görünür.
+Uçları birbirine **değen** çizgileri, yayları ve yaylı çoklu çizgileri tek bir
+nesneye ekler. Sıra önemsizdir ve ters çizilmiş bir parça gerekirse çevrilir —
+sayısallaştırılmış bir harita tam olarak böyle görünür.
+
+**Yaylar yay kalır.** Yalnız doğru parçalarından oluşan bir zincir çoklu çizgi
+olur; içinde yay olan bir zincir **yaylı çoklu çizgi** olur ve her yay kendi
+merkeziyle, yarıçapıyla kalır — kirişine indirgenmez. Aynı çemberin uç uca iki
+yayı tek bir yay olur. Uzunluk, eklenen parçaların uzunlukları toplamıdır.
+
+### Kurallar
+
+| Konu | Kural |
+|---|---|
+| **Yön** | Sonuç, seçilen **ilk** nesnenin yönündedir; öteki parçalar gerekirse çevrilir |
+| **Katman, stil** | İlk nesnenin; başka katmandaki parça sayısı söylenir |
+| **Öznitelikler** | İlk nesnenin değerleri kalır; değeri farklı olan sütunlar adıyla söylenir. `cakisma=reddet` ile katman ya da öznitelik farkı varsa hiç birleştirmez |
+| **Z** | Model iki boyutludur; kot bir öznitelik olarak tutuluyorsa öznitelik kuralına tabidir |
+| **Kimlik** | Sonuç ilk nesnenin türündeyse onun kimliğini taşır; tür değişirse (çizgi + yay → yaylı çoklu çizgi) yeni bir nesnedir. Her kaynağın hangi kimliğe dönüştüğü yapılandırılmış cevapta söylenir |
+| **Kapalı şekil** | Daire, kapalı yaylı çoklu çizgi ve alan eklenmez — uçları yoktur |
+| **Uçları buluşan zincir** | Açık kalır ve söylenir; kapalı alana çevirmek [`ÇİZGİDÜZENLE`](pedit.md) `islem=kapat`'ın işidir |
 
 **`BİRLEŞTİR` ile karıştırmayın.** İkisi farklı sorudur:
 
@@ -33,6 +50,9 @@ Uçların "değmiş" sayılması için en büyük açıklık `tolerans=` ile ver
 değil: kadastral bir çizim 1 mm ister, elle sayısallaştırılmış bir harita bir
 metre isteyebilir.
 
+**Tolerans gizlenmez ve hiçbir şey yerinden oynatılmaz.** Tam değen iki uç aynı
+noktayı paylaşır; tolerans içindeki bir açıklık, parçaları kaydırmadan **bir doğru
+parçasıyla kapatılır** ve komut kaç boşluk kapattığını ve en büyüğünü söyler.
 Zincire değmeyen bir çizgi **olduğu gibi bırakılır** — yerine çekilmez.
 
 ## Adlar
@@ -48,15 +68,16 @@ Zincire değmeyen bir çizgi **olduğu gibi bırakılır** — yerine çekilmez.
 ## Sözdizimi
 
 ```text
-UÇUCA nesne=<kimlik> nesne=<kimlik> [nesne=… …] [tolerans=<m>]
+UÇUCA nesne=<kimlik> nesne=<kimlik> [nesne=… …] [tolerans=<m>] [cakisma=ilk|reddet]
 ```
 
 ## Parametreler
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | seçim | 0..n | Uç uca eklenecek çizgiler |
-| `tolerans` | sayı | 0..1 | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 |
+| `nesne` | seçim | 0..n | Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler; ilki yönü ve değerleri verir |
+| `tolerans` | sayı | 0..1 | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001. Aradaki boşluk doğru parçasıyla kapatılır |
+| `cakisma` | sözcük | 0..1 | `ilk` (varsayılan): katman ve öznitelikler ilk nesneden · `reddet`: fark varsa birleştirmez |
 
 ## Örnekler
 
@@ -72,15 +93,35 @@ UÇUCA nesne=1 nesne=2 nesne=3
 3 çizgi tek bir çizgiye eklendi (4 köşe).
 ```
 
-5 metrelik bir açıklığı kapatmak:
+5 metrelik bir açıklığı kapatmak — açıklık bir doğru parçasıyla kapanır:
 
 ```text
 UÇUCA nesne=1 nesne=2 tolerans=5
 ```
 
+```text
+2 çizgi tek bir çizgiye eklendi (4 köşe).
+  1 boşluk doğru parçasıyla kapatıldı; en büyüğü 5000 mm (tolerans 5000 mm).
+```
+
+Bir çizgiyle bir yayı (`1`, `2`) eklemek — sonuç yaylı çoklu çizgidir, yay yay
+kalır:
+
+```text
+UÇUCA nesne=1 2
+```
+
+Katmanları ya da öznitelikleri farklıysa hiç birleştirmemek:
+
+```text
+UÇUCA nesne=1 2 cakisma=reddet
+```
+
 ### Arayüz
 
-**Değiştir > Uç Uca Ekle**. Çizgileri seçip Enter'a basın.
+**Değiştir > Uç Uca Ekle**. Çizgileri seçip Enter'a basın. Önce seçtiğiniz nesne
+yönü, katmanı ve öznitelikleri verir; transkript, kapatılan boşlukları ve farklı
+olan katman ve öznitelikleri yazar.
 
 ### Betik
 
@@ -102,8 +143,11 @@ Betiklenebilir ve yapay zekâya açıktır; her parametre için tip ve adet üre
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `UÇUCA en az iki çizgi ister; N geldi.` | Tek nesne seçili | En az iki çizgi seçin |
-| `Seçilen çizgilerin uçları birbirine değmiyor (tolerans N mm).` | Açıklık toleransı aşıyor | `tolerans=` ile büyütün ya da uçları yakalama açıkken yeniden çizin |
-| `Nesne N açık bir çizgi değil.` | Kapalı alan | `ÇİZGİDÜZENLE islem=ac` ile açın |
+| `Seçilen çizgilerin uçları birbirine değmiyor (tolerans N mm). Uçları yakalama açıkken yeniden çizin ya da tolerans= ile büyütün.` | Açıklık toleransı aşıyor | `tolerans=` ile büyütün ya da uçları yakalama açıkken yeniden çizin |
+| `Nesne N kapalı; ucu olmayan bir şekil uç uca eklenmez.` | Daire, kapalı şekil ya da alan | Açık bir nesne seçin; alanı `ÇİZGİDÜZENLE islem=ac` ile açın |
+| `Nesne N uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır.` | Elips, spline, nokta, yazı ya da blok | Eklenebilir bir nesne seçin |
+| `UÇUCA: birleşecek nesneler farklı — katman, ad. İlk nesnenin değerleriyle birleştirmek için cakisma=ilk verin.` | `cakisma=reddet` ve katman ya da öznitelik farkı | Farkları giderin ya da `cakisma=ilk` verin |
+| `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

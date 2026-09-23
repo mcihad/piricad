@@ -182,7 +182,7 @@ Task<void> run_join(Context& ctx)
         co_return;
     }
 
-    // THE TOLERANCE IS A PARAMETER, IN MILLIMETRES, AND IT IS NOT THE PICK
+    // THE TOLERANCE IS A PARAMETER, IN METRES, AND IT IS NOT THE PICK
     // TOLERANCE. How close two ends have to be to count as touching is a
     // property of the survey, not of the mouse: a 1 mm default is the one a
     // cadastral drawing wants and a metre is what a hand-digitised map needs.
@@ -190,56 +190,47 @@ Task<void> run_join(Context& ctx)
     if (const Value v = ctx.argument("tolerans"); !v.empty())
         tolerance = core::mm_from_metres(v.as_number());
     if (tolerance < 0) tolerance = 0;
-    const double reach = static_cast<double>(tolerance) * static_cast<double>(tolerance);
 
-    struct Run
-    {
-        core::EntityId slot{core::kNoEntity};
-        std::int64_t id{0};
-        std::vector<core::Point2> pts;
-        bool used{false};
-    };
+    // WHAT A CONFLICT DOES: `ilk` keeps the first object's layer, style and
+    // attributes and says what differed; `reddet` refuses and says what.
+    std::string on_conflict = "ilk";
+    if (const Value v = ctx.argument("cakisma"); !v.empty()) on_conflict = v.as_text();
+    const bool refuse_conflicts = core::turkish_key_equals(on_conflict, "reddet");
 
-    std::vector<Run> runs;
+    // LINES, ARCS AND BENT POLYLINES (TODOS C-05): each walked as a path, so
+    // an arc joins as an arc and is never replaced by its chord. A closed
+    // shape has no ends to join.
+    const core::Document& doc = ctx.document();
+    std::vector<core::EntityId> slots;
+    std::vector<core::CurvePath> paths;
     for (const std::int64_t id : chosen) {
-        Run one;
-        one.id = id;
-        if (!open_run(ctx, id, one.slot, one.pts)) co_return;
-        runs.push_back(std::move(one));
-    }
-
-    // Greedy chaining from the first run: take whichever remaining run touches
-    // either end, flipping it if it has to be flipped.
-    std::vector<core::Point2> chain = runs.front().pts;
-    runs.front().used               = true;
-    std::size_t joined              = 1;
-
-    bool grew = true;
-    while (grew) {
-        grew = false;
-        for (Run& one : runs) {
-            if (one.used) continue;
-            const auto touches = [reach](core::Point2 a, core::Point2 b) {
-                return core::distance_squared(a, b) <= reach;
-            };
-            if (touches(chain.back(), one.pts.front())) {
-                chain.insert(chain.end(), one.pts.begin() + 1, one.pts.end());
-            } else if (touches(chain.back(), one.pts.back())) {
-                chain.insert(chain.end(), one.pts.rbegin() + 1, one.pts.rend());
-            } else if (touches(chain.front(), one.pts.back())) {
-                chain.insert(chain.begin(), one.pts.begin(), one.pts.end() - 1);
-            } else if (touches(chain.front(), one.pts.front())) {
-                chain.insert(chain.begin(), one.pts.rbegin(), one.pts.rend() - 1);
-            } else {
-                continue;
-            }
-            one.used = true;
-            ++joined;
-            grew = true;
+        const core::EntityId slot =
+            id > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)))
+                   : core::kNoEntity;
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+            co_return;
         }
+        auto path = core::path_of(doc, slot);
+        if (!path) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(id) +
+                           " uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır.");
+            co_return;
+        }
+        if (path->closed) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(id) +
+                           " kapalı; ucu olmayan bir şekil uç uca eklenmez.");
+            co_return;
+        }
+        slots.push_back(slot);
+        paths.push_back(std::move(*path));
     }
 
-    if (joined < 2) {
+    const core::PathJoin join = core::join_paths(paths, tolerance);
+    if (join.joined.size() < 2) {
         ctx.session().fail(core::err(
             core::ErrorCode::InvalidArgument,
             "Seçilen çizgilerin uçları birbirine değmiyor (tolerans " + std::to_string(tolerance) +
@@ -247,22 +238,98 @@ Task<void> run_join(Context& ctx)
         co_return;
     }
 
-    if (!write_run(ctx, runs.front().slot, chain)) co_return;
-    for (const Run& one : runs) {
-        if (!one.used || one.slot == runs.front().slot) continue;
-        auto st = ctx.transaction().erase_entity(one.slot);
-        if (!st) {
+    // THE CONFLICTS, measured over what joined: the layers, and every
+    // attribute column whose values are not the first object's.
+    const core::EntityId first = slots[join.joined.front()];
+    std::size_t other_layers   = 0;
+    for (const std::size_t j : join.joined)
+        if (doc.entities().layer[slots[j]] != doc.entities().layer[first]) ++other_layers;
+    std::vector<std::string> differing;
+    const core::AttrTable& table = doc.attributes();
+    for (std::size_t c = 0; c < table.columns(); ++c) {
+        const auto col  = static_cast<core::AttrId>(c);
+        const auto mine = doc.attribute(col, first);
+        for (const std::size_t j : join.joined) {
+            const auto theirs     = doc.attribute(col, slots[j]);
+            const bool mine_set   = mine && mine.value().present;
+            const bool theirs_set = theirs && theirs.value().present;
+            if (!theirs_set) continue;
+            if (!mine_set || !(mine.value() == theirs.value())) {
+                if (const core::AttrColumn* column = table.column(col); column != nullptr)
+                    differing.push_back(column->spec().id);
+                break;
+            }
+        }
+    }
+    const std::string layer_name = doc.layers()[doc.entities().layer[first]].name;
+    if (refuse_conflicts && (other_layers != 0 || !differing.empty())) {
+        std::string what;
+        if (other_layers != 0) what += "katman";
+        for (const std::string& name : differing)
+            what += (what.empty() ? "" : ", ") + name;
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "UÇUCA: birleşecek nesneler farklı — " + what +
+                          ". İlk nesnenin değerleriyle birleştirmek için cakisma=ilk verin."));
+        co_return;
+    }
+
+    // THE RESULT IN ITS OWN KIND, drawn like the first object: in place when
+    // the first can hold it — its key stays — and new when the kind changes
+    // (lines joined to an arc are a bent polyline).
+    std::vector<std::int64_t> result;
+    const auto key_of = [&doc](core::EntityId e) {
+        return static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+    };
+    const bool in_place = core::path_record(join.chain).kind == doc.entities().kind[first];
+    if (in_place) {
+        if (!write_path(ctx, first, join.chain)) co_return;
+        result.push_back(key_of(first));
+    } else if (!add_path_like(ctx, first, join.chain, result)) {
+        co_return;
+    }
+    for (const std::size_t j : join.joined) {
+        if (in_place && slots[j] == first) continue;
+        if (const auto st = ctx.transaction().erase_entity(slots[j]); !st) {
             ctx.session().fail(st.error());
             co_return;
         }
     }
 
+    std::vector<PathEdit> edits;
+    edits.reserve(join.joined.size());
+    for (const std::size_t j : join.joined)
+        edits.push_back(PathEdit{.source = chosen[j], .result = result});
     ctx.record("nesne", Value::ids(chosen));
-    ctx.echo(std::to_string(joined) + " çizgi tek bir çizgiye eklendi (" +
-             std::to_string(chain.size()) + " köşe)." +
-             (joined < chosen.size() ? " " + std::to_string(chosen.size() - joined) +
-                                           " çizginin ucu zincire değmedi ve olduğu gibi bırakıldı."
-                                     : ""));
+    if (const Value v = ctx.argument("tolerans"); !v.empty()) ctx.record("tolerans", v);
+    if (refuse_conflicts) ctx.record("cakisma", Value::text(on_conflict));
+    ctx.report(edits_json(edits));
+
+    // WHAT WAS DONE, AND WHAT WAS ADDED OR DECIDED TO DO IT — the gaps bridged,
+    // the layer kept, the values that were not the same — because a join that
+    // hides its tolerance hides a geometry change.
+    std::string said = std::to_string(join.joined.size()) + " çizgi tek bir çizgiye eklendi (" +
+                       std::to_string(core::path_record(join.chain).ring.size()) + " köşe).";
+    if (join.bridged != 0)
+        said += "\n  " + std::to_string(join.bridged) +
+                " boşluk doğru parçasıyla kapatıldı; en büyüğü " + std::to_string(join.widest) +
+                " mm (tolerans " + std::to_string(tolerance) + " mm).";
+    if (other_layers != 0)
+        said += "\n  " + std::to_string(other_layers) +
+                " çizgi başka katmandaydı; sonuç ilk çizginin katmanında (" + layer_name + ").";
+    if (!differing.empty()) {
+        said += "\n  Öznitelikleri farklıydı: ";
+        for (std::size_t i = 0; i < differing.size(); ++i)
+            said += (i == 0 ? "" : ", ") + differing[i];
+        said += " — ilk çizginin değerleri kaldı.";
+    }
+    if (join.joined.size() < chosen.size())
+        said += "\n  " + std::to_string(chosen.size() - join.joined.size()) +
+                " çizginin ucu zincire değmedi ve olduğu gibi bırakıldı.";
+    if (join.ends_meet)
+        said += "\n  Zincirin iki ucu buluşuyor; kapalı alana çevirmek için ÇİZGİDÜZENLE "
+                "islem=kapat.";
+    ctx.echo(said);
 }
 
 // --------------------------------------------------------------- UZUNLUK ----
@@ -423,19 +490,24 @@ KENTOS_COMMAND(join_lines)
         .params =
             {
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Uç uca eklenecek çizgiler"}
+                      "Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler"}
                     .en("object"),
                 Param::number("tolerans", Arity::optional(),
                               "Uçların değmiş sayılması için en büyük açıklık (m); varsayılan "
-                              "0,001")
+                              "0,001. Aradaki boşluk doğru parçasıyla kapatılır ve söylenir")
                     .measured_in("m")
                     .en("tolerance"),
+                Param::choice("cakisma", Arity::optional(), {"ilk", "reddet"},
+                              "ilk: katman, stil ve öznitelikler ilk nesneden, farklar söylenir "
+                              "· reddet: katman ya da öznitelik farklıysa birleştirmez")
+                    .en("on_conflict"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Uçları birbirine değen çizgileri tek bir çizgiye ekler.",
-        .run     = &run_join,
-        .effect  = Effect::DocumentEdit,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir "
+                   "nesneye ekler; yaylar yay kalır, boşluklar söylenir.",
+        .run    = &run_join,
+        .effect = Effect::DocumentEdit,
     };
 }
 
