@@ -5387,6 +5387,16 @@ QWidget* MainWindow::pythonSignatureHint() const
     return pythonConsole_ == nullptr ? nullptr : pythonConsole_->promptHint();
 }
 
+QWidget* MainWindow::pythonCompletionPopup() const
+{
+    return pythonConsole_ == nullptr ? nullptr : pythonConsole_->promptPopup();
+}
+
+void MainWindow::clearPythonPrompt()
+{
+    if (pythonConsole_ != nullptr) pythonConsole_->prompt()->clear();
+}
+
 void MainWindow::showTranscript()
 {
     if (propertyDock_ == nullptr || propertyStack_ == nullptr) return;
@@ -6711,6 +6721,38 @@ int MainWindow::probePython()
     {
         const QStringList shown = pythonConsole_->probeOffered(QStringLiteral("pri"));
         check(shown.contains(QStringLiteral("print")), "yerleşik print önerilmiyor");
+    }
+
+    // ---- nothing floats over the line being typed, nor over the other --------
+    //
+    // WHAT THE USER SAW: the list and the hint on top of each other and both on
+    // top of the line, at a prompt that sits on the bottom edge of the window.
+    // The pictures never showed it, because each floater was photographed alone.
+    {
+        (void)pythonConsole_->probeOffered(QStringLiteral("cad.line("));
+        const ScriptEditor::Floaters f = pythonConsole_->promptFloaters();
+        const auto text                = [](const QRect& r) {
+            return QStringLiteral("%1,%2 %3×%4")
+                .arg(r.x())
+                .arg(r.y())
+                .arg(r.width())
+                .arg(r.height());
+        };
+        say("satır", text(f.line));
+        say("liste", text(f.popup));
+        say("ipucu", text(f.hint));
+        check(!f.popup.isEmpty(), "çağrı içinde liste açılmadı");
+        check(!f.hint.isEmpty(), "çağrı içinde ipucu açılmadı");
+        check(!f.popup.intersects(f.line), "liste yazılan satırı örtüyor");
+        check(!f.hint.intersects(f.line), "ipucu yazılan satırı örtüyor");
+        check(!f.popup.intersects(f.hint), "liste ile ipucu üst üste");
+    }
+
+    // ---- the prompt is a prompt ---------------------------------------------
+    {
+        ScriptEditor* prompt = pythonConsole_->prompt();
+        check(prompt->gutterText(0) == QStringLiteral(">>>"), "istem >>> ile başlamıyor");
+        check(prompt->gutterText(1) == QStringLiteral("..."), "devam satırı ... değil");
     }
 
     // ---- the hint follows the cursor out of the call ------------------------

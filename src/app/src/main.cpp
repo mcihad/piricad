@@ -1141,6 +1141,26 @@ int main(int argc, char** argv)
         later([&window, shot] {
             shot(QStringLiteral("1e-python-imza-ipucu"), window.pythonSignatureHint());
         });
+        // AND ALL THREE IN ONE FRAME: the prompt's line, the list and the hint where
+        // they really are. Photographed one at a time, a list sitting on the line
+        // and a hint sitting on the list looked fine in every picture.
+        later([&window] {
+            window.clearPythonPrompt();
+            window.typeIntoPythonPrompt(QStringLiteral("cad.line("));
+        });
+        later([&window, into] {
+            QImage frame = window_shot(&window);
+            QPainter paint(&frame);
+            const QPoint origin = window.mapToGlobal(QPoint(0, 0));
+            for (QWidget* floating : {window.pythonCompletionPopup(), window.pythonSignatureHint()})
+                if (floating != nullptr && floating->isVisible())
+                    paint.drawPixmap(floating->mapToGlobal(QPoint(0, 0)) - origin,
+                                     floating->grab());
+            paint.end();
+            const QString path = into + QStringLiteral("/1f-python-liste-ve-ipucu.png");
+            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[kentos] %s\n",
+                               qPrintable(path));
+        });
 
         // AND THE LAYOUT DESIGNER, which is a whole editor and had never been
         // photographed. It opens modal, so the steps after it run inside its

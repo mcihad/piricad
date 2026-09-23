@@ -66,6 +66,24 @@ PYTHON kod="print(cad.doc.entity_count())"
 **Shift+Enter** satır ekler, **Yukarı** ve **Aşağı** gönderilenleri geri getirir. Panel
 yazdığınızı `>>>` ile, programın söylediklerini altına yazar.
 
+İstemin solunda satır numarası değil, Python'un kendi istemi durur: bir deyimin ilk
+satırı `>>>`, devam eden satırlar `...` ile başlar. `for` satırından sonra gövdesi
+beklenirken ilk satır da `...` olur.
+
+Yazarken iki yardımcı açılır ve ikisi de **yazdığınız satırın üstünü örtmez**:
+
+- **İmza ipucu** — bir `cad.` çağrısının parantezi içindeyken komutun parametreleri,
+  üzerinde bulunduğunuz parametre vurgulu ve Türkçe açıklamasıyla. Satırın hemen
+  yanında durur ve yazdıkça yer değiştirmez.
+- **Tamamlama listesi** — `cad.`'den sonra komutlar, bir çağrının içinde o komutun
+  anahtar sözcükleri (`points=`), başka yerde betiğin kendi adları ve Python'un
+  sözcükleri. İpucunun ötesinde açılır; **Yukarı/Aşağı** ile seçip **Enter** ya da
+  **Tab** ile yerleştirirsiniz, **Esc** kapatır. **Ctrl+Boşluk** istediğiniz yerde
+  açar.
+
+İkisi, istem pencerenin alt kenarındaysa satırın üstüne, yer varsa altına istiflenir:
+ipucu satıra en yakın, liste onun ötesinde.
+
 Panel bu komutun bir istemcisidir: her gönderim bir `core.python` çağrısıdır, dolayısıyla
 panelden yapabildiğiniz her şeyi komut satırından da yapabilirsiniz.
 

@@ -780,6 +780,7 @@ void ScriptEditor::offerCompletions(const Context& where)
                  completer_->popup()->verticalScrollBar()->sizeHint().width());
     box.translate(-fontMetrics().horizontalAdvance(where.prefix), 0);
     completer_->complete(box);
+    placeFloaters(); // QCompleter put it where IT likes; this puts it where it belongs
 }
 
 void ScriptEditor::updateSignatureHint(const Context& where)
@@ -815,15 +816,93 @@ void ScriptEditor::updateSignatureHint(const Context& where)
     hint_->setFont(font());
     hint_->show(QStringLiteral("cad.") + c->name + QLatin1Char('('), parts, active, note,
                 QStringLiteral(") -> int"), theme_);
-
-    // UNDER THE CURSOR, and pushed back onto the screen when the line is long.
-    QPoint at = mapToGlobal(cursorRect().bottomLeft()) + QPoint(0, 6);
-    if (const QScreen* screen = this->screen(); screen != nullptr) {
-        const int right = screen->availableGeometry().right() - hint_->width() - 8;
-        at.setX(qMin(at.x(), right));
-    }
-    hint_->move(at);
     hint_->QWidget::show();
+    placeFloaters();
+}
+
+void ScriptEditor::placeFloaters()
+{
+    QWidget* popup  = completer_->popup();
+    const bool list = popup->isVisible();
+    const bool sign = hint_->isVisible();
+    if (!list && !sign) return;
+
+    // THE LINE BEING TYPED, across the whole editor, is the one thing nothing may
+    // cover: both used to open over it — the popup where QCompleter liked, the
+    // hint six pixels under the cursor — and at a prompt on the bottom edge of
+    // the window the two landed on each other and on the line.
+    const QRect cursor = cursorRect();
+    const QRect line(viewport()->mapToGlobal(QPoint(0, cursor.top())),
+                     QSize(viewport()->width(), cursor.height()));
+    const QRect screen = this->screen() != nullptr
+                             ? this->screen()->availableGeometry()
+                             : QRect(line.topLeft() - QPoint(0, 2000), QSize(4000, 4000));
+    constexpr int kGap = 4;
+
+    // THE SIDE WITH ROOM FOR BOTH, decided on the list's FULL height even while
+    // it is down, so the hint does not jump across the line the moment a list
+    // comes up under it.
+    const int list_h =
+        list ? popup->height() : completer_->maxVisibleItems() * fontMetrics().height() + 8;
+    const int sign_h = sign ? hint_->height() : 0;
+    const int need   = kGap + sign_h + (sign ? kGap : 0) + list_h;
+    const int below  = screen.bottom() - line.bottom();
+    const int above  = line.top() - screen.top();
+    const bool down  = below >= need || below >= above;
+
+    const auto fit_x = [&screen](int want, int width) {
+        return qBound(screen.left() + 4, want, qMax(screen.left() + 4, screen.right() - width - 4));
+    };
+    const int column = viewport()->mapToGlobal(cursor.topLeft()).x();
+
+    // THE HINT NEXT TO THE LINE, the list beyond it. The hint is read the whole
+    // time a call is being typed and must stay put; the list is picked from and
+    // put away, and it is the one that moves.
+    int edge = down ? line.bottom() + 1 + kGap : line.top() - kGap;
+    if (sign) {
+        const int y = down ? edge : edge - sign_h;
+        hint_->move(fit_x(column, hint_->width()), y);
+        edge = down ? y + sign_h + kGap : y - kGap;
+    }
+    if (list) {
+        // The list lines up with the start of the word it completes.
+        const int x = column - fontMetrics().horizontalAdvance(completer_->completionPrefix());
+        popup->move(fit_x(x, popup->width()), down ? edge : edge - popup->height());
+    }
+}
+
+QWidget* ScriptEditor::completionPopup() const
+{
+    return completer_->popup();
+}
+
+ScriptEditor::Floaters ScriptEditor::floaters() const
+{
+    Floaters out;
+    const QRect cursor = cursorRect();
+    out.line           = QRect(viewport()->mapToGlobal(QPoint(0, cursor.top())),
+                               QSize(viewport()->width(), cursor.height()));
+    if (completer_->popup()->isVisible()) out.popup = completer_->popup()->frameGeometry();
+    if (hint_->isVisible()) out.hint = hint_->frameGeometry();
+    return out;
+}
+
+QString ScriptEditor::gutterText(int block) const
+{
+    if (!promptGutter_) return QString::number(block + 1);
+    return block == 0 && !continuing_ ? QStringLiteral(">>>") : QStringLiteral("...");
+}
+
+void ScriptEditor::setPromptGutter(bool on)
+{
+    promptGutter_ = on;
+    updateGutterWidth();
+}
+
+void ScriptEditor::setContinuing(bool on)
+{
+    continuing_ = on;
+    gutter_->update();
 }
 
 QStringList ScriptEditor::completionsShown() const
@@ -849,6 +928,8 @@ QWidget* ScriptEditor::signatureHint() const
 
 int ScriptEditor::gutterWidth() const
 {
+    if (promptGutter_)
+        return kGutterPad + fontMetrics().horizontalAdvance(QStringLiteral(">>>")) + kGutterPad;
     int digits = 1;
     for (int lines = qMax(1, blockCount()); lines >= 10; lines /= 10)
         ++digits;
@@ -883,12 +964,22 @@ void ScriptEditor::paintGutter(QPaintEvent* event)
     const int current = textCursor().blockNumber();
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
-            // THE CURRENT LINE'S NUMBER IS THE ONLY BRIGHT ONE. A gutter is a
-            // reference, not a column of content, and 200 equally dark numbers
-            // beside the code compete with it.
-            painter.setPen(number == current ? t.text : t.textFaint);
-            painter.drawText(0, top, gutter_->width() - kGutterPad, fontMetrics().height(),
-                             Qt::AlignRight, QString::number(number + 1));
+            if (promptGutter_) {
+                // THE PROMPT, not a number: `>>>` where a statement starts and
+                // `...` where it goes on, in the accent so the eye finds where to
+                // type before it finds anything else.
+                const QString text = gutterText(number);
+                painter.setPen(text == QStringLiteral(">>>") ? t.accent : t.textFaint);
+                painter.drawText(kGutterPad, top, gutter_->width() - kGutterPad,
+                                 fontMetrics().height(), Qt::AlignLeft, text);
+            } else {
+                // THE CURRENT LINE'S NUMBER IS THE ONLY BRIGHT ONE. A gutter is a
+                // reference, not a column of content, and 200 equally dark numbers
+                // beside the code compete with it.
+                painter.setPen(number == current ? t.text : t.textFaint);
+                painter.drawText(0, top, gutter_->width() - kGutterPad, fontMetrics().height(),
+                                 Qt::AlignRight, QString::number(number + 1));
+            }
         }
         block  = block.next();
         top    = bottom;
@@ -1112,6 +1203,7 @@ PythonConsole::PythonConsole(Controller& controller, QWidget* parent)
     // ENTER SENDS, Shift+Enter opens a line. `wantsMore` keeps a block open on
     // its own, so a `for` loop still gets its body without a modifier.
     prompt_->setSubmitOnEnter(true);
+    prompt_->setPromptGutter(true);
     connect(prompt_, &ScriptEditor::submitRequested, this, &PythonConsole::submit);
 
     appendOutput(tr("Python konsolu. `cad.run(\"ÇİZGİ 0,0 10,10\")` ya da `cad.line(points=…)`. "
@@ -1183,7 +1275,11 @@ void PythonConsole::submit()
                  typed.split(QLatin1Char('\n')).join(QStringLiteral("\n... ")));
     prompt_->clear();
 
-    if (wantsMore(buffer_)) return;
+    if (wantsMore(buffer_)) {
+        prompt_->setContinuing(true); // the next line is `...`, the statement is open
+        return;
+    }
+    prompt_->setContinuing(false);
 
     const QString source = buffer_.join(QLatin1Char('\n'));
     buffer_.clear();

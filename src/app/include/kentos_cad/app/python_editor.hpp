@@ -96,6 +96,16 @@ public:
     /// line either way, so a multi-line statement is typable at the prompt.
     void setSubmitOnEnter(bool on) { submitOnEnter_ = on; }
 
+    /// Makes the gutter a PROMPT: `>>>` on the first line and `...` on the
+    /// lines after it, which is what every Python REPL has shown since 1991 and
+    /// what tells the user at a glance that this box runs what they type. Line
+    /// numbers are for a file; a console line has no number worth reading.
+    void setPromptGutter(bool on);
+
+    /// Whether the statement being typed CONTINUES one already sent — a `for`
+    /// line whose body is still coming. Then the first line shows `...` too.
+    void setContinuing(bool on);
+
     /// Steps through what has been sent, for Up and Down at a console prompt.
     /// Empty when there is nothing to recall.
     void setHistory(const QStringList& entries) { history_ = entries; }
@@ -113,6 +123,22 @@ public:
     /// its own, so a grab of the shell does not contain it.
     QWidget* signatureHint() const;
 
+    /// The completion popup, for the same probe and for the same reason.
+    QWidget* completionPopup() const;
+
+    /// Where the line being typed, the popup and the hint are ON THE SCREEN, for
+    /// the probe that checks that none of the three covers another. An empty
+    /// rectangle for one that is not up.
+    struct Floaters
+    {
+        QRect line;  ///< the cursor's line, across the editor
+        QRect popup; ///< the completion list
+        QRect hint;  ///< the signature strip
+    };
+
+    /// See `Floaters`.
+    Floaters floaters() const;
+
     /// Paints the line-number gutter. Public because the gutter widget is a
     /// plain `QWidget` whose `paintEvent` forwards here — the shape Qt's own
     /// code-editor example uses, and the reason is that a gutter needs the
@@ -121,6 +147,10 @@ public:
 
     /// How wide the gutter must be for the current line count.
     int gutterWidth() const;
+
+    /// What the gutter shows beside `block`: its number in a file, `>>>` or
+    /// `...` at a prompt (`setPromptGutter`).
+    QString gutterText(int block) const;
 
     void applyTheme(ThemeMode mode) override;
 
@@ -185,6 +215,11 @@ private:
     /// Shows or hides the signature hint for `where`.
     void updateSignatureHint(const Context& where);
 
+    /// Puts the hint and the popup where they cover neither the line being typed
+    /// nor each other: on the side of the line with room for both, the hint next
+    /// to the line and the list beyond it. See the definition for why that order.
+    void placeFloaters();
+
     /// The callable named `name`, or null.
     const PythonCallable* callable(const QString& name) const;
 
@@ -202,8 +237,10 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 
     bool submitOnEnter_{false};
-    QStringList history_; ///< what a console prompt recalls with Up and Down
-    int recall_{-1};      ///< where Up/Down is in `history_`, -1 when not recalling
+    bool promptGutter_{false}; ///< `>>>` and `...` instead of line numbers
+    bool continuing_{false};   ///< the first line continues a statement: `...`
+    QStringList history_;      ///< what a console prompt recalls with Up and Down
+    int recall_{-1};           ///< where Up/Down is in `history_`, -1 when not recalling
 };
 
 /// The bottom panel: a transcript and a prompt, the command line's sibling.
@@ -263,6 +300,15 @@ public:
     /// request with nowhere to land — which is how this panel first opened as a
     /// 90 px slot with its transcript invisible.
     QSize sizeHint() const override { return {720, 260}; }
+
+    /// The prompt's popup, hint and cursor line on the screen (`ScriptEditor::Floaters`).
+    ScriptEditor::Floaters promptFloaters() const { return prompt_->floaters(); }
+
+    /// The prompt's completion popup, for the probe that photographs it.
+    QWidget* promptPopup() const { return prompt_->completionPopup(); }
+
+    /// The prompt itself, for the probe that reads its gutter.
+    ScriptEditor* prompt() const { return prompt_; }
 
 private:
     /// Sends what is buffered, or keeps buffering when the source is unfinished.

@@ -133,6 +133,12 @@ public:
     /// The Python prompt's signature strip, for the probe that photographs it.
     QWidget* pythonSignatureHint() const;
 
+    /// The Python prompt's completion popup — a window of its own, like the hint.
+    QWidget* pythonCompletionPopup() const;
+
+    /// Empties the Python prompt, for a probe that types a fresh line.
+    void clearPythonPrompt();
+
     /// Drives the Python prompt and checks what it offers. Returns the number of
     /// failures, so `ctest` fails on any of them.
     int probePython();

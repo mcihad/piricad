@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — Python konsolunda ipucu ve liste satırı örtmüyor
+
+İmza ipucu ile tamamlama listesi pencerenin alt kenarındaki istemde birbirinin ve
+yazılan satırın üstüne açılıyordu. Artık tek bir kuralla yerleşiyorlar: satırın yer olan
+tarafında, ipucu satıra en yakın ve yazdıkça yerinde, liste onun ötesinde; hiçbiri
+satırı örtmüyor. İstemin solunda satır numarası yerine `>>>` ve devam satırlarında
+`...` duruyor. Ekran görüntüsü serisi artık üçünü tek karede çekiyor
+(`1f-python-liste-ve-ipucu`) — ayrı ayrı çekilen karelerde üst üste binme hiç
+görünmüyordu; `KENTOS_PYTHON_PROBE` üç dikdörtgenin kesişmediğini ölçüyor.
+
 ### Düzeltildi — reddedilen komut artık hata döner (TODOS F-01)
 
 Bir komut işi reddettiğinde — daireyi budamak, olmayan bir nesneyi silmek, proje
