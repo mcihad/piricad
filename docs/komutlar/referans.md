@@ -786,6 +786,7 @@ Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: aç�
 | `nokta` | point | isteğe bağlı | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer |
 | `kaynak` | text | isteğe bağlı | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil |
 | `ozellik` | text | isteğe bağlı | Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da etkin katman |
+| `oznitelik` | text | isteğe bağlı | Kaynağın öznitelik değerleri: paralele aktar (öntanımlı) ya da aktarma — parselin içine çizilen çekme hattı gibi kaynağın kendisi olmayan bir çizgi için |
 
 Ayrıntılı kullanım: [OFSET](offset.md)
 
@@ -6772,6 +6773,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "aktif"
           ],
           "description": "Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da etkin katman (metin)"
+        },
+        "oznitelik": {
+          "type": "string",
+          "enum": [
+            "aktar",
+            "aktarma"
+          ],
+          "description": "Kaynağın öznitelik değerleri: paralele aktar (öntanımlı) ya da aktarma — parselin içine çizilen çekme hattı gibi kaynağın kendisi olmayan bir çizgi için (metin)"
         }
       },
       "required": [],

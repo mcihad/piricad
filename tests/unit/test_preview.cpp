@@ -908,6 +908,51 @@ TEST_CASE("OFSET: tam bir satır iki yanı verir; kaynak=sil ve ozellik=aktif s�
     CHECK((source == core::kNoEntity || !r.doc.alive(source)));
 }
 
+TEST_CASE("OFSET: kaynağın öznitelikleri paralele aktarılır; oznitelik=aktarma aktarmaz")
+{
+    // C-03's last clause. The kerb lines of a road axis are that road's, so the
+    // road's name travels with them, as it does with KOPYALA and with both
+    // halves of a BÖL. A setback line inside a parcel is not the parcel, and
+    // `aktarma` keeps its ada number from turning up twice.
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 50,0", Origin::Test).ok()); // 1
+    REQUIRE(r.bus.execute_line("SÜTUN kimlik=yol_adi tur=metin", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÖZNİTELİK ad=yol_adi nesne=1 deger=ATATURK", Origin::Test).ok());
+    const core::AttrId col = r.doc.attributes().find("yol_adi");
+    REQUIRE(col != core::kNoAttr);
+
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=3500 taraf=sol", Origin::Test).ok()); // 2
+    const core::EntityId kerb = r.doc.slot_of(static_cast<core::EntityKey>(2));
+    REQUIRE(kerb != core::kNoEntity);
+    auto carried = r.doc.attribute(col, kerb);
+    REQUIRE(carried.ok());
+    CHECK(carried.value().present);
+    CHECK(carried.value() ==
+          r.doc.attribute(col, r.doc.slot_of(static_cast<core::EntityKey>(1))).value());
+
+    REQUIRE(
+        r.bus.execute_line("OFSET nesneler=1 mesafe=5000 taraf=sag oznitelik=aktarma",
+                           Origin::Test)
+            .ok()); // 3
+    const core::EntityId bare = r.doc.slot_of(static_cast<core::EntityKey>(3));
+    REQUIRE(bare != core::kNoEntity);
+    auto left = r.doc.attribute(col, bare);
+    REQUIRE(left.ok());
+    CHECK_FALSE(left.value().present);
+
+    // Written down as said, so a replay makes the same choice.
+    CHECK_EQ(r.journal.entries().back().args.get("oznitelik").as_text(), std::string("aktarma"));
+
+    // AND WITH THE SOURCE GONE the parallel carries on what it was: a boundary
+    // moved by its setback keeps its data.
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=sol kaynak=sil", Origin::Test)
+                .ok()); // 4
+    const core::EntityId moved = r.doc.slot_of(static_cast<core::EntityKey>(4));
+    REQUIRE(moved != core::kNoEntity);
+    CHECK(r.doc.attribute(col, moved).value().present);
+}
+
 TEST_CASE("OFSET: paraleli olmayan nesne ve yaklaşık eğri sebebiyle söylenir")
 {
     Rig r;

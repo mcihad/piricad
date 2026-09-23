@@ -866,6 +866,7 @@ def offset(
     through: Coord = ...,
     source: str = ...,
     properties: str = ...,
+    attributes: str = ...,
 ) -> int:
     """Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.
 
@@ -877,6 +878,7 @@ def offset(
         through — Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce]
         source — Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil
         properties — Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da etkin katman
+        attributes — Kaynağın öznitelik değerleri: paralele aktar (öntanımlı) ya da aktarma — parselin içine çizilen çekme hattı gibi kaynağın kendisi olmayan bir çizgi için
     """
 
 def sector(

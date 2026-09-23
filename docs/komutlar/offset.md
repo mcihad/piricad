@@ -29,6 +29,12 @@ yakındır. **İki** her iki yanı birden çizer.
 oynatılmaz. Paralel, kaynağın katmanına ve stiline çizilir; istenirse etkin
 katmana (`ozellik=aktif`) ve kaynağı silerek (`kaynak=sil`).
 
+**Öznitelikleri de taşır.** Kaynağın öznitelik değerleri (örneğin yolun adı)
+paralele aktarılır — [`KOPYALA`](copy.md)'nın ve [`BÖL`](split.md)'ün yaptığı
+gibi: bir yol ekseninin bordür çizgileri o yolundur. Paralel kaynağın kendisi
+değilse — bir parselin içine çizilen çekme hattı gibi — `oznitelik=aktarma` verin;
+yoksa öznitelik tablosunda aynı ada/parsel numarasını taşıyan iki satır olur.
+
 **Bant değildir.** Bu komut önceden açık bir çizginin iki yanını saran kapalı bir
 alan (bant) üretiyordu. O bir paralel değil, bir **tampondur**; artık üretilmez.
 
@@ -59,6 +65,7 @@ GPLv3 ile uyumludur.
 ```text
 OFSET [nesneler=<kimlikler>] [mesafe=<mm>] [taraf=sol|sag|dis|ic|iki] [nokta=<n>]
       [kose=KÖŞE|YUVARLAK|PAH] [kaynak=koru|sil] [ozellik=kaynak|aktif]
+      [oznitelik=aktar|aktarma]
 ```
 
 ## Parametreler
@@ -72,6 +79,7 @@ OFSET [nesneler=<kimlikler>] [mesafe=<mm>] [taraf=sol|sag|dis|ic|iki] [nokta=<n>
 | `kose` | Dış köşenin biçimi: `KÖŞE` (öntanımlı), `YUVARLAK`, `PAH` |
 | `kaynak` | `koru` (öntanımlı) ya da `sil`: paralel çizilince kaynak silinir |
 | `ozellik` | `kaynak` (öntanımlı): paralel kaynağın katmanına ve stiline; `aktif`: etkin katmana |
+| `oznitelik` | `aktar` (öntanımlı): kaynağın öznitelik değerleri paralele de yazılır; `aktarma`: paralel boş başlar |
 
 **Ne taraf ne nokta verilirse** mesafenin işareti karar verir: kapalı bir şekilde
 artı dışarı, eksi içeri; açık bir çizgide **iki yan** çizilir. Bu yalnız mesafeyi
@@ -104,6 +112,13 @@ Tarafı bir noktayla göstermek:
 
 ```text
 OFSET nesneler=1 mesafe=2000 nokta=25,-5
+```
+
+Bir parselin içine öznitelik taşımayan bir çekme hattı çizmek:
+
+```text
+ALAN 0,0 30,0 30,20 0,20
+OFSET nesneler=1 mesafe=5000 taraf=ic oznitelik=aktarma
 ```
 
 ### Arayüz
@@ -180,6 +195,11 @@ Taraf sorulduğunda boş bir Enter verildi.
 > `Tanınmayan taraf: '…'. Taraflar: sol / sag / dis / ic / iki`
 
 `taraf` yanlış yazıldı.
+
+> `'core.offset': 'oznitelik' için tanınmayan değer '…'. Kabul edilenler: aktar / aktarma`
+
+`oznitelik` yanlış yazıldı; `aktar` ya da `aktarma` yazın. `kaynak` ve `ozellik` için
+de aynı biçimde söylenir.
 
 ## İlgili
 

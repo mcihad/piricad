@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — OFSET öznitelikleri paralele aktarıyor (C-03 tamam)
+
+[`OFSET`](docs/komutlar/offset.md) kaynağın öznitelik değerlerini paralele yazıyor —
+`KOPYALA` ve `BÖL`'ün yaptığı gibi: bir yol ekseninin bordür çizgileri yolun adını
+taşıyor. Paralel kaynağın kendisi değilse (parselin içine çizilen çekme hattı gibi)
+`oznitelik=aktarma` onu boş bırakıyor; aynı ada/parsel numarasını taşıyan iki satır
+oluşmuyor. Böylece C-03'ün bütün maddeleri — tek yanlı paralel, kapalı sınır ofseti,
+ayrı tampon, taraf, mesafe, köşe, kaynak koruma ve öznitelik aktarımı — tanımlı ve
+testli.
+
 ### Eklendi — RENK: renk kutuları boyuyor
 
 Araç kutusunun altındaki iki renk kutusu "RENK komutu Faz 2" diyordu. Artık

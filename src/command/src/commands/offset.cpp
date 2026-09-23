@@ -26,13 +26,15 @@
 //
 // THE PARALLEL IS A NEW OBJECT, not a change to the old one: a boundary is the
 // measured thing and its parallel a derived one. It takes the source's layer and
-// style unless told otherwise (`ozellik=aktif`), and the source stays unless told
+// style unless told otherwise (`ozellik=aktif`), the source's attribute values
+// unless told otherwise (`oznitelik=aktarma`), and the source stays unless told
 // otherwise (`kaynak=sil`).
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/parallel.hpp"
@@ -189,6 +191,14 @@ Task<void> run(Context& ctx)
     const bool drop_source  = core::turkish_key_equals(keep, "sil");
     const std::string props = ctx.argument("ozellik").as_text();
     const bool on_active    = core::turkish_key_equals(props, "aktif");
+    // THE SOURCE'S DATA TRAVELS WITH IT, as it does with KOPYALA and with both
+    // halves of a BÖL: the kerb lines of a road axis are that road's, and a
+    // parallel that forgot the road's name would be retyped by hand. A setback
+    // line drawn inside a parcel is the case for `aktarma` — it is not the
+    // parcel, and two rows carrying one ada/parsel number is the one duplicate
+    // a cadastral table must not grow (TODOS C-03).
+    const std::string data = ctx.argument("oznitelik").as_text();
+    const bool carry_data  = !core::turkish_key_equals(data, "aktarma");
 
     std::size_t made      = 0;
     std::size_t collapsed = 0;
@@ -248,6 +258,20 @@ Task<void> run(Context& ctx)
                     co_return;
                 }
             }
+            if (carry_data) {
+                const core::AttrTable& table = doc.attributes();
+                for (std::size_t c = 0; c < table.columns(); ++c) {
+                    const auto col = static_cast<core::AttrId>(c);
+                    auto had       = doc.attribute(col, e);
+                    if (!had || !had.value().present) continue;
+                    if (const auto st =
+                            ctx.transaction().set_attribute(col, added.value(), had.value());
+                        !st) {
+                        ctx.refuse(st.error());
+                        co_return;
+                    }
+                }
+            }
             ++made;
         }
 
@@ -281,6 +305,7 @@ Task<void> run(Context& ctx)
     if (named) ctx.record("taraf", Value::text(std::string(core::parallel_side_name(*named))));
     if (!keep.empty()) ctx.record("kaynak", Value::text(keep));
     if (!props.empty()) ctx.record("ozellik", Value::text(props));
+    if (!data.empty()) ctx.record("oznitelik", Value::text(data));
 
     ctx.echo(
         std::to_string(made) + " paralel çizildi (" + metres(reach) + ")" +
@@ -322,6 +347,11 @@ KENTOS_COMMAND(offset)
                               "Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da "
                               "etkin katman")
                     .en("properties"),
+                Param::choice("oznitelik", Arity::optional(), {"aktar", "aktarma"},
+                              "Kaynağın öznitelik değerleri: paralele aktar (öntanımlı) ya da "
+                              "aktarma — parselin içine çizilen çekme hattı gibi kaynağın kendisi "
+                              "olmayan bir çizgi için")
+                    .en("attributes"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
