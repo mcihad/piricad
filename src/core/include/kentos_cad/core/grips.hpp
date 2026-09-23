@@ -12,14 +12,19 @@
 //
 // So every kind names its grips HERE, once, and says what a grip means when it
 // moves: a circle's centre translates the circle, its quadrant handle sets the
-// radius; an arc's end moves that end and re-fits the radius; an ellipse's axis
+// radius; an arc's end moves that end and its midpoint handle bends it, and in
+// both the arc is re-fitted through three points — the other end stays where it
+// is, as in every CAD, so a line that meets it stays met; an ellipse's axis
 // end turns and stretches the axis and keeps the other axis perpendicular; an
 // arc polyline's corner keeps the bulge of the arcs that meet at it, and the
-// midpoint of an arc re-fits the arc through three points; a dimension's
-// definition point re-lays the dimension out (`dimension_layout`) so the line,
-// the extension lines and the caption follow. The command (`KÖŞETAŞI`), the
-// canvas that draws the handles, and the preview under a dragged handle all
-// read this one table, so what a handle promises is what the command does.
+// midpoint of an arc re-fits the arc through three points; a spline's grips are
+// its CONTROL points, the ones the curve is drawn from — the fit points a source
+// file gave no longer describe the curve once one moves, and are dropped; a
+// block reference's insertion point moves it and its turning handle turns it
+// about that point; a dimension's definition point re-lays the dimension out
+// (`dimension_layout`) so the line, the extension lines and the caption follow. The command
+// (`KÖŞETAŞI`), the canvas that draws the handles, and the preview under a dragged handle all read
+// this one table, so what a handle promises is what the command does.
 //
 // Numbering: grip `i` (0-based) is corner `i + 1` at the command line, and for
 // a polyline that is the vertex numbering `KÖŞETAŞI` always used (R11 order
@@ -50,6 +55,8 @@ enum class GripRole : std::uint8_t {
     Definition, ///< a definition point of a dimension
     Caption,    ///< where a dimension's text sits
     Insertion,  ///< the insertion point of a block reference
+    Control,    ///< a control point of a spline: the curve is drawn from these
+    Rotation,   ///< a block reference's turning handle, on its x axis: sets the rotation
 };
 
 /// One grip: where it is and what it is.

@@ -416,6 +416,7 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
 
 void MapCanvas::buildSelection()
 {
+    selection_runs_ = 0;
     // Not named `slots`: Qt defines that as a macro (qobjectdefs.h).
     const auto& selected = controller_.selectedSlots();
     if (selected.empty()) return;
@@ -473,15 +474,31 @@ void MapCanvas::buildSelection()
                 core::arc_start_of(geom, table.slot[e]), core::arc_end_of(geom, table.slot[e]),
                 curve_scratch_x_, curve_scratch_y_);
         else if (curve) {
+            // EVERY RUN THE KIND DRAWS. A block reference draws each of its
+            // members, a hatch its boundary and its holes; outlining only the
+            // first run lit one line of a selected symbol and left the rest
+            // looking unselected (TODOS C-07).
             core::EmitBuffer outline;
             if (core::entity_outline(doc, e, outline) && outline.run_total() > 0) {
-                // The first run is the shape; a selection outline is one stroke.
-                curve_scratch_x_.assign(outline.xs.begin(),
-                                        outline.xs.begin() + outline.run_count[0]);
-                curve_scratch_y_.assign(outline.ys.begin(),
-                                        outline.ys.begin() + outline.run_count[0]);
-                curve_closed = outline.run_closed[0] != 0;
+                std::size_t at = 0;
+                for (std::size_t r = 0; r < outline.run_total(); ++r) {
+                    const std::size_t n = outline.run_count[r];
+                    if (n >= 2) {
+                        const auto before = static_cast<std::uint32_t>(batch.xs.size());
+                        for (std::size_t v = at; v < at + n; ++v) {
+                            const render::ScreenPointF q = render::to_f(
+                                view_.to_screen(core::Point2{outline.xs[v], outline.ys[v]}));
+                            batch.xs.push_back(q.x);
+                            batch.ys.push_back(q.y);
+                        }
+                        batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
+                        batch.closed.push_back(outline.run_closed[r] != 0 ? 1 : 0);
+                        ++selection_runs_;
+                    }
+                    at += n;
+                }
             }
+            continue;
         }
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
@@ -498,9 +515,10 @@ void MapCanvas::buildSelection()
                 batch.ys.push_back(q.y);
             }
             batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
-            // A circle and an ellipse close; an arc does not.
+            // A circle closes; an arc does not.
             batch.closed.push_back(
                 (curve ? curve_closed : geom.ring_role[r] != core::RingRole::Open) ? 1 : 0);
+            ++selection_runs_;
         }
     }
 }
@@ -670,6 +688,20 @@ void MapCanvas::buildGrips()
         }
     }
 
+    // A SPLINE'S HANDLES ARE OFF THE CURVE: its control points, joined by a
+    // thin dashed frame so it reads which handle pulls which part (TODOS C-07).
+    // Drawn under the handles, in the selection's ink.
+    const std::size_t frame = nextBatch(palette_.selection.rgba(), 1.0f, true);
+    for (const core::EntityId e : selected) {
+        if (e >= table.size() || !table.visible(e) || table.kind[e] != core::kSplineKind) continue;
+        const auto grips = core::entity_grips(doc, e);
+        std::vector<render::ScreenPointF> run;
+        run.reserve(grips.size());
+        for (const core::GripPoint& g : grips)
+            run.push_back(render::to_f(view_.to_screen(g.at)));
+        if (run.size() >= 2) addRun(frame, run, false);
+    }
+
     // The handles themselves, drawn over the outline so a corner is grabbable
     // wherever two objects meet.
     const std::size_t plain = nextBatch(palette_.selection.rgba(), 1.0f, false);
@@ -690,7 +722,7 @@ void MapCanvas::buildGrips()
                                  hover_grip_.corner == static_cast<std::int64_t>(i) + 1;
                 const core::GripRole role = grips[i].role;
                 if (role == core::GripRole::Radius || role == core::GripRole::ArcMid ||
-                    role == core::GripRole::Caption)
+                    role == core::GripRole::Caption || role == core::GripRole::Rotation)
                     addCircle(hot ? lit : plain, p.x, p.y, kHalf);
                 else
                     addRun(hot ? lit : plain,

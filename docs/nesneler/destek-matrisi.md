@@ -302,7 +302,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 |---|---|---|
 | Seç | ✓ destekli | pencere seçimi nesneyi aldı |
 | Yakala | ✓ destekli | en yakın, ekleme noktası |
-| Tutamaç | ✓ destekli | 1 tutamaç; ilki taşındı, tür korundu |
+| Tutamaç | ✓ destekli | 2 tutamaç; ilki taşındı, tür korundu |
 | Taşı | ✓ destekli | kapsam tam (5, 3) m kaydı, tür ve ölçü korundu |
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |

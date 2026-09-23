@@ -32,14 +32,20 @@ daire daire kalır, yalnız yarıçapı ya da yeri değişir.
 | Nesne | Tutamaklar (sırayla) | Taşıyınca ne olur |
 |---|---|---|
 | Daire | 1 merkez · 2–5 doğu/kuzey/batı/güney çeyrek | merkez daireyi taşır; çeyrek yarıçapı kurar |
-| Yay | 1 merkez · 2 başlangıç · 3 bitiş · 4 orta nokta | merkez yayı taşır; uç kendi yerine gider ve yarıçap onu izler; orta nokta yalnız yarıçapı kurar |
+| Yay | 1 merkez · 2 başlangıç · 3 bitiş · 4 orta nokta | merkez yayı taşır; uç kendi yerine gider, **öbür uç yerinde kalır** ve yay yeni uçtan, orta noktadan ve öbür uçtan geçecek biçimde yeniden kurulur; orta nokta iki uç yerinde kalarak yayı yeni noktadan geçirir |
 | Elips | 1 merkez · 2 birinci eksen ucu · 3 ikinci eksen ucu · 4–5 aynaları | eksen ucu ekseni çevirir ve uzatır; öteki eksen boyunu koruyarak dik kalır |
 | Yaylı çoklu çizgi | köşeler · sonra her yayın orta noktası | köşe taşınınca ona değen yaylar şişkinliğini korur; yayın ortası yayı üç noktadan yeniden kurar, kirişin üstüne gelirse kenar düzleşir |
-| Spline | kontrol noktaları · sonra varsa uydurma noktaları | nokta yerine gider, eğri yeniden hesaplanır |
+| Spline | kontrol noktaları | kontrol noktası yerine gider, eğri yeniden hesaplanır; dosyadan gelen uydurma noktaları artık eğriyi anlatmadığı için düşer |
 | Tarama, lider | halka köşeleri | köşe yerine gider |
 | Ölçü | tanım noktaları · son olarak yazı | tanım noktası taşınınca ölçü çizgisi, uzatma çizgileri ve yazı yeniden kurulur, rakam yeniden ölçülür; yazı tutamağı yalnız yazıyı kaydırır |
-| Blok referansı | 1 ekleme noktası | referans taşınır |
+| Blok referansı | 1 ekleme noktası · 2 döndürme tutamağı | ekleme noktası referansı taşır; döndürme tutamağı referansı ekleme noktası çevresinde tutamağa doğru döndürür, ölçeği değişmez |
 | Nokta | 1 nokta | nokta taşınır |
+
+Yayın bir ucunu taşımak öbür ucu kıpırdatmaz: yaya bağlanan bir çizgi bağlı kalır.
+Spline'ın tutamakları eğrinin üstünde değil, eğrinin çizildiği **kontrol
+noktalarındadır**; spline seçiliyken kontrol noktaları kesikli ince bir çerçeveyle
+birleştirilir. Blok referansının döndürme tutamağı, bloğun kendi yatay ekseni
+üzerinde, çizdiği şeklin en uzak köşesi kadar dışarıdadır.
 
 Bir eğrinin **arasına** köşe eklenemez: [`KÖŞEEKLE`](vertex_insert.md) yalnız çoklu
 çizgi ve alan için çalışır.
@@ -115,8 +121,8 @@ menüsündedir).
 
 **Tutamakla.** Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. Bir dairede merkez ve
 dört çeyrek, bir yayda uçlar ve orta nokta, bir ölçüde tanım noktaları ve yazı
-görünür; boyut kuran tutamaklar (yarıçap, yay ortası, yazı) kare değil **yuvarlak**
-çizilir. İmleç bir tutamağın üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve
+görünür; boyut ya da açı kuran tutamaklar (yarıçap, yay ortası, yazı, bloğun döndürme
+tutamağı) kare değil **yuvarlak** çizilir. İmleç bir tutamağın üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve
 bırakın; sürüklerken nesnenin alacağı yeni biçim kesikli çizgiyle gösterilir — daire
 sürüklenirken daire kalır, çünkü önizleme türün kendi çizimidir.
 
@@ -182,7 +188,10 @@ geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok 
 | `Tek bir köşe numarası beklenir; N değer verildi.` | `kose` birden çok değer aldı | Tek bir köşe numarası yazın |
 | `Bu nesnenin N. köşesi yok; M köşesi var.` | Nesnede o sırada köşe yok | 1 ile M arasında bir numara verin |
 | `Bu nesnenin N. tutamağı yok; M tutamağı var.` | Eğride o sırada tutamak yok | Yukarıdaki tabloya göre 1 ile M arasında bir numara verin |
-| `Yarıçap sıfır: tutamak merkezin üstünde. …` | Çeyrek ya da uç tutamağı merkeze bırakıldı | Merkezden uzak bir nokta verin |
+| `Yarıçap sıfır: tutamak merkezin üstünde. …` | Dairenin çeyrek tutamağı merkeze bırakıldı | Merkezden uzak bir nokta verin |
+| `Yayın iki ucu aynı noktaya düşüyor. …` | Yayın ucu öbür ucun üstüne bırakıldı | Öbür uçtan uzak bir nokta verin |
+| `Üç nokta aynı doğru üzerinde; yay düzleşir. …` | Yayın ucu ya da ortası iki ucu birleştiren doğrunun üstüne bırakıldı | Noktayı o doğrunun dışına bırakın |
+| `Döndürme tutamağı ekleme noktasının üstünde; …` | Bloğun döndürme tutamağı ekleme noktasına bırakıldı | Açıyı gösteren bir yer seçin |
 | `Birinci eksen sıfır: …` / `İkinci eksen sıfır: …` | Elipsin ekseni sıfıra indi | Merkezden ya da birinci eksenden uzak bir nokta verin |
 | `Ölçü bu noktayla kurulamıyor: …` | İki nokta çakıştı ya da açının tepesi kolun ucuna geldi | Noktayı başka yere bırakın |
 | `Blok tanımındaki nesne doğrudan düzenlenemez …` | Nesne bir blok tanımının üyesi | Referansın ekleme noktasını taşıyın |

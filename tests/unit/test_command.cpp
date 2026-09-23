@@ -3997,9 +3997,13 @@ TEST_CASE("KÖŞETAŞI blok referansının ekleme noktasını taşır ve kutusun
     REQUIRE(ref != core::kNoEntity);
     const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[ref]));
 
+    // The insertion point, and the turning handle out along the block's own x
+    // axis, at the far end of what it draws.
     const auto grips = core::entity_grips(f.doc, ref);
-    REQUIRE_EQ(grips.size(), 1u);
+    REQUIRE_EQ(grips.size(), 2u);
     CHECK_EQ(grips[0].role, core::GripRole::Insertion);
+    CHECK_EQ(grips[1].role, core::GripRole::Rotation);
+    CHECK_EQ(grips[1].at, (core::Point2{110000, 100000}));
 
     REQUIRE(f.bus
                 .execute_line("KÖŞETAŞI nesne=" + std::to_string(key) + " kose=1 nokta=200,200",
@@ -4008,6 +4012,26 @@ TEST_CASE("KÖŞETAŞI blok referansının ekleme noktasını taşır ve kutusun
     CHECK_EQ(core::block_reference_insertion(f.doc.geometry(), f.doc.entities().slot[ref]),
              (core::Point2{200000, 200000}));
     CHECK_EQ(f.doc.entities().box_of(ref), (core::Box2{200000, 200000, 210000, 200000}));
+
+    // THE HANDLE TURNS IT about the insertion point: pointed north, a quarter
+    // turn, and the box follows.
+    REQUIRE(f.bus
+                .execute_line("KÖŞETAŞI nesne=" + std::to_string(key) + " kose=2 nokta=200,230",
+                              Origin::Test)
+                .ok());
+    auto turned =
+        core::decode_block_reference(f.doc.geometry().payload_of(f.doc.entities().slot[ref]));
+    REQUIRE(turned.ok());
+    CHECK_EQ(turned.value().rotation_udeg, std::int64_t{90'000'000});
+    CHECK_EQ(core::block_reference_insertion(f.doc.geometry(), f.doc.entities().slot[ref]),
+             (core::Point2{200000, 200000}));
+    CHECK_EQ(f.doc.entities().box_of(ref), (core::Box2{200000, 200000, 200000, 210000}));
+
+    // A window over the handle alone does not turn it: ESNET moves places.
+    const std::uint64_t before = f.doc.content_hash();
+    REFUSED(f.bus.execute_line(
+        "ESNET pencere=199,209 pencere=201,211 baslangic=200,210 bitis=205,210", Origin::Test));
+    CHECK_EQ(f.doc.content_hash(), before);
 }
 
 TEST_CASE("DAİRE geri alınır")
@@ -5362,7 +5386,7 @@ TEST_CASE("YAY: merkezle çakışan uç reddedilir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
-TEST_CASE("KÖŞETAŞI yayın ucunu taşır ve yarıçapı yeniden kurar; ALANAÇEVİR yayı reddeder")
+TEST_CASE("KÖŞETAŞI yayın ucunu ve ortasını taşır; öbür uç yerinde kalır; ALANAÇEVİR yayı reddeder")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
@@ -5371,24 +5395,51 @@ TEST_CASE("KÖŞETAŞI yayın ucunu taşır ve yarıçapı yeniden kurar; ALANA�
     const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
     REQUIRE(e != core::kNoEntity);
     const auto slot = [&] { return f.doc.entities().slot[e]; };
+    // Whether `p` is on the arc's circle, to the millimetre rounding allows.
+    const auto on_circle = [&](core::Point2 p) {
+        const core::Point2 c = core::arc_centre_of(f.doc.geometry(), slot());
+        const double dx      = static_cast<double>(p.x - c.x);
+        const double dy      = static_cast<double>(p.y - c.y);
+        return std::abs(std::sqrt(dx * dx + dy * dy) -
+                        static_cast<double>(core::arc_radius_of(f.doc.geometry(), slot()))) <= 1.5;
+    };
 
     // Centre, start, end, midpoint.
     const auto grips = core::entity_grips(f.doc, e);
     REQUIRE_EQ(grips.size(), 4u);
     CHECK_EQ(grips[1].at, (core::Point2{130000, 100000}));
     CHECK_EQ(grips[3].role, core::GripRole::Radius);
+    const core::Point2 mid = grips[3].at;
 
-    // The start goes to 40 m out; the radius follows it, the end keeps its direction.
+    // The start goes 10 m further out. The END STAYS WHERE IT IS — a line that
+    // meets it stays met — and the arc is re-fitted through the new start, its
+    // old midpoint and that end: all three on the one circle the record holds.
     REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=140,100", Origin::Test).ok());
     CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()), (core::Point2{140000, 100000}));
-    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), slot()), core::Mm{40000});
     CHECK_EQ(core::arc_end_of(f.doc.geometry(), slot()), (core::Point2{100000, 130000}));
+    CHECK(on_circle({140000, 100000}));
+    CHECK(on_circle({100000, 130000}));
+    CHECK(on_circle(mid));
 
-    // The centre carries the whole arc.
+    // The midpoint handle bends it through a new point, both ends held.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=4 nokta=128,128", Origin::Test).ok());
+    CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()), (core::Point2{140000, 100000}));
+    CHECK_EQ(core::arc_end_of(f.doc.geometry(), slot()), (core::Point2{100000, 130000}));
+    CHECK(on_circle({128000, 128000}));
+
+    // Onto the chord it would be straight, which an arc cannot be: refused.
+    const std::uint64_t bent = f.doc.content_hash();
+    REFUSED(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=4 nokta=120,115", Origin::Test));
+    CHECK_EQ(f.doc.content_hash(), bent);
+
+    // The centre carries the whole arc, its shape unchanged.
+    const core::Point2 c0 = core::arc_centre_of(f.doc.geometry(), slot());
+    const core::Mm r0     = core::arc_radius_of(f.doc.geometry(), slot());
     REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=0,0", Origin::Test).ok());
     CHECK_EQ(core::arc_centre_of(f.doc.geometry(), slot()), (core::Point2{0, 0}));
-    CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()), (core::Point2{40000, 0}));
-    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), slot()), core::Mm{40000});
+    CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()),
+             (core::Point2{140000 - c0.x, 100000 - c0.y}));
+    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), slot()), r0);
     CHECK_EQ(f.doc.entities().kind[e], core::kArcKind);
 
     const std::uint64_t before = f.doc.content_hash();

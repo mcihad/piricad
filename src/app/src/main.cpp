@@ -1612,6 +1612,25 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14t-yuvarla-secili-hepsi"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // THE GRIPS THAT MEAN WHAT THEY SAY (TODOS C-07): a spline's handles on
+        // its control points with the dashed frame that joins them, an arc's
+        // ends and midpoint, and a block's turning handle out on its x axis.
+        later([scene] { scene(QStringLiteral("SPLINE 0,0 6,10 14,-4 22,6")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YAY merkez=30,0 baslangic=36,0 bitis=30,6"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ 40,-2 46,-2"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("ÇİZGİ 46,-2 46,2"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("BLOK ad=DIREK taban=40,-2 nesneler=3 4"));
+            window.runScriptLine(QStringLiteral("BLOKEKLE ad=DIREK nokta=42,2 aci=30"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+        });
+        later([&window, shot] { shot(QStringLiteral("15a-tutamaklar"), &window); });
+        later([&window] { window.runScriptLine(QStringLiteral("SEÇ TEMİZLE")); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

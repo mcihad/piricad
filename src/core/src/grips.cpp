@@ -9,8 +9,11 @@
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/spline.hpp"
+#include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
@@ -135,15 +138,43 @@ Result<GripEdit> arc_move(GripEdit edit, std::size_t index, Point2 to)
         return edit;
     }
     if (index > 3) return no_such_grip(index, 4);
-    const Mm r = mm_round(length(c, to));
-    if (r <= 0)
+    // THREE POINTS, AND THE ONES NOT HELD STAY PUT. An end dragged re-fits the
+    // arc through it, the midpoint and the other end; the midpoint dragged
+    // re-fits it through both ends — which is what an arc does under a grip in
+    // every CAD. The old reading kept the centre and let the radius follow the
+    // handle, which carried the OTHER end off whatever it met and left the
+    // stored end off the circle the record declares.
+    const Mm r     = v[1].x - c.x;
+    Point2 a       = v[2];
+    Point2 b       = v[3];
+    Point2 through = arc_midpoint(c, r, a, b);
+    // A grip moved to where it already is changes nothing — which is what
+    // ESNET asks of the ends and the midpoint once the centre has carried the
+    // whole arc, and a re-fit through rounded points would drift it.
+    if ((index == 1 && to == a) || (index == 2 && to == b) || (index == 3 && to == through))
+        return edit;
+    if (index == 1) a = to;
+    if (index == 2) b = to;
+    if (index == 3) through = to;
+    if (a == b)
         return err(ErrorCode::ValidationFailed,
-                   "Yarıçap sıfır: tutamak merkezin üstünde. Merkezden uzak bir yer seçin.");
-    // An end goes where it was put and the radius follows it; the other end
-    // keeps its direction. The midpoint handle sets the radius alone.
-    if (index == 1) v[2] = to;
-    if (index == 2) v[3] = to;
-    v[1] = Point2{c.x + r, c.y};
+                   "Yayın iki ucu aynı noktaya düşüyor. Tutamağı öbür uçtan uzak bir yere "
+                   "götürün.");
+    Point2 centre{};
+    Mm radius = 0;
+    if (!circumcircle(a, through, b, centre, radius) || radius <= 0)
+        return err(ErrorCode::ValidationFailed,
+                   "Üç nokta aynı doğru üzerinde; yay düzleşir. Tutamağı iki ucu birleştiren "
+                   "doğrunun dışına götürün.");
+    // Which way round: the arc runs from `a` through `through` to `b`, and is
+    // stored counter-clockwise, so a clockwise run is stored from `b` to `a`.
+    const double turn = static_cast<double>(through.x - a.x) * static_cast<double>(b.y - a.y) -
+                        static_cast<double>(through.y - a.y) * static_cast<double>(b.x - a.x);
+    const bool ccw = turn > 0.0;
+    v[0]           = centre;
+    v[1]           = Point2{centre.x + radius, centre.y};
+    v[2]           = ccw ? a : b;
+    v[3]           = ccw ? b : a;
     return edit;
 }
 
@@ -387,16 +418,98 @@ Result<GripEdit> dimension_move(const Document& doc, EntityId e, GripEdit edit, 
 
 // --------------------------------------------------------- block reference ----
 
+/// How far out a block reference's turning handle sits: to the far corner of
+/// what it draws, so the handle is on the symbol's own scale — and at least a
+/// metre, so a point-sized symbol's handle is not on top of its insertion.
+Mm turning_reach(Point2 insertion, const Box2& bounds)
+{
+    double far = 1000.0;
+    for (const Point2 corner :
+         {Point2{bounds.min_x, bounds.min_y}, Point2{bounds.max_x, bounds.min_y},
+          Point2{bounds.max_x, bounds.max_y}, Point2{bounds.min_x, bounds.max_y}})
+        far = std::max(far, length(insertion, corner));
+    return mm_round(far);
+}
+
+/// Where the turning handle of a reference at `insertion` sits.
+Point2 turning_handle(Point2 insertion, const BlockReference& ref)
+{
+    const Mm reach    = turning_reach(insertion, ref.bounds);
+    const SinCos turn = sin_cos_udeg(ref.rotation_udeg);
+    return Point2{insertion.x + mm_round(static_cast<double>(reach) * turn.cos),
+                  insertion.y + mm_round(static_cast<double>(reach) * turn.sin)};
+}
+
+std::vector<GripPoint> block_reference_grips(const RingGeometry& geom, std::uint32_t slot)
+{
+    const Point2 at = block_reference_insertion(geom, slot);
+    std::vector<GripPoint> out{GripPoint{at, GripRole::Insertion}};
+    if (auto ref = decode_block_reference(geom.payload_of(slot)))
+        out.push_back(GripPoint{turning_handle(at, ref.value()), GripRole::Rotation});
+    return out;
+}
+
 Result<GripEdit> block_reference_move(const Document& doc, GripEdit edit, std::size_t index,
                                       Point2 to)
 {
-    if (index != 0 || edit.points.empty() || edit.points[0].empty()) return no_such_grip(index, 1);
+    if (index > 1 || edit.points.empty() || edit.points[0].empty()) return no_such_grip(index, 2);
     auto decoded = decode_block_reference(edit.payload);
     if (!decoded) return decoded.error();
     BlockReference ref = std::move(decoded.value());
-    edit.points[0][0]  = to;
-    ref.bounds         = block_reference_bounds(doc, to, ref);
-    edit.payload       = encode_block_reference(ref);
+    if (index == 1) {
+        // THE TURNING HANDLE: the reference turns about its insertion point to
+        // face the handle, its scale and its copies as they were.
+        const Point2 at = edit.points[0][0];
+        if (to == at)
+            return err(ErrorCode::ValidationFailed,
+                       "Döndürme tutamağı ekleme noktasının üstünde; açıyı gösteren bir yer "
+                       "seçin.");
+        ref.rotation_udeg = atan2_udeg(to.y - at.y, to.x - at.x);
+        ref.bounds        = block_reference_bounds(doc, at, ref);
+        edit.payload      = encode_block_reference(ref);
+        return edit;
+    }
+    edit.points[0][0] = to;
+    ref.bounds        = block_reference_bounds(doc, to, ref);
+    edit.payload      = encode_block_reference(ref);
+    return edit;
+}
+
+// ------------------------------------------------------------------ spline ----
+
+/// A spline's grips are its CONTROL points, ring 0: the points the curve is
+/// drawn from. The fit points of ring 1 are a source file's record of where
+/// the curve was meant to pass, and moving one would move nothing on screen.
+std::vector<GripPoint> spline_grips(const RingGeometry& geom, std::uint32_t slot)
+{
+    std::vector<GripPoint> out;
+    const RingSpan rs = geom.rings_of(slot);
+    if (rs.count == 0) return out;
+    const auto xs = geom.ring_xs(rs.first);
+    const auto ys = geom.ring_ys(rs.first);
+    out.reserve(xs.size());
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(GripPoint{Point2{xs[v], ys[v]}, GripRole::Control});
+    return out;
+}
+
+Result<GripEdit> spline_move(GripEdit edit, std::size_t index, Point2 to)
+{
+    if (edit.points.empty() || index >= edit.points[0].size())
+        return no_such_grip(index, edit.points.empty() ? 0 : edit.points[0].size());
+    edit.points[0][index] = to;
+    // THE FIT POINTS NO LONGER DESCRIBE THE CURVE once a control point moves:
+    // kept, a file written from this record would say the curve passes where it
+    // no longer does. So they go, and the record says it has none.
+    if (edit.points.size() > 1) {
+        auto def = decode_spline(edit.payload);
+        if (!def) return def.error();
+        def.value().has_fit = false;
+        edit.points.resize(1);
+        edit.roles.resize(1);
+        edit.parts.resize(1);
+        edit.payload = encode_spline(def.value());
+    }
     return edit;
 }
 
@@ -450,10 +563,8 @@ std::vector<GripPoint> entity_grips(const Document& doc, EntityId e)
     case kEllipseKind: return ellipse_grips(geom, slot);
     case kArcPolylineKind: return arc_polyline_grips(geom, slot);
     case kDimensionKind: return dimension_grips(geom, slot);
-    case kBlockReferenceKind: {
-        const auto v = vertex_grips(geom, slot);
-        return v.empty() ? v : std::vector<GripPoint>{GripPoint{v[0].at, GripRole::Insertion}};
-    }
+    case kBlockReferenceKind: return block_reference_grips(geom, slot);
+    case kSplineKind: return spline_grips(geom, slot);
     default: return vertex_grips(geom, slot);
     }
 }
@@ -472,6 +583,7 @@ Result<GripEdit> apply_move(const Document& doc, EntityId e, GripEdit edit, std:
     case kArcPolylineKind: return arc_polyline_move(std::move(edit), index, to);
     case kDimensionKind: return dimension_move(doc, e, std::move(edit), index, to);
     case kBlockReferenceKind: return block_reference_move(doc, std::move(edit), index, to);
+    case kSplineKind: return spline_move(std::move(edit), index, to);
     default: return vertex_move(std::move(edit), index, to);
     }
 }
@@ -563,8 +675,11 @@ Result<std::optional<Stretched>> stretch_entity(const Document& doc, EntityId e,
     // handle is and changes nothing: windowing a whole circle translates it.
     const std::vector<GripPoint> grips = entity_grips(doc, e);
     std::vector<GripMove> moves;
+    // A block's turning handle is not a place on the drawing: a window over it
+    // does not turn the block, which moves with its insertion point or not at all.
     for (std::size_t i = 0; i < grips.size(); ++i)
-        if (inside(grips[i].at)) moves.push_back(GripMove{i, shifted(grips[i].at, dx, dy)});
+        if (grips[i].role != GripRole::Rotation && inside(grips[i].at))
+            moves.push_back(GripMove{i, shifted(grips[i].at, dx, dy)});
     if (moves.empty()) return std::optional<Stretched>{};
 
     auto edit = move_grips(doc, e, moves);

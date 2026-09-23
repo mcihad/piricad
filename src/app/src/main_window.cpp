@@ -4766,6 +4766,42 @@ int MainWindow::probeRealMouse()
                {2'000, 0}, QStringLiteral("PAH, bütün köşeler"));
     }
 
+    // ---- 8. A SELECTED SYMBOL IS LIT WHOLE --------------------------------------
+    //
+    // A block reference draws every member; its selection outline lit only the
+    // first, so a selected pole symbol looked half selected (TODOS C-07).
+    {
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+        runScriptLine(QStringLiteral("SİL"));
+        runScriptLine(QStringLiteral("ÇİZGİ 0,0 6,0"));
+        endCommand();
+        runScriptLine(QStringLiteral("ÇİZGİ 6,0 6,4"));
+        endCommand();
+        QStringList members;
+        const core::Document& doc = controller_->document();
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+            if (doc.alive(e) && doc.entities().kind[e] == core::kPolylineKind)
+                members << QString::number(core::raw(doc.key_of(e)));
+        runScriptLine(QStringLiteral("BLOK ad=PROBSEMBOL taban=0,0 nesneler=") +
+                      members.join(QLatin1Char(' ')));
+        runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+        canvas_->repaint();
+        QCoreApplication::processEvents();
+        // ASSERTED ONLY WHERE THERE IS A CANVAS TO DRAW ON, as the guide above:
+        // the overlay is built in `paintEvent`, which the offscreen platform
+        // never reaches for a `QRhiWidget`.
+        if (!canvas_->grabCanvas().isNull())
+            check(canvas_->selectionRunCountForProbe() >= 2,
+                  QStringLiteral("seçili blok referansının iki parçası da vurgulu (%1 çizgi)")
+                      .arg(canvas_->selectionRunCountForProbe()));
+        else
+            (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); seçim "
+                                       "vurgusu ancak gerçek pencerede sınanır\n");
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+    }
+
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
 }

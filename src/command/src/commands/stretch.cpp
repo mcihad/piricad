@@ -135,16 +135,22 @@ Task<void> run(Context& ctx)
 
     std::size_t moved   = 0;
     std::size_t touched = 0;
-    std::size_t locked  = 0;
+    std::size_t locked  = 0; ///< on a locked layer
+    std::size_t foreign = 0; ///< of a kind this build does not know, kept as it came
     std::vector<std::int64_t> did;
 
     for (const core::EntityId slot : slots) {
-        // A LOCKED LAYER REFUSES AND THE RUN CONTINUES, exactly as the other edit
-        // verbs do: a window over a sheet is a rough gesture and one locked parcel
-        // under it is not a reason to abandon the whole stretch. It is counted and
-        // said, because a silent skip is a stretch that looks like it worked.
+        // AN OBJECT THAT CANNOT BE EDITED IS PASSED OVER AND THE RUN CONTINUES,
+        // exactly as the other edit verbs do: a window over a sheet is a rough
+        // gesture and one locked parcel under it is not a reason to abandon the
+        // whole stretch. It is counted and said BY ITS REASON — a locked layer
+        // is not an object this build keeps unread — because a silent skip is a
+        // stretch that looks like it worked (TODOS C-07).
         if (auto st = ctx.document().editable(slot); !st) {
-            ++locked;
+            if (ctx.document().kind_known(slot))
+                ++locked;
+            else
+                ++foreign;
             continue;
         }
 
@@ -178,12 +184,18 @@ Task<void> run(Context& ctx)
         did.push_back(static_cast<std::int64_t>(ctx.document().key_of(slot)));
     }
 
+    // What was passed over, by reason, for the answer and for the refusal.
+    std::string passed;
+    if (locked > 0) passed += ", " + std::to_string(locked) + " nesne kilitli katmanda atlandı";
+    if (foreign > 0)
+        passed += ", " + std::to_string(foreign) +
+                  " nesne bu sürümün tanımadığı türde olduğu için olduğu gibi kaldı";
+
     if (moved == 0) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
-                   locked > 0 ? "Pencerede esnetilecek köşe yok; " + std::to_string(locked) +
-                                    " nesne kilitli katmanda."
-                              : "Pencerede esnetilecek köşe yok. Pencere, taşınacak köşelerin "
-                                "üzerinden geçmelidir.");
+                   passed.empty() ? "Pencerede esnetilecek köşe yok. Pencere, taşınacak köşelerin "
+                                    "üzerinden geçmelidir."
+                                  : "Pencerede esnetilecek köşe yok" + passed + ".");
         co_return;
     }
 
@@ -196,8 +208,7 @@ Task<void> run(Context& ctx)
     ctx.record("nesneler", Value::ids(did));
 
     ctx.echo(std::to_string(moved) + " köşe esnetildi (" + std::to_string(touched) + " nesne)" +
-             (locked > 0 ? ", " + std::to_string(locked) + " nesne kilitli katmanda atlandı" : "") +
-             ".");
+             passed + ".");
 }
 
 } // namespace

@@ -212,6 +212,11 @@ public:
     /// the same category as `timeFrames`.
     std::size_t guideVertexCountForProbe() const noexcept { return guide_vertices_; }
 
+    /// Strokes the selection outline drew at the last overlay build: one per
+    /// run of every selected object, so a probe can tell a symbol lit whole
+    /// from one lit by its first line.
+    std::size_t selectionRunCountForProbe() const noexcept { return selection_runs_; }
+
     /// Enter while a face is being pulled to a wanted area: sends the point that
     /// lands the figure exactly. True when it did; false when nothing of the
     /// kind is being asked, so the caller can go on to what Enter means next.
@@ -697,6 +702,9 @@ private:
 
     /// Vertices the guide contributed to the last overlay build.
     std::size_t guide_vertices_{0};
+
+    /// Strokes the selection outline drew at the last overlay build.
+    std::size_t selection_runs_{0};
 
     /// Scratch for a curve guide, kept so the frame path does not allocate.
     std::vector<core::Mm> curve_scratch_x_;

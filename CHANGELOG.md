@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — tutamaklar söylediklerini yapıyor (C-07, 1. aşama)
+
+- **Yayın ucunu taşımak öbür ucu kaydırıyordu**: merkez sabit kalıyor, yarıçap
+  tutamağı izliyor, öbür uç yeni çembere kayıyor ve saklanan uç çemberin dışında
+  kalıyordu. Artık uç taşınınca öbür uç yerinde kalıyor ve yay yeni uçtan, orta
+  noktadan ve öbür uçtan geçiyor; orta nokta iki ucu tutarak yayı büküyor.
+- **Spline tutamakları kontrol noktaları**; seçiliyken kontrol çerçevesi kesikli
+  çiziliyor. Kontrol noktası taşınınca dosyadan gelen uydurma noktaları düşüyor
+  (artık eğriyi anlatmıyorlar).
+- **Blok referansında döndürme tutamağı**: bloğu ekleme noktası çevresinde
+  döndürüyor; ESNET döndürmüyor.
+- **ESNET atladığını sebebiyle söylüyor**: kilitli katman ile bu sürümün
+  tanımadığı tür ayrı sayılıyor.
+- **Seçili blok referansının yalnız ilk parçası vurgulanıyordu**; artık bütün
+  parçaları.
+
 ### Eklendi — YUVARLA ve PAH iki nesne arasında ve bütün köşelerde (C-06)
 
 - **İki ayrı nesnenin köşesi**: `YUVARLA` çizgi-çizgi, çizgi-yay ve yay-yay

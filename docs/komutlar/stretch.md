@@ -159,12 +159,18 @@ yalnız araç sonucu tutamağıyla gelir (CLAUDE.md 5.8).
 | `Esnetme penceresi bir çizgi: iki köşe aynı sırada ya da aynı kolonda.` | Pencerenin alanı yok | Alanı olan bir pencere verin |
 | `Pencerede esnetilecek köşe yok. Pencere, taşınacak köşelerin üzerinden geçmelidir.` | Pencere hiçbir köşenin üstünden geçmiyor | Pencereyi taşınacak köşeleri kapsayacak şekilde verin |
 | `'TAPU' katmanı kilitli; üzerindeki nesne düzenlenemez.` | Nesne kilitli katmanda | `KATMAN ad=TAPU kilitli=hayır` |
+| `Pencerede esnetilecek köşe yok, N nesne kilitli katmanda atlandı.` | Penceredeki bütün köşeler kilitli katmandaki nesnelerin | Katmanın kilidini açın ya da pencereyi değiştirin |
+| `…, N nesne bu sürümün tanımadığı türde olduğu için olduğu gibi kaldı` | Başka bir programdan gelen, bu sürümün okumadığı türde nesne | Nesne korunur ve çizilir, düzenlenmez; kendi programında düzenleyin |
 | Halkanın kendisiyle kesişmesi hakkında bir ileti | Esnetme parseli kendi üzerine katlıyor | Pencereyi ya da ötelemeyi değiştirin; hiçbir köşe taşınmaz |
 
-Kilitli katmandaki nesneler **atlanır ve sayılır**: bir sayfa üzerine atılan
-pencere kaba bir jesttir ve altındaki tek kilitli parsel bütün esnetmeyi iptal
-etmek için sebep değildir. Kaç nesnenin atlandığı yazılır, çünkü sessiz bir atlama
-çalışmış gibi görünen bir esnetmedir.
+Kilitli katmandaki nesneler ve bu sürümün tanımadığı türdeki nesneler **atlanır ve
+sebebiyle sayılır**: bir sayfa üzerine atılan pencere kaba bir jesttir ve altındaki
+tek kilitli parsel bütün esnetmeyi iptal etmek için sebep değildir. Kaç nesnenin
+hangi sebeple atlandığı yazılır, çünkü sessiz bir atlama çalışmış gibi görünen bir
+esnetmedir.
+
+Bir blok referansı ekleme noktası pencerede ise taşınır; döndürme tutamağı pencereye
+girse de blok **dönmez** — esnetme yerleri taşır, açıları değil.
 
 ## İlgili sayfalar
 
