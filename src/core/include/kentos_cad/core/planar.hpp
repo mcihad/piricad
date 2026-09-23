@@ -160,6 +160,22 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
+/// One stored ring as a snapshot holds it: its vertices and its role.
+struct StoredRing
+{
+    std::span<const Point2> points; ///< the vertices, no repeated closing point
+    RingRole role{RingRole::Open};  ///< open, exterior or interior
+};
+
+/// The pieces a stored object contributes to a network, from its kind, rings
+/// and payload alone — the answer `network_pieces` gives for a live entity, for
+/// a snapshot that has no document (a processing tool, R4). `drawn` is the
+/// object's drawn outline, read only for the kinds that are not paths yet: an
+/// ellipse and a spline, whose pieces are its chords, marked approximate.
+std::vector<NetworkPiece> record_pieces(KindId kind, std::span<const StoredRing> rings,
+                                        std::span<const std::uint8_t> payload,
+                                        std::span<const StoredRing> drawn, std::uint32_t source);
+
 /// The pieces entity `e` contributes to a network: every ring of a polyline or
 /// a face, an arc, a circle, an arc-polyline with its arcs; an ellipse or a
 /// spline as the chords it is drawn with, marked approximate. Nothing for a kind
@@ -167,6 +183,23 @@ private:
 /// and nothing for a member of a block definition. `source` is written into
 /// every piece.
 std::vector<NetworkPiece> network_pieces(const Document& doc, EntityId e, std::uint32_t source);
+
+/// How a face is stored. One record of the kind that holds it exactly — an
+/// arc-polyline for a face bounded by arcs, a circle for a whole circle — or
+/// rings for an area. A face with arcs AND holes, which no single kind holds,
+/// is rings with its arcs as the chords `arc_outline` draws, and `chords` says
+/// how far those chords stray from the arcs. One rule for every caller, so SINIR
+/// and ALANÜRET cannot write the same face two ways.
+struct FaceShape
+{
+    bool whole{false};                      ///< a record (`record`), not rings
+    PathRecord record;                      ///< the record, when `whole`
+    std::vector<std::vector<Point2>> rings; ///< otherwise the exterior, then the holes
+    Mm chords{0};                           ///< how far any chord strays from its arc
+};
+
+/// The shape `face` is stored as.
+FaceShape face_shape(const NetworkFace& face);
 
 /// The signed area of a closed path: counter-clockwise positive, arcs counted
 /// with the segment they add to or take from the polygon of their ends.

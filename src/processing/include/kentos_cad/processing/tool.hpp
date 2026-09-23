@@ -20,6 +20,7 @@
 // makes a tool testable without a bus at all.
 #pragma once
 
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/value.hpp"
@@ -199,6 +200,10 @@ struct InputEntity
     /// one that measures or buffers what is on the sheet. Empty for every class
     /// but `Curves`.
     std::vector<Ring> drawn;
+    /// ITS KIND PAYLOAD (model.md R9a), for a tool that must read a curve
+    /// exactly rather than as drawn: an arc-polyline's bends live here, not in
+    /// its rings. Empty for a kind that carries none.
+    std::vector<std::uint8_t> payload;
     std::string text;        ///< its caption, or empty
     core::Mm text_height{0}; ///< the caption's height
     /// What it FOLLOWS, when it is attached to another object (core/attach.hpp).
@@ -216,6 +221,10 @@ struct ToolInput
     command::Args args; ///< every tool parameter, defaults applied and validated
     core::DrawingUnit unit{core::DrawingUnit::Metre}; ///< the project's drawing unit
     std::int64_t plan_scale{1000}; ///< the plan scale's denominator, for paper sizes
+    /// The project's node tolerance (`core.topoloji.dugum_toleransi`): two ends
+    /// this close are one node. Read by the runner, because a tool never sees
+    /// the settings (P1), and the same number ALANAÇEVİR and SINIR read.
+    core::Mm node_tolerance{10};
 };
 
 /// What a tool produces. The runner turns it into objects on the output layer.
@@ -263,9 +272,27 @@ struct ToolOutput
         std::vector<std::vector<core::Point2>> holes; ///< the holes, each a ring
     };
 
-    std::vector<Caption> captions;         ///< text objects to create
-    std::vector<Polyline> polylines;       ///< line and face objects to create
-    std::vector<Face> faces;               ///< faces with holes to create
+    /// AN OBJECT OF AN EXISTING KIND, GIVEN WHOLE: its kind, its one ring and
+    /// the kind's payload, for a result a polyline cannot hold — a face bounded
+    /// by arcs is an arc-polyline, a whole circle a circle (R9: an existing
+    /// kind, never a new one). `core::path_record` makes one from a path.
+    struct Record
+    {
+        core::KindId kind{0};                      ///< the kind that holds it
+        std::vector<core::Point2> ring;            ///< that kind's one ring
+        core::RingRole role{core::RingRole::Open}; ///< open, or exterior for a face
+        std::vector<std::uint8_t> payload;         ///< the kind's payload
+    };
+
+    std::vector<Caption> captions;   ///< text objects to create
+    std::vector<Polyline> polylines; ///< line and face objects to create
+    std::vector<Face> faces;         ///< faces with holes to create
+    std::vector<Record> records;     ///< whole objects of existing kinds to create
+    /// What the tool wants LEFT ON THE CANVAS — an open end, a gap — as a
+    /// measurement leaves its figure (command/measure_mark.hpp). View state:
+    /// never journalled, never undone, and lost on a client with no canvas,
+    /// which is why whatever a mark shows is also in `notes`.
+    std::vector<command::MeasureMark> marks;
     std::vector<Replacement> replacements; ///< geometry to put in place of an input's
     std::vector<std::string> notes;        ///< what the tool wants said on the transcript
     std::size_t touched{0};                ///< how many input objects produced something

@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 103 (91 tanesi onay ister)
-- Katalog parmak izi: `12328420406662033426`
+- Araç sayısı: 104 (92 tanesi onay ister)
+- Katalog parmak izi: `2621473356578956761`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1660,6 +1660,24 @@ Onay ister.
 | `kenar` | integer | hayır | Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar (tam sayı) |
 | `kose` | integer | hayır | Çekilecek köşe; mod=kose (tam sayı) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `islem_alan_uret` — ALANÜRET
+
+Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
+Komut: ALANÜRET (ALANURET, POLYGONIZE, ALÜ)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `ada` | boolean | hayır | Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet (evet/hayır) |
+| `bosluk` | number | hayır | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `islem_bag_coz` — BAĞÇÖZ

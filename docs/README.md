@@ -75,6 +75,7 @@ Tek tek komutlar:
 | `BAĞÇÖZ` | [Yazının bağını çözme](komutlar/bag_coz.md) |
 | `ALANDÜZENLE` | [Alanı istenen değere getirme](komutlar/alan_duzenle.md) |
 | `TAMPON` | [Tampon bölge çizme](komutlar/tampon.md) |
+| `ALANÜRET` | [Çizgilerden alan üretme](komutlar/alan_uret.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
 | `SINIR` | [Kapalı bölgenin sınırını çıkarma](komutlar/boundary.md) |
 | `TAŞI` | [Nesne taşıma](komutlar/move.md) |

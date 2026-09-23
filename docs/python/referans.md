@@ -192,6 +192,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.number_vertices`](#cadnumber_vertices) | `islem.kose_numarala` | `KÖŞENUMARALA` | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
 | [`cad.detach`](#caddetach) | `islem.bag_coz` | `BAĞÇÖZ` | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
 | [`cad.attach`](#cadattach) | `islem.bagla` | `BAĞLA` | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`cad.polygonize`](#cadpolygonize) | `islem.alan_uret` | `ALANÜRET` | Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz. |
 | [`cad.fit`](#cadfit) | `core.fit` | `OTURT` | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
 | [`cad.stakeout`](#cadstakeout) | `core.stakeout` | `APLİKASYON` | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
 | [`cad.reproject`](#cadreproject) | `core.reproject` | `DÖNÜŞTÜR` | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
@@ -2882,6 +2883,34 @@ cad.attach(
 | `decimal_separator` | `str` | `ayrac` | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul |
 
 [Komut sayfası](../komutlar/bagla.md)
+
+### `cad.polygonize`
+
+Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
+
+Komut: `islem.alan_uret` — `ALANÜRET`
+
+```python
+cad.polygonize(
+    objects: list[int],
+    scope: str,
+    window: Coords,
+    layer: str,
+    islands: bool,
+    gap: float,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
+| `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `islands` | `bool` | `ada` | Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet |
+| `gap` | `float` | `bosluk` | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 |
+
+[Komut sayfası](../komutlar/alan_uret.md)
 
 ### `cad.fit`
 

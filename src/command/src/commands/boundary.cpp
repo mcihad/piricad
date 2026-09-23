@@ -33,7 +33,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace kentos::command {
@@ -65,113 +67,58 @@ std::string square_metres(core::Mm2 v)
     return (negative ? "-" : "") + std::to_string(cm2 / 100) + "," + frac + " m²";
 }
 
-bool has_arcs(const core::CurvePath& path)
-{
-    return std::ranges::any_of(
-        path.pieces, [](const core::PathPiece& p) { return p.kind == core::PathPiece::Kind::Arc; });
-}
-
-/// A ring's vertices with its arcs drawn as the chords `arc_outline` draws them,
-/// and how far those chords stray from the arcs.
-std::vector<core::Point2> chords_of(const core::CurvePath& path, core::Mm& deviation)
-{
-    std::vector<core::Point2> out;
-    for (const core::PathPiece& p : path.pieces) {
-        if (p.kind == core::PathPiece::Kind::Segment) {
-            out.push_back(p.from);
-            continue;
-        }
-        std::vector<core::Mm> xs;
-        std::vector<core::Mm> ys;
-        // `arc_outline` sweeps counter-clockwise; a clockwise piece is the same
-        // arc from its other end, walked back.
-        const bool ccw = p.sweep_udeg >= 0;
-        core::arc_outline(p.centre, p.radius, ccw ? p.from : p.to, ccw ? p.to : p.from, xs, ys);
-        std::vector<core::Point2> run;
-        run.reserve(xs.size());
-        for (std::size_t i = 0; i < xs.size(); ++i)
-            run.push_back(core::Point2{xs[i], ys[i]});
-        if (!ccw) std::ranges::reverse(run);
-        const auto r = static_cast<double>(p.radius);
-        for (std::size_t i = 0; i + 1 < run.size(); ++i) {
-            const auto dx  = static_cast<double>(run[i + 1].x - run[i].x);
-            const auto dy  = static_cast<double>(run[i + 1].y - run[i].y);
-            const double h = (dx * dx + dy * dy) / 4.0;
-            if (h < r * r)
-                deviation = std::max(deviation, core::mm_round(r - std::sqrt(r * r - h)));
-        }
-        // The last point is the next piece's first; the ring closes itself.
-        if (!run.empty()) run.pop_back();
-        out.insert(out.end(), run.begin(), run.end());
-    }
-    return out;
-}
-
-/// The face, written as the kind that holds it exactly — or, for arcs with
-/// islands, as an area with the arcs as chords, `deviation` saying how far.
+/// The face, written as the kind that holds it (`core::face_shape`): a record,
+/// or an area whose arcs are chords when it has holes too, `deviation` saying
+/// how far.
 Result<core::EntityId> write_face(Context& ctx, const core::NetworkFace& face, core::Mm& deviation,
                                   std::string& kind_words)
 {
-    bool arcs = has_arcs(face.outer.path);
-    for (const core::FaceRing& hole : face.holes)
-        arcs = arcs || has_arcs(hole.path);
-
-    if (arcs && face.holes.empty()) {
-        // A CLOSED ARC-POLYLINE NEEDS THREE CORNERS, and a half-disc bounded by
-        // its diameter has two. The arc is cut at its middle — the same circle,
-        // one more corner, nothing lost — until the ring can be stored.
-        core::CurvePath path = face.outer.path;
-        while (path.pieces.size() < 3) {
-            const auto arc = std::ranges::find_if(path.pieces, [](const core::PathPiece& p) {
-                return p.kind == core::PathPiece::Kind::Arc && p.from != p.to;
-            });
-            if (arc == path.pieces.end()) break;
-            const core::PathPiece whole = *arc;
-            const bool ccw              = whole.sweep_udeg >= 0;
-            const core::Point2 middle =
-                ccw ? core::arc_midpoint(whole.centre, whole.radius, whole.from, whole.to)
-                    : core::arc_midpoint(whole.centre, whole.radius, whole.to, whole.from);
-            const core::PathPiece first =
-                core::arc_piece(whole.centre, whole.radius, whole.from, middle, ccw);
-            const core::PathPiece second =
-                core::arc_piece(whole.centre, whole.radius, middle, whole.to, ccw);
-            *arc = first;
-            path.pieces.insert(arc + 1, second);
-        }
-        const core::PathRecord rec = core::path_record(path);
-        const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
-        kind_words = rec.kind == core::kCircleKind ? "daire" : "yaylı çoklu çizgi";
-        return ctx.transaction().add_kind(ctx.active_layer(), rec.kind, {&ring, 1}, rec.payload);
+    const core::FaceShape shape = core::face_shape(face);
+    if (shape.whole) {
+        const core::RingGeometry::RingInput ring{shape.record.ring, shape.record.role, 0};
+        kind_words = shape.record.kind == core::kCircleKind ? "daire" : "yaylı çoklu çizgi";
+        return ctx.transaction().add_kind(ctx.active_layer(), shape.record.kind, {&ring, 1},
+                                          shape.record.payload);
     }
-
-    std::vector<std::vector<core::Point2>> rings;
-    rings.push_back(chords_of(face.outer.path, deviation));
-    for (const core::FaceRing& hole : face.holes)
-        rings.push_back(chords_of(hole.path, deviation));
+    deviation = shape.chords;
     std::vector<core::RingGeometry::RingInput> input;
-    input.reserve(rings.size());
-    for (std::size_t i = 0; i < rings.size(); ++i)
+    input.reserve(shape.rings.size());
+    for (std::size_t i = 0; i < shape.rings.size(); ++i)
         input.push_back(core::RingGeometry::RingInput{
-            rings[i], i == 0 ? core::RingRole::Exterior : core::RingRole::Interior, 0});
+            shape.rings[i], i == 0 ? core::RingRole::Exterior : core::RingRole::Interior, 0});
     kind_words = face.holes.empty() ? "alan" : "delikli alan";
     return ctx.transaction().add_area(ctx.active_layer(), input);
 }
 
-/// The open ends, as the canvas marks them.
+/// The open ends, as the canvas marks them: the ones a gap away from other
+/// linework first — nearest the click first, each end in one gap only, so two
+/// ends that see each other are one line and a corner gets no second, wider
+/// one — and bare ends, a line stopping in the open, only when no end has a gap
+/// to show.
 void mark_open_ends(const Context& ctx, const std::vector<core::OpenEnd>& open)
 {
     // A dozen is what a person reads; the rest are counted in the sentence.
     constexpr std::size_t kShown = 12;
-    for (std::size_t i = 0; i < open.size() && i < kShown; ++i) {
+    std::set<core::Point2> used;
+    std::size_t shown = 0;
+    for (const core::OpenEnd& end : open) {
+        if (shown == kShown) break;
+        if (!end.has_nearest || used.contains(end.at) || used.contains(end.nearest)) continue;
+        used.insert(end.at);
+        used.insert(end.nearest);
         MeasureMark m;
-        m.shape = MeasureMark::Shape::Gap;
-        m.points.push_back(open[i].at);
-        if (open[i].has_nearest) {
-            m.points.push_back(open[i].nearest);
-            m.labels.push_back("boşluk " + length_words(open[i].distance));
-        } else {
-            m.labels.emplace_back("açık uç");
-        }
+        m.shape  = MeasureMark::Shape::Gap;
+        m.points = {end.at, end.nearest};
+        m.labels = {"boşluk " + length_words(end.distance)};
+        ctx.mark(m);
+        ++shown;
+    }
+    if (shown > 0) return;
+    for (std::size_t i = 0; i < open.size() && i < 3; ++i) {
+        MeasureMark m;
+        m.shape  = MeasureMark::Shape::Gap;
+        m.points = {open[i].at};
+        m.labels = {"açık uç"};
         ctx.mark(m);
     }
 }
@@ -241,11 +188,14 @@ Task<void> run(Context& ctx)
             co_return;
         }
         mark_open_ends(ctx, region.open);
-        const core::OpenEnd& first = region.open.front();
+        // The nearest end to the click that is a GAP away from other linework;
+        // an end in the open, with nothing near it, is counted but not measured.
+        const auto gap =
+            std::ranges::find_if(region.open, [](const core::OpenEnd& e) { return e.has_nearest; });
         std::string why =
             "Bu bölge kapanmıyor: " + std::to_string(region.open.size()) + " açık uç var";
-        if (first.has_nearest)
-            why += "; tıkladığınız yere en yakını bir çizgiye " + length_words(first.distance) +
+        if (gap != region.open.end())
+            why += "; tıkladığınız yere en yakını bir çizgiye " + length_words(gap->distance) +
                    " uzakta";
         why += ". Uçlar tuvalde işaretlendi. Boşluğu yakalamayla kapatın ya da köprülemek için "
                "bosluk=<mm> verin.";

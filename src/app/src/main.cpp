@@ -1721,6 +1721,27 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("17b-sinir-bosluk"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // ALANÜRET (TODOS C-09): six parcels drawn as crossing lines that run
+        // past the frame, one inner line stopping short and the right frame
+        // line not reaching the bottom. Every closed cell becomes an area
+        // (selected, so they read); the cell the frame gap keeps open does not,
+        // and its open end is marked with the gap.
+        later([scene] { scene(QStringLiteral("ÇİZGİ -1,0 31,0")); });
+        later([&window] {
+            for (const char* line :
+                 {"ÇİZGİ -1,10 31,10", "ÇİZGİ -1,20 31,20", "ÇİZGİ 0,-1 0,21", "ÇİZGİ 10,-1 10,21",
+                  "ÇİZGİ 20,-1 20,17.5", "ÇİZGİ 30,21 30,1.5"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.85"));
+            window.runScriptLine(QStringLiteral("ALANÜRET kapsam=proje katman=PARSEL"));
+            window.runScriptLine(QStringLiteral("SEÇ mod=KATMAN katman=PARSEL"));
+        });
+        later([&window, shot] { shot(QStringLiteral("17c-alan-uret"), &window); });
+        later([&window] { window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE")); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

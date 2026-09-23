@@ -11,6 +11,7 @@ add_library(kentos_processing STATIC
     src/tools/attach.cpp
     src/tools/detach.cpp
     src/tools/buffer.cpp
+    src/tools/polygonize.cpp
 )
 
 target_include_directories(kentos_processing PUBLIC include)

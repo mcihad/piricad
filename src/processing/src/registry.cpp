@@ -44,6 +44,7 @@ KENTOS_PROCESSING_TOOL(area_edit);
 KENTOS_PROCESSING_TOOL(attach);
 KENTOS_PROCESSING_TOOL(detach);
 KENTOS_PROCESSING_TOOL(buffer);
+KENTOS_PROCESSING_TOOL(polygonize);
 
 namespace {
 
@@ -58,6 +59,7 @@ const std::vector<const ProcessingTool*>& all_tools()
         const std::vector<const ProcessingTool*> declared{
             &kentos_tool_label_length(), &kentos_tool_number_vertices(), &kentos_tool_area_edit(),
             &kentos_tool_attach(),       &kentos_tool_detach(),          &kentos_tool_buffer(),
+            &kentos_tool_polygonize(),
         };
         // The ORDER is sorted, never the addresses: a run that put two tools in
         // a different place would move a row in the Araçlar tree and a line in
@@ -196,6 +198,8 @@ InputEntity snapshot(const core::Document& doc, core::EntityId e, Applies cls)
                 out.drawn.push_back(std::move(ring));
             }
     }
+    const std::span<const std::uint8_t> payload = geom.payload_of(ents.slot[e]);
+    out.payload.assign(payload.begin(), payload.end());
     if (const core::Attachment* a = doc.attachments().get(e); a != nullptr) out.attach = *a;
     return out;
 }
@@ -245,6 +249,7 @@ Task<void> run_tool(Context& ctx)
         static_cast<std::uint16_t>(bus.project_settings().get("core.cizim.birim").as_enum()));
     input.plan_scale = bus.project_settings().get("core.plan.olcek").as_int();
     if (input.plan_scale <= 0) input.plan_scale = 1000;
+    input.node_tolerance = bus.project_settings().get("core.topoloji.dugum_toleransi").as_length();
 
     // ---- the scope: ids given, the selection (asked for when empty), the
     //      viewport, or the whole project ----
@@ -425,6 +430,18 @@ Task<void> run_tool(Context& ctx)
         ++made;
     }
 
+    for (const ToolOutput::Record& rec : output.records) {
+        if (rec.ring.empty()) continue;
+        const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
+        const auto created = ctx.transaction().add_kind(
+            layer, rec.kind, std::span<const core::RingGeometry::RingInput>(&ring, 1), rec.payload);
+        if (!created) {
+            ctx.refuse(created.error());
+            co_return;
+        }
+        ++made;
+    }
+
     for (const ToolOutput::Replacement& r : output.replacements) {
         const core::EntityId e =
             doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(r.key)));
@@ -485,6 +502,8 @@ Task<void> run_tool(Context& ctx)
     for (const std::string& n : output.notes)
         said += "\n  not: " + n;
     ctx.echo(said);
+    for (const command::MeasureMark& m : output.marks)
+        ctx.mark(m);
 }
 
 } // namespace

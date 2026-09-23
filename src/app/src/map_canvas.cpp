@@ -2050,12 +2050,20 @@ void MapCanvas::buildRegionPreview(std::span<const std::uint8_t> payload, core::
     // nearest first, in the warning ink the refusal will mark them in.
     const std::size_t warn = nextBatch(tokens_->warn.rgba(), 1.6f, false);
     const std::size_t dash = nextBatch(tokens_->warn.rgba(), 1.2f, true);
-    for (std::size_t i = 0; i < cache.open.size() && i < 3; ++i) {
-        const core::OpenEnd& end     = cache.open[i];
+    std::size_t shown      = 0;
+    std::vector<core::Point2> used; // an end in one gap only, as SINIR marks them
+    for (const core::OpenEnd& end : cache.open) {
+        if (shown == 3) break;
+        if (!end.has_nearest || std::ranges::find(used, end.at) != used.end() ||
+            std::ranges::find(used, end.nearest) != used.end())
+            continue;
+        used.push_back(end.at);
+        used.push_back(end.nearest);
+        ++shown;
         const render::ScreenPointF v = render::to_f(view_.to_screen(end.at));
-        addCircle(warn, v.x, v.y, 6.0f);
-        if (!end.has_nearest) continue;
         const render::ScreenPointF w = render::to_f(view_.to_screen(end.nearest));
+        addCircle(warn, v.x, v.y, 6.0f);
+        addCircle(warn, w.x, w.y, 3.0f);
         addRun(dash, {v, w}, false);
         addReadout((v.x + w.x) * 0.5F + 8.0F, (v.y + w.y) * 0.5F - 8.0F,
                    trimmed(static_cast<double>(end.distance) / 1000.0, 3) + " m");

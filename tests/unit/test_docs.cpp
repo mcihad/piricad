@@ -175,11 +175,13 @@ bool is_out_of_scope(const CommandSpec& spec)
 {
     if (spec.id == "core.script") return true;
 
-    // SINIR needs the planar arrangement (core/planar.hpp), which a build
+    // SINIR and ALANÜRET need the planar arrangement (core/planar.hpp), which a build
     // without CGAL does not have; it refuses and says so, which is the truth
     // about that build and says nothing about the manual. test_planar.cpp
     // reports those cases as pending.
-    if (spec.id == "core.boundary" && !kentos::core::network_available()) return true;
+    if ((spec.id == "core.boundary" || spec.id == "islem.alan_uret") &&
+        !kentos::core::network_available())
+        return true;
 
 #if !KENTOS_HAVE_PYTHON
     // PYTHON needs an interpreter behind `Bus::on_run_python`. The rig attaches

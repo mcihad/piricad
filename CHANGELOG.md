@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çizgi ağından alan üretme: ALANÜRET (C-09, 2. aşama)
+
+- **ALANÜRET** (`islem.alan_uret`, Araçlar ▸ Geometri): kapsamdaki çizgilerin kapattığı
+  her göz ayrı bir alan olur; bir gözün içindeki kapalı şekil o alanın deliği olur ve
+  kendisi de ayrı alan olarak çizilir. SINIR ile aynı çekirdek, aynı düğüm toleransı ve
+  aynı "hangi türle yazılır" kuralı (`core::face_shape`): yaylı göz yaylı çoklu çizgi,
+  dairenin içi daire kalır. Açık uçlar sayılır, en dar boşluk söylenir ve tuvalde
+  işaretlenir; kapanmayan göz alan olmaz, köprü yalnız `bosluk=` ile.
+- **Taşan uç boşluk sayılmaz.** Açık ucun en yakın çizgisi artık düğümlenmiş ağ üzerinde
+  ölçülüyor: bir çizgiyi kesip biraz öteye geçen uç, az önce kestiği çizgiye "boşluk"
+  diye bağlanmıyor.
+- İşlem araçları artık nesnenin tür yükünü okuyabiliyor (yaylı çoklu çizginin yayları),
+  projenin düğüm toleransını alıyor, var olan türden tam kayıt (yaylı çoklu çizgi,
+  daire) üretebiliyor ve tuvale işaret bırakabiliyor.
+
 ### Eklendi — kapalı bölgenin sınırı: SINIR (C-09, 1. aşama)
 
 - **SINIR** (`core.boundary`): kapalı bir bölgenin içine tıklayınca sınırı yeni bir

@@ -2,6 +2,7 @@
 #include "kentos_cad/core/planar.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
@@ -468,6 +469,26 @@ public:
 
     static constexpr double kFar = 1e300;
 
+    /// How far the linework runs from the free end `from` before it meets a
+    /// node that is not a plain corner: a junction, or the chain's other end.
+    double chain(Point2 from) const
+    {
+        const auto it = nodes_.find(from);
+        if (it == nodes_.end() || links_[it->second].size() != 1) return 0.0;
+        std::size_t prev  = it->second;
+        std::size_t at    = links_[prev].front().first;
+        double length     = links_[prev].front().second;
+        std::size_t steps = 0;
+        while (links_[at].size() == 2 && at != it->second && steps++ < links_.size()) {
+            const auto& out      = links_[at];
+            const std::size_t go = out[0].first == prev ? 1 : 0;
+            length += out[go].second;
+            prev = at;
+            at   = out[go].first;
+        }
+        return length;
+    }
+
 private:
     std::size_t node(Point2 p)
     {
@@ -547,7 +568,17 @@ std::vector<OpenEnd> measure_open_ends(const std::vector<Prepared>& pieces,
             return a.gap != b.gap ? a.gap < b.gap : a.at < b.at;
         });
         walk.restart(at);
+        // A GAP IS SHORTER THAN THE LINE THAT LEAVES IT. A line run a metre past
+        // the frame it crossed ends a metre from that crossing; once the frame
+        // is ruled out as its own, the next linework may be ten metres off, and
+        // a ten-metre "gap" is noise that buries the real ones. So a candidate
+        // counts only when it is nearer than the end's own chain is long — the
+        // run from the end, through plain corners, to the first junction or to
+        // the chain's other end. A boundary that stopped 5 cm short has sixty
+        // metres of chain behind it; an overshoot has one.
+        const double reach = walk.chain(at);
         for (const Candidate& c : candidates) {
+            if (c.gap >= reach) break;
             const PathPiece& piece = pieces[c.piece].piece;
             const double limit     = 2.0 * c.gap;
             double walked          = Walk::kFar;
@@ -682,18 +713,98 @@ Mm2 path_area(const CurvePath& path)
     return area;
 }
 
+// ---------------------------------------------------------------- shape ----
+
+namespace {
+
+bool bends(const CurvePath& path)
+{
+    return std::ranges::any_of(path.pieces,
+                               [](const PathPiece& p) { return p.kind == PathPiece::Kind::Arc; });
+}
+
+/// A ring's vertices with its arcs drawn as the chords `arc_outline` draws, and
+/// how far those chords stray from the arcs.
+std::vector<Point2> chords_of(const CurvePath& path, Mm& deviation)
+{
+    std::vector<Point2> out;
+    for (const PathPiece& p : path.pieces) {
+        if (p.kind == PathPiece::Kind::Segment) {
+            out.push_back(p.from);
+            continue;
+        }
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        // `arc_outline` sweeps counter-clockwise; a clockwise piece is the same
+        // arc from its other end, walked back.
+        const bool ccw = p.sweep_udeg >= 0;
+        arc_outline(p.centre, p.radius, ccw ? p.from : p.to, ccw ? p.to : p.from, xs, ys);
+        std::vector<Point2> run;
+        run.reserve(xs.size());
+        for (std::size_t i = 0; i < xs.size(); ++i)
+            run.push_back(Point2{xs[i], ys[i]});
+        if (!ccw) std::ranges::reverse(run);
+        const auto r = static_cast<double>(p.radius);
+        for (std::size_t i = 0; i + 1 < run.size(); ++i) {
+            const auto dx  = static_cast<double>(run[i + 1].x - run[i].x);
+            const auto dy  = static_cast<double>(run[i + 1].y - run[i].y);
+            const double h = (dx * dx + dy * dy) / 4.0;
+            if (h < r * r) deviation = std::max(deviation, mm_round(r - std::sqrt(r * r - h)));
+        }
+        // The last point is the next piece's first; the ring closes itself.
+        if (!run.empty()) run.pop_back();
+        out.insert(out.end(), run.begin(), run.end());
+    }
+    return out;
+}
+
+} // namespace
+
+FaceShape face_shape(const NetworkFace& face)
+{
+    FaceShape shape;
+    bool arcs = bends(face.outer.path);
+    for (const FaceRing& hole : face.holes)
+        arcs = arcs || bends(hole.path);
+
+    if (arcs && face.holes.empty()) {
+        // A CLOSED ARC-POLYLINE NEEDS THREE CORNERS, and a half-disc bounded by
+        // its diameter has two. The arc is cut at its middle — the same circle,
+        // one more corner, nothing lost — until the ring can be stored.
+        CurvePath path = face.outer.path;
+        while (path.pieces.size() < 3) {
+            const auto arc = std::ranges::find_if(path.pieces, [](const PathPiece& p) {
+                return p.kind == PathPiece::Kind::Arc && p.from != p.to;
+            });
+            if (arc == path.pieces.end()) break;
+            const PathPiece whole = *arc;
+            const bool ccw        = whole.sweep_udeg >= 0;
+            const Point2 middle =
+                ccw ? arc_midpoint(whole.centre, whole.radius, whole.from, whole.to)
+                    : arc_midpoint(whole.centre, whole.radius, whole.to, whole.from);
+            const PathPiece first  = arc_piece(whole.centre, whole.radius, whole.from, middle, ccw);
+            const PathPiece second = arc_piece(whole.centre, whole.radius, middle, whole.to, ccw);
+            *arc                   = first;
+            path.pieces.insert(arc + 1, second);
+        }
+        shape.whole  = true;
+        shape.record = path_record(path);
+        return shape;
+    }
+    shape.rings.push_back(chords_of(face.outer.path, shape.chords));
+    for (const FaceRing& hole : face.holes)
+        shape.rings.push_back(chords_of(hole.path, shape.chords));
+    return shape;
+}
+
 // --------------------------------------------------------------- pieces ----
 
-std::vector<NetworkPiece> network_pieces(const Document& doc, EntityId e, std::uint32_t source)
+std::vector<NetworkPiece> record_pieces(KindId kind, std::span<const StoredRing> rings,
+                                        std::span<const std::uint8_t> payload,
+                                        std::span<const StoredRing> drawn, std::uint32_t source)
 {
     std::vector<NetworkPiece> out;
-    const EntityTable& ents = doc.entities();
-    if (e >= ents.size() || !ents.alive(e)) return out;
-    if ((ents.flags[e] & FlagInBlock) != 0) return out;
-    const RingGeometry& geom = doc.geometry();
-    const std::uint32_t slot = ents.slot[e];
-    const KindId kind        = ents.kind[e];
-    const auto segment       = [&](Point2 a, Point2 b, bool approximate) {
+    const auto segment = [&](Point2 a, Point2 b, bool approximate) {
         if (a == b) return;
         NetworkPiece n;
         n.piece.from  = a;
@@ -702,52 +813,119 @@ std::vector<NetworkPiece> network_pieces(const Document& doc, EntityId e, std::u
         n.approximate = approximate;
         out.push_back(n);
     };
+    const auto arc = [&](const PathPiece& piece) {
+        if (piece.radius <= 0 || piece.sweep_udeg == 0) return;
+        NetworkPiece n;
+        n.piece  = piece;
+        n.source = source;
+        out.push_back(n);
+    };
+    const auto runs = [&](std::span<const StoredRing> of, bool approximate) {
+        for (const StoredRing& ring : of) {
+            const std::span<const Point2> p = ring.points;
+            for (std::size_t i = 0; i + 1 < p.size(); ++i)
+                segment(p[i], p[i + 1], approximate);
+            if (ring.role != RingRole::Open && p.size() >= 3)
+                segment(p.back(), p.front(), approximate);
+        }
+    };
 
     if (kind == kPolylineKind) {
-        if (doc.texts().has(slot)) return out; // a caption's baseline bounds nothing
-        const RingSpan span = geom.rings_of(slot);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs       = geom.ring_xs(r);
-            const auto ys       = geom.ring_ys(r);
-            const std::size_t n = xs.size();
-            for (std::size_t i = 0; i + 1 < n; ++i)
-                segment(Point2{xs[i], ys[i]}, Point2{xs[i + 1], ys[i + 1]}, false);
-            if (geom.ring_role[r] != RingRole::Open && n >= 3)
-                segment(Point2{xs[n - 1], ys[n - 1]}, Point2{xs[0], ys[0]}, false);
-        }
-        return out;
-    }
-    if (kind == kArcKind || kind == kCircleKind || kind == kArcPolylineKind) {
-        if (auto path = path_of(doc, e)) {
-            for (const PathPiece& piece : path->pieces) {
-                NetworkPiece n;
-                n.piece  = piece;
-                n.source = source;
-                out.push_back(n);
+        runs(rings, false);
+    } else if (kind == kCircleKind) {
+        // A centre and a rim point due east of it (core/circle.hpp).
+        if (rings.empty() || rings.front().points.size() < 2) return out;
+        const Point2 c = rings.front().points[0];
+        const Mm dx    = rings.front().points[1].x - c.x;
+        const Mm r     = dx < 0 ? -dx : dx;
+        arc(PathPiece{.kind       = PathPiece::Kind::Arc,
+                      .from       = Point2{c.x + r, c.y},
+                      .to         = Point2{c.x + r, c.y},
+                      .centre     = c,
+                      .radius     = r,
+                      .sweep_udeg = kUDegFullCircle});
+    } else if (kind == kArcKind) {
+        // A centre, a radius handle due east, then the two ends; the sweep runs
+        // counter-clockwise from the first end to the second (core/arc.hpp).
+        if (rings.empty() || rings.front().points.size() < 4) return out;
+        const std::span<const Point2> p = rings.front().points;
+        const Mm dx                     = p[1].x - p[0].x;
+        arc(arc_piece(p[0], dx < 0 ? -dx : dx, p[2], p[3], true));
+    } else if (kind == kArcPolylineKind) {
+        // THE VERTICES ARE THE RING, the bends are the payload — the reading
+        // `path_of` gives a live arc-polyline, edge for edge.
+        if (rings.empty() || rings.front().points.size() < 2) return out;
+        auto def = decode_arc_polyline(payload);
+        if (!def) return out;
+        const std::span<const Point2> v = rings.front().points;
+        const bool closed               = rings.front().role != RingRole::Open;
+        const std::size_t n             = v.size();
+        const std::size_t edges         = closed ? n : n - 1;
+        std::size_t next                = 0;
+        const auto& bends               = def.value().arcs;
+        for (std::size_t i = 0; i < edges; ++i) {
+            const Point2 a = v[i];
+            const Point2 b = v[(i + 1) % n];
+            while (next < bends.size() && bends[next].segment < i)
+                ++next;
+            if (next < bends.size() && bends[next].segment == i) {
+                if (a != b)
+                    arc(arc_piece(bends[next].centre, bends[next].radius, a, b, bends[next].ccw));
+                continue;
             }
+            segment(a, b, false);
         }
-        return out;
-    }
-    if (kind == kEllipseKind || kind == kSplineKind) {
+    } else if (kind == kEllipseKind || kind == kSplineKind) {
         // AS DRAWN, AND SAID. An ellipse or a spline is not a path yet
         // (curve_path.hpp); the chords it is drawn with stand in for it, and a
         // face they bound carries the mark so the caller can report how far the
         // drawing is from the curve.
-        EmitBuffer drawn;
-        if (!curve_outline(kind, geom, slot, drawn)) return out;
-        for (std::size_t r = 0; r < drawn.run_total(); ++r) {
-            const std::uint32_t first = drawn.run_start[r];
-            const std::uint32_t count = drawn.run_count[r];
-            for (std::uint32_t v = 0; v + 1 < count; ++v)
-                segment(Point2{drawn.xs[first + v], drawn.ys[first + v]},
-                        Point2{drawn.xs[first + v + 1], drawn.ys[first + v + 1]}, true);
-            if (drawn.run_closed[r] != 0 && count >= 3)
-                segment(Point2{drawn.xs[first + count - 1], drawn.ys[first + count - 1]},
-                        Point2{drawn.xs[first], drawn.ys[first]}, true);
-        }
-        return out;
+        runs(drawn, true);
     }
     return out; // a dimension, a hatch, a block, a point: they bound no ground
+}
+
+std::vector<NetworkPiece> network_pieces(const Document& doc, EntityId e, std::uint32_t source)
+{
+    const EntityTable& ents = doc.entities();
+    if (e >= ents.size() || !ents.alive(e)) return {};
+    if ((ents.flags[e] & FlagInBlock) != 0) return {};
+    const RingGeometry& geom = doc.geometry();
+    const std::uint32_t slot = ents.slot[e];
+    const KindId kind        = ents.kind[e];
+    if (kind == kPolylineKind && doc.texts().has(slot)) return {}; // a caption bounds nothing
+
+    // The live entity read into the same shape a snapshot has, so there is one
+    // reading of every kind (`record_pieces`) and not two that could drift.
+    const RingSpan span = geom.rings_of(slot);
+    std::vector<std::vector<Point2>> points(span.count);
+    std::vector<StoredRing> rings(span.count);
+    for (std::uint32_t r = 0; r < span.count; ++r) {
+        const auto xs = geom.ring_xs(span.first + r);
+        const auto ys = geom.ring_ys(span.first + r);
+        points[r].reserve(xs.size());
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            points[r].push_back(Point2{xs[v], ys[v]});
+        rings[r] = StoredRing{points[r], geom.ring_role[span.first + r]};
+    }
+    std::vector<std::vector<Point2>> runs;
+    std::vector<StoredRing> drawn;
+    if (kind == kEllipseKind || kind == kSplineKind) {
+        EmitBuffer buf;
+        if (curve_outline(kind, geom, slot, buf)) {
+            runs.resize(buf.run_total());
+            for (std::size_t r = 0; r < buf.run_total(); ++r) {
+                const auto xs = buf.run_xs(r);
+                const auto ys = buf.run_ys(r);
+                for (std::size_t v = 0; v < xs.size(); ++v)
+                    runs[r].push_back(Point2{xs[v], ys[v]});
+            }
+            for (std::size_t r = 0; r < runs.size(); ++r)
+                drawn.push_back(StoredRing{runs[r], buf.run_closed[r] != 0 ? RingRole::Exterior
+                                                                           : RingRole::Open});
+        }
+    }
+    return record_pieces(kind, rings, geom.payload_of(slot), drawn, source);
 }
 
 // -------------------------------------------------------------- network ----
@@ -852,6 +1030,45 @@ struct Network::Impl
         for (const std::uint32_t i : h->curve().data())
             if (pieces[i].piece.kind == PathPiece::Kind::Arc) return &pieces[i].piece;
         return nullptr;
+    }
+
+    /// THE ARRANGEMENT'S EDGES AS PIECES — every crossing already a node — so
+    /// an open end is measured against the network as it was noded and not
+    /// against the pieces it was noded from. A line run 30 cm past the one it
+    /// crosses ends 30 cm from that crossing, and walking back to it is 30 cm
+    /// too: not a gap. Against the unnoded pieces the crossing was no node at
+    /// all, and every overshoot read as a gap.
+    std::vector<Prepared> edge_pieces() const
+    {
+        std::vector<Prepared> out;
+        out.reserve(arr.number_of_edges());
+        for (auto e = arr.edges_begin(); e != arr.edges_end(); ++e) {
+            const Halfedge h  = e;
+            const Point2 from = rounded(h->source()->point());
+            const Point2 to   = rounded(h->target()->point());
+            if (from == to) continue;
+            Prepared p;
+            if (h->curve().is_circular()) {
+                const PathPiece* src = arc_source(h);
+                if (src == nullptr) continue;
+                p.piece = arc_piece(src->centre, src->radius, from, to, ccw(h));
+            } else {
+                p.piece.from = from;
+                p.piece.to   = to;
+            }
+            for (const std::uint32_t i : h->curve().data()) {
+                if (pieces[i].bridge >= 0) {
+                    p.bridge = pieces[i].bridge;
+                    continue;
+                }
+                p.source      = pieces[i].source;
+                p.approximate = pieces[i].approximate;
+                p.bridge      = -1;
+                break;
+            }
+            out.push_back(p);
+        }
+        return out;
     }
 
     /// A CCB as rings: the edges with the face on BOTH sides — a dangling line,
@@ -1102,8 +1319,9 @@ Result<Network> Network::build(std::span<const NetworkPiece> pieces, Mm node_tol
     snap_ends_to_lines(impl->pieces, node_tolerance, impl->snaps);
     impl->insert_all();
     if (bridge > 0) {
-        const std::vector<OpenEnd> open = measure_open_ends(impl->pieces, impl->free_points());
-        const std::size_t before        = impl->bridges.size();
+        const std::vector<OpenEnd> open =
+            measure_open_ends(impl->edge_pieces(), impl->free_points());
+        const std::size_t before = impl->bridges.size();
         add_bridges(impl->pieces, open, bridge, impl->bridges);
         if (impl->bridges.size() != before) impl->insert_all();
     }
@@ -1166,7 +1384,7 @@ std::size_t Network::collapsed() const noexcept
 std::vector<OpenEnd> Network::open_ends() const
 {
 #ifdef KENTOS_HAVE_CGAL
-    return measure_open_ends(impl_->pieces, impl_->free_points());
+    return measure_open_ends(impl_->edge_pieces(), impl_->free_points());
 #else
     return {};
 #endif

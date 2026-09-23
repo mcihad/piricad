@@ -112,6 +112,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`islem.kose_numarala`](kose_numarala.md) | — | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
 | [`islem.bag_coz`](bag_coz.md) | — | `BAĞÇÖZ`, `BAGCOZ`, `DETACH`, `BÇ`, `BC` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
 | [`islem.bagla`](bagla.md) | — | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`islem.alan_uret`](alan_uret.md) | — | `ALANÜRET`, `ALANURET`, `POLYGONIZE`, `ALÜ` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz. |
 | [`core.fit`](fit.md) | Oturt (Helmert) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
 | [`core.stakeout`](stakeout.md) | Aplikasyon | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
 | [`core.reproject`](reproject.md) | Dönüştür | `DÖNÜŞTÜR`, `DONUSTUR`, `REPROJECT`, `DNS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
@@ -1574,6 +1575,21 @@ Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine ba�
 | `ayrac` | text | isteğe bağlı | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul |
 
 Ayrıntılı kullanım: [BAĞLA](bagla.md)
+
+### `islem.alan_uret` — ALANÜRET
+
+Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `ada` | bool | isteğe bağlı | Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet |
+| `bosluk` | number | isteğe bağlı | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 |
+
+Ayrıntılı kullanım: [ALANÜRET](alan_uret.md)
 
 ### `core.fit` — OTURT (Oturt (Helmert))
 
@@ -12121,6 +12137,111 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "ALANDUZENLE",
         "ADJUSTAREA",
         "ADZ"
+      ]
+    }
+  },
+  {
+    "name": "islem_alan_uret",
+    "title": "ALANÜRET",
+    "description": "Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.\nKomut: ALANÜRET (ALANURET, POLYGONIZE, ALÜ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
+        },
+        "pencere": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 2
+            }
+          ],
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
+        },
+        "ada": {
+          "type": "boolean",
+          "description": "Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet (evet/hayır)"
+        },
+        "bosluk": {
+          "type": "number",
+          "description": "Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 (sayı)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.alan_uret",
+      "cad.kentos/category": "İşlem",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "ALANÜRET",
+        "ALANURET",
+        "POLYGONIZE",
+        "ALÜ"
       ]
     }
   },

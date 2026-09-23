@@ -1951,6 +1951,26 @@ def attach(
         decimal_separator — Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul
     """
 
+def polygonize(
+    *,
+    objects: list[int] = ...,
+    scope: str = ...,
+    window: Coords = ...,
+    layer: str = ...,
+    islands: bool = ...,
+    gap: float = ...,
+) -> int:
+    """Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
+
+    Komut: islem.alan_uret (ALANÜRET)
+        objects — Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı]
+        scope — secili (varsayılan), gorunum ya da proje: nesneler nereden alınır
+        window — gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce]
+        layer — Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman
+        islands — Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet
+        gap — Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0
+    """
+
 def fit(
     *,
     points: Coords = ...,

@@ -229,8 +229,49 @@ TEST_CASE("DÜZLEMSEL AĞ: kesişen çizgi ağı her gözü ayrı yüz yapar; ta
     for (const NetworkFace& f : faces)
         CHECK_EQ(f.area, Mm2{100'000'000});
     CHECK_EQ(net.open_ends().size(), std::size_t{12}); // every overhang ends in the open
+    // AN OVERSHOOT IS NOT A GAP. Each overhang ends a metre past the frame
+    // line it crossed, and walking back to that crossing is a metre too: the
+    // crossing is a node of the network, and a bridge there would close a
+    // sliver, not a gap.
+    for (const OpenEnd& end : net.open_ends())
+        CHECK_FALSE(end.has_nearest);
     // Listed by position: the lowest-left cell first.
     CHECK_EQ(faces.front().outer.path.pieces.front().from, (Point2{0, 0}));
+}
+
+TEST_CASE("DÜZLEMSEL AĞ: taşan uçlar boşluk sayılmaz; kısa kalan çizgi ve bozuk köşe sayılır")
+{
+    NEEDS_NETWORK();
+    // Six parcels drawn as lines that run a metre past the frame; the inner
+    // line at x=20 stops 2.5 m short of the top, and the right frame line
+    // stops 1.5 m above the bottom one.
+    const Network net = built(
+        {seg({-1'000, 0}, {31'000, 0}, 1), seg({-1'000, 10'000}, {31'000, 10'000}, 2),
+         seg({-1'000, 20'000}, {31'000, 20'000}, 3), seg({0, -1'000}, {0, 21'000}, 4),
+         seg({10'000, -1'000}, {10'000, 21'000}, 5), seg({20'000, -1'000}, {20'000, 17'500}, 6),
+         seg({30'000, 21'000}, {30'000, 1'500}, 7)});
+    const auto open = net.open_ends();
+    const auto at   = [&open](Point2 p) {
+        return std::find_if(open.begin(), open.end(), [p](const OpenEnd& e) { return e.at == p; });
+    };
+    // The short inner line: 2.5 m below the top line.
+    REQUIRE(at({20'000, 17'500}) != open.end());
+    CHECK(at({20'000, 17'500})->has_nearest);
+    CHECK_EQ(at({20'000, 17'500})->nearest, (Point2{20'000, 20'000}));
+    CHECK_EQ(at({20'000, 17'500})->distance, Mm{2'500});
+    // The broken corner: the frame line 1.5 m above the bottom line.
+    REQUIRE(at({30'000, 1'500}) != open.end());
+    CHECK_EQ(at({30'000, 1'500})->nearest, (Point2{30'000, 0}));
+    CHECK_EQ(at({30'000, 1'500})->distance, Mm{1'500});
+    // Overshoots past a crossing measure nothing: the crossing is theirs.
+    for (const Point2 p : {Point2{0, 21'000}, Point2{10'000, 21'000}, Point2{-1'000, 10'000},
+                           Point2{-1'000, 20'000}, Point2{0, -1'000}, Point2{10'000, -1'000}}) {
+        REQUIRE(at(p) != open.end());
+        CHECK_FALSE(at(p)->has_nearest);
+    }
+    // And the faces that do close are the four whole cells and the one the
+    // short line leaves open at the top, merged.
+    CHECK_EQ(net.faces(true).size(), std::size_t{4});
 }
 
 TEST_CASE("DÜZLEMSEL AĞ: üst üste çizilmiş iki çizgi örtüşme olarak bulunur")

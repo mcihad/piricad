@@ -94,6 +94,7 @@ taşınan yazının başına gelen [Bağlı nesneler](bagli-nesneler.md) sayfas�
 | Etiketleme | Yazıyı nesneye bağla | `BAĞLA` | [Yazıyı nesneye bağlama](../komutlar/bagla.md) |
 | Etiketleme | Yazının bağını çöz | `BAĞÇÖZ` | [Yazının bağını çözme](../komutlar/bag_coz.md) |
 | Analiz | Tampon bölge | `TAMPON` | [Tampon bölge çizme](../komutlar/tampon.md) |
+| Geometri | Çizgilerden alan üret | `ALANÜRET` | [Çizgilerden alan üretme](../komutlar/alan_uret.md) |
 | Düzenleme | Alanı düzenle | `ALANDÜZENLE` | [Alanı istenen değere getirme](../komutlar/alan_duzenle.md) |
 
 Yeni bir araç eklendiğinde ağaçta, **Analiz** menüsünde ve

@@ -9,12 +9,16 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/journal.hpp"
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/planar.hpp"
+#include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <stop_token>
@@ -103,7 +107,7 @@ std::string what_happened(const Journal& j)
 TEST_CASE("İŞLEM: her araç bir komuttur; dört ortak parametre önde, kendi parametreleri arkada")
 {
     Rig f;
-    REQUIRE_EQ(processing::processing_tools().size(), 6u);
+    REQUIRE_EQ(processing::processing_tools().size(), 7u);
 
     // TAMPON is one of them, in its own group, and takes every drawn class.
     const CommandSpec* tampon = f.reg.resolve("TAMPON");
@@ -923,4 +927,215 @@ TEST_CASE("TAMPON KANIT: komut satırı ve betik aynı belgeyi ve günlüğü ü
     }
     CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
     CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+// ================================================================ ALANÜRET ===
+
+namespace {
+
+#define NEEDS_NETWORK()                                                                            \
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; ALANÜRET sınanamıyor.")
+
+/// The kind of every object on `layer`.
+std::vector<core::KindId> kinds_on(const core::Document& doc, const std::string& layer)
+{
+    std::vector<core::KindId> out;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e)) continue;
+        const core::LayerId l = doc.entities().layer[e];
+        if (l < doc.layers().size() && doc.layers()[l].name == layer)
+            out.push_back(doc.entities().kind[e]);
+    }
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("ALANÜRET: aracın kimliği, adları, grubu ve uygulandığı sınıflar")
+{
+    Rig f;
+    const CommandSpec* spec = f.reg.resolve("ALANÜRET");
+    REQUIRE(spec != nullptr);
+    CHECK_EQ(spec->id, std::string("islem.alan_uret"));
+    CHECK(f.reg.resolve("POLYGONIZE") == spec);
+    CHECK(f.reg.resolve("ALÜ") == spec);
+    const processing::ProcessingTool* tool = processing::find_tool("islem.alan_uret");
+    REQUIRE(tool != nullptr);
+    CHECK_EQ(tool->spec().group, std::string("Geometri"));
+    CHECK(processing::applies_to(tool->spec().applies, processing::Applies::Lines));
+    CHECK(processing::applies_to(tool->spec().applies, processing::Applies::Faces));
+    CHECK(processing::applies_to(tool->spec().applies, processing::Applies::Curves));
+    CHECK_FALSE(processing::applies_to(tool->spec().applies, processing::Applies::Points));
+    REQUIRE(spec->params.size() >= 6u);
+    CHECK_EQ(spec->params[4].name, std::string("ada"));
+    CHECK_EQ(spec->params[5].name, std::string("bosluk"));
+}
+
+TEST_CASE("ALANÜRET: kesişen çizgi ağının her gözü bir alan olur; taşan uçlar bozmaz")
+{
+    NEEDS_NETWORK();
+    // Two parcels and a road: a 2 × 1 grid of 10 m cells, every line running a
+    // metre past the frame the way digitised linework does.
+    Rig r;
+    r.run("ÇİZGİ -1,0 21,0");
+    r.run("ÇİZGİ -1,10 21,10");
+    r.run("ÇİZGİ 0,-1 0,11");
+    r.run("ÇİZGİ 10,-1 10,11");
+    r.run("ÇİZGİ 20,-1 20,11");
+    r.run("ALANÜRET kapsam=proje katman=GOZ");
+    const auto faces = faces_on(r.doc, "GOZ");
+    REQUIRE_EQ(faces.size(), std::size_t{2});
+    for (const auto& [area, rings] : faces) {
+        CHECK_EQ(area, core::Mm2{100'000'000});
+        CHECK_EQ(rings, 1u);
+    }
+    // The lines are untouched, and nothing about an overshoot is a gap.
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{7});
+    // Word for word what the manual prints (docs/komutlar/alan_uret.md).
+    CHECK(r.said.find("Çizgilerden alan üret: 5 nesneye uygulandı, 2 nesne üretildi (katman: "
+                      "GOZ).\n  not: 2 kapalı göz bulundu, toplam alan 200,00 m².") !=
+          std::string::npos);
+    CHECK(r.said.find("açık uç") == std::string::npos);
+}
+
+TEST_CASE("ALANÜRET: içerideki ada delik olur, ada da kendi alanıdır; ada=hayır dolu çizer")
+{
+    NEEDS_NETWORK();
+    Rig r;
+    r.run("ÇİZGİ 0,0 20,0");
+    r.run("ÇİZGİ 20,0 20,10");
+    r.run("ÇİZGİ 20,10 0,10");
+    r.run("ÇİZGİ 0,10 0,0");
+    r.run("DAİRE 10,5 12,5");
+    r.run("ALANÜRET kapsam=proje katman=ADA");
+    // The parcel with the pool cut out (an area of two rings, the pool as
+    // chords), and the pool itself (a circle, exactly).
+    const auto kinds = kinds_on(r.doc, "ADA");
+    REQUIRE_EQ(kinds.size(), std::size_t{2});
+    CHECK(std::ranges::count(kinds, core::kCircleKind) == 1);
+    const auto faces = faces_on(r.doc, "ADA");
+    const auto holed = std::ranges::find_if(faces, [](const auto& f) { return f.second == 2; });
+    REQUIRE(holed != faces.end());
+    const double net = static_cast<double>(holed->first) / 1e6;
+    CHECK(net > 200.0 - 12.6);
+    CHECK(net < 200.0 - 12.4);
+    CHECK(r.said.find("1 ada delik olarak bırakıldı") != std::string::npos);
+
+    r.run("ALANÜRET kapsam=proje ada=hayır katman=DOLU");
+    const auto filled = faces_on(r.doc, "DOLU");
+    CHECK(std::ranges::any_of(
+        filled, [](const auto& f) { return f.first == core::Mm2{200'000'000} && f.second == 1u; }));
+}
+
+TEST_CASE("ALANÜRET: yayla kapanan göz yaylı çoklu çizgi olur, yaylar yay kalır")
+{
+    NEEDS_NETWORK();
+    Rig r;
+    r.run("ÇİZGİ -5,0 5,0");
+    r.run("YAY 0,0 5,0 -5,0");
+    r.run("ALANÜRET kapsam=proje katman=YARIM");
+    const auto kinds = kinds_on(r.doc, "YARIM");
+    REQUIRE_EQ(kinds.size(), std::size_t{1});
+    CHECK_EQ(kinds.front(), core::kArcPolylineKind);
+    // The kind's own area, which counts its arc — a ring's area would be the
+    // triangle of its three corners.
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+        if (r.doc.alive(e) && r.doc.entities().kind[e] == core::kArcPolylineKind)
+            CHECK_EQ(r.doc.entity_area(e),
+                     core::circular_segment_area(5'000, core::kUDegFullCircle / 2));
+}
+
+TEST_CASE(
+    "ALANÜRET: açık kalan köşe kapanmaz; boşluk söylenir ve işaretlenir, köprü istenirse kapanır")
+{
+    NEEDS_NETWORK();
+    Rig r;
+    std::vector<command::MeasureMark> marks;
+    r.bus.on_measure_mark = [&marks](const command::MeasureMark& m) { marks.push_back(m); };
+    r.run("ÇİZGİ 0,0 20,0");
+    r.run("ÇİZGİ 20,0 20,10");
+    r.run("ÇİZGİ 20,10 0,10");
+    r.run("ÇİZGİ 0,10 0,0.05");
+    r.run("ALANÜRET kapsam=proje katman=YOK");
+    CHECK(faces_on(r.doc, "YOK").empty());
+    CHECK(r.said.find("Çizgilerden alan üret: 4 nesneye uygulandı, 0 nesne üretildi (katman: "
+                      "YOK).\n  not: Çizgiler kapalı bir göz oluşturmuyor.\n  not: 2 açık uç bir "
+                      "çizgiye yakın ama değmiyor; en dar boşluk 5 cm. Uçlar tuvalde "
+                      "işaretlendi; kapanmayan göz alan olmadı. Köprülemek için bosluk=<metre> "
+                      "verin.") != std::string::npos);
+    REQUIRE_FALSE(marks.empty());
+    CHECK_EQ(marks.front().shape, command::MeasureMark::Shape::Gap);
+
+    r.run("ALANÜRET kapsam=proje bosluk=0.1 katman=VAR");
+    const auto faces = faces_on(r.doc, "VAR");
+    REQUIRE_EQ(faces.size(), std::size_t{1});
+    CHECK_EQ(faces.front().first, core::Mm2{200'000'000});
+    CHECK(r.said.find("Çizgilerden alan üret: 4 nesneye uygulandı, 1 nesne üretildi (katman: "
+                      "VAR).\n  not: 1 kapalı göz bulundu, toplam alan 200,00 m².\n  not: 1 "
+                      "boşluk köprülendi: 5 cm.") != std::string::npos);
+}
+
+TEST_CASE("ALANÜRET: durdurulan araç hiçbir şey üretmez; tek geri alma adımıdır")
+{
+    NEEDS_NETWORK();
+    const processing::ProcessingTool* tool = processing::find_tool("islem.alan_uret");
+    REQUIRE(tool != nullptr);
+    processing::ToolInput input;
+    processing::InputEntity ring;
+    ring.cls  = processing::Applies::Faces;
+    ring.kind = core::kPolylineKind;
+    ring.rings.push_back(processing::InputEntity::Ring{
+        {{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}}, core::RingRole::Exterior});
+    input.entities.push_back(ring);
+    input.args.set("ada", Value::boolean(true));
+    input.args.set("bosluk", Value::number(0.0));
+    std::stop_source stop;
+    stop.request_stop();
+    std::atomic<std::uint32_t> permille{0};
+    processing::ToolOutput output;
+    const auto status = tool->run(input, output, processing::Progress{stop.get_token(), &permille});
+    CHECK_FALSE(status.ok());
+    CHECK_EQ(status.error().code, core::ErrorCode::Cancelled);
+    CHECK(output.faces.empty());
+    CHECK(output.records.empty());
+
+    Rig r;
+    r.run("ÇİZGİ -1,0 11,0");
+    r.run("ÇİZGİ 10,-1 10,11");
+    r.run("ÇİZGİ 11,10 -1,10");
+    r.run("ÇİZGİ 0,11 0,-1");
+    const std::uint64_t before = r.doc.content_hash();
+    r.run("ALANÜRET kapsam=proje");
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{5});
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("ALANÜRET KANIT: komut satırı ve betik aynı belgeyi ve günlüğü üretir")
+{
+    NEEDS_NETWORK();
+    Rig cli;
+    cli.run("ÇİZGİ -1,0 21,0");
+    cli.run("ÇİZGİ -1,10 21,10");
+    cli.run("ÇİZGİ 0,-1 0,11");
+    cli.run("ÇİZGİ 20,-1 20,11");
+    cli.run("DAİRE 10,5 12,5");
+    cli.run("ALANÜRET nesneler=1 nesneler=2 nesneler=3 nesneler=4 nesneler=5 katman=GOZ");
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({"ad": "Alan üret", "komutlar": [
+            {"cmd": "core.line", "args": {"noktalar": [[-1000, 0], [21000, 0]]}},
+            {"cmd": "core.line", "args": {"noktalar": [[-1000, 10000], [21000, 10000]]}},
+            {"cmd": "core.line", "args": {"noktalar": [[0, -1000], [0, 11000]]}},
+            {"cmd": "core.line", "args": {"noktalar": [[20000, -1000], [20000, 11000]]}},
+            {"cmd": "core.circle_draw", "args": {"merkez": [10000, 5000], "cevre": [12000, 5000]}},
+            {"cmd": "islem.alan_uret",
+             "args": {"nesneler": [1, 2, 3, 4, 5], "katman": "GOZ"}}]})");
+        if (!r) FAIL_WITH("betik", r.error().message);
+    }
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK_EQ(faces_on(cli.doc, "GOZ").size(), std::size_t{2});
 }
