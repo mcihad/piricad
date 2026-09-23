@@ -170,6 +170,13 @@ core::Status Session::supply(Value v)
                          "\"" + prompt_.message +
                              "\" bir sayı bekliyor; tıklamak yerine komut satırına yazın.");
 
+    // A COUNT HAS NO FRACTION: `4,5` at a prompt for a whole number is said to
+    // be wrong here, while the prompt is still open for the right one.
+    if (prompt_.kind == ParamKind::Integer && v.kind() == Value::Kind::Number &&
+        v.as_number() != static_cast<double>(static_cast<std::int64_t>(v.as_number())))
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "\"" + prompt_.message + "\" bir tam sayı bekliyor.");
+
     // NOR IS IT A WORD. A click at a prompt for a word arrived as the empty
     // string — `as_text` of a coordinate — so pressing the canvas while RENK
     // asked for a colour failed the command with "Tanınmayan renk: ''", and a

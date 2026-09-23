@@ -46,7 +46,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.to_area`](to_area.md) | Alana Çevir | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`core.move`](move.md) | Taşı | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
-| [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
+| [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
@@ -56,8 +56,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.set_layer`](set_layer.md) | Katmana Ata | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
 | [`core.match_style`](match_style.md) | Stil Kopyala | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
 | [`core.colour`](colour.md) | Renk | `RENK`, `COLOR`, `COLOUR`, `RNK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
-| [`core.rotate`](rotate.md) | Döndür | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
-| [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
+| [`core.rotate`](rotate.md) | Döndür | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur. |
+| [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
 | [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
@@ -305,6 +305,8 @@ Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçe
 | `kaynak2` | point_list | isteğe bağlı | İkinci kaynak nokta; verilirse döndürme de yapılır |
 | `hedef2` | point_list | isteğe bağlı | İkinci kaynağın gideceği yer |
 | `olcekle` | bool | isteğe bağlı | İki çiftin uzunluk oranıyla ölçekler de |
+| `kaynak3` | point_list | isteğe bağlı | Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa nesneler ters çevrilir |
+| `hedef3` | point_list | isteğe bağlı | Üçüncü kaynağın gideceği yan |
 
 Ayrıntılı kullanım: [HİZALA](align.md)
 
@@ -342,6 +344,8 @@ Seçili nesneleri çizimin kendi biçiminde panoya yazar.
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Panoya alınacak nesneler; verilmezse seçim kullanılır |
 | `dosya` | text | isteğe bağlı | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `taban` | point | isteğe bağlı | Yapıştırırken gösterilen yere gelecek taban noktası |
+| `tabanli` | bool | isteğe bağlı | evet: taban noktası nesneler seçildikten sonra sorulur |
 
 Ayrıntılı kullanım: [PANOYAKOPYALA](copy_clip.md)
 
@@ -353,6 +357,8 @@ Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı.
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Kesilecek nesneler; verilmezse seçim kullanılır |
 | `dosya` | text | isteğe bağlı | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `taban` | point | isteğe bağlı | Yapıştırırken gösterilen yere gelecek taban noktası |
+| `tabanli` | bool | isteğe bağlı | evet: taban noktası nesneler seçildikten sonra sorulur |
 
 Ayrıntılı kullanım: [KES](cut.md)
 
@@ -600,19 +606,24 @@ Ayrıntılı kullanım: [KOPYALA](copy.md)
 
 ### `core.array` — DİZİ (Dizi)
 
-Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Dizilecek nesnelerin kimlikleri; yoksa etkin seçim |
-| `mod` | text | isteğe bağlı | KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi |
+| `mod` | text | isteğe bağlı | KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi |
 | `satir` | integer | isteğe bağlı | Satır sayısı (dikdörtgen dizi) |
 | `sutun` | integer | isteğe bağlı | Sütun sayısı (dikdörtgen dizi) |
 | `satir_aralik` | number | isteğe bağlı | Satır aralığı, metre; kuzeye artı |
 | `sutun_aralik` | number | isteğe bağlı | Sütun aralığı, metre; doğuya artı |
 | `merkez` | point | isteğe bağlı | Dizinin merkezi (kutupsal dizi) |
-| `sayi` | integer | isteğe bağlı | Toplam kopya sayısı, özgün dahil (kutupsal dizi) |
+| `sayi` | integer | isteğe bağlı | Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) |
 | `aci` | number | isteğe bağlı | Süpürülecek toplam açı, derece; verilmezse tam tur |
+| `yol` | selection | isteğe bağlı | mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi |
+| `yol_nokta` | point | isteğe bağlı | Yolu gösteren nokta; yol verilmişse sorulmaz |
+| `aralik` | number | isteğe bağlı | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi |
+| `hizala` | bool | isteğe bağlı | mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet |
+| `taban` | point | isteğe bağlı | mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı |
 
 Ayrıntılı kullanım: [DİZİ](array.md)
 
@@ -742,7 +753,7 @@ Ayrıntılı kullanım: [RENK](colour.md)
 
 ### `core.rotate` — DÖNDÜR (Döndür)
 
-Seçilen nesneleri bir merkez etrafında döndürür.
+Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -750,12 +761,16 @@ Seçilen nesneleri bir merkez etrafında döndürür.
 | `merkez` | point | 1 | Döndürme merkezi |
 | `aci` | number | isteğe bağlı | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir |
 | `aci_nokta` | point_list | isteğe bağlı | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz |
+| `yontem` | text | isteğe bağlı | referans: bir doğrultu yenisine döndürülür; referans doğrultu iki noktayla gösterilir |
+| `referans` | number | isteğe bağlı | Referans doğrultunun açısı, derece; aci onun yeni açısıdır |
+| `referans_nokta` | point_list | 0–2 | Referans doğrultuyu gösteren iki nokta |
+| `kopya` | bool | isteğe bağlı | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 Ayrıntılı kullanım: [DÖNDÜR](rotate.md)
 
 ### `core.scale` — ÖLÇEKLE (Ölçekle)
 
-Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -763,6 +778,12 @@ Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 | `merkez` | point | 1 | Ölçekleme merkezi; bu nokta yerinde kalır |
 | `carpan` | number | isteğe bağlı | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir |
 | `carpan_nokta` | point_list | isteğe bağlı | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz |
+| `carpan_y` | number | isteğe bağlı | Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur |
+| `yontem` | text | isteğe bağlı | referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir |
+| `referans` | number | isteğe bağlı | Referans uzunluk, metre; yeni onun olacağı uzunluktur |
+| `yeni` | number | isteğe bağlı | Referans uzunluğun yeni değeri, metre |
+| `referans_nokta` | point_list | 0–2 | Referans uzunluğu gösteren iki nokta |
+| `kopya` | bool | isteğe bağlı | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 Ayrıntılı kullanım: [ÖLÇEKLE](scale.md)
 
@@ -775,6 +796,7 @@ Seçilen nesneleri iki noktadan geçen eksende aynalar.
 | `nesneler` | selection | en az 0 | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim |
 | `baslangic` | point | 1 | Ayna ekseninin ilk noktası |
 | `bitis` | point | 1 | Ayna ekseninin ikinci noktası |
+| `kopya` | bool | isteğe bağlı | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 Ayrıntılı kullanım: [AYNALA](mirror.md)
 
@@ -1973,6 +1995,100 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "İki çiftin uzunluk oranıyla ölçekler de (evet/hayır)"
         },
+        "kaynak3": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 1
+            }
+          ],
+          "description": "Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa nesneler ters çevrilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "hedef3": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 1
+            }
+          ],
+          "description": "Üçüncü kaynağın gideceği yan — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -2538,7 +2654,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_array",
     "title": "Dizi",
-    "description": "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.\nKomut: DİZİ (DIZI, ARRAY, DZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır.\nKomut: DİZİ (DIZI, ARRAY, DZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2549,7 +2665,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "mod": {
           "type": "string",
-          "description": "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi (metin)"
+          "description": "KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi (metin)"
         },
         "satir": {
           "type": "integer",
@@ -2602,11 +2718,90 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "sayi": {
           "type": "integer",
-          "description": "Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı)"
+          "description": "Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) (tam sayı)"
         },
         "aci": {
           "type": "number",
           "description": "Süpürülecek toplam açı, derece; verilmezse tam tur (sayı)"
+        },
+        "yol": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yol_nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Yolu gösteren nokta; yol verilmişse sorulmaz — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "aralik": {
+          "type": "number",
+          "description": "mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi (sayı)"
+        },
+        "hizala": {
+          "type": "boolean",
+          "description": "mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet (evet/hayır)"
+        },
+        "taban": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "varsayimlar": {
           "type": "array",
@@ -3780,6 +3975,43 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "description": "Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin)"
         },
+        "taban": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Yapıştırırken gösterilen yere gelecek taban noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "tabanli": {
+          "type": "boolean",
+          "description": "evet: taban noktası nesneler seçildikten sonra sorulur (evet/hayır)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -3825,6 +4057,43 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "dosya": {
           "type": "string",
           "description": "Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin)"
+        },
+        "taban": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Yapıştırırken gösterilen yere gelecek taban noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "tabanli": {
+          "type": "boolean",
+          "description": "evet: taban noktası nesneler seçildikten sonra sorulur (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",
@@ -7264,6 +7533,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "Ayna ekseninin ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
+        "kopya": {
+          "type": "boolean",
+          "description": "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -8729,7 +9002,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_rotate",
     "title": "Döndür",
-    "description": "Seçilen nesneleri bir merkez etrafında döndürür.\nKomut: DÖNDÜR (DONDUR, ROTATE, DÖN)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur.\nKomut: DÖNDÜR (DONDUR, ROTATE, DÖN)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8822,6 +9095,68 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "referans"
+          ],
+          "description": "referans: bir doğrultu yenisine döndürülür; referans doğrultu iki noktayla gösterilir (metin)"
+        },
+        "referans": {
+          "type": "number",
+          "description": "Referans doğrultunun açısı, derece; aci onun yeni açısıdır (sayı)"
+        },
+        "referans_nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 2
+            }
+          ],
+          "description": "Referans doğrultuyu gösteren iki nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "kopya": {
+          "type": "boolean",
+          "description": "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -8857,7 +9192,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_scale",
     "title": "Ölçekle",
-    "description": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.\nKomut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek.\nKomut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8949,6 +9284,76 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "carpan_y": {
+          "type": "number",
+          "description": "Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur (sayı)"
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "referans"
+          ],
+          "description": "referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir (metin)"
+        },
+        "referans": {
+          "type": "number",
+          "description": "Referans uzunluk, metre; yeni onun olacağı uzunluktur (sayı)"
+        },
+        "yeni": {
+          "type": "number",
+          "description": "Referans uzunluğun yeni değeri, metre (sayı)"
+        },
+        "referans_nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 2
+            }
+          ],
+          "description": "Referans uzunluğu gösteren iki nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "kopya": {
+          "type": "boolean",
+          "description": "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

@@ -91,8 +91,8 @@ köşesinden, tıkladığınız iki parçanın arasındaki köşe yuvarlanır, k
 köşeler birbiri ardınca işlenir ve her köşe, bir öncekinin kısalttığı kenara göre
 yargılanır. Yarıçapın sığmadığı köşe **atlanır ve sayılır**, işin geri kalanı
 reddedilmez. Açık bir çizginin bütün köşeleri yuvarlanınca sonuç **tek bir yaylı
-çoklu çizgidir** — yaylar gerçek yaydır, nesne yığını değil; kapalı bir alan alan
-olarak kalır.
+çoklu çizgidir** — yaylar gerçek yaydır, nesne yığını değil; nesnenin kimliği,
+öznitelikleri ve bağlı yazıları korunur. Kapalı bir alan alan olarak kalır.
 
 Birden çok nesne verilirse — ya da önceden seçilmişse — hepsinin bütün köşeleri
 **tek adımda** yuvarlanır ve tek bir geri alma adımıdır. Köşeli bir çizgi ya da

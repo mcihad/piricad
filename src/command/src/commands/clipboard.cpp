@@ -48,6 +48,26 @@ Task<bool> wanted(Context& ctx, const char* message, const char* example,
     co_return true;
 }
 
+/// THE BASE POINT a paste will carry the payload by (TODOS C-08): given as
+/// `taban`, or — with `tabanli=evet`, what the column's "taban noktalı" entry
+/// sends — asked for after the objects, so it can be picked on them. None
+/// leaves the payload's lower-left corner, as a paste always used. False when
+/// the command is over.
+Task<bool> base_point(Context& ctx, std::optional<core::Point2>& base)
+{
+    base.reset();
+    if (const Value v = ctx.argument("taban"); !v.empty()) {
+        base = v.as_point();
+        co_return true;
+    }
+    if (const Value v = ctx.argument("tabanli"); v.empty() || !v.as_bool()) co_return true;
+    auto picked = co_await ctx.point("taban", "Taban noktası: yapıştırırken gösterilen yere gelir");
+    if (!picked) co_return false;
+    base = *picked;
+    ctx.record("tabanli", Value{});
+    co_return true;
+}
+
 Task<void> run_copy(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
@@ -61,10 +81,13 @@ Task<void> run_copy(Context& ctx)
     if (!co_await wanted(ctx, "Panoya alınacak nesneleri seçin, sonra Enter",
                          "PANOYAKOPYALA nesneler=1", keys))
         co_return;
+    std::optional<core::Point2> base;
+    if (!co_await base_point(ctx, base)) co_return;
 
     FileRequest request;
     request.verb     = FileRequest::Verb::ClipboardCopy;
     request.entities = keys;
+    request.base     = base;
     if (const Value v = ctx.argument("dosya"); !v.empty()) request.path = v.as_text();
 
     auto said = co_await bus.on_file_request(request);
@@ -80,6 +103,7 @@ Task<void> run_copy(Context& ctx)
                    return ids;
                }())
                                                             : ctx.argument("nesneler"));
+    if (base) ctx.record("taban", Value::point(*base));
     ctx.echo(said.value());
 }
 
@@ -95,10 +119,13 @@ Task<void> run_cut(Context& ctx)
     std::vector<std::uint64_t> keys;
     if (!co_await wanted(ctx, "Kesilecek nesneleri seçin, sonra Enter", "KES nesneler=1", keys))
         co_return;
+    std::optional<core::Point2> base;
+    if (!co_await base_point(ctx, base)) co_return;
 
     FileRequest request;
     request.verb     = FileRequest::Verb::ClipboardCopy;
     request.entities = keys;
+    request.base     = base;
     if (const Value v = ctx.argument("dosya"); !v.empty()) request.path = v.as_text();
 
     auto said = co_await bus.on_file_request(request);
@@ -133,6 +160,7 @@ Task<void> run_cut(Context& ctx)
             ids.push_back(static_cast<std::int64_t>(k));
         return Value::ids(std::move(ids));
     }());
+    if (base) ctx.record("taban", Value::point(*base));
     ctx.echo(said.value() + " " + std::to_string(gone) + " nesne çizimden silindi.");
 }
 
@@ -154,7 +182,9 @@ Task<void> run_paste(Context& ctx)
         // that is what pasting means to a hand. A copy between two drawings in
         // the same coordinate system wants `yerinde=evet` instead, and the
         // command says which it did.
-        auto where = co_await ctx.point("nokta", "Yapıştırılacak yerin sol alt köşesi");
+        auto where = co_await ctx.point(
+            "nokta",
+            "Yapıştırılacak yer: taban noktası ya da nesnelerin sol alt köşesi buraya gelir");
         if (!where) co_return;
         at = *where;
     }
@@ -193,6 +223,12 @@ KENTOS_COMMAND(copy_clip)
                 Param::text("dosya", Arity::optional(),
                             "Panonun yazılacağı dosya; verilmezse ortak pano dosyası")
                     .en("file"),
+                Param{"taban", ParamKind::Point, Arity::optional(),
+                      "Yapıştırırken gösterilen yere gelecek taban noktası"}
+                    .en("base_point"),
+                Param::boolean("tabanli", Arity::optional(),
+                               "evet: taban noktası nesneler seçildikten sonra sorulur")
+                    .en("with_base"),
             },
         // NOT `SingleTransaction`: a copy changes nothing in the drawing, so it
         // leaves no undo step. It is a `File` command because what it does is
@@ -220,6 +256,12 @@ KENTOS_COMMAND(cut)
                 Param::text("dosya", Arity::optional(),
                             "Panonun yazılacağı dosya; verilmezse ortak pano dosyası")
                     .en("file"),
+                Param{"taban", ParamKind::Point, Arity::optional(),
+                      "Yapıştırırken gösterilen yere gelecek taban noktası"}
+                    .en("base_point"),
+                Param::boolean("tabanli", Arity::optional(),
+                               "evet: taban noktası nesneler seçildikten sonra sorulur")
+                    .en("with_base"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

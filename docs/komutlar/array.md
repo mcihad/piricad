@@ -6,7 +6,7 @@ komut satırından ve betikten kullanmayı bileceksiniz.
 
 ## Ne yapar
 
-`DİZİ`, seçili nesneleri düzenli olarak çoğaltır. İki kipi vardır.
+`DİZİ`, seçili nesneleri düzenli olarak çoğaltır. Üç kipi vardır.
 
 **Satır/sütun dizisi** (öntanımlı): nesneleri bir ızgara halinde çoğaltır. Aynı
 tipteki yapı adaları, otopark cepleri ya da bir ölçü ağının kazıkları böyle
@@ -16,6 +16,15 @@ tipteki yapı adaları, otopark cepleri ya da bir ölçü ağının kazıkları 
 çoğaltır. Bir rögar halkası, bir kavşağın radyal bordürleri ya da dairesel bir
 yapının kolonları böyle üretilir.
 
+**Yol boyunca dizi** (`mod=YOL`): nesneleri bir çizgi, yay, daire ya da yaylı
+çoklu çizgi boyunca eşit aralıkla dizer. Bordür boyunca direkler, bir cadde boyunca
+ağaçlar, bir kilometraj boyunca taşlar böyle üretilir. Nesnelerin **taban noktası**
+(verilmezse yolun başı) her durağa taşınır ve kopya, yolun o noktadaki
+doğrultusuna **döndürülür** — `hizala=hayir` ile döndürülmez. Duraklar ya `sayi` ile
+(açık yolda iki uç dahil eşit paylaşılır, kapalı yolda bir tur boyunca) ya da
+`aralik` ile (yolun başından sabit uzaklıkla) verilir. Taban yolun başındaysa ilk
+durak nesnenin kendisidir ve kopyalanmaz.
+
 Özgün nesne **yerinde kalır** ve sayıya dahildir: `sayi=4` toplam dört nesne
 demektir, özgün artı üç kopya.
 
@@ -24,7 +33,8 @@ kolon 30 derece aralıklıdır; çeyrek turda on iki kolon 90/11 derece aralıkl
 çünkü hem ilk hem son uçta birer nesne durur.
 
 Kopyalarla birlikte **stil, yazı ve öznitelikler** de gider — [`KOPYALA`](copy.md)
-ile aynı kurallar geçerlidir.
+ile aynı kurallar geçerlidir. Her kopya kaynağının **türündedir**: bir spline'ın,
+elipsin, bloğun ya da ölçünün kopyası da spline, elips, blok ve ölçüdür.
 
 ## Adlar
 
@@ -42,6 +52,8 @@ ile aynı kurallar geçerlidir.
 DİZİ nesneler=<k> satir=<n> sutun=<m> satir_aralik=<d> sutun_aralik=<d>
 DİZİ nesneler=<k> mod=KUTUPSAL merkez=<n> sayi=<n>
 DİZİ nesneler=<k> mod=KUTUPSAL merkez=<n> sayi=<n> aci=<derece>
+DİZİ nesneler=<k> mod=YOL yol=<k> sayi=<n> [hizala=hayir] [taban=<n>]
+DİZİ nesneler=<k> mod=YOL yol=<k> aralik=<metre>
 ```
 
 ## Parametreler
@@ -49,14 +61,19 @@ DİZİ nesneler=<k> mod=KUTUPSAL merkez=<n> sayi=<n> aci=<derece>
 | Parametre | Ne yapar |
 |---|---|
 | `nesneler` | Dizilecek nesnelerin kimlikleri. Verilmezse etkin seçim |
-| `mod` | `KUTUPSAL` ise kutupsal dizi; verilmezse satır/sütun dizisi |
+| `mod` | `KUTUPSAL` ise kutupsal dizi, `YOL` ise yol boyunca dizi; verilmezse satır/sütun dizisi |
 | `satir` | Satır sayısı (satır/sütun dizisi) |
 | `sutun` | Sütun sayısı (satır/sütun dizisi) |
 | `satir_aralik` | Satır aralığı, metre. Artı yön kuzey |
 | `sutun_aralik` | Sütun aralığı, metre. Artı yön doğu |
 | `merkez` | Dizinin merkezi (kutupsal dizi) |
-| `sayi` | Toplam nesne sayısı, özgün dahil (kutupsal dizi) |
+| `sayi` | Toplam nesne sayısı, özgün dahil (kutupsal ve yol boyunca dizi) |
 | `aci` | Süpürülecek toplam açı, derece. Verilmezse tam tur |
+| `yol` | Yol boyunca dizinin izleyeceği nesne: çizgi, yay, daire ya da yaylı çoklu çizgi |
+| `yol_nokta` | Yolu gösteren nokta; `yol` verilmişse sorulmaz |
+| `aralik` | Yol boyunca duraklar arası uzaklık, metre; verilmezse `sayi` |
+| `hizala` | Kopyalar yolun doğrultusuna döndürülsün mü; varsayılan `evet` |
+| `taban` | Nesnelerin yola taşınan taban noktası; verilmezse yolun başı |
 
 ## Örnekler
 
@@ -81,9 +98,23 @@ DİZİ nesneler=1 mod=KUTUPSAL merkez=485300,4310200 sayi=8
 DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=3 aci=90
 ```
 
+Yeni bir çizimde, 30 m'lik bir bordürün başındaki direği dört durağa dizin:
+
+```text
+ÇİZGİ 0,0 30,0
+ÇİZGİ 0,0 0,2
+DİZİ nesneler=2 mod=yol yol=1 sayi=4
+```
+
+```text
+3 kopya yol boyunca dizildi, her biri yolun doğrultusuna döndürüldü.
+```
+
 ### Arayüz
 
-Nesneleri seçin, `DİZİ` yazın, sorulan değerleri girin.
+Nesneleri seçin, `DİZİ` yazın, sorulan değerleri girin. **Dizi — kutupsal** ve
+**Dizi — yol boyunca** araç sütununun Taşı ailesinde ve **Değiştir** menüsündedir:
+yol boyunca dizide nesneleri seçtikten sonra yola tıklayın ve sayıyı yazın.
 
 ### Betik
 
@@ -122,6 +153,9 @@ Betikten çağrıldığında `nesneler` ve kipin gerektirdiği parametreler veri
 | `Tek satır ve tek sütun bir dizi değildir; kopya üretilmedi.` | `satir=1 sutun=1` | En az birini artırın |
 | `Satır ve sütun sayısı en az bir olmalı.` | Sıfır ya da negatif sayı | Artı sayı verin |
 | `Kutupsal dizi en az iki nesne ister; N istendi.` | `sayi` birden küçük | En az 2 verin |
+| `Yol bulunamadı: dizi bir çizgi, yay, daire ya da yaylı çoklu çizgi boyunca kurulur.` | Tıklanan yerde yol yok ya da yol olmayan bir nesne | Bir çizgiye ya da yaya tıklayın |
+| `Yol boyunca dizi en az iki nesne ister; N istendi.` | `sayi` birden küçük | En az 2 verin |
+| `Aralık sıfırdan büyük olmalı.` | `aralik` sıfır ya da eksi | Artı bir aralık verin |
 
 ## İlgili
 

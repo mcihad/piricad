@@ -13,6 +13,13 @@ Kopyayla birlikte **stil, yazı ve bütün öznitelikler** de gider. Ada numaras
 kaybeden bir kopya, koruyan bir kopyadan daha kötüdür: tek bir numarayı düzeltmek,
 hepsini yeniden yazmaktan küçük bir iştir.
 
+Kopya kaynağının **türündedir**: bir spline'ın kopyası spline, elipsin elips,
+bloğun blok referansı, ölçünün ölçü, noktanın nokta olur; türünün taşıdığı bütün
+bilgi (spline'ın düğümleri, bloğun ölçeği ve açısı, ölçünün sayısı) kopyaya geçer.
+
+Her tıklama bir kopya daha koyar (**tekrarlı kopya**): bir sıra direği tek komutta
+yerleştirirsiniz; sağ tık ya da Esc bitirir. Betik aynı listeyi `bitis=` ile verir.
+
 Kopya **yeni bir kimlik** alır. Bu kasıtlıdır ve model kuralıdır: kimlik nesnenin
 kendisidir, iki nesne aynı kimliği taşıyamaz. Pratikte şu demektir: kopyalanan bir
 parselin ada/parsel numarası kopyaya da geçer ve **onu siz düzeltmelisiniz** —

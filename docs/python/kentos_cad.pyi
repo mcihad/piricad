@@ -291,6 +291,8 @@ def align(
     source2: Coord = ...,
     target2: Coord = ...,
     scale: bool = ...,
+    source3: Coord = ...,
+    target3: Coord = ...,
 ) -> int:
     """Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler.
 
@@ -301,6 +303,8 @@ def align(
         source2 — İkinci kaynak nokta; verilirse döndürme de yapılır [mm, Sağa (Y) önce]
         target2 — İkinci kaynağın gideceği yer [mm, Sağa (Y) önce]
         scale — İki çiftin uzunluk oranıyla ölçekler de
+        source3 — Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa nesneler ters çevrilir [mm, Sağa (Y) önce]
+        target3 — Üçüncü kaynağın gideceği yan [mm, Sağa (Y) önce]
     """
 
 def divide(
@@ -339,24 +343,32 @@ def copy_clip(
     *,
     objects: list[int] = ...,
     file: str = ...,
+    base_point: Coord = ...,
+    with_base: bool = ...,
 ) -> int:
     """Seçili nesneleri çizimin kendi biçiminde panoya yazar.
 
     Komut: core.copy_clip (PANOYAKOPYALA)
         objects — Panoya alınacak nesneler; verilmezse seçim kullanılır [kalıcı nesne anahtarı]
         file — Panonun yazılacağı dosya; verilmezse ortak pano dosyası
+        base_point — Yapıştırırken gösterilen yere gelecek taban noktası [mm, Sağa (Y) önce]
+        with_base — evet: taban noktası nesneler seçildikten sonra sorulur
     """
 
 def cut(
     *,
     objects: list[int] = ...,
     file: str = ...,
+    base_point: Coord = ...,
+    with_base: bool = ...,
 ) -> int:
     """Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı.
 
     Komut: core.cut (KES)
         objects — Kesilecek nesneler; verilmezse seçim kullanılır [kalıcı nesne anahtarı]
         file — Panonun yazılacağı dosya; verilmezse ortak pano dosyası
+        base_point — Yapıştırırken gösterilen yere gelecek taban noktası [mm, Sağa (Y) önce]
+        with_base — evet: taban noktası nesneler seçildikten sonra sorulur
     """
 
 def paste(
@@ -664,19 +676,29 @@ def array(
     center: Coord = ...,
     count: int = ...,
     angle: float = ...,
+    path: list[int] = ...,
+    path_point: Coord = ...,
+    spacing: float = ...,
+    follow: bool = ...,
+    base_point: Coord = ...,
 ) -> int:
-    """Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+    """Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır.
 
     Komut: core.array (DİZİ)
         objects — Dizilecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
-        mode — KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi
+        mode — KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi
         rows — Satır sayısı (dikdörtgen dizi)
         columns — Sütun sayısı (dikdörtgen dizi)
         row_spacing — Satır aralığı, metre; kuzeye artı
         column_spacing — Sütun aralığı, metre; doğuya artı
         center — Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce]
-        count — Toplam kopya sayısı, özgün dahil (kutupsal dizi)
+        count — Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi)
         angle — Süpürülecek toplam açı, derece; verilmezse tam tur
+        path — mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı]
+        path_point — Yolu gösteren nokta; yol verilmişse sorulmaz [mm, Sağa (Y) önce]
+        spacing — mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi
+        follow — mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet
+        base_point — mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı [mm, Sağa (Y) önce]
     """
 
 def combine(
@@ -843,14 +865,22 @@ def rotate(
     center: Coord = ...,
     angle: float = ...,
     angle_point: Coord = ...,
+    method: str = ...,
+    reference: float = ...,
+    reference_point: Coords = ...,
+    copy: bool = ...,
 ) -> int:
-    """Seçilen nesneleri bir merkez etrafında döndürür.
+    """Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur.
 
     Komut: core.rotate (DÖNDÜR)
         objects — Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
         center — Döndürme merkezi [mm, Sağa (Y) önce]
         angle — Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir
         angle_point — Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz [mm, Sağa (Y) önce]
+        method — referans: bir doğrultu yenisine döndürülür; referans doğrultu iki noktayla gösterilir
+        reference — Referans doğrultunun açısı, derece; aci onun yeni açısıdır
+        reference_point — Referans doğrultuyu gösteren iki nokta [mm, Sağa (Y) önce]
+        copy — evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır
     """
 
 def scale(
@@ -859,14 +889,26 @@ def scale(
     center: Coord = ...,
     factor: float = ...,
     factor_point: Coord = ...,
+    factor_y: float = ...,
+    method: str = ...,
+    reference: float = ...,
+    new_length: float = ...,
+    reference_point: Coords = ...,
+    copy: bool = ...,
 ) -> int:
-    """Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+    """Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek.
 
     Komut: core.scale (ÖLÇEKLE)
         objects — Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
         center — Ölçekleme merkezi; bu nokta yerinde kalır [mm, Sağa (Y) önce]
         factor — Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir
         factor_point — Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce]
+        factor_y — Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur
+        method — referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir
+        reference — Referans uzunluk, metre; yeni onun olacağı uzunluktur
+        new_length — Referans uzunluğun yeni değeri, metre
+        reference_point — Referans uzunluğu gösteren iki nokta [mm, Sağa (Y) önce]
+        copy — evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır
     """
 
 def mirror(
@@ -874,6 +916,7 @@ def mirror(
     objects: list[int] = ...,
     start: Coord = ...,
     end: Coord = ...,
+    copy: bool = ...,
 ) -> int:
     """Seçilen nesneleri iki noktadan geçen eksende aynalar.
 
@@ -881,6 +924,7 @@ def mirror(
         objects — Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
         start — Ayna ekseninin ilk noktası [mm, Sağa (Y) önce]
         end — Ayna ekseninin ikinci noktası [mm, Sağa (Y) önce]
+        copy — evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır
     """
 
 def measure(

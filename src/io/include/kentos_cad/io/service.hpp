@@ -221,7 +221,9 @@ private:
     /// program already has one that round-trips every kind. The subset is built
     /// by `Transaction::adopt_from` with a key filter — the same function an
     /// import uses, so a kind that adopts correctly copies correctly.
-    core::Result<std::string> clipboard_copy(std::string path, std::vector<std::uint64_t> entities);
+    core::Result<std::string> clipboard_copy(std::string path,
+                                             const std::vector<std::uint64_t>& entities,
+                                             std::optional<core::Point2> base = std::nullopt);
 
     /// Reads such a file and places what is in it, as ONE undo step.
     command::Task<core::Result<std::string>>

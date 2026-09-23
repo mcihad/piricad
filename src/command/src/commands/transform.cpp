@@ -22,19 +22,24 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/transform_edit.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/transform.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numeric>
 #include <optional>
@@ -60,13 +65,18 @@ core::Point2 apply(const Xform& x, core::Point2 p)
 /// the verb resolved, so a verb told its objects by name draws those rather
 /// than whatever is highlighted.
 PointOptions ghost(core::GhostKind kind, core::Point2 base, const std::vector<std::int64_t>& keys,
-                   std::int64_t copies = 1)
+                   std::int64_t copies = 1, std::int64_t reference_udeg = 0,
+                   core::Mm reference_length = 0)
 {
     return PointOptions{.rubber_band    = true,
                         .rubber_origin  = base,
                         .rubber_shape   = RubberShape::Ghost,
                         .rubber_payload = core::encode_ghost_spec(
-                            core::GhostSpec{.kind = kind, .copies = copies, .keys = keys})};
+                            core::GhostSpec{.kind             = kind,
+                                            .copies           = copies,
+                                            .keys             = keys,
+                                            .reference_udeg   = reference_udeg,
+                                            .reference_length = reference_length})};
 }
 
 /// How a curve's radius changes. Only scaling touches it: moving, turning and
@@ -75,8 +85,16 @@ PointOptions ghost(core::GhostKind kind, core::Point2 base, const std::vector<st
 /// every time the object was moved.
 core::Mm apply_radius(const Xform& x, core::Mm r)
 {
-    if (x.kind != Xform::Kind::Scale) return r;
+    if (x.kind != Xform::Kind::Scale && x.kind != Xform::Kind::Align) return r;
     return core::mm_round(static_cast<double>(r) * x.factor);
+}
+
+/// The factor a transform scales every length by, 1 when it scales none —
+/// a stretch that differs across and up has no one factor, and keeps
+/// annotation sizes as they were.
+double length_factor(const Xform& x)
+{
+    return x.kind == Xform::Kind::Scale || x.kind == Xform::Kind::Align ? x.factor : 1.0;
 }
 
 /// Whether the transform turns the plane inside out, so a counter-clockwise sweep
@@ -84,7 +102,7 @@ core::Mm apply_radius(const Xform& x, core::Mm r)
 /// which is how `core.arc` spells a reversed sweep (core/arc.hpp).
 bool reverses(const Xform& x)
 {
-    return x.kind == Xform::Kind::Mirror;
+    return core::xform_reverses(x);
 }
 
 /// How a stored ANGLE changes: a turn adds itself, a mirror about an axis at θ
@@ -101,6 +119,18 @@ std::int64_t apply_angle(const Xform& x, std::int64_t udeg)
     case Xform::Kind::Mirror:
         out = 2 * core::atan2_udeg(x.axis_b.y - x.base.y, x.axis_b.x - x.base.x) - udeg;
         break;
+    case Xform::Kind::Align:
+        out = (x.flip ? -udeg : udeg) +
+              core::atan2_udeg(static_cast<std::int64_t>(std::llround(x.turn.sin * 1e9)),
+                               static_cast<std::int64_t>(std::llround(x.turn.cos * 1e9)));
+        break;
+    case Xform::Kind::Stretch: {
+        // A DIRECTION under a stretch leans toward the axis stretched more.
+        const core::SinCos d = core::sin_cos_udeg(udeg);
+        out = core::atan2_udeg(static_cast<std::int64_t>(std::llround(d.sin * x.factor_y * 1e9)),
+                               static_cast<std::int64_t>(std::llround(d.cos * x.factor * 1e9)));
+        break;
+    }
     default: break;
     }
     out %= core::kUDegFullCircle;
@@ -114,11 +144,21 @@ core::Mm apply_length(const Xform& x, core::Mm v)
     return apply_radius(x, v);
 }
 
+/// A text's height under the transform: a scale or a scaling alignment makes
+/// the letters as much bigger as the drawing; a stretch keeps them, because a
+/// letter has one height and no width to stretch (TODOS C-08).
+core::Mm apply_height(const Xform& x, core::Mm h)
+{
+    const double f = length_factor(x);
+    if (f == 1.0) return h;
+    return std::max<core::Mm>(1, core::mm_round(static_cast<double>(h) * f));
+}
+
 /// A rational scale under the transform: multiplied by the factor, to six
 /// decimals, reduced.
 core::Ratio apply_ratio(const Xform& x, core::Ratio r)
 {
-    if (x.kind != Xform::Kind::Scale) return r;
+    if (x.kind != Xform::Kind::Scale && x.kind != Xform::Kind::Align) return r;
     const double v       = static_cast<double>(r.num) / static_cast<double>(r.den) * x.factor;
     const auto num       = static_cast<std::int64_t>(std::llround(v * 1000000.0));
     std::int64_t den     = 1000000;
@@ -168,8 +208,20 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
     std::vector<core::RingGeometry::RingInput> input;
     transformed_rings(g, gslot, x, rings, input);
     std::vector<std::uint8_t> payload;
+    // A dimension re-laid for its new points carries its new caption here.
+    bool relaid = false;
+    std::string relaid_text;
+    core::Mm relaid_height = 0;
 
     if (kind == core::kArcPolylineKind) {
+        if (x.kind == Xform::Kind::Stretch) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(core::raw(doc.key_of(slot))) +
+                           " yaylı bir çoklu çizgi: eşit olmayan ölçek yaylarını eliptik yapar ve "
+                           "yaylı çoklu çizgi yalnız dairesel yay taşır. Eşit ölçek kullanın ya "
+                           "da önce PATLAT ile kenarlarına ayırın.");
+            return false;
+        }
         auto def = core::arc_polyline_of(g, gslot);
         if (!def) {
             ctx.refuse(def.error());
@@ -232,11 +284,41 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
             return false;
         }
         core::BlockReference ref = def.value();
-        ref.rotation_udeg        = apply_angle(x, ref.rotation_udeg);
-        ref.sx                   = apply_ratio(x, ref.sx);
-        ref.sy                   = apply_ratio(x, ref.sy);
-        ref.column_spacing       = apply_length(x, ref.column_spacing);
-        ref.row_spacing          = apply_length(x, ref.row_spacing);
+        if (x.kind == Xform::Kind::Stretch) {
+            // A STRETCH A BLOCK CAN HOLD: across and up its own axes, which is
+            // only when it stands square — turned a quarter, the two factors
+            // trade places. Turned any other way it would lean, and a
+            // reference has no lean to hold.
+            const std::int64_t quarter = core::kUDegFullCircle / 4;
+            const std::int64_t turned  = ref.rotation_udeg % core::kUDegFullCircle;
+            if (turned % quarter != 0) {
+                ctx.refuse(core::ErrorCode::Unsupported,
+                           "Nesne " + std::to_string(core::raw(doc.key_of(slot))) +
+                               " döndürülmüş bir blok: eşit olmayan ölçek onu eğer ve blok "
+                               "referansı eğikliği taşıyamaz. Eşit ölçek kullanın ya da önce "
+                               "PATLAT ile açın.");
+                return false;
+            }
+            const bool sideways = (turned / quarter) % 2 != 0;
+            const double across = sideways ? x.factor_y : x.factor;
+            const double up     = sideways ? x.factor : x.factor_y;
+            Xform sx_only;
+            sx_only.kind   = Xform::Kind::Scale;
+            sx_only.factor = across;
+            Xform sy_only;
+            sy_only.kind       = Xform::Kind::Scale;
+            sy_only.factor     = up;
+            ref.sx             = apply_ratio(sx_only, ref.sx);
+            ref.sy             = apply_ratio(sy_only, ref.sy);
+            ref.column_spacing = apply_length(sx_only, ref.column_spacing);
+            ref.row_spacing    = apply_length(sy_only, ref.row_spacing);
+        } else {
+            ref.rotation_udeg  = apply_angle(x, ref.rotation_udeg);
+            ref.sx             = apply_ratio(x, ref.sx);
+            ref.sy             = apply_ratio(x, ref.sy);
+            ref.column_spacing = apply_length(x, ref.column_spacing);
+            ref.row_spacing    = apply_length(x, ref.row_spacing);
+        }
         // A reflection of R(ρ)·S is R(2θ−ρ)·S with the y scale negated.
         if (reverses(x)) ref.sy.num = -ref.sy.num;
         const core::Point2 at = rings.empty() || rings[0].empty() ? core::Point2{} : rings[0][0];
@@ -258,19 +340,49 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
         d.extension_beyond = apply_length(x, d.extension_beyond);
         d.extension_offset = apply_length(x, d.extension_offset);
         d.text_gap         = apply_length(x, d.text_gap);
-        payload            = core::encode_dimension(d);
-        if (x.kind == Xform::Kind::Scale && doc.texts().has(gslot)) {
-            // The measured text changes with the length; the caption follows.
-            const core::DrawingUnit unit = core::drawing_unit_from_setting(
-                ctx.session().bus().project_settings().get("core.cizim.birim").as_enum());
-            if (auto s = ctx.transaction().set_text(slot, core::dimension_text(d, unit),
-                                                    doc.texts().height(gslot),
-                                                    doc.texts().anchor(gslot));
-                !s) {
-                ctx.refuse(s.error());
-                return false;
+
+        // RE-LAID, NOT ONLY CARRIED (TODOS C-08). An aligned, radial,
+        // diametric or three-point angular dimension is measured again from
+        // the points it now has and its caption set where ÖLÇÜ would set it,
+        // the right way up. A LINEAR one measures along its own direction,
+        // which the layout would square to the sheet, so it keeps that
+        // direction turned with the drawing, is measured again along it, and
+        // has its caption turned about its centre when it would read
+        // backwards. An ordinate or a four-point angle from a file is
+        // re-measured and keeps its caption.
+        const core::Mm height =
+            doc.texts().has(gslot) ? apply_height(x, doc.texts().height(gslot)) : 0;
+        const core::DrawingUnit unit = core::drawing_unit_from_setting(
+            ctx.session().bus().project_settings().get("core.cizim.birim").as_enum());
+        if (rings.size() >= 2 && !rings[0].empty()) {
+            std::vector<core::Point2> picks;
+            core::Point2 where{};
+            core::DimensionLayout layout;
+            if (d.type != core::DimensionType::Linear &&
+                core::dimension_picks(d.type, rings[1], rings[0][0], picks, where) &&
+                core::dimension_layout(d, picks, where, height, layout)) {
+                rings[1]        = layout.defs;
+                relaid_text     = core::dimension_text(d, unit);
+                const auto base = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
+                                                           layout.text_dir_y, height, relaid_text);
+                rings[0]        = {base[0], base[1]};
+            } else {
+                if (x.kind == Xform::Kind::Stretch)
+                    d.measurement = core::dimension_measure(d.type, rings[1], d.rotation_udeg);
+                relaid_text = core::dimension_text(d, unit);
+                if (rings[0].size() >= 2) {
+                    const core::Point2 c = rings[0][0];
+                    const core::Point2 e = rings[0][1];
+                    if (e.x < c.x || (e.x == c.x && e.y < c.y))
+                        rings[0][1] = core::Point2{2 * c.x - e.x, 2 * c.y - e.y};
+                }
             }
+            relaid_height = height;
+            relaid        = true;
+            for (std::size_t i = 0; i < rings.size() && i < input.size(); ++i)
+                input[i].points = rings[i];
         }
+        payload = core::encode_dimension(d);
     } else if (kind == core::kLeaderKind) {
         auto def = core::leader_of(g, gslot);
         if (!def) {
@@ -289,6 +401,15 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
         ctx.refuse(st.error());
         return false;
     }
+    if (kind == core::kDimensionKind && doc.texts().has(doc.entities().slot[slot])) {
+        const std::uint32_t now = doc.entities().slot[slot];
+        const std::string text  = relaid ? relaid_text : std::string(doc.texts().text(now));
+        const core::Mm height   = relaid ? relaid_height : apply_height(x, doc.texts().height(now));
+        if (auto s = ctx.transaction().set_text(slot, text, height, doc.texts().anchor(now)); !s) {
+            ctx.refuse(s.error());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -300,6 +421,57 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
     const core::RingGeometry& g = doc.geometry();
     const std::uint32_t gslot   = doc.entities().slot[slot];
     const core::KindId kind     = doc.entities().kind[slot];
+
+    // AN ELLIPSE IS WRITTEN AS ITS IMAGE (`core::transformed_ellipse`): its
+    // axes perpendicular again after a stretch, the right way round after a
+    // reflection, its sweep re-read in the new axes. A circle or an arc
+    // stretched unevenly is no longer circular, and becomes the ellipse or the
+    // elliptic arc it now is — the same object, by the same key (model.md R9b,
+    // TODOS C-08: "eşit olmayan ölçek daireyi uygun elipse dönüştürür").
+    const auto write_ellipse = [&ctx, slot](const core::EllipseImage& img) {
+        const std::array<core::Point2, 3> pts{img.centre, img.major, img.minor};
+        const core::RingGeometry::RingInput ring{std::span<const core::Point2>(pts),
+                                                 core::RingRole::Open, 0};
+        std::vector<std::uint8_t> sweep;
+        if (img.partial)
+            sweep = core::encode_ellipse_arc(
+                core::EllipseArc{.start_udeg = img.start_udeg, .end_udeg = img.end_udeg});
+        const core::Status st =
+            ctx.transaction().set_kind_geometry(slot, core::kEllipseKind, {&ring, 1}, sweep);
+        if (!st) ctx.refuse(st.error());
+        return static_cast<bool>(st);
+    };
+    const bool uneven = x.kind == Xform::Kind::Stretch && x.factor != x.factor_y;
+    if (kind == core::kEllipseKind) {
+        core::EllipseImage e{.centre = core::ellipse_centre_of(g, gslot),
+                             .major  = core::ellipse_major_of(g, gslot),
+                             .minor  = core::ellipse_minor_of(g, gslot)};
+        if (const auto arc = core::ellipse_arc_of(g, gslot); arc.has_value()) {
+            e.partial    = true;
+            e.start_udeg = arc->start_udeg;
+            e.end_udeg   = arc->end_udeg;
+        }
+        return write_ellipse(core::transformed_ellipse(x, e));
+    }
+    if (kind == core::kCircleKind && uneven) {
+        const core::Point2 c = core::circle_centre_of(g, gslot);
+        const core::Mm r     = core::circle_radius_of(g, gslot);
+        return write_ellipse(core::transformed_ellipse(
+            x, core::EllipseImage{.centre = c, .major = {c.x + r, c.y}, .minor = {c.x, c.y + r}}));
+    }
+    if (kind == core::kArcKind && uneven) {
+        const core::Point2 c = core::arc_centre_of(g, gslot);
+        const core::Mm r     = core::arc_radius_of(g, gslot);
+        const core::Point2 a = core::arc_start_of(g, gslot);
+        const core::Point2 b = core::arc_end_of(g, gslot);
+        return write_ellipse(core::transformed_ellipse(
+            x, core::EllipseImage{.centre     = c,
+                                  .major      = {c.x + r, c.y},
+                                  .minor      = {c.x, c.y + r},
+                                  .partial    = true,
+                                  .start_udeg = core::atan2_udeg(a.y - c.y, a.x - c.x),
+                                  .end_udeg   = core::atan2_udeg(b.y - c.y, b.x - c.x)}));
+    }
 
     if (kind == core::kCircleKind) {
         const core::Point2 centre = apply(x, core::circle_centre_of(g, gslot));
@@ -370,10 +542,36 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
     std::vector<core::RingGeometry::RingInput> input;
     transformed_rings(g, gslot, x, rings, input);
 
+    // A CAPTION STAYS A CAPTION (TODOS C-08). Its letters grow with a scale —
+    // a baseline made twice as long under letters of the old height was a
+    // caption drawn wrong — and after a reflection it is turned about its
+    // anchor to read left to right: the renderer never mirrors a glyph, so a
+    // baseline reflected to run leftward read upside down.
+    const bool caption = doc.texts().has(gslot) && rings.size() == 1 && rings[0].size() == 2;
+    if (caption && reverses(x)) {
+        const core::Point2 a = rings[0][0];
+        const core::Point2 b = rings[0][1];
+        if (b.x < a.x || (b.x == a.x && b.y < a.y)) {
+            rings[0][1]     = core::Point2{2 * a.x - b.x, 2 * a.y - b.y};
+            input[0].points = rings[0];
+        }
+    }
+    const core::Mm was_height = caption ? doc.texts().height(gslot) : 0;
+    const std::string words   = caption ? std::string(doc.texts().text(gslot)) : std::string();
+    const core::TextAnchor anchor =
+        caption ? doc.texts().anchor(gslot) : core::TextAnchor::BaselineLeft;
+
     auto st = ctx.transaction().set_geometry(slot, input);
     if (!st) {
         ctx.refuse(st.error());
         return false;
+    }
+    if (caption && apply_height(x, was_height) != was_height) {
+        if (auto t = ctx.transaction().set_text(slot, words, apply_height(x, was_height), anchor);
+            !t) {
+            ctx.refuse(t.error());
+            return false;
+        }
     }
     return true;
 }
@@ -381,10 +579,18 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
 /// Makes a NEW entity that is `slot` with `x` applied, and returns its id.
 ///
 /// Everything a user would expect to travel with a copy travels with it: the
-/// layer, the style, the text, and every attribute cell. What does NOT travel is
-/// the key — a copy is a new object and mints its own (model.md R4), which is
-/// exactly why an ada/parsel number carried over on a copy must be corrected by
-/// the surveyor rather than assumed.
+/// kind and its payload, the layer, the style, the text, and every attribute
+/// cell. What does NOT travel is the key — a copy is a new object and mints its
+/// own (model.md R4), which is exactly why an ada/parsel number carried over on
+/// a copy must be corrected by the surveyor rather than assumed.
+///
+/// A COPY IS THE SAME RECORD, THEN THE SAME TRANSFORM. The object is duplicated
+/// as it is — its kind, its rings and its payload byte for byte — and the copy
+/// is then transformed by `transform_one`, the call a move makes. Before this a
+/// copy was rebuilt from its raw vertices as a plain polyline for every kind but
+/// the circle and the arc, so a copied spline became the polygon of its control
+/// points, an ellipse three stray points and a block reference, a dimension or
+/// a hatch lost everything that made it one (TODOS C-08).
 core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const Xform& x)
 {
     const core::Document& doc   = ctx.document();
@@ -393,47 +599,13 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
     const core::KindId kind     = doc.entities().kind[slot];
     const core::LayerId layer   = doc.entities().layer[slot];
 
-    core::Result<core::EntityId> made = core::err(core::ErrorCode::Internal, "");
+    std::vector<std::vector<core::Point2>> rings;
+    std::vector<core::RingGeometry::RingInput> input;
+    transformed_rings(g, gslot, Xform{}, rings, input); // the identity: the rings as they are
+    const auto payload = g.payload_of(gslot);
+    const std::vector<std::uint8_t> bytes(payload.begin(), payload.end());
 
-    if (kind == core::kCircleKind) {
-        const core::Point2 centre = apply(x, core::circle_centre_of(g, gslot));
-        const core::Mm radius     = apply_radius(x, core::circle_radius_of(g, gslot));
-        made                      = ctx.transaction().add_circle(layer, centre, radius);
-    } else if (kind == core::kArcKind) {
-        const core::Point2 centre = apply(x, core::arc_centre_of(g, gslot));
-        const core::Mm radius     = apply_radius(x, core::arc_radius_of(g, gslot));
-        core::Point2 start        = apply(x, core::arc_start_of(g, gslot));
-        core::Point2 end          = apply(x, core::arc_end_of(g, gslot));
-        if (reverses(x)) {
-            const core::Point2 t = start;
-            start                = end;
-            end                  = t;
-        }
-        made = ctx.transaction().add_arc(layer, centre, radius, start, end);
-    } else {
-        const core::RingSpan span = g.rings_of(gslot);
-        std::vector<std::vector<core::Point2>> rings;
-        std::vector<core::RingGeometry::RingInput> input;
-
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = g.ring_xs(r);
-            const auto ys = g.ring_ys(r);
-            std::vector<core::Point2> pts;
-            pts.reserve(xs.size());
-            for (std::size_t v = 0; v < xs.size(); ++v)
-                pts.push_back(apply(x, core::Point2{xs[v], ys[v]}));
-            rings.push_back(std::move(pts));
-        }
-        if (reverses(x))
-            for (auto& pts : rings)
-                std::reverse(pts.begin(), pts.end());
-
-        for (std::size_t i = 0; i < rings.size(); ++i)
-            input.push_back(core::RingGeometry::RingInput{rings[i], g.ring_role[span.first + i],
-                                                          g.ring_part[span.first + i]});
-        made = ctx.transaction().add_area(layer, input);
-    }
-
+    auto made = ctx.transaction().add_kind(layer, kind, input, bytes);
     if (!made) return made;
     const core::EntityId fresh = made.value();
 
@@ -465,6 +637,10 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
         if (!st) return st.error();
     }
 
+    // THEN THE TRANSFORM, by the one function every verb uses; it has refused
+    // with its reason when it returns false.
+    if (!transform_one(ctx, fresh, x))
+        return core::err(core::ErrorCode::InvalidArgument, "Kopya dönüştürülemedi.");
     return made;
 }
 
@@ -505,6 +681,27 @@ bool apply_all(Context& ctx, const std::vector<core::EntityId>& slots, const Xfo
 {
     for (core::EntityId slot : slots)
         if (!transform_one(ctx, slot, x)) return false;
+    return true;
+}
+
+/// `x` applied to every object — or, with `kopya=evet`, to a COPY of each, the
+/// original left where it is: the option every CAD's DÖNDÜR, ÖLÇEKLE and AYNALA
+/// offer, so a turned or mirrored duplicate is one command rather than a copy
+/// and a move (TODOS C-08). Sets `copied` to whether it copied.
+bool apply_or_copy(Context& ctx, const std::vector<core::EntityId>& slots, const Xform& x,
+                   bool& copied)
+{
+    const Value wanted = ctx.argument("kopya");
+    copied             = !wanted.empty() && wanted.as_bool();
+    if (!copied) return apply_all(ctx, slots, x);
+    for (const core::EntityId slot : slots) {
+        const auto made = clone_one(ctx, slot, x);
+        if (!made) {
+            ctx.refuse(made.error());
+            return false;
+        }
+    }
+    ctx.record("kopya", Value::boolean(true));
     return true;
 }
 
@@ -594,10 +791,121 @@ Task<void> run_array(Context& ctx)
     const bool polar =
         !mode_arg.empty() && (core::turkish_key_equals(mode_arg.as_text(), "KUTUPSAL") ||
                               core::turkish_key_equals(mode_arg.as_text(), "POLAR"));
+    const bool along = !mode_arg.empty() && (core::turkish_key_equals(mode_arg.as_text(), "YOL") ||
+                                             core::turkish_key_equals(mode_arg.as_text(), "PATH"));
 
     std::size_t made = 0;
 
+    if (along) {
+        // ALONG A PATH (TODOS C-08): copies set out along a line, an arc or a
+        // road's arc polyline — poles along a kerb, trees along an avenue,
+        // markers down a chainage — each turned to follow the path unless
+        // asked not to. The objects' base point (the path's start unless
+        // given) is carried to every station.
+        const core::Document& doc = ctx.document();
+        core::EntityId path_slot  = core::kNoEntity;
+        std::int64_t path_key     = 0;
+        if (const Value named = ctx.argument("yol"); !named.empty() && !named.as_ids().empty()) {
+            path_key = named.as_ids().front();
+            path_slot =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(path_key)));
+        } else {
+            auto on = co_await ctx.point("yol_nokta", "Dizinin izleyeceği yola tıklayın");
+            if (!on) co_return;
+            path_slot =
+                core::pick_nearest(doc, *on, ctx.session().bus().aid_settings().pick_radius);
+            if (path_slot != core::kNoEntity)
+                path_key = static_cast<std::int64_t>(core::raw(doc.key_of(path_slot)));
+            ctx.record("yol_nokta", Value{});
+        }
+        const auto path = path_slot != core::kNoEntity && doc.alive(path_slot)
+                              ? core::path_of(doc, path_slot)
+                              : std::nullopt;
+        if (!path || path->pieces.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Yol bulunamadı: dizi bir çizgi, yay, daire ya da yaylı çoklu çizgi "
+                       "boyunca kurulur.");
+            co_return;
+        }
+        const core::Mm length = core::path_length(*path);
+        if (length <= 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Yolun uzunluğu sıfır.");
+            co_return;
+        }
+        const core::PathPlace start = core::path_start(*path);
+        core::Point2 base           = core::point_at(*path, start);
+        if (const Value t = ctx.argument("taban"); !t.empty()) base = t.as_point();
+        bool follow = true;
+        if (const Value h = ctx.argument("hizala"); !h.empty()) follow = h.as_bool();
+
+        // THE STATIONS: a count shares the length out — both ends kept on an
+        // open path, the seam once round a closed one — and a spacing walks
+        // it from the start.
+        std::vector<core::Mm> stations;
+        if (const Value gap_arg = ctx.argument("aralik"); !gap_arg.empty()) {
+            const core::Mm gap =
+                core::mm_round(gap_arg.as_number() * static_cast<double>(core::kMmPerMetre));
+            if (gap <= 0) {
+                ctx.refuse(core::ErrorCode::InvalidArgument, "Aralık sıfırdan büyük olmalı.");
+                co_return;
+            }
+            for (core::Mm at = 0; at <= length; at += gap)
+                stations.push_back(at);
+        } else {
+            auto count = co_await ctx.integer("sayi", "Yol boyunca kaç nesne (özgün dahil)");
+            if (!count) co_return;
+            if (*count < 2) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Yol boyunca dizi en az iki nesne ister; " + std::to_string(*count) +
+                               " istendi.");
+                co_return;
+            }
+            const std::int64_t gaps = path->closed ? *count : *count - 1;
+            for (std::int64_t k = 0; k < *count; ++k)
+                stations.push_back(
+                    core::mm_round(static_cast<double>(length) * static_cast<double>(k) /
+                                   static_cast<double>(gaps)));
+        }
+
+        const std::int64_t first = core::direction_at(*path, start);
+        for (const core::Mm at : stations) {
+            const core::PathPlace place = core::place_at_length(*path, at);
+            const core::Point2 to       = core::point_at(*path, place);
+            const std::int64_t turn     = follow ? core::direction_at(*path, place) - first : 0;
+            const bool square           = turn % core::kUDegFullCircle == 0;
+            if (to == base && square) continue; // the original's own place
+            Xform x;
+            if (square) {
+                x.kind = Xform::Kind::Translate;
+                x.dx   = to.x - base.x;
+                x.dy   = to.y - base.y;
+            } else {
+                x.kind   = Xform::Kind::Align;
+                x.base   = base;
+                x.axis_b = to;
+                x.turn   = core::sin_cos_udeg(turn);
+            }
+            for (const core::EntityId slot : slots) {
+                const auto copy = clone_one(ctx, slot, x);
+                if (!copy) {
+                    ctx.refuse(copy.error());
+                    co_return;
+                }
+                ++made;
+            }
+        }
+
+        ctx.record("nesneler", Value::ids(requested));
+        ctx.record("mod", Value::text("YOL"));
+        ctx.record("yol", Value::ids({path_key}));
+        if (!follow) ctx.record("hizala", Value::boolean(false));
+        ctx.echo(std::to_string(made) + " kopya yol boyunca dizildi" +
+                 (follow ? ", her biri yolun doğrultusuna döndürüldü." : "."));
+        co_return;
+    }
+
     if (polar) {
+
         // A POLAR ARRAY: copies swung about a centre. This is what a manhole ring,
         // a roundabout's radial kerbs or a circular building's columns are.
         auto centre = co_await ctx.point("merkez", "Dizinin merkezi");
@@ -630,8 +938,8 @@ Task<void> run_array(Context& ctx)
             x.turn = core::sin_cos_udeg(static_cast<core::UDeg>(std::llround(
                 step * static_cast<double>(i) * static_cast<double>(core::kUDegPerDegree))));
 
-            for (core::EntityId slot : slots) {
-                auto copy = clone_one(ctx, slot, x);
+            for (const core::EntityId slot : slots) {
+                const auto copy = clone_one(ctx, slot, x);
                 if (!copy) {
                     ctx.refuse(copy.error());
                     co_return;
@@ -703,6 +1011,14 @@ Task<void> run_array(Context& ctx)
 
 // --------------------------------------------------------------- DÖNDÜR ----
 
+/// Whether the run is BY REFERENCE: `yontem=referans`, or a reference given.
+bool by_reference(const Context& ctx)
+{
+    if (ctx.has_argument("referans")) return true;
+    const Value way = ctx.argument("yontem");
+    return !way.empty() && core::turkish_key_equals(way.as_text(), "REFERANS");
+}
+
 Task<void> run_rotate(Context& ctx)
 {
     std::vector<std::int64_t> requested;
@@ -714,13 +1030,41 @@ Task<void> run_rotate(Context& ctx)
     // it (command.md P10). A run that was handed `aci` asks nothing more, which
     // keeps every line written before the gesture existed replayable.
     const bool angle_given = ctx.has_argument("aci");
+    const bool reference   = by_reference(ctx);
 
     auto centre = co_await ctx.point("merkez", "Döndürme merkezi");
     if (!centre) co_return;
 
+    // BY REFERENCE (TODOS C-08): a direction on the drawing — typed as an
+    // angle, or shown by two points along a building's wall — is turned onto
+    // a new one, and the turn is the difference. What a surveyor does to bring
+    // a sketch's wall onto the measured bearing without working the angle out.
+    std::int64_t from_udeg = 0;
+    if (reference) {
+        if (ctx.has_argument("referans")) {
+            from_udeg = std::llround(ctx.argument("referans").as_number() *
+                                     static_cast<double>(core::kUDegPerDegree));
+        } else {
+            auto a = co_await ctx.point("referans_nokta", "Referans doğrultunun ilk noktası");
+            if (!a) co_return;
+            auto b = co_await ctx.point(
+                "referans_nokta", "Referans doğrultunun ikinci noktası",
+                PointOptions{.rubber_band = true, .rubber_origin = *a, .rubber_base = false});
+            if (!b) co_return;
+            if (*a == *b) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Referans doğrultu tek noktadan geçemez; iki farklı nokta verin.");
+                co_return;
+            }
+            from_udeg = core::atan2_udeg(b->y - a->y, b->x - a->x);
+            ctx.record("referans_nokta", Value{});
+        }
+    }
+
     double degrees = 0.0;
     if (angle_given) {
-        degrees = ctx.argument("aci").as_number();
+        degrees = ctx.argument("aci").as_number() -
+                  static_cast<double>(from_udeg) / static_cast<double>(core::kUDegPerDegree);
     } else {
         // POINTED, WITH THE OBJECTS TURNING UNDER THE CURSOR. The angle used to
         // be typed and nothing else was offered, so turning a building onto a
@@ -728,11 +1072,13 @@ Task<void> run_rotate(Context& ctx)
         // afterwards whether it was the one you wanted. The cursor's direction
         // from the centre IS the angle — degrees counter-clockwise from east,
         // which is what this parameter has always meant — and the ghost turns
-        // with it.
-        auto at = co_await ctx.point("aci_nokta", "Dönme açısı: yeni doğrultuyu gösterin",
-                                     ghost(core::GhostKind::Rotate, *centre, requested));
+        // with it; by reference, less the reference direction.
+        auto at = co_await ctx.point(
+            "aci_nokta",
+            reference ? "Yeni doğrultuyu gösterin" : "Dönme açısı: yeni doğrultuyu gösterin",
+            ghost(core::GhostKind::Rotate, *centre, requested, 1, from_udeg));
         if (!at) co_return;
-        degrees = static_cast<double>(core::ghost_turn_udeg(*centre, *at)) /
+        degrees = static_cast<double>(core::ghost_turn_udeg(*centre, *at) - from_udeg) /
                   static_cast<double>(core::kUDegPerDegree);
         // NOT PART OF THE RECORD: the gesture is HOW the angle was chosen and
         // `aci` is what the angle IS (Article 1.4).
@@ -745,12 +1091,17 @@ Task<void> run_rotate(Context& ctx)
     x.turn = core::sin_cos_udeg(
         static_cast<core::UDeg>(std::llround(degrees * static_cast<double>(core::kUDegPerDegree))));
 
-    if (!apply_all(ctx, slots, x)) co_return;
+    bool copied = false;
+    if (!apply_or_copy(ctx, slots, x, copied)) co_return;
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("merkez", Value::point(*centre));
+    // THE TURN, RESOLVED: a reference is how it was found, not what it is.
     ctx.record("aci", Value::number(degrees));
-    ctx.echo(std::to_string(slots.size()) + " nesne döndürüldü.");
+    ctx.record("referans", Value{});
+    ctx.record("yontem", Value{});
+    ctx.echo(std::to_string(slots.size()) +
+             (copied ? " nesnenin döndürülmüş kopyası çizildi." : " nesne döndürüldü."));
 }
 
 // -------------------------------------------------------------- ÖLÇEKLE ----
@@ -763,12 +1114,53 @@ Task<void> run_scale(Context& ctx)
         co_return;
 
     const bool factor_given = ctx.has_argument("carpan");
+    const bool reference    = by_reference(ctx);
 
     auto centre = co_await ctx.point("merkez", "Ölçekleme merkezi");
     if (!centre) co_return;
 
+    // BY REFERENCE (TODOS C-08): a length on the drawing — typed, or shown by
+    // two points — becomes a new one, and the factor is their ratio. What a
+    // scanned sketch needs when one of its sides was measured in the field.
+    core::Mm from_length = 0;
+    if (reference) {
+        if (ctx.has_argument("referans")) {
+            from_length = core::mm_round(ctx.argument("referans").as_number() *
+                                         static_cast<double>(core::kMmPerMetre));
+        } else {
+            auto a = co_await ctx.point("referans_nokta", "Referans uzunluğun ilk noktası");
+            if (!a) co_return;
+            auto b = co_await ctx.point(
+                "referans_nokta", "Referans uzunluğun ikinci noktası",
+                PointOptions{.rubber_band = true, .rubber_origin = *a, .rubber_base = false});
+            if (!b) co_return;
+            from_length = core::segment_length(*a, *b);
+            ctx.record("referans_nokta", Value{});
+        }
+        if (from_length <= 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Referans uzunluk sıfırdan büyük olmalı; iki farklı nokta verin.");
+            co_return;
+        }
+    }
+
     std::optional<double> factor;
-    if (factor_given) {
+    if (reference) {
+        if (ctx.has_argument("yeni")) {
+            factor = ctx.argument("yeni").as_number() * static_cast<double>(core::kMmPerMetre) /
+                     static_cast<double>(from_length);
+        } else {
+            // THE NEW LENGTH SHOWN: the cursor's distance from the centre, as
+            // every CAD reads a pointed new length, and the ghost that size.
+            auto at = co_await ctx.point(
+                "carpan_nokta", "Yeni uzunluk: merkezden uzaklığı gösterin",
+                ghost(core::GhostKind::Scale, *centre, requested, 1, 0, from_length));
+            if (!at) co_return;
+            factor = static_cast<double>(core::segment_length(*centre, *at)) /
+                     static_cast<double>(from_length);
+            ctx.record("carpan_nokta", Value{});
+        }
+    } else if (factor_given) {
         factor = ctx.argument("carpan").as_number();
     } else {
         // POINTED, WITH THE OBJECTS GROWING UNDER THE CURSOR. The factor is the
@@ -783,7 +1175,13 @@ Task<void> run_scale(Context& ctx)
         ctx.record("carpan_nokta", Value{});
     }
 
-    if (*factor <= 0.0) {
+    // A SECOND FACTOR, UP (TODOS C-08): the scale across is `carpan`, the one
+    // up `carpan_y`. A circle stretched so becomes the ellipse it is; what a
+    // kind cannot hold unevenly is refused by name.
+    double up = *factor;
+    if (const Value v = ctx.argument("carpan_y"); !v.empty()) up = v.as_number();
+
+    if (*factor <= 0.0 || up <= 0.0) {
         // A negative factor is refused rather than quietly becoming a half turn:
         // "scale by minus one" and "mirror" are different intentions, and a user
         // who typed the wrong sign should be told rather than obeyed.
@@ -793,16 +1191,26 @@ Task<void> run_scale(Context& ctx)
     }
 
     Xform x;
-    x.kind   = Xform::Kind::Scale;
+    x.kind   = up == *factor ? Xform::Kind::Scale : Xform::Kind::Stretch;
     x.base   = *centre;
     x.factor = *factor;
+    if (x.kind == Xform::Kind::Stretch) x.factor_y = up;
 
-    if (!apply_all(ctx, slots, x)) co_return;
+    bool copied = false;
+    if (!apply_or_copy(ctx, slots, x, copied)) co_return;
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("merkez", Value::point(*centre));
     ctx.record("carpan", Value::number(*factor));
-    ctx.echo(std::to_string(slots.size()) + " nesne ölçeklendi.");
+    if (x.kind == Xform::Kind::Stretch) ctx.record("carpan_y", Value::number(up));
+    ctx.record("referans", Value{});
+    ctx.record("yeni", Value{});
+    ctx.record("yontem", Value{});
+    ctx.echo(std::to_string(slots.size()) +
+             (copied ? " nesnenin ölçeklenmiş kopyası çizildi." : " nesne ölçeklendi.") +
+             (x.kind == Xform::Kind::Stretch
+                  ? " Eşit olmayan ölçekte yazıların yüksekliği ve ölçülerin ok boyu korundu."
+                  : ""));
 }
 
 // --------------------------------------------------------------- AYNALA ----
@@ -832,15 +1240,27 @@ Task<void> run_mirror(Context& ctx)
 
     const Xform x = core::ghost_xform(core::GhostKind::Mirror, *a, *b);
 
-    if (!apply_all(ctx, slots, x)) co_return;
+    bool copied = false;
+    if (!apply_or_copy(ctx, slots, x, copied)) co_return;
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("baslangic", Value::point(*a));
     ctx.record("bitis", Value::point(*b));
-    ctx.echo(std::to_string(slots.size()) + " nesne aynalandı.");
+    ctx.echo(std::to_string(slots.size()) +
+             (copied ? " nesnenin aynalanmış kopyası çizildi." : " nesne aynalandı."));
 }
 
 } // namespace
+
+bool transform_entity(Context& ctx, core::EntityId slot, const core::Xform& x)
+{
+    return transform_one(ctx, slot, x);
+}
+
+core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, const core::Xform& x)
+{
+    return clone_one(ctx, slot, x);
+}
 
 KENTOS_COMMAND(move)
 {
@@ -902,7 +1322,8 @@ KENTOS_COMMAND(array_objects)
                       "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim"}
                     .en("objects"),
                 Param::text("mod", Arity::optional(),
-                            "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi")
+                            "KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse "
+                            "satır/sütun dizisi")
                     .en("mode"),
                 Param::integer("satir", Arity::optional(), "Satır sayısı (dikdörtgen dizi)")
                     .en("rows"),
@@ -918,15 +1339,34 @@ KENTOS_COMMAND(array_objects)
                       "Dizinin merkezi (kutupsal dizi)"}
                     .en("center"),
                 Param::integer("sayi", Arity::optional(),
-                               "Toplam kopya sayısı, özgün dahil (kutupsal dizi)")
+                               "Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi)")
                     .en("count"),
                 Param::number("aci", Arity::optional(),
                               "Süpürülecek toplam açı, derece; verilmezse tam tur")
                     .en("angle"),
+                Param{"yol", ParamKind::Selection, Arity::optional(),
+                      "mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu "
+                      "çizgi"}
+                    .en("path"),
+                Param{"yol_nokta", ParamKind::Point, Arity::optional(),
+                      "Yolu gösteren nokta; yol verilmişse sorulmaz"}
+                    .en("path_point"),
+                Param::number("aralik", Arity::optional(),
+                              "mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi")
+                    .en("spacing"),
+                Param::boolean("hizala", Arity::optional(),
+                               "mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; "
+                               "varsayılan evet")
+                    .en("follow"),
+                Param{"taban", ParamKind::Point, Arity::optional(),
+                      "mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun "
+                      "başı"}
+                    .en("base_point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.",
+        .summary = "Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca "
+                   "çoğaltır.",
         .run     = &run_array,
     };
 }
@@ -951,11 +1391,26 @@ KENTOS_COMMAND(rotate)
                 Param::points("aci_nokta", Arity::optional(),
                               "Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz")
                     .en("angle_point"),
+                Param::choice("yontem", Arity::optional(), {"referans"},
+                              "referans: bir doğrultu yenisine döndürülür; referans doğrultu "
+                              "iki noktayla gösterilir")
+                    .en("method"),
+                Param::number("referans", Arity::optional(),
+                              "Referans doğrultunun açısı, derece; aci onun yeni açısıdır")
+                    .en("reference"),
+                Param::points("referans_nokta", Arity{0, 2},
+                              "Referans doğrultuyu gösteren iki nokta")
+                    .en("reference_point"),
+                Param::boolean("kopya", Arity::optional(),
+                               "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün "
+                               "yerinde kalır")
+                    .en("copy"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Seçilen nesneleri bir merkez etrafında döndürür.",
-        .run     = &run_rotate,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya "
+                   "da bir referans doğrultudan bulunur.",
+        .run = &run_rotate,
     };
 }
 
@@ -979,11 +1434,31 @@ KENTOS_COMMAND(scale)
                 Param::points("carpan_nokta", Arity::optional(),
                               "Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz")
                     .en("factor_point"),
+                Param::number("carpan_y", Arity::optional(),
+                              "Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki "
+                              "çarpandır ve daire elips olur")
+                    .en("factor_y"),
+                Param::choice("yontem", Arity::optional(), {"referans"},
+                              "referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki "
+                              "noktayla gösterilir")
+                    .en("method"),
+                Param::number("referans", Arity::optional(),
+                              "Referans uzunluk, metre; yeni onun olacağı uzunluktur")
+                    .en("reference"),
+                Param::number("yeni", Arity::optional(), "Referans uzunluğun yeni değeri, metre")
+                    .en("new_length"),
+                Param::points("referans_nokta", Arity{0, 2}, "Referans uzunluğu gösteren iki nokta")
+                    .en("reference_point"),
+                Param::boolean("kopya", Arity::optional(),
+                               "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün "
+                               "yerinde kalır")
+                    .en("copy"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.",
-        .run     = &run_scale,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit "
+                   "olmayan ölçek, referans uzunlukla ölçek.",
+        .run = &run_scale,
     };
 }
 
@@ -1001,6 +1476,10 @@ KENTOS_COMMAND(mirror)
                     .en("objects"),
                 Param::point("baslangic", "Ayna ekseninin ilk noktası").en("start"),
                 Param::point("bitis", "Ayna ekseninin ikinci noktası").en("end"),
+                Param::boolean("kopya", Arity::optional(),
+                               "evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün "
+                               "yerinde kalır")
+                    .en("copy"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

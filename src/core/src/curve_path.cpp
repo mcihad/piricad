@@ -364,6 +364,21 @@ PathPlace place_of(const CurvePath& path, Point2 probe)
     return best;
 }
 
+std::int64_t direction_at(const CurvePath& path, PathPlace at)
+{
+    if (path.pieces.empty()) return 0;
+    const PathPiece& p = path.pieces[std::min(at.piece, path.pieces.size() - 1)];
+    if (p.kind == PathPiece::Kind::Segment) return atan2_udeg(p.to.y - p.from.y, p.to.x - p.from.x);
+    // An arc's tangent is its radius turned a quarter, forward the way the
+    // arc is walked.
+    const Point2 q          = point_at(path, at);
+    const std::int64_t out  = atan2_udeg(q.y - p.centre.y, q.x - p.centre.x);
+    const std::int64_t turn = kUDegFullCircle / 4;
+    std::int64_t d          = p.sweep_udeg >= 0 ? out + turn : out - turn;
+    d %= kUDegFullCircle;
+    return d < 0 ? d + kUDegFullCircle : d;
+}
+
 PathPlace path_start(const CurvePath& /*path*/) noexcept
 {
     return PathPlace{0, 0.0};

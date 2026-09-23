@@ -1657,6 +1657,35 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("15c-kenar-turu"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // DÖNDÜR BY REFERENCE (TODOS C-08): a wall along 45°, its two ends
+        // shown; the ghost turns so the wall points at the cursor.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 10,10 6,14 -4,4")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(
+                QStringLiteral("DÖNDÜR yontem=referans merkez=0,0 referans_nokta=0,0 "
+                               "referans_nokta=10,10"));
+        });
+        later([hover] { hover({0, 12'000}); });
+        later([&window, shot] { shot(QStringLiteral("16a-dondur-referans"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // DİZİ ALONG A PATH: poles along a road's curve, each turned to it;
+        // and a circle stretched into the ellipse it becomes.
+        later([scene] { scene(QStringLiteral("YAY merkez=0,0 baslangic=20,0 bitis=0,20")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇİZGİ 20,0 23,0"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("DİZİ nesneler=2 mod=yol yol=1 sayi=7"));
+            window.runScriptLine(QStringLiteral("DAİRE merkez=-15,5 cevre=-11,5"));
+            window.endCommand();
+            window.runScriptLine(
+                QStringLiteral("ÖLÇEKLE nesneler=9 merkez=-15,5 carpan=1 carpan_y=2"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+        });
+        later([&window, shot] { shot(QStringLiteral("16b-yol-dizisi-elips"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

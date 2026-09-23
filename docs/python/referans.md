@@ -126,7 +126,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.to_area`](#cadto_area) | `core.to_area` | `ALANAÇEVİR` | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`cad.move`](#cadmove) | `core.move` | `TAŞI` | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
-| [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
+| [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`cad.combine`](#cadcombine) | `core.combine` | `BİRLEŞTİR` | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
@@ -136,8 +136,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.set_layer`](#cadset_layer) | `core.set_layer` | `KATMANAT` | Seçilen nesneleri başka bir katmana taşır. |
 | [`cad.match_style`](#cadmatch_style) | `core.match_style` | `STİLKOPYALA` | Bir nesnenin stilini seçilen nesnelere uygular. |
 | [`cad.colour`](#cadcolour) | `core.colour` | `RENK` | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
-| [`cad.rotate`](#cadrotate) | `core.rotate` | `DÖNDÜR` | Seçilen nesneleri bir merkez etrafında döndürür. |
-| [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
+| [`cad.rotate`](#cadrotate) | `core.rotate` | `DÖNDÜR` | Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur. |
+| [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
@@ -520,6 +520,8 @@ cad.align(
     source2: Coord,
     target2: Coord,
     scale: bool,
+    source3: Coord,
+    target3: Coord,
 ) -> int
 ```
 
@@ -531,6 +533,8 @@ cad.align(
 | `source2` | `Coord` | `kaynak2` | İkinci kaynak nokta; verilirse döndürme de yapılır [mm, Sağa (Y) önce] |
 | `target2` | `Coord` | `hedef2` | İkinci kaynağın gideceği yer [mm, Sağa (Y) önce] |
 | `scale` | `bool` | `olcekle` | İki çiftin uzunluk oranıyla ölçekler de |
+| `source3` | `Coord` | `kaynak3` | Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa nesneler ters çevrilir [mm, Sağa (Y) önce] |
+| `target3` | `Coord` | `hedef3` | Üçüncü kaynağın gideceği yan [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/align.md)
 
@@ -592,6 +596,8 @@ Komut: `core.copy_clip` — `PANOYAKOPYALA`
 cad.copy_clip(
     objects: list[int],
     file: str,
+    base_point: Coord,
+    with_base: bool,
 ) -> int
 ```
 
@@ -599,6 +605,8 @@ cad.copy_clip(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Panoya alınacak nesneler; verilmezse seçim kullanılır [kalıcı nesne anahtarı] |
 | `file` | `str` | `dosya` | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `base_point` | `Coord` | `taban` | Yapıştırırken gösterilen yere gelecek taban noktası [mm, Sağa (Y) önce] |
+| `with_base` | `bool` | `tabanli` | evet: taban noktası nesneler seçildikten sonra sorulur |
 
 [Komut sayfası](../komutlar/copy_clip.md)
 
@@ -612,6 +620,8 @@ Komut: `core.cut` — `KES`
 cad.cut(
     objects: list[int],
     file: str,
+    base_point: Coord,
+    with_base: bool,
 ) -> int
 ```
 
@@ -619,6 +629,8 @@ cad.cut(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Kesilecek nesneler; verilmezse seçim kullanılır [kalıcı nesne anahtarı] |
 | `file` | `str` | `dosya` | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `base_point` | `Coord` | `taban` | Yapıştırırken gösterilen yere gelecek taban noktası [mm, Sağa (Y) önce] |
+| `with_base` | `bool` | `tabanli` | evet: taban noktası nesneler seçildikten sonra sorulur |
 
 [Komut sayfası](../komutlar/cut.md)
 
@@ -1070,7 +1082,7 @@ cad.copy(
 
 ### `cad.array`
 
-Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır.
 
 Komut: `core.array` — `DİZİ`
 
@@ -1085,20 +1097,30 @@ cad.array(
     center: Coord,
     count: int,
     angle: float,
+    path: list[int],
+    path_point: Coord,
+    spacing: float,
+    follow: bool,
+    base_point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Dizilecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `mode` | `str` | `mod` | KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi |
+| `mode` | `str` | `mod` | KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi |
 | `rows` | `int` | `satir` | Satır sayısı (dikdörtgen dizi) |
 | `columns` | `int` | `sutun` | Sütun sayısı (dikdörtgen dizi) |
 | `row_spacing` | `float` | `satir_aralik` | Satır aralığı, metre; kuzeye artı |
 | `column_spacing` | `float` | `sutun_aralik` | Sütun aralığı, metre; doğuya artı |
 | `center` | `Coord` | `merkez` | Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce] |
-| `count` | `int` | `sayi` | Toplam kopya sayısı, özgün dahil (kutupsal dizi) |
+| `count` | `int` | `sayi` | Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) |
 | `angle` | `float` | `aci` | Süpürülecek toplam açı, derece; verilmezse tam tur |
+| `path` | `list[int]` | `yol` | mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı] |
+| `path_point` | `Coord` | `yol_nokta` | Yolu gösteren nokta; yol verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `spacing` | `float` | `aralik` | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi |
+| `follow` | `bool` | `hizala` | mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet |
+| `base_point` | `Coord` | `taban` | mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/array.md)
 
@@ -1334,7 +1356,7 @@ cad.colour(
 
 ### `cad.rotate`
 
-Seçilen nesneleri bir merkez etrafında döndürür.
+Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur.
 
 Komut: `core.rotate` — `DÖNDÜR`
 
@@ -1344,6 +1366,10 @@ cad.rotate(
     center: Coord,
     angle: float,
     angle_point: Coord,
+    method: str,
+    reference: float,
+    reference_point: Coords,
+    copy: bool,
 ) -> int
 ```
 
@@ -1353,12 +1379,16 @@ cad.rotate(
 | `center` | `Coord` | `merkez` | Döndürme merkezi [mm, Sağa (Y) önce] |
 | `angle` | `float` | `aci` | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir |
 | `angle_point` | `Coord` | `aci_nokta` | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | referans: bir doğrultu yenisine döndürülür; referans doğrultu iki noktayla gösterilir |
+| `reference` | `float` | `referans` | Referans doğrultunun açısı, derece; aci onun yeni açısıdır |
+| `reference_point` | `Coords` | `referans_nokta` | Referans doğrultuyu gösteren iki nokta [mm, Sağa (Y) önce] |
+| `copy` | `bool` | `kopya` | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 [Komut sayfası](../komutlar/rotate.md)
 
 ### `cad.scale`
 
-Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek.
 
 Komut: `core.scale` — `ÖLÇEKLE`
 
@@ -1368,6 +1398,12 @@ cad.scale(
     center: Coord,
     factor: float,
     factor_point: Coord,
+    factor_y: float,
+    method: str,
+    reference: float,
+    new_length: float,
+    reference_point: Coords,
+    copy: bool,
 ) -> int
 ```
 
@@ -1377,6 +1413,12 @@ cad.scale(
 | `center` | `Coord` | `merkez` | Ölçekleme merkezi; bu nokta yerinde kalır [mm, Sağa (Y) önce] |
 | `factor` | `float` | `carpan` | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir |
 | `factor_point` | `Coord` | `carpan_nokta` | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `factor_y` | `float` | `carpan_y` | Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur |
+| `method` | `str` | `yontem` | referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir |
+| `reference` | `float` | `referans` | Referans uzunluk, metre; yeni onun olacağı uzunluktur |
+| `new_length` | `float` | `yeni` | Referans uzunluğun yeni değeri, metre |
+| `reference_point` | `Coords` | `referans_nokta` | Referans uzunluğu gösteren iki nokta [mm, Sağa (Y) önce] |
+| `copy` | `bool` | `kopya` | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 [Komut sayfası](../komutlar/scale.md)
 
@@ -1391,6 +1433,7 @@ cad.mirror(
     objects: list[int],
     start: Coord,
     end: Coord,
+    copy: bool,
 ) -> int
 ```
 
@@ -1399,6 +1442,7 @@ cad.mirror(
 | `objects` | `list[int]` | `nesneler` | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
 | `start` | `Coord` | `baslangic` | Ayna ekseninin ilk noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Ayna ekseninin ikinci noktası [mm, Sağa (Y) önce] |
+| `copy` | `bool` | `kopya` | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
 [Komut sayfası](../komutlar/mirror.md)
 

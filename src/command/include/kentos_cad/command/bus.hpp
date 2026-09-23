@@ -146,6 +146,11 @@ struct FileRequest
     /// copied from, ignoring `at`. What a user means by "paste in place", and
     /// what a copy between two drawings in the same coordinate system wants.
     bool in_place{false};
+
+    /// ClipboardCopy: the point the payload is carried by when it is pasted —
+    /// the user's own base point (`PANOYAKOPYALA tabanli=evet`), or nothing for
+    /// the payload's lower-left corner (TODOS C-08).
+    std::optional<core::Point2> base;
 };
 
 /// One database operation, asked for by `VERİTABANI` and carried out by /src/io.

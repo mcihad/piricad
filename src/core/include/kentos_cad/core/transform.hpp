@@ -15,6 +15,7 @@
 // of which IEEE-754 pins exactly.
 #pragma once
 
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -86,17 +87,21 @@ Point2 mirrored_in_line(Point2 p, Point2 a, Point2 b);
 struct Xform
 {
     /// Which transform this is. `Align` is the one HİZALA applies: turned and
-    /// scaled about `base`, then carried so `base` lands on `axis_b`.
-    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror, Align };
+    /// scaled about `base`, then carried so `base` lands on `axis_b` — and, with
+    /// `flip`, reflected first. `Stretch` is a scale about `base` by `factor`
+    /// across and `factor_y` up: ÖLÇEKLE with two factors (TODOS C-08).
+    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror, Align, Stretch };
 
     Kind kind{Kind::Translate}; ///< which transform
     Mm dx{0};                   ///< Translate: east component
     Mm dy{0};                   ///< Translate: north component
     Point2
         base{}; ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the source
-    Point2 axis_b{};    ///< Mirror: the axis's second point · Align: where the source goes
-    SinCos turn{};      ///< Rotate, Align: the turn
-    double factor{1.0}; ///< Scale, Align: the multiplier
+    Point2 axis_b{};      ///< Mirror: the axis's second point · Align: where the source goes
+    SinCos turn{};        ///< Rotate, Align: the turn
+    double factor{1.0};   ///< Scale, Align: the multiplier · Stretch: the one across (east)
+    double factor_y{1.0}; ///< Stretch: the multiplier up (north)
+    bool flip{false};     ///< Align: reflected in the line through `base` along east, first
 
     friend bool operator==(const Xform&, const Xform&) = default;
 };
@@ -137,11 +142,22 @@ struct GhostSpec
     Point2 from2{};
     bool scale{false};
 
+    /// `Rotate` BY REFERENCE: the direction that turns onto the cursor's, in
+    /// micro-degrees — the turn drawn is the cursor's direction less this
+    /// (DÖNDÜR yontem=referans, TODOS C-08). Zero is the plain turn.
+    std::int64_t reference_udeg{0};
+
+    /// `Scale` BY REFERENCE: the length that becomes the cursor's distance from
+    /// the base, in millimetres — the factor drawn is that distance over this
+    /// (ÖLÇEKLE yontem=referans). Zero is the plain factor, metres out.
+    Mm reference_length{0};
+
     friend bool operator==(const GhostSpec&, const GhostSpec&) = default;
 };
 
 /// The ghost as bytes: kind (uint8), copies (int64), the three `Align` points
-/// (six int64), the scale flag (uint8), the key count (uint32) and the keys.
+/// (six int64), the scale flag (uint8), the reference turn and length (two
+/// int64), the key count (uint32) and the keys.
 /// Unversioned because a ghost lives for the length of one prompt and is never
 /// written to a file.
 std::vector<std::uint8_t> encode_ghost_spec(const GhostSpec& spec);
@@ -151,7 +167,55 @@ std::optional<GhostSpec> decode_ghost_spec(std::span<const std::uint8_t> bytes);
 /// along `to1`→`to2`, and — with `scale` — stretched by how much longer the
 /// second pair is. Nothing when either pair's two points coincide, which leaves
 /// no direction to turn to and no length to scale by.
-std::optional<Xform> align_xform(Point2 from1, Point2 to1, Point2 from2, Point2 to2, bool scale);
+std::optional<Xform> align_xform(Point2 from1, Point2 to1, Point2 from2, Point2 to2, bool scale,
+                                 bool flip = false);
+
+/// Whether `x` turns the plane inside out — a mirror, or an alignment that
+/// reflects — so a counter-clockwise sweep comes out clockwise.
+bool xform_reverses(const Xform& x) noexcept;
+
+/// One object's record carried by a translation: its rings, and its payload
+/// with every coordinate the payload holds moved too.
+struct TranslatedRecord
+{
+    std::vector<std::vector<Point2>> rings; ///< one vector per ring, R11 order
+    std::vector<RingRole> roles;            ///< each ring's role
+    std::vector<std::uint16_t> parts;       ///< each ring's part
+    std::vector<std::uint8_t> payload;      ///< the kind's payload, its coordinates moved
+
+    /// The rings as `set_kind_geometry` takes them; the spans borrow from
+    /// `rings`, so the record must outlive the call.
+    std::vector<RingGeometry::RingInput> inputs() const;
+};
+
+/// `e` carried by (`dx`, `dy`) — the record a paste writes (TODOS C-08). The
+/// rings alone are not the whole object: an arc polyline's arc centres, a
+/// block reference's drawn box and a hatch's pattern origin live in the
+/// payload, and a paste that moved only the vertices left an arc bending
+/// round its old centre and a symbol's box where it used to be.
+Result<TranslatedRecord> translated_record(const Document& doc, EntityId e, Mm dx, Mm dy);
+
+/// An ellipse — or an elliptic arc — by its centre, its two axis ends and its
+/// sweep in the ellipse's own parameter (core/ellipse.hpp).
+struct EllipseImage
+{
+    Point2 centre{};            ///< the centre
+    Point2 major{};             ///< the end of the first axis
+    Point2 minor{};             ///< the end of the second, perpendicular and counter-clockwise
+    bool partial{false};        ///< an elliptic arc rather than a whole ellipse
+    std::int64_t start_udeg{0}; ///< the arc's start parameter
+    std::int64_t end_udeg{0};   ///< its end parameter, counter-clockwise from the start
+};
+
+/// What `x` makes of an ellipse: its axes PERPENDICULAR again, the second
+/// counter-clockwise of the first, and the sweep re-read in the new axes'
+/// parameter. Under a scale that differs across and up the images of two
+/// perpendicular axes are conjugate but no longer perpendicular — a record kept
+/// that way would draw right and be written wrong to a DXF ELLIPSE, which reads
+/// the second axis as the first turned a quarter — so the principal axes are
+/// found again, the longer first. Every other transform keeps the axes it was
+/// given, turned the right way round after a reflection (TODOS C-08).
+EllipseImage transformed_ellipse(const Xform& x, const EllipseImage& e);
 
 /// The transform `cursor` implies for a ghost whose base point is `base`.
 ///

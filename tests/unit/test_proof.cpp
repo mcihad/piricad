@@ -13,6 +13,8 @@
 #include <functional>
 #include "kentos_test.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
+
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -1005,6 +1007,57 @@ TEST_CASE("YENİ: betiğin ortasında çalışınca eski belgenin geri alma adı
 }
 
 // ==================================== PANO (P6) ==============================
+
+TEST_CASE("PANO: taban noktalı kopya o noktayı gösterilen yere koyar; yaylı çizgi bütün taşınır")
+{
+    // TODOS C-08. The payload is carried by the point the user picked when
+    // copying — here the parcel's north-east corner — and a paste moves every
+    // kind whole: an arc polyline's arc centres go with its vertices.
+    const auto clip =
+        (std::filesystem::temp_directory_path() / "kentoscad-pano-taban.pcad").string();
+    std::filesystem::remove(clip);
+
+    FileRig source;
+    REQUIRE(source.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10 20,10", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("YUVARLA nesne=2 hepsi=evet yaricap=2", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("SEÇ mod=TÜMÜ", Origin::Test).ok());
+    REQUIRE(
+        source.bus.execute_line("PANOYAKOPYALA taban=40,30 dosya=\"" + clip + "\"", Origin::Test)
+            .ok());
+
+    FileRig moved;
+    std::string said;
+    moved.bus.on_echo = [&said](std::string_view s) { said.append(s).append("\n"); };
+    REQUIRE(moved.bus.execute_line("YAPIŞTIR nokta=1000,500 dosya=\"" + clip + "\"", Origin::Test)
+                .ok());
+    CHECK(said.find("taban noktası gösterilen yerde") != std::string::npos);
+    const core::Box2 box = moved.doc.extent();
+    CHECK_EQ(box.max_x, 1'000'000); ///< the base point, (40, 30), is where it was pointed
+    CHECK_EQ(box.max_y, 500'000);
+
+    // The arc polyline arrived whole: every arc still passes through its ends.
+    std::size_t arcs = 0;
+    for (core::EntityId e = 0; e < moved.doc.entities().size(); ++e) {
+        if (!moved.doc.alive(e) || moved.doc.entities().kind[e] != core::kArcPolylineKind) continue;
+        const auto path = core::path_of(moved.doc, e);
+        REQUIRE(path);
+        for (const core::PathPiece& p : path->pieces) {
+            if (p.kind != core::PathPiece::Kind::Arc) continue;
+            ++arcs;
+            const auto off = [&p](core::Point2 q) {
+                const double dx = static_cast<double>(q.x - p.centre.x);
+                const double dy = static_cast<double>(q.y - p.centre.y);
+                return std::abs(std::sqrt(dx * dx + dy * dy) - static_cast<double>(p.radius));
+            };
+            CHECK(off(p.from) <= 2.0);
+            CHECK(off(p.to) <= 2.0);
+        }
+    }
+    CHECK_EQ(arcs, 2u);
+    std::filesystem::remove(clip);
+}
 
 TEST_CASE("PANO: kopyala ve yapıştır aynı geometriyi yeni kimliklerle verir")
 {
@@ -2194,6 +2247,88 @@ TEST_CASE("PROOF: KENARTÜRÜ — arayüz, komut satırı, betik ve oynatma ayn�
                         "nokta":[10000,-3000]}}]})")
                     .ok());
     }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
+TEST_CASE("PROOF: DÖNDÜR referansla — arayüz, komut satırı, betik ve oynatma aynı")
+{
+    // TODOS C-08. A wall drawn along 45° turned onto north: the GUI shows the
+    // centre, the wall's two ends and the new direction; the command line and
+    // the script give the resolved turn.
+    const std::vector<std::string> setup{"ÇİZGİ 0,0 10,10"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("DÖNDÜR nesneler=1 yontem=referans", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());           // merkez
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());           // referans 1
+        CHECK(session.supply(Value::point(core::Point2{10'000, 10'000})).ok()); // referans 2
+        CHECK(session.supply(Value::point(core::Point2{0, 20'000})).ok());      // yeni doğrultu
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("DÖNDÜR nesneler=1 merkez=0,0 aci=45", Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.line","args":{"noktalar":[[0,0],[10000,10000]]}},
+                      {"cmd":"core.rotate","args":{"nesneler":[1],"merkez":[0,0],"aci":45}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
+TEST_CASE("PROOF: DİZİ yol boyunca — arayüz, komut satırı, betik ve oynatma aynı")
+{
+    // TODOS C-08. The GUI clicks the path and types the count.
+    const std::vector<std::string> setup{"ÇİZGİ 0,0 30,0", "ÇİZGİ 0,0 0,2"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("DİZİ nesneler=2 mod=YOL", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{15'000, 0})).ok()); // the path
+        CHECK(session.supply(Value::integer(4)).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("DİZİ nesneler=2 mod=YOL yol=1 sayi=4", Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.line","args":{"noktalar":[[0,0],[30000,0]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[0,0],[0,2000]]}},
+                      {"cmd":"core.array","args":{"nesneler":[2],"mod":"YOL","yol":[1],"sayi":4}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{5});
     CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
     CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
     CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));

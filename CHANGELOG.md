@@ -6,6 +6,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — referanslı ve eşit olmayan dönüşümler, yol boyunca dizi (C-08)
+
+- **Referansla döndür/ölçekle**: `DÖNDÜR yontem=referans` iki noktayla gösterilen
+  doğrultuyu yenisine, `ÖLÇEKLE yontem=referans` bir uzunluğu yenisine getirir;
+  yazılı biçimi `referans=`/`yeni=`. Hayalet referansı bilir.
+- **İki çarpanla ölçek** (`carpan_y`): daire aynı kimlikle elips, yay eliptik yay
+  olur; dik blok ölçeklerini taşır; dönük blok ve yaylı çizgi açıklanarak
+  reddedilir.
+- **Kopyalayarak** (`kopya=evet`) DÖNDÜR, ÖLÇEKLE ve AYNALA'da.
+- **HİZALA** her türü hizalar; üçüncü nokta çifti gerektiğinde ters çevirir.
+- **DİZİ mod=YOL**: nesneler bir çizgi ya da yay boyunca `sayi` ya da `aralik` ile,
+  her biri yolun doğrultusuna dönerek dizilir.
+- **Taban noktalı kopya**: `PANOYAKOPYALA tabanli=evet` / `taban=`; yapıştırırken o
+  nokta gösterilen yere gelir. Düzen menüsünde **Taban Noktasıyla Kopyala**.
+- Araç sütununda ve Değiştir menüsünde **Döndür — referansla**, **Ölçekle —
+  referansla**, **Aynala — kopyalayarak**, **Dizi — kutupsal**, **Dizi — yol
+  boyunca**.
+
+### Düzeltildi — dönüşümler taşıdıklarını bozuyordu (C-08)
+
+- **KOPYALA ve DİZİ** daire ve yay dışındaki her türü düz çoklu çizgi olarak
+  kopyalıyordu: spline kontrol poligonuna, elips üç noktaya dönüyor; blok, ölçü,
+  tarama ve nokta kopyası türünü kaybediyordu. Artık kopya kaynağının türünde.
+- **YAPIŞTIR** yaylı çizginin yay merkezlerini, bloğun kutusunu ve taramanın desen
+  başlangıcını köşeleriyle birlikte taşımıyordu.
+- **ÖLÇEKLE yazının harflerini büyütmüyordu**; **AYNALA** yazıyı baş aşağı
+  bırakıyordu; yarım dönen ya da aynalanan ölçünün yazısı ters okunuyordu.
+- **Arayüzde tam sayı istemine yazılan sayı** (DİZİ'nin satır, sütun, sayı istemleri)
+  ondalık olarak kaydediliyor ve komutun bütün işi doğrulamada geri sarılıyordu.
+- **YUVARLA `hepsi=evet`** açık çizgiyi yeni bir kimlikle yaylı çizgiye
+  çeviriyordu; artık kimliği, öznitelikleri ve bağlı yazıları korunuyor.
+
 ### Eklendi — KÖŞESİL, KENARTÜRÜ ve bağlı yazıların açıklaması (C-07 tamam)
 
 - **`KÖŞESİL`**: köşeye tıklayın, iki kenar tek kenar olur. Çizgi, alan, yaylı çoklu

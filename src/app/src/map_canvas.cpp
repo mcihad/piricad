@@ -793,14 +793,12 @@ void MapCanvas::buildGrips()
         }
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
-        std::int64_t number       = 0;
 
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
             const auto xs = geom.ring_xs(r);
             const auto ys = geom.ring_ys(r);
 
             for (std::size_t v = 0; v < xs.size(); ++v) {
-                ++number;
                 const render::ScreenPointF p =
                     render::to_f(view_.to_screen(core::Point2{xs[v], ys[v]}));
 

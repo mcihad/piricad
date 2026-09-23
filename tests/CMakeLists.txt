@@ -42,6 +42,7 @@ add_executable(kentos_tests
     unit/test_split_join.cpp
     unit/test_fillet.cpp
     unit/test_grips.cpp
+    unit/test_transform.cpp
     unit/test_processing.cpp
     unit/test_ai_catalog.cpp
     unit/test_ai_policy.cpp

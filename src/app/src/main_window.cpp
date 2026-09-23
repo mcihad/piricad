@@ -995,6 +995,11 @@ void MainWindow::buildActions()
                       tr("PANOYAKOPYALA — seçili nesneleri çizimin kendi biçiminde panoya yazar  "
                          "·  kısaltma: PKP"),
                       QKeySequence(Qt::CTRL | Qt::Key_C));
+    actCopyBase_ = commandAction(
+        Glyph::Duplicate, tr("Taban Noktasıyla Kopyala"),
+        QStringLiteral("PANOYAKOPYALA tabanli=evet"),
+        tr("PANOYAKOPYALA tabanli=evet — nesneleri seçin, sonra taban noktasını gösterin; "
+           "yapıştırırken o nokta gösterdiğiniz yere gelir"));
     actPaste_ = commandAction(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"),
                               tr("YAPIŞTIR — panodaki nesneleri tıkladığınız yere koyar; "
                                  "yerinde=evet kopyalandığı koordinatlara  ·  kısaltma: YP"),
@@ -1086,6 +1091,27 @@ void MainWindow::buildActions()
     actArray_ =
         modifyTool(Glyph::Array, tr("Dizi"), QStringLiteral("DİZİ"),
                    tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
+    // THE OTHER WAYS A TRANSFORM IS ASKED FOR (TODOS C-08), each its own entry
+    // so a hand reaches it: a turn or a scale found from a reference on the
+    // drawing, a mirrored copy, and arrays round a centre and along a path.
+    actArrayPolar_ =
+        modifyTool(Glyph::Array, tr("Dizi — kutupsal"), QStringLiteral("DİZİ mod=KUTUPSAL"),
+                   tr("DİZİ mod=KUTUPSAL — seçili nesneleri bir merkez etrafında çoğaltır"));
+    actArrayPath_ =
+        modifyTool(Glyph::Array, tr("Dizi — yol boyunca"), QStringLiteral("DİZİ mod=YOL"),
+                   tr("DİZİ mod=YOL — seçili nesneleri bir çizgi ya da yay boyunca eşit aralıkla "
+                      "dizer, her kopyayı yolun doğrultusuna döndürür"));
+    actRotateRef_ = modifyTool(
+        Glyph::Rotate, tr("Döndür — referansla"), QStringLiteral("DÖNDÜR yontem=referans"),
+        tr("DÖNDÜR yontem=referans — iki noktayla gösterilen doğrultuyu yeni "
+           "doğrultuya döndürür"));
+    actScaleRef_ = modifyTool(
+        Glyph::Scale, tr("Ölçekle — referansla"), QStringLiteral("ÖLÇEKLE yontem=referans"),
+        tr("ÖLÇEKLE yontem=referans — iki noktayla gösterilen uzunluğu yeni uzunluğa "
+           "getirir"));
+    actMirrorCopy_ =
+        modifyTool(Glyph::Mirror, tr("Aynala — kopyalayarak"), QStringLiteral("AYNALA kopya=evet"),
+                   tr("AYNALA kopya=evet — özgün yerinde kalır, aynalanmış kopyası çizilir"));
     actExtend_ = modifyTool(Glyph::Extend, tr("Uzat"), QStringLiteral("UZAT"),
                             tr("UZAT — ucu en yakın sınıra kadar uzatır: çizgiyi doğrultusunda, "
                                "yayı çemberi boyunca"));
@@ -1587,6 +1613,7 @@ void MainWindow::buildMenus()
     edit->addSeparator();
     edit->addAction(actCut_);
     edit->addAction(actCopyClip_);
+    edit->addAction(actCopyBase_);
     edit->addAction(actPaste_);
     edit->addSeparator();
     edit->addAction(actSelectAll_);
@@ -1689,9 +1716,14 @@ void MainWindow::buildMenus()
     modify->addAction(actMove_);
     modify->addAction(actCopy_);
     modify->addAction(actRotate_);
+    modify->addAction(actRotateRef_);
     modify->addAction(actScale_);
+    modify->addAction(actScaleRef_);
     modify->addAction(actMirror_);
+    modify->addAction(actMirrorCopy_);
     modify->addAction(actArray_);
+    modify->addAction(actArrayPolar_);
+    modify->addAction(actArrayPath_);
     modify->addSeparator();
     modify->addAction(actTrim_);
     modify->addAction(actTrimFence_);
@@ -2175,7 +2207,8 @@ void MainWindow::buildToolBox()
     // the `Değiştir` menu alone — and three of them have just been given a ghost
     // that turns, scales and flips under the cursor, which is a thing you cannot
     // discover from a menu (§2.6a).
-    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_,
+    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actRotateRef_, actScale_, actScaleRef_,
+                         actMirror_, actMirrorCopy_, actArray_, actArrayPolar_, actArrayPath_,
                          actAlign_, actAlignScaled_, actStretch_});
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
@@ -4889,8 +4922,8 @@ int MainWindow::probeRealMouse()
                       .arg(static_cast<double>(now.y) / 1000.0));
             check(!controller_->selectedSlots().empty(),
                   QStringLiteral("seçim yerinde kaldı; sıradaki tutamak bir tıklama uzakta"));
-            const command::Session* after = controller_->session();
-            check(after == nullptr || !after->waiting(),
+            const command::Session* left = controller_->session();
+            check(left == nullptr || !left->waiting(),
                   QStringLiteral("tutamak düzenlemesi bir araç kurmadı"));
         }
 
@@ -4975,6 +5008,49 @@ int MainWindow::probeRealMouse()
                                  "çizgi (son söz: \"%1\")")
                       .arg(lastSaid()));
         }
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+
+        // ---- 10. TRANSFORMS BY HAND (TODOS C-08) ------------------------------
+        //
+        // DÖNDÜR by reference from the column: the centre, the two ends of the
+        // wall, the new direction — four clicks, and the wall now runs north.
+        fresh({QStringLiteral("ÇİZGİ 0,0 10,10")});
+        const std::int64_t wall = first_key();
+        actRotateRef_->trigger();
+        QCoreApplication::processEvents();
+        for (const core::Point2 p : {core::Point2{0, 0}, core::Point2{0, 0},
+                                     core::Point2{10'000, 10'000}, core::Point2{0, 20'000}}) {
+            press(screen(p));
+            release(screen(p));
+        }
+        const core::Point2 top = vertex(wall, 1);
+        check(std::abs(top.x) <= 300 && std::abs(top.y - 14'142) <= 300,
+              QStringLiteral("Döndür — referansla: duvar kuzeye döndü (%1, %2; son söz: \"%3\")")
+                  .arg(static_cast<double>(top.x) / 1000.0)
+                  .arg(static_cast<double>(top.y) / 1000.0)
+                  .arg(lastSaid()));
+        controller_->cancelInteractive();
+
+        // DİZİ along a path from the column: the pole selected, the path
+        // clicked, the count typed.
+        fresh({QStringLiteral("ÇİZGİ 0,0 30,0"), QStringLiteral("ÇİZGİ 0,0 0,2")});
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        const std::int64_t road = first_key();
+        runScriptLine(QStringLiteral("SEÇ NESNE nesneler=") + QString::number(road + 1));
+        const std::size_t before = controller_->document().live_entity_count();
+        actArrayPath_->trigger();
+        QCoreApplication::processEvents();
+        press(screen({15'000, 0}));
+        release(screen({15'000, 0}));
+        // Typed, as a hand types a count: the command line hands it over as a
+        // number, which the prompt for a count records as a whole one.
+        controller_->runLine(QStringLiteral("4"), command::Origin::CommandLine);
+        QCoreApplication::processEvents();
+        check(controller_->document().live_entity_count() == before + 3,
+              QStringLiteral("Dizi — yol boyunca: üç kopya dizildi (%1 nesne; son söz: \"%2\")")
+                  .arg(controller_->document().live_entity_count())
+                  .arg(lastSaid()));
         controller_->cancelInteractive();
         runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
     }

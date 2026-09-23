@@ -22,6 +22,16 @@ dolanan bir dış sınır **eksi alan** hesaplar. Alan hesabı hukuki çıktıd�
 Yayın süpürme yönü de çevrilir: yansıtılan yay artık öteki yönde süpürür ve iki
 ucu takas edilir.
 
+**Yazılar okunur kalır.** Harfler ayna görüntüsüne çevrilmez: bir yazının yeri
+aynalanır ve soldan sağa okunacak biçimde durur; bir ölçünün yazısı da öyle, sayısı
+değişmeden. Bir elipsin eksenleri yansımadan sonra yeniden doğru sırayla saklanır.
+
+### Kopyalayarak
+
+`kopya=evet` nesnelerin kendisini değil kopyasını aynalar; özgün yerinde kalır.
+Simetrik bir yapı adasını yarısından üretmenin yolu budur: yarısını çizin, sonra
+**Aynala — kopyalayarak** ile öbür yarısını ekleyin.
+
 ## Adlar
 
 | Ad | Tür |
@@ -35,7 +45,7 @@ ucu takas edilir.
 
 ```text
 AYNALA
-AYNALA nesneler=<k> baslangic=<n> bitis=<n>
+AYNALA nesneler=<k> baslangic=<n> bitis=<n> [kopya=evet]
 ```
 
 ## Parametreler
@@ -45,6 +55,7 @@ AYNALA nesneler=<k> baslangic=<n> bitis=<n>
 | `nesneler` | Aynalanacak nesnelerin kimlikleri. Verilmezse etkin seçim |
 | `baslangic` | Ayna ekseninin ilk noktası |
 | `bitis` | Ayna ekseninin ikinci noktası |
+| `kopya` | `evet`: kopya aynalanır, özgün yerinde kalır |
 
 ## Örnekler
 
@@ -61,6 +72,17 @@ Yatay eksende:
 
 ```text
 AYNALA nesneler=1 baslangic=0,0 bitis=100,0
+```
+
+Yeni bir çizimde, bir yarıyı düşey eksende kopyalayarak simetriğini ekleyin:
+
+```text
+ÇİZGİ 10,0 20,0
+AYNALA nesneler=1 baslangic=0,-5 bitis=0,5 kopya=evet
+```
+
+```text
+1 nesnenin aynalanmış kopyası çizildi.
 ```
 
 ### Arayüz

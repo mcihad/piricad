@@ -7,13 +7,14 @@ için.
 
 Panodaki nesneleri çizime koyar. Katmanları, stilleri ve öznitelikleri birlikte
 getirir; çizimde aynı adda bir katman varsa **onun içine** koyar, yenisini
-açmaz.
+açmaz. Her nesne **bütün** taşınır: yaylı çoklu çizginin yay merkezleri, bloğun
+kutusu ve taramanın desen başlangıcı köşeleriyle birlikte gider.
 
 ## İki yerleştirme
 
 | Nasıl | Sonuç |
 |---|---|
-| `nokta=<nokta>` (varsayılan olarak sorulur) | Yükün **sol alt köşesi** o noktaya taşınır — bir elin yapıştırmaktan anladığı şey |
+| `nokta=<nokta>` (varsayılan olarak sorulur) | Yükün **taban noktası** — kopyalarken verildiyse o, verilmediyse yükün sol alt köşesi — o noktaya taşınır; bir elin yapıştırmaktan anladığı şey |
 | `yerinde=evet` | Her koordinat kopyalandığı gibi kalır — aynı koordinat sistemindeki iki çizim arasında kopyalamanın istediği şey |
 
 ## Adlar

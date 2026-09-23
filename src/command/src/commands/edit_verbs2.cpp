@@ -32,6 +32,7 @@
 #include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/command/transform_edit.hpp"
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/block.hpp"
@@ -269,10 +270,45 @@ Task<void> run_align(Context& ctx)
     }
     const bool turning = from2 && to2;
 
+    // A THIRD PAIR SAYS WHICH SIDE (TODOS C-08). Two pairs fix a move, a turn
+    // and a scale; in the plane a third decides whether the objects are also
+    // turned over — when the source triangle runs the other way round from the
+    // target one, they are reflected, so the third point lands on the side of
+    // the line its target is on. Only given, never asked: two pairs are how
+    // every CAD aligns in the plane.
+    bool flip = false;
+    std::optional<core::Point2> from3;
+    std::optional<core::Point2> to3;
+    if (const Value v = ctx.argument("kaynak3"); turning && !v.empty() && !v.as_points().empty())
+        from3 = v.as_points().front();
+    if (const Value v = ctx.argument("hedef3"); from3 && !v.empty() && !v.as_points().empty())
+        to3 = v.as_points().front();
+    if (from3 && !to3) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Üçüncü kaynağın gideceği yer verilmedi: hedef3=<nokta>."));
+        co_return;
+    }
+    if (from2 && to2 && from3 && to3) {
+        const auto side = [](core::Point2 a, core::Point2 b, core::Point2 c) {
+            const double t = static_cast<double>(b.x - a.x) * static_cast<double>(c.y - a.y) -
+                             static_cast<double>(b.y - a.y) * static_cast<double>(c.x - a.x);
+            return (t > 0.0) - (t < 0.0);
+        };
+        const int was     = side(*from1, *from2, *from3);
+        const int becomes = side(*to1, *to2, *to3);
+        if (was == 0 || becomes == 0) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Üçüncü nokta ilk ikisiyle aynı doğru üzerinde; hangi "
+                                         "yana düştüğü okunamıyor."));
+            co_return;
+        }
+        flip = was != becomes;
+    }
+
     // ONE TRANSFORM, the one the ghost drew: `p -> to1 + factor · turn(p - from1)`.
     core::Xform x = core::ghost_xform(core::GhostKind::Translate, *from1, *to1);
     if (turning) {
-        auto aligned = core::align_xform(*from1, *to1, *from2, *to2, scaling);
+        auto aligned = core::align_xform(*from1, *to1, *from2, *to2, scaling, flip);
         if (!aligned) {
             ctx.session().fail(core::err(
                 core::ErrorCode::InvalidArgument,
@@ -297,33 +333,11 @@ Task<void> run_align(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
-        if (doc.entities().kind[slot] != core::kPolylineKind) {
-            ctx.session().fail(core::err(core::ErrorCode::Unsupported,
-                                         std::string("Nesne ") + std::to_string(id) + " bir " +
-                                             kind_word(doc.entities().kind[slot]) +
-                                             "; HİZALA bu sürümde çizgileri ve alanları hizalar."));
-            co_return;
-        }
-
-        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
-        std::vector<std::vector<core::Point2>> store;
-        std::vector<core::RingGeometry::RingInput> rings;
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            std::vector<core::Point2> pts = ring_points(doc, r);
-            for (core::Point2& p : pts)
-                p = core::transformed(x, p);
-            store.push_back(std::move(pts));
-            rings.push_back(core::RingGeometry::RingInput{
-                {}, doc.geometry().ring_role[r], doc.geometry().ring_part[r]});
-        }
-        for (std::size_t i = 0; i < rings.size(); ++i)
-            rings[i].points = store[i];
-
-        auto st = ctx.transaction().set_geometry(slot, rings);
-        if (!st) {
-            ctx.session().fail(st.error());
-            co_return;
-        }
+        // EVERY KIND, BY THE ONE TRANSFORM EVERY VERB USES: a circle stays a
+        // circle of the scaled radius, a caption turns and grows, a block
+        // keeps its symbol, a dimension says its new figure. It aligned lines
+        // and faces only (TODOS C-08).
+        if (!transform_entity(ctx, slot, x)) co_return;
         ++moved;
     }
 
@@ -332,10 +346,15 @@ Task<void> run_align(Context& ctx)
         ctx.record("kaynak2", Value::point(*from2));
         ctx.record("hedef2", Value::point(*to2));
     }
-    ctx.echo(std::to_string(moved) + " nesne hizalandı" +
-             (turning ? (factor == 1.0 ? " (taşındı ve döndürüldü)."
-                                       : " (taşındı, döndürüldü ve ölçeklendi).")
-                      : " (taşındı)."));
+    if (from3 && to3) {
+        ctx.record("kaynak3", Value::point(*from3));
+        ctx.record("hedef3", Value::point(*to3));
+    }
+    std::string how = " (taşındı).";
+    if (turning)
+        how = factor == 1.0 ? " (taşındı ve döndürüldü" : " (taşındı, döndürüldü ve ölçeklendi";
+    if (turning) how += flip ? "; üçüncü nokta öbür yana düştüğü için ters çevrildi)." : ").";
+    ctx.echo(std::to_string(moved) + " nesne hizalandı" + how);
 }
 
 // --------------------------------------------------- BÖLÜMLE / İŞARETLE ----
@@ -723,6 +742,12 @@ KENTOS_COMMAND(align)
                 Param::boolean("olcekle", Arity::optional(),
                                "İki çiftin uzunluk oranıyla ölçekler de")
                     .en("scale"),
+                Param::points("kaynak3", Arity::optional(),
+                              "Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa "
+                              "nesneler ters çevrilir")
+                    .en("source3"),
+                Param::points("hedef3", Arity::optional(), "Üçüncü kaynağın gideceği yan")
+                    .en("target3"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

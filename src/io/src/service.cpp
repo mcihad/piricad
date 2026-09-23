@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/service.hpp"
 
+#include "kentos_cad/core/transform.hpp"
+
 #include "kentos_cad/command/journal.hpp"
 
 #include "kentos_cad/command/registry.hpp"
@@ -293,7 +295,7 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
     case command::FileRequest::Verb::ClipboardCopy: {
         const bool own_path = request.path.empty();
         std::string where   = own_path ? default_clipboard_path() : std::move(request.path);
-        auto wrote          = clipboard_copy(where, std::move(request.entities));
+        auto wrote          = clipboard_copy(where, request.entities, request.base);
         // AND ONTO THE OPERATING SYSTEM'S CLIPBOARD, through the window layer.
         // Only for the payload this program owns: a user who named a file asked
         // for a file, and hijacking their clipboard because of it would be a side
@@ -461,7 +463,8 @@ std::string FileService::default_clipboard_path()
 }
 
 core::Result<std::string> FileService::clipboard_copy(std::string path,
-                                                      std::vector<std::uint64_t> entities)
+                                                      const std::vector<std::uint64_t>& entities,
+                                                      std::optional<core::Point2> base)
 {
     if (entities.empty())
         return err(ErrorCode::InvalidArgument,
@@ -487,6 +490,16 @@ core::Result<std::string> FileService::clipboard_copy(std::string path,
         auto summary = tx.adopt_from(bus_.document(), keys);
         if (!summary) return summary.error();
         copied = summary.value().entities;
+        // THE BASE POINT, WHEN THE USER GAVE ONE, TRAVELS AS A GUIDE CROSS: one
+        // vertical and one horizontal guide through it — the drafting
+        // furniture a reference point is — in the payload's own guide store,
+        // which the file already carries and a paste never adopts. No new
+        // block and no second description of a point (TODOS C-08).
+        if (base) {
+            if (auto st = tx.add_guide(core::GuideAxis::Vertical, base->x); !st) return st.error();
+            if (auto st = tx.add_guide(core::GuideAxis::Horizontal, base->y); !st)
+                return st.error();
+        }
     }
     if (copied == 0)
         return err(ErrorCode::NotFound, "Seçilen nesneler bulunamadı; panoya bir şey yazılmadı.");
@@ -497,8 +510,9 @@ core::Result<std::string> FileService::clipboard_copy(std::string path,
     auto report = save_project(scratch, bus_.project_settings(), path);
     if (!report) return report.error();
 
-    return "Panoya alındı: " + std::to_string(copied) + " nesne (" +
-           std::to_string(report.value().bytes) + " bayt).";
+    return "Panoya alındı: " + std::to_string(copied) + " nesne" +
+           (base ? ", taban noktasıyla" : "") + " (" + std::to_string(report.value().bytes) +
+           " bayt).";
 }
 
 command::Task<core::Result<std::string>> FileService::clipboard_paste(command::Transaction* tx,
@@ -531,36 +545,44 @@ command::Task<core::Result<std::string>> FileService::clipboard_paste(command::T
 
     // WHERE IT GOES. `in_place` leaves every coordinate as it was copied, which
     // is what a copy between two drawings in the same system wants. Otherwise
-    // the payload's own lower-left corner is moved onto `at`, so a paste lands
-    // where the user pointed rather than back where it came from.
+    // the payload's BASE POINT is moved onto `at` — the one the user picked
+    // when copying, carried as a guide cross (see `clipboard_copy`), or its own
+    // lower-left corner — so a paste lands where the user pointed.
+    bool based = false;
     if (!in_place) {
+        const core::GuideStore& guides = payload.guides();
+        std::optional<core::Mm> across;
+        std::optional<core::Mm> up;
+        for (std::size_t i = 0; i < guides.size(); ++i) {
+            if (guides.axis(i) == core::GuideAxis::Vertical) across = guides.coordinate(i);
+            if (guides.axis(i) == core::GuideAxis::Horizontal) up = guides.coordinate(i);
+        }
         const core::Box2 extent = payload.extent();
-        if (!extent.empty()) {
-            const core::Mm dx = at.x - extent.min_x;
-            const core::Mm dy = at.y - extent.min_y;
-            if (dx != 0 || dy != 0) {
-                command::Transaction shift(payload, "pano-tasi");
-                const core::EntityTable& ents = payload.entities();
-                for (core::EntityId e = 0; e < ents.size(); ++e) {
-                    if (!payload.alive(e)) continue;
-                    const core::RingSpan span = payload.geometry().rings_of(ents.slot[e]);
-                    std::vector<std::vector<core::Point2>> store;
-                    std::vector<core::RingGeometry::RingInput> rings;
-                    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-                        const auto xs = payload.geometry().ring_xs(r);
-                        const auto ys = payload.geometry().ring_ys(r);
-                        std::vector<core::Point2> pts;
-                        pts.reserve(xs.size());
-                        for (std::size_t v = 0; v < xs.size(); ++v)
-                            pts.push_back(core::Point2{xs[v] + dx, ys[v] + dy});
-                        store.push_back(std::move(pts));
-                        rings.push_back(core::RingGeometry::RingInput{
-                            {}, payload.geometry().ring_role[r], payload.geometry().ring_part[r]});
-                    }
-                    for (std::size_t i = 0; i < rings.size(); ++i)
-                        rings[i].points = store[i];
-                    if (auto st = shift.set_geometry(e, rings); !st) co_return st.error();
-                }
+        std::optional<core::Point2> from;
+        if (across && up) {
+            from  = core::Point2{*across, *up};
+            based = true;
+        } else if (!extent.empty()) {
+            from = core::Point2{extent.min_x, extent.min_y};
+        }
+        const core::Mm dx = from ? at.x - from->x : 0;
+        const core::Mm dy = from ? at.y - from->y : 0;
+        if (dx != 0 || dy != 0) {
+            // EVERY KIND WHOLE, its payload's coordinates with its vertices
+            // (`core::translated_record`): moving the rings alone left an arc
+            // polyline bending round its old centres (TODOS C-08).
+            command::Transaction shift(payload, "pano-tasi");
+            const core::EntityTable& ents = payload.entities();
+            for (core::EntityId e = 0; e < ents.size(); ++e) {
+                if (!payload.alive(e) || (ents.flags[e] & core::FlagInBlock) != 0) continue;
+                auto moved = core::translated_record(payload, e, dx, dy);
+                if (!moved) co_return moved.error();
+                const auto rings = moved.value().inputs();
+                const core::Status st =
+                    ents.kind[e] == core::kPolylineKind
+                        ? shift.set_geometry(e, rings)
+                        : shift.set_kind_geometry(e, rings, moved.value().payload);
+                if (!st) co_return st.error();
             }
         }
     }
@@ -573,7 +595,12 @@ command::Task<core::Result<std::string>> FileService::clipboard_paste(command::T
     const command::Transaction::AdoptSummary& s = summary.value();
     std::string said = "Yapıştırıldı: " + std::to_string(s.entities) + " nesne";
     if (s.layers > 0) said += ", " + std::to_string(s.layers) + " yeni katman";
-    said += in_place ? " (yerinde)." : ".";
+    if (in_place)
+        said += " (yerinde).";
+    else if (based)
+        said += " (taban noktası gösterilen yerde).";
+    else
+        said += ".";
     for (const std::string& note : s.notes)
         said += "  not: " + note;
     co_return said;

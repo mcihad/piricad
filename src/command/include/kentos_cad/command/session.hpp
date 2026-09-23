@@ -299,6 +299,17 @@ template<class T> std::optional<T> InputAwaiter<T>::await_resume()
     // is idempotent so re-resolving it changes nothing (core/snap.hpp).
     v = apply_input_aids(session_, prompt_, std::move(v), up_front);
 
+    // A WHOLE NUMBER TYPED AT A PROMPT FOR ONE is recorded as one. The command
+    // line hands every typed figure over as a number, `4` as 4.0; recorded so,
+    // the journal said a count was a measurement and the check after the body
+    // refused the run it had just finished — DİZİ laid out its copies and then
+    // rolled them back (TODOS C-08).
+    if (prompt_.kind == ParamKind::Integer && v.kind() == Value::Kind::Number) {
+        const double n = v.as_number();
+        if (n == static_cast<double>(static_cast<std::int64_t>(n)))
+            v = Value::integer(static_cast<std::int64_t>(n));
+    }
+
     session_.record_awaited(param_.name, v);
     return conv_(v);
 }

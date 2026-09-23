@@ -18,6 +18,22 @@ parsel bit bit başladığı yere döner — bu programda test edilen bir davran
 çünkü neredeyse dik olan bir açı bir dikdörtgeni bir milimetre eğik paralelkenara
 çevirir.
 
+**Yazılar ve ölçüler okunur kalır.** Bir yazı nesneyle birlikte döner; bir ölçünün
+yazısı ise yarım tur dönse de baş aşağı durmaz, soldan sağa okunacak biçimde
+yeniden yerleşir ve sayısı değişmez.
+
+### Referansla
+
+`yontem=referans` çizimdeki bir doğrultuyu — iki noktayla gösterilen ya da
+`referans=` ile yazılan açı — yeni bir doğrultuya döndürür; dönme açısı ikisinin
+farkıdır. Bir krokideki bina duvarını ölçülen doğrultuya getirmek için açıyı
+hesaplamanız gerekmez: duvarın iki ucunu, sonra yeni doğrultuyu gösterin. Günlüğe
+bulunan dönme açısı yazılır.
+
+### Kopyalayarak
+
+`kopya=evet` nesnelerin kendisini değil kopyasını döndürür; özgün yerinde kalır.
+
 ## Adlar
 
 | Ad | Tür |
@@ -32,8 +48,10 @@ parsel bit bit başladığı yere döner — bu programda test edilen bir davran
 
 ```text
 DÖNDÜR
-DÖNDÜR nesneler=<k> merkez=<n> aci=<derece>
+DÖNDÜR nesneler=<k> merkez=<n> aci=<derece> [kopya=evet]
 DÖNDÜR nesneler=<k> merkez=<n>              # açıyı fareyle gösterirsiniz
+DÖNDÜR nesneler=<k> merkez=<n> referans=<derece> aci=<yeni derece>
+DÖNDÜR nesneler=<k> merkez=<n> yontem=referans  # referans iki noktayla gösterilir
 ```
 
 ## Parametreler
@@ -44,6 +62,10 @@ DÖNDÜR nesneler=<k> merkez=<n>              # açıyı fareyle gösterirsiniz
 | `merkez` | Döndürme merkezi; bu nokta yerinde kalır |
 | `aci` | Dönme açısı, derece. Artı yön saat yönünün tersi. Verilmezse sorulur |
 | `aci_nokta` | Açının gösterildiği nokta; `aci` verilmişse sorulmaz |
+| `yontem` | `referans`: bir doğrultu yenisine döndürülür |
+| `referans` | Referans doğrultunun açısı, derece; `aci` onun yeni açısıdır |
+| `referans_nokta` | Referans doğrultuyu gösteren iki nokta |
+| `kopya` | `evet`: kopya döndürülür, özgün yerinde kalır |
 
 ## Örnekler
 
@@ -62,6 +84,13 @@ Saat yönünde 30 derece — negatif açı:
 DÖNDÜR nesneler=1 merkez=0,0 aci=-30
 ```
 
+Yeni bir çizimde, 30° doğrultusundaki bir duvarı kuzeye (90°) çevirin — 60° döner:
+
+```text
+ÇİZGİ 10,0 20,0
+DÖNDÜR nesneler=1 merkez=0,0 referans=30 aci=90
+```
+
 ### Arayüz
 
 Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
@@ -74,6 +103,10 @@ oluşacak duruştur. İmlecin merkeze göre doğrultusu açıdır: doğuya doğr
 derece, kuzeye doğru 90. Okumayı imlecin yanındaki yazı söyler.
 
 Açıyı yazmak isterseniz `aci=` verin; o zaman komut hiçbir şey sormaz.
+
+**Döndür — referansla** aynı karttadır: merkezi, sonra referans doğrultunun iki
+noktasını gösterin; nesneler imleçle döner, referans doğrultu imlecin doğrultusuna
+gelecek biçimde. Tıklayın ya da yeni açıyı yazın.
 
 ### Betik
 
@@ -99,8 +132,9 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Betikten kullanım
 
-Betikten çağrıldığında `nesneler`, `merkez` ve `aci` verilmelidir. Açı derecedir,
-radyan değil.
+Betikten çağrıldığında `nesneler`, `merkez` ve `aci` verilmelidir; referansla
+döndürmede `referans` da. Açı derecedir, radyan değil. Günlüğe her zaman bulunan dönme
+açısı yazılır.
 
 ## Hatalar
 

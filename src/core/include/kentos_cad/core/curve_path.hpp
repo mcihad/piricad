@@ -100,6 +100,11 @@ CurvePath reversed(const CurvePath& path);
 /// The point at `at`, rounded to the millimetre; a piece's own ends exactly.
 Point2 point_at(const CurvePath& path, PathPlace at);
 
+/// The direction the path runs at `at`, whole micro-degrees counter-clockwise
+/// from east: a segment's own direction, an arc's tangent the way it is walked
+/// (TODOS C-08, the copies of a path array turned to follow it).
+std::int64_t direction_at(const CurvePath& path, PathPlace at);
+
 /// The place on `path` nearest `probe`.
 PathPlace place_of(const CurvePath& path, Point2 probe);
 

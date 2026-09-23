@@ -355,9 +355,11 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
         ++touched;
         deviation = std::max(deviation, all.deviation);
         if (all.bent) {
-            PathEdit edit;
-            if (!replace_with_pieces(ctx, targets[k].slot, {all.path}, edit)) co_return;
-            edits.push_back(std::move(edit));
+            // THE SAME OBJECT, now an arc polyline (model.md R9b): its key,
+            // attributes and followers stay, rather than a new object drawn
+            // like it and the line erased (TODOS C-08).
+            if (!rewrite_path(ctx, targets[k].slot, all.path)) co_return;
+            edits.push_back(PathEdit{.source = targets[k].id, .result = {targets[k].id}});
             ++bent;
         } else {
             const core::RingGeometry::RingInput ring{all.ring, targets[k].role, 0};

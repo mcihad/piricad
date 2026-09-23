@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 102 (90 tanesi onay ister)
-- Katalog parmak izi: `6056110288278537139`
+- Katalog parmak izi: `5935013850257652072`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -109,6 +109,8 @@ Onay ister.
 | `kaynak2` | konum (tutamak ya da göreli nokta) | hayır | İkinci kaynak nokta; verilirse döndürme de yapılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `hedef2` | konum (tutamak ya da göreli nokta) | hayır | İkinci kaynağın gideceği yer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `olcekle` | boolean | hayır | İki çiftin uzunluk oranıyla ölçekler de (evet/hayır) |
+| `kaynak3` | konum (tutamak ya da göreli nokta) | hayır | Üçüncü kaynak nokta: hedefi ilk iki hedefin öbür yanındaysa nesneler ters çevrilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `hedef3` | konum (tutamak ya da göreli nokta) | hayır | Üçüncü kaynağın gideceği yan — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_annulus` — Halka
@@ -163,7 +165,7 @@ Onay ister.
 
 ### `core_array` — Dizi
 
-Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır.
 Komut: DİZİ (DIZI, ARRAY, DZ)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -172,14 +174,19 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Dizilecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `mod` | string | hayır | KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi (metin) |
+| `mod` | string | hayır | KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi (metin) |
 | `satir` | integer | hayır | Satır sayısı (dikdörtgen dizi) (tam sayı) |
 | `sutun` | integer | hayır | Sütun sayısı (dikdörtgen dizi) (tam sayı) |
 | `satir_aralik` | number | hayır | Satır aralığı, metre; kuzeye artı (sayı) |
 | `sutun_aralik` | number | hayır | Sütun aralığı, metre; doğuya artı (sayı) |
 | `merkez` | konum (tutamak ya da göreli nokta) | hayır | Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı) |
+| `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) (tam sayı) |
 | `aci` | number | hayır | Süpürülecek toplam açı, derece; verilmezse tam tur (sayı) |
+| `yol` | string | hayır | mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yol_nokta` | konum (tutamak ya da göreli nokta) | hayır | Yolu gösteren nokta; yol verilmişse sorulmaz — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `aralik` | number | hayır | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi (sayı) |
+| `hizala` | boolean | hayır | mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet (evet/hayır) |
+| `taban` | konum (tutamak ya da göreli nokta) | hayır | mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_attribute` — Öznitelik
@@ -361,6 +368,8 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Panoya alınacak nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `dosya` | string | hayır | Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin) |
+| `taban` | konum (tutamak ya da göreli nokta) | hayır | Yapıştırırken gösterilen yere gelecek taban noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `tabanli` | boolean | hayır | evet: taban noktası nesneler seçildikten sonra sorulur (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_cut` — Kes
@@ -375,6 +384,8 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Kesilecek nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `dosya` | string | hayır | Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin) |
+| `taban` | konum (tutamak ya da göreli nokta) | hayır | Yapıştırırken gösterilen yere gelecek taban noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `tabanli` | boolean | hayır | evet: taban noktası nesneler seçildikten sonra sorulur (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_dimension` — Ölçü
@@ -935,6 +946,7 @@ Onay ister.
 | `nesneler` | string | hayır | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | Ayna ekseninin ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | Ayna ekseninin ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `kopya` | boolean | hayır | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_move` — Taşı
@@ -1173,7 +1185,7 @@ Onay ister.
 
 ### `core_rotate` — Döndür
 
-Seçilen nesneleri bir merkez etrafında döndürür.
+Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur.
 Komut: DÖNDÜR (DONDUR, ROTATE, DÖN)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -1185,11 +1197,15 @@ Onay ister.
 | `merkez` | konum (tutamak ya da göreli nokta) | evet | Döndürme merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `aci` | number | hayır | Dönme açısı, derece; artı yön saat yönünün tersi. Verilmezse yeni doğrultu gösterilir (sayı) |
 | `aci_nokta` | konum (tutamak ya da göreli nokta) | hayır | Dönme açısının gösterildiği nokta; aci verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `yontem` | string | hayır | referans: bir doğrultu yenisine döndürülür; referans doğrultu iki noktayla gösterilir (metin) |
+| `referans` | number | hayır | Referans doğrultunun açısı, derece; aci onun yeni açısıdır (sayı) |
+| `referans_nokta` | konum (tutamak ya da göreli nokta) | hayır | Referans doğrultuyu gösteren iki nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `kopya` | boolean | hayır | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_scale` — Ölçekle
 
-Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek.
 Komut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -1201,6 +1217,12 @@ Onay ister.
 | `merkez` | konum (tutamak ya da göreli nokta) | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `carpan` | number | hayır | Ölçek çarpanı; sıfırdan büyük. Verilmezse merkezden uzaklık gösterilir (sayı) |
 | `carpan_nokta` | konum (tutamak ya da göreli nokta) | hayır | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `carpan_y` | number | hayır | Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur (sayı) |
+| `yontem` | string | hayır | referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir (metin) |
+| `referans` | number | hayır | Referans uzunluk, metre; yeni onun olacağı uzunluktur (sayı) |
+| `yeni` | number | hayır | Referans uzunluğun yeni değeri, metre (sayı) |
+| `referans_nokta` | konum (tutamak ya da göreli nokta) | hayır | Referans uzunluğu gösteren iki nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `kopya` | boolean | hayır | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_sector` — Daire Dilimi

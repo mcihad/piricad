@@ -27,6 +27,8 @@ Pano yükü ve nerede durduğu için bkz. [PANOYAKOPYALA](copy_clip.md).
 
 ```text
 KES [nesneler=<kimlik> …] [dosya=<yol>]
+KES [nesneler=<kimlik> …] taban=<nokta>
+KES tabanli=evet
 ```
 
 ## Parametreler
@@ -35,6 +37,8 @@ KES [nesneler=<kimlik> …] [dosya=<yol>]
 |---|---|---|---|
 | `nesneler` | seçim | 0..n | Kesilecek nesneler; verilmezse **seçim** kullanılır |
 | `dosya` | metin | 0..1 | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `taban` | nokta | 0..1 | Yapıştırırken gösterilen yere gelecek **taban noktası**; verilmezse nesnelerin sol alt köşesi |
+| `tabanli` | mantıksal | 0..1 | `evet`: taban noktası nesneler seçildikten sonra sorulur |
 
 ## Örnekler
 

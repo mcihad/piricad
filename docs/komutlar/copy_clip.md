@@ -17,6 +17,14 @@ zaten var.
 Bu yüzden panoya **her şey** gider: katman adı, stil, çizgi tipi, öznitelik
 sütunları ve değerleri, blok tanımları, ve çizimin koordinat sistemi.
 
+## Taban noktası
+
+Yapıştırılan nesneler öntanımlı olarak **sol alt köşelerinden** gösterilen yere
+konur. Bir yapının köşesini komşu parselin köşesine oturtmak gibi belli bir nokta
+gerekiyorsa kopyalarken **taban noktası** verin: `taban=<nokta>` ya da
+`tabanli=evet` (nesneleri seçtikten sonra sorulur). Yapıştırırken o nokta tam
+gösterdiğiniz yere gelir. Düzen menüsündeki **Taban Noktasıyla Kopyala** bunu yapar.
+
 ## Pano nerede
 
 `dosya=` verilmezse kullanıcı başına ortak bir pano dosyası kullanılır
@@ -41,6 +49,8 @@ yolu budur ve **aynı** yoldur (Article 1.2).
 
 ```text
 PANOYAKOPYALA [nesneler=<kimlik> …] [dosya=<yol>]
+PANOYAKOPYALA [nesneler=<kimlik> …] taban=<nokta>
+PANOYAKOPYALA tabanli=evet
 ```
 
 ## Parametreler
@@ -49,6 +59,8 @@ PANOYAKOPYALA [nesneler=<kimlik> …] [dosya=<yol>]
 |---|---|---|---|
 | `nesneler` | seçim | 0..n | Panoya alınacak nesneler; verilmezse **seçim** kullanılır |
 | `dosya` | metin | 0..1 | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+| `taban` | nokta | 0..1 | Yapıştırırken gösterilen yere gelecek **taban noktası**; verilmezse nesnelerin sol alt köşesi |
+| `tabanli` | mantıksal | 0..1 | `evet`: taban noktası nesneler seçildikten sonra sorulur |
 
 ## Örnekler
 
@@ -67,6 +79,12 @@ Bir dosyaya:
 
 ```text
 PANOYAKOPYALA nesneler=1 nesneler=2 dosya="/tmp/blok.pcad"
+```
+
+Taban noktasıyla — yapıştırırken parselin kuzeydoğu köşesi gösterilen yere gelir:
+
+```text
+PANOYAKOPYALA nesneler=1 taban=40,30
 ```
 
 ### Arayüz

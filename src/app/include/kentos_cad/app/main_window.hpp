@@ -959,6 +959,12 @@ private:
     QAction* actScale_{nullptr};
     QAction* actMirror_{nullptr};
     QAction* actArray_{nullptr};
+    QAction* actArrayPolar_{nullptr}; ///< DİZİ mod=KUTUPSAL
+    QAction* actArrayPath_{nullptr};  ///< DİZİ mod=YOL
+    QAction* actRotateRef_{nullptr};  ///< DÖNDÜR yontem=referans
+    QAction* actScaleRef_{nullptr};   ///< ÖLÇEKLE yontem=referans
+    QAction* actMirrorCopy_{nullptr}; ///< AYNALA kopya=evet
+    QAction* actCopyBase_{nullptr};   ///< PANOYAKOPYALA tabanli=evet
     QAction* actExtend_{nullptr};
     QAction* actTrimFence_{nullptr};   ///< BUDA yontem=çit
     QAction* actTrimKeep_{nullptr};    ///< BUDA tut=evet
