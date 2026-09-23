@@ -915,15 +915,17 @@ cad.vertex_move(
     object: list[int],
     vertex: int,
     at: Coord,
+    shared_point: Coord,
     point: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Köşesi taşınacak nesnenin kimliği [kalıcı nesne anahtarı] |
-| `vertex` | `int` | `kose` | Taşınacak köşenin sırası; ilk köşe 1'dir |
+| `object` | `list[int]` | `nesne` | Köşesi taşınacak nesne; birden çok nesne verilirse ortak köşeleri birlikte taşınır [kalıcı nesne anahtarı] |
+| `vertex` | `int` | `kose` | Taşınacak köşenin sırası; ilk köşe 1'dir. Birden çok nesnede birincinin köşesi; verilmezse yer ya da kaynak |
 | `at` | `Coord` | `yer` | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce] |
+| `shared_point` | `Coord` | `kaynak` | Ortak köşenin bugünkü yeri: verilen nesnelerin o noktadaki bütün köşe ve tutamakları birlikte taşınır [mm, Sağa (Y) önce] |
 | `point` | `Coord` | `nokta` | Köşenin yeni yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_move.md)

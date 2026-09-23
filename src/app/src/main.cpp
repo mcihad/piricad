@@ -1631,6 +1631,21 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("15a-tutamaklar"), &window); });
         later([&window] { window.runScriptLine(QStringLiteral("SEÇ TEMİZLE")); });
 
+        // THE CORNER TWO PARCELS SHARE, hot: both parcels follow the cursor
+        // before the click that puts it down (TODOS C-07).
+        later([scene] { scene(QStringLiteral("ALAN 0,0 10,0 10,10 0,10")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ALAN 10,0 22,0 22,10 10,10"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("KÖŞETAŞI nesne=1 2 kose=3"));
+        });
+        later([hover] { hover({12'500, 13'000}); });
+        later([&window, shot] { shot(QStringLiteral("15b-ortak-kose"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

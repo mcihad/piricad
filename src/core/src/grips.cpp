@@ -555,6 +555,15 @@ std::vector<GripPoint> entity_grips(const Document& doc, EntityId e)
 {
     const EntityTable& ents = doc.entities();
     if (e >= ents.size() || !ents.alive(e) || !doc.editable(e)) return {};
+    return grip_places(doc, e);
+}
+
+std::vector<GripPoint> grip_places(const Document& doc, EntityId e)
+{
+    const EntityTable& ents = doc.entities();
+    if (e >= ents.size() || !ents.alive(e) || !doc.kind_known(e) ||
+        (ents.flags[e] & FlagInBlock) != 0)
+        return {};
     const RingGeometry& geom = doc.geometry();
     const std::uint32_t slot = ents.slot[e];
     switch (ents.kind[e]) {
@@ -823,25 +832,51 @@ std::optional<std::size_t> nearest_edge(const Document& doc, EntityId e, Point2 
 
 std::vector<std::uint8_t> encode_grip_guide(const GripGuide& guide)
 {
-    // version, insert, index, key — little-endian as the machine writes it,
-    // because the bytes never leave the process (a prompt to the canvas).
-    std::vector<std::uint8_t> bytes(2 + sizeof(guide.index) + sizeof(guide.key));
+    // version, insert, index, key, and then — only when more grips follow —
+    // their count and each one's key and index; little-endian as the machine
+    // writes it, because the bytes never leave the process (a prompt to the
+    // canvas).
+    constexpr std::size_t fixed = 2 + sizeof(std::uint32_t) + sizeof(std::int64_t);
+    constexpr std::size_t each  = sizeof(std::int64_t) + sizeof(std::uint32_t);
+    const auto more             = static_cast<std::uint32_t>(guide.also.size());
+    std::vector<std::uint8_t> bytes(fixed + (more == 0 ? 0 : sizeof(more) + more * each));
     bytes[0] = 1;
     bytes[1] = guide.insert ? 1 : 0;
     std::memcpy(bytes.data() + 2, &guide.index, sizeof(guide.index));
     std::memcpy(bytes.data() + 2 + sizeof(guide.index), &guide.key, sizeof(guide.key));
+    if (more != 0) {
+        std::memcpy(bytes.data() + fixed, &more, sizeof(more));
+        std::size_t at = fixed + sizeof(more);
+        for (const GripGuide::More& m : guide.also) {
+            std::memcpy(bytes.data() + at, &m.key, sizeof(m.key));
+            std::memcpy(bytes.data() + at + sizeof(m.key), &m.index, sizeof(m.index));
+            at += each;
+        }
+    }
     return bytes;
 }
 
 Result<GripGuide> decode_grip_guide(std::span<const std::uint8_t> bytes)
 {
+    constexpr std::size_t fixed = 2 + sizeof(std::uint32_t) + sizeof(std::int64_t);
+    constexpr std::size_t each  = sizeof(std::int64_t) + sizeof(std::uint32_t);
     GripGuide guide;
-    if (bytes.size() != 2 + sizeof(guide.index) + sizeof(guide.key) || bytes[0] != 1 ||
-        bytes[1] > 1)
+    std::uint32_t more = 0;
+    if (bytes.size() > fixed + sizeof(more)) std::memcpy(&more, bytes.data() + fixed, sizeof(more));
+    const std::size_t want =
+        fixed + (more == 0 ? 0 : sizeof(more) + static_cast<std::size_t>(more) * each);
+    if (bytes.size() < fixed || bytes.size() != want || bytes[0] != 1 || bytes[1] > 1)
         return err(ErrorCode::InvalidArgument, "Tutamak önizlemesinin baytları tanınmıyor.");
     guide.insert = bytes[1] == 1;
     std::memcpy(&guide.index, bytes.data() + 2, sizeof(guide.index));
     std::memcpy(&guide.key, bytes.data() + 2 + sizeof(guide.index), sizeof(guide.key));
+    guide.also.resize(more);
+    std::size_t at = fixed + sizeof(more);
+    for (GripGuide::More& m : guide.also) {
+        std::memcpy(&m.key, bytes.data() + at, sizeof(m.key));
+        std::memcpy(&m.index, bytes.data() + at + sizeof(m.key), sizeof(m.index));
+        at += each;
+    }
     return guide;
 }
 

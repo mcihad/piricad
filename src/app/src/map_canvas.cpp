@@ -552,8 +552,9 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
         // from the one table `KÖŞETAŞI` edits by (core/grips.hpp). Only a
         // polyline has EDGES a new corner can go into, so only it is searched
         // for an edge hit below.
+        const bool locked = !doc.editable(e);
         if (table.kind[e] != core::kPolylineKind) {
-            const auto grips = core::entity_grips(doc, e);
+            const auto grips = core::grip_places(doc, e);
             for (std::size_t i = 0; i < grips.size(); ++i) {
                 const render::ScreenPoint p = view_.to_screen(grips[i].at);
                 const double dx             = p.x - where.x();
@@ -561,8 +562,9 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 const double d2             = dx * dx + dy * dy;
                 if (d2 < corner_best) {
                     corner_best = d2;
-                    corner_hit =
-                        Grip{e, static_cast<std::int64_t>(i + 1), false, grips[i].at, grips[i].at};
+                    corner_hit  = Grip{e,           static_cast<std::int64_t>(i + 1),
+                                      false,       grips[i].at,
+                                      grips[i].at, locked};
                 }
             }
             continue;
@@ -589,8 +591,12 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 const double d2             = dx * dx + dy * dy;
                 if (d2 < corner_best) {
                     corner_best = d2;
-                    corner_hit  = Grip{e, number, false, core::Point2{xs[v], ys[v]},
-                                      core::Point2{xs[v], ys[v]}};
+                    corner_hit  = Grip{e,
+                                      number,
+                                      false,
+                                      core::Point2{xs[v], ys[v]},
+                                      core::Point2{xs[v], ys[v]},
+                                      locked};
                 }
 
                 // The edge LEAVING this corner. On an open ring the last vertex has
@@ -618,8 +624,8 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                     // The new corner starts where the pointer pressed, projected
                     // onto the edge, so it does not jump before the drag begins.
                     const auto foot = render::ScreenPoint{p.x + t * ex, p.y + t * ey};
-                    edge_hit =
-                        Grip{e, number, true, view_.to_world(foot), core::Point2{xs[v], ys[v]}};
+                    edge_hit        = Grip{
+                        e, number, true, view_.to_world(foot), core::Point2{xs[v], ys[v]}, locked};
                 }
             }
         }
@@ -630,6 +636,40 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
     // rather than to grow a new one beside it.
     if (corner_hit.valid()) return corner_hit;
     return edge_hit;
+}
+
+std::vector<std::pair<core::EntityId, std::size_t>> MapCanvas::sharedGripsAt(core::Point2 at) const
+{
+    std::vector<std::pair<core::EntityId, std::size_t>> out;
+    const core::Document& doc = controller_.document();
+    for (const core::EntityId e : controller_.selectedSlots()) {
+        if (e >= doc.entities().size() || !doc.entities().visible(e)) continue;
+        const auto grips = core::entity_grips(doc, e);
+        for (std::size_t i = 0; i < grips.size(); ++i)
+            if (grips[i].at == at) out.emplace_back(e, i);
+    }
+    return out;
+}
+
+QString MapCanvas::gripLine(const Grip& grip) const
+{
+    const core::Document& doc = controller_.document();
+    const auto key_of         = [&doc](core::EntityId e) {
+        return QString::number(core::raw(doc.entities().key[e]));
+    };
+    if (grip.insert)
+        return QStringLiteral("KÖŞEEKLE nesne=%1 kose=%2")
+            .arg(key_of(grip.entity))
+            .arg(grip.corner);
+    // THE CLICKED OBJECT FIRST, so `kose` names its grip; every other selected
+    // object with a grip at the same place follows it.
+    QStringList keys{key_of(grip.entity)};
+    if (!grip.locked)
+        for (const auto& [e, index] : sharedGripsAt(grip.at))
+            if (e != grip.entity && !keys.contains(key_of(e))) keys << key_of(e);
+    return QStringLiteral("KÖŞETAŞI nesne=%1 kose=%2")
+        .arg(keys.join(QLatin1Char(' ')))
+        .arg(grip.corner);
 }
 
 void MapCanvas::buildGrips()
@@ -648,6 +688,17 @@ void MapCanvas::buildGrips()
         const core::Point2 to = snap_preview_valid_
                                     ? snap_preview_.point
                                     : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+        // EVERY OTHER SELECTED OBJECT SHARING THE CORNER follows it too, drawn
+        // by its own kind as it will be (`core::grip_preview`).
+        if (!drag_grip_.insert) {
+            const std::size_t shared = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+            for (const auto& [other, index] : sharedGripsAt(drag_grip_.at)) {
+                if (other == drag_grip_.entity) continue;
+                core::EmitBuffer buf;
+                if (core::grip_preview(doc, other, index, to, buf)) addEmitRuns(shared, buf);
+            }
+        }
 
         const core::EntityId e = drag_grip_.entity;
         if (e < table.size() && table.visible(e) && table.kind[e] != core::kPolylineKind) {
@@ -703,29 +754,35 @@ void MapCanvas::buildGrips()
     }
 
     // The handles themselves, drawn over the outline so a corner is grabbable
-    // wherever two objects meet.
+    // wherever two objects meet — in the lock's ink on an object that cannot be
+    // edited now, so the lock shows rather than the handles going missing.
     const std::size_t plain = nextBatch(palette_.selection.rgba(), 1.0f, false);
     const std::size_t lit   = nextBatch(tokens_->accent.rgba(), 2.0f, false);
+    const std::size_t lock  = nextBatch(tokens_->warn.rgba(), 1.0f, false);
 
     constexpr float kHalf = 3.0f;
 
-    for (core::EntityId e : selected) {
+    // A HOT GRIP LIGHTS EVERY GRIP AT ITS PLACE: the corner two selected
+    // parcels share moves in both, and both are shown to.
+    const bool hovering = hover_grip_.valid() && !hover_grip_.insert && !hover_grip_.locked;
+    for (const core::EntityId e : selected) {
         if (e >= table.size() || !table.visible(e)) continue;
+        const bool frozen = !doc.editable(e);
         if (table.kind[e] != core::kPolylineKind) {
             // The kind's grips: a square where a point is a point, a circle where
             // a handle sets a size (radius, arc bend, caption).
-            const auto grips = core::entity_grips(doc, e);
+            const auto grips = core::grip_places(doc, e);
             for (std::size_t i = 0; i < grips.size(); ++i) {
                 const render::ScreenPointF p = render::to_f(view_.to_screen(grips[i].at));
-                const bool hot               = hover_grip_.valid() && !hover_grip_.insert &&
-                                 hover_grip_.entity == e &&
-                                 hover_grip_.corner == static_cast<std::int64_t>(i) + 1;
+                const bool hot               = !frozen && hovering && grips[i].at == hover_grip_.at;
+                std::size_t ink              = hot ? lit : plain;
+                if (frozen) ink = lock;
                 const core::GripRole role = grips[i].role;
                 if (role == core::GripRole::Radius || role == core::GripRole::ArcMid ||
                     role == core::GripRole::Caption || role == core::GripRole::Rotation)
-                    addCircle(hot ? lit : plain, p.x, p.y, kHalf);
+                    addCircle(ink, p.x, p.y, kHalf);
                 else
-                    addRun(hot ? lit : plain,
+                    addRun(ink,
                            {{p.x - kHalf, p.y - kHalf},
                             {p.x + kHalf, p.y - kHalf},
                             {p.x + kHalf, p.y + kHalf},
@@ -747,10 +804,12 @@ void MapCanvas::buildGrips()
                 const render::ScreenPointF p =
                     render::to_f(view_.to_screen(core::Point2{xs[v], ys[v]}));
 
-                const bool hot = hover_grip_.valid() && !hover_grip_.insert &&
-                                 hover_grip_.entity == e && hover_grip_.corner == number;
+                const bool hot =
+                    !frozen && hovering && core::Point2{xs[v], ys[v]} == hover_grip_.at;
 
-                addRun(hot ? lit : plain,
+                std::size_t ink = hot ? lit : plain;
+                if (frozen) ink = lock;
+                addRun(ink,
                        {{p.x - kHalf, p.y - kHalf},
                         {p.x + kHalf, p.y - kHalf},
                         {p.x + kHalf, p.y + kHalf},
@@ -777,10 +836,38 @@ void MapCanvas::commitGripDrag()
     // corner asks for nothing. Qt's own drag threshold is the right number here:
     // it is what the platform considers a deliberate movement, and using anything
     // else makes this widget feel unlike every other one on the machine.
+    // A PRESS AND RELEASE WITHOUT TRAVEL MAKES THE GRIP HOT, as in every CAD:
+    // the command starts on it and asks for the new place, the object follows
+    // the pointer, and the next click puts it down — Esc leaves it where it was.
+    // It used to do nothing at all, so a user who clicked a corner and moved
+    // the mouse saw nothing happen (TODOS C-07).
     const QPointF moved = cursor_ - drag_anchor_;
-    if (moved.manhattanLength() < QApplication::startDragDistance()) return;
+    if (moved.manhattanLength() < QApplication::startDragDistance()) {
+        controller_.beginOneShot(gripLine(drag_grip_), command::Origin::Gui);
+        return;
+    }
 
     const core::Point2 world = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+    // A CORNER SELECTED OBJECTS SHARE moves in all of them, in one step: named
+    // by its place, so every one of them finds its own grip there.
+    if (!drag_grip_.insert) {
+        std::vector<std::int64_t> keys;
+        for (const auto& [e, index] : sharedGripsAt(drag_grip_.at)) {
+            const auto key =
+                static_cast<std::int64_t>(core::raw(controller_.document().entities().key[e]));
+            if (std::ranges::find(keys, key) == keys.end()) keys.push_back(key);
+        }
+        if (keys.size() > 1) {
+            command::Args args;
+            args.set("nesne", command::Value::ids(keys));
+            args.set("kaynak", command::Value::point(drag_grip_.at));
+            args.set("nokta", command::Value::point(world));
+            controller_.runInvocation(
+                command::Invocation{"core.vertex_move", std::move(args), command::Origin::Gui});
+            return;
+        }
+    }
 
     // The RAW world point, exactly as a click supplies one. Snapping happens once,
     // inside the command layer, on the road every client takes — the marker the
@@ -2547,16 +2634,41 @@ void MapCanvas::buildOverlay()
             // cross itself shows nothing rather than something it cannot do.
             if (auto decoded = core::decode_grip_guide(session->prompt().rubber_payload)) {
                 const core::Document& doc = controller_.document();
-                const core::EntityId e    = doc.slot_of(
-                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                const auto slot_of        = [&doc](std::int64_t key) {
+                    return doc.slot_of(
+                        static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                };
+                const core::EntityId e = slot_of(decoded.value().key);
                 if (e != core::kNoEntity && doc.alive(e)) {
-                    core::EmitBuffer buf;
-                    const bool drawn =
-                        decoded.value().insert
-                            ? core::insert_preview(doc, e, decoded.value().index, cursorWorld(),
-                                                   buf)
-                            : core::grip_preview(doc, e, decoded.value().index, cursorWorld(), buf);
-                    if (drawn) addEmitRuns(nextBatch(tokens_->accent.rgba(), 1.5f, false), buf);
+                    const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                    if (decoded.value().insert) {
+                        core::EmitBuffer buf;
+                        if (core::insert_preview(doc, e, decoded.value().index, cursorWorld(), buf))
+                            addEmitRuns(lit, buf);
+                    } else {
+                        // EVERY GRIP THE GUIDE NAMES, grouped by object and moved
+                        // in turn (`core::move_grips`): a shared corner shows in
+                        // every object that shares it.
+                        std::vector<std::pair<core::EntityId, std::vector<core::GripMove>>> each;
+                        const auto add = [&](core::EntityId slot, std::size_t index) {
+                            if (slot == core::kNoEntity || !doc.alive(slot)) return;
+                            for (auto& [s2, moves] : each)
+                                if (s2 == slot) {
+                                    moves.push_back(core::GripMove{index, cursorWorld()});
+                                    return;
+                                }
+                            each.push_back({slot, {core::GripMove{index, cursorWorld()}}});
+                        };
+                        add(e, decoded.value().index);
+                        for (const core::GripGuide::More& m : decoded.value().also)
+                            add(slot_of(m.key), m.index);
+                        for (const auto& [slot, moves] : each) {
+                            auto edit = core::move_grips(doc, slot, moves);
+                            core::EmitBuffer buf;
+                            if (edit && core::edit_preview(doc, slot, edit.value(), buf))
+                                addEmitRuns(lit, buf);
+                        }
+                    }
                 }
             }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
@@ -3071,6 +3183,14 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         // press is always part of the answer, and moving a corner instead would
         // edit the drawing in the middle of being asked a question.
         if (const Grip grip = picking ? Grip{} : gripAt(event->position()); grip.valid()) {
+            // A LOCKED HANDLE SAYS WHY instead of starting a drag nothing would
+            // take: the command itself refuses, with the lock's own sentence
+            // and how to open it (TODOS C-07).
+            if (grip.locked) {
+                controller_.beginOneShot(gripLine(grip), command::Origin::Gui);
+                update();
+                return;
+            }
             drag_grip_     = grip;
             dragging_grip_ = true;
             drag_anchor_   = event->position();

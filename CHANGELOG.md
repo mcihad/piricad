@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — sıcak tutamak ve ortak köşe (C-07, 2. aşama)
+
+- **Tutamağa tıklamak onu sıcak yapar**: nesne imleci izler, ikinci tıklama köşeyi
+  bırakır, Esc yerinde bırakır; seçim kalır ve araç kurulmaz. Eskiden tıklama hiçbir
+  şey yapmıyordu, yalnız sürükleme çalışıyordu.
+- **Ortak köşe**: seçili iki parselin ortak köşesi sürüklenince ya da tıklanıp
+  götürülünce ikisinde birden, tek adımda taşınır; komut satırında
+  `KÖŞETAŞI nesne=1 2 kaynak=10,10 nokta=11,12`.
+- **Kilitli nesnenin tutamakları kilit renginde**; basınca taşımaz, sebebini ve
+  kilidin nasıl açılacağını yazar.
+
 ### Düzeltildi — tutamaklar söylediklerini yapıyor (C-07, 1. aşama)
 
 - **Yayın ucunu taşımak öbür ucu kaydırıyordu**: merkez sabit kalıyor, yarıçap

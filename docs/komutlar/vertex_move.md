@@ -50,6 +50,21 @@ birleştirilir. Blok referansının döndürme tutamağı, bloğun kendi yatay e
 Bir eğrinin **arasına** köşe eklenemez: [`KÖŞEEKLE`](vertex_insert.md) yalnız çoklu
 çizgi ve alan için çalışır.
 
+### Ortak köşe
+
+Yan yana iki parselin **ortak köşesi** birlikte taşınır: birden çok nesne verilirse
+— ya da birden çok nesne seçiliyken bir köşeye tıklanırsa — hepsinin **o noktadaki**
+köşe ve tutamakları aynı yeni yere, tek adımda gider. Parseller arasında boşluk ya da
+bindirme açılmaz; bir parselin köşesini tek başına taşımak iki tapu arasında şerit
+açan harekettir.
+
+- Nesneler kimlikleriyle verildiyse her birinin o noktada bir köşesi olmalıdır;
+  olmayan adıyla söylenir ve hiçbir şey taşınmaz.
+- Seçimden gelen nesnelerden o noktada köşesi olmayanlar işin dışında kalır.
+- Seçimde kilitli katmandaki bir nesne varsa atlanır ve sayılır; kimliğiyle
+  verildiyse kilidin kendi cümlesiyle bütün taşıma reddedilir.
+- Ortak köşe tek bir geri alma adımıdır.
+
 ## Adlar
 
 | Ad | Tür |
@@ -66,6 +81,8 @@ Bir eğrinin **arasına** köşe eklenemez: [`KÖŞEEKLE`](vertex_insert.md) yal
 KÖŞETAŞI nesne=<kimlik> kose=<sıra>
 KÖŞETAŞI nesne=<kimlik> kose=<sıra> nokta=<n>
 KÖŞETAŞI yer=<n> nokta=<n>
+KÖŞETAŞI nesne=<kimlik> <kimlik> … kaynak=<n> nokta=<n>
+KÖŞETAŞI nesne=<kimlik> <kimlik> … kose=<sıra> nokta=<n>
 ```
 
 `nokta` verilmezse komut sizden ister; imleç hareket ettikçe nesne, köşesi imleçte
@@ -77,8 +94,9 @@ en yakın köşe alınır; `nesne` de verilmemişse o noktanın altındaki nesne
 
 | Parametre | Ne yapar |
 |---|---|
-| `nesne` | Köşesi taşınacak nesnenin kimliği. [`SEÇ`](select.md)'in yazdığı kimliğin aynısı |
-| `kose` | Taşınacak köşenin sırası. İlk köşe `1`'dir |
+| `nesne` | Köşesi taşınacak nesnenin kimliği. [`SEÇ`](select.md)'in yazdığı kimliğin aynısı. Birden çok kimlik ortak köşeyi taşır |
+| `kose` | Taşınacak köşenin sırası. İlk köşe `1`'dir. Birden çok nesnede birincinin köşesi, ortak köşenin yerini söyler |
+| `kaynak` | Ortak köşenin bugünkü yeri: verilen nesnelerin o noktadaki bütün köşe ve tutamakları birlikte taşınır. Günlüğe hep bu nokta yazılır |
 | `yer` | Köşeyi gösteren nokta: `kose` verilmezse en yakın köşe, `nesne` de verilmezse altındaki nesne. Günlüğe `yer` değil, bulunan `kose` yazılır |
 | `nokta` | Köşenin yeni yeri. Verilmezse arayüz sorar |
 
@@ -107,6 +125,18 @@ Noktayı yazmadan bırakırsanız komut sorar ve tıklamanızı bekler:
 KÖŞETAŞI nesne=1 kose=2
 ```
 
+Yeni bir çizimde, yan yana iki parselin ortak köşesini birlikte taşımak:
+
+```text
+ALAN 0,0 10,0 10,10 0,10
+ALAN 10,0 20,0 20,10 10,10
+KÖŞETAŞI nesne=1 2 kaynak=10,10 nokta=11,12
+```
+
+```text
+2 nesnenin ortak köşesi taşındı.
+```
+
 ### Arayüz
 
 **Araçla.** Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da
@@ -119,7 +149,9 @@ menüsündedir).
    komşu kenar imleci izler.
 3. Yeni yere tıklayın ya da koordinatı yazın.
 
-**Tutamakla.** Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. Bir dairede merkez ve
+**Tutamakla.** Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir.
+Kilitli katmandaki bir nesnenin tutamakları kilit rengiyle (turuncu) çizilir; birine
+basmak nesneyi taşımaz, sebebini ve kilidin nasıl açılacağını yazar. Bir dairede merkez ve
 dört çeyrek, bir yayda uçlar ve orta nokta, bir ölçüde tanım noktaları ve yazı
 görünür; boyut ya da açı kuran tutamaklar (yarıçap, yay ortası, yazı, bloğun döndürme
 tutamağı) kare değil **yuvarlak** çizilir. İmleç bir tutamağın üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve
@@ -131,8 +163,15 @@ işareti nerede duracağını önceden gösterir — komşu parselin köşesine 
 için [`MOD`](mode.md) ile uç nokta yakalamasını açık tutun. Dik mod ve kutupsal
 izleme, köşenin **eski yerinden** ölçer.
 
-Tutamağa basıp kıpırdatmadan bırakırsanız hiçbir şey olmaz: bu bir tıklamadır,
-taşıma değil, ve boşuna bir geri alma adımı üretmez.
+**Tıkla, götür, tıkla.** Tutamağa basıp kıpırdatmadan bırakırsanız tutamak
+**sıcak** olur: komut o tutamakta başlar, nesne imleci izler ve ikinci tıklama köşeyi
+bırakır. Koordinatı yazabilir, yakalamayı kullanabilirsiniz; Esc köşeyi yerinde
+bırakır. Düzenleme bitince seçim yerinde kalır ve araç kurulmaz — sıradaki tutamak
+bir tıklama uzaktadır.
+
+**Ortak köşe.** Yan yana iki parseli seçin ve ortak köşelerini sürükleyin ya da
+tıklayıp götürün: imlecin üzerindeki köşe iki parselde de vurgulanır, sürüklerken iki
+parsel de izler ve bırakınca ikisi birlikte, tek adımda taşınır.
 
 Arayüzün ayrıcalığı yoktur: fareyle taşıdığınız köşe ile komut satırına yazdığınız
 köşe aynı komuttur ve komut günlüğüne aynı satır olarak düşer.
@@ -170,6 +209,9 @@ saklamaya devam eder ve geri alma onu yeniden hesaplamaz, yerine koyar.
 
 Betikten çağrıldığında komut hiçbir şey sormaz: `nesne` ve `kose` (ya da ikisinin
 yerine `yer`) ile `nokta` verilmelidir. Eksik olan varsa komut bir açıklama yazar ve çizimi değiştirmez.
+Ortak köşe için birden çok `nesne` ile `kaynak` ve `nokta` verin; günlük her zaman bu
+biçimi yazar, çünkü `kaynak` bir yer, bir köşe numarası değildir ve oynatıldığında her
+nesne kendi köşesini o yerde bulur.
 
 Bir betik içinde arka arkaya birden çok `KÖŞETAŞI` çağırabilirsiniz; her biri kendi
 geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok olarak
@@ -181,7 +223,11 @@ geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok 
 |---|---|---|
 | `Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2` | Betik ne `nesne` ne `yer` verdi | Nesnenin kimliğini ya da köşeyi gösteren `yer=` noktasını yazın |
 | `Orada köşesi taşınacak bir nesne yok. ...` | Tıklanan yerde nesne yok | Bir nesnenin köşesine tıklayın |
-| `Bir seferde tek nesne düzenlenir; N nesne verildi.` | `nesne` birden çok kimlik aldı | Her nesne için ayrı bir `KÖŞETAŞI` çağırın |
+| `Nesne N'in bu noktada köşesi ya da tutamağı yok.` | Ortak köşede kimliğiyle verilen bir nesnenin o noktada köşesi yok | O nesneyi çıkarın ya da doğru `kaynak` noktasını verin |
+| `Orada seçili nesnelerin bir köşesi yok. Bir köşeye tıklayın.` | Seçim birden çok nesneyken tıklama bir köşeye değmedi | Seçili nesnelerden birinin köşesine tıklayın |
+| `Bu noktada seçili nesnelerin köşesi ya da tutamağı yok.` | `kaynak` hiçbir seçili nesnenin köşesine denk gelmiyor | Ortak köşenin tam yerini verin |
+| `Seçilen nesnelerin hiçbiri düzenlenemiyor; N nesne kilitli katmanda.` | Seçimdeki bütün nesneler kilitli katmanda | Katmanın kilidini açın |
+| `Nesne N: 'TAPU' katmanı kilitli; …` | Ortak köşede kimliğiyle verilen bir nesne kilitli katmanda | Kilidi açın ya da o nesneyi çıkarın |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar; doğru kimliği yazın |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik hiç var olmadı ya da nesne silindi | [`GERİAL`](undo.md) ile geri getirin veya doğru kimliği verin |
 | `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | Betik ne `kose` ne `yer` verdi | Taşınacak köşenin sırasını ya da `yer=` noktasını yazın |

@@ -2085,6 +2085,51 @@ TEST_CASE("PROOF: YUVARLA iki nesne arasında — arayüz, komut satırı, betik
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
 }
 
+TEST_CASE("PROOF: KÖŞETAŞI ortak köşe — arayüz, komut satırı, betik ve oynatma aynı")
+{
+    // TODOS C-07. Two parcels side by side: the GUI selects both and clicks
+    // their shared corner, then the new place — the hot grip's road.
+    const std::vector<std::string> setup{"ALAN 0,0 10,0 10,10 0,10", "ALAN 10,0 20,0 20,10 10,10"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    REQUIRE(gui.bus.execute_line("SEÇ HEPSİ", Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("KÖŞETAŞI", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{10'000, 10'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{11'000, 12'000})).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("SEÇ HEPSİ", Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("KÖŞETAŞI nesne=1 2 kaynak=10,10 nokta=11,12", Origin::CommandLine)
+                .ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.area","args":{"noktalar":[[0,0],[10000,0],[10000,10000],[0,10000]]}},
+                      {"cmd":"core.area","args":{"noktalar":[[10000,0],[20000,0],[20000,10000],[10000,10000]]}},
+                      {"cmd":"core.select","args":{"mod":"HEPSİ"}},
+                      {"cmd":"core.vertex_move","args":{"nesne":[1,2],"kaynak":[10000,10000],
+                        "nokta":[11000,12000]}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

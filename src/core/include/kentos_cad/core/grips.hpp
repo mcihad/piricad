@@ -67,8 +67,16 @@ struct GripPoint
 };
 
 /// The grips of a live entity, in the order that numbers them. Empty for an
-/// entity this build cannot edit (unknown kind, inside a block definition).
+/// entity this build cannot edit (unknown kind, inside a block definition, on
+/// a locked layer).
 std::vector<GripPoint> entity_grips(const Document& doc, EntityId e);
+
+/// Where the grips of `e` sit whether or not it can be edited NOW: an object on
+/// a locked layer still has its handles, and the canvas draws them in the
+/// lock's ink so a user sees the lock rather than handles gone missing (TODOS
+/// C-07). Empty for a kind this build does not know and inside a block
+/// definition, where there is nothing a grip could mean.
+std::vector<GripPoint> grip_places(const Document& doc, EntityId e);
 
 /// The result of moving a grip: new rings and, for a kind whose payload holds
 /// coordinates or a measurement, a new payload. What `Transaction::set_kind_geometry`
@@ -180,6 +188,18 @@ struct GripGuide
     std::int64_t key{0};    ///< the object, by persistent key
     std::uint32_t index{0}; ///< the grip; for an insert, the vertex before the new one
     bool insert{false};     ///< a new vertex rather than a moved grip
+
+    /// One more grip that follows the cursor with it: a corner two parcels
+    /// share moves in both, and each is drawn as it will be (TODOS C-07).
+    struct More
+    {
+        std::int64_t key{0};    ///< the object, by persistent key
+        std::uint32_t index{0}; ///< its grip at the same place
+
+        friend bool operator==(const More&, const More&) = default;
+    };
+
+    std::vector<More> also; ///< every other grip moved with it; none for one grip
 };
 
 /// The guide as bytes.

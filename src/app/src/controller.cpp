@@ -438,6 +438,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                     return started.error();
                 }
                 session_ = std::move(started.value());
+                oneShot_ = false;
                 ++sessionsBegun_;
                 // WHAT COMES BACK WHEN IT ENDS: the method and its settings,
                 // not the points (`command::rearm_line`). A typed
@@ -612,6 +613,16 @@ void Controller::supplyNumber(double value)
 
 void Controller::beginInteractive(const QString& line, command::Origin origin)
 {
+    startInteractive(line, origin, false);
+}
+
+void Controller::beginOneShot(const QString& line, command::Origin origin)
+{
+    startInteractive(line, origin, true);
+}
+
+void Controller::startInteractive(const QString& line, command::Origin origin, bool one_shot)
+{
     // A command whose job is still running cannot be replaced: its worker owns
     // the read. The user stops it first (Durdur), or waits.
     if (session_ && session_->working()) {
@@ -627,8 +638,10 @@ void Controller::beginInteractive(const QString& line, command::Origin origin)
         return;
     }
 
-    session_   = std::move(started.value());
-    armedLine_ = line.trimmed();
+    session_ = std::move(started.value());
+    // A one-shot arms nothing: no line for the window to light or re-arm.
+    armedLine_ = one_shot ? QString() : line.trimmed();
+    oneShot_   = one_shot;
     ++sessionsBegun_;
     settleSession();
 }

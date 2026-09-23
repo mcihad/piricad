@@ -552,14 +552,16 @@ def vertex_move(
     object: list[int] = ...,
     vertex: int = ...,
     at: Coord = ...,
+    shared_point: Coord = ...,
     point: Coord = ...,
 ) -> int:
     """Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
     Komut: core.vertex_move (KÖŞETAŞI)
-        object — Köşesi taşınacak nesnenin kimliği [kalıcı nesne anahtarı]
-        vertex — Taşınacak köşenin sırası; ilk köşe 1'dir
+        object — Köşesi taşınacak nesne; birden çok nesne verilirse ortak köşeleri birlikte taşınır [kalıcı nesne anahtarı]
+        vertex — Taşınacak köşenin sırası; ilk köşe 1'dir. Birden çok nesnede birincinin köşesi; verilmezse yer ya da kaynak
         at — Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce]
+        shared_point — Ortak köşenin bugünkü yeri: verilen nesnelerin o noktadaki bütün köşe ve tutamakları birlikte taşınır [mm, Sağa (Y) önce]
         point — Köşenin yeni yeri [mm, Sağa (Y) önce]
     """
 

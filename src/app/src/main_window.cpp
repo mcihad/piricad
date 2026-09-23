@@ -4802,6 +4802,120 @@ int MainWindow::probeRealMouse()
         runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
     }
 
+    // ---- 9. GRIPS BY HAND: HOT, SHARED AND LOCKED ------------------------------
+    //
+    // TODOS C-07. A click on a corner makes it hot — the object follows the
+    // pointer and the next click puts it down; a corner two selected parcels
+    // share is dragged in both; a locked parcel's handle says why it will not
+    // move. Each through the canvas's own press, move and release.
+    {
+        const auto screen = [this](core::Point2 world) {
+            const auto at = canvas_->view().to_screen(world);
+            return QPointF(at.x, at.y);
+        };
+        const auto press = [&onCanvas](QPointF at) {
+            onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+        };
+        const auto release = [&onCanvas](QPointF at) {
+            onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+        };
+        const auto vertex = [this](std::int64_t key, std::size_t at) {
+            const core::Document& doc = controller_->document();
+            const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+            return core::Point2{doc.geometry().ring_xs(span.first)[at],
+                                doc.geometry().ring_ys(span.first)[at]};
+        };
+        const auto lastSaid = [this] {
+            const QStringList lines = transcript_->toPlainText().split(QLatin1Char('\n'));
+            return lines.isEmpty() ? QString() : lines.back();
+        };
+        const auto fresh = [this](const QStringList& lines) {
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+            runScriptLine(QStringLiteral("SİL"));
+            for (const QString& line : lines) {
+                runScriptLine(line);
+                endCommand();
+            }
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+            QCoreApplication::processEvents();
+        };
+        // The first object drawn since the sheet was cleared — not a member of
+        // a block an earlier section defined, which SİL leaves in its definition.
+        const auto first_key = [this] {
+            const core::Document& doc = controller_->document();
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                    return static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+            return std::int64_t{0};
+        };
+
+        // HOT: click the corner, move away, click again.
+        fresh({QStringLiteral("ALAN 0,0 20,0 20,12 0,12")});
+        const std::int64_t parcel = first_key();
+        press(screen({20'000, 12'000}));
+        release(screen({20'000, 12'000}));
+        const command::Session* hot = controller_->session();
+        check(hot != nullptr && hot->waiting() && hot->prompt().param == "nokta",
+              QStringLiteral("köşeye tıklamak tutamağı sıcak yaptı: yeni yer soruluyor (son söz: "
+                             "\"%1\")")
+                  .arg(lastSaid()));
+        if (hot != nullptr && hot->waiting()) {
+            onCanvas(QEvent::MouseMove, screen({23'000, 15'000}), Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, screen({23'000, 15'000}), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen({23'000, 15'000}), Qt::LeftButton);
+            const core::Point2 now = vertex(parcel, 2);
+            check(std::abs(now.x - 23'000) <= 300 && std::abs(now.y - 15'000) <= 300,
+                  QStringLiteral("ikinci tıklama köşeyi bıraktı (%1, %2)")
+                      .arg(static_cast<double>(now.x) / 1000.0)
+                      .arg(static_cast<double>(now.y) / 1000.0));
+            check(!controller_->selectedSlots().empty(),
+                  QStringLiteral("seçim yerinde kaldı; sıradaki tutamak bir tıklama uzakta"));
+            const command::Session* after = controller_->session();
+            check(after == nullptr || !after->waiting(),
+                  QStringLiteral("tutamak düzenlemesi bir araç kurmadı"));
+        }
+
+        // SHARED: two parcels side by side, their common corner dragged once.
+        fresh({QStringLiteral("ALAN 0,0 10,0 10,10 0,10"),
+               QStringLiteral("ALAN 10,0 20,0 20,10 10,10")});
+        const std::int64_t left  = first_key();
+        const std::int64_t right = left + 1;
+        const std::size_t depth  = controller_->undoStack().undo_depth();
+        press(screen({10'000, 10'000}));
+        release(screen({12'000, 13'000}));
+        const core::Point2 a = vertex(left, 2);
+        const core::Point2 b = vertex(right, 3);
+        check(a == b && std::abs(a.x - 12'000) <= 300 && std::abs(a.y - 13'000) <= 300,
+              QStringLiteral("ortak köşe iki parselde birlikte taşındı: (%1, %2) ve (%3, %4)")
+                  .arg(static_cast<double>(a.x) / 1000.0)
+                  .arg(static_cast<double>(a.y) / 1000.0)
+                  .arg(static_cast<double>(b.x) / 1000.0)
+                  .arg(static_cast<double>(b.y) / 1000.0));
+        check(controller_->undoStack().undo_depth() == depth + 1,
+              QStringLiteral("ortak köşe tek geri alma adımı"));
+
+        // LOCKED: the handle says why, and the corner stays.
+        fresh({QStringLiteral("KATMAN ad=PROBTAPU"), QStringLiteral("ALAN 0,0 20,0 20,12 0,12"),
+               QStringLiteral("KATMAN ad=PROBTAPU kilitli=evet")});
+        const std::int64_t titled = first_key();
+        press(screen({20'000, 12'000}));
+        release(screen({24'000, 16'000}));
+        check(vertex(titled, 2) == (core::Point2{20'000, 12'000}),
+              QStringLiteral("kilitli parselin köşesi yerinde kaldı"));
+        check(lastSaid().contains(QStringLiteral("kilitli")),
+              QStringLiteral("kilitli tutamak sebebini söyledi (son söz: \"%1\")").arg(lastSaid()));
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("KATMAN ad=PROBTAPU kilitli=hayır"));
+        runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+    }
+
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
 }
@@ -6269,6 +6383,11 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated, bool dis
         if (mutated) controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
     }
     if (dismissed) return;
+
+    // A GRIP EDIT RE-ARMS NOTHING: a corner clicked and put down is one edit,
+    // not a tool picked up, and the selection it was made on stays for the
+    // next grip (TODOS C-07). Re-arming KÖŞETAŞI would clear it.
+    if (controller_->oneShot()) return;
 
     // THE SAME TOOL, NOT THE FAMILY'S FIRST ONE. A method tool carries a whole
     // line (`ÇOKGEN yontem=dis`), and resolving all of it as a command NAME finds

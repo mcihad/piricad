@@ -124,6 +124,25 @@ public:
     /// answered, everything else is asked for. `origin` is what the journal
     /// records — a typed line that then prompts is `CommandLine`.
     void beginInteractive(const QString& line, command::Origin origin = command::Origin::Gui);
+
+    /// Starts a command for ONE edit that no tool owns: a grip clicked on the
+    /// canvas (TODOS C-07). The same road as `beginInteractive` — same parser,
+    /// same bus, same journal line — but when it ends nothing is re-armed and
+    /// the selection stays, so the next grip is one click away, as in every
+    /// CAD. `oneShot()` says so to the window deciding what to re-arm.
+    void beginOneShot(const QString& line, command::Origin origin = command::Origin::Gui);
+
+    /// Whether the session running — or the one that just ended — was started
+    /// by `beginOneShot`.
+    bool oneShot() const noexcept { return oneShot_; }
+
+private:
+    /// What both starts share; `one_shot` is what tells them apart.
+    void startInteractive(const QString& line, command::Origin origin, bool one_shot);
+
+public:
+    /// Answers the running command's point prompt with a place on the drawing,
+    /// the raw world point a click names — snapping happens in the command layer.
     void supplyPoint(core::Point2 world);
 
     /// Answers the running command's prompt with a piece of TEXT.
@@ -407,6 +426,9 @@ private:
     /// empty when nothing is armed. The tool column lights the button whose line
     /// this is: five buttons send `core.arc_draw`, and only the line says which.
     QString armedLine_;
+
+    /// The running session was started by `beginOneShot`: it re-arms nothing.
+    bool oneShot_{false};
 
     /// The worker running `session_`'s job, or null. Owned through Qt parenting;
     /// waited on before the session goes.

@@ -690,8 +690,23 @@ private:
         /// rather than something close to it.
         core::Point2 base{};
 
+        /// The object cannot be edited now — its layer is locked. The handle is
+        /// drawn in the lock's ink and a press on it says why instead of
+        /// starting a drag (TODOS C-07).
+        bool locked{false};
+
         bool valid() const noexcept { return entity != core::kNoEntity; }
     };
+
+    /// Every grip of a selected, editable object lying exactly at `at`, as
+    /// (object, grip index) — the corner two selected parcels share moves in
+    /// both (TODOS C-07).
+    std::vector<std::pair<core::EntityId, std::size_t>> sharedGripsAt(core::Point2 at) const;
+
+    /// The command line a clicked grip starts: KÖŞETAŞI on the grip — every
+    /// selected object sharing it, the clicked one first — or KÖŞEEKLE on the
+    /// edge. The same line a user could type (Article 1.2).
+    QString gripLine(const Grip& grip) const;
 
     /// The grip under the pointer, so it can be lit before it is grabbed.
     Grip hover_grip_{};

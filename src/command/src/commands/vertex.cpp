@@ -307,6 +307,44 @@ core::DrawingUnit drawing_unit(Context& ctx)
         ctx.session().bus().project_settings().get("core.cizim.birim").as_enum());
 }
 
+/// Writes a grip edit into `slot`: the rings for a polyline, the rings and the
+/// payload for every other kind, and a dimension's caption re-said for its new
+/// number in the drawing's unit. False, having refused, when it is not taken.
+bool write_grip_edit(Context& ctx, core::EntityId slot, core::GripEdit& g)
+{
+    const core::KindId kind = ctx.document().entities().kind[slot];
+    // A dimension says a number; a moved definition point changes it, and the
+    // caption is re-laid for the new text in the drawing's unit.
+    std::string text;
+    core::Mm height = 0;
+    if (kind == core::kDimensionKind && g.caption_centre) {
+        if (auto def = core::decode_dimension(g.payload)) {
+            height          = ctx.document().texts().height(ctx.document().entities().slot[slot]);
+            text            = core::dimension_text(def.value(), drawing_unit(ctx));
+            const auto base = core::dimension_baseline(*g.caption_centre, g.caption_dir_x,
+                                                       g.caption_dir_y, height, text);
+            g.points[0]     = {base[0], base[1]};
+        }
+    }
+    const auto inputs     = g.inputs();
+    const core::Status st = kind == core::kPolylineKind
+                                ? ctx.transaction().set_geometry(slot, inputs)
+                                : ctx.transaction().set_kind_geometry(slot, inputs, g.payload);
+    if (!st) {
+        ctx.refuse(st.error());
+        return false;
+    }
+    if (!text.empty()) {
+        if (auto set =
+                ctx.transaction().set_text(slot, text, height, core::TextAnchor::MiddleCentre);
+            !set) {
+            ctx.refuse(set.error());
+            return false;
+        }
+    }
+    return true;
+}
+
 /// KÖŞETAŞI for every kind but the polyline: the grip table says what moving
 /// grip `corner` means, and a dimension's caption is re-said afterwards.
 Task<void> move_grip_of(Context& ctx, core::EntityId slot, const Value& object, std::int64_t corner)
@@ -330,35 +368,7 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, const Value& object, 
         ctx.refuse(edit.error());
         co_return;
     }
-    core::GripEdit& g = edit.value();
-
-    // A dimension says a number; a moved definition point changes it, and the
-    // caption is re-laid for the new text in the drawing's unit.
-    std::string text;
-    core::Mm height = 0;
-    if (ctx.document().entities().kind[slot] == core::kDimensionKind && g.caption_centre) {
-        if (auto def = core::decode_dimension(g.payload)) {
-            height          = ctx.document().texts().height(ctx.document().entities().slot[slot]);
-            text            = core::dimension_text(def.value(), drawing_unit(ctx));
-            const auto base = core::dimension_baseline(*g.caption_centre, g.caption_dir_x,
-                                                       g.caption_dir_y, height, text);
-            g.points[0]     = {base[0], base[1]};
-        }
-    }
-
-    const auto inputs = g.inputs();
-    if (auto st = ctx.transaction().set_kind_geometry(slot, inputs, g.payload); !st) {
-        ctx.refuse(st.error());
-        co_return;
-    }
-    if (!text.empty()) {
-        if (auto st =
-                ctx.transaction().set_text(slot, text, height, core::TextAnchor::MiddleCentre);
-            !st) {
-            ctx.refuse(st.error());
-            co_return;
-        }
-    }
+    if (!write_grip_edit(ctx, slot, edit.value())) co_return;
 
     ctx.record("nesne",
                Value::ids({static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)))}));
@@ -367,8 +377,196 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, const Value& object, 
     ctx.record("nokta", Value::point(*to));
 }
 
+/// The keys an argument names, whichever shape it arrived in.
+std::vector<std::int64_t> ids_of(const Value& given)
+{
+    if (given.kind() == Value::Kind::IdList) return given.as_ids();
+    if (given.kind() == Value::Kind::Int) return {given.as_int()};
+    return {};
+}
+
+/// KÖŞETAŞI AT A PLACE SEVERAL OBJECTS SHARE — the corner two parcels have in
+/// common, the end where a road line meets its curve. Every object's grips
+/// lying exactly at `kaynak` move to the new place together, in one step, so
+/// the shared corner stays shared: moving it in one parcel alone is what opens
+/// a sliver between two titles (TODOS C-07). `named` is whether the objects
+/// were given by key — then each must have the corner — or taken from the
+/// selection, where those without it are simply not part of it.
+Task<void> run_shared(Context& ctx, std::vector<std::int64_t> ids, bool named)
+{
+    const core::Document& doc = ctx.document();
+    const Bus& bus            = ctx.session().bus();
+
+    struct Held
+    {
+        std::int64_t key{0};
+        core::EntityId slot{core::kNoEntity};
+        std::vector<core::GripPoint> grips;
+    };
+
+    std::vector<Held> held;
+    std::size_t locked = 0;
+    for (const std::int64_t id : ids) {
+        const core::EntityId slot =
+            id > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)))
+                   : core::kNoEntity;
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+            co_return;
+        }
+        if (const auto st = doc.editable(slot); !st) {
+            // Named, the object's own reason stops the edit; in a selection
+            // it is passed over, counted and said.
+            if (named) {
+                ctx.refuse(core::Error{st.error().code,
+                                       "Nesne " + std::to_string(id) + ": " + st.error().message});
+                co_return;
+            }
+            ++locked;
+            continue;
+        }
+        held.push_back(Held{.key = id, .slot = slot, .grips = core::entity_grips(doc, slot)});
+    }
+    if (held.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Seçilen nesnelerin hiçbiri düzenlenemiyor; " +
+                                                         std::to_string(locked) +
+                                                         " nesne kilitli katmanda.");
+        co_return;
+    }
+
+    // WHERE: the place given, the numbered grip of the first object, or a click
+    // — which takes the grip nearest it among all the objects.
+    std::optional<core::Point2> from;
+    if (const Value k = ctx.argument("kaynak"); !k.empty()) from = k.as_point();
+    if (!from) {
+        std::int64_t corner = 0;
+        std::size_t count   = 0;
+        if (const Value numbered = ctx.argument("kose");
+            !numbered.empty() && single_id(numbered, corner, count)) {
+            if (corner < 1 || static_cast<std::size_t>(corner) > held.front().grips.size()) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Nesne " + std::to_string(held.front().key) + "'in " +
+                               std::to_string(corner) + ". köşesi ya da tutamağı yok.");
+                co_return;
+            }
+            from = held.front().grips[static_cast<std::size_t>(corner - 1)].at;
+        }
+    }
+    if (!from) {
+        auto pointed = co_await ctx.point("yer", "Taşınacak ortak köşeye tıklayın");
+        if (!pointed) co_return;
+        double best = -1.0;
+        for (const Held& h : held)
+            for (const core::GripPoint& g : h.grips) {
+                const double d = core::distance_squared(g.at, *pointed);
+                if (best < 0.0 || d < best) {
+                    best = d;
+                    from = g.at;
+                }
+            }
+        const auto reach = static_cast<double>(bus.aid_settings().pick_radius);
+        if (!from || best > reach * reach) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Orada seçili nesnelerin bir köşesi yok. Bir köşeye tıklayın.");
+            co_return;
+        }
+    }
+
+    // WHICH GRIPS: every one at that exact place, in every object.
+    struct Moving
+    {
+        const Held* of{nullptr};
+        std::vector<std::size_t> indices;
+    };
+
+    std::vector<Moving> moving;
+    for (const Held& h : held) {
+        Moving m{.of = &h, .indices = {}};
+        for (std::size_t i = 0; i < h.grips.size(); ++i)
+            if (h.grips[i].at == *from) m.indices.push_back(i);
+        if (m.indices.empty()) {
+            if (named) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Nesne " + std::to_string(h.key) +
+                               "'in bu noktada köşesi ya da tutamağı yok.");
+                co_return;
+            }
+            continue;
+        }
+        moving.push_back(std::move(m));
+    }
+    if (moving.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Bu noktada seçili nesnelerin köşesi ya da tutamağı yok.");
+        co_return;
+    }
+
+    // THE NEW PLACE, every object drawn as it will be while it is aimed.
+    core::GripGuide guide{.key    = moving.front().of->key,
+                          .index  = static_cast<std::uint32_t>(moving.front().indices.front()),
+                          .insert = false,
+                          .also   = {}};
+    for (std::size_t k = 0; k < moving.size(); ++k)
+        for (std::size_t j = k == 0 ? 1 : 0; j < moving[k].indices.size(); ++j)
+            guide.also.push_back(
+                core::GripGuide::More{.key   = moving[k].of->key,
+                                      .index = static_cast<std::uint32_t>(moving[k].indices[j])});
+    PointOptions aim;
+    aim.rubber_band    = true;
+    aim.rubber_origin  = *from;
+    aim.rubber_shape   = RubberShape::Grip;
+    aim.rubber_payload = core::encode_grip_guide(guide);
+    auto to            = co_await ctx.point(
+        "nokta", moving.size() > 1 ? "Ortak köşenin yeni yeri" : "Köşenin yeni yeri",
+        std::move(aim));
+    if (!to) co_return;
+
+    std::vector<std::int64_t> did;
+    for (const Moving& m : moving) {
+        std::vector<core::GripMove> moves;
+        moves.reserve(m.indices.size());
+        for (const std::size_t i : m.indices)
+            moves.push_back(core::GripMove{.index = i, .to = *to});
+        auto edit = core::move_grips(doc, m.of->slot, moves);
+        if (!edit) {
+            ctx.refuse(core::Error{edit.error().code, "Nesne " + std::to_string(m.of->key) + ": " +
+                                                          edit.error().message});
+            co_return;
+        }
+        if (!write_grip_edit(ctx, m.of->slot, edit.value())) co_return;
+        did.push_back(m.of->key);
+    }
+
+    ctx.record("nesne", Value::ids(did));
+    ctx.record("kaynak", Value::point(*from));
+    ctx.record("kose", Value{});
+    ctx.record("yer", Value{});
+    ctx.record("nokta", Value::point(*to));
+    if (did.size() > 1 || locked > 0)
+        ctx.echo(
+            std::to_string(did.size()) + " nesnenin ortak köşesi taşındı" +
+            (locked > 0 ? ", " + std::to_string(locked) + " nesne kilitli katmanda atlandı" : "") +
+            ".");
+}
+
 Task<void> run_move(Context& ctx)
 {
+    // MANY OBJECTS, OR A PLACE: the shared corner. Named by key, or every
+    // object of a selection of more than one.
+    std::vector<std::int64_t> ids = ids_of(ctx.argument("nesne"));
+    const bool named              = !ids.empty();
+    if (!named) {
+        const auto keys = ctx.session().bus().selection().keys();
+        if (keys.size() > 1)
+            for (const auto key : keys)
+                ids.push_back(static_cast<std::int64_t>(core::raw(key)));
+    }
+    if (ids.size() > 1 || !ctx.argument("kaynak").empty()) {
+        co_await run_shared(ctx, std::move(ids), named);
+        co_return;
+    }
+
     Value object;
     core::EntityId slot = core::kNoEntity;
     std::int64_t corner = 0;
@@ -480,16 +678,22 @@ KENTOS_COMMAND(vertex_move)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Köşesi taşınacak nesnenin kimliği"}
+                Param{"nesne", ParamKind::Selection, Arity::at_least(1),
+                      "Köşesi taşınacak nesne; birden çok nesne verilirse ortak köşeleri "
+                      "birlikte taşınır"}
                     .en("object"),
-                Param::integer("kose", Arity::exactly(1),
-                               "Taşınacak köşenin sırası; ilk köşe 1'dir")
+                Param::integer("kose", Arity::optional(),
+                               "Taşınacak köşenin sırası; ilk köşe 1'dir. Birden çok nesnede "
+                               "birincinin köşesi; verilmezse yer ya da kaynak")
                     .en("vertex"),
                 Param{"yer", ParamKind::Point, Arity::optional(),
                       "Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de "
                       "verilmezse altındaki nesne"}
                     .en("at"),
+                Param{"kaynak", ParamKind::Point, Arity::optional(),
+                      "Ortak köşenin bugünkü yeri: verilen nesnelerin o noktadaki bütün köşe "
+                      "ve tutamakları birlikte taşınır"}
+                    .en("shared_point"),
                 Param::point("nokta", "Köşenin yeni yeri").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
