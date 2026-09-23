@@ -46,7 +46,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
-| [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
+| [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
 | [`core.chamfer`](chamfer.md) | Pah | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
@@ -597,13 +597,16 @@ Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
 
 ### `core.split` — BÖL (Böl)
 
-Nesneleri çizilen bir kesme çizgisiyle böler.
+Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 0 | Kesilecek nesneler; yoksa etkin seçim |
-| `noktalar` | point_list | 0–2 | Kesme çizgisinin iki noktası; arayüzde çizilir |
+| `noktalar` | point_list | en az 0 | cizgi: kesme çizgisinin iki noktası · nokta: nesnenin üstündeki bölme noktaları |
 | `nokta` | point | isteğe bağlı | Bölme noktası (tek çizgi; eski biçim) |
+| `yontem` | text | isteğe bağlı | cizgi: çizilen kesme çizgisinden · nokta: nesnenin üstündeki noktalardan · kesisim: seçilenlerin birbirini kestiği yerlerden · mesafe: baştan verilen uzaklıktan · esit: eşit parçalara |
+| `mesafe` | number | isteğe bağlı | mesafe: baştan uzaklık (m) |
+| `sayi` | integer | isteğe bağlı | esit: kaç eşit parça |
 
 Ayrıntılı kullanım: [BÖL](split.md)
 
@@ -9013,7 +9016,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_split",
     "title": "Böl",
-    "description": "Nesneleri çizilen bir kesme çizgisiyle böler.\nKomut: BÖL (BOL, SPLIT, BL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.\nKomut: BÖL (BOL, SPLIT, BL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -9063,11 +9066,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
                   }
                 ],
                 "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
-              },
-              "maxItems": 2
+              }
             }
           ],
-          "description": "Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "cizgi: kesme çizgisinin iki noktası · nokta: nesnenin üstündeki bölme noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "nokta": {
           "anyOf": [
@@ -9101,6 +9103,27 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "cizgi",
+            "nokta",
+            "kesisim",
+            "mesafe",
+            "esit"
+          ],
+          "description": "cizgi: çizilen kesme çizgisinden · nokta: nesnenin üstündeki noktalardan · kesisim: seçilenlerin birbirini kestiği yerlerden · mesafe: baştan verilen uzaklıktan · esit: eşit parçalara (metin)"
+        },
+        "mesafe": {
+          "type": "number",
+          "description": "mesafe: baştan uzaklık (m) [m] (sayı)"
+        },
+        "sayi": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 10000,
+          "description": "esit: kaç eşit parça (tam sayı)"
         },
         "varsayimlar": {
           "type": "array",

@@ -126,7 +126,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`cad.combine`](#cadcombine) | `core.combine` | `BİRLEŞTİR` | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
-| [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri çizilen bir kesme çizgisiyle böler. |
+| [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`cad.extend`](#cadextend) | `core.extend` | `UZAT` | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
 | [`cad.chamfer`](#cadchamfer) | `core.chamfer` | `PAH` | Bir köşeyi düz bir kenarla keser (pah kırar). |
@@ -1066,7 +1066,7 @@ cad.combine(
 
 ### `cad.split`
 
-Nesneleri çizilen bir kesme çizgisiyle böler.
+Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
 
 Komut: `core.split` — `BÖL`
 
@@ -1075,14 +1075,20 @@ cad.split(
     object: list[int],
     points: Coords,
     point: Coord,
+    method: str,
+    distance: float,
+    count: int,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Kesilecek nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `points` | `Coords` | `noktalar` | Kesme çizgisinin iki noktası; arayüzde çizilir [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | cizgi: kesme çizgisinin iki noktası · nokta: nesnenin üstündeki bölme noktaları [mm, Sağa (Y) önce] |
 | `point` | `Coord` | `nokta` | Bölme noktası (tek çizgi; eski biçim) [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | cizgi: çizilen kesme çizgisinden · nokta: nesnenin üstündeki noktalardan · kesisim: seçilenlerin birbirini kestiği yerlerden · mesafe: baştan verilen uzaklıktan · esit: eşit parçalara |
+| `distance` | `float` | `mesafe` | mesafe: baştan uzaklık (m) [m] |
+| `count` | `int` | `sayi` | esit: kaç eşit parça |
 
 [Komut sayfası](../komutlar/split.md)
 

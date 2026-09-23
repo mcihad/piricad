@@ -9,9 +9,11 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/trim_curve.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <string>
@@ -242,4 +244,139 @@ TEST_CASE("CURVE: çizginin tam ucuna tıklamak uçtaki parçayı gösterir")
     REQUIRE(at_start.ok());
     CHECK(path_vertices(at_start.value().kept.front()) ==
           std::vector<Point2>{{25'000, 0}, {50'000, 0}});
+}
+
+// =============================================================================
+// Walked both ways, cut anywhere, written back as what it is (TODOS C-05)
+// =============================================================================
+
+namespace {
+
+/// A drawing holding one arc-polyline: (0,0) → (10,0) straight, then a
+/// half-circle of radius 5 m CLOCKWISE up to (10,10) — from the south round
+/// through the west, a kerb return bending into the block — then straight back
+/// to (0,10).
+struct KerbDrawing
+{
+    Document doc;
+    EntityId kerb{kNoEntity};
+
+    KerbDrawing()
+    {
+        const LayerId layer = doc.ensure_layer("0");
+        const std::vector<Point2> vertices{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
+        ArcPolyline def;
+        def.arcs.push_back(ArcPolyline::Arc{1, Point2{10'000, 5'000}, 5'000, false});
+        const RingGeometry::RingInput input{vertices, RingRole::Open, 0};
+        Op op;
+        auto made =
+            doc.add_kind(layer, kArcPolylineKind, {&input, 1}, encode_arc_polyline(def), op);
+        REQUIRE(made.ok());
+        kerb = made.value();
+    }
+};
+
+} // namespace
+
+TEST_CASE("CURVE: yaylı çoklu çizgi yol olarak yürür; saat yönündeki kenar saat yönünde")
+{
+    KerbDrawing d;
+    const auto path = path_of(d.doc, d.kerb);
+    REQUIRE(path.has_value());
+    REQUIRE_EQ(path->pieces.size(), 3u);
+    CHECK(path->pieces[0].kind == PathPiece::Kind::Segment);
+    CHECK(path->pieces[1].kind == PathPiece::Kind::Arc);
+    CHECK_EQ(path->pieces[1].sweep_udeg, -kUDegFullCircle / 2); ///< clockwise half turn
+    CHECK(path->pieces[1].from == (Point2{10'000, 0}));
+    CHECK(path->pieces[1].to == (Point2{10'000, 10'000}));
+
+    // THE WALK DRAWS WHAT THE KIND DRAWS, point for point — through the west.
+    std::vector<Mm> walked_x;
+    std::vector<Mm> walked_y;
+    path_outline(*path, walked_x, walked_y);
+    std::vector<Mm> kind_x;
+    std::vector<Mm> kind_y;
+    (void)arc_polyline_outline(d.doc.geometry(), d.doc.entities().slot[d.kerb], kind_x, kind_y);
+    CHECK(walked_x == kind_x);
+    CHECK(walked_y == kind_y);
+    bool through_west = false;
+    for (std::size_t i = 0; i < walked_x.size(); ++i)
+        through_west = through_west || (walked_x[i] == 5'000 && walked_y[i] == 5'000);
+    CHECK(through_west); ///< clockwise from the south passes the west, (5; 5)
+
+    // 10 m + π·5 m + 10 m, to the millimetre.
+    CHECK_EQ(path_length(*path), Mm{35'708});
+}
+
+TEST_CASE("CURVE: ters yürünen yol aynı uzunlukta, aynı çizimdir")
+{
+    KerbDrawing d;
+    const CurvePath path = *path_of(d.doc, d.kerb);
+    const CurvePath back = reversed(path);
+    CHECK_EQ(path_length(back), path_length(path));
+    CHECK(back.pieces.front().from == (Point2{0, 10'000}));
+    CHECK_EQ(back.pieces[1].sweep_udeg, kUDegFullCircle / 2); ///< counter-clockwise now
+    CHECK(reversed(back) == path);
+
+    std::vector<Mm> fx;
+    std::vector<Mm> fy;
+    path_outline(path, fx, fy);
+    std::vector<Mm> bx;
+    std::vector<Mm> by;
+    path_outline(back, bx, by);
+    std::ranges::reverse(bx);
+    std::ranges::reverse(by);
+    CHECK(bx == fx);
+    CHECK(by == fy);
+}
+
+TEST_CASE("CURVE: bölünen yolun parçaları kaynağın uzunluğunu verir, yay yay kalır")
+{
+    KerbDrawing d;
+    const CurvePath path = *path_of(d.doc, d.kerb);
+    const Mm total       = path_length(path);
+
+    // Three cuts: one on the first straight, two on the arc.
+    const std::vector<PathPlace> cuts{place_at_length(path, 4'000), place_at_length(path, 13'000),
+                                      place_at_length(path, 20'000)};
+    const std::vector<CurvePath> pieces = split_path(path, cuts);
+    REQUIRE_EQ(pieces.size(), 4u);
+    Mm sum = 0;
+    for (const CurvePath& p : pieces)
+        sum += path_length(p);
+    CHECK(std::abs(sum - total) <= 4); ///< a millimetre of rounding per cut at most
+    CHECK(std::abs(path_length(pieces[0]) - 4'000) <= 1);
+
+    // THE ARC IS NOT FLATTENED: the pieces cut from it are arcs of the same
+    // circle, still clockwise, and store as arcs and arc-polylines.
+    CHECK(pieces[2].pieces.size() == 1);
+    CHECK(pieces[2].pieces[0].kind == PathPiece::Kind::Arc);
+    CHECK(pieces[2].pieces[0].centre == (Point2{10'000, 5'000}));
+    CHECK(pieces[2].pieces[0].sweep_udeg < 0);
+    CHECK(path_record(pieces[2]).kind == kArcKind);
+    CHECK(path_record(pieces[1]).kind == kArcPolylineKind); ///< straight, then arc
+    CHECK(path_record(pieces[0]).kind == kPolylineKind);
+}
+
+TEST_CASE("CURVE: kayıt biçimi geri okunduğunda aynı yoldur")
+{
+    KerbDrawing d;
+    const CurvePath path = *path_of(d.doc, d.kerb);
+    const PathRecord rec = path_record(path);
+    REQUIRE(rec.kind == kArcPolylineKind);
+    const RingGeometry::RingInput input{rec.ring, rec.role, 0};
+    Op op;
+    auto again =
+        d.doc.add_kind(d.doc.entities().layer[d.kerb], rec.kind, {&input, 1}, rec.payload, op);
+    REQUIRE(again.ok());
+    CHECK(*path_of(d.doc, again.value()) == path);
+
+    // A circle cut twice is two arcs; one whole turn is a circle again.
+    const CurvePath round = circle({0, 0}, 10'000);
+    const auto halves =
+        split_path(round, {place_of(round, {0, 10'000}), place_of(round, {0, -10'000})});
+    REQUIRE_EQ(halves.size(), 2u);
+    CHECK(path_record(halves[0]).kind == kArcKind);
+    CHECK(path_record(halves[1]).kind == kArcKind);
+    CHECK(path_record(round).kind == kCircleKind);
 }

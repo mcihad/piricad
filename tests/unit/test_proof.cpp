@@ -232,6 +232,55 @@ TEST_CASE("PROOF: geri alınan köşe hiçbir yolda kalmaz — arayüz, komut sa
     CHECK(replay.doc.slot_of(static_cast<core::EntityKey>(2)) != core::kNoEntity);
 }
 
+TEST_CASE("PROOF: BÖL yayı noktalarından — arayüz, komut satırı, betik ve oynatma aynı")
+{
+    // TODOS C-05. A quarter arc split at two points on it: the pieces are arcs
+    // on every road, the same keys, the same journal line.
+    const std::string setup = "YAY merkez=0,0 baslangic=10,0 bitis=0,10";
+
+    Rig gui;
+    REQUIRE(gui.bus.execute_line(setup, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("BÖL yontem=nokta nesne=1", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{7'071, 7'071})).ok());
+        CHECK(session.supply(Value::point(core::Point2{9'239, 3'827})).ok());
+        CHECK(session.supply(Value{}).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus.execute_line(setup, Origin::CommandLine).ok());
+    REQUIRE(cli.bus
+                .execute_line("BÖL yontem=nokta nesne=1 noktalar=7.071,7.071 9.239,3.827",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.arc_draw","args":{"merkez":[0,0],"baslangic":[10000,0],
+                                                     "bitis":[0,10000]}},
+                      {"cmd":"core.split","args":{"yontem":"nokta","nesne":[1],
+                        "noktalar":[[7071,7071],[9239,3827]]}}]})")
+                    .ok());
+    }
+
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{3});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı belge, aynı günlük")
 {
     // TODOS-CAD P0-6. The polar form is the one coordinate whose meaning depends

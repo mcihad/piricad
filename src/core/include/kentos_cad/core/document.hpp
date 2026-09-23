@@ -569,6 +569,11 @@ private:
     /// which keeps its own caption, so nothing is written back on the way out.
     void carry_text(std::uint32_t from, std::uint32_t to);
 
+    /// The attribute row of slot `from` copied to slot `to`, for the same
+    /// reason as `carry_text`: cells are slot-indexed, and without the copy
+    /// every geometry edit silently dropped the entity's attributes (P11).
+    void carry_attributes(std::uint32_t from, std::uint32_t to);
+
     void mirror_layer_visibility(LayerId l, bool visible);
 
     /// Points an entity back at a slot the arena already holds. The undo half of

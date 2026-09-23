@@ -656,13 +656,19 @@ def split(
     object: list[int] = ...,
     points: Coords = ...,
     point: Coord = ...,
+    method: str = ...,
+    distance: float = ...,
+    count: int = ...,
 ) -> int:
-    """Nesneleri çizilen bir kesme çizgisiyle böler.
+    """Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
 
     Komut: core.split (BÖL)
         object — Kesilecek nesneler; yoksa etkin seçim [kalıcı nesne anahtarı]
-        points — Kesme çizgisinin iki noktası; arayüzde çizilir [mm, Sağa (Y) önce]
+        points — cizgi: kesme çizgisinin iki noktası · nokta: nesnenin üstündeki bölme noktaları [mm, Sağa (Y) önce]
         point — Bölme noktası (tek çizgi; eski biçim) [mm, Sağa (Y) önce]
+        method — cizgi: çizilen kesme çizgisinden · nokta: nesnenin üstündeki noktalardan · kesisim: seçilenlerin birbirini kestiği yerlerden · mesafe: baştan verilen uzaklıktan · esit: eşit parçalara
+        distance — mesafe: baştan uzaklık (m) [m]
+        count — esit: kaç eşit parça
     """
 
 def trim(

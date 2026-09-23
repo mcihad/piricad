@@ -539,6 +539,7 @@ Status Document::set_kind_geometry(EntityId e, std::span<const RingGeometry::Rin
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
     carry_text(was, slot.value());
+    carry_attributes(was, slot.value());
     refresh_box(e);
     ++revision_;
 
@@ -589,6 +590,7 @@ Status Document::set_kind_payload(EntityId e, std::span<const std::uint8_t> payl
 
     entities_.slot[e] = slot.value();
     carry_text(was, slot.value());
+    carry_attributes(was, slot.value());
     refresh_box(e);
     ++revision_;
 
@@ -921,6 +923,7 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
     carry_text(was, slot.value());
+    carry_attributes(was, slot.value());
 
     refresh_box(e);
     ++revision_;
@@ -930,6 +933,23 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     undo_out.entity        = e;
     undo_out.geometry_slot = was;
     return ok();
+}
+
+void Document::carry_attributes(std::uint32_t from, std::uint32_t to)
+{
+    // THE ROW MOVES WITH THE GEOMETRY. Cells are indexed by geometry slot, and a
+    // geometry edit gives the entity a new slot; carried like the caption, or a
+    // moved parcel, a dragged corner and a trimmed road lost every attribute
+    // they had (model.md P11). The old slot keeps its row, so undoing the edit
+    // brings the old values back with the old geometry.
+    if (attributes_.columns() == 0 || from >= attributes_.rows()) return;
+    attributes_.resize(geometry_.slot_count());
+    for (std::size_t c = 0; c < attributes_.columns(); ++c) {
+        const auto col = static_cast<AttrId>(c);
+        auto had       = attributes_.get(col, from);
+        if (!had || !had.value().present) continue;
+        (void)attributes_.set(col, to, had.value());
+    }
 }
 
 void Document::carry_text(std::uint32_t from, std::uint32_t to)

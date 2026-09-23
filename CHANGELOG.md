@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — geometri düzenlemesi öznitelikleri siliyordu
+
+- **Taşınan, köşesi sürüklenen, budanan ya da uzatılan bir nesne bütün özniteliklerini
+  kaybediyordu.** Öznitelik hücreleri geometri yuvasına göre tutuluyor ve her geometri
+  düzenlemesi nesneye yeni bir yuva veriyor; yazı yeni yuvaya taşınıyordu, öznitelikler
+  taşınmıyordu. Artık öznitelik satırı da taşınıyor; geri alma eski değerleri eski
+  geometriyle birlikte geri getiriyor (`C-05: öznitelik bir geometri düzenlemesinde
+  kaybolmaz` testi).
+
+### Eklendi — BÖL her eğride ve beş yoldan böler; yaylar yay kalır (C-05)
+
+- **`BÖL` artık yay, daire ve yaylı çoklu çizgide de çalışıyor**; her parça kendi
+  türünde kalıyor: yaydan yaylar, daireden yaylar, yaylı sınırdan yaylı parçalar —
+  yaylar düzleşmiyor ve parçaların uzunlukları toplamı kaynağınki.
+- **Beş yöntem:** kesme çizgisi (`cizgi`, artık eğrileri her kesişiminde böler),
+  nesnenin üstündeki noktalar (`nokta`; parçalar Enter'dan önce sırayla iki renkte
+  görünür, ⌫ son noktayı geri alır), seçilenlerin birbirini kestiği yerler
+  (`kesisim`), baştan uzaklık (`mesafe`) ve eşit parçalar (`esit`). Dördü araç
+  kutusunda Buda ailesinde ve Değiştir menüsünde kendi araçlarıyla.
+- **Her parça katmanı, stili ve bütün öznitelikleri taşıyor** (eskiden ikinci yarı
+  öznitelikleri kaybediyordu); yapılandırılmış cevap her kaynak için hangi
+  kimliklere dönüştüğünü söylüyor (`{"kaynak": 1, "sonuc": [1, 2, 3]}`).
+- Kanıt: `tests/unit/test_split_join.cpp`, `test_curve_path.cpp` (yaylı çoklu çizgi
+  yolu, ters yol, bölme uzunlukları, kayıt biçimi), `PROOF: BÖL yayı noktalarından`;
+  destek matrisi 145 → 149 desteklenen hücre; `14p-bol-noktalardan` karesi.
+
 ### Düzeltildi — kılavuz tıklamanın çizeceği nesne; yöntem araç tekrarında korunuyor (C-02)
 
 - **Hayalet, nesnenin kendisi.** Daire, yay, elips, çokgen, dikdörtgen, spline, çizgi

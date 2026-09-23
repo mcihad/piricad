@@ -1112,8 +1112,26 @@ void MainWindow::buildActions()
     actExtendCarry_ = modifyTool(
         Glyph::Extend, tr("Uzat — sınırları uzatarak"), QStringLiteral("UZAT uzanti=evet"),
         tr("UZAT uzanti=evet — uca yetişmeyen bir sınır kendi doğrultusunda uzatılmış sayılır"));
-    actSplit_    = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
-                              tr("BÖL — çizgiyi verilen noktadan ikiye böler  ·  kısaltma: BL"));
+    actSplit_ = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
+                           tr("BÖL — çizdiğiniz kesme çizgisiyle böler: çizgi, yay, daire, yaylı "
+                              "çoklu çizgi ve alan  ·  kısaltma: BL"));
+    // THE OTHER FOUR WAYS TO SAY WHERE (TODOS C-05), each its own entry: they
+    // were not there at all, and BÖL could cut nothing but a line.
+    actSplitPoint_ =
+        modifyTool(Glyph::Split, tr("Böl — noktalardan"), QStringLiteral("BÖL yontem=nokta"),
+                   tr("BÖL yontem=nokta — nesnenin üstüne tıkladığınız noktalardan böler; "
+                      "parçalar Enter'dan önce görünür, ⌫ son noktayı geri alır"));
+    actSplitCross_ =
+        modifyTool(Glyph::Split, tr("Böl — kesişimlerden"), QStringLiteral("BÖL yontem=kesisim"),
+                   tr("BÖL yontem=kesisim — seçtiğiniz nesneleri birbirini kestikleri her yerden "
+                      "böler"));
+    actSplitEqual_ =
+        modifyTool(Glyph::Split, tr("Böl — eşit parçaya"), QStringLiteral("BÖL yontem=esit"),
+                   tr("BÖL yontem=esit — seçtiğiniz nesneleri verdiğiniz sayıda eşit parçaya "
+                      "böler"));
+    actSplitDistance_ = modifyTool(
+        Glyph::Split, tr("Böl — baştan uzaklıkla"), QStringLiteral("BÖL yontem=mesafe"),
+        tr("BÖL yontem=mesafe — seçtiğiniz nesneleri başından verdiğiniz uzaklıkta böler"));
     actChamfer_  = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
                               tr("PAH — köşeye tıklayın; köşeyi düz bir kenarla keser, mesafe "
                                   "yazılır ya da gösterilir  ·  kısaltma: PH"));
@@ -1660,6 +1678,10 @@ void MainWindow::buildMenus()
     modify->addAction(actExtendFence_);
     modify->addAction(actExtendCarry_);
     modify->addAction(actSplit_);
+    modify->addAction(actSplitPoint_);
+    modify->addAction(actSplitCross_);
+    modify->addAction(actSplitEqual_);
+    modify->addAction(actSplitDistance_);
     modify->addAction(actCombine_);
     modify->addAction(actChamfer_);
     modify->addAction(actFillet_);
@@ -2116,6 +2138,7 @@ void MainWindow::buildToolBox()
     toolBox_->addTool(actErase_);
     toolBox_->addFamily({actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_, actExtend_,
                          actExtendFence_, actExtendCarry_, actBreak_, actLengthen_, actSplit_,
+                         actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_,
                          actDivide_});
     toolBox_->addFamily({actChamfer_, actFillet_, actVertexMove_, actVertexAdd_, actPolylineEdit_});
     toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});

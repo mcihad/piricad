@@ -3,6 +3,7 @@
 #include "kentos_cad/core/curve_path.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -10,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 
 namespace kentos::core {
 namespace {
@@ -52,19 +54,27 @@ Point2 piece_point(const PathPiece& p, double t) noexcept
     return on_circle(p.centre, p.radius, angle_of(p.centre, p.from) + turn);
 }
 
+/// How much an arc piece turns, whichever way it is walked.
+std::int64_t turn_of(const PathPiece& p) noexcept
+{
+    return p.sweep_udeg < 0 ? -p.sweep_udeg : p.sweep_udeg;
+}
+
 /// How far along an arc piece the direction of `q` lies, or a value outside
 /// [0, 1] when it is off the sweep (then: below 0 nearer the start, above 1
-/// nearer the end).
+/// nearer the end). Measured the way the piece is walked.
 double arc_fraction(const PathPiece& p, Point2 q) noexcept
 {
-    const std::int64_t d = wrap(angle_of(p.centre, q) - angle_of(p.centre, p.from));
-    if (p.sweep_udeg >= kTurn) return static_cast<double>(d) / static_cast<double>(kTurn);
-    if (d <= p.sweep_udeg) return static_cast<double>(d) / static_cast<double>(p.sweep_udeg);
+    const std::int64_t s     = turn_of(p);
+    const std::int64_t delta = angle_of(p.centre, q) - angle_of(p.centre, p.from);
+    const std::int64_t d     = wrap(p.sweep_udeg < 0 ? -delta : delta);
+    if (s >= kTurn) return static_cast<double>(d) / static_cast<double>(kTurn);
+    if (d <= s) return static_cast<double>(d) / static_cast<double>(s);
     // Off the sweep: which end is nearer round the circle.
-    const std::int64_t past = d - p.sweep_udeg; // beyond the end
-    const std::int64_t back = kTurn - d;        // before the start
-    return past <= back ? 1.0 + static_cast<double>(past) / static_cast<double>(p.sweep_udeg)
-                        : -static_cast<double>(back) / static_cast<double>(p.sweep_udeg);
+    const std::int64_t past = d - s;     // beyond the end
+    const std::int64_t back = kTurn - d; // before the start
+    return past <= back ? 1.0 + static_cast<double>(past) / static_cast<double>(s)
+                        : -static_cast<double>(back) / static_cast<double>(s);
 }
 
 /// The fraction of a segment piece nearest `q`, unclamped.
@@ -80,7 +90,7 @@ double segment_fraction(const PathPiece& p, Point2 q) noexcept
 /// Whether a point already known to be on the circle lies on the piece's arc.
 bool on_piece_arc(const PathPiece& p, Point2 q) noexcept
 {
-    if (p.sweep_udeg >= kTurn) return true;
+    if (turn_of(p) >= kTurn) return true;
     const double f = arc_fraction(p, q);
     return f >= -kSame && f <= 1.0 + kSame;
 }
@@ -194,9 +204,11 @@ void merge_arcs(std::vector<PathPiece>& pieces)
     for (const PathPiece& p : pieces) {
         if (!out.empty()) {
             PathPiece& last = out.back();
+            // One circle, walked the same way, not past a whole turn.
             if (last.kind == PathPiece::Kind::Arc && p.kind == PathPiece::Kind::Arc &&
                 last.centre == p.centre && last.radius == p.radius && last.to == p.from &&
-                last.sweep_udeg + p.sweep_udeg <= kTurn) {
+                (last.sweep_udeg < 0) == (p.sweep_udeg < 0) &&
+                turn_of(last) + turn_of(p) <= kTurn) {
                 last.to = p.to;
                 last.sweep_udeg += p.sweep_udeg;
                 continue;
@@ -213,6 +225,20 @@ bool comes_before(PathPlace a, PathPlace b) noexcept
 {
     if (a.piece != b.piece) return a.piece < b.piece;
     return a.t < b.t - kSame;
+}
+
+PathPiece arc_piece(Point2 centre, Mm radius, Point2 from, Point2 to, bool ccw) noexcept
+{
+    PathPiece p;
+    p.kind   = PathPiece::Kind::Arc;
+    p.centre = centre;
+    p.radius = radius;
+    p.from   = from;
+    p.to     = to;
+    // `arc_sweep_udeg` is counter-clockwise from its second argument to its
+    // third; walked clockwise the same arc is that sweep from the other end.
+    p.sweep_udeg = ccw ? arc_sweep_udeg(centre, from, to) : -arc_sweep_udeg(centre, to, from);
+    return p;
 }
 
 std::optional<CurvePath> path_of(const Document& doc, EntityId e)
@@ -272,6 +298,40 @@ std::optional<CurvePath> path_of(const Document& doc, EntityId e)
         path.closed = true;
         break;
     }
+    case kArcPolylineKind: {
+        // THE VERTICES ARE THE RING, the bends are the payload: each edge is a
+        // segment unless an arc names it, and then it is that arc — walked the
+        // way the edge runs, which is clockwise when the arc says so.
+        const RingSpan span = geom.rings_of(slot);
+        if (span.count != 1) return std::nullopt;
+        auto def = arc_polyline_of(geom, slot);
+        if (!def) return std::nullopt;
+        const auto xs = geom.ring_xs(span.first);
+        const auto ys = geom.ring_ys(span.first);
+        if (xs.size() < 2) return std::nullopt;
+        path.closed          = geom.ring_role[span.first] != RingRole::Open;
+        const std::size_t n  = xs.size();
+        const std::size_t ns = path.closed ? n : n - 1;
+        std::size_t next_arc = 0;
+        const auto& arcs     = def.value().arcs;
+        for (std::size_t i = 0; i < ns; ++i) {
+            const Point2 a{xs[i], ys[i]};
+            const Point2 b{xs[(i + 1) % n], ys[(i + 1) % n]};
+            while (next_arc < arcs.size() && arcs[next_arc].segment < i)
+                ++next_arc;
+            if (next_arc < arcs.size() && arcs[next_arc].segment == i) {
+                const ArcPolyline::Arc& arc = arcs[next_arc];
+                const PathPiece p           = arc_piece(arc.centre, arc.radius, a, b, arc.ccw);
+                if (p.sweep_udeg != 0) path.pieces.push_back(p);
+                continue;
+            }
+            PathPiece p;
+            p.from = a;
+            p.to   = b;
+            if (p.from != p.to) path.pieces.push_back(p);
+        }
+        break;
+    }
     default: return std::nullopt;
     }
     if (path.pieces.empty()) return std::nullopt;
@@ -321,7 +381,7 @@ Mm path_length(const CurvePath& path)
             metres += mm_to_metres(segment_length(p.from, p.to));
         } else {
             // r · θ, the sweep in radians from whole micro-degrees.
-            metres += mm_to_metres(p.radius) * static_cast<double>(p.sweep_udeg) *
+            metres += mm_to_metres(p.radius) * static_cast<double>(turn_of(p)) *
                       (kPi / 180.0 / 1000000.0);
         }
     }
@@ -416,7 +476,7 @@ CurvePath sub_path(const CurvePath& path, PathPlace a, PathPlace b)
         if (p.kind == PathPiece::Kind::Arc) {
             q.sweep_udeg = static_cast<std::int64_t>(
                 std::llround(static_cast<double>(p.sweep_udeg) * (t1 - t0)));
-            if (q.sweep_udeg <= 0) return;
+            if (q.sweep_udeg == 0) return;
         } else if (q.from == q.to) {
             return;
         }
@@ -444,6 +504,132 @@ CurvePath sub_path(const CurvePath& path, PathPlace a, PathPlace b)
     return out;
 }
 
+CurvePath reversed(const CurvePath& path)
+{
+    CurvePath out;
+    out.closed = path.closed;
+    out.pieces.reserve(path.pieces.size());
+    for (PathPiece q : std::views::reverse(path.pieces)) {
+        std::swap(q.from, q.to);
+        q.sweep_udeg = -q.sweep_udeg;
+        out.pieces.push_back(q);
+    }
+    return out;
+}
+
+PathPlace place_at_length(const CurvePath& path, Mm length)
+{
+    if (path.pieces.empty() || length <= 0) return path_start(path);
+    double left = mm_to_metres(length);
+    for (std::size_t i = 0; i < path.pieces.size(); ++i) {
+        const PathPiece& p  = path.pieces[i];
+        const double metres = p.kind == PathPiece::Kind::Segment
+                                  ? mm_to_metres(segment_length(p.from, p.to))
+                                  : mm_to_metres(p.radius) * static_cast<double>(turn_of(p)) *
+                                        (kPi / 180.0 / 1000000.0);
+        if (metres <= 0.0) continue;
+        if (left <= metres) return PathPlace{i, left / metres};
+        left -= metres;
+    }
+    return path_end(path);
+}
+
+std::vector<CurvePath> split_path(const CurvePath& path, std::vector<PathPlace> cuts)
+{
+    std::vector<CurvePath> out;
+    if (path.pieces.empty()) return out;
+
+    // IN ORDER, ONCE, AND NOT AT AN END OF AN OPEN PATH: a cut at its start or
+    // its end cuts off nothing.
+    std::ranges::sort(cuts, [](PathPlace a, PathPlace b) { return comes_before(a, b); });
+    std::vector<PathPlace> at;
+    for (const PathPlace& c : cuts) {
+        if (!at.empty() && !comes_before(at.back(), c)) continue;
+        if (!path.closed &&
+            (!comes_before(path_start(path), c) || !comes_before(c, path_end(path))))
+            continue;
+        at.push_back(c);
+    }
+
+    const auto keep = [&out](CurvePath piece) {
+        if (piece.pieces.empty() || path_length(piece) <= 0) return;
+        piece.closed = false;
+        out.push_back(std::move(piece));
+    };
+    if (!path.closed) {
+        PathPlace from = path_start(path);
+        for (const PathPlace& c : at) {
+            keep(sub_path(path, from, c));
+            from = c;
+        }
+        keep(sub_path(path, from, path_end(path)));
+        return out;
+    }
+    if (at.empty()) {
+        out.push_back(path);
+        return out;
+    }
+    if (at.size() == 1) {
+        // One cut opens a closed path and cuts nothing off: the whole run,
+        // from the cut round to the cut.
+        CurvePath opened     = sub_path(path, at.front(), path_end(path));
+        const CurvePath rest = sub_path(path, path_start(path), at.front());
+        opened.pieces.insert(opened.pieces.end(), rest.pieces.begin(), rest.pieces.end());
+        keep(std::move(opened));
+        return out;
+    }
+    for (std::size_t i = 0; i < at.size(); ++i)
+        keep(sub_path(path, at[i], at[(i + 1) % at.size()]));
+    return out;
+}
+
+PathRecord path_record(const CurvePath& path)
+{
+    PathRecord out;
+    const bool straight = std::ranges::all_of(
+        path.pieces, [](const PathPiece& p) { return p.kind == PathPiece::Kind::Segment; });
+    if (straight) {
+        out.kind = kPolylineKind;
+        out.ring = path_vertices(path);
+        // A closed polyline stores its closing vertex once, as its first.
+        if (path.closed && out.ring.size() >= 2 && out.ring.front() == out.ring.back())
+            out.ring.pop_back();
+        out.role = path.closed ? RingRole::Exterior : RingRole::Open;
+        return out;
+    }
+    if (path.pieces.size() == 1) {
+        const PathPiece& arc = path.pieces.front();
+        const Point2 handle{arc.centre.x + arc.radius, arc.centre.y};
+        if (turn_of(arc) >= kTurn) {
+            out.kind = kCircleKind;
+            out.ring = {arc.centre, handle};
+            return out;
+        }
+        // AN ARC IS STORED COUNTER-CLOCKWISE: walked clockwise, the same arc
+        // is kept from its end to its start.
+        out.kind = kArcKind;
+        out.ring = arc.sweep_udeg >= 0 ? std::vector<Point2>{arc.centre, handle, arc.from, arc.to}
+                                       : std::vector<Point2>{arc.centre, handle, arc.to, arc.from};
+        return out;
+    }
+
+    // SEGMENTS AND ARCS TOGETHER: an arc-polyline, each bent edge its arc.
+    out.kind = kArcPolylineKind;
+    ArcPolyline def;
+    for (std::size_t i = 0; i < path.pieces.size(); ++i) {
+        const PathPiece& p = path.pieces[i];
+        if (out.ring.empty()) out.ring.push_back(p.from);
+        const bool last_closing = path.closed && i + 1 == path.pieces.size();
+        if (!last_closing) out.ring.push_back(p.to);
+        if (p.kind == PathPiece::Kind::Arc)
+            def.arcs.push_back(ArcPolyline::Arc{static_cast<std::uint32_t>(i), p.centre, p.radius,
+                                                p.sweep_udeg >= 0});
+    }
+    out.role    = path.closed ? RingRole::Exterior : RingRole::Open;
+    out.payload = encode_arc_polyline(def);
+    return out;
+}
+
 std::vector<Point2> path_vertices(const CurvePath& path)
 {
     std::vector<Point2> out;
@@ -468,7 +654,8 @@ void path_outline(const CurvePath& path, std::vector<Mm>& xs, std::vector<Mm>& y
         }
         std::vector<Mm> ax;
         std::vector<Mm> ay;
-        if (p.sweep_udeg >= kTurn) {
+        const bool ccw = p.sweep_udeg >= 0;
+        if (turn_of(p) >= kTurn) {
             // A whole circle: two half turns, because an arc's two ends coincide
             // there and `arc_outline` would read them as nothing.
             const Point2 far =
@@ -479,8 +666,18 @@ void path_outline(const CurvePath& path, std::vector<Mm>& xs, std::vector<Mm>& y
             arc_outline(p.centre, p.radius, far, p.to, bx, by);
             ax.insert(ax.end(), bx.begin() + (bx.empty() ? 0 : 1), bx.end());
             ay.insert(ay.end(), by.begin() + (by.empty() ? 0 : 1), by.end());
-        } else {
+            if (!ccw) { // the same circle from the same start, the other way round
+                std::ranges::reverse(ax);
+                std::ranges::reverse(ay);
+            }
+        } else if (ccw) {
             arc_outline(p.centre, p.radius, p.from, p.to, ax, ay);
+        } else {
+            // WALKED CLOCKWISE: the arc drawn counter-clockwise from its end to
+            // its start, which is the same points, and then read backwards.
+            arc_outline(p.centre, p.radius, p.to, p.from, ax, ay);
+            std::ranges::reverse(ax);
+            std::ranges::reverse(ay);
         }
         for (std::size_t i = 0; i < ax.size(); ++i) {
             if (i == 0 && !xs.empty() && xs.back() == ax[0] && ys.back() == ay[0]) continue;

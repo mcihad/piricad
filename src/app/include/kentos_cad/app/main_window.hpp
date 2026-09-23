@@ -966,6 +966,10 @@ private:
     QAction* actExtendFence_{nullptr}; ///< UZAT yontem=çit
     QAction* actExtendCarry_{nullptr}; ///< UZAT uzanti=evet
     QAction* actSplit_{nullptr};
+    QAction* actSplitPoint_{nullptr};    ///< BÖL yontem=nokta
+    QAction* actSplitCross_{nullptr};    ///< BÖL yontem=kesisim
+    QAction* actSplitEqual_{nullptr};    ///< BÖL yontem=esit
+    QAction* actSplitDistance_{nullptr}; ///< BÖL yontem=mesafe
     QAction* actChamfer_{nullptr};
     QAction* actFillet_{nullptr};
     QAction* actSetLayer_{nullptr};

@@ -11,11 +11,14 @@
 // treated an arc as its chord would move a road curve by however much the chord
 // misses the arc. That is a wrong drawing, not a coarse one (§12).
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -37,188 +40,7 @@
 namespace kentos::command {
 namespace {
 
-/// One entity's single open ring, or false having said why not.
-bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot, std::vector<core::Point2>& pts)
-{
-    const core::Document& doc = ctx.document();
-
-    if (id <= 0) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
-        return false;
-    }
-    const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
-    slot           = doc.slot_of(key);
-    if (slot == core::kNoEntity || !doc.alive(slot)) {
-        ctx.refuse(core::ErrorCode::NotFound,
-                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
-        return false;
-    }
-    if (doc.entities().kind[slot] != core::kPolylineKind) {
-        ctx.refuse(core::ErrorCode::Unsupported,
-                   "Nesne " + std::to_string(id) +
-                       " bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır.");
-        return false;
-    }
-
-    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
-    if (span.count != 1 || doc.geometry().ring_role[span.first] != core::RingRole::Open) {
-        ctx.refuse(core::ErrorCode::Unsupported,
-                   "Nesne " + std::to_string(id) +
-                       " açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır.");
-        return false;
-    }
-
-    const auto xs = doc.geometry().ring_xs(span.first);
-    const auto ys = doc.geometry().ring_ys(span.first);
-    pts.clear();
-    pts.reserve(xs.size());
-    for (std::size_t v = 0; v < xs.size(); ++v)
-        pts.push_back(core::Point2{xs[v], ys[v]});
-    return true;
-}
-
-/// Replaces `slot`'s geometry with one open run.
-bool write_run(Context& ctx, core::EntityId slot, const std::vector<core::Point2>& pts)
-{
-    const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
-    auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
-    if (!st) {
-        ctx.refuse(st.error());
-        return false;
-    }
-    return true;
-}
-
-/// Where along a polyline a point falls: the segment index and the fraction along
-/// it. Returns false when the line has no segments.
-bool locate_on(const std::vector<core::Point2>& pts, core::Point2 probe, std::size_t& segment,
-               double& along, core::Point2& foot)
-{
-    if (pts.size() < 2) return false;
-
-    double best = -1.0;
-    for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
-        const core::Point2 f = core::closest_point_on_segment(pts[i], pts[i + 1], probe);
-        const double d       = core::distance_squared(f, probe);
-        if (best < 0.0 || d < best) {
-            best    = d;
-            segment = i;
-            foot    = f;
-
-            const double ex   = core::mm_to_metres(pts[i + 1].x - pts[i].x);
-            const double ey   = core::mm_to_metres(pts[i + 1].y - pts[i].y);
-            const double fx   = core::mm_to_metres(f.x - pts[i].x);
-            const double fy   = core::mm_to_metres(f.y - pts[i].y);
-            const double len2 = ex * ex + ey * ey;
-            along             = len2 > 0.0 ? (fx * ex + fy * ey) / len2 : 0.0;
-        }
-    }
-    return best >= 0.0;
-}
-
-/// Where the DRAWN segment `a`-`b` first crosses the polyline `pts`.
-///
-/// The segment, not its infinite extension — and that is the one place a line
-/// cut and a face cut differ on purpose. A face has to be spanned to be divided,
-/// so `core::half_plane` reaches well past it; a line is cut where the stroke
-/// actually crossed it, because a stroke drawn across one boundary must not also
-/// cut every other selected line that happens to lie on the same infinite line.
-///
-/// The first crossing, not the nearest: a cut enters a line once, and a user who
-/// drew through a bend means the bend they drew through. Returns false when the
-/// stroke misses, which is not an error — one cut may cross some of a selection
-/// and not the rest.
-bool segment_crossing(const std::vector<core::Point2>& pts, core::Point2 a, core::Point2 b,
-                      core::Point2& out)
-{
-    const double abx = core::mm_to_metres(b.x - a.x);
-    const double aby = core::mm_to_metres(b.y - a.y);
-
-    for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
-        const core::Point2 p = pts[i];
-        const core::Point2 q = pts[i + 1];
-
-        const double pqx = core::mm_to_metres(q.x - p.x);
-        const double pqy = core::mm_to_metres(q.y - p.y);
-
-        const double denom = abx * pqy - aby * pqx;
-        if (denom == 0.0) continue; // parallel
-
-        const double apx = core::mm_to_metres(p.x - a.x);
-        const double apy = core::mm_to_metres(p.y - a.y);
-
-        // How far along each: `t` along this segment of the polyline, `u` along
-        // the stroke the user drew. Both have to be inside their own segment for
-        // the two to have actually met.
-        const double t = (apx * aby - apy * abx) / denom;
-        if (t < 0.0 || t > 1.0) continue;
-
-        const double u = (apx * pqy - apy * pqx) / denom;
-        if (u < 0.0 || u > 1.0) continue;
-
-        out = core::Point2{p.x + core::mm_round(pqx * t), p.y + core::mm_round(pqy * t)};
-        return true;
-    }
-    return false;
-}
-
 // ------------------------------------------------------------------ BÖL ----
-
-/// Splits one open line at a point that lies on it. The legacy `nokta` form.
-bool split_run_at(Context& ctx, core::EntityId slot, const std::vector<core::Point2>& pts,
-                  core::Point2 at)
-{
-    std::size_t segment = 0;
-    double along        = 0.0;
-    core::Point2 foot{};
-    if (!locate_on(pts, at, segment, along, foot)) {
-        ctx.refuse(core::ErrorCode::InvalidArgument, "Çizgide bölünecek kenar yok.");
-        return false;
-    }
-
-    // A split AT an end produces a zero-length piece, which is not a line. Told
-    // rather than silently producing a record the geometry layer would refuse.
-    if ((segment == 0 && along <= 0.0) || (segment + 2 == pts.size() && along >= 1.0)) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
-        return false;
-    }
-
-    // The FIRST half keeps the object, so its key, layer, style and attributes
-    // stay with it (model.md R4, R28). The second half is a new object.
-    std::vector<core::Point2> head(pts.begin(),
-                                   pts.begin() + static_cast<std::ptrdiff_t>(segment) + 1);
-    head.push_back(foot);
-
-    std::vector<core::Point2> tail;
-    tail.push_back(foot);
-    tail.insert(tail.end(), pts.begin() + static_cast<std::ptrdiff_t>(segment) + 1, pts.end());
-
-    if (head.size() < 2 || tail.size() < 2) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
-        return false;
-    }
-
-    if (!write_run(ctx, slot, head)) return false;
-
-    auto made = ctx.transaction().add_polyline(ctx.document().entities().layer[slot], tail);
-    if (!made) {
-        ctx.refuse(made.error());
-        return false;
-    }
-
-    if (const core::StyleId style = ctx.document().entities().style[slot];
-        style != core::kByLayerStyle) {
-        auto st = ctx.transaction().set_entity_style(made.value(), style);
-        if (!st) {
-            ctx.refuse(st.error());
-            return false;
-        }
-    }
-    return true;
-}
 
 /// The rings of one entity as a `core::Polygon`, or false when it encloses nothing.
 bool face_of(const core::Document& doc, core::EntityId slot, core::Polygon& out)
@@ -321,24 +143,107 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
     return true;
 }
 
+/// The path of one object BÖL can cut along, or nothing with the reason said:
+/// a face is cut in two by a cut line and never opened along its boundary
+/// (a parcel is not two lines), and a kind that is not a path — an ellipse, a
+/// spline, a point, a caption — says so.
+std::optional<core::CurvePath> split_target(const Context& ctx, std::int64_t key,
+                                            core::EntityId& slot)
+{
+    const core::Document& doc = ctx.document();
+    if (key <= 0) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Geçersiz nesne kimliği: " + std::to_string(key) + ". Kimlikler 1'den başlar.");
+        return std::nullopt;
+    }
+    slot = doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+    if (slot == core::kNoEntity || !doc.alive(slot)) {
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(key));
+        return std::nullopt;
+    }
+    core::Polygon face;
+    if (doc.entities().kind[slot] == core::kPolylineKind && face_of(doc, slot, face)) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(key) +
+                       " bir alan; alan kenarı boyunca açılmaz. İkiye ayırmak için BÖL'ü kesme "
+                       "çizgisiyle kullanın (yontem=cizgi).");
+        return std::nullopt;
+    }
+    auto path = core::path_of(doc, slot);
+    if (!path) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(key) +
+                       " bu yöntemle bölünemiyor; BÖL çizgi, yay, daire ve yaylı çoklu çizgide "
+                       "çalışır.");
+        return std::nullopt;
+    }
+    return path;
+}
+
+/// Writes one object's pieces back (`replace_with_pieces`) and remembers what
+/// its key became. False, having refused, when the document refuses a piece.
+bool write_pieces(Context& ctx, core::EntityId slot, const std::vector<core::CurvePath>& pieces,
+                  std::vector<PathEdit>& edits)
+{
+    PathEdit edit;
+    if (!replace_with_pieces(ctx, slot, pieces, edit)) return false;
+    edits.push_back(std::move(edit));
+    return true;
+}
+
+/// "3 parça: 4,000 + 9,000 + 7,000 m" — the lengths a surveyor checks against
+/// the source, for one object; a count for many.
+std::string pieces_said(const std::vector<std::vector<core::CurvePath>>& cut)
+{
+    std::size_t pieces = 0;
+    for (const auto& one : cut)
+        pieces += one.size();
+    if (cut.size() != 1)
+        return std::to_string(cut.size()) + " nesne bölündü, " + std::to_string(pieces) +
+               " parça çıktı.";
+    std::string out = std::to_string(pieces) + " parça:";
+    core::Mm total  = 0;
+    for (std::size_t i = 0; i < cut.front().size(); ++i) {
+        const core::Mm len = core::path_length(cut.front()[i]);
+        total += len;
+        out += (i == 0 ? " " : " + ") + metres_text(len);
+    }
+    return out + " = " + metres_text(total) + " m.";
+}
+
 Task<void> run_split(Context& ctx)
 {
-    // THE ARGUMENT, THE SELECTION, OR ASKED FOR — in that order, like every other
-    // modify command.
+    // FIVE WAYS TO SAY WHERE, one verb (TODOS C-05): a CUT LINE drawn across
+    // (`cizgi`, the default and what an ifraz line is), POINTS on the object
+    // (`nokta`), every place the chosen objects CROSS each other (`kesisim`),
+    // a DISTANCE from the start (`mesafe`), and EQUAL parts (`esit`). Every
+    // piece keeps its kind — an arc cut is arcs — and every piece keeps the
+    // layer, style and attributes of what it was cut from.
+    std::string how = "cizgi";
+    if (const Value v = ctx.argument("yontem"); !v.empty()) how = v.as_text();
+    const auto is = [&how](const char* word) { return core::turkish_key_equals(how, word); };
+
     std::vector<std::int64_t> chosen;
-    if (!co_await want_objects(ctx, "nesne", "Kesilecek nesneleri seçin, Enter'a basın", chosen))
+    if (!co_await want_objects(ctx, "nesne",
+                               is("nokta") ? "Bölünecek nesneyi seçin, Enter'a basın"
+                                           : "Kesilecek nesneleri seçin, Enter'a basın",
+                               chosen, is("nokta") ? 1 : 0, "BÖL nesne=1 yontem=esit sayi=3"))
         co_return;
 
+    std::vector<PathEdit> edits;
+    std::vector<std::vector<core::CurvePath>> cut; ///< what each written object became
+
     // THE LEGACY POINT FORM, kept because it is in journals and in scripts: a
-    // single open line split at a point that lies on it. Nothing collects it
-    // interactively any more — a hand draws the cut.
+    // single open line split at a point that lies on it — now any open path,
+    // an arc as well as a line.
     // GUARDED ON `noktalar` BEING ABSENT, not merely on `nokta` being present. A
     // bare trailing token — `BÖL noktalar=10,-5 10,15` — binds positionally to the
     // next unfilled parameter, which is this one, and the command would then take
     // the second half of the cut line for a legacy split point and refuse the
     // face. A cut line named means a cut line meant.
     if (const Value at_arg = ctx.argument("nokta");
-        !at_arg.empty() && ctx.argument("noktalar").empty()) {
+        !at_arg.empty() && ctx.argument("noktalar").empty() && is("cizgi")) {
         if (chosen.size() != 1) {
             ctx.refuse(
                 core::ErrorCode::InvalidArgument,
@@ -347,13 +252,173 @@ Task<void> run_split(Context& ctx)
             co_return;
         }
         core::EntityId slot = core::kNoEntity;
-        std::vector<core::Point2> pts;
-        if (!open_run(ctx, chosen.front(), slot, pts)) co_return;
-        if (!split_run_at(ctx, slot, pts, at_arg.as_point())) co_return;
-
+        const auto path     = split_target(ctx, chosen.front(), slot);
+        if (!path) co_return;
+        const core::Point2 at                     = at_arg.as_point();
+        const std::vector<core::CurvePath> pieces = split_at_points(*path, {&at, 1});
+        if (path->closed || pieces.size() < 2) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
+            co_return;
+        }
+        if (!write_pieces(ctx, slot, pieces, edits)) co_return;
         ctx.record("nesne", Value::ids({chosen.front()}));
         ctx.record("nokta", at_arg);
+        ctx.report(edits_json(edits));
         ctx.echo("Çizgi ikiye bölündü.");
+        co_return;
+    }
+
+    if (is("nokta")) {
+        // POINTS ON THE OBJECT, as many as the user gives: each is a cut, the
+        // pieces it makes drawn as they will be before Enter, and a wrong one
+        // taken back with ⌫ like a corner of a line.
+        core::EntityId slot = core::kNoEntity;
+        const auto path     = split_target(ctx, chosen.front(), slot);
+        if (!path) co_return;
+        const std::int64_t key = chosen.front();
+
+        Value::Points given;
+        if (const Value v = ctx.argument("noktalar"); !v.empty()) given = v.as_points();
+        if (given.empty())
+            for (;;) {
+                auto p = co_await ctx.point(
+                    "noktalar",
+                    given.empty() ? "Bölme noktası"
+                                  : "Sonraki bölme noktası — Enter: böl, ⌫: sonuncuyu geri al",
+                    PointOptions{.rubber_band    = true,
+                                 .rubber_origin  = given.empty() ? core::Point2{} : given.back(),
+                                 .rubber_base    = false,
+                                 .rubber_shape   = RubberShape::Split,
+                                 .rubber_chain   = given,
+                                 .rubber_payload = core::encode_break_guide(core::BreakGuide{key}),
+                                 .can_retract    = !given.empty()});
+                if (p) {
+                    given.push_back(*p);
+                    continue;
+                }
+                if (ctx.took_back() && !given.empty()) {
+                    given.pop_back();
+                    continue;
+                }
+                break;
+            }
+        if (given.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "BÖL: bölme noktası verilmedi. Nesnenin üstünde bir noktaya tıklayın ya "
+                       "da BÖL yontem=nokta noktalar=<nokta> yazın.");
+            co_return;
+        }
+        const std::vector<core::CurvePath> pieces = split_at_points(*path, given);
+        if (pieces.size() < 2) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       path->closed ? "Kapalı bir şekil tek noktada bölünmez; en az iki bölme "
+                                      "noktası verin."
+                                    : "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
+            co_return;
+        }
+        if (!write_pieces(ctx, slot, pieces, edits)) co_return;
+        cut.push_back(pieces);
+        ctx.record("nesne", Value::ids({key}));
+        ctx.record("yontem", Value::text(how));
+        ctx.record("noktalar", Value::points(given));
+        ctx.report(edits_json(edits));
+        ctx.echo(pieces_said(cut));
+        co_return;
+    }
+
+    if (is("kesisim") || is("mesafe") || is("esit")) {
+        // THE ANSWER FIRST, THEN THE CUTS: a distance or a count is asked once
+        // for every chosen object.
+        double distance    = 0.0;
+        std::int64_t parts = 0;
+        if (is("mesafe")) {
+            auto d = co_await ctx.number("mesafe", "Baştan uzaklık (m)");
+            if (!d) co_return;
+            distance = *d;
+        } else if (is("esit")) {
+            auto n = co_await ctx.integer("sayi", "Kaç eşit parça (2–10000)");
+            if (!n) co_return;
+            parts = *n;
+            if (parts < 2 || parts > 10000) {
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Parça sayısı 2 ile 10000 arasında olmalı; " + std::to_string(parts) +
+                               " verildi.");
+                co_return;
+            }
+        }
+
+        // EVERY PATH READ BEFORE ANY IS WRITTEN: the crossings of a network are
+        // the crossings of the drawing as it was, not of its half-cut pieces.
+        std::vector<core::EntityId> slots(chosen.size(), core::kNoEntity);
+        std::vector<core::CurvePath> paths;
+        paths.reserve(chosen.size());
+        for (std::size_t i = 0; i < chosen.size(); ++i) {
+            auto path = split_target(ctx, chosen[i], slots[i]);
+            if (!path) co_return;
+            paths.push_back(std::move(*path));
+        }
+
+        std::size_t untouched = 0;
+        for (std::size_t i = 0; i < paths.size(); ++i) {
+            const core::CurvePath& path = paths[i];
+            const core::Mm length       = core::path_length(path);
+            std::vector<core::PathPlace> places;
+            if (is("kesisim")) {
+                for (std::size_t j = 0; j < paths.size(); ++j) {
+                    if (j == i) continue;
+                    for (const core::PathCrossing& c : core::path_crossings(path, paths[j]))
+                        places.push_back(c.at);
+                }
+            } else if (is("mesafe")) {
+                const core::Mm at = core::mm_from_metres(distance);
+                if (path.closed) {
+                    ctx.refuse(core::ErrorCode::InvalidArgument,
+                               "Nesne " + std::to_string(chosen[i]) +
+                                   " kapalı; başı olmayan bir şekil baştan uzaklıkla bölünmez. "
+                                   "yontem=esit ya da yontem=nokta kullanın.");
+                    co_return;
+                }
+                if (at <= 0 || at >= length) {
+                    ctx.refuse(core::ErrorCode::InvalidArgument,
+                               "Nesne " + std::to_string(chosen[i]) + " " + metres_text(length) +
+                                   " m uzunluğunda; bölme uzaklığı 0 ile " + metres_text(length) +
+                                   " m arasında olmalı.");
+                    co_return;
+                }
+                places.push_back(core::place_at_length(path, at));
+            } else {
+                const auto n = static_cast<std::size_t>(parts);
+                for (std::size_t k = path.closed ? 0 : 1; k < n; ++k)
+                    places.push_back(core::place_at_length(
+                        path,
+                        static_cast<core::Mm>(static_cast<double>(length) * static_cast<double>(k) /
+                                              static_cast<double>(n))));
+            }
+            const std::vector<core::CurvePath> pieces = core::split_path(path, places);
+            if (pieces.size() < 2) {
+                ++untouched;
+                continue;
+            }
+            if (!write_pieces(ctx, slots[i], pieces, edits)) co_return;
+            cut.push_back(pieces);
+        }
+        if (cut.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       is("kesisim") ? "Seçilen nesneler birbirini hiçbir yerde kesmiyor."
+                                     : "Seçilen nesnelerin hiçbiri bölünemedi.");
+            co_return;
+        }
+        ctx.record("nesne", Value::ids(chosen));
+        ctx.record("yontem", Value::text(how));
+        if (is("mesafe")) ctx.record("mesafe", Value::number(distance));
+        if (is("esit")) ctx.record("sayi", Value::integer(parts));
+        ctx.report(edits_json(edits));
+        std::string said = pieces_said(cut);
+        if (untouched != 0)
+            said += "\n  " + std::to_string(untouched) +
+                    (is("kesisim") ? " nesneyi başka bir nesne kesmiyor." : " nesne bölünmedi.");
+        ctx.echo(said);
         co_return;
     }
 
@@ -377,6 +442,8 @@ Task<void> run_split(Context& ctx)
     }
 
     const core::Document& doc = ctx.document();
+    core::CurvePath stroke;
+    stroke.pieces.push_back(core::PathPiece{.from = *first, .to = *second});
 
     std::size_t cut_lines = 0;
     std::size_t cut_faces = 0;
@@ -392,24 +459,34 @@ Task<void> run_split(Context& ctx)
         }
 
         core::Polygon face;
-        if (face_of(doc, slot, face)) {
+        if (doc.entities().kind[slot] == core::kPolylineKind && face_of(doc, slot, face)) {
             const std::size_t before = cut_faces;
             if (!cut_face(ctx, slot, face, *first, *second, cut_faces)) co_return;
             if (cut_faces == before) ++untouched;
             continue;
         }
 
-        // An open line: split where the cut crosses it.
-        core::EntityId run_slot = core::kNoEntity;
-        std::vector<core::Point2> pts;
-        if (!open_run(ctx, raw, run_slot, pts)) co_return;
-
-        core::Point2 crossing{};
-        if (!segment_crossing(pts, *first, *second, crossing)) {
+        // A LINE, AN ARC, A CIRCLE OR A BENT POLYLINE: cut wherever the stroke
+        // crosses it — every crossing, not the first — and each piece keeps its
+        // kind.
+        const auto path = core::path_of(doc, slot);
+        if (!path) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Nesne " + std::to_string(raw) +
+                           " bir eğri ya da nokta; BÖL çizgi, yay, daire, yaylı çoklu çizgi ve "
+                           "alanlarla çalışır.");
+            co_return;
+        }
+        std::vector<core::PathPlace> places;
+        for (const core::PathCrossing& c : core::path_crossings(*path, stroke))
+            places.push_back(c.at);
+        const std::vector<core::CurvePath> pieces = core::split_path(*path, places);
+        if (pieces.size() < 2) {
             ++untouched;
             continue;
         }
-        if (!split_run_at(ctx, run_slot, pts, crossing)) co_return;
+        if (!write_pieces(ctx, slot, pieces, edits)) co_return;
+        cut.push_back(pieces);
         ++cut_lines;
     }
 
@@ -421,6 +498,7 @@ Task<void> run_split(Context& ctx)
 
     ctx.record("nesne", Value::ids(chosen));
     ctx.record("noktalar", Value::points({*first, *second}));
+    if (!edits.empty()) ctx.report(edits_json(edits));
 
     std::string said;
     if (cut_lines != 0) said += std::to_string(cut_lines) + " çizgi bölündü.";
@@ -435,70 +513,6 @@ Task<void> run_split(Context& ctx)
 
 // ----------------------------------------------------------- BUDA / UZAT ----
 
-/// Writes `path` into `slot` in place, so its key, layer, style and attributes
-/// stay with it (model.md R4, R28): a polyline takes the path's vertices, an arc
-/// its one arc. False, having refused, when the kind cannot hold the path.
-bool write_path(Context& ctx, core::EntityId slot, const core::CurvePath& path)
-{
-    const core::KindId kind = ctx.document().entities().kind[slot];
-    if (kind == core::kPolylineKind) return write_run(ctx, slot, core::path_vertices(path));
-    if (kind == core::kArcKind && path.pieces.size() == 1 &&
-        path.pieces[0].kind == core::PathPiece::Kind::Arc) {
-        const core::PathPiece& arc = path.pieces[0];
-        const std::vector<core::Point2> ring{
-            arc.centre, core::Point2{arc.centre.x + arc.radius, arc.centre.y}, arc.from, arc.to};
-        const core::RingGeometry::RingInput input{ring, core::RingRole::Open, 0};
-        if (auto st = ctx.transaction().set_kind_geometry(slot, {&input, 1}, {}); !st) {
-            ctx.refuse(st.error());
-            return false;
-        }
-        return true;
-    }
-    ctx.refuse(core::ErrorCode::Unsupported, "Kalan parça bu nesnenin türünde yazılamıyor.");
-    return false;
-}
-
-/// A new object holding `path`, drawn like `like`: its layer, its style and
-/// every attribute cell — a trimmed road is still that road on both sides of
-/// the gap (the rule BÖL keeps for both halves of a face).
-bool add_like(Context& ctx, core::EntityId like, const core::CurvePath& path)
-{
-    const core::Document& doc = ctx.document();
-    const core::LayerId layer = doc.entities().layer[like];
-    const bool one_arc =
-        path.pieces.size() == 1 && path.pieces[0].kind == core::PathPiece::Kind::Arc;
-    const bool all_straight = std::ranges::all_of(path.pieces, [](const core::PathPiece& p) {
-        return p.kind == core::PathPiece::Kind::Segment;
-    });
-    if (!one_arc && !all_straight) {
-        ctx.refuse(core::ErrorCode::Unsupported, "Kalan parça bir çizgi ya da tek bir yay değil.");
-        return false;
-    }
-    const core::PathPiece& arc = path.pieces[0];
-    auto made = one_arc ? ctx.transaction().add_arc(layer, arc.centre, arc.radius, arc.from, arc.to)
-                        : ctx.transaction().add_polyline(layer, core::path_vertices(path));
-    if (!made) {
-        ctx.refuse(made.error());
-        return false;
-    }
-    if (const core::StyleId style = doc.entities().style[like]; style != core::kByLayerStyle)
-        if (const auto st = ctx.transaction().set_entity_style(made.value(), style); !st) {
-            ctx.refuse(st.error());
-            return false;
-        }
-    const core::AttrTable& table = doc.attributes();
-    for (std::size_t c = 0; c < table.columns(); ++c) {
-        const auto col = static_cast<core::AttrId>(c);
-        auto had       = doc.attribute(col, like);
-        if (!had || !had.value().present) continue;
-        if (const auto st = ctx.transaction().set_attribute(col, made.value(), had.value()); !st) {
-            ctx.refuse(st.error());
-            return false;
-        }
-    }
-    return true;
-}
-
 /// The ids a selection argument holds, whichever shape it arrived in.
 std::vector<std::int64_t> ids_of(const Value& v)
 {
@@ -508,24 +522,12 @@ std::vector<std::int64_t> ids_of(const Value& v)
 }
 
 /// Writes a trim into the document: what stays of `slot` in place, every
-/// further piece as a new object drawn like it. A circle's pieces are arcs — a
-/// different kind — so they are all new, and the circle goes.
+/// further piece as a new object drawn like it, and a circle — whose pieces are
+/// arcs, a different kind — replaced by them (`replace_with_pieces`).
 bool apply_trim(Context& ctx, core::EntityId slot, const core::CurveTrim& cut)
 {
-    const std::vector<core::CurvePath>& kept = cut.kept;
-    if (ctx.document().entities().kind[slot] == core::kCircleKind) {
-        for (const core::CurvePath& piece : kept)
-            if (!add_like(ctx, slot, piece)) return false;
-        if (const auto st = ctx.transaction().erase_entity(slot); !st) {
-            ctx.refuse(st.error());
-            return false;
-        }
-        return true;
-    }
-    if (!write_path(ctx, slot, kept.front())) return false;
-    for (std::size_t i = 1; i < kept.size(); ++i)
-        if (!add_like(ctx, slot, kept[i])) return false;
-    return true;
+    PathEdit edit;
+    return replace_with_pieces(ctx, slot, cut.kept, edit);
 }
 
 /// A flag argument, false when absent.
@@ -804,8 +806,9 @@ KENTOS_COMMAND(split)
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Kesilecek nesneler; yoksa etkin seçim"}
                     .en("object"),
-                Param::points("noktalar", Arity{0, 2},
-                              "Kesme çizgisinin iki noktası; arayüzde çizilir")
+                Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
+                              "cizgi: kesme çizgisinin iki noktası · nokta: nesnenin üstündeki "
+                              "bölme noktaları")
                     .en("points"),
                 // THE LEGACY FORM, kept because it is written into journals and
                 // into scripts already: one open line split at a point on it.
@@ -813,10 +816,22 @@ KENTOS_COMMAND(split)
                 Param{"nokta", ParamKind::Point, Arity::optional(),
                       "Bölme noktası (tek çizgi; eski biçim)"}
                     .en("point"),
+                Param::choice("yontem", Arity::optional(),
+                              {"cizgi", "nokta", "kesisim", "mesafe", "esit"},
+                              "cizgi: çizilen kesme çizgisinden · nokta: nesnenin üstündeki "
+                              "noktalardan · kesisim: seçilenlerin birbirini kestiği yerlerden · "
+                              "mesafe: baştan verilen uzaklıktan · esit: eşit parçalara")
+                    .en("method"),
+                Param::number("mesafe", Arity::optional(), "mesafe: baştan uzaklık (m)")
+                    .measured_in("m")
+                    .en("distance"),
+                Param::integer_range("sayi", Arity::optional(), 2, 10000, "esit: kaç eşit parça")
+                    .en("count"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Nesneleri çizilen bir kesme çizgisiyle böler.",
+        .summary = "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, "
+                   "baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.",
         .run     = &run_split,
     };
 }

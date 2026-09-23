@@ -254,16 +254,18 @@ Result<CurveExtension> extend_curve(const CurvePath& target, std::span<const Cur
     }
 
     // AN ARC'S END ROUND ITS CIRCLE, to the nearest edge past it — never so far
-    // that the arc would come round onto itself.
-    const std::int64_t room = kTurn - tip.sweep_udeg;
+    // that the arc would come round onto itself — and ON the way it is walked:
+    // an arc-polyline edge that bends clockwise carries its end clockwise.
+    const bool ccw          = tip.sweep_udeg >= 0;
+    const std::int64_t room = kTurn - (ccw ? tip.sweep_udeg : -tip.sweep_udeg);
     std::optional<std::int64_t> best;
     Point2 reached{};
     for (const CurvePath& edge : edges)
         for (const PathPiece& piece : edge.pieces)
             for (const Point2 q : circle_meets(tip, piece)) {
-                const std::int64_t d =
-                    at_start ? wrap(angle_of(tip.centre, tip.from) - angle_of(tip.centre, q))
-                             : wrap(angle_of(tip.centre, q) - angle_of(tip.centre, tip.to));
+                const std::int64_t back = angle_of(tip.centre, tip.from) - angle_of(tip.centre, q);
+                const std::int64_t on   = angle_of(tip.centre, q) - angle_of(tip.centre, tip.to);
+                const std::int64_t d = at_start ? wrap(ccw ? back : -back) : wrap(ccw ? on : -on);
                 if (d <= 0 || d >= room) continue;
                 if (!best || d < *best) {
                     best    = d;
@@ -275,7 +277,7 @@ Result<CurveExtension> extend_curve(const CurvePath& target, std::span<const Cur
                    "Bu yayın ucu, sınırlara çemberi boyunca uzatılarak ulaşamıyor: kesişme yok.");
 
     PathPiece reach  = tip;
-    reach.sweep_udeg = *best;
+    reach.sweep_udeg = ccw ? *best : -*best;
     if (at_start) {
         reach.from  = reached;
         reach.to    = tip.from;
@@ -285,7 +287,7 @@ Result<CurveExtension> extend_curve(const CurvePath& target, std::span<const Cur
         reach.to   = reached;
         edited.to  = reached;
     }
-    edited.sweep_udeg += *best;
+    edited.sweep_udeg += ccw ? *best : -*best;
     out.added.pieces.push_back(reach);
     return out;
 }

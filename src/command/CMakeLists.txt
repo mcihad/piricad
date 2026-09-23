@@ -5,6 +5,7 @@
 add_library(kentos_command STATIC
     src/aids.cpp
     src/ghost.cpp
+    src/path_edit.cpp
     src/bus.cpp
     src/context.cpp
     src/input.cpp

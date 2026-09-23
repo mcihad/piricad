@@ -97,6 +97,11 @@ const AidSettings& InputAids::settings(const core::Settings& app,
 PendingRun pending_run(const Prompt& p) noexcept
 {
     if (!p.can_retract) return {};
+    // A RUN ONLY WHERE ONE IS DRAWN: BÖL's split points are marks on an object,
+    // not corners of a line between them.
+    if (p.rubber_shape != RubberShape::Line && p.rubber_shape != RubberShape::Ring &&
+        p.rubber_shape != RubberShape::Curve)
+        return {};
     return PendingRun{.corners = p.rubber_chain, .edges = p.rubber_shape != RubberShape::Curve};
 }
 

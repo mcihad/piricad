@@ -1542,6 +1542,18 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14n-daire-ttr-yon"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // BÖL yontem=nokta on an arc (TODOS C-05): one cut given, the cursor at
+        // the second — the three arcs it will make drawn in turn, marked at the
+        // cuts, with the count and the distance from the start.
+        later([scene] { scene(QStringLiteral("YAY merkez=0,0 baslangic=10,0 bitis=-10,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("BÖL yontem=nokta nesne=1"));
+            window.runScriptLine(QStringLiteral("8,6"));
+        });
+        later([hover] { hover({-6'000, 8'000}); });
+        later([&window, shot] { shot(QStringLiteral("14p-bol-noktalardan"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

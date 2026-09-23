@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — core: a curve walked piece by piece, and where two curves meet.
 //
-// ONE WAY TO WALK A LINE, AN ARC AND A CIRCLE (TODOS C-01). Trimming, extending
+// ONE WAY TO WALK A LINE, AN ARC, A CIRCLE AND A POLYLINE WHOSE EDGES BEND
+// (TODOS C-01, C-05). Trimming, extending
 // and breaking all ask the same three questions — where does this curve cross
 // that one, how far along it is a point, what lies between two places on it —
 // and the answer must not depend on the kind asking: an arc trimmed to a line is
@@ -39,20 +40,23 @@
 
 namespace kentos::core {
 
-/// One piece of a path: a straight segment, or an arc of a circle swept
-/// counter-clockwise from `from` to `to`.
+/// One piece of a path: a straight segment, or an arc of a circle swept from
+/// `from` to `to` — counter-clockwise when `sweep_udeg` is positive, clockwise
+/// when it is negative. A path is WALKED, and an arc-polyline edge that bends
+/// the other way, or a chain turned round to join another, walks its arcs
+/// clockwise; a sign keeps the direction and every arc still its definition.
 struct PathPiece
 {
     /// Which of the two a piece is.
     enum class Kind : std::uint8_t { Segment, Arc };
 
-    Kind kind{Kind::Segment}; ///< which it is
-    Point2 from{};            ///< where the piece starts along the path
-    Point2 to{};              ///< where it ends
-    Point2 centre{};          ///< Arc: the centre
-    Mm radius{0};             ///< Arc: the radius
-    std::int64_t sweep_udeg{
-        0}; ///< Arc: the sweep from `from`, whole micro-degrees; 360° is a circle
+    Kind kind{Kind::Segment};   ///< which it is
+    Point2 from{};              ///< where the piece starts along the path
+    Point2 to{};                ///< where it ends
+    Point2 centre{};            ///< Arc: the centre
+    Mm radius{0};               ///< Arc: the radius
+    std::int64_t sweep_udeg{0}; ///< Arc: the signed sweep from `from`, whole micro-degrees;
+                                ///< ±360° is a circle
 
     friend bool operator==(const PathPiece&, const PathPiece&) = default;
 };
@@ -77,10 +81,19 @@ struct PathPlace
 /// Whether `a` comes before `b` along the path.
 bool comes_before(PathPlace a, PathPlace b) noexcept;
 
+/// The arc piece from `from` to `to` round `centre`, walked counter-clockwise
+/// or clockwise — the one place a direction becomes a signed sweep.
+PathPiece arc_piece(Point2 centre, Mm radius, Point2 from, Point2 to, bool ccw) noexcept;
+
 /// The path `e` is drawn along: a polyline's single ring, open or closed; an
-/// arc; a circle. Nothing for every other kind, for a polyline of several rings
-/// (a face with holes), and for a caption's baseline.
+/// arc; a circle; an arc-polyline, its bent edges as arcs. Nothing for every
+/// other kind, for a polyline of several rings (a face with holes), and for a
+/// caption's baseline.
 std::optional<CurvePath> path_of(const Document& doc, EntityId e);
+
+/// The same path walked the other way: the pieces in reverse order, each from
+/// its end to its start, every arc's sweep negated.
+CurvePath reversed(const CurvePath& path);
 
 /// The point at `at`, rounded to the millimetre; a piece's own ends exactly.
 Point2 point_at(const CurvePath& path, PathPlace at);
@@ -94,6 +107,31 @@ PathPlace path_end(const CurvePath& path) noexcept;
 
 /// The length of `path`, in millimetres.
 Mm path_length(const CurvePath& path);
+
+/// The place `length` millimetres along `path` from its start, clamped to the
+/// path — what a split at a distance and a split into equal parts walk to.
+PathPlace place_at_length(const CurvePath& path, Mm length);
+
+/// `path` cut at `cuts`, every piece kept, in order: an open path from its
+/// start to the first cut and on to its end; a closed one from each cut to the
+/// next, round the seam. Cuts are sorted and a repeated or an end cut is
+/// dropped; a piece that shrinks to nothing is not a piece. A closed path
+/// needs two cuts to come apart — with one it comes back whole, opened there.
+std::vector<CurvePath> split_path(const CurvePath& path, std::vector<PathPlace> cuts);
+
+/// How a path is stored: the kind that holds it, its one ring and the kind's
+/// payload. Straight pieces only are a polyline; one arc is an arc and one
+/// whole turn a circle; anything else an arc-polyline, whose arcs stay arcs.
+struct PathRecord
+{
+    KindId kind{kPolylineKind};        ///< the kind that holds the path
+    std::vector<Point2> ring;          ///< that kind's one ring
+    RingRole role{RingRole::Open};     ///< open, or exterior for a closed polyline
+    std::vector<std::uint8_t> payload; ///< the kind's payload; empty for a polyline
+};
+
+/// The record `path` is written as. False-free: every path has one.
+PathRecord path_record(const CurvePath& path);
 
 /// One place where a path meets another.
 struct PathCrossing

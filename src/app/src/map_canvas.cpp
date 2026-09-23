@@ -5,6 +5,7 @@
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/command/aids.hpp"
 #include "kentos_cad/command/ghost.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/area_edit.hpp"
@@ -1623,12 +1624,9 @@ void MapCanvas::addImpliedEdges(const core::Document& doc, core::EntityId target
         core::CurvePath run_on;
         core::PathPiece piece;
         if (end.kind == core::PathPiece::Kind::Arc) {
-            piece.kind       = core::PathPiece::Kind::Arc;
-            piece.centre     = end.centre;
-            piece.radius     = end.radius;
-            piece.from       = at_start ? c.point : end.to;
-            piece.to         = at_start ? end.from : c.point;
-            piece.sweep_udeg = core::arc_sweep_udeg(piece.centre, piece.from, piece.to);
+            // Round its circle the way the edge is walked (`core::arc_piece`).
+            piece = core::arc_piece(end.centre, end.radius, at_start ? c.point : end.to,
+                                    at_start ? end.from : c.point, end.sweep_udeg >= 0);
         } else {
             piece.from = at_start ? end.from : end.to;
             piece.to   = c.point;
@@ -2280,6 +2278,48 @@ void MapCanvas::buildOverlay()
                             addReadout(c.x + 12.0F, c.y + 24.0F, text);
                             guide_label_ = text;
                         }
+                    }
+                }
+            }
+        } else if (shape == command::RubberShape::Split) {
+            // THE PIECES THE SPLIT WILL MAKE, each drawn in turn so the cuts read
+            // as cuts: the object cut at the points given so far and at the
+            // cursor, by the function BÖL cuts with (`command::split_at_points`)
+            // — an arc's pieces drawn as arcs, because they will be arcs.
+            if (auto decoded = core::decode_break_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::EntityId e    = doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                const auto path =
+                    e != core::kNoEntity && doc.alive(e) ? core::path_of(doc, e) : std::nullopt;
+                if (path) {
+                    std::vector<core::Point2> at = session->prompt().rubber_chain;
+                    at.push_back(cursorWorld());
+                    const std::vector<core::CurvePath> pieces = command::split_at_points(*path, at);
+                    const std::size_t even = nextBatch(tokens_->accent.rgba(), 2.0f, false);
+                    const std::size_t odd  = nextBatch(palette_.rubberBand.rgba(), 2.0f, true);
+                    for (std::size_t i = 0; i < pieces.size(); ++i) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        core::path_outline(pieces[i], curve_scratch_x_, curve_scratch_y_);
+                        addWorldRun(i % 2 == 0 ? even : odd, curve_scratch_x_, curve_scratch_y_,
+                                    false);
+                    }
+                    // A mark at every cut, on the object and not where the hand was.
+                    for (const core::Point2& p : at) {
+                        const render::ScreenPointF on = render::to_f(
+                            view_.to_screen(core::point_at(*path, core::place_of(*path, p))));
+                        addCircle(even, on.x, on.y, 4.0f);
+                    }
+                    if (look_.dynamic_input) {
+                        const core::Mm along         = core::path_length(core::sub_path(
+                            *path, core::path_start(*path), core::place_of(*path, cursorWorld())));
+                        const render::ScreenPointF c = toScreenF(to);
+                        const std::string text =
+                            std::to_string(pieces.size()) + " parça · baştan " +
+                            trimmed(static_cast<double>(along) / 1000.0, 3) + " m";
+                        addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                        guide_label_ = text;
                     }
                 }
             }

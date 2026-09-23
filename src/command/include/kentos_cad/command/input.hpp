@@ -90,6 +90,8 @@ enum class RubberShape : std::uint8_t {
                  ///< would gain) against the edges `rubber_payload` names: BUDA, UZAT
     TrimFence,   ///< the fence `rubber_chain` holds, run on to the cursor, with every piece it
                  ///< would take (or every end it would carry on): BUDA, UZAT yontem=çit
+    Split,       ///< the object `rubber_payload` names cut at the chain's points and the
+                 ///< cursor, each piece it becomes drawn in turn: BÖL yontem=nokta
 };
 
 struct Prompt
