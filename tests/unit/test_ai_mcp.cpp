@@ -853,8 +853,10 @@ TEST_CASE("Yazma aracı ÇALIŞMAZ: öneri kimliği ve komut satırları döner"
 
     const std::string text = text_of(result);
     CHECK(text.find(plan_id) != std::string::npos);
-    // The exact command line a person reads and could type themselves.
-    CHECK(text.find("ÇİZGİ 0,0 10000,10000") != std::string::npos);
+    // The exact command line a person reads and could type themselves — in
+    // METRES, the unit the command line reads. It said `10000,10000`, which typed
+    // back would have drawn ten kilometres out.
+    CHECK(text.find("ÇİZGİ 0,0 10,10") != std::string::npos);
     // THE ANSWER SAYS WHICH STATE IT IS IN. A pending plan says the drawing is
     // unchanged and names BOTH roads it could take — the card, or the policy the
     // user set beforehand (§5.2.1). It must never claim the client applied it.

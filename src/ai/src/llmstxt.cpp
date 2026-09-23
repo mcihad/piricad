@@ -41,10 +41,13 @@ std::string preamble()
     elemanı için `@0123456789abcdef.3`;
   - bir tutamaktan **ölçüyle** uzaklaşan **göreli nokta**:
     `{"taban": "@0123456789abcdef.0", "dogu": 10000, "kuzey": -5000}` — tabanın 10 m
-    doğusu, 5 m güneyi. Ölçüler tam sayı milimetredir; batı ve güney eksidir.
+    doğusu, 5 m güneyi. `dogu` ve `kuzey` her zaman tam sayı milimetredir; batı ve güney
+    eksidir.
   Nokta listesi (bir çokgenin köşeleri) ya tek bir tutamaktır ya da her elemanı bir
   tutamak veya göreli nokta olan bir dizidir. Uzunluk, yarıçap, mesafe gibi ÖLÇÜLER
-  düz sayıdır (`yaricap`, `mesafe`, `kenar_uzunlugu`).
+  düz sayıdır ve **birimi parametrenin açıklamasında yazar**: `(m)` metre demektir
+  (`yaricap`, `kenar_uzunlugu` metredir), `milimetre` milimetre (OFSET'in `mesafe`si).
+  Birimi okumadan sayı yazmayın; 10 metre yarıçap `"yaricap": 10`dur.
 - **Konum nereden gelir.** `gorunum_bilgisi` ekranın ortasını ("görünümün ortası") bir
   nokta tutamağı olarak verir; kullanıcı bir yer söylemediyse yeni çizim oraya yapılır.
   `nesne_noktalari` bir nesnenin merkezini, köşelerini, uçlarını, kutusunu ya da kenar
@@ -58,7 +61,8 @@ std::string preamble()
   {"taban": "@m", "dogu": 10000, "kuzey": -10000}, {"taban": "@m", "dogu": 10000,
   "kuzey": 10000}, {"taban": "@m", "dogu": -10000, "kuzey": 10000}]}`.
 - **Örnek: 10 m yarıçaplı altıgen.** `core_polygon_regular` şu argümanla:
-  `{"merkez": {"taban": "@m"}, "kenar_sayisi": 6, "yaricap": 10000}`. Bir nesneyi 5 m
+  `{"merkez": {"taban": "@m"}, "kenar_sayisi": 6, "yaricap": 10}`. 3 m yarıçaplı daire:
+  `core_circle_draw` `{"merkez": "@m", "cevre": {"taban": "@m", "dogu": 3000}}`. Bir nesneyi 5 m
   doğuya taşımak: `core_move` `{"nesneler": "@n", "baslangic": {"taban": "@m"},
   "bitis": {"taban": "@m", "dogu": 5000}}`.
 - **Yazan araçlar çağrıldığında uygulamaz.** Belgeyi ya da diski değiştiren bir araç

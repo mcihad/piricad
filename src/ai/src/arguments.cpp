@@ -25,11 +25,33 @@ std::string format_number(double v)
     return out.str();
 }
 
-/// A coordinate as the command line writes it: easting first, integer
-/// millimetres, no decimal point (model.md R37a, and `Mm` is an int64).
+/// A length in METRES as the command line reads it: to the millimetre, `.` for
+/// the decimal point (`,` separates a coordinate's two halves), trailing zeros
+/// dropped — `485340150` mm is `485340.15`.
+std::string metres_text(core::Mm mm)
+{
+    const bool negative = mm < 0;
+    const std::uint64_t v =
+        negative ? 0 - static_cast<std::uint64_t>(mm) : static_cast<std::uint64_t>(mm);
+    std::string out    = (negative ? "-" : "") + std::to_string(v / 1000);
+    std::uint64_t frac = v % 1000;
+    if (frac != 0) {
+        std::string digits = std::to_string(frac);
+        digits.insert(0, 3 - digits.size(), '0');
+        while (!digits.empty() && digits.back() == '0')
+            digits.pop_back();
+        out += "." + digits;
+    }
+    return out;
+}
+
+/// A coordinate as the command line writes it: easting first, in METRES — the
+/// unit the command line reads. It used to be written in stored millimetres,
+/// and a surveyor who retyped a suggestion card's line would have drawn a
+/// thousand times too far (model.md R37a).
 std::string format_point(core::Point2 p)
 {
-    return std::to_string(p.x) + "," + std::to_string(p.y);
+    return metres_text(p.x) + "," + metres_text(p.y);
 }
 
 /// Whether a text value has to be quoted to survive the command line's tokeniser.

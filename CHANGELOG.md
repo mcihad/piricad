@@ -29,6 +29,11 @@ kaydında (`konum_kaynagi`) duruyor. CLAUDE.md 5.8 bu okumaya göre güncellendi
 koordinat değildir; kaynağı §5.2'nin `ofset_hesapla`sı). Değerlendirme seti çizim
 vakalarıyla 20 senaryoya çıktı.
 
+Öneri kartındaki satır da düzeldi: noktalar saklandıkları milimetreyle yazılıyordu
+(`ÇİZGİ 0,0 10000,10000`); komut satırı metre okuduğu için mühendis satırı yeniden
+yazsa on kilometre öteye çizerdi. Artık kart komut satırının birimini yazıyor
+(`ÇİZGİ 0,0 10,10`).
+
 ### Düzeltildi — Python konsolunda ipucu ve liste satırı örtmüyor
 
 İmza ipucu ile tamamlama listesi pencerenin alt kenarındaki istemde birbirinin ve

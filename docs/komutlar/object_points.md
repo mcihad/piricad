@@ -101,10 +101,11 @@ arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp `NESNENOKT
 
 Sohbette "bu parselin ortasına 3 m yarıçaplı bir daire çiz" denince ajan önce parseli
 `sorgula` ya da `secimi_al` ile nesne tutamağı olarak alır, sonra `nesne_noktalari` ile
-merkezini nokta tutamağı olarak ister ve daireyi o tutamakla önerir:
+merkezini nokta tutamağı olarak ister ve daireyi o tutamakla önerir; çember üzerindeki
+nokta, merkezden 3000 mm doğudadır:
 
 ```text
-core_circle_draw  {"merkez": "@….0", "yaricap": 3000}
+core_circle_draw  {"merkez": "@….0", "cevre": {"taban": "@….0", "dogu": 3000}}
 ```
 
 Öneri kartında koordinatlar ve konumun kaynağı görünür; uygulanması sizin onayınızla
