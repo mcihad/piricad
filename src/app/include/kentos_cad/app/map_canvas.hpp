@@ -21,6 +21,7 @@
 #include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/transform.hpp"
 #include "kentos_cad/core/trim_curve.hpp"
@@ -433,6 +434,11 @@ private:
     /// the ones the drawing has since moved on from.
     void buildMeasureMarks();
 
+    /// Draws SINIR's preview: the region the cursor is inside, found by the call
+    /// the click makes (`core::region_at`), or the open ends that keep it from
+    /// closing.
+    void buildRegionPreview(std::span<const std::uint8_t> payload, core::Point2 at);
+
     /// Appends the runs of a drawing prompt's ghost (`command::ghost_outline`) —
     /// the object the next click makes — to an overlay batch.
     void addGhost(std::size_t batch, const std::vector<command::GhostRun>& runs);
@@ -739,6 +745,24 @@ private:
     };
 
     std::vector<StoredMark> marks_;
+
+    /// The last region SINIR's preview found, kept while the cursor stays in it:
+    /// an arrangement per mouse move is a cost a hover should not pay. Stale
+    /// when the drawing or the query changes.
+    struct RegionCache
+    {
+        std::uint64_t revision{0};                    ///< the document it was found in
+        std::vector<std::uint8_t> payload;            ///< the query it answered
+        core::Point2 asked{};                         ///< where it was asked
+        bool found{false};                            ///< a face, or only open ends
+        std::vector<std::vector<core::Point2>> rings; ///< outer first, then holes, as drawn
+        std::string label;                            ///< the area, as the preview writes it
+        std::vector<core::OpenEnd> open;              ///< the gaps, when nothing closed
+        bool valid{false};
+    };
+
+    RegionCache region_cache_;
+
     std::uint64_t seen_revision_{0}; ///< the revision `noteDocumentChange` last saw
     std::uint64_t edits_{0};         ///< how many changes it has seen
 

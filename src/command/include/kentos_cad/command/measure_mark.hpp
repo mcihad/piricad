@@ -34,9 +34,11 @@ struct MeasureMark
         Angle, ///< an angle: `points` are the vertex and a point on each arm; `labels[0]` the
                ///< reading
         Point, ///< one point: `points[0]`; `labels[0]` what was read there
+        Gap,   ///< an end that meets nothing: `points[0]` the end, `points[1]` the nearest
+               ///< linework when there is any; `labels[0]` the gap's width (SINIR)
     };
 
-    Shape shape{Shape::Run};          ///< which of the four
+    Shape shape{Shape::Run};          ///< which of the five
     std::vector<core::Point2> points; ///< see `Shape`
     std::vector<std::string> labels;  ///< see `Shape`, in the user's language and units
 };

@@ -637,6 +637,22 @@ def to_area(
         objects — Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
     """
 
+def boundary(
+    *,
+    point: Coord = ...,
+    islands: bool = ...,
+    gap: int = ...,
+    objects: list[int] = ...,
+) -> int:
+    """İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir.
+
+    Komut: core.boundary (SINIR)
+        point — Sınırı çıkarılacak bölgenin içindeki nokta; yoksa sorulur [mm, Sağa (Y) önce]
+        islands — İçerideki kapalı çizgiler delik olsun mu; varsayılan evet
+        gap — Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm]
+        objects — Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı]
+    """
+
 def move(
     *,
     objects: list[int] = ...,

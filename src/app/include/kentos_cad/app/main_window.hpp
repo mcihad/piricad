@@ -996,6 +996,7 @@ private:
     QAction* actVertexDelete_{nullptr}; ///< KÖŞESİL
     QAction* actEdgeKind_{nullptr};     ///< KENARTÜRÜ
     QAction* actToArea_{nullptr};       ///< ALANAÇEVİR
+    QAction* actBoundary_{nullptr};     ///< SINIR
     QAction* actTextEdit_{nullptr};     ///< YAZIDÜZENLE
     QAction* actTraverse_{nullptr};     ///< POLİGON, on both the Çizim and the Harita menu
     QAction* actStakeout_{nullptr};     ///< APLİKASYON

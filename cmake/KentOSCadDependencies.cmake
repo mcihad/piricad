@@ -314,6 +314,38 @@ if(KENTOS_WITH_CLIPPER2)
         VERSION 1.3)
 endif()
 
+if(KENTOS_WITH_CGAL)
+    # CLAUDE.md 2.7 and 5.16, and kentoscad.md §9.2, which names CGAL for
+    # "arrangement": noding a drawing's segments and arcs into a planar network
+    # and walking its faces — islands as holes, dangling ends as dangling ends —
+    # is a solved problem with every degeneracy a survey produces (collinear
+    # overlaps, T-junctions, near-parallel crossings), and CGAL's Arrangement_2
+    # over the circle-segment traits solves it EXACTLY, arcs included. It lives
+    # in core/src/planar.cpp alone, behind core/planar.hpp.
+    #
+    # HEADER-ONLY, AND COMPILED WITH OUR FLAGS. The templates are instantiated in
+    # our own translation unit, so Article 2.5's -ffp-contract=off reaches them —
+    # which a prebuilt overlay library could not promise — and the exact kernel's
+    # results are the same on every platform (§7.3).
+    #
+    # LICENCE: the Arrangement_2 package and its traits are GPL-3.0-or-later, the
+    # kernel is LGPL-3.0-or-later; GMP (LGPL-3.0-or-later OR GPL-2.0-or-later),
+    # MPFR (LGPL-3.0-or-later) and Boost (BSL-1.0) come with it. All recorded in
+    # /NOTICE with the version found.
+    set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
+    find_package(CGAL 5.6 CONFIG QUIET)
+    if(NOT CGAL_FOUND)
+        message(FATAL_ERROR
+            "KENTOS_WITH_CGAL=ON but CGAL 5.6 or newer was not found.\n"
+            "  macOS:          brew install cgal\n"
+            "  Debian/Ubuntu:  sudo apt install libcgal-dev\n"
+            "  Fedora:         sudo dnf install CGAL-devel\n"
+            "  Windows/vcpkg:  vcpkg install cgal  (feature \"cgal\" of /vcpkg.json)\n"
+            "  or configure with -DKENTOS_WITH_CGAL=OFF (SINIR then refuses and says why).")
+    endif()
+    message(STATUS "  cgal: ${CGAL_VERSION} (düzlemsel ağ, core/planar.cpp)")
+endif()
+
 if(KENTOS_WITH_DWG)
     # DWG, READ ONLY, and the read-only part is enforced by the build rather than
     # by discipline: `LIBREDWG_DISABLE_WRITE=ON` leaves the encoder out of the

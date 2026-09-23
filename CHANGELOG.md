@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kapalı bölgenin sınırı: SINIR (C-09, 1. aşama)
+
+- **SINIR** (`core.boundary`): kapalı bir bölgenin içine tıklayınca sınırı yeni bir
+  nesne olur. Bölge, görünen bütün çizgilerden — kesişen, T biçiminde birleşen, üst
+  üste binen çizgi, yay, daire, alan — kesin aritmetikle bulunur; içerideki adalar
+  delik olur (`ada=hayır` yok sayar). Yalnız düz kenarlı bölge alan, yaylı bölge
+  yaylı çoklu çizgi, dairenin içi daire olarak yazılır; yay ve delik birlikteyse
+  yaylar kirişlerle yazılır ve sapma söylenir.
+- **Hiçbir boşluk kendiliğinden kapanmaz.** Düğüm toleransından uzak her uç açık
+  uçtur: bölge kapanmıyorsa komut hiçbir şey çizmez, açık uçları tuvalde turuncu
+  işaretler ve en yakın çizgiye uzaklıklarını yazar. Köprü `bosluk=<mm>` ile açıkça
+  istenir ve her köprü sonuçta sayılır. Bir ucun kendi çizgisi — az önce döndüğü
+  köşe — boşluk sayılmaz.
+- Araç, imlecin bulunduğu bölgeyi tıklamanın bulacağı aynı çağrıyla önizler: sınır
+  vurgulu, adalar boş, alan imlecin yanında. Araç sütununda alan ailesinde ve
+  **Çizim → Sınır Bul** menüsünde.
+- **Düzlemsel ağ çekirdeği** (`core/planar.hpp`): CGAL'ın `Arrangement_2`'si
+  üzerinde; sınır bulma, çizgi ağından alan üretme ve topoloji denetimi aynı
+  çekirdeği paylaşacak. CGAL bulunduğu her makinede açık (`KENTOS_WITH_CGAL`);
+  NOTICE'e işlendi, CI'da Linux ve macOS'ta kuruluyor.
+
 ### Eklendi — referanslı ve eşit olmayan dönüşümler, yol boyunca dizi (C-08)
 
 - **Referansla döndür/ölçekle**: `DÖNDÜR yontem=referans` iki noktayla gösterilen

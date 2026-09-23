@@ -1897,7 +1897,168 @@ void MapCanvas::buildMeasureMarks()
             if (!m.labels.empty()) addReadout(v.x + 10.0F, v.y - 10.0F, m.labels.front());
             break;
         }
+        case command::MeasureMark::Shape::Gap: {
+            // AN OPEN END, IN THE WARNING INK: a ring round the end that meets
+            // nothing and a dashed line across the gap to the nearest linework,
+            // its width written on it. It is why the region did not close, shown
+            // where it is rather than described.
+            if (m.points.empty()) break;
+            const std::size_t line       = nextBatch(tokens_->warn.rgba(), 1.8f, false);
+            const render::ScreenPointF v = screen(m.points.front());
+            addCircle(line, v.x, v.y, 7.0f);
+            if (m.points.size() >= 2) {
+                const std::size_t dash       = nextBatch(tokens_->warn.rgba(), 1.4f, true);
+                const render::ScreenPointF w = screen(m.points[1]);
+                addRun(dash, {v, w}, false);
+                addCircle(line, w.x, w.y, 3.0f);
+                if (!m.labels.empty())
+                    addReadout((v.x + w.x) * 0.5F + 8.0F, (v.y + w.y) * 0.5F - 8.0F,
+                               m.labels.front());
+            } else if (!m.labels.empty()) {
+                addReadout(v.x + 10.0F, v.y - 10.0F, m.labels.front());
+            }
+            break;
         }
+        }
+    }
+}
+
+void MapCanvas::buildRegionPreview(std::span<const std::uint8_t> payload, core::Point2 at)
+{
+    auto decoded = core::decode_region_preview(payload);
+    if (!decoded) return;
+    const core::Document& doc = controller_.document();
+
+    // THE SAME QUERY THE CLICK MAKES, bounded by what is on screen: a region
+    // larger than the view is still the command's to find, the preview simply
+    // does not guess at it.
+    const auto inside_ring = [](const std::vector<core::Point2>& ring, core::Point2 p) {
+        bool in = false;
+        for (std::size_t i = 0, j = ring.size() - 1; i < ring.size(); j = i++) {
+            const core::Point2 a = ring[i];
+            const core::Point2 b = ring[j];
+            if ((a.y > p.y) != (b.y > p.y)) {
+                const double x = static_cast<double>(a.x) + static_cast<double>(p.y - a.y) *
+                                                                static_cast<double>(b.x - a.x) /
+                                                                static_cast<double>(b.y - a.y);
+                if (static_cast<double>(p.x) < x) in = !in;
+            }
+        }
+        return in;
+    };
+    RegionCache& cache = region_cache_;
+    bool keep          = cache.valid && cache.revision == doc.revision() &&
+                std::ranges::equal(cache.payload, payload);
+    if (keep) {
+        if (cache.found) {
+            keep = !cache.rings.empty() && inside_ring(cache.rings.front(), at);
+            for (std::size_t h = 1; keep && h < cache.rings.size(); ++h)
+                keep = !inside_ring(cache.rings[h], at);
+        } else {
+            // Nothing closed here a moment ago: ask again once the cursor has
+            // travelled a few pixels, not on every one.
+            const double moved =
+                static_cast<double>(core::segment_length(cache.asked, at)) / view_.mm_per_pixel();
+            keep = moved < 12.0;
+        }
+    }
+    if (!keep) {
+        core::RegionQuery query;
+        query.at             = at;
+        query.islands        = decoded.value().islands;
+        query.node_tolerance = decoded.value().node_tolerance;
+        query.bridge         = decoded.value().bridge;
+        for (const std::int64_t key : decoded.value().keys) {
+            const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            if (e != core::kNoEntity && doc.alive(e)) query.only.push_back(e);
+        }
+        const core::Box2 seen = view_.visible_box();
+        query.max_reach       = std::max(seen.width(), seen.height());
+        cache                 = RegionCache{};
+        cache.revision        = doc.revision();
+        cache.payload.assign(payload.begin(), payload.end());
+        cache.asked                = at;
+        cache.valid                = true;
+        auto found                 = core::region_at(doc, query);
+        const core::Region* region = found ? &found.value() : nullptr;
+        if (region != nullptr && region->face.has_value()) {
+            const core::NetworkFace& face = *region->face;
+            cache.found                   = true;
+            const auto drawn              = [](const core::CurvePath& path) {
+                std::vector<core::Mm> xs;
+                std::vector<core::Mm> ys;
+                core::path_outline(path, xs, ys);
+                std::vector<core::Point2> ring;
+                ring.reserve(xs.size());
+                for (std::size_t i = 0; i < xs.size(); ++i)
+                    ring.push_back(core::Point2{xs[i], ys[i]});
+                return ring;
+            };
+            cache.rings.push_back(drawn(face.outer.path));
+            for (const core::FaceRing& hole : face.holes)
+                cache.rings.push_back(drawn(hole.path));
+            const auto cm2   = static_cast<std::uint64_t>((face.area + 5000) / 10000);
+            std::string frac = std::to_string(cm2 % 100);
+            if (frac.size() < 2) frac = "0" + frac;
+            cache.label = std::to_string(cm2 / 100) + "," + frac + " m²";
+            if (!face.holes.empty())
+                cache.label += " · " + std::to_string(face.holes.size()) + " ada";
+        } else if (region != nullptr) {
+            cache.open = region->open;
+        }
+    }
+
+    if (cache.found && !cache.rings.empty()) {
+        // THE FACE, ITS HOLES PUNCHED OUT. One keyhole run fills it — outer ring,
+        // across to each hole and round it the other way — so a pool reads as a
+        // hole in the parcel and not as part of it; the rings are stroked apart.
+        QColor wash = tokens_->accent;
+        wash.setAlpha(40);
+        std::vector<render::ScreenPointF> keyhole;
+        for (const core::Point2& p : cache.rings.front())
+            keyhole.push_back(render::to_f(view_.to_screen(p)));
+        const render::ScreenPointF home =
+            keyhole.empty() ? render::ScreenPointF{} : keyhole.front();
+        for (std::size_t h = 1; h < cache.rings.size(); ++h) {
+            keyhole.push_back(home);
+            for (const core::Point2& p : cache.rings[h])
+                keyhole.push_back(render::to_f(view_.to_screen(p)));
+            if (!cache.rings[h].empty())
+                keyhole.push_back(render::to_f(view_.to_screen(cache.rings[h].front())));
+            keyhole.push_back(home);
+        }
+        // The fill's own stroke is fully transparent: the keyhole's bridges are
+        // how the holes are reached, not lines anybody drew.
+        QColor unseen = wash;
+        unseen.setAlpha(0);
+        addRun(nextBatch(unseen.rgba(), 0.5f, false, wash.rgba()), keyhole, true);
+        const std::size_t edge = nextBatch(tokens_->accent.rgba(), 2.2f, false);
+        for (const std::vector<core::Point2>& ring : cache.rings) {
+            std::vector<render::ScreenPointF> run;
+            run.reserve(ring.size());
+            for (const core::Point2& p : ring)
+                run.push_back(render::to_f(view_.to_screen(p)));
+            addRun(edge, run, true);
+        }
+        const render::ScreenPointF c = render::to_f(view_.to_screen(at));
+        addReadout(c.x + 14.0F, c.y + 22.0F, cache.label);
+        guide_label_ = cache.label;
+        return;
+    }
+    // NOTHING CLOSES AROUND THE CURSOR: the open ends that keep it from closing,
+    // nearest first, in the warning ink the refusal will mark them in.
+    const std::size_t warn = nextBatch(tokens_->warn.rgba(), 1.6f, false);
+    const std::size_t dash = nextBatch(tokens_->warn.rgba(), 1.2f, true);
+    for (std::size_t i = 0; i < cache.open.size() && i < 3; ++i) {
+        const core::OpenEnd& end     = cache.open[i];
+        const render::ScreenPointF v = render::to_f(view_.to_screen(end.at));
+        addCircle(warn, v.x, v.y, 6.0f);
+        if (!end.has_nearest) continue;
+        const render::ScreenPointF w = render::to_f(view_.to_screen(end.nearest));
+        addRun(dash, {v, w}, false);
+        addReadout((v.x + w.x) * 0.5F + 8.0F, (v.y + w.y) * 0.5F - 8.0F,
+                   trimmed(static_cast<double>(end.distance) / 1000.0, 3) + " m");
     }
 }
 
@@ -2704,6 +2865,9 @@ void MapCanvas::buildOverlay()
                     }
                 }
             }
+        } else if (shape == command::RubberShape::Region) {
+            // THE REGION THE CLICK WILL FIND, found by the same call (TODOS C-09).
+            buildRegionPreview(session->prompt().rubber_payload, cursorWorld());
         } else if (shape == command::RubberShape::MeasureRun) {
             // THE RUN MEASURED SO FAR AND THE NEXT SEGMENT TO THE CURSOR, each
             // segment's length written on it and the running total at the

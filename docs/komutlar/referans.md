@@ -44,6 +44,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.vertex_delete`](vertex_delete.md) | Köşe Sil | `KÖŞESİL`, `KOSESIL`, `DELVERTEX`, `KSL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur. |
 | [`core.edge_kind`](edge_kind.md) | Kenar Türü | `KENARTÜRÜ`, `KENARTURU`, `EDGEKIND`, `KNT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur. |
 | [`core.to_area`](to_area.md) | Alana Çevir | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
+| [`core.boundary`](boundary.md) | Sınır Bul | `SINIR`, `BOUNDARY`, `SNR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir. |
 | [`core.move`](move.md) | Taşı | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
@@ -579,6 +580,19 @@ Uç uca değen çizgileri tek bir kapalı alana çevirir.
 | `nesneler` | selection | en az 0 | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim |
 
 Ayrıntılı kullanım: [ALANAÇEVİR](to_area.md)
+
+### `core.boundary` — SINIR (Sınır Bul)
+
+İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nokta` | point | isteğe bağlı | Sınırı çıkarılacak bölgenin içindeki nokta; yoksa sorulur |
+| `ada` | bool | isteğe bağlı | İçerideki kapalı çizgiler delik olsun mu; varsayılan evet |
+| `bosluk` | integer | isteğe bağlı | Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz |
+| `nesneler` | selection | en az 0 | Sınır sayılacak nesneler; yoksa görünen her çizgi |
+
+Ayrıntılı kullanım: [SINIR](boundary.md)
 
 ### `core.move` — TAŞI (Taşı)
 
@@ -2966,6 +2980,88 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BLOK",
         "BLOCK",
         "BLK"
+      ]
+    }
+  },
+  {
+    "name": "core_boundary",
+    "title": "Sınır Bul",
+    "description": "İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir.\nKomut: SINIR (BOUNDARY, SNR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Sınırı çıkarılacak bölgenin içindeki nokta; yoksa sorulur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "ada": {
+          "type": "boolean",
+          "description": "İçerideki kapalı çizgiler delik olsun mu; varsayılan evet (evet/hayır)"
+        },
+        "bosluk": {
+          "type": "integer",
+          "description": "Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm] (tam sayı)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınır sayılacak nesneler; yoksa görünen her çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.boundary",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "SINIR",
+        "BOUNDARY",
+        "SNR"
       ]
     }
   },

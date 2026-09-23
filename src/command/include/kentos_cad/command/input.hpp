@@ -96,6 +96,9 @@ enum class RubberShape : std::uint8_t {
                  ///< cursor's distance from the origin shows: YUVARLA, PAH with two objects
     EdgeArc,     ///< the object `rubber_payload` names with one edge bent through the
                  ///< cursor: KENARTÜRÜ tur=yay
+    Region,      ///< the region of the linework the cursor is inside, found as
+                 ///< `rubber_payload`'s query finds it, its islands as holes and its area
+                 ///< written in it: SINIR
 };
 
 struct Prompt

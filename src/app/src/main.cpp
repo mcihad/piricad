@@ -1686,6 +1686,41 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("16b-yol-dizisi-elips"), &window); });
 
+        // SINIR (TODOS C-09): two parcels drawn as loose lines, the middle one
+        // a shared boundary, a pool in the left one. The cursor inside the left
+        // parcel lights the region the click would make, the pool punched out.
+        later([scene] { scene(QStringLiteral("ÇİZGİ -2,0 32,0")); });
+        later([&window] {
+            for (const char* line : {"ÇİZGİ 30,-2 30,12", "ÇİZGİ 32,10 -2,10", "ÇİZGİ 0,12 0,-2",
+                                     "ÇİZGİ 15,0 15,10", "DAİRE 7,5 9,5"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.runScriptLine(QStringLiteral("SINIR"));
+        });
+        later([hover] { hover({3'000, 7'500}); });
+        later([&window, shot] { shot(QStringLiteral("17a-sinir-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // A corner left 60 cm open and a side 1.5 m short: the preview marks the
+        // open ends and their gaps instead of a region.
+        later([scene] { scene(QStringLiteral("ÇİZGİ 0,0 20,0")); });
+        later([&window] {
+            for (const char* line :
+                 {"ÇİZGİ 20,0 20,10", "ÇİZGİ 20,10 1.5,10", "ÇİZGİ 0,8.5 0,0.6"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.runScriptLine(QStringLiteral("SINIR"));
+        });
+        later([hover] { hover({6'000, 5'000}); });
+        later([&window, shot] { shot(QStringLiteral("17b-sinir-bosluk"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

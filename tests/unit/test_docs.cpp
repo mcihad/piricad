@@ -12,6 +12,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -174,6 +175,12 @@ bool is_out_of_scope(const CommandSpec& spec)
 {
     if (spec.id == "core.script") return true;
 
+    // SINIR needs the planar arrangement (core/planar.hpp), which a build
+    // without CGAL does not have; it refuses and says so, which is the truth
+    // about that build and says nothing about the manual. test_planar.cpp
+    // reports those cases as pending.
+    if (spec.id == "core.boundary" && !kentos::core::network_available()) return true;
+
 #if !KENTOS_HAVE_PYTHON
     // PYTHON needs an interpreter behind `Bus::on_run_python`. The rig attaches
     // one when the build has it; a build without one refuses the command, which
@@ -309,7 +316,7 @@ TEST_CASE("DOKÜMAN: kılavuzdaki her JSON betiği geçerli ve çalışır")
                 const core::Json* cmd = step.find("cmd");
                 if (cmd == nullptr || !cmd->is_string()) continue;
                 if (const CommandSpec* spec = probe.reg.resolve(cmd->as_string());
-                    spec != nullptr && spec->category == Category::File)
+                    spec != nullptr && (spec->category == Category::File || is_out_of_scope(*spec)))
                     needs_files = true;
             }
             if (needs_files) continue;

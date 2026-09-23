@@ -326,6 +326,12 @@ std::string_view parallel_side_name(ParallelSide side) noexcept
     return "?";
 }
 
+Mm drawn_deviation(const Document& doc, EntityId e)
+{
+    auto shape = shape_of(doc, e);
+    return shape && shape.value().approximate ? shape.value().deviation : 0;
+}
+
 std::optional<std::string> parallel_refusal(const Document& doc, EntityId e)
 {
     if (e == kNoEntity || !doc.alive(e)) return std::string("Nesne bulunamadı veya silinmiş.");

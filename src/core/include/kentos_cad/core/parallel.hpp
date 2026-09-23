@@ -98,6 +98,12 @@ struct Parallel
 /// have none: a hatch's boundary does, and a point's neighbourhood is a BUFFER.
 std::optional<std::string> parallel_refusal(const Document& doc, EntityId e);
 
+/// How far the drawing of `e` departs from the curve it stands for, measured
+/// chord by chord against the curve's own definition: an ellipse, a spline or
+/// an arc-polyline drawn as chords. Zero for a kind whose drawing is its
+/// definition. The figure a result built from that drawing reports.
+Mm drawn_deviation(const Document& doc, EntityId e);
+
 /// Whether `e`'s sides are `Outside`/`Inside` — a closed shape, a circle, an
 /// arc — rather than an open run's `Left`/`Right`. What a caller that was given
 /// a signed distance and no side needs to know: plus grows a closed shape and

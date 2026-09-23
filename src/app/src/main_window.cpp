@@ -42,6 +42,7 @@
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/selection.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
@@ -1254,6 +1255,14 @@ void MainWindow::buildActions()
     actToArea_ = modifyTool(Glyph::ToArea, tr("Alana Çevir"), QStringLiteral("ALANAÇEVİR"),
                             tr("ALANAÇEVİR — uç uca değen çizgilerden kapalı bir alan kurar  ·  "
                                "kısaltma: ALÇ"));
+    // SINIR: a click inside ground the linework closes. The tool previews the
+    // region under the cursor with the same call the click makes, and where the
+    // lines do not close it marks the open ends instead (TODOS C-09).
+    actBoundary_ =
+        modifyTool(Glyph::Boundary, tr("Sınır Bul"), QStringLiteral("SINIR"),
+                   tr("SINIR — kapalı bir bölgenin içine tıklayın: sınırı yeni bir alan "
+                      "olur, içerideki adalar delik; kapanmıyorsa açık uçlar gösterilir  "
+                      "·  kısaltma: SNR"));
     actTextEdit_ = modifyTool(Glyph::TextEdit, tr("Yazıyı Düzenle"), QStringLiteral("YAZIDÜZENLE"),
                               tr("YAZIDÜZENLE — yazıyı seçin, yeni metni yazın; eskisi önerilir  "
                                  "·  kısaltma: YZD"));
@@ -1669,6 +1678,7 @@ void MainWindow::buildMenus()
     draw->addSeparator();
     draw->addAction(actSpline_);
     draw->addAction(actHatch_);
+    draw->addAction(actBoundary_);
     draw->addAction(actBlock_);
     draw->addAction(actInsert_);
     draw->addAction(actDimension_);
@@ -2102,6 +2112,7 @@ void MainWindow::buildToolBox()
         methodTool(Glyph::Polygon, tr("Çokgen — kenardan"), QStringLiteral("ÇOKGEN yontem=kenar"),
                    tr("Kenar uzunluğundan; yarıçap sorulmaz")),
         actHatch_,
+        actBoundary_,
     });
     toolBox_->addFamily({
         actCircle_,
@@ -5053,6 +5064,63 @@ int MainWindow::probeRealMouse()
                   .arg(lastSaid()));
         controller_->cancelInteractive();
         runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+
+        // ---- 11. SINIR BY HAND (TODOS C-09) -----------------------------------
+        //
+        // Four loose lines and a pool; the tool from the column, the cursor moved
+        // inside, the region previewed, clicked — a face with the pool as a hole.
+        if (core::network_available()) {
+            fresh({QStringLiteral("ÇİZGİ 0,0 20,0"), QStringLiteral("ÇİZGİ 20,0 20,10"),
+                   QStringLiteral("ÇİZGİ 20,10 0,10"), QStringLiteral("ÇİZGİ 0,10 0,0"),
+                   QStringLiteral("DAİRE 10,5 12,5")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::size_t lines = controller_->document().live_entity_count();
+            actBoundary_->trigger();
+            QCoreApplication::processEvents();
+            const command::Session* asking = controller_->session();
+            check(asking != nullptr && asking->waiting() &&
+                      asking->prompt().rubber_shape == command::RubberShape::Region,
+                  QStringLiteral("Sınır Bul: araç bölgenin içini soruyor, bölge imleçle "
+                                 "önizleniyor (son söz: \"%1\")")
+                      .arg(lastSaid()));
+            onCanvas(QEvent::MouseMove, screen({3'000, 3'000}), Qt::NoButton);
+            press(screen({3'000, 3'000}));
+            release(screen({3'000, 3'000}));
+            const core::Document& doc = controller_->document();
+            bool holed                = false;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+                if (!doc.alive(e) || doc.entities().kind[e] != core::kPolylineKind) continue;
+                holed = holed || doc.geometry().rings_of(doc.entities().slot[e]).count == 2;
+            }
+            check(doc.live_entity_count() == lines + 1 && holed,
+                  QStringLiteral("Sınır Bul: tıklanan bölge delikli alan oldu (%1 nesne; son "
+                                 "söz: \"%2\")")
+                      .arg(doc.live_entity_count())
+                      .arg(lastSaid()));
+            controller_->cancelInteractive();
+
+            // A side stopping 1.5 m short of the corner: nothing is written and
+            // the open ends are said, not bridged. (Wider than the snap aperture
+            // at this zoom, which is two thirds of a metre: a typed end inside it
+            // is pulled onto the corner, as a click would be.)
+            fresh({QStringLiteral("ÇİZGİ 0,0 20,0"), QStringLiteral("ÇİZGİ 20,0 20,10"),
+                   QStringLiteral("ÇİZGİ 20,10 0,10"), QStringLiteral("ÇİZGİ 0,10 0,1.5")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::size_t open = controller_->document().live_entity_count();
+            actBoundary_->trigger();
+            QCoreApplication::processEvents();
+            press(screen({5'000, 5'000}));
+            release(screen({5'000, 5'000}));
+            check(controller_->document().live_entity_count() == open &&
+                      lastSaid().contains(QStringLiteral("kapanmıyor")),
+                  QStringLiteral("Sınır Bul: köşeye 1,5 m varmayan kenar kapanmadı, açık uçlar "
+                                 "söylendi (%1 → %2 nesne; son söz: \"%3\")")
+                      .arg(open)
+                      .arg(controller_->document().live_entity_count())
+                      .arg(lastSaid()));
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

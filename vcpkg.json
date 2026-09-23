@@ -39,7 +39,7 @@
       "dependencies": [{ "name": "geos", "version>=": "3.12.0" }]
     },
     "cgal": {
-      "description": "Exact arithmetic, straight skeleton for setbacks — KENTOS_WITH_CGAL",
+      "description": "Planar arrangements (SINIR, core/planar.cpp), exact arithmetic, straight skeleton for setbacks — KENTOS_WITH_CGAL. Linked; licence recorded in /NOTICE.",
       "dependencies": [{ "name": "cgal", "version>=": "5.6" }]
     },
     "python": {

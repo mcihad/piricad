@@ -14,6 +14,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/planar.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/parser.hpp"
@@ -2329,6 +2330,50 @@ TEST_CASE("PROOF: DİZİ yol boyunca — arayüz, komut satırı, betik ve oynat
                     .ok());
     }
     CHECK_EQ(gui.doc.live_entity_count(), std::size_t{5});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
+TEST_CASE("PROOF: SINIR — arayüz, komut satırı, betik ve oynatma aynı sınırı çıkarır")
+{
+    // TODOS C-09. The GUI clicks inside the parcel; the others name the point.
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    const std::vector<std::string> setup{"ÇİZGİ 0,0 20,0", "ÇİZGİ 20,0 20,10", "ÇİZGİ 20,10 0,10",
+                                         "ÇİZGİ 0,10 0,0", "DAİRE 10,5 12,5"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("SINIR", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{3'000, 3'000})).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("SINIR nokta=3,3", Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.line","args":{"noktalar":[[0,0],[20000,0]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[20000,0],[20000,10000]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[20000,10000],[0,10000]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[0,10000],[0,0]]}},
+                      {"cmd":"core.circle_draw","args":{"merkez":[10000,5000],"cevre":[12000,5000]}},
+                      {"cmd":"core.boundary","args":{"nokta":[3000,3000]}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{6});
     CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
     CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
     CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));

@@ -46,7 +46,19 @@ else()
     option(KENTOS_WITH_PROJ "Enable PROJ coordinate transformation" OFF)
 endif()
 option(KENTOS_WITH_GEOS     "Enable GEOS overlay operations"        OFF)
-option(KENTOS_WITH_CGAL     "Enable CGAL exact arithmetic"          OFF)
+# CGAL follows GDAL and PROJ, for the reason Article 8.2 gives: "defaulting ON
+# once found". Its arrangement is what finds a closed region from a click and
+# what turns a network of boundary lines into parcels (core/planar.hpp, TODOS
+# C-09); a machine that has CGAL must not silently build a KentOSCad whose
+# SINIR command can only say it was built without it. Header-only, so the probe
+# is the package config alone. Absent, it stays OFF and SINIR names the package.
+set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
+find_package(CGAL 5.6 CONFIG QUIET)
+if(CGAL_FOUND)
+    option(KENTOS_WITH_CGAL "Enable CGAL exact arithmetic (planar arrangements)" ON)
+else()
+    option(KENTOS_WITH_CGAL "Enable CGAL exact arithmetic (planar arrangements)" OFF)
+endif()
 option(KENTOS_WITH_PYTHON   "Enable the embedded Python script host" OFF)
 # ---- the two halves of the GPU canvas: ON once their toolchain is found ------
 #

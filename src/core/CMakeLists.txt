@@ -32,6 +32,7 @@ add_library(kentos_core STATIC
     src/layout.cpp
     src/offset.cpp
     src/parallel.cpp
+    src/planar.cpp
     src/json.cpp
     src/layer.cpp
     src/pick.cpp
@@ -65,6 +66,14 @@ endif()
 if(KENTOS_WITH_CLIPPER2)
     target_link_libraries(kentos_core PRIVATE Clipper2)
     target_compile_definitions(kentos_core PRIVATE KENTOS_HAVE_CLIPPER2=1)
+endif()
+
+# PRIVATE, and for the same reason again: CGAL's arrangement lives inside
+# core/planar.cpp and the facade in core/planar.hpp is what the product sees.
+# Without it the facade still links and every call says the build has no CGAL.
+if(KENTOS_WITH_CGAL)
+    target_link_libraries(kentos_core PRIVATE CGAL::CGAL)
+    target_compile_definitions(kentos_core PRIVATE KENTOS_HAVE_CGAL=1)
 endif()
 
 set_target_properties(kentos_core PROPERTIES

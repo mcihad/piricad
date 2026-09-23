@@ -469,6 +469,27 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         grip(p, QPointF(12.0, 6.0), c);
         break;
 
+    case Glyph::Boundary: {
+        // CROSSING LINES AND THE CELL THEY CLOSE: the lines run past each other
+        // the way loose linework does, the one face they make is filled, and
+        // the click that found it sits inside.
+        QColor fill = c;
+        fill.setAlphaF(0.22F);
+        p.setPen(Qt::NoPen);
+        p.setBrush(fill);
+        p.drawRect(QRectF(7.0, 7.0, 10.0, 10.0));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.0, 7.0), QPointF(21.0, 7.0));
+        p.drawLine(QPointF(3.0, 17.0), QPointF(21.0, 17.0));
+        p.drawLine(QPointF(7.0, 3.0), QPointF(7.0, 21.0));
+        p.drawLine(QPointF(17.0, 3.0), QPointF(17.0, 21.0));
+        p.setPen(stroke(c, 1.3));
+        p.drawLine(QPointF(10.2, 12.0), QPointF(13.8, 12.0));
+        p.drawLine(QPointF(12.0, 10.2), QPointF(12.0, 13.8));
+        break;
+    }
+
     case Glyph::ToArea: {
         // AN OPEN RUN CLOSING INTO A FACE: three edges drawn, the fourth dashed
         // in, and the face filled faintly behind them.

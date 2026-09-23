@@ -45,6 +45,7 @@ namespace kentos::command {
     X(vertex_delete)                                                                               \
     X(edge_kind)                                                                                   \
     X(to_area)                                                                                     \
+    X(boundary)                                                                                    \
     X(move)                                                                                        \
     X(copy_objects)                                                                                \
     X(array_objects)                                                                               \

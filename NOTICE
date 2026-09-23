@@ -279,6 +279,40 @@ Currently linked
                           lists Apache 2.0 as compatible with GPLv3 only, which
                           is this project's licence floor, Article 2.1).
 
+  CGAL                    GPL-3.0-or-later /    >= 5.6   system    (KENTOS_WITH_CGAL)
+                          LGPL-3.0-or-later
+                          The planar arrangement behind SINIR: a drawing's
+                          segments and arcs noded exactly into a network, its
+                          faces walked, islands as holes (core/planar.hpp,
+                          TODOS C-09). kentoscad.md §9.2 names CGAL for exactly
+                          this ("arrangement"). Header-only, instantiated in
+                          src/core/src/planar.cpp alone, behind the facade in
+                          kentos_cad/core/planar.hpp — so Article 2.5's
+                          -ffp-contract=off reaches the templates too. Found
+                          with find_package(CGAL 5.6 CONFIG) — apt libcgal-dev,
+                          brew cgal, vcpkg cgal. Built and tested here with
+                          CGAL 6.2.
+
+                          LICENCE FINDING, from the LICENSE file and the SPDX
+                          line of every header used: Arrangement_2.h,
+                          Arr_circle_segment_traits_2.h,
+                          Arr_consolidated_curve_data_traits_2.h and
+                          Arr_naive_point_location.h are "GPL-3.0-or-later OR
+                          LicenseRef-Commercial"; the exact kernel
+                          (Exact_predicates_exact_constructions_kernel.h) is
+                          "LGPL-3.0-or-later OR LicenseRef-Commercial". Used
+                          under GPL-3.0-or-later and LGPL-3.0-or-later, both
+                          this project's own terms or compatible with them. The
+                          commercial alternative is not used.
+
+                          Brought by CGAL, and linked for it:
+                            GMP   LGPL-3.0-or-later OR GPL-2.0-or-later
+                                  (used under LGPL-3.0-or-later; the exact
+                                  number type)
+                            MPFR  LGPL-3.0-or-later
+                            Boost BSL-1.0 (headers)
+                          All three GPLv3-compatible; none GPLv2-only (5.5).
+
   GDAL/OGR                MIT (X11) + others    >= 3.8   (KENTOS_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage
                           today, from the allow-list in
@@ -436,7 +470,7 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
 
   PROJ                    MIT                   coordinate transformation
   GEOS                    LGPL 2.1              overlay operations
-  CGAL                    GPLv3+                exact arithmetic, straight skeleton
+  CGAL straight skeleton  GPLv3+                setbacks (the arrangement is linked, above)
   Boost (Geometry, PFR)   BSL-1.0               R-tree index
   Eigen                   MPL 2.0               linear algebra, adjustment
   Shewchuk predicates     public domain         robust orientation / incircle

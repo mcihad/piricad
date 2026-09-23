@@ -63,6 +63,17 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.config }}
 
+      # CGAL for the planar arrangement behind SINIR (core/planar.cpp).
+      # Header-only; the package brings Boost, GMP and MPFR. Windows builds
+      # without it for now and SINIR's cases report pending there, never pass
+      # (CLAUDE.md Article 8.2).
+      - name: Install CGAL
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y libcgal-dev; fi
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install cgal; fi
+
       - name: Configure
         run: cmake --preset ${{ matrix.config }}
 
@@ -90,6 +101,7 @@ jobs:
         with:
           version: '6.7.*'
           cache: true
+      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev
       - run: cmake --preset asan
       - run: cmake --build --preset asan
       - run: ctest --test-dir build/asan --output-on-failure
@@ -103,6 +115,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev
       - run: cmake --preset headless
       - run: cmake --build --preset headless
       - run: ctest --test-dir build/headless --output-on-failure

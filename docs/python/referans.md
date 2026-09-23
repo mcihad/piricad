@@ -124,6 +124,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.vertex_delete`](#cadvertex_delete) | `core.vertex_delete` | `KÖŞESİL` | Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur. |
 | [`cad.edge_kind`](#cadedge_kind) | `core.edge_kind` | `KENARTÜRÜ` | Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur. |
 | [`cad.to_area`](#cadto_area) | `core.to_area` | `ALANAÇEVİR` | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
+| [`cad.boundary`](#cadboundary) | `core.boundary` | `SINIR` | İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir. |
 | [`cad.move`](#cadmove) | `core.move` | `TAŞI` | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
@@ -1035,6 +1036,30 @@ cad.to_area(
 | `objects` | `list[int]` | `nesneler` | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/to_area.md)
+
+### `cad.boundary`
+
+İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir.
+
+Komut: `core.boundary` — `SINIR`
+
+```python
+cad.boundary(
+    point: Coord,
+    islands: bool,
+    gap: int,
+    objects: list[int],
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `point` | `Coord` | `nokta` | Sınırı çıkarılacak bölgenin içindeki nokta; yoksa sorulur [mm, Sağa (Y) önce] |
+| `islands` | `bool` | `ada` | İçerideki kapalı çizgiler delik olsun mu; varsayılan evet |
+| `gap` | `int` | `bosluk` | Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm] |
+| `objects` | `list[int]` | `nesneler` | Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı] |
+
+[Komut sayfası](../komutlar/boundary.md)
 
 ### `cad.move`
 
