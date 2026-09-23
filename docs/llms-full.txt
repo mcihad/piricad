@@ -71,8 +71,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 98 (86 tanesi onay ister)
-- Katalog parmak izi: `9629889477016944236`
+- Araç sayısı: 99 (87 tanesi onay ister)
+- Katalog parmak izi: `10012057689232931916`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1526,6 +1526,25 @@ Onay ister.
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı) |
 | `bosluk` | integer | hayır | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı) |
 | `bagla` | boolean | hayır | Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet (evet/hayır) |
+
+### `islem_tampon` — TAMPON
+
+Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.
+Komut: TAMPON (BUFFER, TMP)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `mesafe` | number | hayır | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır (sayı) |
+| `birlestir` | boolean | hayır | Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet (evet/hayır) |
+| `kose` | string | hayır | Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak (metin) |
+| `uc` | string | hayır | Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak (metin) |
 
 ### `islem_uzunluk_yaz` — UZUNLUKYAZ
 

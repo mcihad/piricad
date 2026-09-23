@@ -182,6 +182,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.preference`](#cadpreference) | `core.preference` | `TERCİH` | Uygulama tercihlerini listeler, okur ve değiştirir. |
 | [`cad.mode`](#cadmode) | `core.mode` | `MOD` | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
 | [`cad.help`](#cadhelp) | `core.help` | `YARDIM` | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
+| [`cad.buffer`](#cadbuffer) | `islem.tampon` | `TAMPON` | Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur. |
 | [`cad.adjust_area`](#cadadjust_area) | `islem.alan_duzenle` | `ALANDÜZENLE` | Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz. |
 | [`cad.label_length`](#cadlabel_length) | `islem.uzunluk_yaz` | `UZUNLUKYAZ` | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
 | [`cad.number_vertices`](#cadnumber_vertices) | `islem.kose_numarala` | `KÖŞENUMARALA` | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
@@ -2479,6 +2480,38 @@ cad.help(
 | `command` | `str` | `komut` | Ayrıntısı istenen komut adı |
 
 [Komut sayfası](../komutlar/help.md)
+
+### `cad.buffer`
+
+Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.
+
+Komut: `islem.tampon` — `TAMPON`
+
+```python
+cad.buffer(
+    objects: list[int],
+    scope: str,
+    window: Coords,
+    layer: str,
+    distance: float,
+    dissolve: bool,
+    corner: str,
+    end: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı] |
+| `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `distance` | `float` | `mesafe` | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır |
+| `dissolve` | `bool` | `birlestir` | Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet |
+| `corner` | `str` | `kose` | Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak |
+| `end` | `str` | `uc` | Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak |
+
+[Komut sayfası](../komutlar/tampon.md)
 
 ### `cad.adjust_area`
 

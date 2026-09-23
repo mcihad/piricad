@@ -10,6 +10,7 @@ add_library(kentos_processing STATIC
     src/tools/area_edit.cpp
     src/tools/attach.cpp
     src/tools/detach.cpp
+    src/tools/buffer.cpp
 )
 
 target_include_directories(kentos_processing PUBLIC include)

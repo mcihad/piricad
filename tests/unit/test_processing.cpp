@@ -103,7 +103,14 @@ std::string what_happened(const Journal& j)
 TEST_CASE("İŞLEM: her araç bir komuttur; dört ortak parametre önde, kendi parametreleri arkada")
 {
     Rig f;
-    REQUIRE_EQ(processing::processing_tools().size(), 5u);
+    REQUIRE_EQ(processing::processing_tools().size(), 6u);
+
+    // TAMPON is one of them, in its own group, and takes every drawn class.
+    const CommandSpec* tampon = f.reg.resolve("TAMPON");
+    REQUIRE(tampon != nullptr);
+    CHECK_EQ(tampon->id, std::string("islem.tampon"));
+    CHECK(f.reg.resolve("BUFFER") == tampon);
+    CHECK_EQ(processing::find_tool("islem.tampon")->spec().group, std::string("Analiz"));
 
     const CommandSpec* uz = f.reg.resolve("UZUNLUKYAZ");
     REQUIRE(uz != nullptr);
@@ -782,4 +789,138 @@ TEST_CASE(
         if (!r) FAIL_WITH(e.command_id.c_str(), r.error().message);
     }
     CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+}
+
+// ============================================================================
+// TAMPON — everything within a distance, as a face (TODOS C-03)
+// ============================================================================
+
+namespace {
+
+/// The faces the document holds on `layer`, as (area, ring count) pairs.
+std::vector<std::pair<core::Mm2, std::uint32_t>> faces_on(const core::Document& doc,
+                                                          const std::string& layer)
+{
+    std::vector<std::pair<core::Mm2, std::uint32_t>> out;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e)) continue;
+        const core::LayerId l = doc.entities().layer[e];
+        if (l >= doc.layers().size() || doc.layers()[l].name != layer) continue;
+        const std::uint32_t slot = doc.entities().slot[e];
+        out.emplace_back(doc.geometry().area_of(slot), doc.geometry().rings_of(slot).count);
+    }
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("TAMPON: çizginin iki yanı, noktanın çevresi, alanın dışı birer alandır")
+{
+    {
+        // A 20 m line, 5 m either side, round ends: 20·10 + π·5² ≈ 278.54 m².
+        Rig r;
+        r.run("KATMAN ad=DERE");
+        r.run("ÇOKLUÇİZGİ 0,0 20,0");
+        r.run("TAMPON nesneler=1 mesafe=5 katman=KORUMA");
+        const auto faces = faces_on(r.doc, "KORUMA");
+        REQUIRE(faces.size() == 1);
+        CHECK(std::abs(static_cast<double>(faces[0].first) / 1e6 - (200.0 + 25.0 * M_PI)) < 1.0);
+        // The source is untouched: a buffer is new ground, not an edit.
+        CHECK(r.doc.live_entity_count() == 2);
+    }
+    {
+        // A point: a disc of radius 3 m.
+        Rig r;
+        r.run("NOKTA 0,0");
+        r.run("TAMPON nesneler=1 mesafe=3 katman=KUYU");
+        const auto faces = faces_on(r.doc, "KUYU");
+        REQUIRE(faces.size() == 1);
+        CHECK(std::abs(static_cast<double>(faces[0].first) / 1e6 - 9.0 * M_PI) < 0.2);
+    }
+    {
+        // A face with a courtyard: grown outward, and the courtyard shrinks but stays.
+        Rig r;
+        r.run("ALAN 0,0 30,0 30,30 0,30 bolum=4 10,10 20,10 20,20 10,20 bolum=4");
+        r.run("TAMPON nesneler=1 mesafe=2 kose=koseli katman=CEVRE");
+        const auto faces = faces_on(r.doc, "CEVRE");
+        REQUIRE(faces.size() == 1);
+        CHECK(faces[0].second == 2); ///< the hole is still a hole
+        // 34² − 6² = 1120 m² with square corners.
+        CHECK(std::abs(static_cast<double>(faces[0].first) / 1e6 - 1120.0) < 0.5);
+    }
+    {
+        // A CIRCLE IS BUFFERED AS DRAWN: the pond and 2 m round it, not a disc
+        // round its centre point.
+        Rig r;
+        r.run("DAİRE 0,0 5,0");
+        r.run("TAMPON nesneler=1 mesafe=2 katman=GOL");
+        const auto faces = faces_on(r.doc, "GOL");
+        REQUIRE(faces.size() == 1);
+        CHECK(std::abs(static_cast<double>(faces[0].first) / 1e6 - 49.0 * M_PI) < 1.5);
+    }
+}
+
+TEST_CASE("TAMPON: üst üste binen tamponlar tek alan olur; birlestir=hayir her birini ayrı tutar")
+{
+    Rig r;
+    r.run("NOKTA 0,0");
+    r.run("NOKTA 4,0");
+    r.run("TAMPON nesneler=1 nesneler=2 mesafe=3 katman=BIR");
+    CHECK(faces_on(r.doc, "BIR").size() == 1);
+    r.run("TAMPON nesneler=1 nesneler=2 mesafe=3 birlestir=hayir katman=AYRI");
+    CHECK(faces_on(r.doc, "AYRI").size() == 2);
+
+    // Nothing left is said, not drawn: a 4 m square eroded by 3 m.
+    r.run("ALAN 10,0 14,0 14,4 10,4");
+    r.said.clear();
+    r.run("TAMPON nesneler=5 mesafe=-3 katman=YOK");
+    CHECK(faces_on(r.doc, "YOK").empty());
+    CHECK(r.said.find("tampon kalmıyor") != std::string::npos);
+}
+
+TEST_CASE("TAMPON: durdurulan araç hiçbir şey üretmez; tek geri alma adımıdır")
+{
+    const processing::ProcessingTool* tool = processing::find_tool("islem.tampon");
+    REQUIRE(tool != nullptr);
+    processing::ToolInput input;
+    processing::InputEntity line;
+    line.cls  = processing::Applies::Lines;
+    line.kind = core::kPolylineKind;
+    line.rings.push_back(processing::InputEntity::Ring{{{0, 0}, {10000, 0}}, core::RingRole::Open});
+    input.entities.push_back(line);
+    input.args.set("mesafe", Value::number(2.0));
+    std::stop_source stop;
+    stop.request_stop();
+    std::atomic<std::uint32_t> permille{0};
+    processing::ToolOutput output;
+    const auto status = tool->run(input, output, processing::Progress{stop.get_token(), &permille});
+    CHECK_FALSE(status.ok());
+    CHECK_EQ(status.error().code, core::ErrorCode::Cancelled);
+    CHECK(output.faces.empty());
+
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 20,0");
+    const std::uint64_t before = r.doc.content_hash();
+    r.run("TAMPON nesneler=1 mesafe=5");
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("TAMPON KANIT: komut satırı ve betik aynı belgeyi ve günlüğü üretir")
+{
+    Rig cli;
+    cli.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
+    cli.run("TAMPON nesneler=1 mesafe=2.5 uc=duz katman=BANT");
+
+    Rig scr;
+    scr.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({"ad": "Tampon", "komutlar": [
+            {"cmd": "islem.tampon",
+             "args": {"nesneler": [1], "mesafe": 2.5, "uc": "duz", "katman": "BANT"}}]})");
+        if (!r) FAIL_WITH("betik", r.error().message);
+    }
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
 }

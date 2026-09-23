@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — TAMPON: iki yanlı GIS tamponu, ayrı bir araç olarak
+
+[`TAMPON`](docs/komutlar/tampon.md) (`islem.tampon`, Araçlar ▸ Analiz ▸ Tampon bölge)
+nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çiziyor: çizginin iki yanı,
+noktanın çevresinde disk, alanın dışı (delikleri korunarak), eğrilerin çizildiği hâlinin
+çevresi. Üst üste binen tamponlar tek alan oluyor (`birlestir=hayir` her birini ayrı
+tutuyor); eksi mesafe alanları aşındırıyor. OFSET'in eskiden "paralel" diye çizdiği bant
+buydu; artık ikisi ayrı araç. İşlem araçları eğrileri çizildiği hâliyle okuyabiliyor
+(`InputEntity::drawn`) ve delikli alan üretebiliyor (`ToolOutput::faces`).
+
 ### Değişti — OFSET gerçek paralel çiziyor, tarafı imleçle gösteriliyor
 
 OFSET açık bir çizginin iki yanını saran kapalı bir alan (bant) üretiyordu; o bir

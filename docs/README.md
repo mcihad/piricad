@@ -72,6 +72,7 @@ Tek tek komutlar:
 | `BAĞLA` | [Yazıyı nesneye bağlama](komutlar/bagla.md) |
 | `BAĞÇÖZ` | [Yazının bağını çözme](komutlar/bag_coz.md) |
 | `ALANDÜZENLE` | [Alanı istenen değere getirme](komutlar/alan_duzenle.md) |
+| `TAMPON` | [Tampon bölge çizme](komutlar/tampon.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
 | `TAŞI` | [Nesne taşıma](komutlar/move.md) |
 | `KOPYALA` | [Nesne çoğaltma](komutlar/copy.md) |

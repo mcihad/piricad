@@ -1633,6 +1633,30 @@ def help(
         command — Ayrıntısı istenen komut adı
     """
 
+def buffer(
+    *,
+    objects: list[int] = ...,
+    scope: str = ...,
+    window: Coords = ...,
+    layer: str = ...,
+    distance: float = ...,
+    dissolve: bool = ...,
+    corner: str = ...,
+    end: str = ...,
+) -> int:
+    """Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.
+
+    Komut: islem.tampon (TAMPON)
+        objects — Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı]
+        scope — secili (varsayılan), gorunum ya da proje: nesneler nereden alınır
+        window — gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce]
+        layer — Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman
+        distance — Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır
+        dissolve — Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet
+        corner — Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak
+        end — Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak
+    """
+
 def adjust_area(
     *,
     objects: list[int] = ...,

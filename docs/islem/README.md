@@ -1,8 +1,8 @@
 # İşlem Araçları
 
 Bir paftadaki yüzlerce nesneye aynı işi tek seferde uygulamak isteyen herkes için:
-her kenara uzunluğunu yazmak, her parselin köşelerini numaralamak, ileride tampon
-çizmek, sadeleştirmek, birleştirmek. Bu sayfayı bitirdiğinizde bir işlem aracını
+her kenara uzunluğunu yazmak, her parselin köşelerini numaralamak, bir derenin koruma
+bandını çizmek; ileride sadeleştirmek ve birleştirmek. Bu sayfayı bitirdiğinizde bir işlem aracını
 **Araçlar** panelinden, komut satırından ve betikten çalıştırmayı, kapsamını seçmeyi,
 sonucunu ayrı bir katmana yazmayı ve süren bir işlemi durdurmayı bileceksiniz.
 
@@ -93,6 +93,7 @@ taşınan yazının başına gelen [Bağlı nesneler](bagli-nesneler.md) sayfas�
 | Etiketleme | Köşeleri numarala | `KÖŞENUMARALA` | [Köşe numaralama](../komutlar/kose_numarala.md) |
 | Etiketleme | Yazıyı nesneye bağla | `BAĞLA` | [Yazıyı nesneye bağlama](../komutlar/bagla.md) |
 | Etiketleme | Yazının bağını çöz | `BAĞÇÖZ` | [Yazının bağını çözme](../komutlar/bag_coz.md) |
+| Analiz | Tampon bölge | `TAMPON` | [Tampon bölge çizme](../komutlar/tampon.md) |
 | Düzenleme | Alanı düzenle | `ALANDÜZENLE` | [Alanı istenen değere getirme](../komutlar/alan_duzenle.md) |
 
 Yeni bir araç eklendiğinde ağaçta, **Analiz** menüsünde ve

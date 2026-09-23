@@ -191,8 +191,16 @@ struct InputEntity
     core::LayerId layer{0};               ///< its layer
     std::string layer_name;               ///< that layer's name, for the default output layer
     std::vector<Ring> rings;              ///< its rings, in R11 order
-    std::string text;                     ///< its caption, or empty
-    core::Mm text_height{0};              ///< the caption's height
+
+    /// A CURVE AS IT IS DRAWN: a circle's polygon, an arc's run of chords, an
+    /// ellipse's and a spline's outline, one ring per drawn run. Its `rings`
+    /// are its DEFINITION — a circle stores a centre and a rim point — which is
+    /// the right thing for a tool that edits the curve and the wrong thing for
+    /// one that measures or buffers what is on the sheet. Empty for every class
+    /// but `Curves`.
+    std::vector<Ring> drawn;
+    std::string text;        ///< its caption, or empty
+    core::Mm text_height{0}; ///< the caption's height
     /// What it FOLLOWS, when it is attached to another object (core/attach.hpp).
     std::optional<core::Attachment> attach;
 };
@@ -246,8 +254,18 @@ struct ToolOutput
         bool detach{false};                     ///< it is to follow nothing
     };
 
+    /// A face with holes: the exterior and the rings it has cut out of it. A
+    /// `Polyline` cannot say "this ring is a courtyard", and a buffer of a ring
+    /// road has one.
+    struct Face
+    {
+        std::vector<core::Point2> exterior;           ///< the outer boundary
+        std::vector<std::vector<core::Point2>> holes; ///< the holes, each a ring
+    };
+
     std::vector<Caption> captions;         ///< text objects to create
     std::vector<Polyline> polylines;       ///< line and face objects to create
+    std::vector<Face> faces;               ///< faces with holes to create
     std::vector<Replacement> replacements; ///< geometry to put in place of an input's
     std::vector<std::string> notes;        ///< what the tool wants said on the transcript
     std::size_t touched{0};                ///< how many input objects produced something

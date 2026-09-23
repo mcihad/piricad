@@ -25,6 +25,7 @@
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
@@ -42,6 +43,7 @@ KENTOS_PROCESSING_TOOL(number_vertices);
 KENTOS_PROCESSING_TOOL(area_edit);
 KENTOS_PROCESSING_TOOL(attach);
 KENTOS_PROCESSING_TOOL(detach);
+KENTOS_PROCESSING_TOOL(buffer);
 
 namespace {
 
@@ -55,7 +57,7 @@ const std::vector<const ProcessingTool*>& all_tools()
     static const std::vector<const ProcessingTool*> tools = [] {
         const std::vector<const ProcessingTool*> declared{
             &kentos_tool_label_length(), &kentos_tool_number_vertices(), &kentos_tool_area_edit(),
-            &kentos_tool_attach(),       &kentos_tool_detach(),
+            &kentos_tool_attach(),       &kentos_tool_detach(),          &kentos_tool_buffer(),
         };
         // The ORDER is sorted, never the addresses: a run that put two tools in
         // a different place would move a row in the Araçlar tree and a line in
@@ -175,6 +177,24 @@ InputEntity snapshot(const core::Document& doc, core::EntityId e, Applies cls)
     if (doc.texts().has(ents.slot[e])) {
         out.text        = std::string(doc.texts().text(ents.slot[e]));
         out.text_height = doc.texts().height(ents.slot[e]);
+    }
+    // A CURVE'S DRAWN FORM, from the kind's own outline — the code the canvas
+    // draws it with — so a tool that measures or buffers what is on the sheet
+    // reads the same vertices the eye does.
+    if (cls == Applies::Curves) {
+        core::EmitBuffer buf;
+        if (core::curve_outline(ents.kind[e], geom, ents.slot[e], buf))
+            for (std::size_t r = 0; r < buf.run_total(); ++r) {
+                InputEntity::Ring ring;
+                ring.role =
+                    buf.run_closed[r] != 0 ? core::RingRole::Exterior : core::RingRole::Open;
+                const auto xs = buf.run_xs(r);
+                const auto ys = buf.run_ys(r);
+                ring.points.reserve(xs.size());
+                for (std::size_t v = 0; v < xs.size(); ++v)
+                    ring.points.push_back(core::Point2{xs[v], ys[v]});
+                out.drawn.push_back(std::move(ring));
+            }
     }
     if (const core::Attachment* a = doc.attachments().get(e); a != nullptr) out.attach = *a;
     return out;
@@ -382,6 +402,22 @@ Task<void> run_tool(Context& ctx)
         } else {
             created = ctx.transaction().add_polyline(layer, p.points);
         }
+        if (!created) {
+            ctx.refuse(created.error());
+            co_return;
+        }
+        ++made;
+    }
+
+    for (const ToolOutput::Face& f : output.faces) {
+        if (f.exterior.size() < 3) continue;
+        std::vector<core::RingGeometry::RingInput> rings;
+        rings.reserve(1 + f.holes.size());
+        rings.push_back(core::RingGeometry::RingInput{f.exterior, core::RingRole::Exterior, 0});
+        for (const std::vector<core::Point2>& hole : f.holes)
+            if (hole.size() >= 3)
+                rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
+        const auto created = ctx.transaction().add_area(layer, rings);
         if (!created) {
             ctx.refuse(created.error());
             co_return;
