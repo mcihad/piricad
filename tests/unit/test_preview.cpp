@@ -13,10 +13,13 @@
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/transform.hpp"
+#include "kentos_cad/core/trim_end.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -99,9 +102,6 @@ TEST_CASE("ÖNİZLEME: bir çalıştırmanın ikinci ve sonraki her nokta istemi
         // the first, and a line between them would promise a segment that is
         // never drawn.
         {"core.point_draw|noktalar", "her nokta ayrı bir nesnedir"},
-        // The displacement's BASE after the window: a new first point, the
-        // start of the move the window will carry.
-        {"core.stretch|baslangic", "yer değiştirmenin başlangıcı, yeni bir ilk nokta"},
         // Each pair's LOCAL point starts a new pair: it is not measured from the
         // map point before it. (The map point is, and is previewed from it.)
         {"core.fit|noktalar#yerel", "her çiftin yerel noktası yeni bir ilk noktadır"},
@@ -214,6 +214,255 @@ TEST_CASE("Bir sözcük isteminde tıklama boş sözcük değildir: reddedilir v
     REQUIRE(r.bus.finish(s).ok());
     const core::EntityId e = r.doc.slot_of(static_cast<core::EntityKey>(1));
     CHECK_EQ(r.doc.styles().at(r.doc.entities().style[e]).rgba, 0xFF0000FFu);
+}
+
+// =============================================================================
+// ESNET: the window in sight, the result under the cursor
+// =============================================================================
+
+TEST_CASE("ESNET: başlangıç sorulurken pencere görünür; bitişte sonuç imleci izler")
+{
+    // The base point used to be asked with nothing on the canvas — the window
+    // that decides which corners follow had gone — and the end with a bare line
+    // from the base. Now the window stays drawn, and the end prompt carries the
+    // window so the canvas draws each object AS IT WILL BE, by the call the
+    // command makes with the click.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::Test).ok()); // 1
+    auto started = r.bus.begin_interactive("ESNET", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(core::Point2{8'000, -2'000})).ok());
+    REQUIRE(s.supply(Value::point(core::Point2{12'000, 12'000})).ok());
+
+    REQUIRE(s.waiting());
+    CHECK_EQ(s.prompt().param, std::string("baslangic"));
+    CHECK(s.prompt().has_rubber_band);
+    CHECK(s.prompt().rubber_shape == RubberShape::Fixed);
+    REQUIRE_EQ(s.prompt().rubber_chain.size(), 5u);
+    CHECK(s.prompt().rubber_chain.front() == s.prompt().rubber_chain.back());
+
+    REQUIRE(s.supply(Value::point(core::Point2{10'000, 0})).ok());
+    REQUIRE(s.waiting());
+    CHECK_EQ(s.prompt().param, std::string("bitis"));
+    CHECK(s.prompt().rubber_shape == RubberShape::Stretch);
+    auto guide = core::decode_stretch_guide(s.prompt().rubber_payload);
+    REQUIRE(guide.ok());
+    CHECK(guide.value().window == core::Box2{8'000, -2'000, 12'000, 12'000});
+    CHECK(guide.value().keys.empty()); ///< the window's own pick decides
+
+    // THE PREVIEW IS THE RESULT: what the canvas draws for a cursor 3 m east is
+    // exactly what the click there writes.
+    const core::EntityId line = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    auto shown                = core::stretch_entity(r.doc, line, guide.value().window, 3'000, 0);
+    REQUIRE(shown.ok());
+    REQUIRE(shown.value().has_value());
+    CHECK_EQ(shown.value()->moved, 2u);
+    const std::vector<core::Point2> expected{{0, 0}, {13'000, 0}, {13'000, 10'000}};
+    CHECK(shown.value()->edit.points.front() == expected);
+
+    REQUIRE(s.supply(Value::point(core::Point2{13'000, 0})).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK_EQ(vertex_of(r.doc, 1, 1), (core::Point2{13'000, 0}));
+    CHECK_EQ(vertex_of(r.doc, 1, 2), (core::Point2{13'000, 10'000}));
+}
+
+TEST_CASE("KIR: ikinci nokta aranırken gidecek parça işaretli; tıklama tam onu götürür")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok()); // 1
+    auto started = r.bus.begin_interactive("KIR", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::ids({1})).ok());
+    REQUIRE(
+        s.supply(Value::point(core::Point2{30'000, 2'000})).ok()); // off the line: its foot counts
+
+    REQUIRE(s.waiting());
+    CHECK_EQ(s.prompt().param, std::string("ikinci"));
+    CHECK(s.prompt().rubber_shape == RubberShape::Break);
+    auto guide = core::decode_break_guide(s.prompt().rubber_payload);
+    REQUIRE(guide.ok());
+    CHECK_EQ(guide.value().key, 1);
+
+    // What the canvas marks for a cursor at 70 m is the piece the click removes.
+    const std::vector<core::Point2> run{{0, 0}, {100'000, 0}};
+    auto shown = core::break_run(run, s.prompt().rubber_origin, core::Point2{70'000, -1'000});
+    REQUIRE(shown.ok());
+    CHECK(shown.value().gap == std::vector<core::Point2>{{30'000, 0}, {70'000, 0}});
+    CHECK(shown.value().head == std::vector<core::Point2>{{0, 0}, {30'000, 0}});
+    CHECK(shown.value().tail == std::vector<core::Point2>{{70'000, 0}, {100'000, 0}});
+
+    REQUIRE(s.supply(Value::point(core::Point2{70'000, -1'000})).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK_EQ(vertex_count(r.doc, 1), 2u);
+    CHECK_EQ(vertex_of(r.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(vertex_of(r.doc, 2, 0), (core::Point2{70'000, 0}));
+
+    // Given in either order along the line, the same gap.
+    auto reversed = core::break_run(run, core::Point2{70'000, 0}, core::Point2{30'000, 0});
+    REQUIRE(reversed.ok());
+    CHECK(reversed.value().gap == shown.value().gap);
+}
+
+TEST_CASE("BUDA/UZAT: atılacak parça ve eklenecek uzantı imleç üzerindeyken hesaplanır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok()); // 1, the line
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 7,-5 7,5", Origin::Test).ok()); // 2, the boundary
+    REQUIRE(r.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+
+    auto started = r.bus.begin_interactive("BUDA", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::Trim);
+    CHECK_FALSE(s.prompt().rubber_base); ///< nothing is aimed from its origin
+    auto guide = core::decode_trim_guide(s.prompt().rubber_payload);
+    REQUIRE(guide.ok());
+    CHECK(guide.value().paired);
+    CHECK_FALSE(guide.value().extend);
+
+    // THE CURSOR NEAR THE LINE'S EAST END: the line is the one edited, and what
+    // the canvas marks as going is the piece past the boundary.
+    const std::vector<core::Point2> line{{0, 0}, {10'000, 0}};
+    const std::vector<core::Point2> edge{{7'000, -5'000}, {7'000, 5'000}};
+    const core::Point2 cursor{9'000, 200};
+    CHECK(core::picks_first(line, edge, cursor));
+    auto shown = core::trim_end(line, edge, cursor, false);
+    REQUIRE(shown.ok());
+    CHECK(shown.value().changed == std::vector<core::Point2>{{7'000, 0}, {10'000, 0}});
+
+    REQUIRE(s.supply(Value::point(cursor)).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK_EQ(vertex_of(r.doc, 1, 1), (core::Point2{7'000, 0})); ///< what was shown is what went
+
+    // UZAT: the reach it adds, from the end to the boundary.
+    const std::vector<core::Point2> short_line{{0, 0}, {5'000, 0}};
+    auto reach = core::trim_end(short_line, edge, core::Point2{4'500, 0}, true);
+    REQUIRE(reach.ok());
+    CHECK(reach.value().changed == std::vector<core::Point2>{{5'000, 0}, {7'000, 0}});
+    CHECK(reach.value().run.back() == core::Point2{7'000, 0});
+}
+
+TEST_CASE("Tabanı olmayan bir önizleme DİK kilidini saptırmaz")
+{
+    // A preview that measures from nothing must not steer the answer: with dik
+    // mod on, ESNET's base point used to be bent onto a ray through the
+    // window's corner, and BUDA's pick onto one through the drawing's zero.
+    Rig r;
+    REQUIRE(r.bus.execute_line("MOD dik_mod evet", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::Test).ok());
+    auto started = r.bus.begin_interactive("ESNET", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(core::Point2{8'000, -2'000})).ok());
+    REQUIRE(s.supply(Value::point(core::Point2{12'000, 12'000})).ok());
+    if (!s.waiting()) FAIL_WITH("ESNET durdu", s.error().message);
+    CHECK_FALSE(s.prompt().rubber_base);
+    REQUIRE(s.supply(Value::point(core::Point2{10'000, 3'000})).ok()); // not level with a corner
+    REQUIRE(s.waiting());
+    // The end IS aimed from the base, so dik mod applies there as it always did.
+    CHECK(s.prompt().rubber_base);
+    REQUIRE(s.supply(Value::point(core::Point2{13'000, 3'400})).ok());
+    REQUIRE(r.bus.finish(s).ok());
+
+    const JournalEntry& last = r.journal.entries().back();
+    CHECK(last.args.get("baslangic").as_point() == core::Point2{10'000, 3'000}); ///< untouched
+    CHECK(last.args.get("bitis").as_point() == core::Point2{13'000, 3'000});     ///< levelled
+}
+
+TEST_CASE("DİK mod bir dikdörtgenin karşı köşesini eksene kilitlemez")
+{
+    // Locked to an axis through the first corner the opposite one makes a
+    // rectangle with no width or no height: with dik mod on nobody could drag a
+    // window or draw a rectangle at all. Everywhere else dik mod still holds.
+    Rig r;
+    REQUIRE(r.bus.execute_line("MOD dik_mod evet", Origin::Test).ok());
+    auto started = r.bus.begin_interactive("DİKDÖRTGEN", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::Rectangle);
+    REQUIRE(s.supply(Value::point(core::Point2{20'000, 12'000})).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    const core::EntityId e = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(e != core::kNoEntity);
+    CHECK(r.doc.entities().box_of(e) == core::Box2{0, 0, 20'000, 12'000});
+
+    // And a line's next point is still levelled, as it always was.
+    REQUIRE(r.bus.execute_line("ÇİZGİ 0,30 20,31", Origin::Test).ok());
+    CHECK_EQ(vertex_of(r.doc, 2, 1), (core::Point2{20'000, 30'000}));
+}
+
+TEST_CASE("HİZALA: her adımda nesneler imleçle gider; ikinci çift arayüzden de sorulur")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok()); // 1
+    auto started = r.bus.begin_interactive("HİZALA", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::ids({1})).ok());
+    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+
+    // The first target: the objects themselves, by key, carried by the move.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::Ghost);
+    auto first = core::decode_ghost_spec(s.prompt().rubber_payload);
+    REQUIRE(first.has_value());
+    CHECK(first->keys == std::vector<std::int64_t>{1});
+    REQUIRE(s.supply(Value::point(core::Point2{50'000, 50'000})).ok());
+
+    // The second source is ASKED, with the first pair kept in sight and nothing
+    // aimed from it.
+    REQUIRE(s.waiting());
+    CHECK_EQ(s.prompt().param, std::string("kaynak2"));
+    CHECK(s.prompt().rubber_shape == RubberShape::Fixed);
+    CHECK_FALSE(s.prompt().rubber_base);
+    REQUIRE(s.supply(Value::point(core::Point2{20'000, 0})).ok());
+
+    // The second target turns the objects under the cursor — by the transform
+    // the click applies.
+    REQUIRE(s.waiting());
+    CHECK_EQ(s.prompt().param, std::string("hedef2"));
+    auto turning = core::decode_ghost_spec(s.prompt().rubber_payload);
+    REQUIRE(turning.has_value());
+    CHECK(turning->kind == core::GhostKind::Align);
+    const core::Point2 cursor{50'000, 70'000}; // a quarter turn counter-clockwise
+    const core::Xform shown         = core::ghost_xform(*turning, s.prompt().rubber_origin, cursor);
+    const core::Point2 corner_there = core::transformed(shown, core::Point2{20'000, 10'000});
+
+    REQUIRE(s.supply(Value::point(cursor)).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK_EQ(vertex_of(r.doc, 1, 2), corner_there); ///< the ghost was the result
+    CHECK_EQ(vertex_of(r.doc, 1, 2), (core::Point2{40'000, 70'000}));
+}
+
+TEST_CASE("move_grips: tutamaklar sırayla, her biri öncekinin bıraktığı şekle göre taşınır")
+{
+    // What moving them one by one in the document would do, computed without
+    // touching it. A circle's centre carries its handle, so the handle's own
+    // move then lands where it already is: a translation, not a growth.
+    Rig r;
+    REQUIRE(r.bus.execute_line("DAİRE 0,0 2,0", Origin::Test).ok()); // centre (0,0), r = 2 m
+    const core::EntityId circle = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    const std::vector<core::GripMove> both{{0, {5'000, 0}}, {1, {7'000, 0}}};
+    auto moved = core::move_grips(r.doc, circle, both);
+    REQUIRE(moved.ok());
+    CHECK(moved.value().points[0][0] == core::Point2{5'000, 0});
+    CHECK(moved.value().points[0][1] == core::Point2{7'000, 0}); ///< r still 2 m
+
+    // A handle alone sets the radius.
+    const std::vector<core::GripMove> rim{{1, {4'000, 0}}};
+    auto grown = core::move_grips(r.doc, circle, rim);
+    REQUIRE(grown.ok());
+    CHECK(grown.value().points[0][1] == core::Point2{4'000, 0});
+
+    // The document is untouched by either.
+    CHECK_EQ(r.undo.undo_depth(), 1u);
+    const std::uint32_t slot = r.doc.entities().slot[circle];
+    CHECK_EQ(r.doc.geometry().ring_xs(r.doc.geometry().rings_of(slot).first)[1], 2'000);
 }
 
 // =============================================================================

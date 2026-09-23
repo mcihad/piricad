@@ -281,6 +281,16 @@ Bir parselin köşesine oturmuş noktayı ızgaraya çekmek, ikisinden de olmaya
 Dik mod ve kutupsal izleme yalnızca **önceki bir nokta varken** iş görür: ilk nokta
 kilitlenecek bir yöne sahip değildir.
 
+İki istisna vardır, ikisi de kilidin anlamsız olduğu yerler:
+
+- **Bir dikdörtgenin karşı köşesi** — `DİKDÖRTGEN`, seçim penceresi, `ESNET`
+  penceresi, çıktı alanı — dik moda kilitlenmez: eksene kilitli bir karşı köşe eni ya
+  da boyu olmayan bir dikdörtgen olurdu. Köşegen kilidi (kare çizmek için) orada da
+  çalışır.
+- **Bir şeyin ölçülmediği nokta** — `BUDA`/`UZAT`'ta atılacak parçayı gösteren
+  tıklama, `ESNET`'in ötelemesinin başlangıcı, `HİZALA`'nın ikinci kaynağı — bir
+  önceki noktaya göre verilmez; oraya yön kilidi uygulanmaz.
+
 ### Tolerans ve ekran
 
 Yakalama arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı`

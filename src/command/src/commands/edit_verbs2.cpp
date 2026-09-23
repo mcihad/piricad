@@ -41,6 +41,7 @@
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/transform.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -214,47 +215,71 @@ Task<void> run_align(Context& ctx)
         co_return;
     if (chosen.empty()) co_return;
 
+    // THE OBJECTS RIDE UNDER THE CURSOR at every step, drawn by the transform
+    // this body applies (`core::ghost_xform`, `core::align_xform`): first carried
+    // by the move of the first pair, then turned — and, asked to, scaled — by
+    // the second. Before this the targets were aimed along a bare line and the
+    // turn was seen only after it had happened.
     auto from1 = co_await ctx.point("kaynak", "Birinci kaynak nokta");
     if (!from1) co_return;
-    auto to1 = co_await ctx.point("hedef", "Birinci kaynağın gideceği yer",
-                                  PointOptions{.rubber_band   = true,
-                                               .rubber_origin = *from1,
-                                               .rubber_shape  = RubberShape::Line});
+    auto to1 = co_await ctx.point(
+        "hedef", "Birinci kaynağın gideceği yer",
+        PointOptions{.rubber_band    = true,
+                     .rubber_origin  = *from1,
+                     .rubber_shape   = RubberShape::Ghost,
+                     .rubber_payload = core::encode_ghost_spec(core::GhostSpec{.keys = chosen})});
     if (!to1) co_return;
 
-    // THE SECOND PAIR IS OPTIONAL AND IT IS WHAT ADDS THE TURN. One pair is a
-    // move; two are a move and a rotation, and a rotation needs two.
-    const Value from2_arg = ctx.argument("kaynak2");
-    const Value to2_arg   = ctx.argument("hedef2");
-    const bool turning = !from2_arg.empty() && !from2_arg.as_points().empty() && !to2_arg.empty() &&
-                         !to2_arg.as_points().empty();
+    bool scaling = false;
+    if (const Value v = ctx.argument("olcekle"); !v.empty()) scaling = v.as_bool();
 
-    double turn_turns = 0.0;
-    double factor     = 1.0;
+    // THE SECOND PAIR IS OPTIONAL AND IT IS WHAT ADDS THE TURN. One pair is a
+    // move; two are a move and a rotation, and a rotation needs two. ASKED, so
+    // the turn is not a script's alone: Enter at the second source keeps the
+    // move and nothing else, the way every CAD's ALIGN reads it.
+    std::optional<core::Point2> from2;
+    std::optional<core::Point2> to2;
+    if (const Value v = ctx.argument("kaynak2"); !v.empty() && !v.as_points().empty())
+        from2 = v.as_points().front();
+    else
+        from2 = co_await ctx.point("kaynak2", "İkinci kaynak nokta — Enter: yalnız taşı",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = *to1,
+                                                .rubber_base   = false,
+                                                .rubber_shape  = RubberShape::Fixed,
+                                                .rubber_chain  = {*from1, *to1}});
+    if (from2) {
+        if (const Value v = ctx.argument("hedef2"); !v.empty() && !v.as_points().empty())
+            to2 = v.as_points().front();
+        else
+            to2 =
+                co_await ctx.point("hedef2", "İkinci kaynağın gideceği doğrultu",
+                                   PointOptions{.rubber_band    = true,
+                                                .rubber_origin  = *to1,
+                                                .rubber_shape   = RubberShape::Ghost,
+                                                .rubber_payload = core::encode_ghost_spec(
+                                                    core::GhostSpec{.kind  = core::GhostKind::Align,
+                                                                    .keys  = chosen,
+                                                                    .from1 = *from1,
+                                                                    .to1   = *to1,
+                                                                    .from2 = *from2,
+                                                                    .scale = scaling})});
+    }
+    const bool turning = from2 && to2;
+
+    // ONE TRANSFORM, the one the ghost drew: `p -> to1 + factor · turn(p - from1)`.
+    core::Xform x = core::ghost_xform(core::GhostKind::Translate, *from1, *to1);
     if (turning) {
-        const core::Point2 from2 = from2_arg.as_points().front();
-        const core::Point2 to2   = to2_arg.as_points().front();
-        const core::Mm was       = core::segment_length(*from1, from2);
-        const core::Mm becomes   = core::segment_length(*to1, to2);
-        if (was == 0 || becomes == 0) {
+        auto aligned = core::align_xform(*from1, *to1, *from2, *to2, scaling);
+        if (!aligned) {
             ctx.session().fail(core::err(
                 core::ErrorCode::InvalidArgument,
                 "İki kaynak ya da iki hedef nokta aynı; doğrultu ve ölçek hesaplanamaz."));
             co_return;
         }
-        turn_turns = core::direction_turns(*to1, to2, core::AngleRule::Matematik) -
-                     core::direction_turns(*from1, from2, core::AngleRule::Matematik);
-
-        bool scaling = false;
-        if (const Value v = ctx.argument("olcekle"); !v.empty()) scaling = v.as_bool();
-        if (scaling) factor = static_cast<double>(becomes) / static_cast<double>(was);
+        x = *aligned;
     }
-
-    // The transform is `p -> to1 + factor · rotate(p - from1)`, built once and
-    // applied to every vertex. `sin_cos_udeg` rather than libm, so a quarter
-    // turn is exact and every platform agrees (§7.3).
-    const core::SinCos t =
-        core::sin_cos_udeg(core::mm_round(turn_turns * static_cast<double>(core::kUDegFullCircle)));
+    const double factor = turning ? x.factor : 1.0;
 
     const core::Document& doc = ctx.document();
     std::size_t moved         = 0;
@@ -283,12 +308,8 @@ Task<void> run_align(Context& ctx)
         std::vector<core::RingGeometry::RingInput> rings;
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
             std::vector<core::Point2> pts = ring_points(doc, r);
-            for (core::Point2& p : pts) {
-                const double dx = static_cast<double>(p.x - from1->x) * factor;
-                const double dy = static_cast<double>(p.y - from1->y) * factor;
-                p               = core::Point2{to1->x + core::mm_round(dx * t.cos - dy * t.sin),
-                                 to1->y + core::mm_round(dx * t.sin + dy * t.cos)};
-            }
+            for (core::Point2& p : pts)
+                p = core::transformed(x, p);
             store.push_back(std::move(pts));
             rings.push_back(core::RingGeometry::RingInput{
                 {}, doc.geometry().ring_role[r], doc.geometry().ring_part[r]});
@@ -305,6 +326,10 @@ Task<void> run_align(Context& ctx)
     }
 
     ctx.record("nesne", Value::ids(chosen));
+    if (turning) {
+        ctx.record("kaynak2", Value::point(*from2));
+        ctx.record("hedef2", Value::point(*to2));
+    }
     ctx.echo(std::to_string(moved) + " nesne hizalandı" +
              (turning ? (factor == 1.0 ? " (taşındı ve döndürüldü)."
                                        : " (taşındı, döndürüldü ve ölçeklendi).")

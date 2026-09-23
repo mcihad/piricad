@@ -3,10 +3,12 @@
 
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/command/aids.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/area_edit.hpp"
 #include "kentos_cad/core/block_reference.hpp"
+#include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/dimension.hpp"
@@ -22,6 +24,7 @@
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/core/trig.hpp"
+#include "kentos_cad/core/trim_end.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/snap_marker.hpp"
 
@@ -314,8 +317,10 @@ void MapCanvas::updateSnapPreview()
     const bool picking_point  = capture_ == Capture::Point;
     if (!asking && !dragging_grip_ && !picking_point) return;
 
-    command::Bus& bus                = controller_.bus();
-    const command::AidSettings& aids = bus.aid_settings();
+    command::Bus& bus = controller_.bus();
+    // The SAME aids the command will apply to this prompt (`command::aids_for`).
+    const command::AidSettings aids =
+        asking ? command::aids_for(bus.aid_settings(), session->prompt()) : bus.aid_settings();
     const core::Point2 aim = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
     // The SAME base the command will use, so the marker and the result cannot
@@ -323,7 +328,8 @@ void MapCanvas::updateSnapPreview()
     // from the corner the edge leaves; a drag that previewed against some other
     // origin would put dik mod and kutupsal on a different ray than the one the
     // corner actually lands on.
-    const bool has_base     = asking ? session->prompt().has_rubber_band : drag_grip_.valid();
+    const bool has_base =
+        asking ? command::aimed_from_origin(session->prompt()) : drag_grip_.valid();
     const core::Point2 base = asking ? session->prompt().rubber_origin : drag_grip_.base;
 
     const core::SnapResult r =
@@ -1376,13 +1382,25 @@ void MapCanvas::addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, cons
         addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, map);
 }
 
-void MapCanvas::addGhost(std::size_t batch, const core::Xform& map)
+void MapCanvas::addGhost(std::size_t batch, const core::Xform& map,
+                         std::span<const std::int64_t> keys)
 {
     const core::Document& doc      = controller_.document();
     const core::EntityTable& table = doc.entities();
     const core::RingGeometry& geom = doc.geometry();
     core::EmitBuffer buf;
-    for (core::EntityId e : controller_.selectedSlots()) {
+
+    // THE OBJECTS THE VERB NAMED, when it named them: `TAŞI nesneler=5` moves
+    // object 5 whatever is highlighted, and the ghost has to be of what moves.
+    std::vector<core::EntityId> named;
+    for (const std::int64_t key : keys)
+        if (const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            e != core::kNoEntity && doc.alive(e))
+            named.push_back(e);
+    const std::vector<core::EntityId>& carried = keys.empty() ? controller_.selectedSlots() : named;
+
+    for (const core::EntityId e : carried) {
         if (e >= table.size() || !table.visible(e)) continue;
         // A caption travels as the box around its letters (`text_quad`), a curve
         // as its drawn form, a polyline as its rings. The DRAWN form is what a
@@ -2163,6 +2181,148 @@ void MapCanvas::buildOverlay()
                 }
             }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::Stretch) {
+            // THE OBJECTS AS THEY WILL BE: every one the window catches, its
+            // windowed corners carried by the cursor's offset from the base —
+            // `core::stretch_entity`, the call ESNET makes with the click, drawn
+            // by each kind's own outline. The window stays drawn, because it is
+            // what decides which corners follow.
+            if (auto decoded = core::decode_stretch_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::Box2& window  = decoded.value().window;
+                const core::Point2 base   = session->prompt().rubber_origin;
+                const core::Point2 at     = cursorWorld();
+                std::vector<core::EntityId> candidates;
+                if (decoded.value().keys.empty()) {
+                    core::pick_in_box(doc, window, core::PickMode::Crossing, candidates);
+                } else {
+                    for (const std::int64_t key : decoded.value().keys) {
+                        const core::EntityId e = doc.slot_of(
+                            static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                        if (e != core::kNoEntity && doc.alive(e)) candidates.push_back(e);
+                    }
+                }
+                core::EmitBuffer buf;
+                for (const core::EntityId e : candidates) {
+                    auto stretched =
+                        core::stretch_entity(doc, e, window, at.x - base.x, at.y - base.y);
+                    if (!stretched) continue;
+                    if (const std::optional<core::Stretched>& done = stretched.value(); done)
+                        (void)core::edit_preview(doc, e, done->edit, buf);
+                }
+                addEmitRuns(nextBatch(tokens_->accent.rgba(), 1.5f, false), buf);
+
+                std::vector<render::ScreenPointF> frame;
+                for (const core::Point2 corner : {core::Point2{window.min_x, window.min_y},
+                                                  core::Point2{window.max_x, window.min_y},
+                                                  core::Point2{window.max_x, window.max_y},
+                                                  core::Point2{window.min_x, window.max_y}})
+                    frame.push_back(render::to_f(view_.to_screen(corner)));
+                addRun(batch, frame, true);
+            }
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::Break) {
+            // THE PIECE THAT WILL GO, drawn as going: between the first point and
+            // the cursor, along the line, in the ink of a destructive action and
+            // dashed — and what stays on either side of it in the accent. From
+            // `core::break_run`, the cut KIR makes with the click.
+            if (auto decoded = core::decode_break_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::EntityId e    = doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                if (e != core::kNoEntity && doc.alive(e)) {
+                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+                    const auto xs             = doc.geometry().ring_xs(span.first);
+                    const auto ys             = doc.geometry().ring_ys(span.first);
+                    std::vector<core::Point2> run;
+                    run.reserve(xs.size());
+                    for (std::size_t v = 0; v < xs.size(); ++v)
+                        run.push_back(core::Point2{xs[v], ys[v]});
+                    if (auto cut =
+                            core::break_run(run, session->prompt().rubber_origin, cursorWorld())) {
+                        const auto add = [this](std::size_t into,
+                                                const std::vector<core::Point2>& pts) {
+                            if (pts.size() < 2) return;
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            for (const core::Point2& p : pts) {
+                                curve_scratch_x_.push_back(p.x);
+                                curve_scratch_y_.push_back(p.y);
+                            }
+                            addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
+                        };
+                        const std::size_t kept = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                        add(kept, cut.value().head);
+                        add(kept, cut.value().tail);
+                        const std::size_t gone = nextBatch(tokens_->danger.rgba(), 2.5f, true);
+                        add(gone, cut.value().gap);
+
+                        // HOW MUCH GOES, measured ALONG the line: the straight
+                        // distance from the first point to the cursor is not
+                        // the length of a gap that turns a corner.
+                        if (look_.dynamic_input) {
+                            core::Mm along                       = 0;
+                            const std::vector<core::Point2>& gap = cut.value().gap;
+                            for (std::size_t i = 0; i + 1 < gap.size(); ++i)
+                                along += core::segment_length(gap[i], gap[i + 1]);
+                            const render::ScreenPointF c = toScreenF(to);
+                            const std::string text =
+                                "kırılan " + trimmed(static_cast<double>(along) / 1000.0, 3) + " m";
+                            addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                            guide_label_ = text;
+                        }
+                    }
+                }
+            }
+        } else if (shape == command::RubberShape::Trim) {
+            // WHAT THE CLICK WILL DO TO THE LINE UNDER IT: for BUDA the piece it
+            // throws away, in the ink of a destructive action and dashed; for
+            // UZAT the reach it adds, dashed in the accent; the boundary marked,
+            // so it is clear which line cuts which. With two lines selected the
+            // cursor decides which one is edited, as the command decides it
+            // (`core::picks_first`), and the edit is `core::trim_end` — the call
+            // BUDA and UZAT make with the click.
+            if (auto decoded = core::decode_trim_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const auto open_run       = [&doc](std::int64_t key) {
+                    std::vector<core::Point2> run;
+                    const core::EntityId e =
+                        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                    if (e == core::kNoEntity || !doc.alive(e)) return run;
+                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+                    if (span.count != 1) return run;
+                    const auto xs = doc.geometry().ring_xs(span.first);
+                    const auto ys = doc.geometry().ring_ys(span.first);
+                    for (std::size_t v = 0; v < xs.size(); ++v)
+                        run.push_back(core::Point2{xs[v], ys[v]});
+                    return run;
+                };
+                const std::vector<core::Point2> a = open_run(decoded.value().first);
+                const std::vector<core::Point2> b = open_run(decoded.value().second);
+                const core::Point2 at             = cursorWorld();
+                if (a.size() >= 2 && b.size() >= 2) {
+                    const bool first = !decoded.value().paired || core::picks_first(a, b, at);
+                    const std::vector<core::Point2>& target = first ? a : b;
+                    const std::vector<core::Point2>& edge   = first ? b : a;
+                    if (auto made = core::trim_end(target, edge, at, decoded.value().extend)) {
+                        const auto add = [this](std::size_t into,
+                                                const std::vector<core::Point2>& pts) {
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            for (const core::Point2& p : pts) {
+                                curve_scratch_x_.push_back(p.x);
+                                curve_scratch_y_.push_back(p.y);
+                            }
+                            addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
+                        };
+                        add(nextBatch(tokens_->accent.rgba(), 1.0f, true), edge);
+                        add(nextBatch(tokens_->accent.rgba(), 1.5f, false), made.value().run);
+                        add(decoded.value().extend ? nextBatch(tokens_->accent.rgba(), 2.5f, true)
+                                                   : nextBatch(tokens_->danger.rgba(), 2.5f, true),
+                            made.value().changed);
+                    }
+                }
+            }
         } else if (shape == command::RubberShape::Grip) {
             // THE OBJECT AS IT WILL BE with its corner — or a new one — at the
             // cursor: the two edges that meet there follow it. Drawn from the
@@ -2355,18 +2515,18 @@ void MapCanvas::buildOverlay()
                 spec = decoded.value();
 
             const core::Point2 base = session->prompt().rubber_origin;
-            const core::Xform step  = core::ghost_xform(spec.kind, base, cursorWorld());
+            const core::Xform step  = core::ghost_xform(spec, base, cursorWorld());
 
             // REPEATED FOR A COMMAND THAT REPEATS ITS STEP. Only a translation
             // composes with itself by simple multiples; the other three are
             // previewed once, which is all any of them applies.
-            addGhost(batch, step);
+            addGhost(batch, step, spec.keys);
             if (step.kind == core::Xform::Kind::Translate)
                 for (std::int64_t copy = 2; copy <= spec.copies; ++copy) {
                     core::Xform further = step;
                     further.dx          = step.dx * copy;
                     further.dy          = step.dy * copy;
-                    addGhost(batch, further);
+                    addGhost(batch, further, spec.keys);
                 }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (const auto& chain = session->prompt().rubber_chain; !chain.empty()) {
@@ -2398,11 +2558,12 @@ void MapCanvas::buildOverlay()
         // result and undo. The length and the bearing belong on the line while it
         // is being dragged — that is what every CAD calls dynamic input, and what
         // a surveyor setting out a 12 cm step needs to see the step working.
-        if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
-            shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates &&
-            shape != command::RubberShape::Angle && shape != command::RubberShape::MeasureRun &&
+        if (look_.dynamic_input && session->prompt().rubber_base &&
+            shape != command::RubberShape::AreaEdit && shape != command::RubberShape::Fixed &&
+            shape != command::RubberShape::Candidates && shape != command::RubberShape::Angle &&
+            shape != command::RubberShape::MeasureRun &&
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
-            shape != command::RubberShape::Corner) {
+            shape != command::RubberShape::Corner && shape != command::RubberShape::Break) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

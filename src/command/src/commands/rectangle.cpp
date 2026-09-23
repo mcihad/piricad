@@ -49,9 +49,12 @@ Task<void> run(Context& ctx)
                                     by_edge ? "Bir kenarın ilk köşesi" : "Dikdörtgenin ilk köşesi");
     if (!first) co_return; // ESC before anything was drawn
 
-    // The rubber band starts at the first corner, so the diagonal lock — and
-    // ortho, and polar, and every object snap — measure from it exactly as they
-    // do for a line. Nothing here is a private input path (kentoscad.md §2.4).
+    // The rubber band starts at the first corner, so the diagonal lock — polar,
+    // which at half a right angle draws a square — and every object snap measure
+    // from it exactly as they do for a line. Dik mod does NOT: locked to an axis
+    // the opposite corner makes a rectangle with no width or no height, so the
+    // aids leave it out of every rectangle's corner (`command::aids_for`).
+    // Nothing here is a private input path (kentoscad.md §2.4).
     auto second = co_await ctx.point(
         "noktalar", by_edge ? "Aynı kenarın öteki köşesi" : "Karşı köşe",
         PointOptions{.rubber_band   = true,

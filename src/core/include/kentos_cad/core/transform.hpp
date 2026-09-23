@@ -85,16 +85,18 @@ Point2 mirrored_in_line(Point2 p, Point2 a, Point2 b);
 /// What is being done to the coordinates.
 struct Xform
 {
-    /// Which of the four transforms this is.
-    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror };
+    /// Which transform this is. `Align` is the one HİZALA applies: turned and
+    /// scaled about `base`, then carried so `base` lands on `axis_b`.
+    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror, Align };
 
     Kind kind{Kind::Translate}; ///< which transform
     Mm dx{0};                   ///< Translate: east component
     Mm dy{0};                   ///< Translate: north component
-    Point2 base{};              ///< Rotate/Scale: the centre · Mirror: the axis's first point
-    Point2 axis_b{};            ///< Mirror: the axis's second point
-    SinCos turn{};              ///< Rotate: the turn
-    double factor{1.0};         ///< Scale: the multiplier
+    Point2
+        base{}; ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the source
+    Point2 axis_b{};    ///< Mirror: the axis's second point · Align: where the source goes
+    SinCos turn{};      ///< Rotate, Align: the turn
+    double factor{1.0}; ///< Scale, Align: the multiplier
 
     friend bool operator==(const Xform&, const Xform&) = default;
 };
@@ -107,7 +109,8 @@ enum class GhostKind : std::uint8_t {
     Translate, ///< the cursor is where the base point goes: TAŞI, KOPYALA
     Rotate,    ///< the cursor's direction from the base is the turn: DÖNDÜR
     Scale,     ///< the cursor's distance from the base, in METRES, is the factor: ÖLÇEKLE
-    Mirror     ///< the cursor is the axis's second point: AYNALA
+    Mirror,    ///< the cursor is the axis's second point: AYNALA
+    Align      ///< the cursor is where the second source goes: HİZALA (`GhostSpec::from1`…)
 };
 
 /// What a ghost needs beyond the points it is handed.
@@ -120,14 +123,35 @@ struct GhostSpec
     /// More than one only for a command that repeats a step.
     std::int64_t copies{1};
 
-    friend constexpr bool operator==(const GhostSpec&, const GhostSpec&) = default;
+    /// The objects the ghost carries, by persistent key. Empty is the live
+    /// selection, which is what a verb started from the canvas has in hand; a
+    /// verb told its objects by name (`TAŞI nesneler=5`) names them here, so the
+    /// ghost is of what will move rather than of whatever is highlighted.
+    std::vector<std::int64_t> keys;
+
+    /// `Align` only: the first source, where it goes, and the second source —
+    /// the cursor being where the second source goes — and whether the second
+    /// pair's distance scales the objects (`HİZALA olcekle=evet`).
+    Point2 from1{};
+    Point2 to1{};
+    Point2 from2{};
+    bool scale{false};
+
+    friend bool operator==(const GhostSpec&, const GhostSpec&) = default;
 };
 
-/// Fixed 9-byte layout: kind (uint8), copies (int64). Fixed rather than
-/// versioned because a ghost lives for the length of one prompt and is never
+/// The ghost as bytes: kind (uint8), copies (int64), the three `Align` points
+/// (six int64), the scale flag (uint8), the key count (uint32) and the keys.
+/// Unversioned because a ghost lives for the length of one prompt and is never
 /// written to a file.
 std::vector<std::uint8_t> encode_ghost_spec(const GhostSpec& spec);
 std::optional<GhostSpec> decode_ghost_spec(std::span<const std::uint8_t> bytes);
+
+/// The transform HİZALA applies: `from1` carried to `to1`, turned so `from1`→`from2` lies
+/// along `to1`→`to2`, and — with `scale` — stretched by how much longer the
+/// second pair is. Nothing when either pair's two points coincide, which leaves
+/// no direction to turn to and no length to scale by.
+std::optional<Xform> align_xform(Point2 from1, Point2 to1, Point2 from2, Point2 to2, bool scale);
 
 /// The transform `cursor` implies for a ghost whose base point is `base`.
 ///
@@ -135,6 +159,11 @@ std::optional<GhostSpec> decode_ghost_spec(std::span<const std::uint8_t> bytes);
 /// takes the pointed answer and by the canvas on every mouse move. That is what
 /// makes the ghost exact rather than nearly right.
 Xform ghost_xform(GhostKind kind, Point2 base, Point2 cursor);
+
+/// The same, for a ghost whose spec carries more than a kind: an `Align`
+/// ghost's fixed points (the cursor is the second target), every other kind as
+/// the call above. An `Align` whose pairs collapse moves nothing.
+Xform ghost_xform(const GhostSpec& spec, Point2 base, Point2 cursor);
 
 /// The turn `base`->`cursor` makes, in whole micro-degrees counter-clockwise
 /// from east — the unit `DÖNDÜR`'s own `aci` is written in, times

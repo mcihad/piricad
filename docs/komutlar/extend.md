@@ -58,8 +58,9 @@ UZAT nesne=1 sinir=2 nokta=485350,4310200
 tıklayın.
 
 Hangisinin uzatılacağını **tıklama** söyler: tıkladığınız noktaya daha yakın olan
-çizgi uzatılır, diğeri sınır olur. Komut satırından `UZAT nesne=1 sinir=2` yazarak
-ikisini açıkça da verebilirsiniz.
+çizgi uzatılır, diğeri sınır olur. İmleç gezinirken **eklenecek uzantı** sınıra
+kadar kesikli çizilir; uzatılacak uç, imlece yakın olan uçtur. Komut satırından
+`UZAT nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
 
 Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
 yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.

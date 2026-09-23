@@ -1124,9 +1124,16 @@ void MainWindow::buildActions()
     actAlign_    = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
                               tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
                                     "ölçekler  ·  kısaltma: HZL"));
-    actDivide_   = modifyTool(Glyph::Divide, tr("Bölümle"), QStringLiteral("BÖLÜMLE"),
-                              tr("BÖLÜMLE — nesne boyunca eşit parçalara ya da sabit aralıkla nokta "
-                                   "koyar  ·  kısaltma: BLM"));
+    // AND THE SCALING FORM, whose whole line rides on the button: the second
+    // pair's length then stretches the objects too — a sketch fitted onto its
+    // surveyed corners. It was reachable only by typing `olcekle=evet`.
+    actAlignScaled_ =
+        modifyTool(Glyph::Align, tr("Hizala — ölçekleyerek"), QStringLiteral("HİZALA olcekle=evet"),
+                   tr("HİZALA olcekle=evet — iki nokta çiftiyle taşır, döndürür ve "
+                      "ikinci çiftin uzunluğuna göre ölçekler"));
+    actDivide_ = modifyTool(Glyph::Divide, tr("Bölümle"), QStringLiteral("BÖLÜMLE"),
+                            tr("BÖLÜMLE — nesne boyunca eşit parçalara ya da sabit aralıkla nokta "
+                               "koyar  ·  kısaltma: BLM"));
     actPolylineEdit_ =
         modifyTool(Glyph::PolylineEdit, tr("Çizgi Düzenle"), QStringLiteral("ÇİZGİDÜZENLE"),
                    tr("ÇİZGİDÜZENLE — kapatır, açar, yönünü çevirir ya da "
@@ -1623,6 +1630,7 @@ void MainWindow::buildMenus()
     modify->addAction(actStretch_);
     modify->addAction(actExplode_);
     modify->addAction(actAlign_);
+    modify->addAction(actAlignScaled_);
     modify->addAction(actDivide_);
     modify->addAction(actPolylineEdit_);
     modify->addSeparator();
@@ -2065,8 +2073,8 @@ void MainWindow::buildToolBox()
     // the `Değiştir` menu alone — and three of them have just been given a ghost
     // that turns, scales and flips under the cursor, which is a thing you cannot
     // discover from a menu (§2.6a).
-    toolBox_->addFamily(
-        {actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_, actAlign_, actStretch_});
+    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_,
+                         actAlign_, actAlignScaled_, actStretch_});
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
 

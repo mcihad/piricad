@@ -11,6 +11,7 @@
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -88,9 +89,8 @@ std::vector<GripPoint> circle_grips(const RingGeometry& geom, std::uint32_t slot
             GripPoint{Point2{c.x, c.y - r}, GripRole::Radius}};
 }
 
-Result<GripEdit> circle_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> circle_move(GripEdit edit, std::size_t index, Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (edit.points.empty() || edit.points[0].size() < 2) return no_such_grip(index, 0);
     const Point2 c = edit.points[0][0];
     if (index == 0) {
@@ -122,9 +122,8 @@ std::vector<GripPoint> arc_grips(const RingGeometry& geom, std::uint32_t slot)
             GripPoint{f, GripRole::Endpoint}, GripPoint{mid, GripRole::Radius}};
 }
 
-Result<GripEdit> arc_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> arc_move(GripEdit edit, std::size_t index, Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (edit.points.empty() || edit.points[0].size() < 4) return no_such_grip(index, 0);
     std::vector<Point2>& v = edit.points[0];
     const Point2 c         = v[0];
@@ -162,9 +161,8 @@ std::vector<GripPoint> ellipse_grips(const RingGeometry& geom, std::uint32_t slo
             GripPoint{b2, GripRole::AxisEnd}};
 }
 
-Result<GripEdit> ellipse_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> ellipse_move(GripEdit edit, std::size_t index, Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (edit.points.empty() || edit.points[0].size() < 3) return no_such_grip(index, 0);
     std::vector<Point2>& v = edit.points[0];
     const Point2 c         = v[0];
@@ -240,9 +238,8 @@ std::vector<GripPoint> arc_polyline_grips(const RingGeometry& geom, std::uint32_
     return out;
 }
 
-Result<GripEdit> arc_polyline_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> arc_polyline_move(GripEdit edit, std::size_t index, Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (edit.points.empty()) return no_such_grip(index, 0);
     std::vector<Point2>& v = edit.points[0];
     const std::size_t n    = v.size();
@@ -337,9 +334,9 @@ std::vector<GripPoint> dimension_grips(const RingGeometry& geom, std::uint32_t s
     return out;
 }
 
-Result<GripEdit> dimension_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> dimension_move(const Document& doc, EntityId e, GripEdit edit, std::size_t index,
+                                Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (edit.points.size() < 2 || edit.points[0].size() < 2) return no_such_grip(index, 0);
     std::vector<Point2>& base = edit.points[0];
     std::vector<Point2>& defs = edit.points[1];
@@ -390,9 +387,9 @@ Result<GripEdit> dimension_move(const Document& doc, EntityId e, std::size_t ind
 
 // --------------------------------------------------------- block reference ----
 
-Result<GripEdit> block_reference_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> block_reference_move(const Document& doc, GripEdit edit, std::size_t index,
+                                      Point2 to)
 {
-    GripEdit edit = read_edit(doc, e);
     if (index != 0 || edit.points.empty() || edit.points[0].empty()) return no_such_grip(index, 1);
     auto decoded = decode_block_reference(edit.payload);
     if (!decoded) return decoded.error();
@@ -418,9 +415,8 @@ std::vector<GripPoint> vertex_grips(const RingGeometry& geom, std::uint32_t slot
     return out;
 }
 
-Result<GripEdit> vertex_move(const Document& doc, EntityId e, std::size_t index, Point2 to)
+Result<GripEdit> vertex_move(GripEdit edit, std::size_t index, Point2 to)
 {
-    GripEdit edit    = read_edit(doc, e);
     std::size_t ring = 0;
     std::size_t at   = 0;
     std::size_t have = 0;
@@ -462,34 +458,61 @@ std::vector<GripPoint> entity_grips(const Document& doc, EntityId e)
     }
 }
 
-Result<GripEdit> move_grip(const Document& doc, EntityId e, std::size_t index, Point2 to)
+namespace {
+
+/// One grip move applied to `edit`, the entity's state so far — the step
+/// `move_grip` takes once and `move_grips` takes in turn.
+Result<GripEdit> apply_move(const Document& doc, EntityId e, GripEdit edit, std::size_t index,
+                            Point2 to)
+{
+    switch (doc.entities().kind[e]) {
+    case kCircleKind: return circle_move(std::move(edit), index, to);
+    case kArcKind: return arc_move(std::move(edit), index, to);
+    case kEllipseKind: return ellipse_move(std::move(edit), index, to);
+    case kArcPolylineKind: return arc_polyline_move(std::move(edit), index, to);
+    case kDimensionKind: return dimension_move(doc, e, std::move(edit), index, to);
+    case kBlockReferenceKind: return block_reference_move(doc, std::move(edit), index, to);
+    default: return vertex_move(std::move(edit), index, to);
+    }
+}
+
+/// Why `e` cannot be edited at all, or nothing.
+std::optional<Error> not_editable(const Document& doc, EntityId e)
 {
     const EntityTable& ents = doc.entities();
     if (e >= ents.size() || !ents.alive(e))
         return err(ErrorCode::NotFound, "Nesne bulunamadı veya silinmiş.");
     if (auto st = doc.editable(e); !st) return st.error();
-    switch (ents.kind[e]) {
-    case kCircleKind: return circle_move(doc, e, index, to);
-    case kArcKind: return arc_move(doc, e, index, to);
-    case kEllipseKind: return ellipse_move(doc, e, index, to);
-    case kArcPolylineKind: return arc_polyline_move(doc, e, index, to);
-    case kDimensionKind: return dimension_move(doc, e, index, to);
-    case kBlockReferenceKind: return block_reference_move(doc, e, index, to);
-    default: return vertex_move(doc, e, index, to);
-    }
+    return std::nullopt;
 }
 
-bool grip_preview(const Document& doc, EntityId e, std::size_t index, Point2 to, EmitBuffer& into)
-{
-    auto edit = move_grip(doc, e, index, to);
-    if (!edit) return false;
-    const GripEdit& g = edit.value();
+} // namespace
 
+Result<GripEdit> move_grip(const Document& doc, EntityId e, std::size_t index, Point2 to)
+{
+    if (auto why = not_editable(doc, e)) return *why;
+    return apply_move(doc, e, read_edit(doc, e), index, to);
+}
+
+Result<GripEdit> move_grips(const Document& doc, EntityId e, std::span<const GripMove> moves)
+{
+    if (auto why = not_editable(doc, e)) return *why;
+    GripEdit state = read_edit(doc, e);
+    for (const GripMove& m : moves) {
+        auto next = apply_move(doc, e, std::move(state), m.index, m.to);
+        if (!next) return next.error();
+        state = std::move(next.value());
+    }
+    return state;
+}
+
+bool edit_preview(const Document& doc, EntityId e, const GripEdit& edit, EmitBuffer& into)
+{
     // The edited shape in a scratch arena, drawn by the kind's own outline: the
     // preview IS the future drawing, computed once and the same way.
     RingGeometry scratch;
-    const auto inputs = g.inputs();
-    auto slot         = scratch.append(inputs, g.payload);
+    const auto inputs = edit.inputs();
+    auto slot         = scratch.append(inputs, edit.payload);
     if (!slot) return false;
     const KindId kind = doc.entities().kind[e];
     if (curve_outline(kind, scratch, slot.value(), into)) return true;
@@ -503,6 +526,90 @@ bool grip_preview(const Document& doc, EntityId e, std::size_t index, Point2 to,
             into.push_vertex(xs[v], ys[v]);
     }
     return true;
+}
+
+bool grip_preview(const Document& doc, EntityId e, std::size_t index, Point2 to, EmitBuffer& into)
+{
+    auto edit = move_grip(doc, e, index, to);
+    return edit && edit_preview(doc, e, edit.value(), into);
+}
+
+Result<std::optional<Stretched>> stretch_entity(const Document& doc, EntityId e, const Box2& window,
+                                                Mm dx, Mm dy)
+{
+    if (auto why = not_editable(doc, e)) return *why;
+    const auto inside = [&window](Point2 p) {
+        return p.x >= window.min_x && p.x <= window.max_x && p.y >= window.min_y &&
+               p.y <= window.max_y;
+    };
+
+    // A POLYLINE'S CORNERS ARE ITS GRIPS and each moves on its own, so they are
+    // moved in one pass over the rings rather than one search per corner.
+    if (doc.entities().kind[e] == kPolylineKind) {
+        Stretched out{e, read_edit(doc, e), 0};
+        for (std::vector<Point2>& ring : out.edit.points)
+            for (Point2& p : ring)
+                if (inside(p)) {
+                    p = shifted(p, dx, dy);
+                    ++out.moved;
+                }
+        if (out.moved == 0) return std::optional<Stretched>{};
+        return std::optional<Stretched>{std::move(out)};
+    }
+
+    // EVERY OTHER KIND GRIP BY GRIP, each to where it WAS plus the offset —
+    // positions taken once, before the first move. A circle's centre already
+    // carries its radius handle, so the handle's own move then lands where the
+    // handle is and changes nothing: windowing a whole circle translates it.
+    const std::vector<GripPoint> grips = entity_grips(doc, e);
+    std::vector<GripMove> moves;
+    for (std::size_t i = 0; i < grips.size(); ++i)
+        if (inside(grips[i].at)) moves.push_back(GripMove{i, shifted(grips[i].at, dx, dy)});
+    if (moves.empty()) return std::optional<Stretched>{};
+
+    auto edit = move_grips(doc, e, moves);
+    if (!edit) return edit.error();
+    return std::optional<Stretched>{Stretched{e, std::move(edit.value()), moves.size()}};
+}
+
+std::vector<std::uint8_t> encode_stretch_guide(const StretchGuide& guide)
+{
+    // version, the window, the key count, the keys — little-endian as the
+    // machine writes them, because the bytes never leave the process.
+    std::vector<std::uint8_t> bytes(1 + sizeof(Box2) + sizeof(std::uint32_t) +
+                                    guide.keys.size() * sizeof(std::int64_t));
+    bytes[0]       = 1;
+    std::size_t at = 1;
+    const auto put = [&bytes, &at](const void* from, std::size_t n) {
+        std::memcpy(bytes.data() + at, from, n);
+        at += n;
+    };
+    const std::array<Mm, 4> box{guide.window.min_x, guide.window.min_y, guide.window.max_x,
+                                guide.window.max_y};
+    put(box.data(), sizeof(box));
+    const auto count = static_cast<std::uint32_t>(guide.keys.size());
+    put(&count, sizeof(count));
+    if (count != 0) put(guide.keys.data(), guide.keys.size() * sizeof(std::int64_t));
+    return bytes;
+}
+
+Result<StretchGuide> decode_stretch_guide(std::span<const std::uint8_t> bytes)
+{
+    const std::size_t head = 1 + 4 * sizeof(Mm) + sizeof(std::uint32_t);
+    if (bytes.size() < head || bytes[0] != 1)
+        return err(ErrorCode::InvalidArgument, "Esnetme önizlemesinin baytları tanınmıyor.");
+    StretchGuide guide;
+    std::array<Mm, 4> box{};
+    std::memcpy(box.data(), bytes.data() + 1, sizeof(box));
+    guide.window        = Box2{box[0], box[1], box[2], box[3]};
+    std::uint32_t count = 0;
+    std::memcpy(&count, bytes.data() + 1 + sizeof(box), sizeof(count));
+    if (bytes.size() != head + count * sizeof(std::int64_t))
+        return err(ErrorCode::InvalidArgument, "Esnetme önizlemesinin baytları tanınmıyor.");
+    guide.keys.resize(count);
+    if (count != 0)
+        std::memcpy(guide.keys.data(), bytes.data() + head, count * sizeof(std::int64_t));
+    return guide;
 }
 
 Result<GripEdit> insert_vertex(const Document& doc, EntityId e, std::size_t after, Point2 at)

@@ -1405,6 +1405,57 @@ int main(int argc, char** argv)
         later([&window] { window.cancelCommand(); });
         later([&window, shot] { shot(QStringLiteral("14c-yuvarla-dikdortgen-sonuc"), &window); });
 
+        // THE EDIT VERBS' PREVIEWS: what each click will do, drawn before it.
+        // ESNET — the window's corners follow the cursor, the rest stays.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ESNET"));
+            window.runScriptLine(QStringLiteral("16,-2"));
+            window.runScriptLine(QStringLiteral("24,14"));
+            window.runScriptLine(QStringLiteral("20,6"));
+        });
+        later([hover] { hover({26'000, 6'000}); });
+        later([&window, shot] { shot(QStringLiteral("14d-esnet-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // KIR — the piece between the first point and the cursor, marked as going.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("KIR"));
+            window.runScriptLine(QStringLiteral("5,0"));
+        });
+        later([hover] { hover({20'000, 5'000}); });
+        later([&window, shot] { shot(QStringLiteral("14e-kir-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // BUDA — the piece past the boundary, marked as going, under the cursor.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 14,-6 14,6"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("BUDA"));
+        });
+        later([hover] { hover({18'000, 300}); });
+        later([&window, shot] { shot(QStringLiteral("14f-buda-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // HİZALA — the objects turned under the cursor by the second pair.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 10,0 10,6 0,6")); });
+        later([&window] {
+            // Room for where the objects go as well as where they are.
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.4"));
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("HİZALA"));
+            window.runScriptLine(QStringLiteral("0,0"));
+            window.runScriptLine(QStringLiteral("14,4"));
+            window.runScriptLine(QStringLiteral("10,0"));
+        });
+        later([hover] { hover({18'000, 12'000}); });
+        later([&window, shot] { shot(QStringLiteral("14g-hizala-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // KÖŞETAŞI: the parcel with its corner on the cursor.
         later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
         later([&window] {

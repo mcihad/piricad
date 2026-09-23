@@ -92,6 +92,23 @@ struct GripEdit
 /// a radius of zero, an ellipse axis of zero, a grip the entity does not have.
 Result<GripEdit> move_grip(const Document& doc, EntityId e, std::size_t index, Point2 to);
 
+/// One grip and where it goes.
+struct GripMove
+{
+    std::size_t index{0}; ///< the grip, as `entity_grips` numbers it
+    Point2 to{};          ///< where it goes
+};
+
+/// Moves several grips of `e` IN TURN, each against the shape the moves before
+/// it left — what moving them one by one in the document would do, computed
+/// without touching the document. ESNET moves every windowed grip this way and
+/// its preview draws the same result.
+Result<GripEdit> move_grips(const Document& doc, EntityId e, std::span<const GripMove> moves);
+
+/// Draws `edit` — a new shape for `e` — by `e`'s kind's own outline: the form
+/// the canvas shows for an edit that has not been made yet.
+bool edit_preview(const Document& doc, EntityId e, const GripEdit& edit, EmitBuffer& into);
+
 /// The drawn form `e` would have with grip `index` at `to`: what the canvas
 /// shows under the pointer while the handle is dragged. Uses the kind's own
 /// outline over the edited geometry, so the preview is the future drawing.
@@ -117,6 +134,36 @@ std::optional<std::size_t> nearest_grip(const Document& doc, EntityId e, Point2 
 /// by the vertex it leaves, counted as `insert_vertex` counts. Nothing when `e`
 /// is not a polyline or has no edge.
 std::optional<std::size_t> nearest_edge(const Document& doc, EntityId e, Point2 probe);
+
+/// What a stretch window does to one entity.
+struct Stretched
+{
+    EntityId e{kNoEntity}; ///< the entity
+    GripEdit edit;         ///< its new shape
+    std::size_t moved{0};  ///< how many of its grips the window moved
+};
+
+/// ESNET's edit of `e`: every grip inside `window` moved by `dx`, `dy` — a
+/// polyline's corners, every other kind's handles (`entity_grips`) — each to
+/// where it was plus the offset, the positions taken before the first move.
+/// Nothing when no grip is inside; an error when the moved shape is refused.
+Result<std::optional<Stretched>> stretch_entity(const Document& doc, EntityId e, const Box2& window,
+                                                Mm dx, Mm dy);
+
+/// The payload ESNET's last prompt carries (`command::RubberShape::Stretch`):
+/// the window, and the objects when the run named them — with none named the
+/// window's own crossing pick decides, as it does for the command.
+struct StretchGuide
+{
+    Box2 window{};                  ///< the window, document millimetres
+    std::vector<std::int64_t> keys; ///< the named objects, by persistent key
+};
+
+/// The guide as bytes.
+std::vector<std::uint8_t> encode_stretch_guide(const StretchGuide& guide);
+
+/// The guide back, refused when the bytes are not what the encoder writes.
+Result<StretchGuide> decode_stretch_guide(std::span<const std::uint8_t> bytes);
 
 /// The payload a grip preview carries (`command::RubberShape::Grip`): the
 /// object by its persistent key, the grip — or, for an insert, the vertex the

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/context.hpp"
 
+#include "kentos_cad/command/aids.hpp"
+
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/session.hpp"
 
@@ -56,14 +58,17 @@ Value snap_value(Session& session, const Prompt& prompt, Value v)
     // Only a point is aimed; a number, a name or a flag is typed exactly.
     if (v.kind() != Value::Kind::Point && v.kind() != Value::Kind::PointList) return v;
 
-    Bus& bus               = session.bus();
-    const AidSettings& set = bus.aid_settings();
+    Bus& bus = session.bus();
+    // The aids THIS prompt takes (`aids_for`): dik mod has no say over a
+    // rectangle's opposite corner.
+    const AidSettings set = aids_for(bus.aid_settings(), prompt);
 
     const bool object_snap = set.snap_radius > 0 && (set.modes & core::SnapObjectMask) != 0;
     const bool grid        = set.grid_step > 0 && (set.modes & core::SnapGrid) != 0;
-    const bool direction =
-        prompt.has_rubber_band && (set.ortho || set.normal_lock ||
-                                   (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
+    // AIMED FROM THE ORIGIN only when the origin is a base (`Prompt::rubber_base`).
+    const bool based     = aimed_from_origin(prompt);
+    const bool direction = based && (set.ortho || set.normal_lock ||
+                                     (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
     // A TRACE NEEDS A MARK AND NOT A VIEW, so it is its own gate: with the
     // aperture at zero and every object mode off, a marked corner still tracks.
     const bool tracking = set.tracking_reach > 0 && (set.modes & core::SnapTracking) != 0 &&
@@ -80,13 +85,13 @@ Value snap_value(Session& session, const Prompt& prompt, Value v)
     };
 
     if (v.kind() == Value::Kind::Point)
-        return Value::point(resolve(v.as_point(), prompt.has_rubber_band, prompt.rubber_origin));
+        return Value::point(resolve(v.as_point(), based, prompt.rubber_origin));
 
     // A whole point list arrives when a script hands one over at once. Each point
     // is resolved against the one before it, exactly as an interactive run would,
     // so a scripted polyline and a drawn polyline agree vertex for vertex.
     Value::Points points = v.as_points();
-    bool has_base        = prompt.has_rubber_band;
+    bool has_base        = based;
     core::Point2 base    = prompt.rubber_origin;
 
     for (auto& p : points) {
@@ -127,6 +132,7 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.param           = param;
     prompt.has_rubber_band = o.rubber_band;
     prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_base     = o.rubber_base;
     prompt.rubber_shape    = o.rubber_shape;
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
@@ -139,6 +145,7 @@ InputAwaiter<double> Context::number(std::string param, std::string message, Poi
     Prompt prompt{.message = std::move(message), .kind = ParamKind::Number, .param = param};
     prompt.has_rubber_band = o.rubber_band;
     prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_base     = o.rubber_base;
     prompt.rubber_shape    = o.rubber_shape;
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
@@ -152,6 +159,7 @@ InputAwaiter<std::int64_t> Context::integer(std::string param, std::string messa
     Prompt prompt{.message = std::move(message), .kind = ParamKind::Integer, .param = param};
     prompt.has_rubber_band = o.rubber_band;
     prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_base     = o.rubber_base;
     prompt.rubber_shape    = o.rubber_shape;
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);

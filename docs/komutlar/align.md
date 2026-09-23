@@ -76,9 +76,19 @@ HİZALA nesne=1 kaynak=0,0 hedef=0,0 kaynak2=10,0 hedef2=0,20 olcekle=evet
 
 ### Arayüz
 
-**Değiştir > Hizala**. Nesneleri seçip Enter'a basın, sonra birinci kaynağı ve
-hedefini tıklayın. İkinci çift `kaynak2=`/`hedef2=` ile verilir — bir hizalamada
-ikinci çift bir kez verilir, her nesne için değil.
+**Değiştir > Hizala**, ya da araç kolonundaki değiştirme ailesinde **Hizala**.
+
+1. Nesneleri seçip Enter'a basın.
+2. Birinci kaynağı tıklayın, sonra hedefini: nesneler **imleçle birlikte taşınır**.
+3. **İkinci kaynağı** tıklayın — ya da yalnız taşımak için **Enter**'a basın. Birinci
+   çift bu sırada tuvalde kalır.
+4. İkinci kaynağın gideceği **doğrultuyu** gösterin: nesneler imleçle birlikte
+   **döner**; tıklamak hizalamayı uygular.
+
+Ölçekleyerek hizalamak için aynı ailedeki **Hizala — ölçekleyerek** aracını seçin
+(`HİZALA olcekle=evet`): ikinci çiftin uzunluğu nesneleri de büyütür ya da küçültür,
+önizlemede de öyle görünür. Bir hizalamada ikinci çift bir kez verilir, her nesne
+için değil.
 
 ### Betik
 

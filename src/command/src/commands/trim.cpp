@@ -19,6 +19,7 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/trim_end.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
@@ -426,25 +427,6 @@ Task<void> run_split(Context& ctx)
 
 // ----------------------------------------------------------- BUDA / UZAT ----
 
-/// Where `line` meets the infinite line through `a`-`b`, as a fraction along
-/// `line`'s own segment. Returns false when they are parallel.
-bool cut_fraction(core::Point2 p0, core::Point2 p1, core::Point2 a, core::Point2 b, double& t)
-{
-    const double dx = core::mm_to_metres(p1.x - p0.x);
-    const double dy = core::mm_to_metres(p1.y - p0.y);
-    const double ex = core::mm_to_metres(b.x - a.x);
-    const double ey = core::mm_to_metres(b.y - a.y);
-
-    const double denom = dx * ey - dy * ex;
-    if (std::abs(denom) < 1e-12) return false; // parallel: no crossing to move to
-
-    const double wx = core::mm_to_metres(a.x - p0.x);
-    const double wy = core::mm_to_metres(a.y - p0.y);
-
-    t = (wx * ey - wy * ex) / denom;
-    return true;
-}
-
 /// Shared body: `keep_start` says which side of the cut survives a trim, and
 /// `extend` says whether the end is being pushed out instead of pulled back.
 Task<void> run_cut(Context& ctx, bool extend)
@@ -501,8 +483,25 @@ Task<void> run_cut(Context& ctx, bool extend)
     };
 
     // ASKED BEFORE THE PAIR IS SETTLED when it came from the selection, because
-    // the answer is what settles it.
-    auto at = co_await ctx.point("nokta", extend ? "Uzatılacak uç" : "Atılacak parça");
+    // the answer is what settles it — and with the answer DRAWN as the cursor
+    // moves: the piece a trim throws away marked as going, the reach an
+    // extension adds drawn as coming, from `core::trim_end`, the edit this body
+    // makes with the click. With two lines selected the cursor also decides
+    // which of them is edited, and the preview follows that decision too.
+    core::TrimGuide guide{.extend = extend};
+    if (from_selection) {
+        guide.paired = true;
+        guide.first  = pair[0];
+        guide.second = pair[1];
+    } else {
+        guide.first  = one_id(target_arg);
+        guide.second = one_id(edge_arg);
+    }
+    auto at = co_await ctx.point("nokta", extend ? "Uzatılacak uç" : "Atılacak parça",
+                                 PointOptions{.rubber_band    = true,
+                                              .rubber_base    = false,
+                                              .rubber_shape   = RubberShape::Trim,
+                                              .rubber_payload = core::encode_trim_guide(guide)});
     if (!at) co_return;
 
     std::int64_t target_id = 0;
@@ -515,17 +514,7 @@ Task<void> run_cut(Context& ctx, bool extend)
         if (!open_run(ctx, pair[0], a, a_pts)) co_return;
         if (!open_run(ctx, pair[1], b, b_pts)) co_return;
 
-        const auto nearest = [&](const std::vector<core::Point2>& run) {
-            double best = -1.0;
-            for (std::size_t i = 0; i + 1 < run.size(); ++i) {
-                const core::Point2 f = core::closest_point_on_segment(run[i], run[i + 1], *at);
-                const double d       = core::distance_squared(f, *at);
-                if (best < 0.0 || d < best) best = d;
-            }
-            return best;
-        };
-
-        const bool first_is_target = nearest(a_pts) <= nearest(b_pts);
+        const bool first_is_target = core::picks_first(a_pts, b_pts, *at);
         target_id                  = first_is_target ? pair[0] : pair[1];
         edge_id                    = first_is_target ? pair[1] : pair[0];
 
@@ -545,56 +534,12 @@ Task<void> run_cut(Context& ctx, bool extend)
     if (!open_run(ctx, target_id, target, pts)) co_return;
     if (!open_run(ctx, edge_id, edge, edge_pts)) co_return;
 
-    const double to_start = core::distance_squared(pts.front(), *at);
-    const double to_end   = core::distance_squared(pts.back(), *at);
-    const bool at_start   = to_start <= to_end;
-
-    // The segment that moves is the one at that end.
-    const std::size_t seg = at_start ? 0 : pts.size() - 2;
-    const core::Point2 p0 = at_start ? pts[1] : pts[seg];     // the anchored end
-    const core::Point2 p1 = at_start ? pts[0] : pts[seg + 1]; // the end that moves
-
-    // Every edge segment is a candidate; the nearest crossing to the moving end
-    // is the one meant, because that is the first boundary the line reaches.
-    bool found  = false;
-    double best = 0.0;
-    core::Point2 cut{};
-
-    for (std::size_t i = 0; i + 1 < edge_pts.size(); ++i) {
-        double t = 0.0;
-        if (!cut_fraction(p0, p1, edge_pts[i], edge_pts[i + 1], t)) continue;
-
-        const core::Point2 hit{p0.x + core::mm_round((static_cast<double>(p1.x - p0.x)) * t),
-                               p0.y + core::mm_round((static_cast<double>(p1.y - p0.y)) * t)};
-
-        // The crossing has to be ON the boundary segment, not merely on its line:
-        // a line trimmed to where two boundaries would have met had they been
-        // longer is a line trimmed to nothing that exists.
-        const core::Point2 foot = core::closest_point_on_segment(edge_pts[i], edge_pts[i + 1], hit);
-        if (core::distance_squared(foot, hit) > 1.0) continue;
-
-        // Trimming pulls the end back (t < 1), extending pushes it out (t > 1).
-        if (extend ? (t <= 1.0) : (t >= 1.0 || t <= 0.0)) continue;
-
-        if (!found || std::abs(t - 1.0) < std::abs(best - 1.0)) {
-            found = true;
-            best  = t;
-            cut   = hit;
-        }
-    }
-
-    if (!found) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   extend ? "Bu uç, sınır çizgisine uzatılarak ulaşamıyor: kesişme yok."
-                          : "Bu uç sınır çizgisini kesmiyor; budanacak bir şey yok.");
+    auto edit = core::trim_end(pts, edge_pts, *at, extend);
+    if (!edit) {
+        ctx.refuse(edit.error());
         co_return;
     }
-
-    std::vector<core::Point2> out = pts;
-    if (at_start)
-        out.front() = cut;
-    else
-        out.back() = cut;
+    const std::vector<core::Point2>& out = edit.value().run;
 
     if (!write_run(ctx, target, out)) co_return;
 

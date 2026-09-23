@@ -11,6 +11,8 @@ add_library(kentos_core STATIC
     src/arc_polyline.cpp
     src/circle.cpp
     src/corner.cpp
+    src/break_run.cpp
+    src/trim_end.cpp
     src/block.cpp
     src/block_reference.cpp
     src/dimension.cpp

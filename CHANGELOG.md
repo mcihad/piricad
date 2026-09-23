@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — ESNET, KIR, BUDA/UZAT ve HİZALA sonucu önceden gösteriyor
+
+- **ESNET:** başlangıç noktası sorulurken pencere tuvalde kalıyor; bitiş noktasında
+  pencerenin yakaladığı her nesne esnetilmiş hâliyle imleci izliyor. Önizleme komutun
+  kullandığı çekirdek hesabın kendisi (`core::stretch_entity`); tutamaklar artık
+  belgeye dokunmadan sırayla taşınıyor (`core::move_grips`).
+- **KIR:** ikinci nokta aranırken gidecek parça kırmızı ve kesikli işaretleniyor.
+- **BUDA / UZAT:** imleç çizginin üzerindeyken atılacak parça (ya da eklenecek
+  uzantı) çiziliyor; iki çizgi seçiliyse hangisinin düzenleneceği imleçle birlikte
+  değişiyor.
+- **HİZALA:** ikinci nokta çifti artık arayüzden de soruluyor (Enter: yalnız taşı);
+  nesneler ilk hedefte imleçle taşınıyor, ikinci hedefte imleçle dönüyor. **Hizala —
+  ölçekleyerek** aracı `olcekle=evet`'i fareye açıyor.
+- **TAŞI, KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA:** hayalet artık komutun çözdüğü
+  nesneleri gösteriyor; `TAŞI nesneler=5` gibi adıyla verilen nesnelerin de hayaleti
+  çıkıyor (önce yalnız seçim çiziliyordu).
+
+### Düzeltildi — dik mod dikdörtgen köşesini ve ölçülmeyen noktaları kilitlemiyor
+
+Dik mod açıkken bir dikdörtgenin karşı köşesi eksene kilitleniyor, pencere bir çizgiye
+dönüşüyordu: seçim penceresi, `DİKDÖRTGEN` ve `ESNET` penceresi hiç çizilemiyordu.
+Önizlemesi olup bir önceki noktaya göre verilmeyen tıklamalar (BUDA'nın seçimi,
+ESNET'in başlangıcı) da yanlışlıkla bir köşeden ya da çizimin sıfırından geçen bir
+ışına kilitlenebiliyordu. Artık bu noktalara yön kilidi uygulanmıyor; tuvaldeki
+yakalama işareti de aynı kuralı izliyor.
+
 ### Eklendi — OFSET öznitelikleri paralele aktarıyor (C-03 tamam)
 
 [`OFSET`](docs/komutlar/offset.md) kaynağın öznitelik değerlerini paralele yazıyor —

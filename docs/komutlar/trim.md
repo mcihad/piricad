@@ -66,6 +66,10 @@ Hangisinin budanacağını **tıklama** söyler: tıkladığınız noktaya daha 
 tıklama sırasını değil nesne kimliğini takip eder — "önce seçtiğim" demek "önce
 çizdiğim" demek olurdu.
 
+İmleç bir çizginin üzerinde gezinirken **atılacak parça** kırmızı ve kesikli, kalacak
+çizgi vurgulu, sınır da kesikli çizilir; imleci öteki çizgiye götürünce önizleme de
+ona geçer. Gördüğünüz, tıklamanın yapacağının kendisidir.
+
 Komut satırından `BUDA nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
 
 Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini

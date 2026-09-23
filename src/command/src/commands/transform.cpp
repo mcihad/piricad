@@ -56,14 +56,17 @@ core::Point2 apply(const Xform& x, core::Point2 p)
 }
 
 /// The ghost a verb asks for: WHICH transform the cursor is completing, so the
-/// canvas draws the result rather than a slide.
-PointOptions ghost(core::GhostKind kind, core::Point2 base, std::int64_t copies = 1)
+/// canvas draws the result rather than a slide — and of WHICH objects, the ones
+/// the verb resolved, so a verb told its objects by name draws those rather
+/// than whatever is highlighted.
+PointOptions ghost(core::GhostKind kind, core::Point2 base, const std::vector<std::int64_t>& keys,
+                   std::int64_t copies = 1)
 {
-    return PointOptions{
-        .rubber_band    = true,
-        .rubber_origin  = base,
-        .rubber_shape   = RubberShape::Ghost,
-        .rubber_payload = core::encode_ghost_spec(core::GhostSpec{.kind = kind, .copies = copies})};
+    return PointOptions{.rubber_band    = true,
+                        .rubber_origin  = base,
+                        .rubber_shape   = RubberShape::Ghost,
+                        .rubber_payload = core::encode_ghost_spec(
+                            core::GhostSpec{.kind = kind, .copies = copies, .keys = keys})};
 }
 
 /// How a curve's radius changes. Only scaling touches it: moving, turning and
@@ -521,7 +524,7 @@ Task<void> run_move(Context& ctx)
     // — the ghost every CAD shows — so where they will land is seen, not
     // inferred from a line.
     auto to = co_await ctx.point("bitis", "Taşımanın bitiş noktası",
-                                 ghost(core::GhostKind::Translate, *from));
+                                 ghost(core::GhostKind::Translate, *from, requested));
     if (!to) co_return;
 
     // THE SAME CALL THE GHOST MADE. The offset was worked out here and the ghost
@@ -555,7 +558,7 @@ Task<void> run_copy(Context& ctx)
     std::vector<core::Point2> placed;
     while (auto to = co_await ctx.point(
                "bitis", placed.empty() ? "Kopyanın geleceği nokta" : "Sonraki kopyanın yeri",
-               ghost(core::GhostKind::Translate, *from))) {
+               ghost(core::GhostKind::Translate, *from, requested))) {
         const Xform x = core::ghost_xform(core::GhostKind::Translate, *from, *to);
 
         for (core::EntityId slot : slots) {
@@ -727,7 +730,7 @@ Task<void> run_rotate(Context& ctx)
         // which is what this parameter has always meant — and the ghost turns
         // with it.
         auto at = co_await ctx.point("aci_nokta", "Dönme açısı: yeni doğrultuyu gösterin",
-                                     ghost(core::GhostKind::Rotate, *centre));
+                                     ghost(core::GhostKind::Rotate, *centre, requested));
         if (!at) co_return;
         degrees = static_cast<double>(core::ghost_turn_udeg(*centre, *at)) /
                   static_cast<double>(core::kUDegPerDegree);
@@ -773,7 +776,7 @@ Task<void> run_scale(Context& ctx)
         // the size — which is how every CAD reads a dragged scale, and the ghost
         // is the size it will be.
         auto at = co_await ctx.point("carpan_nokta", "Ölçek çarpanı: merkezden uzaklık (m)",
-                                     ghost(core::GhostKind::Scale, *centre));
+                                     ghost(core::GhostKind::Scale, *centre, requested));
         if (!at) co_return;
         factor = core::ghost_factor(*centre, *at);
         // As above: the gesture is not the answer, the factor is.
@@ -818,7 +821,7 @@ Task<void> run_mirror(Context& ctx)
     // the one thing the command is about — which way round the objects end up —
     // was invisible until it had happened.
     auto b = co_await ctx.point("bitis", "Ayna ekseninin ikinci noktası",
-                                ghost(core::GhostKind::Mirror, *a));
+                                ghost(core::GhostKind::Mirror, *a, requested));
     if (!b) co_return;
 
     if (a->x == b->x && a->y == b->y) {

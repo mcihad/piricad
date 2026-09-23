@@ -80,6 +80,12 @@ enum class RubberShape : std::uint8_t {
                  ///< perimeter written in it: ALANÖLÇ yontem=nokta
     Parallel,    ///< the parallels of the objects `rubber_payload` names, on the side of each
                  ///< the cursor is on: OFSET
+    Stretch,     ///< the objects the window in `rubber_payload` stretches, its grips carried by
+                 ///< the cursor's offset from the origin: ESNET
+    Break,       ///< the line `rubber_payload` names, with the piece between the origin and the
+                 ///< cursor marked for removal: KIR
+    Trim,        ///< the line and boundary `rubber_payload` names, with the end nearer the cursor
+                 ///< trimmed back or extended to the boundary: BUDA, UZAT
 };
 
 struct Prompt
@@ -90,6 +96,16 @@ struct Prompt
     bool has_rubber_band{false};                 ///< whether a preview should be drawn
     Point2 rubber_origin{};                      ///< where that preview starts
     RubberShape rubber_shape{RubberShape::Line}; ///< what it draws between the two
+
+    /// Whether the answer is AIMED FROM `rubber_origin`: dik mod, kutupsal
+    /// izleme and the normal lock lay their rays through it, and the dynamic
+    /// readout measures from it. True for every guide that draws from a point
+    /// already given — a line's next corner, a move's end. False for a preview
+    /// that shows what a click will do without measuring from anything: BUDA's
+    /// pick of the piece to throw away, the base point of ESNET's move. Aimed
+    /// from an origin that is not a base, dik mod bent the pick onto a ray
+    /// through a window corner — or through the drawing's zero.
+    bool rubber_base{true};
 
     /// The points this run has already fixed, oldest first, `rubber_origin` last.
     ///

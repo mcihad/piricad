@@ -65,6 +65,11 @@ KIR nesne=1 birinci=40,0 ikinci=40,0
 **Değiştir > Kır**. Çizgiyi seçip Enter'a basın, sonra iki noktayı tıklayın.
 Nokta yakalama açıkken kırılma yerini mevcut bir kesişime yakalayabilirsiniz.
 
+İkinci nokta aranırken **gidecek parça işaretli çizilir**: birinci nokta ile imleç
+arasında, çizgi boyunca, kırmızı ve kesikli; iki yanda kalacak parçalar vurgulu.
+İkinci noktada tıklamak yerine **Enter**'a basarsanız çizgi birinci noktada, arası
+açılmadan ikiye bölünür.
+
 ### Betik
 
 ```json

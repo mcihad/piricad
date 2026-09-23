@@ -23,12 +23,15 @@
 // handle already is and changes nothing — a translation, which is what windowing
 // a whole circle should do.
 //
-// A POLYLINE IS WRITTEN IN ONE GO and every other kind grip by grip. The split is
-// `core.vertex_move`'s own (vertex.cpp): a polyline's rings ARE its shape, so all
-// its moved corners go in one `set_geometry` and no half-moved ring is ever
-// offered to the validator. A definition-bearing kind — circle, arc, ellipse,
-// dimension, block reference — goes through `core::move_grip`, which is the one
-// place that knows what moving THAT kind's handle means.
+// EVERY OBJECT IS WRITTEN IN ONE GO, from an edit computed before anything
+// moves (`core::stretch_entity`): a polyline's windowed corners, and for every
+// other kind its windowed handles moved in turn by `core::move_grips` — the one
+// place that knows what moving a circle's centre, an arc's end or a dimension's
+// definition point means. No half-moved ring is ever offered to the validator.
+//
+// THE PREVIEW IS THE SAME CALL. The last prompt carries the window, and the
+// canvas draws every object it catches through `core::stretch_entity` at the
+// cursor's offset — so what the drag shows is what the click writes.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -40,17 +43,12 @@
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/pick.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
-
-/// Whether `p` lies in the closed box.
-bool inside(const core::Box2& b, core::Point2 p)
-{
-    return p.x >= b.min_x && p.x <= b.max_x && p.y >= b.min_y && p.y <= b.max_y;
-}
 
 /// The box two corners make, whichever way round they were given.
 core::Box2 box_of(core::Point2 a, core::Point2 b)
@@ -59,72 +57,15 @@ core::Box2 box_of(core::Point2 a, core::Point2 b)
                       a.y > b.y ? a.y : b.y};
 }
 
-/// Moves the windowed corners of one polyline, all of them in one write.
-core::Status stretch_polyline(Context& ctx, core::EntityId slot, const core::Box2& window,
-                              core::Mm dx, core::Mm dy, std::size_t& moved)
+/// The window's outline, for the prompt that follows it: closed by repeating
+/// its first corner, because a fixed reference is drawn as a run.
+std::vector<core::Point2> outline_of(const core::Box2& b)
 {
-    const core::RingGeometry& g = ctx.document().geometry();
-    const core::RingSpan span   = g.rings_of(ctx.document().entities().slot[slot]);
-
-    std::vector<std::vector<core::Point2>> rings;
-    std::vector<core::RingGeometry::RingInput> input;
-    rings.reserve(span.count);
-    input.reserve(span.count);
-
-    std::size_t here = 0;
-    for (std::uint32_t i = 0; i < span.count; ++i) {
-        const std::uint32_t ring = span.first + i;
-        const auto xs            = g.ring_xs(ring);
-        const auto ys            = g.ring_ys(ring);
-
-        std::vector<core::Point2> pts;
-        pts.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v) {
-            core::Point2 p{xs[v], ys[v]};
-            if (inside(window, p)) {
-                p.x += dx;
-                p.y += dy;
-                ++here;
-            }
-            pts.push_back(p);
-        }
-        rings.push_back(std::move(pts));
-    }
-
-    if (here == 0) return core::Status{};
-
-    for (std::uint32_t i = 0; i < span.count; ++i)
-        input.push_back(core::RingGeometry::RingInput{rings[i], g.ring_role[span.first + i],
-                                                      g.ring_part[span.first + i]});
-
-    if (auto st = ctx.transaction().set_geometry(slot, input); !st) return st.error();
-    moved += here;
-    return core::Status{};
-}
-
-/// Moves the windowed grips of one definition-bearing kind, one at a time, each
-/// to a target taken from the snapshot.
-core::Status stretch_by_grips(Context& ctx, core::EntityId slot, const core::Box2& window,
-                              core::Mm dx, core::Mm dy, std::size_t& moved)
-{
-    // SNAPSHOT FIRST. `move_grip` reads the live document, so the positions that
-    // decide what is windowed and where each grip goes are taken once, before the
-    // first write.
-    const std::vector<core::GripPoint> before = core::entity_grips(ctx.document(), slot);
-
-    for (std::size_t i = 0; i < before.size(); ++i) {
-        if (!inside(window, before[i].at)) continue;
-
-        const core::Point2 to{before[i].at.x + dx, before[i].at.y + dy};
-        auto edit = core::move_grip(ctx.document(), slot, i, to);
-        if (!edit) return edit.error();
-
-        const auto inputs = edit.value().inputs();
-        if (auto st = ctx.transaction().set_kind_geometry(slot, inputs, edit.value().payload); !st)
-            return st.error();
-        ++moved;
-    }
-    return core::Status{};
+    return {{b.min_x, b.min_y},
+            {b.max_x, b.min_y},
+            {b.max_x, b.max_y},
+            {b.min_x, b.max_y},
+            {b.min_x, b.min_y}};
 }
 
 Task<void> run(Context& ctx)
@@ -149,12 +90,27 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    auto from = co_await ctx.point("baslangic", "Esnetmenin başlangıç noktası");
+    // THE WINDOW STAYS IN SIGHT while the move is given: it is what decides
+    // which corners follow, and it is not a document object, so once drawn it
+    // left the screen and the base point was chosen against nothing.
+    auto from = co_await ctx.point("baslangic", "Esnetmenin başlangıç noktası",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = *corner_a,
+                                                .rubber_base   = false,
+                                                .rubber_shape  = RubberShape::Fixed,
+                                                .rubber_chain  = outline_of(window)});
     if (!from) co_return;
+
+    // AND THE RESULT FOLLOWS THE CURSOR: every object the window catches drawn
+    // as it will be, its windowed corners carried by the cursor's offset —
+    // `core::stretch_entity`, the call this body makes with the click.
+    core::StretchGuide guide{.window = window, .keys = {}};
+    if (const Value named = ctx.argument("nesneler"); !named.empty()) guide.keys = named.as_ids();
     auto to = co_await ctx.point("bitis", "Esnetmenin bitiş noktası",
-                                 PointOptions{.rubber_band   = true,
-                                              .rubber_origin = *from,
-                                              .rubber_shape  = RubberShape::Line});
+                                 PointOptions{.rubber_band    = true,
+                                              .rubber_origin  = *from,
+                                              .rubber_shape   = RubberShape::Stretch,
+                                              .rubber_payload = core::encode_stretch_guide(guide)});
     if (!to) co_return;
 
     const core::Mm dx = to->x - from->x;
@@ -192,21 +148,34 @@ Task<void> run(Context& ctx)
             continue;
         }
 
-        const std::size_t was = moved;
-        core::Status st       = ctx.document().entities().kind[slot] == core::kPolylineKind
-                                    ? stretch_polyline(ctx, slot, window, dx, dy, moved)
-                                    : stretch_by_grips(ctx, slot, window, dx, dy, moved);
+        // EVERY TARGET FROM THE SNAPSHOT, in one write per object: the edit is
+        // computed before anything moves (`core::stretch_entity`), so a circle
+        // whose centre carries its handle is translated, not grown, and no
+        // half-moved ring is ever offered to the validator.
+        auto stretched = core::stretch_entity(ctx.document(), slot, window, dx, dy);
+        if (!stretched) {
+            // A handle a kind refuses names itself. The bus rolls the whole
+            // transaction back — no half-stretched sheet, ever (Article 1.6).
+            ctx.session().fail(stretched.error());
+            co_return;
+        }
+        const std::optional<core::Stretched>& done = stretched.value();
+        if (!done) continue;
+
+        const core::GripEdit& edit = done->edit;
+        const auto inputs          = edit.inputs();
+        const core::Status st =
+            ctx.document().entities().kind[slot] == core::kPolylineKind
+                ? ctx.transaction().set_geometry(slot, inputs)
+                : ctx.transaction().set_kind_geometry(slot, inputs, edit.payload);
         if (!st) {
-            // A ring that now crosses itself, or a handle a kind refuses, names
-            // itself. The bus rolls the whole transaction back — no half-stretched
-            // sheet, ever (Article 1.6).
+            // A ring that now crosses itself names itself, as above.
             ctx.session().fail(st.error());
             co_return;
         }
-        if (moved > was) {
-            ++touched;
-            did.push_back(static_cast<std::int64_t>(ctx.document().key_of(slot)));
-        }
+        moved += done->moved;
+        ++touched;
+        did.push_back(static_cast<std::int64_t>(ctx.document().key_of(slot)));
     }
 
     if (moved == 0) {

@@ -22,6 +22,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/break_run.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -80,53 +81,6 @@ bool write_run(Context& ctx, core::EntityId slot, const std::vector<core::Point2
     return true;
 }
 
-/// Where along `pts` the point `at` falls: the segment index and the fraction
-/// along it, plus the foot itself. False when the run has no segments.
-bool locate(const std::vector<core::Point2>& pts, core::Point2 at, std::size_t& segment,
-            double& along, core::Point2& foot)
-{
-    if (pts.size() < 2) return false;
-
-    double best = 0.0;
-    bool found  = false;
-    for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
-        core::Point2 candidate{};
-        double t = 0.0;
-        if (!core::closest_point_on_line(pts[i], pts[i + 1], at, candidate, t)) continue;
-        const double clamped = std::clamp(t, 0.0, 1.0);
-        if (clamped != t) {
-            const double dx = static_cast<double>(pts[i + 1].x - pts[i].x);
-            const double dy = static_cast<double>(pts[i + 1].y - pts[i].y);
-            candidate       = core::Point2{pts[i].x + core::mm_round(clamped * dx),
-                                     pts[i].y + core::mm_round(clamped * dy)};
-        }
-        const double d = core::distance_squared(at, candidate);
-        if (!found || d < best) {
-            found   = true;
-            best    = d;
-            segment = i;
-            along   = clamped;
-            foot    = candidate;
-        }
-    }
-    return found;
-}
-
-/// The run up to `(segment, along)`, and the run from it onwards.
-void cut_at(const std::vector<core::Point2>& pts, std::size_t segment, double along,
-            core::Point2 foot, std::vector<core::Point2>& head, std::vector<core::Point2>& tail)
-{
-    head.clear();
-    tail.clear();
-    for (std::size_t i = 0; i <= segment; ++i)
-        head.push_back(pts[i]);
-    if (along > 0.0) head.push_back(foot);
-
-    if (along < 1.0) tail.push_back(foot);
-    for (std::size_t i = segment + 1; i < pts.size(); ++i)
-        tail.push_back(pts[i]);
-}
-
 // -------------------------------------------------------------------- KIR ----
 
 Task<void> run_break(Context& ctx)
@@ -150,60 +104,30 @@ Task<void> run_break(Context& ctx)
     if (!first) co_return;
 
     // ONE POINT IS A SPLIT WITH NO GAP, which is AutoCAD's `break at point` and
-    // the degenerate case of the same verb. Two points remove what is between.
+    // the degenerate case of the same verb. Two points remove what is between —
+    // and while the second is aimed, the piece that will go is drawn as going,
+    // by the function this body cuts with (`core::break_run`).
     core::Point2 second = *first;
     if (const Value v = ctx.argument("ikinci"); !v.empty() && !v.as_points().empty()) {
         second = v.as_points().front();
     } else {
-        auto asked = co_await ctx.point("ikinci", "Kırılacak parçanın ikinci noktası",
-                                        PointOptions{.rubber_band   = true,
-                                                     .rubber_origin = *first,
-                                                     .rubber_shape  = RubberShape::Line});
+        const auto key = static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)));
+        auto asked     = co_await ctx.point(
+            "ikinci", "Kırılacak parçanın ikinci noktası",
+            PointOptions{.rubber_band    = true,
+                             .rubber_origin  = *first,
+                             .rubber_shape   = RubberShape::Break,
+                             .rubber_payload = core::encode_break_guide(core::BreakGuide{key})});
         if (asked) second = *asked;
     }
 
-    std::size_t seg_a = 0;
-    std::size_t seg_b = 0;
-    double at_a       = 0.0;
-    double at_b       = 0.0;
-    core::Point2 foot_a{};
-    core::Point2 foot_b{};
-    if (!locate(pts, *first, seg_a, at_a, foot_a) || !locate(pts, second, seg_b, at_b, foot_b)) {
-        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                     "Kırılma noktası çizgi üzerinde bulunamadı."));
+    auto cut = core::break_run(pts, *first, second);
+    if (!cut) {
+        ctx.session().fail(cut.error());
         co_return;
     }
-
-    // ORDERED ALONG THE LINE, not in the order they were clicked: a hand clicks
-    // the far end first as often as not, and a gap is a gap either way.
-    if (seg_b < seg_a || (seg_b == seg_a && at_b < at_a)) {
-        std::swap(seg_a, seg_b);
-        std::swap(at_a, at_b);
-        std::swap(foot_a, foot_b);
-    }
-
-    std::vector<core::Point2> head;
-    std::vector<core::Point2> scrap;
-    cut_at(pts, seg_a, at_a, foot_a, head, scrap);
-    std::vector<core::Point2> middle;
-    std::vector<core::Point2> tail;
-    // The tail is cut from the SCRAP, whose own indices start at the first cut.
-    std::size_t seg_in_scrap = seg_b - seg_a;
-    double at_in_scrap       = at_b;
-    if (at_a > 0.0 && seg_b == seg_a) {
-        // Both cuts on one segment: the scrap's first segment is what is left of
-        // it, so the second fraction has to be re-measured against that stub.
-        const double left = 1.0 - at_a;
-        at_in_scrap       = left > 0.0 ? (at_b - at_a) / left : 0.0;
-    }
-    cut_at(scrap, seg_in_scrap, at_in_scrap, foot_b, middle, tail);
-
-    if (head.size() < 2 && tail.size() < 2) {
-        ctx.session().fail(core::err(
-            core::ErrorCode::InvalidArgument,
-            "Kırılma çizginin tamamını götürüyor; parça bırakmıyor. Silmek için SİL kullanın."));
-        co_return;
-    }
+    const std::vector<core::Point2>& head = cut.value().head;
+    const std::vector<core::Point2>& tail = cut.value().tail;
 
     if (head.size() >= 2) {
         if (!write_run(ctx, slot, head)) co_return;
@@ -219,8 +143,8 @@ Task<void> run_break(Context& ctx)
     }
 
     ctx.record("nesne", Value::ids({chosen.front()}));
-    ctx.record("birinci", Value::point(foot_a));
-    ctx.record("ikinci", Value::point(foot_b));
+    ctx.record("birinci", Value::point(cut.value().first));
+    ctx.record("ikinci", Value::point(cut.value().second));
     ctx.echo(head.size() >= 2 && tail.size() >= 2 ? "Çizgi kırıldı; iki parça kaldı."
                                                   : "Çizginin bir ucu kırıldı.");
 }

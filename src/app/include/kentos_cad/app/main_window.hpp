@@ -949,6 +949,7 @@ private:
     QAction* actJoin_{nullptr};         ///< UÇUCA
     QAction* actExplode_{nullptr};      ///< PATLAT
     QAction* actAlign_{nullptr};        ///< HİZALA
+    QAction* actAlignScaled_{nullptr};  ///< HİZALA olcekle=evet
     QAction* actDivide_{nullptr};       ///< BÖLÜMLE
     QAction* actPolylineEdit_{nullptr}; ///< ÇİZGİDÜZENLE
     QAction* actVertexMove_{nullptr};   ///< KÖŞETAŞI

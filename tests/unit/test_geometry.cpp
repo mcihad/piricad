@@ -1420,10 +1420,21 @@ TEST_CASE("Hayalet yükü: gidip geliyor")
 
     const GhostSpec spec{.kind = GhostKind::Rotate, .copies = 3};
     const std::vector<std::uint8_t> bytes = encode_ghost_spec(spec);
-    REQUIRE_EQ(bytes.size(), std::size_t{9});
-    const auto back = decode_ghost_spec(bytes);
+    const auto back                       = decode_ghost_spec(bytes);
     REQUIRE(back.has_value());
     CHECK_EQ(back.value(), spec);
+
+    // AND EVERYTHING AN ALIGN GHOST CARRIES: the objects by key, the two fixed
+    // points of the first pair, the second source and the scale flag.
+    const GhostSpec align{.kind  = GhostKind::Align,
+                          .keys  = {3, 7, 11},
+                          .from1 = {1'000, 2'000},
+                          .to1   = {-5'000, 9'000},
+                          .from2 = {4'000, 2'000},
+                          .scale = true};
+    const auto align_back = decode_ghost_spec(encode_ghost_spec(align));
+    REQUIRE(align_back.has_value());
+    CHECK_EQ(align_back.value(), align);
 
     CHECK_FALSE(decode_ghost_spec(std::vector<std::uint8_t>{}).has_value());
     std::vector<std::uint8_t> bad_kind = bytes;

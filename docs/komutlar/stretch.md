@@ -101,6 +101,15 @@ Pencerenin bir köşesine, sonra karşı köşesine tıklarsınız (arada lastik
 görünür); sonra ötelemenin başlangıç ve bitiş noktasına. Yakalama açıktır: öteleme
 noktalarını mevcut köşelere `UÇ` ile yakalayabilirsiniz.
 
+Başlangıç noktası sorulurken **pencere tuvalde kalır**; hangi köşelerin gideceğini
+o belirler. Bitiş noktası sorulurken pencerenin yakaladığı her nesne **esnetilmiş
+hâliyle** imleci izler: pencere içindeki köşeler imleçle gider, dışındakiler yerinde
+kalır. Gördüğünüz, tıklamanın yapacağının kendisidir — aynı hesap.
+
+Dik mod açıkken pencerenin ikinci köşesi ve ötelemenin başlangıç noktası eksene
+kilitlenmez (kilitli bir dikdörtgen köşesi eni ya da boyu olmayan bir pencere
+olurdu); bitiş noktası başlangıca göre kilitlenir.
+
 ### Betik
 
 ```json

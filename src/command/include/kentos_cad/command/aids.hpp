@@ -30,6 +30,7 @@
 // against a document that has since grown a nearer vertex.
 #pragma once
 
+#include "kentos_cad/command/input.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/snap.hpp"
 
@@ -132,5 +133,19 @@ private:
     mutable std::uint64_t cached_session_revision_{0};
     mutable double cached_scale_{-1.0};
 };
+
+/// Whether `p`'s answer is aimed from its rubber origin — the base dik mod,
+/// kutupsal izleme and the normal lock lay their rays through
+/// (`Prompt::rubber_base`). The command's resolver and the canvas's marker both
+/// ask this, so the marker cannot promise a point the command will not take.
+bool aimed_from_origin(const Prompt& p) noexcept;
+
+/// The aids that apply to `p`: `set`, with dik mod left out for the opposite
+/// corner of a rectangle. Locked to an axis through the first corner, that
+/// corner makes a rectangle with no width or no height — refused by every
+/// command that asks for one, so a user with dik mod on could not drag a
+/// window at all. Kutupsal izleme still applies there: at half a right angle it
+/// is what draws a square.
+AidSettings aids_for(const AidSettings& set, const Prompt& p);
 
 } // namespace kentos::command

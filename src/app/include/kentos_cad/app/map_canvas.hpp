@@ -421,7 +421,8 @@ private:
     /// The selected objects' outlines under `map`: the ghost TAŞI, KOPYALA,
     /// DÖNDÜR, ÖLÇEKLE and AYNALA carry under the cursor. `map` is the verb's own
     /// transform, so what is drawn is the result rather than a guess at it.
-    void addGhost(std::size_t batch, const core::Xform& map);
+    void addGhost(std::size_t batch, const core::Xform& map,
+                  std::span<const std::int64_t> keys = {});
 
     /// Draws the drafting guides across the whole canvas, under everything else.
     ///

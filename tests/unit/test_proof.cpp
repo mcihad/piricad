@@ -1783,15 +1783,31 @@ TEST_CASE("PROOF: PATLAT gui, komut satırı ve betikten aynı belgeyi ve aynı 
 
 TEST_CASE("PROOF: HİZALA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
+    // One pair: the move. The GUI is asked for a second source and answers it
+    // with Enter — an empty answer — which is "move and nothing else".
+    prove_verb({.name     = "HİZALA",
+                .id       = "core.align",
+                .setup    = {"ALAN 0,0 20,0 20,10 0,10"},
+                .objects  = {1},
+                .answers  = {Value::point(core::Point2{0, 0}),
+                             Value::point(core::Point2{50'000, 50'000}), Value{}},
+                .typed    = "HİZALA nesne=1 kaynak=0,0 hedef=50,50",
+                .scripted = R"({"ad":"HİZALA","komutlar":[{"cmd":"core.align","args":{
+                    "nesne":[1],"kaynak":[0,0],"hedef":[50000,50000]}}]})"});
+
+    // Two pairs: the move and the turn, now asked of the GUI too.
     prove_verb(
         {.name     = "HİZALA",
          .id       = "core.align",
          .setup    = {"ALAN 0,0 20,0 20,10 0,10"},
          .objects  = {1},
-         .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{50'000, 50'000})},
-         .typed    = "HİZALA nesne=1 kaynak=0,0 hedef=50,50",
+         .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{50'000, 50'000}),
+                      Value::point(core::Point2{20'000, 0}),
+                      Value::point(core::Point2{50'000, 70'000})},
+         .typed    = "HİZALA nesne=1 kaynak=0,0 hedef=50,50 kaynak2=20,0 hedef2=50,70",
          .scripted = R"({"ad":"HİZALA","komutlar":[{"cmd":"core.align","args":{
-                    "nesne":[1],"kaynak":[0,0],"hedef":[50000,50000]}}]})"});
+                    "nesne":[1],"kaynak":[0,0],"hedef":[50000,50000],
+                    "kaynak2":[[20000,0]],"hedef2":[[50000,70000]]}}]})"});
 }
 
 TEST_CASE("PROOF: BÖLÜMLE gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")

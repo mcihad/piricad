@@ -127,4 +127,16 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     return core::snap(doc, q);
 }
 
+bool aimed_from_origin(const Prompt& p) noexcept
+{
+    return p.has_rubber_band && p.rubber_base;
+}
+
+AidSettings aids_for(const AidSettings& set, const Prompt& p)
+{
+    AidSettings out = set;
+    if (p.rubber_shape == RubberShape::Rectangle) out.ortho = false;
+    return out;
+}
+
 } // namespace kentos::command
