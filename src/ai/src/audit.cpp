@@ -122,7 +122,7 @@ std::string AuditLog::write_escalation_refusal(std::string requester, std::strin
     record.requester = std::move(requester);
     record.decision  = "yetki_reddi";
     record.utc_ms    = utc_ms;
-    record.commands  = {tool};
+    record.commands  = {std::move(tool)};
     record.outcome   = std::move(detail);
     record.prompt    = "(istemci kendi yetkisini genişletecek bir çağrı yaptı)";
     return write(std::move(record));
