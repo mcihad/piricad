@@ -132,6 +132,25 @@ set_target_properties(kentos_envanter PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+# The support matrix, MEASURED: every editing command run on every kind, the
+# result classified (TODOS F-01, `docs/nesneler/destek-matrisi.md`). It links io
+# as well as everything the inventory links, because building one fixture
+# imports a DXF and one column round-trips the project file — and it is still an
+# executable at the top of the graph, with no Qt (Article 3.2a).
+add_executable(kentos_kapsam tools/kapsam.cpp)
+target_link_libraries(kentos_kapsam PRIVATE
+    kentos_command
+    kentos_io
+    kentos_processing
+    kentos_ai
+    kentos_domain_geodesy
+    kentos_domain_cadastre
+    kentos_domain_surface
+    kentos_flags)
+set_target_properties(kentos_kapsam PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
 # The source tree's data, so a developer build finds the drawing catalogues with
 # no environment set (command/drawing_catalogs.hpp `resolve_catalog_path`).
 target_compile_definitions(kentos_command PRIVATE KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")

@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ölçülen destek matrisi (TODOS F-01)
+
+[Destek matrisi](docs/nesneler/destek-matrisi.md), hangi düzenleme işleminin hangi
+nesne türünde ne yaptığını gösteriyor — ve **elle yazılmadı**. `kentos_kapsam` her
+hücre için boş bir çizimde türü bir kullanıcının yazacağı komutla kuruyor, işlemi
+aynı komut veri yolundan çalıştırıyor ve çıkan sonucu ölçüyor: tür korundu mu, uzunluk
+azaldı mı, taşınan nesne tam kaydı mı, daire ölçüsü 2πr mi. `scripts/ci-gate-kapsam.sh`
+tabloyu yeniden üretip karşılaştırıyor; bir davranış değişirse tablo da aynı commit'te
+değişmek zorunda.
+
+15 tür × 17 işlem, 238 ölçülen hücre: 138 destekli, 10 kısmi, 38 yok, 52 uygulanamaz.
+Ölçüm, statik okumanın göremediğini buldu:
+
+- **38 sessiz ret.** Komut işlemi reddediyor ama veri yoluna **başarı** bildiriyor:
+  reddini transkripte yazıp çıkıyor. Kişi cümleyi okur; betik, yapay zekâ, MCP ve
+  Python işlemin yapıldığını sanır. 28 komut dosyası bu deseni kullanıyor.
+- **Paralel, tampon üretiyor.** `(0,0)→(50,0)` çizgisinin 2 m paraleli 200 m²'lik
+  kapalı bir alan; daire paraleli kirişli çoklu çizgi; delikli alanın paralelinde delik
+  ayrı bir nesneye dönüşüyor.
+- **Yuvarlatma yayı kirişlerle** çiziliyor, gerçek yay değil.
+- **Hiçbir komut çok parçalı alan üretmiyor.** `combine.cpp` başındaki yorum "iki
+  ayrık parça tek nesne olur" diyor, kod her parçayı ayrı nesne yapıyor. Yaylı çoklu
+  çizgiyi de hiçbir komut üretmiyor; tek yolu DXF.
+- **Ölçü doğru:** daire, yay, elips ve yaylı çizginin çevresi analitik değerle
+  milimetresine kadar aynı.
+
+
 ### Eklendi — `cad.Point`, `cad.Box`, `cad.viewport` ve gerçek bir editör
 
 **Değer tipleri.** `cad.Point(east, north)` ve `cad.Box(...)` programın **kendi**

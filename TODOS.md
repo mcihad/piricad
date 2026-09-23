@@ -1,1258 +1,430 @@
-# KentOSCad — Çıktı Yerleşimi, AI Surface ve MCP geliştirme planı
+# PiriCAD — CAD + GIS + AI geliştirme görevleri
 
-İnceleme tarihi: **19 Eylül 2026**. Ana referans: yerel `main`, **`86e290a`**.
-Bu belge mevcut kodun incelemesini, QGIS 4.2 araştırmasını ve hedef ürün davranışını
-birleştirir. İşaretlenmemiş maddeler yapılacak iştir; uygulanmış özellik iddiası değildir.
-İnceleme statik kod ve Git geçmişi üzerinden yapılmıştır; uygulama çalıştırılarak
-karşılaştırmalı QGIS testi veya performans ölçümü yapılmamıştır. Uzak depo fetch edilmemiştir.
+> Araştırma ve kod incelemesi: **22 Eylül 2026**. Bu dosya önceki TODOS.md okunmadan silinerek sıfırdan yazılmıştır. Hedef; hassas CAD üretimi, GIS verisi ve analizi, haritacılık, arazi ve pafta işlerini aynı uygulamada, elle veya AI/MCP/Python üzerinden uçtan uca tamamlamaktır.
 
-**Hedef:** Kullanıcı, arayüzde yapabildiği bütün işleri AI penceresinden veya MCP
-istemcisinden de tamamlayabilmeli. Çıktı Yerleşimi, QGIS 4.2 Print Layout / Atlas /
-Report kapsamını karşılayacak derinlikte olmalı. AI'nin açıklama soruları ile işlem
-onayları birbirinden bağımsız Settings tercihleri olmalı; otomatik çalışma gerçekten
-işi bitirmeli, her adımda kullanıcıya geri dönmemeli.
+## 1. Ürün hedefi ve başarı tanımı
 
-## 0. İşaretler
+PiriCAD tam bir **CAD/GIS üretim ortamı** olacak. Bir parsel yalnız çizgi ve taramadan oluşmayacak: kalıcı kimliği, gerçek geometrisi, koordinat sistemi, öznitelikleri, komşulukları, ölçüleri, kaynağı ve üretildiği işlem birlikte yönetilecek. Aynı nesne CAD düzenlemesinde, GIS sorgusunda, tabloda, arazi hesabında ve paftada aynı anlamı taşıyacak.
 
-| İşaret | Anlamı |
-|---|---|
-| `- [ ]` | Yapılacak. Henüz başlanmadı. |
-| `- [~]` | Kısmen yapıldı. Madde altında **Yapıldı** ve **Kalan** ayrı ayrı yazılı. |
-| `- [x]` | Bitti. |
-| `- [!]` | **Karar bekliyor.** Mühendislik tarafında yapılacak iş kalmadı; madde, bakımcının vermesi gereken bir karara bağlı ve o karar maddenin altında okunmaya hazır yazılı. |
+Hedef, Netcad ekosistemindeki işleri daha kolay, hızlı ve denetlenebilir yapmak; QGIS düzeyindeki GIS ve kartografya gücünü hassas CAD düzenleme ile birleştirmek. AI sonradan eklenen bir sohbet kutusu olmayacak: kullanıcı “şu adayı düzenle, hataları düzelt, analizi yap ve paftaları hazırla” dediğinde uygulamanın gerçek araçlarını kullanarak sonuç üretecek. MCP istemcisi de aynı işleri yapabilecek.
 
-`[!]` 20 Eylül 2026'da eklendi, tek bir madde taşıdı (S-05) ve aynı gün boşaldı:
-kullanıcı kararı verdi, zincir uygulandı. İşaret duruyor çünkü sebebi duruyor —
-bir iş planının "henüz yapılmadı" ile "bakımcının kararını bekliyor" durumlarını
-ayırt edememesi, ikincisini birincisi gibi göstermektir, ve o iki durumun
-gerektirdiği hamle aynı değildir. `[!]` bir maddeyi **bitmiş saymaz**.
+“Dünyada ilk ve tek” ürün vizyonunu anlatan bir hedef olabilir; doğrulanmış pazar iddiası değildir. CAD/GIS birleşimi zaten vardır. Farklılaşma hedefimiz **aynı veri üzerinde hassas düzenleme + analiz + ilişkili çıktılar + kesintisiz AI otomasyonu** ve bunun ölçülebilir kullanım kalitesidir. Yapılan iş, işlem sayısı ve hata oranıyla kanıtlanacak; yalnız komut sayısıyla değil.
 
-## 1. İncelenen dallar ve mevcut çalışmalar
+### Başlangıç ürün senaryosu
 
-| Referans | Bulgular | Bu plandaki karşılığı |
+Kullanıcı ortofoto, ölçü noktaları, bir DXF ve parsel verisini açar; koordinatları doğrular; çizimi CAD araçlarıyla düzenler; çizdiğini yeniden dönüştürmeden GIS sorgusuna sokar; komşuluk hatalarını bulur; alanları ve etiketleri günceller; araziyle ilişkilendirir; atlas/rapor üretir; DXF, GeoPackage ve PDF teslim eder. Bu zincir hem elle hem tek bir AI göreviyle yürütülebilir; kaynak veri ve yapılan değişiklikler izlenebilir.
+
+### Değişmez tasarım ilkeleri
+
+- CAD nesnesi ile GIS özelliği arasında kimlik kaybettiren kopyalar üretme. Çizim, tablo, analiz ve çıktı aynı kimlik ve revizyona başvursun.
+- Yerel düzenlenebilir belge, uzak veri sağlayıcısı ve görüntü referansının yetenekleri açık olsun. Bir WMS görüntüsüne vektör düzenlemesi vaat etme.
+- Geometri işlemleri çekirdekte; değişiklikler mevcut Registry/Bus/transaction hattında kalsın. UI, AI, MCP ve Python ayrı geometri hesapları yazmasın.
+- Önizleme ile uygulama aynı hesap sonucunu kullansın. Desteklenmeyen eğriyi sessizce kirişe veya çoklu doğruya dönüştürme.
+- Mevcut Qt bağımsız çekirdek, sabit noktalı depolama, journal ve lisans sınırları korunsun. Yeni türler ve sağlayıcılar için gerekli model/format değişiklikleri açık tasarım kararı ve göç planıyla yapılsın.
+- Uzun işler iptal edilebilir olsun. Geri alınabilir belge işi tek mantıksal işlem olarak geri alınsın; dış dosya/veritabanı etkilerinin geri alma sınırı açıkça gösterilsin.
+- Parametreler birim, CRS, nesne türü, kapsam ve yan etki bilgisi taşısın. Ekrandan tıklama gerektiren işlemlerin sayısal/kimlik tabanlı karşılığı bulunsun.
+
+## 2. Araştırma: neyi referans alıyoruz?
+
+### Netcad ürün kapsamı
+
+Aşağıdakiler üreticinin resmî ürün ve yardım sayfalarındaki yeteneklerdir; bu çalışma sırasında kurulu Netcad üzerinde performans veya dosya uyumluluk testi yapılmadı. Uzmanlık modülleri temel Netcad GIS lisansının özelliği gibi değerlendirilmemelidir.
+
+| Referans | Araştırmadan çıkan kapsam | PiriCAD karşılığı |
 |---|---|---|
-| `main` — `86e290a` | Layout veri modeli, tasarımcı, çıktı, yönetici ve şablon kitaplığı var. AI ve MCP ortak katalog/öneri altyapısını kullanıyor. | Bütün mevcut durum değerlendirmelerinin tabanı. |
-| `claude/pafta-duzeni` — `f865648` | Temel layout çalışması. Dalın ucu main'in atası; `158b4ab` birleştirmesiyle main'e alınmış. | Yeniden geliştirilecek veya yeniden merge edilecek bağımsız bir özellik dalı değil. |
-| Main'deki `3975b3d`, `0148f18` | Sırasıyla layout yöneticisi/ana menü bağlantısı ve şablon kitaplığı. | Yönetici ve şablon sistemi “yok” kabul edilmemeli; genişletilmeli. |
-| Açık dal `yerlesim-adlandirmasi` — `1713715` | “Pafta” yerine “Çıktı Yerleşimi”; komut adları, parametreler, yer tutucular, yardım ve format okuma yollarında değişiklikler. | Ürün dilinde Çıktı Yerleşimi kullanılmalı; uyumluluk ayrıca doğrulanmalı. |
-| Açık çalışma ağacı | Layout başlığında alan düzenleme, öğe sıralamasında indeks kullanımı, bazı render/metin/tema değişiklikleri ve layout dışı düzenlemeler var. | Commit edilmemiş çalışma main'e mal edilmedi; mevcut değişiklikler korunmalı. |
+| [Netcad GIS](https://www.netcad.com/tr/urunler/netcad-gis) | CAD/GIS çalışma ortamı; çizim ve düzenleme, katman/semboloji, farklı veri kaynakları, raster/nokta bulutu ve 2D/3D iş akışları | Günlük CAD ve GIS birlikte temel ürün; veri biçimi ve servis desteği ayrı ayrı doğrulanacak |
+| [Paralel](https://wiki.netcad.com.tr/display/HELP/Paralel), [Uzat-Kes](https://wiki.netcad.com.tr/display/HELP/Uzat-Kes) | Paralelde mesafe, taraf ve köşe seçenekleri; sınırlarla toplu kesme/uzatma; bazı eğrilerde tür dönüşümü gereksinimi | Gerçek CAD paraleli, eğri farkındalığı, toplu düzenleme ve görünür yaklaşıklaştırma toleransı |
+| [Netsurf](https://www.netcad.com/tr/urunler/netsurf) | Arazi modelleme, eş yükselti, kesit/profil ve hacim işleri | Kalıcı yüzey, kırık hat, sınır, profil ve iki yüzey arasında hesap |
+| [Netmap](https://www.netcad.com/tr/urunler/netmap) | Parsel/kadastro, ifraz/tevhit, dağıtım ve raporlama iş akışları | Topolojiye bağlı parsel işlemleri, alan kontrolü, sürümlü kural paketleri |
+| [Netpro](https://www.netcad.com/tr/urunler/netpro) | Güzergâh, yol, enkesit ve kazı/dolgu üretimi | Yatay/düşey güzergâh, parametrik kesit ve ilişkili mühendislik çıktıları |
+| [Planet](https://www.netcad.com/tr/urunler/planet) | Planlama, standart gösterim, plan verisi ve rapor üretimi | Ölçek ve katalog temelli çizim, plan topolojisi, açıklanabilir kalite kontrolü |
+| [VGA](https://www.netcad.com/tr/urunler/vga), [Analist](https://www.netcad.com/tr/urunler/analist) | Veritabanıyla ilişkili CAD/GIS düzenleme; mekânsal analiz iş akışları | Sağlayıcı yetenekleri, öznitelik yönetimi ve tekrar kullanılabilir analiz modelleri |
+| [Netcad Akademi](https://akademi.netcad.com/) | Tekil çizimden projeksiyon, sayısallaştırma ve çıktıya uzanan eğitim akışları | Eğitim ve kabul testleri gerçek teslim işlerini takip edecek |
 
-Karşılaştırmada `git show main:<dosya>`, dal geçmişi ve ayrı commit/çalışma ağacı
-diff'leri kullanıldı. Bu belgeyi hazırlarken dal değiştirilmedi veya merge yapılmadı.
+### Görsel inceleme notları
 
-- [x] **BR-01 / P0 — Adlandırma geçişinin uyumluluk sözleşmesini tamamla.** *(19 Eylül 2026)*
-  `core.layout`, `core.layout_item`, `core.layout_template` kimlikleri sabit kaldı.
-  Karar: **eski ad okunur, yeni ad yazılır.** `Param::was` alanı bir parametrenin emekli
-  adını taşıyor; `bind_tokens` (komut satırı) ve `Bus::dispatch` (betik/günlük) onu güncel
-  adın üstüne taşıyor, `Context::record` yalnız güncel adı yazıyor — yani programdan tek
-  yazım çıkıyor ve tekrarın tekrarı aynı baytları veriyor. İki yazımı birlikte vermek
-  reddediliyor (skaler bir argümanın sessizce sonuncuyu tutması `command.md` P15'in
-  yasakladığı şey). `<pafta>` yer tutucusu çözülmeye devam ediyor: bir antede yazılmış
-  yazı, programın sözcük değiştirmesiyle bozulmaz. Şablon JSON'u alan adları taşıdığı
-  için etkilenmiyor (`layout_to_json`). **Kabul karşılandı:** `test_io.cpp` içinde üç
-  vaka — eski komut satırı ile yeni komut satırı aynı `content_hash`, eski günlük satırı
-  (`{"args":{"pafta":…}}`) ile yeni günlük satırı aynı `content_hash` **ve** bayt bayt
-  aynı günlük, iki adın birlikte verilmesi reddediliyor.
+Resmî yardım sayfalarındaki aşağıdaki görseller tarayıcıda açılıp görsel olarak incelendi. Netcad 7/8.6 ekranları güncel sürümün görünümü olarak sunulmuyor; iş akışı referansıdır. Erişilemeyen bazı ürün sitesi medya dosyaları değerlendirmeye alınmadı. Tüm Netcad ekranlarının veya modüllerinin incelendiği iddia edilmiyor.
 
-## 2. Kodun bugün sundukları ve somut boşluklar
-
-### 2.1. Layout
-
-| Alan | Main'de görülen durum | Sonuç / yapılması gereken |
+| Görsel ve kaynak | Görülen düzen | Tasarıma dönüşen görev |
 |---|---|---|
-| Belge modeli | `src/core/include/kentos_cad/core/layout.hpp`: `Layout`, `LayoutPage`, `LayoutItem`, `LayoutStore`; kâğıt ölçüleri `Um`, arazi ölçüleri `Mm`; belge hash'i ve undo yaklaşımı var. | Doğru temel korunmalı; ayrı ve kopuk bir layout dosya modeli kurulmasın. |
-| Öğe türleri | Map, Label, ScaleBar, NorthArrow, Legend, Picture, Shape, Table var. | Türün enum'da bulunması, özelliklerinin komut/UI/render üzerinden tam çalıştığı anlamına gelmiyor. |
-| Çok sayfa | Modelde `pages` ve `item_pages` var. Tasarımcı `setSheet(name_, 0)` ile açılıyor; dönüşüm/sürükleme yollarında `pages.front()` kullanılıyor. | Veri modeli var, tamamlanmış çok sayfalı düzenleme akışı yok. Farklı boydaki sayfalar özellikle doğrulanmalı. |
-| Hassasiyet | Model mikrometre saklıyor; `layout_item` konum/boyut parametreleri tam sayı mm, tasarımcı snap'i sabit 1 mm. | Modelin hassasiyeti kullanıcıya ve otomasyona ulaşmıyor. |
-| Harita ilişkileri | Ölçek çubuğu ve metin çözümleme `first_map()` üzerinden ilerliyor. Öğeler arasında açık `linked_map_id` yok. | İki haritalı sayfada her öğenin hangi haritaya bağlı olduğu tanımlanmalı. |
-| Katman süzme | ~~Aktarılmıyordu~~ **Düzeltildi (19 Eylül 2026)**: `render::SceneOptions::layer_allowed` eklendi — katman başına bir bayt, çünkü sahne bunu nesne başına bir kez okuyor ve orada bir ad karşılaştırması kare bütçesinin içine girerdi (§10.1). `paint_map` maskeyi `item.layers`'tan kuruyor. Boş olması "görünür bütün katmanlar" demek ve maske **daraltıyor, genişletmiyor**: belgenin gizlediği katman ne olursa olsun gizli kalıyor (model.md R7). | **Tamamlandı (19 Eylül 2026)**: `Value::Kind::TextList` eklendi — JSON gidiş-dönüşü, günlük render'ı (anahtar sözcük başına bir kez, ayrıştırıcının okuduğu biçim), doğrulama çokluğu ve ajan şeması (`array of string`, `minItems`/`maxItems`, seçenekler `items.enum`'a) dahil. Bir `Text` parametresinin arity'si birden büyükse **biriktiriyor**, çünkü `katmanlar=parsel katmanlar=bina` iki katman demek ve sonuncuyu tutmak birini sessizce düşürmek olurdu (command.md P15). `ÇIKTIÖĞE islem=ayarla katmanlar=` artık her istemciden çalışıyor; `hepsi` listeyi boşaltıyor. |
-| Render | `paint_map` önce `QImage` üretip sayfaya basıyor. | PDF dosyasının var olması, harita içeriğinin vektörel olduğu anlamına gelmiyor. |
-| Sayfa çıktısı | `print_service.cpp::printLayout` PDF ve yazıcı yolu sunuyor. Cihaz sayfa boyutu ilk sayfadan kuruluyor; sonraki sayfalarda yeni boyut atanmıyor. | Karma A4/A3 sayfalı çıktı için cihaz sayfa boyutu geçişi düzeltilmeli. |
-| Veriyle çalışan içerik | Sabit yer tutucular ve temel katman öznitelik tablosu var. | Genel ifade bağlamı, atlas, rapor ağacı, tablo akışı ve grafik öğeleri eksik. |
-| AI erişimi | `layout.cpp` içindeki üç layout komutunda `AiAccessible` yok; yorumlarda kâğıt/arazi koordinatı ayrımı gerekçe gösteriliyor. `core.print` ve `core.print_profile` da katalog dışında. | AI ve MCP bugün tam bir layout üretip dışa aktarma işini tamamlayamaz. |
+| [Düzenle şeridi](https://wiki.netcad.com.tr/pages/viewpage.action?pageId=217385414), görsel başlığında Netcad 8.6 | Düzenleme ve dönüşüm araçları gruplu; kes/uzat, paralel, birleştir, böl ve köşe araçları aynı şeritte | U-01: arama, bağlama uygun araçlar ve sabit kısayollarla keşfedilebilirlik |
+| [Paralel ayar ekranı](https://wiki.netcad.com.tr/display/HELP/Paralel) | Mesafe, özellik aktarımı, köşe/uç seçenekleri ve tek taraf kontrolü | C-03: çizimin yanında canlı önizleme; mesafe ve tarafı değiştirirken araçtan çıkmama |
+| [Uzat/Kes örneği](https://wiki.netcad.com.tr/display/HELP/Uzat-Kes) | Sınır nesneleri ile değişecek bölüm farklı renklerde; daire ve çizgi örnekleri | C-04: tutulacak/silinecek bölümün açık önizlemesi ve aday değiştirme |
+| [Obje özellikleri / Çoklu Doğru](https://wiki.netcad.com.tr/pages/viewpage.action?pageId=218041782), Netcad 7 yardım ağacı | Genel, görünüm ve nesne özellikleri; GIS anahtarı/sınıf, tabaka, merkez, nokta sayısı, alan/çevre | U-04 ve G-03: ortak özellik paneli, hesaplanan ve düzenlenebilir alanların ayrımı |
+| [Sayısallaştırma Sihirbazı](https://wiki.netcad.com.tr/pages/viewpage.action?pageId=217909474), Netcad 7 | Yapılar, sınırlar, hidrografya, bitki örtüsü gibi sınıflar içeren kalem ağacı ve tanım menüsü | G-04: aranabilir kalem kitaplığı; geometri, öznitelik, gösterim ve doğrulamayı tek seçimle bağlama |
 
-### 2.2. AI Surface ve MCP
+### QGIS ve MCP referansının sürümü
 
-Burada **AI Surface**, yalnız sohbet balonu değil; modelin görebildiği bağlam,
-keşfedebildiği araçlar, çalıştırabildiği komutlar, iş yürütme döngüsü ve sonuç
-doğrulama yüzeyinin tamamıdır.
+[QGIS 4.2 değişiklik kaydı](https://changelog.qgis.org/en/version/4.2/) 3 Temmuz 2026 çıkış tarihini veriyor. Yerleşim açısından katman gösteriminden grafik kategori/renk üretimi, şekille resim kırpma ve GeoPDF katman ağacının korunması somut referanslar. Bunlar önceki sürümlerden gelen atlas/rapor gibi temel yeteneklerle karıştırılmamalı. LTR takvimi ayrı bir konudur: [resmî takvim açıklaması](https://blog.qgis.org/2025/10/07/update-on-qgis-4-0-release-schedule-and-ltr-plans/) 4.2'nin LTR depolarına geçişini Ekim 2026 için planlıyor.
 
-| Alan | Main'de görülen durum | Sonuç / yapılması gereken |
+[QGIS Model Designer belgesi](https://docs.qgis.org/3.44/en/docs/user_manual/processing/modeler.html) girdi, algoritma ve bağımlılık zincirlerini tekrar kullanılabilir işlem haline getiriyor; bu bağlantı açıkça **3.44** belgesidir, 4.2'ye özel belge değildir. PiriCAD'deki modelleyici için davranış referansıdır.
+
+[MCP 2026-07-28 açıklaması](https://blog.modelcontextprotocol.io/posts/2026-07-28/) ve [resmî araç şeması](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2026-07-28/server/tools.mdx) sürüm uyumu için referanstır. Uzun iş desteği [Tasks uzantısında](https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks) ayrıca tanımlanıyor; açılan belge draft işaretli olduğundan istemci uyumu ve sürüm sabitleme doğrulanmadan temel protokolün zorunlu parçası sayılmayacak.
+
+## 3. Kodda bugün ne var, gerçek açık nerede?
+
+İnceleme tabanı: `main`, başlangıç HEAD `fe4b8b2`; ayrıca çalışma ağacındaki güncel değişiklikler. Python API ve komut metadata çalışmalarının bir kısmı henüz commit edilmemişti. Bu belge onların tamamlandığını veya testlerinin geçtiğini varsaymaz. İnceleme statiktir; aşağıdaki açıklar uygulamada tekrar üretme ve kabul testleriyle kapatılacak.
+
+**Güncelleme (23 Eylül 2026, F-01):** Aşağıdaki tablonun düzenleme satırları artık statik okuma değil **ölçüm**: [destek matrisi](docs/nesneler/destek-matrisi.md) 15 türün her birini kullanıcının yazacağı komutla oluşturup 17 işlemi aynı komut veri yolundan çalıştırıyor ve sonucu sınıflıyor; `scripts/ci-gate-kapsam.sh` onu her değişiklikte yeniden üretip karşılaştırıyor. Python API artık commit edilmiş durumda (`kentos.cad`, komut kaydından üretilen yüzey, konsol ve editör); gömülü Lua kaldırıldı.
+
+Yerelde görünen diğer dal `claude/relaxed-franklin-b73a78`, `3af2fbb` noktasında ve `main`in atasıdır; ayrı, main'e gelmemiş layout değişikliği görülmedi. Mevcut dal referansları ve layout geçmişi incelendi; uzak depodaki tüm silinmiş/erişilmeyen dallar hakkında sonuç çıkarılmadı. Atlas, rapor, bağlı harita ve preflight geliştirmeleri main geçmişinde zaten bulunuyor.
+
+| Alan | Kodda görülen temel | Yeni görevlerin hedefi |
 |---|---|---|
-| Ortak katalog | `src/ai/src/catalog.cpp::build_catalog`, `Registry` içinden yalnız `AiAccessible` komutlarını alıyor. | İki ayrı elle tutulan AI/MCP araç listesi oluşturulmamalı. |
-| Kapsama açığı | Statik `return CommandSpec{...}` taramasında 81 tanımın 59'unda `AiAccessible` var. Dinamik üretilen komutlar bu sayıya dahil değil. | Bu oran çalışma zamanı kapsam yüzdesi değildir; gerçek registry ve kullanıcı eylemleri üzerinden envanter gerekir. |
-| Katalog dışında kalan örnekler | `core.open/save/saveas/import/export`, `core.undo/redo`, `core.column`, `core.database`, `core.select`, `core.setting/preference/mode`, layout ve print aileleri. | “Her şeyi yapabilme” için dosya, seçim, ayarlar, çıktı ve veri yönetimi de açılmalı. |
-| Mutasyon sınıflaması | Araç etkisi `!Flags::NoEffect` üzerinden tek boolean; kategori `File` ise `open_world`. | Okuma, görünüm, belge düzenleme, disk yazma ve dış sistem etkisi ayrı modellenmeli. Layout'un `File` kategorisi tek başına dış dünya etkisi kanıtı değil. |
-| Sabit onay | `Gate`, `Approval`, `Plan` ve `agent_preamble()` her yazmayı insan kararına bağlıyor. `catalog.cpp` açıklamaları da bunu sabit söylüyor. | Sorun yalnız model prompt'u değil; yürütme politikası ve sonuç sözleşmesi değişmeli. |
-| Sohbet döngüsü | `chat_panel.cpp::finishTurn` yalnız okuma sonucu varsa ve yazma önerisi yoksa `sendRound()` çağırıyor. Kartın `settled` bağlantısı durum bildiriyor. | Uygulama sonrası sonuçları modele verip doğrulama/sonraki adıma geçme akışı tamamlanmalı. |
-| Plan bütünlüğü | `fileWrites` hatalı adımları ayırırken geçerli adımları öneriye koyabiliyor; genel sonuç metni bütün yazma çağrılarına dolaştırılıyor. | Birbirine bağımlı planın parçası sessizce atılmamalı; her çağrı tek ve doğru sonuç almalı. |
-| Öneri durumu | Sohbet metni `oneri_durumu` aracına yönlendiriyor; katalog adı eşlemesinde bu araç yok ve `core.suggestion` AI'ye açık değil. | Gerçek durum aracı/sonuç olayı sağlanmalı; üretilen metin yalnız mevcut araçları anmalı. |
-| Plan ekleme | MCP protokol katmanı `_meta.plan` ile plana ekleme bekliyor; `AiService::propose` doğrudan `plans_.add(...)` çağırıyor. | Test double ile çalışan sözleşmenin gerçek masaüstü dispatcher'ında da uygulanması gerekir. |
-| Revizyon | Plan revizyonu saklanıyor; `AiService::applyPlan` içinde uygulama öncesi plan revizyonu karşılaştırması görünmüyor. | Beklerken değişmiş belgeye eski niyet uygulanmadan tekrar doğrulanmalı. |
-| MCP sürümü | Kod `2026-07-28`, `server/discover`, istek başına metadata ve `subscriptions/listen` kullanıyor. | Bu sürümde `initialize` bulunmaması tek başına kusur değildir; eski istemci uyumu ayrı hedef olmalı. |
-| MCP taşıma | `mcp_service.cpp` SSE yanıtını tek seferde yazıp kapatıyor; `keep_open` aboneliklerinin bu sınırı kodda açıkça belirtilmiş. | Protokol birim testi yanında gerçek socket/Qt entegrasyonu, canlı bildirim ve iptal testleri gerekir. |
-| Kaynaklar | MCP'de `llms.txt` / `llms-full.txt` kaynakları var. | Çizim, layout, seçim, işlem ve çıktı kaynakları ayrıca sunulmalı. |
-| Settings | `core.ai.hassas`, `core.ai.dusunme_goster`, `core.ai.sorumlu`; MCP port/belirteç/otomatik başlatma ayarları var. | Açıklama sorusu ve işlem onayı politikaları henüz yok. |
+| Geometri | `src/core/include/kentos_cad/core/` altında circle, arc, ellipse, arc_polyline, spline, dimension, hatch ve block_reference | Yeni isimler eklemekten çok her türün tüm düzenleme hattını tamamlamak |
+| Kes/uzat/böl | **Ölçüldü:** kes/uzat/böl/kır/uç uca yalnız çizgi ve köşeli çoklu çizgide çalışıyor; yay, daire, elips, spline, yaylı çizgi, tarama ve liderde reddediyor. Delikli alanda da kes/böl/kır reddediyor | Yay, daire, elips ve spline için türüne uygun işlemler |
+| Paralel | **Ölçüldü:** açık çizgi, köşeli çizgi, yay, spline, yaylı çizgi ve liderin paraleli kapalı bant (tampon) çıkıyor — `(0,0)→(50,0)` çizgisinin 2 m paraleli 200 m²'lik bir alan; daire ve elips paraleli kirişli çoklu çizgi; delikli alanın paralelinde delik ayrı nesneye dönüşüyor | CAD paraleli ile GIS tamponunu ayırmak; delik ve çok parçalı topolojiyi korumak |
+| Köşe/birleştir | **Ölçüldü:** yuvarlatma yayı kirişlerle üretiliyor (gerçek yay değil); yaylı çizgi, tarama ve delikli alanda köşe işlemleri reddediliyor. `combine.cpp` başındaki yorum "iki ayrık parça tek nesne olur" diyor, kod her parçayı ayrı nesne yapıyor — bu yüzden **hiçbir komut çok parçalı alan üretmiyor**. Yaylı çoklu çizgiyi de hiçbir komut üretmiyor; tek yolu DXF içe aktarma | Karma çizgi/yay zincirleri ve eğriye uygun köşe davranışı |
+| Tutamaç/yakalama | `grips.hpp`, snap altyapısı ve yakın tarihli görsel/önizleme düzeltmeleri var | Karma geometri, iç içe blok, aday yönetimi ve gerçek kullanıcı akışlarında tutarlılık |
+| Ölçü/tarama | Çok sayıda ölçü türü ve tarama modeli var; hatch `associative` alanı DXF round-trip amacıyla tutuluyor | Bir bayrağı canlı bağımlılık sanmadan, kaynak geometriyle gerçek ilişkilendirme |
+| Öznitelik/GIS | Sütun temelli şema, decimal/date/code türleri, tablo/panel, CRS ve GDAL vektör hattı var | İlişki, doğrulama, büyük veri, mekânsal sorgu ve CAD düzenlemesiyle bütünlük |
+| PostGIS | `src/io/include/kentos_cad/io/postgis.hpp`: katmanı uzamsal tabloya ve projeyi bütün olarak kaydetme | Artımlı düzenleme, çakışma, yetenek ve transaction davranışını ayrıca doğrulamak |
+| Arazi | `domain/surface` eş yükselti ve referans düzleme kazı/dolgu hesaplıyor; üçgenleme geçici | Kalıcı/düzenlenebilir yüzey, kırık hat, iki yüzey ve ilişkili kesitler |
+| Layout | `core/layout.hpp`, `commands/layout.cpp`, `app/layout_*`: bağlı harita, atlas, rapor, çok sayfa ve denetim temelleri | Özelliklerin gerçek çıktı doğruluğu ve QGIS düzeyindeki kalan kapsam |
+| AI ayarları | `ai/policy.hpp`, `policy_path.cpp`, settings komutları: onay, soru ve üzerine yazma politikaları var | Ayarların sohbet/MCP/yeniden bağlanma boyunca gerçekten uygulanması; tekrar onay döngülerini bitirmek |
+| MCP/Python | `ai/mcp.cpp`, kaynak/araç keşfi, job templates. Python API commit edildi: her komut `cad.<ad>(...)` olarak komut kaydından üretiliyor; `cad.Point`, `cad.Box`, `cad.viewport`; alt panelde konsol, tamamlama ve imza ipucu | Sadece komut listesi değil, bütün işi tamamlayan bağlam ve eşdeğer işlem kapsamı |
+| Sessiz ret | **Ölçüldü:** 38 hücrede komut işlemi reddediyor ama veri yoluna **başarı** bildiriyor: reddini transkripte bir cümle olarak yazıp gövdesini bitiriyor. Komut satırındaki kişi cümleyi okur; betik, AI, MCP ve Python işlemin yapıldığını sanır. 28 komut dosyası bu deseni kullanıyor; hata kanalı (`Session::fail`) var ama kullanılmıyor | Ret her zaman hata olarak dönsün (A-07: kısmi hata başarı diye sunulmaz; U-01: araç neden uygulanamadığını söyler) |
+| Raster/servis | Raster sembol çizimi görülüyor; bu, coğrafi raster sağlayıcısı veya WMS desteğinin kanıtı değildir | G-08/G-09 için ayrı veri sağlayıcısı envanteri ve çalışan senaryo |
 
-## 3. QGIS 4.2 araştırması ve karşılaştırma hedefi
+## 4. Öncelik ve tamamlanma sözleşmesi
 
-Resmî 4.2 kullanıcı kılavuzu ve 4.2 değişiklik günlüğü esas alındı. QGIS yol haritası
-inceleme tarihinde 4.2.2'yi mevcut sürüm olarak gösteriyor. Bu belge 4.2 ailesinin
-özelliklerini hedefler; geliştirme dalındaki özellikleri 4.2 özelliği saymaz.
-[QGIS sürüm yol haritası](https://qgis.org/resources/roadmap/)
+- **P0:** Günlük CAD/GIS üretiminde doğruluk, ortak veri modeli ve kesintisiz temel kullanım. İlk teslim kapısı.
+- **P1:** Profesyonel proje üretimi, birlikte çalışabilirlik, analiz, pafta ve AI ile tam iş akışları.
+- **P2:** İleri parametrik tasarım, uzmanlık modülleri ve geniş ölçekli mühendislik. Ortak çekirdeğin üzerine kurulur.
 
-### 3.1. Genel layout kabiliyeti ile 4.2 yeniliklerini ayır
+Kutular yeni geliştirme/doğrulama işlerini gösterir; kodda bir sınıfın varlığı bitmiş ürün sayılmaz. Her iş sahibi, ilgili kabul senaryosunun çıktısını, komut/API kapsamını ve bilinen sınırlarını teslim eder. Desteklenmeyen kombinasyon görünür ve tutarlı hata vermelidir; sessiz veri kaybı kabul edilmez.
 
-QGIS 4.2 kılavuzunda layout yöneticisi, sayfalar, kılavuzlar, öğe ve undo panelleri;
-harita, 3B harita, metin, lejant, ölçek, tablo, resim/kuzey oku, yükseklik profili,
-HTML, şekil ve grafik öğeleri bulunuyor. Atlas ve raporlar da aynı çıktı iş akışının
-parçası. Bunlar topluca “4.2'de yeni geldi” diye sunulmamalı.
-[Layout genel bakış](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/overview_layout.html),
-[Öğe türleri](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/index.html)
+**Ortak tamamlanma ölçütü:** İlgili işlem UI ve uygulanabilir otomasyon yüzeylerinde aynı geometri/öznitelik sonucunu verir; önizleme, iptal, undo/redo, kaydet/aç, hata ve büyük koordinat davranışı doğrulanır. Yeni kalıcı veri format göçüyle gelir. Uygun olmayan kombinasyonlar matriste “uygulanamaz” gerekçesiyle işaretlenir. Ekran görüntüsü tek başına geometrik doğruluk kanıtı değildir.
 
-**4.2 değişiklik günlüğünün özellikle eklediği üç çıktı yerleşimi özelliği:**
+### F — Ortak CAD/GIS temeli
 
-1. Grafik kategorilerini ve renklerini kaynak vektör katmanının sembolojisinden üretme;
-   sayım veya Y ifadesi üzerinden toplama.
-2. Resim öğesini şekil türündeki başka bir öğeyle kırpma.
-3. GeoPDF çıktısında katman ağacının grup, sıra, ad ve görünürlük yapısını taşıma.
-   QGIS tarafında kilitli katmanları olmayan harita gereksinimi ve karşılıklı dışlayan
-   gruplar gibi sınırlamalar var; “her durumda tam katman eşitliği” varsayılmamalı.
+- [x] **F-01 · P0 — Komut × nesne türü × yüzey kapsam matrisi.** Çizgi/polyline, yay, daire, elips, spline, eğrisel polyline, delikli/çok parçalı alan, blok, yazı, ölçü ve taramayı listele; seçme, snap, grip, transform, trim, extend, split, offset, fillet, join, ölçüm ve aktarımı karşılaştır.
+  **Kabul:** Her hücre destekli/kısmi/yok/uygulanamaz durumunda ve kanıtıyla kayıtlı; UI, AI, MCP, Python farkları görünür. Menüde bulunup uygulanamayan araç gizli başarı sayılmaz.
+  **Başlangıç:** `src/core`, `src/command/src/commands`, `src/ai`, `src/script`.
+  **Teslim (23 Eylül 2026):** [docs/nesneler/destek-matrisi.md](docs/nesneler/destek-matrisi.md), `kentos_kapsam` ile **ölçülerek üretiliyor** — her hücre için boş bir çizimde tür kullanıcı komutuyla kurulur, işlem aynı veri yolundan çalışır, sonuç sınıflanır ve kanıtı yanına yazılır; `scripts/ci-gate-kapsam.sh` yeniden üretip karşılaştırır. 15 tür × 17 işlem: 138 destekli, 10 kısmi, 38 yok, 52 uygulanamaz; çok parçalı alan hiçbir komutla oluşturulamadığı için ölçülemedi. Yüzey tablosu her işlemin komut satırı/arayüz, AI/MCP ve Python/JSON erişimini komut bayraklarından gösterir. "Menüde bulunup uygulanamayan araç" artık gizli başarı sayılmıyor: başarı dönüp belgeyi değiştirmeyen her düzenleme **sessiz ret** olarak ayrı listeleniyor. Dosya alışverişi (DXF/DWG/GPKG) bilerek dışarıda — derlemeye bağlıdır, I-01'in matrisidir.
 
-Kaynak: [QGIS 4.2 — Print Layouts yenilikleri](https://qgis.org/project/visual-changelogs/visualchangelog42/#print-layouts).
+- [ ] **F-02 · P0 — Tek nesne kimliği ve veri kaynağı sözleşmesi.** Kalıcı kimlik, kaynak kimliği, revizyon, CAD geometrisi, GIS şeması ve sağlayıcı düzenlenebilirliği birlikte tanımlansın. Referans katmanı içe almak ile canlı bağlanmak farklı eylemler olsun.
+  **Kabul:** Haritada grip ile değiştirilen parselin tablo satırı, seçimi ve ilişkileri korunur; analiz çıktısı kökenini bilir. Salt okunur kaynağı düzenleme isteği yerel kopya seçeneğini açıkça sunar.
+  **Bağımlılık:** F-01; mevcut Document/AttrTable ve PostGIS modelini genişlet, ikinci bağımsız CAD/GIS belge modeli kurma.
 
-### 3.2. Yetenek eşleme matrisi
+- [ ] **F-03 · P0 — Sayısal doğruluk ve tolerans sözleşmesi.** Depolama çözünürlüğü, geometrik hesap toleransı, ekrandaki snap yarıçapı, topoloji onarım eşiği ve aktarımda eğri yaklaşım hatası ayrı olsun. CRS birimi ile model birimi açıkça ayrışsın.
+  **Kabul:** Büyük doğu/kuzey koordinatlarında 1 mm fark korunur; uzunluk/alan ara işlemleri taşmaz. Coğrafi derece doğrudan `Mm` kabul edilmez. Milimetre altı CAD gereksinimi için örnek veriyle karar ve gerekiyorsa sürümlü format göçü hazırlanır.
+  **Bağımlılık:** F-02; `core/units`, geodesy ve IO sınırlarında tek dönüşüm politikası.
 
-| QGIS 4.2 referansı | KentOSCad hedefi | İş paketleri |
-|---|---|---|
-| Sayfa, kılavuz, öğe yönetimi, undo | Profesyonel çok sayfalı düzenleyici; hassas yerleştirme ve toplu işlemler | L-01, L-02, L-03 |
-| Harita extent/ölçek/dönüş, katman kilidi/tema, grid ve overview | Aynı belgede birbirinden bağımsız harita çerçeveleri | L-04, L-05 |
-| Ortak öğe özellikleri ve veriyle tanımlanan özellikler | Tutarlı özellik sistemi ve tipli ifade bağlamı | L-03, L-06 |
-| Lejant, ölçek, kuzey oku, resim | Haritaya açık bağlantı ve gerçek kartografik temsil | L-05, L-07 |
-| Öznitelik/manuel tablo, HTML çerçeveleri, rapor | Sayfalara akan veri ve rapor hiyerarşisi | L-08, L-11 |
-| Grafik, yükseklik profili, 3B harita | Analiz çıktılarının yerleşime bağlanması | L-09 |
-| Atlas | Kapsama nesnesi başına tekrarlanabilir pafta üretimi | L-10 |
-| PDF, SVG, resim, coğrafi referanslı çıktı | Vektör kalitesi, gerçek ölçü, katmanlı GeoPDF ve toplu export | L-12, L-13 |
-| Şablon ve processing ile çıktı | Sürümlü şablon, komut/API üzerinden baştan sona üretim | L-14, A-02, M-03 |
+- [ ] **F-04 · P0 — İlişkili nesne ve türetilmiş sonuç altyapısı.** Ölçü, tarama sınırı, etiket, alan tablosu, arazi çıktısı ve pafta bağımlılıkları kaynak kimlik/revizyonuyla izlenebilsin; döngü ve kopuk bağ davranışı tanımlansın.
+  **Kabul:** Kaynak değişince sonuç güncellenir veya açıkça “güncel değil” olur; yanlış eski sonucu sessizce kullanmaz. Silme/geri alma bağımlılıkları tutarlı geri getirir; yalnız etkilenen sonuçlar yeniden hesaplanır.
+  **Bağımlılık:** F-02; mevcut layout bağlantıları ve kalıcı kimlikler üzerine kurulacak.
 
-Detay referansları:
-[Harita](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/layout_map.html),
-[Ortak öğe özellikleri](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/layout_items_options.html),
-[Tablolar](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/layout_tables.html),
-[Resim ve kuzey oku](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/layout_image.html),
-[Grafikler](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/layout_items/layout_chart.html),
-[Çıktı ve atlas](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/create_output.html),
-[Raporlar](https://docs.qgis.org/4.2/en/docs/user_manual/print_layout/create_reports.html),
-[Processing kartografya araçları](https://docs.qgis.org/4.2/en/docs/user_manual/processing_algs/qgis/cartography.html).
+- [ ] **F-05 · P0 — Tek mantıksal işlem, ortak önizleme ve uzun iş yaşam döngüsü.** Geometri değişiklikleri, öznitelik aktarımı ve bağımlı güncellemeler birlikte uygulanabilsin. Uzun analizler ilerleme, iptal ve sonuç özeti taşısın.
+  **Kabul:** 500 nesnelik iş ortasında hata/iptal belgeyi yarım bırakmaz; tek undo işlemi geri alır. Dış etkide atomiklik mümkün değilse hazırlama/yazma/başarısız öğeler ayrı raporlanır; tekrar çağrı çoğaltma yapmaz.
+  **Bağımlılık:** F-02/F-04; mevcut Bus/journal hattı.
 
-Aşağıdaki tasarım KentOSCad için öneridir. QGIS'in C++ sınıf hiyerarşisini kopyalama
-veya QGIS proje/şablon biçimleriyle kendiliğinden uyum iddiası taşımaz. “QGIS kadar
-güçlü” ifadesi bu matristeki işlerin uygulamada tamamlanabilmesiyle ölçülmelidir.
+### C — Hassas ve eksiksiz CAD düzenleme
 
-## 4. Ortak mimari: GUI, AI ve MCP aynı işi yapmalı
+- [ ] **C-01 · P0 — Ortak eğri sorgu ve kesişim altyapısı.** Nokta değerlendirme, parametre, en yakın nokta, teğet, uzunluk, bounding box ve kesişim sonuçları geometri türüne göre ortak arayüzden gelsin.
+  **Kabul:** Çizgi-yay, yay-yay, elips-çizgi ve spline kesişimleri; teğet temas, çakışan bölüm, kapalı eğri dikişi ve çoklu çözüm ayrı sonuçlanır. Sayısal çözüm başarısızlığı ile kesişim yokluğu ayrılır.
+  **Bağımlılık:** F-01/F-03; mevcut geometri kütüphanelerini değerlendir, çözülmüş çekirdekleri yeniden yazma.
 
-```text
-GUI / komut satırı / AI sohbeti / MCP
-                 |
-    Registry + tipli girdi/sonuç sözleşmesi
-                 |
-  Bağlam ve hedef çözümleme -> Plan -> Etki analizi
-                 |
-   Settings + kullanıcı/istemci kapsamı -> PolicyDecision
-                 |
-      Doğrula -> Önizle -> Gerekiyorsa onay
-                 |
-     Komut veri yolu -> Uygula -> Sonucu doğrula
-                 |
-     Journal + audit + kaynak/çıktı + UI olayı
-```
+- [ ] **C-02 · P0 — Çizim yöntemlerini tamamla ve aynı davranışta birleştir.** Çizgi, bağlı yay/çizgi, daire, elips, dikdörtgen, çokgen ve spline varyantlarını mevcut araçlardan ilerlet; sayısal girdi ile işaretleme aynı sonucu üretsin.
+  **Kabul:** Merkez/yarıçap, üç nokta, teğet ve mevcut varyantlar matriste sınanır; hayalet önizleme gerçek nesneyle çakışır. Araç tekrarında yöntem korunur; yanlış girilen son nokta tüm çizimi kaybettirmeden geri alınır.
+  **Başlangıç:** Son snap/önizleme/araçta kalma düzeltmelerini regresyon paketi olarak koru.
 
-Önizleme otomatik modda da üretilebilen bir veri/artefakt olmalı; kullanıcının her
-seferinde tıklamasını gerektiren bir bariyer olmamalı. Yetkilendirme, geometri
-doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
+- [ ] **C-03 · P0 — Gerçek CAD paraleli ile GIS tamponunu ayır.** Açık çizgiye tek taraflı paralel, kapalı sınır ofseti ve iki taraflı alan tamponu ayrı anlam taşısın. Taraf, mesafe, köşe, kaynak koruma ve öznitelik aktarımı tanımlansın.
+  **Kabul:** `(0,0)→(10,0)` metre çizgisinin sol 2 m paraleli açık `(0,2)→(10,2)` çizgisidir; kapalı bant değildir. Sağ/sol yön ters çevirmeyle tutarlıdır. Daire yarıçapı doğru değişir; delikler korunur; çöken sonuç açıklanır.
+  **Ek:** Genel spline/elips paralelinin aynı türden tam temsil edilemeyebileceğini hesaba kat; yaklaşık sonuçta hata sınırı ve tür değişimi görünür olsun. Statik bulgu: mevcut `offset.cpp` bant/alan üretiyor; önce yeniden üretme testi yaz.
 
-- [~] **C-01 / P0 — Capability envanteri ve kapsam kapısı.** *(komut tarafı 19 Eylül 2026)*
-  **Yapıldı:** `kentos_envanter` (`src/command/tools/envanter.cpp`) canlı registry'leri
-  yürüyor — builtin + processing + üç domain + ai — ve her komut için kimlik, adlar,
-  kategori, geri alma, **parametre şeması** (tür, arity, seçenek listesi, aralık,
-  emekli ad) ve altı bayrağın her birini ayrı ayrı JSON'a yazıyor. Ağacı grep'leyen
-  statik sayım **81** komut görüyordu; program **93** komut kaydediyor.
-  **Gerçek kapsam: 93 komuttan 69'u ajana açık (%74), 24'ü kapalı.**
-  `tests/support/ai-kapsam.json` bu 24'ün her birinin gerekçesini ve onu açacak iş
-  paketini taşıyor (20 plana bağlı, 4 bilerek kalıcı: `core.select`, `core.ai_provider`,
-  `core.mcp`, `core.script`). `scripts/ci-gate-envanter.sh` canlı envanteri bu listeyle
-  karşılaştırıyor: gerekçesiz kapalı bir komut, ölmüş bir satır ve açıldığı hâlde
-  duran bir satır kapıyı kırıyor. Üretici derlenmemişse **atlamıyor, kırıyor**.
-  **Kalan:** menü/panel/etkileşimli araç tarafı — Qt gerektirdiği için ayrı bir uygulama
-  probe'u olacak; "her satırda test" sütunu; MCP erişim sütunu (M-03 ile birlikte).
-- [x] **C-02 / P0 — Etki sözleşmesi.** *(19 Eylül 2026)*
-  `command::Effect` yedi biti taşıyor: `sorgu`, `gorunum`, `belge_duzenleme`,
-  `dosya_okuma`, `dosya_yazma`, `dis_yazma`, `ayar_degisikligi`. `Flags` "hangi
-  istemci ulaşabilir" sorusunu cevaplıyor; `Effect` bir politikanın sormak zorunda
-  olduğu **farklı** soruyu: geriye ne değişmiş kalıyor, ve nerede.
-  **Karma fiiller argümandan türetiliyor**: `CommandSpec::effect_verb` + `verb_effects`,
-  ve `effect_of(spec, args)` verilen sözcüğün etkisini döndürüyor —
-  `ÇIKTIYERLEŞİMİ islem=listele` yalnız `sorgu`, `islem=sil` `belge_duzenleme`.
-  Fiil verilmemişse ya da tanınmayan bir sözcükse cevap **en kötü hâl**, çünkü
-  etkileşimli bir çalıştırma fiili doğrulamadan sonra sorar.
-  `Effect::None` "kimse söylemedi" demek ve `effect_of` onu asla döndürmüyor:
-  bildirilmemiş bir komut kategorisinden okunuyor. **İlk geri düşüş yanlıştı** —
-  `ReadOnly && !Dosya → ayar_degisikligi` diyordu ve `core.zoom` ile `core.pan`'i
-  "ayar değiştirir" yapıyordu; kategoriye çevrildi.
-  **Kabul karşılandı:** üç test — listelemek onay doğurmaz, `core.save` `ReadOnly`
-  taşımasına rağmen `dosya_yazma` der, `core.print` `dis_yazma` der (bir yazıcı geri
-  alma yığını değildir), ve 93 komutun hiçbiri bildirilmemiş kalmaz.
-  Envanter her komutun etkisini ve fiil başına etkisini yazıyor.
-  **Kalan:** bu sözleşmeyi TÜKETEN politika motoru S-01'dir.
-- [~] **C-03 / P0 — Plan ve sonuç sözleşmesi.** *(sonuç 19 Eylül 2026)*
-  **Sonuç tarafı yapıldı.** `DispatchResult` dört yeni alan taşıyor: `revision`
-  (çalıştıktan SONRAKİ belge sürümü — sonradan sormak bir yarıştır, araya başka
-  bir istemci girebilir), `undo_label` (sayarak değil **adıyla**, çünkü arada bir
-  insan bir şey çizmiş olabilir), `outputs` (bu çağrının yazdığı dosyalar) ve
-  `warnings` (başarısız olmadan yerine getirilemeyen şeyler — bunlar hata değil
-  ve hiçbir şey de değil: onları söylemeden başarı bildiren istemci olmayan bir
-  şey bildirir).
-  `Context::wrote` ve `Context::warn` eklendi; `YAZDIR`, `FARKLIKAYDET`,
-  `DIŞAAKTAR`, `STİLDIŞAAKTAR` ve `NOKTADIŞAAKTAR` yazdıkları dosyayı söylüyor —
-  **okuyan fiiller söylemiyor**, çünkü bir okumayı çıktı diye adlandırmak
-  istemciye üretmediği bir şeyi üretti demektir.
-  **Plan tarafı yapıldı:** `Plan` artık `applied_revision`, `undo_label`,
-  `outputs`, `warnings` ve `decided_by` taşıyor ve `to_json` bunları yazıyor —
-  yani **"uygulandı" ile "çıktı üretildi" ayrı şeyler**, istemcinin birini
-  öbüründen çıkarması gerekmiyor. Kabul ölçütü buydu.
-  **Kalan:** adım bağımlılıkları ve varsayımlar; policy sürümünün plana yazılması
-  (S-06 ile birlikte, ki o engelli).
-  Eski madde metni: Plan; belge kimliği/revizyonu, adım
-  bağımlılıkları, hedef nesneler, varsayımlar, etki özeti, önizleme ve policy sürümü
-  taşısın. Sonuç; `status`, değişen kimlikler, yeni revizyon, uyarılar, doğrulama sonucu,
-  undo referansı ve çıktı URI'ları döndürsün. **Kabul:** “planlandı”, “onay bekliyor”,
-  “uygulandı” ve “çıktı üretildi” farklı makine durumlarıdır.
-- [~] **C-04 / P0 — Revizyon ve tekrar çalıştırma.** *(revizyon 19 Eylül 2026)*
-  **Yapıldı:** `AiService::applyPlan` artık planın hazırlandığı belge sürümünü
-  uygulamadan **önce** karşılaştırıyor. Plan bu sürümü baştan beri taşıyordu ve
-  hiçbir şey ona bakmıyordu: hazırlamakla uygulamak arasında çizim kıpırdayabilir
-  — biri komut yazar, başka bir istemci düzenler, bir geri alma çalışır — ve
-  plandaki tutamaklar o arada yeniden kullanılmış yuvalara çözülür. Bir onayın,
-  kimsenin onaylamadığı bir düzenlemeye dönüşmesinin yolu budur.
-  **Bayat plan yeniden hedeflenmiyor, reddediliyor.** Eski niyeti yeni zemine
-  uygulamak bir tahmindir; dürüst cevap, önündeki çizime karşı taze bir plandır.
-  `core::ErrorCode::Conflict` eklendi — `ValidationFailed`'dan ayrı, çünkü cevabı
-  farklı: doğrulama hatası çağrının yanlış olduğunu ve yanlış kalacağını söyler,
-  bu ise çağrının doğru olduğunu ama artık önünde olmayan bir çizime göre doğru
-  olduğunu. Numaralar korunsun diye enum'un **sonuna** eklendi.
-  **Kalan:** istemci kimliğiyle kapsamlanmış idempotency anahtarı — aynı isteğin
-  tekrarının ikinci bir çizgi ya da ikinci bir PDF üretmemesi (M-06 ile birlikte).
-  Eski madde metni: Commit öncesi belge kimliği,
-  revizyon ve referanslar yeniden doğrulansın; plan değişirse önceki onay yeni plana
-  taşınmasın. İstemci kimliğiyle kapsamlanmış idempotency anahtarı ekle. **Kabul:**
-  bağlantı yeniden denemesi aynı çizgiyi veya aynı PDF'yi ikinci kez üretmez;
-  `revision_conflict` yanlış nesnede işlem yapmak yerine taze plan gerektirir.
-- [~] **C-05 / P1 — Belge işlemi ile dış etkiyi ayır.** *(atomik yayımlama 19 Eylül 2026)*
-  **Yapıldı:** PDF çıktısı artık **hedefin yanına yazılıp doğrulanıyor, sonra tek
-  adımda yerine konuyor**. Yarıda kalan bir plot — makine uyudu, disk doldu, biri
-  programı kapattı — kullanıcının verdiği yolda kırpılmış bir PDF bırakıyordu:
-  doğru adı ve makul bir boyu var, ve öğrenilme yeri plotterdı. `project_writer`
-  bunu yerel biçim var olduğundan beri yapıyordu; artık diğer yazdıklarımız da
-  aynı cevabı veriyor. Şifreli yol zaten bir kardeş dosya kullanıyordu; düz yol
-  doğrudan kullanıcının dosyasının üstüne yazıyordu.
-  `std::filesystem::rename` hedefi tek adımda değiştiriyor, yani ne eski ne yeni
-  dosyanın olmadığı bir an yok. Probe ayrıca **yayımlanmamış bir `.yeni` kalmadığını**
-  denetliyor: kalan bir geçici, bitmemiş ve kimsenin fark etmediği bir yayımdır.
-  **Kalan:** yazıcıya gönderme ve uzak sistem yazmasının ayrı sonuçlarla
-  izlenmesi; kısmi dış başarısızlıkların tekrar denenebilir adımlar olarak dönmesi;
-  bir belge değişikliği grubunun atomik rollback'i (bu zaten `begin_batch` ile var,
-  sınanması kaldı). Bir belge değişikliği grubu
-  tek undo ve atomik rollback sunsun. Dosya çıktısı geçici hedefe yazılıp doğrulansın,
-  ardından atomik yayımlansın; yazıcıya gönderme ve uzak sistem yazma ayrı sonuçlarla
-  izlenmeli. **Kabul:** Ctrl+Z'nin dışarı gönderilmiş çıktıyı geri aldığı iddia edilmez;
-  kısmi dış başarısızlıklar ve tekrar denenebilir adımlar açıkça döner.
+- [ ] **C-04 · P0 — Eğrilerde ve toplu seçimde kes/uzat.** Bir veya çok sınır seçimi, tutulacak bölüm, ters taraf ve geçici sınır uzantısı desteklensin; sınır ve hedef nesne rolleri net olsun.
+  **Kabul:** Yay ve daire çizgiyle, çizgi eğriyle kesilebilir; kalan yay yay olarak kalır. Teğet ve birden çok kesişim kullanıcıya aday gösterir. Toplu önizleme uygulanacak bölümleri gösterir; tüm işlem tek geri almadır.
+  **Bağımlılık:** C-01/F-05; `trim.cpp` açık polyline sınırlamasını tür bazında kaldır.
 
-## 5. Çıktı Yerleşimi iş paketleri
+- [ ] **C-05 · P0 — Böl, kır ve birleştir işlemlerinde gerçek geometri.** Noktadan, kesişimden, mesafeden ve eşit aralıktan bölme; aralık çıkarma; çizgi/yay zinciri birleştirme; açık/kapalı dönüşümü tamamla.
+  **Kabul:** Parçaların toplam uzunluğu izin verilen toleransta kaynağa eşit; yaylar düzleşmez. Birleşmede yön, Z, katman ve öznitelik çatışması kurala bağlıdır. Boşluk toleransı kullanıcıdan gizlenmez.
+  **Bağımlılık:** C-01/F-03; değişen kalıcı kimlikler için kaynak→sonuç eşlemesi döndür.
 
-### 5.1. Model, tasarımcı ve haritalar
+- [ ] **C-06 · P0 — Köşe yuvarlatma ve pah.** Çizgi-çizgi, çizgi-yay ve yay-yay için aday köşe/yarıçap; zincire toplu uygulama; kaynakları budama seçeneği.
+  **Kabul:** Sonuç teğetlik ve yarıçap koşulunu sağlar; yanlış tarafta çözüm seçilmez. Sığmayan yarıçap, içbükey köşe ve sıfır yarıçap açık davranışa sahiptir; önizleme ve çıktı aynıdır.
+  **Bağımlılık:** C-01/C-04; mevcut polyline köşe aracı korunarak genişletilir.
 
-- [~] **L-01 / P0 — Kalıcı kimlik ve genişletilebilir model.** *(kimlik 19 Eylül 2026)*
-  **Yapıldı:** `LayoutItemKey` ve `LayoutPageKey` — kapsamlı sayaçlar, yerleşimin
-  **kendi** `next_key`'inden basılıyor, çünkü bir yerleşim şablon dosyasında
-  belgesiz yolculuk ediyor.
-  **Oturum kimliği, saklanan kimlik değil.** Dosya adlarla konuşuyor (okunabilir
-  ve diff'lenebilir kalsın diye), anahtarlar okunurken basılıyor. Bu, evin kendi
-  cevabı: `Document::content_hash` zaten "Keys are deliberately excluded: key
-  assignment is an allocation detail" diyor. Dolayısıyla anahtarlar ne katlamada
-  ne eşitlikte — ikisi de elle yazıldı ki bu bilerek olsun.
-  `Layout::relink()` eksik anahtarı basıyor ve bağın iki yarısını (`linked_map`
-  adı, `linked` anahtarı) uzlaştırıyor; **anlaşmazlıkta anahtar kazanıyor**, çünkü
-  yeniden adlandırmadan sağ çıkan o. `LayoutStore::upsert` her yerleşimin geçtiği
-  tek kapı olduğu için kimlik orada oturuyor.
-  **`ÇIKTIÖĞE islem=ad`** eklendi — anahtarların var oluş sebebi. Bir haritayı
-  yeniden adlandırmak ona bağlı ölçek çubuğunu koparmıyor ve dosyaya hedefin
-  **yeni** adı yazılıyor. Kullanımdaki bir ada yeniden adlandırma reddediliyor.
-  Test, yeniden adlandırma + dosya gidiş-dönüşü + parmak izinin aynı kalmasını
-  birlikte sınıyor — anahtar hash'e sızsaydı sonuncusu kırılırdı.
-  **Ayrıca kendi kusurum kapandı:** `linked_map` katlamaya girmiyordu. Bağ hangi
-  haritanın ölçeğinin basılacağını belirliyor, yani içeriktir; farklı sayı basan
-  iki çizim aynı parmak izini taşıyamaz.
-  **Kalan:** grup ilişkisi (L-03 ile birlikte gelecek); `item_pages`'in indeksten
-  sayfa anahtarına çevrilmesi (bugün her sayfa fiili onu aynı işlemde onarıyor,
-  yani kırık değil).
-  Eski madde metni: Layout, sayfa ve öğe
-  için yeniden adlandırmadan etkilenmeyen kimlik; açık `page_id`, grup ilişkisi,
-  referans harita ve öğe bağlantıları ekle. Değer tabanlı, Qt'siz core ve sabit nokta
-  modeli korunsun. Eski `item_pages` için migration tanımlansın. **Kabul:** ekle/sil/
-  yeniden sırala, kaydet/aç ve undo/redo sonrası bütün bağlantılar aynı hedefi bulur.
-- [~] **L-02 / P0 — Gerçek çok sayfalı düzenleme.** *(model ve çıktı 19 Eylül 2026)*
-  **Yapıldı:** dört yeni fiil — `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi` —
-  ve `islem=sayfa` artık `sayfa=<n>` alıyor, yani bir yerleşim bir A4 ile bir A3'ü
-  aynı anda tutabiliyor. Sayfa indeksleri **1'den** başlıyor, çünkü sayfanın üstünde
-  yazan ve insanın söylediği o.
-  Her fiil `item_pages`'i onarıyor: ekleme sonrasındakileri bir yukarı kaydırıyor,
-  **silme öğeleri de götürüyor** (geride kalan kutu var olmayan bir sayfayı gösterirdi
-  ve onları taşıyacak dürüst bir sayfa yok) ve kaç öğe gittiğini söylüyor, **çoğaltma
-  öğeleri taze adlarla kopyalıyor** (boş dönen bir sayfa çoğaltılmış sayfa değildir),
-  **taşıma öğeleri sayfasıyla birlikte götürüyor** (öğesiz sıralama boş kâğıt
-  sıralamaktır). Son sayfa silinemiyor.
-  **Ve asıl kusur kapandı:** `print_service` cihaz sayfa boyutunu bir kez
-  `pages.front()`'tan alıyordu, bir daha atamıyordu — karma A4/A3 bir yerleşimin
-  her sayfası A4 yazılıyor ve ikinci sayfanın içeriği A4 kutusuna A3 ölçüsünde
-  çizilip kâğıttan taşıyordu. Boyut artık **her sayfadan önce** atanıyor.
-  Çıktı mesajı da karma sayfayı "karma sayfa boyu" diye söylüyor, olmayan bir
-  ölçüyü rapor etmiyor.
-  **Kabul kanıtlandı — dosyadan okunarak:** `print-pdf` probe'u karma bir yerleşim
-  basıyor ve PDF'te iki MediaBox buluyor: `595x842` (A4 dikey) ve `1191x842`
-  (A3 yatay). Artı iki birim testi sayfa fiillerinin tamamını sürüyor.
-  **İkinci yarı da yapıldı:** tasarımcıda bir **SAYFA** bölümü var — hangi sayfada
-  olduğunu söyleyen bir alan, "N sayfadan biri · 420×297 mm" yardım satırı ve üç
-  düğme (ekle, çoğalt, sil) — ve düğmeler kendi mantığını taşımıyor, bir elin
-  yazacağı `ÇIKTIYERLEŞİMİ islem=sayfa*` satırını yazıyor (Article 1.2).
-  Öğe listesi artık **yalnız gösterilen sayfanın** öğelerini taşıyor: her sayfanın
-  öğesini gösteren bir liste, önündeki kâğıtta olmayan bir şeyi seçtirirdi.
-  **Ve "ikinci sayfada sürükleme kayar" kusuru kapandı:** `pageRect()` sayfa
-  kutusunu aktif sayfadan ölçüyordu ama `deviceFrom`, `paperFrom` ve `dragged`
-  `pages.front()` ile ölçekliyordu — ikinci sayfası farklı boyda olan bir
-  yerleşimde her kutu olduğu yerden başka bir yere çiziliyor ve sürükleniyordu.
-  Dördü de tek bir `activePage()`'e bağlandı.
-  `ÇIKTIÖĞE islem=tasi sayfa=<n>` bir öğeyi sayfalar arasında taşıyor; testi
-  dosya gidiş-dönüşünü de kapsıyor (iki sayfa, farklı boy, doğru sayfada öğe).
-  **Kalan:** bütün sayfaları bir arada görme (küçük önizleme şeridi).
-- [~] **L-03 / P1 — Profesyonel öğe düzenleme.** *(ondalık mm 19 Eylül 2026)*
-  **Kabul ölçütünün yarısı karşılandı:** kâğıt ölçüleri artık **ondalık
-  milimetre** kabul ediyor — `x=0.35`, `genislik=100.25`. Model baştan beri
-  mikrometre saklıyordu; yalnız kapı tam sayıydı, yani kenardan 0,35 mm'lik bir
-  kutu hiçbir istemciden söylenemiyordu. 0,35 mm tam olarak 350 µm; yuvarlama yok,
-  dosyaya da öyle gidiyor. Test bunu dosya gidiş-dönüşüyle birlikte sınıyor.
-  Ayrım da netleşti: `ParamKind` çizgisi tam sayı/ondalık değil, **çağıranın
-  yazabileceği** sayı ile **yalnız araç sonucundan devredebileceği** koordinat
-  arasında.
-  **Kalan:** çoklu seçim, grup/çöz, kopyala/yapıştır/çoğalt, hizala/dağıt, eş
-  boyutlandır, referans noktası, baskıdan hariç tutma, cetvel, kılavuz ve
-  ayarlanabilir snap; tek sürükleme ya da toplu hizalamanın tek geri alma üretmesi.
-  Eski madde metni: Çoklu seçim, grup/çöz, kopyala/
-  yapıştır/çoğalt, hizala/dağıt, eş boyutlandır, referans noktası, döndürme, z sırası,
-  görünürlük, baskıdan hariç tutma, kilit, cetvel, kılavuz ve ayarlanabilir snap ekle.
-  Kâğıt ölçüleri birimi açık ondalık mm olarak girilebilsin, içeride `Um` saklansın.
-  **Kabul:** 0,35 mm konum ve 0,18 mm çizgi kalınlığı UI/komut/AI/MCP'de aynı değere
-  gider; tek sürükleme veya toplu hizalama tek undo oluşturur.
-- [~] **L-04 / P0 — Bağımsız harita çerçevesi.** *(katman süzgeci 19 Eylül 2026)*
-  **Yapıldı:** `render::SceneOptions::layer_allowed` — katman başına bir bayt,
-  çünkü sahne bunu nesne başına bir kez okuyor ve orada bir ad karşılaştırması
-  kare bütçesinin içine girerdi (§10.1). `paint_map` maskeyi `item.layers`'tan
-  kuruyor. Maske **daraltıyor, genişletmiyor**: belgenin gizlediği katman ne
-  olursa olsun gizli kalıyor (model.md R7) — yani "ana tuval görünürlüğündeki
-  değişiklik kilitlenmiş çerçeveyi etkilemez" kabulünün yarısı henüz yok, çünkü
-  çerçeve bugün belgenin görünürlüğünü devralıyor.
-  `ÇIKTIÖĞE islem=ayarla katmanlar=` her istemciden çalışıyor (`Value::Kind::TextList`
-  bunun için eklendi); `hepsi` listeyi boşaltıyor. Ölçek zaten çerçeveye özeldi.
-  **Kalan:** stil anlık görüntüsü ya da tema takibi (çerçevenin belgenin
-  görünürlüğünden bağımsızlaşması); çerçeveye özel CRS; harita içeriğini kaydırma
-  ile kutuyu taşımanın ayrı araçlar olması; içerik dönüşü.
-  Eski madde metni: Extent, merkez, ölçek, içerik
-  dönüşü, katman listesi/sırası, stil anlık görüntüsü veya tema takibi ve çerçeveye
-  özel CRS tanımla. Harita içeriğini kaydırma ile kâğıttaki kutuyu taşıma ayrı araçlar
-  olsun. `paint_map` gerçek katman filtresini kullansın. **Kabul:** aynı sayfadaki
-  1:1000 ve 1:5000 haritalar farklı katmanlarla çizilir; ana tuval görünürlüğündeki
-  değişiklik kilitlenmiş çerçeveyi etkilemez. CRS dönüşüm desteği eksikse hata açık olur.
-- [~] **L-05 / P0 — Haritaya bağlı kartografik öğeler.** *(bağ 19 Eylül 2026)*
-  **Yapıldı:** `core::LayoutItem::linked_map` ve `ÇIKTIÖĞE islem=ayarla harita=<ad>`.
-  Ölçek çubuğu ve `<olcek>` yer tutucusu artık **kendi haritasının** ölçeğini
-  söylüyor; `first_map()` yalnız bağ verilmemişken geçerli. `harita=ilk` bağı
-  kaldırıyor. Bir harita çerçevesi başka bir haritaya bağlanamıyor.
-  **Kopuk bağ sessizce ilk haritaya DÖNMÜYOR**: `Layout::map_for` null veriyor,
-  `link_is_broken` doğru diyor ve `paint_layout_page` bunu `trouble` listesine
-  yazıyor — preflight raporunun tohumu (L-15).
-  Dosya biçimi dört baytı kaydın `reserved` dizisinden aldı: `LayoutItemRecord`
-  hâlâ 160 bayt, eski dosya sıfırlarla okunup her öğeyi ilk haritaya bağlıyor
-  (io.md R10). Testi dosya gidiş-dönüşünü de kapsıyor.
-  **Kalan:** lejant ve kuzey oku henüz bağı kullanmıyor (ikisi de bugün haritadan
-  bir şey okumuyor); harita içerik dönüşü ile öğe kutusu dönüşünün ayrılması;
-  ızgaranın CRS'i, çizgi/çentik seçimi ve sayı biçimi.
-  Eski madde metni: `linked_map_id` ile ölçek
-  çubuğu, kuzey oku, lejant, overview ve dinamik metni ilişkilendir. Harita içerik
-  dönüşü ile öğe kutusu dönüşünü ayır. Grid'in CRS'i, aralıkları, çizgi/çentik,
-  kenar etiketleri ve sayı formatı düzenlenebilsin. **Kabul:** ikinci haritanın ölçeği
-  değişince yalnız ona bağlı ölçek/metin güncellenir; silinen bağlantı preflight'ta
-  raporlanır, sessizce ilk haritaya dönmez.
+- [ ] **C-07 · P0 — Tutamaç, vertex ve stretch bütünlüğü.** Mevcut semantik grips altyapısını eğriler, çoklu seçim, blok dönüşümleri ve Z düzenleme ile tamamla; vertex ekle/sil/sürükle ve segment tipini değiştir.
+  **Kabul:** Dairenin yarıçap tutamacı daireyi bozmadan çalışır; yay ortası ve spline kontrol noktası doğru anlamdadır. Stretch yalnız pencerenin kapsadığı öğeleri etkiler; kilitli/bağlı nesneler açıklanır.
+  **Bağımlılık:** C-01/F-04/F-05.
 
-### 5.2. Veriyle çalışan öğeler
+- [ ] **C-08 · P0 — Dönüşümler ve çoğaltma.** Referanslı taşı/döndür/ölçekle, iki/üç noktayla hizala, aynala, dikdörtgensel/kutupsal/yol boyunca dizi ve taban noktalı yapıştırmayı ortak komut davranışında tamamla.
+  **Kabul:** Referans açı/uzunlukla dönüşüm, tekrarlı kopya ve negatif ölçek sınanır. Eşit olmayan ölçek daireyi uygun elipse dönüştürür veya destek sınırını açıklar; yazı, ölçü ve bloklar sessizce bozulmaz.
+  **Bağımlılık:** F-01/F-03; yakın tarihli dönüşüm önizlemesi iyileştirmeleri korunur.
 
-- [~] **L-06 / P1 — İfade ve değişken altyapısı.** *(tipli bağlam 19 Eylül 2026)*
-  **Yapıldı:** `core::SheetContext` ve `core::resolve_fields` — Qt'siz, yani
-  tasarımcının önizlemesi ile dışa aktarılan PDF **aynı değerlerden** çözüyor.
-  İki kod yolu, ayrışana kadar aynı fikirdedir; ayrışan hep basılmış olandır.
-  Bağlam alanları: `<yerlesim>` (`<pafta>` hâlâ okunuyor), `<proje>`, `<crs>`,
-  `<tarih>`, `<kagit>`, `<olcek>`, `<sayfa>`, `<sayfa_sayisi>`, ve **atlas
-  nesnesinin bütün öznitelikleri** (`<ada>`, `<parsel>`, `<alan>`). Öznitelikler
-  hedef çözülürken alınıyor, çizilirken değil: sayfa 80'e gelindiğinde çizim
-  başlangıçtaki çizim olmalı.
-  **Kabul karşılandı:** doldurulamayan bir alan kâğıtta `⟨ada?⟩` olarak görünüyor
-  ve `trouble` listesine yazılıyor — **sessizce boş metne dönmüyor**. Sessizce
-  "Ada , Parsel 7" basan bir antet, birinin eksik bir sayıyla imzaladığı bir
-  paftadır ve bunun öğrenildiği yer tapu müdürlüğüdür.
-  **İKİNCİ BİR GRAMER EKLENMEDİ** (CLAUDE.md 5.11): bu bir alan yerine koymadır,
-  bir ifade dili değil. Aritmetik, sayıyı üreten komuta ait. Kapanmamış bir `<`
-  küçüktür işaretidir, bozuk bir alan değil.
-  **Kalan:** konum/boyut/görünürlük/renk gibi özelliklerin ifadeye bağlanması;
-  null, tarih/yerel ayar ve döngü davranışının tanımlanması.
-  Eski madde metni: Proje, layout, sayfa, harita,
-  seçili/atlas nesnesi ve rapor grubu bağlamlarını tipli sun. Konum, boyut, görünürlük,
-  renk, metin, dosya adı ve ölçek özellikleri sabit değer veya ifadeye bağlanabilsin.
-  Birim, null, tarih/yerel ayar, hata ve döngü davranışını tanımla. İfadeler keyfî
-  dosya/ağ/kod yürütme sağlamasın. **Kabul:** ada/parsel başlığı ile alan toplamı
-  önizleme/export'ta aynı snapshot'tan hesaplanır; eksik alan sessiz boş metin olmaz.
-- [~] **L-07 / P1 — Tam öğe özellikleri.** *(lejant sembolojisi ve logo 19 Eylül 2026)*
-  **Yapıldı:** Lejant her katmanın yanına **gerçek sembolünü** çiziyor ve
-  haritayı çizen aynı boru hattından geçiyor, yani anahtar ile harita
-  ayrılamıyor. Anahtar PDF'e **vektör** gidiyor — ilk hâlim resmi basıyordu ve
-  L-12'nin düzelttiği kusuru geri getiriyordu.
-  **Taşınan projede logo kaybolmuyor:** göreli resim yolu projenin klasörüne göre
-  çözülüyor. Türkçe karakterler zaten korunuyordu (metin UTF-8, `QString`).
-  **Kapı:** `KENTOS_LAYOUT_PROBE` artık satır içi rasteri de arıyor (küçük bir
-  blit XObject olmaz) ve anahtarın gerçekten çizdiğini sayfayı render edip
-  katman rengini arayarak doğruluyor; ikisi de kusur geri konularak sınandı.
-  **Kalan:** lejantta gruplar, filtre, manuel ad/sıra ve kolon düzeni; ölçek
-  çubuğunda birim/segment/etiket seçenekleri; metinde font, satır aralığı ve
-  taşma; resimde SVG, en-boy oranı ve kaynağın projeye **paketlenmesi** (bugün
-  dosya klasörde taşınıyor, `.pcad` içine gömülmüyor); resmin bir şekil öğesiyle
-  kırpılması.
-  **Eski metin:** Lejantta gerçek semboloji, gruplar,
-  filtre, manuel ad/sıra ve kolon düzeni; ölçek çubuğunda birim/segment/etiket;
-  metinde font, satır aralığı ve taşma; resimde SVG/raster, en-boy oranı ve kaynağı
-  paketleme ekle. QGIS 4.2 karşılığı olarak resim bir şekil öğesiyle kırpılabilsin.
-  **Kabul:** katman adı listesi yerine baskıdaki sembollerle eşleşen lejant çıkar;
-  taşınan projede logo kaybolmaz; Türkçe karakterler korunur.
-- [~] **L-08 / P1 — Tablo ve çok çerçeveli akış.** *(kesilme ve sütunlar 19 Eylül 2026)*
-  **Yapıldı:** `satir_siniri` ve `sutunlar` parametreleri eklendi. İkisi de modelde
-  duruyordu ve **hiçbir istemciden ayarlanamıyordu** — üstelik
-  `docs/komutlar/layout_item.md` `satir_siniri`'ni baştan beri vaat ediyordu, yani
-  var olmayan belgelenmiş bir özellikti. `sutunlar` `Value::Kind::TextList`
-  gelince mümkün oldu; `hepsi` listeyi boşaltıyor.
-  **Kesilme artık sonuca da bildiriliyor.** Renderer kâğıdın üstüne "… N satır
-  daha sığmadı" yazıyordu; sayfayı dışa aktaran bir istemci ise "tamam" okuyup
-  tabloyu eksiksiz sanarak dosyalıyordu. Kâğıdın üstündeki not onu elinde tutan
-  için, sonuçtaki uyarı diğer herkes için.
-  **Kalan:** çok çerçeveli AKIŞ — sığmayan satırların sonraki çerçeveye/sayfaya
-  devam etmesi; filtre, sıralama, toplama, koşullu biçim, kolon genişliği,
-  yinelenen başlık; manuel tablo ve HTML/zengin metin.
-  Eski madde metni: Alan/ifade kolonları, filtre,
-  sıralama, toplama, koşullu biçim, kolon genişliği, yinelenen başlık ve sayfaya
-  devam destekle. Manuel tablo ve sınırlı HTML/zengin metin içeriği aynı akış
-  sözleşmesine otursun. **Kabul:** 500 satırlı tablo bütün satırları sayfalara taşır;
-  satırların sığmadığı durumda sessiz kesme yerine devam veya açık taşma raporu olur.
-- [~] **L-09 / P2 — Grafik, profil ve 3B öğeleri.** *(çubuk grafik 19 Eylül 2026)*
-  **Yapıldı:** `grafik` öğesi — bir katmanın bir öznitelik sütununa göre nesne
-  sayısı, çubuk grafik. Çubuklar katmanın kendi rengini alıyor (QGIS'in
-  sembolojiden türetmesiyle aynı gerekçe: ilgisiz renkler ikinci bir lejanttır),
-  sayı çubuğun üstünde, değersiz nesneler `(boş)` çubuğunda toplanıyor.
-  **Maddenin "desteklenmeyen kaynak için boş resimle başarı bildirilmez" cümlesi
-  karşılandı:** katman/sütun verilmemişse ya da yoksa, sayılacak nesne yoksa,
-  kutu çok küçükse — sebep kâğıda yazılıyor ve `trouble`'a giriyor, yani
-  `islem=denetle` ve dışa aktarma uyarıları taşıyor.
-  **Kalan:** çizgi ve pasta grafikleri; ifade/filtre ile bağlama; kategorilerin
-  katman sembolojisinden (yalnız renginden değil) türetilmesi; **yükseklik
-  profili** ve **3B harita** — maddenin kendisi bunların "mevcut yüzey/3B
-  motorunun yeterliliğine bağımlı paketler" olduğunu söylüyor ve bugün o motorda
-  kamera, sahne snapshot'ı ve ölçekli 3B çıktı yok. "Temel veri değişince
-  kontrollü yenilenir" yarısı da açık: grafik her çizimde belgeden yeniden
-  sayılıyor (yani hep güncel), ama pahalı bir kaynak için denetimli bir yenileme
-  yok.
-  **Eski metin:** Çubuk/çizgi/pasta grafiklerini
-  alan/ifade/filtreyle bağla; QGIS 4.2 karşılığı olarak kategori ve renkleri katman
-  sembolojisinden türet. Yükseklik profilinde güzergâh ve yüzey kaynağı; 3B haritada
-  kamera, ölçekli çıktı ve sahne snapshot'ı tanımla. Bunlar mevcut yüzey/3B motorunun
-  yeterliliğine bağımlı paketlerdir. **Kabul:** temel veri değişince grafik/profil
-  kontrollü yenilenir; desteklenmeyen kaynak için boş resimle başarı bildirilmez.
+- [ ] **C-09 · P1 — Alan üretimi, sınır bulma ve geometri temizliği.** Kapalı bölgeyi tıklayarak sınır çıkarma, delik/ada tanıma, çizgi ağından alan üretme, yinelenen ve sıfır uzunluklu öğeleri bulma.
+  **Kabul:** Yakın fakat açık uçlar otomatik ve sessiz kapanmaz; boşluklar gösterilir. İç ada delik olarak korunur. Onarım öncesi/sonrası alan ve değişen öğeler raporlanır; GIS topoloji denetimi aynı çekirdeği kullanır.
+  **Bağımlılık:** C-01/G-05; ortak sınırları bozan bağımsız sadeleştirme yapılmaz.
 
-### 5.3. Atlas, rapor, çıktı ve şablon
+- [ ] **C-10 · P1 — Kaynağa bağlı profesyonel ölçülendirme.** Mevcut lineer, hizalı, açısal, radyal, çap, ordinate ve yay uzunluğu modelinin oluşturma/düzenleme/çıktı kapsamını tamamla; zincir, baz ve ölçü stilleri ekle.
+  **Kabul:** Kaynak uç/yay değişince ölçü değeri ve yerleşimi güncellenir; kopuk bağ görünür. Birim, hassasiyet, tolerans, önek/sonek ve elle yazılmış değer gerçek ölçümden ayırt edilir; farklı pafta ölçeklerinde okunabilirlik korunur.
+  **Bağımlılık:** F-04/C-01; yalnız ölçünün kendi tanım noktalarını değiştirmek canlı ilişki sayılmaz.
 
-- [~] **L-10 / P1 — Atlas.** *(çekirdek 19 Eylül 2026)*
-  **Yapıldı:** `core::Atlas` ve `core::atlas_targets` — kapsama katmanı, sıralama
-  sütunu, kenar payı ve tek dosya/nesne başına dosya tercihi. `ÇIKTIYERLEŞİMİ
-  islem=atlas` bunları kuruyor; `YAZDIR yerlesim=` her nesne için harita
-  çerçevesini yeniden hedefleyip bir sayfa basıyor. **Çizim değişmiyor** — belgeyi
-  düzenleyen bir baskı, geri alma gerektiren bir baskı olurdu.
-  Kabul ölçütleri karşılandı: **sıra belirli** (aynı çizim iki kez aynı sırayı
-  verir; 47. sayfanın tekrar basımı 47. sayfanın parselidir), **adlar benzersiz**
-  (`sirala` yoksa nesne ANAHTARI, yuva değil; çakışan ada `-2` eklenir, çünkü
-  farklı adalarda 21 numaralı iki parsel olağandır), **sıfır sonuç hata verir**
-  (sıfır dosya yazıp başarı bildirmek yerine), **boş geometri atlanır**.
-  Hedefler **çizimden önce** çözülüyor, yani sayfa sayısı biliniyor ve hiçbir şey
-  basılmadan önce söylenebiliyor. Dosya biçimi kaydın `reserved` dizisinden dört
-  alan aldı; kayıt hâlâ 48 bayt.
-  Probe PDF'ten okuyarak doğruluyor: **beş parsel → beş sayfa**.
-  **Kalan:** nesne başına ayrı dosya (`tek_dosya=hayır` saklanıyor ama baskı hep
-  tek belge yazıyor); dosya adı ifadesi; filtre; sabit/ön tanımlı ölçek seçenekleri;
-  güncel atlas nesnesini vurgulama/kırpma; ileri/geri önizleme; iptal.
-  Eski madde metni: Kapsama katmanı/seçimi, filtre, sıralama, sayfa adı,
-  dosya adı ifadesi; sabit ölçek, ön tanımlı ölçek veya kenar payıyla kapsama;
-  güncel atlas nesnesini gösterme/vurgulama/kırpma; ileri/geri önizleme ekle.
-  Tek PDF ve nesne başına dosya destekle. **Kabul:** 100 parsel tek istekle sıralı,
-  benzersiz adlandırılmış çıktı verir; sıfır sonuç, boş geometri, dosya adı çakışması
-  ve iptal deterministik davranır. Snapshot ve manifest yeniden üretimi mümkün kılar.
-- [~] **L-11 / P2 — Rapor motoru.** *(bölüm modeli 19 Eylül 2026)*
-  **Yapıldı:** `core::Report` / `core::report_groups` ve `ÇIKTIYERLEŞİMİ
-  islem=rapor`. Bir atlas ve bir rapor farklı şekillerdir: atlas düz bir
-  döngüdür, rapor hiyerarşidir ve döngünün bölüm diye bir kavramı yoktur — bu
-  yüzden ayrı bir model. Ada başına bölüm, adet ve kutu alanı toplamı, bölümün
-  kendi kapsamı. Üyeler `atlas_targets`'tan geliyor, yani "bu sayfa neyi
-  kapsıyor" sorusunun tek cevabı var.
-  `kutu_alani_mm2` **ölçülen alan değildir** ve adı bunu söylüyor. Grup değeri
-  olmayan nesne kendi bölümünü oluşturuyor, atılmıyor.
-  **Kalan:** bölümlerin **sayfaya dökülmesi** — statik kapak, grup başlığı/altlığı
-  ve nesne bölümünün ayrı şablonlar olması, ve bunların elle sayfa çoğaltılmadan
-  basılması. Bugün model ve sayım var, çıktı yok: `islem=rapor` okuyor ve
-  bildiriyor. Bir de `keep_empty` alanı bildirildi ama okunmuyor (kodda yazılı) —
-  bölüm bir listeden gelebildiği gün anlam kazanacak.
-  **Eski metin:** Statik kapak, grup başlığı/altlığı, nesne
-  bölümü ve toplamları iç içe tanımla; ada → parsel hiyerarşisiyle çalış. Atlasın
-  “her nesne için aynı şablon” döngüsünden ayrı rapor modeli kur. **Kabul:** ada
-  bazında başlık ve toplam, parsel bazında harita/tablo içeren rapor elle sayfa
-  çoğaltılmadan üretilir; boş bölümlerin davranışı ayarlanabilir.
-- [~] **L-12 / P0 — Render ve çıktı doğruluğu.** *(vektör çıktı 19 Eylül 2026)*
-  **Yapıldı — asıl kusur kapandı:** harita bir `QImage`'a çizilip sayfaya
-  yapıştırılıyordu, yani PDF'e **tek bir fotoğraf** olarak gidiyordu: 1:1000 bir
-  parsel sınırı piksel olarak varıyordu — ölçülemez, seçilemez, çözünürlüğe bağlı —
-  imzalanan bir belgede.
-  Koddaki gerekçe gerçekti ve ikisi de yanıtlandı, etrafından dolaşılmadı: boru
-  hattı hedefinin tamamına sahipti (arka planı dolduruyor, hiçbir şeyi kırpmıyor).
-  Artık `FrameContext::target_is_painter` ile arka uç **çağıranın boyacısına**
-  çiziyor, durumunu bulduğu gibi geri veriyor; kırpma çerçeve, arka plan sıfır
-  alfa ("orada olanı bırak").
-  **Kanıt dosyadan:** aynı yerleşimin PDF'i **435.594 bayttan 8.402 bayta** indi,
-  `/Subtype /Image` sayısı **sıfır**, 34 vektör çizgi operatörü var. Probe bunu
-  her koşumda denetliyor. Basılan görüntü bire bir aynı.
-  Ölçü de sınandı: 1:1000'de 100 mm'lik bir çerçeve tam olarak 100 000 mm zemin
-  gösteriyor — `Mm` sabit noktalı, yani aritmetik kesin.
-  **Kalan:** SVG çıktı; font gömme/ikame ve metni kontur çıkarma seçeneği; sayfa
-  aralığı seçimi; raster gerektiren öğelerin ayrı işaretlenmesi; 0,1 mm toleranslı
-  görsel karşılaştırma; fiziksel baskıda "sayfaya sığdır"ın kapatılması.
-  Eski madde metni: Önizleme/PDF/SVG/raster/yazıcı
-  aynı ölçü ve stil çözümünü kullansın. Desteklenen çizgi/metin/semboller vektör
-  çıksın; raster gerektiren öğeler ayrı işaretlensin. Font gömme/ikame, metni metin
-  veya kontur çıkarma ve sayfa aralığı seçenekleri tanımlansın. **Kabul:** 1:1000'de
-  100 m çizgi kâğıtta 100 mm'dir; raster-only veri dışında harita PDF'de tek görüntü
-  değildir. Önerilen test toleransı 0,1 mm; fiziksel baskıda “sayfaya sığdır” kapatılır.
-- [~] **L-13 / P2 — Coğrafi referans ve üretim çıktısı.** *(biçimler ve world file 19 Eylül 2026)*
-  **Yapıldı — ve asıl kusur şuydu:** `dosya=cikti.png` bir **PDF yazıp adını
-  `cikti.png` koyuyor** ve "tamam" diyordu. Artık uzantı isteğin kendisi:
-  `.pdf` (vektör sayfa), `.svg` (vektör, sayfa başına bir dosya), `.png`/`.tif`
-  (raster + world file). Yazılamayan biçim **adıyla reddediliyor** ve ne
-  yazılabildiği sayılıyor — GeoPDF dahil; sessiz indirgeme yok.
-  **World file** raster çıktının yanına, sayfada hedeflenmiş harita çerçevesi
-  varsa. Sayfanın tamamını tanımlıyor ama çerçevenin sayfadaki yerini hesaba
-  katıyor, ve ölçek iki yönde aynı (çerçeve pencereyi germiyor, sığdırıyor).
-  Hedef yoksa yazılmıyor ve sebebi söyleniyor.
-  `KENTOS_PRINT_PROBE` dördünü de gerçek dosyada sınıyor.
-  **Kalan:** katmanlı/coğrafi referanslı PDF (GeoPDF) — bu bir bağımlılık ve
-  lisans kararıdır ve maddenin kendisi "ayrı teknik inceleme" diyor; grup/sıra/ad/
-  görünürlük eşlemesi; renk profili seçenekleri; ve `dpi` ile renk profilinin
-  komut parametresi olması (bugün dpi yerleşimin kendi ayarından geliyor).
-  **Eski metin:** Referans harita üzerinden
-  world file/coğrafi referanslı PDF; katmanlı GeoPDF, grup/sıra/ad/görünürlük eşlemesi;
-  SVG ve PNG/TIFF çıktı, DPI ve renk profili seçenekleri ekle. Backend desteğini
-  capability olarak bildir. **Kabul:** koordinat eşlemesi bağımsız okuyucuda doğrulanır;
-  iç içe katman ağacı referans projeyle karşılaştırılır; desteklenmeyen özellik
-  sessiz düz PDF'ye indirgenmez. GeoPDF bağımlılık/lisans kararı ayrı teknik incelemedir.
-- [~] **L-14 / P1 — Taşınabilir şablonlar.** *(bağımlılıklar 19 Eylül 2026)*
-  **Doğrulandı:** şablon **zemini taşımıyor**. `layout_to_json` harita
-  çerçevesinin `olcek`'ini yazıyor — "1:1000" düzenin bir özelliğidir, bir yerin
-  değil — ama `extent`'i yazmıyor. Trabzon'daki bir çizimin koordinatlarını
-  Ankara'daki bir sayfaya taşımak, şablonun yerleşimi yanlış ülkeye hedeflemesi
-  olurdu. Test bunu açıkça sınıyor: JSON'da `485200` geçmiyor, okunan şablonun
-  harita çerçevesi hedefsiz geliyor.
-  **Eklendi:** `core::layout_dependencies` ve şablon dosyasında `bagimliliklar`
-  alanı — şablonu alan masanın bulması gereken dosyalar. Amblemi başkasının
-  diskinde duran bir sayfa, öbür bilgisayarda boş bir kutu basan bir yerleşim
-  olarak varıyor; listeyi yazmak, bunu plottan önce söyleyebilmenin yolu. Liste
-  **türetiliyor**, saklanmıyor: öğelerle asla çelişemesin diye.
-  **Kalan:** küçük önizleme; kurum/proje değişkenleri; katman/alan eşleme; içe/dışa
-  aktarma; eksik bağımlılığın uygulama anında bildirilmesi (disk isteyen kısım,
-  `/src/app`); QGIS `.qpt` dönüştürücüsü.
-  Eski madde metni: Var olan kitaplığı; sürüm, küçük
-  önizleme, kurum/proje değişkenleri, font/resim bağımlılıkları, katman/alan eşleme
-  ve içe/dışa aktarma ile genişlet. Şablona arazi extent'i yanlışlıkla taşınmasın.
-  QGIS `.qpt` içe aktarma istenirse ayrı dönüştürücü ve destek matrisi gerekir.
-  **Kabul:** kurum şablonu başka projede katman eşlemesinden sonra aynı yerleşimi kurar;
-  eksik bağımlılık listelenir; eski şablonlar migration testinden geçer.
-- [~] **L-15 / P1 — Preflight ve büyük işler.** *(preflight 19 Eylül 2026)*
-  **Yapıldı:** `core::layout_trouble` — Qt'siz ve dosya sistemi görmeyen, yani bir
-  betik ve başsız bir koşum tasarımcının gösterdiği raporun aynısını alıyor.
-  Saydıkları: hedeflenmemiş harita çerçevesi, sayfa dışına taşan kutu, sıfır boyutlu
-  kutu, kopmuş harita bağı, katmanı verilmemiş tablo, dosyası verilmemiş resim,
-  var olmayan sayfada duran öğe, hiç harita çerçevesi olmayan yerleşim.
-  **Hiçbiri basmayı engellemiyor** — dosya çıkar ve bitmiş görünür, tam da bu
-  yüzden söylenmeleri gerekiyor. `ÇIKTIYERLEŞİMİ islem=denetle` bunları yazıyor;
-  `YAZDIR yerlesim=` aynı denetimi kendiliğinden yapıp bulduklarını sonucunun
-  **uyarıları** olarak döndürüyor (C-03).
-  **Kalan:** eksik font/resim dosyası ve yetersiz raster çözünürlüğü (disk isteyen
-  denetimler, `/src/app`'e ait); tablo kesilmesi; sayfa bazında render/cache,
-  iptal, ilerleme ve bellek sınırı; 100 sayfalık atlasın UI'yi kilitlememesi.
-  Eski madde metni: Sayfa taşması, eksik font/resim,
-  geçersiz ifade, kopuk harita bağlantısı, boş extent, tablo kesilmesi ve yetersiz
-  raster çözünürlüğünü export öncesi raporla. Sayfa bazında render/cache, iptal,
-  ilerleme, bellek sınırı ve UI dışı ağır hesap kullan. **Kabul:** 100 sayfalık atlas
-  UI'yi kilitlemez; iptal edilen çıktı tamamlanmış diye yayımlanmaz. Referans makine
-  ve fixture sabitlenip ilk önizleme/tepe bellek/iptal gecikmesi ölçülür; ölçümden
-  önce performans başarısı iddia edilmez.
+- [ ] **C-11 · P1 — Gerçek ilişkili tarama ve dolgu.** Sınır kimlikleri, delikler, desen açısı/aralığı/başlangıcı ve çoklu bölge; sınır değişince kontrollü yeniden hesaplama.
+  **Kabul:** Delikli parsel değişince tarama delikten taşmaz; sınır silindiğinde bağ durumu görünür. Yoğun tarama etkileşimi kilitlemez; PDF ve DXF deseni aynı ölçekte taşır.
+  **Bağımlılık:** F-04/C-09; mevcut DXF associative bayrağını çalışan bağımlılık yerine sayma.
 
-## 6. AI Surface: isteği tamamlayan çalışma ortamı
+- [ ] **C-12 · P1 — Yazı ve açıklama kalitesi.** Çok satırlı yazı, hizalama, satır/paragraf aralığı, Unicode/Türkçe, alan ifadeleri, leader/multileader ve arama/değiştirme kapsamını tamamla.
+  **Kabul:** Ekran, PDF ve DXF'te satır kırılması/hizalama için karşılaştırmalı örnekler geçer; eksik font görünür. Alan/uzunluk içeren yazı kaynak değişiminde güncellenir; toplu bul/değiştir önizlemelidir.
+  **Bağımlılık:** F-04/G-07; font lisansı ve taşınabilirlik çıktı paketinde kaydedilir.
 
-### 6.1. “Her şeyi yapabilme” kapsamı
+- [ ] **C-13 · P1 — Blok ve sembol üretimi.** Mevcut blok tanımı/referansı üzerine yerinde düzenleme, öznitelikli blok, taban noktası, kitaplık ve kontrollü explode akışını tamamla.
+  **Kabul:** İç içe, döndürülmüş ve aynalanmış blokta seçme/snap doğrudur; tanımı güncellemek tüm referanslara yansır. Explode sonrası geometri, görünüm, değerler ve kaynak ilişkisi raporlanır; döngü reddi korunur.
+  **Bağımlılık:** F-02/F-04; parametrik blok P2 kapsamına ayrılır.
 
-| Kullanıcı işi | AI ve MCP'de gerekli yol |
-|---|---|
-| Proje aç/yeni/kaydet/farklı kaydet, import/export | Dosya hedefi, seçenekler, sonuç URI'sı, overwrite politikası ve işlem sonucu |
-| Katman/stil/semboloji/etiket/tema | Oku, oluştur, düzenle, sırala, görünürlük ve stilleri uygula |
-| Çizim/düzenleme/seçim/snap/ölçüm/undo | GUI tıklaması istemeyen tipli girdi, nesne referansı ve geometrik araç sonucu |
-| Öznitelik sorgusu/kolon/hesap/toplu güncelleme | Şema keşfi, filtreli okuma, değişim önizlemesi ve toplu transaction |
-| CRS/jeodezi/kadastro/imar/yüzey/processing | Algoritma keşfi, parametre doldurma, iş başlatma, iptal ve sonucu denetleme |
-| Layout/atlas/rapor/yazdırma | Bölüm 5'teki her özellik için komut ve okunabilir sonuç |
-| Görünüm/panel/aktif layout/araç | Anlamsal görünüm ve çalışma bağlamı kontrolü; mouse otomasyonu gerekmez |
-| Settings/sağlayıcı/MCP/veritabanı | Normal ayar CRUD; gizli değer yerine credential referansı; yetki kapsamı açık yönetim işlemleri |
+- [ ] **C-14 · P1 — Harici CAD/GIS referansları.** Referans yöneticisi, göreli yol, yeniden bağlama, görünürlük, kırpma, CRS/dönüşüm, yükleme durumu ve bağlama/kopyalama ayrımı.
+  **Kabul:** Kaynak güncellenince kullanıcı değişikliği görür; kayıp referans belgeyi açılmaz yapmaz. Referansa snap mümkünken yanlışlıkla düzenleme olmaz. Proje paketi taşınınca yollar ve kimlikler çözülür.
+  **Bağımlılık:** F-02/I-05; DWG xref desteğini genel referans yöneticisinden ayrı uyumluluk hücresiyle doğrula.
 
-Üründe henüz olmayan bir yetenek “AI destekli” gösterilmez. Önce ortak komut ve
-motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır.
+- [ ] **C-15 · P2 — Geometrik ve boyutsal kısıtlar.** Yatay/düşey, paralel, dik, teğet, eşmerkez, eşit ve sabit mesafe/yarıçap ilişkileri; çözüm durumunu gösteren arayüz.
+  **Kabul:** Az/fazla kısıtlı durumlar açıklanır; çelişen kısıtlar belirlenir. Bir ölçüyü değiştirmek ilgili modeli günceller; sabit kontrol noktasını kaydırmaz. Çözüm tekrarlanabilir ve geri alınabilir olur.
+  **Bağımlılık:** C-01/F-04; çözücü/lisans değerlendirmesi yapılır. Bu madde Netcad'de doğrulanmış özellik iddiası değil, PiriCAD geliştirme hedefidir.
 
-- [~] **A-01 / P0 — Tam ve tipli bağlam.** *(bağlam aracı 19 Eylül 2026)*
-  **Yapıldı:** `core.context` (**BAĞLAM**) — bir ajanın ilk sorduğu soruyu tek
-  çağrıda cevaplıyor: belge sürümü, CRS, çizim kapsamı, nesne sayısı, katman
-  adları, çıktı yerleşimleri ve her birinin **hedefli olup olmadığı** ve kaç
-  sorunu olduğu, seçili nesnelerin **kalıcı anahtarları** (yuva değil, model.md
-  R44), ve görünüm.
-  **Özet veriyor, döküm değil**: geometri yok, öznitelik satırı yok, nesne listesi
-  yok — çizimle birlikte büyüyen bir bağlam, beş milyon parsellik bir paftayı bir
-  isteme sokardı. Gerisini beş dar araç cevaplıyor.
-  **Ekran yoksa `gorunum` `null`** ve bu dürüst bir cevap: uydurulmuş bir
-  dikdörtgen, ajanın bir sonraki çizimini kimsenin bakmadığı bir yere koyardı.
-  **Kalan:** şablon kitaplığı, kullanılabilir işlem algoritmaları ve **etkili
-  politika** — sonuncusu S-01'in Gate'e bağlanmasına bağlı, o da engelli.
-  Eski madde metni: Aktif belge/layout/sayfa, seçim,
-  katmanlar, CRS/birimler, görünüm, şablonlar, kullanılabilir algoritmalar, yetenekler
-  ve etkili politikayı sorgulanabilir sun. Büyük veriyi sayfalı/sınırlandırılmış
-  sorgula; bütün geometriyi prompt'a dökme. **Kabul:** “bunu A3'e yerleştir” ifadesi
-  tek geçerli seçim ve layout bağlamında tekrar nesne seçtirmeden çözülür.
-- [~] **A-02 / P0 — Eksik komutları erişime aç.** *(yerleşim ve yazdırma 19 Eylül 2026)*
-  **Açıldı:** `core.layout`, `core.layout_item`, `core.layout_template` ve
-  `core.print`. Kâğıt/zemin ayrımı A-03 ile şemada yazılı hâle gelince, bunları
-  kapalı tutan gerekçe ortadan kalktı — TODOS E-01'in "seçili parselleri A3 yatay
-  yerleştir ve PDF çıkar" senaryosunun komut tarafı artık ajanın elinde.
-  **Kapsam %74'ten %78'e çıktı** (93 komutun 73'ü). Kalan 20'nin 16'sı plana
-  bağlı, 4'ü bilerek kalıcı; `tests/support/ai-kapsam.json` her birinin gerekçesini
-  taşıyor ve kapı gerekçesiz olanı kırıyor.
-  **Kalan:** dosya ailesi (`open/save/saveas/import/export`), `undo/redo`,
-  ayarlar ailesi, `core.column`, `core.database` — hepsi C-02 etkileri ve S-01
-  politikası Gate'e bağlandıktan sonra açılacak, çünkü açmanın anlamı onay yolunun
-  onları doğru sınıflandırması.
-  Eski madde metni: C-01 envanterindeki dosya,
-  layout, print, seçim, ayarlar, undo ve diğer aileleri C-02 etkileriyle aç. Eksik
-  parametrede GUI tıklaması bekleyen coroutine'ler otomasyon yolunda tipli eksik
-  girdi hatası versin. **Kabul:** parametreleri tam bir işlem pencere/modal açmadan
-  hem sohbet hem MCP'den biter; yardım ve şemalar Registry'den üretilir.
-- [~] **A-03 / P0 — Kâğıt ve arazi koordinatını ayır.** *(birim 19 Eylül 2026)*
-  **Yapıldı:** `Param::unit` — sayının neyle ölçüldüğü, Türkçe, hem okuyucuya hem
-  şemaya. Yapısal yarı zaten vardı ve kaldı: bir `Point` parametresi **yalnız
-  tutamak** kabul ediyor (`mcp.cpp`), bir `Integer` ise çağıranın yazabileceği bir
-  sayı. Eksik olan şey şemanın hangisinin hangisi olduğunu **söylememesiydi** —
-  "integer 0..10000" diyen bir şema, ajanı tahmine bırakıyordu.
-  Yerleşim komutlarının `x`, `y`, `genislik`, `yukseklik`, `yazi`, `kenar` alanları
-  artık `[kâğıt mm]`, `pencere` ise `[ZEMİN koordinatı — kâğıt değil]` diyor.
-  Birim, açıklamanın **başına** konuyor çünkü ajanın yanlış yaptığı şey o.
-  **Kalan:** `extent_ref`/`entity_ref` gibi anlamsal türler; kullanıcının verdiği
-  koordinat/CSV'nin CRS ve birim doğrulamasından geçip provenance taşıyan bir
-  tutamağa dönüşmesi (ölçüm listesi yolu).
-  Eski madde metni: Şemada `paper_length`,
-  `ground_point`, `extent_ref`, `entity_ref` gibi anlamsal türler ve birimler tanımla.
-  Kâğıtta 20 mm konum model tarafından üretilebilir; arazi geometrisi araç sonucuna
-  veya açık kullanıcı verisine dayanmalı. Kullanıcının verdiği koordinat/CSV,
-  CRS ve birimi doğrulanarak provenance taşıyan handle'a dönüşsün. **Kabul:** AI
-  layout öğesini yerleştirir ve kullanıcının verdiği ölçüyü işler; arazi koordinatı
-  uydurmaz. Her sayı için genel bir handle zorunluluğu getirilmez.
-- [~] **A-04 / P0 — Kalıcı iş yürütme döngüsü.** *(onay sonrası devam 19 Eylül 2026)*
-  **Yapıldı — ve bu maddenin asıl kusuru buydu:** konuşma **ilk kartta
-  bitiyordu**. Kullanıcı Uygula'ya basıyor ve hiçbir şey olmuyordu; kalan her
-  adım, modelin ipini kaybettiği bir konuşmada yeniden istenmek zorundaydı.
-  Artık karardan sonra modele önerinin durumu, çizimin yeni sürümü, yazılan
-  dosyalar ve uyarılar anlatılıyor ve **doğrulaması** isteniyor. Otomatik
-  uygulama değil: kararı kişi verdi, devam eden konuşma (5.7).
-  **Ret tur harcamıyor**; **tur sınırı onayla sıfırlanmıyor**.
-  **"Her tool-call kimliği doğru tek sonuç alır"** sağlandı: bilinmeyen bir araç
-  adı atlanıyordu, yani çağrı kimliği yanıtsız kalıyordu — ve cevapsız bir araç
-  çağrısı alan sağlayıcı sonraki turun tamamını reddeder. Okuma/bilinmeyen ile
-  yazma kümeleri artık ayrık ve hepsini kapsıyor.
-  **Kalan:** döngünün `ChatPanel` widget'ından **bağımsız bir servise** taşınması.
-  Bugün mantık pencerededir; bu, MCP istemcisinin de aynı döngüyü kullanabilmesi
-  ve A-06'nın iş/adım durumunu, A-07'nin yeniden deneme ve zaman aşımını tek iş
-  durumu üzerinden yönetebilmesi için gerekli. Araç bağımlılıklarının
-  sıralanması da orada.
-  **Eski metin:** Bağlam → plan → doğrulama →
-  policy → uygulama → sonuç okuma → gerekirse düzeltme → tamamlanma döngüsünü
-  `ChatPanel` widget'ından bağımsız servis yap. Onay sonrası aynı iş kendiliğinden
-  devam etsin. Araç bağımlılıklarını sırala; eksik plan adımını sessiz atlama.
-  **Kabul:** katman oluştur → nesne ekle → layout kur → PDF çıkar → dosyayı doğrula
-  tek kullanıcı talebinden tamamlanır; her tool-call kimliği doğru tek sonuç alır.
-- [~] **A-05 / P1 — Görsel ve yapısal önizleme.** *(yapısal yarısı 19 Eylül 2026)*
-  **Yapıldı:** `core::layout_overlaps` — hangi öğe hangisinin üstünde, hangi
-  sayfada, altındakinin yüzde kaçını kapatıyor, gizliyor mu. Çakışma **sorun
-  ilan edilmiyor**: çoğu tasarımın kendisidir (başlık haritanın üstündedir) ve
-  kusur saymak doğru kurulmuş her sayfada boşuna alarm olurdu; hiç istenmeyen
-  tek hâl — mat bir öğenin altında tamamen kalmak — sorun listesinde.
-  `islem=denetle` ikisini de hem insana hem makineye veriyor.
-  **Yol üstünde bulunan kusur:** MCP'nin önizleme kaynağı aylardır her sayfa için
-  boş liste döndürüyordu, yani "sorun yok" — okuma kapısı komut başına bir
-  bayrağa baktığı için `denetle` hiç çalışmıyordu. Kapı artık `effect_of(spec,
-  args)` ile bu çağrının ne yapacağına bakıyor, ret yutulmuyor, ve
-  `KENTOS_MCP_PROBE` gerçek sokette sınıyor.
-  **Kalan:** görsel yarısı — çizim/yerleşim anlık görüntüsünün sohbette
-  gösterilmesi ve destekleyen modele görsel girdi olarak sunulması; değişim
-  özeti ve etkilenen nesne sayısının kartta görünmesi. Bunlar sohbet
-  penceresinin işi ve A-04'ün iş yürütücüsüne bağlı.
-  **Eski metin:** Çizim/layout snapshot'ı, değişim
-  özeti, etkilenen nesne sayısı ve preflight raporunu sohbet içinde göster; destekleyen
-  modele görsel girdi sun. Çok modlu olmayan model yapısal raporla çalışabilsin.
-  **Kabul:** “lejant haritanın üstüne binmiş” talebinde çakışma saptanır, düzeltilir
-  ve yeni önizlemeyle doğrulanır; yalnız metinle “düzelttim” denmez.
-- [~] **A-06 / P1 — İş sürekliliği ve anlaşılır UI.** *(dürüst iptal ve tur sınırı 19 Eylül 2026)*
-  **Yapıldı — ve bu maddenin "iptal edildi mesajı gerçekten uygulanmış işleri
-  gizlemez" cümlesi bir kusuru tarif ediyordu:** Dur, "Çizimde hiçbir şey
-  değişmedi" diyordu, ki bir öneriyi uygulamış biri için yanlıştı. Mesaj artık bu
-  konuşmada uygulanmış önerileri adıyla sayıyor ve Ctrl+Z'yi gösteriyor;
-  hangisinin uygulandığı öneri defterinden okunuyor, bir bayraktan değil.
-  **Tur sınırı ayar oldu** (`core.ai.tur_siniri`, 1–50, öntanımlı 8) ve **yetki**
-  olarak işaretlendi: sınıra çarpıp onu yükselten bir model, reddedildiği turları
-  kendine verirdi. Sınıra gelince panel duruyor ve **söylüyor** — sonuç
-  kaybolmuyor.
-  **"Sağlayıcı hatasında tamamlanmış adımlar yeniden uygulanmaz"** zaten
-  sağlanıyordu: uygulanmış bir plan `Applied` ve `settle` ikinci kararı
-  reddediyor.
-  **Kalan:** iş/adım durumunun ve varsayımların panelde görünmesi; çıktı
-  bağlantıları; devam/geri al düğmeleri; tek toplu soru kartı; oturum geçmişinin
-  ve çalışma özetinin **kalıcı** olması; süre ve maliyet sınırları. Hepsi A-04'ün
-  iş yürütücüsüne bağlı — bugün iş durumu diye bir nesne yok, tur sayacı var.
-  **Eski metin:** İş/adım durumu, varsayımlar,
-  uygulanan değişiklikler, çıktı bağlantıları, durdur/devam/geri al ve gerektiğinde
-  tek toplu soru kartı göster. Oturum geçmişi ve çalışma özeti kalıcı olsun. İş/tur/
-  süre/maliyet sınırları Settings'te olsun; sınıra gelince sonuç kaybolmasın.
-  **Kabul:** sağlayıcı hatasında tamamlanmış adımlar yeniden uygulanmaz; devam
-  doğru checkpoint'ten olur; “iptal edildi” mesajı gerçekten uygulanmış işleri gizlemez.
-- [~] **A-07 / P1 — Sağlayıcı ve hata dayanıklılığı.** *(kabiliyet bildirimi 19 Eylül 2026)*
-  **Yapıldı:** `ai::DialectCapabilities` ve `capabilities_of(Dialect)` — dört
-  lehçenin her biri için araç çağrısı, akış, görsel, akıl yürütme, yapılandırılmış
-  çıktı ve güvenilir jeton sayımı. Tek yerde yazılı, yani sohbet, sağlayıcı
-  diyaloğu ve ileride bir eval koşucusu kendi fikirlerini tutamıyor.
-  **Her alan TEL DİLİ hakkında bir olgu**, bir satıcı ya da model hakkında değil:
-  `ollama_native` hangi model arkasında olursa olsun NDJSON çerçeveliyor ve
-  `vision`'ı yanlış, çünkü mesaj şeklinde bir resmin yeri yok — "hiçbir yerel
-  model göremez" demek değil.
-  **Kalan:** yeniden deneme, rate limit ve zaman aşımının tek iş durumu üzerinden
-  yönetilmesi; parçalanmış akış / bozuk argüman / araç reddinin modele **tipli
-  sonuç** olarak dönmesi; aynı hataya sınırsız tur harcanmaması; iptalin tüm alt
-  işleri sonlandırması — hepsi A-04'ün iş yürütücüsüne bağlı. Mevcut lehçeler için tool-call,
-  streaming, görsel, context ve structured-output kabiliyetlerini bildir. Yeniden
-  deneme, rate limit ve zaman aşımını tek iş durumu üzerinden yönet. **Kabul:**
-  parçalanmış akış/bozuk argüman/araç reddi modele tipli sonuç olarak döner;
-  aynı hataya sınırsız tur harcanmaz, iptal tüm alt işleri sonlandırır.
-- [~] **A-08 / P1 — Türkçe uçtan uca değerlendirme.** *(set, koşucu ve sayaç 19 Eylül 2026)*
-  **Yapıldı:** `tests/ai-eval` bir README'den ibaretti, oysa CLAUDE.md Article 8.9
-  başlangıç setinin harness'ı ve saklanan temeliyle geldiğini ve `make check`'in
-  vaka sayısını bildirdiğini söylüyordu — hiçbiri yoktu.
-  Set (16 vaka, 28 terim), koşucu ve `ci-gate-eval.sh` geldi. Koşucu iki soruyu
-  ayrı soruyor: dizi **canlı kütüğe** karşı hâlâ geçerli mi (cevap anahtarı
-  çürümesin diye — yazdığım ilk on altı vakada beş hata yakaladı), ve **üç istemci
-  aynı belgeyi ve aynı günlüğü mü üretiyor** (A-08 kabulü; argümanlar yol üstünde
-  `Value` JSON turunu da yapıyor, yani Article 1.4 de sınanıyor).
-  **Yol üstünde bulunan kusur:** atlas nişanı `content_hash`'e girmiyordu — iki
-  ayrı katmana nişanlanmış iki çizim aynı parmak izini taşıyordu.
-  **Kalan:** setin 200 vakaya ve §5.6 sözcük dağarcığına ulaşması — bu **alan
-  işidir**, ifrazı tevhitten ayıran birinin yazması gerekir, ve Article 8.9 açığı
-  onaylı sayıyor (sayaç her koşuda yazıyor). Bir de gereksiz soru/onay sayısı,
-  tamamlanma ve tekrar yürütme başarısı gibi **model** ölçümleri: bunlar canlı bir
-  sağlayıcıya bağlanan ayrı bir koşucunun işi ve hiçbir test canlı sağlayıcıya
-  bağlanamaz (ai.md P10).
-  **Eski metin:** Katalog sayısına ek olarak
-  gerçek iş senaryoları, gereksiz soru sayısı, gereksiz onay sayısı, tamamlanma,
-  doğruluk ve tekrar yürütme başarısı ölç. **Kabul:** bölüm 9'daki ortak fixture'lar
-  GUI, sohbet ve MCP için aynı beklenen proje/çıktı durumunu üretir.
+- [ ] **C-16 · P1 — 2.5D CAD davranışı.** Z düzenlemesi, eğim, projeksiyonda görünen kesişim ile gerçek uzaysal kesişim ayrımı, hat boyunca kot üretme ve yüzeye oturtma.
+  **Kabul:** Planda kesişen farklı kotlu iki hat kendiliğinden topolojik düğüm olmaz. XY taşıma Z'yi korur; 3D uzunluk/plan uzunluğu ayrı sunulur; ölçü ve dışa aktarım aynı Z politikasını kullanır.
+  **Bağımlılık:** F-03/G-01/T-01; tam katı modelleme ile 2.5D araziyi aynı kapsam sayma.
 
-## 7. Settings: soru sıklığı ve onay ayrı tercihler olmalı
+### U — Hızlı ve öğrenilebilir çalışma alanı
 
-### 7.1. Kullanıcıya sunulacak davranış
+- [ ] **U-01 · P0 — Ortak araç keşfi ve komut satırı.** Türkçe/İngilizce ad, kısa ad ve doğal dil araması; son kullanılanlar, favoriler ve seçime uygun araçlar; çizim anında komut seçenekleri.
+  **Kabul:** “Paralel/ofset/offset” aynı gerçek araca ulaşır. Desteklenmeyen nesnede araç neden uygulanamadığını söyler; klavyeyle tüm temel iş akışı tamamlanabilir.
+  **Bağımlılık:** F-01/A-01; metadata tek kaynaktan üretilir.
 
-Settings → **Yapay Zeka ve Otomasyon → Çalışma Davranışı** altında iki bağımsız
-kontrol bulunmalı. Aşağıdaki adlar ve kimlikler **önerilen yeni sözleşmedir**.
+- [ ] **U-02 · P0 — Dinamik sayısal giriş.** Mutlak/göreli XY(Z), kutupsal mesafe/açı, açı birimi, eğim, uzunluk kilidi, geçici referans ve basit birimli ifadeler.
+  **Kabul:** `12.5 m`, `1250 cm` ve desteklenen yerel sayı yazımları aynı sonucu verir; alanlar arasında geçiş ve kilit durumu görünür. Fareyi oynatmak kilitli değeri değiştirmez; son geçerli girdi kaybolmaz.
+  **Bağımlılık:** F-03/C-02; UI metin ayrıştırıcısı ile AI/Python birimleri tutarlı olur.
 
-| Ayar | Değerler | Önerilen varsayılan |
-|---|---|---|
-| `core.ai.onay_politikasi` | `her_degisiklikte`, `riskli_islemlerde`, `otomatik` | `riskli_islemlerde` |
-| `core.ai.soru_politikasi` | `etkili_belirsizlikte_sor`, `yalniz_zorunlu`, `varsayimla_ilerle` | `yalniz_zorunlu` |
-| `core.ai.is_butcesi.*` | Azami tur, süre, varsa sağlayıcı maliyet sınırı | Ölçümle belirlenen ürün varsayılanları |
-| `core.ai.cikti_dizini` | Yeni çıktılar için varsayılan hedef | Kullanıcının seçtiği çalışma dizini |
-| `core.ai.uzerine_yazma` | `sor`, `yeni_ad_uret`, `izin_ver` | `yeni_ad_uret` |
-| MCP istemci profili | Aynı politikayı devral veya istemciye özel daha dar/geniş açık yetki; proje/dizin/işlem kapsamı | Genel politikayı devral, verilen erişim kapsamı içinde |
+- [ ] **U-03 · P0 — Yakalama ve seçimde kesinlik.** Mevcut snap türlerini karma geometri/bloklarda tamamla; geçici snap, izleme, aday döngüsü, pencere/kesişen pencere, çit ve seçim filtresi.
+  **Kabul:** Adayın nesnesi ve türü görünür; zoom değişince piksel toleransı sabit hissedilir. Kilitli/gizli/reference katman davranışı ayarlanabilir; 100 üst üste nesnede istenen nesne seçilebilir.
+  **Bağımlılık:** C-01/F-01; son snap simgesi iyileştirmelerine regresyon testi.
 
-MCP profilleri tek global setting içine düzleştirilmemeli; kimliği doğrulanmış
-istemci/principal anahtarıyla saklanmalı. İstemcinin kendi bildirdiği ad yetki kanıtı değildir.
+- [ ] **U-04 · P0 — Tek özellik paneli ve bağlı tablo seçimi.** CAD geometrisi, görünüm, GIS alanları, kaynak ve kalite durumu aynı nesne panelinde; çoklu seçimde ortak/farklı değerler.
+  **Kabul:** Tablodan seçilen nesne haritada, haritadan seçilen satır tabloda bulunur. Hesaplanan alan ile düzenlenebilir alan ayırt edilir; toplu değişiklik kaç nesneyi etkileyeceğini gösterir ve tek geri alınır.
+  **Bağımlılık:** F-02/G-03.
 
-**Onay modları:**
+- [ ] **U-05 · P1 — Katman, görünüm ve çalışma alanı yönetimi.** CAD/GIS/raster/reference kaynaklarını tek ağaçta, türleri açık biçimde göster; gruplar, kilit, seçilebilirlik, ölçek aralığı, filtre, görünüm teması ve kayıtlı çalışma alanları.
+  **Kabul:** Tema değişimi veriyi değiştirmez; görünürlük, basılabilirlik ve seçilebilirlik karışmaz. Aktif araç/katman/CRS/ölçek kullanıcıya her zaman anlaşılır; 1000 katmanda arama ve toplu işlem akıcıdır.
+  **Bağımlılık:** F-02/G-06/L-01.
 
-| İşlem | Her değişiklikte | Riskli işlemlerde | Otomatik |
+- [ ] **U-06 · P1 — İşe dayalı başlangıç ve yardım.** Ölçüden harita, parsel düzenleme, plan çizimi, GIS analiz ve arazi işi şablonları; kısa örnek projeler ve bağlama uygun açıklamalar.
+  **Kabul:** Yeni kullanıcı kurulum dışında yardım almadan bir örnek veriyi açıp düzenler ve doğru ölçekli çıktı alır; uzman kısayolları aynı araçları hızlandırır. Hata mesajı nesneyi ve düzeltilebilir nedeni gösterir.
+  **Bağımlılık:** Q-01; başarı gerçek kullanıcı denemesiyle ölçülür.
+
+### G — GIS, CAD kadar temel bir yetenek
+
+- [ ] **G-01 · P0 — CRS, birim ve dönüşüm doğruluğu.** Kaynak CRS, belge çalışma CRS'si ve görünüm CRS'si ayrı tanımlansın; eksen sırası, metre/feet/derece, yatay/düşey datum, grid ve dönüşüm doğruluğu taşınsın.
+  **Kabul:** Aynı alanın farklı CRS verileri doğru üst üste gelir. CRS atamak ile yeniden projekte etmek ayrı işlemdir; eksik grid veya bilinmeyen CRS sessiz varsayılmaz. Lokal CAD çizimi açık yerleştirme/dönüşümle haritaya bağlanır.
+  **Bağımlılık:** F-03; mevcut PROJ/geodesy servislerini genişlet. Nokta doğruluğu dönüşüm öncesi/sonrası kontrol noktalarıyla ölçülür.
+
+- [ ] **G-02 · P0 — Veri sağlayıcı yetenekleri ve katman yaşam döngüsü.** Dosya/veritabanı/servis kaynaklarının okuma, yazma, filtre, indeks, transaction, eğri, Z/M ve şema yeteneklerini kaydet.
+  **Kabul:** Katman açılırken kaynak, kimlik, CRS, satır tahmini ve kısıtlar görünür. Geometriyi salt görüntülemek ile edit buffer'a almak ayrılır; desteklenmeyen yazma işlemi başarılı görünmez.
+  **Bağımlılık:** F-02/I-01; formatın GDAL'da varlığı bütün yeteneklerinin ürün tarafından desteklendiği anlamına gelmez.
+
+- [ ] **G-03 · P0 — Öznitelik tablosu, şema ve alan hesaplayıcı.** Mevcut sütun modeli üzerinde filtre/sıralama, sanal görünüm, toplu hesap, null, zorunluluk, benzersizlik, kod listesi, varsayılan ve ilişkili kayıt desteğini tamamla.
+  **Kabul:** Bir milyon satırı tamamen arayüze yüklemeden gez; `NULL`, sıfır ve boş metni ayır. Alan hesabı değişim özeti ve geri alma sağlar; bölünen/birleşen nesnede öznitelik aktarımı alan bazında kurallıdır.
+  **Bağımlılık:** F-02/F-05; tarih-saat, büyük sayısal alan ve ilişkiler için mevcut AttrType dışı ihtiyaçlar göç kararıyla ele alınır.
+
+- [ ] **G-04 · P0 — Şema bilen CAD sayısallaştırma kalemleri.** “Bina”, “yol ekseni”, “parsel”, “dere” gibi sınıflar geometri türü, katman, kod, varsayılan alan, gösterim, etiket ve doğrulama kurallarını birlikte seçsin.
+  **Kabul:** Kullanıcı kalemi seçip çizer; sonuç anında anlamlı GIS kaydıdır. Mevcut CAD nesnelerini sınıfa bağlama önizleme ve alan eşlemesiyle yapılır. Kurum tanımları veri paketidir; C++ içine mevzuat kodlanmaz.
+  **Bağımlılık:** G-03/G-06; mevcut katalog altyapısını kullan.
+
+- [ ] **G-05 · P0 — CAD/GIS ortak topoloji denetimi ve düzenleme.** Gap, overlap, self-intersection, duplicate, dangle, geçersiz halka ve ortak sınır kuralları katman/sınıf bazında çalışsın.
+  **Kabul:** Komşu parsel sınırı taşınırken topolojik düzenleme seçeneği ikisini birlikte günceller; kapalıyken oluşan hata bulunur. Hata katmanından nesneye gidilir; toplu onarımın toleransı ve alan etkisi önizlenir.
+  **Bağımlılık:** F-03/F-05/C-09; mevcut `domain/cadastre/topology` geliştirilir, alan bazlı istisnalar kuralda tanımlanır.
+
+- [ ] **G-06 · P1 — Profesyonel semboloji ve kartografya.** Tek sembol, kategori, dereceli ve kural temelli gösterim; ölçek aralığı, sembol düzeyi, dolgu/çizgi/işaret, ifade tabanlı özellikler ve temalar.
+  **Kabul:** Aynı veri ekran/pafta/lejantta tutarlı görünür. CAD nesnesine özel stil ile sınıf/katman gösteriminin önceliği açık olur; stil değiştirmek asıl geometriyi bozmaz. Mevcut QGIS backend sınırları belgelenir.
+  **Bağımlılık:** F-02/U-05; QGIS kullanılmayan derlemede destek kaybı sessiz olmaz.
+
+- [ ] **G-07 · P1 — Etiketleme ve ortak ifade sistemi.** Alan, geometri, birim, CRS, proje ve atlas değişkenleri; null ve tür kuralları; çakışma, öncelik, leader, mask ve elle yerleştirme.
+  **Kabul:** Aynı alan ifadesi tablo hesabı, etiket, filtre, pafta ve AI sorgusunda aynı değeri verir. Öznitelik veya sınır değişince etiket güncellenir; elle sabitlenen yerleşim kaybolmaz; yoğun haritada çakışmalar raporlanır.
+  **Bağımlılık:** F-04/G-03; mevcut expression bileşenleri tek semantiğe bağlanır.
+
+- [ ] **G-08 · P1 — Coğrafi raster ve georeferanslama.** GeoTIFF/COG başta olmak üzere büyük rasterı pencere/overview ile oku; bant, nodata, renk, kontrast, kırpma, mozaik ve kontrol noktasıyla yerleştirme.
+  **Kabul:** Büyük ortofoto tümü RAM'e alınmadan CAD çiziminin altında akıcı açılır. Kontrol noktaları artık hata ve RMS ile listelenir; dönüşüm tipi/kaynak CRS kaydedilir. Raster sembol resmi bu yeteneğin yerine geçmez.
+  **Bağımlılık:** G-01/G-02/Q-02; ileri raster analizleri G-11'de.
+
+- [ ] **G-09 · P1 — OGC ve harita servisleri.** WMS/WMTS/XYZ görüntü ile WFS/OGC API Features vektör erişimini ayrı sağlayıcılar olarak değerlendir; servis keşfi, CRS, sayfalama, önbellek ve bağlantı kesilmesi.
+  **Kabul:** Aynı referans altında CAD çizilir; sunucu hatası arayüzü kilitlemez. Servis kısıtı, sürüm, kaynak atfı ve kullanım koşulları kaydedilir. Sunucunun desteklemediği çevrimdışı indirme veya yazma özelliği vaat edilmez.
+  **Bağımlılık:** G-02/G-08; sırlar proje/AI bağlamına düz metin taşınmaz.
+
+- [ ] **G-10 · P1 — Vektör mekânsal analiz çekirdeği.** Konum/mesafe ile seç, clip, intersection, union, difference, dissolve, spatial join, nearest, buffer ve istatistik işlemlerini ürün seviyesine getir.
+  **Kabul:** Delik, çok parça, boş sonuç ve çakışan alan adları doğru ele alınır. Planar/geodezik mesafe seçimi açık; CAD paraleli buffer adı altında karışmaz. Girdi revizyonu, parametre, CRS ve algoritma sürümü sonuca eklenir.
+  **Bağımlılık:** G-01/G-03/C-03; mevcut alan düzenleme hesapları yeniden kullanılacak.
+
+- [ ] **G-11 · P1 — Raster/vektör birlikte analiz.** Raster hesaplama, yeniden örnekleme, eğim/bakı/gölgeleme, kontur, rasterdan Z, zonal istatistik ve raster-vektör dönüşümü için ortak işlem tanımları.
+  **Kabul:** Nodata, hücre boyutu, hizalama ve yeniden örnekleme yöntemi sonuçla kaydedilir. Parsel bazında ortalama kot/eğim doğru hesaplanır; kategorik rastera yanlış interpolasyon sessiz uygulanmaz.
+  **Bağımlılık:** G-08/G-10/T-01; mevcut kontur hesabıyla raster yüzey hesabının farkı açıklanır.
+
+- [ ] **G-12 · P1 — Tekrarlanabilir GIS işlem modeli.** Girdi/çıktı türleri ve bağımlılıkları bilinen zincirler, toplu çalıştırma, parametreli şablon, koşullu adım ve kaynak değişince yeniden çalıştırma.
+  **Kabul:** “Yol tamponu → etkilenen parseller → alan özeti → atlas” modeli UI, AI, MCP ve Python'dan aynı kayıtlı tanımla çalışır. Adım süreleri/nesne sayıları görünür; başarısız adımdan güvenli yeniden çalışma mümkün olur.
+  **Bağımlılık:** F-04/F-05/G-10/A-01; grafik arayüz ortak işlem şemasının görünümü olsun.
+
+### I — Veri alışverişi ve kurumsal kullanım
+
+- [ ] **I-01 · P0 — Format ve veri kaybı matrisi.** DXF, derlemeye bağlı DWG, GeoPackage, GeoJSON, SHP, GML, CSV/XYZ ve veritabanı yolları için gerçek okuma/yazma yeteneklerini çıkar; DGN, LandXML, LAS/LAZ gibi genişlemeleri kanıta göre sırala.
+  **Kabul:** Tür, eğri, blok, stil, font, öznitelik, CRS, Z/M ve null korunumu ayrı ölçülür. Veri kaybı içe/dışa aktarmadan önce ve sonra nesne bazında raporlanır; “destekli format” genel etiketi yeterli değildir.
+  **Bağımlılık:** F-01/G-02; mevcut IO tanı mekanizması.
+
+- [ ] **I-02 · P1 — Netcad projelerinden geçiş.** Kullanıcının gerçek Netcad örnekleriyle NCZ ekosisteminden DXF + GIS verisi + nokta listesi + stil/katalog eşlemesi üzerinden aktarım rotasını doğrula.
+  **Kabul:** Seçilen örnek projelerde eksilen nesne/öznitelik/stil raporu ve düzeltme yolu vardır. NCZ'nin doğrudan tam desteği araştırılmadan vaat edilmez; gerekiyorsa belgeli ve lisansı uygun dönüştürücü/SDK kararı ayrıca verilir.
+  **Bağımlılık:** I-01/G-04; hedef “dosya açıldı” değil üretime devam edilebilmesidir.
+
+- [ ] **I-03 · P1 — DXF/DWG profesyonel round-trip.** Eğriler, bulge, blok özniteliği, katman/çizgi tipi, ölçü, tarama, metin, birim, UCS/OCS ve model/paper-space kapsamını referans dosyalarla doğrula.
+  **Kabul:** İçeri al→kaydet→bağımsız okuyucuda aç karşılaştırması geometrik tolerans ve semantik değerlerle geçer. LibreDWG/opsiyonel derleme sınırları açık; desteklenmeyen entity için kayıp raporu bulunur.
+  **Bağımlılık:** I-01/C-10/C-11/C-13; lisans mimarisiyle çelişen bağımlılık eklenmez.
+
+- [ ] **I-04 · P1 — Canlı PostGIS düzenleme ve çatışma.** Mevcut proje/katman saklama üzerine kalıcı feature kimliği, artımlı değişiklik, yetki, optimistic locking ve yeniden bağlanma sözleşmesi kur.
+  **Kabul:** İki oturum aynı parseli değiştirince son yazan sessizce ezmez. Çok nesneli işlem transaction içinde tamamlanır; ağ kesilmesi tekrar yazımda çoğaltma yapmaz. Tabloyu bütünüyle değiştirme ile satır düzenleme UI/API'de ayrıdır.
+  **Bağımlılık:** F-02/F-05/G-02; veritabanı integration testleriyle doğrulanır.
+
+- [ ] **I-05 · P1 — Taşınabilir ve kurtarılabilir proje.** Şema/format sürümü, katalog, sembol, font referansı, harici veri, CRS grid ve kaynak envanteri; göreli yollar, autosave ve çökme kurtarma.
+  **Kabul:** İkinci makinede proje eksik bağımlılıkları açıkça bildirerek açılır. Kayıt sırasında çökme son sağlam projeyi bozmaz; eski sürüm dosyası kontrollü göç eder. Büyük referans verilerini pakete gömmek isteğe bağlıdır.
+  **Bağımlılık:** F-02/C-14; mevcut yerel format/journal üzerine kurulacak.
+
+### S — Haritacılık, kadastro ve plan üretimi
+
+- [ ] **S-01 · P1 — Ölçü noktası ve saha verisi.** Nokta numarası/kodu, kaynak, kalite, Z ve ölçüm sınıfı; yinelenen numara yönetimi, koddan çizgi üretme ve nokta listesi eşlemesi.
+  **Kabul:** Aynı ölçü dosyası tekrar alındığında çoğaltma seçimi açık olur; eksik kot ile sıfır kot ayrılır. Kontrol noktaları korunur; kodlu saha verisinden oluşan çizginin kökeni izlenir.
+  **Bağımlılık:** G-01/G-03/I-01; mevcut nokta/polar komutları genişletilir.
+
+- [ ] **S-02 · P1 — Jeodezik hesap ve aplikasyon.** Mevcut dönüşüm, fit, traverse ve stakeout akışlarını tek iş ekranında birleştir; artık hata, kapanma, ağırlık ve rapor doğruluğunu tamamla.
+  **Kabul:** Bilinen kontrol ağı örnekleriyle hesap doğrulanır; ölçülen, düzeltilen ve aplikasyon koordinatları ayırt edilir. Seçilen yöntem/parametre/CRS ve birimler raporla taşınır.
+  **Bağımlılık:** F-03/G-01/S-01; gelişmiş ağ dengelemesi kapsamı kullanılan matematik modeliyle ayrıca tanımlanır.
+
+- [ ] **S-03 · P1 — Parsel düzenleme ve alan denetimi.** Mevcut ifraz/tevhit üzerine hedef alana göre bölme, doğrultu/cephe koşulu, ortak sınır, numaralandırma ve kaynak-soy ilişkisini tamamla.
+  **Kabul:** Girdi toplam alanı ile sonuç toplamı, delikler ve dış sınır korunumu kontrol edilir; fark gerekçelendirilir. Malik/öznitelik aktarımı kuralı görünür; taslak işlem ile resmî teslim durumu ayrılır.
+  **Bağımlılık:** G-05/F-04/S-02; fiziksel alan ile kayıtlı/tapu alanı farklı alanlarda tutulur.
+
+- [ ] **S-04 · P2 — Planlama, dağıtım ve kurum teslim paketleri.** Ölçek bazlı gösterim, yol/çekme mesafesi, kullanım alanı özeti, parselasyon dağıtımı ve kurum raporlarını sürümlü kural paketleriyle kur.
+  **Kabul:** Kullanılan kuralın sürümü/tarihi/kaynağı raporda vardır; kurallar örnek kurum verisi ve uzman kontrolüyle doğrulanır. Mevzuat güncel diye varsayılmaz; ürün sayfasındaki eski mevzuat atfı yazılıma doğrudan kopyalanmaz.
+  **Bağımlılık:** G-04/S-03/L-03; AI mevzuata uygunluk veya mühendis imzası uydurmaz.
+
+### T — Arazi, kesit ve mühendislik modeli
+
+- [ ] **T-01 · P1 — Kalıcı ve düzenlenebilir arazi yüzeyi.** Mevcut geçici üçgenleme/contour hesabından ilerle; kaynak noktalar, kırık hatlar, dış sınır, boşluk, üçgen düzenleme ve yüzey sürümü tanımla.
+  **Kabul:** Dere sırtı/kırık hat korunur; bina boşluğunda üçgen oluşmaz. Kaynak değişince etkilenen yüzey/çıktı güncellenir veya kirli işaretlenir; aynı kaynak aynı yüzeyi üretir.
+  **Bağımlılık:** F-03/F-04/S-01; yeni kalıcı yüzey türü model/format tasarım kararı gerektirir.
+
+- [ ] **T-02 · P1 — Eş yükselti ve yüzey analizi.** Ana/ara eğri, etiket, yumuşatma, sınır kırpma, eğim/bakı ve drenaj gibi analizleri yüzey kimliğiyle ilişkilendir.
+  **Kabul:** Eş yükselti etiketi doğru kotu taşır; yumuşatma topoğrafik anlamı bozmaz ve hata sınırı kayıtlıdır. Nodata/boşluk ve düz üçgen uç durumları sınanır.
+  **Bağımlılık:** T-01/G-07/G-11; mevcut contour komutu yeniden yazılmadan genişletilir.
+
+- [ ] **T-03 · P1 — Boykesit, enkesit ve iki yüzey hacmi.** Seçilen hat boyunca profil, istasyon/enine mesafe, birden çok yüzey ve sınırlandırılmış kazı/dolgu.
+  **Kabul:** Basit prizma ve kesişen yüzey örneklerinde bağımsız analitik sonuçla uyuşur; kazı/dolgu ayrı raporlanır. Hesap alanı, boşluk politikası, yöntem ve yüzey revizyonları sonuçla saklanır.
+  **Bağımlılık:** T-01/F-04/L-03; mevcut referans düzleme hacim desteği iki yüzey desteği sayılmaz.
+
+- [ ] **T-04 · P2 — Güzergâh ve koridor.** Doğru/yay/geçiş eğrisi, kilometre/istasyon, düşey güzergâh, tip kesit, şev ve parametrik koridor modeli.
+  **Kabul:** Bir güzergâh değişikliği plan, profil, kesit ve hacmi ilişkili günceller; geometrik süreklilik kontrol edilir. Yeniden hesaplanan ve geçersiz sonuçlar açıkça ayrılır.
+  **Bağımlılık:** C-01/C-16/T-03; netpro düzeyindeki kapsam aşamalı modül olarak teslim edilir.
+
+- [ ] **T-05 · P2 — Büyük nokta bulutu ve eş zamanlı 2D/3D.** LAS/LAZ/COPC gibi aday formatları veri/bağımlılık analiziyle seç; sınıf/yoğunluk/kot görünümü, LOD, kesit ve kontrollü yüzey üretimi.
+  **Kabul:** Veri tamamı RAM'e yüklenmez; 2D/3D seçim aynı kimlik/konumu gösterir. Yerel koordinatlı render hassas model değerini değiştirmez; kot örneklemesinin yöntemi ve yoğunluğu raporlanır.
+  **Bağımlılık:** G-02/T-01/Q-02; nokta bulutundan CAD çıkarımı ayrıca kalite ölçütü ister.
+
+### L — Pafta, kartografya ve teslim kalitesi
+
+- [ ] **L-01 · P1 — Mevcut layout sistemini üretim seviyesinde doğrula.** Çok sayfa, sayfa boyutu/yönü, çoklu harita, kilitli ölçek/tema, bağlı ölçek çubuğu/kuzey oku/lejant, grid, overview, hizalama, gruplama ve şablon kapsam matrisi.
+  **Kabul:** Bir sayfada farklı CRS/ölçekte iki harita kendi doğru grid/lejant/ölçek öğesine bağlanır; yanlış haritaya bağlı öğe görünür hata verir. Ekran ile çıktı aynı yerleşimi taşır; undo/redo ve save/open geçer.
+  **Bağımlılık:** F-04/G-01/G-06; var olan linked_map/atlas/report işleri yeniden başlatılmaz.
+
+- [ ] **L-02 · P1 — Veri güdümlü yerleşim ve QGIS 4.2 farkları.** İfadeyle boyut/konum/metin, katman gösteriminden grafik kategori/renkleri, şekille resim kırpma ve harita kapsamına göre lejant.
+  **Kabul:** Veri/sınıflandırma değişince grafik ve lejant tutarlı güncellenir; geçersiz ifade boş çıktı yerine tanı üretir. Kırpma vektör/raster çıktıda aynı sınırı izler.
+  **Bağımlılık:** G-07/L-01; QGIS 4.2 referansındaki üç somut yerleşim yeniliği bölüm 2'de kaynaklıdır, GeoPDF L-04'te ele alınır.
+
+- [ ] **L-03 · P1 — Atlas ve mühendislik raporları.** Mevcut atlas/report üzerine filtre/sıralama, sabit/uygun ölçek, grup başlıkları, taşan tablolar, boş veri ve bölüm numaralandırması.
+  **Kabul:** 1000 parsel atlasında taşan yazı, yanlış kapsam veya kayıp tablo sessiz geçmez. Parsel özeti ve kesit/hacim raporu doğru kaynak revizyonunu taşır; iptal edilen toplu üretim durumu raporlanır.
+  **Bağımlılık:** G-07/L-01/T-03; mevcut report grup modelinin çıktı davranışı test edilir.
+
+- [ ] **L-04 · P1 — PDF/SVG/raster ve GeoPDF teslimi.** Ölçek, çizgi kalınlığı, font, transparanlık, raster DPI, seçilebilir yazı; GeoPDF koordinat ve katman/grup görünürlüğü; toplu adlandırma.
+  **Kabul:** Bilinen 100 m çizgi 1:1000 çıktıda 100 mm'dir; farklı PDF okuyucularında ölçü ve yerleşim sınanır. GeoPDF katman ağacı ve öznitelik dahil etme seçimi doğrulanır; rasterleşen öğe ve sebebi bildirilir.
+  **Bağımlılık:** L-01/I-01; çıktı desteği backend/derleme koşullarıyla birlikte kaydedilir.
+
+- [ ] **L-05 · P1 — Teslim öncesi kalite kapısı.** Mevcut preflight'ı kayıp font/kaynak, kopuk bağ, eski hesap, CRS, ölçek, dışa taşma, tablo taşması ve düşük raster çözünürlüğü kontrolleriyle tamamla.
+  **Kabul:** Her bulgu ilgili nesne/sayfaya gider; kullanıcı düzeltir veya gerekçeli istisna bırakır. Rapor, veri ve çıktıyla aynı revizyonu gösterir; analizden sonra kaynak değişmişse eski “temiz” sonucu kullanmaz.
+  **Bağımlılık:** F-04/L-01; ayarlanabilir uyarı ve engel seviyeleri, otomasyonda da aynı sonuçlar.
+
+### A — AI, MCP ve Python ile eksiksiz üretim
+
+- [ ] **A-01 · P0 — Tek yetenek kataloğu ve yüzey eşitliği.** Mevcut CommandSpec/Processing metadata'sından UI, AI araçları, MCP şemaları, Python bağları ve yardım üret; her işin tipli girdi/çıktı, birim, CRS, etki ve önkoşulu olsun.
+  **Kabul:** Yeni kullanıcı işlemi kataloğa girdiğinde dört yüzeyde keşfedilir veya gerekçeli kapsam dışıdır. Bir aracın listelenmesi değil, etkileşimsiz geçerli parametrelerle iş bitirmesi ölçülür; schema/yardım/API ayrışması denetlenir.
+  **Bağımlılık:** F-01/F-05; devam eden İngilizce parametre ve Python API çalışmalarını tamamla, ikinci binding listesi üretme.
+
+- [ ] **A-02 · P0 — AI'nin doğru proje bağlamını görmesi.** Seçim, aktif katman/kalem, CRS/birim, görünüm alanı, veri kaynakları, şema, sınırlı örnekler, hata ve son işlem sonuçları yapılandırılmış okunabilsin.
+  **Kabul:** “Seçili yayları yola kadar uzat” isteğinde model nesne kimliği/türünü doğrular; ekran pikselinden koordinat uydurmaz. Büyük tabloyu tamamen isteme yerine filtre/sayfalama kullanır; bağlam değişince eski kimlik/revizyon fark edilir.
+  **Bağımlılık:** F-02/G-02; görsel önizleme yapısal veriyi tamamlar.
+
+- [ ] **A-03 · P0 — Soru ve onay ayarlarını uçtan uca tamamla.** Mevcut `core.ai.onay_politikasi`, `core.ai.soru_politikasi` ve `core.ai.uzerine_yazma` ayarlarını anlaşılır Settings denetimleriyle sohbet ve MCP'ye aynı karar motorundan uygula.
+  **Kabul:** “Her değişiklikte / yalnız riskli işlemlerde / otomatik” ile “etkili belirsizlikte sor / yalnız zorunlu / varsayımla ilerle” bağımsızdır. Otomatik ve varsayımla ilerle modunda parametreleri yeterli bir CAD/GIS işi gereksiz onay/soru döngüsü olmadan biter; kullanılan varsayımlar sonuçta görünür.
+  **Sınır:** Eksik zorunlu CRS/hedef gibi sonucu belirleyen bilgi uydurulmaz. Kullanıcı Settings'te verilen kapsamı belirler; agent kendi yetkisini/politikasını genişletemez. Bu, henüz yoktan yapılacak ayar değil, mevcut policy/policy_path hattının kullanım ve eşitlik işidir.
+
+- [ ] **A-04 · P1 — Planı gerçek iş sonucuna kadar yürüt.** Plan→önizleme→politika kararı→uygulama→geometrik/öznitelik doğrulama→çıktı zinciri; yeniden deneme, değişen kaynak ve çok adımlı geri alma.
+  **Kabul:** “Yolun iki yanına 5 m paralel çiz, etkilenen parselleri bul, alan tablosunu ve atlası üret” işi elle menü açtırmadan tamamlanır. Kullanıcı onayı gerekiyorsa somut plan için bir kez istenir; aynı onaylı plan adımlarında tekrar sorulmaz. Kaynak/plan değişirse eski izin içeriğiyle uygulanmaz.
+  **Bağımlılık:** F-05/C-03/G-10/L-03/A-03; özet başarı demeden çıktı ve değişen nesneler kontrol edilir.
+
+- [ ] **A-05 · P1 — MCP'yi tam uygulama yüzeyi yap.** Araç keşfi, proje/nesne/şema kaynakları, yapılandırılmış hatalar, önizleme ve dosya sonuçları; belge oturumu/kimliği açık olsun, istemci bağlamı gizli UI durumuna bağlı kalmasın.
+  **Kabul:** Bağımsız MCP istemcisi veri açma, çizim/düzenleme, GIS analiz, layout, dışa aktarma ve geri alma senaryosunu tamamlar. Kullanıcı başka belgeye geçince yanlış belgeye yazmaz; kopma/yeniden bağlanma işlemi iki kez uygulamaz.
+  **Ek:** Kodun mevcut 2026-07-28 yolu gerçek istemciyle doğrulanır; uzun iş için müzakere edilen Tasks uzantısı veya belgeli uygulama iş tanıtıcısı kullanılır. Desteklenmeyen protokol özelliği varmış gibi duyurulmaz.
+
+- [ ] **A-06 · P1 — Kaydedilebilir iş tarifleri ve Python otomasyonu.** Elle/AI ile tamamlanan işi parametreli tarif olarak sakla; aynı komut şemalarından Python örnekleri ve belgeler üret, proje revizyonu/bağımlılıkları kaydet.
+  **Kabul:** “Nokta dosyası→yüzey→kontur→kontrol→pafta” tarifi farklı girdilerle tekrar çalışır; bağımlılık veya API sürümü değişince anlaşılır tanı verir. İptal/exception yarım belge bırakmaz; keyfi Python çalıştırma ile tipli komut yetkisi aynı şey sayılmaz.
+  **Bağımlılık:** A-01/G-12/F-05; mevcut gömülü Python çalışmasını temel al, kaldırılmış Lua hattını geri getirme.
+
+- [ ] **A-07 · P1 — Gözlemlenebilir, kapsamlı ama denetlenebilir AI.** Hangi nesnelerin okunduğu/değiştiği, neden soru/onay istendiği, hangi politikanın uyguladığı ve çıktı doğrulaması görülebilsin; durdur/geri al/yeniden çalıştır kontrolleri.
+  **Kabul:** “Tamamlandı” mesajından nesne ve dosyaya gidilir; kısmi hata başarı diye sunulmaz. İstemci izinleri kullanıcı ayarlarıyla uygulanır; proje metni/öznitelik içindeki talimatlar yetki sayılmaz. Dış veri paylaşımı ve veritabanı yazımı belirlenen kapsamla sınırlıdır.
+  **Bağımlılık:** A-03/A-05; normal çizim işini gereksiz uyarıya boğmadan mevcut audit ve redaction hattını tamamla.
+
+### Q — Performans, sağlamlık ve ürün doğrulaması
+
+- [ ] **Q-01 · P0 — Gerçek proje kabul veri seti.** Anonimleştirilmiş saha ölçüsü, karma CAD, parsel/imar, büyük GIS, ortofoto ve arazi örneklerini; küçük analitik doğruluk örnekleriyle birlikte sürümle.
+  **Kabul:** Her veri setinin kaynak/izin bilgisi, beklenen geometri/alan/öznitelik sonucu ve teslim dosyaları vardır. Aynı senaryolar elle, AI, MCP ve Python için tekrar edilebilir; yalnız unit test sayısı raporlanmaz.
+  **Bağımlılık:** F-01; kullanıcı verisi araştırma amacıyla dışarı gönderilmez.
+
+- [ ] **Q-02 · P0 — Ölçülmüş performans bütçeleri.** Donanım, işletim sistemi, derleme, veri seti, görünür nesne miktarı, soğuk/sıcak önbellek ve P50/P95/P99 sürelerini kaydet; mevcut benchmark'ları gerçek işlerle tamamla.
+  **Kabul hedefi:** Orta referans projede P95 çizim/snap/önizleme geri bildirimi ≤50 ms; normal gezinmede P95 kare ≤33 ms. 100 bin/1 milyon nesne ve büyük raster kademelerinde açma/RAM/indeks bütçesi ilk ölçümden sonra yazılı sabitlenir; uzun işte iptal isteği ≤1 s içinde algılanır.
+  **Not:** Bunlar henüz ölçülmüş sonuç değil, doğrulanacak ürün hedefleridir. Netcad/QGIS'ten hızlı olma iddiası ancak aynı veri/donanım/senaryoyla ölçülür.
+
+- [ ] **Q-03 · P0 — Geometrik doğruluk, round-trip ve bozuk veri testleri.** Analitik örnekler, özellik tabanlı testler, bağımsız kütüphane karşılaştırması ve bozuk dosya fuzz testleri; büyük koordinat/küçük detay ve dönüşüm uç durumları.
+  **Kabul:** Alan korunumu, birleştir-böl ilişkisi, transform tersi, curve parametreleri, snap sonucu ve hole topolojisi ölçülür. Hatalı içe aktarım kısmi başarı raporu verir veya atomik geri döner; çökmez.
+  **Bağımlılık:** F-03/Q-01; farklı motor farkları tolerans ve model semantiğiyle açıklanır.
+
+- [ ] **Q-04 · P1 — Gerçek etkileşim ve çıktı regresyonu.** Klavye/fareyle seçim, sayı girişi, snap, grip, iptal, tekrar; farklı DPI/tema/platform; pafta ve font görüntü karşılaştırmaları.
+  **Kabul:** Tuşa basılması yalnız işleyici çağrısı değil gerçek kullanıcı olaylarıyla sınanır. Görsel farkla birlikte geometri/ölçü doğrulanır; odak kaybı, modal pencere ve araçta kalma hataları kapsanır.
+  **Bağımlılık:** U-01/U-03/L-04; mevcut OS olay testlerinden ilerle.
+
+- [ ] **Q-05 · P1 — Kullanım kıyaslaması ve sürüm kapısı.** Netcad/QGIS deneyimli kullanıcılarla aynı teslim işini yap; süre, tıklama/tuş sayısı, düzeltme, yanlış sonuç ve öğrenme ihtiyacını ölç.
+  **Kabul:** İlk ölçüm baz alınarak sonraki sürümde hedeflenen iyileşme gösterilir. Açık kritik doğruluk/veri kaybı hatasıyla “profesyonel hazır” etiketi verilmez; destek matrisi, bilinen sınırlamalar ve değişiklik notları sürümle yayınlanır.
+  **Bağımlılık:** Q-01/Q-02/Q-04; farklılaşma iddiası bu kanıtlardan çıkarılır.
+
+## 5. Uygulama sırası ve teslim kapıları
+
+Takvim tahmini verilmedi; kapsam ve mevcut altyapı doğrulandıktan sonra işler küçük teslimlere bölünecek. Büyük modüller P0 düzeltmelerini geciktirmemeli. GIS veri kimliği/CRS/öznitelik/topoloji ve otomasyon temeli ilk aşamadan itibaren CAD ile birlikte geliştirilir.
+
+| Kapı | Teslim edilecek sonuç | Başlıca bağımlılıklar | Geçiş kanıtı |
 |---|---|---|---|
-| Bağlam/sorgu/önizleme | Doğrudan | Doğrudan | Doğrudan |
-| Görünüm/aktif sayfa değiştirme | Doğrudan | Doğrudan | Doğrudan |
-| Geri alınabilir belge/layout düzenleme | Plan başına tek onay | Doğrudan | Doğrudan |
-| İzinli dizinde yeni dosya | Planın dış etki özetiyle onay | Doğrudan | Doğrudan |
-| Üzerine yazma veya yıkıcı dış işlem | Onay | Onay; `yeni_ad_uret` ile önlenebilir | Açık kapsam ve overwrite tercihi izin veriyorsa doğrudan |
-| Yetki kapsamı dışındaki işlem | Yetki gerekli sonucu | Yetki gerekli sonucu | Yetki gerekli sonucu; model kendine yetki veremez |
+| **K0 — Ölçülebilir mevcut durum** | Kapsam matrisi, örnek projeler, yeniden üretilen doğruluk açıkları | F-01, Q-01, Q-02, Q-03 | Destekli/kısmi/yok ayrımı ve ilk performans kaydı |
+| **K1 — Güvenilir günlük CAD/GIS düzenleme** | Gerçek paralel, eğri kes/uzat/böl, ortak kimlik, CRS, öznitelik, snap ve AI politikası | F-02–F-05, C-01–C-08, U-01–U-04, G-01–G-05, I-01, A-01–A-03 | E1–E4 senaryoları; veri kaybı ve tekrar onay döngüsü yok |
+| **K2 — Profesyonel Map CAD/GIS** | İlişkili açıklamalar, kartografya, raster/servis, analiz, IO, parsel ve pafta | C-09–C-14/C-16, G-06–G-12, I, S-01–S-03, L, A-04–A-07 | E5–E8 ve karma teslim paketi; bağımsız çıktı kontrolü |
+| **K3 — Arazi ve uzmanlık** | Kalıcı yüzey, profil/hacim; ardından güzergâh, planlama ve parametrik tasarım | T-01–T-05, S-04, C-15 | E9–E10; uzman denetimli referans hesaplar |
 
-`otomatik`, izinli ve girdileri yeterli işi tekrar onay istemeden yürütmelidir.
-Her aracın arkasına gizli bir “son onay” eklenmemeli. Önizleme, audit, doğrulama,
-undo ve durdurma bu modda da çalışır. İnsan imzası gerektiren bir ürün işlemi varsa
-otomatik uygulama ile imza durumu birbirine karıştırılmamalıdır.
+### Uçtan uca kabul senaryoları
 
-**Soru politikası:**
-
-- `etkili_belirsizlikte_sor`: Sonucu anlamlı değiştirecek belirsizlikleri tek kartta
-  topla; her küçük tercihte konuşmayı durdurma.
-- `yalniz_zorunlu`: Önce araçlarla bilgi topla; proje/kurum varsayılanı ve mevcut
-  seçim yeterliyse ilerle. Gerçekten eksik zorunlu bilgi için bir soru sor.
-- `varsayimla_ilerle`: Geri alınabilir ve makul varsayımları kısa durum mesajıyla
-  kaydet ve uygula. Kaynak CRS'i bilinmeyen ölçüyü, erişim parolasını veya hangi
-  dosyanın silineceğini uydurma. Çözülemeyen zorunlu girdi tek `input_required`
-  durumuyla raporlansın; sonsuz soru/yeniden deneme döngüsü oluşmasın.
-
-“A3 yatay hazırla” için kâğıt/yön yeniden sorulmaz. “PDF al” için kayıtlı çıktı
-dizini ve çakışmasız ad varsa dosya adı sorulmaz. “Seçilileri sil” gibi açık talep
-otomatik modda yeniden onaya çevrilmez. “Bunu taşı” için iki eşit olasılıklı nesne
-ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne sorulur.
-
-### 7.2. Politikanın uygulanması ve eski kurallardan geçiş
-
-- [~] **S-01 / P0 — Ortak policy engine.** *(karar motoru 19 Eylül 2026)*
-  **Yapıldı:** `ai/policy.hpp` — saf bir işlev. `decide(effect, prefs, scope, missing,
-  overwrites)` dört kararı üretiyor: `izin`, `onay_gerekli`, `girdi_gerekli`,
-  `yetki_yok`. Model yok, Qt yok, saat yok, G/Ç yok — aynı girdiler sohbette,
-  soket üzerinde ve testte aynı cevabı veriyor. Her karar bir **gerekçe** taşıyor
-  (kimsenin açıklayamadığı bir karar kimsenin itiraz edemeyeceği bir karardır) ve
-  hangi etki bitlerinin onu sürüklediğini söylüyor.
-  Kurulan ayrımlar: **kapsam bir tercih değildir** — `yetki_yok`, `onay_gerekli`
-  değil, çünkü "bir insana sor" denen istemci, hiçbir insanın o karttan veremeyeceği
-  bir şeyi sonsuza dek sorar. **Okuma her modda doğrudan.** **Riskli, "değişen her
-  şey" değil**: bir çizim düzenlemesi tek Ctrl+Z uzakta, riskli olan geri almanın
-  ulaşamadığı şey — üstüne yazılan dosya ve bu makinenin dışı. **`otomatik` onay
-  modu `uzerine_yazma=sor`'u ezmez.**
-  Sekiz test, her biri §7.1 tablosunun bir satırı.
-  **Kalan — ve bu bilerek bırakıldı:** `Gate` bu kararı henüz UYGULAMIYOR.
-  `Gate::apply` hâlâ yalnız bir insanın üretebileceği `Approval` istiyor, çünkü
-  bunu değiştirmek **CLAUDE.md 5.7'yi tadil etmek**tir (S-05). O tadil kullanıcının
-  kararıdır; motor onsuz da doğru ve sınanabilir.
-- [~] **S-02 / P0 — Settings UI, kapsam ve saklama.** *(saklama 19 Eylül 2026)*
-  **Yapıldı:** `core.ai.onay_politikasi`, `core.ai.soru_politikasi` ve
-  `core.ai.uzerine_yazma` üç `Enum` ayar olarak, hepsi **App kapsamında** — bir
-  proje dosyasının açılması bir makinenin bir ajana verdiği güveni yükseltemez.
-  Varsayılanlar en dar olanlar (`her_degisiklikte`); yeni kurulumun
-  `riskli_islemlerde`'ye taşınması ilk açılış yolunun işi, bu geri düşüşün değil —
-  bir yükseltme yürürlükteki davranışı sessizce gevşetemez (S-06).
-  Yeni "Çalışma Davranışı" ayar bölümü açıldı.
-  **`core.ai.cikti_dizini` EKLENEMEDİ:** bir `SettingSpec` metni 48 bayt taşıyor
-  (`kSettingTextCapacity`) ve bir dosya yolu sığmaz. "Klasörler ve Şablonlar"
-  bölümü hâlâ Faz 2 yer tutucusu; çıktı dizini o klasör mekanizmasıyla gelmeli.
-  **Kalan:** ayar sayfasının arayüzü, etkin profilin sohbet başlığında/MCP
-  keşfinde görünmesi, bekleyen planların tercih değişince yeniden değerlendirilmesi.
-  Eski madde metni:
-  Uygulama/kullanıcı düzeyinde
-  sakla; sıradan proje dosyası açılması güveni yükseltmesin. Etkin profil ve kaynağı
-  sohbet başlığında/MCP keşfinde görülsün. Kullanıcı değişikliği yeni adımlara hemen
-  uygulansın; bekleyen planlar tekrar değerlendirilsin. **Kabul:** uygulama yeniden
-  açılınca tercihler korunur, başka proje dosyası bunları sessizce değiştiremez.
-- [~] **S-03 / P0 — Prompt ve gerçek yürütmeyi eşle.** *(çelişen metin 19 Eylül 2026)*
-  **Yapıldı:** Bu maddenin "çelişkili metin yok" cümlesi bir kusuru tarif
-  ediyordu ve kusur promptta değil **ayardaydı**. `core.ai.onay_politikasi`
-  özeti `otomatik` için "onay beklemeden yürür" diyordu; 5.7 bunu yasaklıyor ve
-  `Gate` uyguluyor, yani seçen kişiye program yine soruyordu. Aynı anda ajan
-  yönergesi "Bunu atlayan bir yol, bir başlık ya da bir AYAR yoktur" diyordu —
-  iki metin birbiriyle çelişiyordu. Özet artık `otomatik`'in **henüz yürürlükte
-  olmadığını** söylüyor; değer, motoruyla birlikte duruyor.
-  Test olumsuz biçimde yazıldı (özet katılımsız yürütme vaat edemez), böylece
-  yeniden yazılınca da geçerli ve kural değiştiği gün aynı commit'te değişiyor.
-  **Kalan:** araç açıklamalarının, MCP `instructions`'ın, hata metinlerinin ve
-  öneri kartlarının **etkili policy'den üretilmesi** — bugün hepsi doğru ama
-  SABİT metin; politika değiştiğinde kendiliğinden değişmiyorlar. Bu, S-05'in
-  anayasa kararına bağlı: `otomatik` yürürlüğe girmeden üretilecek bir şey yok.
-  **Eski metin:** `agent_preamble`, araç
-  açıklamaları, MCP `instructions`, hata metinleri ve öneri kartları etkili
-  policy'den üretilsin. Yalnız prompt'a “sorma” yazmak yeterli sayılmasın.
-  **Kabul:** otomatik modda “mühendis uygulayana kadar bekler” gibi çelişkili
-  metin yok; modeller araç başarısını bekleyip iş akışına devam eder.
-- [x] **S-04 / P0 — İzinleri yeniden sorma ve yetki yükseltme kontrolü.** Bir
-  onay planın içeriği/revizyonu/etki kapsamına bağlansın; aynı iş için onay
-  tekrarlanmasın. Model genel ayarları yönetebilsin; kendi onay politikasını veya
-  erişim kapsamını genişletme işlemi ayrı, açık kullanıcı talebine dayanmalı.
-  **Kabul:** model araç hatasını çözmek için kendiliğinden `otomatik` açamaz;
-  kullanıcının önceden verdiği otomatik yetki de her komutta yeniden sorulmaz.
-  *(19 Eylül 2026 — yetki yükseltme yarısı yapıldı.)* `SettingSpec::authority`
-  bir ayarın tercih mi yetki mi olduğunu ayarın kendi alanında söylüyor (yedi
-  ayar: üç politika, hassaslık işareti, üç MCP ayarı). `ai::escalates` üç kapıda
-  birden denetliyor: okuma kapısı, öneri kaydı (bir genişletme bir önerinin adımı
-  olarak da kaçırılamaz) ve protokol katmanı. Ret, ayarı ve kimin
-  değiştirebileceğini adıyla söylüyor. `core.ai.`/`core.mcp.` içindeki yeni bir
-  ayar işaretsiz eklenemiyor: test kırılıyor.
-  *(20 Eylül 2026 — onay artık içeriğe bağlı.)* **"Bir onay planın
-  içeriğine/revizyonuna bağlansın" cümlesi karşılandı**, ve bu gerçek bir deliği
-  kapattı: onay yalnız öneri KİMLİĞİNE bağlıydı, oysa kart çizildikten sonra
-  öneriyi açan istemci ona adım ekleyebiliyor (bir diziyi tek geri alma adımında
-  toplamanın yolu budur). İki satır gösteren bir kart üç satır uygulayabilirdi ve
-  denetim kaydı mühendisin üçünü de onayladığını yazardı. `Plan::content_fingerprint`
-  ve `Approval::content` bunu bağlıyor; farklı bir öneri **reddediliyor**,
-  kırpılmıyor — dürüst cevap önerinin şu anki hâlini gösteren yeni bir karttır.
-  Revizyon kontrolü zaten vardı (`applyPlan`, C-04).
-  *(20 Eylül 2026 — son yarı da kapandı.)* Kullanıcının **önceden verdiği**
-  yetki artık gerçekten iş görüyor: tadilat onaylandı (S-05) ve
-  `ai::decide_by_policy` politikanın izin verdiği planı uyguluyor. "Aynı iş için
-  onay tekrarlanmasın" böylece sağlandı — izin bir kez, önceden, kullanıcının
-  kendisi tarafından veriliyor. Kapsam dışı iş hiçbir modda yürümüyor ve model
-  kendi politikasını genişletemiyor, yani izin **yetki yükseltmesine**
-  dönüşmüyor.
-- [x] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(20 Eylül 2026)*
-  Kullanıcı 20 Eylül'de tadilatı onayladı ve zincirin tamamı **tek değişiklikte**
-  taşındı — sıra bağlayıcıydı ve ona uyuldu:
-  1. **`kentoscad.md` §5.2.1** (niyetin kaynağı, Article 0.3/0.4 gereği önce):
-     "Otomatik uygulama yok" → "Onaysız uygulama yok", iki yol (önizleme+onay, ya
-     da kullanıcının **önceden kendisi için** kurduğu politika). **§5.2.4
-     değişmedi:** AI imza atamaz.
-  2. **`CLAUDE.md` 5.7** yeniden yazıldı, neyi geçersiz kıldığını adıyla yazıyor
-     (Article 0.5); yeni **5.23** yetki genişletme yasağını anayasaya taşıdı.
-  3. **`.claude/ai.md`** R3, P1, P15 ve R24.
-  4. **`scripts/ci-gate-ai.sh`**: onay fabrikası **iki kapalı çağırana** açıldı
-     (kart + politika yolu), **üçüncüsü hâlâ kırıyor**. Kabul cümlesinin ikinci
-     yarısı buydu.
-  5. **Kod:** `ai::decide_by_policy` (`policy_path.cpp`) ve
-     `AiService::applyByPolicy`. Politika `Allow` demezse hiçbir şey olmuyor, yani
-     öntanımlı `her_degisiklikte` altında davranış **birebir eskisi**.
-  6. **Yorumlar:** `gate.hpp`, `plan.hpp`, `suggestion_card.cpp`.
-  7. **Belgeler:** `onay.md` ("Onay zorlanamaz" iki yolu anlatıyor, politika
-     tablosu ve "hiçbir modda olmayan şeyler"), `README.md`, `mcp-sunucusu.md`,
-     ayar özeti; `make reference` ile `llms*.txt` yeniden üretildi (elle değil).
-  8. **Testler:** `no_autoapply` yerine S-05'in kabul vakası — yetkisiz uygulama
-     yakalanıyor (`Deny` onayla açılmıyor), yetkili uygulama reddedilmiyor; S-03
-     vakası tersine çevrildi (özet artık programın YAPTIĞINI anlatıyor).
-  **Yol üstünde bulunan kusur:** MCP cevabı her hâlde "Çizim değişmedi" diyordu.
-  Politika uygulamışsa bu, istemciye üzerinde çalıştığı çizim hakkında düpedüz
-  yalandır. Cevap artık duruma göre konuşuyor ve her hâlde ekliyor: **uygulayan
-  sen değilsin.**
-  **Değişmeyenler — ve asıl mesele bunlar:** kapsam dışı iş hiçbir modda yürümez;
-  girdisi eksik plan yürümez; onay kartta okunan adımlara bağlı; her karar hangi
-  politikanın verdiğiyle kayda geçiyor; ve politikayı **yalnız kullanıcı**
-  değiştirebiliyor (`ai::escalates`, CLAUDE.md 5.23) — ikinci yolu bir "güven
-  kipi" değil bir **izin** yapan şey budur.
-
-- [~] **S-06 / P1 — Audit ve ayar migration'ı.** *(karar kaynağı ve policy 19 Eylül 2026)*
-  **Yapıldı:** Denetim kaydı iki alan kazandı — `karar_veren` ve
-  `onay_politikasi`. İlki bugün her satırda `insan` yazıyor ve **yazılması
-  şart**: hiçbir şey söylemeyen bir kayıt, kuralın değiştiği günden sonra
-  yazılmış bir kayıttan ayırt edilemez, ve "otomatik işlem insan tıklaması gibi
-  yazılmasın" geriye dönük denetlenemez olurdu. İkincisi onayla birlikte
-  taşınıyor, kayıt yazılırken bakılmıyor: ayar tıklama ile satır arasında
-  değişebilir. Gizli değer taşımadığı da sınanıyor.
-  **Mevcut kurulumlar `her_degisiklikte` davranışını koruyor** — fallback zaten
-  en darı ve her kurulum onu alıyor.
-  **Yol üstünde:** ayarın yanındaki bir yorum yeni kurulumun "first-run path" ile
-  `riskli_islemlerde`'ye taşındığını söylüyordu; ağaçta öyle bir yol yok. Yorum
-  düzeltildi.
-  **Kalan:** kapsam, varsayım ve sonucun kayda girmesi; **ilk çalıştırma yolu**
-  (yeni kurulum için önerilen varsayılan) ve Settings'ten tek seçimle mod
-  değiştirme. Bunlar `otomatik` yürürlüğe girmeden anlamlı değil, yani S-05'in
-  anayasa kararına bağlı.
-  **Eski metin:** Karar kaynağı `human`/`policy`,
-  etkili policy sürümü, kapsam, varsayım ve sonuç kaydedilsin. Otomatik işlem insan
-  tıklaması gibi yazılmasın. Mevcut kurulumlar ilk yükseltmede `her_degisiklikte`
-  davranışını korusun; Settings'ten tek seçimle diğer modlara geçebilsin. Yeni
-  kurulum varsayılanı tabloda önerilen olsun. **Kabul:** kayıtlar hangi iznin hangi
-  işi yürüttüğünü açıklayabilir; token/parola ve gereksiz hassas payload içermez.
-
-## 8. MCP: dış ajan için tam uygulama arayüzü
-
-### 8.1. Protokol kararları
-
-Mevcut kodun hedefi **MCP 2026-07-28**. Resmî sürümleme sayfası bu revizyonda istek
-başına sürüm/yetenek metadata'sını ve `server/discover` yolunu tanımlar; eski
-`2025-11-25` ve öncesi `initialize` oturumlarıyla farkını açıklar. Gerekliyse iki
-dönemi destekleyen adaptör eklenmeli; modern protokol eski handshake'e zorlanmamalı.
-[MCP sürümleme ve uyumluluk](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning)
-
-Streamable HTTP'de yanıt akışının kapanması ile iptal ilişkisi, stdio'daki bildirim
-mekaniğinden farklıdır. Tamamlanmış bir yanıtın normal kapanması, kalıcı işi yanlışlıkla
-iptal etmemeli. Protokol taşıma davranışı ile uygulamadaki plan/iş ömrü ayrı tasarlanmalı.
-[MCP taşıma sözleşmesi](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
-
-Araçlar, kaynaklar ve opsiyonel uzantılar farklı işlevlerdir. Uygulama iş kimliğinin
-bulunması tek başına MCP Tasks uzantısının desteklendiği anlamına gelmez. Yalnız
-uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
-[MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28),
-[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools),
-[Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
-
-- [~] **M-01 / P0 — Gerçek istemci uyumu.** *(kısmen)*
-  Protokol uygunluğu Qt'siz olarak sınanıyor (`test_ai_mcp.cpp`): POST/GET/405/202,
-  `403` yanlış `Origin`'de, `400` + `-32020` başlık uyuşmazlığında, `404` + `-32601`
-  bilinmeyen yöntemde, SSE çerçeveleme, ve `server/discover`'ın zorunlu alanları.
-  Canlı soket yarısı `mcp-server` ctest'inde.
-  **Kalan — ve bu mühendislik değil, erişim meselesi:** gerçek istemcilerle
-  (Claude Code, Cursor, vb.) elle bağlanma denemesi ve **hedef istemci listesinin
-  sürümleriyle kaydedilmesi**. Bunu bir istemci elde olmadan yapmak mümkün değil;
-  kullanıcının hangi istemcileri hedeflediğini söylemesi gerekiyor. Modern discover, metadata/header
-  doğrulaması, yetenek bildirimi ve anlaşılır sürüm hataları korunup gerçek
-  istemcilerle test edilsin. Hedef istemci listesi ve sürümleri kaydedilsin;
-  ihtiyaç varsa legacy adaptör eklensin. **Kabul:** en az iki bağımsız istemci
-  discover → araç keşfi → sorgu → izinli yazma → sonuç doğrulama akışını tamamlar.
-- [~] **M-02 / P0 — Canlı taşıma ve yaşam döngüsü.** *(dürüstlük 19 Eylül 2026)*
-  **Gerçek bir kusur kapandı:** sunucu `tools.listChanged: true` ve bir
-  `subscriptions` kabiliyeti **ilan ediyordu**, oysa canlı taşıma SSE yanıtını bir
-  kez yazıp kapatıyor. Abone olan bir istemci, hiç gelemeyecek bir bildirimi
-  bekleyerek soket tutardı — ve bunu yapacağı ona bu nesne tarafından söylenmişti.
-  **Sahip olunmayan bir kabiliyeti ilan etmek, ona sahip olmamaktan kötüdür**:
-  bildirime güvenen istemci yoklamayı bırakır. İkisi de kapatıldı.
-  Test aynı zamanda **hatırlatıcı**: `McpService` saklanan bir responder ve bir
-  keep-alive zamanlayıcısı kazandığında bu test kırılacak, ve o kırılma ilanı aynı
-  değişimde geri açmanın işareti.
-  **Kalan:** açık SSE responder yaşamı, keepalive, disconnect, backpressure ve
-  kapanma temizliği — asıl taşıma işi. `mcp_service.cpp` içinde
-  açık SSE responder yaşamı, keepalive, disconnect, backpressure ve kapanma
-  temizliğini uygula. Gerçekte taşınmayan bildirim kabiliyetini ilan etme.
-  **Kabul:** açık abonelik katalog değişimini alır; bağlantı kopması doğru işi
-  etkiler; tamamlanan `tools/call` yanıtının kapanması öneriyi geri çekmez.
-- [~] **M-03 / P0 — Sohbetle aynı tam araç yüzeyi.** *(doğrulandı 19 Eylül 2026)*
-  **Yapı gereği sağlanıyor ve artık sınanıyor.** Yüzey `Registry`'den PROJEKTE
-  ediliyor, hiçbir yerde listelenmiyor (CLAUDE.md 5.10, 5.20) — yani A-02'nin
-  açtığı dört komut MCP'ye kendiliğinden girdi. "Yapı gereği" iddiası, biri ikinci
-  bir liste eklediği gün doğru olmaktan çıkan bir iddiadır; test bunu yüksek sesle
-  söylüyor: açılanlar katalogda, bilerek kapalı tutulanlar (`core.mcp`,
-  `core.ai_provider`, `core.script`) değil, ve katalogdaki her araç var olan bir
-  komutu adlandırıyor.
-  Sınırsız bir `execute` aracı yok ve olmayacak.
-  **Kalan:** kapsamın tamamı A-02'nin kalan 15 komutuna bağlı (S bloğu engelli);
-  politika bilgisinin araç açıklamasına yazılması (S-03). C-01/A-02 kapsamının tamamı
-  MCP'de bulunsun. Girdi ve çıktı şemaları, birimler, enum'lar, yan etkiler ve
-  policy bilgisi katalogdan gelsin. Özel bir sınırsız `execute` aracıyla doğrulama
-  atlanmasın. **Kabul:** layout oluşturma, düzenleme, export ve dosya sonucu
-  okuma GUI'de onay penceresine mecbur kalmadan seçilen politikayla çalışır.
-- [~] **M-04 / P0 — Plan/iş işlemlerini tamamla.** *(okuma yarısı 19 Eylül 2026)*
-  **Açıldı:** `core.suggestion` (**ÖNERİ**) ajana açık. `listele` ve `durum`
-  okuma; ajan artık **ne önerdiğini ve ondan ne çıktığını görebiliyor**. Bunu
-  göremeyen bir istemci tahmin eder, tahmin eden istemci yeniden önerir — dikkatli
-  bir protokolün birinin ekranında on bir kopya öneriye dönüşmesinin yolu budur.
-  **Yazma yarısı reddediliyor ve kimin çağırdığına bakarak değil:** `AiService`
-  `uygula`/`reddet`'i her komut yolundan "bir öneri ancak kartındaki düğmeyle
-  uygulanır" diye cevaplıyor — komut satırı da ajan da aynı cevabı alıyor
-  (Article 1.2). C-03 plana `applied_revision`, `outputs` ve `warnings` eklediği
-  için `durum` artık gerçek bir sonuç döndürüyor.
-  **Kalan:** `policy kapsamında uygula` — S bloğu engelli; `_meta.plan` ekleme
-  davranışının gerçek dispatcher'la sınanması; iptal. Durum oku, plan önizle,
-  policy kapsamında uygula, iptal et ve sonucu al işlemleri tanımla. `_meta.plan`
-  ekleme davranışı gerçek `AiService` ile uyumlu olsun. Otomatik modda dönen
-  durum gerçek `applied/running/completed` sonucu olsun; hep `pending` dönmesin.
-  **Kabul:** dış ajan insanın sohbet mesajı göndermesini beklemeden işini takip eder;
-  onay gereken modda tek plan kararıyla devam eder, başka istemcinin planına ekleyemez.
-- [~] **M-05 / P1 — İş ve çıktı kaynakları.** *(iki canlı kaynak 19 Eylül 2026)*
-  **Eklendi:** `kentoscad://belge/ozet` (belge özeti, katmanlar, çıktı
-  yerleşimleri ve hedefli olup olmadıkları, seçim, görünüm) ve
-  `kentoscad://yerlesim/denetim` (her yerleşimin preflight raporu).
-  **İkisi de kendi veri yolunu kurmuyor**: `Dispatcher::run_read_only` üzerinden
-  `BAĞLAM` ve `ÇIKTIYERLEŞİMİ islem=denetle` komutlarını çalıştırıyorlar. Kendi
-  belge özetini hesaplayan bir kaynak, tek bir soruya ikinci bir cevap olurdu ve
-  ikisi zamanla ayrışırdı (CLAUDE.md 5.10). Yerleşim adları da sunucunun tuttuğu
-  bir listeden değil, `BAĞLAM`'ın cevabından geliyor — sunucunun kendi belgesi yok
-  ve olmamalı.
-  `application/json` dönüyorlar, düz metin değil: bir ajan katman sayısını
-  öğrenmek için Türkçe bir cümle ayrıştırmak zorunda kalmamalı.
-  Bilinmeyen bir URI, sunulanların **hepsini adıyla** söyleyen bir `400` + `-32602`
-  alıyor.
-  **Kalan:** `kentoscad://jobs/{id}/result` ve artefaktlar (A-04'ün iş yürütücüsüne
-  bağlı); layout önizlemesi (görüntü kaynağı); seçili öğeler ayrı kaynak olarak. Belge özeti, layer schema, layout
-  ağacı, seçili öğeler, önizleme, preflight, iş sonucu ve artefaktları kaynak
-  olarak sun. Örnek uygulama URI'ları: `kentoscad://documents/{id}/summary`,
-  `kentoscad://layouts/{id}/preview`, `kentoscad://jobs/{id}/result`. Bunlar yeni
-  uygulama tasarımıdır, mevcut endpoint iddiası değildir. **Kabul:** ajan layout'u
-  yalnız oluşturmaz; son durumunu ve ürettiği dosyanın doğrulama raporunu okuyabilir.
-- [x] **M-06 / P1 — Uzun işler ve olaylar.** *(19 Eylül 2026)*
-  **İş kimliği zaten öneri kimliğidir** ve ayrı bir `job_id` açmak ikinci bir
-  kimlik olurdu: bir ajanın açtırabildiği uzun iş, uyguladığı bir öneridir
-  (okuma araçları kısadır, yazan hiçbir şey ajan tarafında çalışmaz).
-  **Reconnect sonrasında durum bulunur:** protokol durumsuz, defter uygulamada;
-  `ÖNERİ islem=durum` ve `tools/call` cevabındaki `oneri` alanı her yeni
-  bağlantıda aynı kimliği çözüyor.
-  **Aynı istek tekrarı yeni iş açmaz:** `_meta.idempotency` anahtarı, istemciye
-  kapsamlı. Bağlantısı kopan istemci çağrının ulaşıp ulaşmadığını bilemez;
-  anahtarsız deneme ekranda tek iş için iki kart bırakıyordu.
-  **Kısmi çıktı tamamlanmış görünmez:** yeni `uygulaniyor` durumu, biten/toplam
-  adım sayıları, ve dosya listesinin ancak toplu iş kapandıktan sonra yazılması.
-  Dosyanın kendisi zaten atomik yayımlanıyor (C-05).
-  **Tasks uzantısı ilan edilmiyor**, çünkü müzakere edilmiş bir uygulaması yok;
-  M-09'daki `prompts` kararıyla aynı gerekçe. Durum sorgulama fallback'i
-  uygulama araçlarıyla, yani `ÖNERİ` ile veriliyor.
-  **Kalan:** adım İÇİ ilerleme. Bugün sayılan birim adımdır; dört yüz sayfalık bir
-  atlas tek bir adımdır ve o adımın içindeki sayfa sayacı `command::Job`'ın
-  `permille` alanında duruyor ama öneriye bağlı değil. Bağlamak, uygulamanın
-  toplu işi bir iş parçasına taşımasını gerektiriyor (aynı iş parçası kuralı:
-  belge kilitsiz).
-- [x] **M-07 / P1 — İstemci kapsamı ve veri izolasyonu.** *(19 Eylül 2026)*
-  `ai::Dispatcher`'ın dört kapısı artık **kimin sorduğunu** alıyor: `run_read_only`,
-  `plan_state`, `withdraw`, `handles`. İstemciyi ayıran ad, `_meta` içindeki
-  `cad.kentos/client` ile belirtecin parmak izi (`McpServer::requester_label`);
-  denetim kaydına giren de o.
-  **Tutamaklar istemci başına** (`ai::HandleScopes`): tek defter varken
-  `HandleStore::next_id` bir sayaç olduğu için bir ajanın ikinci tutamağının kimliği
-  bir başkasınınkiyle aynıydı — yani hiç okumadığı geometrinin tutamağı eline
-  geçebiliyordu. Deftere yazılı olan "her oturumun kendi sayacı" yorumu artık doğru.
-  **Önerilerin sahibi var** (`PlanStore::owned_by` / `find_for` / `append_for`):
-  bir istemci yalnız kendi açtığı öneriyi okur, genişletir ve akışını kapatarak geri
-  çektirir. Asıl madde **genişletme**: öneri kimliği istemcinin cevabında geçtiği için
-  gizli değildir, ve adım ekleyebilen ikinci bir istemci mühendise kartta
-  **okumadığı** bir satırı imzalatırdı. "Sizin değil" ile "yok" aynı cevabı alıyor;
-  boş istemci adı — masadaki kişi — hepsini görüyor, çünkü uygulayan o.
-  `AiService::propose` adım ekleme sözleşmesini artık gerçekten uyguluyor.
-  Revizyon kontrolü zaten yerindeydi ve korundu: `HandleStore::resolve` eski bir
-  tutamağı reddediyor, `Plan::revision` önerinin derlendiği hâli taşıyor. Belgeye
-  erişim bus iş parçasında, `Dispatcher` ilkesiyle.
-  **Kalan:** `ClientScope`'un dosya dizini yarısı — `may_read_files`,
-  `may_write_files`, `may_write_external` bitlerinin bir köke bağlanması. Bugün
-  dosyaya dokunan hiçbir komut ajana açık değil (`tests/support/ai-kapsam.json`:
-  `core.open`, `core.save`, `core.export`… hepsi A-02'ye bağlı), ve bu bitleri
-  tüketecek politika motoru S-01/A-04 zinciri.
-- [x] **M-08 / P1 — Kullanılabilir bağlantı yönetimi.** *(19 Eylül 2026)*
-  `Seçenekler ▸ MCP Sunucusu` sayfası artık durumu, adresi, **Bağlantıyı sına**yı,
-  belirteç yenilemeyi, konuşmuş **istemcileri** ve her birinin son hatasını taşıyor;
-  tablonun üstündeki satır etkin kapsamı yazıyor (kaç araçtan kaçı çizimi değiştirir,
-  hepsinin önizlemeli öneriye dönüştüğü, tutamak ve önerilerin istemciye özel olduğu).
-  **Sınama motorun kendi kendini yoklaması değil**: gerçek soket, sayfadaki gerçek
-  adres, gerçek `server/discover`. `401`, cevapsızlık ve tanınmayan cevap ayrı ayrı
-  anlatılıyor.
-  **Tek istemcinin yetkisi kaldırılabiliyor** (`ai::ClientLedger`, `MCPSUNUCU
-  islem=iptal ad=…`, ve satır düğmesi): belirteci yenilemek kör araçtır ve birlikte
-  çalıştığınız ajanı da kapatır; bu keskin olanı. Durdurulan istemci `403` + `-32001`
-  alıyor ve sebebini okuyor — belirteci hâlâ geçerli olduğu için yalnız "yasak" diyen
-  bir cevap onu sonsuza kadar yeniden denemeye iterdi. Karar `islem=izin` ile geri
-  alınıyor. Defter sınırlı ama **yetkisizliği unutmuyor**: en eski *yetkili* kayıt
-  düşüyor, yani ad uydurarak taşırmak bir kararı geri almanın yolu değil.
-  **Gizli değer hiçbir yere taşınmıyor**: ad, istemcinin kendini tanıttığı ad artı
-  belirtecin sekiz haneli parmak izi — denetim kaydına giren dizenin aynısı. Bunu
-  `KENTOS_MCP_PROBE` gerçek sokette doğruluyor. Bearer başlığı sayfada **tercih edilen**
-  biçim olarak yazılı; yol biçimi başlık gönderemeyen istemciler için duruyor.
-  Ekrana bakarak düzeltilen üç kusur: boş tablo yerine bir cümle, kırpılan sütun
-  başlıkları, ve açık bir sayfayı canlı tutan `clientsChanged` sinyali (o olmadan
-  sayfa kurulduğu andaki hâli gösteriyordu).
-  **Kalan:** yol biçimindeki belirtecin tamamen kaldırılması — bunu bir Bearer
-  gönderemeyen istemci kalmadığında yapmak gerekir, bugün değil.
-- [x] **M-09 / P2 — Keşif ve iş şablonları.** *(19 Eylül 2026)*
-  **`ARAÇARA`** katalogda ad ve özete göre arıyor, Türkçe katlamayla. Aramanın tek
-  gerçek tehlikesi tam görünen süzülmüş bir listedir, o yüzden her cevap üç sayı
-  taşıyor — kaç eşleşti, kaçı gösterildi, katalogda kaç var — ve tam listenin
-  `tools/list` olduğunu söylüyor; hiç eşleşme yoksa bunu sözle söylüyor. `sinir`
-  yalnız gösterileni kesiyor, sayımı değil. İstemci tam katalog yolunu kullanmaya
-  devam ediyor: `tools/list` hiçbir süzgeç tanımıyor.
-  **`İŞŞABLONU`** atlas, kadastro kontrolü ve parsel raporu işlerini komut satırları
-  hâlinde, sırasıyla veriyor; hiçbirini çalıştırmıyor. Şablonlar **veri**
-  (`data/catalogs/ai/is-sablonlari.json` + şeması), her biri paketten ayrı **kendi
-  sürümüyle**. Her adım canlı komut kütüğüne karşı sınanıyor — bu test yazıldığı
-  anda veride üç hata buldu.
-  **Uydurulmuş pagination alanı yok**: `tools/list` hâlâ `nextCursor` döndürmüyor ve
-  nedeni kodda yazılı. **`prompts` ilan edilmiyor**: `prompts/get` bir modele
-  verilecek mesajlar döndürür, bir iş şablonu ise kişinin uyguladığı bir öneriye
-  dönüşecek komut satırlarıdır; olmayan bir kabiliyeti ilan etmek sunmamaktan
-  kötüdür.
-  **Kalan:** üç şablon bir başlangıçtır. İfraz, tevhit ve 18. madde için şablonlar
-  alan işidir (A-08 ile aynı cinsten) ve bir harita mühendisinin yazması gerekir;
-  paket veri olduğu için bu bir veri yayımıdır, yeniden derleme değil.
-
-### Gözlenen
-
-- [x] **FLAKE-01 — "seyrek düşen test" bir ÇÖKMEYDİ.** *(19 Eylül 2026)*
-  `layout-designer` ctest'i arada düşüyordu ve tek başına koşturulunca geçiyordu;
-  paralellik sanılmıştı, oysa ctest bu projede **seri** koşuyor. Probe doğrudan
-  bir döngüde koşturulunca çıkış kodu **139** çıktı: SIGSEGV. Çökme raporu satırı
-  adıyla verdi — `LayoutDesigner::aimAt`, `QString::fromStdString` içinde
-  `strlen`.
-  **Sebep:** `aimAt` belgeye İŞARET EDEN bir `const LayoutItem*` tutuyor, sonra
-  `runLine` ile `ÇIKTIÖĞE islem=ayarla` çalıştırıyor — bu da yerleşimin öğe
-  dizisini yeniden yazıyor — ve ardından o işaretçiden `map->id` okuyordu. Serbest
-  bırakılmış bellek. Bu **gerçek uygulamada da** çöküyordu: kullanıcı tasarımcıda
-  harita çerçevesini nişanladığında.
-  **Düzeltme:** ad, belge kıpırdamadan önce kopyalanıyor. Düzeltmeden önce 12. ve
-  5. koşuda çöktü; sonra **60 ardışık koşu temiz**.
-  **Ders:** "seyrek düşen test" ilk açıklama olarak kabul edilmemeli. Çıkış kodu
-  139'dur ve bir çökme raporu vardır; ikisi de sebebi ilk denemede veriyor.
-
-## 9. Ölçülebilir uçtan uca kabul senaryoları
-
-Aşağıdaki senaryolar özellik bitiş ölçütüdür. Mevcut birim testleri korunmalı;
-eksik masaüstü/taşıma/çıktı entegrasyon testleri bunları tamamlamalı.
-
-| No | İstek / kurulum | Geçme koşulu |
+| ID | Kullanıcının işi | Geçme koşulu |
 |---|---|---|
-| E-01 | “Seçili parselleri A3 yatay, 1:1000, lejant ve kuzey oklu yerleştir; çalışma dizinine PDF çıkar.” | Otomatik + yalnız zorunlu modunda yeterli fixture için **0 soru, 0 onay**; layout ve doğrulanmış PDF mevcut. |
-| E-02 | Aynı isteği MCP'den gönder. | GUI'ye tıklamadan aynı anlamsal proje durumu; çıktı kaynağı, ölçek ve sayfa ölçüleri eşit. |
-| E-03 | Aynı sayfada farklı tema/ölçekli iki harita. | Lejant/ölçek/kuzey doğru haritaya bağlı; birinin değişimi diğerini bozmaz. |
-| E-04 | A4 dikey ve A3 yatay sayfaları düzenle, sırasını değiştir, kaydet/aç. | Öğeler doğru sayfada; sürükleme ve PDF sayfa boyutları doğru; undo/redo çalışır. |
-| E-05 | “100 parsel için ada/parsel adında atlas PDF'leri üret.” | 100 doğru hedef/başlık; sıralama ve dosya adları deterministik; boş geometri/çakışma raporu var. |
-| E-06 | 500 satırlı tablo, grup toplamları ve dinamik grafik içeren rapor. | Veri eksilmeden sayfalara akar; toplamlar doğrulanır; grafik renkleri katman sembolojisiyle eşleşir. |
-| E-07 | Her değişiklikte onay modunda 12 adımlı belge düzenlemesi. | **Tek plan onayı**, tek undo; uygulama sonrası doğrulama otomatik devam eder. |
-| E-08 | Planın ortasında geçersiz nesne/parametre. | Bağımlı plan sessiz kısaltılmaz; belge hash'i aynı kalır; başarısız çağrı başarılı diye işaretlenmez. |
-| E-09 | Plan beklerken belgeyi değiştir; eski handle veya planı uygula. | Yanlış hedefte işlem yok; revizyon çatışması, taze bağlam ve gerekiyorsa yeni kapsam onayı. |
-| E-10 | Dosya zaten var; `yeni_ad_uret` seçili. | Tekrar soru sormadan benzersiz ad; var olan dosya değişmez; gerçek yol sonuçta döner. |
-| E-11 | MCP bağlantısı kesilsin ve istek aynı anahtarla tekrar gelsin. | Çift mutasyon yok; işin son durumu bulunur; başka istemcinin işi etkilenmez. |
-| E-12 | “Bunu taşı”; seçim yok ve iki eşit aday var. | Araçlarla çözüm aranır; zorunluysa tek hedef sorusu; gereksiz işlem onayıyla karıştırılmaz. |
-| E-13 | Kullanıcı koordinat CSV'siyle geometri oluştur; yanlış CRS de dene. | Doğru birim/CRS/provenance ile işlenir; belirsiz CRS uydurulmaz; layout mm'si arazi koordinatı sanılmaz. |
-| E-14 | Ayar değiştir, yeniden başlat, başka proje aç, ikinci MCP istemcisini bağla. | Soru/onay tercihi korunur; istemci kapsamları doğru; proje güveni yükseltmez. |
-| E-15 | Önizlemede taşma/eksik logo/font ve export iptali. | Sorunlar kaynak/öğe kimliğiyle raporlanır; yarım dosya başarı olarak sunulmaz. |
-| E-16 | QGIS 4.2 ile referans karşılaştırması. | Aynı veri/CRS/font/ölçekle çok sayfa, atlas, rapor, tablo, grafik, resim kırpma ve GeoPDF fixture'ları karşılaştırılır. |
+| **E1** | Açık yol ekseninin iki yanına 5 m paralel üret, kavşakta yayla birleştir | Açık eğri semantiği, doğru mesafe/teğetlik, kaynak korunumu ve tek undo |
+| **E2** | Daire ve yayları sınır çizgilerine göre kes/uzat; seçili kısmı tekrar düzenle | Geometri türü korunur, doğru çözüm önizlenir, snap/ölçüm sonucu tutarlıdır |
+| **E3** | Ortak sınırlı iki parseli grip ile düzenle, tabloda alanını ve paftada etiketini gör | Ortak sınır, kimlik, alan, öznitelik ve ilişkili çıktı birlikte tutarlıdır |
+| **E4** | Otomatik AI ayarıyla seçili nesneleri düzenle; aynı işi MCP'den çalıştır | Gerekli bilgi mevcutsa sıfır gereksiz soru/onay; aynı sonuç ve açıklanabilir işlem kaydı |
+| **E5** | DXF + GeoPackage + farklı CRS ortofotoyu birleştir, geometri/öznitelik sorgula | Konumsal uyum kontrol noktalarıyla doğru; derece/metre karışmaz; kaynak kimliği korunur |
+| **E6** | Dere tamponundaki parselleri bul, etkilenen alanı hesapla, kategorize et ve raporla | Tampon/paralel ayrımı; doğru delik/çok parça ve alan toplamı; tekrarlanabilir analiz |
+| **E7** | 1000 parsel için atlas, PDF ve CAD/GIS teslim dosyaları üret | Doğru ölçek, taşmayan etiket/tablo, kaynak revizyonu ve dış okuyucuyla uyumluluk |
+| **E8** | PostGIS'te parsel değiştirirken bağlantıyı kes ve başka oturumla çakıştır | Yarım kayıt/çift nesne/sessiz üzerine yazma yok; kurtarma yolu açık |
+| **E9** | Saha noktası + kırık hattan arazi üret, eş yükselti ve iki yüzey hacmini hesapla | Sınır/boşluk/kırık hat korunur; analitik örnekle hacim tutar; değişiklik bağımlılara yansır |
+| **E10** | Güzergâhı değiştir, plan/profil/kesit/hacim ve paftayı yenile | Eski sonuç güncel görünmez; tek kaynaktan ilişkili üretim ve tekrar çalıştırılabilir tarif |
 
-**Karşılaştırma yöntemi:** Geometri/ölçek/bağlantı/alan toplamları yapısal testle;
-yerleşim taşması ve görsel kalite render karşılaştırmasıyla; PDF sayfa kutuları,
-fontlar, vektör/raster içeriği ve GeoPDF koordinatları bağımsız okuyucuyla doğrulanır.
-Farklı render motorlarının tüm PDF baytlarının aynı olması beklenmez. Proje/journal
-determinizmi ile görsel tolerans ayrı test edilir. QGIS fixture'ında kullanılan tam
-4.2.x sürümü ve bütün export seçenekleri kaydedilir.
+## 6. İlk somut iş paketi
 
-## 10. Uygulama sırası ve bitiş kapıları
+İlk geliştirme turu **F-01 + Q-01**, ardından **C-03, C-04, G-01/G-03/G-05 ve A-03** etrafında kesilecek. Sebep: yeni araç sayısından önce çizimin doğru üretilmesi, GIS anlamını koruması ve gereksiz AI kesintileri olmadan kullanılabilmesi gerekiyor. C-01/F-03/F-05 bu araçların ihtiyaç duyduğu ölçüde ortaklaştırılacak; bütün uygulamayı baştan yazan bir çerçeve projesine dönüştürülmeyecek.
 
-| Aşama | Kapsam | Bağımlılık ve çıkış koşulu |
-|---|---|---|
-| **P0 — Temel doğruluk ve erişim** | BR-01; C-01–04; L-01/02/04/05/12; A-01–04; S-01–05; M-01–04 | Önce capability/etki/policy sözleşmesi. Ardından layout/print erişimi ve agent döngüsü. E-01–04, E-07–09 geçer; mevcut veri okunur. |
-| **P1 — Günlük üretim** | C-05; L-03/06–08/10/14/15; A-05–08; S-06; M-05–08 | P0 üzerinde atomik dışa aktarma, atlas, görsel doğrulama ve kalıcı işler. E-05, E-10–15 geçer; UI/taşıma entegrasyonu doğrulanır. |
-| **P2 — QGIS kapsamının tamamlanması** | L-09/11/13; M-09 | İfade/akış motoru, render backend'i, yüzey/3B ve export yeteneklerine bağlı. E-06/E-16 ve tüm eşleme matrisi geçer. |
-
-Öncelik, kapsamı düşürmek için kullanılmamalı. P0 sonunda “tam QGIS eşitliği” veya
-“uygulamanın her şeyi AI'ye açık” denmez; yalnız biten envanter satırları raporlanır.
-
-Uygulama sahipliği mevcut modül sınırlarına göre dağıtılmalı:
-
-- **Core/command:** layout modeli, migration, birimler, etki/şema sözleşmesi,
-  Registry, transaction/journal ve tüm yeni komutlar.
-- **App/render/io:** tasarımcı, önizleme/export, çok sayfa, kaynak paketleme,
-  Settings UI ve gerçek Qt MCP taşıması.
-- **AI:** policy, plan ve iş yürütücüsü, katalog, provenance, provider davranışı,
-  MCP protokolü ve yapısal sonuçlar; Qt bağımlılığı eklenmeden.
-- **Test/docs:** registry kapsam testi, eski dosya/journal fixture'ları, Türkçe
-  değerlendirme, istemci entegrasyonu, QGIS referans çıktıları ve üretilmiş kılavuzlar.
-
-**Tamamlanma tanımı:** Ürün envanterindeki her iş GUI, AI ve MCP'den aynı kurallarla
-tamamlanıyor; kullanıcı Settings'ten onay/soru davranışını seçebiliyor; otomatik
-modda yeterli girdili işler tekrar soru/onay istemiyor; layout karşılaştırma matrisi
-gerçek dosyalar ve ölçülebilir testlerle karşılanıyor. Sadece yeni panel, araç adı,
-enum değeri veya prompt eklenmesi tamamlanma sayılmaz.
+Her teslimde buradaki ilgili kutu yalnız kabul kanıtıyla kapanacak. Yeni araştırma veya kod değişikliği mevcut durum tablosunu değiştirirse önce o tablo güncellenecek; zaten yapılmış özellik tekrar “eksik” diye görevlendirilmeyecek.

@@ -156,6 +156,7 @@ noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeği
 |---|---|
 | [Nesne türleri](nesneler/README.md) | Tür nedir, sayılar nasıl saklanır, tanınmayan tür ne olur |
 | [Türler referansı](nesneler/referans.md) | Bütün türlerin üretilmiş tablosu |
+| [Destek matrisi](nesneler/destek-matrisi.md) | Hangi düzenleme işlemi hangi türde çalışıyor — her hücre gerçekten çalıştırılarak ölçülür |
 | [Çoklu çizgi ve alan](nesneler/coklucizgi.md) | Halkalar, parsel, delik, çok parça; alan ve çevre |
 | [Daire](nesneler/daire.md) | Merkez ve yarıçap; 128-gen çizim; tam alan |
 | [Yay](nesneler/yay.md) | Merkez, yarıçap, iki uç; saat yönünün tersine |
