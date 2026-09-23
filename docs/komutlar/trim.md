@@ -42,6 +42,24 @@ Hangi nesnelerin keseceği şu sırayla belirlenir:
 Bir nesne kendi kendini kesmez. Her şeyi seçip `BUDA`'ya bastığınızda her nesne,
 ötekiler tarafından kesilir.
 
+### Parçayı göstermenin üç yolu daha
+
+- **Çitle** (`yontem=çit`): tek tek tıklamak yerine bir **çit** çizersiniz; çitin
+  geçtiği her nesnenin, geçtiği her parçası gider. Çitin bütün işi Enter'a basmadan
+  önce tuvalde çizilir, ve hepsi tek geri alma adımıdır. Sınırların kesmediği ya da
+  budanamayan (alan, elips…) nesneler atlanır ve sayısı söylenir.
+- **Tıklanan kalsın** (`tut=evet`): tıkladığınız parça **kalır**, iki yanındaki
+  kesimlerin dışında kalan her şey gider — iki yolun arasındaki bölümü bırakıp iki
+  ucu birden atmak tek tıklamadır.
+- **Sınırları uzatarak** (`uzanti=evet`): nesneye yetişmeyen bir sınır, kendi
+  yolunda — çizgi doğrultusunda, yay çemberi boyunca — uzatılmış sayılır ve nesneyi
+  orada keser. Sınırın kendisi değişmez; önizleme uzatılan bölümü noktalı çizer.
+
+Önizlemede sınırların nesneyi kestiği **her yer** işaretlenir: kesen bir sınır `×`
+ile, yalnız değen (teğet) bir sınır küçük bir halkayla. Teğet de keser; beklemediyseniz
+halka bunu gösterir. İmlecin yanındaki yazı atılacak uzunluğu ve kesişim sayısını
+söyler.
+
 ## Adlar
 
 | Ad | Tür |
@@ -54,7 +72,8 @@ Bir nesne kendi kendini kesmez. Her şeyi seçip `BUDA`'ya bastığınızda her 
 ## Sözdizimi
 
 ```text
-BUDA [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
+BUDA [sinir=<k> …] [hepsi=evet] [tut=evet] [uzanti=evet] [nesne=<k> …] nokta=<n> [<n> …]
+BUDA [sinir=<k> …] [hepsi=evet] [tut=evet] [uzanti=evet] [yontem=çit] cit=<n> <n> [<n> …]
 ```
 
 ## Parametreler
@@ -65,6 +84,10 @@ BUDA [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
 | `nesne` | Her noktanın budadığı nesne, aynı sırayla; verilmezse noktanın altındaki nesne |
 | `sinir` | Kesme sınırları; verilmezse seçim, o da yoksa hızlı budama |
 | `hepsi` | `evet`: tıklanan nesnenin yakınındaki her nesne sınırdır |
+| `yontem` | `tıkla` (öntanımlı) ya da `çit`: parçalar çizilen bir çitle gösterilir |
+| `cit` | Çitin köşeleri, en az iki; çitin geçtiği her parça budanır |
+| `tut` | `evet`: gösterilen parça kalır, iki yanındaki kesimlerin dışında kalan gider |
+| `uzanti` | `evet`: sınırlar kendi yolunda uzatılmış sayılır; yetişmeyen bir sınır da keser |
 
 ## Örnekler
 
@@ -90,6 +113,37 @@ BUDA hepsi=evet nokta=50,10 50,-10
 2 parça budandı.
 ```
 
+Aynı iki yolun arasını bırakıp iki ucu atmak — tıklanan parça kalır:
+
+```text
+BUDA tut=evet sinir=2 sinir=3 nesne=1 nokta=50,0
+```
+
+```text
+2 parça budandı.
+```
+
+İki yolu kesen iki çizginin ortasını tek çitle atmak (çit, iki yolun arasından
+geçer):
+
+```text
+BUDA cit=50,-5 50,15
+```
+
+```text
+2 parça budandı (2 nesnede).
+```
+
+Çizgiye yetişmeyen bir sınırla budamak — `2`, y = 5'ten yukarı gider:
+
+```text
+BUDA uzanti=evet sinir=2 nesne=1 nokta=80,0
+```
+
+```text
+1 parça budandı.
+```
+
 ### Arayüz
 
 Sol araç kutusundaki **Buda** düğmesine basın ya da `BUDA` yazın. Komut satırı
@@ -111,6 +165,18 @@ tıklamayı kaydırmaz; bir kesişimin yakınına tıklamak parçayı kesişimin
 
 **Esc** komutu Enter gibi bitirir: o ana kadar budananlar budanmış kalır. Hiç
 tıklamadan Esc'e basarsanız hiçbir şey olmaz.
+
+Öteki yollar aynı düğmenin ailesindedir: **Buda**'yı basılı tutun (ya da sağ tıklayın,
+ya da köşesindeki küçük üçgene tıklayın) ve kartta seçin — **Buda — çitle**, **Buda —
+tıklanan kalsın**, **Buda — sınırları uzatarak**. Hepsi **Değiştir** menüsünde de var.
+
+- **Buda — çitle:** çitin köşelerini tıklayın; her köşeden sonra çitin şimdiye kadar
+  alacağı bütün parçalar kırmızı ve kesikli görünür, imlecin yanında kaç parça
+  budanacağı yazar. **Enter** uygular.
+- **Buda — tıklanan kalsın:** komut satırı `Kalacak parçaya tıklayın` der; imlecin
+  altındaki parça vurgulu kalır, dışındaki uçlar kırmızı görünür.
+- **Buda — sınırları uzatarak:** yetişmeyen bir sınırın uzatılan bölümü noktalı
+  çizilir; kesim onun ucunda işaretlenir.
 
 ### Betik
 
@@ -134,9 +200,9 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Geri alma
 
-Bir `BUDA` çalışmasının bütün tıklamaları **tek** geri alma adımıdır;
-[`GERİAL`](undo.md) atılan parçaların hepsini birden geri getirir. Esc ile bitirilen
-çalışma da tek adımdır.
+Bir `BUDA` çalışmasının bütün tıklamaları — ya da çitin aldığı bütün parçalar —
+**tek** geri alma adımıdır; [`GERİAL`](undo.md) atılan parçaların hepsini birden geri
+getirir. Esc ile bitirilen çalışma da tek adımdır.
 
 ## Betikten kullanım
 
@@ -146,10 +212,13 @@ seçim açıklığı yoktur ve nokta nesnenin üzerinde olmalıdır. Güvenli yo
 vermektir.
 
 Günlüğe sınırlar (ya da `hepsi`), budanan nesneler ve noktalar yazılır; yeniden
-oynatılan satır aynı parçaları atar. `hepsi` ile yazılan bir satır, oynatıldığı
+oynatılan satır aynı parçaları atar. Çitle yapılan budamada nesneler değil **çit**
+yazılır (`yontem=çit`, `cit`): oynatılan satır çiti aynı çizime yeniden çizer ve
+aynı parçaları alır. `hepsi` ile yazılan bir satır, oynatıldığı
 çizimdeki yakın nesneleri yeniden okur — kaydedildiği çizimde yaptığını yapar.
 Python'dan `cad.trim(boundary=[2, 3], object=[1], point=[[485350000, 4310200000]])`
-olarak çağrılır.
+olarak çağrılır; çitle `cad.trim(fence=[[…], […]])`, tutarak `keep=True`, sınırları
+uzatarak `carry_edges=True`.
 
 ## Hatalar
 
@@ -165,6 +234,9 @@ olarak çağrılır.
 | `BUDA için kesecek sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Hızlı budamada yakında kesecek nesne yok | Bir sınır çizin ya da `sinir=` verin |
 | `BUDA için kesecek sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Seçili ya da verilen tek sınır, budanan nesnenin kendisi | Başka bir nesneyi sınır seçin |
 | `BUDA: hiçbir parça gösterilmedi. Atılacak parçaya tıklayın ya da BUDA nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir parçaya tıklayın ya da `nokta` verin |
+| `Tıklanan parçanın dışında atılacak bir şey yok.` | `tut=evet` ile tıklanan parça nesnenin tamamı | Tutmak yerine budayın ya da nesneyi kesen bir sınır ekleyin |
+| `BUDA: çit en az iki noktadan oluşur. Çitin köşelerini tıklayın ya da BUDA cit=<nokta> <nokta> yazın.` | Çitin tek köşesi var | Çite en az bir köşe daha verin |
+| `Çit, sınırların kestiği bir parçadan geçmiyor.` | Çit hiçbir nesneden geçmiyor ya da geçtiği nesneleri hiçbir sınır kesmiyor | Çiti atılacak parçaların üzerinden çizin |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
 | `Nesne bulunamadı veya silinmiş: N` | `nesne` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
 | `Sınır nesnesi bulunamadı veya silinmiş: N` | `sinir` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |

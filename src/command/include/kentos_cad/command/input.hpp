@@ -84,8 +84,10 @@ enum class RubberShape : std::uint8_t {
                  ///< the cursor's offset from the origin: ESNET
     Break,       ///< the line `rubber_payload` names, with the piece between the origin and the
                  ///< cursor marked for removal: KIR
-    Trim,        ///< the line and boundary `rubber_payload` names, with the end nearer the cursor
-                 ///< trimmed back or extended to the boundary: BUDA, UZAT
+    Trim,        ///< the object under the cursor, with the piece it would lose (or the reach it
+                 ///< would gain) against the edges `rubber_payload` names: BUDA, UZAT
+    TrimFence,   ///< the fence `rubber_chain` holds, run on to the cursor, with every piece it
+                 ///< would take (or every end it would carry on): BUDA, UZAT yontem=çit
 };
 
 struct Prompt

@@ -947,6 +947,11 @@ private:
     QAction* actMirror_{nullptr};
     QAction* actArray_{nullptr};
     QAction* actExtend_{nullptr};
+    QAction* actTrimFence_{nullptr};   ///< BUDA yontem=çit
+    QAction* actTrimKeep_{nullptr};    ///< BUDA tut=evet
+    QAction* actTrimCarry_{nullptr};   ///< BUDA uzanti=evet
+    QAction* actExtendFence_{nullptr}; ///< UZAT yontem=çit
+    QAction* actExtendCarry_{nullptr}; ///< UZAT uzanti=evet
     QAction* actSplit_{nullptr};
     QAction* actChamfer_{nullptr};
     QAction* actFillet_{nullptr};

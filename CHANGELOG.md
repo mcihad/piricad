@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — BUDA ve UZAT çitle, tıklananı tutarak ve sınırı uzatarak (C-04 tamam)
+
+- **Çitle** (`yontem=çit`, `cit=`): çizilen bir çitin geçtiği her parça tek seferde
+  budanıyor, ya da çite yakın her uç uzatılıyor. Bütün iş Enter'dan önce tuvalde
+  görünüyor (`core::plan_fence` — komutun uyguladığı plan); tek geri alma adımı.
+  Kesilemeyen ya da budanamayan nesneler atlanıp sayılıyor.
+- **Tıklanan kalsın** (`tut=evet`): tıklanan parça kalıyor, iki yanındaki kesimlerin
+  dışı gidiyor.
+- **Sınırları uzatarak** (`uzanti=evet`): nesneye yetişmeyen bir sınır kendi yolunda
+  — çizgi doğrultusunda, yay çemberi boyunca — uzatılmış sayılıyor; önizleme uzatılan
+  bölümü noktalı çiziyor.
+- **Adaylar:** önizleme sınırların nesneyi kestiği her yeri işaretliyor — kesen `×`,
+  teğet halka — ve imlecin yanında atılacak uzunluğu, kesişim ve teğet sayısını
+  yazıyor.
+- Hepsi araç kutusunda **Buda** ailesinin kartında ve **Değiştir** menüsünde:
+  Buda — çitle, Buda — tıklanan kalsın, Buda — sınırları uzatarak, Uzat — çitle,
+  Uzat — sınırları uzatarak.
+- Düzeltme: çizginin tam ucuna tıklamak uçtaki parçayı gösteriyor (destek matrisi bunu
+  yakaladı).
+
 ### Düzeltildi — pencere dizüstü ekranına sığıyor; araç kutusu gerekirse ikinci sütuna geçiyor
 
 Araç kutusu dikey bir kutu yerleşimiydi ve tam yüksekliği pencerenin **asgari**

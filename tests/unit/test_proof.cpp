@@ -1786,6 +1786,34 @@ TEST_CASE("PROOF: BUDA gui, komut satırı ve betikten aynı belgeyi ve aynı g�
                     "sinir":[2],"nesne":[1],"nokta":[[-10000,0]]}}]})"});
 }
 
+TEST_CASE("PROOF: BUDA çitle ve tutarak gui, komut satırı ve betikten aynı sonucu bırakır")
+{
+    // A FENCE, drawn corner by corner and applied with Enter: every piece it
+    // crosses goes in one run. The GUI road starts the way the tool column's
+    // "Buda — çitle" starts it.
+    prove_verb({.name     = "BUDA yontem=çit",
+                .id       = "core.trim",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 0,10 100,10",
+                             "ÇOKLUÇİZGİ 30,-20 30,30", "ÇOKLUÇİZGİ 70,-20 70,30"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{50'000, -5'000}),
+                             Value::point(core::Point2{50'000, 15'000}), Value{}},
+                .typed    = "BUDA yontem=çit cit=50,-5 50,15",
+                .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "yontem":"çit","cit":[[50000,-5000],[50000,15000]]}}]})"});
+
+    // KEEPING the piece clicked: both ends past the roads go.
+    prove_verb(
+        {.name = "BUDA tut=evet",
+         .id   = "core.trim",
+         .setup = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
+         .objects  = {},
+         .answers  = {Value::point(core::Point2{50'000, 0}), Value{}},
+         .typed    = "BUDA tut=evet hepsi=evet nesne=1 nokta=50,0",
+         .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "tut":true,"hepsi":true,"nesne":[1],"nokta":[[50000,0]]}}]})"});
+}
+
 TEST_CASE("PROOF: UZAT gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // An arc's end carried round its circle to a line, in quick mode. The click

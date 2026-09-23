@@ -671,6 +671,10 @@ def trim(
     boundary: list[int] = ...,
     every_edge: bool = ...,
     point: Coords = ...,
+    method: str = ...,
+    fence: Coords = ...,
+    keep: bool = ...,
+    carry_edges: bool = ...,
 ) -> int:
     """Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır.
 
@@ -679,6 +683,10 @@ def trim(
         boundary — Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı]
         every_edge — Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı)
         point — Atılacak her parçanın üzerinde bir nokta, sırayla [mm, Sağa (Y) önce]
+        method — Parçalar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle
+        fence — Çitin köşeleri; çitin geçtiği her parça budanır [mm, Sağa (Y) önce]
+        keep — Gösterilen parça kalır; iki yanındaki kesimlerin dışında kalan gider
+        carry_edges — Sınırlar kendi yolunda uzatılmış sayılır; nesneye yetişmeyen bir sınır da keser
     """
 
 def extend(
@@ -687,6 +695,9 @@ def extend(
     boundary: list[int] = ...,
     every_edge: bool = ...,
     point: Coords = ...,
+    method: str = ...,
+    fence: Coords = ...,
+    carry_edges: bool = ...,
 ) -> int:
     """Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca.
 
@@ -695,6 +706,9 @@ def extend(
         boundary — Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı]
         every_edge — Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı)
         point — Uzatılacak her ucun yakınında bir nokta, sırayla [mm, Sağa (Y) önce]
+        method — Uçlar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle
+        fence — Çitin köşeleri; çitin yanından geçtiği her uç uzatılır [mm, Sağa (Y) önce]
+        carry_edges — Sınırlar kendi yolunda uzatılmış sayılır; ucun doğrultusuna yetişmeyen bir sınıra da ulaşılır
     """
 
 def chamfer(

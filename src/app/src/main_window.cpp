@@ -50,6 +50,7 @@
 #include <QMimeData>
 #include <QToolButton>
 
+#include <array>
 #include <cmath>
 #include <limits>
 #include <span>
@@ -1006,7 +1007,8 @@ void MainWindow::buildActions()
     // through the `kToolCommand` property set above, so the group is all it needed.
     drawingTools_->addAction(actSelectArea_);
     actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
-                          tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
+                          tr("BUDA — tıkladığınız parçayı sınırlar arasından atar: çizgide, yayda "
+                             "ve dairede  ·  kısaltma: BD"));
     // THE GENERIC PAIR AND THE CADASTRAL PAIR ARE DIFFERENT TOOLS, and the tool
     // column carries the generic one. `BİRLEŞTİR`/`BÖL` are geometry: they work on
     // any area or line and say what came out. `TEVHİT`/`İFRAZ` are cadastral acts
@@ -1070,8 +1072,32 @@ void MainWindow::buildActions()
     actArray_ =
         modifyTool(Glyph::Array, tr("Dizi"), QStringLiteral("DİZİ"),
                    tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
-    actExtend_   = modifyTool(Glyph::Extend, tr("Uzat"), QStringLiteral("UZAT"),
-                              tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
+    actExtend_ = modifyTool(Glyph::Extend, tr("Uzat"), QStringLiteral("UZAT"),
+                            tr("UZAT — ucu en yakın sınıra kadar uzatır: çizgiyi doğrultusunda, "
+                               "yayı çemberi boyunca"));
+    // THE OTHER WAYS TO SHOW BUDA AND UZAT THEIR WORK, each its own entry so a
+    // hand reaches it: a fence across many pieces at once, the piece to keep
+    // rather than the one to lose, and a boundary that stops short taken as
+    // running on. They were parameters only a typed line could set.
+    actTrimFence_ =
+        modifyTool(Glyph::Trim, tr("Buda — çitle"), QStringLiteral("BUDA yontem=çit"),
+                   tr("BUDA yontem=çit — çizdiğiniz çitin geçtiği bütün parçaları tek seferde "
+                      "budar; Enter uygular"));
+    actTrimKeep_ =
+        modifyTool(Glyph::Trim, tr("Buda — tıklanan kalsın"), QStringLiteral("BUDA tut=evet"),
+                   tr("BUDA tut=evet — tıkladığınız parça kalır, iki yanındaki kesimlerin dışında "
+                      "kalan gider"));
+    actTrimCarry_ =
+        modifyTool(Glyph::Trim, tr("Buda — sınırları uzatarak"), QStringLiteral("BUDA uzanti=evet"),
+                   tr("BUDA uzanti=evet — nesneye yetişmeyen bir sınır kendi doğrultusunda "
+                      "uzatılmış sayılır"));
+    actExtendFence_ =
+        modifyTool(Glyph::Extend, tr("Uzat — çitle"), QStringLiteral("UZAT yontem=çit"),
+                   tr("UZAT yontem=çit — çizdiğiniz çitin yanından geçtiği bütün uçları sınıra "
+                      "uzatır; Enter uygular"));
+    actExtendCarry_ = modifyTool(
+        Glyph::Extend, tr("Uzat — sınırları uzatarak"), QStringLiteral("UZAT uzanti=evet"),
+        tr("UZAT uzanti=evet — uca yetişmeyen bir sınır kendi doğrultusunda uzatılmış sayılır"));
     actSplit_    = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
                               tr("BÖL — çizgiyi verilen noktadan ikiye böler  ·  kısaltma: BL"));
     actChamfer_  = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
@@ -1609,7 +1635,12 @@ void MainWindow::buildMenus()
     modify->addAction(actArray_);
     modify->addSeparator();
     modify->addAction(actTrim_);
+    modify->addAction(actTrimFence_);
+    modify->addAction(actTrimKeep_);
+    modify->addAction(actTrimCarry_);
     modify->addAction(actExtend_);
+    modify->addAction(actExtendFence_);
+    modify->addAction(actExtendCarry_);
     modify->addAction(actSplit_);
     modify->addAction(actCombine_);
     modify->addAction(actChamfer_);
@@ -2065,7 +2096,9 @@ void MainWindow::buildToolBox()
     //   pieces  — merge, join end to end, close into a face, take apart
     //   move    — the transforms, with HİZALA and ESNET beside them
     toolBox_->addTool(actErase_);
-    toolBox_->addFamily({actTrim_, actExtend_, actBreak_, actLengthen_, actSplit_, actDivide_});
+    toolBox_->addFamily({actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_, actExtend_,
+                         actExtendFence_, actExtendCarry_, actBreak_, actLengthen_, actSplit_,
+                         actDivide_});
     toolBox_->addFamily({actChamfer_, actFillet_, actVertexMove_, actVertexAdd_, actPolylineEdit_});
     toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});
     // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
@@ -7922,6 +7955,53 @@ void MainWindow::probeToolsByHand()
 
         controller_->cancelInteractive();
         QCoreApplication::processEvents();
+    }
+
+    // ---- THE FENCE, from the family's own entry ----------------------------
+    //
+    // "Buda — çitle" pressed, two corners clicked across the east piece of the
+    // horizontal line, the whole edit photographed BEFORE Enter, then Enter.
+    // And "Buda — tıklanan kalsın": one click on the piece that stays.
+    {
+        struct Mode
+        {
+            const char* tool;                 ///< the member pressed
+            std::vector<core::Point2> clicks; ///< its clicks, the last one hovered first
+            const char* frame;                ///< the photograph's name
+        };
+
+        const std::array<Mode, 3> modes{{
+            {"BUDA yontem=çit", {{62'000, 8'000}, {74'000, 32'000}}, "BUDA-cit"},
+            {"BUDA tut=evet", {{70'000, 20'000}}, "BUDA-tut"},
+            {"UZAT uzanti=evet", {{52'000, 20'000}}, "UZAT-uzanti"},
+        }};
+        for (const Mode& mode : modes) {
+            scene();
+            auto* action =
+                findChild<QAction*>(QStringLiteral("toolAction.") + QString::fromUtf8(mode.tool));
+            if (action == nullptr) {
+                (void)std::fprintf(stdout, "[el] %-16s DÜĞME YOK\n", mode.tool);
+                continue;
+            }
+            const auto mark = static_cast<int>(transcript_->toPlainText().size());
+            action->trigger();
+            QCoreApplication::processEvents();
+            for (std::size_t i = 0; i < mode.clicks.size(); ++i) {
+                if (i + 1 == mode.clicks.size()) {
+                    send(QEvent::MouseMove, at(mode.clicks[i]), Qt::NoButton, Qt::NoButton);
+                    shot(QString::fromUtf8(mode.frame) + QStringLiteral("-onizleme"));
+                }
+                click(at(mode.clicks[i]));
+            }
+            enter();
+            shot(QString::fromUtf8(mode.frame) + QStringLiteral("-bitti"));
+            QString said = transcript_->toPlainText().mid(mark).trimmed();
+            said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+            (void)std::fprintf(stdout, "[el] %-16s SONUÇ :: %s\n", mode.tool,
+                               qPrintable(said.right(110)));
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+        }
     }
 
     // ---- THE GHOSTS ----------------------------------------------------------

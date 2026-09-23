@@ -333,12 +333,15 @@ TEST_CASE("BUDA/UZAT: atılacak parça ve eklenecek uzantı imleç üzerindeyken
     REQUIRE(line == r.doc.slot_of(static_cast<core::EntityKey>(1U)));
     const auto path = core::path_of(r.doc, line);
     REQUIRE(path.has_value());
-    const auto edges = core::cutting_edges(r.doc, line, guide.value().every, guide.value().keys);
+    const auto edges = core::cutting_edges(r.doc, line, guide.value());
     CHECK_EQ(edges.size(), 1u); ///< the line never cuts itself
     auto shown = core::trim_curve(*path, edges, cursor);
     REQUIRE(shown.ok());
-    CHECK(core::path_vertices(shown.value().removed) ==
+    REQUIRE_EQ(shown.value().removed.size(), 1u);
+    CHECK(core::path_vertices(shown.value().removed.front()) ==
           std::vector<core::Point2>{{7'000, 0}, {10'000, 0}});
+    REQUIRE_EQ(shown.value().cuts.size(), 1u); ///< the candidate the canvas marks
+    CHECK_EQ(shown.value().cuts.front().point, (core::Point2{7'000, 0}));
 
     REQUIRE(s.supply(Value::point(cursor)).ok());
     REQUIRE(s.waiting()); ///< the next piece, until Enter
@@ -364,9 +367,7 @@ TEST_CASE("BUDA/UZAT: atılacak parça ve eklenecek uzantı imleç üzerindeyken
     const auto short_path           = core::path_of(r.doc, short_line);
     REQUIRE(short_path.has_value());
     auto reach = core::extend_curve(
-        *short_path,
-        core::cutting_edges(r.doc, short_line, reach_guide.value().every, reach_guide.value().keys),
-        near_end);
+        *short_path, core::cutting_edges(r.doc, short_line, reach_guide.value()), near_end);
     REQUIRE(reach.ok());
     CHECK(core::path_vertices(reach.value().added) ==
           std::vector<core::Point2>{{5'000, 2'000}, {7'000, 2'000}});
@@ -375,6 +376,47 @@ TEST_CASE("BUDA/UZAT: atılacak parça ve eklenecek uzantı imleç üzerindeyken
     REQUIRE(x.supply(Value{}).ok());
     REQUIRE(r.bus.finish(x).ok());
     CHECK_EQ(vertex_of(r.doc, 3, 1), (core::Point2{7'000, 2'000}));
+}
+
+TEST_CASE("BUDA çitle: çitin bütün işi Enter'dan önce tuvalde, uygulananla aynı")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,10 100,10", Origin::Test).ok());  // 2
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,30", Origin::Test).ok()); // 3
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 70,-20 70,30", Origin::Test).ok()); // 4
+
+    auto started = r.bus.begin_interactive("BUDA yontem=çit", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().message.find("Çitin ilk noktası") != std::string::npos);
+    REQUIRE(s.supply(Value::point(core::Point2{50'000, -5'000})).ok());
+
+    // THE SECOND CORNER'S PROMPT carries the fence so far and the run's rules;
+    // the canvas runs the fence on to the cursor and plans it.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::TrimFence);
+    CHECK(s.prompt().rubber_chain == std::vector<core::Point2>{{50'000, -5'000}});
+    auto guide = core::decode_trim_guide(s.prompt().rubber_payload);
+    REQUIRE(guide.ok());
+    CHECK(guide.value().every);
+    const std::vector<core::Point2> fence{{50'000, -5'000}, {50'000, 15'000}};
+    const core::FencePlan plan = core::plan_fence(r.doc, fence, guide.value());
+    REQUIRE_EQ(plan.edits.size(), 2u);
+    for (const core::FenceEdit& edit : plan.edits) {
+        REQUIRE_EQ(edit.cut.removed.size(), 1u);
+        CHECK_EQ(core::path_length(edit.cut.removed.front()), core::Mm{40'000});
+    }
+
+    REQUIRE(s.supply(Value::point(fence.back())).ok());
+    REQUIRE(s.waiting()); ///< another corner, or Enter
+    REQUIRE(s.supply(Value{}).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    // WHAT WAS SHOWN IS WHAT WENT: the planned pieces, and nothing else.
+    CHECK_EQ(vertex_of(r.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(vertex_of(r.doc, 2, 1), (core::Point2{30'000, 10'000}));
+    CHECK_EQ(vertex_of(r.doc, 3, 1), (core::Point2{30'000, 30'000}));
 }
 
 TEST_CASE("Tabanı olmayan bir önizleme DİK kilidini saptırmaz")

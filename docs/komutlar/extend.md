@@ -27,6 +27,16 @@ Sınırlar [`BUDA`](trim.md)'daki sırayla belirlenir: `sinir=` ile verilenler, 
 seçtikleriniz, o da yoksa tıkladığınız nesnenin yakınındaki her görünür çizgi, yay
 ve daire (`hepsi=evet`).
 
+### Uçları göstermenin iki yolu daha
+
+- **Çitle** (`yontem=çit`): bir çit çizersiniz; çitin geçtiği her nesnenin, çite
+  yakın olan ucu uzatılır. Bir çizgiyi iki ucunun yakınından geçen bir çit iki ucunu
+  da uzatır. Bütün uzantılar Enter'dan önce tuvalde görünür ve hepsi tek geri alma
+  adımıdır; hiçbir sınıra ulaşamayan uçların nesneleri atlanır ve sayısı söylenir.
+- **Sınırları uzatarak** (`uzanti=evet`): ucun yoluna yetişmeyen bir sınır kendi
+  yolunda uzatılmış sayılır; uç, sınırın o uzantısına kadar gider. Sınırın kendisi
+  değişmez.
+
 ## Adlar
 
 | Ad | Tür |
@@ -39,7 +49,8 @@ ve daire (`hepsi=evet`).
 ## Sözdizimi
 
 ```text
-UZAT [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
+UZAT [sinir=<k> …] [hepsi=evet] [uzanti=evet] [nesne=<k> …] nokta=<n> [<n> …]
+UZAT [sinir=<k> …] [hepsi=evet] [uzanti=evet] [yontem=çit] cit=<n> <n> [<n> …]
 ```
 
 ## Parametreler
@@ -50,6 +61,9 @@ UZAT [sinir=<k> …] [hepsi=evet] [nesne=<k> …] nokta=<n> [<n> …]
 | `nesne` | Her noktanın uzattığı nesne, aynı sırayla; verilmezse noktanın altındaki nesne |
 | `sinir` | Ulaşılacak sınırlar; verilmezse seçim, o da yoksa yakındaki her nesne |
 | `hepsi` | `evet`: tıklanan nesnenin yakınındaki her nesne sınırdır |
+| `yontem` | `tıkla` (öntanımlı) ya da `çit`: uçlar çizilen bir çitle gösterilir |
+| `cit` | Çitin köşeleri, en az iki; çitin geçtiği her nesnenin çite yakın ucu uzatılır |
+| `uzanti` | `evet`: sınırlar kendi yolunda uzatılmış sayılır; yetişmeyen bir sınıra da ulaşılır |
 
 ## Örnekler
 
@@ -76,6 +90,27 @@ UZAT nesne=1 sinir=2 nokta=1,9.9
 1 uç sınıra uzatıldı.
 ```
 
+İki çizginin (`1`, `2`) sağ uçlarını tek çitle `3` sınırına uzatmak:
+
+```text
+UZAT sinir=3 cit=35,-5 45,15
+```
+
+```text
+2 uç sınıra uzatıldı (2 nesnede).
+```
+
+Ucun yoluna yetişmeyen bir sınıra (`4`, y = 0'dan yukarı gider) uzatmak — `3`
+çizgisi y = −10 boyunca uzanır:
+
+```text
+UZAT uzanti=evet sinir=4 nesne=3 nokta=10,-10
+```
+
+```text
+1 uç sınıra uzatıldı.
+```
+
 ### Arayüz
 
 Sol araç kutusundaki **Uzat** düğmesine basın ya da `UZAT` yazın. Komut satırı
@@ -89,6 +124,10 @@ uzatılanları tutarak bitirir.
 
 Tıklama bir konum değil, bir seçimdir: nesne yakalama, ızgara ve dik mod tıklamayı
 kaydırmaz.
+
+**Uzat — çitle** ve **Uzat — sınırları uzatarak**, araç kutusunda **Buda** ailesinin
+kartında ve **Değiştir** menüsündedir. Çitte her köşeden sonra çitin şimdiye kadar
+uzatacağı bütün uçlar kesikli görünür; **Enter** uygular.
 
 ### Betik
 
@@ -110,16 +149,17 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Geri alma
 
-Bir `UZAT` çalışmasının bütün tıklamaları **tek** geri alma adımıdır;
-[`GERİAL`](undo.md) hepsini birden geri alır.
+Bir `UZAT` çalışmasının bütün tıklamaları — ya da çitin uzattığı bütün uçlar —
+**tek** geri alma adımıdır; [`GERİAL`](undo.md) hepsini birden geri alır.
 
 ## Betikten kullanım
 
 Betikten `nokta` verilmelidir. `nesne` verilmezse her nokta **tam altındaki**
 nesneyi uzatır — betiğin seçim açıklığı yoktur; güvenli yol `nesne`'yi vermektir.
-Günlüğe sınırlar (ya da `hepsi`), uzatılan nesneler ve noktalar yazılır. Python'dan
+Günlüğe sınırlar (ya da `hepsi`), uzatılan nesneler ve noktalar yazılır; çitle
+yapılan uzatmada çit (`yontem=çit`, `cit`). Python'dan
 `cad.extend(boundary=[2], object=[1], point=[[485350000, 4310200000]])` olarak
-çağrılır.
+çağrılır; çitle `fence=[[…], […]]`, sınırları uzatarak `carry_edges=True`.
 
 ## Hatalar
 
@@ -134,6 +174,8 @@ Günlüğe sınırlar (ya da `hepsi`), uzatılan nesneler ve noktalar yazılır.
 | `UZAT için ulaşılacak sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Yakında ulaşılacak nesne yok | Bir sınır çizin ya da `sinir=` verin |
 | `UZAT için ulaşılacak sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Verilen tek sınır, uzatılan nesnenin kendisi | Başka bir nesneyi sınır seçin |
 | `UZAT: hiçbir uç gösterilmedi. Uzatılacak uca tıklayın ya da UZAT nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir uca tıklayın ya da `nokta` verin |
+| `UZAT: çit en az iki noktadan oluşur. Çitin köşelerini tıklayın ya da UZAT cit=<nokta> <nokta> yazın.` | Çitin tek köşesi var | Çite en az bir köşe daha verin |
+| `Çit, sınırlara uzatılabilecek bir uçtan geçmiyor.` | Çit hiçbir nesneden geçmiyor ya da geçtiği nesnelerin hiçbir ucu bir sınıra ulaşmıyor | Çiti uzatılacak uçların yakınından çizin |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
 | `Nesne bulunamadı veya silinmiş: N` | `nesne` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |
 | `Sınır nesnesi bulunamadı veya silinmiş: N` | `sinir` ile verilen kimlik yok | [`SEÇ`](select.md) ile doğru kimliği bulun |

@@ -148,6 +148,15 @@ AidSettings aids_for(const AidSettings& set, const Prompt& p)
         out.tracking_reach = 0;
         out.step           = 0;
     }
+    // A FENCE IS A GESTURE, not geometry: a snap would pin its corner on the
+    // crossing it is meant to pass through. Dik mod and kutupsal izleme stay —
+    // a straight fence is drawn with them.
+    if (p.rubber_shape == RubberShape::TrimFence) {
+        out.modes &= core::SnapPolar;
+        out.normal_lock    = false;
+        out.tracking_reach = 0;
+        out.step           = 0;
+    }
     return out;
 }
 

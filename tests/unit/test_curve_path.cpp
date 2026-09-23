@@ -171,4 +171,75 @@ TEST_CASE("CURVE: budama önizlemesinin baytları gidip gelir, bozuğu reddedili
     bytes.pop_back();
     CHECK_FALSE(decode_trim_guide(bytes).ok());
     CHECK_FALSE(decode_trim_guide(std::vector<std::uint8_t>{}).ok());
+
+    // THE RULES RIDE ALONG: `tut` and `uzanti` reach the canvas as they reached
+    // the command.
+    const TrimGuide rules{.extend = false, .every = true, .keys = {}, .keep = true, .carry = true};
+    auto ruled = decode_trim_guide(encode_trim_guide(rules));
+    REQUIRE(ruled.ok());
+    CHECK(ruled.value().every);
+    CHECK(ruled.value().keep);
+    CHECK(ruled.value().carry);
+}
+
+TEST_CASE("CURVE: tutma kipinde tıklanan parça kalır, iki yanındaki uçlar gider")
+{
+    // A line across two roads, kept between them: both ends go, the middle stays.
+    const CurvePath line = segment({0, 0}, {100'000, 0});
+    const std::array<CurvePath, 2> roads{segment({30'000, -20'000}, {30'000, 20'000}),
+                                         segment({70'000, -20'000}, {70'000, 20'000})};
+    auto kept = trim_curve(line, roads, Point2{50'000, 0}, true);
+    REQUIRE(kept.ok());
+    REQUIRE_EQ(kept.value().kept.size(), 1u);
+    CHECK(path_vertices(kept.value().kept.front()) ==
+          std::vector<Point2>{{30'000, 0}, {70'000, 0}});
+    REQUIRE_EQ(kept.value().removed.size(), 2u);
+    CHECK(path_vertices(kept.value().removed[0]) == std::vector<Point2>{{0, 0}, {30'000, 0}});
+    CHECK(path_vertices(kept.value().removed[1]) == std::vector<Point2>{{70'000, 0}, {100'000, 0}});
+
+    // A circle kept on its east side: the west half goes, as one arc.
+    const std::array<CurvePath, 1> chord{segment({0, -20'000}, {0, 20'000})};
+    auto east = trim_curve(circle({0, 0}, 10'000), chord, Point2{10'000, 0}, true);
+    REQUIRE(east.ok());
+    REQUIRE_EQ(east.value().kept.size(), 1u);
+    CHECK_EQ(east.value().kept.front().pieces.front().from, (Point2{0, -10'000}));
+    CHECK_EQ(east.value().kept.front().pieces.front().to, (Point2{0, 10'000}));
+    REQUIRE_EQ(east.value().removed.size(), 1u);
+    CHECK_EQ(east.value().removed.front().pieces.front().sweep_udeg, kUDegFullCircle / 2);
+}
+
+TEST_CASE("CURVE: işaretli parçalar gider, komşu aynı kaderdekiler tek parça olur")
+{
+    // Cuts at 20, 40, 60, 80: marks in the second and third pieces take one
+    // stretch, 20..60, not two.
+    const CurvePath line = segment({0, 0}, {100'000, 0});
+    std::vector<PathCrossing> cuts;
+    for (const Mm x : {20'000, 40'000, 60'000, 80'000})
+        cuts.push_back(PathCrossing{.at = place_of(line, {x, 0}), .point = {x, 0}});
+    const std::array<PathPlace, 2> marks{place_of(line, {30'000, 0}), place_of(line, {50'000, 0})};
+    auto cut = cut_pieces(line, cuts, marks, false);
+    REQUIRE(cut.ok());
+    REQUIRE_EQ(cut.value().removed.size(), 1u);
+    CHECK(path_vertices(cut.value().removed.front()) ==
+          std::vector<Point2>{{20'000, 0}, {60'000, 0}});
+    REQUIRE_EQ(cut.value().kept.size(), 2u);
+    CHECK(path_vertices(cut.value().kept[0]) == std::vector<Point2>{{0, 0}, {20'000, 0}});
+    CHECK(path_vertices(cut.value().kept[1]) == std::vector<Point2>{{60'000, 0}, {100'000, 0}});
+}
+
+TEST_CASE("CURVE: çizginin tam ucuna tıklamak uçtaki parçayı gösterir")
+{
+    // THE REGRESSION: the support matrix clicks a line's own end, and the piece
+    // test was strict at both bounds, so the click fell in no piece and BUDA
+    // said there was nothing to throw away. A cut is a boundary no click can
+    // name; the path's own ends are not cuts.
+    const CurvePath line = segment({0, 0}, {50'000, 0});
+    const std::array<CurvePath, 1> edge{segment({25'000, -5'000}, {25'000, 5'000})};
+    auto at_end = trim_curve(line, edge, Point2{50'000, 0});
+    REQUIRE(at_end.ok());
+    CHECK(path_vertices(at_end.value().kept.front()) == std::vector<Point2>{{0, 0}, {25'000, 0}});
+    auto at_start = trim_curve(line, edge, Point2{0, 0});
+    REQUIRE(at_start.ok());
+    CHECK(path_vertices(at_start.value().kept.front()) ==
+          std::vector<Point2>{{25'000, 0}, {50'000, 0}});
 }

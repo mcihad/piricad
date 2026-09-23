@@ -72,7 +72,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `6231691581833795565`
+- Katalog parmak izi: `9480962184800404850`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -480,6 +480,9 @@ Onay ister.
 | `sinir` | string | hayır | Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `hepsi` | boolean | hayır | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Uzatılacak her ucun yakınında bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `yontem` | string | hayır | Uçlar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle (metin) |
+| `cit` | konum (tutamak ya da göreli nokta) | hayır | Çitin köşeleri; çitin yanından geçtiği her uç uzatılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `uzanti` | boolean | hayır | Sınırlar kendi yolunda uzatılmış sayılır; ucun doğrultusuna yetişmeyen bir sınıra da ulaşılır (evet/hayır) |
 
 ### `core_fillet` — Yuvarla
 
@@ -1386,6 +1389,10 @@ Onay ister.
 | `sinir` | string | hayır | Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `hepsi` | boolean | hayır | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) (evet/hayır) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Atılacak her parçanın üzerinde bir nokta, sırayla — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `yontem` | string | hayır | Parçalar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle (metin) |
+| `cit` | konum (tutamak ya da göreli nokta) | hayır | Çitin köşeleri; çitin geçtiği her parça budanır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `tut` | boolean | hayır | Gösterilen parça kalır; iki yanındaki kesimlerin dışında kalan gider (evet/hayır) |
+| `uzanti` | boolean | hayır | Sınırlar kendi yolunda uzatılmış sayılır; nesneye yetişmeyen bir sınır da keser (evet/hayır) |
 
 ### `core_vertex_insert` — Köşe Ekle
 

@@ -22,6 +22,7 @@
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/transform.hpp"
+#include "kentos_cad/core/trim_curve.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/scene.hpp"
@@ -404,6 +405,18 @@ private:
 
     /// A label at a pixel position in the readout ink.
     void addReadout(float x, float y, const std::string& text);
+
+    /// Draws `path` into `batch`: segments as they are, arcs by `arc_outline`.
+    void addCurve(std::size_t batch, const core::CurvePath& path);
+
+    /// Marks every cut of a trim — a cross, or a ring for a touch — and returns
+    /// how many only touch.
+    std::size_t addCutMarks(std::span<const core::PathCrossing> cuts);
+
+    /// Dots the stretch each carried-on edge runs past its real end to reach a
+    /// cut in `cuts` (`core::TrimGuide::carry`).
+    void addImpliedEdges(const core::Document& doc, core::EntityId target,
+                         const core::TrimGuide& guide, std::span<const core::PathCrossing> cuts);
 
     /// Draws the measurements the session has left (`addMeasureMark`) and drops
     /// the ones the drawing has since moved on from.

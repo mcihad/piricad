@@ -1098,6 +1098,10 @@ cad.trim(
     boundary: list[int],
     every_edge: bool,
     point: Coords,
+    method: str,
+    fence: Coords,
+    keep: bool,
+    carry_edges: bool,
 ) -> int
 ```
 
@@ -1107,6 +1111,10 @@ cad.trim(
 | `boundary` | `list[int]` | `sinir` | Kesme sınırları; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı] |
 | `every_edge` | `bool` | `hepsi` | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
 | `point` | `Coords` | `nokta` | Atılacak her parçanın üzerinde bir nokta, sırayla [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | Parçalar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle |
+| `fence` | `Coords` | `cit` | Çitin köşeleri; çitin geçtiği her parça budanır [mm, Sağa (Y) önce] |
+| `keep` | `bool` | `tut` | Gösterilen parça kalır; iki yanındaki kesimlerin dışında kalan gider |
+| `carry_edges` | `bool` | `uzanti` | Sınırlar kendi yolunda uzatılmış sayılır; nesneye yetişmeyen bir sınır da keser |
 
 [Komut sayfası](../komutlar/trim.md)
 
@@ -1122,6 +1130,9 @@ cad.extend(
     boundary: list[int],
     every_edge: bool,
     point: Coords,
+    method: str,
+    fence: Coords,
+    carry_edges: bool,
 ) -> int
 ```
 
@@ -1131,6 +1142,9 @@ cad.extend(
 | `boundary` | `list[int]` | `sinir` | Uzatılacak sınırlar; yoksa seçili nesneler, o da yoksa tıklanan nesnenin yakınındaki her nesne [kalıcı nesne anahtarı] |
 | `every_edge` | `bool` | `hepsi` | Tıklanan nesnenin yakınındaki her nesne sınırdır (seçim ve sinir yokken öntanımlı) |
 | `point` | `Coords` | `nokta` | Uzatılacak her ucun yakınında bir nokta, sırayla [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | Uçlar nasıl gösterilir: tek tek tıklayarak (öntanımlı) ya da çizilen bir çitle |
+| `fence` | `Coords` | `cit` | Çitin köşeleri; çitin yanından geçtiği her uç uzatılır [mm, Sağa (Y) önce] |
+| `carry_edges` | `bool` | `uzanti` | Sınırlar kendi yolunda uzatılmış sayılır; ucun doğrultusuna yetişmeyen bir sınıra da ulaşılır |
 
 [Komut sayfası](../komutlar/extend.md)
 

@@ -224,7 +224,7 @@ yay ise açık bir kenardır ve hiçbir şeyi çevrelemez.
 | Metin | `METİN` · `YAZIDÜZENLE` | yazmak ve yazıyı düzeltmek |
 | Blok Ekle | `BLOKEKLE` · `BLOK` | blok yerleştirmek ve tanımlamak |
 | Ölçü | `ÖLÇÜ` · `LİDER` · `ETİKET` | açıklama: ölçü, not oku, öznitelikten etiket |
-| Buda | `BUDA` · `UZAT` · `KIR` · `UZUNLUK` · `BÖL` · `BÖLÜMLE` | kesmek, uzatmak, parçaya ayırmak |
+| Buda | `BUDA` · `BUDA yontem=çit` · `BUDA tut=evet` · `BUDA uzanti=evet` · `UZAT` · `UZAT yontem=çit` · `UZAT uzanti=evet` · `KIR` · `UZUNLUK` · `BÖL` · `BÖLÜMLE` | kesmek (tıklayarak ya da çitle, tıklananı tutarak, sınırı uzatarak), uzatmak, parçaya ayırmak |
 | Pah | `PAH` · `YUVARLA` · `KÖŞETAŞI` · `KÖŞEEKLE` · `ÇİZGİDÜZENLE` | köşeler ve çizginin biçimi |
 | Birleştir | `BİRLEŞTİR` · `UÇUCA` · `ALANAÇEVİR` · `PATLAT` | parçaları birleştirmek ve ayırmak |
 | Taşı | `TAŞI` · `KOPYALA` · `DÖNDÜR` · `ÖLÇEKLE` · `AYNALA` · `DİZİ` · `HİZALA` · `ESNET` | seçileni yerinden oynatmak |

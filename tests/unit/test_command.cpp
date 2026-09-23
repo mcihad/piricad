@@ -6259,6 +6259,138 @@ TEST_CASE("UZAT yayın ucunu çemberi boyunca sınıra taşır")
     CHECK_EQ(ring_vertex(f.doc, 1, 3), (core::Point2{-5'000, 8'660}));
 }
 
+TEST_CASE("BUDA tut=evet: tıklanan parça kalır, sınırların dışındaki iki uç gider")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok()); // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 70,-20 70,20", Origin::Test).ok()); // 3
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    auto kept =
+        f.bus.execute_line("BUDA tut=evet sinir=2 sinir=3 nesne=1 nokta=50,0", Origin::Test);
+    if (!kept) FAIL_WITH("BUDA tut", kept.error().message);
+    REQUIRE(kept.ok());
+    CHECK(said.find("2 parça budandı.") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{3}); ///< one object, trimmed at both ends
+    CHECK_EQ(ring_vertex(f.doc, 1, 0), (core::Point2{30'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{70'000, 0}));
+}
+
+TEST_CASE("BUDA çitle: çitin geçtiği her parça tek seferde ve tek geri almada gider")
+{
+    // Two lines across two roads, and a fence down the middle of the gap: both
+    // middles go in one run. The roads themselves are crossed by nothing.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,10 100,10", Origin::Test).ok());  // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,30", Origin::Test).ok()); // 3
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 70,-20 70,30", Origin::Test).ok()); // 4
+    const std::uint64_t before = f.doc.content_hash();
+    const std::size_t depth    = f.undo.undo_depth();
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    auto fenced   = f.bus.execute_line("BUDA cit=50,-5 50,15", Origin::Test);
+    if (!fenced) FAIL_WITH("BUDA cit", fenced.error().message);
+    REQUIRE(fenced.ok());
+    CHECK(said.find("2 parça budandı (2 nesnede).") != std::string::npos);
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 2, 1), (core::Point2{30'000, 10'000}));
+    CHECK_EQ(ring_vertex(f.doc, 5, 0), (core::Point2{70'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 6, 0), (core::Point2{70'000, 10'000}));
+    CHECK_EQ(f.undo.undo_depth(), depth + 1);
+
+    // WHAT THE JOURNAL HOLDS is the fence, so a replay draws it again.
+    const Args& args = f.journal.entries().back().args;
+    REQUIRE(args.find("cit") != nullptr);
+    CHECK_EQ(args.find("cit")->as_points().size(), std::size_t{2});
+    REQUIRE(args.find("yontem") != nullptr);
+    CHECK(args.find("yontem")->as_text() == "çit");
+
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+}
+
+TEST_CASE("BUDA çitle: bir parçayı iki kez geçen çit onu bir kez atar; kesilmeyenler atlanır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());    // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok()); // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,50 100,50", Origin::Test).ok());  // 3, cut by nothing
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    // A zig-zag over the east piece of 1, and up across 3 which nothing cuts.
+    REQUIRE(f.bus.execute_line("BUDA hepsi=evet cit=50,-5 60,5 70,-5 80,60", Origin::Test).ok());
+    CHECK(said.find("1 parça budandı (1 nesnede).") != std::string::npos);
+    CHECK(said.find("1 nesne atlandı") != std::string::npos);
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{30'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 3, 1), (core::Point2{100'000, 50'000})); ///< untouched
+}
+
+TEST_CASE("UZAT çitle: çitin yanından geçtiği uçlar sınıra uzanır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 50,0", Origin::Test).ok());     // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,10 45,10", Origin::Test).ok());   // 2
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 80,-20 80,30", Origin::Test).ok()); // 3
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    REQUIRE(f.bus.execute_line("UZAT sinir=3 cit=35,-5 45,15", Origin::Test).ok());
+    CHECK(said.find("2 uç sınıra uzatıldı (2 nesnede).") != std::string::npos);
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{80'000, 0}));
+    CHECK_EQ(ring_vertex(f.doc, 2, 1), (core::Point2{80'000, 10'000}));
+}
+
+TEST_CASE("uzanti=evet: yetişmeyen bir sınır kendi doğrultusunda keser ve ulaşılır")
+{
+    // A boundary from y = 5 up: it stops short of the line along y = 0.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());  // 1
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,5 30,20", Origin::Test).ok()); // 2
+    const std::uint64_t before = f.doc.content_hash();
+
+    // As drawn it cuts nothing; carried on, it cuts at x = 30.
+    REQUIRE_FALSE(f.bus.execute_line("BUDA sinir=2 nesne=1 nokta=80,0", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    REQUIRE(f.bus.execute_line("BUDA uzanti=evet sinir=2 nesne=1 nokta=80,0", Origin::Test).ok());
+    CHECK(said.find("1 parça budandı.") != std::string::npos); ///< the page's example, as printed
+    CHECK_EQ(ring_vertex(f.doc, 1, 1), (core::Point2{30'000, 0}));
+
+    // And UZAT reaches the line of a boundary that ends before the line does.
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,-10 10,-10", Origin::Test).ok()); // 3
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 60,0 60,20", Origin::Test).ok());   // 4
+    REQUIRE_FALSE(f.bus.execute_line("UZAT sinir=4 nesne=3 nokta=10,-10", Origin::Test).ok());
+    said.clear();
+    REQUIRE(f.bus.execute_line("UZAT uzanti=evet sinir=4 nesne=3 nokta=10,-10", Origin::Test).ok());
+    CHECK(said.find("1 uç sınıra uzatıldı.") != std::string::npos);
+    CHECK_EQ(ring_vertex(f.doc, 3, 1), (core::Point2{60'000, -10'000}));
+}
+
+TEST_CASE("BUDA çitle: tek noktalı ya da hiçbir parçadan geçmeyen çit söylenerek reddedilir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 30,-20 30,20", Origin::Test).ok());
+    const std::uint64_t before = f.doc.content_hash();
+
+    const std::string single = REFUSED(f.bus.execute_line("BUDA cit=50,-5", Origin::Test));
+    CHECK(single.find("çit en az iki noktadan oluşur") != std::string::npos);
+    const std::string nowhere = REFUSED(f.bus.execute_line("BUDA cit=50,40 60,40", Origin::Test));
+    CHECK(nowhere.find("Çit, sınırların kestiği bir parçadan geçmiyor.") != std::string::npos);
+    CHECK_EQ(f.doc.content_hash(), before);
+}
+
 TEST_CASE("BUDA ve UZAT noktasız bir betiğe ne eksik olduğunu söyler")
 {
     // A script cannot click: without `nokta` it is told so in the words the

@@ -1457,6 +1457,38 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14h-buda-daire"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // BUDA uzanti=evet: a boundary that stops short of the line cuts it along
+        // its own run — the carried-on stretch dotted, the cut marked.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 14,3 14,9"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("BUDA uzanti=evet"));
+        });
+        later([hover] { hover({18'000, 40}); });
+        later([&window, shot] { shot(QStringLiteral("14j-buda-uzanti"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // THE CANDIDATES: a line a circle only touches and a line crosses. Both
+        // cut it — the touch marked with a ring, the crossing with a cross — and
+        // the piece between them is the one under the cursor.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,5 20,5")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("DAİRE merkez=10,0 cevre=15,0"));
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 16,-2 16,9"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("BUDA"));
+        });
+        later([hover] { hover({13'000, 5'030}); });
+        later([&window, shot] { shot(QStringLiteral("14k-buda-teget"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // UZAT on an arc: its end carried on round its own circle to the line.
         later([scene] { scene(QStringLiteral("YAY 0,0 10,0 0,10")); });
         later([&window] {

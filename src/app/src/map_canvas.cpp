@@ -1533,6 +1533,82 @@ void MapCanvas::addCircle(std::size_t index, float cx, float cy, float radius)
     batch.closed.push_back(1);
 }
 
+void MapCanvas::addCurve(std::size_t batch, const core::CurvePath& path)
+{
+    curve_scratch_x_.clear();
+    curve_scratch_y_.clear();
+    core::path_outline(path, curve_scratch_x_, curve_scratch_y_);
+    if (curve_scratch_x_.size() >= 2) addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
+}
+
+std::size_t MapCanvas::addCutMarks(std::span<const core::PathCrossing> cuts)
+{
+    // A CROSS WHERE AN EDGE CROSSES, A RING WHERE ONE ONLY TOUCHES: a tangent
+    // cuts too, and a user who did not expect it should see that it does.
+    // Screen-sized, so a cut reads the same at every zoom.
+    constexpr float kArm    = 4.0F;
+    const std::size_t marks = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+    std::size_t touching    = 0;
+    for (const core::PathCrossing& c : cuts) {
+        const render::ScreenPointF p = render::to_f(view_.to_screen(c.point));
+        if (c.touching) {
+            addCircle(marks, p.x, p.y, kArm);
+            ++touching;
+            continue;
+        }
+        addRun(marks, {{p.x - kArm, p.y - kArm}, {p.x + kArm, p.y + kArm}}, false);
+        addRun(marks, {{p.x - kArm, p.y + kArm}, {p.x + kArm, p.y - kArm}}, false);
+    }
+    return touching;
+}
+
+void MapCanvas::addImpliedEdges(const core::Document& doc, core::EntityId target,
+                                const core::TrimGuide& guide,
+                                std::span<const core::PathCrossing> cuts)
+{
+    // WHERE AN EDGE WAS CARRIED ON TO CUT: from the real end of the edge to the
+    // cut it reaches, dotted — the boundary the user did not draw but is using.
+    // A straight end runs on along its line; an arc's end round its circle.
+    core::TrimGuide plain                   = guide;
+    plain.carry                             = false;
+    const std::vector<core::CurvePath> real = core::cutting_edges(doc, target, plain);
+    const std::size_t implied               = nextBatch(tokens_->accent.rgba(), 1.0f, true);
+    for (const core::PathCrossing& c : cuts) {
+        const core::CurvePath* nearest = nullptr;
+        double best                    = -1.0;
+        for (const core::CurvePath& edge : real) {
+            if (edge.pieces.empty()) continue;
+            const core::Point2 on = core::point_at(edge, core::place_of(edge, c.point));
+            const double d        = core::distance_squared(on, c.point);
+            if (best < 0.0 || d < best) {
+                best    = d;
+                nearest = &edge;
+            }
+        }
+        if (nearest == nullptr || best <= 1.0) continue; ///< on the edge itself
+        const core::PathPiece& head = nearest->pieces.front();
+        const core::PathPiece& tail = nearest->pieces.back();
+        const bool at_start =
+            core::distance_squared(head.from, c.point) <= core::distance_squared(tail.to, c.point);
+        const core::PathPiece& end = at_start ? head : tail;
+        core::CurvePath run_on;
+        core::PathPiece piece;
+        if (end.kind == core::PathPiece::Kind::Arc) {
+            piece.kind       = core::PathPiece::Kind::Arc;
+            piece.centre     = end.centre;
+            piece.radius     = end.radius;
+            piece.from       = at_start ? c.point : end.to;
+            piece.to         = at_start ? end.from : c.point;
+            piece.sweep_udeg = core::arc_sweep_udeg(piece.centre, piece.from, piece.to);
+        } else {
+            piece.from = at_start ? end.from : end.to;
+            piece.to   = c.point;
+        }
+        run_on.pieces.push_back(piece);
+        addCurve(implied, run_on);
+    }
+}
+
 void MapCanvas::addReadout(float x, float y, const std::string& text)
 {
     overlay_.labels.push_back(render::OverlayLabel{tokens_->readout.rgba(), x, y,
@@ -2277,14 +2353,16 @@ void MapCanvas::buildOverlay()
             }
         } else if (shape == command::RubberShape::Trim) {
             // WHAT THE CLICK WILL DO TO THE OBJECT UNDER IT: for BUDA the piece it
-            // throws away, in the ink of a destructive action and dashed; for UZAT
-            // the reach it adds, dashed in the accent. The object is the one the
-            // click would pick and the edges are the run's (`core::cutting_edges`),
-            // and the edit is `core::trim_curve` / `core::extend_curve` — the calls
-            // BUDA and UZAT make with the click. A line, an arc and a circle alike.
+            // throws away, in the ink of a destructive action and dashed, and every
+            // place the edges cut it — the candidates, a touch drawn as a ring; for
+            // UZAT the reach it adds, dashed in the accent. The object is the one
+            // the click would pick and the edges are the run's
+            // (`core::cutting_edges`), and the edit is `core::trim_curve` /
+            // `core::extend_curve` — the calls BUDA and UZAT make with the click.
             if (auto decoded = core::decode_trim_guide(session->prompt().rubber_payload)) {
-                const core::Document& doc = controller_.document();
-                const core::Point2 at     = cursorWorld();
+                const core::TrimGuide& guide = decoded.value();
+                const core::Document& doc    = controller_.document();
+                const core::Point2 at        = cursorWorld();
                 const core::EntityId e =
                     core::pick_nearest(doc, at, controller_.bus().aid_settings().pick_radius);
                 const std::optional<core::CurvePath> path =
@@ -2293,28 +2371,89 @@ void MapCanvas::buildOverlay()
                 const bool area =
                     path && path->closed && doc.entities().kind[e] == core::kPolylineKind;
                 if (path && !area) {
-                    const std::vector<core::CurvePath> edges =
-                        core::cutting_edges(doc, e, decoded.value().every, decoded.value().keys);
-                    const auto add = [this](std::size_t into, const core::CurvePath& piece) {
-                        curve_scratch_x_.clear();
-                        curve_scratch_y_.clear();
-                        core::path_outline(piece, curve_scratch_x_, curve_scratch_y_);
-                        if (curve_scratch_x_.size() >= 2)
-                            addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
-                    };
-                    if (decoded.value().extend) {
+                    const std::vector<core::CurvePath> edges = core::cutting_edges(doc, e, guide);
+                    std::string said;
+                    if (guide.extend) {
                         // The object as it is, solid, and the reach alone dashed:
                         // drawn over the extended whole, the dashes vanish into it.
                         if (auto reach = core::extend_curve(*path, edges, at)) {
-                            add(nextBatch(tokens_->accent.rgba(), 1.5f, false), *path);
-                            add(nextBatch(tokens_->accent.rgba(), 2.5f, true), reach.value().added);
+                            addCurve(nextBatch(tokens_->accent.rgba(), 1.5f, false), *path);
+                            addCurve(nextBatch(tokens_->accent.rgba(), 2.5f, true),
+                                     reach.value().added);
+                            said = "uzantı " +
+                                   trimmed(
+                                       static_cast<double>(core::path_length(reach.value().added)) /
+                                           1000.0,
+                                       3) +
+                                   " m";
                         }
-                    } else if (auto cut = core::trim_curve(*path, edges, at)) {
+                    } else if (auto cut = core::trim_curve(*path, edges, at, guide.keep)) {
                         const std::size_t kept = nextBatch(tokens_->accent.rgba(), 1.5f, false);
                         for (const core::CurvePath& piece : cut.value().kept)
-                            add(kept, piece);
-                        add(nextBatch(tokens_->danger.rgba(), 2.5f, true), cut.value().removed);
+                            addCurve(kept, piece);
+                        const std::size_t gone = nextBatch(tokens_->danger.rgba(), 2.5f, true);
+                        core::Mm going         = 0;
+                        for (const core::CurvePath& piece : cut.value().removed) {
+                            addCurve(gone, piece);
+                            going += core::path_length(piece);
+                        }
+                        if (guide.carry) addImpliedEdges(doc, e, guide, cut.value().cuts);
+                        const std::size_t touching = addCutMarks(cut.value().cuts);
+                        said = "atılacak " + trimmed(static_cast<double>(going) / 1000.0, 3) +
+                               " m · " + std::to_string(cut.value().cuts.size()) + " kesişim";
+                        if (touching != 0) said += " (" + std::to_string(touching) + " teğet)";
                     }
+                    if (look_.dynamic_input && !said.empty()) {
+                        const render::ScreenPointF c = toScreenF(to);
+                        addReadout(c.x + 12.0F, c.y + 24.0F, said);
+                        guide_label_ = said;
+                    }
+                }
+            }
+        } else if (shape == command::RubberShape::TrimFence) {
+            // THE WHOLE FENCE'S EDIT before Enter applies it: the fence run on to
+            // the cursor in the rubber band's own ink, every piece it would take
+            // marked as going — or every reach it would add — on every object it
+            // crosses. Drawn from `core::plan_fence`, the plan the command applies.
+            if (auto decoded = core::decode_trim_guide(session->prompt().rubber_payload)) {
+                const core::TrimGuide& guide    = decoded.value();
+                const core::Document& doc       = controller_.document();
+                std::vector<core::Point2> fence = session->prompt().rubber_chain;
+                fence.push_back(cursorWorld());
+                curve_scratch_x_.clear();
+                curve_scratch_y_.clear();
+                for (const core::Point2& p : fence) {
+                    curve_scratch_x_.push_back(p.x);
+                    curve_scratch_y_.push_back(p.y);
+                }
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
+
+                const core::FencePlan plan = core::plan_fence(doc, fence, guide);
+                const std::size_t kept     = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                const std::size_t gone     = nextBatch(
+                    (guide.extend ? tokens_->accent : tokens_->danger).rgba(), 2.5f, true);
+                std::size_t pieces = 0;
+                for (const core::FenceEdit& edit : plan.edits) {
+                    if (guide.extend) {
+                        if (auto now = core::path_of(doc, edit.target)) addCurve(kept, *now);
+                        addCurve(gone, edit.reach.added);
+                        pieces += edit.reach.added.pieces.size();
+                        continue;
+                    }
+                    for (const core::CurvePath& piece : edit.cut.kept)
+                        addCurve(kept, piece);
+                    for (const core::CurvePath& piece : edit.cut.removed)
+                        addCurve(gone, piece);
+                    pieces += edit.cut.removed.size();
+                }
+                if (look_.dynamic_input) {
+                    std::string said = std::to_string(pieces) +
+                                       (guide.extend ? " uç uzatılacak" : " parça budanacak");
+                    if (plan.passed_over != 0)
+                        said += " · " + std::to_string(plan.passed_over) + " nesne atlanır";
+                    const render::ScreenPointF c = toScreenF(to);
+                    addReadout(c.x + 12.0F, c.y + 24.0F, said);
+                    guide_label_ = said;
                 }
             }
         } else if (shape == command::RubberShape::Grip) {
@@ -2557,7 +2696,8 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::Candidates && shape != command::RubberShape::Angle &&
             shape != command::RubberShape::MeasureRun &&
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
-            shape != command::RubberShape::Corner && shape != command::RubberShape::Break) {
+            shape != command::RubberShape::Corner && shape != command::RubberShape::Break &&
+            shape != command::RubberShape::TrimFence) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point
