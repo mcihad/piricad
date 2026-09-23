@@ -32,6 +32,8 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - **Ayarlar penceresi okunur seçenekler gösteriyor** ("Her değişiklikte onay iste" …);
   değer adları `TERCİH` ve günlükte aynı kalıyor (`SettingSpec::labels`).
 - Sohbet paneli, yerleşim kaydı onu yüzen bırakmışsa her açılışta yerine oturuyor.
+- Bir istemcinin kendi yetkisini genişletme denemesi denetim kaydına `karar: yetki_reddi`
+  olarak yazılıyor.
 
 ### Eklendi — BUDA ve UZAT çitle, tıklananı tutarak ve sınırı uzatarak (C-04 tamam)
 

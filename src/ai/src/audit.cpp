@@ -115,4 +115,17 @@ std::string AuditLog::write_coordinate_refusal(std::string requester, std::strin
     return write(std::move(record));
 }
 
+std::string AuditLog::write_escalation_refusal(std::string requester, std::string tool,
+                                               std::string detail, std::int64_t utc_ms)
+{
+    AuditRecord record;
+    record.requester = std::move(requester);
+    record.decision  = "yetki_reddi";
+    record.utc_ms    = utc_ms;
+    record.commands  = {tool};
+    record.outcome   = std::move(detail);
+    record.prompt    = "(istemci kendi yetkisini genişletecek bir çağrı yaptı)";
+    return write(std::move(record));
+}
+
 } // namespace kentos::ai

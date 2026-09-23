@@ -118,6 +118,14 @@ public:
     std::string write_coordinate_refusal(std::string requester, std::string tool,
                                          std::string detail, std::int64_t utc_ms);
 
+    /// The record for a call that would have WIDENED ITS CALLER'S OWN AUTHORITY
+    /// — an approval, question or overwrite policy, a listener setting — and was
+    /// refused by name (`ai::escalates`, CLAUDE.md 5.23). Like a coordinate
+    /// refusal it never becomes a plan, so this is its only trace; and the
+    /// attempt is the one thing an audit most needs to find (TODOS S-04).
+    std::string write_escalation_refusal(std::string requester, std::string tool,
+                                         std::string detail, std::int64_t utc_ms);
+
     /// Every record written in this run, newest last. For the panel and the
     /// tests; the file is the durable copy.
     const std::vector<AuditRecord>& recent() const noexcept { return recent_; }

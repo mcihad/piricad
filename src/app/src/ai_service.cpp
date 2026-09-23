@@ -146,6 +146,12 @@ void AiService::recordCoordinateRefusal(const ai::AuditNote& note)
                                      QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
 }
 
+void AiService::recordEscalationRefusal(const ai::AuditNote& note)
+{
+    audit_->write_escalation_refusal(note.requester, note.tool, note.detail,
+                                     QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
+}
+
 void AiService::announce()
 {
     if (trouble_.isEmpty()) return;
@@ -369,8 +375,11 @@ core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& comman
     // asks "would this change who may do what" — and a call can be both
     // harmless-looking and a widening, which is exactly how an agent removes an
     // obstacle it met a moment ago (TODOS S-04).
-    if (std::string why = ai::escalation_refusal(*spec, args); !why.empty())
+    if (std::string why = ai::escalation_refusal(*spec, args); !why.empty()) {
+        audit_->write_escalation_refusal(requester, command_id, why,
+                                         QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
         return core::err(core::ErrorCode::Unsupported, why);
+    }
 
     auto ran = bus_.dispatch(command::Invocation{command_id, args, command::Origin::Ai});
     if (!ran) return ran.error();
@@ -479,8 +488,11 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
     for (const ai::PlanStep& step : plan.steps) {
         const command::CommandSpec* spec = bus_.registry().by_id(step.command_id);
         if (spec == nullptr) continue;
-        if (std::string why = ai::escalation_refusal(*spec, step.args); !why.empty())
+        if (std::string why = ai::escalation_refusal(*spec, step.args); !why.empty()) {
+            audit_->write_escalation_refusal(plan.requester, step.command_id, why,
+                                             QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
             return core::err(core::ErrorCode::Unsupported, why);
+        }
     }
 
     // ---- HAVE I ALREADY BEEN ASKED THIS? (TODOS M-06) ----------------------

@@ -86,6 +86,10 @@ public:
     /// becomes a plan, so this is its only trace).
     void recordCoordinateRefusal(const ai::AuditNote& note);
 
+    /// Writes the audit record for a call the protocol layer refused as a
+    /// widening of the caller's own authority (CLAUDE.md 5.23, TODOS S-04).
+    void recordEscalationRefusal(const ai::AuditNote& note);
+
     /// The application-scope settings, for the card that has to name the
     /// responsible engineer (`core.ai.sorumlu`).
     const core::Settings& appSettings() const noexcept { return bus_.app_settings(); }

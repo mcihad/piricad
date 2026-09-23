@@ -156,6 +156,10 @@ struct AuditNote
     /// the application can call `AuditLog::write_coordinate_refusal`; the client
     /// has already been answered with `isError` (CLAUDE.md 5.8, ai.md R10).
     bool coordinate_refusal{false};
+
+    /// The call would have widened the caller's own authority and was refused
+    /// by name; the application writes `AuditLog::write_escalation_refusal`.
+    bool escalation_refusal{false};
 };
 
 /// One HTTP response, and what the application must audit about it.

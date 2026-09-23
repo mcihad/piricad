@@ -269,6 +269,7 @@ void McpService::serve(const QHttpServerRequest& request, QHttpServerResponder& 
     // where a handle was declared never becomes a plan, so this is the only
     // place it can leave a trace (.claude/ai.md R10).
     if (outcome.audit.coordinate_refusal) ai_.recordCoordinateRefusal(outcome.audit);
+    if (outcome.audit.escalation_refusal) ai_.recordEscalationRefusal(outcome.audit);
 
     QHttpHeaders headers;
     for (const auto& [key, held] : outcome.headers)

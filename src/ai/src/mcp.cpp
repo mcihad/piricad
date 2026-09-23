@@ -576,8 +576,9 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // An agent that hits a refusal and tries to remove the obstacle is the
     // failure S-04 names, and the obstacle it would reach for is this one.
     if (std::string why = escalation_refusal(*spec, compiled.args); !why.empty()) {
-        out.audit.detail = why;
-        out.payload      = rpc_result(rpc.id, call_result(why, Json::null(), true, Json::null()));
+        out.audit.detail             = why;
+        out.audit.escalation_refusal = true;
+        out.payload = rpc_result(rpc.id, call_result(why, Json::null(), true, Json::null()));
         return out;
     }
 

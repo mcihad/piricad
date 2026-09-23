@@ -230,7 +230,7 @@ Her satır bir JSON nesnesidir ve her karar alındığı anda **diske yazılıp 
 | `kayit` | Kaydın kimliği: `d` ve on altı onaltılık hane |
 | `oneri` | Kararın verildiği önerinin kimliği |
 | `zaman_utc_ms` | Kararın zamanı, UTC |
-| `karar` | `uygula`, `reddet` ya da `koordinat_reddi` |
+| `karar` | `uygula`, `reddet`, `koordinat_reddi` ya da `yetki_reddi` |
 | `kullanici` | Bilgisayar başındaki kişi: kararı veren. `core.ai.sorumlu` ayarından gelir |
 | `karar_veren` | Kararı **ne** verdi: kartta tıklayan kişi için `insan`, onay politikası için `politika:otomatik` ya da `politika:riskli_islemlerde` |
 | `onay_politikasi` | Karar anında yürürlükte olan onay politikası |
@@ -263,7 +263,8 @@ kendisini hangi modelin sürdüğünü söylemez, ve hukuki bir kayda yazılan b
 yanlış bir olgudur.
 
 **Reddedilen öneriler de yazılır.** Aylar sonra sorulan soru genellikle mühendisin neyi
-**reddettiğidir**. Koordinat reddi de yazılır ve `karar` alanı `koordinat_reddi` olur.
+**reddettiğidir**. Koordinat reddi de yazılır ve `karar` alanı `koordinat_reddi` olur;
+bir istemcinin kendi yetkisini genişletme denemesi `yetki_reddi` olur.
 
 Geri çekilen bir öneri — istemci bağlantıyı kapattığında — defterde `geri_cekildi`
 durumuna geçer; kendi denetim satırını (`karar: geri_cek`) yazması **Faz 3'ün kalan
@@ -404,8 +405,8 @@ ise **yetkidir** — kimin neyi yapabileceğini belirler:
 | `core.mcp.otomatik` | Dinleyicinin kendiliğinden açılıp açılmadığı |
 
 Bunları **yalnız bilgisayar başındaki kullanıcı** değiştirir. Bir istemci — bir ajan, bir
-betik, sohbetteki model — değiştiremez; denemesi adıyla reddedilir. Reddin denetim kaydına
-da yazılması **Faz 3'ün kalan işlerindendir**; bugün ret istemciye ve günlüğe yazılır. Aynı kural `MCPSUNUCU` ve `YAPAYZEKAMODELİ` komutlarının **tamamı** için geçerlidir:
+betik, sohbetteki model — değiştiremez; denemesi adıyla reddedilir ve ret denetim kaydına
+`karar: yetki_reddi` olarak, deneyen istemcinin adı ve denenen komutla girer. Aynı kural `MCPSUNUCU` ve `YAPAYZEKAMODELİ` komutlarının **tamamı** için geçerlidir:
 bir ajanın kendi kapısını açması ya da kendi anahtar referansını yönetmesi, hangi argümanla
 olursa olsun bir yetki genişletmesidir.
 

@@ -25,6 +25,7 @@
 #include "kentos_cad/ai/mcp.hpp"
 #include "kentos_cad/ai/policy_path.hpp"
 
+#include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -1991,4 +1992,64 @@ TEST_CASE("A-03: bildirilen varsayımlar yanıta, öneriye ve denetim kaydına t
         error_of(server.handle(tool_call("katmanlari_listele", std::move(read)).view()));
     REQUIRE(refused.find("message") != nullptr);
     CHECK(refused.find("message")->as_string().find("varsayimlar") != std::string::npos);
+}
+
+namespace {
+
+/// A body for a command that is refused before any body runs.
+command::Task<void> never_runs(command::Context& /*ctx*/)
+{
+    co_return;
+}
+
+} // namespace
+
+TEST_CASE("S-04: kendi yetkisini genişletmeye çalışan çağrı reddedilir ve denetime işaretlenir")
+{
+    // THE ATTEMPT IS THE THING AN AUDIT MOST NEEDS TO FIND: a client that hit a
+    // refusal and reached for the approval policy. Refused by name, and the
+    // answer carries the flag the application writes the audit record from.
+    //
+    // No command that reaches an authority setting is open to an agent today, so
+    // the guard is proved on a registry where one is: the day a flag slips onto
+    // `TERCİH`, this is what stands between the agent and its own policy.
+    FakeDispatcher disp;
+    command::CommandSpec pref;
+    pref.id       = "core.preference";
+    pref.names    = {"TERCİH", "TERCIH", "PREFERENCE"};
+    pref.category = command::Category::System;
+    pref.params   = {
+        command::Param::text("ad", command::Arity::optional(), "Tercih adı").en("name"),
+        command::Param::text("deger", command::Arity::optional(), "Yeni değer").en("value")};
+    pref.flags   = command::Flags::Scriptable | command::Flags::AiAccessible;
+    pref.summary = "Bir tercihi okur ya da değiştirir.";
+    pref.run     = &never_runs; ///< refused before it could
+    REQUIRE(disp.reg.add(std::move(pref)).ok());
+    disp.cat = ai::build_catalog(disp.reg);
+    ai::ServerInfo info;
+    ai::ServerPolicy policy;
+    policy.token = "gizli-anahtar";
+    ai::McpServer server(disp, disp.reg, info, policy);
+
+    Json arguments;
+    arguments.set("ad", Json::string("core.ai.onay_politikasi"));
+    arguments.set("deger", Json::string("otomatik"));
+    const ai::HttpOutcome out =
+        server.handle(tool_call("core_preference", std::move(arguments)).view());
+    REQUIRE_EQ(out.status, 200);
+    CHECK(out.audit.escalation_refusal);
+    const Json result = result_of(out);
+    CHECK(is_error(result));
+    CHECK(text_of(result).find("core.ai.onay_politikasi") != std::string::npos);
+    CHECK(disp.plans.pending().empty()); ///< never a suggestion
+}
+
+TEST_CASE("S-04: yetki reddi denetim satırı yetki_reddi kararını taşır")
+{
+    std::vector<std::string> lines;
+    ai::AuditLog audit([&lines](const std::string& line) { lines.push_back(line); });
+    audit.write_escalation_refusal("istemci #1", "core_preference", "Bu ayar ajana kapalı.", 0);
+    REQUIRE_EQ(lines.size(), 1u);
+    CHECK(lines.front().find("\"karar\":\"yetki_reddi\"") != std::string::npos);
+    CHECK(lines.front().find("istemci #1") != std::string::npos);
 }
