@@ -351,6 +351,12 @@ std::optional<std::string> parallel_refusal(const Document& doc, EntityId e)
     return std::nullopt;
 }
 
+bool parallel_encloses(const Document& doc, EntityId e)
+{
+    auto shape = shape_of(doc, e);
+    return shape && shape.value().cls != Shape::Class::Runs;
+}
+
 Result<ParallelSide> parallel_side_at(const Document& doc, EntityId e, Point2 p)
 {
     auto shape = shape_of(doc, e);

@@ -98,6 +98,13 @@ struct Parallel
 /// have none: a hatch's boundary does, and a point's neighbourhood is a BUFFER.
 std::optional<std::string> parallel_refusal(const Document& doc, EntityId e);
 
+/// Whether `e`'s sides are `Outside`/`Inside` — a closed shape, a circle, an
+/// arc — rather than an open run's `Left`/`Right`. What a caller that was given
+/// a signed distance and no side needs to know: plus grows a closed shape and
+/// minus shrinks it, and an open run has no such pair. False for an entity that
+/// has no parallel at all (`parallel_refusal`).
+bool parallel_encloses(const Document& doc, EntityId e);
+
 /// The side of `e` that `p` is on: `Left`/`Right` of an open run, `Outside`/
 /// `Inside` of a closed shape (and of an arc, by its centre). Refused for a
 /// point ON an open run, whose side is not a side at all.

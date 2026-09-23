@@ -848,13 +848,21 @@ def offset(
     objects: list[int] = ...,
     distance: int = ...,
     corner: str = ...,
+    side: str = ...,
+    through: Coord = ...,
+    source: str = ...,
+    properties: str = ...,
 ) -> int:
-    """Seçili nesnelerin verilen mesafede paralelini çizer.
+    """Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.
 
     Komut: core.offset (OFSET)
         objects — Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı]
-        distance — Ofset mesafesi, milimetre; eksi değer içeri
+        distance — Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri
         corner — KÖŞE | YUVARLAK | PAH — dış köşenin biçimi
+        side — Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan
+        through — Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce]
+        source — Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil
+        properties — Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da etkin katman
     """
 
 def sector(

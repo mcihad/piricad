@@ -161,6 +161,11 @@ public:
     /// Takes every measurement mark off the canvas.
     void clearMeasureMarks();
 
+    /// Tells the canvas the document may have changed. The shell calls it after
+    /// every command; a mark taken before a change describes a drawing that is
+    /// gone and is dropped at the next frame.
+    void noteDocumentChange();
+
     /// How many measurement marks are on the canvas, for the probes.
     std::size_t measureMarkCount() const noexcept { return marks_.size(); }
 
@@ -673,15 +678,22 @@ private:
     std::vector<core::Mm> curve_scratch_x_;
     std::vector<core::Mm> curve_scratch_y_;
 
-    /// A measurement left on the canvas, and the document revision it was
-    /// taken at: a mark older than the drawing describes a drawing that is gone.
+    /// A measurement left on the canvas, and how many document changes the
+    /// canvas had seen when it was taken: a mark older than the drawing
+    /// describes a drawing that is gone.
+    ///
+    /// NOT THE REVISION ITSELF. `YENİ` starts the count again, so a new drawing
+    /// three edits in carried the revision a measurement of the old one was
+    /// taken at, and the old measurement was drawn over the new drawing.
     struct StoredMark
     {
         command::MeasureMark mark;
-        std::uint64_t revision{0};
+        std::uint64_t edits{0};
     };
 
     std::vector<StoredMark> marks_;
+    std::uint64_t seen_revision_{0}; ///< the revision `noteDocumentChange` last saw
+    std::uint64_t edits_{0};         ///< how many changes it has seen
 
     /// Where the press landed, so a CLICK on a grip can be told from a DRAG of
     /// one. Without it, taking hold of a corner and letting go without moving

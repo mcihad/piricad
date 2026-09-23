@@ -5411,6 +5411,7 @@ void MainWindow::onEcho(const QString& text)
 
 void MainWindow::onDocumentChanged()
 {
+    canvas_->noteDocumentChange();
     refreshLayerCombo();
     layerPanel_->refresh();
     attributePanel_->refresh();

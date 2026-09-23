@@ -16,6 +16,7 @@
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
+#include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/settings.hpp"
@@ -1557,9 +1558,18 @@ double MapCanvas::addAngleSweep(std::size_t batch, core::Point2 vertex, core::Po
     return between;
 }
 
+void MapCanvas::noteDocumentChange()
+{
+    if (const std::uint64_t now = controller_.document().revision(); now != seen_revision_) {
+        seen_revision_ = now;
+        ++edits_;
+    }
+}
+
 void MapCanvas::addMeasureMark(const command::MeasureMark& mark)
 {
-    marks_.push_back(StoredMark{mark, controller_.document().revision()});
+    noteDocumentChange();
+    marks_.push_back(StoredMark{mark, edits_});
     update();
 }
 
@@ -1575,8 +1585,8 @@ void MapCanvas::buildMeasureMarks()
     // A MARK OLDER THAN THE DRAWING DESCRIBES A DRAWING THAT IS GONE: a length
     // left beside a boundary that has since moved is a wrong number in the right
     // place, which is the worst kind.
-    const std::uint64_t now = controller_.document().revision();
-    std::erase_if(marks_, [now](const StoredMark& m) { return m.revision != now; });
+    noteDocumentChange();
+    std::erase_if(marks_, [this](const StoredMark& m) { return m.edits != edits_; });
     if (marks_.empty()) return;
 
     const auto screen = [this](core::Point2 p) { return render::to_f(view_.to_screen(p)); };
@@ -2244,6 +2254,80 @@ void MapCanvas::buildOverlay()
                 addReadout(static_cast<float>(cx / n) - 40.0F, static_cast<float>(cy / n), text);
                 guide_label_ = text;
             }
+        } else if (shape == command::RubberShape::Parallel) {
+            // THE PARALLELS THE CLICK WILL MAKE, each on the side of its object
+            // the cursor is on — `core::parallel_side_at` and
+            // `core::entity_parallel`, the two calls OFSET makes with the click.
+            // The distance was typed; the cursor only chooses the side, which is
+            // the one thing a number cannot say.
+            if (auto decoded = core::decode_parallel_preview(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::Point2 at     = cursorWorld();
+                const std::size_t lit     = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                for (const std::int64_t key : decoded.value().keys) {
+                    const core::EntityId e =
+                        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                    if (e == core::kNoEntity || !doc.alive(e)) continue;
+                    auto side = core::parallel_side_at(doc, e, at);
+                    if (!side) continue;
+                    auto made = core::entity_parallel(doc, e, decoded.value().distance,
+                                                      side.value(), decoded.value().join);
+                    if (!made) continue;
+                    for (const core::ParallelPiece& piece : made.value().pieces) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        bool shut = false;
+                        switch (piece.shape) {
+                        case core::ParallelPiece::Shape::Run:
+                            for (const core::Point2& p : piece.run) {
+                                curve_scratch_x_.push_back(p.x);
+                                curve_scratch_y_.push_back(p.y);
+                            }
+                            shut = piece.closed;
+                            break;
+                        case core::ParallelPiece::Shape::Face:
+                            for (const core::Polygon& face : piece.faces) {
+                                std::vector<core::Mm> xs;
+                                std::vector<core::Mm> ys;
+                                for (const core::Point2& p : face.exterior) {
+                                    xs.push_back(p.x);
+                                    ys.push_back(p.y);
+                                }
+                                addWorldRun(lit, xs, ys, true);
+                                for (const std::vector<core::Point2>& hole : face.holes) {
+                                    xs.clear();
+                                    ys.clear();
+                                    for (const core::Point2& p : hole) {
+                                        xs.push_back(p.x);
+                                        ys.push_back(p.y);
+                                    }
+                                    addWorldRun(lit, xs, ys, true);
+                                }
+                            }
+                            break;
+                        case core::ParallelPiece::Shape::Circle:
+                            core::circle_outline(piece.centre, piece.radius, curve_scratch_x_,
+                                                 curve_scratch_y_);
+                            shut = true;
+                            break;
+                        case core::ParallelPiece::Shape::Arc:
+                            core::arc_outline(piece.centre, piece.radius, piece.start, piece.end,
+                                              curve_scratch_x_, curve_scratch_y_);
+                            break;
+                        }
+                        if (curve_scratch_x_.size() >= 2)
+                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut);
+                    }
+                }
+                if (look_.dynamic_input) {
+                    const render::ScreenPointF c = toScreenF(to);
+                    const std::string text =
+                        "paralel " +
+                        trimmed(static_cast<double>(decoded.value().distance) / 1000.0, 3) + " m";
+                    addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                    guide_label_ = text;
+                }
+            }
         } else if (shape == command::RubberShape::Ghost) {
             // THE OBJECTS THEMSELVES, under the transform the cursor implies:
             // where TAŞI will put them, how far round DÖNDÜR will turn them, how
@@ -2306,7 +2390,7 @@ void MapCanvas::buildOverlay()
         if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
             shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates &&
             shape != command::RubberShape::Angle && shape != command::RubberShape::MeasureRun &&
-            shape != command::RubberShape::MeasureRing) {
+            shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

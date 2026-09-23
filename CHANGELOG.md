@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — OFSET gerçek paralel çiziyor, tarafı imleçle gösteriliyor
+
+OFSET açık bir çizginin iki yanını saran kapalı bir alan (bant) üretiyordu; o bir
+paralel değil tampondu. Artık paralel kaynağıyla aynı türde:
+
+- Açık çizginin paraleli **tek yanda açık bir çizgi**: `(0,0)→(10,0)` çizgisinin sol
+  2 m paraleli `(0,2)→(10,2)`. Sol ve sağ çizim yönüne göredir.
+- Alan delikleriyle alan, daire yarıçapı değişmiş daire, yay aynı merkezli yay
+  olarak çıkıyor. Elips, spline ve yaylı çoklu çizginin paraleli çizildiği hâliyle
+  alınıp çoklu çizgi oluyor ve komut gerçek eğriden ne kadar saptığını yazıyor.
+- **Taraf gösteriliyor:** mesafe yazıldıktan sonra paralel imlecin olduğu yanda
+  vurgulu çiziliyor, tıklama o yanı seçiyor. Betikte `taraf=sol|sag|dis|ic|iki`,
+  `nokta=` ya da (tam bir satırda) mesafenin işareti.
+- Paralel kaynağın katmanına ve stiline çiziliyor (`ozellik=aktif` ile etkin katmana);
+  `kaynak=sil` kaynağı siliyor. Çöken sonuç nesne nesne söyleniyor.
+- Nokta, yazı, ölçü, lider, tarama ve blok referansı artık sebebiyle reddediliyor.
+
 ### Değişti — ölçüm araçları: sürekli ölçüm, köşelerden alan, tuvalde kalan sonuç
 
 - **ÖLÇ noktadan noktaya ölçüyor.** İkinci noktada durmuyor; her yeni nokta bir kenar

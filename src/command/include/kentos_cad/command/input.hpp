@@ -78,6 +78,8 @@ enum class RubberShape : std::uint8_t {
                  ///< length on it and the total at the cursor: ÖLÇ
     MeasureRing, ///< the face the corners so far and the cursor enclose, with its area and
                  ///< perimeter written in it: ALANÖLÇ yontem=nokta
+    Parallel,    ///< the parallels of the objects `rubber_payload` names, on the side of each
+                 ///< the cursor is on: OFSET
 };
 
 struct Prompt

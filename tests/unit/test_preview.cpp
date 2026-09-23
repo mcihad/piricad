@@ -15,6 +15,7 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/grips.hpp"
+#include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -708,4 +709,165 @@ TEST_CASE("KOORDİNAT ve AÇIÖLÇ okumalarını tuvalde bırakır")
     CHECK(marks[1].shape == MeasureMark::Shape::Angle);
     CHECK(marks[1].points.size() == 3);
     CHECK_FALSE(marks[1].labels.front().empty());
+}
+
+// =============================================================================
+// OFSET: the real parallel, on the side that is shown (TODOS C-03)
+// =============================================================================
+
+namespace {
+
+/// The vertices of the only ring of the entity with `key`.
+std::vector<core::Point2> ring_of(const core::Document& doc, std::int64_t key)
+{
+    std::vector<core::Point2> out;
+    const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+    if (e == core::kNoEntity) return out;
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+    const auto xs             = doc.geometry().ring_xs(span.first);
+    const auto ys             = doc.geometry().ring_ys(span.first);
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(core::Point2{xs[v], ys[v]});
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("OFSET: açık çizginin sol 2 m paraleli açık (0,2)→(10,2) çizgisidir, bant değil")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sol", Origin::Test).ok());
+    REQUIRE(r.doc.live_entity_count() == 2);
+    const core::EntityId made = r.doc.slot_of(static_cast<core::EntityKey>(2));
+    CHECK(
+        r.doc.geometry().ring_role[r.doc.geometry().rings_of(r.doc.entities().slot[made]).first] ==
+        core::RingRole::Open);
+    CHECK(ring_of(r.doc, 2) == std::vector<core::Point2>{{0, 2'000}, {10'000, 2'000}});
+
+    // RIGHT IS THE OTHER SIDE, and reversing the line reverses both.
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag", Origin::Test).ok());
+    CHECK(ring_of(r.doc, 3) == std::vector<core::Point2>{{0, -2'000}, {10'000, -2'000}});
+    Rig back;
+    REQUIRE(back.bus.execute_line("ÇOKLUÇİZGİ 10,0 0,0", Origin::Test).ok());
+    REQUIRE(back.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sol", Origin::Test).ok());
+    CHECK(ring_of(back.doc, 2) == std::vector<core::Point2>{{10'000, -2'000}, {0, -2'000}});
+}
+
+TEST_CASE("OFSET: daire daire kalır, yarıçapı değişir; çöken sonuç açıklanır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("DAİRE 0,0 5,0", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=2000", Origin::Test).ok()); ///< plus: out
+    const core::EntityId grown = r.doc.slot_of(static_cast<core::EntityKey>(2));
+    REQUIRE(grown != core::kNoEntity);
+    CHECK(r.doc.entities().kind[grown] == core::kCircleKind);
+    CHECK(r.doc.entities().box_of(grown).max_x == 7'000);
+
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=-2000", Origin::Test).ok()); ///< minus: in
+    CHECK(r.doc.entities().box_of(r.doc.slot_of(static_cast<core::EntityKey>(3))).max_x == 3'000);
+
+    const std::string why =
+        REFUSED(r.bus.execute_line("OFSET nesneler=1 mesafe=6000 taraf=ic", Origin::Test));
+    CHECK(why.find("paraleli kalmıyor") != std::string::npos);
+}
+
+TEST_CASE("OFSET: delikli alanın paraleli deliğiyle birlikte alandır")
+{
+    Rig r;
+    REQUIRE(r.bus
+                .execute_line("ALAN 0,0 20,0 20,20 0,20 bolum=4 5,5 15,5 15,15 5,15 bolum=4",
+                              Origin::Test)
+                .ok());
+    const core::EntityId src = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(r.doc.geometry().rings_of(r.doc.entities().slot[src]).count == 2);
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=dis", Origin::Test).ok());
+    const core::EntityId made = r.doc.slot_of(static_cast<core::EntityKey>(2));
+    REQUIRE(made != core::kNoEntity);
+    CHECK(r.doc.geometry().rings_of(r.doc.entities().slot[made]).count == 2); ///< the hole stays
+}
+
+TEST_CASE("OFSET arayüzde mesafeyi sorar, tarafı imleçle gösterir; Esc hiçbir şey çizmez")
+{
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+        auto started = r.bus.begin_interactive("OFSET", Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().kind == ParamKind::Number);
+        REQUIRE(s.supply(Value::number(2.0)).ok());
+
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().param == "nokta");
+        CHECK(s.prompt().rubber_shape == RubberShape::Parallel);
+        auto guide = core::decode_parallel_preview(s.prompt().rubber_payload);
+        REQUIRE(guide.ok());
+        CHECK(guide.value().keys == std::vector<std::int64_t>{1});
+        CHECK(guide.value().distance == 2'000);
+
+        REQUIRE(s.supply(Value::point(core::Point2{5'000, -3'000})).ok()); ///< below: right
+        REQUIRE(r.bus.finish(s).ok());
+        CHECK(ring_of(r.doc, 2) == std::vector<core::Point2>{{0, -2'000}, {10'000, -2'000}});
+        CHECK(r.journal.entries().back().args.get("nokta").as_point() ==
+              core::Point2{5'000, -3'000});
+    }
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+        const std::uint64_t before = r.doc.content_hash();
+        auto started               = r.bus.begin_interactive("OFSET nesneler=1", Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        REQUIRE(s.supply(Value::number(2.0)).ok());
+        REQUIRE(s.waiting());
+        s.cancel(); ///< Esc at the side
+        const auto done = r.bus.finish(s);
+        REQUIRE(done.ok());
+        CHECK(done.value().message == "İptal edildi");
+        CHECK(r.doc.content_hash() == before);
+    }
+}
+
+TEST_CASE("OFSET: tam bir satır iki yanı verir; kaynak=sil ve ozellik=aktif söyleneni yapar")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=CEKME", Origin::Test).ok());
+
+    // An open line given neither side nor point: both sides, on the source's layer.
+    REQUIRE(r.bus.execute_line("OFSET nesneler=1 mesafe=2000", Origin::Test).ok());
+    CHECK(r.doc.live_entity_count() == 3);
+    const core::EntityId one = r.doc.slot_of(static_cast<core::EntityKey>(2));
+    CHECK(r.doc.layers()[r.doc.entities().layer[one]].name == "YOL");
+
+    // On the active layer when asked, and the source gone when asked.
+    REQUIRE(r.bus
+                .execute_line("OFSET nesneler=1 mesafe=3000 taraf=sol ozellik=aktif kaynak=sil",
+                              Origin::Test)
+                .ok());
+    const core::EntityId last = r.doc.slot_of(static_cast<core::EntityKey>(4));
+    REQUIRE(last != core::kNoEntity);
+    CHECK(r.doc.layers()[r.doc.entities().layer[last]].name == "CEKME");
+    const core::EntityId source = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    CHECK((source == core::kNoEntity || !r.doc.alive(source)));
+}
+
+TEST_CASE("OFSET: paraleli olmayan nesne ve yaklaşık eğri sebebiyle söylenir")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("NOKTA 0,0", Origin::Test).ok());
+    const std::string why =
+        REFUSED(r.bus.execute_line("OFSET nesneler=1 mesafe=1000", Origin::Test));
+    CHECK(why.find("Nesne 1") != std::string::npos);
+
+    Rig curve;
+    REQUIRE(curve.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test).ok());
+    curve.echoed.clear();
+    REQUIRE(curve.bus.execute_line("OFSET nesneler=1 mesafe=1000", Origin::Test).ok());
+    CHECK(curve.echoed.find("kendi türünde paraleli olmayan") != std::string::npos);
+    CHECK(curve.echoed.find("sapar") != std::string::npos);
 }

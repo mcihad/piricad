@@ -1490,6 +1490,20 @@ int main(int argc, char** argv)
         later([hover] { hover({10'000, 14'000}); });
         later([&window, shot] { shot(QStringLiteral("22-olcum-isaretleri"), &window); });
 
+        // OFSET: the parallel on the side the cursor is on — one side, then the
+        // other, the distance typed once.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 12,0 20,8 20,14")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("OFSET"));
+            window.runScriptLine(QStringLiteral("2"));
+        });
+        later([hover] { hover({8'000, -3'000}); });
+        later([&window, shot] { shot(QStringLiteral("23-ofset-sag"), &window); });
+        later([hover] { hover({8'000, 4'000}); });
+        later([&window, shot] { shot(QStringLiteral("24-ofset-sol"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         later([] { QApplication::exit(0); });
     }
 

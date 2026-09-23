@@ -25,23 +25,23 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 
 | Tür | Seç | Yakala | Tutamaç | Taşı | Döndür | Ölçekle | Aynala | Kes (BUDA) | Uzat | Böl | Kır | Paralel (OFSET) | Yuvarla | Pah | Uç uca | Ölç | Proje dosyası |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| [Çizgi](#cizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | — | — | ✓ | ✓ | ✓ |
-| [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ◐ | ✓ | ✓ | ✓ | ✓ |
+| [Çizgi](#cizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | ✓ |
+| [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✓ | ✓ | ✓ |
 | [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ◐ | ✗ | ✗ | — | ✓ | ✓ |
+| [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
 | [Çok parçalı alan](#cokparca) | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ |
-| [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ◐ | — | — | — | ✓ | ✓ |
-| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | — | — | ✗ | ✓ | ✓ |
+| [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | — | — | — | ✓ | ✓ |
+| [Yay](#yay) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | — | — | ✗ | ✓ | ✓ |
 | [Elips](#elips) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ◐ | — | — | — | ✓ | ✓ |
 | [Spline](#spline) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | — | — | ✗ | ✓ | ✓ |
-| [Tarama](#tarama) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
+| [Tarama](#tarama) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✗ | ✗ | ✗ | — | ✓ | ✓ |
 | [Nokta](#nokta) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Yazı](#yazi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Blok referansı](#blok) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
-| [Lider](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ | — | — | ✗ | ✓ | ✓ |
+| [Lider](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
-238 hücre: 138 destekli, 10 kısmi, 38 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
+238 hücre: 142 destekli, 4 kısmi, 40 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
@@ -65,7 +65,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✓ destekli | uzadı: 50.000 m → 60.000 m; sonuç: ÇOKLUÇİZGİ |
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
 | Kır | ✓ destekli | aradaki parça çıktı: 50.000 m → 33.500 m; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 200.000 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ✓ destekli | 2 paralel (ÇOKLUÇİZGİ), kaynak korundu |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✓ destekli | iki parça tek ÇOKLUÇİZGİ oldu, uzunluk korundu |
@@ -87,7 +87,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✓ destekli | uzadı: 90.000 m → 100.000 m; sonuç: ÇOKLUÇİZGİ |
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
 | Kır | ✓ destekli | aradaki parça çıktı: 90.000 m → 60.300 m; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 360.000 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ✓ destekli | 2 paralel (ÇOKLUÇİZGİ), kaynak korundu |
 | Yuvarla | ◐ kısmi | 5 m yarıçapla yuvarlandı; yuvarlatma yayı kirişlerle (ÇOKLUÇİZGİ) |
 | Pah | ✓ destekli | 5 m pah kırıldı; sonuç: ÇOKLUÇİZGİ |
 | Uç uca | ✓ destekli | iki parça tek ÇOKLUÇİZGİ oldu, uzunluk korundu |
@@ -109,7 +109,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 320.000 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ◐ kısmi | YAYLIÇİZGİ paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -131,7 +131,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 açık bir çizgi değil; bu komut yalnız açık çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 açık bir çizgi değil. |
-| Paralel (OFSET) | ◐ kısmi | 1 delikli alandan 2 ayrı nesne (ÇOKLUÇİZGİ) çıktı, 0 delik kaldı — delik ilişkisi kayboldu |
+| Paralel (OFSET) | ✓ destekli | 1 paralel (ÇOKLUÇİZGİ), kaynak korundu |
 | Yuvarla | ✗ yok | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
 | Pah | ✗ yok | Nesne 1 çok halkalı; köşe işlemleri tek halkalı nesnelerde çalışır. |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
@@ -157,7 +157,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ◐ kısmi | DAİRE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
+| Paralel (OFSET) | ✓ destekli | yarıçap 2 m değişti, daire kaldı |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
@@ -179,7 +179,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 478.489 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ✓ destekli | 1 paralel (YAY), kaynak korundu |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -223,7 +223,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 218.880 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ◐ kısmi | SPLINE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
@@ -245,7 +245,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ✓ destekli | 1 paralel (ÇOKLUÇİZGİ), kaynak korundu |
+| Paralel (OFSET) | ✗ yok | Nesne 1: Bir taramanın paraleli olmaz; sınırının paralelini alın. |
 | Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
@@ -355,7 +355,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
-| Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 48.280 m²) üretildi — paralel değil tampon |
+| Paralel (OFSET) | ✗ yok | Nesne 1: Bir açıklamanın (ölçü, lider) paraleli olmaz; ölçtüğü çizginin paralelini alın. |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |

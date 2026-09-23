@@ -140,7 +140,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`cad.pan`](#cadpan) | `core.pan` | `KAYDIR` | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
-| [`cad.offset`](#cadoffset) | `core.offset` | `OFSET` | Seçili nesnelerin verilen mesafede paralelini çizer. |
+| [`cad.offset`](#cadoffset) | `core.offset` | `OFSET` | Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire. |
 | [`cad.sector`](#cadsector) | `core.sector` | `DİLİM` | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
 | [`cad.annulus`](#cadannulus) | `core.annulus` | `HALKA` | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`cad.ellipse_draw`](#cadellipse_draw) | `core.ellipse_draw` | `ELİPS` | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
@@ -1368,7 +1368,7 @@ cad.pan(
 
 ### `cad.offset`
 
-Seçili nesnelerin verilen mesafede paralelini çizer.
+Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.
 
 Komut: `core.offset` — `OFSET`
 
@@ -1377,14 +1377,22 @@ cad.offset(
     objects: list[int],
     distance: int,
     corner: str,
+    side: str,
+    through: Coord,
+    source: str,
+    properties: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `distance` | `int` | `mesafe` | Ofset mesafesi, milimetre; eksi değer içeri |
+| `distance` | `int` | `mesafe` | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri |
 | `corner` | `str` | `kose` | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi |
+| `side` | `str` | `taraf` | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan |
+| `through` | `Coord` | `nokta` | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce] |
+| `source` | `str` | `kaynak` | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil |
+| `properties` | `str` | `ozellik` | Paralelin katmanı ve stili: kaynak nesneninki (öntanımlı) ya da etkin katman |
 
 [Komut sayfası](../komutlar/offset.md)
 
