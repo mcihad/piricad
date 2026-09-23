@@ -279,6 +279,18 @@ YAKINLAŞ mod=ÇARPAN carpan=1.5
 Evet/hayır değerleri için `evet`, `hayır`, `yes`, `no`, `true`, `false`, `1`, `0`
 kabul edilir.
 
+**Bir nokta listesinin anahtarı, ardından gelen koordinatları da toplar.** Birden çok
+nokta alan bir parametrenin adını bir kez yazmanız yeter; arkasından boşlukla
+yazdığınız her koordinat o listeye eklenir:
+
+```text
+ALANÖLÇ noktalar=0,0 20,0 20,10 0,10
+KOPYALA baslangic=0,0 bitis=20,0 40,0 60,0
+```
+
+Liste, koordinat olmayan ilk değerde ya da başka bir anahtarda biter. Nesne kimliği
+gibi başka listelerde anahtarı yinelersiniz: `SİL nesneler=1 nesneler=2`.
+
 İçinde boşluk olan metin tırnak içine alınır:
 
 ```

@@ -590,3 +590,122 @@ TEST_CASE("core: köşe ekleme, en yakın tutamak ve en yakın kenar")
     CHECK(back.value().insert);
     CHECK_FALSE(core::decode_grip_guide(std::vector<std::uint8_t>{1}).ok());
 }
+
+// =============================================================================
+// Measuring: a run, a face by its corners, and the answer left on the canvas
+// =============================================================================
+
+TEST_CASE("ÖLÇ noktadan noktaya ölçer: her kenar, toplam ve tuvalde kalan işaret")
+{
+    Rig r;
+    std::vector<MeasureMark> marks;
+    r.bus.on_measure_mark = [&marks](const MeasureMark& m) { marks.push_back(m); };
+
+    auto started = r.bus.begin_interactive("ÖLÇ", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::MeasureRun);
+    REQUIRE(s.supply(Value::point(core::Point2{3'000, 4'000})).ok()); ///< 5 m
+
+    // IT DOES NOT STOP AT TWO: the next point is asked for, with the run so far.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "devam");
+    CHECK(s.prompt().rubber_shape == RubberShape::MeasureRun);
+    CHECK(s.prompt().rubber_chain.size() == 2);
+    REQUIRE(s.supply(Value::point(core::Point2{3'000, 10'000})).ok()); ///< 6 m more
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value{}).ok()); ///< Enter
+    REQUIRE(r.bus.finish(s).ok());
+
+    CHECK(r.echoed.find("Mesafe: 5,000 m") != std::string::npos);
+    CHECK(r.echoed.find("Kenar 2: 6,000 m") != std::string::npos);
+    CHECK(r.echoed.find("Toplam: 11,000 m") != std::string::npos);
+    CHECK(r.echoed.find("Toplam uzunluk: 11,000 m") != std::string::npos);
+
+    REQUIRE(marks.size() == 1);
+    CHECK(marks[0].shape == MeasureMark::Shape::Run);
+    CHECK(marks[0].points.size() == 3);
+    CHECK(marks[0].labels == std::vector<std::string>{"5,000 m", "6,000 m", "toplam 11,000 m"});
+}
+
+TEST_CASE("ÖLÇ iki noktayla eskisi gibi tek kenar verir; betik devam= ile sürdürür")
+{
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("ÖLÇ 0,0 3,4", Origin::Script).ok());
+        CHECK(r.echoed.find("Mesafe: 5,000 m") != std::string::npos);
+        CHECK(r.echoed.find("Toplam uzunluk") == std::string::npos);
+    }
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("ÖLÇ 0,0 3,4 devam=3,10 devam=0,10", Origin::Script).ok());
+        CHECK(r.echoed.find("Kenar 3: 3,000 m") != std::string::npos);
+        CHECK(r.echoed.find("Toplam uzunluk: 14,000 m   (3 kenar)") != std::string::npos);
+    }
+}
+
+TEST_CASE("ALANÖLÇ köşelerden ölçer: alan imleçle birlikte, sonuç tuvalde")
+{
+    Rig r;
+    std::vector<MeasureMark> marks;
+    r.bus.on_measure_mark = [&marks](const MeasureMark& m) { marks.push_back(m); };
+
+    auto started = r.bus.begin_interactive("ALANÖLÇ yontem=nokta", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s                   = *started.value();
+    const core::Point2 corners[] = {{0, 0}, {20'000, 0}, {20'000, 10'000}, {0, 10'000}};
+    for (std::size_t i = 0; i < 4; ++i) {
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().param == "noktalar");
+        // The face follows the cursor from the second corner on.
+        CHECK((s.prompt().rubber_shape == RubberShape::MeasureRing) == (i > 0));
+        REQUIRE(s.supply(Value::point(corners[i])).ok());
+    }
+    REQUIRE(s.supply(Value{}).ok()); ///< Enter
+    REQUIRE(r.bus.finish(s).ok());
+
+    CHECK(r.echoed.find("Alan: 200,00 m²   çevre: 60,000 m   (4 köşe)") != std::string::npos);
+    REQUIRE(marks.size() == 1);
+    CHECK(marks[0].shape == MeasureMark::Shape::Ring);
+    CHECK(marks[0].points.size() == 4);
+
+    // A SCRIPT's corners say which method it means.
+    Rig scripted;
+    REQUIRE(scripted.bus.execute_line("ALANÖLÇ noktalar=0,0 20,0 20,10 0,10", Origin::Script).ok());
+    CHECK(scripted.echoed.find("Alan: 200,00 m²") != std::string::npos);
+
+    // Two corners enclose nothing.
+    Rig few;
+    const std::string why =
+        REFUSED(few.bus.execute_line("ALANÖLÇ yontem=nokta noktalar=0,0 20,0", Origin::Script));
+    CHECK(why.find("en az üç köşe") != std::string::npos);
+}
+
+TEST_CASE("ALANÖLÇ açık bir çizgiye alan değil uzunluk der")
+{
+    // "alan: 0,00 m²" read as a measured empty parcel; the figure the user
+    // wanted was printed under the name `çevre`.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 30,0 30,40", Origin::Test).ok());
+    r.echoed.clear();
+    REQUIRE(r.bus.execute_line("ALANÖLÇ nesneler=1", Origin::Script).ok());
+    CHECK(r.echoed.find("kapalı değil, alanı yok; uzunluk: 70,000 m") != std::string::npos);
+    CHECK(r.echoed.find("0,00 m²") == std::string::npos);
+}
+
+TEST_CASE("KOORDİNAT ve AÇIÖLÇ okumalarını tuvalde bırakır")
+{
+    Rig r;
+    std::vector<MeasureMark> marks;
+    r.bus.on_measure_mark = [&marks](const MeasureMark& m) { marks.push_back(m); };
+    REQUIRE(r.bus.execute_line("KOORDİNAT 485320.150,4310220.400", Origin::Script).ok());
+    REQUIRE(r.bus.execute_line("AÇIÖLÇ 0,0 10,0 0,10", Origin::Script).ok());
+    REQUIRE(marks.size() == 2);
+    CHECK(marks[0].shape == MeasureMark::Shape::Point);
+    CHECK(marks[0].labels.front() == "Y 485320,150 m  X 4310220,400 m");
+    CHECK(marks[1].shape == MeasureMark::Shape::Angle);
+    CHECK(marks[1].points.size() == 3);
+    CHECK_FALSE(marks[1].labels.front().empty());
+}

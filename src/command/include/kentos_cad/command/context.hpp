@@ -9,6 +9,7 @@
 #pragma once
 
 #include "kentos_cad/command/input.hpp"
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/command/value.hpp"
@@ -230,6 +231,11 @@ public:
     /// It goes nowhere near the document: not hashed, not journalled, not
     /// undoable. It rides out on `DispatchResult::report`.
     void report(core::Json data) const;
+
+    /// Leaves what a measurement measured on the canvas, when there is one
+    /// (`Bus::on_measure_mark`); nothing otherwise. Never recorded: a mark is
+    /// view state, and the command that makes it stays read-only.
+    void mark(const MeasureMark& m) const;
 
     /// NAMES A FILE THIS CALL WROTE. Rides out on `DispatchResult::outputs`.
     ///

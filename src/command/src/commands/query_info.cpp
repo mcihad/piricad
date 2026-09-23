@@ -240,6 +240,12 @@ Task<void> run_measure_angle(Context& ctx)
              "   (ters: " + core::angle_text(reflex, convention.unit) +
              ")   kenarlar: " + metres_text(arm_a) + " m ve " + metres_text(arm_b) + " m   (" +
              core::angle_rule_label(convention.rule) + ")");
+
+    // AND THE ANGLE STAYS DRAWN where it was read: the two arms, the sweep and
+    // the figure on it, the way the preview showed it while it was being aimed.
+    ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Angle,
+                         .points = {*vertex, *first, *second},
+                         .labels = {core::angle_text(between, convention.unit)}});
 }
 
 } // namespace

@@ -14,6 +14,7 @@
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/polygon.hpp"
@@ -868,11 +869,20 @@ std::string bearing_text(core::Point2 a, core::Point2 b, core::AngleConvention c
 
 std::string trimmed(double value, int places)
 {
-    std::string out = QString::number(value, 'f', places).toStdString();
-    if (out.find('.') == std::string::npos) return out;
+    // THE TURKISH DECIMAL COMMA, as every other figure this program prints: the
+    // transcript said "20,000 m" and the line being dragged said "10.77 m" beside
+    // "124,2238 grad" — two conventions in one label. The comma is put in after
+    // formatting, so the digits are the ones `QString::number` produced.
+    std::string out       = QString::number(value, 'f', places).toStdString();
+    const std::size_t dot = out.find('.');
+    if (dot == std::string::npos) return out;
     while (!out.empty() && out.back() == '0')
         out.pop_back();
-    if (!out.empty() && out.back() == '.') out.pop_back();
+    if (!out.empty() && out.back() == '.') {
+        out.pop_back();
+        return out;
+    }
+    out[dot] = ',';
     return out;
 }
 
@@ -1503,6 +1513,144 @@ void MapCanvas::addCircle(std::size_t index, float cx, float cy, float radius)
     batch.closed.push_back(1);
 }
 
+void MapCanvas::addReadout(float x, float y, const std::string& text)
+{
+    overlay_.labels.push_back(render::OverlayLabel{tokens_->readout.rgba(), x, y,
+                                                   static_cast<float>(look_.hint_px), false, text});
+}
+
+double MapCanvas::addAngleSweep(std::size_t batch, core::Point2 vertex, core::Point2 arm_a,
+                                core::Point2 arm_b)
+{
+    // THE SWEEP, drawn at a radius that is READABLE rather than at the arms' own
+    // length: an angle between a 2 cm arm and a 40 m one has to be legible at
+    // both ends, so the mark sits a fixed number of pixels from the vertex like
+    // every other mark this canvas draws.
+    const core::Mm reach       = core::mm_round(28.0 * view_.mm_per_pixel());
+    const core::AngleRule rule = look_.angle.rule;
+    const double to_a          = core::direction_turns(vertex, arm_a, rule);
+    const double to_b          = core::direction_turns(vertex, arm_b, rule);
+    double between             = to_b - to_a;
+    between -= std::floor(between);
+
+    if (reach > 0 && between > 0.0) {
+        // THE SWEEP THE COMMAND REPORTS, not the shorter one. Drawing the short
+        // way round while writing the other number beside it was the very thing
+        // this pass has been removing: the picture said one angle and the reading
+        // said another. The sweep runs from the FIRST arm to the second in the
+        // rule's own direction, which is how the command defines it — and why
+        // the order the two arms are picked in is a choice rather than noise.
+        const core::Point2 at_a =
+            vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_a, rule);
+        const core::Point2 at_b =
+            vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_b, rule);
+        curve_scratch_x_.clear();
+        curve_scratch_y_.clear();
+        // `arc_outline` sweeps counter-clockwise from start to end. Under semt an
+        // increasing angle turns CLOCKWISE, so going from a to b that way is going
+        // counter-clockwise from b to a.
+        const bool ccw_from_a = rule != core::AngleRule::Semt;
+        core::arc_outline(vertex, reach, ccw_from_a ? at_a : at_b, ccw_from_a ? at_b : at_a,
+                          curve_scratch_x_, curve_scratch_y_);
+        addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
+    }
+    return between;
+}
+
+void MapCanvas::addMeasureMark(const command::MeasureMark& mark)
+{
+    marks_.push_back(StoredMark{mark, controller_.document().revision()});
+    update();
+}
+
+void MapCanvas::clearMeasureMarks()
+{
+    if (marks_.empty()) return;
+    marks_.clear();
+    update();
+}
+
+void MapCanvas::buildMeasureMarks()
+{
+    // A MARK OLDER THAN THE DRAWING DESCRIBES A DRAWING THAT IS GONE: a length
+    // left beside a boundary that has since moved is a wrong number in the right
+    // place, which is the worst kind.
+    const std::uint64_t now = controller_.document().revision();
+    std::erase_if(marks_, [now](const StoredMark& m) { return m.revision != now; });
+    if (marks_.empty()) return;
+
+    const auto screen = [this](core::Point2 p) { return render::to_f(view_.to_screen(p)); };
+    QColor wash       = tokens_->accent;
+    wash.setAlpha(34);
+
+    for (const StoredMark& stored : marks_) {
+        const command::MeasureMark& m = stored.mark;
+        switch (m.shape) {
+        case command::MeasureMark::Shape::Run: {
+            const std::size_t line = nextBatch(tokens_->accent.rgba(), 1.6f, false);
+            std::vector<render::ScreenPointF> drawn;
+            drawn.reserve(m.points.size());
+            for (const core::Point2& p : m.points)
+                drawn.push_back(screen(p));
+            addRun(line, drawn, false);
+            for (const render::ScreenPointF& v : drawn)
+                addCircle(line, v.x, v.y, 3.0f);
+            for (std::size_t i = 1; i < drawn.size() && i - 1 < m.labels.size(); ++i)
+                addReadout((drawn[i - 1].x + drawn[i].x) * 0.5F + 6.0F,
+                           (drawn[i - 1].y + drawn[i].y) * 0.5F - 6.0F, m.labels[i - 1]);
+            // The total, when there is one, beside the last point.
+            if (!drawn.empty() && m.labels.size() == drawn.size())
+                addReadout(drawn.back().x + 10.0F, drawn.back().y + 18.0F, m.labels.back());
+            break;
+        }
+        case command::MeasureMark::Shape::Ring: {
+            if (m.points.size() < 3) break;
+            const std::size_t face = nextBatch(tokens_->accent.rgba(), 1.6f, false, wash.rgba());
+            curve_scratch_x_.clear();
+            curve_scratch_y_.clear();
+            double cx = 0.0;
+            double cy = 0.0;
+            for (const core::Point2& p : m.points) {
+                curve_scratch_x_.push_back(p.x);
+                curve_scratch_y_.push_back(p.y);
+                const render::ScreenPointF v = screen(p);
+                cx += static_cast<double>(v.x);
+                cy += static_cast<double>(v.y);
+            }
+            addWorldRun(face, curve_scratch_x_, curve_scratch_y_, true);
+            if (!m.labels.empty()) {
+                const auto n = static_cast<double>(m.points.size());
+                addReadout(static_cast<float>(cx / n) - 40.0F, static_cast<float>(cy / n),
+                           m.labels.front());
+            }
+            break;
+        }
+        case command::MeasureMark::Shape::Angle: {
+            if (m.points.size() < 3) break;
+            const std::size_t line = nextBatch(tokens_->accent.rgba(), 1.6f, false);
+            addRun(line, {screen(m.points[0]), screen(m.points[1])}, false);
+            addRun(line, {screen(m.points[0]), screen(m.points[2])}, false);
+            (void)addAngleSweep(line, m.points[0], m.points[1], m.points[2]);
+            if (!m.labels.empty()) {
+                const render::ScreenPointF v = screen(m.points[0]);
+                addReadout(v.x + 32.0F, v.y - 12.0F, m.labels.front());
+            }
+            break;
+        }
+        case command::MeasureMark::Shape::Point: {
+            if (m.points.empty()) break;
+            const std::size_t line       = nextBatch(tokens_->accent.rgba(), 1.6f, false);
+            const render::ScreenPointF v = screen(m.points.front());
+            addRun(line, {{v.x - 6.0F, v.y}, {v.x + 6.0F, v.y}}, false);
+            addRun(line, {{v.x, v.y - 6.0F}, {v.x, v.y + 6.0F}}, false);
+            addCircle(line, v.x, v.y, 3.0f);
+            if (!m.labels.empty()) addReadout(v.x + 10.0F, v.y - 10.0F, m.labels.front());
+            break;
+        }
+        }
+    }
+}
+
 void MapCanvas::buildOverlay()
 {
     overlay_.clear();
@@ -1516,6 +1664,7 @@ void MapCanvas::buildOverlay()
 
     buildSelection();
     buildGrips();
+    buildMeasureMarks();
 
     guide_vertices_ = 0;
     guide_label_.clear();
@@ -1714,40 +1863,7 @@ void MapCanvas::buildOverlay()
                    {render::to_f(view_.to_screen(vertex)), render::to_f(view_.to_screen(arm_a))},
                    false);
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
-
-            // THE SWEEP, drawn at a radius that is READABLE rather than at the
-            // arms' own length: an angle between a 2 cm arm and a 40 m one has
-            // to be legible at both ends, so the mark sits a fixed number of
-            // pixels from the vertex like every other mark this canvas draws.
-            const core::Mm reach       = core::mm_round(28.0 * view_.mm_per_pixel());
-            const core::AngleRule rule = look_.angle.rule;
-            const double to_a          = core::direction_turns(vertex, arm_a, rule);
-            const double to_b          = core::direction_turns(vertex, arm_b, rule);
-            double between             = to_b - to_a;
-            between -= std::floor(between);
-
-            if (reach > 0 && between > 0.0) {
-                // THE SWEEP THE COMMAND REPORTS, not the shorter one. Drawing
-                // the short way round while writing the other number beside it
-                // was the very thing this pass has been removing: the picture
-                // said one angle and the reading said another. The sweep runs
-                // from the FIRST arm to the second in the rule's own direction,
-                // which is how the command defines it — and why the order the
-                // two arms are picked in is a choice rather than noise.
-                const core::Point2 at_a =
-                    vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_a, rule);
-                const core::Point2 at_b =
-                    vertex + core::polar_offset_turns(core::mm_to_metres(reach), to_b, rule);
-                curve_scratch_x_.clear();
-                curve_scratch_y_.clear();
-                // `arc_outline` sweeps counter-clockwise from start to end.
-                // Under semt an increasing angle turns CLOCKWISE, so going from
-                // a to b that way is going counter-clockwise from b to a.
-                const bool ccw_from_a = rule != core::AngleRule::Semt;
-                core::arc_outline(vertex, reach, ccw_from_a ? at_a : at_b, ccw_from_a ? at_b : at_a,
-                                  curve_scratch_x_, curve_scratch_y_);
-                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, false);
-            }
+            const double between = addAngleSweep(batch, vertex, arm_a, arm_b);
 
             // AND THE READING, which is what the user is here for. The generic
             // dynamic-input label writes the distance and bearing to the cursor;
@@ -2047,6 +2163,87 @@ void MapCanvas::buildOverlay()
                 }
             }
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::MeasureRun) {
+            // THE RUN MEASURED SO FAR AND THE NEXT SEGMENT TO THE CURSOR, each
+            // segment's length written on it and the running total at the
+            // cursor — the tape laid along a boundary, read as it goes out.
+            std::vector<core::Point2> run = session->prompt().rubber_chain;
+            run.push_back(cursorWorld());
+            std::vector<render::ScreenPointF> drawn;
+            drawn.reserve(run.size());
+            for (const core::Point2& p : run)
+                drawn.push_back(render::to_f(view_.to_screen(p)));
+            addRun(batch, drawn, false);
+
+            core::Mm total = 0;
+            for (std::size_t i = 1; i < run.size(); ++i) {
+                const core::Mm side = core::segment_length(run[i - 1], run[i]);
+                total += side;
+                if (i + 1 < run.size())
+                    addReadout((drawn[i - 1].x + drawn[i].x) * 0.5F + 6.0F,
+                               (drawn[i - 1].y + drawn[i].y) * 0.5F - 6.0F,
+                               trimmed(static_cast<double>(side) / 1000.0, 3) + " m");
+            }
+            if (look_.dynamic_input && run.size() >= 2) {
+                // ON THE SEGMENT, at its middle, like every guide's reading: beside
+                // the cursor it sat on the snap marker's own name. The total goes
+                // UNDER the cursor, where nothing else is written.
+                const core::Point2 last      = run[run.size() - 2];
+                const render::ScreenPointF a = drawn[drawn.size() - 2];
+                const render::ScreenPointF b = drawn.back();
+                const std::string segment =
+                    trimmed(static_cast<double>(core::segment_length(last, run.back())) / 1000.0,
+                            3) +
+                    " m  " + bearing_text(last, run.back(), look_.angle);
+                addReadout((a.x + b.x) * 0.5F + 8.0F, (a.y + b.y) * 0.5F - 6.0F, segment);
+                std::string text = segment;
+                if (run.size() > 2) {
+                    const std::string sum =
+                        "toplam " + trimmed(static_cast<double>(total) / 1000.0, 3) + " m";
+                    addReadout(b.x + 12.0F, b.y + 24.0F, sum);
+                    text += "  ·  " + sum;
+                }
+                guide_label_ = text;
+            }
+        } else if (shape == command::RubberShape::MeasureRing) {
+            // THE FACE THE CORNERS SO FAR AND THE CURSOR ENCLOSE, washed in the
+            // accent, with its area and perimeter at the cursor — ALANÖLÇ's
+            // answer as the corners are placed, not after the last one.
+            std::vector<core::Point2> ring = session->prompt().rubber_chain;
+            ring.push_back(cursorWorld());
+            QColor wash = tokens_->accent;
+            wash.setAlpha(40);
+            const std::size_t face =
+                ring.size() >= 3 ? nextBatch(tokens_->accent.rgba(), 1.5f, false, wash.rgba())
+                                 : batch;
+            curve_scratch_x_.clear();
+            curve_scratch_y_.clear();
+            for (const core::Point2& p : ring) {
+                curve_scratch_x_.push_back(p.x);
+                curve_scratch_y_.push_back(p.y);
+            }
+            addWorldRun(face, curve_scratch_x_, curve_scratch_y_, ring.size() >= 3);
+            if (look_.dynamic_input && ring.size() >= 3) {
+                const core::Mm2 signed_area = core::ring_area(ring);
+                core::Mm perimeter          = 0;
+                for (std::size_t i = 0; i < ring.size(); ++i)
+                    perimeter += core::segment_length(ring[i], ring[(i + 1) % ring.size()]);
+                const std::string text =
+                    core::format_square_metres(signed_area < 0 ? -signed_area : signed_area) +
+                    "  ·  çevre " + trimmed(static_cast<double>(perimeter) / 1000.0, 3) + " m";
+                // IN THE FACE, where the area is: beside the cursor it fought the
+                // snap marker's name, and the figure belongs to the whole shape.
+                double cx = 0.0;
+                double cy = 0.0;
+                for (const core::Point2& p : ring) {
+                    const render::ScreenPointF v = render::to_f(view_.to_screen(p));
+                    cx += static_cast<double>(v.x);
+                    cy += static_cast<double>(v.y);
+                }
+                const auto n = static_cast<double>(ring.size());
+                addReadout(static_cast<float>(cx / n) - 40.0F, static_cast<float>(cy / n), text);
+                guide_label_ = text;
+            }
         } else if (shape == command::RubberShape::Ghost) {
             // THE OBJECTS THEMSELVES, under the transform the cursor implies:
             // where TAŞI will put them, how far round DÖNDÜR will turn them, how
@@ -2108,7 +2305,8 @@ void MapCanvas::buildOverlay()
         // a surveyor setting out a 12 cm step needs to see the step working.
         if (look_.dynamic_input && shape != command::RubberShape::AreaEdit &&
             shape != command::RubberShape::Fixed && shape != command::RubberShape::Candidates &&
-            shape != command::RubberShape::Angle) {
+            shape != command::RubberShape::Angle && shape != command::RubberShape::MeasureRun &&
+            shape != command::RubberShape::MeasureRing) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point
@@ -2772,8 +2970,11 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             update();
             return;
         }
-        // Nothing running: ESC clears the selection, and it does so by sending the
-        // command, not by reaching into the bus (Article 1.2).
+        // Nothing running: ESC clears the measurements left on the canvas and
+        // the selection — the second by sending the command, not by reaching
+        // into the bus (Article 1.2); the first is view state and never was
+        // the document's.
+        clearMeasureMarks();
         if (!controller_.bus().selection().empty()) {
             command::Args args;
             args.set("mod", command::Value::text("TEMİZLE"));

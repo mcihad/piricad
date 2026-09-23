@@ -18,6 +18,7 @@
 
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/transform.hpp"
@@ -150,6 +151,19 @@ public:
     const std::vector<int>& sceneCosts() const noexcept { return scene_costs_; }
 
     void zoomToExtents();
+
+    /// Keeps what a measurement measured on the canvas (`Bus::on_measure_mark`):
+    /// the run with its lengths, the face with its area, the angle, the point
+    /// with its coordinates. They stay until the drawing changes or Esc is
+    /// pressed with nothing running — the answer is where it was asked.
+    void addMeasureMark(const command::MeasureMark& mark);
+
+    /// Takes every measurement mark off the canvas.
+    void clearMeasureMarks();
+
+    /// How many measurement marks are on the canvas, for the probes.
+    std::size_t measureMarkCount() const noexcept { return marks_.size(); }
+
     void zoomBy(double factor);
 
     /// Moves the view's centre without changing its scale. KAYDIR's landing point.
@@ -376,6 +390,19 @@ private:
     /// The face-at-wanted-area ghost for the running ALANDÜZENLE prompt, or an
     /// empty one when no such prompt is up (core/area_edit.hpp).
     core::AreaGhost areaGhost() const;
+
+    /// The sweep between two arms, drawn at a fixed number of pixels from the
+    /// vertex, in the session's angle rule; returns the sweep in turns. Shared by
+    /// AÇIÖLÇ's preview and the mark it leaves, so the two are one picture.
+    double addAngleSweep(std::size_t batch, core::Point2 vertex, core::Point2 arm_a,
+                         core::Point2 arm_b);
+
+    /// A label at a pixel position in the readout ink.
+    void addReadout(float x, float y, const std::string& text);
+
+    /// Draws the measurements the session has left (`addMeasureMark`) and drops
+    /// the ones the drawing has since moved on from.
+    void buildMeasureMarks();
 
     /// Appends one run of document points, mapped through `map`, to an overlay
     /// batch. The default is the identity, which is what every caller but the
@@ -645,6 +672,16 @@ private:
     /// Scratch for a curve guide, kept so the frame path does not allocate.
     std::vector<core::Mm> curve_scratch_x_;
     std::vector<core::Mm> curve_scratch_y_;
+
+    /// A measurement left on the canvas, and the document revision it was
+    /// taken at: a mark older than the drawing describes a drawing that is gone.
+    struct StoredMark
+    {
+        command::MeasureMark mark;
+        std::uint64_t revision{0};
+    };
+
+    std::vector<StoredMark> marks_;
 
     /// Where the press landed, so a CLICK on a grip can be told from a DRAG of
     /// one. Without it, taking hold of a corner and letting go without moving

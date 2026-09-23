@@ -797,22 +797,28 @@ def measure(
     *,
     start: Coord = ...,
     end: Coord = ...,
+    more: Coords = ...,
 ) -> int:
-    """İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
+    """Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
 
     Komut: core.measure (ÖLÇ)
         start — Ölçümün ilk noktası [mm, Sağa (Y) önce]
         end — Ölçümün ikinci noktası [mm, Sağa (Y) önce]
+        more — Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır [mm, Sağa (Y) önce]
     """
 
 def measure_area(
     *,
     objects: list[int] = ...,
+    method: str = ...,
+    points: Coords = ...,
 ) -> int:
-    """Seçilen nesnelerin alanını ve çevresini yazar.
+    """Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 
     Komut: core.measure_area (ALANÖLÇ)
         objects — Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
+        method — nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan
+        points — yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce]
     """
 
 def coordinate(

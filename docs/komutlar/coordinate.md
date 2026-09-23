@@ -46,9 +46,11 @@ Sağa: 485320,500 m   Yukarı: 4310220,250 m   (TUREF/TM30)
 
 ### Arayüz
 
-Sol araç kutusundaki **Koordinat Oku** düğmesine basın, sonra noktayı tıklayın.
-Sonuç durum çubuğunda yazar; tam metni sağ paneldeki **Geçmiş** sekmesinde
-bulursunuz.
+Sol araç kutusundaki **Ölç** ailesinden **Koordinat Oku**'yu seçin, sonra noktayı
+tıklayın. Sonuç durum çubuğunda yazar; tam metni sağ paneldeki **Geçmiş** sekmesinde
+bulursunuz. **Okuma tuvalde de kalır**: noktada küçük bir işaret ve yanında `Y … X …`
+yazar. Birkaç noktayı arka arkaya okuyabilirsiniz; işaretler çizim değişince ya da
+hiçbir komut çalışmıyorken Esc'e basınca silinir.
 
 Yakalama açıkken tıklamanız en yakın köşeye oturur, yani bir parsel köşesinin
 gerçek koordinatını okursunuz — göz kararı bir noktanınkini değil.

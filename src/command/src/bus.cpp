@@ -303,7 +303,23 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         return core::err(ErrorCode::ParseError, why);
     };
 
+    // A KEYWORD OPENS A RUN. `ALANÖLÇ noktalar=0,0 20,0 20,10` means four
+    // corners, and it used to mean one corner and three coordinates handed to
+    // whatever parameter came first positionally — a SELECTION, which refused
+    // them as the wrong kind. Only a point list keeps the run open, and only for
+    // coordinates: the first token of any other kind, or another keyword, closes
+    // it and positional binding carries on exactly as it did.
+    const Param* open_run = nullptr;
+
     for (const auto& t : tokens) {
+        if (open_run != nullptr && t.kind != Token::Kind::KeyValue && is_coordinate(t)) {
+            auto v = value_from_token(*open_run, t);
+            if (!v) return v.error();
+            append(*open_run, std::move(v.value()));
+            continue;
+        }
+        open_run = nullptr;
+
         if (t.kind == Token::Kind::KeyValue) {
             const Param* p = param_by_name(t.word);
             if (!p) {
@@ -332,6 +348,7 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             auto v = value_from_token(*p, t.nested.front());
             if (!v) return v.error();
             append(*p, std::move(v.value()));
+            if (p->kind == ParamKind::PointList) open_run = p;
             continue;
         }
 

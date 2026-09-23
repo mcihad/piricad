@@ -2008,3 +2008,103 @@ TEST_CASE("PROOF: İZ gui, komut satırı ve betikten aynı işaretleri bırakı
             CHECK(e.command_id != "core.tracking");
     }
 }
+
+namespace {
+
+/// A READING PROVEN ACROSS THE THREE CLIENTS. A measurement is read-only and so
+/// is not journalled (a Ctrl+Z must not undo a question): the proof it owes is
+/// that the three roads SAY the same thing and LEAVE the same mark, and that the
+/// drawing is untouched on every one of them.
+struct ReadingProof
+{
+    const char* name;           ///< the command line that starts it at the canvas
+    std::vector<Value> answers; ///< what the canvas supplies, in order
+    const char* typed;          ///< the whole command line
+    const char* scripted;       ///< the whole script
+};
+
+void prove_reading(const ReadingProof& v)
+{
+    struct Seen
+    {
+        std::string said;
+        std::vector<MeasureMark> marks;
+    };
+
+    const auto watch = [](Rig& rig, Seen& seen) {
+        rig.bus.on_echo         = [&seen](std::string_view t) { seen.said.append(t).append("\n"); };
+        rig.bus.on_measure_mark = [&seen](const MeasureMark& m) { seen.marks.push_back(m); };
+    };
+
+    Rig gui;
+    Seen from_gui;
+    watch(gui, from_gui);
+    {
+        auto started = gui.bus.begin_interactive(v.name, Origin::Gui);
+        REQUIRE_MESSAGE(started.ok(), v.name);
+        auto& session = *started.value();
+        for (const Value& answer : v.answers)
+            CHECK_MESSAGE(session.supply(answer).ok(), v.name);
+        auto done = gui.bus.finish(session);
+        if (!done.ok()) FAIL_WITH(v.name, done.error().message);
+    }
+
+    Rig cli;
+    Seen from_cli;
+    watch(cli, from_cli);
+    if (auto r = cli.bus.execute_line(v.typed, Origin::CommandLine); !r.ok())
+        FAIL_WITH(v.typed, r.error().message);
+
+    Rig scr;
+    Seen from_scr;
+    watch(scr, from_scr);
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        if (auto r = runner.run_text(v.scripted); !r.ok()) FAIL_WITH(v.name, r.error().message);
+    }
+
+    // THE SAME WORDS AND THE SAME MARK. The script runner adds its own summary
+    // line after the command's, so only the command's words are compared.
+    const auto words = [](const std::string& all) { return all.substr(0, all.rfind("Betik")); };
+    CHECK_MESSAGE(!from_gui.said.empty(), v.name);
+    CHECK_EQ(from_gui.said, from_cli.said);
+    CHECK(words(from_scr.said).find(from_cli.said) != std::string::npos);
+    REQUIRE_EQ(from_gui.marks.size(), from_cli.marks.size());
+    REQUIRE_EQ(from_cli.marks.size(), from_scr.marks.size());
+    for (std::size_t i = 0; i < from_gui.marks.size(); ++i) {
+        CHECK(from_gui.marks[i].points == from_cli.marks[i].points);
+        CHECK(from_gui.marks[i].labels == from_cli.marks[i].labels);
+        CHECK(from_cli.marks[i].points == from_scr.marks[i].points);
+        CHECK(from_cli.marks[i].labels == from_scr.marks[i].labels);
+    }
+    // A QUESTION CHANGES NOTHING, on any road.
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK(rig->journal.entries().empty());
+        CHECK(rig->undo.undo_depth() == 0);
+    }
+}
+
+} // namespace
+
+TEST_CASE("PROOF: ÖLÇ noktadan noktaya gui, komut satırı ve betikten aynı cevabı ve işareti verir")
+{
+    prove_reading(
+        {.name     = "ÖLÇ",
+         .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{3'000, 4'000}),
+                      Value::point(core::Point2{3'000, 10'000}), Value{}},
+         .typed    = "ÖLÇ 0,0 3,4 devam=3,10",
+         .scripted = R"({"ad":"ÖLÇ","komutlar":[{"cmd":"core.measure","args":{
+                    "baslangic":[0,0],"bitis":[3000,4000],"devam":[[3000,10000]]}}]})"});
+}
+
+TEST_CASE("PROOF: ALANÖLÇ köşelerden gui, komut satırı ve betikten aynı cevabı ve işareti verir")
+{
+    prove_reading(
+        {.name     = "ALANÖLÇ yontem=nokta",
+         .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{20'000, 0}),
+                      Value::point(core::Point2{20'000, 10'000}),
+                      Value::point(core::Point2{0, 10'000}), Value{}},
+         .typed    = "ALANÖLÇ yontem=nokta noktalar=0,0 20,0 20,10 0,10",
+         .scripted = R"({"ad":"ALANÖLÇ","komutlar":[{"cmd":"core.measure_area","args":{
+                    "yontem":"nokta","noktalar":[[0,0],[20000,0],[20000,10000],[0,10000]]}}]})"});
+}

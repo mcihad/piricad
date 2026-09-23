@@ -19,6 +19,9 @@
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
@@ -56,19 +59,34 @@ std::string square_metres(core::Mm2 v)
     return (negative ? "-" : "") + std::to_string(cm2 / 100) + "," + frac + " m²";
 }
 
+/// The preview a measuring point prompt carries: the run so far, and the next
+/// segment to the cursor, measured as it moves.
+PointOptions measuring(const std::vector<core::Point2>& run, RubberShape shape)
+{
+    PointOptions o;
+    if (run.empty()) return o;
+    o.rubber_band   = true;
+    o.rubber_origin = run.back();
+    o.rubber_shape  = shape;
+    o.rubber_chain  = run;
+    return o;
+}
+
 Task<void> run_measure(Context& ctx)
 {
+    // A RUN, NOT A PAIR. ÖLÇ measured one segment and stopped, so the three
+    // sides of a building, a boundary with six breaks or a pipe's route were
+    // measured one ÖLÇ at a time and added up by hand. The first two points
+    // still give the one-segment answer they always gave; every point after
+    // that adds a segment and the running total, until Enter.
     auto a = co_await ctx.point("baslangic", "Ölçümün ilk noktası");
     if (!a) co_return;
+    std::vector<core::Point2> run{*a};
 
     auto b = co_await ctx.point("bitis", "Ölçümün ikinci noktası",
-                                PointOptions{.rubber_band = true, .rubber_origin = *a});
+                                measuring(run, RubberShape::MeasureRun));
     if (!b) co_return;
-
-    const double dx = core::mm_to_metres(b->x - a->x);
-    const double dy = core::mm_to_metres(b->y - a->y);
-    const core::Mm distance =
-        core::mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(core::kMmPerMetre));
+    run.push_back(*b);
 
     // The angle is written the way the session reads one: in `core.aci.birim`,
     // under `core.aci.kural` — by default the `semt açısı` a Turkish instrument
@@ -78,18 +96,129 @@ Task<void> run_measure(Context& ctx)
     // pair (TODOS-CAD P0-4), through the same core function the canvas and
     // APLİKASYON use.
     const core::AngleConvention convention = ctx.session().bus().angle_convention();
-    const double turns                     = core::direction_turns(*a, *b, convention.rule);
+    const auto bearing                     = [&convention](core::Point2 from, core::Point2 to) {
+        return core::angle_text(core::direction_turns(from, to, convention.rule), convention.unit);
+    };
 
-    ctx.echo("Mesafe: " + metres(distance) + "   ΔY: " + metres(b->x - a->x) + "   ΔX: " +
-             metres(b->y - a->y) + "   Açı: " + core::angle_text(turns, convention.unit) + " (" +
+    const core::Mm first = core::segment_length(*a, *b);
+    ctx.echo("Mesafe: " + metres(first) + "   ΔY: " + metres(b->x - a->x) +
+             "   ΔX: " + metres(b->y - a->y) + "   Açı: " + bearing(*a, *b) + " (" +
              core::angle_rule_label(convention.rule) + ")");
+
+    std::vector<core::Mm> sides{first};
+    core::Mm total = first;
+    for (;;) {
+        auto next = co_await ctx.point("devam", "Sonraki nokta (Enter bitirir)",
+                                       measuring(run, RubberShape::MeasureRun));
+        if (!next) break;
+        const core::Mm side = core::segment_length(run.back(), *next);
+        total += side;
+        ctx.echo("Kenar " + std::to_string(sides.size() + 1) + ": " + metres(side) +
+                 "   Açı: " + bearing(run.back(), *next) + "   Toplam: " + metres(total));
+        sides.push_back(side);
+        run.push_back(*next);
+    }
+    if (sides.size() > 1)
+        ctx.echo("Toplam uzunluk: " + metres(total) + "   (" + std::to_string(sides.size()) +
+                 " kenar)");
+
+    // THE SAME FIGURES FOR A CLIENT THAT READS DATA, and the same run for one
+    // that has a canvas to leave it on.
+    core::Json lengths = core::Json::array({});
+    for (const core::Mm side : sides)
+        lengths.push(core::Json::integer(side));
+    core::Json report;
+    report.set("kenarlar_mm", std::move(lengths));
+    report.set("toplam_mm", core::Json::integer(total));
+    ctx.report(std::move(report));
+
+    MeasureMark mark{.shape = MeasureMark::Shape::Run, .points = run, .labels = {}};
+    for (const core::Mm side : sides)
+        mark.labels.push_back(metres(side));
+    if (sides.size() > 1) mark.labels.push_back("toplam " + metres(total));
+    ctx.mark(std::move(mark));
 
     ctx.record("baslangic", Value::point(*a));
     ctx.record("bitis", Value::point(*b));
 }
 
+/// The corners of the first closed ring of `slot`, when it has one.
+std::vector<core::Point2> closed_ring(const core::Document& doc, core::EntityId slot)
+{
+    std::vector<core::Point2> out;
+    if (doc.entities().kind[slot] != core::kPolylineKind) return out;
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+    if (span.count == 0 || doc.geometry().ring_role[span.first] == core::RingRole::Open) return out;
+    const auto xs = doc.geometry().ring_xs(span.first);
+    const auto ys = doc.geometry().ring_ys(span.first);
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(core::Point2{xs[v], ys[v]});
+    return out;
+}
+
+/// ALANÖLÇ yontem=nokta: the face the user points out, measured as it is drawn.
+Task<void> measure_by_corners(Context& ctx)
+{
+    // A FACE THAT IS NOT IN THE DRAWING. The area of a yard between two
+    // buildings, of the part of a parcel a road will take, of a field someone
+    // paced out: none of them is an object, and ALANÖLÇ measured objects only.
+    // The corners are pointed at, the face and its area follow the cursor, and
+    // Enter answers.
+    std::vector<core::Point2> ring;
+    for (;;) {
+        const char* asked = "Sonraki köşe (Enter bitirir)";
+        if (ring.empty())
+            asked = "Ölçülecek alanın ilk köşesi";
+        else if (ring.size() < 3)
+            asked = "Sonraki köşe";
+        auto corner =
+            co_await ctx.point("noktalar", asked, measuring(ring, RubberShape::MeasureRing));
+        if (!corner) break;
+        ring.push_back(*corner);
+    }
+    if (ring.size() < 3) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Alan ölçmek için en az üç köşe gerekir; " +
+                                                         std::to_string(ring.size()) +
+                                                         " köşe verildi.");
+        co_return;
+    }
+
+    const core::Mm2 signed_area = core::ring_area(ring);
+    const core::Mm2 area        = signed_area < 0 ? -signed_area : signed_area;
+    core::Mm perimeter          = 0;
+    for (std::size_t i = 0; i < ring.size(); ++i)
+        perimeter += core::segment_length(ring[i], ring[(i + 1) % ring.size()]);
+
+    ctx.echo("Alan: " + square_metres(area) + "   çevre: " + metres(perimeter) + "   (" +
+             std::to_string(ring.size()) + " köşe)");
+
+    core::Json report;
+    report.set("alan_mm2", core::Json::integer(area));
+    report.set("cevre_mm", core::Json::integer(perimeter));
+    report.set("kose", core::Json::integer(static_cast<std::int64_t>(ring.size())));
+    ctx.report(std::move(report));
+
+    ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Ring,
+                         .points = ring,
+                         .labels = {square_metres(area) + " · çevre " + metres(perimeter)}});
+    ctx.record("yontem", Value::text("nokta"));
+}
+
 Task<void> run_measure_area(Context& ctx)
 {
+    // BY CORNERS when asked for, or when corners were handed over: a script's
+    // `noktalar` says which of the two it means without naming the method.
+    const std::string method = ctx.argument("yontem").as_text();
+    if (method == "nokta" || (method.empty() && !ctx.argument("noktalar").empty())) {
+        co_await measure_by_corners(ctx);
+        co_return;
+    }
+    if (!method.empty() && method != "nesne") {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Tanınmayan yöntem: '" + method + "'. Yöntemler: nesne / nokta");
+        co_return;
+    }
+
     // The argument, the selection, or ASKED FOR — the order every modify tool
     // uses (`want_objects`), so the tool-column button arms and asks instead of
     // refusing when nothing is highlighted.
@@ -139,8 +268,31 @@ Task<void> run_measure_area(Context& ctx)
                                 std::span<core::Mm>(&perimeter, 1));
         }
 
+        // AN OPEN LINE HAS A LENGTH, NOT AN AREA. It used to be reported as
+        // "alan: 0,00 m²", which reads as a measured empty parcel rather than as
+        // the wrong question — and the figure the user did want, the length,
+        // was printed under the name `çevre`.
+        const core::Box2 box = doc.entities().box_of(slot);
+        const core::Point2 middle{box.min_x + (box.max_x - box.min_x) / 2,
+                                  box.min_y + (box.max_y - box.min_y) / 2};
+        if (area == 0) {
+            ctx.echo("Nesne " + std::to_string(raw) +
+                     " — kapalı değil, alanı yok; uzunluk: " + metres(perimeter));
+            ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Point,
+                                 .points = {middle},
+                                 .labels = {"uzunluk " + metres(perimeter)}});
+            continue;
+        }
+
         ctx.echo("Nesne " + std::to_string(raw) + " — alan: " + square_metres(area) +
                  "   çevre: " + metres(perimeter));
+        const std::string label = square_metres(area) + " · çevre " + metres(perimeter);
+        if (std::vector<core::Point2> ring = closed_ring(doc, slot); ring.size() >= 3)
+            ctx.mark(MeasureMark{
+                .shape = MeasureMark::Shape::Ring, .points = std::move(ring), .labels = {label}});
+        else
+            ctx.mark(MeasureMark{
+                .shape = MeasureMark::Shape::Point, .points = {middle}, .labels = {label}});
 
         total += area;
         ++counted;
@@ -176,6 +328,11 @@ Task<void> run_coordinate(Context& ctx)
     // and the order a TUCBS record writes them in.
     ctx.echo("Sağa: " + metres(at->x) + "   Yukarı: " + metres(at->y) + where);
 
+    // AND THE READING STAYS WHERE IT WAS TAKEN, in the Y/X a surveyor writes.
+    ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Point,
+                         .points = {*at},
+                         .labels = {"Y " + metres(at->x) + "  X " + metres(at->y)}});
+
     ctx.record("nokta", Value::point(*at));
 }
 
@@ -192,11 +349,15 @@ KENTOS_COMMAND(measure)
             {
                 Param::point("baslangic", "Ölçümün ilk noktası").en("start"),
                 Param::point("bitis", "Ölçümün ikinci noktası").en("end"),
+                Param::points("devam", Arity::at_least(0),
+                              "Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır")
+                    .en("more"),
             },
-        .undo    = UndoPolicy::None,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary = "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.",
-        .run     = &run_measure,
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .summary = "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla "
+                   "nokta kenarları ve toplam uzunluğu verir.",
+        .run = &run_measure,
     };
 }
 
@@ -209,11 +370,20 @@ KENTOS_COMMAND(measure_area)
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
-                         .en("objects")},
+                         .en("objects"),
+                     Param::choice("yontem", Arity::optional(), {"nesne", "nokta"},
+                                   "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: "
+                                     "köşeleri gösterilen alan")
+                         .en("method"),
+                     Param::points("noktalar", Arity::at_least(0),
+                                   "yontem=nokta için alanın köşeleri; verilirse yöntem "
+                                     "kendiliğinden nokta olur")
+                         .en("points")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary  = "Seçilen nesnelerin alanını ve çevresini yazar.",
-        .run      = &run_measure_area,
+        .summary = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "
+                   "yazar.",
+        .run = &run_measure_area,
     };
 }
 

@@ -446,6 +446,10 @@ MainWindow::~MainWindow()
     for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_})
         if (dock != nullptr) dock->disconnect(this);
 
+    // AND THE BUS HOOK THAT DRAWS INTO THIS WINDOW'S CANVAS, for the same
+    // reason: the controller may outlive the shell by a command or two.
+    if (controller_ != nullptr) controller_->bus().on_measure_mark = nullptr;
+
     // A PROBE RUN WRITES NOTHING. Every probe drives the REAL shell, and the
     // shell saves its preferences, its geometry and its dock layout here on the
     // way out — so a probe that floats a panel and re-docks it saved THAT over
@@ -1018,7 +1022,8 @@ void MainWindow::buildActions()
         modifyTool(Glyph::ParcelSplit, tr("Alana Göre İfraz"), QStringLiteral("ALANİFRAZ"),
                    tr("ALANİFRAZ — parselden istenen yüzölçümünde parça ayırır (kadastro)"));
     actMeasureArea_ = modifyTool(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
-                                 tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
+                                 tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar; sonuç "
+                                    "tuvalde kalır"));
 
     actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
@@ -1252,7 +1257,8 @@ void MainWindow::buildActions()
     // measurement was in progress, and the answer went to a hidden tab.
     actMeasure_ = new QAction(tr("Ölç"), this);
     actMeasure_->setCheckable(true);
-    actMeasure_->setToolTip(tr("ÖLÇ — iki nokta arası mesafe, koordinat farkı ve açı"));
+    actMeasure_->setToolTip(tr("ÖLÇ — noktadan noktaya: her kenar, açısı ve toplam uzunluk; Enter "
+                               "bitirir, sonuç tuvalde kalır"));
     actMeasure_->setData(static_cast<int>(Glyph::Measure));
     actMeasure_->setProperty(kToolCommand, QStringLiteral("ÖLÇ"));
     actMeasure_->setProperty(kToolRepeats, true);
@@ -2053,8 +2059,14 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // measurement
-    toolBox_->addFamily({actMeasure_, actMeasureArea_, actMeasureAngle_, actCoordinate_,
-                         actEntityInfo_, actStakeout_});
+    // AND AN AREA NOBODY HAS DRAWN: the corners are pointed at and the face,
+    // its area and its perimeter follow the cursor.
+    toolBox_->addFamily({actMeasure_, actMeasureArea_,
+                         methodTool(Glyph::MeasureArea, tr("Alan Ölç — köşelerden"),
+                                    QStringLiteral("ALANÖLÇ yontem=nokta"),
+                                    tr("Köşelere tıklayın; alan ve çevre imleçle birlikte yazılır, "
+                                       "Enter bitirir")),
+                         actMeasureAngle_, actCoordinate_, actEntityInfo_, actStakeout_});
     toolBox_->addSeparator();
 
     // helpers
@@ -2128,6 +2140,12 @@ void MainWindow::buildPanels()
     // script or macro asks before it draws. Installed beside the provider above
     // and from the same source, so the two cannot disagree. View state is not
     // document state (model.md R43): read here, never hashed, never journalled.
+    // WHAT A MEASUREMENT MEASURED stays on the canvas it was measured on
+    // (`command/measure_mark.hpp`). View state, from the same seam family as
+    // the view hooks: the command says what, the canvas draws it.
+    controller_->bus().on_measure_mark = [this](const command::MeasureMark& mark) {
+        if (canvas_ != nullptr) canvas_->addMeasureMark(mark);
+    };
     controller_->bus().on_view_query = [this] {
         const render::ViewTransform& view = canvas_->view();
         command::ViewInfo info;

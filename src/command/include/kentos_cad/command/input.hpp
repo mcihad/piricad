@@ -72,8 +72,12 @@ enum class RubberShape : std::uint8_t {
             ///< it: AÇIÖLÇ
     Corner, ///< the corner `rubber_payload` names, cut at the cursor's distance from it: PAH,
             ///< YUVARLA
-    Grip    ///< the object with the grip `rubber_payload` names at the cursor — or a new corner
-            ///< there: KÖŞETAŞI, KÖŞEEKLE
+    Grip,   ///< the object with the grip `rubber_payload` names at the cursor — or a new
+            ///< corner there: KÖŞETAŞI, KÖŞEEKLE
+    MeasureRun,  ///< the run measured so far and its next segment to the cursor, each segment's
+                 ///< length on it and the total at the cursor: ÖLÇ
+    MeasureRing, ///< the face the corners so far and the cursor enclose, with its area and
+                 ///< perimeter written in it: ALANÖLÇ yontem=nokta
 };
 
 struct Prompt

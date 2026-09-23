@@ -1454,6 +1454,42 @@ int main(int argc, char** argv)
                    QStringLiteral("19-parca-ailesi"));
         });
 
+        // MEASURING: a run with each side and the total, a face by its corners
+        // with its area as the corners go down, and the answers left on the
+        // canvas once they have been read.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÖLÇ"));
+            window.runScriptLine(QStringLiteral("0,0"));
+            window.runScriptLine(QStringLiteral("20,0"));
+        });
+        later([hover] { hover({20'000, 12'000}); });
+        later([&window, shot] { shot(QStringLiteral("20-olc-surekli"), &window); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("20,12"));
+            window.endCommand();
+        });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ALANÖLÇ yontem=nokta"));
+            window.runScriptLine(QStringLiteral("3,3"));
+            window.runScriptLine(QStringLiteral("15,3"));
+            window.runScriptLine(QStringLiteral("15,9"));
+        });
+        later([hover] { hover({3'000, 9'000}); });
+        later([&window, shot] { shot(QStringLiteral("21-alanolc-koselerden"), &window); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("3,9"));
+            window.endCommand();
+        });
+        later([&window] {
+            window.cancelCommand();
+            window.runScriptLine(QStringLiteral("KOORDİNAT 0,12"));
+            window.runScriptLine(QStringLiteral("AÇIÖLÇ 20,12 0,12 20,0"));
+        });
+        later([&window] { window.cancelCommand(); });
+        later([hover] { hover({10'000, 14'000}); });
+        later([&window, shot] { shot(QStringLiteral("22-olcum-isaretleri"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

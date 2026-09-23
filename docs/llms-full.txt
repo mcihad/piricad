@@ -72,7 +72,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 98 (86 tanesi onay ister)
-- Katalog parmak izi: `6243574586957852198`
+- Katalog parmak izi: `15307031400132952538`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -775,7 +775,7 @@ Onay ister.
 
 ### `core_measure` — Ölç
 
-İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
+Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
 Komut: ÖLÇ (OLC, MEASURE, MS)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -785,6 +785,7 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `devam` | konum (tutamak ya da göreli nokta) | hayır | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_measure_angle` — Açı Ölç
 
@@ -802,7 +803,7 @@ Doğrudan çalışır.
 
 ### `core_measure_area` — Alan Ölç
 
-Seçilen nesnelerin alanını ve çevresini yazar.
+Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 Komut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -811,6 +812,8 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan (metin) |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_merge` — Tevhit
 

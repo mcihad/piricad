@@ -744,6 +744,28 @@ int Controller::jobPermille() const noexcept
 
 void Controller::finishInteractive()
 {
+    // A RUN IS FINISHED BY SAYING "THAT IS ALL", not by cancelling it. When the
+    // prompt fills a parameter that holds a RUN of points — the corners of a
+    // line, the next points of a measurement — Enter and the right button answer
+    // it with nothing, which is exactly what the end of a script's list is: the
+    // command ends the way it ends on every other road, with its own answer.
+    // Cancelling it instead made the bus say "İptal edildi" after a measurement
+    // that had just been read out, because a question writes nothing and a
+    // cancelled command that wrote nothing is, to the bus, a cancel.
+    //
+    // A prompt for ONE point is still finished the old way: an empty answer
+    // there is a missing argument, and "İptal edildi" is the truth about a
+    // circle whose rim was never given.
+    if (session_ && session_->waiting()) {
+        const command::Prompt& asking = session_->prompt();
+        if (asking.kind == command::ParamKind::Point) {
+            for (const command::Param& p : session_->spec().params)
+                if (p.name == asking.param && p.kind == command::ParamKind::PointList) {
+                    supplyValue(command::Value{});
+                    return;
+                }
+        }
+    }
     finishing_ = true;
     cancelInteractive();
     finishing_ = false;

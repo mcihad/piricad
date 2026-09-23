@@ -136,8 +136,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.rotate`](#cadrotate) | `core.rotate` | `DÖNDÜR` | Seçilen nesneleri bir merkez etrafında döndürür. |
 | [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
-| [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
-| [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin alanını ve çevresini yazar. |
+| [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
+| [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`cad.pan`](#cadpan) | `core.pan` | `KAYDIR` | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`cad.offset`](#cadoffset) | `core.offset` | `OFSET` | Seçili nesnelerin verilen mesafede paralelini çizer. |
@@ -1286,7 +1286,7 @@ cad.mirror(
 
 ### `cad.measure`
 
-İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
+Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
 
 Komut: `core.measure` — `ÖLÇ`
 
@@ -1294,6 +1294,7 @@ Komut: `core.measure` — `ÖLÇ`
 cad.measure(
     start: Coord,
     end: Coord,
+    more: Coords,
 ) -> int
 ```
 
@@ -1301,24 +1302,29 @@ cad.measure(
 |---|---|---|---|
 | `start` | `Coord` | `baslangic` | Ölçümün ilk noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Ölçümün ikinci noktası [mm, Sağa (Y) önce] |
+| `more` | `Coords` | `devam` | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/measure.md)
 
 ### `cad.measure_area`
 
-Seçilen nesnelerin alanını ve çevresini yazar.
+Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 
 Komut: `core.measure_area` — `ALANÖLÇ`
 
 ```python
 cad.measure_area(
     objects: list[int],
+    method: str,
+    points: Coords,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
+| `method` | `str` | `yontem` | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan |
+| `points` | `Coords` | `noktalar` | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/measure_area.md)
 

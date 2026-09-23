@@ -134,6 +134,10 @@ ikisini de yazar.
 Yakalama açıktır: köşeye `UÇ`, kenar ortasına `ORTA` yakalar, böylece ölçtüğünüz
 açı gerçekten çizimdeki köşedir, tıklamanızın piksel hassasiyeti değildir.
 
+**Okuma tuvalde kalır.** Üçüncü tıklamadan sonra iki kol, süpürme yayı ve açının
+değeri vurgulu çizili kalır; çizim değişince ya da hiçbir komut çalışmıyorken Esc'e
+basınca silinir.
+
 ### Betik
 
 ```json

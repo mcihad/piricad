@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — ölçüm araçları: sürekli ölçüm, köşelerden alan, tuvalde kalan sonuç
+
+- **ÖLÇ noktadan noktaya ölçüyor.** İkinci noktada durmuyor; her yeni nokta bir kenar
+  ekliyor ve o kenarın uzunluğunu, açısını ve **toplamı** yazıyor. İmleç hareket
+  ettikçe biten her kenarın üstünde uzunluğu, imlece giden kenarın yanında uzunluğu ve
+  açısı, imlecin altında toplam yazıyor. Enter ya da sağ tık bitiriyor. Betikte
+  `devam=` noktaları aynı işi yapıyor; yapılandırılmış sonuç `kenarlar_mm`,
+  `toplam_mm`.
+- **ALANÖLÇ köşelerden ölçüyor** (`yontem=nokta`, araç sütununda **Alan Ölç —
+  köşelerden**): çizimde olmayan bir alanın köşeleri gösteriliyor, alan dolgulu
+  çiziliyor ve alanı ile çevresi köşeler konuldukça yazılıyor. Açık bir çizgiye artık
+  "alan: 0,00 m²" değil "kapalı değil, alanı yok; uzunluk: …" diyor.
+- **Sonuç tuvalde kalıyor.** ÖLÇ, ALANÖLÇ, AÇIÖLÇ ve KOORDİNAT bittiklerinde ölçtükleri
+  şeyi (hat ve kenar uzunlukları, alan, açı, koordinat) vurgulu çizili bırakıyor;
+  çizim değişince ya da hiçbir komut çalışmıyorken Esc'e basınca siliniyor. Çizimin
+  parçası değil, kaydedilmiyor, günlüğe girmiyor.
+- **Bir nokta listesinin anahtarı ardından gelen koordinatları da topluyor:**
+  `ALANÖLÇ noktalar=0,0 20,0 20,10`. Önceden ikinci ve sonraki koordinatlar ilk
+  konumsal parametreye bağlanmaya çalışılıyordu; `KOPYALA … bitis=A B C` artık üç
+  kopya yapıyor.
+- Nokta dizisi bekleyen bir istemi Enter ya da sağ tıkla bitirmek artık komutu iptal
+  etmiyor, "bu kadar" diyor: salt okunur bir ölçüm bittiğinde "İptal edildi" yazmıyor.
+- Tuvaldeki sayılar (kılavuz okuması, ölçek çubuğu, imleç koordinatı) Türkçe ondalık
+  virgülle yazılıyor; "10.77 m  124,2238 grad" gibi karışık yazım kalmadı.
+
 ### Düzeltildi — araç sütunu ve menüler komutlara tam bağlı; basılınca reddeden araç kalmadı
 
 Araç sütunu ve menülerdeki 108 aracın her biri iki kez — önce seçip sonra basarak ve

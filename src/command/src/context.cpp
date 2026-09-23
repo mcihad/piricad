@@ -289,6 +289,11 @@ void Context::echo(std::string message) const
     session_.bus().echo(message);
 }
 
+void Context::mark(const MeasureMark& m) const
+{
+    if (const auto& hook = session_.bus().on_measure_mark) hook(m);
+}
+
 void Context::refuse(core::ErrorCode code, std::string message) const
 {
     refuse(core::Error{code, std::move(message)});

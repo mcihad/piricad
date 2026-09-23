@@ -2641,18 +2641,19 @@ TEST_CASE("bir koordinat nesne seçimine bağlanmaz: yutulmaz, reddedilir")
     CHECK(pair.error().message.find("nesneler=1 nesneler=2") != std::string::npos);
     CHECK_EQ(f.doc.live_entity_count(), before);
 
-    // THE REPORTED REPRO. The bare coordinates after `bitis=` bind positionally
-    // to `nesneler`, the first declared parameter, whose arity never fills. They
-    // were swallowed and KOPYALA made ONE copy where three were asked for, with
-    // a success report and a journal line that recorded the single copy.
+    // THE REPORTED REPRO. The bare coordinates after `bitis=` used to bind
+    // positionally to `nesneler`, the first declared parameter, whose arity never
+    // fills: they were swallowed and KOPYALA made ONE copy where three were
+    // asked for. That became a refusal; it is now what was asked for, because a
+    // keyword that names a point list keeps the run open for the coordinates
+    // after it — three copies of each of the two points.
     REQUIRE(f.bus.execute_line("SEÇ KATMAN katman=0", Origin::Test).ok());
     auto copied = f.bus.execute_line("KOPYALA baslangic=485600,4310200 bitis=485620,4310200 "
                                      "485640,4310200 485660,4310200",
                                      Origin::Test);
-    CHECK(!copied.ok());
-    CHECK(copied.error().message.find("core.copy") != std::string::npos);
-    CHECK(copied.error().message.find("nesneler") != std::string::npos);
-    CHECK_EQ(f.doc.live_entity_count(), before);
+    REQUIRE(copied.ok());
+    CHECK_EQ(f.doc.live_entity_count(), before + 6);
+    const std::size_t copies = f.doc.live_entity_count();
 
     // A COORDINATE AT THE OTHER KINDS is refused where it is read rather than one
     // layer later, and a parameter that takes a single value gets no advice to
@@ -2665,7 +2666,7 @@ TEST_CASE("bir koordinat nesne seçimine bağlanmaz: yutulmaz, reddedilir")
     // WHAT THE DOCUMENTATION TEACHES STILL WORKS, at any count — this is the form
     // every `/docs/komutlar` page shows and the only one that carries a third id.
     REQUIRE(f.bus.execute_line("SİL nesneler=1 nesneler=2", Origin::Test).ok());
-    CHECK_EQ(f.doc.live_entity_count(), before - 2);
+    CHECK_EQ(f.doc.live_entity_count(), copies - 2);
 }
 
 TEST_CASE("betikteki [1,2] hâlâ iki kimlik: komut satırının reddi JSON yolunu kapatmadı")
@@ -8494,4 +8495,26 @@ TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı d
         CHECK_FALSE(result.error().message.empty());
         CHECK_EQ(f.doc.content_hash(), before);
     }
+}
+
+TEST_CASE("Bir nokta listesinin anahtarı ardından gelen koordinatları da toplar")
+{
+    // `ALANÖLÇ noktalar=0,0 20,0 20,10` handed the second and third corners to
+    // the first positional parameter — a selection — which refused them as the
+    // wrong kind. A keyword that names a point list keeps the run open for the
+    // coordinates that follow it, and closes at the first token of another kind.
+    Fixture f;
+    auto r = f.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test);
+    REQUIRE(r.ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(e != core::kNoEntity);
+    CHECK(f.doc.geometry()
+              .ring_xs(f.doc.geometry().rings_of(f.doc.entities().slot[e]).first)
+              .size() == 4);
+
+    // Another keyword closes the run; positional binding carries on as it did.
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    REQUIRE(f.bus.execute_line("ÖLÇ baslangic=0,0 bitis=3,4 devam=3,10 0,10", Origin::Test).ok());
+    CHECK(said.find("Kenar 3: 3,000 m") != std::string::npos);
 }

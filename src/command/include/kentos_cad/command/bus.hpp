@@ -14,6 +14,7 @@
 
 #include "kentos_cad/command/aids.hpp"
 #include "kentos_cad/command/journal.hpp"
+#include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/selection.hpp"
@@ -790,6 +791,13 @@ public:
     /// double would be inventing a second, lossy encoding for a coordinate
     /// (Article 1.4). A headless client leaves it unset and the command says so.
     std::function<void(core::Point2 from, core::Point2 to)> on_pan_request;
+
+    /// WHAT A MEASUREMENT MEASURED, for a client that can leave it on the
+    /// canvas (`measure_mark.hpp`). Called by ÖLÇ, ALANÖLÇ, AÇIÖLÇ and
+    /// KOORDİNAT once they have answered; view state like the two hooks above,
+    /// so never journalled and never undone. Unset in a headless run, which
+    /// loses nothing: the figures are in the words and the report too.
+    std::function<void(const MeasureMark&)> on_measure_mark;
 
     /// What an AI-facing command asks the application to do.
     ///
