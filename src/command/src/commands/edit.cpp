@@ -25,25 +25,18 @@ Task<void> run_erase(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
 
+    // THE ORDER EVERY MODIFY COMMAND KEEPS (`want_objects`): the named ids, then
+    // the active selection — the select-then-erase order every CAD user works in
+    // — and then ASKED FOR. The third step is new, and it is why the Delete key
+    // and the Sil menu entry are no longer dead with nothing highlighted: they
+    // used to answer "seçim boş" and stop, where every CAD program asks which
+    // objects. The selection is session state (model.md R43), so the ids are
+    // copied out and the journal records them — a replay must not depend on what
+    // happened to be highlighted at the time.
     std::vector<std::int64_t> requested;
-
-    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
-        requested = given.as_ids();
-    } else {
-        // No argument: the active selection is what the user means, which is the
-        // select-then-erase order every CAD user works in. The selection is
-        // session state (model.md R43), so the ids are copied out here and the
-        // journal records them — a replay must not depend on what happened to be
-        // highlighted at the time.
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-        if (requested.empty()) {
-            ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1");
-            co_return;
-        }
-    }
+    if (!co_await want_objects(ctx, "nesneler", "Silinecek nesneleri seçin, sonra Enter", requested,
+                               0, "SİL nesneler=1"))
+        co_return;
 
     std::size_t removed = 0;
     for (std::int64_t raw : requested) {
@@ -147,7 +140,7 @@ KENTOS_COMMAND(erase)
                          "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Scriptable | Flags::AiAccessible,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Seçilen nesneleri siler.",
         .run      = &run_erase,
     };

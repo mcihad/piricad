@@ -498,6 +498,17 @@ Task<void> run_pedit(Context& ctx)
     if (!verb) co_return;
     const auto is = [&verb](const char* word) { return core::turkish_key_equals(*verb, word); };
 
+    // THE WORD IS CHECKED BEFORE ANYTHING IS EDITED. An unknown or empty one fell
+    // through to the last branch — simplifying at a tolerance of nothing — and
+    // the command reported "2 çizgi düzenlendi ()" before the bus's own check of
+    // the resolved word refused it and rolled the edit back: a success sentence
+    // and a refusal for one press, and the success was false.
+    if (!is("kapat") && !is("ac") && !is("ters") && !is("sadelestir")) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Tanınmayan işlem: '" + *verb + "'. İşlemler: kapat / ac / ters / sadelestir");
+        co_return;
+    }
+
     core::Mm tolerance = 0;
     if (is("sadelestir")) {
         double given = 0.0;

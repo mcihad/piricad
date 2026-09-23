@@ -117,23 +117,14 @@ Task<void> run(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
 
+    // Named, highlighted, or ASKED FOR (`want_objects`). The ids are copied out
+    // so the journal records them: a replay must not depend on what happened to
+    // be highlighted (model.md R43). Pressed with nothing highlighted, the menu
+    // entry used to refuse where it could have asked.
     std::vector<std::int64_t> requested;
-    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
-        requested = given.as_ids();
-    } else {
-        // The active selection, which is the select-then-act order every CAD user
-        // works in. Copied out here so the journal records the ids: a replay must
-        // not depend on what happened to be highlighted (model.md R43).
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-        if (requested.empty()) {
-            ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Çevrilecek çizgi belirtilmedi ve seçim boş. "
-                       "Örnek: ALANAÇEVİR nesneler=1 nesneler=2");
-            co_return;
-        }
-    }
+    if (!co_await want_objects(ctx, "nesneler", "Alana çevrilecek çizgileri seçin, sonra Enter",
+                               requested, 0, "ALANAÇEVİR nesneler=1 nesneler=2"))
+        co_return;
 
     std::vector<Strand> strands;
     if (!collect(ctx, requested, strands)) co_return;
@@ -252,7 +243,7 @@ KENTOS_COMMAND(to_area)
                          "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Scriptable | Flags::AiAccessible,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Uç uca değen çizgileri tek bir kapalı alana çevirir.",
         .run      = &run,
     };

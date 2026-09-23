@@ -76,7 +76,15 @@ Oturtma: 2 kontrol noktası, ölçek 1,000, dönüklük 0,000 grad
 ### Arayüz
 
 Çizimi `YEREL` sistemde başlatın — durum çubuğu **YEREL · haritaya oturtulmadı**
-yazar. İş bitince kontrol noktalarını `OTURT` ile verin.
+yazar. İş bitince **Harita → Oturt (Helmert)** menüsünü tıklayın. Komut çiftleri
+tek tek sorar:
+
+1. `1. çiftin çizimdeki noktası` — kontrol noktasının çizimdeki yerine tıklayın.
+2. `1. çiftin harita koordinatı (Y,X yazın)` — yayımlanmış koordinatı yazın
+   (`485320.150,4310220.400`); çizimdeki nokta ile imleç arasında kılavuz çizgi
+   durur.
+3. Aynısını sonraki çiftler için yapın; en az iki çift gerekir. Bitirmek için yeni
+   bir çiftin ilk noktası sorulduğunda **Enter**'a basın.
 
 ### Betik
 

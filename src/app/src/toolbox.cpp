@@ -691,6 +691,14 @@ ToolBox::ToolBox(QWidget* parent) : QWidget(parent)
 
 void ToolBox::addTool(QAction* action)
 {
+    // A TOOL THAT DOES NOT EXIST YET is kept out of the column and kept IN the
+    // list, so `KENTOS_TOOL_PROBE` can name it: four tools were once added
+    // before the code that makes them had run, and the column simply went
+    // without them — nothing crashed and nothing said so.
+    if (action == nullptr) {
+        tools_.push_back(nullptr);
+        return;
+    }
     auto* button = new ToolButton(this);
     button->setObjectName(QStringLiteral("toolBoxButton"));
     button->setFace(action);
@@ -700,11 +708,16 @@ void ToolBox::addTool(QAction* action)
     button->setFocusPolicy(Qt::NoFocus);
 
     buttons_.push_back(button);
+    tools_.push_back(action);
     column_->insertWidget(chipsSpacer_++, button, 0, Qt::AlignHCenter);
 }
 
-void ToolBox::addFamily(const QVector<QAction*>& family)
+void ToolBox::addFamily(const QVector<QAction*>& given)
 {
+    tools_ += given; ///< nulls included, for the probe — see `addTool`
+    QVector<QAction*> family;
+    for (QAction* member : given)
+        if (member != nullptr) family.push_back(member);
     if (family.isEmpty()) return;
     if (flyout_ == nullptr) {
         flyout_ = new ToolFlyout(this);

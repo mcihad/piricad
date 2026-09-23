@@ -82,8 +82,9 @@ NESNENOKTALARI nesneler=1 tur=orta_noktalar
 ### Arayüz
 
 Komut bir ajan içindir; arayüzde karşılığı nesneye tıklarken çalışan **yakalamadır**:
-merkez, uç, orta nokta ve çeyrek yakalamaları aynı noktaları verir. Komutun kendisini
-arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp `NESNENOKTALARI` yazın.
+merkez, uç, orta nokta ve çeyrek yakalamaları aynı noktaları verir. Komutun kendisi
+**Sorgu → Nesne Noktaları** menüsündedir ya da **Ctrl+K** ile bulunur: nesne seçili
+değilse hangi nesnelerin noktalarının isteneceğini sorar; seçiliyse onları okur.
 
 ### Betik
 

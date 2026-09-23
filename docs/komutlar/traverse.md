@@ -131,9 +131,11 @@ Ret hâlinde **hiçbir şey çizilmez**: işlemin tamamı geri sarılır (Articl
 
 ### Arayüz
 
-**Çizim > Poligon Hesabı** ya da **Harita > Poligon Hesabı**. Komut başlangıç
-istasyonunu ve bağlamayı sorar, sonra **her istasyon için sırayla kırılma açısını
-ve ondan sonraki kenarı sorar**:
+**Çizim > Poligon Hesabı**, **Harita > Poligon Hesabı** ya da sol araç sütununda
+**nokta ailesi**. Komut başlangıç istasyonunu ve bağlamayı sorar — bağlama
+gösterilirken istasyondan imlece kılavuz çizgi durur — sonra **her istasyon için
+sırayla kırılma açısını ve ondan sonraki kenarı sorar**; bu sırada istasyon ve
+bağlaması tuvalde çizili kalır:
 
 ```text
 İstasyon 1: kırılma açısı (Enter ya da sağ tık bitirir)

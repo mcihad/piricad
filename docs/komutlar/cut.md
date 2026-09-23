@@ -51,7 +51,9 @@ Panoya alındı: 1 nesne (912 bayt). 1 nesne çizimden silindi.
 
 ### Arayüz
 
-**Düzen > Kes** ya da **Ctrl+X**.
+**Düzen > Kes** ya da **Ctrl+X**. Önce nesneleri seçebilirsiniz; seçim boşsa
+komut hangi nesnelerin kesileceğini sorar: tıklayın ya da kutu sürükleyin, sonra
+Enter.
 
 ### Betik
 
@@ -72,7 +74,7 @@ Betiklenebilir ve yapay zekâya açıktır.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Kesilecek nesne yok. Önce nesne seçin ya da nesneler= ile verin.` | Seçim boş | `SEÇ` ile seçin |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Betik ne `nesneler` verdi ne seçim vardı | `SEÇ` ile seçin ya da `nesneler=` yazın |
 | `Katman kilitli: …` | Nesnenin katmanı kilitli | `KATMAN` ile kilidi kaldırın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

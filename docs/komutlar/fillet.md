@@ -24,8 +24,18 @@ kesindir.
 
 Yayın süpürme yönü köşenin dönüş yönünden anlaşılır; ayrıca belirtmeniz gerekmez.
 
-Diğer kurallar [`PAH`](chamfer.md) ile aynıdır: kapalı alanın her köşesi köşedir,
-açık çizginin uçları değildir, ve yarıçap komşu kenarlardan kısa olmalıdır.
+Diğer kurallar [`PAH`](chamfer.md) ile aynıdır: açık çizginin uçları köşe
+değildir ve teğet noktaları komşu kenarların dışına taşamaz.
+
+**Kapalı bir alanın köşesi yuvarlatılamaz.** Sonuç bir kısmı yay olan bir sınır
+olurdu; bu belge modelinde halka köşe noktalarından oluşur. Bir parselin köşesini
+düz kenarla kesmek için [`PAH`](chamfer.md) kullanın.
+
+**Hangi köşe?** Nesne verilmemişse ve tek bir nesne seçili değilse komut önce
+köşeyi sorar: köşeye **bir kez tıklamak** hem nesneyi hem köşeyi seçer. Ardından
+yarıçap sorulur; **yazabilir** ya da tuvalde **gösterebilirsiniz** — köşeden
+imlece olan uzaklık yarıçaptır. İmleç hareket ettikçe yay ve iki bacak tuvalde
+vurgulu çizilir.
 
 ## Adlar
 
@@ -64,7 +74,13 @@ Köşe yuvarlatıldı.
 
 ### Arayüz
 
-`YUVARLA` yazın, nesneyi verin, köşeyi tıklayın, yarıçapı yazın.
+Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da sağ tıklayın ve
+**Yuvarla**'yı seçin; aynı araç **Değiştir → Yuvarla** menüsündedir.
+
+1. Yuvarlatılacak köşeye tıklayın. Nesne de bu tıklamayla seçilir.
+2. İmleci köşeden uzaklaştırın: yay ve iki bacak tuvalde vurgulu çizilir.
+3. İstediğiniz yerde tıklayın **ya da** yarıçapı komut satırına yazıp Enter'a
+   basın (`8`).
 
 ### Betik
 
@@ -98,10 +114,14 @@ Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir.
 |---|---|---|
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
-| `Nesne N bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.` | Daire, yay ya da nokta verildi | Çizgi ya da alan seçin |
+| `YUVARLA için nesne belirtilmedi. Örnek: YUVARLA nesne=1 nokta=10,10 yaricap=3` | Betik ne nesneyi ne köşeyi verdi | `nesne=` ve `nokta=` verin |
+| `Orada köşesi kesilecek bir çizgi ya da alan yok. ...` | Tıklanan yerde nesne yok | Bir çizginin iki kenarının buluştuğu köşeye tıklayın |
+| `Nesne N bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.` | Daire, yay, yazı ya da nokta verildi | Çizgi ya da alan seçin |
+| `Kapalı bir alanın köşesi yuvarlatılamaz: ...` | Bir alanın ya da kapalı çizginin köşesi gösterildi | Düz kenarla kesmek için [`PAH`](chamfer.md) kullanın |
 | `Burada iki kenarın buluştuğu bir köşe yok. ...` | Açık bir çizginin ucu gösterildi | İki kenarın buluştuğu bir köşe gösterin |
 | `Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.` | Kenarlar doğrusal | Gerçek bir köşe gösterin |
-| `Kesim komşu kenardan uzun: kenarlar A m ve B m, gereken C m.` | Değer kenarlardan büyük | Daha küçük bir değer verin |
+| `Yarıçap sıfırdan büyük olmalı.` | Sıfır ya da eksi yarıçap | Artı bir yarıçap verin |
+| `Kesim komşu kenardan uzun: kenarlar 12,000 m ve 20,000 m, gereken 21,000 m. ...` | Yarıçap bu köşeye büyük | Daha küçük bir yarıçap verin ya da daha yakına tıklayın |
 | `Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.` | Kenarlar aynı doğrultuda geri dönüyor | Gerçek bir köşe gösterin |
 
 ## İlgili

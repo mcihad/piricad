@@ -8,8 +8,11 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <utility>
 
@@ -500,6 +503,124 @@ bool grip_preview(const Document& doc, EntityId e, std::size_t index, Point2 to,
             into.push_vertex(xs[v], ys[v]);
     }
     return true;
+}
+
+Result<GripEdit> insert_vertex(const Document& doc, EntityId e, std::size_t after, Point2 at)
+{
+    const EntityTable& ents = doc.entities();
+    if (e >= ents.size() || !ents.alive(e))
+        return err(ErrorCode::NotFound, "Nesne bulunamadı veya silinmiş.");
+    if (const auto st = doc.editable(e); !st) return st.error();
+    // A CURVE HAS NO CORNERS TO ADD. Its stored vertices are its definition —
+    // a circle's are a centre and a radius handle — and one more would leave a
+    // record that is no longer that kind at all.
+    if (ents.kind[e] != kPolylineKind || doc.texts().has(ents.slot[e]))
+        return err(ErrorCode::InvalidArgument,
+                   "Bu nesne bir eğri ya da yazı; araya köşe eklenemez. Tutamaklarını KÖŞETAŞI "
+                   "ile taşıyabilirsiniz.");
+
+    GripEdit edit    = read_edit(doc, e);
+    std::size_t ring = 0;
+    std::size_t pos  = 0;
+    std::size_t have = 0;
+    for (const auto& r : edit.points)
+        have += r.size();
+    if (!locate(edit, after, ring, pos)) return no_such_grip(after, have);
+
+    // `after` names the corner the new one follows, so it names a SEGMENT: the
+    // one leaving that corner. On a closed ring the last corner's segment is the
+    // closing edge — a parcel's closing edge needs a bend as often as any other.
+    if (edit.roles[ring] == RingRole::Open && pos + 1 >= edit.points[ring].size())
+        return err(ErrorCode::InvalidArgument,
+                   "Son köşeden sonra kenar yok: açık bir çizgide " + std::to_string(after + 1) +
+                       ". köşe uçtur. Araya köşe eklemek için ondan önceki bir köşe verin.");
+
+    edit.points[ring].insert(edit.points[ring].begin() + static_cast<std::ptrdiff_t>(pos) + 1, at);
+    return edit;
+}
+
+bool insert_preview(const Document& doc, EntityId e, std::size_t after, Point2 at, EmitBuffer& into)
+{
+    auto edit = insert_vertex(doc, e, after, at);
+    if (!edit) return false;
+    const GripEdit& g = edit.value();
+    for (std::size_t r = 0; r < g.points.size(); ++r) {
+        into.begin_run(g.roles[r] != RingRole::Open, g.roles[r] == RingRole::Interior);
+        for (const Point2& p : g.points[r])
+            into.push_vertex(p.x, p.y);
+    }
+    return true;
+}
+
+std::optional<std::size_t> nearest_grip(const Document& doc, EntityId e, Point2 probe)
+{
+    const std::vector<GripPoint> grips = entity_grips(doc, e);
+    std::optional<std::size_t> best;
+    double nearest = 0.0;
+    for (std::size_t i = 0; i < grips.size(); ++i) {
+        const double dx = mm_to_metres(grips[i].at.x - probe.x);
+        const double dy = mm_to_metres(grips[i].at.y - probe.y);
+        const double d  = dx * dx + dy * dy;
+        if (!best || d < nearest) {
+            best    = i;
+            nearest = d;
+        }
+    }
+    return best;
+}
+
+std::optional<std::size_t> nearest_edge(const Document& doc, EntityId e, Point2 probe)
+{
+    const EntityTable& ents = doc.entities();
+    if (e >= ents.size() || !ents.alive(e) || ents.kind[e] != kPolylineKind) return std::nullopt;
+
+    const GripEdit edit = read_edit(doc, e);
+    std::optional<std::size_t> best;
+    double nearest     = 0.0;
+    std::size_t before = 0; ///< vertices in the rings already walked
+    for (std::size_t r = 0; r < edit.points.size(); ++r) {
+        const std::vector<Point2>& ring = edit.points[r];
+        const bool closed               = edit.roles[r] != RingRole::Open;
+        const std::size_t edges         = closed ? ring.size() : ring.size() - 1;
+        for (std::size_t i = 0; ring.size() >= 2 && i < edges; ++i) {
+            const Point2 a     = ring[i];
+            const Point2 b     = ring[(i + 1) % ring.size()];
+            const Point2 on    = closest_point_on_segment(a, b, probe);
+            const double dx    = mm_to_metres(on.x - probe.x);
+            const double dy    = mm_to_metres(on.y - probe.y);
+            const double score = dx * dx + dy * dy;
+            if (!best || score < nearest) {
+                best    = before + i;
+                nearest = score;
+            }
+        }
+        before += ring.size();
+    }
+    return best;
+}
+
+std::vector<std::uint8_t> encode_grip_guide(const GripGuide& guide)
+{
+    // version, insert, index, key — little-endian as the machine writes it,
+    // because the bytes never leave the process (a prompt to the canvas).
+    std::vector<std::uint8_t> bytes(2 + sizeof(guide.index) + sizeof(guide.key));
+    bytes[0] = 1;
+    bytes[1] = guide.insert ? 1 : 0;
+    std::memcpy(bytes.data() + 2, &guide.index, sizeof(guide.index));
+    std::memcpy(bytes.data() + 2 + sizeof(guide.index), &guide.key, sizeof(guide.key));
+    return bytes;
+}
+
+Result<GripGuide> decode_grip_guide(std::span<const std::uint8_t> bytes)
+{
+    GripGuide guide;
+    if (bytes.size() != 2 + sizeof(guide.index) + sizeof(guide.key) || bytes[0] != 1 ||
+        bytes[1] > 1)
+        return err(ErrorCode::InvalidArgument, "Tutamak önizlemesinin baytları tanınmıyor.");
+    guide.insert = bytes[1] == 1;
+    std::memcpy(&guide.index, bytes.data() + 2, sizeof(guide.index));
+    std::memcpy(&guide.key, bytes.data() + 2 + sizeof(guide.index), sizeof(guide.key));
+    return guide;
 }
 
 } // namespace kentos::core

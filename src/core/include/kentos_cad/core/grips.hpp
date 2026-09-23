@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -96,5 +97,41 @@ Result<GripEdit> move_grip(const Document& doc, EntityId e, std::size_t index, P
 /// outline over the edited geometry, so the preview is the future drawing.
 /// False when the move is refused; the caller then draws nothing.
 bool grip_preview(const Document& doc, EntityId e, std::size_t index, Point2 to, EmitBuffer& into);
+
+/// Inserts a new vertex at `at` after vertex `after` of the polyline `e`,
+/// counted across its rings in R11 order from zero. On a closed ring the last
+/// vertex's edge is the closing edge, so inserting after it bends that edge; on
+/// an open run there is no edge after the last vertex, and that is refused.
+Result<GripEdit> insert_vertex(const Document& doc, EntityId e, std::size_t after, Point2 at);
+
+/// The drawn form `e` would have with a new vertex at `at` after `after`: what
+/// the canvas shows while KÖŞEEKLE aims. The same edit the command makes.
+bool insert_preview(const Document& doc, EntityId e, std::size_t after, Point2 at,
+                    EmitBuffer& into);
+
+/// The grip of `e` nearest `probe`, by its index in `entity_grips` — what a
+/// click on a corner names. Nothing when `e` has no grips.
+std::optional<std::size_t> nearest_grip(const Document& doc, EntityId e, Point2 probe);
+
+/// The vertex whose EDGE is nearest `probe` — the edge a click lands on, named
+/// by the vertex it leaves, counted as `insert_vertex` counts. Nothing when `e`
+/// is not a polyline or has no edge.
+std::optional<std::size_t> nearest_edge(const Document& doc, EntityId e, Point2 probe);
+
+/// The payload a grip preview carries (`command::RubberShape::Grip`): the
+/// object by its persistent key, the grip — or, for an insert, the vertex the
+/// new one follows — and which of the two.
+struct GripGuide
+{
+    std::int64_t key{0};    ///< the object, by persistent key
+    std::uint32_t index{0}; ///< the grip; for an insert, the vertex before the new one
+    bool insert{false};     ///< a new vertex rather than a moved grip
+};
+
+/// The guide as bytes.
+std::vector<std::uint8_t> encode_grip_guide(const GripGuide& guide);
+
+/// The guide back, refused when the bytes are not what the encoder writes.
+Result<GripGuide> decode_grip_guide(std::span<const std::uint8_t> bytes);
 
 } // namespace kentos::core

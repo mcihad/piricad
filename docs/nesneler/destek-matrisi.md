@@ -110,8 +110,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ◐ kısmi | açık eğriden kapalı bant (ÇOKLUÇİZGİ, 320.000 m²) üretildi — paralel değil tampon |
-| Yuvarla | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Pah | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Uç uca | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Ölç | ✓ destekli | çevre 108.540 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
@@ -246,8 +246,8 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Böl | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Kır | ✗ yok | Nesne 1 bir eğri ya da nokta; bu komut yalnız çizgilerle çalışır. |
 | Paralel (OFSET) | ✓ destekli | 1 paralel (ÇOKLUÇİZGİ), kaynak korundu |
-| Yuvarla | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Pah | ✗ yok | Nesne 1 bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
 | Ölç | ✓ destekli | çevre 100.000 m, alan 600.000 m² — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |

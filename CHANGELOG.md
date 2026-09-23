@@ -6,6 +6,45 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — araç sütunu ve menüler komutlara tam bağlı; basılınca reddeden araç kalmadı
+
+Araç sütunu ve menülerdeki 108 aracın her biri iki kez — önce seçip sonra basarak ve
+hiçbir şey seçmeden basarak — sınandı. Seçim yokken basılınca soru sormak yerine hata
+veren on yedi araç vardı; hepsi artık istediğini soruyor:
+
+- **SİL, KES, PANOYAKOPYALA, TEVHİT, İFRAZ, ALANİFRAZ, ALANAÇEVİR, YAZIDÜZENLE,
+  NESNENOKTALARI** nesne istiyor. Del tuşu ve **Sil** düğmesi seçim yokken komut
+  satırına `SİL nesneler=` yazıp beklemiyor, silinecek nesneleri soruyor.
+- **PAH, YUVARLA**: köşeye **tek tıklama** hem nesneyi hem köşeyi seçiyor. Mesafe ya
+  da yarıçap **yazılabiliyor ya da gösterilebiliyor**; imleç hareket ettikçe kesilmiş
+  köşe tuvalde çiziliyor. Hesap çekirdeğe (`core::cut_corner`) taşındı: önizleme ile
+  komut aynı fonksiyonu çağırıyor.
+- **KÖŞETAŞI, KÖŞEEKLE**: köşeye ya da kenara tıklamak nesneyi ve köşeyi seçiyor
+  (yeni `yer` parametresi); yeni yer istenirken nesne, köşesi imleçte olacak biçimde
+  çiziliyor.
+- **HACİM** kotu (metre), **OTURT** kontrol çiftlerini tek tek, **DÖNÜŞTÜR** hedef
+  sistemi (veri paketinin TM 3° dilimlerini önererek), **ARAÇARA** sözcüğü,
+  **İŞŞABLONU** işlemi soruyor. Önceden menüden basılınca "zorunlu parametre eksik"
+  diyorlardı.
+- **KIR, UZUNLUK, BÖLÜMLE** birden çok nesne seçiliyken reddetmiyor, istediği nesneyi
+  soruyor. **ÇİZGİDÜZENLE** tanınmayan bir işlemi hiçbir çizgiye dokunmadan
+  reddediyor (önceden önce "2 çizgi düzenlendi ()" diyor, sonra geri alınıyordu).
+- Bir sayı istemine **tıklamak** artık sessizce sıfır sayılmıyor; komut sayıyı
+  yazmanızı söylüyor ve soruyu açık tutuyor.
+
+Menüde kalıp sütunda olmayan araçlar sütuna aileler hâlinde girdi — sütun 20 düğmede
+kaldı: **Sil**; **Buda** ailesi (Uzat, Kır, Uzunluk, Böl, Bölümle); **Pah** ailesi
+(Yuvarla, Köşe Taşı, Köşe Ekle, Çizgi Düzenle); **Birleştir** ailesi (Uç Uca Ekle,
+Alana Çevir, Patlat); **Taşı** ailesine Hizala ve Esnet; **Metin**'e Yazıyı Düzenle;
+**Ölçü**'ye Etiket; **Nokta**'ya Poligon Hesabı; **Ölç**'e Aplikasyon; **Stil
+Kopyala**'ya Katmana Taşı; çizgi ailesine açılı kılavuz. On bir aracın kendi simgesi
+yoktu (Pah, Yuvarla ve Uzat Buda'nın makasını taşıyordu); hepsine çizildi.
+
+Aracı yeniden kuran gecikmeli olay macOS'ta 800 ms bekleyebiliyordu ve arada
+başlatılan komutu (örneğin yeni yazılan PAH'ı) iptal ediyordu; artık arada bir komut
+başladıysa geri çekiliyor. POLİGON'un bağlama noktası ve okuma istemleri istasyonu
+tuvalde çizili tutuyor.
+
 ### Düzeltildi — yapay zekâ artık çizebiliyor
 
 Sohbet ve MCP ajanı hiçbir şey çizemiyordu, ve iki ayrı sebepten:

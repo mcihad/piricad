@@ -21,37 +21,21 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/units.hpp"
 
-#include <cmath>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
 
-struct Unit
-{
-    double x{0.0};
-    double y{0.0};
-};
-
-Unit unit_from(core::Point2 from, core::Point2 to)
-{
-    // Metres first: the square of a TM3 coordinate difference in millimetres
-    // leaves the 53-bit mantissa long before it leaves int64 (core.md R3).
-    const double dx  = core::mm_to_metres(to.x - from.x);
-    const double dy  = core::mm_to_metres(to.y - from.y);
-    const double len = std::sqrt(dx * dx + dy * dy);
-    if (len <= 0.0) return Unit{};
-    return Unit{dx / len, dy / len};
-}
-
-/// The polyline behind one id, and the vertex the user pointed at.
+/// The polyline behind one id, its vertices and its ring's role.
 bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
-               std::vector<core::Point2>& pts, std::int64_t& id)
+               std::vector<core::Point2>& pts, std::int64_t& id, core::RingRole& role)
 {
     const core::Document& doc = ctx.document();
 
@@ -70,10 +54,12 @@ bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
                    "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return false;
     }
-    if (doc.entities().kind[slot] != core::kPolylineKind) {
+    if (doc.entities().kind[slot] != core::kPolylineKind ||
+        doc.texts().has(doc.entities().slot[slot])) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(id) +
-                       " bir eğri ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.");
+                       " bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda "
+                       "çalışır.");
         return false;
     }
 
@@ -91,280 +77,135 @@ bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
     pts.reserve(xs.size());
     for (std::size_t v = 0; v < xs.size(); ++v)
         pts.push_back(core::Point2{xs[v], ys[v]});
+    role = doc.geometry().ring_role[span.first];
     return true;
-}
-
-/// The index of the vertex nearest `probe`, and whether it HAS two edges — a
-/// corner needs one on each side, which the ends of an open line do not have.
-bool pick_corner(const std::vector<core::Point2>& pts, bool closed, core::Point2 probe,
-                 std::size_t& at)
-{
-    if (pts.size() < 3) return false;
-
-    double best   = -1.0;
-    std::size_t k = 0;
-    for (std::size_t i = 0; i < pts.size(); ++i) {
-        const double d = core::distance_squared(pts[i], probe);
-        if (best < 0.0 || d < best) {
-            best = d;
-            k    = i;
-        }
-    }
-
-    // An open line's first and last vertices are ENDS, not corners: there is only
-    // one edge at them and nothing to cut across.
-    if (!closed && (k == 0 || k + 1 == pts.size())) return false;
-
-    at = k;
-    return true;
-}
-
-core::RingRole role_of(Context& ctx, core::EntityId slot)
-{
-    const core::RingSpan span =
-        ctx.document().geometry().rings_of(ctx.document().entities().slot[slot]);
-    return ctx.document().geometry().ring_role[span.first];
-}
-
-/// The two tangent lengths a corner cut needs, plus the geometry around it.
-struct Corner
-{
-    core::Point2 v{};   ///< the vertex itself
-    Unit d1{};          ///< unit direction from the vertex toward the previous point
-    Unit d2{};          ///< unit direction from the vertex toward the next point
-    double cos_theta{}; ///< cosine of the angle at the vertex
-    double sin_theta{}; ///< its sine, always positive: a magnitude
-    double cross{};     ///< signed, so the turn direction is known
-    core::Mm edge1{};   ///< how long the two edges are, in millimetres
-    core::Mm edge2{};
-};
-
-bool measure_corner(const std::vector<core::Point2>& pts, std::size_t at, Corner& c)
-{
-    const std::size_t prev = at == 0 ? pts.size() - 1 : at - 1;
-    const std::size_t next = at + 1 == pts.size() ? 0 : at + 1;
-
-    c.v  = pts[at];
-    c.d1 = unit_from(c.v, pts[prev]);
-    c.d2 = unit_from(c.v, pts[next]);
-
-    c.cos_theta = c.d1.x * c.d2.x + c.d1.y * c.d2.y;
-    c.cross     = c.d1.x * c.d2.y - c.d1.y * c.d2.x;
-    c.sin_theta = std::abs(c.cross);
-
-    // Collinear edges have no corner to cut, and a doubled-back edge has no
-    // inside. Both are refused rather than divided by zero.
-    if (c.sin_theta < 1e-12) return false;
-
-    const auto len = [](core::Point2 a, core::Point2 b) {
-        const double dx = core::mm_to_metres(b.x - a.x);
-        const double dy = core::mm_to_metres(b.y - a.y);
-        return core::mm_round(std::sqrt(dx * dx + dy * dy) *
-                              static_cast<double>(core::kMmPerMetre));
-    };
-    c.edge1 = len(c.v, pts[prev]);
-    c.edge2 = len(c.v, pts[next]);
-    return true;
-}
-
-core::Point2 along(core::Point2 v, Unit d, core::Mm distance)
-{
-    const double m = core::mm_to_metres(distance);
-    return core::Point2{v.x + core::mm_round(d.x * m * static_cast<double>(core::kMmPerMetre)),
-                        v.y + core::mm_round(d.y * m * static_cast<double>(core::kMmPerMetre))};
 }
 
 Task<void> run_corner(Context& ctx, bool fillet)
 {
-    const char* verb = fillet ? "YUVARLA" : "PAH";
+    const char* verb          = fillet ? "YUVARLA" : "PAH";
+    const core::Document& doc = ctx.document();
+    Bus& bus                  = ctx.session().bus();
 
-    const Value given = ctx.argument("nesne");
+    // WHICH OBJECT AND WHICH CORNER, three ways in:
+    //   1. named, `nesne`, and then the corner by `nokta`;
+    //   2. one object highlighted — the same;
+    //   3. neither: ONE CLICK ON THE CORNER, which names both.
+    //
+    // The third is the one a hand uses and it did not exist: the menu entries
+    // answered "PAH için nesne belirtilmedi" and stopped, so the tool could be
+    // started only by somebody who already knew the object's key. A corner is a
+    // place on the drawing, and pointing at it is the whole question.
+    Value given = ctx.argument("nesne");
     if (given.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   std::string(verb) + " için nesne belirtilmedi. Örnek: " + verb +
-                       " nesne=1 nokta=10,10 " + (fillet ? "yaricap=3" : "mesafe=3"));
-        co_return;
+        const auto keys = bus.selection().keys();
+        if (keys.size() == 1) given = Value::ids({static_cast<std::int64_t>(core::raw(keys[0]))});
+    }
+
+    std::optional<core::Point2> at_pt;
+    if (given.empty()) {
+        at_pt = co_await ctx.point("nokta", fillet ? "Yuvarlatılacak köşeye tıklayın"
+                                                   : "Pah kırılacak köşeye tıklayın");
+        if (!at_pt) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       std::string(verb) + " için nesne belirtilmedi. Örnek: " + verb +
+                           " nesne=1 nokta=10,10 " + (fillet ? "yaricap=3" : "mesafe=3"));
+            co_return;
+        }
+        // The click's own pick box — the one SEÇ uses — so what is under the
+        // cursor is what is taken; a client with no screen picks what lies
+        // exactly under the point, which a corner always does.
+        const core::EntityId hit = core::pick_nearest(doc, *at_pt, bus.aid_settings().pick_radius);
+        if (hit == core::kNoEntity) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Orada köşesi kesilecek bir çizgi ya da alan yok. Bir çizginin iki "
+                       "kenarının buluştuğu köşeye tıklayın.");
+            co_return;
+        }
+        given = Value::ids({static_cast<std::int64_t>(core::raw(doc.key_of(hit)))});
     }
 
     core::EntityId slot = core::kNoEntity;
     std::vector<core::Point2> pts;
-    std::int64_t id = 0;
-    if (!corner_of(ctx, given, slot, pts, id)) co_return;
+    std::int64_t id     = 0;
+    core::RingRole role = core::RingRole::Open;
+    if (!corner_of(ctx, given, slot, pts, id, role)) co_return;
+    const bool closed = role != core::RingRole::Open;
 
-    const bool closed = role_of(ctx, slot) != core::RingRole::Open;
+    if (!at_pt) {
+        at_pt = co_await ctx.point("nokta", "İşlem yapılacak köşe");
+        if (!at_pt) co_return;
+    }
 
-    auto at_pt = co_await ctx.point("nokta", "İşlem yapılacak köşe");
-    if (!at_pt) co_return;
-
-    std::size_t at = 0;
-    if (!pick_corner(pts, closed, *at_pt, at)) {
+    const std::optional<std::size_t> at = core::nearest_corner(pts, closed, *at_pt);
+    if (!at) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Burada iki kenarın buluştuğu bir köşe yok. Açık bir çizginin uçları köşe "
                    "değildir; iki kenarın buluştuğu bir noktayı gösterin.");
         co_return;
     }
 
-    Corner c;
-    if (!measure_corner(pts, at, c)) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.");
-        co_return;
-    }
-
-    auto size = co_await ctx.number(fillet ? "yaricap" : "mesafe",
-                                    fillet ? "Yuvarlatma yarıçapı (metre)"
-                                           : "Köşeden kesilecek mesafe (metre)");
+    // THE SIZE, TYPED OR SHOWN, with the cut drawn at the cursor. The preview is
+    // `core::cut_corner` — the function the command is about to call — at the
+    // cursor's distance from the corner, and a click there hands that distance
+    // back as the answer (`pick_distance`). Before this, the corner was asked for
+    // and then the user typed a number blind and found out on Enter.
+    PointOptions guide;
+    guide.rubber_band    = true;
+    guide.rubber_origin  = pts[*at];
+    guide.rubber_shape   = RubberShape::Corner;
+    guide.rubber_payload = core::encode_corner_preview(
+        core::CornerPreview{.key = id, .at = static_cast<std::uint32_t>(*at), .fillet = fillet});
+    guide.pick_distance = true;
+    auto size           = co_await ctx.number(fillet ? "yaricap" : "mesafe",
+                                    fillet ? "Yuvarlatma yarıçapı (metre) — yazın ya da gösterin"
+                                                     : "Köşeden kesilecek mesafe (metre) — yazın ya da "
+                                                       "gösterin",
+                                    std::move(guide));
     if (!size) co_return;
 
-    if (*size <= 0.0) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   std::string(fillet ? "Yarıçap" : "Mesafe") + " sıfırdan büyük olmalı.");
-        co_return;
-    }
-
     const core::Mm want = core::mm_round(*size * static_cast<double>(core::kMmPerMetre));
-
-    // HOW FAR ALONG EACH EDGE the cut lands. For a chamfer it is the distance the
-    // user gave; for a fillet it is r / tan(theta/2), written with the half-angle
-    // identity tan(t/2) = sin t / (1 + cos t) so nothing but +, *, / and sqrt is
-    // used.
-    core::Mm tangent = want;
-    if (fillet) {
-        const double t = static_cast<double>(want) * (1.0 + c.cos_theta) / c.sin_theta;
-        tangent        = core::mm_round(t);
-    }
-
-    if (tangent <= 0) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bu köşe için hesaplanan kesim sıfır ya da negatif çıkıyor.");
-        co_return;
-    }
-    if (tangent >= c.edge1 || tangent >= c.edge2) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Kesim komşu kenardan uzun: kenarlar " + std::to_string(c.edge1 / 1000) +
-                       " m ve " + std::to_string(c.edge2 / 1000) + " m, gereken " +
-                       std::to_string(tangent / 1000) + " m. Daha küçük bir değer verin.");
+    auto cut            = core::cut_corner(pts, closed, *at, want, fillet);
+    if (!cut) {
+        ctx.refuse(cut.error());
         co_return;
     }
 
-    const core::Point2 p1 = along(c.v, c.d1, tangent);
-    const core::Point2 p2 = along(c.v, c.d2, tangent);
+    // The FIRST piece keeps the object, so its key, layer, style and attributes
+    // stay with it (model.md R4, R28), exactly as BÖL does.
+    const core::RingGeometry::RingInput ring{cut.value().kept, role, 0};
+    if (auto st = ctx.transaction().set_geometry(slot, {&ring, 1}); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
 
-    if (!fillet) {
-        // A CHAMFER stays one object: the corner vertex is replaced by its two
-        // tangent points and the straight edge between them IS the chamfer. The
-        // ring's own order decides which comes first — p1 lies toward the
-        // PREVIOUS vertex.
-        std::vector<core::Point2> out;
-        out.reserve(pts.size() + 1);
-        for (std::size_t i = 0; i < pts.size(); ++i) {
-            if (i != at) {
-                out.push_back(pts[i]);
-                continue;
-            }
-            out.push_back(p1);
-            out.push_back(p2);
-        }
-
-        const core::RingGeometry::RingInput ring{out, role_of(ctx, slot), 0};
-        auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
-        if (!st) {
-            ctx.refuse(st.error());
-            co_return;
-        }
-    } else {
-        // A FILLET BREAKS THE LINE IN TWO, and it has to.
-        //
-        // Leaving both tangent points in one run would draw a straight chord
-        // between them AND the arc over it — a lens where a rounded corner should
-        // be. The arc replaces that chord, so the two legs become two objects with
-        // the arc between them.
-        //
-        // A CLOSED ring therefore cannot be filleted: the result is a boundary
-        // made partly of a curve, and this model's ring holds vertices rather than
-        // curve segments (model.md R9-R12). Refusing says so; producing an open
-        // line where a parcel used to be would quietly destroy the face.
-        if (closed) {
-            ctx.refuse(core::ErrorCode::Unsupported,
-                       "Kapalı bir alanın köşesi yuvarlatılamaz: sonuç bir kısmı yay olan bir "
-                       "sınır olurdu ve bu belge modelinde halka köşe noktalarından oluşur. "
-                       "Düz kenarla kesmek için PAH kullanın.");
-            co_return;
-        }
-
-        std::vector<core::Point2> leg1(pts.begin(), pts.begin() + static_cast<std::ptrdiff_t>(at));
-        leg1.push_back(p1);
-
-        std::vector<core::Point2> leg2;
-        leg2.push_back(p2);
-        leg2.insert(leg2.end(), pts.begin() + static_cast<std::ptrdiff_t>(at) + 1, pts.end());
-
-        if (leg1.size() < 2 || leg2.size() < 2) {
-            ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Bu köşe yuvarlatılınca kenarlardan biri tek noktaya iniyor.");
-            co_return;
-        }
-
-        // The FIRST leg keeps the object, so its key, layer, style and attributes
-        // stay with it (model.md R4, R28), exactly as BÖL does.
-        const core::RingGeometry::RingInput ring{leg1, core::RingRole::Open, 0};
-        auto st = ctx.transaction().set_geometry(slot, {&ring, 1});
-        if (!st) {
-            ctx.refuse(st.error());
-            co_return;
-        }
-
-        auto second = ctx.transaction().add_polyline(ctx.document().entities().layer[slot], leg2);
+    if (cut.value().arc) {
+        auto second =
+            ctx.transaction().add_polyline(doc.entities().layer[slot], cut.value().second);
         if (!second) {
             ctx.refuse(second.error());
             co_return;
         }
-        if (const core::StyleId style = ctx.document().entities().style[slot];
-            style != core::kByLayerStyle) {
+        if (const core::StyleId style = doc.entities().style[slot]; style != core::kByLayerStyle) {
             auto styled = ctx.transaction().set_entity_style(second.value(), style);
             if (!styled) {
                 ctx.refuse(styled.error());
                 co_return;
             }
         }
-    }
-
-    if (fillet) {
-        // The arc's centre sits on the bisector, at r / sin(theta/2) from the
-        // vertex. The half-angle sine comes from cos theta by identity, so there
-        // is still no trigonometric call anywhere in this file.
-        const double half_sin = std::sqrt((1.0 - c.cos_theta) * 0.5);
-        if (half_sin <= 0.0) {
-            ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.");
-            co_return;
-        }
-
-        const Unit bis = [&] {
-            const double bx  = c.d1.x + c.d2.x;
-            const double by  = c.d1.y + c.d2.y;
-            const double len = std::sqrt(bx * bx + by * by);
-            return len > 0.0 ? Unit{bx / len, by / len} : Unit{};
-        }();
-
-        const core::Mm to_centre  = core::mm_round(static_cast<double>(want) / half_sin);
-        const core::Point2 centre = along(c.v, bis, to_centre);
-
-        // THE SWEEP IS COUNTER-CLOCKWISE from the first end to the second
-        // (core/arc.hpp), so which tangent point starts the arc depends on which
-        // way the corner turns.
-        const core::Point2 start = c.cross > 0.0 ? p2 : p1;
-        const core::Point2 end   = c.cross > 0.0 ? p1 : p2;
-
-        auto made = ctx.transaction().add_arc(ctx.document().entities().layer[slot], centre, want,
-                                              start, end);
+        const auto made =
+            ctx.transaction().add_arc(doc.entities().layer[slot], cut.value().centre,
+                                      cut.value().radius, cut.value().start, cut.value().end);
         if (!made) {
             ctx.refuse(made.error());
             co_return;
         }
     }
 
-    ctx.record("nesne", given);
+    // ONE SHAPE ON EVERY ROAD: `nesne=1` typed parses to a number, a click and
+    // a script's `[1]` to a list, and the journal is to be the same line from
+    // all three (Article 6.4). The declared shape is a selection, so a list.
+    ctx.record("nesne", Value::ids({id}));
     ctx.record("nokta", Value::point(*at_pt));
     ctx.record(fillet ? "yaricap" : "mesafe", Value::number(*size));
     ctx.echo(fillet ? "Köşe yuvarlatıldı." : "Köşeye pah kırıldı.");

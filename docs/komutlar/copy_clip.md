@@ -72,7 +72,8 @@ PANOYAKOPYALA nesneler=1 nesneler=2 dosya="/tmp/blok.pcad"
 ### Arayüz
 
 **Düzen > Panoya Kopyala** ya da **Ctrl+C**; araç çubuğunda da bir düğmesi var.
-Önce nesneleri seçin.
+Önce nesneleri seçebilirsiniz; seçim boşsa komut hangi nesnelerin kopyalanacağını
+sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 
 ### Betik
 
@@ -93,7 +94,7 @@ Betiklenebilir ve yapay zekâya açıktır.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Panoya alınacak nesne yok. Önce nesne seçin ya da nesneler= ile verin.` | Seçim boş | `SEÇ` ile seçin |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Betik ne `nesneler` verdi ne seçim vardı | `SEÇ` ile seçin ya da `nesneler=` yazın |
 | `Seçilen nesneler bulunamadı; panoya bir şey yazılmadı.` | Verilen kimlikler silinmiş | Kimlikleri `SEÇİMBİLGİSİ` ile doğrulayın |
 | `Dosya motoru bağlı değil; pano bu yapıda çalışmıyor.` | Başsız bir yapı | Uygulamayı kullanın |
 

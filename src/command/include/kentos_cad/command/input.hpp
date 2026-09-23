@@ -68,8 +68,12 @@ enum class RubberShape : std::uint8_t {
                 ///< baseline of DİKAYAK, the station of ALIM, the line of ARANOKTA
     Candidates, ///< the answers this pick chooses between, marked; the one nearest the cursor is
                 ///< the one it will take: KESİŞİMNOKTA yontem=mesafe
-    Angle ///< the two arms of an angle and the sweep between them, with the reading written on it:
-          ///< AÇIÖLÇ
+    Angle,  ///< the two arms of an angle and the sweep between them, with the reading written on
+            ///< it: AÇIÖLÇ
+    Corner, ///< the corner `rubber_payload` names, cut at the cursor's distance from it: PAH,
+            ///< YUVARLA
+    Grip    ///< the object with the grip `rubber_payload` names at the cursor — or a new corner
+            ///< there: KÖŞETAŞI, KÖŞEEKLE
 };
 
 struct Prompt
@@ -125,6 +129,15 @@ struct Prompt
     /// and drawn by the kind's own outline, so the preview is the future
     /// drawing. Empty for every other shape.
     std::vector<std::uint8_t> rubber_payload{};
+
+    /// A NUMBER THE MOUSE CAN GIVE. Set on a prompt for a distance in metres —
+    /// a chamfer, a fillet radius, an offset — that a click answers with its
+    /// distance from `rubber_origin`, the way every CAD program lets a distance
+    /// be typed OR shown. Without it a click at a number prompt was an error
+    /// ("sayı bekliyor"), so the canvas could preview the result at the cursor
+    /// and then refuse the click that pointed at it. The body is handed the
+    /// number either way and cannot tell which it was (Article 1.2).
+    bool pick_distance{false};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

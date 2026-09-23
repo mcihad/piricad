@@ -121,19 +121,12 @@ core::Mm2 area_of(const std::vector<core::Polygon>& pieces)
 
 Task<void> run(Context& ctx)
 {
-    const Selection& selection = ctx.session().bus().selection();
-
-    Value::Ints requested = ctx.argument("nesneler").as_ids();
-    if (requested.empty())
-        for (core::EntityKey k : selection.keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-    if (requested.size() != 1) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Alana göre ifraz tek parsel üzerinde çalışır. Seçili: " +
-                       std::to_string(requested.size()) + ".");
+    // The parcel: named, highlighted, or ASKED FOR, as İFRAZ does.
+    Value::Ints requested;
+    if (!co_await want_objects(ctx, "nesneler",
+                               "Alana göre ifraz edilecek parseli seçin, sonra Enter", requested, 1,
+                               "ALANİFRAZ nesneler=1 alan=200"))
         co_return;
-    }
 
     // The direction the cut runs in, as two points: a road frontage, an existing
     // boundary, a plan line. Two points rather than an angle, because that is what

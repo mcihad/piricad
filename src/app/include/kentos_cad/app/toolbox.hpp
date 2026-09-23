@@ -182,6 +182,12 @@ public:
     /// anywhere a test could walk.
     const QVector<QToolButton*>& buttons() const noexcept { return buttons_; }
 
+    /// Every tool the column holds, EVERY MEMBER OF EVERY FAMILY included, top to
+    /// bottom. A probe that pressed only the buttons pressed only the faces: the
+    /// nine members behind the creation buttons, and DÖNDÜR, ÖLÇEKLE, AYNALA and
+    /// DİZİ behind TAŞI, were never pressed by anything but a hand.
+    const QVector<QAction*>& tools() const noexcept { return tools_; }
+
 protected:
     /// Fills the column, draws the 1 px rule along its right edge, and rings the
     /// tool the keyboard is on when the keyboard is here.
@@ -212,6 +218,7 @@ private:
 
     QVBoxLayout* column_{nullptr};
     QVector<QToolButton*> buttons_;
+    QVector<QAction*> tools_; ///< every tool, family members included; see `tools()`
     QVector<QWidget*> separators_;
     ColourChips* chips_{nullptr};
 

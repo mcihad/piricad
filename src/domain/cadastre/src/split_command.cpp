@@ -75,18 +75,13 @@ std::string square_metres(core::Mm2 v)
 
 Task<void> run(Context& ctx)
 {
-    const Selection& selection = ctx.session().bus().selection();
-
-    Value::Ints requested = ctx.argument("nesneler").as_ids();
-    if (requested.empty())
-        for (core::EntityKey k : selection.keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-    if (requested.size() != 1) {
-        ctx.refuse(core::ErrorCode::InvalidArgument, "İfraz tek parsel üzerinde çalışır. Seçili: " +
-                                                         std::to_string(requested.size()) + ".");
+    // The parcel: named, highlighted, or ASKED FOR. The menu entry used to
+    // answer "Seçili: 0" and stop, so the command could not be started the way
+    // a hand starts it — reach for the tool, then point at the parcel.
+    Value::Ints requested;
+    if (!co_await want_objects(ctx, "nesneler", "İfraz edilecek parseli seçin, sonra Enter",
+                               requested, 1, "İFRAZ nesneler=1 noktalar=10,-5 10,25"))
         co_return;
-    }
 
     auto first = co_await ctx.point("noktalar", "Ayırma çizgisinin ilk noktası");
     if (!first) co_return; // ESC before anything was cut

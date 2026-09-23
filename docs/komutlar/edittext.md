@@ -84,7 +84,13 @@ YAZIDÜZENLE nesneler=1 yazi="ADA 128/12" hizalama=merkez
 
 ### Arayüz
 
-Yazıya **tıklayın** — harflerin üstüne, taban çizgisine değil; yazı harflerinin
+**Araçla.** Sol araç sütununda **Metin** düğmesini basılı tutun ya da sağ
+tıklayın ve **Yazıyı Düzenle**'yi seçin (aynı araç **Değiştir → Yazıyı Düzenle**
+menüsündedir). Yazı seçili değilse komut hangi yazının düzenleneceğini sorar;
+yazıya tıklayıp Enter'a basın. Sonra yeni metni sorar ve **şimdiki metni önerir**:
+tek harf düzeltmek için bütün satırı yeniden yazmanız gerekmez.
+
+**Panelden.** Yazıya **tıklayın** — harflerin üstüne, taban çizgisine değil; yazı harflerinin
 çevresinden tutulur. **Öznitelikler** panelindeki **METİN** bölümünde `icerik` ve
 `yukseklik` satırları düzenlenebilir: hücreye yeni değeri yazıp **Enter**'a basın.
 
@@ -126,8 +132,8 @@ Yapay zekâ da bu komutu çağırabilir (`AiAccessible`), ama her öneri gibi
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Düzenlenecek yazı yok. Bir yazı seçin ya da nesneler= ile verin.` | Ne seçim var ne `nesneler` | Yazıya tıklayın ya da `nesneler=` yazın |
-| `Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.` | Komut argümansız çağrıldı | Değiştirmek istediğiniz alanı yazın |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Betik ne `nesneler` verdi ne seçim vardı | Yazıya tıklayın ya da `nesneler=` yazın |
+| `Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.` | Betik değiştirilecek alanı vermedi | Değiştirmek istediğiniz alanı yazın |
 | `Seçimde yazı taşıyan nesne yok.` | Seçimdekilerin hiçbiri yazı değil | Bir yazı seçin |
 | `Boş bir yazı bir yazı değildir; silmek için SİL kullanın.` | `yazi=""` verildi | Silmek istiyorsanız [SİL](erase.md) kullanın |
 | `Yazı yüksekliği sıfırdan büyük olmalı.` | `yukseklik` sıfır ya da negatif | Milimetre cinsinden pozitif bir değer yazın, örnek `3000` |

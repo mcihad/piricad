@@ -98,6 +98,18 @@ core::Status Session::supply(Value v)
                          std::string("'") + spec_->id + "' komutu girdi beklemiyor (durum: " +
                              session_state_name(state_) + ")");
 
+    // A POINT IS NOT A NUMBER. A click at a prompt for a number used to be read
+    // as zero — `as_number` of a coordinate — so pressing the canvas at "Ofset
+    // mesafesi" offset by nothing and the command refused a value the user never
+    // typed. Said here, before anything resumes, so the prompt stays open for the
+    // number it wants; a prompt that takes a distance by pointing says so and is
+    // let through (`Prompt::pick_distance`).
+    if ((prompt_.kind == ParamKind::Number || prompt_.kind == ParamKind::Integer) &&
+        v.kind() == Value::Kind::Point && !prompt_.pick_distance)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "\"" + prompt_.message +
+                             "\" bir sayı bekliyor; tıklamak yerine komut satırına yazın.");
+
     supplied_ = std::move(v);
     state_    = SessionState::Running;
 

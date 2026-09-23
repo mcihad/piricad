@@ -72,8 +72,9 @@ Alana göre ifraz:
 
 ### Arayüz
 
-Parseli seçin, `ALANİFRAZ` yazın, yön çizgisinin iki ucunu tıklayın ve alanı
-girin.
+**Kadastro ▸ Alana Göre İfraz** menüsünü tıklayın ya da `ALANİFRAZ` yazın. Parsel
+seçili değilse komut hangi parselin ifraz edileceğini sorar: parsele tıklayıp
+Enter'a basın. Sonra yön çizgisinin iki ucunu tıklayın ve alanı girin.
 
 ### Betik
 
@@ -100,9 +101,14 @@ alınır — yarım uygulanmış bir ifraz olmaz.
 
 ## Hatalar
 
-> `Alana göre ifraz tek parsel üzerinde çalışır.`
+> `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.`
 
-Seçim boş ya da birden çok parsel içeriyor.
+Betik parseli vermedi ve seçim de boş; ya da sorulan parsel seçilmeden Enter'a
+basıldı.
+
+> `Bir seferde en fazla 1 nesne; 2 nesne seçili.`
+
+Betikten birden çok nesne seçiliyken çağrıldı; `nesneler=` ile tek parsel verin.
 
 > `Yön çizgisinin iki ucu aynı yerde; ayırma yönü belirsiz.`
 

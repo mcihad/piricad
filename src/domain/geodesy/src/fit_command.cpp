@@ -53,7 +53,31 @@ Task<void> run(Context& ctx)
     // The pairs arrive as a flat run of points: local, map, local, map... One
     // parameter rather than two, because two lists could disagree in length and
     // then the command would have to guess which one was short.
-    const Value::Points given = ctx.argument("noktalar").as_points();
+    //
+    // ASKED FOR ONE AT A TIME, which is the same run: a script's list is drained
+    // one point per question and ends where it ends, and a hand clicks a point
+    // on the drawing and types the published coordinate it belongs at, pair by
+    // pair, until Enter. The Jeodezi menu's entry used to answer "zorunlu
+    // 'noktalar' parametresi eksik", so a drawing could be put on the map only
+    // by somebody who typed every coordinate of every pair on one line.
+    Value::Points given;
+    for (;;) {
+        const bool local       = given.size() % 2 == 0;
+        const std::string pair = std::to_string(given.size() / 2 + 1);
+        PointOptions guide;
+        if (!local) {
+            // The map point is aimed FROM its local point, so the pair being
+            // entered stays on screen while the coordinate is typed.
+            guide.rubber_band   = true;
+            guide.rubber_origin = given.back();
+        }
+        auto p = co_await ctx.point("noktalar",
+                                    local ? pair + ". çiftin çizimdeki noktası (Enter bitirir)"
+                                          : pair + ". çiftin harita koordinatı (Y,X yazın)",
+                                    guide);
+        if (!p) break;
+        given.push_back(*p);
+    }
     if (given.size() < 4 || (given.size() % 2) != 0) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "OTURT nokta ÇİFTLERİ ister: yerel, harita, yerel, harita... "
@@ -171,7 +195,7 @@ KENTOS_COMMAND(fit)
                     .en("crs"),
             },
         .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Scriptable | Flags::AiAccessible,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).",
         .run = &run,
     };

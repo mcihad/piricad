@@ -68,7 +68,9 @@ Hacim — karşılaştırma kotu 845,000 m
 
 ### Arayüz
 
-Kotlu bir nokta listesi okuyun, sonra `HACİM kot=845000` yazın. Sonuç sağ
+Kotlu bir nokta listesi okuyun, sonra **Harita → Hacim Hesabı** menüsünü
+tıklayın: komut karşılaştırma kotunu **metre** olarak sorar (`845`). Komut satırında
+`HACİM kot=845000` yazmak da aynıdır — orada `kot` milimetredir. Sonuç sağ
 paneldeki **Geçmiş** sekmesinde durur.
 
 ### Betik

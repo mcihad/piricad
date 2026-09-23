@@ -910,6 +910,7 @@ Komut: `core.vertex_move` — `KÖŞETAŞI`
 cad.vertex_move(
     object: list[int],
     vertex: int,
+    at: Coord,
     point: Coord,
 ) -> int
 ```
@@ -918,6 +919,7 @@ cad.vertex_move(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi taşınacak nesnenin kimliği [kalıcı nesne anahtarı] |
 | `vertex` | `int` | `kose` | Taşınacak köşenin sırası; ilk köşe 1'dir |
+| `at` | `Coord` | `yer` | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce] |
 | `point` | `Coord` | `nokta` | Köşenin yeni yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_move.md)
@@ -932,6 +934,7 @@ Komut: `core.vertex_insert` — `KÖŞEEKLE`
 cad.vertex_insert(
     object: list[int],
     vertex: int,
+    at: Coord,
     point: Coord,
 ) -> int
 ```
@@ -940,6 +943,7 @@ cad.vertex_insert(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşe eklenecek nesnenin kimliği [kalıcı nesne anahtarı] |
 | `vertex` | `int` | `kose` | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir |
+| `at` | `Coord` | `yer` | Kenarı gösteren nokta: kose verilmezse en yakın kenar, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce] |
 | `point` | `Coord` | `nokta` | Yeni köşenin yeri [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/vertex_insert.md)

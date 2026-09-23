@@ -11,6 +11,7 @@
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/app/toolbox.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
 
@@ -50,6 +51,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QToolButton>
 #include <QTranslator>
 
 #include <algorithm>
@@ -1340,6 +1342,117 @@ int main(int argc, char** argv)
         later(
             [&window] { window.runScriptLine(QStringLiteral("BUDA nesne=1 sinir=2 nokta=10,0")); });
         later([&window, shot] { shot(QStringLiteral("12-ret"), &window); });
+
+        // THE PREVIEWS A HAND AIMS BY. Each tool is started the way a button
+        // starts it, the corner is given, and the cursor is put where a hand
+        // would hold it — so the frame shows what the next click will make,
+        // drawn by the function the command itself calls.
+        const auto hover = [&window](kentos::core::Point2 world) {
+            kentos::app::MapCanvas* canvas = window.canvas();
+            if (canvas == nullptr) return;
+            const auto at = canvas->view().to_screen(world);
+            const QPointF p(at.x, at.y);
+            QMouseEvent move(QEvent::MouseMove, p, canvas->mapToGlobal(p), Qt::NoButton,
+                             Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &move);
+        };
+        const auto scene = [&window](const QString& shape) {
+            window.cancelCommand();
+            window.runScriptLine(QStringLiteral("YENİ"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(shape);
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            // A little air round the shape, so what the cursor drags past its
+            // edge is still in the frame.
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+        };
+
+        // PAH: the cut at the cursor's distance from the corner, 3.5 m.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("PAH"));
+            window.runScriptLine(QStringLiteral("20,0"));
+        });
+        later([hover] { hover({20'000, 3'500}); });
+        later([&window, shot] { shot(QStringLiteral("13-pah-onizleme"), &window); });
+
+        // YUVARLA: the arc and its two legs at a 4 m radius.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YUVARLA"));
+            window.runScriptLine(QStringLiteral("20,0"));
+        });
+        later([hover] { hover({16'000, 0}); });
+        later([&window, shot] { shot(QStringLiteral("14-yuvarla-onizleme"), &window); });
+
+        // KÖŞETAŞI: the parcel with its corner on the cursor.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("KÖŞETAŞI"));
+            window.runScriptLine(QStringLiteral("20,12"));
+        });
+        later([hover] { hover({25'000, 15'000}); });
+        later([&window, shot] { shot(QStringLiteral("15-kosetasi-onizleme"), &window); });
+
+        // KÖŞEEKLE: the bottom edge bent through the cursor.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("KÖŞEEKLE"));
+            window.runScriptLine(QStringLiteral("10,0"));
+        });
+        later([hover] { hover({10'000, -4'000}); });
+        later([&window, shot] { shot(QStringLiteral("16-koseekle-onizleme"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // AND THE FAMILIES THE EDIT VERBS NOW LIVE IN, opened the way a hand
+        // opens one — a right click on the button — and photographed with the
+        // card over the window, since the card is a popup of its own.
+        // BY ITS MEMBERS, not its face: the face is whichever member was used
+        // last, and the frames above have just used several.
+        const auto family = [&window, into](const QStringList& members, const QString& name) {
+            const auto* box = window.findChild<kentos::app::ToolBox*>();
+            if (box == nullptr) return;
+            QToolButton* button = nullptr;
+            for (QToolButton* b : box->buttons())
+                for (const QAction* a : box->tools())
+                    if (a != nullptr && b->defaultAction() == a &&
+                        members.contains(a->property(kentos::app::kToolCommandProperty).toString()))
+                        button = b;
+            if (button == nullptr) return;
+            const QPointF centre(button->width() / 2.0, button->height() / 2.0);
+            QMouseEvent press(QEvent::MouseButtonPress, centre,
+                              QPointF(button->mapToGlobal(centre.toPoint())), Qt::RightButton,
+                              Qt::RightButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(button, &press);
+            auto* card   = box->findChild<kentos::app::ToolFlyout*>();
+            QImage frame = window_shot(&window);
+            if (card != nullptr && card->isVisible()) {
+                QPainter paint(&frame);
+                paint.drawPixmap(card->mapToGlobal(QPoint(0, 0)) - window.mapToGlobal(QPoint(0, 0)),
+                                 card->grab());
+                paint.end();
+                card->close();
+            }
+            const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
+            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[kentos] %s\n",
+                               qPrintable(path));
+        };
+        later([family] {
+            family({QStringLiteral("PAH"), QStringLiteral("YUVARLA"), QStringLiteral("KÖŞETAŞI"),
+                    QStringLiteral("KÖŞEEKLE"), QStringLiteral("ÇİZGİDÜZENLE")},
+                   QStringLiteral("17-kose-ailesi"));
+        });
+        later([family] {
+            family({QStringLiteral("BUDA"), QStringLiteral("UZAT"), QStringLiteral("KIR"),
+                    QStringLiteral("UZUNLUK"), QStringLiteral("BÖL"), QStringLiteral("BÖLÜMLE")},
+                   QStringLiteral("18-kesme-ailesi"));
+        });
+        later([family] {
+            family({QStringLiteral("BİRLEŞTİR"), QStringLiteral("UÇUCA"),
+                    QStringLiteral("ALANAÇEVİR"), QStringLiteral("PATLAT")},
+                   QStringLiteral("19-parca-ailesi"));
+        });
 
         later([] { QApplication::exit(0); });
     }

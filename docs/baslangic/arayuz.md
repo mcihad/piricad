@@ -89,6 +89,16 @@ klavyenin nerede olacağı değişir:
 | **Nokta** | Tuvale tıklayın; ya da koordinatı komut satırına yazın (`485320,4310220`, `@50,30`, `@100<45`) |
 | **Nesne** | Tuvalde seçin, sonra **Enter** |
 | **Ad** (blok, katman, desen) ya da **sayı** | Odak kendiliğinden komut satırına geçer ve yazılacak yer hazır olur |
+| **Mesafe** (pah mesafesi, yuvarlatma yarıçapı) | İstem "yazın ya da gösterin" der: sayıyı yazın **ya da** tuvale tıklayın — istemin başladığı noktadan tıklanan yere olan uzaklık cevaptır. İmleç hareket ettikçe sonuç tuvalde çizilir |
+
+Bir **sayı** isteyen öteki istemlerde tuvale tıklamak bir cevap değildir: komut
+"… bir sayı bekliyor; tıklamak yerine komut satırına yazın." der ve soruyu açık
+tutar. (Tıklamanın sessizce sıfır sayıldığı eski davranış yoktur.)
+
+Nesneyle çalışan bir araca **hiçbir şey seçmeden** basmak da bir hata değildir:
+araç hangi nesneleri istediğini sorar. Tek nesneyle çalışan bir araca birden çok
+nesne seçiliyken basarsanız reddetmez; "2 nesne seçili; bu araç bir seferde 1
+nesneyle çalışır" diyerek istediği nesneyi sorar.
 
 Cevabı belli bir kümeden olan istemler o kümeyi de gösterir: **Blok Ekle**
 çizimdeki blokların adlarını, **Katman** ve **Etiket** katman adlarını,
@@ -169,10 +179,14 @@ nesneleri elinizde kalmaz.
 | Grup | Araçlar |
 |---|---|
 | **seçim** | Seç · Alan Seç · Kaydır |
-| **oluşturma** | Çizgi ▸ · Dikdörtgen ▸ · Daire ▸ · Yay ▸ · Nokta · Metin · Blok Ekle ▸ · Ölçü ▸ *(▸ aileler)* |
-| **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
-| **ölçüm** | Uzunluk Ölç ▸ *(aile)* |
-| **yardımcı** | Stil Kopyala · Topoloji Denetimi |
+| **oluşturma** | Çizgi ▸ · Dikdörtgen ▸ · Daire ▸ · Yay ▸ · Nokta ▸ · Metin ▸ · Blok Ekle ▸ · Ölçü ▸ *(▸ aileler)* |
+| **düzenleme** | Sil · Buda ▸ · Pah ▸ · Birleştir ▸ · Taşı ▸ · Ofset |
+| **ölçüm** | Ölç ▸ |
+| **yardımcı** | Stil Kopyala ▸ · Topoloji Denetimi |
+
+Kadastro işlemleri — İfraz, Alana Göre İfraz, Tevhit — sütunda değil, kendi
+**Kadastro** menüsündedir: her biri arkasında bir yönetmelik olan bir işlemdir ve
+gündelik geometri araçlarıyla aynı yerde durmaz.
 
 Üst araç çubuğunda **Kaydet**'in sağında **Yazdır** durur; yanındaki küçük ok
 yazdırma profillerini listeler. İlk basış tuvalde [yazdırma alanı](yazdirma.md)
@@ -196,10 +210,19 @@ yay ise açık bir kenardır ve hiçbir şeyi çevrelemez.
 | Dikdörtgen | `DİKDÖRTGEN` · **döndürülmüş** · `ALAN` · `ÇOKGEN` · **dıştan** · **kenardan** · `TARAMA` | kapalı yüz; tarama desenli yüzdür |
 | Daire | `DAİRE` · **çapın iki ucu** · **üç nokta** · **iki doğruya teğet** · `ELİPS` · **eksenin iki ucu** · `HALKA` | kapalı eğri |
 | Yay | `YAY` · **üç nokta** · **başlangıç-merkez-açı** · **başlangıç-bitiş-yarıçap** · **teğet devam** · `DİLİM` | açık eğri ve ondan kesilen dilim |
-| Nokta | `NOKTA` · `DİKAYAK` · `ALIM` · `KESİŞİMNOKTA` · `ARANOKTA` | tek nokta koymanın beş yolu |
+| Nokta | `NOKTA` · `DİKAYAK` · `ALIM` · `KESİŞİMNOKTA` · `ARANOKTA` · `POLİGON` | ölçülmüş noktayı koymanın yolları, poligon hesabı dahil |
+| Metin | `METİN` · `YAZIDÜZENLE` | yazmak ve yazıyı düzeltmek |
 | Blok Ekle | `BLOKEKLE` · `BLOK` | blok yerleştirmek ve tanımlamak |
-| Ölçü | `ÖLÇÜ` · `LİDER` | açıklama: ölçü ve not oku |
-| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `AÇIÖLÇ` · `KOORDİNAT` · `NESNEBİLGİ` | ölçme ve sorma |
+| Ölçü | `ÖLÇÜ` · `LİDER` · `ETİKET` | açıklama: ölçü, not oku, öznitelikten etiket |
+| Buda | `BUDA` · `UZAT` · `KIR` · `UZUNLUK` · `BÖL` · `BÖLÜMLE` | kesmek, uzatmak, parçaya ayırmak |
+| Pah | `PAH` · `YUVARLA` · `KÖŞETAŞI` · `KÖŞEEKLE` · `ÇİZGİDÜZENLE` | köşeler ve çizginin biçimi |
+| Birleştir | `BİRLEŞTİR` · `UÇUCA` · `ALANAÇEVİR` · `PATLAT` | parçaları birleştirmek ve ayırmak |
+| Taşı | `TAŞI` · `KOPYALA` · `DÖNDÜR` · `ÖLÇEKLE` · `AYNALA` · `DİZİ` · `HİZALA` · `ESNET` | seçileni yerinden oynatmak |
+| Ölç | `ÖLÇ` · `ALANÖLÇ` · `AÇIÖLÇ` · `KOORDİNAT` · `NESNEBİLGİ` · `APLİKASYON` | ölçme ve sorma |
+| Stil Kopyala | `STİLKOPYALA` · `KATMANAT` | nesnenin stilini ve katmanını değiştirmek |
+
+Çizgi ailesinin sonunda **açılı kılavuz** (`KILAVUZ yon=45g`) da durur: cetvelden
+sürüklenen kılavuzlar yalnız yatay ve düşey olur, açılı olanı istenir.
 
 ### İnşa yöntemleri de birer araçtır
 

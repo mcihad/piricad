@@ -105,6 +105,12 @@ public:
     /// road (`Controller::finishInteractive`).
     void endCommand();
 
+    /// Abandons a command that is waiting, the way Esc does — with nothing it
+    /// had not yet committed left behind (`Controller::cancelInteractive`).
+    /// Public for the screenshot run, which starts a tool, photographs what it
+    /// previews, and has to put it down again before the next frame.
+    void cancelCommand();
+
     /// Brings the transcript in front: the properties dock, on its `Geçmiş` tab.
     ///
     /// THE TRANSCRIPT IS A TAB, not a dock of its own — which is why a
@@ -921,6 +927,23 @@ private:
     QAction* actChamfer_{nullptr};
     QAction* actFillet_{nullptr};
     QAction* actSetLayer_{nullptr};
+    // THE EDIT VERBS THAT WERE MENU ROWS ONLY. Held as tools now, so the column
+    // can carry them in families and the menus and the column press one action.
+    QAction* actBreak_{nullptr};        ///< KIR
+    QAction* actLengthen_{nullptr};     ///< UZUNLUK
+    QAction* actJoin_{nullptr};         ///< UÇUCA
+    QAction* actExplode_{nullptr};      ///< PATLAT
+    QAction* actAlign_{nullptr};        ///< HİZALA
+    QAction* actDivide_{nullptr};       ///< BÖLÜMLE
+    QAction* actPolylineEdit_{nullptr}; ///< ÇİZGİDÜZENLE
+    QAction* actVertexMove_{nullptr};   ///< KÖŞETAŞI
+    QAction* actVertexAdd_{nullptr};    ///< KÖŞEEKLE
+    QAction* actToArea_{nullptr};       ///< ALANAÇEVİR
+    QAction* actTextEdit_{nullptr};     ///< YAZIDÜZENLE
+    QAction* actTraverse_{nullptr};     ///< POLİGON, on both the Çizim and the Harita menu
+    QAction* actStakeout_{nullptr};     ///< APLİKASYON
+    QAction* actLabel_{nullptr};        ///< ETİKET
+    QAction* actAngledGuide_{nullptr};  ///< KILAVUZ yon=45g
     QAction* actPoint_{nullptr};
     QAction* actPerpOffset_{nullptr};
     QAction* actSurvey_{nullptr};

@@ -71,7 +71,8 @@ TEVHİT nesneler=1 2
 
 ### Arayüz
 
-Parselleri seçin, **Kadastro ▸ Tevhit** menüsünü tıklayın.
+**Kadastro ▸ Tevhit** menüsünü tıklayın. Parseller seçili değilse komut
+birleştirilecek parselleri sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 
 Bu komut sol araç kutusunda değildir: araç kutusundaki **Birleştir**
 ([`BİRLEŞTİR`](combine.md)) genel bir geometri işlemidir ve komşuluk aramaz. Tevhit
@@ -101,9 +102,13 @@ birleştirilmez — işlem bütünüyle geri alınır.
 
 ## Hatalar
 
-> `Tevhit en az iki parsel ister.`
+> `Tevhit en az iki parsel ister. Seçili: 1. Birleştirilecek parselleri seçin.`
 
-Seçim tek parsel ya da boş.
+Tek parsel verildi ya da seçildi.
+
+> `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.`
+
+Betik parselleri vermedi ve seçim de boş.
 
 > `Bu parseller bitişik değil: birleşme <n> ayrı parça veriyor.`
 

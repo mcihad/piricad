@@ -4,7 +4,9 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/session.hpp"
 
+#include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <string>
 #include <utility>
@@ -45,7 +47,11 @@ Value::Ints to_ids(const Value& v)
 
 } // namespace
 
-Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
+namespace {
+
+/// The aids proper: object snap, grid, direction locks and tracking, on a point
+/// or a run of them. Anything else passes through untouched.
+Value snap_value(Session& session, const Prompt& prompt, Value v)
 {
     // Only a point is aimed; a number, a name or a flag is typed exactly.
     if (v.kind() != Value::Kind::Point && v.kind() != Value::Kind::PointList) return v;
@@ -91,6 +97,23 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
     return Value::points(std::move(points));
 }
 
+} // namespace
+
+Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
+{
+    // A DISTANCE SHOWN RATHER THAN TYPED (`Prompt::pick_distance`): the click is
+    // snapped like any other — a chamfer taken to a corner of the next parcel
+    // lands exactly there — and what is handed on, and journalled, is its
+    // distance from the prompt's origin in metres. A replay re-supplies the
+    // number, which is what the command asked for.
+    if (prompt.pick_distance && prompt.kind == ParamKind::Number &&
+        v.kind() == Value::Kind::Point) {
+        const core::Point2 at = snap_value(session, prompt, std::move(v)).as_point();
+        return Value::number(core::mm_to_metres(core::segment_length(prompt.rubber_origin, at)));
+    }
+    return snap_value(session, prompt, std::move(v));
+}
+
 Context::Context(Session& session, Transaction& tx, const core::Document& doc)
     : session_(session), tx_(tx), doc_(doc)
 {}
@@ -119,6 +142,7 @@ InputAwaiter<double> Context::number(std::string param, std::string message, Poi
     prompt.rubber_shape    = o.rubber_shape;
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
+    prompt.pick_distance   = o.pick_distance;
     return InputAwaiter<double>(session_, std::move(p), std::move(prompt), &to_number);
 }
 
@@ -201,14 +225,26 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
     for (core::EntityKey k : ctx.session().bus().selection().keys())
         out.push_back(static_cast<std::int64_t>(core::raw(k)));
 
+    // A SELECTION TOO BIG FOR THE TOOL IS ASKED PAST, not refused. KIR, UZUNLUK
+    // and BÖLÜMLE take one object; pressing one of them with two highlighted used
+    // to answer "en fazla 1 nesne" and do nothing, so the button was dead until
+    // the user went and cleared the selection by hand. Now the tool asks for the
+    // one it wants and says why — and a client that cannot point (a script, an
+    // agent) is told exactly what it was told before, because it cannot answer
+    // the question and the refusal below is the same sentence.
+    std::size_t crowded = 0;
     if (!out.empty()) {
-        if (too_many(out.size()))
-            co_return refuse("Bir seferde en fazla " + std::to_string(most) + " nesne; " +
-                             std::to_string(out.size()) + " nesne seçili.");
-        co_return true;
+        if (!too_many(out.size())) co_return true;
+        crowded = out.size();
+        out.clear();
+        message = std::to_string(crowded) + " nesne seçili; bu araç bir seferde " +
+                  std::to_string(most) + " nesneyle çalışır. " + message;
     }
 
     auto picked = co_await ctx.objects(param, std::move(message));
+    if (crowded != 0 && (!picked || picked->empty()))
+        co_return refuse("Bir seferde en fazla " + std::to_string(most) + " nesne; " +
+                         std::to_string(crowded) + " nesne seçili.");
     if (!picked || picked->empty()) {
         // Said for BOTH clients, without asking which one this is (Article 1.2):
         // a script that forgot its argument is told why nothing happened, and a

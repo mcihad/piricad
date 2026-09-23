@@ -249,12 +249,24 @@ silinmez**; komut çizime dokunmadan durur.
 **Çözüm.** Nesne kimlikleri `1`'den başlar. Kimlikleri [`SEÇ`](komutlar/select.md) ile
 ya da **Komut Günlüğü** panelinden okuyun.
 
-### `Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1`
+### `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.`
 
-**Sebep.** `SİL` kimliksiz çağrılmış ve etkin seçim de boş.
+**Sebep.** Nesnelerle çalışan bir komut (`SİL`, `KES`, `TAŞI`, `TEVHİT` …) bir
+betikten ya da tek satırdan kimliksiz çağrılmış ve etkin seçim de boş. Arayüzde bu
+komutlar sormaz, nesneleri ister; bu cümleyi soruyu cevaplayamayan bir betik görür
+— ya da istenen nesneleri seçmeden Enter'a basan kullanıcı.
 
 **Çözüm.** Önce [`SEÇ`](komutlar/select.md) ile nesne seçin ya da `nesneler=` ile en az
-bir kimlik verin.
+bir kimlik verin; mesajın altındaki örnek satır komutun kendi yazımıdır.
+
+### `Bir seferde en fazla 1 nesne; 2 nesne seçili.`
+
+**Sebep.** Tek nesneyle çalışan bir araca (`KIR`, `UZUNLUK`, `BÖLÜMLE`, `İFRAZ` …)
+birden çok nesne seçiliyken bir betikten ulaşılmış. Arayüzde araç reddetmez;
+"2 nesne seçili; bu araç bir seferde 1 nesneyle çalışır" diyerek istediğini sorar.
+
+**Çözüm.** İstenen nesneye tıklayıp Enter'a basın, betikte ise `nesne=` ile tek bir
+kimlik verin.
 
 ## Seçim
 

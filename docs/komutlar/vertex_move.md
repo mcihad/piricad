@@ -59,10 +59,12 @@ Bir eğrinin **arasına** köşe eklenemez: [`KÖŞEEKLE`](vertex_insert.md) yal
 ```text
 KÖŞETAŞI nesne=<kimlik> kose=<sıra>
 KÖŞETAŞI nesne=<kimlik> kose=<sıra> nokta=<n>
+KÖŞETAŞI yer=<n> nokta=<n>
 ```
 
-`nokta` verilmezse komut sizden ister ve o köşeden imlecinize bir kılavuz çizgi
-uzatır. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat
+`nokta` verilmezse komut sizden ister; imleç hareket ettikçe nesne, köşesi imleçte
+olacak biçimde tuvalde vurgulu çizilir. `kose` yerine `yer` verilebilir: o noktaya
+en yakın köşe alınır; `nesne` de verilmemişse o noktanın altındaki nesne. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat
 (`485320,4310220`), göreli (`@50,30`) ve kutupsal (`@100<45`).
 
 ## Parametreler
@@ -71,6 +73,7 @@ uzatır. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat
 |---|---|
 | `nesne` | Köşesi taşınacak nesnenin kimliği. [`SEÇ`](select.md)'in yazdığı kimliğin aynısı |
 | `kose` | Taşınacak köşenin sırası. İlk köşe `1`'dir |
+| `yer` | Köşeyi gösteren nokta: `kose` verilmezse en yakın köşe, `nesne` de verilmezse altındaki nesne. Günlüğe `yer` değil, bulunan `kose` yazılır |
 | `nokta` | Köşenin yeni yeri. Verilmezse arayüz sorar |
 
 Parametre adı `kose`, Türkçe harfsiz yazılır — bu programda bütün parametre adları
@@ -100,7 +103,17 @@ KÖŞETAŞI nesne=1 kose=2
 
 ### Arayüz
 
-Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. Bir dairede merkez ve
+**Araçla.** Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da
+sağ tıklayın ve **Köşe Taşı**'yı seçin (aynı araç **Değiştir → Köşe Taşı**
+menüsündedir).
+
+1. Taşınacak köşeye tıklayın. Nesne de bu tıklamayla seçilir; tek bir nesne
+   seçiliyse onun en yakın köşesi alınır.
+2. İmleci götürün: nesne, köşesi imleçte olacak biçimde vurgulu çizilir, iki
+   komşu kenar imleci izler.
+3. Yeni yere tıklayın ya da koordinatı yazın.
+
+**Tutamakla.** Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. Bir dairede merkez ve
 dört çeyrek, bir yayda uçlar ve orta nokta, bir ölçüde tanım noktaları ve yazı
 görünür; boyut kuran tutamaklar (yarıçap, yay ortası, yazı) kare değil **yuvarlak**
 çizilir. İmleç bir tutamağın üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve
@@ -149,8 +162,8 @@ saklamaya devam eder ve geri alma onu yeniden hesaplamaz, yerine koyar.
 
 ## Betikten kullanım
 
-Betikten çağrıldığında komut hiçbir şey sormaz: `nesne`, `kose` ve `nokta` üçü de
-verilmelidir. Eksik olan varsa komut bir açıklama yazar ve çizimi değiştirmez.
+Betikten çağrıldığında komut hiçbir şey sormaz: `nesne` ve `kose` (ya da ikisinin
+yerine `yer`) ile `nokta` verilmelidir. Eksik olan varsa komut bir açıklama yazar ve çizimi değiştirmez.
 
 Bir betik içinde arka arkaya birden çok `KÖŞETAŞI` çağırabilirsiniz; her biri kendi
 geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok olarak
@@ -160,11 +173,12 @@ geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok 
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2` | `nesne` verilmedi | Nesnenin kimliğini yazın; kimliği [`SEÇ`](select.md) gösterir |
+| `Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2` | Betik ne `nesne` ne `yer` verdi | Nesnenin kimliğini ya da köşeyi gösteren `yer=` noktasını yazın |
+| `Orada köşesi taşınacak bir nesne yok. ...` | Tıklanan yerde nesne yok | Bir nesnenin köşesine tıklayın |
 | `Bir seferde tek nesne düzenlenir; N nesne verildi.` | `nesne` birden çok kimlik aldı | Her nesne için ayrı bir `KÖŞETAŞI` çağırın |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar; doğru kimliği yazın |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik hiç var olmadı ya da nesne silindi | [`GERİAL`](undo.md) ile geri getirin veya doğru kimliği verin |
-| `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | `kose` verilmedi | Taşınacak köşenin sırasını yazın |
+| `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | Betik ne `kose` ne `yer` verdi | Taşınacak köşenin sırasını ya da `yer=` noktasını yazın |
 | `Tek bir köşe numarası beklenir; N değer verildi.` | `kose` birden çok değer aldı | Tek bir köşe numarası yazın |
 | `Bu nesnenin N. köşesi yok; M köşesi var.` | Nesnede o sırada köşe yok | 1 ile M arasında bir numara verin |
 | `Bu nesnenin N. tutamağı yok; M tutamağı var.` | Eğride o sırada tutamak yok | Yukarıdaki tabloya göre 1 ile M arasında bir numara verin |

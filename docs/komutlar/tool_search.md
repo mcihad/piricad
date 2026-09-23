@@ -99,7 +99,8 @@ ARAÇARA sorgu=yerleşim alan=ad
 
 Arayüzde bunun karşılığı **Ctrl+K** komut aramasıdır: komut adlarında ve açıklamalarında
 aynı Türkçe katlamayla arar, seçtiğinizi komut satırına yerleştirir. `ARAÇARA` aynı işi
-bir **ajan** için yapar ve sonucu yapılandırılmış veri olarak döndürür.
+bir **ajan** için yapar ve sonucu yapılandırılmış veri olarak döndürür. Menüden
+başlatıldığında aranacak sözcüğü komut satırında sorar.
 
 ### Betik
 

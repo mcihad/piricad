@@ -185,6 +185,13 @@ public:
 
     command::Session* session() const noexcept { return session_.get(); }
 
+    /// How many interactive runs have started, ever. A deferred action — the
+    /// tool column re-arming the tool that just finished — reads it when it is
+    /// queued and again when it runs, and stands down if another run started in
+    /// between: a re-arm that lands late must not cancel the command the user
+    /// has since reached for.
+    std::uint64_t sessionsBegun() const noexcept { return sessionsBegun_; }
+
     /// How far the running job has come, 0..1000, or -1 when no job is running
     /// or the job does not count (`Job::permille`).
     int jobPermille() const noexcept;
@@ -385,6 +392,7 @@ private:
 #endif
 
     std::unique_ptr<command::Session> session_;
+    std::uint64_t sessionsBegun_{0}; ///< see `sessionsBegun()`
     /// The exact line the running session was started with (`YAY yontem=3n`),
     /// empty when nothing is armed. The tool column lights the button whose line
     /// this is: five buttons send `core.arc_draw`, and only the line says which.

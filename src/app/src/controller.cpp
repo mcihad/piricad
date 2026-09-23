@@ -400,6 +400,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                     return started.error();
                 }
                 session_ = std::move(started.value());
+                ++sessionsBegun_;
                 if (!session_->finished()) {
                     settleSession();
                     return command::DispatchResult{};
@@ -584,6 +585,7 @@ void Controller::beginInteractive(const QString& line, command::Origin origin)
 
     session_   = std::move(started.value());
     armedLine_ = line.trimmed();
+    ++sessionsBegun_;
     settleSession();
 }
 

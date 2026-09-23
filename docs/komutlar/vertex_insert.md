@@ -44,10 +44,13 @@ sırayla ilerler: önce dış sınır, sonra varsa delikler.
 ```text
 KÖŞEEKLE nesne=<kimlik> kose=<sıra>
 KÖŞEEKLE nesne=<kimlik> kose=<sıra> nokta=<n>
+KÖŞEEKLE yer=<n> nokta=<n>
 ```
 
-`nokta` verilmezse komut sizden ister ve kenarın başladığı köşeden imlecinize bir
-kılavuz çizgi uzatır. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır.
+`nokta` verilmezse komut sizden ister; imleç hareket ettikçe kenar, yeni köşe
+imleçte olacak biçimde kırılarak tuvalde vurgulu çizilir. `kose` yerine `yer`
+verilebilir: o noktaya en yakın kenar alınır; `nesne` de verilmemişse o noktanın
+altındaki nesne. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır.
 
 ## Parametreler
 
@@ -55,6 +58,7 @@ kılavuz çizgi uzatır. Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır.
 |---|---|
 | `nesne` | Köşe eklenecek nesnenin kimliği. [`SEÇ`](select.md)'in yazdığı kimliğin aynısı |
 | `kose` | Yeni köşenin ardına geleceği köşe. İlk köşe `1`'dir |
+| `yer` | Kenarı gösteren nokta: `kose` verilmezse en yakın kenar, `nesne` de verilmezse altındaki nesne. Günlüğe `yer` değil, bulunan `kose` yazılır |
 | `nokta` | Yeni köşenin yeri. Verilmezse arayüz sorar |
 
 Parametre adı `kose`, Türkçe harfsiz yazılır — bu programda bütün parametre adları
@@ -84,7 +88,16 @@ KÖŞEEKLE nesne=1 kose=1
 
 ### Arayüz
 
-Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. İmleci bir **kenarın**
+**Araçla.** Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da
+sağ tıklayın ve **Köşe Ekle**'yi seçin (aynı araç **Değiştir → Köşe Ekle**
+menüsündedir).
+
+1. Köşe eklenecek kenara tıklayın. Nesne de bu tıklamayla seçilir.
+2. İmleci götürün: kenar, yeni köşe imleçte olacak biçimde kırılarak vurgulu
+   çizilir.
+3. Yeni köşenin yerine tıklayın ya da koordinatı yazın.
+
+**Tutamakla.** Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. İmleci bir **kenarın**
 üzerine götürdüğünüzde, kenarın üstünde yuvarlak bir işaret belirir: yeni köşenin
 oluşacağı yer orasıdır. Kare tutamak var olan bir köşeyi taşır, yuvarlak işaret yeni
 bir köşe yapar — ikisi bu yüzden farklı görünür.
@@ -127,8 +140,8 @@ ve kenarı tam olarak eski haline döndürür. [`YİNELE`](redo.md) köşeyi ger
 
 ## Betikten kullanım
 
-Betikten çağrıldığında komut hiçbir şey sormaz: `nesne`, `kose` ve `nokta` üçü de
-verilmelidir. Eksik olan varsa komut bir açıklama yazar ve çizimi değiştirmez.
+Betikten çağrıldığında komut hiçbir şey sormaz: `nesne` ve `kose` (ya da ikisinin
+yerine `yer`) ile `nokta` verilmelidir. Eksik olan varsa komut bir açıklama yazar ve çizimi değiştirmez.
 
 Arka arkaya köşe eklerken **numaraların kaydığına** dikkat edin: bir köşe eklendikten
 sonra ondan sonraki bütün köşelerin sırası bir artar. Aynı kenara iki köşe eklemek
@@ -138,11 +151,13 @@ için ikinci çağrıda `kose` değerini bir artırın.
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2` | `nesne` verilmedi | Nesnenin kimliğini yazın; kimliği [`SEÇ`](select.md) gösterir |
+| `Düzenlenecek nesne belirtilmedi. Örnek: KÖŞEEKLE nesne=1 kose=2` | Betik ne `nesne` ne `yer` verdi | Nesnenin kimliğini ya da kenarı gösteren `yer=` noktasını yazın |
+| `Orada köşe eklenecek bir çizgi ya da alan yok. ...` | Tıklanan yerde nesne yok | Bir kenarın üzerine tıklayın |
 | `Bir seferde tek nesne düzenlenir; N nesne verildi.` | `nesne` birden çok kimlik aldı | Her nesne için ayrı bir `KÖŞEEKLE` çağırın |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar; doğru kimliği yazın |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik hiç var olmadı ya da nesne silindi | [`GERİAL`](undo.md) ile geri getirin veya doğru kimliği verin |
-| `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | `kose` verilmedi | Kenarın başladığı köşenin sırasını yazın |
+| `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | Betik ne `kose` ne `yer` verdi | Kenarın başladığı köşenin sırasını ya da `yer=` noktasını yazın |
+| `Bu nesne bir eğri ya da yazı; araya köşe eklenemez. ...` | Daire, yay, elips ya da yazı verildi | Tutamaklarını [`KÖŞETAŞI`](vertex_move.md) ile taşıyın |
 | `Tek bir köşe numarası beklenir; N değer verildi.` | `kose` birden çok değer aldı | Tek bir köşe numarası yazın |
 | `Bu nesnenin N. köşesi yok; M köşesi var.` | Nesnede o sırada köşe yok | 1 ile M arasında bir numara verin |
 | `Son köşeden sonra kenar yok: açık bir çizgide N. köşe uçtur. Araya köşe eklemek için ondan önceki bir köşe verin.` | Açık bir çizginin son köşesi verildi | Bir önceki köşeyi verin; çizgiyi uzatmak istiyorsanız [`ÇİZGİ`](line.md) kullanın |

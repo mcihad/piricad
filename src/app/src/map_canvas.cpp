@@ -8,6 +8,7 @@
 #include "kentos_cad/core/area_edit.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/grips.hpp"
@@ -1977,6 +1978,75 @@ void MapCanvas::buildOverlay()
                         render::to_f(view_.to_screen(chain[1]))},
                        false);
             }
+        } else if (shape == command::RubberShape::Corner) {
+            // THE CUT THE CLICK WILL MAKE, from the function PAH and YUVARLA make
+            // it with (`core::cut_corner`), at the cursor's distance from the
+            // corner — which is also what the click answers (`pick_distance`).
+            // The corner used to be asked for and then a number typed blind: the
+            // user found out on Enter whether 3 m was too much for the edge.
+            if (auto decoded = core::decode_corner_preview(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::EntityId e    = doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                if (e != core::kNoEntity && doc.alive(e)) {
+                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+                    const auto xs             = doc.geometry().ring_xs(span.first);
+                    const auto ys             = doc.geometry().ring_ys(span.first);
+                    std::vector<core::Point2> run;
+                    run.reserve(xs.size());
+                    for (std::size_t v = 0; v < xs.size(); ++v)
+                        run.push_back(core::Point2{xs[v], ys[v]});
+                    const bool closed =
+                        doc.geometry().ring_role[span.first] != core::RingRole::Open;
+                    const core::Mm size =
+                        core::segment_length(session->prompt().rubber_origin, cursorWorld());
+                    if (auto cut = core::cut_corner(run, closed, decoded.value().at, size,
+                                                    decoded.value().fillet)) {
+                        const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                        const auto add = [&](const std::vector<core::Point2>& pts, bool shut) {
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            for (const core::Point2& p : pts) {
+                                curve_scratch_x_.push_back(p.x);
+                                curve_scratch_y_.push_back(p.y);
+                            }
+                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut);
+                        };
+                        add(cut.value().kept, closed);
+                        if (cut.value().arc) {
+                            add(cut.value().second, false);
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            core::arc_outline(cut.value().centre, cut.value().radius,
+                                              cut.value().start, cut.value().end, curve_scratch_x_,
+                                              curve_scratch_y_);
+                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, false);
+                        }
+                    }
+                }
+            }
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::Grip) {
+            // THE OBJECT AS IT WILL BE with its corner — or a new one — at the
+            // cursor: the two edges that meet there follow it. Drawn from the
+            // edit the command makes (`core::grip_preview`,
+            // `core::insert_preview`), so a corner that would make the ring
+            // cross itself shows nothing rather than something it cannot do.
+            if (auto decoded = core::decode_grip_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const core::EntityId e    = doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
+                if (e != core::kNoEntity && doc.alive(e)) {
+                    core::EmitBuffer buf;
+                    const bool drawn =
+                        decoded.value().insert
+                            ? core::insert_preview(doc, e, decoded.value().index, cursorWorld(),
+                                                   buf)
+                            : core::grip_preview(doc, e, decoded.value().index, cursorWorld(), buf);
+                    if (drawn) addEmitRuns(nextBatch(tokens_->accent.rgba(), 1.5f, false), buf);
+                }
+            }
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::Ghost) {
             // THE OBJECTS THEMSELVES, under the transform the cursor implies:
             // where TAŞI will put them, how far round DÖNDÜR will turn them, how

@@ -159,6 +159,27 @@ enum class Glyph {
     Array,        ///< a grid of small squares: DİZİ
     BlockInsert,  ///< a square dropped onto an insertion cross: BLOKEKLE
     MeasureAngle, ///< two arms and the sweep between them: AÇIÖLÇ, which wore ÖLÇ's own mark
+
+    // ---- the corner, end and piece tools the column did not have --------------
+    //
+    // PAH, YUVARLA and UZAT all wore BUDA's scissors, and the seven verbs P3
+    // added wore whatever was near: KIR the cut mark, UZUNLUK the ruler, HİZALA
+    // the four-way move. They were menu rows then, where a label carries them;
+    // in the column only the icon speaks, so each says what it does.
+    Chamfer,      ///< a corner cut off by a straight edge: PAH
+    Fillet,       ///< a corner rounded off by an arc: YUVARLA
+    Extend,       ///< a line reaching on to a boundary: UZAT
+    Break,        ///< a line with a piece taken out of it: KIR
+    Lengthen,     ///< a line whose end moves along its own direction: UZUNLUK
+    Join,         ///< two runs meeting end to end at one dot: UÇUCA
+    Explode,      ///< a square coming apart into its edges: PATLAT
+    Align,        ///< a shape carried onto a target pair of points: HİZALA
+    Divide,       ///< a line with equal ticks along it: BÖLÜMLE
+    VertexMove,   ///< a corner pulled to a new place, its edges following: KÖŞETAŞI
+    VertexAdd,    ///< an edge bent through a new corner, with a plus: KÖŞEEKLE
+    ToArea,       ///< an open run closing into a filled face: ALANAÇEVİR
+    PolylineEdit, ///< a run with its direction arrow: ÇİZGİDÜZENLE
+    TextEdit,     ///< a letter with the pencil over it: YAZIDÜZENLE
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

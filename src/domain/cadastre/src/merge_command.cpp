@@ -59,12 +59,12 @@ bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& o
 
 Task<void> run(Context& ctx)
 {
-    const Selection& selection = ctx.session().bus().selection();
-
-    Value::Ints requested = ctx.argument("nesneler").as_ids();
-    if (requested.empty())
-        for (core::EntityKey k : selection.keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
+    // The parcels: named, highlighted, or ASKED FOR. Pressed with nothing
+    // highlighted, Tevhit used to refuse where it could have asked.
+    Value::Ints requested;
+    if (!co_await want_objects(ctx, "nesneler", "Birleştirilecek parselleri seçin, sonra Enter",
+                               requested, 0, "TEVHİT nesneler=1 nesneler=2"))
+        co_return;
 
     if (requested.size() < 2) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
@@ -207,7 +207,7 @@ KENTOS_COMMAND(merge)
                          "Birleştirilecek parseller; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Scriptable | Flags::AiAccessible,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Komşu parselleri tek parselde birleştirir (tevhit).",
         .run      = &run,
     };

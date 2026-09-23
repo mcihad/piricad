@@ -947,18 +947,12 @@ void MainWindow::buildActions()
     actErase_->setProperty(kToolCommand, QStringLiteral("SİL"));
     connect(actErase_, &QAction::triggered, this, [this] {
         // With a selection the button IS the command, exactly as typing `SİL`
-        // would be. With nothing selected there is nothing to name, so the button
-        // opens the command line rather than doing something silently.
-        if (!controller_->bus().selection().empty()) {
-            if (!confirmErase()) return;
-            controller_->runCommand(QStringLiteral("SİL"));
-            return;
-        }
-        onEcho(tr("Silinecek nesne seçili değil. Nesneleri seçin ya da "
-                  "SİL nesneler=1 yazın."));
-        showCommandLine(true);
-        commandLine_->setText(QStringLiteral("SİL nesneler="));
-        commandLine_->setFocus();
+        // would be. With nothing selected the COMMAND ASKS which objects, the
+        // way every CAD's erase does — this used to put `SİL nesneler=` on the
+        // command line and wait for a key the user did not know, which is a
+        // button that answers a press with homework.
+        if (!controller_->bus().selection().empty() && !confirmErase()) return;
+        controller_->runCommand(QStringLiteral("SİL"));
     });
 
     // THE CLIPBOARD GROUP IS REAL NOW. These three were `placeholder`s — rows
@@ -1060,18 +1054,79 @@ void MainWindow::buildActions()
     actArray_ =
         modifyTool(Glyph::Array, tr("Dizi"), QStringLiteral("DİZİ"),
                    tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
-    actExtend_   = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
+    actExtend_   = modifyTool(Glyph::Extend, tr("Uzat"), QStringLiteral("UZAT"),
                               tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
     actSplit_    = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
                               tr("BÖL — çizgiyi verilen noktadan ikiye böler  ·  kısaltma: BL"));
-    actChamfer_  = modifyTool(Glyph::Trim, tr("Pah"), QStringLiteral("PAH"),
-                              tr("PAH — köşeyi düz bir kenarla keser"));
-    actFillet_   = modifyTool(Glyph::Trim, tr("Yuvarla"), QStringLiteral("YUVARLA"),
-                              tr("YUVARLA — köşeyi verilen yarıçapta yayla yuvarlatır"));
+    actChamfer_  = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
+                              tr("PAH — köşeye tıklayın; köşeyi düz bir kenarla keser, mesafe "
+                                  "yazılır ya da gösterilir  ·  kısaltma: PH"));
+    actFillet_   = modifyTool(Glyph::Fillet, tr("Yuvarla"), QStringLiteral("YUVARLA"),
+                              tr("YUVARLA — köşeye tıklayın; köşeyi yayla yuvarlatır, yarıçap "
+                                   "yazılır ya da gösterilir  ·  kısaltma: YV"));
     actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"), QStringLiteral("KATMANAT"),
                               tr("KATMANAT — seçili nesneleri başka bir katmana taşır"));
     actOffset_   = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
                               tr("OFSET — seçili nesnelerin paralelini çizer; eksi mesafe içeri"));
+
+    // ONE ACTION, TWO MENUS AND THE COLUMN. POLİGON sat on Çizim and Harita as
+    // two separate rows, so the column had nothing to hold and the two rows
+    // could drift apart in what they said. Made HERE, with the other tools,
+    // because the column is built before the menus: an action a menu builder
+    // makes does not exist yet when the column asks for it.
+    actTraverse_ = commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
+                                 tr("POLİGON — kırılma açısı ve kenarlardan poligon "
+                                    "koordinatları, kapanma dağıtımı ve mevzuat toleransı  ·  "
+                                    "kısaltma: PLG"));
+    actAngledGuide_ =
+        commandAction(Glyph::Ruler, tr("Açılı Kılavuz"), QStringLiteral("KILAVUZ yon=45g"),
+                      tr("KILAVUZ yon=<açı> — verilen noktadan geçen açılı kılavuz; açı "
+                         "oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV"));
+    actLabel_    = commandAction(Glyph::Text, tr("Etiket"), QStringLiteral("ETİKET"),
+                                 tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
+                                       "etiketler  ·  kısaltma: ETK"));
+    actStakeout_ = commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
+                                 tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
+                                    "kısaltma: APL"));
+
+    // THE VERBS THAT WERE MENU ROWS ONLY, made tools: checkable, lit while they
+    // run and put back in the hand when they finish, like every other tool the
+    // column holds. As `commandAction` rows they worked from the menu and could
+    // not be in the column at all — which is where a hand looks for PAH.
+    actBreak_    = modifyTool(Glyph::Break, tr("Kır"), QStringLiteral("KIR"),
+                              tr("KIR — iki nokta arasındaki parçayı çıkarır; tek nokta boşluksuz "
+                                    "böler  ·  kısaltma: KR"));
+    actLengthen_ = modifyTool(Glyph::Lengthen, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
+                              tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
+                                 "kısaltma: UZN"));
+    actJoin_     = modifyTool(Glyph::Join, tr("Uç Uca Ekle"), QStringLiteral("UÇUCA"),
+                              tr("UÇUCA — uçları değen çizgileri tek çizgiye ekler; BİRLEŞTİR ile "
+                                     "karıştırmayın  ·  kısaltma: UÇE"));
+    actExplode_  = modifyTool(Glyph::Explode, tr("Patlat"), QStringLiteral("PATLAT"),
+                              tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu bileşenlerine "
+                                  "ayırır  ·  kısaltma: PTL"));
+    actAlign_    = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
+                              tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
+                                    "ölçekler  ·  kısaltma: HZL"));
+    actDivide_   = modifyTool(Glyph::Divide, tr("Bölümle"), QStringLiteral("BÖLÜMLE"),
+                              tr("BÖLÜMLE — nesne boyunca eşit parçalara ya da sabit aralıkla nokta "
+                                   "koyar  ·  kısaltma: BLM"));
+    actPolylineEdit_ =
+        modifyTool(Glyph::PolylineEdit, tr("Çizgi Düzenle"), QStringLiteral("ÇİZGİDÜZENLE"),
+                   tr("ÇİZGİDÜZENLE — kapatır, açar, yönünü çevirir ya da "
+                      "sadeleştirir  ·  kısaltma: ÇZD"));
+    actVertexMove_ = modifyTool(Glyph::VertexMove, tr("Köşe Taşı"), QStringLiteral("KÖŞETAŞI"),
+                                tr("KÖŞETAŞI — köşeye tıklayın, yeni yerini gösterin; kenarlar "
+                                   "imleci izler  ·  kısaltma: KT"));
+    actVertexAdd_ = modifyTool(Glyph::VertexAdd, tr("Köşe Ekle"), QStringLiteral("KÖŞEEKLE"),
+                               tr("KÖŞEEKLE — kenara tıklayın, yeni köşenin yerini gösterin  ·  "
+                                  "kısaltma: KE"));
+    actToArea_    = modifyTool(Glyph::ToArea, tr("Alana Çevir"), QStringLiteral("ALANAÇEVİR"),
+                               tr("ALANAÇEVİR — uç uca değen çizgilerden kapalı bir alan kurar  ·  "
+                                     "kısaltma: ALÇ"));
+    actTextEdit_ = modifyTool(Glyph::TextEdit, tr("Yazıyı Düzenle"), QStringLiteral("YAZIDÜZENLE"),
+                              tr("YAZIDÜZENLE — yazıyı seçin, yeni metni yazın; eskisi önerilir  "
+                                 "·  kısaltma: YZD"));
 
     actUndo_ = new QAction(tr("Geri Al"), this);
     actUndo_->setShortcut(QKeySequence::Undo);
@@ -1491,10 +1546,7 @@ void MainWindow::buildMenus()
     // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
     // Curated rather than left to the generated tail: this is the first tool a
     // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
-    draw->addAction(commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
-                                  tr("POLİGON — kırılma açısı ve kenarlardan poligon "
-                                     "koordinatları, kapanma dağıtımı ve mevzuat toleransı  ·  "
-                                     "kısaltma: PLG")));
+    draw->addAction(actTraverse_);
     draw->addAction(commandAction(Glyph::Point, tr("Kesişim Noktası"),
                                   QStringLiteral("KESİŞİMNOKTA"),
                                   tr("KESİŞİMNOKTA — iki doğrultunun, iki uzaklığın ya da iki "
@@ -1515,13 +1567,8 @@ void MainWindow::buildMenus()
     // yields horizontal and vertical only; an angled one needs an angle, and an
     // angle is a number — so it has a row of its own that starts the command with
     // one already chosen and then asks for the point it passes through.
-    draw->addAction(commandAction(Glyph::Ruler, tr("Açılı Kılavuz"),
-                                  QStringLiteral("KILAVUZ yon=45g"),
-                                  tr("KILAVUZ yon=<açı> — verilen noktadan geçen açılı kılavuz; "
-                                     "açı oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV")));
-    draw->addAction(commandAction(Glyph::Text, tr("Etiket"), QStringLiteral("ETİKET"),
-                                  tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
-                                     "etiketler  ·  kısaltma: ETK")));
+    draw->addAction(actAngledGuide_);
+    draw->addAction(actLabel_);
     draw->addAction(
         commandAction(Glyph::Function, tr("Eşyükselti Eğrileri"), QStringLiteral("EŞYÜKSELTİ"),
                       tr("EŞYÜKSELTİ — kotlu noktalardan eş yükselti eğrileri çizer  ·  "
@@ -1552,29 +1599,21 @@ void MainWindow::buildMenus()
     // THE SEVEN VERBS P3 ADDED, on the menu a hand already opens for the others.
     // A generated tail would have put them behind `Diğer komutlar`, which is the
     // right place for a command nobody reaches for and the wrong one for KIR.
-    modify->addAction(commandAction(Glyph::Cut, tr("Kır"), QStringLiteral("KIR"),
-                                    tr("KIR — iki nokta arasındaki parçayı çıkarır; tek nokta "
-                                       "boşluksuz böler  ·  kısaltma: KR")));
-    modify->addAction(commandAction(Glyph::Line, tr("Uç Uca Ekle"), QStringLiteral("UÇUCA"),
-                                    tr("UÇUCA — uçları değen çizgileri tek çizgiye ekler; "
-                                       "BİRLEŞTİR ile karıştırmayın  ·  kısaltma: UÇE")));
-    modify->addAction(commandAction(Glyph::Ruler, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
-                                    tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
-                                       "kısaltma: UZN")));
+    modify->addAction(actBreak_);
+    modify->addAction(actJoin_);
+    modify->addAction(actLengthen_);
     modify->addAction(actStretch_);
-    modify->addAction(commandAction(Glyph::Duplicate, tr("Patlat"), QStringLiteral("PATLAT"),
-                                    tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu "
-                                       "bileşenlerine ayırır  ·  kısaltma: PTL")));
-    modify->addAction(commandAction(Glyph::Move, tr("Hizala"), QStringLiteral("HİZALA"),
-                                    tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve "
-                                       "istenirse ölçekler  ·  kısaltma: HZL")));
-    modify->addAction(commandAction(Glyph::Point, tr("Bölümle"), QStringLiteral("BÖLÜMLE"),
-                                    tr("BÖLÜMLE — nesne boyunca eşit parçalara ya da sabit "
-                                       "aralıkla nokta koyar  ·  kısaltma: BLM")));
-    modify->addAction(commandAction(Glyph::Polyline, tr("Çizgi Düzenle"),
-                                    QStringLiteral("ÇİZGİDÜZENLE"),
-                                    tr("ÇİZGİDÜZENLE — kapatır, açar, yönünü çevirir ya da "
-                                       "sadeleştirir  ·  kısaltma: ÇZD")));
+    modify->addAction(actExplode_);
+    modify->addAction(actAlign_);
+    modify->addAction(actDivide_);
+    modify->addAction(actPolylineEdit_);
+    modify->addSeparator();
+    // THE CORNER AND CAPTION EDITS, which lived behind `Diğer komutlar` — the
+    // generated tail — and nowhere a hand looks for them.
+    modify->addAction(actVertexMove_);
+    modify->addAction(actVertexAdd_);
+    modify->addAction(actToArea_);
+    modify->addAction(actTextEdit_);
 
     // A MENU OF THEIR OWN, because they are a different kind of thing. Each of
     // these is an act with a regulation behind it, and grouping them says so; the
@@ -1596,13 +1635,8 @@ void MainWindow::buildMenus()
     map->addSeparator();
     // THE SURVEY COMPUTATIONS. `APLİKASYON` is what a crew takes to the field
     // and `HACİM` is what an earthwork report is made of; neither had a way in.
-    map->addAction(commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
-                                 tr("POLİGON — poligon güzergâhını hesaplar, kapanma hatalarını "
-                                    "dağıtır ve mevzuat toleransına karşı denetler  ·  "
-                                    "kısaltma: PLG")));
-    map->addAction(commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
-                                 tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
-                                    "kısaltma: APL")));
+    map->addAction(actTraverse_);
+    map->addAction(actStakeout_);
     map->addAction(commandAction(Glyph::Function, tr("Hacim Hesabı"), QStringLiteral("HACİM"),
                                  tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
                                     "kısaltma: HCM")));
@@ -1896,7 +1930,10 @@ void MainWindow::buildToolBox()
     //   hatch  — a closed face with a pattern; it joins the face family
     //   block  — placing and defining: the placement first, it is the daily one
     //   note   — a dimension and a leader both annotate: one family
-    toolBox_->addFamily({actLine_, actPolyline_, actSpline_});
+    // THE ANGLED GUIDE IS A CONSTRUCTION LINE, and sits where AutoCAD keeps
+    // XLINE: under the line button. The ruler gives horizontal and vertical
+    // guides by dragging; an angled one has to be asked for.
+    toolBox_->addFamily({actLine_, actPolyline_, actSpline_, actAngledGuide_});
     toolBox_->addFamily({
         actRectangle_,
         methodTool(Glyph::Rectangle, tr("Dikdörtgen — döndürülmüş"),
@@ -1967,10 +2004,15 @@ void MainWindow::buildToolBox()
         methodTool(Glyph::PointAlong, tr("Ara Nokta — mesafeden"),
                    QStringLiteral("ARANOKTA yontem=mesafe"),
                    tr("Oran değil, ilk noktadan metre cinsinden uzaklık")),
+        // AND THE TRAVERSE, which is where a crew's points come from in bulk:
+        // it was on two menus and in no column.
+        actTraverse_,
     });
-    toolBox_->addTool(actText_);
+    // WRITING AND REWRITING, under one button: a caption is placed and then
+    // corrected, and the correction was a menu row behind `Diğer komutlar`.
+    toolBox_->addFamily({actText_, actTextEdit_});
     toolBox_->addFamily({actInsert_, actBlock_});
-    toolBox_->addFamily({actDimension_, actLeader_});
+    toolBox_->addFamily({actDimension_, actLeader_, actLabel_});
     toolBox_->addSeparator();
 
     // editing
@@ -1979,26 +2021,44 @@ void MainWindow::buildToolBox()
     // here, which put two regulated cadastral acts among the everyday edit tools
     // and left the ordinary "merge these two shapes" with no button at all. They
     // are in the Kadastro menu now; these two are geometry and work on anything.
-    toolBox_->addTool(actTrim_);
-    toolBox_->addTool(actCombine_);
-    toolBox_->addTool(actSplit_);
+    //
+    // EVERY EDIT VERB HAS A BUTTON NOW, in families by what they do to a line.
+    // PAH, YUVARLA, UZAT, KIR, UZUNLUK, the corner tools, UÇUCA, PATLAT and
+    // BÖLÜMLE were menu rows only, and the user looked for PAH in the column
+    // and it was not there. A column that holds half of the edits trains a
+    // hand to believe the other half do not exist.
+    //
+    // AND THE COLUMN DID NOT GROW. Twenty buttons is what a 1080-line screen
+    // shows without the foot of the column running under the status bar, so
+    // the new verbs joined families rather than adding buttons:
+    //
+    //   cut     — back to a boundary, on to one, a piece out, an end along
+    //             itself, through a drawn line, into equal parts
+    //   corner  — cut straight or round, move a corner, add one, and the run's
+    //             own edits: close, open, reverse, thin
+    //   pieces  — merge, join end to end, close into a face, take apart
+    //   move    — the transforms, with HİZALA and ESNET beside them
+    toolBox_->addTool(actErase_);
+    toolBox_->addFamily({actTrim_, actExtend_, actBreak_, actLengthen_, actSplit_, actDivide_});
+    toolBox_->addFamily({actChamfer_, actFillet_, actVertexMove_, actVertexAdd_, actPolylineEdit_});
+    toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});
     // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
     // TAŞI was in the column; KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA and DİZİ lived in
     // the `Değiştir` menu alone — and three of them have just been given a ghost
     // that turns, scales and flips under the cursor, which is a thing you cannot
     // discover from a menu (§2.6a).
-    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_});
-    toolBox_->addTool(actStretch_);
+    toolBox_->addFamily(
+        {actMove_, actCopy_, actRotate_, actScale_, actMirror_, actArray_, actAlign_, actStretch_});
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
 
     // measurement
-    toolBox_->addFamily(
-        {actMeasure_, actMeasureArea_, actMeasureAngle_, actCoordinate_, actEntityInfo_});
+    toolBox_->addFamily({actMeasure_, actMeasureArea_, actMeasureAngle_, actCoordinate_,
+                         actEntityInfo_, actStakeout_});
     toolBox_->addSeparator();
 
     // helpers
-    toolBox_->addTool(actStyleCopy_);
+    toolBox_->addFamily({actStyleCopy_, actSetLayer_});
     toolBox_->addTool(actTopology_);
 
     connect(toolBox_->chips(), &ColourChips::chipActivated, this, [this](int which) {
@@ -5611,7 +5671,22 @@ void MainWindow::rearm(QAction* action, const QString& id)
     // Queued, not called: this runs inside the finishing command's own signal,
     // and starting the next session on top of the one being torn down is how a
     // coroutine gets resumed after its frame is gone.
-    QMetaObject::invokeMethod(this, [action] { action->trigger(); }, Qt::QueuedConnection);
+    //
+    // AND IT STANDS DOWN IF ANYTHING GOT THERE FIRST. A queued call is not an
+    // immediate one: on macOS it was seen to wait for the next input event, 800
+    // ms later, by which time the user had typed PAH and given it a corner — and
+    // the late re-arm then cancelled PAH and put ÇOKLUÇİZGİ back. A tool that
+    // comes back over the command the user reached for since is the tool column
+    // overriding the user, so the re-arm happens only if nothing has started
+    // since it was queued and nothing is waiting now.
+    const std::uint64_t ticket = controller_->sessionsBegun();
+    QMetaObject::invokeMethod(
+        this,
+        [this, action, ticket] {
+            if (controller_->sessionsBegun() != ticket || controller_->session() != nullptr) return;
+            action->trigger();
+        },
+        Qt::QueuedConnection);
 }
 
 void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
@@ -5733,6 +5808,11 @@ void MainWindow::runScriptLine(const QString& line)
 void MainWindow::endCommand()
 {
     controller_->finishInteractive();
+}
+
+void MainWindow::cancelCommand()
+{
+    controller_->cancelInteractive();
 }
 
 void MainWindow::runScriptFile(const QString& path)
@@ -6979,13 +7059,59 @@ void MainWindow::probeToolBox()
                                       }
                                   });
 
-    // Every button on the column, found rather than listed: a tool added and
-    // forgotten here would be a tool nobody presses.
-    const QList<QToolButton*> buttons = toolBox_->findChildren<QToolButton*>();
+    // EVERY TOOL A HAND CAN PRESS, found rather than listed: a tool added and
+    // forgotten here would be a tool nobody presses. The column first — every
+    // member of every family, not only the faces, because the faces were all a
+    // probe used to press and the members behind them went untested — and then
+    // every menu entry that starts a drawing, editing or reading command. The
+    // menus are where PAH, YUVARLA, UZAT, KIR and the corner tools lived, and
+    // "the toolbox tools are not wired to the commands" is a complaint about all
+    // of them, not only the ones in the column.
+    //
+    // NOT THE FILE, VIEW, LAYER AND SYSTEM COMMANDS: they open windows, and a
+    // modal window stops the probe where it stands. They have their own probes.
+    struct Pressable
+    {
+        QAction* action;
+        const char* where;
+    };
+
+    QVector<Pressable> pressable;
+    QSet<const QAction*> seen;
+    int unbuilt = 0; ///< tools the column was handed before they existed
+    for (QAction* a : toolBox_->tools()) {
+        if (a == nullptr) {
+            ++unbuilt;
+            continue;
+        }
+        if (!seen.contains(a)) {
+            seen.insert(a);
+            pressable.push_back({a, "sütun"});
+        }
+    }
+    for (QAction* a : findChildren<QAction*>()) {
+        if (seen.contains(a) || a->isSeparator() || a->menu() != nullptr) continue;
+        QString line = a->property(kToolCommand).toString();
+        if (line.isEmpty() && a->objectName().startsWith(QStringLiteral("toolAction.")))
+            line = a->objectName().section(QLatin1Char('.'), 1);
+        if (line.isEmpty()) continue;
+        const command::CommandSpec* spec =
+            controller_->registry().resolve(line.section(QLatin1Char(' '), 0, 0).toStdString());
+        if (spec == nullptr) continue;
+        if (spec->category != command::Category::Draw &&
+            spec->category != command::Category::Modify &&
+            spec->category != command::Category::Query)
+            continue;
+        seen.insert(a);
+        pressable.push_back({a, "menü"});
+    }
 
     int ok_ran   = 0;
     int ok_armed = 0;
-    int dead     = 0;
+    int dead     = unbuilt;
+    QStringList broken;
+    if (unbuilt > 0)
+        broken << QStringLiteral("sütuna %1 araç kurulmadan eklenmiş; düğmeleri yok").arg(unbuilt);
 
     for (int pass = 0; pass < 2; ++pass) {
         const bool withSelection = pass == 0;
@@ -6993,11 +7119,10 @@ void MainWindow::probeToolBox()
         (void)std::fprintf(stdout, "[araç] ==== %s ====\n",
                            withSelection ? "önce seç, sonra bas"
                                          : "önce bas, sonra seç (BOŞ SEÇİM)");
-        for (QToolButton* button : buttons) {
-            QAction* action = button->defaultAction();
-            if (action == nullptr) continue;
+        for (const Pressable& press : pressable) {
+            QAction* action = press.action;
 
-            const QString name = action->text();
+            const QString name = action->text().remove(QLatin1Char('&'));
             QString cmd        = action->property(kToolCommand).toString();
             if (cmd.isEmpty()) cmd = action->objectName().section(QLatin1Char('.'), 1);
 
@@ -7017,7 +7142,13 @@ void MainWindow::probeToolBox()
 
             const int held = static_cast<int>(controller_->bus().selection().size());
 
-            const auto mark = static_cast<int>(transcript_->toPlainText().size());
+            // THE TRANSCRIPT STARTS EMPTY FOR EACH PRESS. It keeps 2000 lines and
+            // drops the oldest, so after a hundred tools a character offset taken
+            // before a press pointed into text that had since moved up — and the
+            // tools that answered late in the run were reported as silent.
+            QCoreApplication::processEvents();
+            transcript_->clear();
+            const int mark = 0;
             prompt.clear();
             armed = false;
             asked = false;
@@ -7047,12 +7178,15 @@ void MainWindow::probeToolBox()
                         for (core::EntityKey k : controller_->bus().selection().keys())
                             ids.push_back(static_cast<std::int64_t>(core::raw(k)));
                         controller_->supplyObjects(ids);
-                    } else if (prompt.contains(QStringLiteral("Yazılacak")))
+                    } else if (prompt.contains(QStringLiteral("Yazılacak"))) {
                         runScriptLine(QStringLiteral("deneme"));
-                    else if (prompt.contains(QStringLiteral("mesafe")))
+                    } else if (controller_->promptKind() == command::ParamKind::Number ||
+                               controller_->promptKind() == command::ParamKind::Integer ||
+                               prompt.contains(QStringLiteral("mesafe"))) {
                         runScriptLine(QStringLiteral("5"));
-                    else
+                    } else {
                         controller_->supplyPoint(clicks[step]);
+                    }
                     QCoreApplication::processEvents();
                 }
                 controller_->cancelInteractive();
@@ -7063,11 +7197,36 @@ void MainWindow::probeToolBox()
             said.replace(QLatin1Char('\n'), QLatin1Char(' '));
 
             QString verdict;
-            const bool refused = said.startsWith(QStringLiteral("Hata:")) ||
-                                 said.startsWith(QStringLiteral("Bilinmeyen komut"));
-            if (refused) {
+            // ANYWHERE IN WHAT WAS SAID, not at its start: the scene's own last
+            // line can land in the transcript after the mark, and a refusal
+            // behind "1 çizgi çizildi." was once counted as a tool that ran.
+            const bool refused = said.contains(QStringLiteral("Hata:")) ||
+                                 said.contains(QStringLiteral("Bilinmeyen komut"));
+            // WHAT A REFUSAL AT THE PRESS IS ABOUT. A tool that never asked and
+            // said it had nothing to work on — "belirtilmedi", "zorunlu", "seçim
+            // boş", "Seçili: 0" — is the dead button this probe exists to find:
+            // it could have asked. Any other refusal is about the DRAWING: two
+            // crossing lines are not a parcel to merge, a drawing with no blocks
+            // has nothing to place, and each says so and what to do.
+            const bool had_nothing = said.contains(QStringLiteral("belirtilmedi")) ||
+                                     said.contains(QStringLiteral("zorunlu")) ||
+                                     said.contains(QStringLiteral("seçim boş")) ||
+                                     said.contains(QStringLiteral("Seçili: 0"));
+            if (refused && !asked && had_nothing) {
+                // REFUSED AT THE PRESS, before asking anything: the dead button.
+                // A refusal AFTER the tool asked is the probe's own three answers
+                // being wrong for it, which says nothing about the button.
                 ++dead;
                 verdict = QStringLiteral("KIRIK   ") + said;
+                broken << QStringLiteral("%1 (%2, %3)")
+                              .arg(name, cmd,
+                                   withSelection ? QStringLiteral("seçiliyken")
+                                                 : QStringLiteral("seçim yokken"));
+            } else if (refused && !asked) {
+                ++ok_ran;
+                verdict =
+                    (withSelection ? QStringLiteral("UYMADI  ") : QStringLiteral("VERİ    ")) +
+                    said;
             } else if (asked) {
                 ++ok_armed;
                 verdict = QStringLiteral("SORDU   \"") + prompt + QLatin1Char('"');
@@ -7082,20 +7241,25 @@ void MainWindow::probeToolBox()
             } else if (said.isEmpty()) {
                 ++dead;
                 verdict = QStringLiteral("SESSİZ  düğme ne sordu ne de bir şey söyledi");
+                broken << QStringLiteral("%1 (%2, sessiz)").arg(name, cmd);
             } else {
                 ++ok_ran;
                 verdict = QStringLiteral("ÇALIŞTI ") + said;
             }
 
-            (void)std::fprintf(stdout, "[araç] %-18s %-12s seçili=%d  %s\n", qPrintable(name),
-                               qPrintable(cmd), held, qPrintable(verdict.left(140)));
+            (void)std::fprintf(stdout, "[araç] %-5s %-26s %-22s seçili=%d  %s\n", press.where,
+                               qPrintable(name.left(26)), qPrintable(cmd.left(22)), held,
+                               qPrintable(verdict.left(150)));
+            (void)std::fflush(stdout);
         }
     }
     disconnect(onPrompt);
 
     (void)std::fprintf(stdout,
                        "[araç] ---- %d araç x2 geçiş: %d çalıştı, %d girdi sordu, %d kırık\n",
-                       static_cast<int>(buttons.size()), ok_ran, ok_armed, dead);
+                       static_cast<int>(pressable.size()), ok_ran, ok_armed, dead);
+    for (const QString& b : broken)
+        (void)std::fprintf(stdout, "[araç] KIRIK: %s\n", qPrintable(b));
 
     // ---- WHAT A HAND CANNOT REACH AT ALL -----------------------------------
     //

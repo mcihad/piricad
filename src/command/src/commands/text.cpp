@@ -104,12 +104,14 @@ Task<void> run_edit(Context& ctx)
     // right-click on a caption and a typed line reach the same entities.
     std::vector<core::EntityId> targets;
 
-    // NAMED, and not for tidiness: `argument` returns a `Value` by VALUE and
-    // `as_ids` refers into it, so the two written together leave the loop reading
-    // a destroyed vector (Article 2.2 — C++23 would extend the temporary, C++20
-    // does not).
-    const Value picked = ctx.argument("nesneler");
-    for (std::int64_t raw : picked.as_ids()) {
+    // Named, highlighted, or ASKED FOR (`want_objects`). The menu entry used to
+    // answer "Düzenlenecek yazı yok" and stop, so a caption could be edited only
+    // by somebody who had selected it first — or who knew its key.
+    std::vector<std::int64_t> picked;
+    if (!co_await want_objects(ctx, "nesneler", "Düzenlenecek yazıyı seçin, sonra Enter", picked, 0,
+                               "YAZIDÜZENLE nesneler=1 yazi=\"101 ada 4 parsel\""))
+        co_return;
+    for (std::int64_t raw : picked) {
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {
@@ -119,29 +121,33 @@ Task<void> run_edit(Context& ctx)
         }
         targets.push_back(slot);
     }
-    if (targets.empty())
-        for (core::EntityKey k : ctx.session().bus().selection().keys()) {
-            const core::EntityId slot = doc.slot_of(k);
-            if (slot != core::kNoEntity && doc.alive(slot)) targets.push_back(slot);
-        }
-
-    if (targets.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Düzenlenecek yazı yok. Bir yazı seçin ya da nesneler= ile verin.");
-        co_return;
-    }
 
     // ONLY WHAT IS ASKED FOR CHANGES. An unnamed field keeps the value the
     // caption already has: rewriting a parsel number must not silently reset the
     // height a planner chose for it.
-    const Value content = ctx.argument("yazi");
-    const Value tall    = ctx.argument("yukseklik");
-    const Value align   = ctx.argument("hizalama");
+    Value content     = ctx.argument("yazi");
+    const Value tall  = ctx.argument("yukseklik");
+    const Value align = ctx.argument("hizalama");
 
+    // NOTHING NAMED IS A QUESTION: the new words. This is what a hand pressing
+    // the menu entry means, and the one change a script that named nothing could
+    // have meant too — it is told the same thing it was told before, because it
+    // cannot answer. The first caption's own words are offered, so fixing one
+    // letter is not retyping the line.
     if (content.empty() && tall.empty() && align.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.");
-        co_return;
+        std::vector<std::string> now;
+        for (const core::EntityId e : targets)
+            if (const std::uint32_t slot = doc.entities().slot[e]; doc.texts().has(slot)) {
+                now.emplace_back(doc.texts().text(slot));
+                break;
+            }
+        auto typed = co_await ctx.text("yazi", "Yeni metin", std::move(now));
+        if (!typed) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.");
+            co_return;
+        }
+        content = Value::text(*typed);
     }
 
     std::size_t written = 0;
@@ -191,7 +197,7 @@ Task<void> run_edit(Context& ctx)
         co_return;
     }
 
-    if (!picked.empty()) ctx.record("nesneler", picked);
+    ctx.record("nesneler", Value::ids(picked));
     if (!content.empty()) ctx.record("yazi", content);
     if (!tall.empty()) ctx.record("yukseklik", tall);
     if (!align.empty()) ctx.record("hizalama", align);

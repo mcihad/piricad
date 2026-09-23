@@ -63,13 +63,23 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    const Value given = ctx.argument("kot");
-    if (given.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Karşılaştırma kotu eksik. Örnek: HACİM kot=845000 (845 m)");
-        co_return;
+    // THE LEVEL, NAMED OR ASKED FOR. The Yüzey menu's entry used to answer
+    // "zorunlu 'kot' parametresi eksik" and stop, which is a sentence for a
+    // programmer. Asked in METRES, the unit an engineer reads a level in; a
+    // named `kot` is the declared millimetres and is never reread as metres,
+    // because a factor of a thousand in a level is a site that moves a kilometre.
+    core::Mm level = 0;
+    if (const Value given = ctx.argument("kot"); !given.empty()) {
+        level = static_cast<core::Mm>(given.as_int());
+    } else {
+        auto typed = co_await ctx.number("kot", "Karşılaştırma kotu (metre)");
+        if (!typed) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Karşılaştırma kotu eksik. Örnek: HACİM kot=845000 (845 m)");
+            co_return;
+        }
+        level = core::mm_round(*typed * static_cast<double>(core::kMmPerMetre));
     }
-    const auto level = static_cast<core::Mm>(given.as_int());
 
     const core::Document& doc    = ctx.document();
     const core::AttrTable& table = doc.attributes();
@@ -145,7 +155,7 @@ KENTOS_COMMAND(earthwork)
                                     "Karşılaştırma kotu, milimetre (845 m = 845000)")
                          .en("elevation")},
         .undo     = UndoPolicy::None,
-        .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.",
         .run      = &run,
     };

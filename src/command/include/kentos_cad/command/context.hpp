@@ -100,6 +100,11 @@ struct PointOptions
 
     /// The kind payload the preview draws with. See `Prompt::rubber_payload`.
     std::vector<std::uint8_t> rubber_payload{};
+
+    /// A click answers this number with its distance from `rubber_origin`, in
+    /// metres. See `Prompt::pick_distance`. Read by `Context::number` only: an
+    /// integer parameter is in a declared unit the canvas does not know.
+    bool pick_distance{false};
 };
 
 class Context;

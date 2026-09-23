@@ -59,8 +59,10 @@ Dört küçük işlem, ve başka hiçbir komutun yapmadığı şeyler:
 
 ### Arayüz
 
-**Değiştir > Çizgi Düzenle**. Çizgileri seçip Enter'a basın, sonra işlemi yazın;
+**Değiştir > Çizgi Düzenle** ya da sol araç sütunundaki **köşe ailesi**. Çizgileri
+seçip Enter'a basın, sonra işlemi yazın (`kapat`, `ac`, `ters`, `sadelestir`);
 `sadelestir` toleransı da ister ve odak kendiliğinden komut satırına geçer.
+Tanınmayan bir işlem yazılırsa komut hiçbir çizgiye dokunmadan söyler.
 
 ### Betik
 

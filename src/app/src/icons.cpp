@@ -325,6 +325,169 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         grip(p, QPointF(20.4, 9.6), c);
         break;
 
+    case Glyph::Chamfer:
+        // A CORNER WITH ITS POINT CUT OFF: the two edges stop short and a
+        // straight edge joins them, with the two cut points held.
+        p.setPen(stroke(c, 1.8));
+        p.drawPolyline(QPolygonF(
+            {QPointF(3.6, 19.6), QPointF(13.0, 19.6), QPointF(19.6, 13.0), QPointF(19.6, 3.6)}));
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawPolyline(QPolygonF({QPointF(13.0, 19.6), QPointF(19.6, 19.6), QPointF(19.6, 13.0)}));
+        grip(p, QPointF(13.0, 19.6), c);
+        grip(p, QPointF(19.6, 13.0), c);
+        break;
+
+    case Glyph::Fillet: {
+        // THE SAME CORNER ROUNDED: an arc tangent to both edges, which is what
+        // tells it from PAH's straight cut at a glance.
+        p.setPen(stroke(c, 1.8));
+        QPainterPath path;
+        path.moveTo(3.6, 19.6);
+        path.lineTo(11.6, 19.6);
+        path.arcTo(QRectF(3.6, 11.6, 16.0, 16.0), 270.0, 90.0);
+        path.lineTo(19.6, 3.6);
+        p.drawPath(path);
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawPolyline(QPolygonF({QPointF(11.6, 19.6), QPointF(19.6, 19.6), QPointF(19.6, 11.6)}));
+        grip(p, QPointF(11.6, 19.6), c);
+        grip(p, QPointF(19.6, 11.6), c);
+        break;
+    }
+
+    case Glyph::Extend:
+        // A LINE REACHING ON TO A BOUNDARY: the dashed stretch is what is added,
+        // and the upright bar is what it stops at.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(3.2, 12.0), QPointF(11.0, 12.0));
+        p.drawLine(QPointF(20.4, 4.0), QPointF(20.4, 20.0));
+        p.setPen(QPen(c, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(11.0, 12.0), QPointF(16.6, 12.0));
+        arrowHead(p, QPointF(19.8, 12.0), QPointF(14.0, 12.0), c, 3.8);
+        break;
+
+    case Glyph::Break:
+        // A LINE WITH A PIECE TAKEN OUT: two runs, a gap, a tick at each cut.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(3.0, 12.0), QPointF(9.2, 12.0));
+        p.drawLine(QPointF(14.8, 12.0), QPointF(21.0, 12.0));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(9.2, 8.2), QPointF(9.2, 15.8));
+        p.drawLine(QPointF(14.8, 8.2), QPointF(14.8, 15.8));
+        break;
+
+    case Glyph::Lengthen:
+        // A LINE WHOSE END WALKS ON ALONG ITSELF, with nothing to stop at: the
+        // difference from UZAT is the missing boundary.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(3.2, 16.4), QPointF(13.0, 16.4));
+        grip(p, QPointF(13.0, 16.4), c);
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(13.0, 9.0), QPointF(19.0, 9.0));
+        arrowHead(p, QPointF(21.0, 9.0), QPointF(16.0, 9.0), c, 3.6);
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(13.0, 16.4), QPointF(20.8, 16.4));
+        break;
+
+    case Glyph::Join:
+        // TWO RUNS MEETING END TO END at the one dot they now share.
+        p.setPen(stroke(c, 1.8));
+        p.drawPolyline(QPolygonF({QPointF(3.2, 17.6), QPointF(8.4, 8.4), QPointF(12.0, 12.0)}));
+        p.drawPolyline(QPolygonF({QPointF(12.0, 12.0), QPointF(16.2, 6.4), QPointF(20.8, 15.2)}));
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+
+    case Glyph::Explode:
+        // A SQUARE COMING APART into its four edges, each pulled out a little.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(7.0, 4.0), QPointF(17.0, 4.0));
+        p.drawLine(QPointF(20.0, 7.0), QPointF(20.0, 17.0));
+        p.drawLine(QPointF(17.0, 20.0), QPointF(7.0, 20.0));
+        p.drawLine(QPointF(4.0, 17.0), QPointF(4.0, 7.0));
+        break;
+
+    case Glyph::Align:
+        // A SHAPE CARRIED ONTO A PAIR OF TARGET POINTS: the small square, the
+        // two marks it is put on, and the arrow between.
+        p.setPen(stroke(c, 1.6));
+        p.drawRect(QRectF(3.4, 13.6, 6.4, 6.4));
+        grip(p, QPointF(15.2, 5.2), c);
+        grip(p, QPointF(20.6, 10.6), c);
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(15.2, 5.2), QPointF(20.6, 10.6));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(9.8, 13.6), QPointF(14.0, 9.4));
+        arrowHead(p, QPointF(15.6, 7.8), QPointF(12.0, 11.4), c, 3.4);
+        break;
+
+    case Glyph::Divide:
+        // A LINE WITH EQUAL TICKS ACROSS IT: the parts, not the points.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(3.0, 12.0), QPointF(21.0, 12.0));
+        p.setPen(stroke(c, 1.3));
+        for (const qreal x : {3.0, 7.5, 12.0, 16.5, 21.0})
+            p.drawLine(QPointF(x, 8.4), QPointF(x, 15.6));
+        break;
+
+    case Glyph::VertexMove:
+        // A CORNER PULLED TO A NEW PLACE: the old corner dashed, the two edges
+        // following the grip, and the arrow of the move.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawPolyline(QPolygonF({QPointF(3.4, 20.0), QPointF(11.0, 11.0), QPointF(20.6, 20.0)}));
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(3.4, 20.0), QPointF(15.4, 4.4), QPointF(20.6, 20.0)}));
+        grip(p, QPointF(15.4, 4.4), c);
+        break;
+
+    case Glyph::VertexAdd:
+        // AN EDGE BENT THROUGH A NEW CORNER, with the plus that says it is new.
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(3.0, 19.0), QPointF(12.0, 9.4), QPointF(21.0, 19.0)}));
+        grip(p, QPointF(12.0, 9.4), c);
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(18.6, 3.4), QPointF(18.6, 9.0));
+        p.drawLine(QPointF(15.8, 6.2), QPointF(21.4, 6.2));
+        break;
+
+    case Glyph::ToArea: {
+        // AN OPEN RUN CLOSING INTO A FACE: three edges drawn, the fourth dashed
+        // in, and the face filled faintly behind them.
+        QColor fill = c;
+        fill.setAlphaF(0.22F);
+        p.setPen(Qt::NoPen);
+        p.setBrush(fill);
+        p.drawPolygon(QPolygonF(
+            {QPointF(4.0, 19.6), QPointF(4.0, 6.4), QPointF(20.0, 4.4), QPointF(20.0, 19.6)}));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF(
+            {QPointF(4.0, 19.6), QPointF(4.0, 6.4), QPointF(20.0, 4.4), QPointF(20.0, 19.6)}));
+        p.setPen(QPen(c, 1.3, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(20.0, 19.6), QPointF(4.0, 19.6));
+        break;
+    }
+
+    case Glyph::PolylineEdit:
+        // A RUN AND ITS DIRECTION: what the command closes, opens, reverses and
+        // thins is the run itself, so the arrow is on it.
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF(
+            {QPointF(3.2, 18.6), QPointF(8.6, 7.4), QPointF(15.0, 15.0), QPointF(19.6, 6.0)}));
+        arrowHead(p, QPointF(20.6, 4.0), QPointF(17.8, 9.4), c, 4.0);
+        grip(p, QPointF(8.6, 7.4), c);
+        grip(p, QPointF(15.0, 15.0), c);
+        break;
+
+    case Glyph::TextEdit:
+        // A LETTER AND THE PENCIL OVER IT: the words of a caption changed.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(3.6, 5.0), QPointF(13.0, 5.0));
+        p.drawLine(QPointF(8.3, 5.0), QPointF(8.3, 17.0));
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(12.4, 20.4), QPointF(20.4, 12.4));
+        p.drawLine(QPointF(18.2, 10.2), QPointF(22.0, 14.0));
+        p.drawLine(QPointF(12.4, 20.4), QPointF(11.4, 21.6));
+        break;
+
     case Glyph::Scale:
         // A SMALL SQUARE GROWING INTO A LARGE ONE about a fixed corner, which is
         // what the command does about its centre.

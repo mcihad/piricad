@@ -26,9 +26,11 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -143,9 +145,8 @@ bool single_id(const Value& v, std::int64_t& out, std::size_t& count)
 /// `corners_only` is what KÖŞEEKLE asks: a new corner can only go into a
 /// polyline, because every other kind's vertices are a DEFINITION and one more
 /// of them would leave a record that is no longer that kind.
-bool resolve_entity(Context& ctx, core::EntityId& out, bool corners_only)
+bool resolve_entity(const Context& ctx, const Value& given, core::EntityId& out, bool corners_only)
 {
-    const Value given = ctx.argument("nesne");
     if (given.empty()) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Düzenlenecek nesne belirtilmedi. Örnek: KÖŞETAŞI nesne=1 kose=2");
@@ -194,6 +195,112 @@ bool resolve_entity(Context& ctx, core::EntityId& out, bool corners_only)
     return true;
 }
 
+/// WHICH OBJECT AND WHICH CORNER, the way a hand says it: ONE CLICK.
+///
+/// The named `nesne` and `kose` are read first, then a single highlighted object
+/// stands in for `nesne`; whatever is still missing is asked for as a POINT on
+/// the drawing (`yer`), which names the object under it and the corner — or,
+/// for KÖŞEEKLE, the edge — nearest it. The menu entries used to answer
+/// "Düzenlenecek nesne belirtilmedi" and stop, so a corner could be moved only
+/// by somebody who knew the object's key and the corner's number: two things a
+/// drawing shows as a place, never as numbers.
+///
+/// Returns false when the command is over. On success `object` holds the ids
+/// to record and `corner` the 1-based corner — the grip moved, or the corner
+/// the new one follows.
+Task<bool> pick_corner(Context& ctx, bool insert, Value& object, core::EntityId& slot,
+                       std::int64_t& corner)
+{
+    const core::Document& doc = ctx.document();
+    Bus& bus                  = ctx.session().bus();
+
+    object = ctx.argument("nesne");
+    if (object.empty()) {
+        const auto keys = bus.selection().keys();
+        if (keys.size() == 1) object = Value::ids({static_cast<std::int64_t>(core::raw(keys[0]))});
+    }
+
+    const Value numbered = ctx.argument("kose");
+    std::optional<core::Point2> pointed;
+    if (object.empty() || numbered.empty()) {
+        pointed = co_await ctx.point("yer", insert ? "Köşe eklenecek kenara tıklayın"
+                                                   : "Taşınacak köşeye tıklayın");
+        if (!pointed) {
+            if (object.empty())
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           std::string("Düzenlenecek nesne belirtilmedi. Örnek: ") +
+                               (insert ? "KÖŞEEKLE" : "KÖŞETAŞI") + " nesne=1 kose=2");
+            else
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Köşe numarası belirtilmedi. İlk köşe 1'dir.");
+            co_return false;
+        }
+        if (object.empty()) {
+            // The click's own pick box — the one SEÇ uses — so what is under
+            // the cursor is what is taken. A client with no screen picks what
+            // lies exactly under the point, which a corner always does.
+            const core::EntityId hit =
+                core::pick_nearest(doc, *pointed, bus.aid_settings().pick_radius);
+            if (hit == core::kNoEntity) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           insert ? "Orada köşe eklenecek bir çizgi ya da alan yok. Bir kenarın "
+                                    "üzerine tıklayın."
+                                  : "Orada köşesi taşınacak bir nesne yok. Bir nesnenin köşesine "
+                                    "tıklayın.");
+                co_return false;
+            }
+            object = Value::ids({static_cast<std::int64_t>(core::raw(doc.key_of(hit)))});
+        }
+    }
+
+    if (!resolve_entity(ctx, object, slot, insert)) co_return false;
+
+    if (!numbered.empty()) {
+        std::size_t count = 0;
+        if (!single_id(numbered, corner, count)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Tek bir köşe numarası beklenir; " +
+                                                             std::to_string(count) +
+                                                             " değer verildi.");
+            co_return false;
+        }
+        co_return true;
+    }
+
+    // `pointed` was asked for above whenever `kose` was missing, which is the
+    // only way here; said again so that nothing reads an empty point.
+    if (!pointed) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Köşe numarası belirtilmedi. İlk köşe 1'dir.");
+        co_return false;
+    }
+    const std::optional<std::size_t> found =
+        insert ? core::nearest_edge(doc, slot, *pointed) : core::nearest_grip(doc, slot, *pointed);
+    if (!found) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   insert ? "Bu nesnenin köşe eklenecek bir kenarı yok."
+                          : "Bu nesnenin taşınacak bir köşesi ya da tutamağı yok.");
+        co_return false;
+    }
+    corner = static_cast<std::int64_t>(*found) + 1;
+    co_return true;
+}
+
+/// The guide the canvas draws while the new place is aimed: the object as it
+/// will be, from the edit the command is about to make (`core::grip_preview`,
+/// `core::insert_preview`), and the two edges following the cursor with it.
+PointOptions grip_guide(const Value& object, std::int64_t corner, core::Point2 from, bool insert)
+{
+    const std::int64_t key = object.kind() == Value::Kind::IdList && !object.as_ids().empty()
+                                 ? object.as_ids()[0]
+                                 : object.as_int();
+    PointOptions o;
+    o.rubber_band    = true;
+    o.rubber_origin  = from;
+    o.rubber_shape   = RubberShape::Grip;
+    o.rubber_payload = core::encode_grip_guide(core::GripGuide{
+        .key = key, .index = static_cast<std::uint32_t>(corner - 1), .insert = insert});
+    return o;
+}
+
 core::DrawingUnit drawing_unit(Context& ctx)
 {
     return core::drawing_unit_from_setting(
@@ -202,7 +309,7 @@ core::DrawingUnit drawing_unit(Context& ctx)
 
 /// KÖŞETAŞI for every kind but the polyline: the grip table says what moving
 /// grip `corner` means, and a dimension's caption is re-said afterwards.
-Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
+Task<void> move_grip_of(Context& ctx, core::EntityId slot, const Value& object, std::int64_t corner)
 {
     const auto grips = core::entity_grips(ctx.document(), slot);
     if (corner < 1 || static_cast<std::size_t>(corner) > grips.size()) {
@@ -214,8 +321,8 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
     const auto index        = static_cast<std::size_t>(corner - 1);
     const core::Point2 from = grips[index].at;
 
-    auto to = co_await ctx.point("nokta", "Tutamağın yeni yeri",
-                                 PointOptions{.rubber_band = true, .rubber_origin = from});
+    auto to =
+        co_await ctx.point("nokta", "Tutamağın yeni yeri", grip_guide(object, corner, from, false));
     if (!to) co_return;
 
     auto edit = core::move_grip(ctx.document(), slot, index, *to);
@@ -253,41 +360,22 @@ Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
         }
     }
 
-    ctx.record("nesne", ctx.argument("nesne"));
+    ctx.record("nesne",
+               Value::ids({static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)))}));
     ctx.record("kose", Value::integer(corner));
+    ctx.record("yer", Value{});
     ctx.record("nokta", Value::point(*to));
-}
-
-/// The `kose` argument, or a message naming what was wrong with it. ASCII in the
-/// NAME, like every declared parameter in this program: a surveyor types it on
-/// whatever keyboard is in front of them. The MESSAGES stay Turkish.
-bool resolve_corner(Context& ctx, std::int64_t& out)
-{
-    const Value given = ctx.argument("kose");
-    if (given.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument, "Köşe numarası belirtilmedi. İlk köşe 1'dir.");
-        return false;
-    }
-
-    std::size_t count = 0;
-    if (!single_id(given, out, count)) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Tek bir köşe numarası beklenir; " + std::to_string(count) + " değer verildi.");
-        return false;
-    }
-    return true;
 }
 
 Task<void> run_move(Context& ctx)
 {
+    Value object;
     core::EntityId slot = core::kNoEntity;
-    if (!resolve_entity(ctx, slot, false)) co_return;
-
     std::int64_t corner = 0;
-    if (!resolve_corner(ctx, corner)) co_return;
+    if (!co_await pick_corner(ctx, false, object, slot, corner)) co_return;
 
     if (ctx.document().entities().kind[slot] != core::kPolylineKind) {
-        co_await move_grip_of(ctx, slot, corner);
+        co_await move_grip_of(ctx, slot, object, corner);
         co_return;
     }
 
@@ -300,12 +388,13 @@ Task<void> run_move(Context& ctx)
         co_return;
     }
 
-    // The guide runs from the corner being moved, so the user sees the two edges
-    // that will follow it rather than a line from nowhere.
+    // THE OBJECT AS IT WILL BE, not a line from the corner: the two edges that
+    // meet at the corner follow the cursor, drawn from the very edit this
+    // command is about to make (`core::grip_preview`).
     const core::Point2 from = rings.points[where.ring][where.at];
 
-    auto to = co_await ctx.point("nokta", "Köşenin yeni yeri",
-                                 PointOptions{.rubber_band = true, .rubber_origin = from});
+    auto to =
+        co_await ctx.point("nokta", "Köşenin yeni yeri", grip_guide(object, corner, from, false));
     if (!to) co_return; // ESC leaves the corner where it was
 
     rings.points[where.ring][where.at] = *to;
@@ -319,65 +408,64 @@ Task<void> run_move(Context& ctx)
         co_return;
     }
 
-    ctx.record("nesne", ctx.argument("nesne"));
+    ctx.record("nesne",
+               Value::ids({static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)))}));
     // The DECLARED shape, so replaying the journal line binds exactly what this
     // run bound: `kose` is an `Arity::exactly(1)` integer, so it records as one.
+    // `yer` is cleared: it only ever stood in for `kose`, and a replay that had
+    // both would be reading one fact twice.
     ctx.record("kose", Value::integer(corner));
+    ctx.record("yer", Value{});
     ctx.record("nokta", Value::point(*to));
 }
 
 Task<void> run_insert(Context& ctx)
 {
+    Value object;
     core::EntityId slot = core::kNoEntity;
-    if (!resolve_entity(ctx, slot, true)) co_return;
-
     std::int64_t corner = 0;
-    if (!resolve_corner(ctx, corner)) co_return;
+    if (!co_await pick_corner(ctx, true, object, slot, corner)) co_return;
 
-    Rings rings       = read_rings(ctx.document(), slot);
-    const Where where = locate(rings, corner);
-    if (!where.found) {
+    // Checked BEFORE the new place is asked for, with the edit the command will
+    // make, so a corner that has no edge after it is refused at once rather than
+    // after the user has aimed.
+    const core::Document& doc = ctx.document();
+    const auto after          = static_cast<std::size_t>(corner - 1);
+    const auto grips          = core::entity_grips(doc, slot);
+    if (corner < 1 || after >= grips.size()) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
-                       std::to_string(rings.vertex_count()) + " köşesi var.");
+                       std::to_string(grips.size()) + " köşesi var.");
+        co_return;
+    }
+    if (const auto probe = core::insert_vertex(doc, slot, after, grips[after].at); !probe) {
+        ctx.refuse(probe.error());
         co_return;
     }
 
-    // `kose` names the corner the new one comes AFTER, so it names a SEGMENT: the
-    // one leaving that corner. On a closed ring the last corner's segment is the
-    // closing edge, which is why the wrap is a modulus and not a refusal — a
-    // parsel's closing edge is an edge like any other and needs a bend as often.
-    const std::vector<core::Point2>& ring = rings.points[where.ring];
-    const bool closed                     = rings.roles[where.ring] != core::RingRole::Open;
-
-    if (!closed && where.at + 1 >= ring.size()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Son köşeden sonra kenar yok: açık bir çizgide " + std::to_string(corner) +
-                       ". köşe uçtur. Araya köşe eklemek için ondan önceki bir köşe verin.");
-        co_return;
-    }
-
-    // The guide starts at the corner the segment leaves, which is where the new
-    // bend will hinge from.
-    const core::Point2 a = ring[where.at];
-
+    // The guide starts at the corner the edge leaves, and the edge itself bends
+    // to the cursor (`core::insert_preview`).
     auto at = co_await ctx.point("nokta", "Yeni köşenin yeri",
-                                 PointOptions{.rubber_band = true, .rubber_origin = a});
+                                 grip_guide(object, corner, grips[after].at, true));
     if (!at) co_return;
 
-    rings.points[where.ring].insert(
-        rings.points[where.ring].begin() + static_cast<std::ptrdiff_t>(where.at) + 1, *at);
-
-    auto st = write_rings(ctx, slot, rings);
-    if (!st) {
+    auto edit = core::insert_vertex(doc, slot, after, *at);
+    if (!edit) {
+        ctx.refuse(edit.error());
+        co_return;
+    }
+    const auto inputs = edit.value().inputs();
+    if (auto st = ctx.transaction().set_geometry(slot, inputs); !st) {
         ctx.refuse(st.error());
         co_return;
     }
 
-    ctx.record("nesne", ctx.argument("nesne"));
+    ctx.record("nesne",
+               Value::ids({static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)))}));
     // The DECLARED shape, so replaying the journal line binds exactly what this
     // run bound: `kose` is an `Arity::exactly(1)` integer, so it records as one.
     ctx.record("kose", Value::integer(corner));
+    ctx.record("yer", Value{});
     ctx.record("nokta", Value::point(*at));
 }
 
@@ -398,6 +486,10 @@ KENTOS_COMMAND(vertex_move)
                 Param::integer("kose", Arity::exactly(1),
                                "Taşınacak köşenin sırası; ilk köşe 1'dir")
                     .en("vertex"),
+                Param{"yer", ParamKind::Point, Arity::optional(),
+                      "Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de "
+                      "verilmezse altındaki nesne"}
+                    .en("at"),
                 Param::point("nokta", "Köşenin yeni yeri").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,
@@ -422,6 +514,10 @@ KENTOS_COMMAND(vertex_insert)
                 Param::integer("kose", Arity::exactly(1),
                                "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir")
                     .en("vertex"),
+                Param{"yer", ParamKind::Point, Arity::optional(),
+                      "Kenarı gösteren nokta: kose verilmezse en yakın kenar, nesne de "
+                      "verilmezse altındaki nesne"}
+                    .en("at"),
                 Param::point("nokta", "Yeni köşenin yeri").en("point"),
             },
         .undo    = UndoPolicy::SingleTransaction,

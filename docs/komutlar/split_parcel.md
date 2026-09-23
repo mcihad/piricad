@@ -69,9 +69,10 @@ ALAN noktalar=0,0 20,0 20,10 0,10
 
 ### Arayüz
 
-Parseli seçin, **Kadastro ▸ İfraz** menüsünü tıklayın, sonra
-ayırma çizgisinin iki ucunu tıklayın. Yakalama açıkken uçlar mevcut köşelere
-oturur.
+**Kadastro ▸ İfraz** menüsünü tıklayın. Parsel seçili değilse komut hangi
+parselin ifraz edileceğini sorar: parsele tıklayıp Enter'a basın. Sonra ayırma
+çizgisinin iki ucunu tıklayın. Yakalama açıkken uçlar mevcut köşelere oturur.
+Birden çok nesne seçiliyken de reddetmez; istediği parseli sorar.
 
 ### Betik
 
@@ -96,9 +97,14 @@ Tek adımdır: `GERİAL` parçaları kaldırır ve asıl parseli geri getirir.
 
 ## Hatalar
 
-> `İfraz tek parsel üzerinde çalışır.`
+> `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.`
 
-Seçim boş ya da birden çok parsel içeriyor.
+Betik parseli vermedi ve seçim de boş; ya da sorulan parsel seçilmeden Enter'a
+basıldı.
+
+> `Bir seferde en fazla 1 nesne; 2 nesne seçili.`
+
+Betikten birden çok nesne seçiliyken çağrıldı; `nesneler=` ile tek parsel verin.
 
 > `Bu çizgi parseli kesmiyor: ifraz için çizginin parselin içinden geçmesi gerekir.`
 

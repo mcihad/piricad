@@ -28,24 +28,24 @@
 namespace kentos::command {
 namespace {
 
-/// The keys the caller means: the named ones, else the live selection.
+/// The keys the caller means: the named ones, else the live selection, else
+/// ASKED FOR — the order every modify command keeps (context.hpp `want_objects`).
 ///
-/// THE ORDER EVERY MODIFY COMMAND KEEPS (context.hpp `want_objects`): the named
-/// argument first, because a script said it; then the highlight, because a user
-/// pointed at it. A clipboard command does not ASK, though — a copy with nothing
-/// selected is a mistake, not a question, and answering it with a prompt would
-/// put the user in a pick loop they did not start.
-std::vector<std::uint64_t> wanted(Context& ctx)
+/// THIS USED NOT TO ASK. The reasoning was that a copy with nothing selected is
+/// a mistake rather than a question; the result was that Kes and Panoya Kopyala
+/// in the Düzen menu were dead with nothing highlighted, which is the one state a
+/// user reaching for a menu is most likely to be in. Every CAD program answers
+/// COPYCLIP with an empty selection by asking which objects, and so does this.
+/// Returns false when the command is over — cancelled, or refused by the helper.
+Task<bool> wanted(Context& ctx, const char* message, const char* example,
+                  std::vector<std::uint64_t>& out)
 {
-    std::vector<std::uint64_t> out;
-    if (const Value v = ctx.argument("nesneler"); !v.empty()) {
-        for (const std::int64_t raw : v.as_ids())
-            if (raw > 0) out.push_back(static_cast<std::uint64_t>(raw));
-        return out;
-    }
-    for (const core::EntityKey k : ctx.session().bus().selection().keys())
-        out.push_back(core::raw(k));
-    return out;
+    std::vector<std::int64_t> ids;
+    if (!co_await want_objects(ctx, "nesneler", message, ids, 0, example)) co_return false;
+    out.clear();
+    for (const std::int64_t raw : ids)
+        if (raw > 0) out.push_back(static_cast<std::uint64_t>(raw));
+    co_return true;
 }
 
 Task<void> run_copy(Context& ctx)
@@ -57,13 +57,10 @@ Task<void> run_copy(Context& ctx)
         co_return;
     }
 
-    std::vector<std::uint64_t> keys = wanted(ctx);
-    if (keys.empty()) {
-        ctx.session().fail(
-            core::err(core::ErrorCode::InvalidArgument,
-                      "Panoya alınacak nesne yok. Önce nesne seçin ya da nesneler= ile verin."));
+    std::vector<std::uint64_t> keys;
+    if (!co_await wanted(ctx, "Panoya alınacak nesneleri seçin, sonra Enter",
+                         "PANOYAKOPYALA nesneler=1", keys))
         co_return;
-    }
 
     FileRequest request;
     request.verb     = FileRequest::Verb::ClipboardCopy;
@@ -95,13 +92,9 @@ Task<void> run_cut(Context& ctx)
         co_return;
     }
 
-    std::vector<std::uint64_t> keys = wanted(ctx);
-    if (keys.empty()) {
-        ctx.session().fail(
-            core::err(core::ErrorCode::InvalidArgument,
-                      "Kesilecek nesne yok. Önce nesne seçin ya da nesneler= ile verin."));
+    std::vector<std::uint64_t> keys;
+    if (!co_await wanted(ctx, "Kesilecek nesneleri seçin, sonra Enter", "KES nesneler=1", keys))
         co_return;
-    }
 
     FileRequest request;
     request.verb     = FileRequest::Verb::ClipboardCopy;

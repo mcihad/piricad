@@ -4979,13 +4979,16 @@ TEST_CASE("nesneler verilmişse hiç sorulmaz: betik yolu değişmedi")
     CHECK(f.doc.geometry().ring_xs(span.first)[0] == 20'000);
 }
 
-TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata bırakmaz")
+TEST_CASE("seçim komutun alabileceğinden çoksa SORAR; fazlasını adlayan betik reddedilir")
 {
-    // BUDA takes exactly two lines. Handed six, it says so — and that used to be
-    // followed by "'core.trim': zorunlu 'nokta' parametresi eksik" from post-run
-    // validation, a second message about a parameter the user was never asked
-    // for. `want_objects` clears the parameter it could not accept, and the bus
-    // no longer validates a command that resolved nothing.
+    // BUDA takes exactly two lines. Handed three highlighted, it used to refuse on
+    // the spot — "en fazla 2 nesne" — so the button was dead until the user went
+    // and cleared the selection by hand. It now asks for the ones it wants, and
+    // says why. A script cannot answer the question, so it is told exactly what
+    // it was told before; and neither road is followed by the raw "zorunlu
+    // parametre" line a post-run validation used to add after the sentence.
+    // (A script that names nothing is told which parameter is missing before
+    // the body runs: a script says what it means, it is not asked.)
     std::string said;
     Fixture f;
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
@@ -4999,21 +5002,35 @@ TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata 
                 .ok());
     REQUIRE(f.bus.execute_line("SEÇ mod=TÜMÜ", Origin::Test).ok());
 
-    said.clear();
-    auto started = f.bus.begin_interactive("BUDA");
-    REQUIRE(started.ok());
+    {
+        // A HAND: the tool asks, and the question says how many are highlighted
+        // and how many it takes.
+        auto started = f.bus.begin_interactive("BUDA", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.waiting());
+        CHECK(session.prompt().kind == ParamKind::Selection);
+        CHECK(session.prompt().message.find("3 nesne seçili") != std::string::npos);
+        CHECK(session.prompt().message.find("2 nesne") != std::string::npos);
 
-    auto& session = *started.value();
-    // It never even asks: three objects are selected and two is the most it can
-    // take, so it refuses on the selection rather than on a prompt.
-    CHECK(!session.waiting());
-
-    // The refusal IS the error, and the error is the sentence — not the raw
-    // "zorunlu parametre" line a post-run validation would have added after it.
-    const std::string why = REFUSED(f.bus.finish(session));
-    CHECK(why.find("en fazla 2 nesne") != std::string::npos);
-    CHECK(why.find("zorunlu") == std::string::npos);
-    CHECK(said.find("zorunlu") == std::string::npos);
+        // Esc is a cancel, not the refusal the script gets.
+        session.cancel();
+        const auto done = f.bus.finish(session);
+        REQUIRE(done.ok());
+        CHECK(done.value().message == "İptal edildi");
+    }
+    {
+        // A SCRIPT names what it means, and three named where two are taken is
+        // refused with the sentence only — never followed by the raw "zorunlu
+        // parametre" line a post-run validation used to add after it.
+        said.clear();
+        const std::string why =
+            REFUSED(f.bus.execute_line("BUDA nesne=1 nesne=2 nesne=3 nokta=5,0", Origin::Script));
+        INFO(why);
+        CHECK(why.find("en fazla") != std::string::npos);
+        CHECK(why.find("zorunlu") == std::string::npos);
+        CHECK(said.find("zorunlu") == std::string::npos);
+    }
 }
 
 // =============================================================================
@@ -7341,9 +7358,23 @@ TEST_CASE("her etkileşimli komut iptal edilince boş geri alma deltası bırak�
             ++refused;
             continue;
         }
-        ++started;
 
         Session& session = *started_ok.value();
+        if (!session.waiting() && !session.working()) {
+            // IT NEVER ASKED, so there was no moment to press Esc in: SİL with
+            // everything highlighted is the Delete key, and it deletes. What
+            // this test pins is the command that asks and is cancelled; one that
+            // ran straight through is taken back, so the next command still
+            // meets the drawing this test started with.
+            const auto done = f.bus.finish(session);
+            if (done.ok() && f.undo.undo_depth() > depth)
+                REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+            REQUIRE(f.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+            CHECK_MESSAGE(f.doc.content_hash() == before, spec.id);
+            continue;
+        }
+        ++started;
+
         session.cancel(); ///< Esc, before a single answer
         const auto done = f.bus.finish(session);
 

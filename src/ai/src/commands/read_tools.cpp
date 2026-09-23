@@ -347,15 +347,16 @@ Task<void> run_object_points(Context& ctx)
     const core::Document& doc = ctx.document();
     const std::string asked   = ctx.argument("tur").as_text().empty() ? std::string("merkez")
                                                                       : ctx.argument("tur").as_text();
-    const Value given         = ctx.argument("nesneler");
-    Value::Ints keys          = given.as_ids();
-    if (keys.empty() && given.kind() == Value::Kind::Int) keys.push_back(given.as_int());
-    if (keys.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Hangi nesnenin noktaları? `nesneler` verin: `sorgula` ya da `secimi_al` "
-                   "tutamağı.");
+    // Named, highlighted, or ASKED FOR. The Sorgu menu's entry used to answer
+    // "zorunlu 'nesneler' parametresi eksik" even with objects highlighted,
+    // because the command read only its argument and was not interactive — so
+    // the one road a hand has to it was dead in every state.
+    Value::Ints keys;
+    if (!co_await command::want_objects(ctx, "nesneler",
+                                        "Noktaları istenen nesneleri seçin, sonra Enter", keys, 0,
+                                        "NESNENOKTALARI nesneler=1 tur=koseler"))
         co_return;
-    }
+    ctx.record("nesneler", Value::ids(keys));
 
     const core::RingGeometry& geom = doc.geometry();
     std::vector<NamedPoint> points;
@@ -751,8 +752,12 @@ Task<void> run_tool_search(Context& ctx)
 /// fast path, and there are none (Article 1.2).
 Task<void> run_job_template(Context& ctx)
 {
-    auto typed = co_await ctx.text("islem", "İşlem: listele / goster");
-    if (!typed) co_return;
+    auto typed = co_await ctx.text("islem", "İşlem: listele / goster", {"listele", "goster"});
+    if (!typed) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Ne yapılacak: islem=listele ya da islem=goster."));
+        co_return;
+    }
 
     const bool show = core::turkish_key_equals(*typed, "goster");
     if (!show && !core::turkish_key_equals(*typed, "listele")) {
@@ -798,7 +803,11 @@ Task<void> run_job_template(Context& ctx)
         co_return;
     }
 
-    auto wanted = co_await ctx.text("sablon", "Şablonun kimliği");
+    std::vector<std::string> ids;
+    ids.reserve(catalogue.templates.size());
+    for (const JobTemplate& held : catalogue.templates)
+        ids.push_back(held.id);
+    auto wanted = co_await ctx.text("sablon", "Şablonun kimliği", std::move(ids));
     if (!wanted || wanted->empty()) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Hangi şablon: sablon=<kimlik>. Kimlikleri İŞŞABLONU "
@@ -924,7 +933,8 @@ std::vector<CommandSpec> detail::read_tool_specs()
                     .en("which"),
             },
         .undo  = UndoPolicy::None,
-        .flags = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                 Flags::AiAccessible,
         .summary = "Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını "
                    "bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.",
         .run = &run_object_points,
@@ -976,8 +986,9 @@ std::vector<CommandSpec> detail::read_tool_specs()
                                      "sayısı her hâlde bildirilir")
                     .en("limit"),
             },
-        .undo    = UndoPolicy::None,
-        .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                 Flags::AiAccessible,
         .summary = "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın "
                    "eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını "
                    "söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.",
@@ -998,8 +1009,9 @@ std::vector<CommandSpec> detail::read_tool_specs()
                 Param::text("sablon", Arity::optional(), "Şablonun kimliği; goster için gerekir")
                     .en("template"),
             },
-        .undo    = UndoPolicy::None,
-        .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                 Flags::AiAccessible,
         .summary = "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut "
                    "satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç "
                    "yüzeyinden gönderilir ve yazan her adım yine öneri olur.",

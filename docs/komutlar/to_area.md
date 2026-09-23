@@ -138,7 +138,7 @@ Yarım uygulanmış bir çevrim yoktur.
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Çevrilecek çizgi belirtilmedi ve seçim boş. Örnek: ALANAÇEVİR nesneler=1 nesneler=2` | Ne kimlik verildi ne seçim var | Çizgileri seçin ya da kimliklerini yazın |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Betik ne `nesneler` verdi ne seçim vardı | Çizgileri seçin ya da kimliklerini yazın |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 | `Nesne N tek parçalı bir çizgi değil; ALANAÇEVİR yalnız açık çizgileri birleştirir.` | Çok parçalı ya da delikli bir nesne verildi | Yalnız açık çizgileri seçin |

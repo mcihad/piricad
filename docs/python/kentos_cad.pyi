@@ -549,6 +549,7 @@ def vertex_move(
     *,
     object: list[int] = ...,
     vertex: int = ...,
+    at: Coord = ...,
     point: Coord = ...,
 ) -> int:
     """Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
@@ -556,6 +557,7 @@ def vertex_move(
     Komut: core.vertex_move (KÖŞETAŞI)
         object — Köşesi taşınacak nesnenin kimliği [kalıcı nesne anahtarı]
         vertex — Taşınacak köşenin sırası; ilk köşe 1'dir
+        at — Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce]
         point — Köşenin yeni yeri [mm, Sağa (Y) önce]
     """
 
@@ -563,6 +565,7 @@ def vertex_insert(
     *,
     object: list[int] = ...,
     vertex: int = ...,
+    at: Coord = ...,
     point: Coord = ...,
 ) -> int:
     """Bir kenarın ortasına yeni köşe ekler.
@@ -570,6 +573,7 @@ def vertex_insert(
     Komut: core.vertex_insert (KÖŞEEKLE)
         object — Köşe eklenecek nesnenin kimliği [kalıcı nesne anahtarı]
         vertex — Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir
+        at — Kenarı gösteren nokta: kose verilmezse en yakın kenar, nesne de verilmezse altındaki nesne [mm, Sağa (Y) önce]
         point — Yeni köşenin yeri [mm, Sağa (Y) önce]
     """
 

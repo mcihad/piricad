@@ -106,13 +106,10 @@ ya da araç kutusundaki, **Düzen** araç çubuğundaki **Sil** düğmesini, ya 
 **Del** pencerenin tamamında çalışır: odak tuvalde, katman listesinde ya da öznitelik
 tablosunda olsun fark etmez, silinen hep aynı seçimdir.
 
-Seçim boşsa transkriptte hatırlatma görürsünüz:
-
-```text
-Silinecek nesne seçili değil. Nesneleri seçin ya da SİL nesneler=1 yazın.
-```
-
-Seçim yapmayı [`SEÇ`](select.md) sayfası anlatır.
+**Seçim boşsa komut sorar**: Del'e, **Sil** düğmesine ya da menüye bastığınızda
+komut satırında "Silinecek nesneleri seçin, sonra Enter" yazar. Nesnelere tıklayın
+ya da kutu sürükleyin, sonra Enter'a basın; Esc vazgeçer. Seçim yapmayı
+[`SEÇ`](select.md) sayfası anlatır.
 
 #### Silmeden önce onay isteme
 
@@ -190,7 +187,7 @@ Betik çalışırken bir silme başarısız olursa **betiğin tamamı geri alın
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1` | `nesneler` verilmemiş ve seçim boş | Önce [`SEÇ`](select.md) ile seçin ya da bir kimlik verin |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Betik ne `nesneler` verdi ne seçim vardı | Önce [`SEÇ`](select.md) ile seçin ya da bir kimlik verin; örnek satır mesajın altındadır |
 | `Nesne bulunamadı veya zaten silinmiş: 99` | Kimlik yok ya da nesne zaten silinmiş | Kimliği denetleyin; hiçbir şey silinmedi |
 | `Geçersiz nesne kimliği: 0. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik verilmiş | Kimlikler `1`'den başlar |
 | `'core.erase': 'nesneler' parametresi nesne seçimi bekliyor, başka türde bir değer geldi.` | Kimlik yerine metin gelmiş | Tam sayı kimlik verin |

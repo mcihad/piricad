@@ -111,7 +111,9 @@ Yer tutucuları doldurup satırları sırayla yazarsınız:
 Arayüzde şablonun karşılığı, adımları **elle** yapmaktır: `Çıktı ▸ Çıktı Yerleşimleri`
 penceresinden yerleşimi kurar, öğeleri koyar, **Atlas** sekmesinden katmanı seçer,
 **Denetle** ile eksikleri okur ve **Yazdır** dersiniz. Şablon aynı sırayı yazılı hâlde
-verir — özellikle bir ajanın okuyabileceği hâlde.
+verir — özellikle bir ajanın okuyabileceği hâlde. Menüden başlatıldığında komut
+önce ne yapılacağını (`listele` ya da `goster`) sorar; `goster` için şablonun
+kimliğini, kataloğun kimliklerini önererek sorar.
 
 ### Betik
 

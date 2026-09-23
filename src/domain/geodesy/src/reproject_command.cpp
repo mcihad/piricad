@@ -25,14 +25,39 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/command/drawing_catalogs.hpp"
+
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
+
+/// The systems a user is offered: the TM 3° zones of the data package, by the
+/// names a surveyor writes (`TUREF/TM30`). Read at every call, like every
+/// catalogue, so a data release takes effect without a restart; nothing when the
+/// package cannot be found, and the question is still asked.
+std::vector<std::string> offered_systems()
+{
+    std::vector<std::string> out;
+    const std::string file = resolve_catalog_path("data/crs/tm3-dilimleri.json");
+    if (file.empty()) return out;
+    const std::string dir = std::filesystem::path(file).parent_path().string();
+    auto catalogue        = domain::geodesy::CrsCatalog::load(dir);
+    if (!catalogue) return out;
+    // The datum as a surveyor writes it in a system's name: "TUREF (ITRF96)" is
+    // `TUREF/TM30`, which is what the resolver reads (crs_service.hpp).
+    const std::string& datum = catalogue.value().parameters().datum;
+    const std::string prefix = datum.substr(0, datum.find(' '));
+    for (const domain::geodesy::Tm3Zone& zone : catalogue.value().zones())
+        out.push_back(prefix + "/" + zone.name);
+    return out;
+}
 
 Task<void> run(Context& ctx)
 {
@@ -43,11 +68,19 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    const Value target_arg = ctx.argument("hedef");
-    if (target_arg.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Hedef koordinat sistemi eksik. Örnek: DÖNÜŞTÜR hedef=EPSG:5256");
-        co_return;
+    // THE TARGET, NAMED OR ASKED FOR. The menu entry used to answer "zorunlu
+    // 'hedef' parametresi eksik" and stop. The zones the data package declares
+    // are OFFERED — never a restriction: a PROJ string or an EPSG code the
+    // package does not list is still an answer (`Prompt::choices`).
+    std::string target = ctx.argument("hedef").as_text();
+    if (target.empty()) {
+        auto typed = co_await ctx.text("hedef", "Hedef koordinat sistemi", offered_systems());
+        if (!typed || typed->empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Hedef koordinat sistemi eksik. Örnek: DÖNÜŞTÜR hedef=EPSG:5256");
+            co_return;
+        }
+        target = *typed;
     }
 
     // The source defaults to what the document already says it is, which is the
@@ -55,7 +88,6 @@ Task<void> run(Context& ctx)
     // wrong and the user knows better.
     const std::string source = ctx.argument("kaynak").empty() ? ctx.document().crs().id()
                                                               : ctx.argument("kaynak").as_text();
-    const std::string target = target_arg.as_text();
 
     if (source.empty()) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
@@ -162,7 +194,7 @@ KENTOS_COMMAND(reproject)
                     .en("source"),
             },
         .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Scriptable | Flags::AiAccessible,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.",
         .run     = &run,
     };

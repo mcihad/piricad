@@ -129,8 +129,24 @@ Task<void> run(Context& ctx)
     // ---- what the crew starts and ends on ---------------------------------
     auto start = co_await ctx.point("baslangic", "Başlangıç istasyonu (bilinen)");
     if (!start) co_return;
-    auto backsight = co_await ctx.point("baglama", "Başlangıçtaki bağlama noktası (bilinen)");
+    // The backsight is aimed FROM the station, so the line the angles will be
+    // read from is on screen while it is placed.
+    auto backsight = co_await ctx.point("baglama", "Başlangıçtaki bağlama noktası (bilinen)",
+                                        PointOptions{.rubber_band = true, .rubber_origin = *start});
     if (!backsight) co_return;
+
+    // AND IT STAYS DRAWN while the field book is typed in: the station and its
+    // backsight are what every angle below is turned from, and they are not
+    // document objects, so without this they left the screen the moment the
+    // numbers began (`RubberShape::Fixed`).
+    const auto reference = [&] {
+        PointOptions o;
+        o.rubber_band   = true;
+        o.rubber_origin = *start;
+        o.rubber_shape  = RubberShape::Fixed;
+        o.rubber_chain  = {*backsight, *start};
+        return o;
+    };
 
     const core::AngleConvention convention = ctx.session().bus().angle_convention();
 
@@ -154,13 +170,15 @@ Task<void> run(Context& ctx)
     Value::Numbers sides  = ctx.argument("kenar").as_numbers();
     if (angles.empty() && sides.empty()) {
         while (true) {
-            auto angle =
-                co_await ctx.number("aci", "İstasyon " + std::to_string(angles.size() + 1) +
-                                               ": kırılma açısı (Enter ya da sağ tık bitirir)");
+            auto angle = co_await ctx.number("aci",
+                                             "İstasyon " + std::to_string(angles.size() + 1) +
+                                                 ": kırılma açısı (Enter ya da sağ tık bitirir)",
+                                             reference());
             if (!angle) break;
-            auto side =
-                co_await ctx.number("kenar", "İstasyon " + std::to_string(sides.size() + 1) +
-                                                 ": ondan sonraki kenar (m)");
+            auto side = co_await ctx.number("kenar",
+                                            "İstasyon " + std::to_string(sides.size() + 1) +
+                                                ": ondan sonraki kenar (m)",
+                                            reference());
             if (!side) break;
             angles.push_back(*angle);
             sides.push_back(*side);
