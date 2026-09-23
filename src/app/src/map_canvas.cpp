@@ -16,6 +16,7 @@
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/fillet.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
@@ -2162,8 +2163,44 @@ void MapCanvas::buildOverlay()
                         addReadout(c.x + 12.0F, c.y + 24.0F, text);
                         guide_label_ = text;
                     }
-                    if (auto cut = core::cut_corner(run, closed, decoded.value().at, size,
-                                                    decoded.value().fillet)) {
+                    if (decoded.value().every) {
+                        // EVERY CORNER AT ONCE, by `core::cut_every_corner`:
+                        // each run as the chain edit will leave it — the
+                        // first object and every other one the payload names.
+                        const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                        const auto draw = [&](const std::vector<core::Point2>& pts, bool shut) {
+                            const core::CornerRun all =
+                                core::cut_every_corner(pts, shut, size, decoded.value().fillet);
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            if (all.bent) {
+                                core::path_outline(all.path, curve_scratch_x_, curve_scratch_y_);
+                            } else {
+                                for (const core::Point2& p : all.ring) {
+                                    curve_scratch_x_.push_back(p.x);
+                                    curve_scratch_y_.push_back(p.y);
+                                }
+                            }
+                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut && !all.bent);
+                        };
+                        draw(run, closed);
+                        for (const std::int64_t other : decoded.value().also) {
+                            const core::EntityId o = doc.slot_of(
+                                static_cast<core::EntityKey>(static_cast<std::uint64_t>(other)));
+                            if (o == core::kNoEntity || !doc.alive(o)) continue;
+                            const core::RingSpan more =
+                                doc.geometry().rings_of(doc.entities().slot[o]);
+                            if (more.count != 1) continue;
+                            const auto ox = doc.geometry().ring_xs(more.first);
+                            const auto oy = doc.geometry().ring_ys(more.first);
+                            std::vector<core::Point2> pts;
+                            pts.reserve(ox.size());
+                            for (std::size_t v = 0; v < ox.size(); ++v)
+                                pts.push_back(core::Point2{ox[v], oy[v]});
+                            draw(pts, doc.geometry().ring_role[more.first] != core::RingRole::Open);
+                        }
+                    } else if (auto cut = core::cut_corner(run, closed, decoded.value().at, size,
+                                                           decoded.value().fillet)) {
                         const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
                         const auto add = [&](const std::vector<core::Point2>& pts, bool shut) {
                             curve_scratch_x_.clear();
@@ -2268,6 +2305,61 @@ void MapCanvas::buildOverlay()
                     }
                 }
             }
+        } else if (shape == command::RubberShape::PairCorner) {
+            // THE CORNER BETWEEN THE TWO, at the size the cursor's distance from
+            // where they meet shows — by `core::fillet_pair` / `chamfer_pair`,
+            // the call the click makes (C-06: the preview is the output). The
+            // parts that stay and the arc or edge that joins them are drawn;
+            // when the size does not fit, the reason is written instead.
+            if (auto guide = core::decode_pair_corner_guide(session->prompt().rubber_payload)) {
+                const core::Document& doc = controller_.document();
+                const auto path_of_key =
+                    [&doc](std::int64_t key) -> std::optional<core::CurvePath> {
+                    const core::EntityId e =
+                        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                    if (e == core::kNoEntity || !doc.alive(e)) return std::nullopt;
+                    return core::path_of(doc, e);
+                };
+                const auto pa = path_of_key(guide.value().key_a);
+                const auto pb = path_of_key(guide.value().key_b);
+                if (pa && pb) {
+                    const core::Mm size =
+                        core::segment_length(session->prompt().rubber_origin, cursorWorld());
+                    const core::PairCornerGuide& g = guide.value();
+                    auto made                      = g.fillet
+                                                         ? core::fillet_pair(*pa, g.pick_a, *pb, g.pick_b, size)
+                                                         : core::chamfer_pair(*pa, g.pick_a, *pb, g.pick_b, size, size);
+                    const render::ScreenPointF c   = toScreenF(to);
+                    std::string text;
+                    if (made) {
+                        const auto draw = [this](std::size_t into, const core::CurvePath& path) {
+                            curve_scratch_x_.clear();
+                            curve_scratch_y_.clear();
+                            core::path_outline(path, curve_scratch_x_, curve_scratch_y_);
+                            addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
+                        };
+                        const std::size_t kept = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                        if (g.trim) {
+                            draw(kept, made.value().a);
+                            draw(kept, made.value().b);
+                        }
+                        if (made.value().has_link) {
+                            core::CurvePath link;
+                            link.pieces.push_back(made.value().link);
+                            draw(nextBatch(tokens_->accent.rgba(), 2.5f, false), link);
+                        }
+                        text = (g.fillet ? "yarıçap " : "mesafe ") +
+                               trimmed(static_cast<double>(size) / 1000.0, 3) + " m";
+                    } else {
+                        text = made.error().message;
+                    }
+                    if (look_.dynamic_input) {
+                        addReadout(c.x + 12.0F, c.y + 24.0F, text);
+                        guide_label_ = text;
+                    }
+                }
+            }
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (shape == command::RubberShape::Split) {
             // THE PIECES THE SPLIT WILL MAKE, each drawn in turn so the cuts read
             // as cuts: the object cut at the points given so far and at the
@@ -2656,7 +2748,8 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::MeasureRun &&
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
             shape != command::RubberShape::Corner && shape != command::RubberShape::Break &&
-            shape != command::RubberShape::TrimFence && shape != command::RubberShape::ArcSweep) {
+            shape != command::RubberShape::TrimFence && shape != command::RubberShape::ArcSweep &&
+            shape != command::RubberShape::PairCorner) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

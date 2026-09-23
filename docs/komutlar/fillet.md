@@ -7,7 +7,13 @@ betikten yapmayı bileceksiniz.
 ## Ne yapar
 
 `YUVARLA`, bir köşeyi verdiğiniz **yarıçapta bir yayla** yuvarlatır. Yay her iki
-kenara da **teğettir**: kenarlar yaya kırılmadan bağlanır.
+kenara da **teğettir**: kenarlar yaya kırılmadan bağlanır. Üç biçimde çalışır:
+
+| Biçim | Ne yuvarlanır |
+|---|---|
+| **Bir köşe** | Bir çizginin ya da alanın kendi köşesi |
+| **İki nesne arasında** | Ayrı iki nesnenin buluştuğu köşe: çizgi-çizgi, çizgi-yay, yay-yay |
+| **Bütün köşeler** (`hepsi=evet`) | Bir ya da birçok çizginin ve alanın bütün köşeleri, aynı yarıçapla |
 
 Köşe noktası, teğet noktalarıyla değiştirilir. Teğet noktalarının köşeye uzaklığı
 `r / tan(θ/2)`'dir — dik bir köşede bu tam olarak `r` kadardır.
@@ -46,13 +52,51 @@ okur. Gerçek yayla alan `r² − πr²/4` kadar, yani 1194,64 m² olurdu; arada
 0,04 m² yayın 16 kenarla çizilmesinden gelir.
 
 Diğer kurallar [`PAH`](chamfer.md) ile aynıdır: açık çizginin uçları köşe
-değildir ve teğet noktaları komşu kenarların dışına taşamaz.
+değildir ve teğet noktaları komşu kenarların dışına taşamaz. Bir alanın **içbükey**
+(içe dönük) köşesi de aynı kuralla yuvarlanır: yay köşenin iki kenarına teğettir ve
+girintiyi doldurur.
 
 **Hangi köşe?** Nesne verilmemişse ve tek bir nesne seçili değilse komut önce
-köşeyi sorar: köşeye **bir kez tıklamak** hem nesneyi hem köşeyi seçer. Ardından
-yarıçap sorulur; **yazabilir** ya da tuvalde **gösterebilirsiniz** — köşeden
-imlece olan uzaklık yarıçaptır. İmleç hareket ettikçe yuvarlatılmış köşe tuvalde
-vurgulu çizilir ve imlecin yanında `yarıçap 5 m` yazar.
+köşeyi sorar: köşeye **bir kez tıklamak** hem nesneyi hem köşeyi seçer. Köşe
+olmayan bir yere tıklarsanız o nesne **iki nesnenin birincisidir** ve komut ikinciyi
+ister. Ardından yarıçap sorulur; **yazabilir** ya da tuvalde **gösterebilirsiniz** —
+köşeden imlece olan uzaklık yarıçaptır. İmleç hareket ettikçe yuvarlatılmış köşe
+tuvalde vurgulu çizilir ve imlecin yanında `yarıçap 5 m` yazar.
+
+### İki nesne arasında
+
+Ayrı iki nesnenin — iki çizginin, bir çizgi ile bir yayın, iki yayın — buluştuğu ya
+da buluşacağı köşe yuvarlanır. Nesneleri **kalacak parçalarından** tıklarsınız ve
+tıkladığınız yerler hangi köşenin kastedildiğini söyler: kesişen iki çizginin dört
+köşesinden, tıkladığınız iki parçanın arasındaki köşe yuvarlanır, karşısındaki asla.
+
+- Yay iki nesneye de **teğettir**; merkezi her birinden tam yarıçap kadar uzaktadır.
+- Nesneler **teğet noktalarına kadar kısaltılır ya da uzatılır**; tıkladığınız parça
+  kalır, köşenin öbür yanındaki parça gider. Kısaltmadan yalnız yayı koymak için
+  `budama=hayir` verin.
+- Bir **daire** ya da kapalı şekil bütün kalır; yay ona teğet konur.
+- **Sıfır yarıçap** (`yaricap=0`) iki nesneyi yay koymadan, kesiştikleri yerde
+  **keskin köşede** buluşturur: kısa kalan uzatılır, uzun gelen kısaltılır.
+- Köşeye **yakın tıklamak** yarıçapı sınırlamaz: teğet noktası tıkladığınız yerin
+  ötesine düşse de tıkladığınız parça kalır ve teğet noktasına kadar kısalır.
+- Yarıçap tıkladığınız parçalara **sığmıyorsa** — köşe o parçanın tamamını
+  götürüyorsa — komut bunu söyleyerek reddeder; yayı köşenin öbür yanına koymaz.
+- Aynı çoklu çizginin **bitişik iki kenarına** tıklamak, o iki kenarın köşesini
+  yuvarlar.
+- Yay birinci nesnenin katmanında ve stilindedir.
+
+### Bütün köşeler
+
+`hepsi=evet` bir çizginin ya da alanın bütün köşelerini aynı yarıçapla yuvarlar;
+köşeler birbiri ardınca işlenir ve her köşe, bir öncekinin kısalttığı kenara göre
+yargılanır. Yarıçapın sığmadığı köşe **atlanır ve sayılır**, işin geri kalanı
+reddedilmez. Açık bir çizginin bütün köşeleri yuvarlanınca sonuç **tek bir yaylı
+çoklu çizgidir** — yaylar gerçek yaydır, nesne yığını değil; kapalı bir alan alan
+olarak kalır.
+
+Birden çok nesne verilirse — ya da önceden seçilmişse — hepsinin bütün köşeleri
+**tek adımda** yuvarlanır ve tek bir geri alma adımıdır. Köşeli bir çizgi ya da
+alan olmayan nesne (daire, yay, yazı) atlanır ve sayılır.
 
 ## Adlar
 
@@ -67,15 +111,20 @@ vurgulu çizilir ve imlecin yanında `yarıçap 5 m` yazar.
 
 ```text
 YUVARLA nesne=<k> nokta=<n> yaricap=<metre>
+YUVARLA nesne=<k> <k> nokta=<n> ikinci_nokta=<n> yaricap=<metre> [budama=hayir]
+YUVARLA nesne=<k> [<k> …] hepsi=evet yaricap=<metre>
 ```
 
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
-| `nesne` | Köşesi yuvarlatılacak nesnenin kimliği |
-| `nokta` | İşlem yapılacak köşe. En yakın köşe seçilir |
-| `yaricap` | Yuvarlatma yarıçapı, metre |
+| `nesne` | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; `hepsi=evet` ile bir ya da daha çok nesne |
+| `nokta` | Tek nesnede işlem yapılacak köşe (en yakın köşe seçilir); iki nesnede birincinin kalacak parçası |
+| `ikinci_nokta` | İki nesnede ikincinin kalacak parçası |
+| `yaricap` | Yuvarlatma yarıçapı, metre; iki nesnede `0` keskin köşe |
+| `budama` | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan `evet` |
+| `hepsi` | `evet`: verilen nesnelerin bütün köşeleri; sığmayan köşe ve köşesi olmayan nesne atlanır |
 
 ## Örnekler
 
@@ -98,6 +147,53 @@ DİKDÖRTGEN 0,0 20,12
 YUVARLA nesne=1 nokta=20,12 yaricap=5
 ```
 
+Yeni bir çizimde, L biçiminde buluşan iki ayrı çizgi arasındaki köşe:
+
+```text
+ÇİZGİ 0,0 10,0
+ÇİZGİ 10,0 10,10
+YUVARLA nesne=1 2 nokta=5,0 ikinci_nokta=10,5 yaricap=2
+```
+
+```text
+İki nesne arasında köşe yuvarlatıldı (yarıçap 2,000 m).
+```
+
+Yeni bir çizimde, birbirine yetişmeyen iki çizgiyi keskin köşede buluşturmak:
+
+```text
+ÇİZGİ 0,0 8,0
+ÇİZGİ 10,2 10,10
+YUVARLA nesne=1 2 nokta=4,0 ikinci_nokta=10,6 yaricap=0
+```
+
+```text
+İki nesne keskin köşede buluştu.
+```
+
+Yeni bir çizimde, bir çizginin bütün köşeleri — sonuç tek bir yaylı çoklu çizgi:
+
+```text
+ÇOKLUÇİZGİ 0,0 10,0 10,10 20,10
+YUVARLA nesne=1 hepsi=evet yaricap=2
+```
+
+```text
+2 köşe yuvarlatıldı; çizgi tek bir yaylı çoklu çizgi oldu.
+```
+
+Yeni bir çizimde, bir parselin ve bir çizginin bütün köşeleri birden:
+
+```text
+ALAN 0,0 10,0 10,10 0,10
+ÇOKLUÇİZGİ 0,20 10,20 10,30 20,30
+YUVARLA nesne=1 2 hepsi=evet yaricap=2
+```
+
+```text
+6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu çizgi oldu.
+```
+
 ### Arayüz
 
 Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da sağ tıklayın ve
@@ -107,6 +203,15 @@ Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da sağ 
 2. İmleci köşeden uzaklaştırın: yay ve iki bacak tuvalde vurgulu çizilir.
 3. İstediğiniz yerde tıklayın **ya da** yarıçapı komut satırına yazıp Enter'a
    basın (`8`).
+
+İki nesne arasında: birinci nesneye **kalacak parçasından** tıklayın, sonra ikinci
+nesneye. İmleci iki nesnenin buluştuğu yerden uzaklaştırdıkça yay ve kısaltılmış
+nesneler tuvalde çizilir ve imlecin yanında `yarıçap X m` yazar; yarıçap sığmıyorsa
+sebebi yazar. Tıklayın ya da yarıçapı yazın.
+
+**Yuvarla — bütün köşeler** köşe ailesinin kartında ve **Değiştir** menüsündedir:
+nesneye tıklayın ya da önce birden çok nesne seçip düğmeye basın; yarıçapı yazın ya
+da gösterin. Bütün nesnelerin bütün köşeleri birlikte önizlenir.
 
 ### Betik
 
@@ -132,7 +237,9 @@ kaldırır hem köşeyi geri getirir; kapalı şekilde köşeyi eski hâline dö
 
 ## Betikten kullanım
 
-Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir.
+Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir; iki nesnede
+`ikinci_nokta` da. Yapılandırılmış cevap, kısaltılan nesnelerin kimliklerini
+(`duzenlenen`) ve eklenen yayın kimliğini (`eklenen`) söyler.
 
 ## Hatalar
 
@@ -148,6 +255,20 @@ Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir.
 | `Yarıçap sıfırdan büyük olmalı.` | Sıfır ya da eksi yarıçap | Artı bir yarıçap verin |
 | `Kesim komşu kenardan uzun: kenarlar 12,000 m ve 20,000 m, gereken 21,000 m. ...` | Yarıçap bu köşeye büyük | Daha küçük bir yarıçap verin ya da daha yakına tıklayın |
 | `Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.` | Kenarlar aynı doğrultuda geri dönüyor | Gerçek bir köşe gösterin |
+| `Bu yarıçapta, seçtiğiniz taraflarda iki nesneye de teğet bir yay yok. ...` | İki nesne paralel ya da seçimler bu yarıçapa uymuyor | Yarıçapı değiştirin ya da nesneleri köşeye yakın yerlerinden seçin |
+| `Yarıçap sığmıyor: birinci nesnede teğet noktası köşenin öbür yanına düşüyor. ...` | Bu yarıçaptaki yay seçilen köşede değil karşısındaki köşede kalıyor | Daha küçük bir yarıçap verin |
+| `Köşe sığmıyor: seçtiğiniz parçanın tamamını götürüyor. Daha küçük bir değer verin.` | Teğet noktası tıklanan parçanın ötesinde | Daha küçük bir yarıçap verin |
+| `Nesneleri köşenin kendisinden değil, kalacak parçalarından seçin.` | Tıklama tam iki nesnenin kesiştiği yerde | Nesneye köşeden biraz uzakta, kalacak parçasından tıklayın |
+| `Yarıçap eksi olamaz.` | Eksi yarıçap | `0` ya da artı bir yarıçap verin |
+| `Köşe, çoklu çizginin ortadaki bir kenarının uzantısına düşüyor; ...` | Ortadaki bir kenar uzatılmak isteniyor | Çizginin ucundaki kenarı seçin |
+| `İki nesne hiçbir yerde kesişmiyor; keskin köşe kurulamaz. ...` | `yaricap=0` ile paralel ya da ayrık nesneler | Bir yarıçap verin |
+| `İkinci tıklamanın altında bir nesne yok.` | İkinci tıklama boşluğa | İkinci nesnenin üstüne tıklayın |
+| `İki tıklama aynı nesnenin bitişik olmayan yerlerinde; köşesini işlemek için köşeye tıklayın.` | Aynı çizginin bitişik olmayan kenarları | Köşeye tıklayın |
+| `Nesne N iki nesne arasındaki köşede kullanılamıyor; çizgi, yay, daire ya da yaylı çoklu çizgi seçin.` | Elips, spline, nokta ya da yazı | Uygun bir nesne seçin |
+| `Bu değer hiçbir köşeye sığmıyor; daha küçük bir değer verin.` | `hepsi=evet` ile hiçbir köşe yarıçapı almıyor | Daha küçük bir yarıçap verin |
+| `Bu çizginin köşesi yok.` | `hepsi=evet` iki köşeli bir çizgiye | Köşesi olan bir çizgi seçin |
+| `Seçilen nesnelerin hiçbirinde işlenecek köşe yok; köşeli bir çizgi ya da alan seçin.` | `hepsi=evet` ile verilen nesnelerin hiçbiri köşeli çizgi ya da alan değil | Köşeli bir çizgi ya da alan seçin |
+| `Köşe iki nesne arasında kurulur; N nesnenin bütün köşeleri için hepsi=evet verin.` | `hepsi` olmadan ikiden çok nesne | İki nesne verin ya da `hepsi=evet` ekleyin |
 
 ## İlgili
 

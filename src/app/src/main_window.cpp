@@ -1132,12 +1132,25 @@ void MainWindow::buildActions()
     actSplitDistance_ = modifyTool(
         Glyph::Split, tr("Böl — baştan uzaklıkla"), QStringLiteral("BÖL yontem=mesafe"),
         tr("BÖL yontem=mesafe — seçtiğiniz nesneleri başından verdiğiniz uzaklıkta böler"));
-    actChamfer_  = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
-                              tr("PAH — köşeye tıklayın; köşeyi düz bir kenarla keser, mesafe "
-                                  "yazılır ya da gösterilir  ·  kısaltma: PH"));
-    actFillet_   = modifyTool(Glyph::Fillet, tr("Yuvarla"), QStringLiteral("YUVARLA"),
-                              tr("YUVARLA — köşeye tıklayın; köşeyi yayla yuvarlatır, yarıçap "
-                                   "yazılır ya da gösterilir  ·  kısaltma: YV"));
+    actChamfer_ = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
+                             tr("PAH — köşeye ya da iki çizgiye kalacak parçalarından tıklayın; "
+                                "köşeyi düz bir kenarla keser, mesafe yazılır ya da "
+                                "gösterilir  ·  kısaltma: PH"));
+    actFillet_  = modifyTool(Glyph::Fillet, tr("Yuvarla"), QStringLiteral("YUVARLA"),
+                             tr("YUVARLA — köşeye ya da iki nesneye kalacak parçalarından "
+                                 "tıklayın; köşeyi teğet bir yayla yuvarlatır, 0 keskin köşe  ·  "
+                                 "kısaltma: YV"));
+    // EVERY CORNER AT ONCE (TODOS C-06), each its own entry so a hand reaches
+    // it: a chain rounded or cut by one size, the corners it does not fit
+    // passed over and counted.
+    actChamferAll_ =
+        modifyTool(Glyph::Chamfer, tr("Pah — bütün köşeler"), QStringLiteral("PAH hepsi=evet"),
+                   tr("PAH hepsi=evet — çizgiye ya da alana tıklayın; bütün köşelerine aynı "
+                      "mesafeyle pah kırar"));
+    actFilletAll_ = modifyTool(
+        Glyph::Fillet, tr("Yuvarla — bütün köşeler"), QStringLiteral("YUVARLA hepsi=evet"),
+        tr("YUVARLA hepsi=evet — çizgiye ya da alana tıklayın; bütün köşelerini aynı "
+           "yarıçapla yuvarlatır"));
     actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"), QStringLiteral("KATMANAT"),
                               tr("KATMANAT — seçili nesneleri başka bir katmana taşır"));
     actOffset_   = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
@@ -1684,7 +1697,9 @@ void MainWindow::buildMenus()
     modify->addAction(actSplitDistance_);
     modify->addAction(actCombine_);
     modify->addAction(actChamfer_);
+    modify->addAction(actChamferAll_);
     modify->addAction(actFillet_);
+    modify->addAction(actFilletAll_);
     modify->addSeparator();
     modify->addAction(actSetLayer_);
     modify->addAction(actStyleCopy_);
@@ -2140,7 +2155,8 @@ void MainWindow::buildToolBox()
                          actExtendFence_, actExtendCarry_, actBreak_, actLengthen_, actSplit_,
                          actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_,
                          actDivide_});
-    toolBox_->addFamily({actChamfer_, actFillet_, actVertexMove_, actVertexAdd_, actPolylineEdit_});
+    toolBox_->addFamily({actChamfer_, actChamferAll_, actFillet_, actFilletAll_, actVertexMove_,
+                         actVertexAdd_, actPolylineEdit_});
     toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});
     // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
     // TAŞI was in the column; KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA and DİZİ lived in
@@ -4682,13 +4698,18 @@ int MainWindow::probeRealMouse()
             const QStringList lines = transcript_->toPlainText().split(QLatin1Char('\n'));
             return lines.isEmpty() ? QString() : lines.back();
         };
-        const auto byHand = [&](QAction* tool, const QString& shape, core::Point2 corner,
-                                core::Point2 shown, const QString& what) {
+        // THE CLICKS BEFORE THE SIZE: the corner, or — between two objects —
+        // the part of each that stays, or for every corner the object itself.
+        const auto byHand = [&](QAction* tool, const QStringList& shapes,
+                                std::initializer_list<core::Point2> picks, core::Point2 shown,
+                                const QString& what) {
             controller_->cancelInteractive();
             runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
             runScriptLine(QStringLiteral("SİL"));
-            runScriptLine(shape);
-            endCommand();
+            for (const QString& shape : shapes) {
+                runScriptLine(shape);
+                endCommand();
+            }
             runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
             runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
@@ -4697,15 +4718,18 @@ int MainWindow::probeRealMouse()
             const std::uint64_t revision = controller_->document().revision();
             tool->trigger();
             QCoreApplication::processEvents();
-            click(screen(corner));
+            for (const core::Point2 pick : picks) {
+                click(screen(pick));
+                QCoreApplication::processEvents();
+            }
 
             const command::Session* live = controller_->session();
             const QString asked          = live != nullptr && live->waiting()
                                                ? QString::fromStdString(live->prompt().message)
                                                : QString();
             check(asked.contains(QStringLiteral("metre")),
-                  QStringLiteral("%1: köşeye tıklayınca boyut soruluyor (istem: \"%2\", son söz: "
-                                 "\"%3\")")
+                  QStringLiteral("%1: tıklamalardan sonra boyut soruluyor (istem: \"%2\", son "
+                                 "söz: \"%3\")")
                       .arg(what, asked, lastSaid()));
             if (asked.isEmpty()) return;
 
@@ -4718,16 +4742,28 @@ int MainWindow::probeRealMouse()
             QCoreApplication::processEvents();
         };
 
-        byHand(actFillet_, QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12"), {20'000, 0}, {17'000, 0},
-               QStringLiteral("YUVARLA, açık çizgi"));
-        byHand(actFillet_, QStringLiteral("ALAN 0,0 20,0 20,12 0,12"), {20'000, 12'000},
+        byHand(actFillet_, {QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12")}, {{20'000, 0}},
+               {17'000, 0}, QStringLiteral("YUVARLA, açık çizgi"));
+        byHand(actFillet_, {QStringLiteral("ALAN 0,0 20,0 20,12 0,12")}, {{20'000, 12'000}},
                {17'000, 12'000}, QStringLiteral("YUVARLA, kapalı alan"));
-        byHand(actFillet_, QStringLiteral("DİKDÖRTGEN 0,0 20,12"), {20'000, 12'000},
+        byHand(actFillet_, {QStringLiteral("DİKDÖRTGEN 0,0 20,12")}, {{20'000, 12'000}},
                {17'000, 12'000}, QStringLiteral("YUVARLA, dikdörtgen"));
-        byHand(actChamfer_, QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12"), {20'000, 0}, {17'000, 0},
-               QStringLiteral("PAH, açık çizgi"));
-        byHand(actChamfer_, QStringLiteral("ALAN 0,0 20,0 20,12 0,12"), {20'000, 12'000},
+        byHand(actChamfer_, {QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12")}, {{20'000, 0}},
+               {17'000, 0}, QStringLiteral("PAH, açık çizgi"));
+        byHand(actChamfer_, {QStringLiteral("ALAN 0,0 20,0 20,12 0,12")}, {{20'000, 12'000}},
                {17'000, 12'000}, QStringLiteral("PAH, kapalı alan"));
+        // BETWEEN TWO OBJECTS AND ON EVERY CORNER (TODOS C-06): each object
+        // clicked on the part that stays, near the corner as a hand clicks.
+        const QStringList pair{QStringLiteral("ÇİZGİ 0,0 20,0"),
+                               QStringLiteral("ÇİZGİ 20,0 20,12")};
+        byHand(actFillet_, pair, {{18'500, 0}, {20'000, 1'500}}, {17'000, 0},
+               QStringLiteral("YUVARLA, iki çizgi arasında"));
+        byHand(actChamfer_, pair, {{18'500, 0}, {20'000, 1'500}}, {17'000, 0},
+               QStringLiteral("PAH, iki çizgi arasında"));
+        byHand(actFilletAll_, {QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12 30,12")}, {{10'000, 0}},
+               {18'000, 0}, QStringLiteral("YUVARLA, bütün köşeler"));
+        byHand(actChamferAll_, {QStringLiteral("ALAN 0,0 20,0 20,12 0,12")}, {{10'000, 0}},
+               {2'000, 0}, QStringLiteral("PAH, bütün köşeler"));
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

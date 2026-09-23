@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `14011123951224376517`
+- Katalog parmak izi: `6776210629992182878`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -230,7 +230,7 @@ Onay ister.
 
 ### `core_chamfer` — Pah
 
-Bir köşeyi düz bir kenarla keser (pah kırar).
+Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 Komut: PAH (CHAMFER, PH)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -238,9 +238,13 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | evet | Köşesi kesilecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | konum (tutamak ya da göreli nokta) | evet | İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `nesne` | string | evet | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı) |
+| `ikinci_nokta` | konum (tutamak ya da göreli nokta) | hayır | İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci_mesafe` | number | hayır | İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m] (sayı) |
+| `budama` | boolean | hayır | İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır) |
+| `hepsi` | boolean | hayır | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_circle_draw` — Daire
@@ -518,7 +522,7 @@ Onay ister.
 
 ### `core_fillet` — Yuvarla
 
-Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
 Komut: YUVARLA (FILLET, YV)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -526,9 +530,12 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | evet | Köşesi yuvarlatılacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `nokta` | konum (tutamak ya da göreli nokta) | evet | İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `yaricap` | number | evet | Yuvarlatma yarıçapı, metre (sayı) |
+| `nesne` | string | evet | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `yaricap` | number | evet | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe (sayı) |
+| `ikinci_nokta` | konum (tutamak ya da göreli nokta) | hayır | İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `budama` | boolean | hayır | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır) |
+| `hepsi` | boolean | hayır | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_fit` — Oturt (Helmert)

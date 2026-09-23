@@ -2039,6 +2039,52 @@ TEST_CASE("PROOF: UÇUCA çizgi ve yayı yaylı çoklu çizgi yapar; üç yolda 
                     "nesne":[1,2]}}]})"});
 }
 
+TEST_CASE("PROOF: YUVARLA iki nesne arasında — arayüz, komut satırı, betik ve oynatma aynı")
+{
+    // TODOS C-06. A line and a line meeting at an L, rounded between them: the
+    // GUI clicks the middle of each and types the radius.
+    const std::vector<std::string> setup{"ÇOKLUÇİZGİ 0,0 10,0", "ÇOKLUÇİZGİ 10,0 10,10"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("YUVARLA", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{5'000, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{10'000, 5'000})).ok());
+        CHECK(session.supply(Value::number(2.0)).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus
+                .execute_line("YUVARLA nesne=1 2 nokta=5,0 ikinci_nokta=10,5 yaricap=2",
+                              Origin::CommandLine)
+                .ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.polyline","args":{"noktalar":[[0,0],[10000,0]]}},
+                      {"cmd":"core.polyline","args":{"noktalar":[[10000,0],[10000,10000]]}},
+                      {"cmd":"core.fillet","args":{"nesne":[1,2],"nokta":[5000,0],
+                        "ikinci_nokta":[10000,5000],"yaricap":2}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{3});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

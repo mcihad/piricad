@@ -20,6 +20,7 @@
 // the command says how far that drawing strays from the true arc.
 #pragma once
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
 
@@ -70,14 +71,36 @@ std::optional<std::size_t> nearest_corner(std::span<const Point2> run, bool clos
 Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size_t at, Mm size,
                              bool fillet);
 
+/// What cutting EVERY corner of a run makes (`cut_every_corner`).
+struct CornerRun
+{
+    std::vector<Point2> ring; ///< the run with its corners cut, when it stays a polyline
+    CurvePath path;           ///< an OPEN run rounded at every corner: one path, real arcs
+    bool bent{false};         ///< the result is `path`, not `ring`
+    std::size_t cut{0};       ///< corners cut
+    std::size_t skipped{0};   ///< corners too short for the size, or straight
+    Mm deviation{0};          ///< a closed ring's rounding: the most a drawn arc strays
+};
+
+/// Cuts every corner of `run` at `size`, the way a chain of corners is cut by
+/// hand one after another: each corner is judged against the edges as the
+/// corners before it left them, and a corner the size does not fit is passed
+/// over and counted rather than refusing the rest. An OPEN run rounded at every
+/// corner comes back as ONE path whose arcs are real arcs — an arc-polyline —
+/// rather than as a pile of lines and arcs; a chamfer, and a closed ring, stay
+/// the polyline they were.
+CornerRun cut_every_corner(std::span<const Point2> run, bool closed, Mm size, bool fillet);
+
 /// The payload a corner preview carries (`command::RubberShape::Corner`): the
 /// object by its persistent key, which vertex, and which cut — so the canvas can
 /// call `cut_corner` with the cursor's distance from the corner.
 struct CornerPreview
 {
-    std::int64_t key{0}; ///< the object, by persistent key
-    std::uint32_t at{0}; ///< the vertex index
-    bool fillet{false};  ///< round rather than straight
+    std::int64_t key{0};            ///< the object, by persistent key
+    std::uint32_t at{0};            ///< the vertex index
+    bool fillet{false};             ///< round rather than straight
+    bool every{false};              ///< every corner of the run at once (`cut_every_corner`)
+    std::vector<std::int64_t> also; ///< with `every`: more objects cut the same way, by key
 };
 
 /// The preview as bytes.

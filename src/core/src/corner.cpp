@@ -14,21 +14,21 @@
 namespace kentos::core {
 namespace {
 
-struct Unit
+struct Dir
 {
     double x{0.0};
     double y{0.0};
 };
 
-Unit unit_from(Point2 from, Point2 to)
+Dir unit_from(Point2 from, Point2 to)
 {
     // Metres first: the square of a TM3 coordinate difference in millimetres
     // leaves the 53-bit mantissa long before it leaves int64 (core.md R3).
     const double dx  = mm_to_metres(to.x - from.x);
     const double dy  = mm_to_metres(to.y - from.y);
     const double len = std::sqrt(dx * dx + dy * dy);
-    if (len <= 0.0) return Unit{};
-    return Unit{dx / len, dy / len};
+    if (len <= 0.0) return Dir{};
+    return Dir{dx / len, dy / len};
 }
 
 Mm length_of(Point2 a, Point2 b)
@@ -38,7 +38,7 @@ Mm length_of(Point2 a, Point2 b)
     return mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(kMmPerMetre));
 }
 
-Point2 along(Point2 v, Unit d, Mm distance)
+Point2 along(Point2 v, Dir d, Mm distance)
 {
     const double m = mm_to_metres(distance);
     return Point2{v.x + mm_round(d.x * m * static_cast<double>(kMmPerMetre)),
@@ -97,8 +97,8 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
     const std::size_t next = at + 1 == run.size() ? 0 : at + 1;
 
     const Point2 v  = run[at];
-    const Unit d1   = unit_from(v, run[prev]);
-    const Unit d2   = unit_from(v, run[next]);
+    const Dir d1    = unit_from(v, run[prev]);
+    const Dir d2    = unit_from(v, run[next]);
     const double co = d1.x * d2.x + d1.y * d2.y;
     const double cr = d1.x * d2.y - d1.y * d2.x;
     const double si = std::abs(cr);
@@ -156,11 +156,11 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
         return err(ErrorCode::InvalidArgument,
                    "Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.");
 
-    const Unit bis = [&] {
+    const Dir bis = [&] {
         const double bx  = d1.x + d2.x;
         const double by  = d1.y + d2.y;
         const double len = std::sqrt(bx * bx + by * by);
-        return len > 0.0 ? Unit{bx / len, by / len} : Unit{};
+        return len > 0.0 ? Dir{bx / len, by / len} : Dir{};
     }();
 
     cut.radius = size;
@@ -235,27 +235,105 @@ Result<CornerCut> cut_corner(std::span<const Point2> run, bool closed, std::size
     return cut;
 }
 
+CornerRun cut_every_corner(std::span<const Point2> run, bool closed, Mm size, bool fillet)
+{
+    CornerRun out;
+    const std::size_t n = run.size();
+    if (n < 3) return out;
+
+    if (fillet && !closed) {
+        // ONE PATH, REAL ARCS: along the run, each corner's leg up to its first
+        // tangent point, the arc, and on — a corner judged against what the one
+        // before it left of their shared edge.
+        Point2 at = run[0];
+        Mm used   = 0; ///< how much of the current edge the previous arc took
+        for (std::size_t i = 1; i + 1 < n; ++i) {
+            auto cut         = cut_corner(run, false, i, size, true);
+            const Mm edge_in = length_of(run[i - 1], run[i]);
+            const Mm need    = cut ? length_of(run[i], cut.value().cut_a) : 0;
+            if (!cut || need + used > edge_in) {
+                out.path.pieces.push_back(PathPiece{.from = at, .to = run[i]});
+                at   = run[i];
+                used = 0;
+                ++out.skipped;
+                continue;
+            }
+            const CornerCut& c = cut.value();
+            if (at != c.cut_a) out.path.pieces.push_back(PathPiece{.from = at, .to = c.cut_a});
+            // Walked from the tangent point toward the previous vertex to the
+            // one toward the next; the stored arc is counter-clockwise from
+            // `start`, so the walk is counter-clockwise when it starts there.
+            out.path.pieces.push_back(
+                arc_piece(c.centre, c.radius, c.cut_a, c.cut_b, c.start == c.cut_a));
+            at   = c.cut_b;
+            used = length_of(run[i], c.cut_b);
+            ++out.cut;
+        }
+        if (at != run[n - 1]) out.path.pieces.push_back(PathPiece{.from = at, .to = run[n - 1]});
+        out.bent = out.cut != 0;
+        if (!out.bent) out.ring.assign(run.begin(), run.end());
+        return out;
+    }
+
+    // FROM THE LAST CORNER TO THE FIRST, so every index not yet reached still
+    // names the vertex it did; the edge a corner shares with the one after it
+    // is the edge as that corner's cut left it.
+    std::vector<Point2> current(run.begin(), run.end());
+    const std::size_t first = closed ? 0 : 1;
+    for (std::size_t k = closed ? n : n - 1; k-- > first;) {
+        auto cut = cut_corner(current, closed, k, size, fillet);
+        if (!cut) {
+            ++out.skipped;
+            continue;
+        }
+        current       = std::move(cut.value().kept);
+        out.deviation = std::max(out.deviation, cut.value().deviation);
+        ++out.cut;
+    }
+    out.ring = std::move(current);
+    return out;
+}
+
 std::vector<std::uint8_t> encode_corner_preview(const CornerPreview& preview)
 {
-    // version, fillet, vertex, key — little-endian as the machine writes it,
+    // version, fillet, vertex, key, and then — only when there are more
+    // objects — their count and keys; little-endian as the machine writes it,
     // because the bytes never leave the process (a prompt to the canvas).
-    std::vector<std::uint8_t> bytes(2 + sizeof(preview.at) + sizeof(preview.key));
+    constexpr std::size_t fixed = 2 + sizeof(std::uint32_t) + sizeof(std::int64_t);
+    const auto more             = static_cast<std::uint32_t>(preview.also.size());
+    std::vector<std::uint8_t> bytes(fixed +
+                                    (more == 0 ? 0 : sizeof(more) + more * sizeof(std::int64_t)));
     bytes[0] = 1;
-    bytes[1] = preview.fillet ? 1 : 0;
+    bytes[1] = static_cast<std::uint8_t>((preview.fillet ? 1U : 0U) | (preview.every ? 2U : 0U));
     std::memcpy(bytes.data() + 2, &preview.at, sizeof(preview.at));
     std::memcpy(bytes.data() + 2 + sizeof(preview.at), &preview.key, sizeof(preview.key));
+    if (more != 0) {
+        std::memcpy(bytes.data() + fixed, &more, sizeof(more));
+        std::memcpy(bytes.data() + fixed + sizeof(more), preview.also.data(),
+                    more * sizeof(std::int64_t));
+    }
     return bytes;
 }
 
 Result<CornerPreview> decode_corner_preview(std::span<const std::uint8_t> bytes)
 {
+    constexpr std::size_t fixed = 2 + sizeof(std::uint32_t) + sizeof(std::int64_t);
     CornerPreview preview;
-    if (bytes.size() != 2 + sizeof(preview.at) + sizeof(preview.key) || bytes[0] != 1 ||
-        bytes[1] > 1)
+    std::uint32_t more = 0;
+    if (bytes.size() > fixed + sizeof(more)) std::memcpy(&more, bytes.data() + fixed, sizeof(more));
+    const std::size_t want =
+        fixed +
+        (more == 0 ? 0 : sizeof(more) + static_cast<std::size_t>(more) * sizeof(std::int64_t));
+    if (bytes.size() < fixed || bytes.size() != want || bytes[0] != 1 || bytes[1] > 3)
         return err(ErrorCode::InvalidArgument, "Köşe önizlemesinin baytları tanınmıyor.");
-    preview.fillet = bytes[1] == 1;
+    preview.fillet = (bytes[1] & 1U) != 0;
+    preview.every  = (bytes[1] & 2U) != 0;
     std::memcpy(&preview.at, bytes.data() + 2, sizeof(preview.at));
     std::memcpy(&preview.key, bytes.data() + 2 + sizeof(preview.at), sizeof(preview.key));
+    preview.also.resize(more);
+    if (more != 0)
+        std::memcpy(preview.also.data(), bytes.data() + fixed + sizeof(more),
+                    static_cast<std::size_t>(more) * sizeof(std::int64_t));
     return preview;
 }
 

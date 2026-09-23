@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — YUVARLA ve PAH iki nesne arasında ve bütün köşelerde (C-06)
+
+- **İki ayrı nesnenin köşesi**: `YUVARLA` çizgi-çizgi, çizgi-yay ve yay-yay
+  arasındaki köşeyi iki nesneye de teğet bir yayla, `PAH` iki düz çizgi arasındakini
+  iki ayrı mesafeyle (`ikinci_mesafe`) kesiyor. Nesneler kalacak parçalarından
+  tıklanıyor; köşe tıklamalardan seçiliyor, karşısındaki köşe asla. Nesneler teğet
+  noktalarına kısaltılıyor ya da uzatılıyor (`budama=hayir` dokunmaz); daire bütün
+  kalıyor. Sıfır yarıçap iki nesneyi keskin köşede buluşturuyor.
+- **Bütün köşeler** (`hepsi=evet`): bir ya da birçok çizginin ve alanın bütün
+  köşeleri tek değerle ve tek geri alma adımında — önceden seçilen bütün nesneler
+  dahil; sığmayan köşe ve köşesi olmayan nesne atlanıp sayılıyor; açık çizgi tek bir
+  yaylı çoklu çizgi oluyor, alan alan kalıyor. Araç sütununda ve **Değiştir**
+  menüsünde **Yuvarla — bütün köşeler**, **Pah — bütün köşeler**.
+- **Önizleme tıklamanın kendisi**: yay ve kısaltılmış nesneler imleçle birlikte
+  çiziliyor, yanında `yarıçap X m`; sığmıyorsa sebebi yazıyor.
+
+### Düzeltildi — yayın tam üstüne tıklamak yayı bulmuyordu
+
+- **Ekranı olmayan bir istemcinin (betik, test, ajan) bir yayın ya da dairenin tam
+  üstündeki noktası hiçbir nesneye değmiyordu**: seçim eğriyi çizildiği kirişlere
+  göre ölçüyordu ve çember üstündeki nokta kirişten milimetrelerce dışarıdaydı. Artık
+  eğri kendisine göre ölçülüyor (`C-06: ekransız bir istemcinin yayın tam üstüne
+  tıklaması yayı bulur` testi).
+
 ### Düzeltildi — geometri düzenlemesi öznitelikleri siliyordu
 
 - **Taşınan, köşesi sürüklenen, budanan ya da uzatılan bir nesne bütün özniteliklerini

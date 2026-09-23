@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/pick.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/outline.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
@@ -172,6 +173,17 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
             const double d = distance_squared(closest_point_on_segment(a, b, p), p);
             if (best < 0.0 || d < best) best = d;
         }
+    }
+
+    // A CURVE IS MEASURED TO ITSELF, not only to the chords it is drawn with.
+    // An arc's outline cuts inside it by up to the chords' sagitta, so a point
+    // exactly ON the circle — what a client with no screen gives, at a pick
+    // radius of zero — was millimetres off everything and hit nothing. The
+    // nearer of the two stands, so no pick that found a curve before stops.
+    if (const KindId kind = doc.entities().kind[e];
+        best > 0.0 && (kind == kArcKind || kind == kCircleKind || kind == kArcPolylineKind)) {
+        if (const auto path = path_of(doc, e); path && !path->pieces.empty())
+            best = std::min(best, distance_squared(point_at(*path, place_of(*path, p)), p));
     }
 
     // A CURSOR INSIDE A FACE IS ON IT, at distance zero.

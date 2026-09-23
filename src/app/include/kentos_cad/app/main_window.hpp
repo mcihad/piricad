@@ -971,7 +971,9 @@ private:
     QAction* actSplitEqual_{nullptr};    ///< BÖL yontem=esit
     QAction* actSplitDistance_{nullptr}; ///< BÖL yontem=mesafe
     QAction* actChamfer_{nullptr};
+    QAction* actChamferAll_{nullptr}; ///< PAH hepsi=evet
     QAction* actFillet_{nullptr};
+    QAction* actFilletAll_{nullptr}; ///< YUVARLA hepsi=evet
     QAction* actSetLayer_{nullptr};
     // THE EDIT VERBS THAT WERE MENU ROWS ONLY. Held as tools now, so the column
     // can carry them in families and the menus and the column press one action.

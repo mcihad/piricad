@@ -1565,6 +1565,53 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14q-kir-yay"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // YUVARLA BETWEEN A LINE AND AN ARC (TODOS C-06): both clicked on the
+        // part that stays, near where they cross; the radius follows the
+        // cursor, the arc tangent to both and the two cut back to it.
+        later([scene] { scene(QStringLiteral("YAY merkez=0,0 baslangic=10,0 bitis=0,10")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ÇİZGİ -5,5 15,5"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("YUVARLA"));
+            window.runScriptLine(QStringLiteral("7,5"));
+            window.runScriptLine(QStringLiteral("9.063,4.226"));
+        });
+        later([hover] { hover({8'660, 2'600}); });
+        later([&window, shot] { shot(QStringLiteral("14r-yuvarla-iki-nesne"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // YUVARLA hepsi=evet: every corner of the run at the cursor's radius,
+        // drawn as the one arc-polyline the click will make.
+        later([scene] { scene(QStringLiteral("ÇOKLUÇİZGİ 0,0 20,0 20,12 32,12 32,0 44,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("YUVARLA hepsi=evet"));
+            window.runScriptLine(QStringLiteral("10,0"));
+        });
+        later([hover] { hover({17'000, 0}); });
+        later([&window, shot] { shot(QStringLiteral("14s-yuvarla-butun-koseler"), &window); });
+        later([&window] { window.cancelCommand(); });
+
+        // AND EVERY CORNER OF WHAT IS SELECTED: two parcels and a run, one
+        // size, all of them drawn at the cursor before the click.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 12,0 12,10 0,10")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("ALAN 18,0 30,0 30,10 18,10"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ 0,16 12,16 12,22 30,22"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            window.runScriptLine(QStringLiteral("SEÇ HEPSİ"));
+            window.runScriptLine(QStringLiteral("YUVARLA hepsi=evet"));
+        });
+        later([hover] { hover({2'500, 0}); });
+        later([&window, shot] { shot(QStringLiteral("14t-yuvarla-secili-hepsi"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

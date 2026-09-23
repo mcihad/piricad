@@ -129,8 +129,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`cad.extend`](#cadextend) | `core.extend` | `UZAT` | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
-| [`cad.chamfer`](#cadchamfer) | `core.chamfer` | `PAH` | Bir köşeyi düz bir kenarla keser (pah kırar). |
-| [`cad.fillet`](#cadfillet) | `core.fillet` | `YUVARLA` | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
+| [`cad.chamfer`](#cadchamfer) | `core.chamfer` | `PAH` | Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar). |
+| [`cad.fillet`](#cadfillet) | `core.fillet` | `YUVARLA` | Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar. |
 | [`cad.set_layer`](#cadset_layer) | `core.set_layer` | `KATMANAT` | Seçilen nesneleri başka bir katmana taşır. |
 | [`cad.match_style`](#cadmatch_style) | `core.match_style` | `STİLKOPYALA` | Bir nesnenin stilini seçilen nesnelere uygular. |
 | [`cad.colour`](#cadcolour) | `core.colour` | `RENK` | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
@@ -1158,7 +1158,7 @@ cad.extend(
 
 ### `cad.chamfer`
 
-Bir köşeyi düz bir kenarla keser (pah kırar).
+Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 
 Komut: `core.chamfer` — `PAH`
 
@@ -1167,20 +1167,28 @@ cad.chamfer(
     object: list[int],
     point: Coord,
     distance: float,
+    second_point: Coord,
+    second_distance: float,
+    trim: bool,
+    every_corner: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Köşesi kesilecek nesnenin kimliği [kalıcı nesne anahtarı] |
-| `point` | `Coord` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
+| `object` | `list[int]` | `nesne` | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı] |
+| `point` | `Coord` | `nokta` | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce] |
 | `distance` | `float` | `mesafe` | Köşeden her iki kenar boyunca kesilecek mesafe, metre |
+| `second_point` | `Coord` | `ikinci_nokta` | İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce] |
+| `second_distance` | `float` | `ikinci_mesafe` | İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m] |
+| `trim` | `bool` | `budama` | İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet |
+| `every_corner` | `bool` | `hepsi` | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır |
 
 [Komut sayfası](../komutlar/chamfer.md)
 
 ### `cad.fillet`
 
-Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
 
 Komut: `core.fillet` — `YUVARLA`
 
@@ -1189,14 +1197,20 @@ cad.fillet(
     object: list[int],
     point: Coord,
     radius: float,
+    second_point: Coord,
+    trim: bool,
+    every_corner: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Köşesi yuvarlatılacak nesnenin kimliği [kalıcı nesne anahtarı] |
-| `point` | `Coord` | `nokta` | İşlem yapılacak köşe [mm, Sağa (Y) önce] |
-| `radius` | `float` | `yaricap` | Yuvarlatma yarıçapı, metre |
+| `object` | `list[int]` | `nesne` | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı] |
+| `point` | `Coord` | `nokta` | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce] |
+| `radius` | `float` | `yaricap` | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe |
+| `second_point` | `Coord` | `ikinci_nokta` | İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce] |
+| `trim` | `bool` | `budama` | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet |
+| `every_corner` | `bool` | `hepsi` | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır |
 
 [Komut sayfası](../komutlar/fillet.md)
 

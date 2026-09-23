@@ -92,6 +92,8 @@ enum class RubberShape : std::uint8_t {
                  ///< would take (or every end it would carry on): BUDA, UZAT yontem=çit
     Split,       ///< the object `rubber_payload` names cut at the chain's points and the
                  ///< cursor, each piece it becomes drawn in turn: BÖL yontem=nokta
+    PairCorner,  ///< the corner between the two objects `rubber_payload` names, at the size the
+                 ///< cursor's distance from the origin shows: YUVARLA, PAH with two objects
 };
 
 struct Prompt

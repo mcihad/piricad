@@ -49,8 +49,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
-| [`core.chamfer`](chamfer.md) | Pah | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
-| [`core.fillet`](fillet.md) | Yuvarla | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
+| [`core.chamfer`](chamfer.md) | Pah | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar). |
+| [`core.fillet`](fillet.md) | Yuvarla | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar. |
 | [`core.set_layer`](set_layer.md) | Katmana Ata | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
 | [`core.match_style`](match_style.md) | Stil Kopyala | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
 | [`core.colour`](colour.md) | Renk | `RENK`, `COLOR`, `COLOUR`, `RNK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine döndürür. |
@@ -646,25 +646,32 @@ Ayrıntılı kullanım: [UZAT](extend.md)
 
 ### `core.chamfer` — PAH (Pah)
 
-Bir köşeyi düz bir kenarla keser (pah kırar).
+Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | 1 | Köşesi kesilecek nesnenin kimliği |
-| `nokta` | point | 1 | İşlem yapılacak köşe |
+| `nesne` | selection | en az 1 | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne |
+| `nokta` | point | isteğe bağlı | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez |
 | `mesafe` | number | 1 | Köşeden her iki kenar boyunca kesilecek mesafe, metre |
+| `ikinci_nokta` | point | isteğe bağlı | İki nesnede ikincinin kalacak parçası |
+| `ikinci_mesafe` | number | isteğe bağlı | İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe |
+| `budama` | bool | isteğe bağlı | İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet |
+| `hepsi` | bool | isteğe bağlı | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır |
 
 Ayrıntılı kullanım: [PAH](chamfer.md)
 
 ### `core.fillet` — YUVARLA (Yuvarla)
 
-Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | 1 | Köşesi yuvarlatılacak nesnenin kimliği |
-| `nokta` | point | 1 | İşlem yapılacak köşe |
-| `yaricap` | number | 1 | Yuvarlatma yarıçapı, metre |
+| `nesne` | selection | en az 1 | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne |
+| `nokta` | point | isteğe bağlı | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez |
+| `yaricap` | number | 1 | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe |
+| `ikinci_nokta` | point | isteğe bağlı | İki nesnede ikincinin kalacak parçası |
+| `budama` | bool | isteğe bağlı | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet |
+| `hepsi` | bool | isteğe bağlı | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır |
 
 Ayrıntılı kullanım: [YUVARLA](fillet.md)
 
@@ -2863,14 +2870,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_chamfer",
     "title": "Pah",
-    "description": "Bir köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "nesne": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Köşesi kesilecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "nokta": {
           "anyOf": [
@@ -2903,11 +2910,56 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "mesafe": {
           "type": "number",
           "description": "Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı)"
+        },
+        "ikinci_nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "ikinci_mesafe": {
+          "type": "number",
+          "description": "İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m] (sayı)"
+        },
+        "budama": {
+          "type": "boolean",
+          "description": "İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır)"
+        },
+        "hepsi": {
+          "type": "boolean",
+          "description": "Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",
@@ -2920,7 +2972,6 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       },
       "required": [
         "nesne",
-        "nokta",
         "mesafe"
       ],
       "additionalProperties": false
@@ -4696,14 +4747,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_fillet",
     "title": "Yuvarla",
-    "description": "Bir köşeyi verilen yarıçapta yay ile yuvarlatır.\nKomut: YUVARLA (FILLET, YV)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.\nKomut: YUVARLA (FILLET, YV)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "nesne": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Köşesi yuvarlatılacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "nokta": {
           "anyOf": [
@@ -4736,11 +4787,52 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "İşlem yapılacak köşe — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "yaricap": {
           "type": "number",
-          "description": "Yuvarlatma yarıçapı, metre (sayı)"
+          "description": "Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe (sayı)"
+        },
+        "ikinci_nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "budama": {
+          "type": "boolean",
+          "description": "İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır)"
+        },
+        "hepsi": {
+          "type": "boolean",
+          "description": "Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",
@@ -4753,7 +4845,6 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       },
       "required": [
         "nesne",
-        "nokta",
         "yaricap"
       ],
       "additionalProperties": false

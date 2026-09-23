@@ -724,13 +724,21 @@ def chamfer(
     object: list[int] = ...,
     point: Coord = ...,
     distance: float = ...,
+    second_point: Coord = ...,
+    second_distance: float = ...,
+    trim: bool = ...,
+    every_corner: bool = ...,
 ) -> int:
-    """Bir köşeyi düz bir kenarla keser (pah kırar).
+    """Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 
     Komut: core.chamfer (PAH)
-        object — Köşesi kesilecek nesnenin kimliği [kalıcı nesne anahtarı]
-        point — İşlem yapılacak köşe [mm, Sağa (Y) önce]
+        object — Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı]
+        point — Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce]
         distance — Köşeden her iki kenar boyunca kesilecek mesafe, metre
+        second_point — İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce]
+        second_distance — İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m]
+        trim — İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet
+        every_corner — Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır
     """
 
 def fillet(
@@ -738,13 +746,19 @@ def fillet(
     object: list[int] = ...,
     point: Coord = ...,
     radius: float = ...,
+    second_point: Coord = ...,
+    trim: bool = ...,
+    every_corner: bool = ...,
 ) -> int:
-    """Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+    """Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
 
     Komut: core.fillet (YUVARLA)
-        object — Köşesi yuvarlatılacak nesnenin kimliği [kalıcı nesne anahtarı]
-        point — İşlem yapılacak köşe [mm, Sağa (Y) önce]
-        radius — Yuvarlatma yarıçapı, metre
+        object — Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı]
+        point — Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce]
+        radius — Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe
+        second_point — İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce]
+        trim — İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet
+        every_corner — Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır
     """
 
 def set_layer(
