@@ -415,6 +415,15 @@ public:
     /// the message says.
     int probeStatusStrip();
 
+    /// DOES THE WINDOW FIT A LAPTOP? Asks for the sizes of the screens this
+    /// program is run on — 1280×720 and 1440×860 of usable desktop — and reports
+    /// the size the window actually took, the minimum each part of it imposes,
+    /// and every tool-column button that lies outside the column's visible
+    /// height. A window taller than the screen puts its status bar, its console
+    /// and the foot of the tool column below the edge, where nobody can see
+    /// them; the defect is invisible on the machine that has the big screen.
+    int probeFit();
+
     /// THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so
     /// nothing there can see whether the payload reached `QClipboard` under the
     /// agreed MIME type and came back out of it. Copies two parcels, clears the

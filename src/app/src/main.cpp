@@ -332,7 +332,7 @@ int main(int argc, char** argv)
           "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",    "KENTOS_NORMAL_PROBE",
           "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE",  "KENTOS_CLIP_PROBE",
           "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
-          "KENTOS_PYTHON_PROBE"})
+          "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1944,6 +1944,12 @@ int main(int argc, char** argv)
             window.probeDesigner();
             QApplication::exit(0);
         });
+    }
+
+    // THE WINDOW ON A LAPTOP SCREEN: every part of it, and every tool, on show.
+    if (qEnvironmentVariableIsSet("KENTOS_FIT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeFit() == 0 ? 0 : 1); });
     }
 
     // THE STATUS STRIP UNDER A LONG MESSAGE, in pixels.

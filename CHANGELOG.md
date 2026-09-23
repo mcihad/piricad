@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — pencere dizüstü ekranına sığıyor; araç kutusu gerekirse ikinci sütuna geçiyor
+
+Araç kutusu dikey bir kutu yerleşimiydi ve tam yüksekliği pencerenin **asgari**
+yüksekliği oluyordu: pencere 1131 pikselden kısa olamıyordu. 900 piksellik bir ekranda
+pencerenin altı — alttaki araçlar, Python paneli, durum çubuğu — ekranın dışında
+kalıyor, görünmüyordu. Kutu artık araçlarını kendisi yerleştiriyor ve gövde kısa
+kaldığında 45 piksellik ikinci (üçüncü…) bir sütuna devam ediyor; gruplar sığdıkça bütün
+kalıyor. Pencerenin asgarisi 607 × 487'ye indi; 1280 × 720 ve 1440 × 860'ta, Python
+paneli açıkken de, pencere ekrana sığıyor ve hiçbir araç gizlenmiyor. Python panelinin
+asgarisi 140 piksele indi, açılış yüksekliği pencerenin üçte birini geçmiyor. Yeni
+`window-fits` testi (`KENTOS_FIT_PROBE`) bunu her derlemede ölçüyor.
+
 ### Değişti — BUDA ve UZAT yaylarda, dairelerde ve çok sınırla çalışıyor (C-04)
 
 - **Tıklanan parça gidiyor:** iki sınırın arasındaki orta parça da artık atılabiliyor;

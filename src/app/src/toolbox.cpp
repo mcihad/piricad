@@ -19,11 +19,11 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QResizeEvent>
 #include <QScreen>
 #include <QTimer>
 #include <QToolButton>
 #include <QToolTip>
-#include <QVBoxLayout>
 
 namespace kentos::app {
 namespace {
@@ -865,23 +865,148 @@ ToolBox::ToolBox(QWidget* parent) : QWidget(parent)
     setAccessibleDescription(tr("Çizim ve düzenleme araçları — yukarı/aşağı ok tuşları gezer, "
                                 "Boşluk ya da Enter aracı çalıştırır, sağ ok aile kartını açar"));
 
-    column_ = new QVBoxLayout(this);
-    column_->setContentsMargins(0, kTopPad, 1, kChipsPad);
-    column_->setSpacing(kGap);
-    column_->setAlignment(Qt::AlignHCenter);
-
     // BUILT HERE, not on the first theme pass. They used to be created lazily in
     // `applyTheme`, which runs after the shell has already asked for `chips()` to
     // connect to it — so the connect got a null and the program died on the next
     // line. A widget the caller can ask for must exist as soon as the object does.
-    //
-    // The stretch goes in first so the chips stay pinned to the foot of the
-    // column whatever tools are added above them.
-    chipsSpacer_ = column_->count();
-    column_->addStretch(1);
-
+    // `place` pins them to the foot of the first column.
     chips_ = new ColourChips(this);
-    column_->addWidget(chips_, 0, Qt::AlignHCenter);
+}
+
+QVector<QRect> ToolBox::place(int height, int& columns) const
+{
+    // WHOLE GROUPS UNLESS THAT COSTS A COLUMN. Kept whole, the select group can
+    // be left alone in the first column with two thirds of it empty while the
+    // tools run on to a fourth; a column is 45 px the canvas does not get.
+    int whole_columns      = 1;
+    QVector<QRect> whole   = flow(height, true, whole_columns);
+    int flowing_columns    = 1;
+    QVector<QRect> flowing = flow(height, false, flowing_columns);
+    if (flowing_columns < whole_columns) {
+        columns = flowing_columns;
+        return flowing;
+    }
+    columns = whole_columns;
+    return whole;
+}
+
+QVector<QRect> ToolBox::flow(int height, bool whole, int& columns) const
+{
+    // THE REFERENCE'S PITCH, kept exactly: 34 px from button to button inside a
+    // group, 51 px across a group boundary — the 24 px rule with 9 px of air
+    // above and below it (7 of its own, 2 of the gap). What is new is only where
+    // a column ENDS: at the chips, not at the window's foot.
+    constexpr int kPitch     = kColumn - 1; ///< one column's content width
+    constexpr int kRuleBlock = 2 * (kRuleAir + kGap) + 1;
+    const int foot           = kChipsPad + chips_->height() + kRuleAir + kGap;
+    const int limit          = std::max(kTopPad + kButton, height - foot);
+
+    QVector<QRect> at(entries_.size());
+    int column = 0;
+    int y      = kTopPad;
+    bool empty = true; ///< nothing placed in this column yet
+
+    const auto button_at = [&](int i) {
+        at[i] = QRect(column * kPitch + (kPitch - kButton) / 2, y, kButton, kButton);
+        y += kButton;
+        empty = false;
+    };
+    const auto next_column = [&] {
+        ++column;
+        y     = kTopPad;
+        empty = true;
+    };
+
+    int i = 0;
+    while (i < entries_.size()) {
+        if (entries_[i].rule) {
+            // A RULE HEADS A GROUP, and it is only drawn between two groups in
+            // one column. The group after it moves on whole when it would not
+            // fit below it but does fit in a column of its own.
+            int n = 0;
+            while (i + 1 + n < entries_.size() && !entries_[i + 1 + n].rule)
+                ++n;
+            const int group = n * kButton + std::max(0, n - 1) * kGap;
+            if (whole && !empty && y + kRuleBlock + group > limit && kTopPad + group <= limit)
+                next_column();
+            if (!empty && y + kRuleBlock + kButton <= limit) {
+                at[i] = QRect(column * kPitch + (kPitch - kRuleWidth) / 2, y + kRuleAir + kGap,
+                              kRuleWidth, 1);
+                y += kRuleBlock;
+            } else if (!empty) {
+                next_column();
+            }
+            ++i;
+            continue;
+        }
+        if (!empty) {
+            if (y + kGap + kButton > limit)
+                next_column();
+            else
+                y += kGap;
+        }
+        button_at(i);
+        ++i;
+    }
+    columns = column + 1;
+    return at;
+}
+
+int ToolBox::columnsFor(int height) const
+{
+    int columns = 1;
+    (void)place(height, columns);
+    return columns;
+}
+
+QSize ToolBox::sizeHint() const
+{
+    // One column's worth of height: what the column would take if the body
+    // gave it everything it asks for.
+    int total  = kTopPad;
+    bool first = true;
+    for (const Entry& e : entries_) {
+        if (e.rule) {
+            total += 2 * (kRuleAir + kGap) + 1;
+            first = true;
+            continue;
+        }
+        total += (first ? 0 : kGap) + kButton;
+        first = false;
+    }
+    total += kRuleAir + kGap + chips_->height() + kChipsPad;
+    return {columns_ * (kColumn - 1) + 1, total};
+}
+
+QSize ToolBox::minimumSizeHint() const
+{
+    return {kColumn, kTopPad + kButton + kRuleAir + kGap + chips_->height() + kChipsPad};
+}
+
+void ToolBox::resizeEvent(QResizeEvent* event)
+{
+    int columns             = 1;
+    const QVector<QRect> at = place(height(), columns);
+    for (int i = 0; i < entries_.size(); ++i) {
+        QWidget* w = entries_[i].widget;
+        if (at[i].isEmpty()) {
+            w->hide();
+            continue;
+        }
+        w->setGeometry(at[i]);
+        w->show();
+    }
+    constexpr int kPitch = kColumn - 1;
+    chips_->move((kPitch - chips_->width()) / 2, height() - kChipsPad - chips_->height());
+
+    // WIDER ONLY WHEN IT MUST, and the body lays itself out again around the
+    // new width; the height, and so the count, does not change on that pass.
+    if (columns != columns_) {
+        columns_ = columns;
+        setFixedWidth(columns * kPitch + 1);
+        updateGeometry();
+    }
+    QWidget::resizeEvent(event);
 }
 
 void ToolBox::addTool(QAction* action)
@@ -904,7 +1029,7 @@ void ToolBox::addTool(QAction* action)
 
     buttons_.push_back(button);
     tools_.push_back(action);
-    column_->insertWidget(chipsSpacer_++, button, 0, Qt::AlignHCenter);
+    entries_.push_back(Entry{.widget = button});
 }
 
 void ToolBox::addFamily(const QVector<QAction*>& given)
@@ -961,7 +1086,7 @@ void ToolBox::addFamily(const QVector<QAction*>& given)
     button->setTheme(theme_);
 
     buttons_.push_back(button);
-    column_->insertWidget(chipsSpacer_++, button, 0, Qt::AlignHCenter);
+    entries_.push_back(Entry{.widget = button});
 }
 
 void ToolBox::addSeparator()
@@ -971,12 +1096,7 @@ void ToolBox::addSeparator()
     rule->setFixedSize(kRuleWidth, 1);
 
     separators_.push_back(rule);
-
-    // The rule carries its own air rather than relying on the layout's spacing,
-    // so the 51 px pitch across a group boundary is exactly the reference's.
-    column_->insertSpacing(chipsSpacer_++, kRuleAir - kGap);
-    column_->insertWidget(chipsSpacer_++, rule, 0, Qt::AlignHCenter);
-    column_->insertSpacing(chipsSpacer_++, kRuleAir - kGap);
+    entries_.push_back(Entry{.widget = rule, .rule = true});
 }
 
 void ToolBox::applyTheme(ThemeMode mode)

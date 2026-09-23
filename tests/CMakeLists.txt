@@ -175,6 +175,21 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(status-strip PROPERTIES TIMEOUT 120)
 
+    # THE WINDOW ON A LAPTOP. The tool column was a vertical box whose full
+    # height became the window's minimum: 1131 px, so on a 900 px screen the
+    # foot of the window — the lower tools, the console, the status bar — sat
+    # below the edge, and the person who reported it could not see whether the
+    # column had grown. The probe asks for 1280×720 and 1440×860, with and
+    # without the console, and fails when the window will not take the size or
+    # a tool button lies outside the column.
+    add_test(NAME window-fits
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_FIT_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(window-fits PROPERTIES TIMEOUT 120)
+
     # DRAWING, THE WAY A REAL MOUSE ARRIVES. Every other probe sends its events
     # straight to the widget it means, which skips the two things a real click
     # goes through first: the hit test that decides which widget is under the

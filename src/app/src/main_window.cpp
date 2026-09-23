@@ -3819,6 +3819,81 @@ int MainWindow::probeClipboard()
     return failures;
 }
 
+int MainWindow::probeFit()
+{
+    int defects      = 0;
+    const auto count = [](const QWidget* w) { return w != nullptr && w->isVisible(); };
+    const auto say   = [](const char* what, QSize s) {
+        (void)std::fprintf(stdout, "[sığ] %-26s %4d × %4d\n", what, s.width(), s.height());
+    };
+
+    say("pencere en küçük", minimumSizeHint());
+    if (count(toolBox_)) say("araç kolonu en küçük", toolBox_->minimumSizeHint());
+    if (count(pythonDock_)) say("Python paneli en küçük", pythonDock_->minimumSizeHint());
+    if (count(propertyDock_)) say("özellik paneli en küçük", propertyDock_->minimumSizeHint());
+    if (count(layerDock_)) say("katman paneli en küçük", layerDock_->minimumSizeHint());
+    if (count(journalDock_)) say("geçmiş paneli en küçük", journalDock_->minimumSizeHint());
+    if (count(chatDock_)) say("sohbet paneli en küçük", chatDock_->minimumSizeHint());
+    if (centralWidget() != nullptr) say("orta alan en küçük", centralWidget()->minimumSizeHint());
+
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_FIT_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    // AND WITH THE CONSOLE OPEN, which is how the person who reported this
+    // works: the bottom dock takes its height out of the same window.
+    for (const bool console : {false, true})
+        for (const QSize want : {QSize(1280, 720), QSize(1440, 860)}) {
+            // The console is opened the way its menu entry opens it, which is
+            // also what repairs a dock a saved layout left collapsed or floating.
+            if (console)
+                showPythonConsole();
+            else if (pythonDock_ != nullptr)
+                pythonDock_->hide();
+            resize(want);
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+            (void)std::fprintf(stdout, "[sığ] Python paneli %s\n", console ? "açık" : "kapalı");
+            const QSize got = size();
+            const bool fits = got.width() <= want.width() && got.height() <= want.height();
+            (void)std::fprintf(fits ? stdout : stderr,
+                               "[sığ] %4d × %4d istendi, %4d × %4d oldu — %s\n", want.width(),
+                               want.height(), got.width(), got.height(),
+                               fits ? "sığıyor" : "EKRANA SIĞMIYOR");
+            if (!fits) ++defects;
+
+            // EVERY BUTTON ON SHOW: a button the column cannot hold is a tool
+            // nobody can press.
+            if (toolBox_ != nullptr) {
+                int hidden = 0;
+                for (const QToolButton* b : toolBox_->findChildren<QToolButton*>()) {
+                    if (!b->isVisibleTo(toolBox_)) continue;
+                    const QRect r = b->geometry();
+                    if (r.bottom() > toolBox_->height()) {
+                        (void)std::fprintf(
+                            stderr, "[sığ]   görünmeyen araç: %s\n",
+                            qPrintable(b->toolTip().section(QLatin1Char(' '), 0, 0)));
+                        ++hidden;
+                    }
+                }
+                (void)std::fprintf(hidden == 0 ? stdout : stderr,
+                                   "[sığ]   araç kolonu %d × %d px, %d sütun; %d araç görünmüyor\n",
+                                   toolBox_->width(), toolBox_->height(),
+                                   toolBox_->columnsFor(toolBox_->height()), hidden);
+                defects += hidden;
+            }
+            if (shooting)
+                (void)grab().save(
+                    into + QStringLiteral("/sigma-%1x%2-%3.png")
+                               .arg(want.width())
+                               .arg(want.height())
+                               .arg(console ? QStringLiteral("konsol") : QStringLiteral("yalin")));
+        }
+    if (pythonDock_ != nullptr) pythonDock_->hide();
+    (void)std::fprintf(stdout, "[sığ] %d kusur\n", defects);
+    return defects;
+}
+
 int MainWindow::probeStatusStrip()
 {
     const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_STRIP_PROBE"));
@@ -5678,7 +5753,9 @@ void MainWindow::showPythonConsole(const QString& source)
     // on a hidden dock is a request Qt has nowhere to apply. The console's own
     // `sizeHint` carries the same number, which is what actually holds when the
     // user reopens the panel later.
-    resizeDocks({pythonDock_}, {260}, Qt::Vertical);
+    // A THIRD OF THE WINDOW AT MOST: 260 px of a 720 px laptop window leaves
+    // the drawing less than half the height it had.
+    resizeDocks({pythonDock_}, {std::min(260, height() / 3)}, Qt::Vertical);
 
     pythonConsole_->focusPrompt();
     if (!source.isEmpty()) pythonConsole_->runSource(source);

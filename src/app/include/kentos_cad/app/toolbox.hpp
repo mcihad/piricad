@@ -7,6 +7,15 @@
 // status bar. §6 gives every dock a 29 px title, and this has none — so it is a
 // plain widget in the body layout and cannot be dragged out of place.
 //
+// A BODY TOO SHORT FOR THE COLUMN GETS A SECOND ONE. The reference is drawn on a
+// 1033 px tall body; a laptop gives the body far less. A vertical box layout
+// made the column's full height the window's MINIMUM, so the window could not be
+// shorter than 1131 px and on a 900 px screen its foot — the lower tools, the
+// status bar, the console — sat below the edge where nobody could see it. The
+// column now lays its tools out itself and carries on in another 45 px column,
+// keeping a group whole where it fits, so every tool stays on show at any
+// height and the column asks the window for almost nothing (`design.md` §14.4).
+//
 // Every button triggers a QAction that dispatches a command; the palette holds no
 // logic of its own and buys the GUI no privilege over any other client
 // (CLAUDE.md Article 1).
@@ -17,7 +26,9 @@
 #include <functional>
 
 #include <QColor>
+#include <QRect>
 #include <QRectF>
+#include <QSize>
 #include <QString>
 #include <QVector>
 #include <QWidget>
@@ -26,8 +37,8 @@ class QAction;
 class QEvent;
 class QFocusEvent;
 class QKeyEvent;
+class QResizeEvent;
 class QToolButton;
-class QVBoxLayout;
 
 namespace kentos::app {
 
@@ -277,10 +288,24 @@ public:
     /// DİZİ behind TAŞI, were never pressed by anything but a hand.
     const QVector<QAction*>& tools() const noexcept { return tools_; }
 
+    /// The width the tools need at the height in force, and the height one
+    /// column of them would take.
+    QSize sizeHint() const override;
+
+    /// Almost nothing: the column wraps rather than making the window taller.
+    QSize minimumSizeHint() const override;
+
+    /// How many columns the tools take at `height` — 1 when they fit in one.
+    int columnsFor(int height) const;
+
 protected:
     /// Fills the column, draws the 1 px rule along its right edge, and rings the
     /// tool the keyboard is on when the keyboard is here.
     void paintEvent(QPaintEvent* event) override;
+
+    /// Lays the tools out for the new height, and widens the column when they
+    /// need another one (`place`).
+    void resizeEvent(QResizeEvent* event) override;
 
     /// Puts the ring on the tool that is RUNNING when Tab arrives, so the ring
     /// and the light never say different things.
@@ -305,15 +330,27 @@ private:
     /// and a widget per family would be a widget per family to re-theme.
     ToolFlyout* flyout_{nullptr};
 
-    QVBoxLayout* column_{nullptr};
+    /// One place down the column, in order: a tool, or the rule between groups.
+    struct Entry
+    {
+        QWidget* widget{nullptr}; ///< the button, or the 1 px rule
+        bool rule{false};         ///< a group boundary rather than a tool
+    };
+
+    /// Where every entry goes at `height`, in `entries_` order — an empty rect
+    /// for a rule that falls at the head of a column and is not drawn — and how
+    /// many columns that takes. With `whole`, a group that would not fit below
+    /// the last one moves on to a column of its own; without, the tools simply
+    /// flow on. `place` takes whichever needs fewer columns, groups whole on a tie.
+    QVector<QRect> flow(int height, bool whole, int& columns) const;
+    QVector<QRect> place(int height, int& columns) const;
+
+    QVector<Entry> entries_; ///< the column's contents, top to bottom
+    int columns_{1};         ///< how many columns the height in force needs
     QVector<QToolButton*> buttons_;
     QVector<QAction*> tools_; ///< every tool, family members included; see `tools()`
     QVector<QWidget*> separators_;
     ColourChips* chips_{nullptr};
-
-    /// Where the next tool goes: the index the stretch and the chips sit at, so
-    /// everything added later lands ABOVE them and they stay at the foot.
-    int chipsSpacer_{0};
 
     /// The button the keyboard is on, an index into `buttons_`. Only drawn while
     /// the column has the focus; kept across a focus loss so Tab and Shift+Tab

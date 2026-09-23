@@ -37,7 +37,8 @@ onlar her masaüstünde o masaüstünün alışıldık görünümündedir.
 
 İki ayrı araç yüzeyi vardır ve işleri farklıdır:
 
-- **Araç kutusu** (sol, dikey, 46 px) — çizim ve düzenleme araçları, beş grup.
+- **Araç kutusu** (sol, dikey, 46 px; kısa pencerede iki ya da daha çok sütun) —
+  çizim ve düzenleme araçları, beş grup.
   Bir araca basınca komut başlar ve sizden girdi ister. En altta iki renk kutusu:
   çizim rengi ve dolgu rengi. Seçili nesnenin — seçim yoksa etkin katmanın —
   renklerini gösterirler; birine tıklamak renk menüsünü açar ve seçilen renk
@@ -185,6 +186,13 @@ nesneleri elinizde kalmaz.
 | **düzenleme** | Sil · Buda ▸ · Pah ▸ · Birleştir ▸ · Taşı ▸ · Ofset |
 | **ölçüm** | Ölç ▸ |
 | **yardımcı** | Stil Kopyala ▸ · Topoloji Denetimi |
+
+**Kısa bir pencerede araç kutusu ikinci bir sütuna geçer.** Yirmi aracın tek sütunda
+durması için gövdenin yaklaşık 800 piksel yüksek olması gerekir; bir dizüstü ekranı,
+hele alttaki Python paneli açıkken, bunu vermez. O zaman kutu 45 piksellik bir sütun
+daha açar ve araçlar orada devam eder — gruplar sığdıkça bütün kalır. Hiçbir araç
+gizlenmez, pencere de ekrandan taşmaz: pencere yeniden uzadığında kutu tek sütuna
+döner.
 
 Kadastro işlemleri — İfraz, Alana Göre İfraz, Tevhit — sütunda değil, kendi
 **Kadastro** menüsündedir: her biri arkasında bir yönetmelik olan bir işlemdir ve

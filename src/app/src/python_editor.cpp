@@ -24,7 +24,7 @@ namespace {
 constexpr int kIndent         = 4;   ///< PEP 8, and the only indentation this offers
 constexpr int kGutterPad      = 10;  ///< breathing room either side of the numbers
 constexpr int kPromptHeight   = 64;  ///< three lines: a statement, not an essay
-constexpr int kConsoleMinimum = 200; ///< the prompt plus enough answer to be worth reading
+constexpr int kConsoleMinimum = 140; ///< the prompt and four lines of answer; a laptop is short
 
 const Tokens& tokensOf(ThemeMode mode)
 {

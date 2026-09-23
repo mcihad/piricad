@@ -432,6 +432,12 @@ aşağı kaydırır.
 - Sol araç kutusu **46 px** (45 içerik + 1 px sağ çizgi); buton **32 × 32**,
   adım **34** (2 px boşluk), grup ayracı **24 × 1**, üstünde ve altında 7 px hava.
   Alttaki renk kutuları **22 × 22**, aralarında 3 px.
+- **Gövde kutuyu taşıyamayacak kadar kısaysa** kutu, aynı adımla ikinci (üçüncü…)
+  bir **45 px** sütuna devam eder; bir grup sığdığı yerde bütün kalır, grup ayracı
+  yalnız bir sütunun içinde iki grup arasında çizilir, renk kutuları ilk sütunun
+  dibinde kalır. Kutu pencerenin asgari yüksekliğini belirlemez: referans 1033 px
+  yüksekliğinde bir gövdeye çizilmiştir, tek sütun kuralı dizüstü ekranında
+  pencerenin altını ekranın dışına itiyordu.
 - Araç çubuğu butonu **30 × 30**, adım **34** (4 px boşluk); grup ayracı 1 px,
   iki yanında 5 px kenar boşluğu — yani iki grup arasındaki adım **49**. Çubuğun
   iki ucunda 8 px iç boşluk.
