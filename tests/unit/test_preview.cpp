@@ -287,12 +287,16 @@ TEST_CASE("KIR: ikinci nokta aranırken gidecek parça işaretli; tıklama tam o
     CHECK_EQ(guide.value().key, 1);
 
     // What the canvas marks for a cursor at 70 m is the piece the click removes.
-    const std::vector<core::Point2> run{{0, 0}, {100'000, 0}};
-    auto shown = core::break_run(run, s.prompt().rubber_origin, core::Point2{70'000, -1'000});
+    const core::CurvePath run = *core::path_of(r.doc, r.doc.slot_of(core::EntityKey{1}));
+    auto shown = core::break_path(run, s.prompt().rubber_origin, core::Point2{70'000, -1'000});
     REQUIRE(shown.ok());
-    CHECK(shown.value().gap == std::vector<core::Point2>{{30'000, 0}, {70'000, 0}});
-    CHECK(shown.value().head == std::vector<core::Point2>{{0, 0}, {30'000, 0}});
-    CHECK(shown.value().tail == std::vector<core::Point2>{{70'000, 0}, {100'000, 0}});
+    CHECK(core::path_vertices(shown.value().gap) ==
+          std::vector<core::Point2>{{30'000, 0}, {70'000, 0}});
+    REQUIRE_EQ(shown.value().kept.size(), 2u);
+    CHECK(core::path_vertices(shown.value().kept[0]) ==
+          std::vector<core::Point2>{{0, 0}, {30'000, 0}});
+    CHECK(core::path_vertices(shown.value().kept[1]) ==
+          std::vector<core::Point2>{{70'000, 0}, {100'000, 0}});
 
     REQUIRE(s.supply(Value::point(core::Point2{70'000, -1'000})).ok());
     REQUIRE(r.bus.finish(s).ok());
@@ -301,7 +305,7 @@ TEST_CASE("KIR: ikinci nokta aranırken gidecek parça işaretli; tıklama tam o
     CHECK_EQ(vertex_of(r.doc, 2, 0), (core::Point2{70'000, 0}));
 
     // Given in either order along the line, the same gap.
-    auto reversed = core::break_run(run, core::Point2{70'000, 0}, core::Point2{30'000, 0});
+    auto reversed = core::break_path(run, core::Point2{70'000, 0}, core::Point2{30'000, 0});
     REQUIRE(reversed.ok());
     CHECK(reversed.value().gap == shown.value().gap);
 }

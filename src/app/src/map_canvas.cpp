@@ -2237,41 +2237,28 @@ void MapCanvas::buildOverlay()
                 const core::Document& doc = controller_.document();
                 const core::EntityId e    = doc.slot_of(
                     static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
-                if (e != core::kNoEntity && doc.alive(e)) {
-                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
-                    const auto xs             = doc.geometry().ring_xs(span.first);
-                    const auto ys             = doc.geometry().ring_ys(span.first);
-                    std::vector<core::Point2> run;
-                    run.reserve(xs.size());
-                    for (std::size_t v = 0; v < xs.size(); ++v)
-                        run.push_back(core::Point2{xs[v], ys[v]});
-                    if (auto cut =
-                            core::break_run(run, session->prompt().rubber_origin, cursorWorld())) {
-                        const auto add = [this](std::size_t into,
-                                                const std::vector<core::Point2>& pts) {
-                            if (pts.size() < 2) return;
+                const auto path =
+                    e != core::kNoEntity && doc.alive(e) ? core::path_of(doc, e) : std::nullopt;
+                if (path) {
+                    if (auto cut = core::break_path(*path, session->prompt().rubber_origin,
+                                                    cursorWorld())) {
+                        const auto add = [this](std::size_t into, const core::CurvePath& piece) {
                             curve_scratch_x_.clear();
                             curve_scratch_y_.clear();
-                            for (const core::Point2& p : pts) {
-                                curve_scratch_x_.push_back(p.x);
-                                curve_scratch_y_.push_back(p.y);
-                            }
+                            core::path_outline(piece, curve_scratch_x_, curve_scratch_y_);
                             addWorldRun(into, curve_scratch_x_, curve_scratch_y_, false);
                         };
                         const std::size_t kept = nextBatch(tokens_->accent.rgba(), 1.5f, false);
-                        add(kept, cut.value().head);
-                        add(kept, cut.value().tail);
+                        for (const core::CurvePath& piece : cut.value().kept)
+                            add(kept, piece);
                         const std::size_t gone = nextBatch(tokens_->danger.rgba(), 2.5f, true);
                         add(gone, cut.value().gap);
 
-                        // HOW MUCH GOES, measured ALONG the line: the straight
+                        // HOW MUCH GOES, measured ALONG the path: the straight
                         // distance from the first point to the cursor is not
-                        // the length of a gap that turns a corner.
+                        // the length of a gap that turns a corner or bends.
                         if (look_.dynamic_input) {
-                            core::Mm along                       = 0;
-                            const std::vector<core::Point2>& gap = cut.value().gap;
-                            for (std::size_t i = 0; i + 1 < gap.size(); ++i)
-                                along += core::segment_length(gap[i], gap[i + 1]);
+                            const core::Mm along         = core::path_length(cut.value().gap);
                             const render::ScreenPointF c = toScreenF(to);
                             const std::string text =
                                 "kırılan " + trimmed(static_cast<double>(along) / 1000.0, 3) + " m";

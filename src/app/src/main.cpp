@@ -1554,6 +1554,17 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("14p-bol-noktalardan"), &window); });
         later([&window] { window.cancelCommand(); });
 
+        // KIR on an arc (TODOS C-05): the piece that will go dashed in the
+        // destructive ink along the ARC, and its length along it.
+        later([scene] { scene(QStringLiteral("YAY merkez=0,0 baslangic=10,0 bitis=-10,0")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("KIR nesne=1"));
+            window.runScriptLine(QStringLiteral("8,6"));
+        });
+        later([hover] { hover({-6'000, 8'000}); });
+        later([&window, shot] { shot(QStringLiteral("14q-kir-yay"), &window); });
+        later([&window] { window.cancelCommand(); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

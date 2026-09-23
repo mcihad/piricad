@@ -8893,8 +8893,9 @@ TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı d
 {
     // THE DEFECT THIS PINS, measured before it was named: BUDA on a circle wrote
     // "bu komut yalnız çizgilerle çalışır" to the transcript, ended its body, and
-    // the bus reported SUCCESS. (BUDA trims a circle now — TODOS C-04 — so the
-    // list below keeps the edits a circle still cannot take.) A person read the sentence; a JSON
+    // the bus reported SUCCESS. (BUDA trims a circle now — TODOS C-04 — and KIR
+    // breaks one — C-05 — so the list below keeps the edits a circle still
+    // cannot take.) A person read the sentence; a JSON
     // script carried on, an agent's plan was told its step happened, and `cad.trim(...)` returned
     // instead of raising. The support matrix listed 38 such cells (docs/nesneler/destek-matrisi.md,
     // "Sessiz retler").
@@ -8908,8 +8909,7 @@ TEST_CASE("RET: reddedilen düzenleme veri yoluna hata döner, sessiz başarı d
 
     for (const char* line :
          {"UZAT nesne=1 sinir=2 nokta=10,0", "BÖL nesne=1 nokta=10,0",
-          "KIR nesne=1 birinci=10,0 ikinci=0,10", "YUVARLA nesne=1 nokta=10,0 yaricap=1",
-          "PAH nesne=1 nokta=10,0 mesafe=1"}) {
+          "YUVARLA nesne=1 nokta=10,0 yaricap=1", "PAH nesne=1 nokta=10,0 mesafe=1"}) {
         INFO(line);
         auto result = f.bus.execute_line(line, Origin::Test);
         REQUIRE_FALSE(result.ok());

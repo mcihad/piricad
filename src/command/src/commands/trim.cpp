@@ -258,7 +258,9 @@ Task<void> run_split(Context& ctx)
         const std::vector<core::CurvePath> pieces = split_at_points(*path, {&at, 1});
         if (path->closed || pieces.size() < 2) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
+                       path->closed ? "Kapalı bir şekil tek noktada bölünmez; en az iki bölme "
+                                      "noktası verin."
+                                    : "Bölme noktası çizginin ucunda; bölünecek bir şey kalmıyor.");
             co_return;
         }
         if (!write_pieces(ctx, slot, pieces, edits)) co_return;

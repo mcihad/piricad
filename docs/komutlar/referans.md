@@ -18,7 +18,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.intersect_point`](intersect_point.md) | Kesişim Noktası | `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar. |
 | [`core.point_along`](point_along.md) | Ara Nokta | `ARANOKTA`, `POINTALONG`, `ARN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
 | [`core.polygon_regular`](polygon_regular.md) | Düzgün Çokgen | `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`, `CKG` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan. |
-| [`core.break`](break.md) | Kır | `KIR`, `BREAK`, `KR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler. |
+| [`core.break`](break.md) | Kır | `KIR`, `BREAK`, `KR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler. |
 | [`core.join`](join.md) | Uç Uca Ekle | `UÇUCA`, `UCUCA`, `JOIN`, `UÇE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uçları birbirine değen çizgileri tek bir çizgiye ekler. |
 | [`core.lengthen`](lengthen.md) | Uzunluk | `UZUNLUK`, `LENGTHEN`, `UZN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
 | [`core.explode`](explode.md) | Patlat | `PATLAT`, `EXPLODE`, `PTL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
@@ -245,11 +245,11 @@ Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
 
 ### `core.break` — KIR (Kır)
 
-Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | en az 0 | Kırılacak çizgi |
+| `nesne` | selection | en az 0 | Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi |
 | `birinci` | point | 1 | Kırılacak parçanın ilk noktası |
 | `ikinci` | point_list | isteğe bağlı | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler |
 
@@ -2739,14 +2739,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_break",
     "title": "Kır",
-    "description": "Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.\nKomut: KIR (BREAK, KR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.\nKomut: KIR (BREAK, KR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "nesne": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Kırılacak çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "birinci": {
           "anyOf": [

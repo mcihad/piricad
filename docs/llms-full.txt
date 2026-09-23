@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 100 (88 tanesi onay ister)
-- Katalog parmak izi: `2725617040204429046`
+- Katalog parmak izi: `13994661256652616238`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -215,7 +215,7 @@ Onay ister.
 
 ### `core_break` — Kır
 
-Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 Komut: KIR (BREAK, KR)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -223,7 +223,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `nesne` | string | hayır | Kırılacak çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesne` | string | hayır | Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `birinci` | konum (tutamak ya da göreli nokta) | evet | Kırılacak parçanın ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ikinci` | konum (tutamak ya da göreli nokta) | hayır | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |

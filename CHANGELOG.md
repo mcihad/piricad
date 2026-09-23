@@ -15,6 +15,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   geometriyle birlikte geri getiriyor (`C-05: öznitelik bir geometri düzenlemesinde
   kaybolmaz` testi).
 
+### Eklendi — KIR yayda, dairede ve yaylı çoklu çizgide (C-05)
+
+- **`KIR` artık yalnız çizgide değil**: yaydan çıkan parça yaydır, kalanlar yaydır;
+  bir daireden birinci noktadan ikinciye saat yönünün tersine giden parça çıkar ve
+  geriye bir yay kalır; yaylı sınırın yayları düzleşmez. Kalan parçalar katmanı,
+  stili ve öznitelikleri taşıyor; önizleme gidecek parçayı nesne boyunca çiziyor ve
+  uzunluğunu nesne boyunca yazıyor. Alan kırılmıyor, nasıl açılacağı söyleniyor.
+  Tek önizleme ve komut hesabı: `core::break_path` (eski `break_run` kalktı).
+  Destek matrisi 149 → 152; `14q-kir-yay` karesi.
+
 ### Eklendi — BÖL her eğride ve beş yoldan böler; yaylar yay kalır (C-05)
 
 - **`BÖL` artık yay, daire ve yaylı çoklu çizgide de çalışıyor**; her parça kendi

@@ -19,6 +19,7 @@
 // kerb 2 m longer", "bring it to 48 m" — and it needs nothing but the line.
 #include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -96,57 +97,74 @@ Task<void> run_break(Context& ctx)
         co_return;
     }
 
-    core::EntityId slot = core::kNoEntity;
-    std::vector<core::Point2> pts;
-    if (!open_run(ctx, chosen.front(), slot, pts)) co_return;
+    // ANY PATH, NOT ONLY A LINE (TODOS C-05): the piece taken out of an arc is
+    // an arc, and what stays of a circle is the arc left over. A face is not
+    // broken — a parcel opened along its boundary is two lines, not a parcel —
+    // and says how it is opened on purpose.
+    const core::Document& doc = ctx.document();
+    const auto id             = chosen.front();
+    const core::EntityId slot =
+        id > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)))
+               : core::kNoEntity;
+    if (slot == core::kNoEntity || !doc.alive(slot)) {
+        ctx.refuse(core::ErrorCode::NotFound,
+                   "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+        co_return;
+    }
+    const auto path = core::path_of(doc, slot);
+    if (!path) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " kırılamıyor; KIR çizgi, yay, daire ve yaylı çoklu çizgide çalışır.");
+        co_return;
+    }
+    if (path->closed && doc.entities().kind[slot] == core::kPolylineKind) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(id) +
+                       " bir alan; alan kırılmaz. Önce ÇİZGİDÜZENLE islem=ac ile açık çizgiye "
+                       "çevirin.");
+        co_return;
+    }
 
     auto first = co_await ctx.point("birinci", "Kırılacak parçanın ilk noktası");
     if (!first) co_return;
 
-    // ONE POINT IS A SPLIT WITH NO GAP, which is AutoCAD's `break at point` and
-    // the degenerate case of the same verb. Two points remove what is between —
-    // and while the second is aimed, the piece that will go is drawn as going,
-    // by the function this body cuts with (`core::break_run`).
+    // ONE POINT IS A SPLIT WITH NO GAP on an open path, which is AutoCAD's
+    // `break at point` and the degenerate case of the same verb. Two points
+    // remove what is between — and while the second is aimed, the piece that
+    // will go is drawn as going, by the function this body cuts with
+    // (`core::break_path`).
     core::Point2 second = *first;
     if (const Value v = ctx.argument("ikinci"); !v.empty() && !v.as_points().empty()) {
         second = v.as_points().front();
     } else {
-        const auto key = static_cast<std::int64_t>(core::raw(ctx.document().key_of(slot)));
-        auto asked     = co_await ctx.point(
+        auto asked = co_await ctx.point(
             "ikinci", "Kırılacak parçanın ikinci noktası",
             PointOptions{.rubber_band    = true,
-                             .rubber_origin  = *first,
-                             .rubber_shape   = RubberShape::Break,
-                             .rubber_payload = core::encode_break_guide(core::BreakGuide{key})});
+                         .rubber_origin  = *first,
+                         .rubber_shape   = RubberShape::Break,
+                         .rubber_payload = core::encode_break_guide(core::BreakGuide{id})});
         if (asked) second = *asked;
     }
 
-    auto cut = core::break_run(pts, *first, second);
+    auto cut = core::break_path(*path, *first, second);
     if (!cut) {
         ctx.session().fail(cut.error());
         co_return;
     }
-    const std::vector<core::Point2>& head = cut.value().head;
-    const std::vector<core::Point2>& tail = cut.value().tail;
+    PathEdit edit;
+    if (!replace_with_pieces(ctx, slot, cut.value().kept, edit)) co_return;
 
-    if (head.size() >= 2) {
-        if (!write_run(ctx, slot, head)) co_return;
-        if (tail.size() >= 2) {
-            auto made = ctx.transaction().add_polyline(ctx.document().entities().layer[slot], tail);
-            if (!made) {
-                ctx.session().fail(made.error());
-                co_return;
-            }
-        }
-    } else if (!write_run(ctx, slot, tail)) {
-        co_return;
-    }
-
-    ctx.record("nesne", Value::ids({chosen.front()}));
+    ctx.record("nesne", Value::ids({id}));
     ctx.record("birinci", Value::point(cut.value().first));
     ctx.record("ikinci", Value::point(cut.value().second));
-    ctx.echo(head.size() >= 2 && tail.size() >= 2 ? "Çizgi kırıldı; iki parça kaldı."
-                                                  : "Çizginin bir ucu kırıldı.");
+    ctx.report(edits_json({edit}));
+    if (path->closed)
+        ctx.echo("Kapalı şekil kırıldı; açık bir parça kaldı.");
+    else if (cut.value().kept.size() >= 2)
+        ctx.echo("Çizgi kırıldı; iki parça kaldı.");
+    else
+        ctx.echo("Çizginin bir ucu kırıldı.");
 }
 
 // ------------------------------------------------------------------ UÇUCA ----
@@ -377,8 +395,9 @@ KENTOS_COMMAND(break_line)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Kırılacak çizgi"}.en(
-                    "object"),
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi"}
+                    .en("object"),
                 Param::point("birinci", "Kırılacak parçanın ilk noktası").en("first"),
                 Param::points("ikinci", Arity::optional(),
                               "Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan "
@@ -387,8 +406,8 @@ KENTOS_COMMAND(break_line)
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk "
-                   "bırakmadan böler.",
+        .summary = "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki "
+                   "parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.",
         .run    = &run_break,
         .effect = Effect::DocumentEdit,
     };

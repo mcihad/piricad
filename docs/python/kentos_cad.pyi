@@ -233,10 +233,10 @@ def break(
     first: Coord = ...,
     second: Coord = ...,
 ) -> int:
-    """Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+    """Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 
     Komut: core.break (KIR)
-        object — Kırılacak çizgi [kalıcı nesne anahtarı]
+        object — Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı]
         first — Kırılacak parçanın ilk noktası [mm, Sağa (Y) önce]
         second — Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler [mm, Sağa (Y) önce]
     """

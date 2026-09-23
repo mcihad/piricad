@@ -98,7 +98,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.intersect_point`](#cadintersect_point) | `core.intersect_point` | `KESİŞİMNOKTA` | İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar. |
 | [`cad.point_along`](#cadpoint_along) | `core.point_along` | `ARANOKTA` | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
 | [`cad.polygon_regular`](#cadpolygon_regular) | `core.polygon_regular` | `ÇOKGEN` | Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan. |
-| [`cad.break`](#cadbreak) | `core.break` | `KIR` | Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler. |
+| [`cad.break`](#cadbreak) | `core.break` | `KIR` | Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler. |
 | [`cad.join`](#cadjoin) | `core.join` | `UÇUCA` | Uçları birbirine değen çizgileri tek bir çizgiye ekler. |
 | [`cad.lengthen`](#cadlengthen) | `core.lengthen` | `UZUNLUK` | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
 | [`cad.explode`](#cadexplode) | `core.explode` | `PATLAT` | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
@@ -418,7 +418,7 @@ cad.polygon_regular(
 
 ### `cad.break`
 
-Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 
 Komut: `core.break` — `KIR`
 
@@ -432,7 +432,7 @@ cad.break(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `object` | `list[int]` | `nesne` | Kırılacak çizgi [kalıcı nesne anahtarı] |
+| `object` | `list[int]` | `nesne` | Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı] |
 | `first` | `Coord` | `birinci` | Kırılacak parçanın ilk noktası [mm, Sağa (Y) önce] |
 | `second` | `Coord` | `ikinci` | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler [mm, Sağa (Y) önce] |
 

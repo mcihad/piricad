@@ -330,3 +330,82 @@ TEST_CASE("C-05: öznitelik bir geometri düzenlemesinde kaybolmaz; geri alma es
     r.run("GERİAL");
     CHECK(cell() == "YOL");
 }
+
+// =============================================================================
+// KIR
+// =============================================================================
+
+TEST_CASE("C-05: KIR yayın iki nokta arasındaki parçasını çıkarır; kalanlar yaydır")
+{
+    Rig r;
+    r.run("YAY merkez=0,0 baslangic=10,0 bitis=0,10"); ///< a quarter turn, r = 10 m
+    // Cuts at 30° and 60°: the middle third goes, two thirds stay as arcs.
+    r.run("KIR nesne=1 birinci=8.660,5 ikinci=5,8.660");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{2});
+    for (const Live& l : all) {
+        CHECK(l.kind == core::kArcKind);
+        CHECK(std::abs(core::path_length(l.path) - 5'236) <= 1); ///< 10 m · π/6
+    }
+    CHECK(r.echoed.find("iki parça kaldı") != std::string::npos);
+    CHECK(r.reported.dump() == R"([{"kaynak":1,"sonuc":[1,2]}])");
+}
+
+TEST_CASE("C-05: KIR daireden bir parça çıkarır, kalan yaydır; tek noktadan kırmaz")
+{
+    // From the east round to the north, the way a circle is walked: a quarter
+    // goes and three quarters stay, as one arc.
+    Rig r;
+    r.run("DAİRE merkez=0,0 cevre=10,0");
+    r.run("KIR nesne=1 birinci=10,0 ikinci=0,10");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{1});
+    CHECK(all.front().kind == core::kArcKind);
+    CHECK(std::abs(core::path_length(all.front().path) - 47'124) <= 1); ///< ¾ · 2π · 10 m
+    CHECK(r.echoed.find("Kapalı şekil kırıldı") != std::string::npos);
+
+    Rig once;
+    once.run("DAİRE merkez=0,0 cevre=10,0");
+    auto refused = once.bus.execute_line("KIR nesne=1 birinci=10,0 ikinci=10,0", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("tek noktadan kırılmaz") != std::string::npos);
+}
+
+TEST_CASE("C-05: KIR alanı kırmaz, nasıl açılacağını söyler")
+{
+    Rig r;
+    r.run("ALAN 0,0 10,0 10,10 0,10");
+    auto refused = r.bus.execute_line("KIR nesne=1 birinci=5,0 ikinci=10,5", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("alan kırılmaz") != std::string::npos);
+    CHECK(refused.error().message.find("ÇİZGİDÜZENLE islem=ac") != std::string::npos);
+}
+
+TEST_CASE("C-05: KIR yaylı çoklu çizginin yayından parça çıkarınca yaylar yay kalır")
+{
+    Rig r;
+    const std::int64_t kerb = add_kerb(r);
+    // Both cuts on the half turn round (10,5): (15,5) is its east point.
+    r.run("KIR nesne=" + std::to_string(kerb) + " birinci=13.536,1.464 ikinci=15,5");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), std::size_t{2});
+    for (const Live& l : all)
+        CHECK(has_arc(l.path));
+}
+
+TEST_CASE("C-05: KIR'dan kalan iki parça da öznitelikleri taşır")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 20,0");
+    r.run("SÜTUN kimlik=ad tur=metin");
+    r.run("ÖZNİTELİK ad=ad nesne=1 deger=ÇİT");
+    r.run("KIR nesne=1 birinci=8,0 ikinci=12,0");
+    const core::AttrId column = r.doc.attributes().find("ad");
+    std::size_t carrying      = 0;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e)) continue;
+        auto cell = r.doc.attribute(column, e);
+        if (cell.ok() && cell.value().present && cell.value().text == "ÇİT") ++carrying;
+    }
+    CHECK_EQ(carrying, std::size_t{2});
+}
