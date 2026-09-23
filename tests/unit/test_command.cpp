@@ -26,6 +26,7 @@
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
+#include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/text_store.hpp"
 
@@ -4185,6 +4186,198 @@ TEST_CASE("Ofset: sıfır mesafe ve yetersiz nokta gerekçesiyle reddedilir")
     const std::vector<Point2> two{{0, 0}, {1000, 0}};
     auto notARing = offset_ring(two, true, 1000);
     CHECK(!notARing.ok());
+}
+
+// ---- C-03: a parallel is not a buffer ---------------------------------------
+
+TEST_CASE("PARALEL: açık çizginin sol 2 m paraleli açık (0,2)→(10,2) çizgisidir")
+{
+    using namespace kentos::core;
+    // TODOS C-03's acceptance, verbatim: not a closed band, an open line.
+    const std::vector<Point2> run{{0, 0}, {10000, 0}};
+
+    auto left = parallel_run(run, 2000);
+    REQUIRE(left.ok());
+    REQUIRE_EQ(left.value().size(), std::size_t{1});
+    CHECK_FALSE(left.value().front().closed);
+    CHECK_EQ(left.value().front().points, (std::vector<Point2>{{0, 2000}, {10000, 2000}}));
+
+    auto right = parallel_run(run, -2000);
+    REQUIRE(right.ok());
+    REQUIRE_EQ(right.value().size(), std::size_t{1});
+    CHECK_EQ(right.value().front().points, (std::vector<Point2>{{0, -2000}, {10000, -2000}}));
+
+    // REVERSING THE LINE SWAPS THE SIDES, and the parallel runs the way its
+    // source does: the left of a westward line is south.
+    const std::vector<Point2> back{{10000, 0}, {0, 0}};
+    auto flipped = parallel_run(back, 2000);
+    REQUIRE(flipped.ok());
+    REQUIRE_EQ(flipped.value().size(), std::size_t{1});
+    CHECK_EQ(flipped.value().front().points, (std::vector<Point2>{{10000, -2000}, {0, -2000}}));
+}
+
+TEST_CASE("PARALEL: köşeli çizginin içi kesişimde kırpılır, dışı sivri köşeyle döner")
+{
+    using namespace kentos::core;
+    const std::vector<Point2> ell{{0, 0}, {10000, 0}, {10000, 10000}}; // turns left
+
+    auto inner = parallel_run(ell, 2000);
+    REQUIRE(inner.ok());
+    REQUIRE_EQ(inner.value().size(), std::size_t{1});
+    CHECK_EQ(inner.value().front().points,
+             (std::vector<Point2>{{0, 2000}, {8000, 2000}, {8000, 10000}}));
+
+    auto outer = parallel_run(ell, -2000);
+    REQUIRE(outer.ok());
+    REQUIRE_EQ(outer.value().size(), std::size_t{1});
+    CHECK_EQ(outer.value().front().points,
+             (std::vector<Point2>{{0, -2000}, {12000, -2000}, {12000, 10000}}));
+
+    CHECK_FALSE(parallel_run(ell, 0).ok());
+    CHECK_FALSE(parallel_run({{5, 5}, {5, 5}}, 1000).ok()); ///< no direction to be beside
+}
+
+TEST_CASE("PARALEL: delikli alanın ofsetinde delik delik kalır")
+{
+    using namespace kentos::core;
+    // A 20 m parcel with a 10 m courtyard in the middle.
+    const Polygon parcel{{{0, 0}, {20000, 0}, {20000, 20000}, {0, 20000}},
+                         {{{5000, 5000}, {15000, 5000}, {15000, 15000}, {5000, 15000}}}};
+
+    auto grown = offset_faces({parcel}, 1000);
+    REQUIRE(grown.ok());
+    REQUIRE_EQ(grown.value().size(), std::size_t{1}); ///< one face, not two
+    REQUIRE_EQ(grown.value().front().holes.size(), std::size_t{1});
+    CHECK_EQ(std::llabs(ring_area(grown.value().front().exterior)), Mm2{22000} * 22000);
+    CHECK_EQ(std::llabs(ring_area(grown.value().front().holes.front())), Mm2{8000} * 8000);
+
+    auto shrunk = offset_faces({parcel}, -1000);
+    REQUIRE(shrunk.ok());
+    REQUIRE_EQ(shrunk.value().size(), std::size_t{1});
+    REQUIRE_EQ(shrunk.value().front().holes.size(), std::size_t{1});
+    CHECK_EQ(std::llabs(ring_area(shrunk.value().front().exterior)), Mm2{18000} * 18000);
+    CHECK_EQ(std::llabs(ring_area(shrunk.value().front().holes.front())), Mm2{12000} * 12000);
+
+    // Grown by more than half the courtyard, the courtyard is gone — not left
+    // behind as a parcel of its own.
+    auto filled = offset_faces({parcel}, 6000);
+    REQUIRE(filled.ok());
+    REQUIRE_EQ(filled.value().size(), std::size_t{1});
+    CHECK(filled.value().front().holes.empty());
+
+    // And shrunk past half its width, nothing survives.
+    auto gone = offset_faces({parcel}, -3000);
+    REQUIRE(gone.ok());
+    CHECK(gone.value().empty());
+}
+
+TEST_CASE("TAMPON: çizginin iki taraflı tamponu bir alandır, noktanınki bir disk")
+{
+    using namespace kentos::core;
+    // THE OLD OFSET RESULT, now under its own name: 50 m at 2 m, flat ends, is a
+    // 200 m² face.
+    BufferSource line;
+    line.runs.push_back({{0, 0}, {50000, 0}});
+    auto band = buffer(line, 2000, JoinStyle::Miter, EndStyle::Butt);
+    REQUIRE(band.ok());
+    REQUIRE_EQ(band.value().size(), std::size_t{1});
+    CHECK_EQ(std::llabs(ring_area(band.value().front().exterior)), Mm2{50000} * 4000);
+
+    // Round ends add a disc's worth: π·2² m² on top.
+    auto rounded = buffer(line, 2000);
+    REQUIRE(rounded.ok());
+    const double round_m2 =
+        static_cast<double>(std::llabs(ring_area(rounded.value().front().exterior))) / 1e6;
+    CHECK(round_m2 == doctest::Approx(200.0 + 3.14159265 * 4.0).epsilon(0.002));
+
+    BufferSource well;
+    well.points.push_back({1000, 1000});
+    auto disc = buffer(well, 5000);
+    REQUIRE(disc.ok());
+    REQUIRE_EQ(disc.value().size(), std::size_t{1});
+    const double disc_m2 =
+        static_cast<double>(std::llabs(ring_area(disc.value().front().exterior))) / 1e6;
+    CHECK(disc_m2 == doctest::Approx(3.14159265 * 25.0).epsilon(0.002));
+
+    // Two bands that overlap dissolve into one face.
+    BufferSource cross;
+    cross.runs.push_back({{0, 0}, {10000, 0}});
+    cross.runs.push_back({{5000, -5000}, {5000, 5000}});
+    auto joined = buffer(cross, 1000, JoinStyle::Miter, EndStyle::Butt);
+    REQUIRE(joined.ok());
+    CHECK_EQ(joined.value().size(), std::size_t{1});
+
+    CHECK_FALSE(buffer(line, -1000).ok()); ///< a line has no inside to erode
+    CHECK_FALSE(buffer(BufferSource{}, 1000).ok());
+}
+
+TEST_CASE("PARALEL: her tür kendi türünde ya da ölçülmüş bir yaklaşıkla")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());                 // 1
+    REQUIRE(f.bus.execute_line("DAİRE merkez=100,0 cevre=110,0", Origin::Test).ok()); // 2
+    REQUIRE(f.bus.execute_line("ELİPS merkez=200,0 birinci=220,0 ikinci=200,10", Origin::Test)
+                .ok());                                            // 3
+    REQUIRE(f.bus.execute_line("NOKTA 300,0", Origin::Test).ok()); // 4
+    const auto slot = [&f](std::int64_t key) {
+        return f.doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+    };
+
+    // A line: exact, open, one side.
+    auto line = core::entity_parallel(f.doc, slot(1), 2000, core::ParallelSide::Left);
+    REQUIRE(line.ok());
+    CHECK_FALSE(line.value().approximate);
+    REQUIRE_EQ(line.value().pieces.size(), std::size_t{1});
+    CHECK_EQ(line.value().pieces.front().shape, core::ParallelPiece::Shape::Run);
+    CHECK_EQ(line.value().pieces.front().run,
+             (std::vector<core::Point2>{{0, 2000}, {10000, 2000}}));
+    CHECK_FALSE(core::entity_parallel(f.doc, slot(1), 2000, core::ParallelSide::Outside).ok());
+
+    // A circle: a circle, the radius changed, both ways at once.
+    auto ring = core::entity_parallel(f.doc, slot(2), 2000, core::ParallelSide::Both);
+    REQUIRE(ring.ok());
+    REQUIRE_EQ(ring.value().pieces.size(), std::size_t{2});
+    CHECK_EQ(ring.value().pieces[0].shape, core::ParallelPiece::Shape::Circle);
+    CHECK_EQ(ring.value().pieces[0].radius, core::Mm{12000});
+    CHECK_EQ(ring.value().pieces[1].radius, core::Mm{8000});
+    // Past its radius inward, nothing survives, and that is an answer.
+    auto shrunk = core::entity_parallel(f.doc, slot(2), 10000, core::ParallelSide::Inside);
+    REQUIRE(shrunk.ok());
+    CHECK(shrunk.value().pieces.empty());
+
+    // An ellipse: no ellipse is its parallel, so the drawing's parallel, with the
+    // drawing's measured distance from the curve.
+    auto oval = core::entity_parallel(f.doc, slot(3), 1000, core::ParallelSide::Outside);
+    REQUIRE(oval.ok());
+    CHECK(oval.value().approximate);
+    CHECK(oval.value().deviation > 0);
+    CHECK(oval.value().deviation < 20); ///< a 128-gon of a 20 m ellipse is within millimetres
+    REQUIRE_EQ(oval.value().pieces.size(), std::size_t{1});
+    CHECK_EQ(oval.value().pieces.front().shape, core::ParallelPiece::Shape::Face);
+
+    // A point has none, and says what to use instead.
+    auto point = core::entity_parallel(f.doc, slot(4), 1000, core::ParallelSide::Left);
+    REQUIRE_FALSE(point.ok());
+    CHECK(point.error().message.find("TAMPON") != std::string::npos);
+
+    // WHICH SIDE A POINT IS ON, for the click that chooses it.
+    CHECK_EQ(core::parallel_side_at(f.doc, slot(1), {5000, 3000}).value(),
+             core::ParallelSide::Left);
+    CHECK_EQ(core::parallel_side_at(f.doc, slot(1), {5000, -3000}).value(),
+             core::ParallelSide::Right);
+    CHECK_FALSE(core::parallel_side_at(f.doc, slot(1), {5000, 0}).ok()); ///< on the line
+    CHECK_EQ(core::parallel_side_at(f.doc, slot(2), {100000, 1000}).value(),
+             core::ParallelSide::Inside);
+    CHECK_EQ(core::parallel_side_at(f.doc, slot(2), {130000, 0}).value(),
+             core::ParallelSide::Outside);
+
+    // And the preview's bytes go and come back.
+    const core::ParallelPreview sent{{1, 2, 3}, 2500, core::JoinStyle::Round};
+    auto back = core::decode_parallel_preview(core::encode_parallel_preview(sent));
+    REQUIRE(back.ok());
+    CHECK_EQ(back.value().keys, sent.keys);
+    CHECK_EQ(back.value().distance, sent.distance);
+    CHECK_EQ(back.value().join, sent.join);
 }
 
 TEST_CASE("OFSET seçili parseli paralelleştirir ve aslını yerinde bırakır")

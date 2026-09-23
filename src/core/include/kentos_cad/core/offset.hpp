@@ -64,6 +64,32 @@ Result<std::vector<OffsetRing>> offset_ring(const std::vector<Point2>& points, b
                                             Mm distance, JoinStyle join = JoinStyle::Miter,
                                             EndStyle end = EndStyle::Butt);
 
+/// The one-sided PARALLEL of an open run: the curve `distance` beside it — to
+/// its LEFT looking along it when positive, to its right when negative — OPEN
+/// like its source and running the same way (TODOS C-03).
+///
+/// This is what a road edge is to its centre line, and it is NOT what
+/// `offset_ring` returns for an open run: that is the band around the run, a
+/// two-sided BUFFER and a face. `(0,0)→(10,0)` at +2 m is `(0,2)→(10,2)`.
+///
+/// Clipper2 still does the offsetting. The band it computes already has every
+/// corner joined the asked way and every loop of a tight concave turn trimmed
+/// away — the part of a parallel that is hard, and what a hand-rolled "move each
+/// edge and re-intersect" gets wrong. What is done here is only to take the side
+/// of that band the caller asked for: every vertex of the band lies at the
+/// distance from the run on one side of it, the two butt caps join the sides, so
+/// the parallel is the stretch of the band's boundary on the wanted side. GEOS's
+/// `OffsetCurve` is the same selection over its own buffer; linking GEOS for it
+/// would bring a floating-point engine into the answer of the one module whose
+/// answers must be the same bits on every platform (CLAUDE.md 2.4, 2.7, 9).
+///
+/// A parallel may come back in SEVERAL runs — the inward side of a U narrower
+/// than twice the distance breaks in two — and in NONE, when nothing of that
+/// side survives. A run marked `closed` met itself: the source doubled back
+/// onto its own start. Consecutive repeated points of the source are ignored.
+Result<std::vector<OffsetRing>> parallel_run(const std::vector<Point2>& run, Mm distance,
+                                             JoinStyle join = JoinStyle::Miter);
+
 /// One polygon: an exterior ring and the holes inside it.
 ///
 /// The shape every boolean below takes and returns. A ring's winding is not the
@@ -75,6 +101,44 @@ struct Polygon
     std::vector<Point2> exterior;           ///< the outer boundary
     std::vector<std::vector<Point2>> holes; ///< the voids inside it, if any
 };
+
+/// The offset of FACES: every ring moved together, outward for a positive
+/// distance and inward for a negative one, so that a HOLE STAYS A HOLE of the
+/// face it was in — growing the face shrinks its holes, and a hole that shrinks
+/// away is gone rather than left behind as a face of its own.
+///
+/// Offsetting each ring alone, which is what OFSET did, turned a holed parcel's
+/// courtyard into a second parcel. The rings are wound here (exteriors
+/// counter-clockwise, holes clockwise) because that is how Clipper2 tells one
+/// from the other; the caller's winding does not matter.
+///
+/// May return several polygons (shrinking a dumbbell past its waist) or none
+/// (shrinking past half the width). An island inside a hole comes back as a
+/// polygon of its own.
+Result<std::vector<Polygon>> offset_faces(const std::vector<Polygon>& faces, Mm distance,
+                                          JoinStyle join = JoinStyle::Miter);
+
+/// What a two-sided BUFFER is taken of.
+struct BufferSource
+{
+    std::vector<std::vector<Point2>> runs; ///< open runs: the band on both sides
+    std::vector<Point2> points;            ///< single points: a disc each
+    std::vector<Polygon> faces;            ///< faces: grown outward, holes kept
+};
+
+/// The two-sided BUFFER of `source` at `distance`: the GIS operation, a face
+/// covering everything within the distance — a protection band along a stream,
+/// a disc round a well (TODOS C-03, G-10). Everything in `source` is dissolved
+/// into one answer; a caller that wants one buffer per object calls once per
+/// object.
+///
+/// `end` shapes the two ends of an open run; a point is a disc whatever it says,
+/// because a square or flat end has no direction to take at a point. A negative
+/// distance only means something for a face — it erodes it — and is refused for
+/// a source with runs or points in it.
+Result<std::vector<Polygon>> buffer(const BufferSource& source, Mm distance,
+                                    JoinStyle join = JoinStyle::Round,
+                                    EndStyle end   = EndStyle::Round);
 
 /// Which boolean to run.
 enum class BooleanOp : std::uint8_t {

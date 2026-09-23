@@ -26,6 +26,7 @@ add_library(kentos_core STATIC
     src/guide.cpp
     src/layout.cpp
     src/offset.cpp
+    src/parallel.cpp
     src/json.cpp
     src/layer.cpp
     src/pick.cpp

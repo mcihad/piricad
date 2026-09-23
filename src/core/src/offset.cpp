@@ -3,7 +3,10 @@
 
 #include "clipper2/clipper.h"
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
+#include <string>
 #include <utility>
 
 namespace kentos::core {
@@ -98,6 +101,81 @@ Clipper2Lib::Path64 to_path(const std::vector<Point2>& ring)
     for (const Point2& p : ring)
         path.emplace_back(p.x, p.y);
     return path;
+}
+
+std::vector<Point2> from_path(const Clipper2Lib::Path64& path)
+{
+    std::vector<Point2> out;
+    out.reserve(path.size());
+    for (const Clipper2Lib::Point64& p : path)
+        out.push_back(Point2{static_cast<Mm>(p.x), static_cast<Mm>(p.y)});
+    return out;
+}
+
+/// Every polygon of a Clipper2 tree, holes with their exterior, and an island
+/// inside a hole as a polygon of its own — at any depth, which is what a
+/// two-level walk loses.
+void collect_polygons(const Clipper2Lib::PolyPath64& node, std::vector<Polygon>& out)
+{
+    for (const auto& child : node) {
+        if (child->IsHole()) continue;
+        Polygon poly;
+        poly.exterior = from_path(child->Polygon());
+        for (const auto& hole : *child) {
+            if (hole->Polygon().size() >= 3) poly.holes.push_back(from_path(hole->Polygon()));
+            collect_polygons(*hole, out); // the islands inside this hole
+        }
+        if (poly.exterior.size() >= 3) out.push_back(std::move(poly));
+    }
+}
+
+/// The ring wound the way Clipper2 reads an exterior (counter-clockwise) or a
+/// hole (clockwise), whichever way the caller drew it.
+Clipper2Lib::Path64 wound(const std::vector<Point2>& ring, bool exterior)
+{
+    Clipper2Lib::Path64 path = to_path(ring);
+    const bool ccw           = Clipper2Lib::Area(path) > 0.0;
+    if (ccw != exterior) std::reverse(path.begin(), path.end());
+    return path;
+}
+
+Clipper2Lib::Paths64 wound_faces(const std::vector<Polygon>& faces)
+{
+    Clipper2Lib::Paths64 paths;
+    for (const Polygon& face : faces) {
+        if (face.exterior.size() < 3) continue;
+        paths.push_back(wound(face.exterior, true));
+        for (const std::vector<Point2>& hole : face.holes)
+            if (hole.size() >= 3) paths.push_back(wound(hole, false));
+    }
+    return paths;
+}
+
+/// Twice the signed area of the triangle `a b p`, exactly: positive when `p` is
+/// to the left of `a`→`b`.
+Int128 cross(Point2 a, Point2 b, Point2 p) noexcept
+{
+    return static_cast<Int128>(b.x - a.x) * (p.y - a.y) -
+           static_cast<Int128>(b.y - a.y) * (p.x - a.x);
+}
+
+/// Squared distance from `p` to the segment `a`→`b`, and where along the run
+/// the nearest point falls (`along`, millimetres from the run's start given the
+/// segment starts at `start`).
+double segment_distance2(Point2 a, Point2 b, Point2 p, double start, double& along) noexcept
+{
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
+    const double len = dx * dx + dy * dy;
+    double t         = 0.0;
+    if (len > 0.0)
+        t = std::clamp((static_cast<double>(p.x - a.x) * dx + static_cast<double>(p.y - a.y) * dy) /
+                           len,
+                       0.0, 1.0);
+    const double qx = static_cast<double>(a.x) + t * dx - static_cast<double>(p.x);
+    const double qy = static_cast<double>(a.y) + t * dy - static_cast<double>(p.y);
+    along           = start + t * std::sqrt(len);
+    return qx * qx + qy * qy;
 }
 
 void push_polygons(const std::vector<Polygon>& in, Clipper2Lib::Paths64& out)
@@ -237,6 +315,214 @@ Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject
         if (poly.exterior.size() >= 3) out.push_back(std::move(poly));
     }
 
+    return out;
+}
+
+Result<std::vector<OffsetRing>> parallel_run(const std::vector<Point2>& run, Mm distance,
+                                             JoinStyle join)
+{
+    if (distance == 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Paralel mesafesi sıfır olamaz. Kaç metre yana istediğinizi yazın.");
+
+    // The source without consecutive repeats: a repeated point has no direction,
+    // and a zero-length edge would leave its side to be guessed.
+    std::vector<Point2> src;
+    src.reserve(run.size());
+    for (const Point2& p : run)
+        if (src.empty() || !(src.back() == p)) src.push_back(p);
+    if (src.size() < 2)
+        return err(ErrorCode::InvalidArgument,
+                   "Paralel için çizginin en az iki ayrı noktası olmalı. Verilen: " +
+                       std::to_string(src.size()));
+
+    // THE BAND, both sides, butt-ended: its caps are exactly the two ends of each
+    // side, which is what lets the sides be told apart below.
+    Clipper2Lib::ClipperOffset offsetter;
+    offsetter.MiterLimit(2.0); // see `offset_ring`
+    offsetter.AddPath(to_path(src), join_of(join), Clipper2Lib::EndType::Butt);
+    Clipper2Lib::PolyTree64 tree;
+    offsetter.Execute(static_cast<double>(distance < 0 ? -distance : distance), tree);
+
+    // Every ring of the band, outer and hole alike: a run that nearly closes on
+    // itself leaves one of its sides as the band's hole.
+    std::vector<const Clipper2Lib::Path64*> rings;
+    const auto gather = [&rings](const Clipper2Lib::PolyPath64& node, const auto& self) -> void {
+        for (const auto& child : node) {
+            rings.push_back(&child->Polygon());
+            self(*child, self);
+        }
+    };
+    gather(tree, gather);
+
+    // Where each edge of the source starts, measured along it, so a piece of the
+    // parallel can be turned to run the way its source runs.
+    std::vector<double> starts(src.size(), 0.0);
+    for (std::size_t s = 1; s < src.size(); ++s) {
+        const double dx = static_cast<double>(src[s].x - src[s - 1].x);
+        const double dy = static_cast<double>(src[s].y - src[s - 1].y);
+        starts[s]       = starts[s - 1] + std::sqrt(dx * dx + dy * dy);
+    }
+
+    const bool left = distance > 0;
+    std::vector<OffsetRing> out;
+    for (const Clipper2Lib::Path64* ring : rings) {
+        const std::size_t n = ring->size();
+        if (n < 2) continue;
+
+        // WHICH SIDE EACH VERTEX IS ON: the side of the source edge nearest to it,
+        // by the exact sign of a cross product. A band vertex is never ON the
+        // source (it is the distance away), so the sign is never zero for one.
+        std::vector<char> on(n, 0);
+        std::vector<double> along(n, 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            const Point2 v{static_cast<Mm>((*ring)[i].x), static_cast<Mm>((*ring)[i].y)};
+            double best      = std::numeric_limits<double>::max();
+            std::size_t near = 0;
+            for (std::size_t s = 0; s + 1 < src.size(); ++s) {
+                double at        = 0.0;
+                const double gap = segment_distance2(src[s], src[s + 1], v, starts[s], at);
+                if (gap < best) {
+                    best     = gap;
+                    near     = s;
+                    along[i] = at;
+                }
+            }
+            const Int128 side = cross(src[near], src[near + 1], v);
+            on[i]             = left ? side > 0 : side < 0;
+        }
+
+        // The whole ring on the wanted side: a parallel that met itself.
+        if (std::all_of(on.begin(), on.end(), [](char c) { return c != 0; })) {
+            OffsetRing closed;
+            closed.closed = true;
+            closed.points = from_path(*ring);
+            out.push_back(std::move(closed));
+            continue;
+        }
+
+        // The stretches on the wanted side, read from just after a vertex that is
+        // not, so no stretch is cut in two where the ring's numbering wraps.
+        std::size_t seam = 0;
+        while (on[seam] != 0)
+            ++seam;
+        std::vector<std::size_t> stretch;
+        const auto flush = [&] {
+            if (stretch.size() >= 2) {
+                OffsetRing piece;
+                piece.points.reserve(stretch.size());
+                for (std::size_t i : stretch)
+                    piece.points.push_back(
+                        Point2{static_cast<Mm>((*ring)[i].x), static_cast<Mm>((*ring)[i].y)});
+                // THE SOURCE'S DIRECTION. Clipper2 winds a face one way, so one
+                // side of the band always comes out running backwards.
+                if (along[stretch.front()] > along[stretch.back()])
+                    std::reverse(piece.points.begin(), piece.points.end());
+                out.push_back(std::move(piece));
+            }
+            stretch.clear();
+        };
+        for (std::size_t k = 1; k <= n; ++k) {
+            const std::size_t i = (seam + k) % n;
+            if (on[i] != 0)
+                stretch.push_back(i);
+            else
+                flush();
+        }
+        flush();
+    }
+
+    // A broken parallel reads from the source's start to its end.
+    std::stable_sort(out.begin(), out.end(), [&](const OffsetRing& a, const OffsetRing& b) {
+        const auto first_along = [&](const OffsetRing& r) {
+            double best = std::numeric_limits<double>::max();
+            double at   = 0.0;
+            for (std::size_t s = 0; s + 1 < src.size(); ++s) {
+                double here = 0.0;
+                const double gap =
+                    segment_distance2(src[s], src[s + 1], r.points.front(), starts[s], here);
+                if (gap < best) {
+                    best = gap;
+                    at   = here;
+                }
+            }
+            return at;
+        };
+        return first_along(a) < first_along(b);
+    });
+    return out;
+}
+
+Result<std::vector<Polygon>> offset_faces(const std::vector<Polygon>& faces, Mm distance,
+                                          JoinStyle join)
+{
+    if (distance == 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Ofset mesafesi sıfır olamaz. Kaç metre paralel istediğinizi yazın.");
+
+    const Clipper2Lib::Paths64 paths = wound_faces(faces);
+    if (paths.empty())
+        return err(ErrorCode::InvalidArgument,
+                   "Ofseti alınacak kapalı bir halka yok: bir alan en az üç köşe ister.");
+
+    // ONE GROUP, every ring of every face in it: that is what makes Clipper2 move
+    // a hole against its exterior instead of treating it as a face of its own.
+    Clipper2Lib::ClipperOffset offsetter;
+    offsetter.MiterLimit(2.0);
+    offsetter.AddPaths(paths, join_of(join), Clipper2Lib::EndType::Polygon);
+    Clipper2Lib::PolyTree64 tree;
+    offsetter.Execute(static_cast<double>(distance), tree);
+
+    std::vector<Polygon> out;
+    collect_polygons(tree, out);
+    return out;
+}
+
+Result<std::vector<Polygon>> buffer(const BufferSource& source, Mm distance, JoinStyle join,
+                                    EndStyle end)
+{
+    if (distance == 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Tampon mesafesi sıfır olamaz. Kaç metre genişlik istediğinizi yazın.");
+    if (distance < 0 && (!source.runs.empty() || !source.points.empty()))
+        return err(ErrorCode::InvalidArgument,
+                   "Eksi tampon yalnız alanlar içindir: bir çizginin ya da noktanın içi yoktur.");
+
+    Clipper2Lib::ClipperOffset offsetter;
+    offsetter.MiterLimit(2.0);
+    bool any = false;
+
+    for (const std::vector<Point2>& run : source.runs) {
+        Clipper2Lib::Path64 path;
+        for (const Point2& p : run)
+            if (path.empty() || path.back().x != p.x || path.back().y != p.y)
+                path.emplace_back(p.x, p.y);
+        if (path.empty()) continue;
+        // A run that is one point after its repeats are gone is a point.
+        offsetter.AddPath(path, path.size() == 1 ? Clipper2Lib::JoinType::Round : join_of(join),
+                          path.size() == 1 ? Clipper2Lib::EndType::Round : end_of(end, false));
+        any = true;
+    }
+    for (const Point2& p : source.points) {
+        // A DISC, whatever `end` says: a flat or square end has no direction to
+        // face at a point.
+        offsetter.AddPath(Clipper2Lib::Path64{Clipper2Lib::Point64(p.x, p.y)},
+                          Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Round);
+        any = true;
+    }
+    if (const Clipper2Lib::Paths64 faces = wound_faces(source.faces); !faces.empty()) {
+        offsetter.AddPaths(faces, join_of(join), Clipper2Lib::EndType::Polygon);
+        any = true;
+    }
+    if (!any)
+        return err(ErrorCode::InvalidArgument,
+                   "Tamponu alınacak bir şey yok: çizgi, nokta ya da alan verin.");
+
+    Clipper2Lib::PolyTree64 tree;
+    offsetter.Execute(static_cast<double>(distance), tree);
+
+    std::vector<Polygon> out;
+    collect_polygons(tree, out);
     return out;
 }
 
