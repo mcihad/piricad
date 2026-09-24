@@ -9,6 +9,7 @@
 // include it.
 #pragma once
 
+#include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
@@ -98,6 +99,55 @@ struct Pt
 /// False when the knot vector does not fit the degree and control count.
 bool nurbs_points(int degree, const std::vector<double>& knots, const std::vector<Pt>& controls,
                   const std::vector<double>& weights, int samples, std::vector<Pt>& out);
+
+// -------------------------------------------------------------- patterns ----
+//
+// A HATCH'S PATTERN TRAVELS AS THE LINES IT DRAWS, not as a name alone. A file
+// that says "ANSI31" and no more leaves the spacing to whichever pattern file
+// the reading program has, in whichever unit it thinks it is in — a metric
+// drawing opened with the imperial acad.pat comes out 25,4 times too sparse,
+// and a drawing in metres read as millimetres a thousand times too dense. So
+// the lines go with it, as DXF lets them (group 78 and what follows), and the
+// scale in group 41 is stated against the metric pattern file this program's
+// catalogue is: its numbers, read as drawing units, times the scale are the
+// spacing on the ground.
+
+/// One line of a pattern as a DXF HATCH carries it after group 78: in drawing
+/// units, turned and scaled — the line as drawn, which is what another program
+/// draws the pattern from.
+struct PatternLine
+{
+    double angle_deg{0.0};      ///< 53: the lines' direction, the hatch's turn included
+    double base_x{0.0};         ///< 43: a point the first line passes through
+    double base_y{0.0};         ///< 44
+    double offset_x{0.0};       ///< 45: from one line to the next, in the drawing's axes
+    double offset_y{0.0};       ///< 46
+    std::vector<double> dashes; ///< 49 each, 79 of them: ink positive, gap negative
+};
+
+/// Group 41 for `def` in `unit`: the scale against the metric pattern file, or
+/// — DXF's own rule for a pattern of the user's own (type 0) — the spacing.
+double dxf_pattern_scale(const core::HatchDef& def, core::DrawingUnit unit) noexcept;
+
+/// The definition lines `def` draws with, in `unit`: each family turned by the
+/// hatch's angle and scaled, its base point set on the hatch's origin, and again
+/// a quarter turn on when the hatch is doubled. Empty for a solid, and for a
+/// pattern known only by its name.
+std::vector<PatternLine> pattern_lines(const core::HatchDef& def, core::DrawingUnit unit);
+
+/// Group 41 back onto `def`, whose `pattern_type` and `angle_udeg` are read:
+/// the scale of a catalogue pattern, or the one family of a user pattern.
+void apply_dxf_pattern_scale(core::HatchDef& def, double group41, core::DrawingUnit unit);
+
+/// `def.families` and `def.origin` from the file's own definition lines, at
+/// `def.scale` and `def.angle_udeg`. `known` — the catalogue's families for the
+/// pattern's name, or a user pattern's one — decides the origin when the file's
+/// lines are that pattern, and is kept as it is when they match it to the
+/// rounding of a text file. A doubled hatch's second half, the same lines a
+/// quarter turn on, is folded back into `double_lines`. False, `def` untouched,
+/// when the lines are not a pattern this program can hold.
+bool families_from_lines(core::HatchDef& def, std::span<const PatternLine> lines,
+                         core::DrawingUnit unit, std::span<const core::HatchDef::Family> known);
 
 // ------------------------------------------------------------------ text ----
 

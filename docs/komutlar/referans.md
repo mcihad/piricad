@@ -962,7 +962,7 @@ Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tara
 | `bagla` | bool | isteğe bağlı | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
 | `aralik` | number | isteğe bağlı | Kendi desen çizgilerinizin aralığı, metre; desen= yerine |
 | `cift` | bool | isteğe bağlı | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
-| `baslangic` | point_list | isteğe bağlı | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi |
+| `baslangic` | point_list | isteğe bağlı | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) |
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
 
@@ -6406,7 +6406,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "maxItems": 1
             }
           ],
-          "description": "Desenin geçtiği nokta; verilmezse sınırın ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "varsayimlar": {
           "type": "array",

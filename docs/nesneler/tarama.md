@@ -45,12 +45,27 @@ Desen çizgilerine yakalanılmaz.
 
 ## Dosya ve dış biçimler
 
-Proje dosyasında tür sütunu `8` (`core.hatch`). DXF `HATCH` sınırı, adı, açısı ve
-ölçeğiyle gelir; aileler katalogdan adla bulunur, katalogda olmayan bir desenin sınırı
-ve adı korunur ama deseni çizilmez (`düşürme:` satırı söyler). Yazarken sınır kenar
-döngüsü olarak, desen adı, açısı ve ölçeğiyle `HATCH` olur; desen tanım çizgileri
-yazılmaz, AutoCAD deseni kendi kataloğundan adla bulur. GeoPackage'a çokgen olarak
-yazılır.
+Proje dosyasında tür sütunu `8` (`core.hatch`). GeoPackage'a çokgen olarak yazılır.
+
+**DXF'te desen çizdiği çizgilerle gider.** Yazarken sınır kenar döngüsü olarak, desen
+adı, açısı, ölçeği ve **desen tanım çizgileriyle** (grup 78 ve ardından: açı, geçtiği
+nokta, aralık, kesik dizisi — çizimin biriminde, döndürülmüş ve ölçeklenmiş) `HATCH`
+olur. Ölçek (grup 41) çizimin birimine göre yazılır: katalogdaki sayılar metrik desen
+dosyasının (acadiso.pat) sayılarıdır, çizim birimi olarak okunup ölçekle çarpılınca
+zemindeki aralığı verir. Kendi deseninizde grup 41 aralığın kendisidir (DXF'in
+kullanıcı deseni kuralı). Böylece başka bir program deseni kendi desen dosyasına
+bakmadan, bu programın ekranda ve kâğıtta çizdiği aralıkla ve aynı başlangıçtan çizer.
+
+Okurken önce ad, açı ve birimine göre ölçek alınır, aileler katalogdan adla bulunur;
+dosya desenin kendi çizgilerini taşıyorsa bunlar geçer: aralık, açı ve başlangıç
+dosyadaki gibidir ve **katalogda olmayan bir desen de çizilir** (transkriptte "N
+taramanın deseni dosyadaki kendi çizgileriyle okundu" denir). Çizgileri olmayan ya
+da grup 78'in söylediğini tutmayan bir kayıtta katalog geçer; katalogda da yoksa sınır
+ve ad korunur, desen çizilmez (`düşürme:` satırı söyler). İkili (binary) DXF'te desen
+çizgileri okunmaz, katalog geçer.
+
+Aralık zeminde milimetreye yuvarlanır, modelin her uzunluğu gibi: 1/500'de bir çizgi
+aralığı kâğıtta 1/500 milimetreden daha az sapar.
 
 Bağlar proje dosyasında kendi bloğunda (`0x008F`, bağ başına 24 bayt: taramanın ve
 sınır nesnesinin anahtarı, kopukluk) durur; blok yalnız bağlı bir tarama varsa yazılır.

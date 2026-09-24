@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — DXF'te tarama deseni çizdiği çizgilerle; ekran, PDF ve DXF aynı aralıkta (C-11 tamam)
+
+- **Desen tanım çizgileri DXF'e yazılır ve DXF'ten okunur.** `HATCH` kaydında grup
+  78'den sonra desenin her çizgisi — açı, geçtiği nokta, aralık, kesik dizisi — çizimin
+  biriminde, döndürülmüş ve ölçeklenmiş olarak durur; başka bir program deseni kendi
+  desen dosyasına bakmadan aynı aralıkla ve aynı başlangıçtan çizer. Okurken dosyanın
+  kendi çizgileri geçer: katalogda olmayan bir desen de çizilir, başlangıç dosyadaki
+  gibidir; çizgileri grup 78'in söylediğini tutmayan kayıtta katalog geçer.
+- **Düzeltildi: DXF'te desen ölçeği birimsizdi.** Grup 41'e programın içindeki çarpan
+  yazılıyor ve öyle okunuyordu: metre çizimde 1/1000 ölçekli `ANSI31` dosyaya 1000 diye
+  gidiyor, başka programda üç kilometre aralıkla açılıyordu; metrik bir dosyanın 1
+  ölçekli deseni de 3 mm aralıkla, zeminde toz gibi okunuyordu. Artık ölçek çizimin
+  birimine göre, metrik desen dosyasına (acadiso.pat) karşı yazılır ve okunur; kendi
+  deseninizde grup 41 aralığın kendisidir (DXF'in kullanıcı deseni kuralı). 1/500'de
+  `ANSI31` kâğıtta 3,175 mm, DXF'te 1,5875 m aralıklıdır.
+- **Düzeltildi: taramanın deseni varsayılan olarak sınırın ilk köşesinden geçiyordu**
+  (2. aşamanın satırı çizimin başlangıcı diyordu). Artık AutoCAD'deki gibi çizimin
+  başlangıç noktasından (0,0) geçer: ayrı ayrı taranan komşu parseller ortak
+  kenarlarında kesintisiz birleşir, aynı desenli binlerce tarama tek geçişte çizilir —
+  400 taramalı sahnede çizim çağrısı 141'den 28'e indi (render.md R7 bütçesi 100).
+- **Yoğun tarama ölçüldü:** 400 taranmış parsel ekranın tamamındayken kare ortancası
+  0,1 ms, 28 çizim çağrısı; sahne `tests/bench/sahne/yogun-tarama.json`, kapı
+  `scripts/ci-gate-butce.sh`.
+
 ### Eklendi — tarama deseni yere bağlı; kendi aralığınız, çapraz tarama, TARAMADÜZENLE (C-11, 2. aşama)
 
 - **Desen yere bağlıdır.** Bir taramanın çizgileri çizimin başlangıç noktasından (ya da

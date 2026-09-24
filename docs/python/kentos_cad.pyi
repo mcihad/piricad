@@ -1118,7 +1118,7 @@ def hatch(
         associate — Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet
         spacing — Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m]
         double — Desen bir de dik açıyla çizilsin mi (çapraz tarama)
-        origin — Desenin geçtiği nokta; verilmezse sınırın ilk köşesi [mm, Sağa (Y) önce]
+        origin — Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) [mm, Sağa (Y) önce]
     """
 
 def hatch_edit(

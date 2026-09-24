@@ -22,6 +22,7 @@
 
 #include "dxf_common.hpp"
 #include "dxf_units.hpp"
+#include "mapped_file.hpp"
 #include "prj_sidecar.hpp"
 
 #include <algorithm>
@@ -36,6 +37,8 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -213,6 +216,149 @@ struct DimStyleFigures
 };
 
 constexpr int kStopStride = 4096;
+
+// ------------------------------------------------------- pattern lines ----
+//
+// libdxfrw hands a HATCH's boundary over and drops the definition lines that
+// follow its group 78 — the lines the pattern is drawn with in that file, at
+// that scale, from that origin. Without them a pattern the catalogue does not
+// know draws as nothing, and one it does know draws from the catalogue's
+// numbers rather than the file's. So they are read here, straight from the
+// text, for the hatches that announced some.
+
+/// One HATCH record's definition lines, with its handle (0 when it has none).
+struct HatchRecordLines
+{
+    std::uint32_t handle{0};
+    std::vector<dxf::PatternLine> lines;
+    bool bad{false}; ///< the lines did not add up to what group 78 announced
+};
+
+/// Bounds on what one hatch may announce: no pattern file has patterns of this
+/// size, and a hostile file must not be able to allocate past them.
+constexpr std::size_t kMaxPatternLines  = 4096;
+constexpr std::size_t kMaxPatternDashes = 256;
+
+/// The next line of `text` from `at`, its end-of-line dropped; `at` moves past it.
+std::string_view next_line(std::string_view text, std::size_t& at) noexcept
+{
+    if (at >= text.size()) return {};
+    const std::size_t end = std::min(text.find('\n', at), text.size());
+    std::string_view line(text.data() + at, end - at);
+    at = end == text.size() ? end : end + 1;
+    while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+        line.remove_suffix(1);
+    while (!line.empty() && (line.front() == ' ' || line.front() == '\t'))
+        line.remove_prefix(1);
+    return line;
+}
+
+template<class T> bool number_in(std::string_view text, T& out, int base = 10) noexcept
+{
+    const char* b = text.data();
+    const char* e = text.data() + text.size();
+    if constexpr (std::is_floating_point_v<T>) {
+        (void)base;
+        const auto r = std::from_chars(b, e, out);
+        return r.ec == std::errc{} && r.ptr == e;
+    } else {
+        const auto r = std::from_chars(b, e, out, base);
+        return r.ec == std::errc{} && r.ptr == e;
+    }
+}
+
+/// Every HATCH record of an ASCII DXF, in file order, with the lines each one
+/// carries after group 78. A binary DXF gives nothing: the catalogue stands in.
+std::vector<HatchRecordLines> scan_hatch_lines(std::string_view text)
+{
+    std::vector<HatchRecordLines> out;
+    if (text.starts_with("AutoCAD Binary DXF")) return out;
+    std::size_t from = 0;
+    while (true) {
+        // A record starts where a `0` group names it: the line before "HATCH"
+        // is its group code, and a code line is never a value line.
+        const std::size_t hit = text.find("HATCH", from);
+        if (hit == std::string_view::npos) break;
+        from                         = hit + 5;
+        const std::size_t line_start = text.rfind('\n', hit == 0 ? 0 : hit - 1);
+        const std::size_t begin      = line_start == std::string_view::npos ? 0 : line_start + 1;
+        std::size_t after            = begin;
+        if (next_line(text, after) != "HATCH") continue;
+        if (begin < 2) continue;
+        const std::size_t code_start = text.rfind('\n', begin - 2);
+        std::size_t at               = code_start == std::string_view::npos ? 0 : code_start + 1;
+        if (next_line(text, at) != "0") continue;
+
+        HatchRecordLines record;
+        std::size_t announced = 0; // group 78: how many lines follow
+        std::size_t dashes    = 0; // group 79 of the line being read
+        bool reading          = false;
+        // A line is whole when it holds the dashes its group 79 announced.
+        const auto whole = [&record, &dashes] {
+            return record.lines.empty() || record.lines.back().dashes.size() == dashes;
+        };
+        at = after;
+        while (at < text.size() && !record.bad) {
+            const std::string_view code_text = next_line(text, at);
+            const std::string_view value     = next_line(text, at);
+            int code                         = -1;
+            if (!number_in(code_text, code)) {
+                record.bad = true;
+                break;
+            }
+            if (code == 0) break;
+            if (code == 5 && record.handle == 0) {
+                (void)number_in(value, record.handle, 16);
+                continue;
+            }
+            if (code == 78) {
+                int n      = -1;
+                record.bad = !number_in(value, n) || n < 0 || std::cmp_greater(n, kMaxPatternLines);
+                if (record.bad) break;
+                announced = static_cast<std::size_t>(n);
+                record.lines.reserve(announced);
+                reading = announced > 0;
+                continue;
+            }
+            if (!reading) continue;
+            if (code == 53) {
+                record.bad = !whole() || record.lines.size() == announced;
+                if (record.bad) break;
+                record.lines.emplace_back();
+                dashes     = 0;
+                record.bad = !number_in(value, record.lines.back().angle_deg);
+                continue;
+            }
+            dxf::PatternLine* line = record.lines.empty() ? nullptr : &record.lines.back();
+            double v               = 0.0;
+            int n                  = -1;
+            switch (code) {
+            case 43: record.bad = line == nullptr || !number_in(value, line->base_x); break;
+            case 44: record.bad = line == nullptr || !number_in(value, line->base_y); break;
+            case 45: record.bad = line == nullptr || !number_in(value, line->offset_x); break;
+            case 46: record.bad = line == nullptr || !number_in(value, line->offset_y); break;
+            case 79:
+                record.bad = line == nullptr || !number_in(value, n) || n < 0 ||
+                             std::cmp_greater(n, kMaxPatternDashes);
+                if (!record.bad) dashes = static_cast<std::size_t>(n);
+                break;
+            case 49:
+                record.bad =
+                    line == nullptr || line->dashes.size() >= dashes || !number_in(value, v);
+                if (!record.bad) line->dashes.push_back(v);
+                break;
+            default:
+                // The lines are over: the pixel size, the seed points, a gradient.
+                reading = false;
+                break;
+            }
+        }
+        if (record.lines.size() != announced || !whole()) record.bad = true;
+        if (record.bad) record.lines.clear();
+        out.push_back(std::move(record));
+    }
+    return out;
+}
 
 /// The receiver of everything libdxfrw parses.
 class DxfSink final : public DRW_Interface
@@ -687,10 +833,15 @@ public:
     void addHatch(const DRW_Hatch* data) override
     {
         if (data == nullptr) return;
-        defer_or_emit(*data, [this](const DRW_Hatch& e, const Xform& x, const Inherit& in, int) {
-            if (!begin(e, "HATCH", in)) return;
-            emit_hatch(e, x, in);
-        });
+        // Counted before anything is skipped: the n-th HATCH handed over is the
+        // n-th HATCH record of the file, which is how a hatch with no handle
+        // finds its pattern lines.
+        const std::size_t ordinal = hatches_seen_++;
+        defer_or_emit(*data,
+                      [this, ordinal](const DRW_Hatch& e, const Xform& x, const Inherit& in, int) {
+                          if (!begin(e, "HATCH", in)) return;
+                          emit_hatch(e, x, in, ordinal);
+                      });
     }
 
     void addViewport(const DRW_Viewport& data) override
@@ -1667,7 +1818,7 @@ private:
         finish_entity(e, type, made.value(), {pz}, false);
     }
 
-    void emit_hatch(const DRW_Hatch& e, const Xform& x, const Inherit& in)
+    void emit_hatch(const DRW_Hatch& e, const Xform& x, const Inherit& in, std::size_t ordinal)
     {
         struct Loop
         {
@@ -1779,24 +1930,29 @@ private:
                 loops[i].pts, i == 0 ? core::RingRole::Exterior : core::RingRole::Interior, 0});
 
         // THE HATCH AS A HATCH (core/hatch.hpp): the loops are its rings, the
-        // pattern its payload — name, angle, scale as the file states them, the
-        // line families from the pattern catalogue by name, since the library
-        // does not hand the file's own definition lines over.
+        // pattern its payload — name, angle and the scale in this file's unit
+        // (dxf_common.hpp), the line families from the pattern catalogue by
+        // name; the file's own definition lines, when it has them, replace
+        // those once the whole file has been read (`read_pattern_lines`).
         core::HatchDef def;
         def.solid        = e.solid != 0;
-        def.name         = e.name.empty() ? std::string(def.solid ? "SOLID" : "ANSI31") : e.name;
         def.double_lines = e.doubleflag != 0;
         def.associative  = e.associative != 0;
         def.style        = static_cast<std::uint16_t>(std::clamp(e.hstyle, 0, 2));
         def.pattern_type = static_cast<std::uint16_t>(std::clamp(e.hpattern, 0, 2));
-        def.angle_udeg   = dxf::udeg_from_degrees(e.angle);
-        def.scale        = ratio_of(e.scale > 0.0 ? e.scale : 1.0);
-        def.origin       = to_mm(dxf::Pt{e.basePoint.x, e.basePoint.y});
+        def.name         = e.name.empty() && def.solid ? std::string("SOLID") : e.name;
+        if (def.name.empty() && def.pattern_type != 0) def.name = "ANSI31";
+        def.angle_udeg = dxf::udeg_from_degrees(e.angle);
+        def.origin     = to_mm(dxf::Pt{e.basePoint.x, e.basePoint.y});
+        bool unknown   = false;
         if (!def.solid) {
-            if (const command::HatchPattern* p = patterns().find(def.name); p != nullptr)
-                def.families = p->families;
-            else
-                ++hatch_unknown_;
+            dxf::apply_dxf_pattern_scale(def, e.scale, unit_);
+            if (def.pattern_type != 0) {
+                if (const command::HatchPattern* p = patterns().find(def.name); p != nullptr)
+                    def.families = p->families;
+                else
+                    unknown = true;
+            }
         }
 
         auto made = tx_.add_kind(layer_for(e, in), core::kHatchKind, rings, core::encode_hatch(def),
@@ -1824,8 +1980,60 @@ private:
             tx_.intern_symbol(command::hatch_symbol(def, 0xFF000000u | rgb));
         if (auto st = tx_.set_entity_style(id, style); !st) fail(st.error());
         finish_entity(e, "HATCH", id, {e.basePoint.z}, stroked);
+        if (!def.solid && e.deflines > 0)
+            patterned_.push_back(Patterned{id, static_cast<std::uint32_t>(e.handle), ordinal,
+                                           std::move(def), 0xFF000000u | rgb, unknown});
+        else if (unknown)
+            ++hatch_unknown_;
     }
 
+public:
+    /// The definition lines of the hatches that announced some, read from the
+    /// file itself once libdxfrw is done with it: each patterned hatch then
+    /// draws with the lines the file draws it with — spacing, angle and origin
+    /// — and a pattern the catalogue does not know draws at all.
+    core::Status read_pattern_lines(const std::string& path)
+    {
+        if (patterned_.empty()) return core::ok();
+        std::vector<HatchRecordLines> records;
+        if (auto mapped = MappedFile::open(path); mapped) {
+            const auto bytes = mapped.value().bytes();
+            records          = scan_hatch_lines(
+                std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
+        }
+        std::map<std::uint32_t, std::size_t> by_handle;
+        for (std::size_t i = 0; i < records.size(); ++i)
+            if (records[i].handle != 0) by_handle.emplace(records[i].handle, i);
+        // By order only when the file and the library agree on how many there
+        // are: a record the library dropped would shift every one after it.
+        const bool by_order = records.size() == hatches_seen_;
+
+        std::uint64_t from_file = 0;
+        for (Patterned& p : patterned_) {
+            const HatchRecordLines* record = nullptr;
+            if (const auto at = by_handle.find(p.handle); p.handle != 0 && at != by_handle.end())
+                record = &records[at->second];
+            else if (by_order && p.ordinal < records.size())
+                record = &records[p.ordinal];
+            const std::vector<core::HatchDef::Family> known = p.def.families;
+            if (record == nullptr ||
+                !dxf::families_from_lines(p.def, record->lines, unit_, known)) {
+                if (p.unknown) ++hatch_unknown_;
+                continue;
+            }
+            ++from_file;
+            if (auto st = tx_.set_kind_payload(p.id, core::encode_hatch(p.def)); !st) return st;
+            const core::StyleId style = tx_.intern_symbol(command::hatch_symbol(p.def, p.ink));
+            if (auto st = tx_.set_entity_style(p.id, style); !st) return st;
+        }
+        if (from_file != 0)
+            note(Severity::Info, std::to_string(from_file) +
+                                     " taramanın deseni dosyadaki kendi çizgileriyle okundu "
+                                     "(aralık, açı ve başlangıç dosyadaki gibi).");
+        return core::ok();
+    }
+
+private:
     /// The pattern catalogue, loaded on first use from its default place.
     const command::HatchPatternCatalog& patterns()
     {
@@ -1889,6 +2097,20 @@ private:
     bool skipping_block_{false};             ///< inside an anonymous block
     command::HatchPatternCatalog patterns_;
     bool patterns_loaded_{false};
+
+    /// A hatch whose file record announced definition lines, until they are read.
+    struct Patterned
+    {
+        command::EntityId id;
+        std::uint32_t handle{0}; ///< group 5, 0 when the file gives none
+        std::size_t ordinal{0};  ///< which HATCH of the file it is
+        core::HatchDef def;      ///< as far as the library read it
+        std::uint32_t ink{0};    ///< the colour its symbol draws in
+        bool unknown{false};     ///< the catalogue does not know its name
+    };
+
+    std::vector<Patterned> patterned_;
+    std::size_t hatches_seen_{0};
 
     std::uint64_t seen_{0}, skipped_{0}, paper_space_{0}, ltypes_{0};
     std::uint64_t blocks_read_{0}, refs_read_{0}, spline_fit_only_{0}, hatch_unknown_{0},
@@ -1961,6 +2183,7 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
                           std::to_string(static_cast<int>(reader.getError())) +
                           "). Dosya bozuk ya da bu bir DXF değil.");
 
+    if (const auto st = sink.read_pattern_lines(path); !st) co_return st.error();
     if (auto st = sink.conclude(); !st) co_return st.error();
     sink.report().version = dxf::acad_name(reader.getVersion());
     co_return std::move(sink.report());

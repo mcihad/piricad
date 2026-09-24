@@ -495,3 +495,38 @@ TEST_CASE("TARAMADÜZENLE: sınır nesnesini göstermek ona bağlı taramayı d�
     REQUIRE(def.ok());
     CHECK_EQ(def.value().name, std::string("ANSI37"));
 }
+
+TEST_CASE("TARAMA: kâğıtta desen, paftasının ölçeğinde kendi aralığındadır — PDF'in çizdiği "
+          "aralık (TODOS C-11)")
+{
+    // The sheet the PDF is painted from (app/print_service.cpp): an A4 at 1/500
+    // and 300 dpi, the window fitted to the page. ANSI31 at olcek=500 is 3,175 mm
+    // apart on that paper — the pattern's own spacing — and 1,5875 m on the
+    // ground, which is what the DXF carries (test_io.cpp "tarama deseni çizim
+    // biriminde…"). The model holds the ground to the millimetre, so the paper
+    // is exact to 1/500 of one.
+    Rig r;
+    r.run("ALAN 0,0 140,0 140,100 0,100");                   // 1
+    r.run("TARAMA nesneler=1 desen=ANSI31 olcek=500 aci=0"); // 2
+    constexpr double kDpi        = 300.0;
+    constexpr double kPxPerPaper = kDpi / 25.4;
+    render::ViewTransform view;
+    view.set_viewport(static_cast<int>(std::lround(297.0 * kPxPerPaper)),
+                      static_cast<int>(std::lround(210.0 * kPxPerPaper)));
+    core::Box2 sheet;
+    sheet.extend(Point2{0, 0});
+    sheet.extend(Point2{148'500, 105'000}); // 297 × 210 mm at 1/500
+    view.fit(sheet, 0.0);
+    render::SceneOptions options;
+    options.pixels_per_paper_mm = kPxPerPaper;
+    render::DrawList list;
+    render::build_scene(r.doc, view, options, list);
+    bool seen = false;
+    for (const render::PassStyle& ps : list.passes) {
+        if (ps.type != core::SymbolLayerType::LinePatternFill) continue;
+        const double paper_mm = static_cast<double>(ps.interval_px) / kPxPerPaper;
+        CHECK(paper_mm == doctest::Approx(3.175).epsilon(0.001));
+        seen = true;
+    }
+    CHECK(seen);
+}

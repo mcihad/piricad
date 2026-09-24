@@ -516,9 +516,14 @@ private:
         h.hpattern    = d.pattern_type;
         h.doubleflag  = d.double_lines ? 1 : 0;
         h.angle       = dxf::degrees_from_udeg(d.angle_udeg);
-        h.scale       = static_cast<double>(d.scale.num) / static_cast<double>(d.scale.den);
-        h.deflines    = 0;
-        h.extPoint    = DRW_Coord(0.0, 0.0, 1.0);
+        // THE PATTERN AS IT IS DRAWN (dxf_common.hpp): the scale against the
+        // metric pattern file in this file's unit, and the lines themselves —
+        // which the library cannot write, so they are spliced in after group
+        // 78 once the file is closed.
+        h.scale                                = dxf::dxf_pattern_scale(d, unit_);
+        std::vector<dxf::PatternLine> patterns = dxf::pattern_lines(d, unit_);
+        h.deflines                             = static_cast<int>(patterns.size());
+        h.extPoint                             = DRW_Coord(0.0, 0.0, 1.0);
         // Every ring as an edge loop of lines: the library writes edge loops
         // and not polyline loops.
         const core::RingSpan span = geo.rings_of(slot);
@@ -538,6 +543,7 @@ private:
         }
         out_.writeHatch(&h);
         remember_xdata(h);
+        if (!patterns.empty()) pending_patterns_.emplace_back(h.handle, std::move(patterns));
     }
 
     void write_insert(core::EntityId e, std::uint32_t slot)
@@ -772,6 +778,13 @@ public:
         return pending_xdata_;
     }
 
+    /// Each patterned hatch's definition lines, by the handle the library gave
+    /// it; spliced in after its group 78 with the XDATA.
+    std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>>& pending_patterns()
+    {
+        return pending_patterns_;
+    }
+
 private:
     /// Layer, colour, weight and extended data — what every entity carries.
     void common(DRW_Entity& out, core::EntityId e)
@@ -890,6 +903,7 @@ private:
     std::uint64_t with_attributes_{0};
     bool cancelled_{false};
     std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>> pending_xdata_;
+    std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>> pending_patterns_;
 };
 
 /// One XDATA group as DXF text: the code right-aligned in three columns, the
@@ -911,21 +925,47 @@ std::string number_text(double d)
     return buf;
 }
 
-/// Splices the remembered XDATA into the written file: for every entity whose
-/// handle group `5` matches, the groups go in just before the next `0` group —
-/// the end of that entity's record. One streaming pass over the ASCII file,
-/// written beside it and renamed over it, so a failure leaves the original.
+/// A hatch's definition lines as DXF text, in the order group 78 announces
+/// them: angle, base point, offset, and the dashes with their count.
+std::string pattern_text(const std::vector<dxf::PatternLine>& lines)
+{
+    std::string block;
+    for (const dxf::PatternLine& l : lines) {
+        append_group(block, 53, number_text(l.angle_deg));
+        append_group(block, 43, number_text(l.base_x));
+        append_group(block, 44, number_text(l.base_y));
+        append_group(block, 45, number_text(l.offset_x));
+        append_group(block, 46, number_text(l.offset_y));
+        append_group(block, 79, std::to_string(l.dashes.size()));
+        for (const double d : l.dashes)
+            append_group(block, 49, number_text(d));
+    }
+    return block;
+}
+
+/// Splices what the library cannot write into the written file, by the handle
+/// group `5` of each record: the remembered XDATA just before the next `0`
+/// group — the end of that entity's record — and a hatch's definition lines
+/// just after its group 78, which announces how many follow. One streaming
+/// pass over the ASCII file, written beside it and renamed over it, so a
+/// failure leaves the original.
 core::Status splice_xdata(
     const std::string& path,
-    const std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>>& pending)
+    const std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>>& pending,
+    const std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>>& patterns)
 {
-    if (pending.empty()) return core::ok();
-    std::map<std::string, const std::vector<std::shared_ptr<DRW_Variant>>*> by_handle;
-    for (const auto& [handle, items] : pending) {
+    if (pending.empty() && patterns.empty()) return core::ok();
+    const auto hex_of = [](unsigned handle) {
         char hex[24];
         (void)std::snprintf(hex, sizeof(hex), "%X", handle);
-        by_handle[hex] = &items;
-    }
+        return std::string(hex);
+    };
+    std::map<std::string, const std::vector<std::shared_ptr<DRW_Variant>>*> by_handle;
+    for (const auto& [handle, items] : pending)
+        by_handle[hex_of(handle)] = &items;
+    std::map<std::string, const std::vector<dxf::PatternLine>*> lines_by_handle;
+    for (const auto& [handle, lines] : patterns)
+        lines_by_handle[hex_of(handle)] = &lines;
 
     std::ifstream in(path, std::ios::binary);
     if (!in) return err(ErrorCode::IoFailure, "'" + path + "' XDATA için geri okunamadı.");
@@ -945,7 +985,9 @@ core::Status splice_xdata(
     std::string code_line, value_line;
     bool in_entities                                         = false;
     const std::vector<std::shared_ptr<DRW_Variant>>* current = nullptr;
-    const auto flush                                         = [&]() {
+    // Blocks carry hatches too, so the lines are looked for in every section.
+    const std::vector<dxf::PatternLine>* lines = nullptr;
+    const auto flush                           = [&] {
         if (current == nullptr) return;
         std::string block;
         for (const auto& v : *current) {
@@ -983,13 +1025,22 @@ core::Status splice_xdata(
         const std::string value = trim(value_line);
         if (code == "0") {
             flush();
+            lines = nullptr;
             if (value == "SECTION") in_entities = false;
         } else if (code == "2" && !in_entities && value == "ENTITIES") {
             in_entities = true;
-        } else if (code == "5" && in_entities && current == nullptr) {
-            if (const auto at = by_handle.find(value); at != by_handle.end()) current = at->second;
+        } else if (code == "5") {
+            if (in_entities && current == nullptr)
+                if (const auto at = by_handle.find(value); at != by_handle.end())
+                    current = at->second;
+            if (const auto at = lines_by_handle.find(value); at != lines_by_handle.end())
+                lines = at->second;
         }
         out << code_line << '\n' << value_line << '\n';
+        if (code == "78" && lines != nullptr) {
+            out << pattern_text(*lines);
+            lines = nullptr;
+        }
     }
     flush();
     out.close();
@@ -1029,8 +1080,10 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
                           std::to_string(static_cast<int>(writer.getError())) +
                           "). Dizin izinlerini ve diski denetleyin.");
 
-    // The XDATA the library cannot write, spliced in after the fact.
-    if (auto st = splice_xdata(path, source.pending_xdata()); !st) co_return st.error();
+    // The XDATA and the pattern lines the library cannot write, spliced in
+    // after the fact.
+    if (const auto st = splice_xdata(path, source.pending_xdata(), source.pending_patterns()); !st)
+        co_return st.error();
 
     // The coordinate system beside the file, the only place DXF lets it go.
     auto prj = write_prj_sidecar(path, options.crs);

@@ -50,10 +50,11 @@ deseninizi eklemek için dosyayı kopyalayın, satır ekleyin, yolunu tercihe ya
 ### Desen yere bağlıdır
 
 Desenin çizgileri **zemindedir**: taramanın **başlangıç noktasından** (`baslangic=`;
-verilmezse sınırın ilk köşesi) geçer ve aralığı kadar tekrar eder. Harita kaydırılınca
-ya da yakınlaştırılınca desen parselin üzerinde yerinde kalır; aynı desenli iki komşu
-tarama, başlangıçları aynı kafese düşüyorsa kesintisiz birleşir. Sınır bütün olarak
-taşınınca başlangıç da onunla taşınır.
+verilmezse çizimin başlangıç noktası, 0,0 — AutoCAD'in de varsayılanı) geçer ve aralığı
+kadar tekrar eder. Harita kaydırılınca ya da yakınlaştırılınca desen parselin üzerinde
+yerinde kalır. Aynı desenle ayrı ayrı taranan komşu parseller bu yüzden ortak
+kenarlarında kesintisiz birleşir; binlercesi de tek seferde çizilir. Sınır bütün olarak
+taşınınca başlangıç da onunla taşınır: desen parselle birlikte kayar.
 
 **Çok sık desen ekranı kilitlemez.** Çizgileri ekranda iki buçuk pikselden sık düşen
 bir desen, uzaktan görünen hâliyle — çizgilerin ortalama tonuyla — dolu çizilir;
@@ -84,6 +85,11 @@ aralıklıdır. `olcek` bu sayıyı çarpar. Vermezseniz pafta ölçeğinin payd
 ([`AYAR plan_ölçeği`](setting.md)) kullanılır: 1/1000 paftada aralık zeminde 3,175 m
 olur ve kâğıtta 3,175 mm çıkar.
 
+**Ekranda, PDF'te ve DXF'te aynı aralık.** Ekran ve [`YAZDIR`](print.md) deseni aynı
+sembolden çizer; DXF'e ölçek çizimin biriminde ve desenin kendi çizgileriyle yazılır
+(ayrıntı: [tarama nesnesi](../nesneler/tarama.md#dosya-ve-dış-biçimler)). 1/500'de
+`olcek=500` ile çizilen `ANSI31` kâğıtta 3,175 mm aralıklıdır, DXF'te 1,5875 m.
+
 ## Adlar
 
 | Türkçe | ASCII | İngilizce | Kısaltma |
@@ -112,7 +118,7 @@ TARAMA desen=<ad>            ← etkin seçimi tarar
 | `bagla` | Seçilen sınır nesnelerine bağlansın mı; varsayılan `evet`. Bkz. [Bağlı tarama](#bağlı-tarama) |
 | `aralik` | Kendi desen çizgilerinizin aralığı, metre; `desen=` yerine. Bkz. [Kendi deseniniz](#kendi-deseniniz) |
 | `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
-| `baslangic` | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi |
+| `baslangic` | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

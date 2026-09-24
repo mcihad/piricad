@@ -1741,7 +1741,7 @@ cad.hatch(
 | `associate` | `bool` | `bagla` | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
 | `spacing` | `float` | `aralik` | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] |
 | `double` | `bool` | `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
-| `origin` | `Coord` | `baslangic` | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi [mm, Sağa (Y) önce] |
+| `origin` | `Coord` | `baslangic` | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/hatch.md)
 

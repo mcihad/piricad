@@ -73,6 +73,8 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |
 | `dxf/03-kesik.dxf` | truncation mid-section |
 | `dxf/04-cop.dxf` | not a DXF at all |
+| `dxf/23-tarama-desen-satirlari.dxf` | three hatches with definition lines after group 78: a catalogue pattern set on its own origin, a pattern no catalogue has with a dashed line, and a record announcing more lines than it carries |
+| `dxf/24-tarama-desen-bozuk.dxf` | five hatches whose definition lines lie: a count past any pattern, a base point before its line, a dash count past the bound, an angle that is not a number, a dash past its count |
 | `komut/01-mutlak.txt` | two absolute metre coordinates |
 | `komut/02-goreli.txt` | relative coordinates, negative and fractional |
 | `komut/03-kutupsal-soneksiz.txt` | bare polar angles on all four axes, the diagonal, negative and past a full turn |

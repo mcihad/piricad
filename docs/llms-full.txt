@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 111 (98 tanesi onay ister)
-- Katalog parmak izi: `3531195003403719916`
+- Katalog parmak izi: `331970401071142881`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -743,7 +743,7 @@ Onay ister.
 | `bagla` | boolean | hayır | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet (evet/hayır) |
 | `aralik` | number | hayır | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] (sayı) |
 | `cift` | boolean | hayır | Desen bir de dik açıyla çizilsin mi (çapraz tarama) (evet/hayır) |
-| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_hatch_edit` — Tarama Düzenle

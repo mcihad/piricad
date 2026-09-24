@@ -233,8 +233,14 @@ Task<void> run(Context& ctx)
     if (!typed.empty()) rings.front().points = std::span<const core::Point2>(store.front());
 
     // ---- the pattern --------------------------------------------------------
+    //
+    // THROUGH THE DRAWING'S ORIGIN unless `baslangic` says otherwise — AutoCAD's
+    // default too. Every hatch of one pattern then lies on one lattice: two
+    // parcels hatched one at a time meet without a seam along the edge they
+    // share, and a thousand of them draw as one pass rather than a thousand
+    // (render.md R7). A pattern set on each boundary's first corner did
+    // neither.
     core::HatchDef def;
-    def.origin = rings.front().points.front();
     if (!read_pattern(ctx, def, true)) co_return;
 
     // ---- the entity and its symbol ------------------------------------------
@@ -529,7 +535,7 @@ KENTOS_COMMAND(hatch)
                                "Desen bir de dik açıyla çizilsin mi (çapraz tarama)")
                     .en("double"),
                 Param::points("baslangic", Arity::optional(),
-                              "Desenin geçtiği nokta; verilmezse sınırın ilk köşesi")
+                              "Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0)")
                     .en("origin"),
             },
         .undo  = UndoPolicy::SingleTransaction,

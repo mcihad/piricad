@@ -35,14 +35,17 @@ if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
     exit 0
 fi
 
-# The heaviest scene the repository carries: patterned fills over a full sheet,
-# which is where both budgets are actually at risk.
-sahne="tests/bench/sahne/desen-yuku.json"
-if [[ ! -f "$kok/$sahne" ]]; then
-    echo "butce: $sahne yok — ATLANDI"
-    exit 0
-fi
-
+# The heaviest scenes the repository carries, which is where the budgets are
+# actually at risk: patterned fills over a full sheet, and four hundred hatched
+# parcels seen whole with their lines just too far apart to turn into a tone
+# (TODOS C-11) — every line drawn, on one lattice, in one pass.
 cd "$kok"
-KENTOS_DATA="$kok/data" KENTOS_BUDGET_PROBE=20 "$exe" --betik "$sahne" 2>&1 | grep '^\[butce\]' || true
-KENTOS_DATA="$kok/data" KENTOS_BUDGET_PROBE=20 "$exe" --betik "$sahne" >/dev/null 2>&1
+for sahne in tests/bench/sahne/desen-yuku.json tests/bench/sahne/yogun-tarama.json; do
+    if [[ ! -f "$kok/$sahne" ]]; then
+        echo "butce: $sahne yok — ATLANDI"
+        continue
+    fi
+    echo "butce: $sahne"
+    KENTOS_DATA="$kok/data" KENTOS_BUDGET_PROBE=20 "$exe" --betik "$sahne" 2>&1 | grep '^\[butce\]' || true
+    KENTOS_DATA="$kok/data" KENTOS_BUDGET_PROBE=20 "$exe" --betik "$sahne" >/dev/null 2>&1
+done

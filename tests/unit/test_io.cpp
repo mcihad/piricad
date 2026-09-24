@@ -34,7 +34,9 @@
 #include <iterator>
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/drawing_catalogs.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
@@ -52,6 +54,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -5410,4 +5413,216 @@ TEST_CASE("Alanlar: eksik bir alan sessiz boş metne dönmüyor")
     // rename, and a document on disk does not get to be wrong because the program
     // changed its mind about a word.
     CHECK_EQ(core::resolve_fields("<pafta>", ctx, nullptr), "Ada 1284");
+}
+
+// ----------------------------------------------- hatch pattern definition ----
+//
+// TODOS C-11: a hatch's pattern travels as the lines it draws — the scale in
+// group 41 stated in the file's unit against the metric pattern file, and the
+// lines themselves after group 78 — so another program draws the same spacing
+// this one does on the screen and on paper, and a pattern no catalogue has
+// still draws when it comes back.
+
+namespace {
+
+/// The groups of the `which`-th HATCH record of a DXF text, code and value,
+/// trimmed, in file order.
+std::vector<std::pair<int, std::string>> hatch_groups(const std::string& text,
+                                                      std::size_t which = 0)
+{
+    std::vector<std::pair<int, std::string>> out;
+    std::istringstream in(text);
+    std::string code, value;
+    const auto trim = [](std::string s) {
+        while (!s.empty() && (s.back() == '\r' || s.back() == ' '))
+            s.pop_back();
+        const std::size_t i = s.find_first_not_of(' ');
+        return i == std::string::npos ? std::string() : s.substr(i);
+    };
+    std::size_t seen = 0;
+    bool inside      = false;
+    while (std::getline(in, code) && std::getline(in, value)) {
+        const int c           = std::stoi(trim(code));
+        const std::string val = trim(value);
+        if (c == 0) {
+            if (inside) break;
+            if (val == "HATCH" && seen++ == which) inside = true;
+            continue;
+        }
+        if (inside) out.emplace_back(c, val);
+    }
+    return out;
+}
+
+/// Every value of `code` in `groups`, as numbers.
+std::vector<double> numbers_of(const std::vector<std::pair<int, std::string>>& groups, int code)
+{
+    std::vector<double> out;
+    for (const auto& [c, v] : groups)
+        if (c == code) out.push_back(std::stod(v));
+    return out;
+}
+
+/// The hatch definitions of a document, in slot order.
+std::vector<core::HatchDef> hatches_of(const core::Document& doc)
+{
+    std::vector<core::HatchDef> out;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+        if (doc.alive(e) && doc.entities().kind[e] == core::kHatchKind)
+            if (auto def = core::hatch_of(doc.geometry(), doc.entities().slot[e]); def)
+                out.push_back(def.value());
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("DXF: tarama deseni çizim biriminde, kendi çizgileriyle gider; aynı aralıkla, aynı "
+          "başlangıçla döner (TODOS C-11)")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-desen");
+    const std::string path = dir.file("desen.dxf");
+
+    Rig a;
+    for (const char* line : {"AYAR core.crs.id EPSG:5254", "ALAN 0,0 30,0 30,20 0,20",
+                             "TARAMA nesneler=1 desen=ANSI31 olcek=500 aci=15 baslangic=3,4"})
+        REQUIRE(a.bus.execute_line(line, Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    const std::vector<core::HatchDef> sent = hatches_of(a.doc);
+    REQUIRE_EQ(sent.size(), std::size_t{1});
+
+    std::ifstream in(path, std::ios::binary);
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const auto groups = hatch_groups(text);
+    // The scale against the metric pattern file, in metres: 3,175 × 0,5 m apart.
+    REQUIRE_EQ(numbers_of(groups, 41).size(), std::size_t{1});
+    CHECK(numbers_of(groups, 41)[0] == doctest::Approx(0.5));
+    REQUIRE_EQ(numbers_of(groups, 78), std::vector<double>{1.0});
+    // The line as drawn: turned by the pattern's 45° and the hatch's 15°, set
+    // on the given origin, its offset the spacing.
+    CHECK(numbers_of(groups, 53)[0] == doctest::Approx(60.0));
+    CHECK(numbers_of(groups, 43)[0] == doctest::Approx(3.0));
+    CHECK(numbers_of(groups, 44)[0] == doctest::Approx(4.0));
+    const double spacing_m = std::hypot(numbers_of(groups, 45)[0], numbers_of(groups, 46)[0]);
+    CHECK(spacing_m == doctest::Approx(1.5875));
+
+    // THE SAME SCALE ON THE SCREEN, ON PAPER AND IN THE FILE: the interval the
+    // symbol draws with — the screen's and the PDF's — is the file's spacing,
+    // to the millimetre the model holds.
+    const core::Symbol drawn = command::hatch_symbol(sent[0], 0xFF000000u);
+    const auto pattern       = std::ranges::find_if(drawn.layers, [](const core::SymbolLayer& l) {
+        return l.type == core::SymbolLayerType::LinePatternFill;
+    });
+    REQUIRE(pattern != drawn.layers.end());
+    CHECK(std::abs(static_cast<double>(pattern->interval.value) - spacing_m * 1000.0) <= 0.5);
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    const std::vector<core::HatchDef> back = hatches_of(b.doc);
+    REQUIRE_EQ(back.size(), std::size_t{1});
+    CHECK_EQ(back[0].name, std::string("ANSI31"));
+    CHECK_EQ(back[0].scale, (core::Ratio{500, 1}));
+    CHECK_EQ(back[0].angle_udeg, 15'000'000);
+    CHECK_EQ(back[0].origin, (core::Point2{3'000, 4'000}));
+    CHECK(back[0].families == sent[0].families);
+    CHECK(b.transcript.find("1 taramanın deseni dosyadaki kendi çizgileriyle okundu") !=
+          std::string::npos);
+}
+
+TEST_CASE("DXF: kendi deseniniz aralığıyla gider (grup 41), çapraz tarama iki çizgiyle; ikisi de "
+          "geri gelir (TODOS C-11)")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-kendi-desen");
+    const std::string path = dir.file("kendi.dxf");
+
+    Rig a;
+    for (const char* line : {"AYAR core.crs.id EPSG:5254", "ALAN 0,0 30,0 30,20 0,20",
+                             "TARAMA nesneler=1 aralik=1.5 aci=30 cift=evet"})
+        REQUIRE(a.bus.execute_line(line, Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    std::ifstream in(path, std::ios::binary);
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const auto groups = hatch_groups(text);
+    CHECK_EQ(numbers_of(groups, 76), std::vector<double>{0.0}); // user-defined
+    CHECK(numbers_of(groups, 41)[0] == doctest::Approx(1.5));   // its spacing, in metres
+    CHECK_EQ(numbers_of(groups, 77), std::vector<double>{1.0}); // doubled
+    REQUIRE_EQ(numbers_of(groups, 78), std::vector<double>{2.0});
+    const auto angles = numbers_of(groups, 53);
+    REQUIRE_EQ(angles.size(), std::size_t{2});
+    CHECK(angles[0] == doctest::Approx(30.0));
+    CHECK(angles[1] == doctest::Approx(120.0));
+    for (std::size_t i = 0; i < 2; ++i)
+        CHECK(std::hypot(numbers_of(groups, 45)[i], numbers_of(groups, 46)[i]) ==
+              doctest::Approx(1.5));
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    const std::vector<core::HatchDef> back = hatches_of(b.doc);
+    REQUIRE_EQ(back.size(), std::size_t{1});
+    CHECK_EQ(back[0].pattern_type, 0);
+    CHECK(back[0].double_lines);
+    CHECK_EQ(back[0].angle_udeg, 30'000'000);
+    REQUIRE_EQ(back[0].families.size(), std::size_t{1});
+    CHECK_EQ(back[0].families[0].offset_y_um, 1'500'000);
+    CHECK(b.transcript.find("katalogda yok") == std::string::npos);
+}
+
+TEST_CASE("DXF: dosyadaki desen çizgileri okunur — katalogdaki desen kendi başlangıcıyla, "
+          "bilinmeyen desen dosyadaki çizgileriyle; tutmayan satırlarda katalog (TODOS C-11)")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said                = import_seed(rig, "23-tarama-desen-satirlari.dxf");
+    const std::vector<core::HatchDef> got = hatches_of(rig.doc);
+    REQUIRE_EQ(got.size(), std::size_t{3});
+
+    // ANSI31 at a metric file's scale 1, in metres: 3,175 m on the ground, set
+    // on the file's own origin, and the catalogue's numbers kept.
+    CHECK_EQ(got[0].name, std::string("ANSI31"));
+    CHECK_EQ(got[0].scale, (core::Ratio{1000, 1}));
+    CHECK_EQ(got[0].origin, (core::Point2{500, 250}));
+    REQUIRE_EQ(got[0].families.size(), std::size_t{1});
+    CHECK_EQ(got[0].families[0].angle_udeg, 45'000'000);
+    CHECK_EQ(got[0].families[0].base_x_um, 0);
+    CHECK_EQ(core::hatch_family_spacing_mm(got[0], got[0].families[0]), 3'175);
+
+    // OZEL is in no catalogue and draws all the same, from the file's lines:
+    // two metres apart, the second a quarter turn on and dashed.
+    CHECK_EQ(got[1].name, std::string("OZEL"));
+    REQUIRE_EQ(got[1].families.size(), std::size_t{2});
+    CHECK_EQ(core::hatch_family_spacing_mm(got[1], got[1].families[0]), 2'000);
+    CHECK_EQ(got[1].families[1].angle_udeg, 90'000'000);
+    CHECK_EQ(core::hatch_family_spacing_mm(got[1], got[1].families[1]), 2'000);
+    CHECK_EQ(got[1].families[1].dashes_um, (std::vector<std::int64_t>{1'000, -500}));
+
+    // Group 78 promised two lines and one came: the catalogue's ANSI37 stands in.
+    CHECK_EQ(got[2].name, std::string("ANSI37"));
+    REQUIRE_EQ(got[2].families.size(), std::size_t{2});
+    CHECK_EQ(got[2].families[1].angle_udeg, 135'000'000);
+
+    CHECK(said.find("2 taramanın deseni dosyadaki kendi çizgileriyle okundu") != std::string::npos);
+    CHECK(said.find("katalogda yok") == std::string::npos);
+}
+
+TEST_CASE("DXF: yalan söyleyen desen satırları okunmaz; katalog geçer, dosya düşmez (TODOS C-11)")
+{
+    // tests/fuzz/tohum/dxf/24: five records whose lines do not add up. Each is
+    // refused on its own and the catalogue's ANSI31 stands in; none is allowed
+    // to allocate what it announced, and the file still imports.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said                = import_seed(rig, "24-tarama-desen-bozuk.dxf");
+    const std::vector<core::HatchDef> got = hatches_of(rig.doc);
+    REQUIRE_EQ(got.size(), std::size_t{5});
+    for (const core::HatchDef& def : got) {
+        CHECK_EQ(def.name, std::string("ANSI31"));
+        REQUIRE_EQ(def.families.size(), std::size_t{1});
+        CHECK_EQ(def.families[0].offset_y_um, 3'175); // the catalogue's own
+        CHECK_EQ(def.origin, (core::Point2{0, 0}));
+    }
+    CHECK(said.find("dosyadaki kendi çizgileriyle") == std::string::npos);
 }
