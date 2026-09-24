@@ -969,6 +969,10 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
     if (settled.dims_released != 0)
         on_echo(std::to_string(settled.dims_released) +
                 " ölçü noktası elle taşındığı için bağından çözüldü.");
+    if (settled.dims_manual != 0)
+        on_echo("Bağlı " + std::to_string(settled.dims_manual) +
+                " ölçünün yazısı elle yazılmış; yeniden ölçülen değeri göstermiyor. Ölçüye "
+                "döndürmek için: ÖLÇÜDÜZENLE sifirla=metin");
     if (settled.dims_left != 0)
         on_echo("Bağlı " + std::to_string(settled.dims_left) +
                 " ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını "

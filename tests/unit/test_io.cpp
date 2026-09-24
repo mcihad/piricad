@@ -3732,6 +3732,49 @@ TEST_CASE("DXF: aynalı OCS (normal −Z) daireyi ve yayı çizim düzlemine do�
     CHECK(std::abs(end.y - 20000) <= 1);
 }
 
+TEST_CASE("DXF: süslenmiş ölçü <> ile, elle yazılmış ölçü yazıldığı gibi gider; geri gelince "
+          "ölçülen ölçülen kalır")
+{
+    // TODOS C-10: a reader that measures the figure itself has to be told where
+    // it goes (`<>`), and a figure typed by hand has to come back typed by hand.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-olcu-yazisi");
+    const std::string path = dir.file("olcu.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254",
+          "ÖLÇÜ birinci=485300,4310200 ikinci=485320,4310200 konum=485310,4310197 onek=R "
+          "sonek=\" m\" tolerans=0.05",
+          "ÖLÇÜ birinci=485300,4310210 ikinci=485320,4310210 konum=485310,4310207 metin=\"19,99\"",
+          "ÖLÇÜ birinci=485300,4310220 ikinci=485320,4310220 konum=485310,4310217"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    std::ifstream in(path, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK(bytes.find("R<>%%p0,05 m") != std::string::npos);
+    CHECK(bytes.find("\n19,99\n") != std::string::npos);
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    std::vector<std::string> captions;
+    std::size_t manual = 0;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+        if (!b.doc.alive(e) || b.doc.entities().kind[e] != core::kDimensionKind) continue;
+        const std::uint32_t row = b.doc.entities().slot[e];
+        captions.emplace_back(b.doc.texts().text(row));
+        auto def = core::dimension_of(b.doc.geometry(), row);
+        REQUIRE(def.ok());
+        manual += core::dimension_text_is_manual(def.value()) ? 1 : 0;
+    }
+    REQUIRE_EQ(captions.size(), std::size_t{3});
+    CHECK(std::ranges::find(captions, std::string("R20,00±0,05 m")) != captions.end());
+    CHECK(std::ranges::find(captions, std::string("19,99")) != captions.end());
+    CHECK_EQ(manual, std::size_t{1}); // only the typed one came back typed
+}
+
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")
 {
     if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");

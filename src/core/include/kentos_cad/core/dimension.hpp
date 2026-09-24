@@ -66,7 +66,22 @@ enum class ArrowStyle : std::uint8_t {
     Tick   = 2, ///< an oblique stroke, the architectural mark
 };
 
+/// How a dimension's tolerance is written beside its figure.
+enum class DimTolerance : std::uint8_t {
+    None      = 0, ///< no tolerance
+    Symmetric = 1, ///< `12,50±0,05`: `tolerance_plus` either way
+    Deviation = 2, ///< `12,50+0,05/-0,02`: up by `tolerance_plus`, down by `tolerance_minus`
+    Limits    = 3, ///< `12,55/12,48`: the two limits written in place of the figure
+};
+
 /// The payload of a `core.dimension` slot.
+///
+/// WHAT IS MEASURED AND WHAT IS WRITTEN ARE KEPT APART (TODOS C-10). The
+/// `measurement` is always the geometry's own figure; the unit, the precision,
+/// the tolerance, the prefix and the suffix are how it is PRESENTED; and an
+/// `override_text` with no `<>` in it is a figure somebody TYPED — which the
+/// program never mistakes for, and never lets pass as, the measured one. A
+/// `<>` in it stands for the measured figure, as in every CAD format.
 struct DimensionDef
 {
     DimensionType type{DimensionType::Aligned}; ///< what is measured
@@ -84,11 +99,31 @@ struct DimensionDef
     std::string style{"ISO-25"};    ///< the style the figures came from, at most 255 bytes
     std::string override_text;      ///< text the user typed instead of the measurement, or empty
 
+    // ---- layout 2: written only when one of these is set ------------------
+    std::string prefix; ///< before the figure (`R`, `Ø`, `≈`), at most 255 bytes
+    std::string suffix; ///< after it (` m`, ` (eski)`), at most 255 bytes
+    DimTolerance tolerance{DimTolerance::None}; ///< how the tolerance is written
+    std::int64_t tolerance_plus{0}; ///< the upper deviation, or the ± value: mm, or µ° for an angle
+    std::int64_t tolerance_minus{0}; ///< the lower deviation, a magnitude: mm, or µ° for an angle
+    std::uint8_t unit{
+        0}; ///< the unit a length is written in: 0 the drawing's, else DrawingUnit + 1
+
+    /// THE SHEET SCALE THE GROUND SIZES WERE LAID OUT FOR, as its denominator
+    /// (`1000` for 1/1000); 0 when not known (a file written before, a DXF).
+    /// A style prescribes PAPER sizes — a 2,5 mm arrow — and this is what lets
+    /// `ÖLÇÜYENİLE` keep them 2,5 mm on another sheet.
+    std::int64_t scale_basis{0};
+
     friend bool operator==(const DimensionDef&, const DimensionDef&) = default;
 };
 
-/// The payload layout version `encode_dimension` writes.
+/// The payload layout version `encode_dimension` writes for a dimension with
+/// none of the layout-2 fields set: every such dimension keeps the bytes, and
+/// every drawing of them its fingerprint, that it had before those fields.
 inline constexpr std::uint16_t kDimensionLayout = 1;
+
+/// The layout with the presentation fields and the sheet scale appended.
+inline constexpr std::uint16_t kDimensionLayout2 = 2;
 
 /// What ÖLÇÜ derives from the user's picks: the definition points in the order
 /// the kind reads them, and where the caption is centred and which way it reads.
@@ -125,7 +160,7 @@ bool dimension_picks(DimensionType type, std::span<const Point2> defs, Point2 ba
 std::array<Point2, 2> dimension_baseline(Point2 centre, double dx, double dy, Mm height,
                                          std::string_view text);
 
-/// The document a dimension lives in; `dimension_follow` reads its geometry.
+/// The document a dimension lives in; `dimension_rebuild` reads its geometry.
 class Document;
 
 /// A dimension rebuilt around moved definition points: its two rings, its
@@ -136,7 +171,30 @@ struct DimensionRebuild
     std::vector<Point2> defs;          ///< ring 1, the definition points
     std::vector<std::uint8_t> payload; ///< the dimension's payload, re-measured
     std::string text;                  ///< the caption, re-worded (the user's own text is kept)
+    Mm text_height{0};                 ///< the caption's height
+    DimensionDef def;                  ///< the payload, decoded: what `payload` holds
 };
+
+/// What to rebuild a stored dimension with (`dimension_rebuild`): every field
+/// left at its default keeps what the dimension has.
+struct DimensionEdit
+{
+    const DimensionDef* def{nullptr}; ///< the payload to lay out, or null for the stored one
+    std::span<const std::pair<std::size_t, Point2>> moves{}; ///< definition points moved
+    Mm text_height{0};              ///< the caption's height, or 0 for the stored one
+    const Point2* caption{nullptr}; ///< a caption placed by hand at this point, or null
+};
+
+/// Rebuilds dimension `e` as `edit` says, laid out as ÖLÇÜ lays one out: moved
+/// definition points (the others stay), a new payload (a prefix, a tolerance,
+/// a unit, a text typed over the figure, figures rescaled for another sheet), a
+/// new caption height, a caption placed by hand. The figure is re-measured from
+/// the points and re-worded in `unit`; a caption placed by hand
+/// (`user_text_position`) keeps its place, carried by the moved points' mean
+/// displacement. What ÖLÇÜDÜZENLE, ÖLÇÜYENİLE, YAZIDÜZENLE on a dimension and a
+/// linked dimension's commit-time update all build with.
+Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
+                                           const DimensionEdit& edit, DrawingUnit unit);
 
 /// Rebuilds dimension `e` with the definition points `moves` names at their new
 /// places and the others where they are, laid out as ÖLÇÜ lays one out: the
@@ -171,10 +229,27 @@ std::size_t dimension_point_count(DimensionType t) noexcept;
 std::int64_t dimension_measure(DimensionType t, std::span<const Point2> defs,
                                std::int64_t rotation_udeg, bool ordinate_x = false) noexcept;
 
-/// The measured text: `12500` mm in metres with 2 decimals and `,` is `12,50`;
-/// an angle of 90 000 000 µ° with 2 decimals is `90,00°`. Integer arithmetic
-/// only, so the string is the same on every platform.
+/// The unit a dimension writes a length in: its own, or the drawing's `unit`.
+DrawingUnit dimension_unit(const DimensionDef& def, DrawingUnit unit) noexcept;
+
+/// The MEASURED figure alone, whatever the caption says: `12500` mm in metres
+/// with 2 decimals and `,` is `12,50`; an angle of 90 000 000 µ° with 2
+/// decimals is `90,00°`. Integer arithmetic only, so the string is the same on
+/// every platform.
+std::string dimension_value_text(const DimensionDef& def, DrawingUnit unit);
+
+/// Whether the caption is a figure somebody typed rather than the measured one:
+/// an `override_text` with no `<>` in it.
+bool dimension_text_is_manual(const DimensionDef& def) noexcept;
+
+/// The caption as written: the prefix, the measured figure (or the two limits),
+/// the tolerance and the suffix — put where the `override_text` has `<>`, or
+/// the `override_text` itself when it has none.
 std::string dimension_text(const DimensionDef& def, DrawingUnit unit);
+
+/// The tolerance as written after the figure — `±0,05`, `+0,05/-0,02` — or an
+/// empty string for none and for limits (which replace the figure instead).
+std::string dimension_tolerance_text(const DimensionDef& def, DrawingUnit unit);
 
 /// Formats a length in `unit` with `precision` decimals and `separator`.
 std::string format_dimension_length(Mm value, DrawingUnit unit, unsigned precision, char separator);

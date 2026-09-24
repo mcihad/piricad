@@ -17,6 +17,8 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/dimension.hpp"
+
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
 
@@ -180,6 +182,43 @@ Task<void> run_edit(Context& ctx)
                 co_return;
             }
             height = static_cast<core::Mm>(tall.as_int());
+        }
+
+        // A DIMENSION'S CAPTION IS ITS FIGURE (TODOS C-10). Written into the
+        // caption alone, a typed number would be a measured one to every reader
+        // of the model and would be put back the next time the dimension
+        // followed its corner. It goes where ÖLÇÜDÜZENLE puts it: the payload's
+        // typed text, with `<>` standing for the measured figure.
+        if (doc.entities().kind[e] == core::kDimensionKind) {
+            auto stored = core::dimension_of(doc.geometry(), slot);
+            if (!stored) {
+                ctx.refuse(stored.error());
+                co_return;
+            }
+            core::DimensionDef def = stored.value();
+            if (!content.empty()) def.override_text = words == "<>" ? std::string() : words;
+            auto rebuilt = core::dimension_rebuild(doc, e, {.def = &def, .text_height = height},
+                                                   ctx.session().bus().drawing_unit());
+            if (!rebuilt) {
+                ctx.refuse(rebuilt.error());
+                co_return;
+            }
+            const core::DimensionRebuild& r = rebuilt.value();
+            const std::array<core::RingGeometry::RingInput, 2> rings{
+                core::RingGeometry::RingInput{r.baseline, core::RingRole::Open, 0},
+                core::RingGeometry::RingInput{r.defs, core::RingRole::Open, 0}};
+            if (auto st = ctx.transaction().set_kind_geometry(e, rings, r.payload); !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+            if (auto st = ctx.transaction().set_text(e, r.text, r.text_height,
+                                                     core::TextAnchor::MiddleCentre);
+                !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+            ++written;
+            continue;
         }
 
         const core::TextAnchor anchor =

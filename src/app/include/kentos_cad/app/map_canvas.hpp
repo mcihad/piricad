@@ -436,7 +436,9 @@ private:
 
     /// Marks every definition point of a dimension on screen whose link to the
     /// object it measured is broken (`core::DimLinkTable`): the object is gone
-    /// and the figure beside it is what that object used to measure.
+    /// and the figure beside it is what that object used to measure. And every
+    /// dimension whose caption was typed by hand, with the measured figure
+    /// beside it (`core::dimension_text_is_manual`).
     void buildBrokenLinks();
 
     /// Draws SINIR's preview: the region the cursor is inside, found by the call
@@ -767,6 +769,12 @@ private:
     };
 
     RegionCache region_cache_;
+
+    /// The dimensions whose caption is typed by hand, found once per document
+    /// revision rather than per frame: a scan of the kind column, and a decode
+    /// only where it says dimension.
+    std::vector<core::EntityId> manual_dims_;
+    std::uint64_t manual_revision_{~std::uint64_t{0}};
 
     std::uint64_t seen_revision_{0}; ///< the revision `noteDocumentChange` last saw
     std::uint64_t edits_{0};         ///< how many changes it has seen

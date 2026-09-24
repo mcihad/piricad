@@ -222,6 +222,7 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 | `PDF yazılamadı: dizin yok — …` | Hedef dizin yok | Dizini oluşturun |
 | `Bu yapı PDF şifreleme ve yazar alanını içermiyor (KENTOS_WITH_QPDF). …` | qpdf'siz derlenmiş yapı | Şifresiz yazın ya da qpdf ile derleyin |
 | `Yazdırma motoru bağlı değil; bu ortamda yazdırılamaz ve PDF alınamaz. …` | Arayüz olmadan çalıştırıldı | Uygulama içinden çalıştırın |
+| `N ölçü 1/1000 paftası için boyutlandırılmış; 1/5000 çıktıda yazıları 0,5 mm olur. …` (uyarı; pafta yine basılır) | Ölçüler başka bir pafta ölçeği için boyutlu | [`ÖLÇÜYENİLE olcek=N`](dimension_refresh.md) ile uyarlayıp yeniden basın |
 
 ## İlgili
 

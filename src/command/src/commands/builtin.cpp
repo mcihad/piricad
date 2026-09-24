@@ -75,6 +75,8 @@ namespace kentos::command {
     X(block)                                                                                       \
     X(insert)                                                                                      \
     X(dimension)                                                                                   \
+    X(dimension_edit)                                                                              \
+    X(dimension_refresh)                                                                           \
     X(leader)                                                                                      \
     X(points)                                                                                      \
     X(guide)                                                                                       \

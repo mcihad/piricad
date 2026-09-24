@@ -1934,13 +1934,61 @@ void MapCanvas::buildBrokenLinks()
     // it, a print does not: it is a question for the author, not the reader.
     const core::Document& doc       = controller_.document();
     const core::DimLinkTable& table = doc.dimension_links();
+    const core::EntityTable& ents   = doc.entities();
+    const core::RingGeometry& geom  = doc.geometry();
+    const auto w                    = static_cast<float>(width());
+    const auto h                    = static_cast<float>(height());
+
+    // A FIGURE TYPED BY HAND IS SAID TO BE ONE (TODOS C-10), with the measured
+    // figure beside it, because on the sheet the two are printed in the same
+    // ink. On the canvas only: the print shows what the author wrote.
+    if (doc.revision() != manual_revision_) {
+        manual_revision_ = doc.revision();
+        manual_dims_.clear();
+        for (core::EntityId e = 0; e < ents.size(); ++e) {
+            if (ents.kind[e] != core::kDimensionKind || !doc.alive(e)) continue;
+            auto def = core::dimension_of(geom, ents.slot[e]);
+            if (def && core::dimension_text_is_manual(def.value())) manual_dims_.push_back(e);
+        }
+    }
+    const core::DrawingUnit unit = controller_.bus().drawing_unit();
+    for (const core::EntityId e : manual_dims_) {
+        if (e >= ents.size() || !doc.alive(e) || !ents.visible(e)) continue;
+        const std::uint32_t row   = ents.slot[e];
+        const core::RingSpan span = geom.rings_of(row);
+        if (span.count < 1 || geom.ring_count[span.first] < 1) continue;
+        const render::ScreenPointF c = render::to_f(view_.to_screen(geom.vertex(span.first, 0)));
+        if (c.x < -200.0F || c.y < -40.0F || c.x > w + 40.0F || c.y > h + 40.0F) continue;
+        auto def = core::dimension_of(geom, row);
+        if (!def) continue;
+        // BESIDE THE CAPTION, whichever way it reads: to the right of the box
+        // its letters fill, level with their middle — below a vertical caption
+        // would be across its own dimension line.
+        float at_x = c.x + 10.0F;
+        float at_y = c.y + 4.0F;
+        if (std::array<core::Point2, 4> quad; core::text_quad(doc, e, quad)) {
+            float right = -1e9F;
+            float top   = 1e9F;
+            float foot  = -1e9F;
+            for (const core::Point2 corner : quad) {
+                const render::ScreenPointF q = render::to_f(view_.to_screen(corner));
+                right                        = std::max(right, q.x);
+                top                          = std::min(top, q.y);
+                foot                         = std::max(foot, q.y);
+            }
+            at_x = right + 10.0F;
+            at_y = (top + foot) * 0.5F + 4.0F;
+        }
+        overlay_.labels.push_back(render::OverlayLabel{
+            tokens_->warn.rgba(), at_x, at_y, static_cast<float>(look_.hint_px), false,
+            tr("elle yazılmış · ölçülen %1")
+                .arg(QString::fromStdString(core::dimension_value_text(def.value(), unit)))
+                .toStdString()});
+    }
+
     if (table.empty()) return;
-    const core::EntityTable& ents  = doc.entities();
-    const core::RingGeometry& geom = doc.geometry();
-    const auto w                   = static_cast<float>(width());
-    const auto h                   = static_cast<float>(height());
-    std::size_t line               = 0;
-    bool started                   = false;
+    std::size_t line = 0;
+    bool started     = false;
     for (const core::EntityId dim : table.linked()) {
         if (!doc.alive(dim) || !ents.visible(dim)) continue;
         const core::RingSpan span = geom.rings_of(ents.slot[dim]);

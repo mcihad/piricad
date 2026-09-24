@@ -27,6 +27,7 @@ Her nesne için yazılanlar:
 | Alan | Metrekare, iki ondalık — tapunun taşıdığı hassasiyet |
 | Kapsam | Nesnenin sınır dikdörtgeni, milimetre olarak `[solY, altX, sağY, üstX]` |
 | Öznitelikler | Dolu olan her hücre; boş hücre hiç yazılmaz |
+| Ölçülen ve yazılan | Bir ölçüde: ölçtüğü değer ve yazdığı yazı yan yana; yazı elle yazılmışsa **ELLE YAZILMIŞ, ölçülen değer değil**; hangi pafta ölçeği için boyutlandığı |
 | Ölçü bağları | Bir [bağlı ölçüde](dimension.md#bağlı-ölçü): hangi noktası hangi nesnenin hangi köşesine, merkezine ya da yay ucuna bağlı, kaç bağı kopuk |
 | Onu ölçen ölçüler | Herhangi bir nesnede: onu kaç bağlı ölçünün ölçtüğü — silmeden önce bilinmesi gereken |
 
@@ -131,6 +132,11 @@ Betik ve yapay zeka istemcisi cümleyi değil bu tabloyu okur:
   "surum": 2
 }
 ```
+
+Bir ölçüde satır `olcu` taşır: `tur`, `olculen` (milimetre ya da mikroderece),
+`olculen_metin`, `yazi`, `elle` (yazı elle yazılmışsa `true`), varsa `metin`,
+`onek`, `sonek`, `tolerans` (`bicim`, `ust`, `alt`), `birim`, `hassasiyet`, `stil` ve
+`olcek` (boyutlandığı pafta ölçeği).
 
 Bağlı bir ölçüde satır `olcu_baglari` taşır — her bağ için `nokta` (ölçünün kaçıncı
 tanım noktası), `nesne` (ölçülen nesnenin kimliği), `ozellik` (`kose`, `merkez`,

@@ -16,6 +16,16 @@ ve yazının yeri; yay uzunluğunda merkez, başlangıç, bitiş ve yazının ye
 milimetresine** indirilmiş hâliyle (ok boyu, uzatma fazlası, uzatma boşluğu, yazı
 boşluğu), ondalık sayısı, ondalık ayracı, stil adı ve varsa elle yazılan metin durur.
 
+Yükün **ikinci düzeni** bunlara önek, sonek, tolerans (biçimi, üst ve alt sapma),
+ölçünün kendi birimi ve **hangi pafta ölçeği için boyutlandığı** ekler. İkinci düzen
+yalnız bunlardan biri doluysa yazılır: bunları taşımayan ölçü, bu alanlar gelmeden
+önceki baytlarıyla yazılır. Yeni çizilen her ölçü pafta ölçeğini taşır.
+
+**Ölçülen ile yazılan ayrı saklanır.** Yükteki ölçülen değer hep noktalardan
+hesaplanandır; yazı onun yazılışıdır. Elle yazılan metindeki `<>` ölçülen değerin
+yeridir; `<>` taşımayan metin **elle yazılmış** sayılır ve program onu hiçbir yerde
+ölçülen değer diye göstermez ([`ÖLÇÜDÜZENLE`](../komutlar/dimension_edit.md)).
+
 ## Nasıl çizilir
 
 Resim saklanmaz, her seferinde tanımdan kurulur: tanım noktalarının ölçü çizgisi
@@ -60,6 +70,12 @@ kaynağın anahtarı, özellik, halka, sıra, kopukluk) durur; blok yalnız bağ
 varsa yazılır. Dosyada olmayan bir nesneye işaret eden bağ okunurken **kopuk** sayılır.
 DXF'e bağ yazılmaz; DXF'ten gelen ölçü bağsızdır.
 
+DXF'te ölçünün yazısı (grup 1): ölçülen değeri okuyan program kendisi ölçsün diye
+önekli, sonekli, toleranslı ya da şablonlu yazı `<>` ile gider (`R<>%%p0,05 m`);
+elle yazılmış yazı yazıldığı gibi gider; kendi birimi olan ölçünün yazısı tam olarak
+yazılır. Geri okunduğunda `<>` taşıyan yazı ölçülen değer olarak kalır, elle yazılmış
+yazı elle yazılmış olarak.
+
 ## Komutlar
 
 ```
@@ -70,6 +86,8 @@ DXF'e bağ yazılmaz; DXF'ten gelen ölçü bağsızdır.
 
 ## Sınırlar
 
-Yazı konumu komutta ölçü çizgisinin ortasıdır; elle taşınmış yazı dosyadan geldiği yerde
-kalır. Ölçek değiştirildiğinde (`ÖLÇEKLE`) ölçülen değer ve yazı da değişir; yazının
+Yazı konumu komutta ölçü çizgisinin ortasıdır; `ÖLÇÜDÜZENLE yazi_yeri=` ile elle
+yerleştirilen ya da dosyadan elle taşınmış gelen yazı yerinde kalır ve ölçü
+kaynağını izleyince onunla taşınır. Tolerans, ölçünün ondalığıyla yazılır; ayrı bir
+tolerans ondalığı yoktur. Ölçek değiştirildiğinde (`ÖLÇEKLE`) ölçülen değer ve yazı da değişir; yazının
 yüksekliği değişmez.

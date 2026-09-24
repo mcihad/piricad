@@ -18,10 +18,14 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace kentos::command {
 namespace {
@@ -99,6 +103,35 @@ bool read_sheet(Context& ctx, PrintRequest& request)
     return true;
 }
 
+/// A SHEET AT A SCALE ITS DIMENSIONS WERE NOT SIZED FOR (TODOS C-10): a 2,5 mm
+/// figure laid out for 1/1000 prints half a millimetre tall on a 1/5000 sheet
+/// and is not read by anyone. Said before the sheet goes out, with the command
+/// that sizes them for it; the sheet still prints (a warning, never a refusal).
+void warn_dimension_scale(Context& ctx, std::int64_t scale)
+{
+    if (scale <= 0) return;
+    const core::Document& doc = ctx.session().bus().document();
+    std::size_t off           = 0;
+    std::int64_t basis        = 0;
+    core::Mm height           = 0;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e) || doc.entities().kind[e] != core::kDimensionKind) continue;
+        const std::uint32_t row = doc.entities().slot[e];
+        auto def                = core::dimension_of(doc.geometry(), row);
+        if (!def || def.value().scale_basis <= 0 || def.value().scale_basis == scale) continue;
+        ++off;
+        basis  = def.value().scale_basis;
+        height = doc.texts().height(row);
+    }
+    if (off == 0) return;
+    const std::int64_t tenths = core::mul_div_round(height, 10, scale);
+    ctx.warn(std::to_string(off) + " ölçü 1/" + std::to_string(basis) +
+             " paftası için boyutlandırılmış; 1/" + std::to_string(scale) + " çıktıda yazıları " +
+             std::to_string(tenths / 10) + "," + std::to_string(tenths % 10) +
+             " mm olur. Kâğıtta aynı boyda kalmaları için önce: ÖLÇÜYENİLE olcek=" +
+             std::to_string(scale));
+}
+
 // ---- YAZDIR ------------------------------------------------------------------
 
 Task<void> run_print(Context& ctx)
@@ -147,9 +180,18 @@ Task<void> run_print(Context& ctx)
         // out on `DispatchResult::warnings`, so a client that reports success
         // reports it WITH the problems rather than instead of them (L-15, C-03).
         const core::Layout* found = ctx.session().bus().document().layouts().find(named);
-        if (found != nullptr)
+        if (found != nullptr) {
             for (const std::string& one : core::layout_trouble(*found))
                 ctx.warn(one);
+            std::vector<std::int64_t> scales;
+            for (const core::LayoutItem& item : found->items)
+                if (item.kind == core::LayoutItemKind::Map)
+                    if (const std::int64_t n = core::map_scale(item);
+                        n > 0 && std::ranges::find(scales, n) == scales.end())
+                        scales.push_back(n);
+            for (const std::int64_t n : scales)
+                warn_dimension_scale(ctx, n);
+        }
     } else if (!centre.empty()) {
         request.has_centre = true;
         request.centre     = centre.as_point();
@@ -170,6 +212,7 @@ Task<void> run_print(Context& ctx)
         }
         request.scale = scale;
         ctx.record("olcek", Value::integer(scale));
+        warn_dimension_scale(ctx, scale);
     } else {
         corners = ctx.argument("pencere").as_points();
         if (corners.size() < 2) {

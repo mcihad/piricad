@@ -31,6 +31,7 @@
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -148,6 +149,51 @@ void describe_links(const core::Document& doc, core::EntityId slot, core::Json& 
     }
 }
 
+/// A dimension's MEASURED figure and its WRITTEN one, side by side (TODOS
+/// C-10): the one question a sheet cannot answer by looking at it, because a
+/// typed number and a measured one are printed in the same ink.
+void describe_dimension(const core::Document& doc, core::EntityId slot, core::DrawingUnit unit,
+                        core::Json& row, std::string& said)
+{
+    if (doc.entities().kind[slot] != core::kDimensionKind) return;
+    const std::uint32_t gslot = doc.entities().slot[slot];
+    auto decoded              = core::dimension_of(doc.geometry(), gslot);
+    if (!decoded) return;
+    const core::DimensionDef& def = decoded.value();
+    const std::string measured    = core::dimension_value_text(def, unit);
+    const std::string written(doc.texts().text(gslot));
+    const bool manual = core::dimension_text_is_manual(def);
+
+    core::Json dim;
+    dim.set("tur", core::Json::string(core::dimension_type_name(def.type)));
+    dim.set("olculen", core::Json::integer(def.measurement));
+    dim.set("olculen_metin", core::Json::string(measured));
+    dim.set("yazi", core::Json::string(written));
+    dim.set("elle", core::Json::boolean(manual));
+    if (!def.override_text.empty()) dim.set("metin", core::Json::string(def.override_text));
+    if (!def.prefix.empty()) dim.set("onek", core::Json::string(def.prefix));
+    if (!def.suffix.empty()) dim.set("sonek", core::Json::string(def.suffix));
+    if (def.tolerance != core::DimTolerance::None) {
+        core::Json tol;
+        const char* how = "sinir";
+        if (def.tolerance == core::DimTolerance::Symmetric) how = "simetrik";
+        if (def.tolerance == core::DimTolerance::Deviation) how = "sapma";
+        tol.set("bicim", core::Json::string(how));
+        tol.set("ust", core::Json::integer(def.tolerance_plus));
+        tol.set("alt", core::Json::integer(def.tolerance_minus));
+        dim.set("tolerans", std::move(tol));
+    }
+    dim.set("birim", core::Json::string(core::drawing_unit_name(core::dimension_unit(def, unit))));
+    dim.set("hassasiyet", core::Json::integer(def.precision));
+    dim.set("stil", core::Json::string(def.style));
+    if (def.scale_basis > 0) dim.set("olcek", core::Json::integer(def.scale_basis));
+    row.set("olcu", std::move(dim));
+
+    said += "; ölçtüğü " + measured + ", yazdığı \"" + written + "\"";
+    if (manual) said += " — ELLE YAZILMIŞ, ölçülen değer değil";
+    if (def.scale_basis > 0) said += "; 1/" + std::to_string(def.scale_basis) + " paftası için";
+}
+
 // ------------------------------------------------------------ NESNEBİLGİ ----
 
 Task<void> run_entity_info(Context& ctx)
@@ -230,6 +276,7 @@ Task<void> run_entity_info(Context& ctx)
         if (perimeter > 0) said += ", çevre " + metres_text(perimeter) + " m";
         if (area != 0) said += ", alan " + square_metres_text(area) + " m²";
         if (filled > 0) said += ", " + std::to_string(filled) + " öznitelik";
+        describe_dimension(doc, slot, ctx.session().bus().drawing_unit(), row, said);
         describe_links(doc, slot, row, said);
         ctx.echo(said + ".");
 

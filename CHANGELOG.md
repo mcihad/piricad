@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ölçülen ile yazılan ayrı: önek, sonek, tolerans, birim; elle yazılan değer görünür; pafta ölçeği (C-10, 2. aşama)
+
+- **ÖLÇÜ** ve yeni **ÖLÇÜDÜZENLE** (`core.dimension_edit`, Değiştir menüsü ve araç
+  kutusunun Ölçü ailesi): `onek`, `sonek`, `birim` (çizimin ya da mm/cm/m/km),
+  `hassasiyet`, `tolerans` (±), `tolerans_ust`/`tolerans_alt` (sapma), `tolerans_bicim`
+  (`sinir`: iki sınır değer); ÖLÇÜDÜZENLE ayrıca `metin`, `stil`, `yazi_yeri` (elle
+  yerleştirilen yazı ölçüyle birlikte taşınır) ve `sifirla`.
+- **Ölçülen ile yazılan ayrı tutulur.** Yazıdaki `<>` ölçülen değerdir; `<>` taşımayan
+  yazı **elle yazılmış** sayılır: tuvalde uyarı renginde "elle yazılmış · ölçülen …",
+  NESNEBİLGİ'de "ELLE YAZILMIŞ, ölçülen değer değil" ve yapılandırılmış `olcu` alanı,
+  nitelik panelinde **ELLE** rozeti. Elle yazılmış değere önek/sonek/tolerans eklenmez;
+  bağlı ölçü yeniden ölçülünce yazısının değişmediği söylenir. YAZIDÜZENLE bir ölçüye
+  uygulanınca aynı modele yazar.
+- Nitelik panelinde ölçü için **ÖLÇÜ** grubu: ölçülen, yazı, metin, önek, sonek, birim,
+  ondalık, tolerans, stil, pafta ölçeği, bağlar; düzenlenebilir her hücre bir
+  ÖLÇÜDÜZENLE satırıdır.
+- **Pafta ölçeği.** Yeni ölçü hangi pafta ölçeği için boyutlandığını saklar;
+  **ÖLÇÜYENİLE** (`core.dimension_refresh`) ölçüleri başka bir ölçeğe uyarlar — ok,
+  uzatma çizgileri ve yazı kâğıtta stilin boyunda kalır. AYAR plan_ölçeği ya da
+  çizim_birimi değişince ve YAZDIR başka ölçekte basarken bu söylenir.
+- DXF: süslenmiş yazı `<>` ile (`R<>%%p0,05 m`), elle yazılmış yazı yazıldığı gibi gider;
+  geri gelince ölçülen ölçülen, elle yazılan elle yazılmış kalır.
+- Ölçü yükünün ikinci düzeni yalnız bu alanlardan biri doluysa yazılır; yeni çizilen
+  ölçüler pafta ölçeğini taşıdığı için altın dosyalar `olcu-turleri` ve `nesne-turleri`
+  yeni yükle güncellendi (geometri aynı).
+
 ### Eklendi — ölçü ölçtüğü nesneye bağlı: köşe taşınınca yeniden ölçülür (C-10, 1. aşama)
 
 - **Bağlı ölçü.** ÖLÇÜ'nün bir noktası bir köşenin, bir dairenin ya da yayın

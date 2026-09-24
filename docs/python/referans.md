@@ -154,6 +154,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
+| [`cad.dimension_edit`](#caddimension_edit) | `core.dimension_edit` | `ÖLÇÜDÜZENLE` | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
+| [`cad.dimension_refresh`](#caddimension_refresh) | `core.dimension_refresh` | `ÖLÇÜYENİLE` | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
 | [`cad.leader`](#cadleader) | `core.leader` | `LİDER` | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`cad.points`](#cadpoints) | `core.points` | `NOKTALAR` | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`cad.guide`](#cadguide) | `core.guide` | `KILAVUZ` | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
@@ -1807,6 +1809,14 @@ cad.dimension(
     text: str,
     catalog: str,
     associate: bool,
+    prefix: str,
+    suffix: str,
+    unit: str,
+    precision: int,
+    tolerance: float,
+    tolerance_upper: float,
+    tolerance_lower: float,
+    tolerance_style: str,
 ) -> int
 ```
 
@@ -1819,11 +1829,87 @@ cad.dimension(
 | `apex` | `Coord` | `tepe` | Açısal ölçünün tepe noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce] |
 | `style` | `str` | `stil` | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
-| `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin |
+| `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `associate` | `bool` | `bagla` | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
+| `prefix` | `str` | `onek` | Değerin önüne yazılan: R, Ø, ≈ … |
+| `suffix` | `str` | `sonek` | Değerin ardına yazılan: " m", " (eski)" … |
+| `unit` | `str` | `birim` | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `precision` | `int` | `hassasiyet` | Ondalık basamak sayısı; varsayılan stilinki |
+| `tolerance` | `float` | `tolerans` | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
+| `tolerance_upper` | `float` | `tolerans_ust` | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
+| `tolerance_lower` | `float` | `tolerans_alt` | Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece |
+| `tolerance_style` | `str` | `tolerans_bicim` | simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine |
 
 [Komut sayfası](../komutlar/dimension.md)
+
+### `cad.dimension_edit`
+
+Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.
+
+Komut: `core.dimension_edit` — `ÖLÇÜDÜZENLE`
+
+```python
+cad.dimension_edit(
+    objects: list[int],
+    text: str,
+    style: str,
+    text_position: Coord,
+    reset: list[str],
+    catalog: str,
+    prefix: str,
+    suffix: str,
+    unit: str,
+    precision: int,
+    tolerance: float,
+    tolerance_upper: float,
+    tolerance_lower: float,
+    tolerance_style: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Düzenlenecek ölçüler; verilmezse seçim, o da boşsa sorulur [kalıcı nesne anahtarı] |
+| `text` | `str` | `metin` | Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve öyle gösterilir. <> ya da boş metin ölçüye döndürür |
+| `style` | `str` | `stil` | Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan |
+| `text_position` | `Coord` | `yazi_yeri` | Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır [mm, Sağa (Y) önce] |
+| `reset` | `list[str]` | `sifirla` | Stile döndürülecekler; anahtar birden çok kez yazılabilir |
+| `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `prefix` | `str` | `onek` | Değerin önüne yazılan: R, Ø, ≈ … |
+| `suffix` | `str` | `sonek` | Değerin ardına yazılan: " m", " (eski)" … |
+| `unit` | `str` | `birim` | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `precision` | `int` | `hassasiyet` | Ondalık basamak sayısı; varsayılan stilinki |
+| `tolerance` | `float` | `tolerans` | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
+| `tolerance_upper` | `float` | `tolerans_ust` | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
+| `tolerance_lower` | `float` | `tolerans_alt` | Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece |
+| `tolerance_style` | `str` | `tolerans_bicim` | simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine |
+
+[Komut sayfası](../komutlar/dimension_edit.md)
+
+### `cad.dimension_refresh`
+
+Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır.
+
+Komut: `core.dimension_refresh` — `ÖLÇÜYENİLE`
+
+```python
+cad.dimension_refresh(
+    objects: list[int],
+    scale: int,
+    old_scale: int,
+    catalog: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Yenilenecek ölçüler; verilmezse çizimin bütün ölçüleri [kalıcı nesne anahtarı] |
+| `scale` | `int` | `olcek` | Paftanın ölçeği, 1/N'nin N'si; verilmezse AYAR plan_ölçeği |
+| `old_scale` | `int` | `eski_olcek` | Ölçeği bilinmeyen ölçülerin çizildiği ölçek (dosyadan gelenler) |
+| `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+[Komut sayfası](../komutlar/dimension_refresh.md)
 
 ### `cad.leader`
 

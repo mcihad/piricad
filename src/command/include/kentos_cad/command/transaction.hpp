@@ -251,6 +251,7 @@ public:
         std::size_t dims_relinked{0};   ///< links moved to the object that replaced theirs
         std::size_t dims_released{0};   ///< links released: the dimension's own point was moved off
         std::size_t dims_left{0};       ///< linked dimensions that could not follow: locked
+        std::size_t dims_manual{0}; ///< followed and re-measured, but the caption is typed by hand
     };
 
     /// Brings every dependent up to date with what this transaction did to its

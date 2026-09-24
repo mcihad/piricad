@@ -342,3 +342,26 @@ TEST_CASE("YAZDIR: motor bağlı değilse söyler; komut satırı ile betik ayn�
     CHECK(journal_of(scr.journal).empty());
     CHECK_EQ(journal_of(cli.journal), journal_of(scr.journal));
 }
+
+TEST_CASE("YAZDIR: ölçülerin boyutlandığı paftadan başka ölçekte basılırken uyarır, yine de basar")
+{
+    // TODOS C-10: a 2,5 mm figure laid out for 1/1000 is half a millimetre tall
+    // on a 1/5000 sheet. The sheet still prints; what it will look like is said
+    // first, with the command that sizes the dimensions for it.
+    Rig f;
+    f.must("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3");
+    auto printed = f.run("YAZDIR merkez=10,0 olcek=5000 dosya=/tmp/pafta.pdf");
+    if (!printed) FAIL_WITH("YAZDIR", printed.error().message);
+    bool warned = false;
+    for (const std::string& w : printed.value().warnings)
+        warned = warned || (w.find("1 ölçü 1/1000 paftası için boyutlandırılmış; 1/5000 çıktıda "
+                                   "yazıları 0,5 mm olur") != std::string::npos &&
+                            w.find("ÖLÇÜYENİLE olcek=5000") != std::string::npos);
+    CHECK(warned);
+
+    // At the scale they were sized for, not a word.
+    auto same = f.run("YAZDIR merkez=10,0 olcek=1000 dosya=/tmp/pafta.pdf");
+    REQUIRE(same.ok());
+    for (const std::string& w : same.value().warnings)
+        CHECK(w.find("boyutlandırılmış") == std::string::npos);
+}

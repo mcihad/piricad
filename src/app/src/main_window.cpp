@@ -1269,6 +1269,14 @@ void MainWindow::buildActions()
     actTextEdit_ = modifyTool(Glyph::TextEdit, tr("Yazıyı Düzenle"), QStringLiteral("YAZIDÜZENLE"),
                               tr("YAZIDÜZENLE — yazıyı seçin, yeni metni yazın; eskisi önerilir  "
                                  "·  kısaltma: YZD"));
+    // THE DIMENSION'S OWN EDIT (TODOS C-10): pick the dimension, type its
+    // caption with `<>` for the measured figure. The rest — prefix, tolerance,
+    // unit, decimals — is on the ÖLÇÜ group of the attribute panel, one cell
+    // per field, and on the command line.
+    actDimensionEdit_ =
+        modifyTool(Glyph::TextEdit, tr("Ölçüyü Düzenle"), QStringLiteral("ÖLÇÜDÜZENLE"),
+                   tr("ÖLÇÜDÜZENLE — ölçüyü seçin, yazısını yazın: <> ölçülen değerdir, <> "
+                      "taşımayan yazı elle yazılmış sayılır ve öyle gösterilir  ·  kısaltma: ÖDZ"));
 
     actUndo_ = new QAction(tr("Geri Al"), this);
     actUndo_->setShortcut(QKeySequence::Undo);
@@ -1783,6 +1791,15 @@ void MainWindow::buildMenus()
     modify->addAction(actEdgeKind_);
     modify->addAction(actToArea_);
     modify->addAction(actTextEdit_);
+    modify->addAction(actDimensionEdit_);
+    // A SHEET SCALE IS WHAT A DIMENSION'S SIZES ARE FOR: the whole drawing's
+    // dimensions sized for the plan scale, so they print at the style's paper
+    // size on this sheet (TODOS C-10).
+    modify->addAction(commandAction(
+        Glyph::Ruler, tr("Ölçüleri Pafta Ölçeğine Uyarla"), QStringLiteral("ÖLÇÜYENİLE"),
+        tr("ÖLÇÜYENİLE — çizimin bütün ölçülerini plan ölçeğine uyarlar: oklar, uzatma "
+           "çizgileri ve yazılar kâğıtta stilin boyunda kalır; yazılar çizimin birimiyle "
+           "yeniden yazılır  ·  kısaltma: ÖYN")));
     modify->addSeparator();
     // TEMİZLE: what the drawing holds twice or for nothing — found and selected
     // first, repaired only when asked, in one undo step (TODOS C-09).
@@ -2194,7 +2211,7 @@ void MainWindow::buildToolBox()
     // corrected, and the correction was a menu row behind `Diğer komutlar`.
     toolBox_->addFamily({actText_, actTextEdit_});
     toolBox_->addFamily({actInsert_, actBlock_});
-    toolBox_->addFamily({actDimension_, actLeader_, actLabel_});
+    toolBox_->addFamily({actDimension_, actDimensionEdit_, actLeader_, actLabel_});
     toolBox_->addSeparator();
 
     // editing
@@ -5185,6 +5202,29 @@ int MainWindow::probeRealMouse()
                     .arg(lastSaid()));
             shoot("olcu-izler");
             controller_->cancelInteractive();
+
+            // THE ÖLÇÜ GROUP OF THE ATTRIBUTE PANEL, cell by cell: a prefix,
+            // then a figure typed by hand — which the model must know is typed.
+            if (dim != core::kNoEntity) {
+                runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1")
+                                  .arg(static_cast<qulonglong>(core::raw(doc.key_of(dim)))));
+                showAttributes();
+                QCoreApplication::processEvents();
+                const bool prefixed =
+                    attributePanel_->editRowForProbe(QStringLiteral("onek"), QStringLiteral("≈"));
+                const std::string after_prefix(doc.texts().text(doc.entities().slot[dim]));
+                check(prefixed && after_prefix.starts_with("≈"),
+                      QStringLiteral("Ölçü: nitelik panelinde önek hücresi ölçüye yazıldı (\"%1\")")
+                          .arg(QString::fromStdString(after_prefix)));
+                const bool typed = attributePanel_->editRowForProbe(QStringLiteral("metin"),
+                                                                    QStringLiteral("26,01"));
+                auto now         = core::dimension_of(doc.geometry(), doc.entities().slot[dim]);
+                check(typed && now && core::dimension_text_is_manual(now.value()) &&
+                          attributePanel_->probeRowKeys().contains(QStringLiteral("olculen")),
+                      QStringLiteral("Ölçü: panelde elle yazılan değer elle yazılmış sayıldı, "
+                                     "ölçülen değer satırı yerinde"));
+                showTranscript();
+            }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
@@ -6510,6 +6550,18 @@ void MainWindow::showTranscript()
     // whatever row it happened to stop at.
     if (QScrollBar* bar = transcript_->verticalScrollBar(); bar != nullptr)
         bar->setValue(bar->maximum());
+}
+
+void MainWindow::showAttributes()
+{
+    if (propertyDock_ == nullptr || propertyStack_ == nullptr || attributePanel_ == nullptr) return;
+    propertyDock_->show();
+    propertyDock_->raise();
+    const int at = propertyStack_->indexOf(attributePanel_);
+    if (at < 0) return;
+    propertyStack_->setCurrentIndex(at);
+    if (propertyHeader_ != nullptr) propertyHeader_->setCurrent(at);
+    attributePanel_->refresh();
 }
 
 bool MainWindow::confirmErase()

@@ -776,12 +776,16 @@ Transaction::SettleReport Transaction::settle_dimensions(core::DrawingUnit unit,
                 const std::array<core::RingGeometry::RingInput, 2> rings{
                     core::RingGeometry::RingInput{r.baseline, core::RingRole::Open, 0},
                     core::RingGeometry::RingInput{r.defs, core::RingRole::Open, 0}};
-                const std::uint32_t slot = ents.slot[dim];
-                const core::Mm height    = doc_.texts().height(slot);
+                const std::int64_t measured_before = decoded.value().measurement;
                 if (set_kind_geometry(dim, rings, r.payload)) {
                     if (r.text != doc_.texts().text(ents.slot[dim]))
-                        (void)set_text(dim, r.text, height, core::TextAnchor::MiddleCentre);
+                        (void)set_text(dim, r.text, r.text_height, core::TextAnchor::MiddleCentre);
                     ++rep.dims_followed;
+                    // A FIGURE TYPED BY HAND DOES NOT FOLLOW, and that is said:
+                    // the side is 13,60 now and the sheet still says 12,50.
+                    if (core::dimension_text_is_manual(r.def) &&
+                        r.def.measurement != measured_before)
+                        ++rep.dims_manual;
                 }
             } else {
                 ++rep.dims_left;

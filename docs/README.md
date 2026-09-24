@@ -123,6 +123,8 @@ Tek tek komutlar:
 | `BLOK` | [Blok tanımlama](komutlar/block.md) |
 | `BLOKEKLE` | [Blok yerleştirme](komutlar/insert.md) |
 | `ÖLÇÜ` | [Ölçülendirme](komutlar/dimension.md) |
+| `ÖLÇÜDÜZENLE` | [Çizilmiş ölçüyü düzenleme](komutlar/dimension_edit.md) |
+| `ÖLÇÜYENİLE` | [Ölçüleri pafta ölçeğine uyarlama](komutlar/dimension_refresh.md) |
 | `LİDER` | [Lider çizme](komutlar/leader.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |

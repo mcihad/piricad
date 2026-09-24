@@ -585,6 +585,41 @@ private:
             const auto ys = geo.ring_ys(span.first);
             if (!xs.empty()) text_at = DRW_Coord(units(xs[0]), units(ys[0]), 0.0);
         }
+        // GROUP 1 KEEPS A MEASURED FIGURE MEASURED (TODOS C-10). A caption typed
+        // by hand goes out as typed; one this program decorated — a prefix, a
+        // tolerance, a template — goes out as `<>` in its place, so the reader
+        // measures the figure itself and a round trip keeps it measured. Only a
+        // dimension with a unit of its own is written out whole: a reader's
+        // `<>` would come back in the file's unit.
+        std::string caption = d.override_text;
+        if (!core::dimension_text_is_manual(d)) {
+            const bool decorated = !d.prefix.empty() || !d.suffix.empty() ||
+                                   d.tolerance != core::DimTolerance::None ||
+                                   !d.override_text.empty();
+            if (d.unit != 0) {
+                caption = std::string(doc_.texts().text(slot));
+            } else if (decorated) {
+                std::string tol = core::dimension_tolerance_text(d, unit_);
+                if (tol.starts_with("±")) tol = "%%p" + tol.substr(std::string_view("±").size());
+                const std::string figure = d.tolerance == core::DimTolerance::Limits
+                                               ? std::string(doc_.texts().text(slot))
+                                               : d.prefix + "<>" + tol + d.suffix;
+                if (d.override_text.empty()) {
+                    caption = figure;
+                } else {
+                    caption.clear();
+                    const std::string_view typed = d.override_text;
+                    std::size_t from             = 0;
+                    for (std::size_t at = typed.find("<>"); at != std::string_view::npos;
+                         at             = typed.find("<>", from)) {
+                        caption += typed.substr(from, at - from);
+                        caption += figure;
+                        from = at + 2;
+                    }
+                    caption += typed.substr(from);
+                }
+            }
+        }
         const auto fill = [&](DRW_Dimension& out, int type_bits) {
             common(out, e);
             out.type =
@@ -592,7 +627,7 @@ private:
                                  (d.user_text_position ? 128U : 0U) | (d.ordinate_x ? 64U : 0U));
             out.setTextPoint(text_at);
             out.setStyle(d.style);
-            out.setText(d.override_text);
+            out.setText(caption);
             out.setExtrusion(DRW_Coord(0.0, 0.0, 1.0));
             out.setAlign(5);
         };

@@ -6,6 +6,8 @@
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/measure_text.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -329,6 +331,145 @@ void AttributePanel::rebuild()
                              {}});
         groups_.push_back(what);
 
+        // ---- what a DIMENSION measures and what it says ------------------
+        //
+        // TODOS C-10. The two side by side, because on the sheet a figure typed
+        // by hand and a measured one look alike — the typed one carries ELLE.
+        // Every editable row is one ÖLÇÜDÜZENLE line, so a cell edited here and
+        // the same line typed at the prompt are one write, one undo step. The
+        // text row holds `<>` for the measured figure: pressing Enter on it
+        // without a change must not turn a measured figure into a typed one.
+        if (kind == core::kDimensionKind)
+            if (auto dim = core::dimension_of(doc.geometry(), gslot); dim) {
+                const core::DimensionDef& def = dim.value();
+                const core::DrawingUnit unit  = controller_.bus().drawing_unit();
+                const bool manual             = core::dimension_text_is_manual(def);
+                const QString id              = QString::number(static_cast<qulonglong>(key));
+                const auto edit               = [&id](const QString& what) {
+                    return QStringLiteral("ÖLÇÜDÜZENLE nesneler=%1 ").arg(id) + what;
+                };
+                AttributeGroup measure{tr("ÖLÇÜ"), {}, true};
+                measure.rows.push_back(
+                    {tr("olculen"),
+                     QString::fromStdString(core::dimension_value_text(def, unit)),
+                     tr("HESAP"),
+                     true,
+                     {},
+                     {}});
+                measure.rows.push_back(
+                    {tr("yazi"),
+                     QString::fromStdString(std::string(doc.texts().text(gslot))),
+                     manual ? tr("ELLE") : QString(),
+                     true,
+                     {},
+                     {}});
+                measure.rows.push_back({tr("metin"),
+                                        def.override_text.empty()
+                                            ? QStringLiteral("<>")
+                                            : QString::fromStdString(def.override_text),
+                                        {},
+                                        false,
+                                        edit(QStringLiteral("metin=\"%1\"")),
+                                        {}});
+                measure.rows.push_back(
+                    {tr("onek"),
+                     def.prefix.empty() ? QStringLiteral("—") : QString::fromStdString(def.prefix),
+                     {},
+                     false,
+                     edit(QStringLiteral("onek=\"%1\"")),
+                     {}});
+                measure.rows.push_back(
+                    {tr("sonek"),
+                     def.suffix.empty() ? QStringLiteral("—") : QString::fromStdString(def.suffix),
+                     {},
+                     false,
+                     edit(QStringLiteral("sonek=\"%1\"")),
+                     {}});
+                const QStringList units{QStringLiteral("cizim"), QStringLiteral("mm"),
+                                        QStringLiteral("cm"), QStringLiteral("m"),
+                                        QStringLiteral("km")};
+                QString unitWord = QStringLiteral("cizim");
+                if (def.unit != 0) {
+                    switch (core::dimension_unit(def, unit)) {
+                    case core::DrawingUnit::Millimetre: unitWord = QStringLiteral("mm"); break;
+                    case core::DrawingUnit::Centimetre: unitWord = QStringLiteral("cm"); break;
+                    case core::DrawingUnit::Kilometre: unitWord = QStringLiteral("km"); break;
+                    default: unitWord = QStringLiteral("m"); break;
+                    }
+                }
+                measure.rows.push_back({tr("birim"),
+                                        unitWord,
+                                        {},
+                                        false,
+                                        edit(QStringLiteral("birim=%1")),
+                                        combo_of(units)});
+                measure.rows.push_back({tr("hassasiyet"),
+                                        QString::number(def.precision),
+                                        {},
+                                        false,
+                                        edit(QStringLiteral("hassasiyet=%1")),
+                                        {}});
+                // THE TOLERANCE AS A NUMBER while it is symmetric, which is what
+                // the cell can edit; a deviation or two limits are shown as
+                // written and changed at the prompt.
+                const bool symmetric = def.tolerance == core::DimTolerance::None ||
+                                       def.tolerance == core::DimTolerance::Symmetric;
+                const bool angle = def.type == core::DimensionType::Angular ||
+                                   def.type == core::DimensionType::Angular3P;
+                QString tolerance = QStringLiteral("—");
+                if (def.tolerance == core::DimTolerance::Symmetric)
+                    tolerance =
+                        angle ? QString::number(
+                                    static_cast<double>(def.tolerance_plus) / 1'000'000.0, 'f', 6)
+                              : QString::number(static_cast<double>(def.tolerance_plus) / 1000.0,
+                                                'f', 3);
+                else if (def.tolerance != core::DimTolerance::None)
+                    tolerance = QString::fromStdString(core::dimension_tolerance_text(def, unit));
+                measure.rows.push_back({tr("tolerans"),
+                                        tolerance,
+                                        {},
+                                        !symmetric,
+                                        symmetric ? edit(QStringLiteral("tolerans=%1")) : QString(),
+                                        {}});
+                measure.rows.push_back(
+                    {tr("stil"), QString::fromStdString(def.style), {}, true, {}, {}});
+                if (def.scale_basis > 0) {
+                    const std::int64_t plan =
+                        controller_.bus().project_settings().get("core.plan.olcek").as_int();
+                    measure.rows.push_back({tr("pafta_olcegi"),
+                                            QStringLiteral("1/%1").arg(def.scale_basis),
+                                            def.scale_basis != plan ? tr("UYARLA") : QString(),
+                                            true,
+                                            {},
+                                            {}});
+                }
+                if (const auto* links = doc.dimension_links().get(slot); links != nullptr) {
+                    std::size_t broken = 0;
+                    for (const core::DimLink& l : *links)
+                        broken += l.broken ? 1 : 0;
+                    measure.rows.push_back(
+                        {tr("baglar"),
+                         broken == 0
+                             ? tr("%1 nokta bağlı").arg(links->size())
+                             : tr("%1 bağlı, %2 kopuk").arg(links->size() - broken).arg(broken),
+                         broken == 0 ? QString() : tr("KOPUK"),
+                         true,
+                         {},
+                         {}});
+                }
+                // FIRST, for a dimension: what it measures and says is what a
+                // user selected it for; its identity folds away beneath it.
+                const QString identity = tr("NESNE");
+                const auto nesne       = std::ranges::find_if(
+                    groups_, [&identity](const AttributeGroup& g) { return g.title == identity; });
+                if (nesne != groups_.end()) {
+                    nesne->open = false;
+                    groups_.insert(nesne, measure);
+                } else {
+                    groups_.push_back(measure);
+                }
+            }
+
         // ---- what it MEASURES -------------------------------------------
         //
         // THE KIND ANSWERS FOR THE AREA, so a circle reports pi*r² rather than
@@ -396,7 +537,8 @@ void AttributePanel::rebuild()
         // Only when there is text. An empty METİN group on every parcel is a
         // group a user learns to scroll past, and then misses on the label that
         // does carry one.
-        if (doc.texts().has(gslot)) {
+        // A dimension's caption is its figure, edited in the ÖLÇÜ group above.
+        if (doc.texts().has(gslot) && kind != core::kDimensionKind) {
             AttributeGroup says{tr("METİN"), {}, false};
 
             // EDITABLE NOW, and the note that stood here said exactly why it was

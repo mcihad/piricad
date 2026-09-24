@@ -74,6 +74,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
+| [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
+| [`core.dimension_refresh`](dimension_refresh.md) | Ölçüleri Yenile | `ÖLÇÜYENİLE`, `OLCUYENILE`, `DIMREFRESH`, `ÖYN`, `OYN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
 | [`core.leader`](leader.md) | Lider | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`core.points`](points.md) | Nokta Listesi | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
@@ -1000,11 +1002,55 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 | `tepe` | point_list | isteğe bağlı | Açısal ölçünün tepe noktası |
 | `bitis` | point_list | isteğe bağlı | Yay uzunluğu ölçüsünün bitiş noktası |
 | `stil` | text | isteğe bağlı | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
-| `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin |
+| `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `bagla` | bool | isteğe bağlı | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
+| `onek` | text | isteğe bağlı | Değerin önüne yazılan: R, Ø, ≈ … |
+| `sonek` | text | isteğe bağlı | Değerin ardına yazılan: " m", " (eski)" … |
+| `birim` | text | isteğe bağlı | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `hassasiyet` | integer | isteğe bağlı | Ondalık basamak sayısı; varsayılan stilinki |
+| `tolerans` | number | isteğe bağlı | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
+| `tolerans_ust` | number | isteğe bağlı | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
+| `tolerans_alt` | number | isteğe bağlı | Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece |
+| `tolerans_bicim` | text | isteğe bağlı | simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine |
 
 Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
+
+### `core.dimension_edit` — ÖLÇÜDÜZENLE (Ölçü Düzenle)
+
+Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Düzenlenecek ölçüler; verilmezse seçim, o da boşsa sorulur |
+| `metin` | text | isteğe bağlı | Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve öyle gösterilir. <> ya da boş metin ölçüye döndürür |
+| `stil` | text | isteğe bağlı | Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan |
+| `yazi_yeri` | point_list | isteğe bağlı | Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır |
+| `sifirla` | text | 0–8 | Stile döndürülecekler; anahtar birden çok kez yazılabilir |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `onek` | text | isteğe bağlı | Değerin önüne yazılan: R, Ø, ≈ … |
+| `sonek` | text | isteğe bağlı | Değerin ardına yazılan: " m", " (eski)" … |
+| `birim` | text | isteğe bağlı | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `hassasiyet` | integer | isteğe bağlı | Ondalık basamak sayısı; varsayılan stilinki |
+| `tolerans` | number | isteğe bağlı | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
+| `tolerans_ust` | number | isteğe bağlı | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
+| `tolerans_alt` | number | isteğe bağlı | Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece |
+| `tolerans_bicim` | text | isteğe bağlı | simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine |
+
+Ayrıntılı kullanım: [ÖLÇÜDÜZENLE](dimension_edit.md)
+
+### `core.dimension_refresh` — ÖLÇÜYENİLE (Ölçüleri Yenile)
+
+Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Yenilenecek ölçüler; verilmezse çizimin bütün ölçüleri |
+| `olcek` | integer | isteğe bağlı | Paftanın ölçeği, 1/N'nin N'si; verilmezse AYAR plan_ölçeği |
+| `eski_olcek` | integer | isteğe bağlı | Ölçeği bilinmeyen ölçülerin çizildiği ölçek (dosyadan gelenler) |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [ÖLÇÜYENİLE](dimension_refresh.md)
 
 ### `core.leader` — LİDER (Lider)
 
@@ -4509,7 +4555,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "metin": {
           "type": "string",
-          "description": "Ölçülen değer yerine yazılacak metin (metin)"
+          "description": "Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır (metin)"
         },
         "katalog": {
           "type": "string",
@@ -4518,6 +4564,52 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "bagla": {
           "type": "boolean",
           "description": "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır)"
+        },
+        "onek": {
+          "type": "string",
+          "description": "Değerin önüne yazılan: R, Ø, ≈ … (metin)"
+        },
+        "sonek": {
+          "type": "string",
+          "description": "Değerin ardına yazılan: \" m\", \" (eski)\" … (metin)"
+        },
+        "birim": {
+          "type": "string",
+          "enum": [
+            "cizim",
+            "mm",
+            "cm",
+            "m",
+            "km"
+          ],
+          "description": "Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin)"
+        },
+        "hassasiyet": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Ondalık basamak sayısı; varsayılan stilinki (tam sayı)"
+        },
+        "tolerans": {
+          "type": "number",
+          "description": "Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır (sayı)"
+        },
+        "tolerans_ust": {
+          "type": "number",
+          "description": "Üst sapma: + bu kadar; uzunlukta metre, açıda derece (sayı)"
+        },
+        "tolerans_alt": {
+          "type": "number",
+          "description": "Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece (sayı)"
+        },
+        "tolerans_bicim": {
+          "type": "string",
+          "enum": [
+            "simetrik",
+            "sapma",
+            "sinir"
+          ],
+          "description": "simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -4550,6 +4642,231 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "OLCU",
         "DIMENSION",
         "ÖÇ"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension_edit",
+    "title": "Ölçü Düzenle",
+    "description": "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.\nKomut: ÖLÇÜDÜZENLE (OLCUDUZENLE, DIMEDIT, ÖDZ, ODZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Düzenlenecek ölçüler; verilmezse seçim, o da boşsa sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "metin": {
+          "type": "string",
+          "description": "Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve öyle gösterilir. <> ya da boş metin ölçüye döndürür (metin)"
+        },
+        "stil": {
+          "type": "string",
+          "description": "Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan (metin)"
+        },
+        "yazi_yeri": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 1
+            }
+          ],
+          "description": "Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "sifirla": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "metin",
+              "onek",
+              "sonek",
+              "tolerans",
+              "birim",
+              "hassasiyet",
+              "yazi_yeri",
+              "hepsi"
+            ]
+          },
+          "maxItems": 8,
+          "description": "Stile döndürülecekler; anahtar birden çok kez yazılabilir (metin)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        },
+        "onek": {
+          "type": "string",
+          "description": "Değerin önüne yazılan: R, Ø, ≈ … (metin)"
+        },
+        "sonek": {
+          "type": "string",
+          "description": "Değerin ardına yazılan: \" m\", \" (eski)\" … (metin)"
+        },
+        "birim": {
+          "type": "string",
+          "enum": [
+            "cizim",
+            "mm",
+            "cm",
+            "m",
+            "km"
+          ],
+          "description": "Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin)"
+        },
+        "hassasiyet": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Ondalık basamak sayısı; varsayılan stilinki (tam sayı)"
+        },
+        "tolerans": {
+          "type": "number",
+          "description": "Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır (sayı)"
+        },
+        "tolerans_ust": {
+          "type": "number",
+          "description": "Üst sapma: + bu kadar; uzunlukta metre, açıda derece (sayı)"
+        },
+        "tolerans_alt": {
+          "type": "number",
+          "description": "Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece (sayı)"
+        },
+        "tolerans_bicim": {
+          "type": "string",
+          "enum": [
+            "simetrik",
+            "sapma",
+            "sinir"
+          ],
+          "description": "simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension_edit",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "ÖLÇÜDÜZENLE",
+        "OLCUDUZENLE",
+        "DIMEDIT",
+        "ÖDZ",
+        "ODZ"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension_refresh",
+    "title": "Ölçüleri Yenile",
+    "description": "Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır.\nKomut: ÖLÇÜYENİLE (OLCUYENILE, DIMREFRESH, ÖYN, OYN)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yenilenecek ölçüler; verilmezse çizimin bütün ölçüleri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "olcek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "Paftanın ölçeği, 1/N'nin N'si; verilmezse AYAR plan_ölçeği (tam sayı)"
+        },
+        "eski_olcek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "Ölçeği bilinmeyen ölçülerin çizildiği ölçek (dosyadan gelenler) (tam sayı)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension_refresh",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "ÖLÇÜYENİLE",
+        "OLCUYENILE",
+        "DIMREFRESH",
+        "ÖYN",
+        "OYN"
       ]
     }
   },

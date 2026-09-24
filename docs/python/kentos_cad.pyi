@@ -1167,6 +1167,14 @@ def dimension(
     text: str = ...,
     catalog: str = ...,
     associate: bool = ...,
+    prefix: str = ...,
+    suffix: str = ...,
+    unit: str = ...,
+    precision: int = ...,
+    tolerance: float = ...,
+    tolerance_upper: float = ...,
+    tolerance_lower: float = ...,
+    tolerance_style: str = ...,
 ) -> int:
     """İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
 
@@ -1178,9 +1186,69 @@ def dimension(
         apex — Açısal ölçünün tepe noktası [mm, Sağa (Y) önce]
         end — Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce]
         style — Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI
-        text — Ölçülen değer yerine yazılacak metin
+        text — Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
         associate — Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet
+        prefix — Değerin önüne yazılan: R, Ø, ≈ …
+        suffix — Değerin ardına yazılan: " m", " (eski)" …
+        unit — Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan)
+        precision — Ondalık basamak sayısı; varsayılan stilinki
+        tolerance — Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır
+        tolerance_upper — Üst sapma: + bu kadar; uzunlukta metre, açıda derece
+        tolerance_lower — Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece
+        tolerance_style — simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine
+    """
+
+def dimension_edit(
+    *,
+    objects: list[int] = ...,
+    text: str = ...,
+    style: str = ...,
+    text_position: Coord = ...,
+    reset: list[str] = ...,
+    catalog: str = ...,
+    prefix: str = ...,
+    suffix: str = ...,
+    unit: str = ...,
+    precision: int = ...,
+    tolerance: float = ...,
+    tolerance_upper: float = ...,
+    tolerance_lower: float = ...,
+    tolerance_style: str = ...,
+) -> int:
+    """Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.
+
+    Komut: core.dimension_edit (ÖLÇÜDÜZENLE)
+        objects — Düzenlenecek ölçüler; verilmezse seçim, o da boşsa sorulur [kalıcı nesne anahtarı]
+        text — Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve öyle gösterilir. <> ya da boş metin ölçüye döndürür
+        style — Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan
+        text_position — Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır [mm, Sağa (Y) önce]
+        reset — Stile döndürülecekler; anahtar birden çok kez yazılabilir
+        catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+        prefix — Değerin önüne yazılan: R, Ø, ≈ …
+        suffix — Değerin ardına yazılan: " m", " (eski)" …
+        unit — Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan)
+        precision — Ondalık basamak sayısı; varsayılan stilinki
+        tolerance — Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır
+        tolerance_upper — Üst sapma: + bu kadar; uzunlukta metre, açıda derece
+        tolerance_lower — Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece
+        tolerance_style — simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine
+    """
+
+def dimension_refresh(
+    *,
+    objects: list[int] = ...,
+    scale: int = ...,
+    old_scale: int = ...,
+    catalog: str = ...,
+) -> int:
+    """Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır.
+
+    Komut: core.dimension_refresh (ÖLÇÜYENİLE)
+        objects — Yenilenecek ölçüler; verilmezse çizimin bütün ölçüleri [kalıcı nesne anahtarı]
+        scale — Paftanın ölçeği, 1/N'nin N'si; verilmezse AYAR plan_ölçeği
+        old_scale — Ölçeği bilinmeyen ölçülerin çizildiği ölçek (dosyadan gelenler)
+        catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
     """
 
 def leader(

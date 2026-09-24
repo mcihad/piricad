@@ -938,6 +938,14 @@ public:
 
     void echo(std::string_view message) const;
 
+    /// The project's drawing unit (`core.cizim.birim`): what a dimension's
+    /// figure is written in unless the dimension names its own.
+    core::DrawingUnit drawing_unit() const;
+
+    /// The project's node tolerance (`core.topoloji.dugum_toleransi`): two corners
+    /// closer than it are one corner, for a dimension's link as for SINIR.
+    core::Mm node_tolerance() const;
+
     /// Collects every `echo` into `sink` until the returned guard dies.
     ///
     /// A GUARD RATHER THAN A FLAG, because dispatches nest: a batch runs commands
@@ -966,14 +974,6 @@ private:
     /// Says what followed a commit: dependents re-placed, re-worded, erased
     /// with their source, or left behind on a locked layer.
     void say_settled(const Transaction::SettleReport& settled) const;
-
-    /// The project's drawing unit (`core.cizim.birim`): what a dimension that
-    /// follows its source is re-worded in.
-    core::DrawingUnit drawing_unit() const;
-
-    /// The project's node tolerance (`core.topoloji.dugum_toleransi`): two corners
-    /// closer than it are one corner, for a dimension's link as for SINIR.
-    core::Mm node_tolerance() const;
 
     core::Document& doc_;
     Registry& reg_;

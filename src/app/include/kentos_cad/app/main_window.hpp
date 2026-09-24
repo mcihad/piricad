@@ -119,6 +119,10 @@ public:
     /// the canvas, so a menu row that runs one has to put its answer where
     /// somebody is looking. Public so `KENTOS_SHOT_DIR` can photograph an answer
     /// where a user would read it; it is the same call the menu makes.
+    /// Brings the attribute panel forward — the tab and the page together, as
+    /// `showTranscript` does for the transcript.
+    void showAttributes();
+
     void showTranscript();
 
     /// Opens the Python console and puts the cursor in its prompt. Public for the
@@ -983,25 +987,26 @@ private:
     QAction* actSetLayer_{nullptr};
     // THE EDIT VERBS THAT WERE MENU ROWS ONLY. Held as tools now, so the column
     // can carry them in families and the menus and the column press one action.
-    QAction* actBreak_{nullptr};        ///< KIR
-    QAction* actLengthen_{nullptr};     ///< UZUNLUK
-    QAction* actJoin_{nullptr};         ///< UÇUCA
-    QAction* actExplode_{nullptr};      ///< PATLAT
-    QAction* actAlign_{nullptr};        ///< HİZALA
-    QAction* actAlignScaled_{nullptr};  ///< HİZALA olcekle=evet
-    QAction* actDivide_{nullptr};       ///< BÖLÜMLE
-    QAction* actPolylineEdit_{nullptr}; ///< ÇİZGİDÜZENLE
-    QAction* actVertexMove_{nullptr};   ///< KÖŞETAŞI
-    QAction* actVertexAdd_{nullptr};    ///< KÖŞEEKLE
-    QAction* actVertexDelete_{nullptr}; ///< KÖŞESİL
-    QAction* actEdgeKind_{nullptr};     ///< KENARTÜRÜ
-    QAction* actToArea_{nullptr};       ///< ALANAÇEVİR
-    QAction* actBoundary_{nullptr};     ///< SINIR
-    QAction* actTextEdit_{nullptr};     ///< YAZIDÜZENLE
-    QAction* actTraverse_{nullptr};     ///< POLİGON, on both the Çizim and the Harita menu
-    QAction* actStakeout_{nullptr};     ///< APLİKASYON
-    QAction* actLabel_{nullptr};        ///< ETİKET
-    QAction* actAngledGuide_{nullptr};  ///< KILAVUZ yon=45g
+    QAction* actBreak_{nullptr};         ///< KIR
+    QAction* actLengthen_{nullptr};      ///< UZUNLUK
+    QAction* actJoin_{nullptr};          ///< UÇUCA
+    QAction* actExplode_{nullptr};       ///< PATLAT
+    QAction* actAlign_{nullptr};         ///< HİZALA
+    QAction* actAlignScaled_{nullptr};   ///< HİZALA olcekle=evet
+    QAction* actDivide_{nullptr};        ///< BÖLÜMLE
+    QAction* actPolylineEdit_{nullptr};  ///< ÇİZGİDÜZENLE
+    QAction* actVertexMove_{nullptr};    ///< KÖŞETAŞI
+    QAction* actVertexAdd_{nullptr};     ///< KÖŞEEKLE
+    QAction* actVertexDelete_{nullptr};  ///< KÖŞESİL
+    QAction* actEdgeKind_{nullptr};      ///< KENARTÜRÜ
+    QAction* actToArea_{nullptr};        ///< ALANAÇEVİR
+    QAction* actBoundary_{nullptr};      ///< SINIR
+    QAction* actTextEdit_{nullptr};      ///< YAZIDÜZENLE
+    QAction* actDimensionEdit_{nullptr}; ///< ÖLÇÜDÜZENLE
+    QAction* actTraverse_{nullptr};      ///< POLİGON, on both the Çizim and the Harita menu
+    QAction* actStakeout_{nullptr};      ///< APLİKASYON
+    QAction* actLabel_{nullptr};         ///< ETİKET
+    QAction* actAngledGuide_{nullptr};   ///< KILAVUZ yon=45g
     QAction* actPoint_{nullptr};
     QAction* actPerpOffset_{nullptr};
     QAction* actSurvey_{nullptr};

@@ -347,7 +347,13 @@ std::vector<std::uint8_t> encode_dimension(const DimensionDef& def)
     std::uint16_t flags = 0;
     if (def.user_text_position) flags |= kFlagUserText;
     if (def.ordinate_x) flags |= kFlagOrdinateX;
-    kind::put_header(out, kDimensionLayout, flags);
+    // LAYOUT 2 ONLY WHEN IT SAYS SOMETHING: a dimension with no prefix, no
+    // tolerance, no unit of its own and no recorded sheet scale is written
+    // byte for byte as before those existed.
+    const bool layout2 = !def.prefix.empty() || !def.suffix.empty() ||
+                         def.tolerance != DimTolerance::None || def.tolerance_plus != 0 ||
+                         def.tolerance_minus != 0 || def.unit != 0 || def.scale_basis != 0;
+    kind::put_header(out, layout2 ? kDimensionLayout2 : kDimensionLayout, flags);
     put_u8(out, static_cast<std::uint8_t>(def.type));
     put_u8(out, static_cast<std::uint8_t>(def.arrow));
     put_u8(out, def.precision);
@@ -362,6 +368,17 @@ std::vector<std::uint8_t> encode_dimension(const DimensionDef& def)
     kind::put_string(out, def.override_text.size() > kMaxText
                               ? def.override_text.substr(0, kMaxText)
                               : def.override_text);
+    if (layout2) {
+        kind::put_string(out, def.prefix.size() > kMaxText ? def.prefix.substr(0, kMaxText)
+                                                           : def.prefix);
+        kind::put_string(out, def.suffix.size() > kMaxText ? def.suffix.substr(0, kMaxText)
+                                                           : def.suffix);
+        put_u8(out, static_cast<std::uint8_t>(def.tolerance));
+        put_i64(out, def.tolerance_plus);
+        put_i64(out, def.tolerance_minus);
+        put_u8(out, def.unit);
+        put_i64(out, def.scale_basis);
+    }
     return out;
 }
 
@@ -372,7 +389,7 @@ Result<DimensionDef> decode_dimension(std::span<const std::uint8_t> payload)
     if (!kind::read_header(in, h) || !in.remaining(4 + 8 * 6))
         return err(ErrorCode::ParseError,
                    "Ölçü yükü başlığı ve sayılarını taşıyacak kadar uzun değil.");
-    if (h.version != kDimensionLayout)
+    if (h.version != kDimensionLayout && h.version != kDimensionLayout2)
         return err(ErrorCode::Unsupported,
                    "Ölçü yükünün düzeni bu yapının tanımadığı bir sürümde: " +
                        std::to_string(h.version));
@@ -406,6 +423,30 @@ Result<DimensionDef> decode_dimension(std::span<const std::uint8_t> payload)
         return err(ErrorCode::ParseError, "Ölçü stil adı okunamadı.");
     if (!kind::read_string(in, def.override_text, kMaxText))
         return err(ErrorCode::ParseError, "Ölçünün elle yazılan metni okunamadı.");
+    if (h.version == kDimensionLayout2) {
+        if (!kind::read_string(in, def.prefix, kMaxText) ||
+            !kind::read_string(in, def.suffix, kMaxText))
+            return err(ErrorCode::ParseError, "Ölçünün öneki ya da soneki okunamadı.");
+        if (!in.remaining(1 + 8 + 8 + 1 + 8))
+            return err(ErrorCode::ParseError,
+                       "Ölçü yükü toleransı, birimi ve ölçeği taşıyacak kadar uzun değil.");
+        const std::uint8_t tolerance = in.u8();
+        if (tolerance > static_cast<std::uint8_t>(DimTolerance::Limits))
+            return err(ErrorCode::ValidationFailed,
+                       "Bilinmeyen tolerans biçimi: " + std::to_string(tolerance));
+        def.tolerance       = static_cast<DimTolerance>(tolerance);
+        def.tolerance_plus  = in.i64();
+        def.tolerance_minus = in.i64();
+        def.unit            = in.u8();
+        def.scale_basis     = in.i64();
+        if (def.tolerance_plus < 0 || def.tolerance_minus < 0)
+            return err(ErrorCode::ValidationFailed, "Ölçü toleransı negatif olamaz.");
+        if (def.unit > static_cast<std::uint8_t>(DrawingUnit::Hectometre) + 1)
+            return err(ErrorCode::ValidationFailed,
+                       "Bilinmeyen ölçü birimi: " + std::to_string(def.unit));
+        if (def.scale_basis < 0)
+            return err(ErrorCode::ValidationFailed, "Ölçünün pafta ölçeği negatif olamaz.");
+    }
     if (in.left() != 0)
         return err(ErrorCode::ParseError,
                    "Ölçü yükünün sonunda " + std::to_string(in.left()) + " fazla bayt var.");
@@ -490,12 +531,77 @@ std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char s
     return with_decimals(scaled, precision > 8 ? 8 : precision, separator, negative) + "°";
 }
 
+namespace {
+
+bool is_angle(DimensionType t) noexcept
+{
+    return t == DimensionType::Angular || t == DimensionType::Angular3P;
+}
+
+/// A figure of the dimension's kind: a length in its unit, or an angle.
+std::string figure(const DimensionDef& def, std::int64_t v, DrawingUnit unit)
+{
+    if (is_angle(def.type)) return format_dimension_angle(v, def.precision, def.decimal_separator);
+    return format_dimension_length(v, dimension_unit(def, unit), def.precision,
+                                   def.decimal_separator);
+}
+
+} // namespace
+
+DrawingUnit dimension_unit(const DimensionDef& def, DrawingUnit unit) noexcept
+{
+    if (def.unit == 0 || def.unit > static_cast<std::uint8_t>(DrawingUnit::Hectometre) + 1)
+        return unit;
+    return static_cast<DrawingUnit>(def.unit - 1);
+}
+
+std::string dimension_value_text(const DimensionDef& def, DrawingUnit unit)
+{
+    return figure(def, def.measurement, unit);
+}
+
+bool dimension_text_is_manual(const DimensionDef& def) noexcept
+{
+    return !def.override_text.empty() && def.override_text.find("<>") == std::string::npos;
+}
+
+std::string dimension_tolerance_text(const DimensionDef& def, DrawingUnit unit)
+{
+    switch (def.tolerance) {
+    case DimTolerance::None:
+    case DimTolerance::Limits: return {};
+    case DimTolerance::Symmetric: return "±" + figure(def, def.tolerance_plus, unit);
+    case DimTolerance::Deviation:
+        return "+" + figure(def, def.tolerance_plus, unit) + "/-" +
+               figure(def, def.tolerance_minus, unit);
+    }
+    return {};
+}
+
 std::string dimension_text(const DimensionDef& def, DrawingUnit unit)
 {
-    if (!def.override_text.empty()) return def.override_text;
-    if (def.type == DimensionType::Angular || def.type == DimensionType::Angular3P)
-        return format_dimension_angle(def.measurement, def.precision, def.decimal_separator);
-    return format_dimension_length(def.measurement, unit, def.precision, def.decimal_separator);
+    // TYPED BY HAND: exactly what was typed, and nothing is added to it — a
+    // prefix or a tolerance around a figure that is not the measured one would
+    // dress a typed number up as a measured one.
+    if (dimension_text_is_manual(def)) return def.override_text;
+    const std::string shown =
+        def.tolerance == DimTolerance::Limits
+            ? figure(def, def.measurement + def.tolerance_plus, unit) + "/" +
+                  figure(def, def.measurement - def.tolerance_minus, unit)
+            : figure(def, def.measurement, unit) + dimension_tolerance_text(def, unit);
+    std::string written = def.prefix + shown + def.suffix;
+    if (def.override_text.empty()) return written;
+    const std::string_view typed = def.override_text;
+    std::string out;
+    std::size_t from = 0;
+    for (std::size_t at = typed.find("<>"); at != std::string_view::npos;
+         at             = typed.find("<>", from)) {
+        out += typed.substr(from, at - from);
+        out += written;
+        from = at + 2;
+    }
+    out += typed.substr(from);
+    return out;
 }
 
 void arrowhead_outline(Point2 tip, Point2 from, Mm size, ArrowStyle style, EmitBuffer& into)
@@ -908,9 +1014,8 @@ KENTOS_KIND(leader)
     return s;
 }
 
-Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
-                                          std::span<const std::pair<std::size_t, Point2>> moves,
-                                          DrawingUnit unit)
+Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
+                                           const DimensionEdit& edit, DrawingUnit unit)
 {
     const EntityTable& ents = doc.entities();
     if (e >= ents.size() || !ents.alive(e) || ents.kind[e] != kDimensionKind)
@@ -923,6 +1028,7 @@ Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
     auto decoded = dimension_of(geom, slot);
     if (!decoded) return decoded.error();
     DimensionDef def = std::move(decoded.value());
+    if (edit.def != nullptr) def = *edit.def;
 
     const std::array<Point2, 2> base{geom.vertex(span.first, 0), geom.vertex(span.first, 1)};
     std::vector<Point2> defs;
@@ -936,32 +1042,39 @@ Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
     std::int64_t sx           = 0;
     std::int64_t sy           = 0;
     std::vector<Point2> moved = defs;
-    for (const auto& [index, to] : moves) {
+    for (const auto& [index, to] : edit.moves) {
         if (index >= moved.size()) return err(ErrorCode::InvalidArgument, "Ölçünün o noktası yok.");
         sx += to.x - defs[index].x;
         sy += to.y - defs[index].y;
         moved[index] = to;
     }
-    const auto n    = static_cast<std::int64_t>(moves.empty() ? 1 : moves.size());
+    const auto n    = static_cast<std::int64_t>(edit.moves.empty() ? 1 : edit.moves.size());
     const Point2 md = Point2{sx / n, sy / n};
 
-    const Mm height = doc.texts().height(slot);
+    const Mm height = edit.text_height > 0 ? edit.text_height : doc.texts().height(slot);
+    // A CAPTION PLACED BY HAND stays where the hand put it, and travels with
+    // what it describes; a new place given now is a caption placed by hand.
+    if (edit.caption != nullptr) def.user_text_position = true;
+    const Point2 kept =
+        edit.caption != nullptr ? *edit.caption : Point2{base[0].x + md.x, base[0].y + md.y};
+
+    DimensionRebuild out;
+    out.text_height = height;
     std::vector<Point2> picks;
     Point2 where{};
     if (!dimension_picks(def.type, defs, base[0], picks, where)) {
         // A type the layout cannot draw: the points move, the figure is
         // re-measured, the caption slides with them and keeps its reading.
-        def.measurement = dimension_measure(def.type, moved, def.rotation_udeg, def.ordinate_x);
-        DimensionRebuild out;
+        def.measurement  = dimension_measure(def.type, moved, def.rotation_udeg, def.ordinate_x);
         out.defs         = std::move(moved);
         out.text         = dimension_text(def, unit);
         const auto dx    = static_cast<double>(base[1].x - base[0].x);
         const auto dy    = static_cast<double>(base[1].y - base[0].y);
         const double len = std::sqrt(dx * dx + dy * dy);
-        out.baseline     = dimension_baseline(Point2{base[0].x + md.x, base[0].y + md.y},
-                                          len > 0.0 ? dx / len : 1.0, len > 0.0 ? dy / len : 0.0,
-                                              height, out.text);
+        out.baseline     = dimension_baseline(kept, len > 0.0 ? dx / len : 1.0,
+                                          len > 0.0 ? dy / len : 0.0, height, out.text);
         out.payload      = encode_dimension(def);
+        out.def          = std::move(def);
         return out;
     }
     if (!dimension_picks(def.type, moved, base[0], picks, where))
@@ -988,13 +1101,20 @@ Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
         return err(ErrorCode::ValidationFailed,
                    "Ölçü yeni noktalarıyla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna "
                    "geldi.");
-    DimensionRebuild out;
     out.defs     = std::move(layout.defs);
     out.text     = dimension_text(def, unit);
-    out.baseline = dimension_baseline(layout.text_centre, layout.text_dir_x, layout.text_dir_y,
-                                      height, out.text);
-    out.payload  = encode_dimension(def);
+    out.baseline = dimension_baseline(def.user_text_position ? kept : layout.text_centre,
+                                      layout.text_dir_x, layout.text_dir_y, height, out.text);
+    out.payload = encode_dimension(def);
+    out.def     = std::move(def);
     return out;
+}
+
+Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
+                                          std::span<const std::pair<std::size_t, Point2>> moves,
+                                          DrawingUnit unit)
+{
+    return dimension_rebuild(doc, e, DimensionEdit{.moves = moves}, unit);
 }
 
 } // namespace kentos::core

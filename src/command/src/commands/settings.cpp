@@ -12,6 +12,8 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/core/crs.hpp"
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -94,6 +96,37 @@ void report_one(Context& ctx, const Settings& store, const SettingSpec& spec)
     }
 
     ctx.echo("    " + spec.summary);
+}
+
+/// A SHEET SCALE IS WHAT A DIMENSION'S SIZES ARE FOR, and a drawing unit what
+/// its figures are written in (TODOS C-10). Neither setting rewrites a drawing
+/// on its own — a dimension is document state and this store is not undoable
+/// yet (the seam above) — so the change says what it left behind and the one
+/// command that brings it up to date.
+void hint_dimensions(const Context& ctx, const std::string& id, std::int64_t now)
+{
+    const core::Document& doc = ctx.document();
+    std::size_t stale         = 0;
+    std::int64_t basis        = 0;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e) || doc.entities().kind[e] != core::kDimensionKind) continue;
+        auto def = core::dimension_of(doc.geometry(), doc.entities().slot[e]);
+        if (!def) continue;
+        if (id == "core.plan.olcek" && def.value().scale_basis > 0 &&
+            def.value().scale_basis != now) {
+            ++stale;
+            basis = def.value().scale_basis;
+        }
+        if (id == "core.cizim.birim" && def.value().unit == 0) ++stale;
+    }
+    if (stale == 0) return;
+    if (id == "core.plan.olcek")
+        ctx.echo("Bu çizimdeki " + std::to_string(stale) + " ölçü 1/" + std::to_string(basis) +
+                 " paftası için boyutlandırılmış; 1/" + std::to_string(now) +
+                 " paftasında kâğıtta aynı boyda kalmaları için: ÖLÇÜYENİLE");
+    else
+        ctx.echo("Bu çizimdeki " + std::to_string(stale) +
+                 " ölçünün yazısı önceki birimle duruyor; yeni birimle yazmak için: ÖLÇÜYENİLE");
 }
 
 /// The whole body of both commands. They differ in the store they reach and in
@@ -211,6 +244,8 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
     ctx.record("deger", Value::text(core::format_setting(spec, change.value().after)));
     ctx.echo(spec.names.front() + " = " + with_unit(spec, change.value().after) +
              "   (önceki: " + with_unit(spec, change.value().before) + ")");
+    if (spec.id == "core.plan.olcek" || spec.id == "core.cizim.birim")
+        hint_dimensions(ctx, spec.id, change.value().after.as_int());
 }
 
 Task<void> run_setting(Context& ctx)

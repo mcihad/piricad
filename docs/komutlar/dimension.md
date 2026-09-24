@@ -26,6 +26,38 @@ birimindedir: 12 500 mm metrede `12,50`.
 | `koordinat` | Bir noktanın başlangıçtan **sağa** ya da **yukarı** değerini | `birinci` başlangıç, `ikinci` ölçülecek nokta, `konum` yazının yeri |
 | `yay` | Bir yayın **boyunca** uzunluğunu | `birinci` merkez, `ikinci` başlangıç, `bitis` bitiş, `konum` yazının yeri |
 
+### Yazı: ölçülen değer ve yazılışı
+
+Ölçünün **ölçtüğü** değer noktalardan hesaplanır ve hep saklanır; **yazısı** bu
+değerin yazılışıdır:
+
+| Ne | Örnek | Nasıl verilir |
+|---|---|---|
+| Önek, sonek | `R12,50 m` | `onek=R sonek=" m"` |
+| Birim | `1250,00` (cm) | `birim=cm`; varsayılan çizimin birimi |
+| Ondalık | `12,500` | `hassasiyet=3`; varsayılan stilinki |
+| Simetrik tolerans | `12,50±0,05` | `tolerans=0.05` (metre; açıda derece) |
+| Sapma | `12,50+0,05/-0,02` | `tolerans_ust=0.05 tolerans_alt=0.02` |
+| Sınır değerler | `12,55/12,48` | `tolerans_bicim=sinir` |
+| Yazı şablonu | `12,50 (tapu)` | `metin="<> (tapu)"`: `<>` ölçülen değerdir |
+| **Elle yazılmış değer** | `12,48` | `metin="12,48"`: `<>` taşımayan yazı |
+
+**Elle yazılmış değer ölçülen değer diye geçmez.** Tuvalde yazının altında uyarı
+renginde **elle yazılmış · ölçülen 12,50** durur (pafta çıktısına girmez),
+[`NESNEBİLGİ`](entity_info.md) ikisini yan yana söyler, nitelik panelinde yazı
+satırı **ELLE** rozeti taşır; önek, sonek ve tolerans elle yazılmış değere
+eklenmez. Bağlı ölçünün köşesi taşınınca yeni değer ölçülür ama elle yazılmış yazı
+değişmez ve bu söylenir. Çizilmiş bir ölçünün bunlarını
+[`ÖLÇÜDÜZENLE`](dimension_edit.md) değiştirir.
+
+### Pafta ölçeği
+
+Stilin ölçüleri **kâğıttadır**; ÖLÇÜ onları plan ölçeğiyle zemine indirir ve ölçü
+**hangi pafta ölçeği için boyutlandığını** saklar. Başka bir ölçekte basılacak
+paftada ölçülerin kâğıtta aynı boyda okunması için
+[`ÖLÇÜYENİLE`](dimension_refresh.md) onları o ölçeğe uyarlar. Plan ölçeği
+değişince ve [`YAZDIR`](print.md) başka bir ölçekte basarken program bunu söyler.
+
 ### Bağlı ölçü
 
 Ölçünün bir noktası bir nesnenin **tam** üzerine düşüyorsa — bir köşe, bir dairenin ya da
@@ -109,9 +141,15 @@ başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona ina
 | `tepe` | Açısal ölçünün tepe noktası |
 | `bitis` | Yay uzunluğu ölçüsünde yayın bitiş noktası (başlangıçtan saat yönünün tersine) |
 | `stil` | Katalogdaki ölçü stili; varsayılan `ISO-25` |
-| `metin` | Ölçülen değer yerine yazılacak metin |
+| `metin` | Yazı; `<>` ölçülen değerdir, `<>` taşımayan metin elle yazılmış sayılır |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
 | `bagla` | Tam denk geldiği köşeye, merkeze ya da yay ucuna bağlansın mı; varsayılan `evet`. Bkz. [Bağlı ölçü](#bağlı-ölçü) |
+| `onek`, `sonek` | Değerin önüne ve ardına yazılanlar. Bkz. [Yazı](#yazı-ölçülen-değer-ve-yazılışı) |
+| `birim` | `cizim` (varsayılan), `mm`, `cm`, `m`, `km` |
+| `hassasiyet` | Ondalık basamak sayısı, 0–8; varsayılan stilinki |
+| `tolerans` | Simetrik tolerans, uzunlukta metre, açıda derece |
+| `tolerans_ust`, `tolerans_alt` | Sapma; ikisi de pozitif yazılır |
+| `tolerans_bicim` | `simetrik`, `sapma`, `sinir` |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -148,6 +186,17 @@ Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
 ```
 
 Ölçünün yazısı artık `25,00`; ölçü çizgisi kenarın yine 3 m altında.
+
+Önek, sonek, tolerans ve üç ondalıkla:
+
+<!-- örnek: yeni çizim -->
+```
+ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3 onek=R sonek=" m" tolerans=0.05 hassasiyet=3
+```
+
+```text
+Ölçü çizildi: R20,000±0,050 m (ISO-25).
+```
 
 ### Arayüz
 
@@ -189,6 +238,7 @@ Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
 | `N ölçü bağı, aynı noktada yerini alan nesneye aktarıldı.` | Nesne aynı komutta başka nesneye dönüştü |
 | `N ölçü noktası elle taşındığı için bağından çözüldü.` | Ölçünün kendi noktası taşındı |
 | `Bağlı N ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını izleyemedi.` | Ölçü kilitli katmanda, ya da yeni noktalarla kurulamıyor (iki nokta çakıştı) |
+| `Bağlı N ölçünün yazısı elle yazılmış; yeniden ölçülen değeri göstermiyor. …` | Ölçü yeniden ölçüldü ama yazısı elle yazılmış; `ÖLÇÜDÜZENLE sifirla=metin` ölçüye döndürür |
 
 ## Hatalar
 
@@ -210,6 +260,8 @@ Katalog dosyası bu makinede yok.
 
 ## İlgili
 
+- [ÖLÇÜDÜZENLE](dimension_edit.md) — çizilmiş ölçünün yazısını, birimini, toleransını değiştirmek
+- [ÖLÇÜYENİLE](dimension_refresh.md) — ölçüleri başka bir pafta ölçeğine uyarlamak
 - [ÖLÇ](measure.md) — çizmeden ölçmek
 - [LİDER](leader.md) — oklu not çizgisi
 - [Ölçü türü](../nesneler/olcu.md) — saklanış, çizim, DXF eşlemesi

@@ -634,10 +634,14 @@ Altında katlanabilir gruplar ve `112 px | 1fr` ızgarasında satırlar: solda a
 sağda değer. Değer tek aralıklı yazıyla yazılır, çünkü değer veridir ve veri tek
 aralıklı okunur.
 
-İki rozet vardır ve ikisi ayrı şey söyler:
+Rozetler ayrı şeyler söyler:
 
 - **HESAP** (turuncu) — bu sayı hesaplanmıştır, elle yazılmaz.
 - **BOŞ** (soluk) — bu hücre henüz doldurulmamıştır.
+- **ELLE** — bir ölçünün yazısı ölçülen değer değil, elle yazılmış bir değerdir.
+- **KOPUK** — bir ölçünün ölçtüğü nesneyle bağı kopmuştur.
+- **UYARLA** — ölçü, plan ölçeğinden başka bir pafta ölçeği için boyutludur
+  ([`ÖLÇÜYENİLE`](../komutlar/dimension_refresh.md)).
 
 Katmanlar panelinde bir katman seçtiğinizde bu panel o katmanın özelliklerini
 gösterir: kabuğun **tek** özellik yüzeyi vardır, iki tane değil.
@@ -656,6 +660,16 @@ grubu açtığınızda **açık kalır**: sonraki parseli seçtiğinizde kapanma
 | **ÖZNİTELİKLER** | Belgede tanımlı her sütun ve nesnenin o sütundaki değeri |
 
 Nesne yazı taşıyorsa bir de **METİN** grubu gelir: içerik ve yükseklik.
+
+Seçilen bir **ölçü** ise en üstte **ÖLÇÜ** grubu açık gelir, NESNE onun altında
+kapalı: `olculen` (noktalardan hesaplanan değer, HESAP), `yazi` (paftada yazan;
+elle yazılmışsa **ELLE**), `metin` (`<>` ölçülen değerdir), `onek`, `sonek`,
+`birim`, `hassasiyet`, `tolerans`, `stil`, `pafta_olcegi` ve bağlıysa `baglar`.
+Düzenlenebilir her hücre bir [`ÖLÇÜDÜZENLE`](../komutlar/dimension_edit.md)
+satırıdır: hücrede yazdığınız ile komut satırına yazdığınız aynı değişikliktir, tek
+adımda geri alınır. `metin` hücresi ölçülen değer için `<>` gösterir, böylece
+hücreye girip değiştirmeden çıkmak ölçülen değeri elle yazılmış bir değere
+çevirmez.
 
 Tek nesne seçiliyken panele **sağ tıklayın** — klavyede **Menü** tuşu ya da
 **Shift+F10** — nesnenin menüsü açılır: **Koordinatları dışa aktar…**

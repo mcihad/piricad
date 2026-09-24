@@ -290,7 +290,8 @@ mavi kenar ve dolgu alır.
 sayı çipiyle toplanır.
 
 **Rozet** — Bir değerin ya da etiketin yanına düşen 14 piksellik küçük etiket: `HESAP`,
-`BOŞ`, `ZORUNLU`, `SABİT`. Rengi ne dediğini söyler, yazısı her zaman rengin yanındadır.
+`BOŞ`, `ZORUNLU`, `SABİT`, `ELLE`, `KOPUK`, `UYARLA`. Rengi ne dediğini söyler, yazısı
+her zaman rengin yanındadır.
 
 **Türetilmiş değer** — Programın başka değerlerden hesapladığı, elle girilmeyen değer.
 Girdi kutusunda `fx` işareti, etiketinde `HESAP` rozeti taşır.
@@ -327,6 +328,18 @@ desenler katalogdan adla gelir.
 
 **Ölçü ve lider** — Uzunluğu ya da açıyı yazısı ve oklarıyla gösteren nesne (`ÖLÇÜ`,
 DXF `DIMENSION`) ile bir noktayı gösteren oklu çizgi (`LİDER`, DXF `LEADER`).
+
+**Bağlı ölçü** — Noktaları ölçtüğü nesnenin köşesine, merkezine ya da yay ucuna bağlı
+ölçü: nesne değişince yeniden ölçülür, nesne silinince bağı kopar ve bu görünür. Bkz.
+[ÖLÇÜ](komutlar/dimension.md#bağlı-ölçü).
+
+**Elle yazılmış ölçü** — Yazısı ölçülen değer değil, elle yazılmış bir değer olan ölçü;
+yazısında ölçülen değerin yeri olan `<>` yoktur. Program onu hiçbir yerde ölçülen değer
+diye göstermez. Bkz. [ÖLÇÜDÜZENLE](komutlar/dimension_edit.md).
+
+**Pafta ölçeği (ölçünün)** — Bir ölçünün ok ve yazı boylarının hangi pafta ölçeği için
+zemine indirildiği; başka bir ölçekte kâğıtta aynı boyda kalmak için
+[ÖLÇÜYENİLE](komutlar/dimension_refresh.md) ile uyarlanır.
 
 **İşlem aracı** — Kapsamındaki (seçim, görünüm ya da proje) bütün nesnelere aynı işi tek
 seferde uygulayan komut; QGIS'in Processing araçlarının karşılığı. Hangi geometri

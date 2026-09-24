@@ -1791,6 +1791,35 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("18c-olcu-bag-koptu"), &window); });
 
+        // ÖLÇÜDÜZENLE (TODOS C-10, 2nd stage): one dimension with a prefix, a
+        // suffix and a tolerance, another whose figure was typed by hand. The
+        // canvas says which is typed, and the attribute panel's ÖLÇÜ group shows
+        // the measured figure beside the written one.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,10 0,10")); });
+        later([&window] {
+            for (const char* line :
+                 {"ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3 onek=≈ sonek=\" m\" tolerans=0.05",
+                  "ÖLÇÜ birinci=20,0 ikinci=20,10 konum=23,5",
+                  "ÖLÇÜDÜZENLE nesneler=3 metin=\"9,98\""}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.75"));
+            window.runScriptLine(QStringLiteral("SEÇ NESNE nesneler=3"));
+            window.showAttributes();
+        });
+        later([&window, shot] { shot(QStringLiteral("18d-olcu-elle-yazilmis"), &window); });
+        // ÖLÇÜYENİLE: the same dimensions sized for a 1/500 sheet — arrows and
+        // figures halve on the ground, which is the same size on that paper.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            window.runScriptLine(QStringLiteral("ÖLÇÜYENİLE olcek=500"));
+            window.endCommand();
+            window.showTranscript();
+        });
+        later([&window, shot] { shot(QStringLiteral("18e-olcu-yenile-500"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });
