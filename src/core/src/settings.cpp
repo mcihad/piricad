@@ -456,6 +456,7 @@ KENTOS_SETTING(secim_rengi);
 KENTOS_SETTING(silme_onayi);
 KENTOS_SETTING(secim_vurgu_rengi);
 KENTOS_SETTING(plan_olcegi);
+KENTOS_SETTING(olcu_stili);
 KENTOS_SETTING(aci_birimi);
 KENTOS_SETTING(aci_kurali);
 KENTOS_SETTING(alan_birimi);
@@ -530,6 +531,7 @@ KENTOS_SETTING(alan_birimi);
     X(silme_onayi)                                                                                 \
     X(secim_vurgu_rengi)                                                                           \
     X(plan_olcegi)                                                                                 \
+    X(olcu_stili)                                                                                  \
     X(aci_birimi)                                                                                  \
     X(aci_kurali)                                                                                  \
     X(alan_birimi)
@@ -1032,6 +1034,25 @@ KENTOS_SETTING(plan_olcegi)
                     "bir sınır 1/1000'de 0,5 m, 1/5000'de 2,5 m'dir. Çizimin kendi "
                     "özelliğidir ve dosyayla birlikte gider, bu yüzden proje "
                     "kapsamındadır.",
+        .section  = "Plot ve Çıktı", // ui-label
+    };
+}
+
+KENTOS_SETTING(olcu_stili)
+{
+    return SettingSpec{
+        .id       = "core.olcu.stil",
+        .names    = {"ölçü_stili", "olcu_stili", "dimstyle"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::Project,
+        .fallback = text_value("ISO-25"), // catalog-key: a style id in olcu-stili.json, not a value
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "ÖLÇÜ, ZİNCİRÖLÇÜ, BAZÖLÇÜ ve LİDER'in stil= verilmediğinde kullandığı " // ui-label
+                    "ölçü stili: ok, uzatma çizgileri, yazı ve ondalıklar ondan gelir. "
+                    "Stiller ölçü stili kataloğundadır; ÖLÇÜSTİLİ listeler. Paftanın "
+                    "görünüşüdür ve dosyayla birlikte gider, bu yüzden proje kapsamındadır.",
         .section  = "Plot ve Çıktı", // ui-label
     };
 }

@@ -25,7 +25,7 @@ LİDER noktalar=<sağa>,<yukarı> <sağa>,<yukarı> ... [metin=<yazı>] [stil=<a
 |---|---|
 | `noktalar` | Okun ucundan yazının yanına köşeler, en az iki |
 | `metin` | Son köşenin yanına yazılacak metin |
-| `stil` | Ok ve yazı boyunu veren ölçü stili; varsayılan `ISO-25` |
+| `stil` | Ok ve yazı boyunu veren ölçü stili; verilmezse projenin [`ölçü_stili`](dimension_style.md) ayarı (başlangıçta `ISO-25`) |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.

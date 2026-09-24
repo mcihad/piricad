@@ -5966,8 +5966,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + PANOYAKOPYALA, KES, YAPIŞTIR
     // + NESNEBİLGİ, AÇIÖLÇ + ESNET + İZ + PYTHON + RENK
     // + KÖŞESİL, KENARTÜRÜ (TODOS C-07) + SINIR, TEMİZLE (TODOS C-09)
-    // + ÖLÇÜDÜZENLE, ÖLÇÜYENİLE (TODOS C-10)
-    CHECK_EQ(f.reg.size(), std::size_t{99});
+    // + ÖLÇÜDÜZENLE, ÖLÇÜYENİLE, ZİNCİRÖLÇÜ, BAZÖLÇÜ, ÖLÇÜSTİLİ (TODOS C-10)
+    CHECK_EQ(f.reg.size(), std::size_t{102});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

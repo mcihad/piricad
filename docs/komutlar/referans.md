@@ -76,6 +76,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`core.dimension_refresh`](dimension_refresh.md) | Ölçüleri Yenile | `ÖLÇÜYENİLE`, `OLCUYENILE`, `DIMREFRESH`, `ÖYN`, `OYN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
+| [`core.dimension_continue`](dimension_continue.md) | Zincir Ölçü | `ZİNCİRÖLÇÜ`, `ZINCIROLCU`, `DIMCONTINUE`, `ZÖ`, `ZO` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler. |
+| [`core.dimension_baseline`](dimension_baseline.md) | Baz Ölçü | `BAZÖLÇÜ`, `BAZOLCU`, `DIMBASELINE`, `BÖ`, `BO` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer. |
+| [`core.dimension_style`](dimension_style.md) | Ölçü Stilleri | `ÖLÇÜSTİLİ`, `OLCUSTILI`, `DIMSTYLE`, `ÖST`, `OST` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler. |
 | [`core.leader`](leader.md) | Lider | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`core.points`](points.md) | Nokta Listesi | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
@@ -1001,7 +1004,7 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 | `tur` | text | isteğe bağlı | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
 | `tepe` | point_list | isteğe bağlı | Açısal ölçünün tepe noktası |
 | `bitis` | point_list | isteğe bağlı | Yay uzunluğu ölçüsünün bitiş noktası |
-| `stil` | text | isteğe bağlı | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
+| `stil` | text | isteğe bağlı | Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili |
 | `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `bagla` | bool | isteğe bağlı | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
@@ -1052,6 +1055,43 @@ Ayrıntılı kullanım: [ÖLÇÜDÜZENLE](dimension_edit.md)
 
 Ayrıntılı kullanım: [ÖLÇÜYENİLE](dimension_refresh.md)
 
+### `core.dimension_continue` — ZİNCİRÖLÇÜ (Zincir Ölçü)
+
+Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `temel` | selection | isteğe bağlı | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü |
+| `noktalar` | point_list | en az 0 | Zincirin sonraki noktaları, her biri bir öncekinden ölçülür |
+| `bagla` | bool | isteğe bağlı | Tam denk geldiği köşeye bağlansın mı; varsayılan evet |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [ZİNCİRÖLÇÜ](dimension_continue.md)
+
+### `core.dimension_baseline` — BAZÖLÇÜ (Baz Ölçü)
+
+Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `temel` | selection | isteğe bağlı | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü |
+| `noktalar` | point_list | en az 0 | Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür |
+| `bagla` | bool | isteğe bağlı | Tam denk geldiği köşeye bağlansın mı; varsayılan evet |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [BAZÖLÇÜ](dimension_baseline.md)
+
+### `core.dimension_style` — ÖLÇÜSTİLİ (Ölçü Stilleri)
+
+Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Gösterilecek stil; verilmezse hepsi |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [ÖLÇÜSTİLİ](dimension_style.md)
+
 ### `core.leader` — LİDER (Lider)
 
 Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
@@ -1060,7 +1100,7 @@ Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
 |---|---|---|---|
 | `noktalar` | point_list | en az 2 | Okun ucundan yazının yanına köşeler |
 | `metin` | text | isteğe bağlı | Son köşenin yanına yazılacak metin |
-| `stil` | text | isteğe bağlı | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 |
+| `stil` | text | isteğe bağlı | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 
 Ayrıntılı kullanım: [LİDER](leader.md)
@@ -4551,7 +4591,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "stil": {
           "type": "string",
-          "description": "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin)"
+          "description": "Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili (metin)"
         },
         "metin": {
           "type": "string",
@@ -4642,6 +4682,200 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "OLCU",
         "DIMENSION",
         "ÖÇ"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension_baseline",
+    "title": "Baz Ölçü",
+    "description": "Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer.\nKomut: BAZÖLÇÜ (BAZOLCU, DIMBASELINE, BÖ, BO)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "temel": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              }
+            }
+          ],
+          "description": "Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Tam denk geldiği köşeye bağlansın mı; varsayılan evet (evet/hayır)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension_baseline",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "BAZÖLÇÜ",
+        "BAZOLCU",
+        "DIMBASELINE",
+        "BÖ",
+        "BO"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension_continue",
+    "title": "Zincir Ölçü",
+    "description": "Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler.\nKomut: ZİNCİRÖLÇÜ (ZINCIROLCU, DIMCONTINUE, ZÖ, ZO)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "temel": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              }
+            }
+          ],
+          "description": "Zincirin sonraki noktaları, her biri bir öncekinden ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Tam denk geldiği köşeye bağlansın mı; varsayılan evet (evet/hayır)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension_continue",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "ZİNCİRÖLÇÜ",
+        "ZINCIROLCU",
+        "DIMCONTINUE",
+        "ZÖ",
+        "ZO"
       ]
     }
   },
@@ -4867,6 +5101,44 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "DIMREFRESH",
         "ÖYN",
         "OYN"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension_style",
+    "title": "Ölçü Stilleri",
+    "description": "Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler.\nKomut: ÖLÇÜSTİLİ (OLCUSTILI, DIMSTYLE, ÖST, OST)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Gösterilecek stil; verilmezse hepsi (metin)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension_style",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "ÖLÇÜSTİLİ",
+        "OLCUSTILI",
+        "DIMSTYLE",
+        "ÖST",
+        "OST"
       ]
     }
   },
@@ -7263,7 +7535,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "stil": {
           "type": "string",
-          "description": "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin)"
+          "description": "Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili (metin)"
         },
         "katalog": {
           "type": "string",

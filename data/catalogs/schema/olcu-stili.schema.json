@@ -30,6 +30,7 @@
           "uzatma_boslugu_um": { "type": "integer", "minimum": 0 },
           "yazi_boslugu_um": { "type": "integer", "minimum": 0 },
           "yazi_yuksekligi_um": { "type": "integer", "minimum": 1 },
+          "baz_araligi_um": { "description": "BAZÖLÇÜ'nün üst üste koyduğu ölçü çizgileri arası; yoksa yazı yüksekliğinin 1,5 katı.", "type": "integer", "minimum": 0 },
           "ondalik": { "type": "integer", "minimum": 0, "maximum": 8 },
           "ondalik_ayraci": { "type": "string", "enum": [",", "."] }
         }

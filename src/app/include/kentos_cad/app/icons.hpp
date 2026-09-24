@@ -184,6 +184,9 @@ enum class Glyph {
     VertexDelete, ///< a bent edge made straight, its corner struck out: KÖŞESİL
     EdgeKind,     ///< a straight edge bowed into an arc, its chord dashed: KENARTÜRÜ
     Boundary,     ///< crossing lines, the one cell they close filled, a click inside: SINIR
+    DimChain,     ///< one dimension line cut into figures end to end: ZİNCİRÖLÇÜ
+    DimBaseline,  ///< dimension lines stacked from one origin: BAZÖLÇÜ
+    DimEdit,      ///< a dimension with the pencil over its figure: ÖLÇÜDÜZENLE
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

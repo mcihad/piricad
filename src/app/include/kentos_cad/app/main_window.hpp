@@ -1003,6 +1003,8 @@ private:
     QAction* actBoundary_{nullptr};      ///< SINIR
     QAction* actTextEdit_{nullptr};      ///< YAZIDÜZENLE
     QAction* actDimensionEdit_{nullptr}; ///< ÖLÇÜDÜZENLE
+    QAction* actDimChain_{nullptr};      ///< ZİNCİRÖLÇÜ
+    QAction* actDimBaseline_{nullptr};   ///< BAZÖLÇÜ
     QAction* actTraverse_{nullptr};      ///< POLİGON, on both the Çizim and the Harita menu
     QAction* actStakeout_{nullptr};      ///< APLİKASYON
     QAction* actLabel_{nullptr};         ///< ETİKET

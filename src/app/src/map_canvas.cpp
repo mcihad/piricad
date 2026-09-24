@@ -2443,6 +2443,38 @@ void MapCanvas::buildOverlay()
                     }
                 }
             }
+        } else if (shape == command::RubberShape::DimensionNext &&
+                   session->prompt().rubber_chain.size() >= 2) {
+            // THE NEXT FIGURE OF A ROW (ZİNCİRÖLÇÜ, BAZÖLÇÜ): from the run's last
+            // point, or its base, to the cursor, on the row's line and in its
+            // direction — the layout the click makes, drawn by the kind's outline.
+            if (auto decoded = core::decode_dimension(session->prompt().rubber_payload)) {
+                core::DimensionDef def = decoded.value();
+                const std::array<core::Point2, 2> picks{session->prompt().rubber_chain[0],
+                                                        cursorWorld()};
+                core::DimensionLayout layout;
+                if (core::dimension_layout(def, picks, session->prompt().rubber_chain[1], 0, layout,
+                                           true)) {
+                    const auto base = core::dimension_baseline(
+                        layout.text_centre, layout.text_dir_x, layout.text_dir_y, 1, "0");
+                    const std::vector<core::Point2> baseline{base[0], base[1]};
+                    const std::array<core::RingGeometry::RingInput, 2> rings{
+                        core::RingGeometry::RingInput{baseline, core::RingRole::Open, 0},
+                        core::RingGeometry::RingInput{layout.defs, core::RingRole::Open, 0}};
+                    core::RingGeometry scratch;
+                    const std::vector<std::uint8_t> payload = core::encode_dimension(def);
+                    if (auto slot = scratch.append(rings, payload)) {
+                        core::EmitBuffer buf;
+                        core::dimension_outline(scratch, slot.value(), buf);
+                        addEmitRuns(batch, buf);
+                    }
+                    // And the figure it will write, where it will write it.
+                    const render::ScreenPointF at =
+                        render::to_f(view_.to_screen(layout.text_centre));
+                    addReadout(at.x + 8.0F, at.y - 8.0F,
+                               core::dimension_text(def, controller_.bus().drawing_unit()));
+                }
+            }
         } else if (shape == command::RubberShape::Block) {
             // THE BLOCK under the cursor, expanded by the code that will draw the
             // reference once it is placed, with the scale, turn and grid the

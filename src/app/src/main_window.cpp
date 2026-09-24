@@ -931,6 +931,17 @@ void MainWindow::buildActions()
                              tr("ÖLÇÜ — iki nokta arasını, yarıçapı, çapı ya da açıyı ölçüp yazısı "
                                 "ve oklarıyla çizer  ·  kısaltma: ÖÇ"));
     drawingTools_->addAction(actDimension_);
+    // A ROW OF FIGURES (TODOS C-10): each from the last point, or each from
+    // the first, carried on the newest linear or aligned dimension.
+    actDimChain_ = drawTool(Glyph::DimChain, tr("Zincir Ölçü"), QStringLiteral("ZİNCİRÖLÇÜ"),
+                            tr("ZİNCİRÖLÇÜ — son ölçünün ucundan aynı çizgide art arda ölçer; "
+                               "noktaları tıklayın, Enter bitirir, toplamı söyler  ·  kısaltma: "
+                               "ZÖ"));
+    drawingTools_->addAction(actDimChain_);
+    actDimBaseline_ = drawTool(Glyph::DimBaseline, tr("Baz Ölçü"), QStringLiteral("BAZÖLÇÜ"),
+                               tr("BAZÖLÇÜ — son ölçünün ilk noktasından ölçer, çizgileri stilin "
+                                  "aralığıyla üst üste dizer; Enter bitirir  ·  kısaltma: BÖ"));
+    drawingTools_->addAction(actDimBaseline_);
     actLeader_ = drawTool(Glyph::Locate, tr("Lider"), QStringLiteral("LİDER"),
                           tr("LİDER — bir noktayı gösteren oklu çizgi, istenirse yanına yazı  ·  "
                              "kısaltma: LD"));
@@ -1274,7 +1285,7 @@ void MainWindow::buildActions()
     // unit, decimals — is on the ÖLÇÜ group of the attribute panel, one cell
     // per field, and on the command line.
     actDimensionEdit_ =
-        modifyTool(Glyph::TextEdit, tr("Ölçüyü Düzenle"), QStringLiteral("ÖLÇÜDÜZENLE"),
+        modifyTool(Glyph::DimEdit, tr("Ölçüyü Düzenle"), QStringLiteral("ÖLÇÜDÜZENLE"),
                    tr("ÖLÇÜDÜZENLE — ölçüyü seçin, yazısını yazın: <> ölçülen değerdir, <> "
                       "taşımayan yazı elle yazılmış sayılır ve öyle gösterilir  ·  kısaltma: ÖDZ"));
 
@@ -1693,6 +1704,12 @@ void MainWindow::buildMenus()
     draw->addAction(actBlock_);
     draw->addAction(actInsert_);
     draw->addAction(actDimension_);
+    draw->addAction(actDimChain_);
+    draw->addAction(actDimBaseline_);
+    draw->addAction(commandAction(Glyph::Ruler, tr("Ölçü Stilleri"), QStringLiteral("ÖLÇÜSTİLİ"),
+                                  tr("ÖLÇÜSTİLİ — ölçü stillerini kâğıttaki ve bu paftadaki "
+                                     "boylarıyla listeler; varsayılanı AYAR ölçü_stili "
+                                     "değiştirir  ·  kısaltma: ÖST")));
     draw->addAction(actLeader_);
     draw->addSeparator();
     // THE THREE THAT HAD NO ENTRY AT ALL. A guide line, a label read from a
@@ -2211,7 +2228,8 @@ void MainWindow::buildToolBox()
     // corrected, and the correction was a menu row behind `Diğer komutlar`.
     toolBox_->addFamily({actText_, actTextEdit_});
     toolBox_->addFamily({actInsert_, actBlock_});
-    toolBox_->addFamily({actDimension_, actDimensionEdit_, actLeader_, actLabel_});
+    toolBox_->addFamily(
+        {actDimension_, actDimChain_, actDimBaseline_, actDimensionEdit_, actLeader_, actLabel_});
     toolBox_->addSeparator();
 
     // editing

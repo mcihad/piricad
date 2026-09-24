@@ -8,8 +8,11 @@ resim saklanmaz, her seferinde tanım noktalarından kurulur, DXF'e `DIMENSION` 
 
 Ölçünün ok boyu, uzatma çizgileri, yazı yüksekliği, ondalık sayısı ve ondalık ayracı bir
 **ölçü stilinden** gelir. Stiller koddan değil `data/catalogs/dxf/olcu-stili.json`
-dosyasından okunur (`TERCİH ölçü_stilleri`): `ISO-25` (varsayılan; 2,5 mm ok, iki
-ondalık, virgül), `STANDARD` (AutoCAD; dört ondalık, nokta), `MIMARI` (45° çentik).
+dosyasından okunur (`TERCİH ölçü_stilleri`): `ISO-25` (2,5 mm ok, iki ondalık, virgül),
+`ISO-18` ve `ISO-35` (1,8 ve 3,5 mm yazı), `STANDARD` (AutoCAD; dört ondalık, nokta),
+`MIMARI` (45° çentik). `stil=` verilmezse projenin varsayılanı
+([`AYAR ölçü_stili`](setting.md), başlangıçta `ISO-25`) kullanılır;
+[`ÖLÇÜSTİLİ`](dimension_style.md) hepsini boylarıyla listeler.
 Değerler **kâğıt** mikrometresidir ve [`AYAR plan_ölçeği`](setting.md) ile zemine iner:
 2,5 mm ok 1/1000 paftada 2,5 m'dir. Yazı [`AYAR çizim_birimi`](setting.md)
 birimindedir: 12 500 mm metrede `12,50`.
@@ -140,7 +143,7 @@ başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona ina
 | `tur` | `hizali`, `dogrusal`, `yaricap`, `cap`, `acisal`, `koordinat`, `yay`; varsayılan `hizali` |
 | `tepe` | Açısal ölçünün tepe noktası |
 | `bitis` | Yay uzunluğu ölçüsünde yayın bitiş noktası (başlangıçtan saat yönünün tersine) |
-| `stil` | Katalogdaki ölçü stili; varsayılan `ISO-25` |
+| `stil` | Katalogdaki ölçü stili; varsayılan projenin `ölçü_stili` ayarı (başlangıçta `ISO-25`) |
 | `metin` | Yazı; `<>` ölçülen değerdir, `<>` taşımayan metin elle yazılmış sayılır |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
 | `bagla` | Tam denk geldiği köşeye, merkeze ya da yay ucuna bağlansın mı; varsayılan `evet`. Bkz. [Bağlı ölçü](#bağlı-ölçü) |
@@ -260,6 +263,9 @@ Katalog dosyası bu makinede yok.
 
 ## İlgili
 
+- [ZİNCİRÖLÇÜ](dimension_continue.md) ve [BAZÖLÇÜ](dimension_baseline.md) — bir ölçüden
+  başlayarak aynı çizgide art arda ya da aynı ilk noktadan üst üste ölçüler
+- [ÖLÇÜSTİLİ](dimension_style.md) — stiller ve varsayılan
 - [ÖLÇÜDÜZENLE](dimension_edit.md) — çizilmiş ölçünün yazısını, birimini, toleransını değiştirmek
 - [ÖLÇÜYENİLE](dimension_refresh.md) — ölçüleri başka bir pafta ölçeğine uyarlamak
 - [ÖLÇ](measure.md) — çizmeden ölçmek

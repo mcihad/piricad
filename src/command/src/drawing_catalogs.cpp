@@ -183,6 +183,7 @@ core::Result<DimensionStyleCatalog> load_dimension_styles(const std::string& pat
         s.extension_offset_um = um("uzatma_boslugu_um", s.extension_offset_um);
         s.text_gap_um         = um("yazi_boslugu_um", s.text_gap_um);
         s.text_height_um      = um("yazi_yuksekligi_um", s.text_height_um);
+        s.baseline_spacing_um = um("baz_araligi_um", s.baseline_spacing_um);
         if (const core::Json* p = row.find("ondalik"); p != nullptr && p->is_number())
             s.precision = static_cast<std::uint8_t>(
                 std::min<std::int64_t>(8, std::max<std::int64_t>(0, p->as_int())));

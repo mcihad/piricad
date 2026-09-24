@@ -105,8 +105,9 @@ TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
     // Every X-macro line was accepted: 62, plus MCP, the AI settings, the run
-    // behaviour and the angle rule (`core.aci.kural`).
-    CHECK(cat.size() == 72);
+    // behaviour, the angle rule (`core.aci.kural`) and the project's dimension
+    // style (`core.olcu.stil`, TODOS C-10).
+    CHECK(cat.size() == 73);
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());

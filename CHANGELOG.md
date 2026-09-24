@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — zincir ve baz ölçü, ölçü stilleri (C-10 tamam)
+
+- **ZİNCİRÖLÇÜ** (`core.dimension_continue`) son doğrusal ya da hizalı ölçünün (ya da
+  `temel=`) ikinci noktasından başlayarak aynı çizgide art arda ölçer ve toplamı
+  söyler; **BAZÖLÇÜ** (`core.dimension_baseline`) her ölçüyü ilk noktadan ölçüp
+  çizgileri stilin baz aralığıyla üst üste dizer. Parçalar temelin doğrultusunda
+  (hizalı temelde o doğrultuda doğrusal) ve stilindedir; köşelere bağlanır; tek geri
+  alma adımı. Arayüzde sıradaki ölçü ve yazacağı değer imleçte önizlenir; araç
+  kutusunun Ölçü ailesinde ve Çizim menüsünde.
+- **Ölçü stilleri:** katalog `olcu-stili` 1.1.0 — ISO 3098-1 yazı dizisinden `ISO-18` ve
+  `ISO-35`, her stilde `baz_araligi_um`. Projenin varsayılan stili yeni ayar
+  `ölçü_stili` (`core.olcu.stil`); **ÖLÇÜSTİLİ** (`core.dimension_style`) stilleri
+  kâğıttaki ve bu paftadaki boylarıyla listeler.
+- **Düzeltildi:** bağlı bir doğrusal ölçü kaynağını izlerken doğrultusunu yeniden
+  seçiyordu; köşe ölçü çizgisinin yanına düşecek kadar taşınınca yatay ölçü dikeye
+  dönüyordu. Artık doğrultusunu korur.
+
 ### Eklendi — ölçülen ile yazılan ayrı: önek, sonek, tolerans, birim; elle yazılan değer görünür; pafta ölçeği (C-10, 2. aşama)
 
 - **ÖLÇÜ** ve yeni **ÖLÇÜDÜZENLE** (`core.dimension_edit`, Değiştir menüsü ve araç

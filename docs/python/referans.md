@@ -156,6 +156,9 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`cad.dimension_edit`](#caddimension_edit) | `core.dimension_edit` | `ÖLÇÜDÜZENLE` | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`cad.dimension_refresh`](#caddimension_refresh) | `core.dimension_refresh` | `ÖLÇÜYENİLE` | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
+| [`cad.dimension_continue`](#caddimension_continue) | `core.dimension_continue` | `ZİNCİRÖLÇÜ` | Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler. |
+| [`cad.dimension_baseline`](#caddimension_baseline) | `core.dimension_baseline` | `BAZÖLÇÜ` | Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer. |
+| [`cad.dimension_style`](#caddimension_style) | `core.dimension_style` | `ÖLÇÜSTİLİ` | Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler. |
 | [`cad.leader`](#cadleader) | `core.leader` | `LİDER` | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`cad.points`](#cadpoints) | `core.points` | `NOKTALAR` | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`cad.guide`](#cadguide) | `core.guide` | `KILAVUZ` | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
@@ -1828,7 +1831,7 @@ cad.dimension(
 | `type` | `str` | `tur` | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
 | `apex` | `Coord` | `tepe` | Açısal ölçünün tepe noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce] |
-| `style` | `str` | `stil` | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
+| `style` | `str` | `stil` | Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili |
 | `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `associate` | `bool` | `bagla` | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
@@ -1911,6 +1914,74 @@ cad.dimension_refresh(
 
 [Komut sayfası](../komutlar/dimension_refresh.md)
 
+### `cad.dimension_continue`
+
+Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler.
+
+Komut: `core.dimension_continue` — `ZİNCİRÖLÇÜ`
+
+```python
+cad.dimension_continue(
+    base: list[int],
+    points: Coords,
+    associate: bool,
+    catalog: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `base` | `list[int]` | `temel` | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü [kalıcı nesne anahtarı] |
+| `points` | `Coords` | `noktalar` | Zincirin sonraki noktaları, her biri bir öncekinden ölçülür [mm, Sağa (Y) önce] |
+| `associate` | `bool` | `bagla` | Tam denk geldiği köşeye bağlansın mı; varsayılan evet |
+| `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+[Komut sayfası](../komutlar/dimension_continue.md)
+
+### `cad.dimension_baseline`
+
+Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer.
+
+Komut: `core.dimension_baseline` — `BAZÖLÇÜ`
+
+```python
+cad.dimension_baseline(
+    base: list[int],
+    points: Coords,
+    associate: bool,
+    catalog: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `base` | `list[int]` | `temel` | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü [kalıcı nesne anahtarı] |
+| `points` | `Coords` | `noktalar` | Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür [mm, Sağa (Y) önce] |
+| `associate` | `bool` | `bagla` | Tam denk geldiği köşeye bağlansın mı; varsayılan evet |
+| `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+[Komut sayfası](../komutlar/dimension_baseline.md)
+
+### `cad.dimension_style`
+
+Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler.
+
+Komut: `core.dimension_style` — `ÖLÇÜSTİLİ`
+
+```python
+cad.dimension_style(
+    name: str,
+    catalog: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Gösterilecek stil; verilmezse hepsi |
+| `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+[Komut sayfası](../komutlar/dimension_style.md)
+
 ### `cad.leader`
 
 Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
@@ -1930,7 +2001,7 @@ cad.leader(
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | Okun ucundan yazının yanına köşeler [mm, Sağa (Y) önce] |
 | `text` | `str` | `metin` | Son köşenin yanına yazılacak metin |
-| `style` | `str` | `stil` | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 |
+| `style` | `str` | `stil` | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 
 [Komut sayfası](../komutlar/leader.md)

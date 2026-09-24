@@ -99,6 +99,9 @@ enum class RubberShape : std::uint8_t {
     Region,      ///< the region of the linework the cursor is inside, found as
                  ///< `rubber_payload`'s query finds it, its islands as holes and its area
                  ///< written in it: SINIR
+    DimensionNext, ///< the next dimension of a run: from the chain's first point to the
+                   ///< cursor, on the line through the chain's second, with
+                   ///< `rubber_payload`'s figures and direction: ZİNCİRÖLÇÜ, BAZÖLÇÜ
 };
 
 struct Prompt

@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 107 (95 tanesi onay ister)
-- Katalog parmak izi: `5142124828577361493`
+- Araç sayısı: 110 (97 tanesi onay ister)
+- Katalog parmak izi: `11223401845461779749`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -434,7 +434,7 @@ Onay ister.
 | `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay (metin) |
 | `tepe` | konum (tutamak ya da göreli nokta) | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
-| `stil` | string | hayır | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin) |
+| `stil` | string | hayır | Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili (metin) |
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `bagla` | boolean | hayır | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır) |
@@ -446,6 +446,38 @@ Onay ister.
 | `tolerans_ust` | number | hayır | Üst sapma: + bu kadar; uzunlukta metre, açıda derece (sayı) |
 | `tolerans_alt` | number | hayır | Alt sapma: − bu kadar, pozitif yazılır; uzunlukta metre, açıda derece (sayı) |
 | `tolerans_bicim` | string | hayır | simetrik: ±; sapma: +üst/−alt; sinir: iki sınır değer, ölçünün yerine (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_dimension_baseline` — Baz Ölçü
+
+Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer.
+Komut: BAZÖLÇÜ (BAZOLCU, DIMBASELINE, BÖ, BO)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `temel` | string | hayır | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bagla` | boolean | hayır | Tam denk geldiği köşeye bağlansın mı; varsayılan evet (evet/hayır) |
+| `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_dimension_continue` — Zincir Ölçü
+
+Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler.
+Komut: ZİNCİRÖLÇÜ (ZINCIROLCU, DIMCONTINUE, ZÖ, ZO)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `temel` | string | hayır | Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Zincirin sonraki noktaları, her biri bir öncekinden ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bagla` | boolean | hayır | Tam denk geldiği köşeye bağlansın mı; varsayılan evet (evet/hayır) |
+| `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_dimension_edit` — Ölçü Düzenle
@@ -489,6 +521,19 @@ Onay ister.
 | `eski_olcek` | integer | hayır | Ölçeği bilinmeyen ölçülerin çizildiği ölçek (dosyadan gelenler) (tam sayı) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_dimension_style` — Ölçü Stilleri
+
+Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler.
+Komut: ÖLÇÜSTİLİ (OLCUSTILI, DIMSTYLE, ÖST, OST)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | hayır | Gösterilecek stil; verilmezse hepsi (metin) |
+| `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 
 ### `core_divide` — Bölümle
 
@@ -908,7 +953,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Okun ucundan yazının yanına köşeler — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `metin` | string | hayır | Son köşenin yanına yazılacak metin (metin) |
-| `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin) |
+| `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 

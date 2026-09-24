@@ -77,6 +77,9 @@ namespace kentos::command {
     X(dimension)                                                                                   \
     X(dimension_edit)                                                                              \
     X(dimension_refresh)                                                                           \
+    X(dimension_continue)                                                                          \
+    X(dimension_baseline)                                                                          \
+    X(dimension_style)                                                                             \
     X(leader)                                                                                      \
     X(points)                                                                                      \
     X(guide)                                                                                       \

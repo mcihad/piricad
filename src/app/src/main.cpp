@@ -1820,6 +1820,43 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("18e-olcu-yenile-500"), &window); });
 
+        // ZİNCİRÖLÇÜ (TODOS C-10, 3rd stage): four lots on a road line, the
+        // first frontage dimensioned, two more chained on, the next one
+        // previewed under the cursor with the figure it will write.
+        later([scene] { scene(QStringLiteral("ÇİZGİ 0,0 40,0")); });
+        later([&window] {
+            for (const char* line :
+                 {"ÇİZGİ 0,0 0,15", "ÇİZGİ 12,0 12,15", "ÇİZGİ 21.5,0 21.5,15", "ÇİZGİ 30,0 30,15",
+                  "ÇİZGİ 40,0 40,15", "ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=12,0 konum=6,-4"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.runScriptLine(QStringLiteral("ZİNCİRÖLÇÜ"));
+            window.runScriptLine(QStringLiteral("21.5,0"));
+            window.runScriptLine(QStringLiteral("30,0"));
+        });
+        later([hover] { hover({40'000, 0}); });
+        later([&window, shot] { shot(QStringLiteral("18f-zincir-olcu"), &window); });
+        later([&window] { window.endCommand(); });
+
+        // BAZÖLÇÜ: the same lots from the left corner, the lines stacked one
+        // style spacing apart.
+        later([scene] { scene(QStringLiteral("ÇİZGİ 0,0 40,0")); });
+        later([&window] {
+            for (const char* line :
+                 {"ÇİZGİ 0,0 0,15", "ÇİZGİ 12,0 12,15", "ÇİZGİ 21.5,0 21.5,15", "ÇİZGİ 30,0 30,15",
+                  "ÇİZGİ 40,0 40,15", "ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=12,0 konum=6,-4",
+                  "BAZÖLÇÜ noktalar=21.5,0 30,0 40,0"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+        });
+        later([&window, shot] { shot(QStringLiteral("18g-baz-olcu"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

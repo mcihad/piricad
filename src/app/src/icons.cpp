@@ -490,6 +490,52 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         break;
     }
 
+    case Glyph::DimChain: {
+        // ONE LINE CUT INTO FIGURES: three extension lines, the dimension line
+        // between them, a tick at each cut — two figures end to end.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.0, 15.0), QPointF(21.0, 15.0));
+        for (const qreal x : {4.0, 11.0, 20.0}) {
+            p.drawLine(QPointF(x, 6.0), QPointF(x, 18.0));
+            p.drawLine(QPointF(x - 1.6, 16.6), QPointF(x + 1.6, 13.4));
+        }
+        p.setPen(stroke(c, 1.3));
+        p.drawLine(QPointF(5.8, 11.0), QPointF(9.2, 11.0));
+        p.drawLine(QPointF(13.0, 11.0), QPointF(18.0, 11.0));
+        break;
+    }
+
+    case Glyph::DimBaseline: {
+        // LINES STACKED FROM ONE ORIGIN: every figure starts at the left
+        // extension line; the lines lie one spacing apart.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(4.0, 4.0), QPointF(4.0, 20.0));
+        p.drawLine(QPointF(12.0, 12.0), QPointF(12.0, 20.0));
+        p.drawLine(QPointF(20.0, 6.0), QPointF(20.0, 20.0));
+        p.drawLine(QPointF(4.0, 16.0), QPointF(12.0, 16.0));
+        p.drawLine(QPointF(4.0, 9.0), QPointF(20.0, 9.0));
+        for (const QPointF& tip : {QPointF(12.0, 16.0), QPointF(20.0, 9.0)})
+            p.drawLine(QPointF(tip.x() - 1.6, tip.y() + 1.6),
+                       QPointF(tip.x() + 1.6, tip.y() - 1.6));
+        break;
+    }
+
+    case Glyph::DimEdit: {
+        // A DIMENSION AND THE PENCIL over its figure: what is written is being
+        // changed, not what is measured.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.0, 18.0), QPointF(3.0, 11.0));
+        p.drawLine(QPointF(21.0, 18.0), QPointF(21.0, 11.0));
+        p.drawLine(QPointF(3.0, 16.0), QPointF(21.0, 16.0));
+        p.setPen(stroke(c, 1.3));
+        p.drawLine(QPointF(6.0, 12.4), QPointF(10.0, 12.4));
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(12.0, 13.0), QPointF(19.5, 5.5));
+        p.drawLine(QPointF(19.5, 5.5), QPointF(21.0, 7.0));
+        p.drawLine(QPointF(21.0, 7.0), QPointF(13.5, 14.5));
+        break;
+    }
+
     case Glyph::ToArea: {
         // AN OPEN RUN CLOSING INTO A FACE: three edges drawn, the fourth dashed
         // in, and the face filled faintly behind them.

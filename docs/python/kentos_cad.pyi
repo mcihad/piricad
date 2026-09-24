@@ -1185,7 +1185,7 @@ def dimension(
         type — hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay
         apex — Açısal ölçünün tepe noktası [mm, Sağa (Y) önce]
         end — Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce]
-        style — Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI
+        style — Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili
         text — Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
         associate — Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet
@@ -1251,6 +1251,50 @@ def dimension_refresh(
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
     """
 
+def dimension_continue(
+    *,
+    base: list[int] = ...,
+    points: Coords = ...,
+    associate: bool = ...,
+    catalog: str = ...,
+) -> int:
+    """Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler.
+
+    Komut: core.dimension_continue (ZİNCİRÖLÇÜ)
+        base — Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü [kalıcı nesne anahtarı]
+        points — Zincirin sonraki noktaları, her biri bir öncekinden ölçülür [mm, Sağa (Y) önce]
+        associate — Tam denk geldiği köşeye bağlansın mı; varsayılan evet
+        catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+    """
+
+def dimension_baseline(
+    *,
+    base: list[int] = ...,
+    points: Coords = ...,
+    associate: bool = ...,
+    catalog: str = ...,
+) -> int:
+    """Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer.
+
+    Komut: core.dimension_baseline (BAZÖLÇÜ)
+        base — Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü [kalıcı nesne anahtarı]
+        points — Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür [mm, Sağa (Y) önce]
+        associate — Tam denk geldiği köşeye bağlansın mı; varsayılan evet
+        catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+    """
+
+def dimension_style(
+    *,
+    name: str = ...,
+    catalog: str = ...,
+) -> int:
+    """Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler.
+
+    Komut: core.dimension_style (ÖLÇÜSTİLİ)
+        name — Gösterilecek stil; verilmezse hepsi
+        catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+    """
+
 def leader(
     *,
     points: Coords = ...,
@@ -1263,7 +1307,7 @@ def leader(
     Komut: core.leader (LİDER)
         points — Okun ucundan yazının yanına köşeler [mm, Sağa (Y) önce]
         text — Son köşenin yanına yazılacak metin
-        style — Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25
+        style — Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
     """
 

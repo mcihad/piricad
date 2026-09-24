@@ -54,6 +54,7 @@ struct DimensionStyle
     std::int32_t extension_offset_um{625}; ///< gap between a point and its extension line
     std::int32_t text_gap_um{625};         ///< between the dimension line and the text
     std::int32_t text_height_um{2500};     ///< the caption's height
+    std::int32_t baseline_spacing_um{0};   ///< between stacked BAZÖLÇÜ lines; 0: 1,5 × text height
     std::uint8_t precision{2};             ///< decimals in the text
     char decimal_separator{','};           ///< `,` or `.`
 };

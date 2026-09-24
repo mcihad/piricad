@@ -638,7 +638,7 @@ void arrowhead_outline(Point2 tip, Point2 from, Mm size, ArrowStyle style, EmitB
 }
 
 bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 where,
-                      Mm text_height, DimensionLayout& out)
+                      Mm text_height, DimensionLayout& out, bool fixed_rotation)
 {
     out = DimensionLayout{};
     if (picks.size() < 2) return false;
@@ -655,6 +655,8 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
         Dir u{1.0, 0.0};
         if (def.type == DimensionType::Aligned) {
             u = unit_between(p1, p2);
+        } else if (fixed_rotation) {
+            u = unit_at(def.rotation_udeg);
         } else {
             // A linear dimension measures horizontally when its line is placed
             // above or below the points, vertically when beside them.
@@ -1096,8 +1098,10 @@ Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
             where          = along(along(picks[0], now, a), now.perp(), o);
         }
     }
+    // A LINEAR DIMENSION KEEPS ITS DIRECTION. Chosen once, from where its line
+    // was put; a corner that moves must not turn a horizontal figure vertical.
     DimensionLayout layout;
-    if (!dimension_layout(def, picks, where, height, layout))
+    if (!dimension_layout(def, picks, where, height, layout, true))
         return err(ErrorCode::ValidationFailed,
                    "Ölçü yeni noktalarıyla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna "
                    "geldi.");

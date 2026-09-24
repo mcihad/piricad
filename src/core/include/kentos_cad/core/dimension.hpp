@@ -145,8 +145,11 @@ struct DimensionLayout
 /// out (ordinate, four-point angular). ONE function, so the command that
 /// creates a dimension, the grip that moves its point and the preview under
 /// the cursor agree about where its line goes.
+/// `fixed_rotation` keeps a linear dimension's `rotation_udeg` instead of
+/// choosing horizontal or vertical from `where`: a dimension that already has a
+/// direction — one being rebuilt, one continuing a run — keeps it.
 bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 where,
-                      Mm text_height, DimensionLayout& out);
+                      Mm text_height, DimensionLayout& out, bool fixed_rotation = false);
 
 /// The inverse of `dimension_layout` for a stored dimension: the picks and the
 /// location its definition points (ring 1) and caption baseline (ring 0) came

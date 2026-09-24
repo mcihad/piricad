@@ -438,3 +438,126 @@ TEST_CASE("ÖLÇÜDÜZENLE ve ÖLÇÜYENİLE: kılavuzdaki örnekler kelimesi ke
                                           "sonek=\" m\" tolerans=0.05 hassasiyet=3"});
     CHECK(drawn.find("Ölçü çizildi: R20,000±0,050 m (ISO-25).\n") != std::string::npos);
 }
+
+// ------------------------------------------------------- chain, baseline ----
+
+TEST_CASE("ZİNCİRÖLÇÜ: her ölçü bir öncekinin ucundan, aynı çizgide; toplamı söylenir")
+{
+    Rig r;
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=5,0 konum=2.5,-3"); // 1
+    r.said.clear();
+    r.run("ZİNCİRÖLÇÜ noktalar=12.5,0 16.75,0"); // 2, 3
+    CHECK_EQ(r.def(2).measurement, 7'500);
+    CHECK_EQ(r.def(3).measurement, 4'250);
+    CHECK(r.said.find("Zincir ölçü: 2 ölçü eklendi (7,50 · 4,25); toplam 11,75.") !=
+          std::string::npos);
+    // One line: every dimension line point three metres below.
+    for (const std::int64_t key : {1, 2, 3}) {
+        const core::RingSpan span = r.doc.geometry().rings_of(r.doc.entities().slot[r.slot(key)]);
+        CHECK_EQ(r.doc.geometry().vertex(span.first + 1, 2).y, -3'000);
+    }
+    // One undo step for the whole row.
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{1});
+}
+
+TEST_CASE("BAZÖLÇÜ: her ölçü ilk noktadan, çizgiler stilin aralığıyla üst üste")
+{
+    Rig r;
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=5,0 konum=2.5,-3"); // 1
+    r.said.clear();
+    r.run("BAZÖLÇÜ noktalar=12.5,0 16.75,0"); // 2, 3
+    CHECK_EQ(r.def(2).measurement, 12'500);
+    CHECK_EQ(r.def(3).measurement, 16'750);
+    CHECK(r.said.find("Baz ölçü: 2 ölçü eklendi (12,50 · 16,75).") != std::string::npos);
+    // ISO-25 stacks lines 3,75 mm apart on paper: 3,75 m on a 1/1000 sheet, away
+    // from the measured points.
+    const auto line_y = [&r](std::int64_t key) {
+        const core::RingSpan span = r.doc.geometry().rings_of(r.doc.entities().slot[r.slot(key)]);
+        return r.doc.geometry().vertex(span.first + 1, 2).y;
+    };
+    CHECK_EQ(line_y(2), -6'750);
+    CHECK_EQ(line_y(3), -10'500);
+}
+
+TEST_CASE("ZİNCİRÖLÇÜ: hizalı ölçünün doğrultusunda sürer; ölçüler köşelere bağlanır ve izler")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 3,3");                                // 1
+    r.run("ÇİZGİ 3,3 6,6");                                // 2
+    r.run("ÖLÇÜ tur=hizali birinci=0,0 ikinci=3,3 konum=-1,1"); // 3
+    r.run("ZİNCİRÖLÇÜ noktalar=6,6");                      // 4
+    const DimensionDef d = r.def(4);
+    CHECK_EQ(d.type, DimensionType::Linear);
+    CHECK_EQ(d.rotation_udeg, 45'000'000);
+    CHECK_EQ(d.measurement, 4'243); // 3√2 m along the row
+    // Tied to the corners it was drawn on, so it follows the second line.
+    r.run("KÖŞETAŞI nesne=2 kose=2 nokta=9,9");
+    CHECK_EQ(r.def(4).measurement, 8'485);
+}
+
+TEST_CASE("BAĞLI ÖLÇÜ: doğrusal ölçü izlerken doğrultusunu korur, yatay dikeye dönmez")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 10,0");                                  // 1
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=10,0 konum=5,-1"); // 2, horizontal
+    CHECK_EQ(r.def(2).rotation_udeg, 0);
+    // Far to the right and a little up: the line's place now lies BESIDE the
+    // points, which is where a new linear dimension would read vertically.
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=40,1");
+    CHECK_EQ(r.def(2).rotation_udeg, 0);
+    CHECK_EQ(r.def(2).measurement, 40'000);
+}
+
+TEST_CASE("ÖLÇÜSTİLİ: stiller kâğıttaki ve bu paftadaki boylarıyla; varsayılan AYAR ile değişir")
+{
+    Rig r;
+    r.run("ÖLÇÜSTİLİ");
+    CHECK(r.said.find("ISO-25 (varsayılan) — yazı 2,5 mm, kapalı ok 2,5 mm") != std::string::npos);
+    CHECK(r.said.find("ISO-35 — yazı 3,5 mm") != std::string::npos);
+    CHECK(r.said.find("1/1000 paftada yazı zeminde 2,50 m") != std::string::npos);
+
+    r.run("AYAR ölçü_stili MIMARI");
+    r.run("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3");
+    CHECK_EQ(r.def(1).style, std::string("MIMARI"));
+    CHECK_EQ(r.def(1).arrow, core::ArrowStyle::Tick);
+    r.said.clear();
+    r.run("ÖLÇÜSTİLİ ad=MIMARI");
+    CHECK(r.said.find("MIMARI (varsayılan)") != std::string::npos);
+    CHECK(r.said.find("ISO-25") == std::string::npos);
+}
+
+TEST_CASE("ZİNCİRÖLÇÜ KANIT: arayüz, komut satırı, betik ve oynatma aynı sırayı bırakır")
+{
+    Rig gui;
+    gui.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=5,0 konum=2.5,-3");
+    {
+        auto started = gui.bus.begin_interactive("ZİNCİRÖLÇÜ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(Point2{12'500, 0})).ok());
+        CHECK(session.supply(Value::point(Point2{16'750, 0})).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    cli.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=5,0 konum=2.5,-3");
+    REQUIRE(cli.bus.execute_line("ZİNCİRÖLÇÜ noktalar=12.5,0 16.75,0", Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"json({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.dimension","args":{"tur":"dogrusal","birinci":[0,0],
+                        "ikinci":[5000,0],"konum":[2500,-3000]}},
+                      {"cmd":"core.dimension_continue","args":{"noktalar":[[12500,0],
+                        [16750,0]]}}]})json")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{3});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}

@@ -18,6 +18,7 @@
 
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
+#include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
 
@@ -103,12 +104,17 @@ std::optional<GroundStyle> style_for(Context& ctx, const std::string& wanted,
     return out;
 }
 
-/// The style ÖLÇÜ draws with: `stil=` or ISO-25, for the plan scale.
+/// The style a new dimension is drawn with: `stil=`, else the project's
+/// (`AYAR ölçü_stili`), for the plan scale.
+std::string wanted_style(Context& ctx)
+{
+    if (const Value s = ctx.argument("stil"); !s.empty()) return s.as_text();
+    return std::string(ctx.session().bus().project_settings().get("core.olcu.stil").as_text());
+}
+
 std::optional<GroundStyle> style_for(Context& ctx)
 {
-    std::string wanted = "ISO-25";
-    if (const Value s = ctx.argument("stil"); !s.empty()) wanted = s.as_text();
-    return style_for(ctx, wanted, plan_scale(ctx));
+    return style_for(ctx, wanted_style(ctx), plan_scale(ctx));
 }
 
 core::DrawingUnit drawing_unit(Context& ctx)
@@ -236,6 +242,32 @@ std::vector<Param> with_presentation(std::vector<Param> base)
     for (Param& p : presentation_params())
         base.push_back(std::move(p));
     return base;
+}
+
+/// LINKED TO WHAT IT MEASURES (TODOS C-10): every definition point of `created`
+/// that sits exactly on a vertex, a centre or an arc's end is tied to it, so
+/// the dimension follows when that geometry moves. Found from the drawing, not
+/// from the hand — a click that snapped, a typed corner and a script's point
+/// link alike (Article 1.2). How many were tied, or nothing after refusing.
+std::optional<std::size_t> link_points(Context& ctx, core::EntityId created,
+                                       core::DimensionType type, std::span<const core::Point2> defs)
+{
+    std::vector<core::DimLink> links;
+    const std::vector<std::optional<core::DimRole>> roles = core::dim_roles(type);
+    for (std::size_t i = 0; i < defs.size() && i < roles.size(); ++i) {
+        const std::optional<core::DimRole>& role = roles[i];
+        if (!role.has_value()) continue;
+        auto found = core::dim_anchor_at(ctx.document(), defs[i], role.value(), created);
+        if (!found) continue;
+        found->point = static_cast<std::uint8_t>(i);
+        links.push_back(*found);
+    }
+    if (links.empty()) return std::size_t{0};
+    if (auto st = ctx.transaction().set_dimension_links(created, links); !st) {
+        ctx.refuse(st.error());
+        return std::nullopt;
+    }
+    return links.size();
 }
 
 // ------------------------------------------------------------------- ÖLÇÜ ----
@@ -387,31 +419,9 @@ Task<void> run_dimension(Context& ctx)
         co_return;
     }
 
-    // LINKED TO WHAT IT MEASURES (TODOS C-10): every definition point that sits
-    // exactly on a vertex, a centre or an arc's end is tied to it, so the
-    // dimension follows when that geometry moves. Found from the drawing, not
-    // from the hand — a click that snapped, a typed corner and a script's point
-    // link alike (Article 1.2) — and `bagla=hayır` draws a free dimension.
-    const bool link    = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
-    std::size_t linked = 0;
-    if (link) {
-        std::vector<core::DimLink> links;
-        const std::vector<std::optional<core::DimRole>> roles = core::dim_roles(type);
-        for (std::size_t i = 0; i < defs.size() && i < roles.size(); ++i) {
-            if (!roles[i]) continue;
-            auto found = core::dim_anchor_at(ctx.document(), defs[i], *roles[i], created.value());
-            if (!found) continue;
-            found->point = static_cast<std::uint8_t>(i);
-            links.push_back(*found);
-        }
-        if (!links.empty()) {
-            if (auto st = ctx.transaction().set_dimension_links(created.value(), links); !st) {
-                ctx.refuse(st.error());
-                co_return;
-            }
-            linked = links.size();
-        }
-    }
+    const bool link   = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    const auto linked = link ? link_points(ctx, created.value(), type, defs) : std::size_t{0};
+    if (!linked) co_return;
 
     ctx.record("birinci", Value::point(*p1));
     ctx.record("ikinci", Value::point(*p2));
@@ -422,8 +432,8 @@ Task<void> run_dimension(Context& ctx)
     if (!def.override_text.empty()) ctx.record("metin", Value::text(def.override_text));
     if (!link) ctx.record("bagla", Value::boolean(false));
     std::string said = "Ölçü çizildi: " + text + " (" + def.style + ")";
-    if (linked != 0)
-        said += "; " + std::to_string(linked) + " noktası ölçtüğü nesneye bağlı, o değişince " +
+    if (*linked != 0)
+        said += "; " + std::to_string(*linked) + " noktası ölçtüğü nesneye bağlı, o değişince " +
                 "ölçü de güncellenir";
     ctx.echo(said + ".");
 }
@@ -815,6 +825,299 @@ Task<void> run_dimension_refresh(Context& ctx)
     ctx.echo(said);
 }
 
+// ----------------------------------------------------- ZİNCİRÖLÇÜ, BAZÖLÇÜ ----
+//
+// A ROW OF FIGURES ON ONE LINE (TODOS C-10). A façade's openings, the lots
+// along a road, the offsets of a building from its corner: a surveyor states
+// them as a CHAIN (each from the last point) or from one BASE (each from the
+// first point, the lines stacked one spacing apart). Each figure is its own
+// dimension — linked, editable, followed — laid on the direction of the one the
+// run starts from, so the figures line up and read as one row.
+
+/// Whether `e` is a dimension a run can start from: linear or aligned.
+bool starts_run(const core::Document& doc, core::EntityId e)
+{
+    if (e >= doc.entities().size() || !doc.alive(e) ||
+        doc.entities().kind[e] != core::kDimensionKind ||
+        (doc.entities().flags[e] & core::FlagInBlock) != 0)
+        return false;
+    auto def = core::dimension_of(doc.geometry(), doc.entities().slot[e]);
+    return def && (def.value().type == core::DimensionType::Linear ||
+                   def.value().type == core::DimensionType::Aligned);
+}
+
+/// The dimension a run starts from: `temel=`, else the newest linear or aligned
+/// dimension of the drawing. Nothing after refusing.
+std::optional<core::EntityId> run_base(const Context& ctx)
+{
+    const core::Document& doc = ctx.document();
+    if (const Value b = ctx.argument("temel"); !b.empty()) {
+        const std::int64_t raw = b.kind() == Value::Kind::IdList && !b.as_ids().empty()
+                                     ? b.as_ids().front()
+                                     : b.as_int();
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+        if (!starts_run(doc, e)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(raw) +
+                           " doğrusal ya da hizalı bir ölçü değil; zincir ve baz ölçü onlardan "
+                           "kurulur.");
+            return std::nullopt;
+        }
+        return e;
+    }
+    for (auto e = static_cast<core::EntityId>(doc.entities().size()); e-- > 0;)
+        if (starts_run(doc, e)) return e;
+    ctx.refuse(core::ErrorCode::NotFound,
+               "Başlanacak doğrusal ya da hizalı bir ölçü yok: önce ÖLÇÜ çizin ya da temel= "
+               "verin.");
+    return std::nullopt;
+}
+
+Task<void> run_dimension_run(Context& ctx, bool baseline)
+{
+    const auto base = run_base(ctx);
+    if (!base) co_return;
+    const core::Document& doc = ctx.document();
+    const std::uint32_t row   = doc.entities().slot[*base];
+    auto stored               = core::dimension_of(doc.geometry(), row);
+    if (!stored) {
+        ctx.refuse(stored.error());
+        co_return;
+    }
+    const core::RingSpan span = doc.geometry().rings_of(row);
+    const core::Point2 b1     = doc.geometry().vertex(span.first + 1, 0);
+    const core::Point2 b2     = doc.geometry().vertex(span.first + 1, 1);
+    const core::Point2 line   = doc.geometry().vertex(span.first + 1, 2);
+    const core::Mm height     = doc.texts().height(row);
+
+    // THE ROW'S DIRECTION AND FIGURES: the base's own. An aligned base gives
+    // its line's direction to linear figures, which is what keeps every figure
+    // of the row on the one line.
+    core::DimensionDef proto = stored.value();
+    proto.type               = core::DimensionType::Linear;
+    proto.override_text.clear();
+    proto.user_text_position = false;
+    if (stored.value().type == core::DimensionType::Aligned) {
+        std::int64_t a = core::atan2_udeg(b2.y - b1.y, b2.x - b1.x) % core::kUDegFullCircle;
+        if (a < 0) a += core::kUDegFullCircle;
+        proto.rotation_udeg = a;
+    }
+    const core::SinCos t = core::sin_cos_udeg(proto.rotation_udeg);
+    const double nx      = -t.sin;
+    const double ny      = t.cos;
+    const double off =
+        static_cast<double>(line.x - b1.x) * nx + static_cast<double>(line.y - b1.y) * ny;
+    const double side = off < 0.0 ? -1.0 : 1.0;
+
+    // THE SPACING BETWEEN STACKED LINES, on paper in the style, on the ground
+    // by the sheet scale the base was drawn for.
+    core::Mm spacing = height * 3 / 2;
+    if (baseline) {
+        if (auto catalog = catalog_for(ctx))
+            if (const DimensionStyle* style = catalog->find(proto.style); style != nullptr) {
+                const std::int64_t scale =
+                    proto.scale_basis > 0 ? proto.scale_basis : plan_scale(ctx);
+                const std::int32_t um = style->baseline_spacing_um > 0
+                                            ? style->baseline_spacing_um
+                                            : style->text_height_um * 3 / 2;
+                spacing               = core::mul_div_round(um, scale, 1000);
+            }
+    }
+
+    const bool link = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    const core::DrawingUnit unit = drawing_unit(ctx);
+    core::Point2 from            = baseline ? b1 : b2;
+    std::vector<std::string> figures;
+    std::int64_t total  = 0;
+    std::size_t skipped = 0;
+    std::size_t linked  = 0;
+    for (std::size_t k = 1;; ++k) {
+        const core::Point2 at =
+            baseline
+                ? core::Point2{line.x + core::mm_round(side * nx * static_cast<double>(spacing) *
+                                                       static_cast<double>(k)),
+                               line.y + core::mm_round(side * ny * static_cast<double>(spacing) *
+                                                       static_cast<double>(k))}
+                : line;
+        auto next =
+            co_await ctx.point("noktalar",
+                               baseline ? "Tabandan ölçülecek sonraki nokta; Enter bitirir"
+                                        : "Zincirin sonraki noktası; Enter bitirir",
+                               PointOptions{.rubber_band    = true,
+                                            .rubber_origin  = from,
+                                            .rubber_shape   = RubberShape::DimensionNext,
+                                            .rubber_chain   = {from, at},
+                                            .rubber_payload = core::encode_dimension(proto)});
+        if (!next) break;
+        core::DimensionDef def = proto;
+        const std::array<core::Point2, 2> picks{from, *next};
+        core::DimensionLayout layout;
+        if (*next == from || !core::dimension_layout(def, picks, at, height, layout, true) ||
+            def.measurement == 0) {
+            // A point measured where the last one was is no figure; said, not
+            // drawn, and the run goes on.
+            ++skipped;
+            if (baseline) --k;
+            continue;
+        }
+        const std::string text = core::dimension_text(def, unit);
+        const auto caption     = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
+                                                          layout.text_dir_y, height, text);
+        const std::vector<core::RingGeometry::RingInput> rings{
+            core::RingGeometry::RingInput{caption, core::RingRole::Open, 0},
+            core::RingGeometry::RingInput{layout.defs, core::RingRole::Open, 0},
+        };
+        auto created = ctx.transaction().add_kind(ctx.active_layer(), core::kDimensionKind, rings,
+                                                  core::encode_dimension(def));
+        if (!created) {
+            ctx.refuse(created.error());
+            co_return;
+        }
+        if (auto st = ctx.transaction().set_text(created.value(), text, height,
+                                                 core::TextAnchor::MiddleCentre);
+            !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
+        if (link) {
+            const auto tied = link_points(ctx, created.value(), def.type, layout.defs);
+            if (!tied) co_return;
+            linked += *tied;
+        }
+        figures.push_back(text);
+        total += def.measurement;
+        if (!baseline) from = *next;
+    }
+    if (figures.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   baseline ? "Tabandan ölçülecek nokta verilmedi." : "Zincire nokta verilmedi.");
+        co_return;
+    }
+
+    ctx.record("temel", Value::ids({static_cast<std::int64_t>(core::raw(doc.key_of(*base)))}));
+    if (!link) ctx.record("bagla", Value::boolean(false));
+    std::string row_text;
+    for (const std::string& f : figures)
+        row_text += (row_text.empty() ? "" : " · ") + f;
+    std::string said = std::string(baseline ? "Baz ölçü: " : "Zincir ölçü: ") +
+                       std::to_string(figures.size()) + " ölçü eklendi (" + row_text + ")";
+    if (!baseline && figures.size() > 1) {
+        core::DimensionDef sum = proto;
+        sum.measurement        = total;
+        sum.prefix.clear();
+        sum.suffix.clear();
+        sum.tolerance = core::DimTolerance::None;
+        said += "; toplam " + core::dimension_value_text(sum, unit);
+    }
+    if (skipped > 0)
+        said += "; " + std::to_string(skipped) +
+                " nokta bir öncekiyle aynı yerde ölçüldüğü için atlandı";
+    if (linked > 0) said += "; " + std::to_string(linked) + " nokta ölçtüğü nesneye bağlı";
+    ctx.echo(said + ".");
+}
+
+// ------------------------------------------------------------- ÖLÇÜSTİLİ ----
+
+/// Paper micrometres as millimetres, two decimals at most: `2500` is `2,5`.
+std::string paper_text(std::int32_t um)
+{
+    std::string out         = std::to_string(um / 1000);
+    const std::int32_t frac = um % 1000;
+    if (frac != 0) {
+        std::string digits = std::to_string(frac + 1000).substr(1);
+        while (!digits.empty() && digits.back() == '0')
+            digits.pop_back();
+        out += "," + digits;
+    }
+    return out;
+}
+
+const char* arrow_word(core::ArrowStyle a)
+{
+    switch (a) {
+    case core::ArrowStyle::Closed: return "kapalı ok";
+    case core::ArrowStyle::Open: return "açık ok";
+    case core::ArrowStyle::Tick: return "45° çentik";
+    }
+    return "ok";
+}
+
+/// WHAT A STYLE LOOKS LIKE, on paper and on this drawing's ground (TODOS C-10):
+/// a style is chosen by what it prints, and a name says nothing about that.
+Task<void> run_dimension_style(Context& ctx)
+{
+    const auto catalog = catalog_for(ctx);
+    if (!catalog) co_return;
+    const std::string current = wanted_style(ctx);
+    const std::int64_t scale  = plan_scale(ctx);
+    const Value named         = ctx.argument("ad");
+    if (!named.empty() && catalog->find(named.as_text()) == nullptr) {
+        std::string known;
+        for (const DimensionStyle& s : catalog->styles)
+            known += (known.empty() ? "" : ", ") + s.id;
+        ctx.refuse(core::ErrorCode::NotFound, "Tanınmayan ölçü stili: '" + named.as_text() +
+                                                  "'. Katalogdaki stiller: " + known + ".");
+        co_return;
+    }
+    if (!named.empty()) ctx.record("ad", named);
+
+    core::Json rows = core::Json::array({});
+    ctx.echo("Ölçü stilleri (katalog " + catalog->package_version + "; yeni ölçüler " + current +
+             " ile çizilir, AYAR ölçü_stili değiştirir):");
+    for (const DimensionStyle& s : catalog->styles) {
+        if (!named.empty() && !core::turkish_key_equals(s.id, named.as_text())) continue;
+        const std::int32_t spacing =
+            s.baseline_spacing_um > 0 ? s.baseline_spacing_um : s.text_height_um * 3 / 2;
+        const auto ground = [scale](std::int32_t um) {
+            core::DimensionDef d;
+            d.measurement = core::mul_div_round(um, scale, 1000);
+            d.precision   = 2;
+            return core::dimension_value_text(d, core::DrawingUnit::Metre);
+        };
+        std::string line =
+            "  " + s.id + (core::turkish_key_equals(s.id, current) ? " (varsayılan)" : "") +
+            " — yazı " + paper_text(s.text_height_um) + " mm, " + arrow_word(s.arrow) + " " +
+            paper_text(s.arrow_um) + " mm, " + std::to_string(s.precision) + " ondalık, ayraç '" +
+            std::string(1, s.decimal_separator) + "', baz aralığı " + paper_text(spacing) +
+            " mm; 1/" + std::to_string(scale) + " paftada yazı zeminde " +
+            ground(s.text_height_um) + " m";
+        if (!s.description.empty()) line += ". " + s.description;
+        ctx.echo(line);
+
+        core::Json row;
+        row.set("ad", core::Json::string(s.id));
+        row.set("varsayilan", core::Json::boolean(core::turkish_key_equals(s.id, current)));
+        row.set("ok", core::Json::string(arrow_word(s.arrow)));
+        row.set("ok_boyu_um", core::Json::integer(s.arrow_um));
+        row.set("uzatma_fazlasi_um", core::Json::integer(s.extension_beyond_um));
+        row.set("uzatma_boslugu_um", core::Json::integer(s.extension_offset_um));
+        row.set("yazi_boslugu_um", core::Json::integer(s.text_gap_um));
+        row.set("yazi_yuksekligi_um", core::Json::integer(s.text_height_um));
+        row.set("baz_araligi_um", core::Json::integer(spacing));
+        row.set("ondalik", core::Json::integer(s.precision));
+        row.set("ondalik_ayraci", core::Json::string(std::string(1, s.decimal_separator)));
+        row.set("aciklama", core::Json::string(s.description));
+        rows.push(std::move(row));
+    }
+    core::Json report;
+    report.set("katalog", core::Json::string(catalog->package_version));
+    report.set("varsayilan", core::Json::string(current));
+    report.set("plan_olcegi", core::Json::integer(scale));
+    report.set("stiller", std::move(rows));
+    ctx.report(std::move(report));
+}
+
+Task<void> run_dimension_continue(Context& ctx)
+{
+    co_await run_dimension_run(ctx, false);
+}
+
+Task<void> run_dimension_baseline(Context& ctx)
+{
+    co_await run_dimension_run(ctx, true);
+}
+
 } // namespace
 
 KENTOS_COMMAND(dimension)
@@ -837,7 +1140,7 @@ KENTOS_COMMAND(dimension)
             Param::points("bitis", Arity::optional(), "Yay uzunluğu ölçüsünün bitiş noktası")
                 .en("end"),
             Param::text("stil", Arity::optional(),
-                          "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI")
+                          "Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili")
                 .en("style"),
             Param::text("metin", Arity::optional(),
                           "Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, "
@@ -929,6 +1232,79 @@ KENTOS_COMMAND(dimension_refresh)
     };
 }
 
+/// The parameters both runs take.
+std::vector<Param> run_params(const char* points_help)
+{
+    return {
+        Param{"temel", ParamKind::Selection, Arity::optional(),
+              "Başlanacak doğrusal ya da hizalı ölçü; verilmezse çizimin en son ölçüsü"}
+            .en("base"),
+        Param::points("noktalar", Arity{0, 0xFFFFFFFFu}, points_help).en("points"),
+        Param::boolean("bagla", Arity::optional(),
+                       "Tam denk geldiği köşeye bağlansın mı; varsayılan evet")
+            .en("associate"),
+        Param::text("katalog", Arity::optional(),
+                    "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+            .en("catalog"),
+    };
+}
+
+KENTOS_COMMAND(dimension_continue)
+{
+    return CommandSpec{
+        .id       = "core.dimension_continue",
+        .names    = {"ZİNCİRÖLÇÜ", "ZINCIROLCU", "DIMCONTINUE", "ZÖ", "ZO"},
+        .title    = "Zincir Ölçü",
+        .category = Category::Draw,
+        .params   = run_params("Zincirin sonraki noktaları, her biri bir öncekinden ölçülür"),
+        .undo     = UndoPolicy::SingleTransaction,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda "
+                   "ölçüler çizer; toplamı söyler.",
+        .run = &run_dimension_continue,
+    };
+}
+
+KENTOS_COMMAND(dimension_baseline)
+{
+    return CommandSpec{
+        .id       = "core.dimension_baseline",
+        .names    = {"BAZÖLÇÜ", "BAZOLCU", "DIMBASELINE", "BÖ", "BO"},
+        .title    = "Baz Ölçü",
+        .category = Category::Draw,
+        .params   = run_params("Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür"),
+        .undo     = UndoPolicy::SingleTransaction,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste "
+                   "dizer.",
+        .run = &run_dimension_baseline,
+    };
+}
+
+KENTOS_COMMAND(dimension_style)
+{
+    return CommandSpec{
+        .id       = "core.dimension_style",
+        .python   = "dimension_style",
+        .names    = {"ÖLÇÜSTİLİ", "OLCUSTILI", "DIMSTYLE", "ÖST", "OST"},
+        .title    = "Ölçü Stilleri",
+        .category = Category::Query,
+        .params =
+            {
+                Param::text("ad", Arity::optional(), "Gösterilecek stil; verilmezse hepsi")
+                    .en("name"),
+                Param::text("katalog", Arity::optional(),
+                            "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+                    .en("catalog"),
+            },
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect | Flags::AiAccessible,
+        .summary = "Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin "
+                   "varsayılan olduğunu söyler.",
+        .run = &run_dimension_style,
+    };
+}
+
 KENTOS_COMMAND(leader)
 {
     return CommandSpec{
@@ -943,7 +1319,7 @@ KENTOS_COMMAND(leader)
                 Param::text("metin", Arity::optional(), "Son köşenin yanına yazılacak metin")
                     .en("text"),
                 Param::text("stil", Arity::optional(),
-                            "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25")
+                            "Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili")
                     .en("style"),
                 Param::text("katalog", Arity::optional(),
                             "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
