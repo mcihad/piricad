@@ -9,6 +9,7 @@
 
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/value.hpp"
+#include "kentos_cad/core/identity.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -76,29 +77,29 @@ enum class RubberShape : std::uint8_t {
             ///< YUVARLA
     Grip,   ///< the object with the grip `rubber_payload` names at the cursor — or a new
             ///< corner there: KÖŞETAŞI, KÖŞEEKLE
-    MeasureRun,  ///< the run measured so far and its next segment to the cursor, each segment's
-                 ///< length on it and the total at the cursor: ÖLÇ
-    MeasureRing, ///< the face the corners so far and the cursor enclose, with its area and
-                 ///< perimeter written in it: ALANÖLÇ yontem=nokta
-    Parallel,    ///< the parallels of the objects `rubber_payload` names, on the side of each
-                 ///< the cursor is on: OFSET
-    Stretch,     ///< the objects the window in `rubber_payload` stretches, its grips carried by
-                 ///< the cursor's offset from the origin: ESNET
-    Break,       ///< the line `rubber_payload` names, with the piece between the origin and the
-                 ///< cursor marked for removal: KIR
-    Trim,        ///< the object under the cursor, with the piece it would lose (or the reach it
-                 ///< would gain) against the edges `rubber_payload` names: BUDA, UZAT
-    TrimFence,   ///< the fence `rubber_chain` holds, run on to the cursor, with every piece it
-                 ///< would take (or every end it would carry on): BUDA, UZAT yontem=çit
-    Split,       ///< the object `rubber_payload` names cut at the chain's points and the
-                 ///< cursor, each piece it becomes drawn in turn: BÖL yontem=nokta
-    PairCorner,  ///< the corner between the two objects `rubber_payload` names, at the size the
-                 ///< cursor's distance from the origin shows: YUVARLA, PAH with two objects
-    EdgeArc,     ///< the object `rubber_payload` names with one edge bent through the
-                 ///< cursor: KENARTÜRÜ tur=yay
-    Region,      ///< the region of the linework the cursor is inside, found as
-                 ///< `rubber_payload`'s query finds it, its islands as holes and its area
-                 ///< written in it: SINIR
+    MeasureRun,    ///< the run measured so far and its next segment to the cursor, each segment's
+                   ///< length on it and the total at the cursor: ÖLÇ
+    MeasureRing,   ///< the face the corners so far and the cursor enclose, with its area and
+                   ///< perimeter written in it: ALANÖLÇ yontem=nokta
+    Parallel,      ///< the parallels of the objects `rubber_payload` names, on the side of each
+                   ///< the cursor is on: OFSET
+    Stretch,       ///< the objects the window in `rubber_payload` stretches, its grips carried by
+                   ///< the cursor's offset from the origin: ESNET
+    Break,         ///< the line `rubber_payload` names, with the piece between the origin and the
+                   ///< cursor marked for removal: KIR
+    Trim,          ///< the object under the cursor, with the piece it would lose (or the reach it
+                   ///< would gain) against the edges `rubber_payload` names: BUDA, UZAT
+    TrimFence,     ///< the fence `rubber_chain` holds, run on to the cursor, with every piece it
+                   ///< would take (or every end it would carry on): BUDA, UZAT yontem=çit
+    Split,         ///< the object `rubber_payload` names cut at the chain's points and the
+                   ///< cursor, each piece it becomes drawn in turn: BÖL yontem=nokta
+    PairCorner,    ///< the corner between the two objects `rubber_payload` names, at the size the
+                   ///< cursor's distance from the origin shows: YUVARLA, PAH with two objects
+    EdgeArc,       ///< the object `rubber_payload` names with one edge bent through the
+                   ///< cursor: KENARTÜRÜ tur=yay
+    Region,        ///< the region of the linework the cursor is inside, found as
+                   ///< `rubber_payload`'s query finds it, its islands as holes and its area
+                   ///< written in it: SINIR
     DimensionNext, ///< the next dimension of a run: from the chain's first point to the
                    ///< cursor, on the line through the chain's second, with
                    ///< `rubber_payload`'s figures and direction: ZİNCİRÖLÇÜ, BAZÖLÇÜ
@@ -191,6 +192,15 @@ struct Prompt
     /// `rubber_chain` then holds the run's corners, which the snap offers as the
     /// run's own endpoints (`command::pending_run`).
     bool can_retract{false};
+
+    /// WHAT THE OBJECTS ARE, when a command acts on one kind only. A hatch lies
+    /// on the edges of the parcel it fills and a dimension on the side it
+    /// measures, so a click meant for either lands on two things at once — and
+    /// the one nearer the bottom of the drawing, the parcel, won the tie. The
+    /// canvas takes the one of this kind among what is under the cursor without
+    /// asking which; `SEÇ mod=NOKTA sira=` is the line it sends, so a keyboard
+    /// reaches the same object (CLAUDE.md 5.15). `kNoKind`: any.
+    core::KindId pick_kind{core::kNoKind};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

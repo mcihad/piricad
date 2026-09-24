@@ -273,21 +273,20 @@ void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out)
 void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
                  std::vector<float>& out)
 {
+    hatch_lines(face, clip, spacing, angle_degrees, out,
+                (static_cast<double>(face.min_x) + static_cast<double>(face.max_x)) * 0.5,
+                (static_cast<double>(face.min_y) + static_cast<double>(face.max_y)) * 0.5);
+}
+
+void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
+                 std::vector<float>& out, double anchor_x, double anchor_y)
+{
     if (spacing <= 0.0 || face.empty()) return;
 
-    // THE PHASE ANCHOR IS THE FACE, ALWAYS. Line i sits at `i * spacing` from the
-    // face's own centre, so the pattern belongs to the parcel: pan the view and
-    // it travels with the parcel instead of crawling across it. Everything below
-    // narrows WHICH of those lines are emitted; none of it moves them.
-    const double cx = (static_cast<double>(face.min_x) + static_cast<double>(face.max_x)) * 0.5;
-    const double cy = (static_cast<double>(face.min_y) + static_cast<double>(face.max_y)) * 0.5;
-
-    const double w = static_cast<double>(face.max_x) - static_cast<double>(face.min_x);
-    const double h = static_cast<double>(face.max_y) - static_cast<double>(face.min_y);
-
-    // The half-diagonal, so a set at any angle still reaches every corner, plus
-    // one spacing so the outermost line is not cut off by the rotation.
-    const double reach = std::hypot(w, h) * 0.5 + spacing;
+    // THE PHASE IS THE ANCHOR'S. Line i sits at `i * spacing` from it; everything
+    // below narrows WHICH of those lines are emitted, none of it moves them.
+    const double cx = anchor_x;
+    const double cy = anchor_y;
 
     const double radians = -angle_degrees * kPi / 180.0;
     const double ca      = std::cos(radians);
@@ -300,8 +299,7 @@ void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, dou
 
     // What actually has to be covered: the part of the face that is on screen.
     // An empty clip means "no viewport was given", and then the face itself is
-    // the region — which is the old behaviour, kept so a caller that cannot say
-    // where the screen is still gets a correct picture.
+    // the region.
     const bool bounded = !clip.empty();
     const double rx0 =
         bounded ? std::max(static_cast<double>(face.min_x), static_cast<double>(clip.min_x))
@@ -317,9 +315,9 @@ void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, dou
                 : static_cast<double>(face.max_y);
     if (rx1 <= rx0 || ry1 <= ry0) return; // the face is off screen entirely
 
-    // That region's four corners, turned into the hatch's own frame. The extent
-    // along the local y axis says WHICH lines can reach it; the extent along the
-    // local x axis says how long each of them has to be.
+    // That region's four corners, turned into the hatch's own frame about the
+    // anchor. The extent along the local y axis says WHICH lines can reach it;
+    // the extent along the local x axis says how long each of them has to be.
     double ly_min = 1e300;
     double ly_max = -1e300;
     double lx_min = 1e300;
@@ -338,24 +336,31 @@ void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, dou
 
     // A COUNT, not an accumulated position: adding a step a thousand times drifts,
     // and a hatch that drifts is a hatch whose spacing is not the one the annex
-    // published. The count is now taken from the visible band rather than from the
-    // whole face, which is the difference between a few dozen lines and a few
-    // hundred thousand at 1:1.
-    const auto steps = static_cast<int>(std::floor(reach / spacing));
-    const int first  = std::max(-steps, static_cast<int>(std::floor(ly_min / spacing)) - 1);
-    const int last   = std::min(steps, static_cast<int>(std::ceil(ly_max / spacing)) + 1);
+    // published. Taken from the visible band, and bounded: a band that needs more
+    // than `kHatchLinesMax` lines is a tone, and the caller draws it as one.
+    const double lines = (ly_max - ly_min) / spacing;
+    if (!(lines < static_cast<double>(kHatchLinesMax))) return;
+    const auto first = static_cast<long long>(std::floor(ly_min / spacing)) - 1;
+    const auto last  = static_cast<long long>(std::ceil(ly_max / spacing)) + 1;
 
     // One spacing of overshoot at each end so a line's cap and its dash phase do
     // not stop exactly at the screen edge and shimmer as the view moves.
-    const double x_from = std::max(-reach, lx_min - spacing);
-    const double x_to   = std::min(reach, lx_max + spacing);
+    const double x_from = lx_min - spacing;
+    const double x_to   = lx_max + spacing;
     if (x_to <= x_from) return;
 
-    for (int i = first; i <= last; ++i) {
-        const double y = i * spacing;
+    for (long long i = first; i <= last; ++i) {
+        const double y = static_cast<double>(i) * spacing;
         put(x_from, y);
         put(x_to, y);
     }
+}
+
+std::uint8_t hatch_tint_alpha(double width_px, double spacing_px, std::uint8_t opacity) noexcept
+{
+    if (!(spacing_px > 0.0)) return opacity;
+    const double coverage = std::clamp(std::max(width_px, 1.0) / spacing_px, 0.0, 1.0);
+    return static_cast<std::uint8_t>(std::lround(coverage * static_cast<double>(opacity)));
 }
 
 void pattern_points(const PixelBox& face, const PixelBox& clip, double step_x, double step_y,

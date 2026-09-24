@@ -47,6 +47,36 @@ deseninizi eklemek için dosyayı kopyalayın, satır ekleyin, yolunu tercihe ya
 `katalog=` argümanına verin. Bugün gelenler: `SOLID`, `ANSI31`, `ANSI32`, `ANSI33`,
 `ANSI34`, `ANSI37`, `LINE`, `NET`, `DOTS`, `EARTH`, `GRASS`.
 
+### Desen yere bağlıdır
+
+Desenin çizgileri **zemindedir**: taramanın **başlangıç noktasından** (`baslangic=`;
+verilmezse sınırın ilk köşesi) geçer ve aralığı kadar tekrar eder. Harita kaydırılınca
+ya da yakınlaştırılınca desen parselin üzerinde yerinde kalır; aynı desenli iki komşu
+tarama, başlangıçları aynı kafese düşüyorsa kesintisiz birleşir. Sınır bütün olarak
+taşınınca başlangıç da onunla taşınır.
+
+**Çok sık desen ekranı kilitlemez.** Çizgileri ekranda iki buçuk pikselden sık düşen
+bir desen, uzaktan görünen hâliyle — çizgilerin ortalama tonuyla — dolu çizilir;
+yakınlaşınca çizgiler geri gelir. Çizim değişmez; yalnız ekranda ve aynı sıklıktaki
+baskıda böyle görünür.
+
+### Kendi deseniniz
+
+`aralik=` katalog yerine kendi çizgilerinizi verir: `aci` doğrultusunda, metre
+cinsinden aralıklı tek bir çizgi ailesi (DXF'in kullanıcı tanımlı deseni; dosyada adı
+`_USER`, program size aralığıyla söyler). `cift=evet` aynı çizgileri dik açıyla bir
+kez daha çizer: çapraz tarama.
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 20,0 20,10 0,10
+TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet
+```
+
+```text
+2,500 m aralıklı kendi deseninizle çapraz tarama çizildi (1 sınır halkası); 1 sınır nesnesine bağlı, o değişince tarama da güncellenir.
+```
+
 ### Ölçek
 
 Desen ölçüleri çizim değil **kâğıt** düşünülerek verilmiştir: `ANSI31` 3,175 mm
@@ -64,7 +94,8 @@ olur ve kâğıtta 3,175 mm çıkar.
 
 ```text
 TARAMA noktalar=<sağa>,<yukarı> <sağa>,<yukarı> <sağa>,<yukarı> ... [desen=<ad>] [aci=<derece>] [olcek=<çarpan>]
-TARAMA nesneler=<kimlik> ... [desen=<ad>] [aci=<derece>] [olcek=<çarpan>]
+TARAMA nesneler=<kimlik> ... [desen=<ad>] [aci=<derece>] [olcek=<çarpan>] [baslangic=<nokta>] [cift=evet]
+TARAMA nesneler=<kimlik> ... aralik=<metre> [aci=<derece>] [cift=evet]
 TARAMA desen=<ad>            ← etkin seçimi tarar
 ```
 
@@ -79,6 +110,9 @@ TARAMA desen=<ad>            ← etkin seçimi tarar
 | `olcek` | Desen ölçeği; varsayılan pafta ölçeğinin paydası |
 | `katalog` | Desen kataloğu dosyası; varsayılan `TERCİH desen_kataloğu` |
 | `bagla` | Seçilen sınır nesnelerine bağlansın mı; varsayılan `evet`. Bkz. [Bağlı tarama](#bağlı-tarama) |
+| `aralik` | Kendi desen çizgilerinizin aralığı, metre; `desen=` yerine. Bkz. [Kendi deseniniz](#kendi-deseniniz) |
+| `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
+| `baslangic` | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -134,9 +168,20 @@ TARAMA nesneler=1 nesneler=2 desen=ANSI31
 'ANSI31' deseniyle tarama çizildi (3 sınır halkası, 2 delik); 2 sınır nesnesine bağlı, o değişince tarama da güncellenir.
 ```
 
+İki buçuk metre aralıklı, 30°'lik kendi çapraz taramanız:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 20,0 20,10 0,10
+TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet
+```
+
 ### Arayüz
 
 **Çizim ▸ Tarama**. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
+Çizilmiş bir taramanın desenini, açısını, ölçeğini, aralığını ve ada kuralını
+nitelik panelinin **TARAMA** grubundan ya da [`TARAMADÜZENLE`](hatch_edit.md) ile
+değiştirin.
 Seçerek çizilen tarama bu nesnelere bağlıdır: parselin köşesini tutamağından
 sürüklediğinizde tarama da güncellenir.
 
@@ -198,6 +243,7 @@ Katalog dosyası bu makinede yok.
 
 ## İlgili
 
+- [TARAMADÜZENLE](hatch_edit.md) — çizilmiş taramanın desenini, açısını, ölçeğini, ada kuralını değiştirmek
 - [ALAN](area.md) — taranacak kapalı sınırı çizmek
 - [STİL](style.md) — bir alanı katalogdaki gösterimle doldurmak; yönetmelik lekesi için o kullanılır
 - [Tarama türü](../nesneler/tarama.md) — saklanış ve DXF eşlemesi

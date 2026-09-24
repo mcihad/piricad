@@ -96,6 +96,10 @@ struct HatchBoundary
 /// every closed run of it. Empty for an object that closes nothing.
 std::vector<std::vector<Point2>> closed_loops_of(const Document& doc, EntityId e);
 
+/// Closed `loops` nested by containment in `style` (see `hatch_boundary`): the
+/// rings a hatch's own loops make when there are no sources to read them from.
+HatchBoundary nest_loops(std::vector<std::vector<Point2>> loops, std::uint16_t style);
+
 /// The boundary `sources` give a hatch in `style` (DXF group 75): 0, normal —
 /// loops nested by containment, a loop inside an odd number of the others a
 /// hole; 1, outermost — the outer loops and their first holes only; 2, ignore —

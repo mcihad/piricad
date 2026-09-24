@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 110 (97 tanesi onay ister)
-- Katalog parmak izi: `5564305447178960474`
+- Araç sayısı: 111 (98 tanesi onay ister)
+- Katalog parmak izi: `3531195003403719916`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -741,6 +741,30 @@ Onay ister.
 | `olcek` | number | hayır | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) (sayı) |
 | `katalog` | string | hayır | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin) |
 | `bagla` | boolean | hayır | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet (evet/hayır) |
+| `aralik` | number | hayır | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] (sayı) |
+| `cift` | boolean | hayır | Desen bir de dik açıyla çizilsin mi (çapraz tarama) (evet/hayır) |
+| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_hatch_edit` — Tarama Düzenle
+
+Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
+Komut: TARAMADÜZENLE (TARAMADUZENLE, HATCHEDIT, TDZ)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `desen` | string | hayır | Katalogdaki desen adı (metin) |
+| `aralik` | number | hayır | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] (sayı) |
+| `aci` | number | hayır | Desenin dönme açısı, derece (sayı) |
+| `olcek` | number | hayır | Desen ölçeği (sayı) |
+| `cift` | boolean | hayır | Desen bir de dik açıyla çizilsin mi (çapraz tarama) (evet/hayır) |
+| `baslangic` | konum (tutamak ya da göreli nokta) | hayır | Desenin geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `stil` | string | hayır | Adalar: normal — iç içe sırayla delik ve dolu; dis — yalnız en dıştaki ve ilk delikler; yoksay — adasız (metin) |
+| `katalog` | string | hayır | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_insert` — Blok Ekle

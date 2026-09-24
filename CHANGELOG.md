@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — tarama deseni yere bağlı; kendi aralığınız, çapraz tarama, TARAMADÜZENLE (C-11, 2. aşama)
+
+- **Desen yere bağlıdır.** Bir taramanın çizgileri çizimin başlangıç noktasından (ya da
+  `baslangic=` ile verilen noktadan) geçen bir ızgaraya oturur, taramanın kendi
+  kutusuna değil: yan yana ayrı ayrı taranan iki parselin çizgileri ortak sınırda
+  kesilmeden sürer, tarama yeniden kurulunca ya da görünüm kayınca desen yerinden
+  oynamaz. Sınır bütün olarak taşınınca desen onunla kayar.
+- **Kendi deseniniz.** `TARAMA aralik=1.5` katalog deseni yerine aralığı metreyle
+  verilen çizgilerle tarar (DXF'in kullanıcı deseni); `cift=evet` çizgileri bir de dik
+  açıyla çizer (çapraz tarama); `aci=` ikisini de döndürür.
+- **TARAMADÜZENLE** (`core.hatch_edit`, `TDZ`): çizilmiş taramaların desenini, açısını,
+  ölçeğini, aralığını, çapraz çizimini, başlangıcını ve ada kuralını (`stil=normal|dis|
+  yoksay`) değiştirir; bağlı tarama bağlı kalır, ada kuralı değişince adalar sınır
+  nesnelerinden yeniden bulunur. Tek geri alma adımı. Araç kutusunun tarama ailesinde
+  ve Çizim menüsünde **Taramayı Düzenle**.
+- **Nitelik panelinde TARAMA grubu:** desen (kendi deseniniz "kendi deseni" diye), açı,
+  ölçek ya da aralık, çapraz, adalar ve sınır bağı (kopuksa **KOPUK**; DXF'ten ilişkili
+  gelip bu çizimde bağı yoksa bu da yazılır). Her hücre bir `TARAMADÜZENLE` satırıdır.
+- **Yalnız bir tür soran araç o türü seçer.** Taramayı Düzenle parselin kenarına
+  tıklanınca "hangisi?" diye sormadan taramayı, Ölçüyü Düzenle ölçüyü alır (`SEÇ
+  mod=NOKTA sira=` satırıyla, klavyeden de aynı nesneye ulaşılır). TARAMADÜZENLE'ye
+  parselin kendisini vermek de yeter: ona bağlı taramalar düzenlenir.
+- Kendi deseninizle çizilen tarama, dosyadaki `_USER` adıyla değil aralığıyla söylenir:
+  "2,500 m aralıklı kendi deseninizle çapraz tarama çizildi".
+- **Çok sık desen tonuna döner.** Çizgileri ekranda 2,5 pikselden sık düşen desen,
+  binlerce çizgi yerine örttüğü kadar koyulukta bir ton olarak çizilir; çizgi üreteci bir
+  yüz için 4096 çizgiyi aşmaz, görünüm ne kadar uzaklaşırsa uzaklaşsın kare bütçesinde
+  kalır.
+
 ### Eklendi — tarama sınırına bağlı: sınır değişince yeniden kurulur, delikten taşmaz (C-11, 1. aşama)
 
 - **Bağlı tarama.** Seçilen nesnelerden çizilen tarama onlara bağlanır

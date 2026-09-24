@@ -383,11 +383,28 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     // that opens sends `SEÇ`, and the document is never touched from a widget
     // (Article 5.9). The radius is the command's own `pick_radius`, so the list
     // holds exactly what `SEÇ mod=NOKTA` would have been choosing between.
+    const bool picking =
+        controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Selection;
+    std::int64_t order = 0; // `sira`: which of the things under the cursor; 0, the nearest
     if (!is_box) {
         std::vector<core::EntityId> under;
         core::pick_all(controller_.document(), a, controller_.bus().aid_settings().pick_radius,
                        under);
-        if (under.size() > 1) {
+        // UNLESS THE QUESTION ALREADY SAYS WHICH. A command that acts on
+        // hatches only asks for hatches, and the parcel under this one is not
+        // an answer to it: the one hatch there is taken, by its place in the
+        // same list `SEÇ mod=NOKTA sira=` counts.
+        if (under.size() > 1 && picking && controller_.promptPickKind() != core::kNoKind) {
+            const core::EntityTable& table = controller_.document().entities();
+            std::size_t matches            = 0;
+            for (std::size_t i = 0; i < under.size(); ++i)
+                if (table.kind[under[i]] == controller_.promptPickKind()) {
+                    ++matches;
+                    order = static_cast<std::int64_t>(i) + 1;
+                }
+            if (matches != 1) order = 0;
+        }
+        if (under.size() > 1 && order == 0) {
             emit pickAmbiguous(under, mods);
             return;
         }
@@ -396,6 +413,7 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     command::Args args;
     args.set("mod", command::Value::text(is_box ? "KUTU" : "NOKTA"));
     args.set("noktalar", is_box ? command::Value::points({a, b}) : command::Value::points({a}));
+    if (order > 1) args.set("sira", command::Value::number(static_cast<double>(order)));
 
     // QGIS keys, because that is where the CBS half of this product's users come
     // from: Shift adds, Ctrl removes, a plain click replaces.
@@ -404,8 +422,6 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     // is "which ones", plural, and a click that replaced the answer so far made
     // BİRLEŞTİR — which needs two — impossible to answer by pointing: the second
     // object threw the first away. Ctrl still removes; Shift adds as it did.
-    const bool picking =
-        controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Selection;
     if (mods.testFlag(Qt::ShiftModifier) || (picking && !mods.testFlag(Qt::ControlModifier)))
         args.set("islem", command::Value::text("EKLE"));
     else if (mods.testFlag(Qt::ControlModifier))

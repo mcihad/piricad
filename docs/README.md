@@ -120,6 +120,7 @@ Tek tek komutlar:
 | `ELİPS` | [Elips çizme](komutlar/ellipse_draw.md) |
 | `SPLINE` | [Spline çizme](komutlar/spline.md) |
 | `TARAMA` | [Tarama çizme](komutlar/hatch.md) |
+| `TARAMADÜZENLE` | [Çizilmiş taramayı düzenleme](komutlar/hatch_edit.md) |
 | `BLOK` | [Blok tanımlama](komutlar/block.md) |
 | `BLOKEKLE` | [Blok yerleştirme](komutlar/insert.md) |
 | `ÖLÇÜ` | [Ölçülendirme](komutlar/dimension.md) |

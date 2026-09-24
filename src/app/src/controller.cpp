@@ -729,6 +729,12 @@ command::ParamKind Controller::promptKind() const
     return session_->prompt().kind;
 }
 
+core::KindId Controller::promptPickKind() const
+{
+    if (!session_ || !session_->waiting()) return core::kNoKind;
+    return session_->prompt().pick_kind;
+}
+
 void Controller::supplyPoint(core::Point2 world)
 {
     supplyValue(command::Value::point(world));

@@ -153,9 +153,11 @@ class Context;
 /// does not. Putting it in the PROMPT, which is what the callers used to do, put
 /// "TAŞI nesneler=1 baslangic=0,0 bitis=10,0" on the command line while the user
 /// was being asked to point at something.
+/// `kind`, when the command acts on one kind only, is what a click on several
+/// things at once takes (`Prompt::pick_kind`).
 Task<bool> want_objects(Context& ctx, std::string param, std::string message,
                         std::vector<std::int64_t>& out, std::size_t most = 0,
-                        std::string example = {});
+                        std::string example = {}, core::KindId kind = core::kNoKind);
 
 class Context
 {
@@ -193,7 +195,8 @@ public:
     /// `nesneler=1 2`, a CLI line, an AI tool result — and by pointing when it did
     /// not: the canvas picks into the live selection and Enter hands it over. The
     /// body cannot tell which happened, which is the whole point (Article 1.2).
-    InputAwaiter<Value::Ints> objects(std::string param, std::string message);
+    InputAwaiter<Value::Ints> objects(std::string param, std::string message,
+                                      core::KindId kind = core::kNoKind);
 
     /// Whole-parameter fetch for non-interactive parameters (a script passing a
     /// full point list at once). Returns an empty Value when absent.

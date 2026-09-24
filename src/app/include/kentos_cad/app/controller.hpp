@@ -185,6 +185,9 @@ public:
     /// editor. `ParamKind::Point` when nothing is running, which is what the
     /// canvas does by default anyway.
     command::ParamKind promptKind() const;
+    /// The kind of object the waiting prompt acts on, or `core::kNoKind` for
+    /// any (`command::Prompt::pick_kind`).
+    core::KindId promptPickKind() const;
 
     void cancelInteractive();
 

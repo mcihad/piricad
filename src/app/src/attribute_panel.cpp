@@ -11,6 +11,8 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 
 #include <QClipboard>
 #include <QColorDialog>
@@ -330,6 +332,97 @@ void AttributePanel::rebuild()
                              {},
                              {}});
         groups_.push_back(what);
+
+        // ---- what a HATCH is drawn with and what it follows ---------------
+        //
+        // TODOS C-11. Every editable row is one TARAMADÜZENLE line. The pattern
+        // row offers the catalogue by name when the combo can read it; a pattern
+        // of the user's own is its spacing, in metres.
+        if (kind == core::kHatchKind)
+            if (auto hatch = core::hatch_of(doc.geometry(), gslot); hatch) {
+                const core::HatchDef& def = hatch.value();
+                const QString id          = QString::number(static_cast<qulonglong>(key));
+                const auto edit           = [&id](const QString& what) {
+                    return QStringLiteral("TARAMADÜZENLE nesneler=%1 ").arg(id) + what;
+                };
+                AttributeGroup filled{tr("TARAMA"), {}, true};
+                // A pattern of the user's own is named by what it is, not by the
+                // `_USER` a DXF file calls it; typing a catalogue name here
+                // turns it into that pattern.
+                const bool own = def.pattern_type == 0 && def.families.size() == 1;
+                filled.rows.push_back({tr("desen"),
+                                       own ? tr("kendi deseni") : QString::fromStdString(def.name),
+                                       {},
+                                       false,
+                                       edit(QStringLiteral("desen=\"%1\"")),
+                                       {}});
+                filled.rows.push_back(
+                    {tr("aci"),
+                     QString::number(static_cast<double>(def.angle_udeg) / 1'000'000.0, 'f', 2),
+                     {},
+                     false,
+                     edit(QStringLiteral("aci=%1")),
+                     {}});
+                if (own) {
+                    filled.rows.push_back(
+                        {tr("aralik"),
+                         QString::number(static_cast<double>(def.families.front().offset_y_um) /
+                                             1'000'000.0,
+                                         'f', 3),
+                         {},
+                         false,
+                         edit(QStringLiteral("aralik=%1")),
+                         {}});
+                } else if (!def.solid) {
+                    filled.rows.push_back({tr("olcek"),
+                                           QString::number(static_cast<double>(def.scale.num) /
+                                                               static_cast<double>(def.scale.den),
+                                                           'g', 8),
+                                           {},
+                                           false,
+                                           edit(QStringLiteral("olcek=%1")),
+                                           {}});
+                }
+                filled.rows.push_back(
+                    {tr("cift"),
+                     def.double_lines ? QStringLiteral("evet") : QStringLiteral("hayır"),
+                     {},
+                     false,
+                     edit(QStringLiteral("cift=%1")),
+                     combo_of({QStringLiteral("evet"), QStringLiteral("hayır")})});
+                const QStringList islands{QStringLiteral("normal"), QStringLiteral("dis"),
+                                          QStringLiteral("yoksay")};
+                filled.rows.push_back({tr("adalar"),
+                                       islands.value(def.style, QStringLiteral("normal")),
+                                       {},
+                                       false,
+                                       edit(QStringLiteral("stil=%1")),
+                                       combo_of(islands)});
+                if (const auto* sources = doc.hatch_links().get(slot); sources != nullptr) {
+                    std::size_t broken = 0;
+                    for (const core::HatchSource& src : *sources)
+                        broken += src.broken ? 1 : 0;
+                    filled.rows.push_back({tr("sinir"),
+                                           broken == 0 ? tr("%1 nesneye bağlı").arg(sources->size())
+                                                       : tr("%1 bağ kopuk").arg(broken),
+                                           broken == 0 ? QString() : tr("KOPUK"),
+                                           true,
+                                           {},
+                                           {}});
+                } else if (def.associative) {
+                    filled.rows.push_back(
+                        {tr("sinir"), tr("DXF'te ilişkili; bu çizimde bağsız"), {}, true, {}, {}});
+                }
+                const QString identity = tr("NESNE");
+                const auto nesne       = std::ranges::find_if(
+                    groups_, [&identity](const AttributeGroup& g) { return g.title == identity; });
+                if (nesne != groups_.end()) {
+                    nesne->open = false;
+                    groups_.insert(nesne, filled);
+                } else {
+                    groups_.push_back(filled);
+                }
+            }
 
         // ---- what a DIMENSION measures and what it says ------------------
         //

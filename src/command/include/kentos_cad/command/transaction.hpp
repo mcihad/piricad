@@ -328,6 +328,9 @@ private:
     std::size_t settled_upto_{0};
     std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
     std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
+
+    /// Whether `hatch`'s rings are exactly what `sources` give it now.
+    bool fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const;
 };
 
 struct UndoEntry

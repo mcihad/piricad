@@ -129,6 +129,9 @@ değerdir). Öneki, soneki, birimi, ondalığı ve toleransı tek tek değiştir
 ölçüyü seçin: nitelik panelinin **ÖLÇÜ** grubunda her biri bir hücredir; hücreyi
 düzenlemek bu komutun ilgili satırını çalıştırır.
 
+Araç yalnız ölçü sorduğu için, ölçünün üst üste bindiği bir kenara tıklamak "hangisi?"
+diye sormadan ölçüyü seçer; altta birden çok ölçü varsa seçim listesi açılır.
+
 [`YAZIDÜZENLE`](edittext.md) bir ölçüye uygulanırsa aynı yola gider: yazıyı ölçünün
 kendi modeline yazar; elle yazılan değer elle yazılmış olarak işaretlenir.
 

@@ -928,13 +928,35 @@ void RhiBackend::emit_line_pattern(const render::PolygonBatch& batch, const rend
     // with the pattern invisible inside. Washing is a `dolgu` layer's job and the
     // MPYY package puts one underneath, which is what draws the green under the
     // trees.
+    const double spacing = ps.interval_px > 0.0f ? static_cast<double>(ps.interval_px) : 6.0;
+
+    // TOO DENSE TO BE LINES (TODOS C-11): drawn as the tint the lines average
+    // to, one fill, instead of thousands of segments no eye can tell apart.
+    if (render::hatch_tint_below(spacing)) {
+        const std::uint32_t tint =
+            (ps.line_rgba & 0x00FFFFFFu) |
+            (static_cast<std::uint32_t>(render::hatch_tint_alpha(
+                 static_cast<double>(ps.line_width_px), spacing,
+                 static_cast<std::uint8_t>(((ps.line_rgba >> 24) & 0xFFu) * ps.opacity / 255u)))
+             << 24);
+        (void)emit_face(batch, cx, cy, tint, /*as_mask=*/false, box);
+        return;
+    }
+
     if (!emit_face(batch, cx, cy, 0u, /*as_mask=*/true, box)) return;
 
-    const double spacing = ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : 6.0;
-
+    // ANCHORED TO THE GROUND when the scene gave an anchor: the lines pass
+    // through the pattern's own point, not through wherever the face happens
+    // to be on screen.
+    const double ax = ps.anchored
+                          ? cx + static_cast<double>(ps.anchor_x)
+                          : (static_cast<double>(box[0]) + static_cast<double>(box[2])) * 0.5;
+    const double ay = ps.anchored
+                          ? cy - static_cast<double>(ps.anchor_y)
+                          : (static_cast<double>(box[1]) + static_cast<double>(box[3])) * 0.5;
     scratch_.clear();
     render::hatch_lines(render::PixelBox{box[0], box[1], box[2], box[3]}, visible_, spacing,
-                        static_cast<double>(ps.angle_udeg) / 1'000'000.0, scratch_);
+                        static_cast<double>(ps.angle_udeg) / 1'000'000.0, scratch_, ax, ay);
 
     const std::uint32_t first = static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
     for (std::size_t i = 0; i + 3 < scratch_.size(); i += 4)

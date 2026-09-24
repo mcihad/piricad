@@ -956,6 +956,7 @@ private:
     QAction* actRectangle_{nullptr};
     QAction* actSpline_{nullptr};
     QAction* actHatch_{nullptr};
+    QAction* actHatchEdit_{nullptr}; ///< TARAMADÜZENLE
     QAction* actBlock_{nullptr};
     QAction* actInsert_{nullptr};
     QAction* actDimension_{nullptr};

@@ -1102,6 +1102,9 @@ def hatch(
     scale: float = ...,
     catalog: str = ...,
     associate: bool = ...,
+    spacing: float = ...,
+    double: bool = ...,
+    origin: Coord = ...,
 ) -> int:
     """Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
 
@@ -1113,6 +1116,35 @@ def hatch(
         scale — Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)
         catalog — Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu
         associate — Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet
+        spacing — Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m]
+        double — Desen bir de dik açıyla çizilsin mi (çapraz tarama)
+        origin — Desenin geçtiği nokta; verilmezse sınırın ilk köşesi [mm, Sağa (Y) önce]
+    """
+
+def hatch_edit(
+    *,
+    objects: list[int] = ...,
+    pattern: str = ...,
+    spacing: float = ...,
+    angle: float = ...,
+    scale: float = ...,
+    double: bool = ...,
+    origin: Coord = ...,
+    islands: str = ...,
+    catalog: str = ...,
+) -> int:
+    """Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
+
+    Komut: core.hatch_edit (TARAMADÜZENLE)
+        objects — Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur [kalıcı nesne anahtarı]
+        pattern — Katalogdaki desen adı
+        spacing — Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m]
+        angle — Desenin dönme açısı, derece
+        scale — Desen ölçeği
+        double — Desen bir de dik açıyla çizilsin mi (çapraz tarama)
+        origin — Desenin geçtiği nokta [mm, Sağa (Y) önce]
+        islands — Adalar: normal — iç içe sırayla delik ve dolu; dis — yalnız en dıştaki ve ilk delikler; yoksay — adasız
+        catalog — Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu
     """
 
 def block(

@@ -562,7 +562,7 @@ Task<void> run_dimension_edit(Context& ctx)
 {
     std::vector<std::int64_t> picked;
     if (!co_await want_objects(ctx, "nesneler", "Düzenlenecek ölçüleri seçin, sonra Enter", picked,
-                               0, "ÖLÇÜDÜZENLE nesneler=1 onek=R"))
+                               0, "ÖLÇÜDÜZENLE nesneler=1 onek=R", core::kDimensionKind))
         co_return;
     std::vector<core::EntityId> dims;
     std::size_t other = 0;

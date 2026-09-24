@@ -169,3 +169,36 @@ TEST_CASE("çizgi üzerindeki işaretçiler görünür alanla sınırlı kalır"
         CHECK(found);
     }
 }
+
+TEST_CASE("çizgi deseni verilen çapadan geçer; çapa yüzün dışında olsa da (TODOS C-11)")
+{
+    // Anchored at a point of the pattern's lattice on the ground — brought to
+    // the screen by the scene — every line lies a whole number of spacings from
+    // it, wherever the face is: the pattern belongs to the ground.
+    const render::PixelBox f = face(1.0f);
+    std::vector<float> lines;
+    const double ax = -377.25;
+    const double ay = 1019.5;
+    render::hatch_lines(f, screen(), 10.0, 0.0, lines, ax, ay);
+    REQUIRE(!lines.empty());
+    for (std::size_t i = 0; i + 3 < lines.size(); i += 4) {
+        const double across = static_cast<double>(lines[i + 1]) - ay;
+        const double k      = across / 10.0;
+        CHECK(std::abs(k - std::round(k)) < 0.001);
+    }
+}
+
+TEST_CASE("çok sık desen binlerce çizgi üretmez; ekranda tonuna döner (TODOS C-11)")
+{
+    // A hatch whose lines are a hundredth of a pixel apart is a tone. The
+    // generator refuses to lay it out line by line — the backends draw the tint
+    // instead — so the frame stays inside its budget whatever the scale.
+    std::vector<float> lines;
+    render::hatch_lines(face(1.0f), screen(), 0.01, 45.0, lines);
+    CHECK(lines.empty());
+    CHECK(render::hatch_tint_below(0.01));
+    CHECK_FALSE(render::hatch_tint_below(6.0));
+    // One-pixel lines every two pixels cover half the face.
+    CHECK_EQ(render::hatch_tint_alpha(1.0, 2.0, 255), 128);
+    CHECK_EQ(render::hatch_tint_alpha(1.0, 0.5, 200), 200);
+}

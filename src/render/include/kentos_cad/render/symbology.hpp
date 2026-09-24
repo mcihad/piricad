@@ -105,10 +105,13 @@ void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out);
 
 /// The parallel lines of a `çizgi-desen-dolgu`, over a face, at an angle.
 ///
-/// Appended as flat segments in SCREEN pixels: x0, y0, x1, y1 per line. The lines
-/// are laid out about the FACE's centre so the pattern is continuous across the
-/// whole face rather than restarting at each ring, and they overshoot by a spacing
-/// so a rotated set still covers the corners.
+/// Appended as flat segments in SCREEN pixels: x0, y0, x1, y1 per line, one line
+/// through `anchor` and every `spacing` from it. The ANCHOR IS THE GROUND'S (TODOS
+/// C-11): a point of the pattern's own lattice in world coordinates, brought to
+/// the screen by the scene (`PassStyle::anchor_x`), so the pattern stays put on
+/// the parcel as the view pans, lines up across two hatches of one pattern, and
+/// passes through the hatch's own origin. A caller with no anchor gives the
+/// face's centre, which keeps the pattern continuous across the face.
 ///
 /// `clip` IS WHY THIS FUNCTION IS FAST, and it is not an optimisation that can be
 /// skipped. The spacing is in PIXELS while the face is in world units, so at 1:1
@@ -116,13 +119,37 @@ void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out);
 /// six-pixel spacing means hundreds of thousands of segments — every one of them
 /// built, uploaded and then thrown away by the rasteriser. Measured on a styled
 /// imar plan: 3.8 MILLION vertices and 19.8 ms a frame with a handful of parcels
-/// on screen, against a 16 ms budget (§10.1).
-///
-/// The clip narrows the RANGE and never the PHASE: line i still sits at
-/// `i * spacing` from the face's own centre, so panning slides the pattern with
-/// the parcel instead of making it crawl across it.
+/// on screen, against a 16 ms budget (§10.1). Only the lines that cross the
+/// visible part of the face are made, and never more than `kHatchLinesMax`: a
+/// pattern that would need more is one a caller draws as its tint
+/// (`hatch_tint_below`).
+void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
+                 std::vector<float>& out, double anchor_x, double anchor_y);
+
+/// The same, anchored at the face's centre.
 void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
                  std::vector<float>& out);
+
+/// The most lines one face gets. A pattern whose lines are this dense on screen
+/// is a tone, not lines; see `hatch_tint_below`.
+inline constexpr int kHatchLinesMax = 4096;
+
+/// Below this spacing on screen a line pattern is drawn as the TINT it averages
+/// to instead (TODOS C-11: a dense hatch must not lock the view). Two and a half
+/// pixels is where one-pixel lines stop being told apart; the tint is what the
+/// eye sees there anyway, and what a print at that density shows.
+inline constexpr double kHatchTintBelowPx = 2.5;
+
+/// Whether a pattern at `spacing_px` is drawn as its tint.
+constexpr bool hatch_tint_below(double spacing_px) noexcept
+{
+    return spacing_px < kHatchTintBelowPx;
+}
+
+/// The opacity, 0–255, lines `width_px` wide every `spacing_px` average to — the
+/// tint a pattern is drawn as below `kHatchTintBelowPx`, multiplied by the
+/// layer's own opacity.
+std::uint8_t hatch_tint_alpha(double width_px, double spacing_px, std::uint8_t opacity) noexcept;
 
 /// The anchor points of a `nokta-desen-dolgu` over a face.
 ///

@@ -27,8 +27,12 @@ bu tablo için hiçbir şey ödemez: parmak izi de dosyası da aynıdır.
 
 Tarama, stiliyle çizilir: komut nesneyi oluştururken katmanın rengiyle bir sembol
 kurar — sınır çizgisi, dolu tarama için bir dolgu katmanı, desenli tarama için aile
-başına bir **çizgi deseni dolgusu** (açı ve aralık). Kare yolu her nesnede olduğu
-gibi tek bir stil numarası okur; desen çerçeve başında hesaplanmaz.
+başına bir **çizgi deseni dolgusu** (açı, aralık ve **faz**: çizgilerin dünya başlangıcına
+göre kafesteki yeri, taramanın başlangıç noktasından hesaplanır). Kare yolu her nesnede
+olduğu gibi tek bir stil numarası okur; desen çerçeve başında hesaplanmaz. Çizgiler
+**yere bağlıdır**: ekranın değil zeminin kafesindedir, görünüm kaydırılınca yerinde
+kalır. Ekranda iki buçuk pikselden sık düşen desen çizgi çizgi değil, ortalama tonuyla
+dolu çizilir.
 
 ## Yakalama noktaları
 

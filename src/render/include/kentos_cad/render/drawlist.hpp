@@ -43,6 +43,16 @@ struct PassStyle
     std::int32_t angle_udeg{0}; ///< pattern angle, or glyph rotation
     std::uint8_t opacity{255};  ///< multiplied into this layer's colours
 
+    /// A line pattern's ANCHOR: a point its lines pass through, on the ground,
+    /// in pixels from the view centre (x right, y up) like the batch vertices.
+    /// Worked out by the scene in double from the world — the layer's `offset`
+    /// is the lines' distance from the world origin across them — and placed
+    /// within one spacing of the view centre, so the float stays small (TODOS
+    /// C-11: the pattern belongs to the ground, not to the screen).
+    float anchor_x{0.0f};
+    float anchor_y{0.0f};
+    bool anchored{false};
+
     /// Ink for the glyphs of a marker type and the lines of a pattern fill.
     ///
     /// The layer's STROKE colour, carried here as well as on the stroke batch

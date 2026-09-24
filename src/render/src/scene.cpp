@@ -5,6 +5,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
+#include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -171,6 +172,29 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const std::size_t at = out.passes.size();
         out.passes.push_back(
             pass_of(sl, doc.images(), doc.dashes(), mm_per_pixel, options.pixels_per_paper_mm));
+
+        // A LINE PATTERN IS ANCHORED TO THE GROUND. Its lines are the points
+        // whose distance from the world origin, across them, is the layer's
+        // offset plus a whole number of spacings; the one of them nearest the
+        // view centre is found here, in double, and handed on as a small
+        // offset from that centre.
+        if (PassStyle& ps = out.passes.back();
+            sl.type == core::SymbolLayerType::LinePatternFill && ps.interval_px > 0.0f) {
+            const double spacing_mm = static_cast<double>(ps.interval_px) * mm_per_pixel;
+            const double phase_mm   = sl.offset.unit == core::Unit::Ground
+                                          ? static_cast<double>(sl.offset.value)
+                                          : static_cast<double>(ps.offset_px) * mm_per_pixel;
+            const core::SinCos t    = core::sin_cos_udeg(sl.angle_udeg);
+            const double nx         = -t.sin;
+            const double ny         = t.cos;
+            const core::Point2 c    = view.centre();
+            const double across     = static_cast<double>(c.x) * nx + static_cast<double>(c.y) * ny;
+            double delta            = std::fmod(phase_mm - across, spacing_mm);
+            if (delta < 0.0) delta += spacing_mm;
+            ps.anchor_x = static_cast<float>(nx * delta / mm_per_pixel);
+            ps.anchor_y = static_cast<float>(ny * delta / mm_per_pixel);
+            ps.anchored = true;
+        }
 
         // Grown, not indexed into a pre-sized table: how many passes a frame
         // needs is not known until its entities are walked. The capacity survives

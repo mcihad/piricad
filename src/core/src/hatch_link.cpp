@@ -166,7 +166,11 @@ Result<HatchBoundary> hatch_boundary(const Document& doc, std::span<const Entity
         return err(ErrorCode::InvalidArgument,
                    "Tarama sınırı kapalı bir şey çevrelemiyor: kapalı bir alan, daire, elips ya "
                    "da kapalı çoklu çizgi gerekir.");
+    return nest_loops(std::move(all), style);
+}
 
+HatchBoundary nest_loops(std::vector<std::vector<Point2>> all, std::uint16_t style)
+{
     // HOW DEEP EACH LOOP LIES: how many of the others contain it, and which of
     // those is the smallest — its immediate container. Only a larger loop can
     // hold a smaller one, so two copies of one loop never hold each other.

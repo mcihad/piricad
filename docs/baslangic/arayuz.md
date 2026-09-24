@@ -661,6 +661,11 @@ grubu açtığınızda **açık kalır**: sonraki parseli seçtiğinizde kapanma
 
 Nesne yazı taşıyorsa bir de **METİN** grubu gelir: içerik ve yükseklik.
 
+Seçilen bir **tarama** ise en üstte **TARAMA** grubu açık gelir: `desen`, `aci`,
+`olcek` (kendi deseninizde `aralik`), `cift`, `adalar` ve bağlıysa `sinir` (kopuksa
+**KOPUK**). Düzenlenebilir her hücre bir [`TARAMADÜZENLE`](../komutlar/hatch_edit.md)
+satırıdır.
+
 Seçilen bir **ölçü** ise en üstte **ÖLÇÜ** grubu açık gelir, NESNE onun altında
 kapalı: `olculen` (noktalardan hesaplanan değer, HESAP), `yazi` (paftada yazan;
 elle yazılmışsa **ELLE**), `metin` (`<>` ölçülen değerdir), `onek`, `sonek`,

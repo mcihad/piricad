@@ -72,6 +72,7 @@ namespace kentos::command {
     X(ellipse_draw)                                                                                \
     X(spline)                                                                                      \
     X(hatch)                                                                                       \
+    X(hatch_edit)                                                                                  \
     X(block)                                                                                       \
     X(insert)                                                                                      \
     X(dimension)                                                                                   \

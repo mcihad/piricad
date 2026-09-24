@@ -208,17 +208,22 @@ InputAwaiter<bool> Context::boolean(std::string param, std::string message)
     return InputAwaiter<bool>(session_, std::move(p), std::move(prompt), &to_bool);
 }
 
-InputAwaiter<Value::Ints> Context::objects(std::string param, std::string message)
+InputAwaiter<Value::Ints> Context::objects(std::string param, std::string message,
+                                           core::KindId kind)
 {
     // Arity starts at ONE: a modify command with nothing to modify is not a
     // command that ran, and the bus should say so rather than the body.
     Param p{param, ParamKind::Selection, Arity{1, 0xFFFFFFFFu}, "İşlem yapılacak nesneler"};
-    Prompt prompt{.message = std::move(message), .kind = ParamKind::Selection, .param = param};
+    Prompt prompt{.message   = std::move(message),
+                  .kind      = ParamKind::Selection,
+                  .param     = std::move(param),
+                  .pick_kind = kind};
     return InputAwaiter<Value::Ints>(session_, std::move(p), std::move(prompt), &to_ids);
 }
 
 Task<bool> want_objects(Context& ctx, std::string param, std::string message,
-                        std::vector<std::int64_t>& out, std::size_t most, std::string example)
+                        std::vector<std::int64_t>& out, std::size_t most, std::string example,
+                        core::KindId kind)
 {
     // A refusal must leave NOTHING behind, and it is an ERROR: the caller's
     // command fails with this sentence, which is what a script, an agent and
@@ -273,7 +278,7 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
                   std::to_string(most) + " nesneyle çalışır. " + message;
     }
 
-    auto picked = co_await ctx.objects(param, std::move(message));
+    auto picked = co_await ctx.objects(param, std::move(message), kind);
     if (crowded != 0 && (!picked || picked->empty()))
         co_return refuse("Bir seferde en fazla " + std::to_string(most) + " nesne; " +
                          std::to_string(crowded) + " nesne seçili.");

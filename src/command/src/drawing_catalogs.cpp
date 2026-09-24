@@ -5,6 +5,7 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
 
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -238,6 +239,23 @@ core::Symbol hatch_symbol(const core::HatchDef& def, std::uint32_t ink_rgba)
         lines.angle_udeg = static_cast<std::int32_t>(angle);
         lines.interval   = core::Measure{
             static_cast<std::int32_t>(std::min<core::Mm>(spacing, 2000000000)), core::Unit::Ground};
+
+        // THROUGH THE HATCH'S OWN POINT (TODOS C-11): the family's base point,
+        // scaled and turned with the pattern, set on the hatch's origin; its
+        // distance from the world origin across the lines, modulo the spacing,
+        // is where the renderer anchors them (`PassStyle::anchor_x`).
+        const core::SinCos turn = core::sin_cos_udeg(def.angle_udeg);
+        const double k          = static_cast<double>(def.scale.num) /
+                         (static_cast<double>(def.scale.den) * 1000.0); // pattern µm -> mm
+        const double bx = static_cast<double>(f.base_x_um) * k;
+        const double by = static_cast<double>(f.base_y_um) * k;
+        const double wx = static_cast<double>(def.origin.x) + bx * turn.cos - by * turn.sin;
+        const double wy = static_cast<double>(def.origin.y) + bx * turn.sin + by * turn.cos;
+        const core::SinCos across = core::sin_cos_udeg(angle);
+        double phase = std::fmod(-wx * across.sin + wy * across.cos, static_cast<double>(spacing));
+        if (phase < 0.0) phase += static_cast<double>(spacing);
+        lines.offset =
+            core::Measure{static_cast<std::int32_t>(std::llround(phase)), core::Unit::Ground};
         sym.layers.push_back(lines);
     };
     for (const core::HatchDef::Family& f : def.families) {

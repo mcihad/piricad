@@ -14,6 +14,11 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/style.hpp"
+#include "kentos_cad/core/trig.hpp"
+#include "kentos_cad/render/drawlist.hpp"
+#include "kentos_cad/render/scene.hpp"
+#include "kentos_cad/render/view.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <cmath>
@@ -286,6 +291,14 @@ TEST_CASE("TARAMA: kılavuzdaki bağlı tarama örnekleri kelimesi kelimesine")
     CHECK(b.said.find("'ANSI31' deseniyle tarama çizildi (3 sınır halkası, 2 delik); 2 sınır "
                       "nesnesine bağlı, o değişince tarama da güncellenir.\n") !=
           std::string::npos);
+
+    Rig c;
+    for (const char* line :
+         {"ALAN 0,0 20,0 20,10 0,10", "TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet"})
+        c.run(line);
+    CHECK(c.said.find("2,500 m aralıklı kendi deseninizle çapraz tarama çizildi (1 sınır "
+                      "halkası); 1 sınır nesnesine bağlı, o değişince tarama da güncellenir.\n") !=
+          std::string::npos);
 }
 
 TEST_CASE("BAĞLI TARAMA: bir sınırı silinen tarama kalanlardan kurulmaz; ada dolu hâle gelmez")
@@ -303,4 +316,182 @@ TEST_CASE("BAĞLI TARAMA: bir sınırı silinen tarama kalanlardan kurulmaz; ada
     // And it no longer follows the island either.
     r.run("TAŞI nesneler=2 baslangic=15,15 bitis=10,10");
     CHECK(r.rings(3) == before);
+}
+
+// ------------------------------------------------------ pattern, 2nd stage ----
+
+namespace {
+
+/// The line-pattern layers of the hatch's symbol.
+std::vector<core::SymbolLayer> pattern_layers(const Rig& r, std::int64_t key)
+{
+    std::vector<core::SymbolLayer> out;
+    const core::StyleId st = r.doc.entities().style[r.slot(key)];
+    for (const core::SymbolLayer& l : r.doc.styles().symbol_at(st).layers)
+        if (l.type == core::SymbolLayerType::LinePatternFill) out.push_back(l);
+    return out;
+}
+
+/// The distance of `p` across a line pattern layer's lines, modulo its spacing,
+/// less the layer's own phase: zero when the lines pass through `p`.
+double off_lattice(const core::SymbolLayer& l, Point2 p)
+{
+    const core::SinCos t = core::sin_cos_udeg(l.angle_udeg);
+    const double s       = static_cast<double>(l.interval.value);
+    double d = std::fmod(-static_cast<double>(p.x) * t.sin + static_cast<double>(p.y) * t.cos -
+                             static_cast<double>(l.offset.value),
+                         s);
+    if (d < 0.0) d += s;
+    return std::min(d, s - d);
+}
+
+} // namespace
+
+TEST_CASE("TARAMA: desen başlangıç noktasından geçer; sınır taşınınca desen de taşınır")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");                                    // 1
+    r.run("TARAMA nesneler=1 desen=ANSI31 olcek=1000 baslangic=3.3,1.7"); // 2
+    auto layers = pattern_layers(r, 2);
+    REQUIRE_FALSE(layers.empty());
+    CHECK(off_lattice(layers[0], Point2{3'300, 1'700}) < 1.0);
+
+    // The parcel moved as a whole: the pattern's point went with it, so the
+    // lines lie on the parcel where they lay before.
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=7.1,2.9");
+    layers = pattern_layers(r, 2);
+    REQUIRE_FALSE(layers.empty());
+    CHECK(off_lattice(layers[0], Point2{10'400, 4'600}) < 1.0);
+}
+
+TEST_CASE("TARAMA: kendi aralığı metre cinsinden; cift=evet çapraz tarar")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");                      // 1
+    r.run("TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet"); // 2
+    auto def = core::hatch_of(r.doc.geometry(), r.doc.entities().slot[r.slot(2)]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().name, std::string("_USER"));
+    CHECK_EQ(def.value().pattern_type, 0);
+    CHECK(def.value().double_lines);
+    const auto layers = pattern_layers(r, 2);
+    REQUIRE_EQ(layers.size(), std::size_t{2}); // the lines and the lines turned
+    CHECK_EQ(layers[0].interval.value, 2'500);
+    CHECK_EQ(layers[0].angle_udeg, 30'000'000);
+    CHECK_EQ(layers[1].angle_udeg, 120'000'000);
+    // Named by its spacing: `_USER` is the file's word for it, not the user's.
+    CHECK(r.said.find("2,500 m aralıklı kendi deseninizle çapraz tarama çizildi (1 sınır "
+                      "halkası)") != std::string::npos);
+    CHECK(r.said.find("_USER") == std::string::npos);
+
+    auto both = r.bus.execute_line("TARAMA nesneler=1 desen=ANSI31 aralik=2", Origin::Test);
+    CHECK_FALSE(both.ok());
+}
+
+TEST_CASE("TARAMADÜZENLE: desen, açı ve ada kuralı değişir; bağ sürer, tek geri alma adımı")
+{
+    Rig r;
+    r.run("ALAN 0,0 30,0 30,30 0,30");                  // 1
+    r.run("DAİRE merkez=15,15 cevre=20,15");            // 2
+    r.run("TARAMA nesneler=1 nesneler=2 desen=ANSI31"); // 3
+    REQUIRE_EQ(r.rings(3).size(), std::size_t{2});
+
+    r.said.clear();
+    r.run("TARAMADÜZENLE nesneler=3 desen=ANSI37 aci=15");
+    auto def = core::hatch_of(r.doc.geometry(), r.doc.entities().slot[r.slot(3)]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().name, std::string("ANSI37"));
+    CHECK_EQ(def.value().angle_udeg, 15'000'000);
+    CHECK(r.said.find("Tarama düzenlendi: 1 tarama; 'ANSI37' deseni, açı 15,00°") !=
+          std::string::npos);
+
+    // Islands ignored: the pool is filled; normal again: it is a hole again —
+    // the hatch follows its objects, so it can find the island it dropped.
+    r.run("TARAMADÜZENLE nesneler=3 stil=yoksay");
+    CHECK_EQ(r.rings(3).size(), std::size_t{1});
+    r.run("TARAMADÜZENLE nesneler=3 stil=normal");
+    CHECK_EQ(r.rings(3).size(), std::size_t{2});
+    REQUIRE_EQ(r.sources(3).size(), std::size_t{2});
+
+    // Still following.
+    r.run("KÖŞETAŞI nesne=1 kose=3 nokta=40,40");
+    CHECK(r.has_corner(3, Point2{40'000, 40'000}));
+
+    const std::size_t depth = r.undo.undo_depth();
+    r.run("TARAMADÜZENLE nesneler=3 desen=NET");
+    CHECK_EQ(r.undo.undo_depth(), depth + 1);
+    r.run("GERİAL");
+    def = core::hatch_of(r.doc.geometry(), r.doc.entities().slot[r.slot(3)]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().name, std::string("ANSI37"));
+}
+
+TEST_CASE("TARAMA: ekranda desen yere bağlıdır — sahne çapası desenin kafesindedir")
+{
+    Rig r;
+    r.run("ALAN 485300,4310200 485320,4310200 485320,4310210 485300,4310210"); // 1, TUREF-sized
+    r.run("TARAMA nesneler=1 desen=ANSI31 olcek=1000 baslangic=485303.3,4310201.7");
+    render::ViewTransform view;
+    view.set_centre(Point2{485'311'000, 4'310'204'000}, 20.0);
+    render::DrawList list;
+    render::build_scene(r.doc, view, render::SceneOptions{}, list);
+    bool checked = false;
+    for (const render::PassStyle& ps : list.passes) {
+        if (ps.type != core::SymbolLayerType::LinePatternFill) continue;
+        REQUIRE(ps.anchored);
+        // The anchor, back on the ground, lies on the pattern's lattice through
+        // the hatch's origin: a whole number of spacings from it, across.
+        const core::SinCos t = core::sin_cos_udeg(ps.angle_udeg);
+        const double ax      = 485'311'000.0 + static_cast<double>(ps.anchor_x) * 20.0;
+        const double ay      = 4'310'204'000.0 + static_cast<double>(ps.anchor_y) * 20.0;
+        const double across  = -(ax - 485'303'300.0) * t.sin + (ay - 4'310'201'700.0) * t.cos;
+        const double spacing = static_cast<double>(ps.interval_px) * 20.0;
+        const double k       = across / spacing;
+        CHECK(std::abs(k - std::round(k)) < 0.01);
+        checked = true;
+    }
+    CHECK(checked);
+}
+
+TEST_CASE("TARAMADÜZENLE: kılavuzdaki örnek kelimesi kelimesine")
+{
+    Rig r;
+    for (const char* line :
+         {"ALAN 0,0 30,0 30,30 0,30", "DAİRE merkez=15,15 cevre=20,15",
+          "TARAMA nesneler=1 nesneler=2 desen=ANSI31",
+          "TARAMADÜZENLE nesneler=3 desen=ANSI37 aci=15", "TARAMADÜZENLE nesneler=3 stil=yoksay"})
+        r.run(line);
+    CHECK(r.said.find("Tarama düzenlendi: 1 tarama; 'ANSI37' deseni, açı 15,00°.\n"
+                      "Tarama düzenlendi: 1 tarama; 'ANSI37' deseni, açı 15,00°.\n") !=
+          std::string::npos);
+    CHECK_EQ(r.rings(3).size(), std::size_t{1});
+}
+
+TEST_CASE("TARAMADÜZENLE: sınır nesnesini göstermek ona bağlı taramayı düzenler")
+{
+    // The hatch lies on the parcel's edges, so the parcel is what a hand points
+    // at and what a surveyor names. Both roads reach the same hatch; an object
+    // no hatch follows is counted as skipped, not guessed at.
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");       // 1
+    r.run("ÇİZGİ 0,20 10,20");               // 2
+    r.run("TARAMA nesneler=1 desen=ANSI31"); // 3
+    r.said.clear();
+    r.run("TARAMADÜZENLE nesneler=1 nesneler=2 desen=ANSI37");
+    auto def = core::hatch_of(r.doc.geometry(), r.doc.entities().slot[r.slot(3)]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().name, std::string("ANSI37"));
+    CHECK(r.said.find("Tarama düzenlendi: 1 tarama; 'ANSI37' deseni; tarama olmayan 1 nesne "
+                      "atlandı.") != std::string::npos);
+    CHECK_EQ(r.sources(3).size(), std::size_t{1});
+
+    // A broken link is no road: once the parcel no longer closes, the hatch
+    // stops following it, and pointing at the parcel no longer means it.
+    r.run("ÇİZGİDÜZENLE nesne=1 islem=ac");
+    REQUIRE(r.sources(3).front().broken);
+    auto refused = r.bus.execute_line("TARAMADÜZENLE nesneler=1 desen=NET", Origin::Test);
+    CHECK_FALSE(refused.ok());
+    def = core::hatch_of(r.doc.geometry(), r.doc.entities().slot[r.slot(3)]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().name, std::string("ANSI37"));
 }

@@ -1890,6 +1890,42 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("19c-tarama-bag-koptu"), &window); });
 
+        // DESEN YERE BAĞLI (C-11, 2nd stage): two parcels side by side, hatched
+        // one at a time — their lines run on across the shared edge, because
+        // the pattern is laid on the ground, not on each parcel. Above them one
+        // with a spacing of its own, crossed.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 12,0 12,10 0,10")); });
+        later([&window] {
+            for (const char* line : {"ALAN 12,0 26,0 26,10 12,10", "ALAN 0,12 26,12 26,20 0,20",
+                                     "TARAMA nesneler=1 desen=ANSI31 olcek=250",
+                                     "TARAMA nesneler=2 desen=ANSI31 olcek=250",
+                                     "TARAMA nesneler=3 aralik=1.5 cift=evet aci=30"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+        });
+        later([&window, shot] { shot(QStringLiteral("19d-tarama-yere-bagli"), &window); });
+        // The crossed hatch selected: its TARAMA group, one cell per property.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ NESNE nesneler=6"));
+            window.showAttributes();
+        });
+        later([&window, shot] { shot(QStringLiteral("19e-tarama-paneli"), &window); });
+        // A district hatched at a fine scale, seen whole: lines closer on the
+        // screen than two and a half pixels are drawn as the grey they make,
+        // not one by one.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 2000,0 2000,1200 0,1200")); });
+        later([&window] {
+            window.runScriptLine(QStringLiteral("TARAMA nesneler=1 desen=ANSI31 olcek=2500"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            window.showTranscript();
+        });
+        later([&window, shot] { shot(QStringLiteral("19f-tarama-yogun-ton"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

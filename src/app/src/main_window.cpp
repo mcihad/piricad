@@ -44,6 +44,8 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/settings.hpp"
 
@@ -917,9 +919,16 @@ void MainWindow::buildActions()
     drawingTools_->addAction(actSpline_);
     // TARAMA and BLOK work on objects, so they go the way BUDA does: the command
     // asks for its objects when nothing is selected (`want_objects`).
-    actHatch_  = modifyTool(Glyph::Grid, tr("Tarama"), QStringLiteral("TARAMA"),
-                            tr("TARAMA — kapalı nesnelerin içini katalogdaki bir desenle tarar  ·  "
-                                "kısaltma: TRM"));
+    actHatch_ = modifyTool(Glyph::Grid, tr("Tarama"), QStringLiteral("TARAMA"),
+                           tr("TARAMA — kapalı nesnelerin içini katalogdaki bir desenle tarar; "
+                              "tarama sınırına bağlıdır, sınır değişince güncellenir  ·  "
+                              "kısaltma: TRM"));
+    // THE HATCH'S OWN EDIT (TODOS C-11): pattern, angle, scale, spacing, origin
+    // and island rule of a hatch already drawn, keeping its tie to its parcel.
+    actHatchEdit_ = modifyTool(Glyph::Grid, tr("Taramayı Düzenle"), QStringLiteral("TARAMADÜZENLE"),
+                               tr("TARAMADÜZENLE — taramayı seçin, desenini yazın; açı, ölçek, "
+                                  "aralık, başlangıç ve ada kuralı nitelik panelinde  ·  "
+                                  "kısaltma: TDZ"));
     actBlock_  = modifyTool(Glyph::Duplicate, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
                                 "referans koyar  ·  kısaltma: BLK"));
@@ -1700,6 +1709,7 @@ void MainWindow::buildMenus()
     draw->addSeparator();
     draw->addAction(actSpline_);
     draw->addAction(actHatch_);
+    draw->addAction(actHatchEdit_);
     draw->addAction(actBoundary_);
     draw->addAction(actBlock_);
     draw->addAction(actInsert_);
@@ -2161,6 +2171,7 @@ void MainWindow::buildToolBox()
         methodTool(Glyph::Polygon, tr("Çokgen — kenardan"), QStringLiteral("ÇOKGEN yontem=kenar"),
                    tr("Kenar uzunluğundan; yarıçap sorulmaz")),
         actHatch_,
+        actHatchEdit_,
         actBoundary_,
     });
     toolBox_->addFamily({
@@ -5304,6 +5315,56 @@ int MainWindow::probeRealMouse()
                                 .arg(lastSaid()));
             shoot("tarama-izler");
             controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+
+            // TARAMADÜZENLE BY HAND: the tool from the column, then a click on
+            // the parcel's bottom edge — where the hatch lies too. The tool asks
+            // for hatches, so the click takes the hatch without asking which;
+            // Enter hands it over and the pattern is typed where a hand types.
+            actHatchEdit_->trigger();
+            QCoreApplication::processEvents();
+            press(screen({10'000, 0}));
+            release(screen({10'000, 0}));
+            const std::vector<core::EntityId>& chosen = controller_->selectedSlots();
+            check(hatch != core::kNoEntity && chosen.size() == 1 && chosen.front() == hatch,
+                  QStringLiteral("Taramayı Düzenle: parselle taramanın ortak kenarına tıklamak "
+                                 "sormadan taramayı seçti (%1 seçili)")
+                      .arg(chosen.size()));
+            const auto enter = [this](const QString& typed) {
+                commandLine_->setText(typed);
+                QKeyEvent down(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(commandLine_, &down);
+                QCoreApplication::processEvents();
+            };
+            enter(QString());
+            enter(QStringLiteral("ANSI37"));
+            const auto pattern = [&doc, hatch] {
+                if (hatch == core::kNoEntity) return core::HatchDef{};
+                auto def = core::hatch_of(doc.geometry(), doc.entities().slot[hatch]);
+                return def ? def.value() : core::HatchDef{};
+            };
+            check(pattern().name == "ANSI37",
+                  QStringLiteral("Taramayı Düzenle: yazılan desen taramaya geçti (\"%1\"; son söz: "
+                                 "\"%2\")")
+                      .arg(QString::fromStdString(pattern().name), lastSaid()));
+            controller_->cancelInteractive();
+
+            // THE TARAMA GROUP OF THE ATTRIBUTE PANEL: the angle, cell by cell.
+            if (hatch != core::kNoEntity) {
+                runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1")
+                                  .arg(static_cast<qulonglong>(core::raw(doc.key_of(hatch)))));
+                showAttributes();
+                QCoreApplication::processEvents();
+                const bool turned =
+                    attributePanel_->editRowForProbe(QStringLiteral("aci"), QStringLiteral("15"));
+                check(turned && pattern().angle_udeg == 15'000'000 &&
+                          doc.hatch_links().get(hatch) != nullptr,
+                      QStringLiteral("Tarama: nitelik panelinde açı hücresi taramaya yazıldı, bağ "
+                                     "sürüyor (%1°)")
+                          .arg(static_cast<double>(pattern().angle_udeg) / 1e6));
+                shoot("tarama-paneli");
+                showTranscript();
+            }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }

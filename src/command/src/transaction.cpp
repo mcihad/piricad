@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/transaction.hpp"
 
+#include "kentos_cad/command/drawing_catalogs.hpp"
+
 #include "kentos_cad/core/dimension_link.hpp"
 
 #include "kentos_cad/core/attach.hpp"
@@ -838,6 +840,34 @@ std::optional<core::Point2> shift_of(const Document& doc, EntityId e, std::uint3
 
 } // namespace
 
+bool Transaction::fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const
+{
+    std::vector<EntityId> live;
+    for (const core::HatchSource& s : sources) {
+        const EntityId src = doc_.slot_of(s.source);
+        if (s.broken || src == core::kNoEntity || !doc_.alive(src)) return false;
+        live.push_back(src);
+    }
+    const RingGeometry& g    = doc_.geometry();
+    const std::uint32_t slot = doc_.entities().slot[hatch];
+    auto def                 = core::hatch_of(g, slot);
+    if (!def) return false;
+    auto boundary = core::hatch_boundary(doc_, live, def.value().style);
+    if (!boundary) return false;
+    const core::RingSpan span = g.rings_of(slot);
+    if (span.count != boundary.value().loops.size()) return false;
+    for (std::uint32_t r = 0; r < span.count; ++r) {
+        const auto xs                         = g.ring_xs(span.first + r);
+        const auto ys                         = g.ring_ys(span.first + r);
+        const std::vector<core::Point2>& loop = boundary.value().loops[r];
+        if (xs.size() != loop.size() || g.ring_role[span.first + r] != boundary.value().roles[r])
+            return false;
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            if (xs[v] != loop[v].x || ys[v] != loop[v].y) return false;
+    }
+    return true;
+}
+
 Transaction::SettleReport Transaction::settle_hatches()
 {
     SettleReport rep;
@@ -879,8 +909,10 @@ Transaction::SettleReport Transaction::settle_hatches()
         }
         if (!touched) {
             // THE HATCH MOVED ON ITS OWN: it no longer fills its boundary, which
-            // is the user saying it is a hatch of its own now.
-            if (contains(moved, hatch) && doc_.editable(hatch) &&
+            // is the user saying it is a hatch of its own now. Reshaped to what
+            // its boundary gives — an island rule changed, TARAMADÜZENLE — it
+            // still fills it, and stays tied.
+            if (contains(moved, hatch) && doc_.editable(hatch) && !fills_boundary(hatch, was) &&
                 set_hatch_links(hatch, std::span<const core::HatchSource>{}))
                 ++rep.hatches_released;
             continue;
@@ -942,8 +974,18 @@ Transaction::SettleReport Transaction::settle_hatches()
                 core::HatchDef next = def.value();
                 if (whole && shift && !contains(moved, hatch)) next.origin = next.origin + *shift;
                 const auto rings = boundary.value().rings();
-                if (set_kind_geometry(hatch, rings, core::encode_hatch(next)))
+                if (set_kind_geometry(hatch, rings, core::encode_hatch(next))) {
                     ++rep.hatches_followed;
+                    // THE PATTERN'S PHASE IS THE ORIGIN'S (drawing_catalogs.hpp):
+                    // an origin carried along is a symbol drawn again.
+                    if (next.origin != def.value().origin) {
+                        const core::StyleId st = doc_.entities().style[hatch];
+                        std::uint32_t ink      = 0xFF000000u;
+                        if (st != core::kByLayerStyle && st < doc_.styles().size())
+                            ink = doc_.styles().symbol_at(st).primary().rgba;
+                        (void)set_entity_style(hatch, intern_symbol(hatch_symbol(next, ink)));
+                    }
+                }
             }
         }
         if (now != was && doc_.editable(hatch)) (void)set_hatch_links(hatch, now);

@@ -71,6 +71,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.ellipse_draw`](ellipse_draw.md) | Elips | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
 | [`core.spline`](spline.md) | Spline | `SPLINE`, `SPLINE`, `SPLINE`, `SPL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
 | [`core.hatch`](hatch.md) | Tarama | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
+| [`core.hatch_edit`](hatch_edit.md) | Tarama Düzenle | `TARAMADÜZENLE`, `TARAMADUZENLE`, `HATCHEDIT`, `TDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
@@ -959,8 +960,29 @@ Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tara
 | `olcek` | number | isteğe bağlı | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) |
 | `katalog` | text | isteğe bağlı | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
 | `bagla` | bool | isteğe bağlı | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
+| `aralik` | number | isteğe bağlı | Kendi desen çizgilerinizin aralığı, metre; desen= yerine |
+| `cift` | bool | isteğe bağlı | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
+| `baslangic` | point_list | isteğe bağlı | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi |
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
+
+### `core.hatch_edit` — TARAMADÜZENLE (Tarama Düzenle)
+
+Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur |
+| `desen` | text | isteğe bağlı | Katalogdaki desen adı |
+| `aralik` | number | isteğe bağlı | Kendi desen çizgilerinizin aralığı, metre; desen= yerine |
+| `aci` | number | isteğe bağlı | Desenin dönme açısı, derece |
+| `olcek` | number | isteğe bağlı | Desen ölçeği |
+| `cift` | bool | isteğe bağlı | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
+| `baslangic` | point_list | isteğe bağlı | Desenin geçtiği nokta |
+| `stil` | text | isteğe bağlı | Adalar: normal — iç içe sırayla delik ve dolu; dis — yalnız en dıştaki ve ilk delikler; yoksay — adasız |
+| `katalog` | text | isteğe bağlı | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
+
+Ayrıntılı kullanım: [TARAMADÜZENLE](hatch_edit.md)
 
 ### `core.block` — BLOK (Blok Tanımla)
 
@@ -6331,6 +6353,61 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet (evet/hayır)"
         },
+        "aralik": {
+          "type": "number",
+          "description": "Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] (sayı)"
+        },
+        "cift": {
+          "type": "boolean",
+          "description": "Desen bir de dik açıyla çizilsin mi (çapraz tarama) (evet/hayır)"
+        },
+        "baslangic": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 1
+            }
+          ],
+          "description": "Desenin geçtiği nokta; verilmezse sınırın ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -6358,6 +6435,128 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "TARAMA",
         "HATCH",
         "TRM"
+      ]
+    }
+  },
+  {
+    "name": "core_hatch_edit",
+    "title": "Tarama Düzenle",
+    "description": "Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.\nKomut: TARAMADÜZENLE (TARAMADUZENLE, HATCHEDIT, TDZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "desen": {
+          "type": "string",
+          "description": "Katalogdaki desen adı (metin)"
+        },
+        "aralik": {
+          "type": "number",
+          "description": "Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] (sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "Desenin dönme açısı, derece (sayı)"
+        },
+        "olcek": {
+          "type": "number",
+          "description": "Desen ölçeği (sayı)"
+        },
+        "cift": {
+          "type": "boolean",
+          "description": "Desen bir de dik açıyla çizilsin mi (çapraz tarama) (evet/hayır)"
+        },
+        "baslangic": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 1
+            }
+          ],
+          "description": "Desenin geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "stil": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "dis",
+            "yoksay"
+          ],
+          "description": "Adalar: normal — iç içe sırayla delik ve dolu; dis — yalnız en dıştaki ve ilk delikler; yoksay — adasız (metin)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.hatch_edit",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "TARAMADÜZENLE",
+        "TARAMADUZENLE",
+        "HATCHEDIT",
+        "TDZ"
       ]
     }
   },

@@ -393,7 +393,18 @@ private:
         const QRectF box        = path.boundingRect();
         if (box.isEmpty()) return;
 
-        const double spacing = ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : 6.0;
+        const double spacing = ps.interval_px > 0.0f ? static_cast<double>(ps.interval_px) : 6.0;
+
+        // TOO DENSE TO BE LINES (TODOS C-11): the tint they average to, as the
+        // GPU backend draws it, so a print and the screen agree.
+        if (render::hatch_tint_below(spacing)) {
+            QColor tint = QColor::fromRgba(ps.line_rgba);
+            tint.setAlpha(render::hatch_tint_alpha(
+                static_cast<double>(ps.line_width_px), spacing,
+                static_cast<std::uint8_t>(((ps.line_rgba >> 24) & 0xFFu) * ps.opacity / 255u)));
+            painter.fillPath(path, tint);
+            return;
+        }
 
         painter.save();
         painter.setClipPath(path, Qt::IntersectClip);
@@ -433,8 +444,10 @@ private:
         // parcels would otherwise make four thousand allocations a frame.
         static thread_local std::vector<float> lines;
         lines.clear();
+        const double ax = ps.anchored ? cx + static_cast<double>(ps.anchor_x) : box.center().x();
+        const double ay = ps.anchored ? cy - static_cast<double>(ps.anchor_y) : box.center().y();
         render::hatch_lines(face, clip, spacing, static_cast<double>(ps.angle_udeg) / 1'000'000.0,
-                            lines);
+                            lines, ax, ay);
         for (std::size_t i = 0; i + 3 < lines.size(); i += 4)
             painter.drawLine(
                 QPointF(static_cast<qreal>(lines[i]), static_cast<qreal>(lines[i + 1])),

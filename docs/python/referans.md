@@ -151,6 +151,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.ellipse_draw`](#cadellipse_draw) | `core.ellipse_draw` | `ELİPS` | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
 | [`cad.spline`](#cadspline) | `core.spline` | `SPLINE` | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
 | [`cad.hatch`](#cadhatch) | `core.hatch` | `TARAMA` | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
+| [`cad.hatch_edit`](#cadhatch_edit) | `core.hatch_edit` | `TARAMADÜZENLE` | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
@@ -1723,6 +1724,9 @@ cad.hatch(
     scale: float,
     catalog: str,
     associate: bool,
+    spacing: float,
+    double: bool,
+    origin: Coord,
 ) -> int
 ```
 
@@ -1735,8 +1739,45 @@ cad.hatch(
 | `scale` | `float` | `olcek` | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) |
 | `catalog` | `str` | `katalog` | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
 | `associate` | `bool` | `bagla` | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
+| `spacing` | `float` | `aralik` | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] |
+| `double` | `bool` | `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
+| `origin` | `Coord` | `baslangic` | Desenin geçtiği nokta; verilmezse sınırın ilk köşesi [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/hatch.md)
+
+### `cad.hatch_edit`
+
+Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
+
+Komut: `core.hatch_edit` — `TARAMADÜZENLE`
+
+```python
+cad.hatch_edit(
+    objects: list[int],
+    pattern: str,
+    spacing: float,
+    angle: float,
+    scale: float,
+    double: bool,
+    origin: Coord,
+    islands: str,
+    catalog: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur [kalıcı nesne anahtarı] |
+| `pattern` | `str` | `desen` | Katalogdaki desen adı |
+| `spacing` | `float` | `aralik` | Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m] |
+| `angle` | `float` | `aci` | Desenin dönme açısı, derece |
+| `scale` | `float` | `olcek` | Desen ölçeği |
+| `double` | `bool` | `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
+| `origin` | `Coord` | `baslangic` | Desenin geçtiği nokta [mm, Sağa (Y) önce] |
+| `islands` | `str` | `stil` | Adalar: normal — iç içe sırayla delik ve dolu; dis — yalnız en dıştaki ve ilk delikler; yoksay — adasız |
+| `catalog` | `str` | `katalog` | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
+
+[Komut sayfası](../komutlar/hatch_edit.md)
 
 ### `cad.block`
 
