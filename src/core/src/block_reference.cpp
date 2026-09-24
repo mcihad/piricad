@@ -10,6 +10,8 @@
 
 #include "kind_common.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace kentos::core {
@@ -52,16 +54,15 @@ void member_runs(const Document& doc, EntityId m, EmitBuffer& scratch, int depth
     }
 }
 
-/// Whether a style takes any property from the block it sits in.
-bool by_block(const Document& doc, StyleId style)
+} // namespace
+
+bool style_by_block(const Document& doc, StyleId style)
 {
     if (style == kByLayerStyle || style >= doc.styles().size()) return false;
     const Appearance& a = doc.styles().at(style);
     return a.src_colour == Source::ByBlock || a.src_width == Source::ByBlock ||
            a.src_dash == Source::ByBlock || a.src_fill == Source::ByBlock;
 }
-
-} // namespace
 
 std::vector<std::uint8_t> encode_block_reference(const BlockReference& ref)
 {
@@ -185,7 +186,7 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
         const std::uint32_t layer = lyr == zero ? kInheritRunLayer : lyr;
         const StyleId st          = ents.style[m];
         const std::uint32_t style =
-            (st == kByLayerStyle || by_block(doc, st)) ? kInheritRunStyle : st;
+            (st == kByLayerStyle || style_by_block(doc, st)) ? kInheritRunStyle : st;
         const std::uint32_t text = doc.texts().has(ents.slot[m]) ? ents.slot[m] : kNoRunText;
 
         for (int row = 0; row < static_cast<int>(ref.rows); ++row) {
@@ -234,6 +235,26 @@ Box2 block_reference_bounds(const Document& doc, Point2 insertion, const BlockRe
                                                  Point2{scratch.xs[v], scratch.ys[v]}, col, row));
     }
     return box;
+}
+
+Mm caption_height_along(const RingGeometry& geom, std::uint32_t slot, Point2 a, Point2 b, Mm height)
+{
+    const RingSpan rs = geom.rings_of(slot);
+    if (rs.count == 0) return height;
+    const auto xs = geom.ring_xs(rs.first);
+    const auto ys = geom.ring_ys(rs.first);
+    if (xs.size() < 2) return height;
+    // Metres, so the squares stay far inside a double's exact range; `sqrt` is
+    // correctly rounded by IEEE-754, the one root §7.3 allows.
+    const auto length = [](Mm x0, Mm y0, Mm x1, Mm y1) {
+        const double dx = mm_to_metres(x1 - x0);
+        const double dy = mm_to_metres(y1 - y0);
+        return std::sqrt(dx * dx + dy * dy);
+    };
+    const double was = length(xs.front(), ys.front(), xs.back(), ys.back());
+    if (was <= 0.0) return height;
+    const double now = length(a.x, a.y, b.x, b.y);
+    return std::max<Mm>(1, mm_round(static_cast<double>(height) * now / was));
 }
 
 namespace {

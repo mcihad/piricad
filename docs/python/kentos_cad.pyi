@@ -277,7 +277,7 @@ def explode(
     *,
     object: list[int] = ...,
 ) -> int:
-    """Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+    """Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
 
     Komut: core.explode (PATLAT)
         object — Patlatılacak nesneler [kalıcı nesne anahtarı]

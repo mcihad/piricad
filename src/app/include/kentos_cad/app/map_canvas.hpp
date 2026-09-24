@@ -220,6 +220,14 @@ public:
     /// from one lit by its first line.
     std::size_t selectionRunCountForProbe() const noexcept { return selection_runs_; }
 
+    /// The snap the marker shows now — what a click here would land on — or
+    /// null when no aid fires. A probe moves the pointer over a drawn corner and
+    /// asks whether the marker sits on it.
+    const core::SnapResult* snapPreviewForProbe() const noexcept
+    {
+        return snap_preview_valid_ ? &snap_preview_ : nullptr;
+    }
+
     /// Enter while a face is being pulled to a wanted area: sends the point that
     /// lands the figure exactly. True when it did; false when nothing of the
     /// kind is being asked, so the caller can go on to what Enter means next.

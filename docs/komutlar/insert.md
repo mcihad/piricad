@@ -27,7 +27,7 @@ BLOKEKLE ad=<ad> nokta=<sağa>,<yukarı> [olcek=<çarpan>] [olcek_y=<çarpan>] [
 |---|---|
 | `ad` | Yerleştirilecek bloğun adı |
 | `nokta` | Ekleme noktası |
-| `olcek` | Ölçek; eksi değer x'te aynalar; varsayılan 1 |
+| `olcek` | Ölçek; varsayılan 1. Eksi değer aynalar — ama `olcek_y` verilmezse o da eksi olur ve iki eksi ayna birlikte **yarım dönüştür**: yalnız x'te aynalamak için `olcek=-1 olcek_y=1` yazın |
 | `olcek_y` | Y ölçeği farklıysa; varsayılan `olcek` |
 | `aci` | Dönme açısı, derece, saat yönünün tersine; varsayılan 0 |
 | `sutun`, `satir` | Dizi sütun ve satır sayısı; varsayılan 1 |
@@ -46,7 +46,7 @@ SEÇ KATMAN katman=ROGAR2
 BLOK ad=BACA taban=0,0
 BLOKEKLE ad=BACA nokta=20,0
 BLOKEKLE ad=BACA nokta=40,0 olcek=2 aci=90
-BLOKEKLE ad=BACA nokta=60,0 olcek=-1
+BLOKEKLE ad=BACA nokta=60,0 olcek=-1 olcek_y=1
 BLOKEKLE ad=BACA nokta=80,0 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000
 ```
 

@@ -21,7 +21,10 @@ bool transform_entity(Context& ctx, core::EntityId slot, const core::Xform& x);
 
 /// A NEW object that is `slot` with `x` applied — the same kind and payload,
 /// layer, style, text and attribute cells, and its own key — or the reason
-/// refused.
-core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, const core::Xform& x);
+/// refused. On `onto` when one is given: PATLAT sets a member drawn on the
+/// drawing's `0` layer down on the reference's, and making it there is not the
+/// same as making it on `0` and moving it — `0` may be locked.
+core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, const core::Xform& x,
+                                          core::LayerId onto = core::kNoLayer);
 
 } // namespace kentos::command

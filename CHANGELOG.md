@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — blok referansı kendi türündeki parçalarına ayrılır, çizdiği yerden yakalanır (C-13, 1. aşama)
+
+- **PATLAT bloğu açar.** Blok referansı patlatılınca tanımın her üyesi **kendi türünde** —
+  daire daire, yay yay, yazı yazı, elips, tarama, ölçü ve iç blok kendisi olarak — referansın
+  onu çizdiği yerleşimle (ölçek, açı, ayna, dizi adımı; aynı tam sayı aritmetiği) çıkar: bir
+  parçanın köşesi referansın o köşeyi çizdiği milimetrededir. `0` katmanındaki üye referansın
+  katmanına iner; katmandan ya da bloktan renklenen üye çizildiği görünüşü alır; gizli üye gizli
+  kalır; iç blok bir kat açılır. Çıktı parçaları türlere göre sayar, dizinin kopyalarını, katman
+  ve görünüş devrini, referansın geçmeyen öznitelik değerlerini söyler; yapılandırılmış rapor
+  parçaların kimliklerini verir. x ve y ölçeği farklı referansta yaylı çoklu çizgi ve dik açının
+  katı olmayan açıyla dönük iç blok **adıyla reddedilir**, hiçbir şey değişmez. Önceden içinde
+  daire, yay ya da yazı olan her blok reddediliyor, çizgiler de referansın katmanına rengi
+  düşürülerek konuyordu.
+- **Yaylı çoklu çizgi patlar.** Düz kenarları çizgi, bükük kenarları aynı merkez ve yarıçaplı
+  gerçek yay olur. `ÖLÇEKLE` ve `ÇİZGİDÜZENLE`'nin "önce PATLAT ile ayırın" önerisi artık
+  yapılabiliyor; önceden PATLAT bu türü reddediyordu. Çizgi ve alan patlatılınca kenarlar
+  nesnenin rengini de taşır.
+- **Yakalama blok üyelerini tutar.** Blok referansı artık üyelerinin uç, orta, merkez, çeyrek,
+  ağırlık merkezi ve düğüm noktalarını da sunar — döndürülmüş, aynalanmış, dizili ve iç içe
+  bloklarda üyeyi çizen yerleşimden geçerek; önceden yalnız ekleme noktası ve kenar üstü
+  noktalar (yakın, dik, kesişim) yakalanıyordu, oysa belge uç ve ortayı vaat ediyordu.
+- **Üye yazısı referansla büyür.** Ölçekli bir referansta üye yazısının harfleri taban çizgisiyle
+  aynı oranda büyür; önceden 2 kat büyük konmuş bir sembolün numarası eski boyunda çiziliyordu.
+- **Düzeltildi:** dizili bir blok referansı aynalanınca ikinci satırı aynanın öbür yanına değil
+  geldiği yana çiziliyordu (satır adımı işaret değiştirmiyordu).
+- **Düzeltildi:** `kopya=evet` ile dönüşümün reddi, asıl sebebi ezip "Kopya dönüştürülemedi."
+  diyordu; şimdi sebebi söylenir.
+- **Belge:** `BLOKEKLE olcek=-1` tek başına x'te aynalamaz — `olcek_y` de eksi olur ve bu yarım
+  dönüştür; sayfa bunu söylüyor ve örnek `olcek=-1 olcek_y=1` yazıyor.
+
 ### Eklendi — DXF'in çoklu kılavuzu (MULTILEADER) içe aktarılır (C-12, 4. aşama: üçüncü teslim)
 
 - **MULTILEADER.** libdxfrw'nun okumadığı çoklu kılavuzlar GDAL'ın DXF sürücüsüyle okunur:

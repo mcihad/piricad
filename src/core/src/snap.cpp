@@ -4,6 +4,7 @@
 #include "kentos_cad/core/trig.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -11,6 +12,7 @@
 #include "kentos_cad/core/pick.hpp"
 
 #include <cmath>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -313,12 +315,11 @@ bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
 
 /// summation order is the ring's own vertex order, which is fixed by model.md
 /// R11, so the result is the same on every platform (`-ffp-contract=off`).
-bool ring_centroid(const RingGeometry& geometry, std::uint32_t ring, Point2& out)
+/// Over the closed ring's vertices as spans, so a block member's ring placed
+/// out of its definition answers with the very arithmetic the piece PATLAT
+/// makes of it will.
+bool points_centroid(std::span<const Mm> xs, std::span<const Mm> ys, Point2& out)
 {
-    if (geometry.ring_role[ring] == RingRole::Open) return false;
-
-    const auto xs = geometry.ring_xs(ring);
-    const auto ys = geometry.ring_ys(ring);
     if (xs.size() < 3) return false;
 
     // Translated to the first vertex, exactly as RingGeometry::ring_area does.
@@ -346,6 +347,195 @@ bool ring_centroid(const RingGeometry& geometry, std::uint32_t ring, Point2& out
     const double scale = 1.0 / (3.0 * twice_area);
     out                = Point2{ox + mm_round(cx * scale), oy + mm_round(cy * scale)};
     return true;
+}
+
+/// The centroid of one stored ring; nothing for an open one.
+bool ring_centroid(const RingGeometry& geometry, std::uint32_t ring, Point2& out)
+{
+    if (geometry.ring_role[ring] == RingRole::Open) return false;
+    return points_centroid(geometry.ring_xs(ring), geometry.ring_ys(ring), out);
+}
+
+// ------------------------------------------------- a block's members ----
+//
+// A block reference's members are drawn, not stored where they stand, so the
+// ring walk below never sees them: before this a reference offered its
+// insertion point and the points ON its lines (YAKIN, DİK, KESİŞİM) and not
+// one corner, middle or centre of what it draws — while its page promised the
+// ends and the middles. They are offered now, each member's own points
+// carried out through every level of nesting by `place_block_point`, the
+// function that draws them, so the point a snap lands on is the corner on
+// the screen and the corner of the piece PATLAT would make of it (TODOS C-13).
+
+/// One level of a nested placement: which copy of which reference.
+struct Placement
+{
+    const BlockReference* ref; ///< the reference at this level
+    Point2 insertion;          ///< where it stands, in the level above
+    Point2 base;               ///< its definition's base point
+    int column;                ///< which copy of its grid
+    int row;                   ///< and which row
+};
+
+/// `p`, a point of the innermost definition, carried out to the drawing: the
+/// innermost placement first.
+Point2 place_through(std::span<const Placement> chain, Point2 p)
+{
+    for (std::size_t i = chain.size(); i-- > 0;)
+        p = place_block_point(*chain[i].ref, chain[i].insertion, chain[i].base, p, chain[i].column,
+                              chain[i].row);
+    return p;
+}
+
+/// Whether every level keeps circles circles: one magnitude across and up.
+bool chain_uniform(std::span<const Placement> chain)
+{
+    const auto mag = [](std::int64_t v) { return static_cast<Int128>(v < 0 ? -v : v); };
+    for (const Placement& p : chain)
+        if (mag(p.ref->sx.num) * static_cast<Int128>(p.ref->sy.den) !=
+            mag(p.ref->sy.num) * static_cast<Int128>(p.ref->sx.den))
+            return false;
+    return true;
+}
+
+/// The key points of the members of `block`, placed by `chain`, into `pts`
+/// with their modes. A member that is hidden, or on a switched-off layer other
+/// than `0`, is not drawn and offers nothing — the rule the drawing follows.
+void member_key_points(const Document& doc, BlockId block, std::vector<Placement>& chain,
+                       std::vector<Point2>& pts, std::vector<std::uint32_t>& modes, int depth)
+{
+    if (depth > kMaxBlockDepth || block >= doc.blocks().size()) return;
+    const BlockDef& def          = doc.blocks().at(block);
+    const EntityTable& ents      = doc.entities();
+    const RingGeometry& geometry = doc.geometry();
+    const LayerId zero           = doc.find_layer("0");
+    std::vector<Point2> own;
+    std::vector<std::uint32_t> own_modes;
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+    const auto give = [&pts, &modes](Point2 p, std::uint32_t mode) {
+        pts.push_back(p);
+        modes.push_back(mode);
+    };
+
+    for (const EntityKey key : def.members) {
+        const EntityId m = doc.slot_of(key);
+        if (m == kNoEntity || !ents.alive(m) || (ents.flags[m] & FlagHidden) != 0) continue;
+        if (ents.layer[m] != zero && ents.layer[m] < doc.layers().size() &&
+            !doc.layers()[ents.layer[m]].visible)
+            continue;
+        const std::uint32_t slot = ents.slot[m];
+        const KindId kind        = ents.kind[m];
+
+        if (kind == kBlockReferenceKind) {
+            // A BLOCK IN THE BLOCK: its insertion point, once, and its own
+            // members through one level more — every copy of its grid.
+            auto inner = block_reference_of(geometry, slot);
+            if (!inner || inner.value().block >= doc.blocks().size()) continue;
+            const BlockReference nested = inner.value();
+            const Point2 at             = block_reference_insertion(geometry, slot);
+            give(place_through(chain, at), SnapInsertion);
+            const Point2 base = doc.blocks().at(nested.block).base;
+            for (int row = 0; row < static_cast<int>(nested.rows); ++row)
+                for (int col = 0; col < static_cast<int>(nested.columns); ++col) {
+                    chain.push_back(Placement{&nested, at, base, col, row});
+                    member_key_points(doc, nested.block, chain, pts, modes, depth + 1);
+                    chain.pop_back();
+                }
+            continue;
+        }
+
+        if (kind == kPolylineKind) {
+            // THE CORNERS PLACED FIRST, and the middles and the centroid taken
+            // of the placed corners — the arithmetic the ring walk applies to
+            // a stored ring, so a piece PATLAT makes offers the same points.
+            const RingSpan span = geometry.rings_of(slot);
+            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                const auto rx = geometry.ring_xs(r);
+                const auto ry = geometry.ring_ys(r);
+                xs.clear();
+                ys.clear();
+                for (std::size_t v = 0; v < rx.size(); ++v) {
+                    const Point2 p = place_through(chain, Point2{rx[v], ry[v]});
+                    xs.push_back(p.x);
+                    ys.push_back(p.y);
+                    give(p, SnapEndpoint);
+                }
+                const bool closed          = geometry.ring_role[r] != RingRole::Open;
+                const std::size_t n        = xs.size();
+                const std::size_t segments = n < 2 ? 0 : (closed ? n : n - 1);
+                for (std::size_t v = 0; v < segments; ++v) {
+                    const std::size_t w = (v + 1) % n;
+                    give(Point2{(xs[v] + xs[w]) / 2, (ys[v] + ys[w]) / 2}, SnapMidpoint);
+                }
+                Point2 centre{};
+                if (closed && points_centroid(xs, ys, centre)) give(centre, SnapCentroid);
+            }
+            continue;
+        }
+
+        if (kind == kPointKind) {
+            const RingSpan span = geometry.rings_of(slot);
+            if (span.count > 0 && !geometry.ring_xs(span.first).empty())
+                give(place_through(chain, Point2{geometry.ring_xs(span.first)[0],
+                                                 geometry.ring_ys(span.first)[0]}),
+                     SnapNode);
+            continue;
+        }
+
+        // Every other kind names its own points (`KindSpec::key_points`): a
+        // circle's centre, an arc's ends and middle, an ellipse's axis ends.
+        own.clear();
+        own_modes.clear();
+        if (const KindSpec* spec = builtin_kinds().find(kind);
+            spec != nullptr && spec->key_points != nullptr) {
+            KeyPointSink sink{own, own_modes};
+            spec->key_points(geometry, slot, sink);
+        }
+        for (std::size_t k = 0; k < own.size(); ++k)
+            give(place_through(chain, own[k]), own_modes[k]);
+
+        // A CIRCLE'S QUADRANTS are the drawing's north, east, south and west
+        // of it, not its definition's: taken of the placed centre and radius,
+        // and only where every level keeps it a circle.
+        if (kind == kCircleKind && chain_uniform(chain)) {
+            const Point2 c0 = circle_centre_of(geometry, slot);
+            const Mm r0     = circle_radius_of(geometry, slot);
+            const Point2 c  = place_through(chain, c0);
+            const Point2 on = place_through(chain, Point2{c0.x + r0, c0.y});
+            const double dx = static_cast<double>(on.x - c.x);
+            const double dy = static_cast<double>(on.y - c.y);
+            const Mm r      = mm_round(std::sqrt(dx * dx + dy * dy));
+            if (r > 0) {
+                give(Point2{c.x + r, c.y}, SnapQuadrant);
+                give(Point2{c.x, c.y + r}, SnapQuadrant);
+                give(Point2{c.x - r, c.y}, SnapQuadrant);
+                give(Point2{c.x, c.y - r}, SnapQuadrant);
+            }
+        }
+    }
+}
+
+/// The points a block reference offers: its insertion point, then every point
+/// of every member it draws, placed — every copy of its grid.
+void block_key_points(const Document& doc, EntityId e, std::vector<Point2>& pts,
+                      std::vector<std::uint32_t>& modes)
+{
+    const RingGeometry& geometry = doc.geometry();
+    const std::uint32_t slot     = doc.entities().slot[e];
+    auto ref                     = block_reference_of(geometry, slot);
+    const Point2 at              = block_reference_insertion(geometry, slot);
+    pts.push_back(at);
+    modes.push_back(SnapInsertion);
+    if (!ref || ref.value().block >= doc.blocks().size()) return;
+    const BlockReference& placed = ref.value();
+    const Point2 base            = doc.blocks().at(placed.block).base;
+    std::vector<Placement> chain;
+    for (int row = 0; row < static_cast<int>(placed.rows); ++row)
+        for (int col = 0; col < static_cast<int>(placed.columns); ++col) {
+            chain.assign(1, Placement{&placed, at, base, col, row});
+            member_key_points(doc, placed.block, chain, pts, modes, 0);
+        }
 }
 
 /// Best candidate found for each priority level, plus the entity that produced it.
@@ -875,17 +1065,20 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
                 // and its four axis ends as UÇ, a block reference's insertion
                 // point as EKLEME. Offered only under a mode that is on, at that
                 // mode's own priority.
-                if (const KindSpec* spec = builtin_kinds().find(entities.kind[e]);
-                    spec != nullptr && spec->key_points != nullptr) {
-                    key_points.clear();
-                    key_modes.clear();
+                // A block reference answers for what it draws as well
+                // (`block_key_points`), which needs the document.
+                key_points.clear();
+                key_modes.clear();
+                if (entities.kind[e] == kBlockReferenceKind) {
+                    block_key_points(doc, e, key_points, key_modes);
+                } else if (const KindSpec* spec = builtin_kinds().find(entities.kind[e]);
+                           spec != nullptr && spec->key_points != nullptr) {
                     KeyPointSink sink{key_points, key_modes};
                     spec->key_points(geometry, entities.slot[e], sink);
-                    for (std::size_t k = 0; k < key_points.size(); ++k)
-                        if ((object_modes & key_modes[k]) != 0)
-                            offer(best[priority_index(key_modes[k])], key_points[k], e, q.aim,
-                                  limit);
                 }
+                for (std::size_t k = 0; k < key_points.size(); ++k)
+                    if ((object_modes & key_modes[k]) != 0)
+                        offer(best[priority_index(key_modes[k])], key_points[k], e, q.aim, limit);
 
                 for_each_chain(doc, e, outline, [&](const Chain& chain) {
                     const std::size_t n = chain.xs.size();

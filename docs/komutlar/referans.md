@@ -21,7 +21,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.break`](break.md) | Kır | `KIR`, `BREAK`, `KR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler. |
 | [`core.join`](join.md) | Uç Uca Ekle | `UÇUCA`, `UCUCA`, `JOIN`, `UÇE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir. |
 | [`core.lengthen`](lengthen.md) | Uzunluk | `UZUNLUK`, `LENGTHEN`, `UZN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
-| [`core.explode`](explode.md) | Patlat | `PATLAT`, `EXPLODE`, `PTL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
+| [`core.explode`](explode.md) | Patlat | `PATLAT`, `EXPLODE`, `PTL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır. |
 | [`core.align`](align.md) | Hizala | `HİZALA`, `HIZALA`, `ALIGN`, `HZL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
 | [`core.divide`](divide.md) | Bölümle | `BÖLÜMLE`, `BOLUMLE`, `DIVIDE`, `BLM` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir. |
 | [`core.pedit`](pedit.md) | Çizgi Düzenle | `ÇİZGİDÜZENLE`, `CIZGIDUZENLE`, `PEDIT`, `ÇZD`, `CZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
@@ -295,7 +295,7 @@ Ayrıntılı kullanım: [UZUNLUK](lengthen.md)
 
 ### `core.explode` — PATLAT (Patlat)
 
-Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -5843,7 +5843,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_explode",
     "title": "Patlat",
-    "description": "Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.\nKomut: PATLAT (EXPLODE, PTL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.\nKomut: PATLAT (EXPLODE, PTL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {

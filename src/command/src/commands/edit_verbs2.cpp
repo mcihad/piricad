@@ -3,17 +3,20 @@
 // core.divide — BÖLÜMLE, core.pedit — ÇİZGİDÜZENLE.
 //
 // PATLAT TAKES A THING APART into the pieces it is drawn from: a run of edges
-// into single edges, a face into its boundary, a block reference into its
-// members placed where they stand. It is what a drafter reaches for when the
-// grouping is in the way — one corner of a parcel has to move and the parcel is
-// a face, one leg of a fence has to go and the fence is one run.
+// into single edges, a face into its boundary, an arc polyline into its lines
+// and arcs, a block reference into its members placed where they stand. It is
+// what a drafter reaches for when the grouping is in the way — one corner of a
+// parcel has to move and the parcel is a face, one leg of a fence has to go and
+// the fence is one run.
 //
-// WHAT IT REFUSES AND WHY. A definition holding a circle, an arc or a caption is
-// named rather than half-placed: those kinds carry a payload whose transform
-// under a mirrored or non-uniform scale is not a circle, an arc or a caption,
-// and placing their drawn outline instead would turn a circle into a 128-gon
-// with an area that is not πr² — which is exactly the number a tapu reads
-// (§12). Phase 2's `BLOKDÜZENLE` is where that gets a real answer.
+// A MEMBER COMES OUT IN ITS OWN KIND (TODOS C-13). Before this a definition
+// holding a circle, an arc or a caption was refused outright, because placing
+// a circle's drawn outline would have made a 128-gon whose area is not πr² —
+// the number a tapu reads (§12). Each member is now made again as what it is
+// and carried by the reference's own placement (`core::block_placement`), the
+// arithmetic that draws it: a circle stays a circle, a caption a caption, and
+// only what no kind can hold — an arc bent into an ellipse, an inner block
+// leaned — is named and refused.
 //
 // HİZALA IS NOT OTURT. `OTURT` is a least-squares Helmert fit over many common
 // points and belongs to geodesy; this is the drafting verb — one or two point
@@ -35,6 +38,7 @@
 #include "kentos_cad/command/transform_edit.hpp"
 
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/curve_path.hpp"
@@ -50,6 +54,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -89,6 +94,229 @@ const char* kind_word(core::KindId k)
 
 // ----------------------------------------------------------------- PATLAT ----
 
+/// What one exploded object came apart into, for the echo and the report.
+struct Pieces
+{
+    std::vector<core::EntityId> made;        ///< every piece, in the order made
+    std::map<std::string, std::size_t> kind; ///< how many of each kind
+    std::size_t copies{1};                   ///< how many copies of a grid
+    std::size_t onto_reference{0};           ///< pieces set down on the reference's layer
+    std::size_t reference_look{0};           ///< pieces given the reference's look
+    std::size_t hidden{0};                   ///< pieces of hidden members, kept hidden
+    std::size_t values_left{0};              ///< the reference's own attribute cells, not carried
+    std::string block;                       ///< the definition's name
+};
+
+/// The pieces' keys, for the report.
+core::Json keys_of(const core::Document& doc, const std::vector<core::EntityId>& made)
+{
+    core::Json out = core::Json::array({});
+    for (const core::EntityId e : made)
+        out.push(core::Json::integer(static_cast<std::int64_t>(core::raw(doc.key_of(e)))));
+    return out;
+}
+
+/// The attribute cells `e` carries.
+std::size_t filled_cells(const core::Document& doc, core::EntityId e)
+{
+    std::size_t filled = 0;
+    for (std::size_t c = 0; c < doc.attributes().columns(); ++c) {
+        auto held = doc.attribute(static_cast<core::AttrId>(c), e);
+        if (held && held.value().present) ++filled;
+    }
+    return filled;
+}
+
+/// A BLOCK REFERENCE TAKEN APART: every member, of every copy of its grid, made
+/// again in its own kind — a circle a circle, a caption a caption, a block
+/// inside the block a reference — and carried by the placement the reference
+/// draws it with (`core::block_placement`), so each piece lands on the
+/// millimetre it was drawn on. It keeps what the drawing gave it: a member on
+/// the drawing's `0` layer goes onto the reference's layer; a ByLayer member
+/// there, and a ByBlock member anywhere, takes the look it was drawn in.
+///
+/// WHAT CANNOT BE WRITTEN IS NAMED, not approximated: under a placement that
+/// differs across and up, an arc polyline's arcs and a turned inner block would
+/// lean, and neither kind can hold that (`transform.cpp` says which).
+bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
+{
+    const core::Document& doc = ctx.document();
+    const std::uint32_t gslot = doc.entities().slot[slot];
+    auto ref                  = core::block_reference_of(doc.geometry(), gslot);
+    if (!ref) {
+        ctx.refuse(ref.error());
+        return false;
+    }
+    const core::BlockReference placed = ref.value();
+    if (placed.block >= doc.blocks().size()) {
+        ctx.refuse(core::ErrorCode::NotFound, "Blok tanımı bulunamadı.");
+        return false;
+    }
+    // Copied, not referred to: the pieces are added to the document under it.
+    const std::vector<core::EntityKey> members = doc.blocks().at(placed.block).members;
+    const core::Point2 base                    = doc.blocks().at(placed.block).base;
+    out.block                                  = doc.blocks().at(placed.block).name;
+    const core::Point2 insertion = core::block_reference_insertion(doc.geometry(), gslot);
+    const core::LayerId home     = doc.entities().layer[slot];
+    const core::StyleId look     = doc.entities().style[slot];
+    const core::LayerId zero     = doc.find_layer("0");
+    out.copies                   = static_cast<std::size_t>(placed.rows) * placed.columns;
+    out.values_left              = filled_cells(doc, slot);
+
+    for (int row = 0; row < static_cast<int>(placed.rows); ++row) {
+        for (int column = 0; column < static_cast<int>(placed.columns); ++column) {
+            const core::Xform x = core::block_placement(placed, insertion, base, column, row);
+            for (const core::EntityKey key : members) {
+                const core::EntityId member = doc.slot_of(key);
+                if (member == core::kNoEntity || !doc.alive(member)) continue;
+                const core::KindId kind  = doc.entities().kind[member];
+                const core::LayerId own  = doc.entities().layer[member];
+                const bool on_zero       = own == zero && zero != core::kNoLayer;
+                const core::StyleId mine = doc.entities().style[member];
+
+                auto made = clone_entity(ctx, member, x, on_zero ? home : core::kNoLayer);
+                if (!made) {
+                    ctx.refuse(made.error().code, "Blok '" + out.block + "' içindeki bir " +
+                                                      kind_word(kind) +
+                                                      " yerine konamadı: " + made.error().message);
+                    return false;
+                }
+                const core::EntityId piece = made.value();
+                if (on_zero && home != own) ++out.onto_reference;
+
+                // THE LOOK IT WAS DRAWN IN. A hatch keeps its own: its style
+                // is its pattern, set again by the transform.
+                const bool inherits =
+                    mine == core::kByLayerStyle || core::style_by_block(doc, mine);
+                if (inherits && kind != core::kHatchKind) {
+                    const core::StyleId want = on_zero ? look : core::kByLayerStyle;
+                    if (doc.entities().style[piece] != want)
+                        if (auto st = ctx.transaction().set_entity_style(piece, want); !st) {
+                            ctx.refuse(st.error());
+                            return false;
+                        }
+                    if (want != core::kByLayerStyle || core::style_by_block(doc, mine))
+                        ++out.reference_look;
+                }
+                if ((doc.entities().flags[member] & core::FlagHidden) != 0) {
+                    if (auto st = ctx.transaction().set_entity_hidden(piece, true); !st) {
+                        ctx.refuse(st.error());
+                        return false;
+                    }
+                    ++out.hidden;
+                }
+                out.made.push_back(piece);
+                ++out.kind[kind_word(kind)];
+            }
+        }
+    }
+    return true;
+}
+
+/// A RUN OF EDGES INTO SINGLE EDGES. A face's boundary becomes an open run
+/// per ring, which is what "take the face apart" means: a face is a closed
+/// thing and its pieces are not. Each edge keeps the run's look.
+bool explode_polyline(Context& ctx, core::EntityId slot, Pieces& out)
+{
+    const core::Document& doc = ctx.document();
+    const core::LayerId home  = doc.entities().layer[slot];
+    const core::StyleId look  = doc.entities().style[slot];
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        std::vector<core::Point2> pts = ring_points(doc, r);
+        const bool closed             = doc.geometry().ring_role[r] != core::RingRole::Open;
+        if (closed && pts.size() >= 3) pts.push_back(pts.front());
+        for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
+            const core::Point2 pair[2]{pts[i], pts[i + 1]};
+            auto one = ctx.transaction().add_polyline(home, pair);
+            if (!one) {
+                ctx.refuse(one.error());
+                return false;
+            }
+            if (look != core::kByLayerStyle)
+                if (auto st = ctx.transaction().set_entity_style(one.value(), look); !st) {
+                    ctx.refuse(st.error());
+                    return false;
+                }
+            out.made.push_back(one.value());
+            ++out.kind[kind_word(core::kPolylineKind)];
+        }
+    }
+    return true;
+}
+
+/// AN ARC POLYLINE INTO ITS EDGES: a straight edge a line, a bent one the arc
+/// it is — its centre, its radius and its sweep as the run held them, never
+/// its drawn chords. What `ÖLÇEKLE` tells a user to do before a stretch the
+/// arcs cannot take ("önce PATLAT ile kenarlarına ayırın"), and what it now
+/// does. A constant width does not go with the pieces: a line has none.
+bool explode_arc_polyline(Context& ctx, core::EntityId slot, Pieces& out)
+{
+    const core::Document& doc = ctx.document();
+    const std::uint32_t gslot = doc.entities().slot[slot];
+    auto def                  = core::arc_polyline_of(doc.geometry(), gslot);
+    if (!def) {
+        ctx.refuse(def.error());
+        return false;
+    }
+    const core::LayerId home  = doc.entities().layer[slot];
+    const core::StyleId look  = doc.entities().style[slot];
+    const core::RingSpan span = doc.geometry().rings_of(gslot);
+    if (span.count == 0) return true;
+    const std::vector<core::Point2> pts = ring_points(doc, span.first);
+    const bool closed       = doc.geometry().ring_role[span.first] != core::RingRole::Open;
+    const std::size_t n     = pts.size();
+    const std::size_t edges = n < 2 ? 0 : (closed ? n : n - 1);
+    std::size_t next        = 0;
+    for (std::size_t s = 0; s < edges; ++s) {
+        const core::Point2 a = pts[s];
+        const core::Point2 b = pts[(s + 1) % n];
+        while (next < def.value().arcs.size() && def.value().arcs[next].segment < s)
+            ++next;
+        const core::ArcPolyline::Arc* arc =
+            next < def.value().arcs.size() && def.value().arcs[next].segment == s
+                ? &def.value().arcs[next]
+                : nullptr;
+        core::Result<core::EntityId> one = core::err(core::ErrorCode::Internal, "");
+        if (arc != nullptr) {
+            // `core.arc` sweeps counter-clockwise from its start to its end, so
+            // a clockwise edge is written from its far end.
+            const core::Point2 ring[4]{arc->centre,
+                                       core::Point2{arc->centre.x + arc->radius, arc->centre.y},
+                                       arc->ccw ? a : b, arc->ccw ? b : a};
+            const core::RingGeometry::RingInput input{std::span<const core::Point2>(ring, 4),
+                                                      core::RingRole::Open, 0};
+            one = ctx.transaction().add_kind(home, core::kArcKind, {&input, 1}, {});
+        } else {
+            const core::Point2 pair[2]{a, b};
+            one = ctx.transaction().add_polyline(home, pair);
+        }
+        if (!one) {
+            ctx.refuse(one.error());
+            return false;
+        }
+        if (look != core::kByLayerStyle)
+            if (auto st = ctx.transaction().set_entity_style(one.value(), look); !st) {
+                ctx.refuse(st.error());
+                return false;
+            }
+        out.made.push_back(one.value());
+        ++out.kind[kind_word(arc != nullptr ? core::kArcKind : core::kPolylineKind)];
+    }
+    return true;
+}
+
+/// "3 çizgi, 1 daire" — the pieces by kind, in the order the map keeps.
+std::string kinds_text(const std::map<std::string, std::size_t>& kinds)
+{
+    std::string out;
+    for (const auto& [word, count] : kinds) {
+        if (!out.empty()) out += ", ";
+        out += std::to_string(count) + " " + word;
+    }
+    return out;
+}
+
 Task<void> run_explode(Context& ctx)
 {
     std::vector<std::int64_t> chosen;
@@ -100,6 +328,7 @@ Task<void> run_explode(Context& ctx)
     const core::Document& doc = ctx.document();
     std::size_t made          = 0;
     std::size_t gone          = 0;
+    core::Json rows           = core::Json::array({});
 
     for (const std::int64_t id : chosen) {
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
@@ -114,87 +343,24 @@ Task<void> run_explode(Context& ctx)
             co_return;
         }
 
-        const core::KindId kind   = doc.entities().kind[slot];
-        const core::LayerId home  = doc.entities().layer[slot];
-        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
-
-        if (kind == core::kBlockReferenceKind) {
-            auto ref = core::block_reference_of(doc.geometry(), doc.entities().slot[slot]);
-            if (!ref) {
-                ctx.session().fail(ref.error());
-                co_return;
-            }
-            if (ref.value().block >= doc.blocks().all().size()) {
-                ctx.session().fail(core::err(core::ErrorCode::NotFound, "Blok tanımı bulunamadı."));
-                co_return;
-            }
-            const core::BlockDef* def = &doc.blocks().at(ref.value().block);
-            const core::Point2 insertion =
-                core::block_reference_insertion(doc.geometry(), doc.entities().slot[slot]);
-
-            // EVERY COPY OF THE GRID, because a grid reference is that many
-            // placements and exploding one of them would leave the rest as a
-            // reference nobody can tell from the pieces.
-            for (int row = 0; row < static_cast<int>(ref.value().rows); ++row)
-                for (int column = 0; column < static_cast<int>(ref.value().columns); ++column)
-                    for (const core::EntityKey member_key : def->members) {
-                        const core::EntityId member = doc.slot_of(member_key);
-                        if (member == core::kNoEntity) continue;
-                        const core::KindId member_kind = doc.entities().kind[member];
-                        if (member_kind != core::kPolylineKind) {
-                            ctx.session().fail(core::err(
-                                core::ErrorCode::Unsupported,
-                                std::string("Blok '") + def->name + "' içinde bir " +
-                                    kind_word(member_kind) +
-                                    " var ve bu sürüm onu yerine koyamıyor: bir daire ya da "
-                                    "yay, aynalı veya eşit olmayan bir ölçekte artık daire "
-                                    "ya da yay değildir ve çizilmiş dış çizgisini koymak "
-                                    "alanını bozar. Bileşenleri tek tek düzenlemek için "
-                                    "Faz 2'nin BLOKDÜZENLE komutu gelecek."));
-                            co_return;
-                        }
-                        const core::RingSpan member_span =
-                            doc.geometry().rings_of(doc.entities().slot[member]);
-                        for (std::uint32_t r = member_span.first;
-                             r < member_span.first + member_span.count; ++r) {
-                            std::vector<core::Point2> pts = ring_points(doc, r);
-                            for (core::Point2& p : pts)
-                                p = core::place_block_point(ref.value(), insertion, def->base, p,
-                                                            column, row);
-                            auto one = ctx.transaction().add_polyline(home, pts);
-                            if (!one) {
-                                ctx.session().fail(one.error());
-                                co_return;
-                            }
-                            ++made;
-                        }
-                    }
-        } else if (kind == core::kPolylineKind) {
-            // A RUN OF EDGES INTO SINGLE EDGES. A face's boundary becomes an
-            // open run per ring, which is what "take the face apart" means: a
-            // face is a closed thing and its pieces are not.
-            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-                std::vector<core::Point2> pts = ring_points(doc, r);
-                const bool closed             = doc.geometry().ring_role[r] != core::RingRole::Open;
-                if (closed && pts.size() >= 3) pts.push_back(pts.front());
-                for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
-                    const core::Point2 pair[2]{pts[i], pts[i + 1]};
-                    auto one = ctx.transaction().add_polyline(home, pair);
-                    if (!one) {
-                        ctx.session().fail(one.error());
-                        co_return;
-                    }
-                    ++made;
-                }
-            }
-        } else {
-            ctx.session().fail(
-                core::err(core::ErrorCode::Unsupported,
-                          std::string("Nesne ") + std::to_string(id) + " bir " + kind_word(kind) +
-                              "; PATLAT bu sürümde çizgileri, alanları ve blok referanslarını "
-                              "patlatır."));
+        const core::KindId kind = doc.entities().kind[slot];
+        Pieces pieces;
+        bool taken = false;
+        if (kind == core::kBlockReferenceKind)
+            taken = explode_reference(ctx, slot, pieces);
+        else if (kind == core::kPolylineKind)
+            taken = explode_polyline(ctx, slot, pieces);
+        else if (kind == core::kArcPolylineKind)
+            taken = explode_arc_polyline(ctx, slot, pieces);
+        else {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       std::string("Nesne ") + std::to_string(id) + " bir " + kind_word(kind) +
+                           "; PATLAT çizgileri, alanları, yaylı çoklu çizgileri ve blok "
+                           "referanslarını patlatır. Bir daire, yay ya da yazı zaten tek "
+                           "parçadır.");
             co_return;
         }
+        if (!taken) co_return;
 
         auto st = ctx.transaction().erase_entity(slot);
         if (!st) {
@@ -202,9 +368,53 @@ Task<void> run_explode(Context& ctx)
             co_return;
         }
         ++gone;
+        made += pieces.made.size();
+
+        // WHAT IT CAME APART INTO, said and reported: the pieces by kind, and
+        // for a block what the drawing gave them and what stayed behind.
+        std::string said = "Nesne " + std::to_string(id) + " (" + kind_word(kind);
+        if (!pieces.block.empty()) said += " '" + pieces.block + "'";
+        said += ") → " + (pieces.made.empty() ? std::string("parça yok") : kinds_text(pieces.kind));
+        if (pieces.copies > 1) said += "; " + std::to_string(pieces.copies) + " kopya";
+        if (pieces.onto_reference > 0)
+            said += "; " + std::to_string(pieces.onto_reference) + " parça 0 katmanından " +
+                    "referansın katmanına";
+        if (pieces.reference_look > 0)
+            said += "; " + std::to_string(pieces.reference_look) + " parça referansın görünüşünde";
+        if (pieces.hidden > 0) said += "; " + std::to_string(pieces.hidden) + " gizli parça";
+        if (pieces.values_left > 0)
+            said += "; referansın " + std::to_string(pieces.values_left) +
+                    " öznitelik değeri parçalara geçmedi";
+        ctx.echo(said + ".");
+
+        core::Json row;
+        row.set("nesne", core::Json::integer(id));
+        row.set("tur", core::Json::string(kind_word(kind)));
+        if (!pieces.block.empty()) {
+            row.set("blok", core::Json::string(pieces.block));
+            row.set("kopya", core::Json::integer(static_cast<std::int64_t>(pieces.copies)));
+            row.set("katman_devri",
+                    core::Json::integer(static_cast<std::int64_t>(pieces.onto_reference)));
+            row.set("gorunus_devri",
+                    core::Json::integer(static_cast<std::int64_t>(pieces.reference_look)));
+            row.set("gizli", core::Json::integer(static_cast<std::int64_t>(pieces.hidden)));
+            row.set("birakilan_oznitelik",
+                    core::Json::integer(static_cast<std::int64_t>(pieces.values_left)));
+        }
+        core::Json kinds = core::Json::object({});
+        for (const auto& [word, count] : pieces.kind)
+            kinds.set(word, core::Json::integer(static_cast<std::int64_t>(count)));
+        row.set("turler", std::move(kinds));
+        row.set("parcalar", keys_of(doc, pieces.made));
+        rows.push(std::move(row));
     }
 
     ctx.record("nesne", Value::ids(chosen));
+    core::Json report;
+    report.set("patlatilan", core::Json::integer(static_cast<std::int64_t>(gone)));
+    report.set("parca", core::Json::integer(static_cast<std::int64_t>(made)));
+    report.set("nesneler", std::move(rows));
+    ctx.report(std::move(report));
     ctx.echo(std::to_string(gone) + " nesne patlatıldı, " + std::to_string(made) + " parça çıktı.");
 }
 
@@ -714,8 +924,8 @@ KENTOS_COMMAND(explode)
                          .en("object")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine "
-                   "ayırır.",
+        .summary = "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve "
+                   "yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.",
         .run    = &run_explode,
         .effect = Effect::DocumentEdit,
     };

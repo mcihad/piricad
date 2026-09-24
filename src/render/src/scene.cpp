@@ -2,6 +2,7 @@
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/symbology.hpp"
 
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
@@ -481,7 +482,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         /// One caption: the baseline from `x0,y0` to `x1,y1` in document
         /// millimetres, the text-table entry at `tslot`, in `rgba`.
         const auto emit_caption = [&](std::uint32_t tslot, core::Mm x0, core::Mm y0, core::Mm x1,
-                                      core::Mm y1, std::uint32_t rgba) {
+                                      core::Mm y1, std::uint32_t rgba, core::Mm height) {
             TextItem item;
             item.rgba = rgba;
             item.x0   = view.offset_x_f(x0);
@@ -493,9 +494,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             // A height in paper units would change what the drawing SAYS when
             // the plot scale changes, and on a pafta the height of a parcel
             // number is part of the drawing (R20).
-            item.height_px =
-                static_cast<float>(static_cast<double>(texts.height(tslot)) / view.mm_per_pixel());
-            item.anchor                 = static_cast<std::uint8_t>(texts.anchor(tslot));
+            item.height_px = static_cast<float>(static_cast<double>(height) / view.mm_per_pixel());
+            item.anchor    = static_cast<std::uint8_t>(texts.anchor(tslot));
             const core::TextLines lines = texts.lines(tslot);
             item.spacing                = lines.spacing;
             item.wrap                   = lines.wrap;
@@ -515,7 +515,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             const auto ys = geometry.ring_ys(span.first);
             if (xs.size() >= 2) {
                 emit_caption(entities.slot[e], xs.front(), ys.front(), xs.back(), ys.back(),
-                             out.polylines[first].rgba);
+                             out.polylines[first].rgba, texts.height(entities.slot[e]));
                 ++out.entity_count;
                 if (entities.kind[e] == core::kPolylineKind || !curve_active) return;
             }
@@ -625,12 +625,18 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
             if (rt != core::kNoRunText && texts.has(rt)) {
                 // The run is a member caption's baseline: drawn as text, in the
-                // pass's colour, and the baseline itself is construction.
+                // pass's colour, and the baseline itself is construction. Its
+                // letters grow with the reference's scale, as much as the
+                // baseline did (TODOS C-13): a symbol inserted twice the size
+                // with its number the old size read as a different symbol.
                 const auto xs = curve.run_xs(r);
                 const auto ys = curve.run_ys(r);
                 if (xs.size() >= 2)
                     emit_caption(rt, xs.front(), ys.front(), xs.back(), ys.back(),
-                                 out.polylines[r_first].rgba);
+                                 out.polylines[r_first].rgba,
+                                 core::caption_height_along(
+                                     geometry, rt, core::Point2{xs.front(), ys.front()},
+                                     core::Point2{xs.back(), ys.back()}, texts.height(rt)));
                 continue;
             }
             emit_run_into(r_first, r_count, r);

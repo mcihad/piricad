@@ -45,6 +45,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/selection.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -5256,6 +5257,141 @@ int MainWindow::probeRealMouse()
             } else {
                 (void)std::fprintf(stdout, "[fare] BEKLEMEDE: MULTILEADER tohumu bulunamadı\n");
             }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 22. A BLOCK TAKEN APART LOOKS AS IT DID (TODOS C-13) ----
+        //
+        // A symbol with a line, a circle, an arc, a caption and a face, inserted
+        // turned, doubled and mirrored. The pointer finds a member's corner on
+        // the reference; PATLAT takes it apart from the ribbon; the picture is
+        // the same after as before, and the same corner is under the pointer.
+        {
+            fresh({QStringLiteral("ÇOKLUÇİZGİ 0,0 3,0 3,1"),
+                   QStringLiteral("DAİRE merkez=1,3 cevre=2,3"),
+                   QStringLiteral("YAY merkez=5,4 baslangic=6,4 bitis=5,5"),
+                   QStringLiteral("METİN noktalar=0,6 yazi=K-12 yukseklik=600"),
+                   QStringLiteral("ALAN 4,0 6,0 6,2 4,2")});
+            const std::int64_t opening = first_key();
+            QString members;
+            for (std::int64_t k = opening; k < opening + 5; ++k)
+                members += QStringLiteral(" nesneler=%1").arg(k);
+            runScriptLine(QStringLiteral("BLOK ad=ROGAR taban=0,0") + members);
+            endCommand();
+            runScriptLine(
+                QStringLiteral("BLOKEKLE ad=ROGAR nokta=16,-4 olcek=-2 olcek_y=2 aci=30"));
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+
+            const core::Document& doc = controller_->document();
+            std::int64_t reference    = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind &&
+                    (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                    reference = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+            const core::EntityId ref_slot =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(reference)));
+            core::Point2 corner{};
+            if (ref_slot != core::kNoEntity) {
+                const std::uint32_t gs = doc.entities().slot[ref_slot];
+                const auto placed      = core::block_reference_of(doc.geometry(), gs);
+                if (placed)
+                    corner = core::place_block_point(
+                        placed.value(), core::block_reference_insertion(doc.geometry(), gs),
+                        doc.blocks().at(placed.value().block).base, core::Point2{3'000, 1'000}, 0,
+                        0);
+            }
+            // BOTH PICTURES WITH THE POINTER IN ONE EMPTY PLACE: the crosshair,
+            // the snap marker and the coordinate readout follow the pointer,
+            // and they are not the drawing being compared.
+            const QPointF resting(canvas_->width() * 0.15, canvas_->height() * 0.2);
+            onCanvas(QEvent::MouseMove, resting, Qt::NoButton);
+            const QImage whole = canvas_->grabCanvas();
+            shoot("blok-once");
+
+            // THE POINTER ON A MEMBER'S CORNER, a few pixels off it, while a
+            // point is asked: the marker sits on the corner as drawn.
+            const auto marker_at = [this, &onCanvas, &screen](core::Point2 at) {
+                runScriptLine(QStringLiteral("ÇİZGİ"));
+                QCoreApplication::processEvents();
+                const QPointF near = screen(at) + QPointF(4.0, -3.0);
+                onCanvas(QEvent::MouseMove, near, Qt::NoButton);
+                const core::SnapResult* shown = canvas_->snapPreviewForProbe();
+                const core::SnapResult got    = shown != nullptr ? *shown : core::SnapResult{};
+                return got;
+            };
+            const core::SnapResult on_reference = marker_at(corner);
+            check(on_reference.mode == core::SnapEndpoint && on_reference.point == corner &&
+                      on_reference.entity == ref_slot,
+                  QStringLiteral("dönük, ölçekli ve aynalı bloğun üye köşesi UÇ olarak yakalandı "
+                                 "(%1, %2)")
+                      .arg(static_cast<double>(on_reference.point.x) / 1000.0, 0, 'f', 3)
+                      .arg(static_cast<double>(on_reference.point.y) / 1000.0, 0, 'f', 3));
+            shoot("blok-uc-yakalama");
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+
+            // TAKEN APART FROM THE RIBBON, the reference selected first.
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(reference));
+            QCoreApplication::processEvents();
+            actExplode_->trigger();
+            QCoreApplication::processEvents();
+            endCommand();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            std::size_t circles = 0;
+            std::size_t arcs    = 0;
+            std::size_t words   = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+                if (!doc.alive(e) || (doc.entities().flags[e] & core::FlagInBlock) != 0) continue;
+                if (doc.entities().kind[e] == core::kCircleKind) ++circles;
+                if (doc.entities().kind[e] == core::kArcKind) ++arcs;
+                if (doc.texts().has(doc.entities().slot[e]) &&
+                    doc.texts().height(doc.entities().slot[e]) == 1'200)
+                    ++words;
+            }
+            check(!doc.alive(ref_slot) && circles == 1 && arcs == 1 && words == 1,
+                  QStringLiteral("PATLAT bloğu kendi türünde parçalara ayırdı (daire %1, yay %2, "
+                                 "iki kat yazı %3)")
+                      .arg(circles)
+                      .arg(arcs)
+                      .arg(words));
+            onCanvas(QEvent::MouseMove, resting, Qt::NoButton);
+            const QImage apart = canvas_->grabCanvas();
+            shoot("blok-sonra");
+            if (!whole.isNull() && whole.size() == apart.size()) {
+                // THE SAME PICTURE: pixels that changed by more than a trace of
+                // anti-aliasing, as a share of the canvas.
+                qint64 changed = 0;
+                for (int y = 0; y < whole.height(); ++y)
+                    for (int x = 0; x < whole.width(); ++x) {
+                        const QRgb was = whole.pixel(x, y);
+                        const QRgb now = apart.pixel(x, y);
+                        if (std::abs(qRed(was) - qRed(now)) + std::abs(qGreen(was) - qGreen(now)) +
+                                std::abs(qBlue(was) - qBlue(now)) >
+                            96)
+                            ++changed;
+                    }
+                const double share = static_cast<double>(changed) /
+                                     static_cast<double>(whole.width() * whole.height());
+                check(share < 0.002, QStringLiteral("patlatmadan önceki ve sonraki resim aynı "
+                                                    "(değişen piksel %1, %2‰)")
+                                         .arg(changed)
+                                         .arg(share * 1000.0, 0, 'f', 2));
+            } else {
+                (void)std::fprintf(stdout,
+                                   "[fare] BEKLEMEDE: tuval çizmiyor; resim karşılaştırması "
+                                   "gerçek pencerede\n");
+            }
+            const core::SnapResult on_piece = marker_at(corner);
+            check(on_piece.mode == core::SnapEndpoint && on_piece.point == corner &&
+                      on_piece.entity != ref_slot,
+                  QStringLiteral("patlatıldıktan sonra aynı köşe, bu kez parçada yakalandı"));
+            shoot("blok-sonra-uc-yakalama");
+            controller_->cancelInteractive();
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }

@@ -18,6 +18,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
@@ -89,5 +90,20 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
 /// have — what a creator stores in `BlockReference::bounds` before `add_kind`.
 /// Empty for a definition with no drawable member.
 Box2 block_reference_bounds(const Document& doc, Point2 insertion, const BlockReference& ref);
+
+/// Whether a member's style takes anything from the reference that places it
+/// — a colour, a width, a dash or a fill written "ByBlock". Such a member is
+/// drawn in the reference's look, and PATLAT gives its piece that look.
+bool style_by_block(const Document& doc, StyleId style);
+
+/// The height a member caption is drawn at once its baseline — stored in `slot`
+/// under letters `height` tall — has been placed from `a` to `b`: as much bigger
+/// as the baseline got, so the letters keep their proportion to the line they
+/// stand on. Asked of the two ends alone, so it holds through any depth of
+/// nesting. The picture and PATLAT both answer with it, which is what keeps a
+/// caption the same size before and after the reference is taken apart (TODOS
+/// C-13). `height` for a baseline of no length; never below 1 mm.
+Mm caption_height_along(const RingGeometry& geom, std::uint32_t slot, Point2 a, Point2 b,
+                        Mm height);
 
 } // namespace kentos::core

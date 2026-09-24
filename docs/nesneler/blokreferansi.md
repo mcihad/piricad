@@ -22,12 +22,28 @@ dönme çeyrek turlarda tam. Üye kendi katmanını, rengini ve yazısını koru
 katmanındaki üye referansın katmanına, rengi **bloktan** (ByBlock) olan üye referansın
 rengine uyar. İç içe bloklar 32 kata kadar izlenir.
 
+Bir üye yazısının harfleri, taban çizgisi ne kadar uzadıysa o kadar büyür: 2 kat
+ölçekli bir referansta 0,5 m'lik yazı 1 m çizilir. x ve y ölçeği farklıysa harfler
+taban çizgisinin uzadığı kadar büyür; harfin eni ayrıca esnetilmez.
+
 ## Yakalama noktaları
+
+Yakalama, referansın **çizdiği** şeyi tutar; her nokta üyeyi çizen yerleşimden geçer, bu
+yüzden döndürülmüş, aynalanmış ve iç içe bir blokta da ekranda gördüğünüz köşeye
+oturur — ve referans [patlatıldığında](../komutlar/explode.md) aynı nokta parçada durur.
 
 | Mod | Nereye |
 |---|---|
-| Ekleme noktası | Referansın yerleştirildiği noktaya |
-| Uç nokta, orta, en yakın, kesişim | Üyelerin çizilen kenarlarına |
+| Ekleme noktası | Referansın yerleştirildiği noktaya; iç içe bloğun ekleme noktasına da |
+| Uç nokta | Üye çizgilerin köşelerine, yayların ve elipslerin uçlarına |
+| Orta nokta | Üye çizgilerin kenar ortalarına, yayların ortasına |
+| Merkez | Üye dairelerin, yayların ve elipslerin merkezine |
+| Çeyrek | Üye dairelerin çizimdeki kuzey, doğu, güney, batı noktalarına (x ve y ölçeği eşitse) |
+| Ağırlık merkezi | Üye alanların ağırlık merkezine |
+| Düğüm | Üye noktalara |
+| En yakın, dik, kesişim | Üyelerin çizilen kenarlarına |
+
+Dizili bir referansta her kopyanın noktaları ayrı ayrı sunulur.
 
 ## Ölçüler
 
@@ -55,6 +71,8 @@ BLOKEKLE ad=BACA nokta=20,0 olcek=2 aci=90
 
 ## Sınırlar
 
-Tanımın üyeleri yerinde düzenlenemez; `BLOKDÜZENLE` Faz 2'nin sonraki işidir. Ölçekli
-bir referansta üye yazısının yüksekliği ölçeklenmez. Blok tanımı silinemez (ekle-yalnız
-tablo); kullanılmayan tanım dosyada kalır.
+Tanımın üyeleri yerinde düzenlenemez; `BLOKDÜZENLE` Faz 2'nin sonraki işidir. Bir
+üyeyi tek başına düzenlemek için referansı [PATLAT](../komutlar/explode.md) ile
+açın: her üye kendi türünde, referansın çizdiği yerde çıkar. Blok tanımı silinemez
+(ekle-yalnız tablo); kullanılmayan tanım dosyada kalır. Aynalanmış bir referanstaki
+üye yazısı, taban çizgisi ters döndüğü için baş aşağı okunur; ekran harfi aynalamaz.

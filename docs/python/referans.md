@@ -101,7 +101,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.break`](#cadbreak) | `core.break` | `KIR` | Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler. |
 | [`cad.join`](#cadjoin) | `core.join` | `UÇUCA` | Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir. |
 | [`cad.lengthen`](#cadlengthen) | `core.lengthen` | `UZUNLUK` | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
-| [`cad.explode`](#cadexplode) | `core.explode` | `PATLAT` | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
+| [`cad.explode`](#cadexplode) | `core.explode` | `PATLAT` | Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır. |
 | [`cad.align`](#cadalign) | `core.align` | `HİZALA` | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
 | [`cad.divide`](#caddivide) | `core.divide` | `BÖLÜMLE` | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir. |
 | [`cad.pedit`](#cadpedit) | `core.pedit` | `ÇİZGİDÜZENLE` | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
@@ -500,7 +500,7 @@ cad.lengthen(
 
 ### `cad.explode`
 
-Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
 
 Komut: `core.explode` — `PATLAT`
 

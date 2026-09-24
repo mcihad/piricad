@@ -79,8 +79,50 @@ Point2 transformed(const Xform& x, Point2 p)
         const auto dy = static_cast<double>(p.y - x.base.y);
         return Point2{x.base.x + mm_round(dx * x.factor), x.base.y + mm_round(dy * x.factor_y)};
     }
+    case Xform::Kind::Place: {
+        // THE REFERENCE'S OWN ARITHMETIC, not a second spelling of it: the grid
+        // step is one copy of a reference spaced by that step, so a member taken
+        // out by PATLAT lands where `expand_block_definition` drew it.
+        BlockReference ref;
+        ref.sx             = x.place_sx;
+        ref.sy             = x.place_sy;
+        ref.rotation_udeg  = x.place_udeg;
+        ref.column_spacing = x.dx;
+        ref.row_spacing    = x.dy;
+        return place_block_point(ref, x.axis_b, x.base, p, 1, 1);
+    }
     }
     return p;
+}
+
+Xform block_placement(const BlockReference& ref, Point2 insertion, Point2 base, int column,
+                      int row) noexcept
+{
+    Xform x;
+    x.kind       = Xform::Kind::Place;
+    x.base       = base;
+    x.axis_b     = insertion;
+    x.dx         = static_cast<Mm>(column) * ref.column_spacing;
+    x.dy         = static_cast<Mm>(row) * ref.row_spacing;
+    x.place_sx   = ref.sx;
+    x.place_sy   = ref.sy;
+    x.place_udeg = ref.rotation_udeg;
+    return x;
+}
+
+bool place_uniform(const Xform& x) noexcept
+{
+    if (x.kind != Xform::Kind::Place) return false;
+    const auto mag = [](std::int64_t v) { return static_cast<Int128>(v < 0 ? -v : v); };
+    return mag(x.place_sx.num) * static_cast<Int128>(x.place_sy.den) ==
+           mag(x.place_sy.num) * static_cast<Int128>(x.place_sx.den);
+}
+
+Mm place_length(const Xform& x, Mm v) noexcept
+{
+    if (!place_uniform(x)) return v;
+    const std::int64_t num = x.place_sx.num < 0 ? -x.place_sx.num : x.place_sx.num;
+    return mul_div_round(v, num, x.place_sx.den);
 }
 
 std::vector<RingGeometry::RingInput> TranslatedRecord::inputs() const
@@ -144,7 +186,8 @@ Result<TranslatedRecord> translated_record(const Document& doc, EntityId e, Mm d
 bool xform_reverses(const Xform& x) noexcept
 {
     return x.kind == Xform::Kind::Mirror || (x.kind == Xform::Kind::Align && x.flip) ||
-           (x.kind == Xform::Kind::Stretch && (x.factor < 0.0) != (x.factor_y < 0.0));
+           (x.kind == Xform::Kind::Stretch && (x.factor < 0.0) != (x.factor_y < 0.0)) ||
+           (x.kind == Xform::Kind::Place && (x.place_sx.num < 0) != (x.place_sy.num < 0));
 }
 
 namespace {
@@ -171,7 +214,7 @@ EllipseImage transformed_ellipse(const Xform& x, const EllipseImage& e)
     auto [bx, by]      = metres_of(transformed(x, e.minor));
     std::int64_t shift = 0; ///< how far the parameter moved, micro-degrees
 
-    if (x.kind == Xform::Kind::Stretch) {
+    if (x.kind == Xform::Kind::Stretch || (x.kind == Xform::Kind::Place && !place_uniform(x))) {
         // CONJUGATE, NOT PERPENDICULAR: the principal axes are the conjugate
         // pair turned by φ, where tan 2φ = 2 a·b / (|a|² − |b|²). `atan2_udeg`
         // and `sin_cos_udeg`, never libm (§7.3), on integers in micro-metres².

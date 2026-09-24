@@ -15,6 +15,7 @@
 // of which IEEE-754 pins exactly.
 #pragma once
 
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
@@ -89,25 +90,52 @@ struct Xform
     /// Which transform this is. `Align` is the one HİZALA applies: turned and
     /// scaled about `base`, then carried so `base` lands on `axis_b` — and, with
     /// `flip`, reflected first. `Stretch` is a scale about `base` by `factor`
-    /// across and `factor_y` up: ÖLÇEKLE with two factors (TODOS C-08).
-    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror, Align, Stretch };
+    /// across and `factor_y` up: ÖLÇEKLE with two factors (TODOS C-08). `Place`
+    /// is what a block reference does to its definition's members, one copy of
+    /// its grid: scaled about `base` by the exact ratios `place_sx`/`place_sy`
+    /// (negative mirrors), stepped by (`dx`, `dy`), turned by `place_udeg` and
+    /// set down on `axis_b` — `place_block_point`'s arithmetic, so a member
+    /// PATLAT takes out lands on the millimetre the reference drew it on (TODOS
+    /// C-13). Made by `block_placement`.
+    enum class Kind : std::uint8_t { Translate, Rotate, Scale, Mirror, Align, Stretch, Place };
 
     Kind kind{Kind::Translate}; ///< which transform
-    Mm dx{0};                   ///< Translate: east component
-    Mm dy{0};                   ///< Translate: north component
-    Point2
-        base{}; ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the source
-    Point2 axis_b{};      ///< Mirror: the axis's second point · Align: where the source goes
-    SinCos turn{};        ///< Rotate, Align: the turn
-    double factor{1.0};   ///< Scale, Align: the multiplier · Stretch: the one across (east)
-    double factor_y{1.0}; ///< Stretch: the multiplier up (north)
-    bool flip{false};     ///< Align: reflected in the line through `base` along east, first
+    Mm dx{0};                   ///< Translate: east component · Place: the grid step across
+    Mm dy{0};                   ///< Translate: north component · Place: the grid step up
+    Point2 base{};   ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the
+                     ///< source · Place: the definition's base point
+    Point2 axis_b{}; ///< Mirror: the axis's second point · Align: where the source goes · Place:
+                     ///< the insertion point
+    SinCos turn{};   ///< Rotate, Align: the turn
+    double factor{1.0};         ///< Scale, Align: the multiplier · Stretch: the one across (east)
+    double factor_y{1.0};       ///< Stretch: the multiplier up (north)
+    bool flip{false};           ///< Align: reflected in the line through `base` along east, first
+    Ratio place_sx{1, 1};       ///< Place: the scale along the definition's x; negative mirrors
+    Ratio place_sy{1, 1};       ///< Place: the scale along its y; negative mirrors
+    std::int64_t place_udeg{0}; ///< Place: the turn, micro-degrees counter-clockwise
 
     friend bool operator==(const Xform&, const Xform&) = default;
 };
 
 /// `p` under `x`.
 Point2 transformed(const Xform& x, Point2 p);
+
+/// The transform that places copy (`column`, `row`) of `ref`'s grid, the
+/// reference standing at `insertion` over a definition whose base is `base`:
+/// what `place_block_point` does to one point, as an `Xform` every kind knows
+/// how to follow.
+Xform block_placement(const BlockReference& ref, Point2 insertion, Point2 base, int column,
+                      int row) noexcept;
+
+/// Whether a `Place` keeps shapes — the same magnitude across and up, so a
+/// circle stays a circle and a caption its proportions. Every other kind
+/// answers for itself (`Stretch` by its two factors).
+bool place_uniform(const Xform& x) noexcept;
+
+/// `v` scaled by a uniform `Place`'s magnitude, exactly: `mul_div_round` over
+/// the ratio, so a radius, a text height and a spacing agree with the vertices
+/// placed beside them. `v` unchanged for any other transform.
+Mm place_length(const Xform& x, Mm v) noexcept;
 
 /// How the cursor completes a ghost: which transform is being previewed.
 enum class GhostKind : std::uint8_t {

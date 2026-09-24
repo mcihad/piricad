@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -85,6 +86,9 @@ PointOptions ghost(core::GhostKind kind, core::Point2 base, const std::vector<st
 /// every time the object was moved.
 core::Mm apply_radius(const Xform& x, core::Mm r)
 {
+    // A block's placement scales by an exact ratio, the one its vertices were
+    // placed by, so a member circle's rim meets the lines drawn beside it.
+    if (x.kind == Xform::Kind::Place) return core::place_length(x, r);
     if (x.kind != Xform::Kind::Scale && x.kind != Xform::Kind::Align) return r;
     return core::mm_round(static_cast<double>(r) * x.factor);
 }
@@ -131,6 +135,28 @@ std::int64_t apply_angle(const Xform& x, std::int64_t udeg)
                                static_cast<std::int64_t>(std::llround(d.cos * x.factor * 1e9)));
         break;
     }
+    case Xform::Kind::Place: {
+        // A BLOCK'S PLACEMENT: the direction through the signed scales, then
+        // the turn. Uniform, it is exact — a mirror across is α → 180° − α, a
+        // mirror up α → −α, both at once the half turn — and only a scale that
+        // differs across and up needs the trigonometry a stretch does.
+        const bool across       = x.place_sx.num < 0;
+        const bool up           = x.place_sy.num < 0;
+        const std::int64_t half = core::kUDegFullCircle / 2;
+        if (core::place_uniform(x)) {
+            out = across == up ? udeg + (across ? half : 0) : (across ? half : 0) - udeg;
+        } else {
+            const core::SinCos d = core::sin_cos_udeg(udeg);
+            const double sx =
+                static_cast<double>(x.place_sx.num) / static_cast<double>(x.place_sx.den);
+            const double sy =
+                static_cast<double>(x.place_sy.num) / static_cast<double>(x.place_sy.den);
+            out = core::atan2_udeg(static_cast<std::int64_t>(std::llround(d.sin * sy * 1e9)),
+                                   static_cast<std::int64_t>(std::llround(d.cos * sx * 1e9)));
+        }
+        out += x.place_udeg;
+        break;
+    }
     default: break;
     }
     out %= core::kUDegFullCircle;
@@ -149,15 +175,58 @@ core::Mm apply_length(const Xform& x, core::Mm v)
 /// letter has one height and no width to stretch (TODOS C-08).
 core::Mm apply_height(const Xform& x, core::Mm h)
 {
+    if (x.kind == Xform::Kind::Place) return std::max<core::Mm>(1, core::place_length(x, h));
     const double f = length_factor(x);
     if (f == 1.0) return h;
     return std::max<core::Mm>(1, core::mm_round(static_cast<double>(h) * f));
 }
 
+/// `a · b`, exact and reduced — or nothing when the exact terms would not fit
+/// in 64 bits, which a caller answers with the six-decimal product.
+std::optional<core::Ratio> ratio_times(core::Ratio a, core::Ratio b)
+{
+    core::Int128 num = static_cast<core::Int128>(a.num) * static_cast<core::Int128>(b.num);
+    core::Int128 den = static_cast<core::Int128>(a.den) * static_cast<core::Int128>(b.den);
+    if (den < 0) {
+        num = -num;
+        den = -den;
+    }
+    // Euclid over the 128-bit terms: `std::gcd` is not promised for them.
+    core::Int128 p = num < 0 ? -num : num;
+    core::Int128 q = den;
+    while (q != 0) {
+        const core::Int128 t = p % q;
+        p                    = q;
+        q                    = t;
+    }
+    if (p > 1) {
+        num /= p;
+        den /= p;
+    }
+    const auto limit = static_cast<core::Int128>(std::numeric_limits<std::int64_t>::max());
+    if (den == 0 || den > limit || num > limit || -num > limit) return std::nullopt;
+    return core::Ratio{static_cast<std::int64_t>(num), static_cast<std::int64_t>(den)};
+}
+
+/// The magnitude of a ratio: its sign dropped, which lives in the numerator.
+core::Ratio magnitude(core::Ratio r)
+{
+    return core::Ratio{r.num < 0 ? -r.num : r.num, r.den};
+}
+
 /// A rational scale under the transform: multiplied by the factor, to six
-/// decimals, reduced.
+/// decimals, reduced — exactly, by a block's own ratio, under its placement.
 core::Ratio apply_ratio(const Xform& x, core::Ratio r)
 {
+    if (x.kind == Xform::Kind::Place) {
+        if (!core::place_uniform(x)) return r;
+        if (const auto exact = ratio_times(r, magnitude(x.place_sx))) return *exact;
+        Xform approx;
+        approx.kind = Xform::Kind::Scale;
+        approx.factor =
+            static_cast<double>(magnitude(x.place_sx).num) / static_cast<double>(x.place_sx.den);
+        return apply_ratio(approx, r);
+    }
     if (x.kind != Xform::Kind::Scale && x.kind != Xform::Kind::Align) return r;
     const double v       = static_cast<double>(r.num) / static_cast<double>(r.den) * x.factor;
     const auto num       = static_cast<std::int64_t>(std::llround(v * 1000000.0));
@@ -214,6 +283,13 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
     core::Mm relaid_height = 0;
 
     if (kind == core::kArcPolylineKind) {
+        if (x.kind == Xform::Kind::Place && !core::place_uniform(x)) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Blokta yaylı bir çoklu çizgi var ve referans eşit olmayan bir ölçekle "
+                       "konmuş: bu ölçek yaylarını eliptik yapar, yaylı çoklu çizgi ise yalnız "
+                       "dairesel yay taşır. Referansı önce eşit ölçeğe getirin (ÖLÇEKLE).");
+            return false;
+        }
         if (x.kind == Xform::Kind::Stretch) {
             ctx.refuse(core::ErrorCode::Unsupported,
                        "Nesne " + std::to_string(core::raw(doc.key_of(slot))) +
@@ -284,7 +360,41 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
             return false;
         }
         core::BlockReference ref = def.value();
-        if (x.kind == Xform::Kind::Stretch) {
+        // Whether the reflection is already in the signed scales, so the
+        // general rule below must not add it a second time.
+        bool signed_scales = false;
+        if (x.kind == Xform::Kind::Place && !core::place_uniform(x)) {
+            // A BLOCK INSIDE A BLOCK, taken out by PATLAT from a placement that
+            // differs across and up. The outer scales commute with the inner
+            // turn only at a quarter — there they trade places — and any
+            // other turn would lean the inner block, which it cannot hold.
+            const std::int64_t quarter = core::kUDegFullCircle / 4;
+            std::int64_t turned        = ref.rotation_udeg % core::kUDegFullCircle;
+            if (turned < 0) turned += core::kUDegFullCircle;
+            if (turned % quarter != 0) {
+                ctx.refuse(core::ErrorCode::Unsupported,
+                           "Blokta döndürülmüş bir iç blok var ve referans eşit olmayan bir "
+                           "ölçekle konmuş: iç blok bu ölçekte eğilir ve blok referansı "
+                           "eğikliği taşıyamaz. Referansı önce eşit ölçeğe getirin (ÖLÇEKLE).");
+                return false;
+            }
+            const bool sideways     = (turned / quarter) % 2 != 0;
+            const core::Ratio along = sideways ? x.place_sy : x.place_sx;
+            const core::Ratio up    = sideways ? x.place_sx : x.place_sy;
+            const auto sx           = ratio_times(ref.sx, along);
+            const auto sy           = ratio_times(ref.sy, up);
+            if (!sx || !sy) {
+                ctx.refuse(core::ErrorCode::Unsupported,
+                           "Blokta bir iç blok var ve iki ölçeğin çarpımı tam olarak yazılamıyor.");
+                return false;
+            }
+            ref.sx             = *sx;
+            ref.sy             = *sy;
+            ref.column_spacing = core::mul_div_round(ref.column_spacing, along.num, along.den);
+            ref.row_spacing    = core::mul_div_round(ref.row_spacing, up.num, up.den);
+            ref.rotation_udeg += x.place_udeg;
+            signed_scales = true;
+        } else if (x.kind == Xform::Kind::Stretch) {
             // A STRETCH A BLOCK CAN HOLD: across and up its own axes, which is
             // only when it stands square — turned a quarter, the two factors
             // trade places. Turned any other way it would lean, and a
@@ -319,8 +429,16 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
             ref.column_spacing = apply_length(x, ref.column_spacing);
             ref.row_spacing    = apply_length(x, ref.row_spacing);
         }
-        // A reflection of R(ρ)·S is R(2θ−ρ)·S with the y scale negated.
-        if (reverses(x)) ref.sy.num = -ref.sy.num;
+        // A reflection of R(ρ)·S is R(2θ−ρ)·S with the y scale negated — and
+        // with the row step negated too, because the grid is stepped in the
+        // same frame: a two-row reference mirrored in a horizontal line had
+        // its second row drawn on the side it came from.
+        if (reverses(x) && !signed_scales) {
+            ref.sy.num      = -ref.sy.num;
+            ref.row_spacing = -ref.row_spacing;
+        }
+        ref.rotation_udeg %= core::kUDegFullCircle;
+        if (ref.rotation_udeg < 0) ref.rotation_udeg += core::kUDegFullCircle;
         const core::Point2 at = rings.empty() || rings[0].empty() ? core::Point2{} : rings[0][0];
         ref.bounds            = core::block_reference_bounds(doc, at, ref);
         payload               = core::encode_block_reference(ref);
@@ -367,7 +485,8 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
                     core::dimension_caption_baseline(d, layout, relaid_text, height, rings[0][0]);
                 rings[0] = {base[0], base[1]};
             } else {
-                if (x.kind == Xform::Kind::Stretch)
+                if (x.kind == Xform::Kind::Stretch ||
+                    (x.kind == Xform::Kind::Place && !core::place_uniform(x)))
                     d.measurement = core::dimension_measure(d.type, rings[1], d.rotation_udeg);
                 relaid_text = core::dimension_text(d, unit);
                 if (rings[0].size() >= 2) {
@@ -441,7 +560,8 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
         if (!st) ctx.refuse(st.error());
         return static_cast<bool>(st);
     };
-    const bool uneven = x.kind == Xform::Kind::Stretch && x.factor != x.factor_y;
+    const bool uneven = (x.kind == Xform::Kind::Stretch && x.factor != x.factor_y) ||
+                        (x.kind == Xform::Kind::Place && !core::place_uniform(x));
     if (kind == core::kEllipseKind) {
         core::EllipseImage e{.centre = core::ellipse_centre_of(g, gslot),
                              .major  = core::ellipse_major_of(g, gslot),
@@ -547,8 +667,15 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
     // caption drawn wrong — and after a reflection it is turned about its
     // anchor to read left to right: the renderer never mirrors a glyph, so a
     // baseline reflected to run leftward read upside down.
+    //
+    // A BLOCK'S PLACEMENT IS THE EXCEPTION: PATLAT promises the pieces look as
+    // the reference drew them, and the reference draws a member caption along
+    // its placed baseline, whichever way that runs — so it stays so, and its
+    // letters are as much bigger as that baseline got, which is the rule the
+    // picture follows too (`render/scene.cpp`).
     const bool caption = doc.texts().has(gslot) && rings.size() == 1 && rings[0].size() == 2;
-    if (caption && reverses(x)) {
+    const bool placed  = x.kind == Xform::Kind::Place;
+    if (caption && reverses(x) && !placed) {
         const core::Point2 a = rings[0][0];
         const core::Point2 b = rings[0][1];
         if (b.x < a.x || (b.x == a.x && b.y < a.y)) {
@@ -560,15 +687,17 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
     const std::string words   = caption ? std::string(doc.texts().text(gslot)) : std::string();
     const core::TextAnchor anchor =
         caption ? doc.texts().anchor(gslot) : core::TextAnchor::BaselineLeft;
+    core::Mm height = caption ? apply_height(x, was_height) : 0;
+    if (caption && placed && !core::place_uniform(x))
+        height = core::caption_height_along(g, gslot, rings[0][0], rings[0][1], was_height);
 
     auto st = ctx.transaction().set_geometry(slot, input);
     if (!st) {
         ctx.refuse(st.error());
         return false;
     }
-    if (caption && apply_height(x, was_height) != was_height) {
-        if (auto t = ctx.transaction().set_text(slot, words, apply_height(x, was_height), anchor);
-            !t) {
+    if (caption && height != was_height) {
+        if (auto t = ctx.transaction().set_text(slot, words, height, anchor); !t) {
             ctx.refuse(t.error());
             return false;
         }
@@ -591,13 +720,14 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
 /// the circle and the arc, so a copied spline became the polygon of its control
 /// points, an ellipse three stray points and a block reference, a dimension or
 /// a hatch lost everything that made it one (TODOS C-08).
-core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const Xform& x)
+core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const Xform& x,
+                                       core::LayerId onto = core::kNoLayer)
 {
     const core::Document& doc   = ctx.document();
     const core::RingGeometry& g = doc.geometry();
     const std::uint32_t gslot   = doc.entities().slot[slot];
     const core::KindId kind     = doc.entities().kind[slot];
-    const core::LayerId layer   = doc.entities().layer[slot];
+    const core::LayerId layer   = onto != core::kNoLayer ? onto : doc.entities().layer[slot];
 
     std::vector<std::vector<core::Point2>> rings;
     std::vector<core::RingGeometry::RingInput> input;
@@ -638,10 +768,11 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
         if (!st) return st.error();
     }
 
-    // THEN THE TRANSFORM, by the one function every verb uses; it has refused
-    // with its reason when it returns false.
-    if (!transform_one(ctx, fresh, x))
-        return core::err(core::ErrorCode::InvalidArgument, "Kopya dönüştürülemedi.");
+    // THEN THE TRANSFORM, by the one function every verb uses. It has refused
+    // with its reason when it returns false, and that reason is what goes back
+    // — a caller that refused again with a generic "could not transform" wrote
+    // over the one sentence that said why.
+    if (!transform_one(ctx, fresh, x)) return ctx.session().error();
     return made;
 }
 
@@ -1258,9 +1389,10 @@ bool transform_entity(Context& ctx, core::EntityId slot, const core::Xform& x)
     return transform_one(ctx, slot, x);
 }
 
-core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, const core::Xform& x)
+core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, const core::Xform& x,
+                                          core::LayerId onto)
 {
-    return clone_one(ctx, slot, x);
+    return clone_one(ctx, slot, x, onto);
 }
 
 KENTOS_COMMAND(move)

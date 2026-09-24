@@ -2012,6 +2012,21 @@ TEST_CASE("PROOF: PATLAT gui, komut satırı ve betikten aynı belgeyi ve aynı 
                 .typed    = "PATLAT nesne=1",
                 .scripted = R"({"ad":"PATLAT","komutlar":[{"cmd":"core.explode","args":{
                     "nesne":[1]}}]})"});
+
+    // A BLOCK TAKEN APART (TODOS C-13): a circle and a caption come out in
+    // their own kinds, turned, doubled and mirrored as the reference drew
+    // them, on every road alike. Key 1 and 2 go into the block, 3 and 4 are
+    // its members, 5 the reference BLOK leaves and 6 the one inserted.
+    prove_verb({.name  = "PATLAT",
+                .id    = "core.explode",
+                .setup = {"DAİRE merkez=1,1 cevre=2,1", "METİN noktalar=0,3 yazi=K yukseklik=400",
+                          "BLOK ad=B taban=0,0 nesneler=1 nesneler=2",
+                          "BLOKEKLE ad=B nokta=40,10 olcek=-2 olcek_y=2 aci=30"},
+                .objects  = {6},
+                .answers  = {},
+                .typed    = "PATLAT nesne=6",
+                .scripted = R"({"ad":"PATLAT","komutlar":[{"cmd":"core.explode","args":{
+                    "nesne":[6]}}]})"});
 }
 
 TEST_CASE("PROOF: HİZALA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")

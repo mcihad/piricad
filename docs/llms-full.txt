@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 112 (99 tanesi onay ister)
-- Katalog parmak izi: `15176429988968804855`
+- Katalog parmak izi: `12240169605656833979`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -647,7 +647,7 @@ Onay ister.
 
 ### `core_explode` — Patlat
 
-Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
 Komut: PATLAT (EXPLODE, PTL)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
