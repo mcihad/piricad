@@ -141,6 +141,7 @@ std::uint64_t Document::content_hash() const
     h = foreign_.fold(h);
     h = blocks_.fold(h);
     h = attachments_.fold(h);
+    h = dim_links_.fold(h);
 
     // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
     // deliverable, even when every parcel in it is identical. Folding an EMPTY
@@ -1289,6 +1290,48 @@ Status Document::set_attachment(EntityId e, const Attachment* a, Op& undo_out)
     return ok();
 }
 
+Status Document::set_dimension_links(EntityId dim, std::span<const DimLink> links, Op& undo_out)
+{
+    if (dim >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(dim));
+    if (!entities_.alive(dim) || entities_.kind[dim] != kDimensionKind)
+        return err(ErrorCode::InvalidArgument,
+                   "Yalnız canlı bir ölçü bir nesneye bağlanabilir: " + std::to_string(dim));
+    if (auto st = editable(dim); !st) return st;
+    const RingSpan span        = geometry_.rings_of(entities_.slot[dim]);
+    const std::uint32_t points = span.count >= 2 ? geometry_.ring_count[span.first + 1] : 0;
+    for (const DimLink& l : links) {
+        if (l.point >= points)
+            return err(ErrorCode::InvalidArgument,
+                       "Ölçünün " + std::to_string(l.point + 1) + ". tanım noktası yok.");
+        if (l.broken) continue;
+        const EntityId src = slot_of(l.source);
+        if (src == kNoEntity || !entities_.alive(src))
+            return err(ErrorCode::NotFound, "Ölçünün bağlanacağı nesne bulunamadı veya silinmiş: " +
+                                                std::to_string(raw(l.source)));
+        if (src == dim) return err(ErrorCode::InvalidArgument, "Bir ölçü kendisine bağlanamaz.");
+    }
+    return restore_dimension_links(dim, std::vector<DimLink>(links.begin(), links.end()), undo_out);
+}
+
+Status Document::restore_dimension_links(EntityId dim, std::vector<DimLink> links, Op& undo_out)
+{
+    if (dim >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(dim));
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetDimensionLinks;
+    undo_out.entity = dim;
+    if (const std::vector<DimLink>* was = dim_links_.get(dim); was != nullptr) {
+        undo_out.bytes_arg = encode_dim_links(*was);
+    } else if (links.empty()) {
+        undo_out = Op{}; // linked to nothing, links to nothing: no change, no inverse
+        return ok();
+    }
+    dim_links_.set(dim, std::move(links));
+    ++revision_;
+    return ok();
+}
+
 void Document::refresh_box(EntityId e)
 {
     if (e >= entities_.size()) return;
@@ -1486,6 +1529,11 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::DetachForeign: return detach_foreign(op.entity, op.str_arg, inverse);
     case Op::Kind::SetAttachment:
         return set_attachment(op.entity, op.has_attach ? &op.attach_arg : nullptr, inverse);
+    case Op::Kind::SetDimensionLinks: {
+        auto links = decode_dim_links(op.bytes_arg);
+        if (!links) return links.error();
+        return restore_dimension_links(op.entity, std::move(links.value()), inverse);
+    }
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

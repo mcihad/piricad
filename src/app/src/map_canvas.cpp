@@ -15,6 +15,7 @@
 #include "kentos_cad/core/corner.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/fillet.hpp"
 #include "kentos_cad/core/grips.hpp"
@@ -1923,6 +1924,52 @@ void MapCanvas::buildMeasureMarks()
     }
 }
 
+void MapCanvas::buildBrokenLinks()
+{
+    // A DIMENSION THAT NO LONGER MEASURES ANYTHING SAYS SO WHERE IT STANDS
+    // (TODOS C-10). The object it was tied to was erased; the figure beside it
+    // is what that object used to measure, and nothing on the sheet would tell
+    // the engineer who signs it. A struck ring in the warning ink at each point
+    // that lost its object, and the words once per dimension. The canvas draws
+    // it, a print does not: it is a question for the author, not the reader.
+    const core::Document& doc       = controller_.document();
+    const core::DimLinkTable& table = doc.dimension_links();
+    if (table.empty()) return;
+    const core::EntityTable& ents  = doc.entities();
+    const core::RingGeometry& geom = doc.geometry();
+    const auto w                   = static_cast<float>(width());
+    const auto h                   = static_cast<float>(height());
+    std::size_t line               = 0;
+    bool started                   = false;
+    for (const core::EntityId dim : table.linked()) {
+        if (!doc.alive(dim) || !ents.visible(dim)) continue;
+        const core::RingSpan span = geom.rings_of(ents.slot[dim]);
+        if (span.count < 2) continue;
+        const std::uint32_t defs = span.first + 1;
+        bool labelled            = false;
+        for (const core::DimLink& l : *table.get(dim)) {
+            if (!l.broken || l.point >= geom.ring_count[defs]) continue;
+            const render::ScreenPointF v =
+                render::to_f(view_.to_screen(geom.vertex(defs, l.point)));
+            if (v.x < -8.0F || v.y < -8.0F || v.x > w + 8.0F || v.y > h + 8.0F) continue;
+            if (!started) {
+                line    = nextBatch(tokens_->warn.rgba(), 1.8f, false);
+                started = true;
+            }
+            addCircle(line, v.x, v.y, 6.0f);
+            addRun(line, {{v.x - 4.2F, v.y + 4.2F}, {v.x + 4.2F, v.y - 4.2F}}, false);
+            if (!labelled) {
+                // In the warning ink too, and below the point: a dimension's
+                // own figure sits above or beside its line far more often.
+                overlay_.labels.push_back(render::OverlayLabel{
+                    tokens_->warn.rgba(), v.x + 10.0F, v.y + 20.0F,
+                    static_cast<float>(look_.hint_px), false, tr("bağ koptu").toStdString()});
+                labelled = true;
+            }
+        }
+    }
+}
+
 void MapCanvas::buildRegionPreview(std::span<const std::uint8_t> payload, core::Point2 at)
 {
     auto decoded = core::decode_region_preview(payload);
@@ -2084,6 +2131,7 @@ void MapCanvas::buildOverlay()
     buildSelection();
     buildGrips();
     buildMeasureMarks();
+    buildBrokenLinks();
 
     guide_vertices_ = 0;
     guide_label_.clear();

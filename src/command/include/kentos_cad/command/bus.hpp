@@ -967,6 +967,14 @@ private:
     /// with their source, or left behind on a locked layer.
     void say_settled(const Transaction::SettleReport& settled) const;
 
+    /// The project's drawing unit (`core.cizim.birim`): what a dimension that
+    /// follows its source is re-worded in.
+    core::DrawingUnit drawing_unit() const;
+
+    /// The project's node tolerance (`core.topoloji.dugum_toleransi`): two corners
+    /// closer than it are one corner, for a dimension's link as for SINIR.
+    core::Mm node_tolerance() const;
+
     core::Document& doc_;
     Registry& reg_;
     Journal& journal_;

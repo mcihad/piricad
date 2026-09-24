@@ -18,6 +18,7 @@ add_library(kentos_core STATIC
     src/block.cpp
     src/block_reference.cpp
     src/dimension.cpp
+    src/dimension_link.cpp
     src/area_edit.cpp
     src/grips.cpp
     src/hatch.cpp

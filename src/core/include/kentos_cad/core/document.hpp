@@ -21,6 +21,7 @@
 #include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/crs.hpp"
 #include "kentos_cad/core/dash_store.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/foreign_table.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/guide.hpp"
@@ -137,6 +138,7 @@ struct Op
         AttachForeign,      ///< entity, str_arg (the tag), bytes_arg
         DetachForeign,      ///< entity, str_arg (the tag)
         SetAttachment,      ///< entity, has_attach, attach_arg — what it followed before
+        SetDimensionLinks,  ///< entity, bytes_arg — the links it had before (encode_dim_links)
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -262,6 +264,10 @@ public:
     /// row. Never read by the frame path: a dependent is re-placed by the
     /// command that moved its source, at that command's commit.
     const AttachTable& attachments() const noexcept { return attachments_; }
+
+    /// Which geometry each linked dimension measures (core/dimension_link.hpp),
+    /// keyed by the dimension's row. Read at commit, never by the frame path.
+    const DimLinkTable& dimension_links() const noexcept { return dim_links_; }
 
     /// The drafting guides this document carries. Furniture, not geometry: saved
     /// with the file and invisible to selection, culling, export and area sums
@@ -532,6 +538,13 @@ public:
     /// restores what `e` followed before.
     Status set_attachment(EntityId e, const Attachment* a, Op& undo_out);
 
+    /// Replaces the links of dimension `dim` (an empty list unlinks it).
+    /// Refused for anything but a live, editable dimension, a definition point
+    /// the dimension does not have, and a live link to a source that does not
+    /// exist — a BROKEN link keeps the key of the object that is gone, which is
+    /// what it is for. The inverse restores the links it had before.
+    Status set_dimension_links(EntityId dim, std::span<const DimLink> links, Op& undo_out);
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -599,6 +612,12 @@ private:
     /// kind it had, both put back.
     Status restore_kind_geometry(EntityId e, std::uint32_t slot, KindId kind, Op& undo_out);
 
+    /// The undo half of `set_dimension_links`: the links a dimension had, put
+    /// back as they were. Nothing about the sources is checked, because undo
+    /// runs backwards — the links of a dimension whose source a command erased
+    /// come back one op BEFORE the source does.
+    Status restore_dimension_links(EntityId dim, std::vector<DimLink> links, Op& undo_out);
+
     Crs crs_{};
     EntityTable entities_{};
     RingGeometry geometry_{};
@@ -610,6 +629,7 @@ private:
     ForeignTable foreign_{};
     BlockTable blocks_{};
     AttachTable attachments_{};
+    DimLinkTable dim_links_{};
     GuideStore guides_{};
     LayoutStore layouts_{};
     ImageStore images_{};

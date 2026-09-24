@@ -21,6 +21,7 @@
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
@@ -47,6 +48,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -3970,6 +3972,143 @@ TEST_CASE("IO: bağlar dosyaya yazılır ve okunur; yeniden açılan çizimde ya
             has_attach_block = true;
     }
     CHECK_FALSE(has_attach_block);
+}
+
+// =============================================================================
+// Dimension links — a dimension that follows its corner still follows it after
+// a reload, and one whose object was erased still says so (TODOS C-10)
+// =============================================================================
+
+TEST_CASE(
+    "IO: ölçü bağları dosyaya yazılır ve okunur; kopuk bağ kopuk kalır, sağlamı izlemeyi sürdürür")
+{
+    TempDir tmp("olcu-bagi");
+    const std::string path = tmp.file("olcu.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("ÇİZGİ 0,0 12,0", Origin::Test).ok());  // 1
+    REQUIRE(written.bus.execute_line("ÇİZGİ 30,0 40,0", Origin::Test).ok()); // 2
+    REQUIRE(written.bus.execute_line("ÖLÇÜ birinci=0,0 ikinci=12,0 konum=6,-2", Origin::Test)
+                .ok()); // 3
+    REQUIRE(written.bus.execute_line("ÖLÇÜ birinci=30,0 ikinci=40,0 konum=35,-2", Origin::Test)
+                .ok()); // 4
+    REQUIRE(written.bus.execute_line("SİL nesneler=2", Origin::Test).ok());
+    REQUIRE_EQ(written.doc.dimension_links().size(), std::size_t{2});
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK(reloaded.transcript.find("parmak izi") == std::string::npos);
+
+    const core::EntityId intact_dim = reloaded.doc.slot_of(core::EntityKey{3});
+    const core::EntityId broken_dim = reloaded.doc.slot_of(core::EntityKey{4});
+    const auto* intact              = reloaded.doc.dimension_links().get(intact_dim);
+    const auto* broken              = reloaded.doc.dimension_links().get(broken_dim);
+    REQUIRE(intact != nullptr);
+    REQUIRE(broken != nullptr);
+    REQUIRE_EQ(intact->size(), std::size_t{2});
+    CHECK_FALSE((*intact)[0].broken);
+    CHECK((*broken)[0].broken);
+    CHECK((*broken)[1].broken);
+
+    // The intact one still follows its line after the reload.
+    REQUIRE(reloaded.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=16,0", Origin::Test).ok());
+    auto def =
+        core::dimension_of(reloaded.doc.geometry(), reloaded.doc.entities().slot[intact_dim]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().measurement, 16'000);
+
+    // A drawing whose dimensions measure nothing in particular writes no link
+    // block: the file is what it was before links existed.
+    Rig plain;
+    REQUIRE(plain.bus.execute_line("ÖLÇÜ birinci=0,0 ikinci=12,0 konum=6,-2", Origin::Test).ok());
+    REQUIRE(plain.doc.dimension_links().empty());
+    const std::string plain_path = tmp.file("duz.pcad");
+    REQUIRE(plain.bus.execute_line("FARKLIKAYDET \"" + plain_path + "\"", Origin::Test).ok());
+    std::ifstream in(plain_path, std::ios::binary);
+    std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    // 0x0000008E followed by the 32-byte stride of DimLinkRecord.
+    bool has_link_block = false;
+    for (std::size_t at = 0; at + 8 <= bytes.size(); at += 8)
+        if (static_cast<unsigned char>(bytes[at]) == 0x8E && bytes[at + 1] == 0 &&
+            bytes[at + 2] == 0 && bytes[at + 3] == 0 &&
+            static_cast<unsigned char>(bytes[at + 4]) == 32)
+            has_link_block = true;
+    CHECK_FALSE(has_link_block);
+}
+
+TEST_CASE("IO: ölçü bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
+{
+    // CLAUDE.md 6.7: the link block ships its seeds with the format. Written by
+    // this case under KENTOS_TOHUM_UPDATE — the valid drawing through
+    // FARKLIKAYDET, the broken one from it with one fault per row — and read
+    // back on every build.
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path good   = corpus / "09-olcu-baglari.pcad";
+    const fs::path bad    = corpus / "10-olcu-bagi-bozuk.pcad";
+    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+        Rig w;
+        for (const char* line :
+             {"ÇİZGİ 0,0 12,0", "ÇİZGİ 30,0 40,0", "ÖLÇÜ birinci=0,0 ikinci=12,0 konum=6,-2",
+              "ÖLÇÜ birinci=30,0 ikinci=40,0 konum=35,-2", "SİL nesneler=2"})
+            REQUIRE(w.bus.execute_line(line, Origin::Test).ok());
+        REQUIRE(w.bus.execute_line("FARKLIKAYDET \"" + good.string() + "\"", Origin::Test).ok());
+
+        std::ifstream in(good, std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        in.close();
+        const auto u32 = [&bytes](std::size_t at) {
+            std::uint32_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 4);
+            return v;
+        };
+        const auto u64 = [&bytes](std::size_t at) {
+            std::uint64_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 8);
+            return v;
+        };
+        std::size_t rows = 0;
+        for (std::uint32_t b = 0; b < u32(20); ++b) {
+            const std::size_t entry = u64(24) + std::size_t{b} * 32;
+            if (u32(entry) == io::kBlkDimensionLinks) rows = u64(entry + 8);
+        }
+        REQUIRE(rows != 0);
+        // Row 0 names a dimension the file does not hold; row 1 an anchor past
+        // the last; row 2 a definition point the dimension does not have; row 3
+        // a live link to no object at all.
+        const std::uint64_t nobody = 0xFFFF'FFFFu;
+        std::memcpy(bytes.data() + rows, &nobody, 8);
+        bytes[rows + 32 + 23]    = 9;
+        bytes[rows + 64 + 22]    = static_cast<char>(200);
+        const std::uint64_t none = 0;
+        std::memcpy(bytes.data() + rows + 96 + 8, &none, 8);
+        bytes[rows + 96 + 24] = 0;
+        std::ofstream out(bad, std::ios::binary);
+        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    if (!fs::exists(good) || !fs::exists(bad))
+        PENDING("Ölçü bağı tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+
+    Rig a;
+    auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE_EQ(a.doc.dimension_links().size(), std::size_t{2});
+    const auto* intact = a.doc.dimension_links().get(a.doc.slot_of(core::EntityKey{3}));
+    const auto* broken = a.doc.dimension_links().get(a.doc.slot_of(core::EntityKey{4}));
+    REQUIRE(intact != nullptr);
+    REQUIRE(broken != nullptr);
+    CHECK_FALSE((*intact)[0].broken);
+    CHECK((*broken)[0].broken);
+
+    Rig b;
+    auto damaged = b.bus.execute_line("AÇ \"" + bad.string() + "\"", Origin::Test);
+    if (!damaged) FAIL_WITH("AÇ", damaged.error().message);
+    CHECK(b.doc.dimension_links().empty());
+    CHECK(b.transcript.find("var olmayan bir ölçüye") != std::string::npos);
+    CHECK(b.transcript.find("Bir ölçü bağı yüklenemedi") != std::string::npos);
 }
 
 // =============================================================================

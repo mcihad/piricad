@@ -341,6 +341,12 @@ enum BlockId : std::uint32_t {
     /// what it was.
     kBlkAttachments = 0x0089, ///< AttachRecord[]
 
+    // ---- dimension links (core/dimension_link.hpp): what each dimension measures. ----
+    /// One record per linked definition point, by KEY on both ends. Written only
+    /// when a dimension is linked, so a drawing with none is byte for byte what
+    /// it was (R10 makes the block skippable to an older reader).
+    kBlkDimensionLinks = 0x008E, ///< DimLinkRecord[]
+
     // ---- sheet layouts (core/layout.hpp). All four or none. ------------------
     //
     // A PAFTA IS DOCUMENT CONTENT, so it is in the file rather than beside it,
@@ -615,6 +621,23 @@ struct AttachRecord
 };
 
 static_assert(sizeof(AttachRecord) == 64, "wire record");
+
+/// One linked definition point of a dimension (core/dimension_link.hpp). Both
+/// ends are persistent KEYS; a broken link keeps the key of the object that is
+/// gone. No field is floating point (R21).
+struct DimLinkRecord
+{
+    std::uint64_t dimension_key; ///<  0  the dimension
+    std::uint64_t source_key;    ///<  8  the object it measures
+    std::uint32_t index;         ///< 16  the vertex, or the angle in micro-degrees
+    std::uint16_t ring;          ///< 20  which ring of the source
+    std::uint8_t point;          ///< 22  which definition point of the dimension
+    std::uint8_t anchor;         ///< 23  core::DimAnchor
+    std::uint8_t broken;         ///< 24  1 = the object measured is gone
+    std::uint8_t reserved[7];    ///< 25  zero-filled
+};
+
+static_assert(sizeof(DimLinkRecord) == 32, "wire record");
 
 /// One sheet layout. Its pages, items and name runs live in the three blocks
 /// beside it.

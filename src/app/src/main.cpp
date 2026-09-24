@@ -1761,6 +1761,36 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("17d-temizle-bul"), &window); });
         later([&window] { window.runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE")); });
 
+        // BAĞLI ÖLÇÜ (TODOS C-10): a parcel dimensioned on two sides and a pool
+        // by its radius, every point on a corner or on the circle, so each
+        // dimension is tied to what it measures.
+        later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,10 0,10")); });
+        later([&window] {
+            for (const char* line :
+                 {"DAİRE merkez=30,5 cevre=33,5", "ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3",
+                  "ÖLÇÜ birinci=20,0 ikinci=20,10 konum=23,5",
+                  "ÖLÇÜ tur=yaricap birinci=30,5 ikinci=33,5 konum=35,8"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.75"));
+        });
+        later([&window, shot] { shot(QStringLiteral("18a-olcu-bagli"), &window); });
+        // The top-right corner moved out: the side's dimension turns with the
+        // side and says its new length; the bottom one, untouched, stays 20,00.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("KÖŞETAŞI nesne=1 kose=3 nokta=24,13"));
+            window.endCommand();
+        });
+        later([&window, shot] { shot(QStringLiteral("18b-olcu-izler"), &window); });
+        // The pool erased: its radius dimension stays where it was, marked.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SİL nesneler=2"));
+            window.endCommand();
+        });
+        later([&window, shot] { shot(QStringLiteral("18c-olcu-bag-koptu"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

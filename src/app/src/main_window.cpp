@@ -41,6 +41,8 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/selection.hpp"
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/settings.hpp"
@@ -5131,6 +5133,57 @@ int MainWindow::probeRealMouse()
                       .arg(open)
                       .arg(controller_->document().live_entity_count())
                       .arg(lastSaid()));
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 12. A DIMENSION BY HAND FOLLOWS ITS CORNER (TODOS C-10) ----------
+        //
+        // The tool from the column; the two corners of the bottom side clicked,
+        // the line's place clicked below it; then the parcel alone selected and
+        // its corner dragged by the grip. The dimension is tied to the corners it
+        // was clicked on, and measures the side it was drawn on after the drag.
+        {
+            fresh({QStringLiteral("ALAN 0,0 20,0 20,10 0,10")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::int64_t measured_parcel = first_key();
+            actDimension_->trigger();
+            QCoreApplication::processEvents();
+            for (const core::Point2 at :
+                 {core::Point2{0, 0}, core::Point2{20'000, 0}, core::Point2{10'000, -3'000}}) {
+                press(screen(at));
+                release(screen(at));
+            }
+            controller_->cancelInteractive();
+            const core::Document& doc = controller_->document();
+            core::EntityId dim        = core::kNoEntity;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kDimensionKind) dim = e;
+            const std::vector<core::DimLink>* links =
+                dim == core::kNoEntity ? nullptr : doc.dimension_links().get(dim);
+            check(links != nullptr && links->size() == 2,
+                  QStringLiteral("Ölçü: fareyle iki köşeye tıklanan ölçü iki köşeye bağlandı (son "
+                                 "söz: \"%1\")")
+                      .arg(lastSaid()));
+
+            runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1").arg(measured_parcel));
+            QCoreApplication::processEvents();
+            press(screen({20'000, 0}));
+            release(screen({20'000, 0}));
+            onCanvas(QEvent::MouseMove, screen({26'000, 0}), Qt::NoButton);
+            press(screen({26'000, 0}));
+            release(screen({26'000, 0}));
+            std::int64_t measured = 0;
+            if (dim != core::kNoEntity)
+                if (auto def = core::dimension_of(doc.geometry(), doc.entities().slot[dim]); def)
+                    measured = def.value().measurement;
+            check(
+                std::abs(measured - 26'000) <= 300,
+                QStringLiteral("Ölçü: köşe tutamağından sürüklenince bağlı ölçü onu izledi (%1 m; "
+                               "son söz: \"%2\")")
+                    .arg(static_cast<double>(measured) / 1000.0)
+                    .arg(lastSaid()));
+            shoot("olcu-izler");
             controller_->cancelInteractive();
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }

@@ -25,6 +25,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace kentos::core {
@@ -123,6 +124,32 @@ bool dimension_picks(DimensionType type, std::span<const Point2> defs, Point2 ba
 /// of ring 0. The caption is anchored MiddleCentre at the first.
 std::array<Point2, 2> dimension_baseline(Point2 centre, double dx, double dy, Mm height,
                                          std::string_view text);
+
+/// The document a dimension lives in; `dimension_follow` reads its geometry.
+class Document;
+
+/// A dimension rebuilt around moved definition points: its two rings, its
+/// payload and its caption.
+struct DimensionRebuild
+{
+    std::array<Point2, 2> baseline{};  ///< ring 0, the caption baseline
+    std::vector<Point2> defs;          ///< ring 1, the definition points
+    std::vector<std::uint8_t> payload; ///< the dimension's payload, re-measured
+    std::string text;                  ///< the caption, re-worded (the user's own text is kept)
+};
+
+/// Rebuilds dimension `e` with the definition points `moves` names at their new
+/// places and the others where they are, laid out as ÖLÇÜ lays one out: the
+/// dimension line and the caption carried by the moved points' mean
+/// displacement (an aligned one keeps its offset from the side it measures and
+/// turns with it), the figure re-measured and re-worded in `unit` unless the
+/// caption is the user's own text. A type the layout cannot draw (an ordinate,
+/// a four-point angular one from a file) moves its points, is re-measured and
+/// keeps its caption's reading. What a linked dimension does at commit when
+/// what it measures moved (core/dimension_link.hpp).
+Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
+                                          std::span<const std::pair<std::size_t, Point2>> moves,
+                                          DrawingUnit unit);
 
 /// The payload bytes.
 std::vector<std::uint8_t> encode_dimension(const DimensionDef& def);

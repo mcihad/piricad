@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <map>
 #include <span>
 #include <string>
 #include <string_view>
@@ -1472,6 +1473,39 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 report.warnings.push_back(
                     Warning{"io.attach", "Bir bağ yüklenemedi: " + st.error().message});
         }
+    }
+
+    // ---- dimension links (core/dimension_link.hpp): after the entities ----
+    if (view.has(kBlkDimensionLinks)) {
+        auto rows = view.column<DimLinkRecord>(kBlkDimensionLinks,
+                                               view.count_of(kBlkDimensionLinks), "ölçü bağları");
+        if (!rows) return rows.error();
+        std::map<core::EntityId, std::vector<core::DimLink>> per_dimension;
+        for (const DimLinkRecord& r : rows.value()) {
+            const core::EntityId dim = doc.slot_of(static_cast<core::EntityKey>(r.dimension_key));
+            if (dim == core::kNoEntity || !doc.alive(dim) || r.anchor > 4) {
+                report.warnings.push_back(Warning{
+                    "io.dimlink_row",
+                    "Dosyadaki bir ölçü bağı var olmayan bir ölçüye işaret ediyor; yok sayıldı."});
+                continue;
+            }
+            core::DimLink l;
+            l.point  = r.point;
+            l.anchor = static_cast<core::DimAnchor>(r.anchor);
+            l.ring   = r.ring;
+            l.index  = r.index;
+            l.source = static_cast<core::EntityKey>(r.source_key);
+            l.broken = r.broken != 0;
+            // A live link to an object the file does not hold is a broken one:
+            // the dimension stays, and says what it measured.
+            const core::EntityId src = doc.slot_of(l.source);
+            if (!l.broken && (src == core::kNoEntity || !doc.alive(src))) l.broken = true;
+            per_dimension[dim].push_back(l);
+        }
+        for (const auto& [dim, links] : per_dimension)
+            if (auto st = tx.set_dimension_links(dim, links); !st)
+                report.warnings.push_back(
+                    Warning{"io.dimlink", "Bir ölçü bağı yüklenemedi: " + st.error().message});
     }
 
     // ---- the allocator must not hand out a key the file already used ----

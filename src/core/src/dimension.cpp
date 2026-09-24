@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/dimension.hpp"
 
+#include "kentos_cad/core/document.hpp"
+
 #include "kentos_cad/core/angle.hpp"
 
 #include "kentos_cad/core/arc.hpp"
@@ -904,6 +906,95 @@ KENTOS_KIND(leader)
     s.validate   = &ld_validate;
     s.key_points = &ld_key_points;
     return s;
+}
+
+Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
+                                          std::span<const std::pair<std::size_t, Point2>> moves,
+                                          DrawingUnit unit)
+{
+    const EntityTable& ents = doc.entities();
+    if (e >= ents.size() || !ents.alive(e) || ents.kind[e] != kDimensionKind)
+        return err(ErrorCode::InvalidArgument, "Bu nesne bir ölçü değil.");
+    const RingGeometry& geom = doc.geometry();
+    const std::uint32_t slot = ents.slot[e];
+    const RingSpan span      = geom.rings_of(slot);
+    if (span.count < 2 || geom.ring_count[span.first] < 2)
+        return err(ErrorCode::InvalidArgument, "Ölçünün halkaları eksik.");
+    auto decoded = dimension_of(geom, slot);
+    if (!decoded) return decoded.error();
+    DimensionDef def = std::move(decoded.value());
+
+    const std::array<Point2, 2> base{geom.vertex(span.first, 0), geom.vertex(span.first, 1)};
+    std::vector<Point2> defs;
+    defs.reserve(geom.ring_count[span.first + 1]);
+    for (std::uint32_t v = 0; v < geom.ring_count[span.first + 1]; ++v)
+        defs.push_back(geom.vertex(span.first + 1, v));
+
+    // THE MEAN DISPLACEMENT carries what no geometry holds: the dimension
+    // line's place and the caption's, so a dimension stays as far from its
+    // points as it was when they move.
+    std::int64_t sx           = 0;
+    std::int64_t sy           = 0;
+    std::vector<Point2> moved = defs;
+    for (const auto& [index, to] : moves) {
+        if (index >= moved.size()) return err(ErrorCode::InvalidArgument, "Ölçünün o noktası yok.");
+        sx += to.x - defs[index].x;
+        sy += to.y - defs[index].y;
+        moved[index] = to;
+    }
+    const auto n    = static_cast<std::int64_t>(moves.empty() ? 1 : moves.size());
+    const Point2 md = Point2{sx / n, sy / n};
+
+    const Mm height = doc.texts().height(slot);
+    std::vector<Point2> picks;
+    Point2 where{};
+    if (!dimension_picks(def.type, defs, base[0], picks, where)) {
+        // A type the layout cannot draw: the points move, the figure is
+        // re-measured, the caption slides with them and keeps its reading.
+        def.measurement = dimension_measure(def.type, moved, def.rotation_udeg, def.ordinate_x);
+        DimensionRebuild out;
+        out.defs         = std::move(moved);
+        out.text         = dimension_text(def, unit);
+        const auto dx    = static_cast<double>(base[1].x - base[0].x);
+        const auto dy    = static_cast<double>(base[1].y - base[0].y);
+        const double len = std::sqrt(dx * dx + dy * dy);
+        out.baseline     = dimension_baseline(Point2{base[0].x + md.x, base[0].y + md.y},
+                                          len > 0.0 ? dx / len : 1.0, len > 0.0 ? dy / len : 0.0,
+                                              height, out.text);
+        out.payload      = encode_dimension(def);
+        return out;
+    }
+    if (!dimension_picks(def.type, moved, base[0], picks, where))
+        return err(ErrorCode::ValidationFailed, "Ölçü yeni noktalarıyla kurulamıyor.");
+    std::vector<Point2> ignored;
+    Point2 old_where{};
+    (void)dimension_picks(def.type, defs, base[0], ignored, old_where);
+    where = Point2{old_where.x + md.x, old_where.y + md.y};
+    if (def.type == DimensionType::Aligned) {
+        // AN ALIGNED DIMENSION TURNS WITH ITS SIDE. Its line is placed by the
+        // offset from the side it measures, not by a place on the sheet, so a
+        // parcel rotated a quarter turn keeps its dimension the same distance
+        // out on the same side, rather than dragging it across the parcel.
+        const Dir was = unit_between(defs[0], defs[1]);
+        const Dir now = unit_between(picks[0], picks[1]);
+        if (!was.zero() && !now.zero()) {
+            const double a = dot(defs[0], old_where, was);
+            const double o = dot(defs[0], old_where, was.perp());
+            where          = along(along(picks[0], now, a), now.perp(), o);
+        }
+    }
+    DimensionLayout layout;
+    if (!dimension_layout(def, picks, where, height, layout))
+        return err(ErrorCode::ValidationFailed,
+                   "Ölçü yeni noktalarıyla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna "
+                   "geldi.");
+    DimensionRebuild out;
+    out.defs     = std::move(layout.defs);
+    out.text     = dimension_text(def, unit);
+    out.baseline = dimension_baseline(layout.text_centre, layout.text_dir_x, layout.text_dir_y,
+                                      height, out.text);
+    out.payload  = encode_dimension(def);
+    return out;
 }
 
 } // namespace kentos::core

@@ -785,7 +785,13 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // document (Article 1.2). A source that was erased takes its dependents with
     // it, and that is said, because a deletion the user did not name is the one
     // thing here they should hear about.
-    if (!read_only) say_settled(session.transaction().settle_attachments());
+    if (!read_only) {
+        say_settled(session.transaction().settle_attachments());
+        // A LINKED DIMENSION follows what it measures in the same breath and
+        // the same transaction (core/dimension_link.hpp), for every client
+        // alike; its figure is worded in the project's unit.
+        say_settled(session.transaction().settle_dimensions(drawing_unit(), node_tolerance()));
+    }
 
     result.ops = session.owns_transaction() ? session.transaction().size() : 0;
     // A borrowed transaction belongs to a batch. Its single visible mutation is
@@ -917,6 +923,17 @@ core::Status Bus::begin_batch(std::string label)
     return core::ok();
 }
 
+core::DrawingUnit Bus::drawing_unit() const
+{
+    return core::drawing_unit_from_setting(
+        static_cast<std::uint16_t>(project_settings_.get("core.cizim.birim").as_enum()));
+}
+
+core::Mm Bus::node_tolerance() const
+{
+    return project_settings_.get("core.topoloji.dugum_toleransi").as_length();
+}
+
 void Bus::say_settled(const Transaction::SettleReport& settled) const
 {
     // WHAT FOLLOWED IS SAID, because it happened to objects the user did not
@@ -937,6 +954,25 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
     if (settled.left != 0)
         on_echo("Bağlı " + std::to_string(settled.left) +
                 " yazı kilitli katmanda olduğu için kaynağını izleyemedi; yerinde kaldı.");
+    if (settled.dims_followed != 0)
+        on_echo("Bağlı " + std::to_string(settled.dims_followed) +
+                " ölçü kaynağını izledi ve yeniden ölçüldü.");
+    if (settled.dims_broken != 0)
+        on_echo("Ölçtüğü nesne silindiği için " + std::to_string(settled.dims_broken) +
+                " ölçü bağı koptu; ölçü yerinde duruyor ve artık bir şey ölçmüyor.");
+    if (settled.dims_cornerless != 0)
+        on_echo("Ölçtüğü köşe kaldırıldığı için " + std::to_string(settled.dims_cornerless) +
+                " ölçü bağı koptu; ölçü yerinde duruyor ve artık bir şey ölçmüyor.");
+    if (settled.dims_relinked != 0)
+        on_echo(std::to_string(settled.dims_relinked) +
+                " ölçü bağı, aynı noktada yerini alan nesneye aktarıldı.");
+    if (settled.dims_released != 0)
+        on_echo(std::to_string(settled.dims_released) +
+                " ölçü noktası elle taşındığı için bağından çözüldü.");
+    if (settled.dims_left != 0)
+        on_echo("Bağlı " + std::to_string(settled.dims_left) +
+                " ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını "
+                "izleyemedi.");
 }
 
 core::Result<DispatchResult> Bus::end_batch()
@@ -945,6 +981,7 @@ core::Result<DispatchResult> Bus::end_batch()
 
     // The last word on what the batch moved (see `finish`).
     say_settled(batch_->settle_attachments());
+    say_settled(batch_->settle_dimensions(drawing_unit(), node_tolerance()));
 
     DispatchResult result;
     result.command_id = "core.batch";

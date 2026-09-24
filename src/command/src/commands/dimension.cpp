@@ -17,6 +17,7 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
 
@@ -238,6 +239,32 @@ Task<void> run_dimension(Context& ctx)
         co_return;
     }
 
+    // LINKED TO WHAT IT MEASURES (TODOS C-10): every definition point that sits
+    // exactly on a vertex, a centre or an arc's end is tied to it, so the
+    // dimension follows when that geometry moves. Found from the drawing, not
+    // from the hand — a click that snapped, a typed corner and a script's point
+    // link alike (Article 1.2) — and `bagla=hayır` draws a free dimension.
+    const bool link    = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    std::size_t linked = 0;
+    if (link) {
+        std::vector<core::DimLink> links;
+        const std::vector<std::optional<core::DimRole>> roles = core::dim_roles(type);
+        for (std::size_t i = 0; i < defs.size() && i < roles.size(); ++i) {
+            if (!roles[i]) continue;
+            auto found = core::dim_anchor_at(ctx.document(), defs[i], *roles[i], created.value());
+            if (!found) continue;
+            found->point = static_cast<std::uint8_t>(i);
+            links.push_back(*found);
+        }
+        if (!links.empty()) {
+            if (auto st = ctx.transaction().set_dimension_links(created.value(), links); !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+            linked = links.size();
+        }
+    }
+
     ctx.record("birinci", Value::point(*p1));
     ctx.record("ikinci", Value::point(*p2));
     if (angular) ctx.record("tepe", Value::point(picks[2]));
@@ -245,7 +272,12 @@ Task<void> run_dimension(Context& ctx)
     ctx.record("tur", Value::text(core::dimension_type_name(type)));
     ctx.record("stil", Value::text(def.style));
     if (!def.override_text.empty()) ctx.record("metin", Value::text(def.override_text));
-    ctx.echo("Ölçü çizildi: " + text + " (" + def.style + ").");
+    if (!link) ctx.record("bagla", Value::boolean(false));
+    std::string said = "Ölçü çizildi: " + text + " (" + def.style + ")";
+    if (linked != 0)
+        said += "; " + std::to_string(linked) + " noktası ölçtüğü nesneye bağlı, o değişince " +
+                "ölçü de güncellenir";
+    ctx.echo(said + ".");
 }
 
 // ------------------------------------------------------------------ LİDER ----
@@ -345,6 +377,10 @@ KENTOS_COMMAND(dimension)
                 Param::text("katalog", Arity::optional(),
                             "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                     .en("catalog"),
+                Param::boolean("bagla", Arity::optional(),
+                               "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; "
+                               "bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet")
+                    .en("associate"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/transaction.hpp"
 
+#include "kentos_cad/core/dimension_link.hpp"
+
 #include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/dimension.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <span>
 #include <string>
@@ -359,6 +362,15 @@ Status Transaction::set_attachment(EntityId e, const core::Attachment& a)
     return core::ok();
 }
 
+Status Transaction::set_dimension_links(EntityId dim, std::span<const core::DimLink> links)
+{
+    core::Op undo;
+    auto st = doc_.set_dimension_links(dim, links, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::clear_attachment(EntityId e)
 {
     core::Op undo;
@@ -544,6 +556,241 @@ Transaction::SettleReport Transaction::settle_attachments()
             }
         }
     }
+    return rep;
+}
+
+namespace {
+
+/// Whether two rings hold the same corners, in any order: reversed, or begun at
+/// another corner. Such a ring moved nothing, only renumbered.
+bool same_corners(std::span<const core::Mm> ax, std::span<const core::Mm> ay,
+                  std::span<const core::Mm> bx, std::span<const core::Mm> by)
+{
+    if (ax.size() != bx.size()) return false;
+    std::vector<std::pair<core::Mm, core::Mm>> a;
+    std::vector<std::pair<core::Mm, core::Mm>> b;
+    a.reserve(ax.size());
+    b.reserve(bx.size());
+    for (std::size_t i = 0; i < ax.size(); ++i) {
+        a.emplace_back(ax[i], ay[i]);
+        b.emplace_back(bx[i], by[i]);
+    }
+    std::ranges::sort(a);
+    std::ranges::sort(b);
+    return a == b;
+}
+
+} // namespace
+
+Transaction::SettleReport Transaction::settle_dimensions(core::DrawingUnit unit, core::Mm tolerance)
+{
+    SettleReport rep;
+    const core::DimLinkTable& table = doc_.dimension_links();
+    if (table.empty()) {
+        dims_settled_upto_ = inverse_.size();
+        return rep;
+    }
+    // WHAT THIS RANGE MOVED, ERASED OR CREATED, read from the inverse record
+    // the way `settle_attachments` reads it — but from this function's own
+    // cursor, so a dimension it re-lays out below is not read back later as one
+    // the user moved (which would release its links). A moved entity's FIRST
+    // inverse in the range names the geometry the range found it with: the
+    // arena keeps those rings, and they say which corner a link meant.
+    std::vector<EntityId> moved;
+    std::vector<EntityId> erased;
+    std::vector<EntityId> created;
+    std::map<EntityId, std::uint32_t> found_as;
+    for (std::size_t i = dims_settled_upto_; i < inverse_.size(); ++i) {
+        const Op& op = inverse_[i];
+        if (op.kind == Op::Kind::SetGeometry || op.kind == Op::Kind::SetKindGeometry) {
+            moved.push_back(op.entity);
+            found_as.try_emplace(op.entity, op.geometry_slot);
+        } else if (op.kind == Op::Kind::SetEntityAlive) {
+            (op.bool_arg ? erased : created).push_back(op.entity);
+        }
+    }
+    dims_settled_upto_ = inverse_.size();
+    if (moved.empty() && erased.empty()) return rep;
+    for (std::vector<EntityId>* list : {&moved, &erased, &created}) {
+        std::ranges::sort(*list);
+        list->erase(std::ranges::unique(*list).begin(), list->end());
+    }
+
+    // WHO MAY INHERIT A LINK: what this range created or reshaped. UÇUCA keeps
+    // the first line and erases the rest, PATLAT erases the line and creates
+    // its pieces, BİRLEŞTİR reshapes one parcel into the union — in every case
+    // the object that now holds the corner was touched by the same command. An
+    // object the command left alone never inherits, so erasing a parcel does
+    // not tie its dimension to the neighbour that shares the corner.
+    std::vector<EntityId> heirs;
+    std::ranges::set_union(created, moved, std::back_inserter(heirs));
+
+    const core::EntityTable& ents = doc_.entities();
+    const RingGeometry& geom      = doc_.geometry();
+
+    // WHICH CORNER, NOT WHICH NUMBER. A link names a vertex by its index, and an
+    // index is only a corner while the ring keeps its corners: KÖŞEEKLE before
+    // it, KÖŞESİL of another, a reversed line all renumber it without moving it.
+    // Nothing when the corner it measured is gone.
+    enum class Corner : std::uint8_t { Kept, Renumbered, Gone };
+    const auto renumber = [&](core::DimLink& l, EntityId src) -> Corner {
+        const auto it = found_as.find(src);
+        if (l.anchor != core::DimAnchor::Vertex || it == found_as.end()) return Corner::Kept;
+        const core::RingSpan was = geom.rings_of(it->second);
+        const core::RingSpan is  = geom.rings_of(ents.slot[src]);
+        if (l.ring >= was.count || l.ring >= is.count) return Corner::Gone;
+        const auto ox = geom.ring_xs(was.first + l.ring);
+        const auto oy = geom.ring_ys(was.first + l.ring);
+        const auto nx = geom.ring_xs(is.first + l.ring);
+        const auto ny = geom.ring_ys(is.first + l.ring);
+        if (l.index >= ox.size()) return Corner::Gone;
+        const core::Point2 corner{ox[l.index], oy[l.index]};
+        if (ox.size() == nx.size()) {
+            // As many corners as before: the number still names the corner that
+            // moved — unless the ring is the same corners in another order.
+            if (!same_corners(ox, oy, nx, ny)) return Corner::Kept;
+            for (std::size_t v = 0; v < nx.size(); ++v)
+                if (nx[v] == corner.x && ny[v] == corner.y) {
+                    if (v == l.index) return Corner::Kept;
+                    l.index = static_cast<std::uint32_t>(v);
+                    return Corner::Renumbered;
+                }
+            return Corner::Kept;
+        }
+        // Corners came or went: the one measured is the one where it was, or
+        // within the node tolerance of it (a repeated corner cleaned away).
+        std::size_t best   = nx.size();
+        double best_d2     = 0.0;
+        const double limit = static_cast<double>(tolerance) * static_cast<double>(tolerance);
+        for (std::size_t v = 0; v < nx.size(); ++v) {
+            const auto dx   = static_cast<double>(nx[v] - corner.x);
+            const auto dy   = static_cast<double>(ny[v] - corner.y);
+            const double d2 = dx * dx + dy * dy;
+            if (d2 <= limit && (best == nx.size() || d2 < best_d2)) {
+                best    = v;
+                best_d2 = d2;
+            }
+        }
+        if (best == nx.size()) return Corner::Gone;
+        l.index = static_cast<std::uint32_t>(best);
+        return Corner::Renumbered;
+    };
+
+    for (const EntityId dim : table.linked()) {
+        if (!doc_.alive(dim)) continue;
+        const std::vector<core::DimLink>* stored = table.get(dim);
+        if (stored == nullptr) continue;
+        const std::vector<core::DimLink> was = *stored;
+        const bool dim_moved                 = contains(moved, dim);
+        bool touched                         = dim_moved;
+        for (const core::DimLink& l : was) {
+            const EntityId src = doc_.slot_of(l.source);
+            touched =
+                touched || (src != core::kNoEntity &&
+                            (contains(moved, src) || contains(erased, src) || !doc_.alive(src)));
+        }
+        if (!touched) continue;
+
+        const core::RingSpan span = geom.rings_of(ents.slot[dim]);
+        if (span.count < 2) continue;
+        const std::uint32_t def_ring = span.first + 1;
+        auto decoded                 = core::dimension_of(geom, ents.slot[dim]);
+        if (!decoded) continue;
+        const std::vector<std::optional<core::DimRole>> roles =
+            core::dim_roles(decoded.value().type);
+
+        std::vector<core::DimLink> now;
+        std::vector<std::pair<std::size_t, core::Point2>> moves;
+        for (const core::DimLink& l : was) {
+            if (l.broken) {
+                now.push_back(l);
+                continue;
+            }
+            if (l.point >= geom.ring_count[def_ring]) {
+                core::DimLink b = l;
+                b.broken        = true;
+                now.push_back(b);
+                ++rep.dims_broken;
+                continue;
+            }
+            const core::Point2 def = geom.vertex(def_ring, l.point);
+            const EntityId src     = doc_.slot_of(l.source);
+            if (src == core::kNoEntity || !doc_.alive(src)) {
+                // REPLACED, NOT ERASED: the line UÇUCA joins, the pieces PATLAT
+                // leaves and the union BİRLEŞTİR makes erase what they were made
+                // from and hold the same corner. The link goes to the object the same command made
+                // or reshaped at the same point (`heirs`).
+                if (!heirs.empty() && l.point < roles.size() && roles[l.point]) {
+                    if (auto next = core::dim_anchor_at(doc_, def, *roles[l.point], dim, heirs)) {
+                        next->point = l.point;
+                        now.push_back(*next);
+                        ++rep.dims_relinked;
+                        continue;
+                    }
+                }
+                // BROKEN, NOT DROPPED: the dimension stays where it was and the
+                // link remembers what it measured, so the canvas and a query
+                // can say it no longer measures anything.
+                core::DimLink b = l;
+                b.broken        = true;
+                now.push_back(b);
+                ++rep.dims_broken;
+                continue;
+            }
+            core::DimLink link = l;
+            if (renumber(link, src) == Corner::Gone) {
+                link.broken = true;
+                now.push_back(link);
+                ++rep.dims_cornerless;
+                continue;
+            }
+            const auto at = core::dim_anchor_point(doc_, link);
+            if (!at) {
+                link.broken = true;
+                now.push_back(link);
+                ++rep.dims_cornerless;
+                continue;
+            }
+            if (*at == def) {
+                now.push_back(link);
+                continue;
+            }
+            if (contains(moved, src) || !dim_moved) {
+                moves.emplace_back(l.point, *at);
+                now.push_back(link);
+            } else {
+                // The dimension's own point was moved off its feature and the
+                // feature stood still: the user said the point is elsewhere now.
+                ++rep.dims_released;
+            }
+        }
+
+        if (!moves.empty()) {
+            if (!doc_.editable(dim)) {
+                ++rep.dims_left;
+                continue;
+            }
+            auto rebuilt = core::dimension_follow(doc_, dim, moves, unit);
+            if (rebuilt) {
+                const core::DimensionRebuild& r = rebuilt.value();
+                const std::array<core::RingGeometry::RingInput, 2> rings{
+                    core::RingGeometry::RingInput{r.baseline, core::RingRole::Open, 0},
+                    core::RingGeometry::RingInput{r.defs, core::RingRole::Open, 0}};
+                const std::uint32_t slot = ents.slot[dim];
+                const core::Mm height    = doc_.texts().height(slot);
+                if (set_kind_geometry(dim, rings, r.payload)) {
+                    if (r.text != doc_.texts().text(ents.slot[dim]))
+                        (void)set_text(dim, r.text, height, core::TextAnchor::MiddleCentre);
+                    ++rep.dims_followed;
+                }
+            } else {
+                ++rep.dims_left;
+            }
+        }
+        if (now != was && doc_.editable(dim)) (void)set_dimension_links(dim, now);
+    }
+    // The writes above are this function's own: not a dimension the user moved.
+    dims_settled_upto_ = inverse_.size();
     return rep;
 }
 

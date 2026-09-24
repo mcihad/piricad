@@ -1806,6 +1806,7 @@ cad.dimension(
     style: str,
     text: str,
     catalog: str,
+    associate: bool,
 ) -> int
 ```
 
@@ -1820,6 +1821,7 @@ cad.dimension(
 | `style` | `str` | `stil` | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
 | `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `associate` | `bool` | `bagla` | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
 
 [Komut sayfası](../komutlar/dimension.md)
 

@@ -474,6 +474,26 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // ---- dimension links (core/dimension_link.hpp): live dimensions only ----
+    std::vector<DimLinkRecord> dimlink_rows;
+    {
+        const core::DimLinkTable& links = doc.dimension_links();
+        for (const core::EntityId dim : links.linked()) {
+            if (!doc.alive(dim)) continue;
+            for (const core::DimLink& l : *links.get(dim)) {
+                DimLinkRecord r{};
+                r.dimension_key = core::raw(doc.key_of(dim));
+                r.source_key    = core::raw(l.source);
+                r.index         = l.index;
+                r.ring          = l.ring;
+                r.point         = l.point;
+                r.anchor        = static_cast<std::uint8_t>(l.anchor);
+                r.broken        = l.broken ? 1 : 0;
+                dimlink_rows.push_back(r);
+            }
+        }
+    }
+
     // ---- block definitions (model.md R45) ----
     std::vector<BlockRecord> block_rows;
     std::vector<std::uint64_t> block_members;
@@ -776,6 +796,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         blocks.push_back(column(kBlkBlockUses, block_uses));
     }
     if (!attach_rows.empty()) blocks.push_back(column(kBlkAttachments, attach_rows));
+    if (!dimlink_rows.empty()) blocks.push_back(column(kBlkDimensionLinks, dimlink_rows));
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

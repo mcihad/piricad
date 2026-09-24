@@ -26,6 +26,39 @@ birimindedir: 12 500 mm metrede `12,50`.
 | `koordinat` | Bir noktanın başlangıçtan **sağa** ya da **yukarı** değerini | `birinci` başlangıç, `ikinci` ölçülecek nokta, `konum` yazının yeri |
 | `yay` | Bir yayın **boyunca** uzunluğunu | `birinci` merkez, `ikinci` başlangıç, `bitis` bitiş, `konum` yazının yeri |
 
+### Bağlı ölçü
+
+Ölçünün bir noktası bir nesnenin **tam** üzerine düşüyorsa — bir köşe, bir dairenin ya da
+yayın merkezi, bir yayın ucu; yarıçap ve çap ölçüsünde çemberin üstü — ölçü o nesneye
+**bağlanır** ve ÖLÇÜ bunu söyler: `2 noktası ölçtüğü nesneye bağlı`. Yakalamayla
+tıklanan, elle yazılan ve betikten verilen köşe aynı milimetredir; üçü de aynı bağı
+kurar. Boşlukta bir noktaya çizilen ölçü bağsızdır.
+
+Bağlı ölçü ölçtüğü şeyi izler:
+
+| Ne olursa | Ölçü ne yapar |
+|---|---|
+| Ölçtüğü köşe ya da yay taşınır (`KÖŞETAŞI`, `TAŞI`, `DÖNDÜR`, `ÖLÇEKLE`, `ESNET` …) | Yeniden kurulur ve yeniden ölçülür. Hizalı ölçünün çizgisi kenardan aynı uzaklıkta ve aynı yakada kalır; kenarla birlikte döner |
+| Nesneye köşe eklenir, köşesi silinir, çizgi ters çevrilir | Bağ **köşenin kendisini** izler, sıra numarasını değil; ölçü yerinden oynamaz |
+| Ölçtüğü köşe silinir | O bağ **kopar** |
+| Ölçtüğü nesne silinir | Bağ **kopar**; ölçü yerinde durur ve yazdığı değer nesnenin eski ölçüsüdür |
+| Nesne aynı komutta başka nesneye dönüşür (`UÇUCA`, `PATLAT`, `BİRLEŞTİR`) | Bağ, aynı noktayı taşıyan yeni ya da yeniden biçimlenen nesneye geçer |
+| Ölçü ve ölçtüğü nesne birlikte taşınır | Hiçbir şey değişmez; bağ sürer |
+| Ölçünün kendi noktası elle taşınır, nesne yerinde durur | O nokta bağından **çözülür**; ölçü artık o ucu izlemez |
+| Ölçü kilitli katmandadır | İzleyemez ve bunu söyler; bağ durur, kilit açıldıktan sonraki ilk değişiklikte yetişir |
+
+İzleme, onu doğuran komutla **aynı geri alma adımındadır**: köşeyi geri alan
+[`GERİAL`](undo.md) ölçüyü de eski hâline getirir.
+
+**Kopuk bağ görünür.** Tuvalde, bağı kopan her tanım noktasında uyarı renginde üstü çizili
+bir halka ve **bağ koptu** yazısı durur; bu işaret yazdırılan paftaya çıkmaz.
+[`NESNEBİLGİ`](entity_info.md) bir ölçünün hangi noktasının hangi nesnenin hangi
+köşesine bağlı olduğunu, bir nesne için de onu kaç bağlı ölçünün ölçtüğünü söyler —
+bir nesneyi silmeden önce sorulacak soru budur.
+
+Bağlamak istemediğinizde `bagla=hayır` verin. [`KOPYALA`](copy.md) ile çoğaltılan ölçü
+bağsızdır: kopya, kopyalanan nesneye bağlanmaz.
+
 ## Adlar
 
 | Türkçe | ASCII | İngilizce | Kısaltma |
@@ -74,9 +107,11 @@ başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona ina
 | `konum` | Ölçü çizgisinin yeri; yarıçap ve çapta yazının yeri; açısalda yayın geçtiği nokta |
 | `tur` | `hizali`, `dogrusal`, `yaricap`, `cap`, `acisal`, `koordinat`, `yay`; varsayılan `hizali` |
 | `tepe` | Açısal ölçünün tepe noktası |
+| `bitis` | Yay uzunluğu ölçüsünde yayın bitiş noktası (başlangıçtan saat yönünün tersine) |
 | `stil` | Katalogdaki ölçü stili; varsayılan `ISO-25` |
 | `metin` | Ölçülen değer yerine yazılacak metin |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
+| `bagla` | Tam denk geldiği köşeye, merkeze ya da yay ucuna bağlansın mı; varsayılan `evet`. Bkz. [Bağlı ölçü](#bağlı-ölçü) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -98,9 +133,27 @@ Yazısı `12,50`, ölçü çizgisi noktaların 3 m üstünde.
 ÖLÇÜ birinci=80,0 ikinci=92.5,0 konum=80,3 stil=MIMARI metin="12,50 m"
 ```
 
+Bir parselin kenarını ölçüp köşesini taşımak; ölçü köşeyi izler ve yeniden ölçülür:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 20,0 20,10 0,10
+ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3
+KÖŞETAŞI nesne=1 kose=2 nokta=25,0
+```
+
+```text
+Ölçü çizildi: 20,00 (ISO-25); 2 noktası ölçtüğü nesneye bağlı, o değişince ölçü de güncellenir.
+Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
+```
+
+Ölçünün yazısı artık `25,00`; ölçü çizgisi kenarın yine 3 m altında.
+
 ### Arayüz
 
-**Çizim ▸ Ölçü**. İki noktayı, sonra ölçü çizgisinin yerini tıklayın.
+**Çizim ▸ Ölçü**. İki noktayı, sonra ölçü çizgisinin yerini tıklayın. Noktaları
+yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya bağlanır; köşeyi tutamağından
+sürüklediğinizde ölçü onunla birlikte güncellenir.
 
 ### Betik
 
@@ -116,12 +169,26 @@ Yazısı `12,50`, ölçü çizgisi noktaların 3 m üstünde.
 
 ## Geri alma
 
-Tek adımdır: `GERİAL` ölçüyü kaldırır.
+Tek adımdır: `GERİAL` ölçüyü de bağlarını da kaldırır. Bağlı bir ölçünün kaynağını
+izlemesi, onu doğuran komutla aynı adımdadır; o komutu geri alan `GERİAL` ölçüyü de geri
+alır, `YİNELE` ikisini birlikte yineler.
 
 ## Betikten kullanım
 
 Günlüğe noktalar, tür, kullanılan stil ve varsa metin yazılır; ölçülen değer yazılmaz,
-tekrar yeniden ölçer.
+tekrar yeniden ölçer. Bağlar günlüğe yazılmaz, çünkü noktalardan yeniden bulunurlar:
+oynatılan `ÖLÇÜ` aynı köşelere aynı bağları kurar. `bagla=hayır` verilmişse o da yazılır.
+
+Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
+
+| Satır | Ne oldu |
+|---|---|
+| `Bağlı N ölçü kaynağını izledi ve yeniden ölçüldü.` | Ölçtükleri köşe ya da yay taşındı |
+| `Ölçtüğü nesne silindiği için N ölçü bağı koptu; ölçü yerinde duruyor ve artık bir şey ölçmüyor.` | Ölçülen nesne silindi |
+| `Ölçtüğü köşe kaldırıldığı için N ölçü bağı koptu; ölçü yerinde duruyor ve artık bir şey ölçmüyor.` | Ölçülen köşe silindi |
+| `N ölçü bağı, aynı noktada yerini alan nesneye aktarıldı.` | Nesne aynı komutta başka nesneye dönüştü |
+| `N ölçü noktası elle taşındığı için bağından çözüldü.` | Ölçünün kendi noktası taşındı |
+| `Bağlı N ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını izleyemedi.` | Ölçü kilitli katmanda, ya da yeni noktalarla kurulamıyor (iki nokta çakıştı) |
 
 ## Hatalar
 

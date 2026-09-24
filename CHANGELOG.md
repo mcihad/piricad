@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ölçü ölçtüğü nesneye bağlı: köşe taşınınca yeniden ölçülür (C-10, 1. aşama)
+
+- **Bağlı ölçü.** ÖLÇÜ'nün bir noktası bir köşenin, bir dairenin ya da yayın
+  merkezinin, bir yay ucunun ya da (yarıçap ve çapta) çemberin tam üzerindeyse ölçü o
+  nesneye bağlanır ve bunu söyler. Yakalamayla tıklanan, yazılan ve betikten verilen
+  köşe aynı bağı kurar; `bagla=hayır` bağsız çizer.
+- Kaynak değişince (KÖŞETAŞI, TAŞI, DÖNDÜR, ÖLÇEKLE, ESNET …) ölçü komutun sonunda,
+  **aynı geri alma adımında** yeniden kurulur, yeniden ölçülür ve yazısı yenilenir;
+  hizalı ölçü kenardan aynı uzaklıkta kalır ve kenarla birlikte döner. Ölçü ile
+  kaynağı birlikte taşınırsa hiçbir şey değişmez; ölçünün kendi noktası elle
+  taşınırsa o nokta bağından çözülür.
+- Bağ **köşeyi** izler, sırasını değil: KÖŞEEKLE, KÖŞESİL ve ÇİZGİDÜZENLE `ters` ölçüyü
+  oynatmaz. UÇUCA, PATLAT ve BİRLEŞTİR bağı aynı noktayı taşıyan yeni nesneye aktarır.
+- Ölçtüğü nesne ya da köşe silinince bağ **kopar**: ölçü yerinde durur, tuvalde uyarı
+  renginde "bağ koptu" diye işaretlenir (pafta çıktısına girmez). Kilitli katmandaki
+  ölçü izleyemez ve bunu söyler.
+- **NESNEBİLGİ** bir ölçünün hangi noktasının neye bağlı olduğunu ve kaç bağının kopuk
+  olduğunu, bir nesne için de onu kaç bağlı ölçünün ölçtüğünü söyler
+  (`olcu_baglari`, `olcen_olculer`).
+- Bağlar proje dosyasına kendi bloğunda yazılır ve okunur; bağlı ölçüsü olmayan
+  çizimin dosyası ve parmak izi değişmez.
+
 ### Eklendi — yinelenen ve boş nesneler: TEMİZLE; TOPOLOJİ aynı çekirdekte (C-09 tamam)
 
 - **TEMİZLE** (`core.cleanup`, Değiştir menüsü): yinelenen (aynı tür, aynı katman, aynı

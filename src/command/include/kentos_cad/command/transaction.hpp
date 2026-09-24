@@ -234,14 +234,23 @@ public:
     /// Makes `e` follow nothing. Undoable: the previous attachment comes back.
     Status clear_attachment(EntityId e);
 
+    /// Replaces the links of dimension `dim` (`Document::set_dimension_links`).
+    Status set_dimension_links(EntityId dim, std::span<const core::DimLink> links);
+
     /// What `settle_attachments` did.
     struct SettleReport
     {
-        std::size_t followed{0};   ///< dependents re-placed after their source moved
-        std::size_t relabelled{0}; ///< dependents whose derived text changed
-        std::size_t erased{0};     ///< dependents erased because their source was
-        std::size_t reoffset{0};   ///< dependents moved by hand, offset re-measured
-        std::size_t left{0};       ///< dependents that could not follow: not editable (locked)
+        std::size_t followed{0};        ///< dependents re-placed after their source moved
+        std::size_t relabelled{0};      ///< dependents whose derived text changed
+        std::size_t erased{0};          ///< dependents erased because their source was
+        std::size_t reoffset{0};        ///< dependents moved by hand, offset re-measured
+        std::size_t left{0};            ///< dependents that could not follow: not editable (locked)
+        std::size_t dims_followed{0};   ///< linked dimensions re-laid out after their source moved
+        std::size_t dims_broken{0};     ///< links broken: the object measured was erased
+        std::size_t dims_cornerless{0}; ///< links broken: the corner measured was removed
+        std::size_t dims_relinked{0};   ///< links moved to the object that replaced theirs
+        std::size_t dims_released{0};   ///< links released: the dimension's own point was moved off
+        std::size_t dims_left{0};       ///< linked dimensions that could not follow: locked
     };
 
     /// Brings every dependent up to date with what this transaction did to its
@@ -253,6 +262,20 @@ public:
     /// write lands in this same transaction, so one undo step covers the command
     /// and what followed from it. Idempotent: a second call finds nothing to do.
     SettleReport settle_attachments();
+
+    /// Brings every LINKED DIMENSION up to date with what this transaction did
+    /// to what it measures (core/dimension_link.hpp): a moved source re-lays
+    /// the dimension out around the moved feature and re-words its figure in
+    /// `unit`; an erased one breaks the link and leaves the dimension where it
+    /// was; a dimension whose own point was moved off its feature, the source
+    /// standing still, releases that link. A link names a CORNER, not a number:
+    /// a corner inserted or removed before it, or a line reversed, renumbers
+    /// the link and moves nothing, and a corner within `tolerance` of where the
+    /// measured one was is still that corner; an object erased and replaced in
+    /// the same command (a join, an explode) hands its links to the new object
+    /// at the same point. Its own cursor, so the writes it makes are never read
+    /// back as a dimension the user moved.
+    SettleReport settle_dimensions(core::DrawingUnit unit, core::Mm tolerance);
 
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
@@ -286,6 +309,7 @@ private:
     /// How far `settle_attachments` has read `inverse_`; the ops before it were
     /// already answered.
     std::size_t settled_upto_{0};
+    std::size_t dims_settled_upto_{0}; ///< how far `settle_dimensions` has read
 };
 
 struct UndoEntry

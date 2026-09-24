@@ -1166,6 +1166,7 @@ def dimension(
     style: str = ...,
     text: str = ...,
     catalog: str = ...,
+    associate: bool = ...,
 ) -> int:
     """İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
 
@@ -1179,6 +1180,7 @@ def dimension(
         style — Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI
         text — Ölçülen değer yerine yazılacak metin
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+        associate — Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet
     """
 
 def leader(

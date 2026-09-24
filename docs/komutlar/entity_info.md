@@ -27,6 +27,8 @@ Her nesne için yazılanlar:
 | Alan | Metrekare, iki ondalık — tapunun taşıdığı hassasiyet |
 | Kapsam | Nesnenin sınır dikdörtgeni, milimetre olarak `[solY, altX, sağY, üstX]` |
 | Öznitelikler | Dolu olan her hücre; boş hücre hiç yazılmaz |
+| Ölçü bağları | Bir [bağlı ölçüde](dimension.md#bağlı-ölçü): hangi noktası hangi nesnenin hangi köşesine, merkezine ya da yay ucuna bağlı, kaç bağı kopuk |
+| Onu ölçen ölçüler | Herhangi bir nesnede: onu kaç bağlı ölçünün ölçtüğü — silmeden önce bilinmesi gereken |
 
 Tür adı bu komutun içine **yazılmamıştır**: nesne türleri tablosundan okunur. Bir
 eklenti yeni bir tür tanımladığında adı kendiliğinden buradan da çıkar.
@@ -129,6 +131,11 @@ Betik ve yapay zeka istemcisi cümleyi değil bu tabloyu okur:
   "surum": 2
 }
 ```
+
+Bağlı bir ölçüde satır `olcu_baglari` taşır — her bağ için `nokta` (ölçünün kaçıncı
+tanım noktası), `nesne` (ölçülen nesnenin kimliği), `ozellik` (`kose`, `merkez`,
+`yay_basi`, `yay_sonu`, `cember`) ve `kopuk`; bağlı ölçülerin ölçtüğü bir nesnede
+`olcen_olculer`, o ölçülerin kimlikleri.
 
 Uzunluklar **milimetre**, alanlar **milimetrekare** tam sayı olarak verilir: metreye
 çevirmek okuyanın işidir, çünkü belgenin sakladığı değer budur ve yuvarlama

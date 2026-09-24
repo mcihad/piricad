@@ -1002,6 +1002,7 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 | `stil` | text | isteğe bağlı | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
 | `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `bagla` | bool | isteğe bağlı | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
 
 Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
 
@@ -4513,6 +4514,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "katalog": {
           "type": "string",
           "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

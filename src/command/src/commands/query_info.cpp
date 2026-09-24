@@ -31,6 +31,7 @@
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -65,6 +66,86 @@ const char* kind_word(core::KindId k)
     const core::KindSpec* spec = core::builtin_kinds().find(k);
     if (spec == nullptr || spec->names[0] == nullptr) return "bilinmeyen tür";
     return spec->names[0];
+}
+
+/// The feature of its object a dimension's point is tied to, in the words the
+/// dimension page uses — without a case suffix, which after a number would have
+/// to follow how the number is read aloud.
+std::string anchor_word(const core::DimLink& l)
+{
+    switch (l.anchor) {
+    case core::DimAnchor::Vertex: return "köşe " + std::to_string(l.index + 1);
+    case core::DimAnchor::Centre: return "merkez";
+    case core::DimAnchor::ArcStart: return "yay başı";
+    case core::DimAnchor::ArcEnd: return "yay sonu";
+    case core::DimAnchor::OnCircle: return "çember";
+    }
+    return "?";
+}
+
+/// The same feature as a stable word, for the report.
+const char* anchor_id(core::DimAnchor a)
+{
+    switch (a) {
+    case core::DimAnchor::Vertex: return "kose";
+    case core::DimAnchor::Centre: return "merkez";
+    case core::DimAnchor::ArcStart: return "yay_basi";
+    case core::DimAnchor::ArcEnd: return "yay_sonu";
+    case core::DimAnchor::OnCircle: return "cember";
+    }
+    return "?";
+}
+
+/// WHAT A DIMENSION IS TIED TO, AND WHAT IS TIED TO AN OBJECT (TODOS C-10): the
+/// one question the canvas cannot answer by looking. A dimension says which of
+/// its points follow which object, and which have lost theirs; an object says
+/// which dimensions measure it — the thing to know before erasing it.
+void describe_links(const core::Document& doc, core::EntityId slot, core::Json& row,
+                    std::string& said)
+{
+    const core::DimLinkTable& table = doc.dimension_links();
+    if (table.empty()) return;
+    if (const std::vector<core::DimLink>* links = table.get(slot); links != nullptr) {
+        core::Json out     = core::Json::array({});
+        std::size_t broken = 0;
+        std::string tied;
+        for (const core::DimLink& l : *links) {
+            core::Json one;
+            one.set("nokta", core::Json::integer(static_cast<std::int64_t>(l.point) + 1));
+            one.set("nesne", core::Json::integer(static_cast<std::int64_t>(core::raw(l.source))));
+            one.set("ozellik", core::Json::string(anchor_id(l.anchor)));
+            one.set("kopuk", core::Json::boolean(l.broken));
+            out.push(std::move(one));
+            if (l.broken) {
+                ++broken;
+                continue;
+            }
+            tied += (tied.empty() ? "" : ", ") + std::to_string(l.point + 1) + ". nokta → nesne " +
+                    std::to_string(core::raw(l.source)) + " " + anchor_word(l);
+        }
+        row.set("olcu_baglari", std::move(out));
+        if (!tied.empty()) said += "; bağları: " + tied;
+        if (broken > 0)
+            said += "; " + std::to_string(broken) +
+                    " bağı kopuk (ölçtüğü nesne silinmiş; yazdığı değer onun eski ölçüsü)";
+    }
+    const core::EntityKey key = doc.entities().key[slot];
+    core::Json measured_by    = core::Json::array({});
+    std::size_t count         = 0;
+    for (const core::EntityId dim : table.linked()) {
+        if (!doc.alive(dim)) continue;
+        for (const core::DimLink& l : *table.get(dim)) {
+            if (l.broken || l.source != key) continue;
+            measured_by.push(
+                core::Json::integer(static_cast<std::int64_t>(core::raw(doc.entities().key[dim]))));
+            ++count;
+            break;
+        }
+    }
+    if (count > 0) {
+        row.set("olcen_olculer", std::move(measured_by));
+        said += "; " + std::to_string(count) + " bağlı ölçü bunu ölçüyor";
+    }
 }
 
 // ------------------------------------------------------------ NESNEBİLGİ ----
@@ -143,16 +224,17 @@ Task<void> run_entity_info(Context& ctx)
         }
         if (filled > 0) row.set("oznitelik", std::move(cells));
 
-        rows.push(std::move(row));
-        ++told;
-
         std::string said = "Nesne " + std::to_string(raw) + " — " + kind_word(kind) + ", katman " +
                            (layer != nullptr ? layer->name : std::string("?"));
         if (vertices > 0) said += ", " + std::to_string(vertices) + " köşe";
         if (perimeter > 0) said += ", çevre " + metres_text(perimeter) + " m";
         if (area != 0) said += ", alan " + square_metres_text(area) + " m²";
         if (filled > 0) said += ", " + std::to_string(filled) + " öznitelik";
+        describe_links(doc, slot, row, said);
         ctx.echo(said + ".");
+
+        rows.push(std::move(row));
+        ++told;
     }
 
     if (told == 0) {

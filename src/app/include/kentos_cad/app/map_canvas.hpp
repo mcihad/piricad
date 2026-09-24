@@ -434,6 +434,11 @@ private:
     /// the ones the drawing has since moved on from.
     void buildMeasureMarks();
 
+    /// Marks every definition point of a dimension on screen whose link to the
+    /// object it measured is broken (`core::DimLinkTable`): the object is gone
+    /// and the figure beside it is what that object used to measure.
+    void buildBrokenLinks();
+
     /// Draws SINIR's preview: the region the cursor is inside, found by the call
     /// the click makes (`core::region_at`), or the open ends that keep it from
     /// closing.
