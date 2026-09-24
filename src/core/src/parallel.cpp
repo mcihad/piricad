@@ -346,7 +346,7 @@ std::optional<std::string> parallel_refusal(const Document& doc, EntityId e)
     if (kind == kHatchKind)
         return std::string("Bir taramanın paraleli olmaz; sınırının paralelini alın.");
     if (kind == kDimensionKind || kind == kLeaderKind)
-        return std::string("Bir açıklamanın (ölçü, lider) paraleli olmaz; ölçtüğü çizginin "
+        return std::string("Bir açıklamanın (ölçü, kılavuz çizgi) paraleli olmaz; ölçtüğü çizginin "
                            "paralelini alın.");
     if (kind == kBlockReferenceKind)
         return std::string("Bir blok yerleşiminin paraleli olmaz; bloğu PATLAT ile açıp "

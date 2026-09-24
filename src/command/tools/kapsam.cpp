@@ -473,7 +473,7 @@ std::vector<Fixture> fixtures()
         {"olcu", "Ölçü", Shape::Annotation, false, std::nullopt, std::nullopt,
          [](Rig& r) { return build(r, {"ÖLÇÜ tur=hizali birinci=0,0 ikinci=30,0 konum=15,5"}); }},
 
-        {"lider", "Lider", Shape::Open, false, std::nullopt, std::nullopt,
+        {"lider", "Kılavuz çizgi", Shape::Open, false, std::nullopt, std::nullopt,
          [](Rig& r) {
              return build(r, {"LİDER noktalar=0,0 5,5 10,5 metin=Not"}, core::kLeaderKind);
          }},

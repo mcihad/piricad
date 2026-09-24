@@ -81,7 +81,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.dimension_continue`](dimension_continue.md) | Zincir Ölçü | `ZİNCİRÖLÇÜ`, `ZINCIROLCU`, `DIMCONTINUE`, `ZÖ`, `ZO` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler. |
 | [`core.dimension_baseline`](dimension_baseline.md) | Baz Ölçü | `BAZÖLÇÜ`, `BAZOLCU`, `DIMBASELINE`, `BÖ`, `BO` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer. |
 | [`core.dimension_style`](dimension_style.md) | Ölçü Stilleri | `ÖLÇÜSTİLİ`, `OLCUSTILI`, `DIMSTYLE`, `ÖST`, `OST` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler. |
-| [`core.leader`](leader.md) | Lider | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
+| [`core.leader`](leader.md) | Kılavuz Çizgi | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir. |
 | [`core.points`](points.md) | Nokta Listesi | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | Öznitelik | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
@@ -1136,9 +1136,9 @@ Ayrıntılı kullanım: [BAZÖLÇÜ](dimension_baseline.md)
 
 Ayrıntılı kullanım: [ÖLÇÜSTİLİ](dimension_style.md)
 
-### `core.leader` — LİDER (Lider)
+### `core.leader` — LİDER (Kılavuz Çizgi)
 
-Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -7794,8 +7794,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_leader",
-    "title": "Lider",
-    "description": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.\nKomut: LİDER (LIDER, LEADER, LD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "title": "Kılavuz Çizgi",
+    "description": "Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.\nKomut: LİDER (LIDER, LEADER, LD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {

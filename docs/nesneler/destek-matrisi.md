@@ -39,7 +39,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Yazı](#yazi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Blok referansı](#blok) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
-| [Lider](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
+| [Kılavuz çizgi](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
 238 hücre: 154 destekli, 4 kısmi, 28 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
@@ -340,7 +340,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Ölç | ✓ destekli | çevre 0.000 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
-### <a id="lider"></a>Lider
+### <a id="lider"></a>Kılavuz çizgi
 
 | İşlem | Durum | Kanıt |
 |---|---|---|
@@ -355,7 +355,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✗ yok | Nesne 1 bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır. |
 | Böl | ✗ yok | Nesne 1 bu yöntemle bölünemiyor; BÖL çizgi, yay, daire ve yaylı çoklu çizgide çalışır. |
 | Kır | ✗ yok | Nesne 1 kırılamıyor; KIR çizgi, yay, daire ve yaylı çoklu çizgide çalışır. |
-| Paralel (OFSET) | ✗ yok | Nesne 1: Bir açıklamanın (ölçü, lider) paraleli olmaz; ölçtüğü çizginin paralelini alın. |
+| Paralel (OFSET) | ✗ yok | Nesne 1: Bir açıklamanın (ölçü, kılavuz çizgi) paraleli olmaz; ölçtüğü çizginin paralelini alın. |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✗ yok | Nesne 1 uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır. |

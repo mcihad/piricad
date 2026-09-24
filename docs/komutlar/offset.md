@@ -17,7 +17,7 @@ Paralel, kaynağıyla **aynı türde** bir nesnedir:
 | Yay | Aynı merkezli yay |
 | Elips, spline, yaylı çoklu çizgi | Kendi türünde paraleli yoktur: çizildiği hâlinin tam paraleli alınır ve **çoklu çizgi** olur; komut çizimin gerçek eğriden en çok ne kadar saptığını yazar |
 
-Nokta, yazı, ölçü, lider, tarama ve blok referansının paraleli olmaz; komut
+Nokta, yazı, ölçü, kılavuz çizgi, tarama ve blok referansının paraleli olmaz; komut
 sebebini söyler (taramada sınırın, ölçüde ölçtüğü çizginin paralelini alın).
 
 **Taraf.** Açık bir çizginin tarafları **sol** ve **sağ**dır — çizildiği yöne
@@ -172,7 +172,7 @@ için reddedilir.
 
 > `Nesne 1: Bir yazının paraleli olmaz …`
 
-Paraleli olmayan bir tür verildi (nokta, yazı, ölçü, lider, tarama, blok).
+Paraleli olmayan bir tür verildi (nokta, yazı, ölçü, kılavuz çizgi, tarama, blok).
 
 > `Nesne 1: Kapalı bir şeklin solu ya da sağı yoktur; taraf=dis ya da taraf=ic verin.`
 >

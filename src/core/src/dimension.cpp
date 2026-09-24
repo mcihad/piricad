@@ -289,7 +289,7 @@ void ld_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
 
 Result<std::uint32_t> ld_read(RingGeometry& geom, std::span<const std::uint8_t> payload)
 {
-    return rings_read(geom, payload, "Lider", 1);
+    return rings_read(geom, payload, "Kılavuz çizgi", 1);
 }
 
 Status ld_validate(std::span<const RingGeometry::RingInput> rings,

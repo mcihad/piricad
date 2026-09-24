@@ -1,4 +1,4 @@
-# Lider
+# Kılavuz çizgi
 
 ## Nedir
 
@@ -9,7 +9,7 @@ not düşer. DXF `LEADER` budur.
 
 Tek açık halka: okun ucundan yazının yanına köşeler. Yükte okun olup olmadığı, ok
 boyu (zemin milimetresi) ve kaynağın spline olarak çizdiğine dair bayrak durur. Yazı
-liderin parçası **değildir**: `LİDER metin=` verilirse son köşenin yanına ayrı bir
+kılavuz çizginin parçası **değildir**: `LİDER metin=` verilirse son köşenin yanına ayrı bir
 yazı nesnesi konur, her CAD biçiminin yaptığı gibi.
 
 ## Nasıl çizilir
@@ -44,4 +44,4 @@ LİDER noktalar=0,0 3,3 6,3 metin=Rögar
 
 ## Sınırlar
 
-Spline lider düz kenarlarla çizilir; bayrağı korunur ve DXF'e geri yazılır.
+Spline kılavuz çizgi düz kenarlarla çizilir; bayrağı korunur ve DXF'e geri yazılır.

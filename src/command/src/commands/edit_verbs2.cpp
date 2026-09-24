@@ -82,7 +82,7 @@ const char* kind_word(core::KindId k)
     case core::kHatchKind: return "tarama";
     case core::kBlockReferenceKind: return "blok referansı";
     case core::kDimensionKind: return "ölçü";
-    case core::kLeaderKind: return "lider";
+    case core::kLeaderKind: return "kılavuz çizgi";
     default: return "bilinmeyen tür";
     }
 }

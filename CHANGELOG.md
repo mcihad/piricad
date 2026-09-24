@@ -34,6 +34,11 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   kuralları…). Pafta ölçeği ve koordinat sistemi durum çubuğuna geçti.
 - **Yeni Hakkında penceresi:** sürüm, Qt, çizim motoru, platform ve komut sayısı; NOTICE'ten
   okunan bileşen listesi ve lisans metni; bilgileri panoya kopyalama.
+- **Değişti:** oklu not çizgisinin adı **Kılavuz Çizgi** oldu — AutoCAD'in Türkçe
+  belgelerinin `LEADER` için kullandığı ad. Şerit düğmesi, komut listesi, iletiler
+  (`3 noktalı kılavuz çizgi çizildi`), destek matrisi ve belgeler aynı adı söylüyor; komut
+  satırında yazılan sözcük `LİDER` (`LEADER`, `LD`) olarak kaldı, eski betikler ve
+  `SEÇ tur=LİDER` aynen çalışır.
 - **Değişti:** Yapay Zeka panelinin kısayolu **Ctrl+Shift+K** oldu (komut paletinin
   **Ctrl+K**'sinin yanında). **Ctrl+Shift+A** hem Seçimi Temizle'ye hem Yapay Zeka'ya
   bağlıydı ve Qt iki eyleme bağlı bir tuşta hiçbirini çalıştırmadığı için ikisi de

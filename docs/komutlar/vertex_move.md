@@ -36,7 +36,7 @@ daire daire kalır, yalnız yarıçapı ya da yeri değişir.
 | Elips | 1 merkez · 2 birinci eksen ucu · 3 ikinci eksen ucu · 4–5 aynaları | eksen ucu ekseni çevirir ve uzatır; öteki eksen boyunu koruyarak dik kalır |
 | Yaylı çoklu çizgi | köşeler · sonra her yayın orta noktası | köşe taşınınca ona değen yaylar şişkinliğini korur; yayın ortası yayı üç noktadan yeniden kurar, kirişin üstüne gelirse kenar düzleşir |
 | Spline | kontrol noktaları | kontrol noktası yerine gider, eğri yeniden hesaplanır; dosyadan gelen uydurma noktaları artık eğriyi anlatmadığı için düşer |
-| Tarama, lider | halka köşeleri | köşe yerine gider |
+| Tarama, kılavuz çizgi | halka köşeleri | köşe yerine gider |
 | Ölçü | tanım noktaları · son olarak yazı | tanım noktası taşınınca ölçü çizgisi, uzatma çizgileri ve yazı yeniden kurulur, rakam yeniden ölçülür; yazı tutamağı yalnız yazıyı kaydırır |
 | Blok referansı | 1 ekleme noktası · 2 döndürme tutamağı | ekleme noktası referansı taşır; döndürme tutamağı referansı ekleme noktası çevresinde tutamağa doğru döndürür, ölçeği değişmez |
 | Nokta | 1 nokta | nokta taşınır |

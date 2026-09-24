@@ -302,7 +302,7 @@ Girdi kutusunda `fx` işareti, etiketinde `HESAP` rozeti taşır.
 
 **Tür yükü** — Bir nesne türünün halkalarının söyleyemediğini taşıyan, yalnız o türün
 okuduğu bayt dizisi. Kısmi elips, yaylı çoklu çizgi, spline, tarama, blok referansı,
-ölçü ve lider taşır; çoklu çizgi, daire, yay, nokta ve tam elips taşımaz.
+ölçü ve kılavuz çizgi taşır; çoklu çizgi, daire, yay, nokta ve tam elips taşımaz.
 
 **Yabancı veri** — Başka bir programın nesneye bağladığı, KentOSCad'in okumadığı ama
 kaybetmediği baytlar; DXF'te XDATA. Panelde yalnız sayısı görünür.
@@ -326,8 +326,9 @@ kirişin yarısına oranla yayın yüksekliği. Okunurken yayın merkezine ve ya
 **Tarama** — Kapalı bir sınırı dolu ya da çizgi deseniyle dolduran nesne (DXF `HATCH`);
 desenler katalogdan adla gelir.
 
-**Ölçü ve lider** — Uzunluğu ya da açıyı yazısı ve oklarıyla gösteren nesne (`ÖLÇÜ`,
-DXF `DIMENSION`) ile bir noktayı gösteren oklu çizgi (`LİDER`, DXF `LEADER`).
+**Ölçü ve kılavuz çizgi** — Uzunluğu ya da açıyı yazısı ve oklarıyla gösteren nesne (`ÖLÇÜ`,
+DXF `DIMENSION`) ile bir noktayı gösteren oklu çizgi (`LİDER`, DXF `LEADER`; İngilizce
+*leader*).
 
 **Bağlı ölçü** — Noktaları ölçtüğü nesnenin köşesine, merkezine ya da yay ucuna bağlı
 ölçü: nesne değişince yeniden ölçülür, nesne silinince bağı kopar ve bu görünür. Bkz.

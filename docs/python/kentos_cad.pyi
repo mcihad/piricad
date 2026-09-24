@@ -1366,7 +1366,7 @@ def leader(
     style: str = ...,
     catalog: str = ...,
 ) -> int:
-    """Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+    """Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 
     Komut: core.leader (LİDER)
         points — Okun ucundan yazının yanına köşeler [mm, Sağa (Y) önce]

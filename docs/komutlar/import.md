@@ -171,7 +171,7 @@ pencereleri çizim değildir; okunmaz ve sayılır (`atlandı: 3 öğe kâğıt 
 
 **DXF notları.** DXF libdxfrw ile okunur ([nasıl okunduğu](../veri/dis-formatlar.md)):
 daire, yay, elips ve kısmi elips gerçek eğri; şişkinlikli çizgi yaylı çoklu çizgi;
-spline, tarama, ölçü ve lider kendi türleri; blok tanımları ve referansları yapısıyla;
+spline, tarama, ölçü ve kılavuz çizgi kendi türleri; blok tanımları ve referansları yapısıyla;
 katman rengi, kalınlığı ve durumu; nesnenin kendi rengi ve kalınlığı; sabit yükseklik
 `kot` sütununa; tutamak `kaynak_kimlik` sütununa; XDATA bayt bayt.
 **Düşürülerek alınanlar**, her biri `düşürme:` ile sayılır: yalnız uydurma noktalı

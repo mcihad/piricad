@@ -161,7 +161,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.dimension_continue`](#caddimension_continue) | `core.dimension_continue` | `ZİNCİRÖLÇÜ` | Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda ölçüler çizer; toplamı söyler. |
 | [`cad.dimension_baseline`](#caddimension_baseline) | `core.dimension_baseline` | `BAZÖLÇÜ` | Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste dizer. |
 | [`cad.dimension_style`](#caddimension_style) | `core.dimension_style` | `ÖLÇÜSTİLİ` | Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin varsayılan olduğunu söyler. |
-| [`cad.leader`](#cadleader) | `core.leader` | `LİDER` | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
+| [`cad.leader`](#cadleader) | `core.leader` | `LİDER` | Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir. |
 | [`cad.points`](#cadpoints) | `core.points` | `NOKTALAR` | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`cad.guide`](#cadguide) | `core.guide` | `KILAVUZ` | Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler. |
 | [`cad.attribute`](#cadattribute) | `core.attribute` | `ÖZNİTELİK` | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
@@ -2066,7 +2066,7 @@ cad.dimension_style(
 
 ### `cad.leader`
 
-Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 
 Komut: `core.leader` — `LİDER`
 

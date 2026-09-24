@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 112 (99 tanesi onay ister)
-- Katalog parmak izi: `1197221946148518547`
+- Katalog parmak izi: `18038967844655025711`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -988,9 +988,9 @@ Onay ister.
 | `yerlesim` | string | hayır | kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). uygula: kurulacak yerleşimin adı (verilmezse şablonun adı) (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
-### `core_leader` — Lider
+### `core_leader` — Kılavuz Çizgi
 
-Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 Komut: LİDER (LIDER, LEADER, LD)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 

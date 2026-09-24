@@ -1,10 +1,10 @@
-# LİDER — Lider Çizme
+# LİDER — Kılavuz Çizgi
 
 ## Ne yapar
 
-Bir noktayı gösteren oklu çizgi çizer ve istenirse son köşesinin yanına bir yazı koyar.
-Ok boyu ve yazı yüksekliği [ölçü stilinden](dimension.md) gelir. Sonuç bir
-[lider nesnesidir](../nesneler/lider.md); yazı ayrı bir metin nesnesidir ve `METİN` gibi
+Bir noktayı gösteren oklu çizgiyi — **kılavuz çizgiyi** — çizer ve istenirse son köşesinin
+yanına bir yazı koyar. Ok boyu ve yazı yüksekliği [ölçü stilinden](dimension.md) gelir.
+Sonuç bir [kılavuz çizgi nesnesidir](../nesneler/lider.md); yazı ayrı bir metin nesnesidir ve `METİN` gibi
 düzenlenir.
 
 ## Adlar
@@ -12,6 +12,10 @@ düzenlenir.
 | Türkçe | ASCII | İngilizce | Kısaltma |
 |---|---|---|---|
 | `LİDER` | `LIDER` | `LEADER` | `LD` |
+
+Şeritte, komut listesinde ve iletilerde adı **Kılavuz Çizgi**'dir — AutoCAD'in Türkçe
+belgelerinin `LEADER` için kullandığı ad. Komut satırında yazılan sözcük `LİDER` (ya da
+`LEADER`) olarak kalır; eski betikler ve `SEÇ tur=LİDER` süzgeci aynen çalışır.
 
 ## Sözdizimi
 
@@ -60,7 +64,7 @@ yazın.
 
 ## Geri alma
 
-Tek adımdır: `GERİAL` lideri ve yazısını birlikte kaldırır.
+Tek adımdır: `GERİAL` kılavuz çizgiyi ve yazısını birlikte kaldırır.
 
 ## Betikten kullanım
 
@@ -68,7 +72,7 @@ Günlüğe köşeler, stil ve varsa metin yazılır.
 
 ## Hatalar
 
-> `Bir lider en az iki nokta ister: okun ucu ve yazının yanı.`
+> `Bir kılavuz çizgi en az iki nokta ister: okun ucu ve yazının yanı.`
 
 Tek nokta verildi.
 
@@ -80,4 +84,4 @@ Stil katalogda yok.
 
 - [ÖLÇÜ](dimension.md) — ölçülendirme
 - [METİN](text.md) — yazıyı sonradan değiştirmek
-- [Lider türü](../nesneler/lider.md)
+- [Kılavuz çizgi türü](../nesneler/lider.md)

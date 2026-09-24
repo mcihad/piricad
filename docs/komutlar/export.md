@@ -16,7 +16,7 @@ DXF'e (libdxfrw ile) her tür kendi varlığı olarak gider: daire `CIRCLE`, yay
 elips ve kısmi elips `ELLIPSE`, nokta `POINT`, yazı `TEXT`, çizgi ve alan
 `LWPOLYLINE`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline `SPLINE`, tarama
 `HATCH`, blok tanımları `BLOCK` ve referansları `INSERT`, ölçü `DIMENSION` (stili
-`DIMSTYLE` tablosuna), lider `LEADER`; katmanlar rengi, kalınlığı, görünürlüğü ve
+`DIMSTYLE` tablosuna), kılavuz çizgi `LEADER`; katmanlar rengi, kalınlığı, görünürlüğü ve
 kilidiyle; nesnenin kendi rengi ve kalınlığı; öznitelikler `KENTOSCAD` uygulama
 verisi (XDATA) olarak — KentOSCad geri okurken sütunlarına döner; başka programın
 XDATA'sı geldiği gibi. Çizgi tipleri bu sürümde yazılmaz ve söylenir. Çalışma
@@ -119,7 +119,7 @@ DXF'te alan yoktur: yazı `TEXT` olarak yüksekliği, açısı ve hizasıyla, pa
 elips `ELLIPSE`, nokta `POINT`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline
 `SPLINE`, tarama sınır döngüleri ve desen adıyla `HATCH` (desen tanım çizgileri
 yazılmaz; AutoCAD deseni adıyla bulur), blok tanımı üyeleriyle `BLOCK`, referansı
-`INSERT`, ölçü türüyle `DIMENSION`, lider `LEADER` olarak yazılır. Koordinatlar
+`INSERT`, ölçü türüyle `DIMENSION`, kılavuz çizgi `LEADER` olarak yazılır. Koordinatlar
 [`AYAR çizim_birimi`](setting.md) ayarındaki birimde yazılır ve `$INSUNITS` başlığa
 işlenir. Öznitelikler her nesnenin `KENTOSCAD` uygulama verisine `ada#0=12` biçiminde
 (ad, sütun türü, değer) yazılır; KentOSCad bu dosyayı geri okurken sütunu yoksa

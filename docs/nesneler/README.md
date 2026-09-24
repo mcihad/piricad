@@ -1,7 +1,7 @@
 # Nesne türleri
 
 Çizimdeki her nesnenin bir **türü** vardır: çoklu çizgi, daire, yay, nokta, elips,
-yaylı çoklu çizgi, spline, tarama, blok referansı, ölçü, lider.
+yaylı çoklu çizgi, spline, tarama, blok referansı, ölçü, kılavuz çizgi.
 Tür, nesnenin iki şeyini birden söyler: dosyaya hangi **sayıların** yazıldığını ve
 o sayılardan ekranda hangi **biçimin** çizildiğini. Bir daire dosyada iki nokta
 olarak durur — merkezi ve yarıçapı — ama ekranda 128 kenarlı, pürüzsüz bir çember
@@ -26,7 +26,7 @@ alanlardan oluşan bir bayt dizisi, yalnız o türün kendisinin okuduğu. İlk 
 taşımaz; kısmi elips (başlangıç ve bitiş açısı), yaylı çoklu çizgi (yayların merkezi
 ve yarıçapı), spline (derece, düğümler, ağırlıklar), tarama (desen, açı, ölçek, çizgi
 aileleri), blok referansı (yerleştirme dönüşümü), ölçü (tür, ölçülen değer, stil
-ölçüleri) ve lider (ok) taşır. Her yük bir düzen sürümüyle başlar; daha yeni bir
+ölçüleri) ve kılavuz çizgi (ok) taşır. Her yük bir düzen sürümüyle başlar; daha yeni bir
 düzeni bu sürüm tanımazsa nesne tanınmayan tür gibi korunur.
 
 ## Belirlenimcilik

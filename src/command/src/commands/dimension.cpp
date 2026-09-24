@@ -456,7 +456,7 @@ Task<void> run_leader(Context& ctx)
     }
     if (points.size() < 2) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bir lider en az iki nokta ister: okun ucu ve yazının yanı.");
+                   "Bir kılavuz çizgi en az iki nokta ister: okun ucu ve yazının yanı.");
         co_return;
     }
 
@@ -500,7 +500,7 @@ Task<void> run_leader(Context& ctx)
     ctx.record("noktalar", Value::points(points));
     ctx.record("stil", Value::text(style->figures.style));
     if (!words.empty()) ctx.record("metin", Value::text(words));
-    ctx.echo(std::to_string(points.size()) + " noktalı lider çizildi" +
+    ctx.echo(std::to_string(points.size()) + " noktalı kılavuz çizgi çizildi" +
              (words.empty() ? "." : ": " + words));
 }
 
@@ -1310,7 +1310,7 @@ KENTOS_COMMAND(leader)
     return CommandSpec{
         .id       = "core.leader",
         .names    = {"LİDER", "LIDER", "LEADER", "LD"},
-        .title    = "Lider",
+        .title    = "Kılavuz Çizgi",
         .category = Category::Draw,
         .params =
             {
@@ -1327,7 +1327,7 @@ KENTOS_COMMAND(leader)
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.",
+        .summary = "Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.",
         .run     = &run_leader,
     };
 }

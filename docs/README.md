@@ -130,7 +130,7 @@ Tek tek komutlar:
 | `ZİNCİRÖLÇÜ` | [Zincir ölçü](komutlar/dimension_continue.md) |
 | `BAZÖLÇÜ` | [Baz ölçü](komutlar/dimension_baseline.md) |
 | `ÖLÇÜSTİLİ` | [Ölçü stilleri](komutlar/dimension_style.md) |
-| `LİDER` | [Lider çizme](komutlar/leader.md) |
+| `LİDER` | [Kılavuz çizgi](komutlar/leader.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
 | `DÖNÜŞTÜR` | [Koordinat sistemi dönüşümü](komutlar/reproject.md) |
@@ -182,7 +182,7 @@ noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeği
 | [Tarama](nesneler/tarama.md) | Sınır halkaları ve desen; desen kataloğu |
 | [Blok referansı](nesneler/blokreferansi.md) | Blok tanımını yerleştiren nesne; ölçek, açı, dizi |
 | [Ölçü](nesneler/olcu.md) | Uzunluk, yarıçap, çap, açı; stil kataloğu; yazı tam sayıdan |
-| [Lider](nesneler/lider.md) | Oklu not çizgisi |
+| [Kılavuz çizgi](nesneler/lider.md) | Oklu not çizgisi (DXF `LEADER`) |
 | [Yazı](nesneler/yazi.md) | Taban çizgisi ve metin; çok satır, dokuz hizalama, satır aralığı; TEXT ve MTEXT |
 
 ## Yapay zeka
