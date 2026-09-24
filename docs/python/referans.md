@@ -114,6 +114,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.tracking`](#cadtracking) | `core.tracking` | `İZ` | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
 | [`cad.text`](#cadtext) | `core.text` | `METİN` | Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir. |
 | [`cad.edittext`](#cadedittext) | `core.edittext` | `YAZIDÜZENLE` | Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir. |
+| [`cad.find_replace`](#cadfind_replace) | `core.find_replace` | `BULDEĞİŞTİR` | Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı. |
 | [`cad.exportstyle`](#cadexportstyle) | `core.exportstyle` | `STİLAKTAR` | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`cad.area`](#cadarea) | `core.area` | `ALAN` | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`cad.rectangle`](#cadrectangle) | `core.rectangle` | `DİKDÖRTGEN` | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
@@ -806,6 +807,36 @@ cad.edittext(
 | `width` | `float` | `genislik` | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] |
 
 [Komut sayfası](../komutlar/edittext.md)
+
+### `cad.find_replace`
+
+Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı.
+
+Komut: `core.find_replace` — `BULDEĞİŞTİR`
+
+```python
+cad.find_replace(
+    find: str,
+    replace: str,
+    layer: str,
+    objects: list[int],
+    match_case: bool,
+    whole_word: bool,
+    apply: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `find` | `str` | `bul` | Aranacak yazı; \n satır sonudur |
+| `replace` | `str` | `degistir` | Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir |
+| `layer` | `str` | `katman` | Yalnız bu katmandaki yazılar |
+| `objects` | `list[int]` | `nesneler` | Yalnız bu yazılar; verilmezse bütün çizim [kalıcı nesne anahtarı] |
+| `match_case` | `bool` | `buyuk_kucuk` | Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile) |
+| `whole_word` | `bool` | `tam_kelime` | Yalnız kendi başına duran kelime; varsayılan hayır |
+| `apply` | `bool` | `uygula` | Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur |
+
+[Komut sayfası](../komutlar/find_replace.md)
 
 ### `cad.exportstyle`
 

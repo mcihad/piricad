@@ -17,11 +17,13 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/dimension.hpp"
 
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
@@ -354,6 +356,324 @@ Task<void> run_edit(Context& ctx)
              (skipped > 0 ? ", " + std::to_string(skipped) + " nesne yazı taşımıyordu" : ""));
 }
 
+// ------------------------------------------------------- BULDEĞİŞTİR -------
+
+/// One code point of a caption: where it starts, how long it is, and the form
+/// a case-blind search compares.
+struct Letter
+{
+    std::size_t at{0};
+    std::size_t length{0};
+    std::string folded;
+};
+
+/// The code points of `utf8`, each with its Turkish capital when `fold` — `i`
+/// is `İ` and `ı` is `I` in this alphabet, which a byte-wise `toupper` gets
+/// wrong (CLAUDE.md 5.6).
+std::vector<Letter> letters_of(std::string_view utf8, bool fold)
+{
+    std::vector<Letter> out;
+    out.reserve(utf8.size());
+    for (std::size_t i = 0; i < utf8.size();) {
+        std::size_t n = 1;
+        const auto c  = static_cast<unsigned char>(utf8[i]);
+        if (c >= 0xF0U)
+            n = 4;
+        else if (c >= 0xE0U)
+            n = 3;
+        else if (c >= 0xC0U)
+            n = 2;
+        n                            = std::min(n, utf8.size() - i);
+        const std::string_view piece = utf8.substr(i, n);
+        out.push_back(Letter{i, n, fold ? core::turkish_upper(piece) : std::string(piece)});
+        i += n;
+    }
+    return out;
+}
+
+/// Whether a code point is part of a word, for `tam_kelime`.
+///
+/// A LETTER OR A DIGIT OF ANY ALPHABET is; a space, a punctuation mark or a
+/// symbol is not — `«ADA»`, `ADA…`, `⌀120` and `m²` hold the words ADA, 120
+/// and m. The layers below Qt link no Unicode library (the tree has no ICU), so
+/// the rule is written out here and kept narrow, as the Turkish casing table
+/// is: ASCII by class, and past ASCII everything is a letter except the Latin-1
+/// signs (U+0080–U+00BF, × and ÷), the punctuation and symbol blocks
+/// U+2000–U+2BFF, and CJK punctuation U+3000–U+303F. Turkish letters, and
+/// every other alphabet's, fall on the letter side of it.
+bool word_letter(std::string_view piece) noexcept
+{
+    if (piece.empty()) return false;
+    const auto lead = static_cast<unsigned char>(piece.front());
+    if (lead < 0x80U)
+        return (lead >= '0' && lead <= '9') || (lead >= 'A' && lead <= 'Z') ||
+               (lead >= 'a' && lead <= 'z') || lead == '_';
+    const std::size_t n = piece.size();
+    if (n == 1) return true; // a broken sequence: part of whatever word it sits in
+    std::uint32_t cp = 0;
+    if (n == 2)
+        cp = (lead & 0x1FU) << 6U;
+    else if (n == 3)
+        cp = (lead & 0x0FU) << 12U;
+    else
+        cp = (lead & 0x07U) << 18U;
+    for (std::size_t k = 1; k < n; ++k)
+        cp |= (static_cast<std::uint32_t>(static_cast<unsigned char>(piece[k])) & 0x3FU)
+              << (6U * static_cast<std::uint32_t>(n - 1 - k));
+    if (cp <= 0xBFU || cp == 0xD7U || cp == 0xF7U) return false;
+    if (cp >= 0x2000U && cp <= 0x2BFFU) return false;
+    return cp < 0x3000U || cp > 0x303FU;
+}
+
+/// Every place `needle` occurs in `hay`, left to right, not overlapping, as byte
+/// ranges of `hay`: case-blind in Turkish when `fold`, and only where it stands
+/// as a word of its own when `whole`.
+std::vector<std::pair<std::size_t, std::size_t>>
+find_all(std::string_view hay, std::string_view needle, bool fold, bool whole)
+{
+    std::vector<std::pair<std::size_t, std::size_t>> out;
+    const std::vector<Letter> h = letters_of(hay, fold);
+    const std::vector<Letter> n = letters_of(needle, fold);
+    if (n.empty() || n.size() > h.size()) return out;
+    for (std::size_t i = 0; i + n.size() <= h.size();) {
+        bool same = true;
+        for (std::size_t k = 0; same && k < n.size(); ++k)
+            same = h[i + k].folded == n[k].folded;
+        if (same && whole) {
+            const bool open_before =
+                i == 0 || !word_letter(hay.substr(h[i - 1].at, h[i - 1].length));
+            const std::size_t after = i + n.size();
+            const bool open_after =
+                after == h.size() || !word_letter(hay.substr(h[after].at, h[after].length));
+            same = open_before && open_after;
+        }
+        if (!same) {
+            ++i;
+            continue;
+        }
+        const std::size_t from = h[i].at;
+        const Letter& last     = h[i + n.size() - 1];
+        out.emplace_back(from, last.at + last.length - from);
+        i += n.size();
+    }
+    return out;
+}
+
+/// Whether a caption has no words left: nothing, or only spaces and breaks.
+bool blank(std::string_view words) noexcept
+{
+    return std::ranges::all_of(words, [](char c) { return c == ' ' || c == '\n' || c == '\t'; });
+}
+
+/// A caption on one line, for a preview: a line break as `\n`, long ones cut.
+std::string preview_of(std::string_view words)
+{
+    std::string out;
+    for (const char c : words) {
+        if (c == '\n')
+            out += "\\n";
+        else
+            out += c;
+        if (out.size() > 60) {
+            out += "…";
+            break;
+        }
+    }
+    return out;
+}
+
+Task<void> run_find_replace(Context& ctx)
+{
+    const core::Document& doc = ctx.document();
+    auto needle               = co_await ctx.text("bul", "Aranacak yazı");
+    if (!needle) co_return;
+    if (needle->empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument, "Aranacak yazı boş olamaz.");
+        co_return;
+    }
+    const std::string wanted  = with_breaks(*needle);
+    const Value replacement   = ctx.argument("degistir");
+    const bool replacing      = !replacement.empty();
+    const std::string instead = replacing ? with_breaks(replacement.as_text()) : std::string();
+    const bool match_case     = ctx.argument("buyuk_kucuk").as_bool();
+    const bool whole          = ctx.argument("tam_kelime").as_bool();
+    const Value layer_arg     = ctx.argument("katman");
+    const core::LayerId only =
+        layer_arg.empty() ? core::kNoLayer : doc.find_layer(layer_arg.as_text());
+    if (!layer_arg.empty() && only == core::kNoLayer) {
+        ctx.refuse(core::ErrorCode::NotFound, "Katman bulunamadı: '" + layer_arg.as_text() + "'.");
+        co_return;
+    }
+    // Held by name: `argument` returns a copy, and a loop over the list of a
+    // temporary walks a list that is already gone (C++20 extends the life of
+    // the last temporary of a range, not of the one it was read from).
+    const Value named_arg = ctx.argument("nesneler");
+    std::vector<core::EntityId> named;
+    for (const std::int64_t raw : named_arg.as_ids()) {
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+        if (e != core::kNoEntity) named.push_back(e);
+    }
+
+    // ---- what matches, and what it would say ----
+    //
+    // The captions themselves: not a dimension's figure (ÖLÇÜDÜZENLE writes
+    // that), not a caption filled from its object (its words are its format's,
+    // and would come back at the next change), not a member of a block
+    // definition (every reference would change at once).
+    struct Hit
+    {
+        core::EntityId e{core::kNoEntity};
+        std::string was;
+        std::string now;
+        std::size_t count{0};
+    };
+
+    std::vector<Hit> hits;
+    std::size_t filled  = 0;
+    std::size_t emptied = 0;
+    std::size_t matches = 0;
+    const auto& ents    = doc.entities();
+    const auto consider = [&](core::EntityId e) {
+        if (e >= ents.size() || !doc.alive(e) || !doc.texts().has(ents.slot[e])) return;
+        if (ents.kind[e] == core::kDimensionKind || (ents.flags[e] & core::FlagInBlock) != 0)
+            return;
+        if (only != core::kNoLayer && ents.layer[e] != only) return;
+        const std::string_view words = doc.texts().text(ents.slot[e]);
+        const auto found             = find_all(words, wanted, !match_case, whole);
+        if (found.empty()) return;
+        if (const core::Attachment* a = doc.attachments().get(e);
+            a != nullptr && a->derive != core::AttachDerive::Keep) {
+            ++filled;
+            return;
+        }
+        Hit hit{e, std::string(words), {}, found.size()};
+        std::size_t from = 0;
+        for (const auto& [at, length] : found) {
+            hit.now.append(words.substr(from, at - from));
+            hit.now.append(instead);
+            from = at + length;
+        }
+        hit.now.append(words.substr(from));
+        // A CAPTION IS NOT EMPTIED by a replacement: a caption with no words is
+        // written as a bare line, which is a text turned into a line without
+        // anybody asking. It keeps its words and the answer counts it; SİL is
+        // how a caption goes.
+        if (replacing && blank(hit.now)) {
+            ++emptied;
+            return;
+        }
+        matches += found.size();
+        hits.push_back(std::move(hit));
+    };
+    if (named.empty())
+        for (core::EntityId e = 0; e < ents.size(); ++e)
+            consider(e);
+    else
+        for (const core::EntityId e : named)
+            consider(e);
+
+    ctx.record("bul", Value::text(wanted));
+    if (replacing) ctx.record("degistir", Value::text(instead));
+    if (match_case) ctx.record("buyuk_kucuk", Value::boolean(true));
+    if (whole) ctx.record("tam_kelime", Value::boolean(true));
+    if (!layer_arg.empty()) ctx.record("katman", layer_arg);
+    if (!named.empty()) ctx.record("nesneler", named_arg);
+
+    // ---- the preview: the same lines to every client, before anything moves ----
+    core::Json rows = core::Json::array({});
+    for (const Hit& h : hits) {
+        core::Json row;
+        row.set("nesne",
+                core::Json::integer(static_cast<std::int64_t>(core::raw(doc.key_of(h.e)))));
+        row.set("once", core::Json::string(h.was));
+        row.set("sonra", core::Json::string(replacing ? h.now : h.was));
+        row.set("adet", core::Json::integer(static_cast<std::int64_t>(h.count)));
+        rows.push(std::move(row));
+    }
+    core::Json report;
+    report.set("yazi", core::Json::integer(static_cast<std::int64_t>(hits.size())));
+    report.set("eslesme", core::Json::integer(static_cast<std::int64_t>(matches)));
+    report.set("atlanan", core::Json::integer(static_cast<std::int64_t>(filled)));
+    report.set("bos_kalacak", core::Json::integer(static_cast<std::int64_t>(emptied)));
+    report.set("satirlar", std::move(rows));
+    ctx.report(std::move(report));
+    std::string skipped;
+    if (filled > 0)
+        skipped += "; kalıptan doldurulan " + std::to_string(filled) +
+                   " yazı atlandı (kalıbı BAĞLA ya da ETİKET ile değişir)";
+    if (emptied > 0)
+        skipped +=
+            "; boş kalacak " + std::to_string(emptied) + " yazı atlandı (bir yazıyı SİL kaldırır)";
+    if (hits.empty()) {
+        ctx.echo("'" + preview_of(wanted) + "' hiçbir yazıda bulunmadı" + skipped + ".");
+        co_return;
+    }
+    constexpr std::size_t kShown = 12;
+    std::string listing = std::to_string(hits.size()) + " yazıda " + std::to_string(matches) +
+                          " eşleşme" + skipped + ":";
+    for (std::size_t i = 0; i < hits.size() && i < kShown; ++i) {
+        listing += "\n  " + std::to_string(core::raw(doc.key_of(hits[i].e))) + ": «" +
+                   preview_of(hits[i].was) + "»";
+        if (replacing) listing += " → «" + preview_of(hits[i].now) + "»";
+    }
+    if (hits.size() > kShown)
+        listing += "\n  … ve " + std::to_string(hits.size() - kShown) + " yazı daha";
+    ctx.echo(listing);
+
+    // FINDING SELECTS what was found, the way SEÇ would, so the next command —
+    // YAZIDÜZENLE, SİL, a move — acts on exactly these.
+    if (!replacing) {
+        Bus& bus = ctx.session().bus();
+        bus.remember_selection();
+        bus.selection().clear();
+        for (const Hit& h : hits)
+            (void)bus.selection().add(doc.key_of(h.e));
+        if (bus.on_selection_changed) bus.on_selection_changed();
+        co_return;
+    }
+
+    // THE PREVIEW IS THE QUESTION: nothing is written until it is answered —
+    // at the prompt by a hand, by `uygula=evet` in a script.
+    auto apply = co_await ctx.boolean("uygula", "Önizlemedeki değişiklikler uygulansın mı?");
+    if (!apply) {
+        ctx.echo("Değiştirilmedi; uygulamak için uygula=evet verin.");
+        co_return;
+    }
+    ctx.record("uygula", Value::boolean(*apply));
+    if (!*apply) {
+        ctx.echo("Değiştirilmedi.");
+        co_return;
+    }
+    for (const Hit& h : hits) {
+        const std::uint32_t slot    = ents.slot[h.e];
+        const core::Mm height       = doc.texts().height(slot);
+        const core::TextAnchor from = doc.texts().anchor(slot);
+        const core::TextLines lines = doc.texts().lines(slot);
+        // The box follows the words, as it does for YAZIDÜZENLE.
+        const core::RingSpan span = doc.geometry().rings_of(slot);
+        if (!lines.wrap && ents.kind[h.e] == core::kPolylineKind && span.count == 1 &&
+            doc.geometry().ring_count[span.first] == 2) {
+            const std::array<core::Point2, 2> base = baseline_of(
+                doc.geometry().vertex(span.first, 0), doc.geometry().vertex(span.first, 1),
+                core::text_width_estimate(h.now, height));
+            const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
+            if (auto st = ctx.transaction().set_geometry(
+                    h.e, std::span<const core::RingGeometry::RingInput>(&ring, 1));
+                !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+        }
+        if (auto st = ctx.transaction().set_text(h.e, h.now, height, from, lines); !st) {
+            ctx.refuse(st.error());
+            co_return; // the bus rolls the whole transaction back
+        }
+    }
+    ctx.echo(std::to_string(hits.size()) + " yazıda " + std::to_string(matches) +
+             " eşleşme değiştirildi.");
+}
+
 } // namespace
 
 KENTOS_COMMAND(text)
@@ -444,6 +764,51 @@ KENTOS_COMMAND(edittext)
         .summary = "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya "
                    "da kırılma genişliğini değiştirir.",
         .run = &run_edit,
+    };
+}
+
+/// BULDEĞİŞTİR — find a word in every caption, and change it everywhere.
+///
+/// THE PREVIEW IS NOT A MODE. Every run lists what matched and what it would
+/// become — the same lines at the prompt, in a script's transcript and in the
+/// dialog's table — and a replacement waits for `uygula`: asked at the prompt,
+/// named in a script. So a batch rewrite of a sheet's four hundred captions is
+/// seen before it happens, by every client, and undone in one step after.
+KENTOS_COMMAND(find_replace)
+{
+    return CommandSpec{
+        .id       = "core.find_replace",
+        .names    = {"BULDEĞİŞTİR", "BULDEGISTIR", "FINDREPLACE", "BUL"},
+        .title    = "Bul ve Değiştir",
+        .category = Category::Modify,
+        .params =
+            {
+                Param::text("bul", Arity::exactly(1), "Aranacak yazı; \\n satır sonudur")
+                    .en("find"),
+                Param::text(
+                    "degistir", Arity::optional(),
+                    "Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir")
+                    .en("replace"),
+                Param::text("katman", Arity::optional(), "Yalnız bu katmandaki yazılar")
+                    .en("layer"),
+                Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Yalnız bu yazılar; verilmezse bütün çizim"}
+                    .en("objects"),
+                Param::boolean("buyuk_kucuk", Arity::optional(),
+                               "Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile)")
+                    .en("match_case"),
+                Param::boolean("tam_kelime", Arity::optional(),
+                               "Yalnız kendi başına duran kelime; varsayılan hayır")
+                    .en("whole_word"),
+                Param::boolean("uygula", Arity::optional(),
+                               "Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur")
+                    .en("apply"),
+            },
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri "
+                   "alma adımı.",
+        .run = &run_find_replace,
     };
 }
 

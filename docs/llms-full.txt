@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 111 (98 tanesi onay ister)
-- Katalog parmak izi: `7983898881643889654`
+- Araç sayısı: 112 (99 tanesi onay ister)
+- Katalog parmak izi: `1197221946148518547`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -692,6 +692,25 @@ Onay ister.
 | `ikinci_nokta` | konum (tutamak ya da göreli nokta) | hayır | İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `budama` | boolean | hayır | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır) |
 | `hepsi` | boolean | hayır | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_find_replace` — Bul ve Değiştir
+
+Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı.
+Komut: BULDEĞİŞTİR (BULDEGISTIR, FINDREPLACE, BUL)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `bul` | string | evet | Aranacak yazı; \n satır sonudur (metin) |
+| `degistir` | string | hayır | Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir (metin) |
+| `katman` | string | hayır | Yalnız bu katmandaki yazılar (metin) |
+| `nesneler` | string | hayır | Yalnız bu yazılar; verilmezse bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `buyuk_kucuk` | boolean | hayır | Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile) (evet/hayır) |
+| `tam_kelime` | boolean | hayır | Yalnız kendi başına duran kelime; varsayılan hayır (evet/hayır) |
+| `uygula` | boolean | hayır | Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_fit` — Oturt (Helmert)

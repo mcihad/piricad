@@ -34,6 +34,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.tracking`](tracking.md) | Geçici İzleme | `İZ`, `IZ`, `TRACK`, `TRK` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir. |
+| [`core.find_replace`](find_replace.md) | Bul ve Değiştir | `BULDEĞİŞTİR`, `BULDEGISTIR`, `FINDREPLACE`, `BUL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
@@ -459,6 +460,22 @@ Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığ�
 | `genislik` | number | isteğe bağlı | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez |
 
 Ayrıntılı kullanım: [YAZIDÜZENLE](edittext.md)
+
+### `core.find_replace` — BULDEĞİŞTİR (Bul ve Değiştir)
+
+Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `bul` | text | 1 | Aranacak yazı; \n satır sonudur |
+| `degistir` | text | isteğe bağlı | Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir |
+| `katman` | text | isteğe bağlı | Yalnız bu katmandaki yazılar |
+| `nesneler` | selection | en az 0 | Yalnız bu yazılar; verilmezse bütün çizim |
+| `buyuk_kucuk` | bool | isteğe bağlı | Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile) |
+| `tam_kelime` | bool | isteğe bağlı | Yalnız kendi başına duran kelime; varsayılan hayır |
+| `uygula` | bool | isteğe bağlı | Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur |
+
+Ayrıntılı kullanım: [BULDEĞİŞTİR](find_replace.md)
 
 ### `core.exportstyle` — STİLAKTAR (Stil Aktar)
 
@@ -6099,6 +6116,74 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "YUVARLA",
         "FILLET",
         "YV"
+      ]
+    }
+  },
+  {
+    "name": "core_find_replace",
+    "title": "Bul ve Değiştir",
+    "description": "Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı.\nKomut: BULDEĞİŞTİR (BULDEGISTIR, FINDREPLACE, BUL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bul": {
+          "type": "string",
+          "description": "Aranacak yazı; \\n satır sonudur (metin)"
+        },
+        "degistir": {
+          "type": "string",
+          "description": "Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir (metin)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Yalnız bu katmandaki yazılar (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yalnız bu yazılar; verilmezse bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "buyuk_kucuk": {
+          "type": "boolean",
+          "description": "Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile) (evet/hayır)"
+        },
+        "tam_kelime": {
+          "type": "boolean",
+          "description": "Yalnız kendi başına duran kelime; varsayılan hayır (evet/hayır)"
+        },
+        "uygula": {
+          "type": "boolean",
+          "description": "Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "bul"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.find_replace",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "BULDEĞİŞTİR",
+        "BULDEGISTIR",
+        "FINDREPLACE",
+        "BUL"
       ]
     }
   },

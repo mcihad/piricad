@@ -479,6 +479,28 @@ def edittext(
         width — Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m]
     """
 
+def find_replace(
+    *,
+    find: str = ...,
+    replace: str = ...,
+    layer: str = ...,
+    objects: list[int] = ...,
+    match_case: bool = ...,
+    whole_word: bool = ...,
+    apply: bool = ...,
+) -> int:
+    """Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı.
+
+    Komut: core.find_replace (BULDEĞİŞTİR)
+        find — Aranacak yazı; \n satır sonudur
+        replace — Yerine yazılacak; boşsa bulunan silinir, verilmezse bulunanlar seçilir
+        layer — Yalnız bu katmandaki yazılar
+        objects — Yalnız bu yazılar; verilmezse bütün çizim [kalıcı nesne anahtarı]
+        match_case — Büyük/küçük harf ayrılsın mı; varsayılan hayır (Türkçe İ/ı ile)
+        whole_word — Yalnız kendi başına duran kelime; varsayılan hayır
+        apply — Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur
+    """
+
 def exportstyle(
     *,
     layer: str = ...,

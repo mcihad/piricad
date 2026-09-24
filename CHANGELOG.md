@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — yazılarda toplu bul ve değiştir, önizlemeli (C-12, 3. aşama)
+
+- **BULDEĞİŞTİR** (`BUL`) bir sözcüğü çizimin bütün yazılarında bulur. `degistir`
+  verilmezse bulunanları seçer; verilirse önce önizler — değişecek her yazı önceki ve
+  sonraki hâliyle — ve `uygula=evet` ile (komut satırında soruya `evet` ile) hepsini tek
+  geri alma adımında değiştirir. Büyük/küçük harf Türkçe kurallarla ayrılmaz (i/İ,
+  ı/I); `tam_kelime`, `katman` ve `nesneler` süzer; boş `degistir` sözcüğü siler.
+- Ölçü yazısına, kalıptan doldurulan etikete, blok tanımının içine ve sözü tamamen
+  boşalacak yazıya dokunmaz; atlananların sayısı söylenir ve yapılandırılmış yanıtta
+  (`atlanan`, `bos_kalacak`) döner.
+- **Arayüz:** Düzen → Bul ve Değiştir… (Ctrl+H; macOS'ta Cmd+Option+F, çünkü orada
+  Cmd+H programı gizler). Tümünü Bul, Önizle ve Tümünü Değiştir düğmeleri; Tümünü
+  Değiştir yalnız o anki alanların önizlemesinden sonra açılır ve bir alan değişince
+  kapanır. Tablodaki bir satır o yazıyı çizimde seçer.
+- Gerçek fare probu 16. bölüm; araç probu pencere açan bir aracı da tanır.
+- **Düzeltildi:** 15. bölümün etiket denetimi, sürüklemenin düştüğü pikselin tam
+  230,00 m² vermesine bağlıydı; artık parselin sürüklemeden sonraki alanıyla karşılaştırır.
+
 ### Eklendi — nesnesini izleyen etiket: alan ve sütun değişince yeniden yazılır (C-12, 2. aşama)
 
 - **Ölçülen alanlar.** Etiket kalıbında `{#alan}` nesnenin alanını (m²), `{#cevre}`

@@ -124,7 +124,7 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 | Menü | İçerik |
 |---|---|
 | **Dosya** | Yeni (**Ctrl+N**), Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe/Dışa Aktar…, Yazdır, **Proje Ayarları…**, Veritabanı… (**Ctrl+Shift+D**), Betik Çalıştır… (**Ctrl+R**), Çıkış |
-| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**), Ayarlar… (**Ctrl+,**) |
+| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**), [Bul ve Değiştir…](../komutlar/find_replace.md) (**Ctrl+H**; macOS'ta **Cmd+Option+F**), Ayarlar… (**Ctrl+,**) |
 | **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Yüzey Normali (**F10**), Izgaraya Yakala (**F9**), Araç Çubuğu, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
 | **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin |
 | **Değiştir** | Sil, Taşı, Kopyala, Döndür, Ofset |
@@ -888,6 +888,7 @@ yapabilecekleriniz:
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele. Çizgi, çoklu çizgi, alan ya da spline çizerken Ctrl+Z yalnız son noktayı geri alır |
 | **⌫** | Seçili nesneleri siler; çizerken yalnız son noktayı geri alır. Komut satırı boşken de çalışır |
 | **Ctrl+A** / **Ctrl+Shift+A** | Tümünü seç / seçimi temizle |
+| **Ctrl+H** (macOS'ta **Cmd+Option+F**) | [Bul ve Değiştir](../komutlar/find_replace.md): yazılarda bul, önizle, hepsini değiştir. macOS'ta Cmd+H programı gizlediği için orada başka tuştur |
 | **F3** / **F8** / **F10** / **F9** | Nesne yakalama / dik mod / yüzey normali / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |

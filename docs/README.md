@@ -64,6 +64,7 @@ Tek tek komutlar:
 | `YAY` | [Yay çizme](komutlar/arc_draw.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
 | `YAZIDÜZENLE` | [Var olan yazıyı değiştirme](komutlar/edittext.md) |
+| `BULDEĞİŞTİR` | [Yazılarda bulma ve toplu değiştirme](komutlar/find_replace.md) |
 | `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
 | `ESNET` | [Pencere içindeki köşeleri taşıma](komutlar/stretch.md) |
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |

@@ -11,6 +11,7 @@
 #include "kentos_cad/app/data_root.hpp"
 #include "kentos_cad/app/database_dialog.hpp"
 #include "kentos_cad/app/export_dialog.hpp"
+#include "kentos_cad/app/find_replace_dialog.hpp"
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/layout_designer.hpp"
@@ -67,6 +68,7 @@
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QDialog>
 #include <QDir>
 #include <QDockWidget>
 #include <QElapsedTimer>
@@ -1405,6 +1407,25 @@ void MainWindow::buildActions()
         Glyph::Select, tr("Seçimi Temizle"), QStringLiteral("SEÇ TEMİZLE"),
         tr("SEÇ TEMİZLE — seçimi boşaltır"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
 
+    // BULDEĞİŞTİR through its dialog: the fields, the preview table and the
+    // buttons are a face on the command, which does the finding (C-12).
+    actFindReplace_ = new QAction(tr("Bul ve Değiştir…"), this);
+    // Ctrl+H is Replace on Windows and on Linux desktops. On a Mac Cmd+H hides
+    // the application — the key would never reach this window — so there it is
+    // Cmd+Option+F, as in TextEdit and Xcode. `QKeySequence::Replace` is no
+    // help: it is empty on a Mac and Ctrl+R on KDE, which already runs a script.
+#ifdef Q_OS_MACOS
+    actFindReplace_->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_F));
+#else
+    actFindReplace_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));
+#endif
+    actFindReplace_->setToolTip(
+        tr("BULDEĞİŞTİR — yazılarda bir sözcüğü bulur, önizler ve değiştirir (%1)")
+            .arg(actFindReplace_->shortcut().toString(QKeySequence::NativeText)));
+    actFindReplace_->setData(static_cast<int>(Glyph::Search));
+    actFindReplace_->setProperty(kToolCommand, QStringLiteral("BULDEĞİŞTİR"));
+    connect(actFindReplace_, &QAction::triggered, this, &MainWindow::openFindReplace);
+
     // ---- `katman` ve CBS ----
     actLayer_ = new QAction(tr("Katman"), this);
     actLayer_->setToolTip(tr("KATMAN — katman oluşturur ve aktif yapar"));
@@ -1658,6 +1679,8 @@ void MainWindow::buildMenus()
     edit->addSeparator();
     edit->addAction(actSelectAll_);
     edit->addAction(actSelectNone_);
+    edit->addSeparator();
+    edit->addAction(actFindReplace_);
     edit->addSeparator();
     edit->addAction(actSettings_);
 
@@ -3187,6 +3210,20 @@ void MainWindow::openAttributeTable(const QString& layerName)
     table->setAttribute(Qt::WA_DeleteOnClose, true);
     table->applyTheme(theme_);
     table->show();
+}
+
+void MainWindow::openFindReplace()
+{
+    // ONE WINDOW: the key pressed again brings the open one forward rather
+    // than a second window over it.
+    if (findReplace_ == nullptr) {
+        findReplace_ = new FindReplaceDialog(*controller_, this);
+        findReplace_->setModal(false);
+        findReplace_->applyTheme(theme_);
+    }
+    findReplace_->show();
+    findReplace_->raise();
+    findReplace_->activateWindow();
 }
 
 void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
@@ -5470,13 +5507,114 @@ int MainWindow::probeRealMouse()
             onCanvas(QEvent::MouseMove, screen({23'000, 11'500}), Qt::NoButton);
             press(screen({23'000, 11'500}));
             release(screen({23'000, 11'500}));
-            // (0,0) (20,0) (23,11.5) (0,10): 230 m² by the shoelace.
-            check(label_text() == "101\n230,00 m²",
+            // (0,0) (20,0) (23,11.5) (0,10): 230 m² by the shoelace, give or
+            // take the centimetres a pixel is. The label must say the area the
+            // parcel now HAS, not a figure this probe expected.
+            const core::EntityId dragged =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(labelled)));
+            const core::Mm2 now_area = dragged == core::kNoEntity ? 0 : doc.entity_area(dragged);
+            const bool near_230      = now_area > 229'000'000 && now_area < 231'000'000;
+            check(near_230 && label_text() == "101\n" + core::format_area(now_area, 2, ',') + " m²",
                   QStringLiteral("Etiket: köşe tutamaktan sürüklenince alan yeniden yazıldı "
                                  "(\"%1\"; son söz: \"%2\")")
                       .arg(QString::fromStdString(label_text()), lastSaid()));
             shoot("etiket-izler");
             controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 16. FIND AND REPLACE THROUGH ITS WINDOW (C-12) --------------------
+        //
+        // The window, driven by its buttons: find-all selects what it finds;
+        // preview fills the table and changes nothing; a field changed after
+        // the preview greys the replace-all button out and its click writes
+        // nothing; pressed after a fresh preview it changes every caption in
+        // one undo step.
+        {
+            fresh({QStringLiteral("METİN noktalar=0,0 yazi=\"ADA 101\""),
+                   QStringLiteral("METİN noktalar=0,6 yazi=\"ADA 102 / ADA 103\"")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const core::Document& doc = controller_->document();
+            const auto words          = [&doc] {
+                std::vector<std::string> out;
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                    if (doc.alive(e) && doc.texts().has(doc.entities().slot[e]))
+                        out.emplace_back(doc.texts().text(doc.entities().slot[e]));
+                return out;
+            };
+            using Step = FindReplaceDialog::Step;
+            // THE WINDOW'S OWN KEY, through the real shortcut road when this
+            // window is active — the combination read off the action, so what
+            // is proved is what this platform registered.
+            const QKeySequence key = actFindReplace_->shortcut();
+            const bool keyed       = isActiveWindow() && !key.isEmpty();
+            if (keyed) {
+                canvas_->setFocus(Qt::OtherFocusReason);
+                QKeyEvent down(QEvent::KeyPress, key[0].key(), key[0].keyboardModifiers());
+                QKeyEvent up(QEvent::KeyRelease, key[0].key(), key[0].keyboardModifiers());
+                QCoreApplication::sendEvent(canvas_, &down);
+                QCoreApplication::sendEvent(canvas_, &up);
+            } else {
+                actFindReplace_->trigger();
+            }
+            QCoreApplication::processEvents();
+            check(findReplace_ != nullptr && findReplace_->isVisible(),
+                  QStringLiteral("Bul ve Değiştir: %1 penceresi açtı (%2)")
+                      .arg(key.toString(QKeySequence::NativeText),
+                           keyed ? QStringLiteral("gerçek kısayol yolu")
+                                 : QStringLiteral("eylem üzerinden; etkin pencere yok")));
+#ifdef Q_OS_MACOS
+            check(key != QKeySequence(Qt::CTRL | Qt::Key_H),
+                  QStringLiteral("Bul ve Değiştir: kısayol macOS'un Gizle tuşu Cmd+H değil"));
+#endif
+            if (findReplace_ != nullptr) {
+                const std::vector<std::string> captions_before = words();
+                findReplace_->runForProbe(QStringLiteral("ADA"), QString(), Step::Find);
+                QCoreApplication::processEvents();
+                check(controller_->bus().selection().size() == 2 &&
+                          findReplace_->previewRows() == 2 && !findReplace_->applyEnabled(),
+                      QStringLiteral("Bul ve Değiştir: Tümünü Bul iki yazıyı çizimde seçti (%1 "
+                                     "seçili), yazma yolu kapalı")
+                          .arg(controller_->bus().selection().size()));
+
+                findReplace_->runForProbe(QStringLiteral("ADA"), QStringLiteral("Ada"),
+                                          Step::Preview);
+                QCoreApplication::processEvents();
+                check(findReplace_->previewRows() == 2 && words() == captions_before &&
+                          findReplace_->applyEnabled(),
+                      QStringLiteral("Bul ve Değiştir: önizleme iki yazıyı listeledi, hiçbir şey "
+                                     "değişmedi; Tümünü Değiştir açıldı (%1 satır)")
+                          .arg(findReplace_->previewRows()));
+                if (shooting)
+                    (void)findReplace_->grab().save(into + QStringLiteral("/bul-degistir.png"));
+
+                // The replacement typed anew after the preview: the table no
+                // longer says what would be written, so nothing is.
+                const std::size_t undo_before = controller_->undoStack().undo_depth();
+                findReplace_->runForProbe(QStringLiteral("ADA"), QStringLiteral("Parsel"),
+                                          Step::Apply);
+                QCoreApplication::processEvents();
+                check(words() == captions_before && !findReplace_->applyEnabled() &&
+                          controller_->undoStack().undo_depth() == undo_before,
+                      QStringLiteral("Bul ve Değiştir: önizlemeden sonra değişen alan Tümünü "
+                                     "Değiştir'i kapattı, hiçbir şey yazılmadı"));
+
+                findReplace_->runForProbe(QStringLiteral("ADA"), QStringLiteral("Ada"),
+                                          Step::Preview);
+                findReplace_->runForProbe(QStringLiteral("ADA"), QStringLiteral("Ada"),
+                                          Step::Apply);
+                QCoreApplication::processEvents();
+                const std::vector<std::string> captions_after = words();
+                check(captions_after.size() == 2 && captions_after[0] == "Ada 101" &&
+                          captions_after[1] == "Ada 102 / Ada 103" &&
+                          controller_->undoStack().undo_depth() == undo_before + 1,
+                      QStringLiteral("Bul ve Değiştir: Tümünü Değiştir iki yazıyı bir geri alma "
+                                     "adımında değiştirdi"));
+                if (shooting)
+                    (void)findReplace_->grab().save(into +
+                                                    QStringLiteral("/bul-degistir-uygulandi.png"));
+                findReplace_->hide();
+            }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
@@ -8538,8 +8676,22 @@ void MainWindow::probeToolBox()
             armed = false;
             asked = false;
 
+            // A TOOL WITH A WINDOW answers by opening it: the find-and-replace
+            // window's fields are its prompts. What was already on screen is
+            // noted first, so the window this press opened is the one found
+            // afterwards.
+            QSet<const QWidget*> shown_before;
+            for (const QWidget* w : QApplication::topLevelWidgets())
+                if (w->isVisible()) shown_before.insert(w);
+
             action->trigger();
             QCoreApplication::processEvents();
+
+            QWidget* opened = nullptr;
+            for (QWidget* w : QApplication::topLevelWidgets())
+                if (w != this && w->isVisible() && !shown_before.contains(w) &&
+                    qobject_cast<QDialog*>(w) != nullptr)
+                    opened = w;
 
             // A modal tool is fed three points, so it either finishes or says what it
             // still wants: an armed tool that cannot finish is as dead as one that
@@ -8623,6 +8775,10 @@ void MainWindow::probeToolBox()
                 // disarm whatever is running — so saying nothing is the right answer.
                 ++ok_ran;
                 verdict = QStringLiteral("BOŞTA   çalışan komutu iptal eder (Esc)");
+            } else if (opened != nullptr) {
+                ++ok_ran;
+                verdict = QStringLiteral("PENCERE ") + opened->windowTitle();
+                opened->hide();
             } else if (said.isEmpty()) {
                 ++dead;
                 verdict = QStringLiteral("SESSİZ  düğme ne sordu ne de bir şey söyledi");

@@ -250,6 +250,8 @@ public:
     /// Public for the same reason the three windows above are: `KENTOS_PICK_PROBE`
     /// drives it, and a chooser nothing constructs is a chooser nothing checks.
     void choosePick(const std::vector<core::EntityId>& candidates, Qt::KeyboardModifiers modifiers);
+    /// Opens (or brings forward) the find-and-replace window.
+    void openFindReplace();
 
     /// A form field's object pick landed on several objects: the same "Hangisi?"
     /// list as a click on the drawing, and the row chosen answers the field.
@@ -907,6 +909,9 @@ private:
     QPointer<SettingsDialog> projectSettings_;
     QAction* actSelectAll_{nullptr};
     QAction* actSelectNone_{nullptr};
+    QAction* actFindReplace_{nullptr};
+    /// The find-and-replace window, made on first use and kept.
+    class FindReplaceDialog* findReplace_{nullptr};
     QAction* actOrtho_{nullptr};
     QAction* actNormal_{nullptr};
     QAction* actGridSnap_{nullptr};

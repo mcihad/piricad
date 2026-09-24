@@ -35,6 +35,7 @@ namespace kentos::command {
     X(tracking)                                                                                    \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
+    X(find_replace)                                                                                \
     X(exportstyle)                                                                                 \
     X(area)                                                                                        \
     X(rectangle)                                                                                   \

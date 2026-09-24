@@ -55,6 +55,7 @@ qt_add_executable(kentos_cad
     src/measure_text.cpp
     src/painter_backend.cpp
     src/pick_list.cpp
+    src/find_replace_dialog.cpp
     src/style_designer.cpp
     src/symbol_image.cpp
     src/symbol_preview.cpp
@@ -101,6 +102,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/panels.hpp
     include/kentos_cad/app/tools_panel.hpp
     include/kentos_cad/app/pick_list.hpp
+    include/kentos_cad/app/find_replace_dialog.hpp
     include/kentos_cad/app/qgis_backend.hpp
     include/kentos_cad/app/settings_dialog.hpp
     include/kentos_cad/app/shell_chrome.hpp
