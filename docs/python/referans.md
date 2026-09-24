@@ -1722,6 +1722,7 @@ cad.hatch(
     angle: float,
     scale: float,
     catalog: str,
+    associate: bool,
 ) -> int
 ```
 
@@ -1733,6 +1734,7 @@ cad.hatch(
 | `angle` | `float` | `aci` | Desenin dönme açısı, derece; varsayılan 0 |
 | `scale` | `float` | `olcek` | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) |
 | `catalog` | `str` | `katalog` | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
+| `associate` | `bool` | `bagla` | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
 
 [Komut sayfası](../komutlar/hatch.md)
 

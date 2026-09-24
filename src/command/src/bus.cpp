@@ -791,6 +791,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         // the same transaction (core/dimension_link.hpp), for every client
         // alike; its figure is worded in the project's unit.
         say_settled(session.transaction().settle_dimensions(drawing_unit(), node_tolerance()));
+        say_settled(session.transaction().settle_hatches());
     }
 
     result.ops = session.owns_transaction() ? session.transaction().size() : 0;
@@ -973,6 +974,21 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
         on_echo("Bağlı " + std::to_string(settled.dims_manual) +
                 " ölçünün yazısı elle yazılmış; yeniden ölçülen değeri göstermiyor. Ölçüye "
                 "döndürmek için: ÖLÇÜDÜZENLE sifirla=metin");
+    if (settled.hatches_followed != 0)
+        on_echo("Bağlı " + std::to_string(settled.hatches_followed) +
+                " tarama sınırını izledi ve yeniden kuruldu.");
+    if (settled.hatches_broken != 0)
+        on_echo("Sınırı silindiği için " + std::to_string(settled.hatches_broken) +
+                " tarama bağı koptu; tarama son hâlinde duruyor.");
+    if (settled.hatches_open != 0)
+        on_echo("Sınırı artık kapanmadığı için " + std::to_string(settled.hatches_open) +
+                " tarama bağı koptu; tarama son hâlinde duruyor.");
+    if (settled.hatches_released != 0)
+        on_echo(std::to_string(settled.hatches_released) +
+                " tarama sınırından ayrı taşındığı için bağından çözüldü.");
+    if (settled.hatches_left != 0)
+        on_echo("Bağlı " + std::to_string(settled.hatches_left) +
+                " tarama kilitli katmanda olduğu için sınırını izleyemedi.");
     if (settled.dims_left != 0)
         on_echo("Bağlı " + std::to_string(settled.dims_left) +
                 " ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını "
@@ -986,6 +1002,7 @@ core::Result<DispatchResult> Bus::end_batch()
     // The last word on what the batch moved (see `finish`).
     say_settled(batch_->settle_attachments());
     say_settled(batch_->settle_dimensions(drawing_unit(), node_tolerance()));
+    say_settled(batch_->settle_hatches());
 
     DispatchResult result;
     result.command_id = "core.batch";

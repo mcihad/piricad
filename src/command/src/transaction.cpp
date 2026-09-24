@@ -5,10 +5,13 @@
 
 #include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -366,6 +369,15 @@ Status Transaction::set_dimension_links(EntityId dim, std::span<const core::DimL
 {
     core::Op undo;
     auto st = doc_.set_dimension_links(dim, links, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::set_hatch_links(EntityId hatch, std::span<const core::HatchSource> sources)
+{
+    core::Op undo;
+    auto st = doc_.set_hatch_links(hatch, sources, undo);
     if (!st) return st;
     if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
     return core::ok();
@@ -795,6 +807,149 @@ Transaction::SettleReport Transaction::settle_dimensions(core::DrawingUnit unit,
     }
     // The writes above are this function's own: not a dimension the user moved.
     dims_settled_upto_ = inverse_.size();
+    return rep;
+}
+
+namespace {
+
+/// The one offset every vertex of `e` moved by since `slot` held it, or
+/// nothing when it did not move as a whole (a corner moved, a ring grew).
+std::optional<core::Point2> shift_of(const Document& doc, EntityId e, std::uint32_t slot)
+{
+    const RingGeometry& g    = doc.geometry();
+    const core::RingSpan was = g.rings_of(slot);
+    const core::RingSpan is  = g.rings_of(doc.entities().slot[e]);
+    if (was.count != is.count || was.count == 0) return std::nullopt;
+    std::optional<core::Point2> by;
+    for (std::uint32_t r = 0; r < was.count; ++r) {
+        const auto ox = g.ring_xs(was.first + r);
+        const auto oy = g.ring_ys(was.first + r);
+        const auto nx = g.ring_xs(is.first + r);
+        const auto ny = g.ring_ys(is.first + r);
+        if (ox.size() != nx.size()) return std::nullopt;
+        for (std::size_t v = 0; v < ox.size(); ++v) {
+            const core::Point2 d{nx[v] - ox[v], ny[v] - oy[v]};
+            if (!by) by = d;
+            if (*by != d) return std::nullopt;
+        }
+    }
+    return by;
+}
+
+} // namespace
+
+Transaction::SettleReport Transaction::settle_hatches()
+{
+    SettleReport rep;
+    const core::HatchLinkTable& table = doc_.hatch_links();
+    if (table.empty()) {
+        hatches_settled_upto_ = inverse_.size();
+        return rep;
+    }
+    std::vector<EntityId> moved;
+    std::vector<EntityId> erased;
+    std::map<EntityId, std::uint32_t> found_as;
+    for (std::size_t i = hatches_settled_upto_; i < inverse_.size(); ++i) {
+        const Op& op = inverse_[i];
+        if (op.kind == Op::Kind::SetGeometry || op.kind == Op::Kind::SetKindGeometry) {
+            moved.push_back(op.entity);
+            found_as.try_emplace(op.entity, op.geometry_slot);
+        } else if (op.kind == Op::Kind::SetEntityAlive && op.bool_arg) {
+            erased.push_back(op.entity);
+        }
+    }
+    hatches_settled_upto_ = inverse_.size();
+    if (moved.empty() && erased.empty()) return rep;
+    for (std::vector<EntityId>* list : {&moved, &erased}) {
+        std::ranges::sort(*list);
+        list->erase(std::ranges::unique(*list).begin(), list->end());
+    }
+
+    for (const EntityId hatch : table.linked()) {
+        if (!doc_.alive(hatch)) continue;
+        const std::vector<core::HatchSource>* stored = table.get(hatch);
+        if (stored == nullptr) continue;
+        const std::vector<core::HatchSource> was = *stored;
+        bool touched                             = false;
+        for (const core::HatchSource& s : was) {
+            if (s.broken) continue;
+            const EntityId src = doc_.slot_of(s.source);
+            touched            = touched || src == core::kNoEntity || !doc_.alive(src) ||
+                      contains(moved, src) || contains(erased, src);
+        }
+        if (!touched) {
+            // THE HATCH MOVED ON ITS OWN: it no longer fills its boundary, which
+            // is the user saying it is a hatch of its own now.
+            if (contains(moved, hatch) && doc_.editable(hatch) &&
+                set_hatch_links(hatch, std::span<const core::HatchSource>{}))
+                ++rep.hatches_released;
+            continue;
+        }
+
+        // ONE BOUNDARY GONE AND THE HATCH STOPS FOLLOWING, all of it. Built from
+        // what is left, a parcel erased from under its hatch would leave the
+        // pool inside it as the only boundary — and the pool, a hole a moment
+        // ago, would be what is filled. It stays as it was, and says so.
+        bool broken = std::ranges::any_of(was, [](const core::HatchSource& s) { return s.broken; });
+        std::vector<core::HatchSource> now = was;
+        std::vector<EntityId> live;
+        for (core::HatchSource& s : now) {
+            if (s.broken) continue;
+            const EntityId src = doc_.slot_of(s.source);
+            if (src == core::kNoEntity || !doc_.alive(src)) {
+                s.broken = true;
+                broken   = true;
+                ++rep.hatches_broken;
+                continue;
+            }
+            if (core::closed_loops_of(doc_, src).empty()) {
+                s.broken = true;
+                broken   = true;
+                ++rep.hatches_open;
+                continue;
+            }
+            live.push_back(src);
+        }
+        if (!broken && !live.empty()) {
+            if (!doc_.editable(hatch)) {
+                ++rep.hatches_left;
+                continue;
+            }
+            const std::uint32_t slot = doc_.entities().slot[hatch];
+            auto def                 = core::hatch_of(doc_.geometry(), slot);
+            auto boundary            = def ? core::hatch_boundary(doc_, live, def.value().style)
+                                           : core::Result<core::HatchBoundary>(def.error());
+            if (def && boundary) {
+                // CARRIED ALONG when the whole boundary moved as one: the pattern
+                // stays where it was on the parcel, not where it was on the sheet.
+                std::optional<core::Point2> shift;
+                bool whole = true;
+                for (const EntityId src : live) {
+                    const auto at = found_as.find(src);
+                    if (at == found_as.end()) {
+                        whole = false;
+                        break;
+                    }
+                    const auto by = shift_of(doc_, src, at->second);
+                    if (!by || (shift && *shift != *by)) {
+                        whole = false;
+                        break;
+                    }
+                    shift = by;
+                }
+                // A hatch the command moved itself already carries its origin
+                // along (TAŞI moves the payload's point with the rings).
+                core::HatchDef next = def.value();
+                if (whole && shift && !contains(moved, hatch)) next.origin = next.origin + *shift;
+                const auto rings = boundary.value().rings();
+                if (set_kind_geometry(hatch, rings, core::encode_hatch(next)))
+                    ++rep.hatches_followed;
+            }
+        }
+        if (now != was && doc_.editable(hatch)) (void)set_hatch_links(hatch, now);
+    }
+    // The writes above are this function's own: not a hatch the user moved.
+    hatches_settled_upto_ = inverse_.size();
     return rep;
 }
 

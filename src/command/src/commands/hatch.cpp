@@ -15,7 +15,7 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/outline.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include <cmath>
@@ -36,49 +36,15 @@ core::Ratio ratio_of(double v)
     return core::Ratio{num, den};
 }
 
-/// The closed rings of one entity, as boundary loops: a face's rings as they
-/// are, a curve's drawn outline, each closed run a loop. Empty for an open one.
-void boundary_of(const core::Document& doc, core::EntityId e, std::uint16_t part,
-                 std::vector<std::vector<core::Point2>>& store,
-                 std::vector<core::RingGeometry::RingInput>& rings)
-{
-    core::EmitBuffer runs;
-    const core::RingGeometry& g = doc.geometry();
-    if (!core::entity_outline(doc, e, runs)) {
-        const core::RingSpan span = g.rings_of(doc.entities().slot[e]);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            if (g.ring_role[r] == core::RingRole::Open) continue;
-            const auto xs = g.ring_xs(r);
-            const auto ys = g.ring_ys(r);
-            std::vector<core::Point2> pts;
-            for (std::size_t v = 0; v < xs.size(); ++v)
-                pts.push_back(core::Point2{xs[v], ys[v]});
-            store.push_back(std::move(pts));
-            rings.push_back(core::RingGeometry::RingInput{store.back(), g.ring_role[r], part});
-        }
-        return;
-    }
-    for (std::size_t r = 0; r < runs.run_total(); ++r) {
-        if (runs.run_closed[r] == 0) continue;
-        const auto xs = runs.run_xs(r);
-        const auto ys = runs.run_ys(r);
-        std::vector<core::Point2> pts;
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            pts.push_back(core::Point2{xs[v], ys[v]});
-        store.push_back(std::move(pts));
-        rings.push_back(core::RingGeometry::RingInput{
-            store.back(),
-            runs.run_hole[r] != 0 ? core::RingRole::Interior : core::RingRole::Exterior, part});
-    }
-}
-
 Task<void> run(Context& ctx)
 {
     // ---- the boundary -------------------------------------------------------
     std::vector<std::vector<core::Point2>> store;
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::int64_t> requested;
+    std::vector<core::EntityId> sources;
     std::vector<core::Point2> typed;
+    core::HatchBoundary boundary;
 
     if (ctx.has_argument("noktalar")) {
         // The corners, one awaited point at a time, the way ÇOKLUÇİZGİ reads
@@ -103,7 +69,6 @@ Task<void> run(Context& ctx)
         if (!co_await want_objects(ctx, "nesneler", "Taranacak kapalı nesneleri seçin, sonra Enter",
                                    requested, 0, "TARAMA nesneler=1 desen=ANSI31"))
             co_return;
-        std::uint16_t part = 0;
         for (const std::int64_t raw : requested) {
             if (raw <= 0) {
                 ctx.refuse(core::ErrorCode::InvalidArgument,
@@ -118,9 +83,7 @@ Task<void> run(Context& ctx)
                            "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
                 co_return;
             }
-            const std::size_t before = rings.size();
-            boundary_of(ctx.document(), slot, part, store, rings);
-            if (rings.size() == before) {
+            if (core::closed_loops_of(ctx.document(), slot).empty()) {
                 ctx.refuse(
                     core::ErrorCode::InvalidArgument,
                     "Nesne " + std::to_string(raw) +
@@ -128,13 +91,21 @@ Task<void> run(Context& ctx)
                         "çoklu çizgi olmalı.");
                 co_return;
             }
-            ++part;
+            sources.push_back(slot);
         }
+        // HOLES BY NESTING (core/hatch_link.hpp): a parcel's courtyard, and a
+        // selected object inside another, are islands the pattern stays out of.
+        auto made = core::hatch_boundary(ctx.document(), sources, 0);
+        if (!made) {
+            ctx.refuse(made.error());
+            co_return;
+        }
+        boundary = std::move(made.value());
+        rings    = boundary.rings();
     }
     // `store` is complete now; the spans in `rings` point into it and must not
     // be taken before it stops growing.
-    for (std::size_t i = 0; i < rings.size(); ++i)
-        rings[i].points = std::span<const core::Point2>(store[i]);
+    if (!typed.empty()) rings.front().points = std::span<const core::Point2>(store.front());
 
     // ---- the pattern --------------------------------------------------------
     std::string wanted = "SOLID";
@@ -185,7 +156,7 @@ Task<void> run(Context& ctx)
     def.pattern_type = 1;
     def.angle_udeg   = static_cast<std::int64_t>(std::llround(angle_deg * 1000000.0));
     def.scale        = ratio_of(scale);
-    def.origin       = store.front().front();
+    def.origin       = rings.front().points.front();
     def.families     = pattern->families;
 
     // ---- the entity and its symbol ------------------------------------------
@@ -207,9 +178,27 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    // FOLLOWS ITS BOUNDARY (TODOS C-11): the objects it was drawn over, by key;
+    // at every commit that reshapes one of them its loops are built again.
+    const bool link = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    if (link && !sources.empty()) {
+        std::vector<core::HatchSource> tied;
+        tied.reserve(sources.size());
+        for (const core::EntityId src : sources)
+            tied.push_back(core::HatchSource{ctx.document().entities().key[src], false});
+        if (auto st = ctx.transaction().set_hatch_links(created.value(), tied); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
+    }
+    if (!link) ctx.record("bagla", Value::boolean(false));
+
     bool dashes = false;
     for (const core::HatchDef::Family& f : def.families)
         if (!f.dashes_um.empty()) dashes = true;
+    std::size_t holes = 0;
+    for (const core::RingRole role : boundary.roles)
+        holes += role == core::RingRole::Interior ? 1 : 0;
 
     if (!typed.empty())
         ctx.record("noktalar", Value::points(typed));
@@ -218,8 +207,14 @@ Task<void> run(Context& ctx)
     ctx.record("desen", Value::text(def.name));
     ctx.record("aci", Value::number(angle_deg));
     ctx.record("olcek", Value::number(scale));
-    ctx.echo("'" + def.name + "' deseniyle tarama çizildi (" + std::to_string(rings.size()) +
-             " sınır halkası)." +
+    std::string said = "'" + def.name + "' deseniyle tarama çizildi (" +
+                       std::to_string(rings.size()) + " sınır halkası";
+    if (holes > 0) said += ", " + std::to_string(holes) + " delik";
+    said += ')';
+    if (link && !sources.empty())
+        said += "; " + std::to_string(sources.size()) +
+                " sınır nesnesine bağlı, o değişince tarama da güncellenir";
+    ctx.echo(said + "." +
              (dashes ? " Desenin kesik dizisi bu sürümde çizilmez, dosyada korunur." : ""));
 }
 
@@ -254,6 +249,10 @@ KENTOS_COMMAND(hatch)
                 Param::text("katalog", Arity::optional(),
                             "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu")
                     .en("catalog"),
+                Param::boolean("bagla", Arity::optional(),
+                               "Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı "
+                               "değişince yeniden kurulur. Varsayılan evet")
+                    .en("associate"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -30,6 +30,8 @@ Her nesne için yazılanlar:
 | Ölçülen ve yazılan | Bir ölçüde: ölçtüğü değer ve yazdığı yazı yan yana; yazı elle yazılmışsa **ELLE YAZILMIŞ, ölçülen değer değil**; hangi pafta ölçeği için boyutlandığı |
 | Ölçü bağları | Bir [bağlı ölçüde](dimension.md#bağlı-ölçü): hangi noktası hangi nesnenin hangi köşesine, merkezine ya da yay ucuna bağlı, kaç bağı kopuk |
 | Onu ölçen ölçüler | Herhangi bir nesnede: onu kaç bağlı ölçünün ölçtüğü — silmeden önce bilinmesi gereken |
+| Tarama sınırları | Bir [bağlı taramada](hatch.md#bağlı-tarama): deseni, hangi nesnelere bağlı olduğu, kaç sınır bağının kopuk olduğu; DXF'ten "ilişkili" işaretli gelip bağı olmadığı |
+| Onu izleyen taramalar | Herhangi bir nesnede: kaç bağlı taramanın onun sınırını izlediği |
 
 Tür adı bu komutun içine **yazılmamıştır**: nesne türleri tablosundan okunur. Bir
 eklenti yeni bir tür tanımladığında adı kendiliğinden buradan da çıkar.
@@ -137,6 +139,10 @@ Bir ölçüde satır `olcu` taşır: `tur`, `olculen` (milimetre ya da mikrodere
 `olculen_metin`, `yazi`, `elle` (yazı elle yazılmışsa `true`), varsa `metin`,
 `onek`, `sonek`, `tolerans` (`bicim`, `ust`, `alt`), `birim`, `hassasiyet`, `stil` ve
 `olcek` (boyutlandığı pafta ölçeği).
+
+Bir taramada satır `tarama` (`desen`, `aci_udeg`, `olcek_pay`, `olcek_payda`,
+`dxf_iliskili`) ve bağlıysa `tarama_sinirlari` (her biri `nesne`, `kopuk`) taşır;
+bağlı taramaların izlediği bir nesnede `taramalar`, o taramaların kimlikleri.
 
 Bağlı bir ölçüde satır `olcu_baglari` taşır — her bağ için `nokta` (ölçünün kaçıncı
 tanım noktası), `nesne` (ölçülen nesnenin kimliği), `ozellik` (`kose`, `merkez`,

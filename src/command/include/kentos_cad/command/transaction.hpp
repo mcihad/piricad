@@ -237,6 +237,9 @@ public:
     /// Replaces the links of dimension `dim` (`Document::set_dimension_links`).
     Status set_dimension_links(EntityId dim, std::span<const core::DimLink> links);
 
+    /// Replaces the boundary sources of hatch `hatch` (`Document::set_hatch_links`).
+    Status set_hatch_links(EntityId hatch, std::span<const core::HatchSource> sources);
+
     /// What `settle_attachments` did.
     struct SettleReport
     {
@@ -252,6 +255,11 @@ public:
         std::size_t dims_released{0};   ///< links released: the dimension's own point was moved off
         std::size_t dims_left{0};       ///< linked dimensions that could not follow: locked
         std::size_t dims_manual{0}; ///< followed and re-measured, but the caption is typed by hand
+        std::size_t hatches_followed{0}; ///< linked hatches rebuilt from their moved boundary
+        std::size_t hatches_broken{0};   ///< sources broken: the boundary object was erased
+        std::size_t hatches_open{0};     ///< sources broken: the boundary object no longer closes
+        std::size_t hatches_released{0}; ///< hatches moved on their own, unlinked
+        std::size_t hatches_left{0};     ///< linked hatches that could not follow: locked
     };
 
     /// Brings every dependent up to date with what this transaction did to its
@@ -277,6 +285,14 @@ public:
     /// at the same point. Its own cursor, so the writes it makes are never read
     /// back as a dimension the user moved.
     SettleReport settle_dimensions(core::DrawingUnit unit, core::Mm tolerance);
+
+    /// Brings every LINKED HATCH up to date with what this transaction did to
+    /// its boundary (core/hatch_link.hpp): the loops built again from the
+    /// sources as they are now, holes by nesting, the pattern's origin carried
+    /// along when every source moved by one offset; a source erased, or no
+    /// longer closed, is kept as broken and the hatch stays as it was; a hatch
+    /// moved on its own is released. Its own cursor, like the dimensions'.
+    SettleReport settle_hatches();
 
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
@@ -310,7 +326,8 @@ private:
     /// How far `settle_attachments` has read `inverse_`; the ops before it were
     /// already answered.
     std::size_t settled_upto_{0};
-    std::size_t dims_settled_upto_{0}; ///< how far `settle_dimensions` has read
+    std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
+    std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
 };
 
 struct UndoEntry

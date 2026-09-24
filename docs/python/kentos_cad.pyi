@@ -1101,6 +1101,7 @@ def hatch(
     angle: float = ...,
     scale: float = ...,
     catalog: str = ...,
+    associate: bool = ...,
 ) -> int:
     """Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
 
@@ -1111,6 +1112,7 @@ def hatch(
         angle — Desenin dönme açısı, derece; varsayılan 0
         scale — Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)
         catalog — Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu
+        associate — Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet
     """
 
 def block(

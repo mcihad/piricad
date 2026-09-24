@@ -142,6 +142,7 @@ std::uint64_t Document::content_hash() const
     h = blocks_.fold(h);
     h = attachments_.fold(h);
     h = dim_links_.fold(h);
+    h = hatch_links_.fold(h);
 
     // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
     // deliverable, even when every parcel in it is identical. Folding an EMPTY
@@ -1314,6 +1315,45 @@ Status Document::set_dimension_links(EntityId dim, std::span<const DimLink> link
     return restore_dimension_links(dim, std::vector<DimLink>(links.begin(), links.end()), undo_out);
 }
 
+Status Document::set_hatch_links(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out)
+{
+    if (hatch >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(hatch));
+    if (!entities_.alive(hatch) || entities_.kind[hatch] != kHatchKind)
+        return err(ErrorCode::InvalidArgument,
+                   "Yalnız canlı bir tarama sınırına bağlanabilir: " + std::to_string(hatch));
+    if (auto st = editable(hatch); !st) return st;
+    for (const HatchSource& s : sources) {
+        if (s.broken) continue;
+        const EntityId src = slot_of(s.source);
+        if (src == kNoEntity || !entities_.alive(src))
+            return err(ErrorCode::NotFound,
+                       "Taramanın bağlanacağı nesne bulunamadı veya silinmiş: " +
+                           std::to_string(raw(s.source)));
+        if (src == hatch) return err(ErrorCode::InvalidArgument, "Bir tarama kendi sınırı olamaz.");
+    }
+    return restore_hatch_links(hatch, std::vector<HatchSource>(sources.begin(), sources.end()),
+                               undo_out);
+}
+
+Status Document::restore_hatch_links(EntityId hatch, std::vector<HatchSource> sources, Op& undo_out)
+{
+    if (hatch >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(hatch));
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetHatchLinks;
+    undo_out.entity = hatch;
+    if (const std::vector<HatchSource>* was = hatch_links_.get(hatch); was != nullptr) {
+        undo_out.bytes_arg = encode_hatch_links(*was);
+    } else if (sources.empty()) {
+        undo_out = Op{}; // followed nothing, follows nothing: no change, no inverse
+        return ok();
+    }
+    hatch_links_.set(hatch, std::move(sources));
+    ++revision_;
+    return ok();
+}
+
 Status Document::restore_dimension_links(EntityId dim, std::vector<DimLink> links, Op& undo_out)
 {
     if (dim >= entities_.size())
@@ -1533,6 +1573,11 @@ Status Document::apply(const Op& op, Op* undo_out)
         auto links = decode_dim_links(op.bytes_arg);
         if (!links) return links.error();
         return restore_dimension_links(op.entity, std::move(links.value()), inverse);
+    }
+    case Op::Kind::SetHatchLinks: {
+        auto sources = decode_hatch_links(op.bytes_arg);
+        if (!sources) return sources.error();
+        return restore_hatch_links(op.entity, std::move(sources.value()), inverse);
     }
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");

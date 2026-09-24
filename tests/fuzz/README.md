@@ -67,6 +67,8 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `proje/08-cakisan-halkalar.pcad` | overlapping ring ranges whose per-entity sum overflows `size_t` |
 | `proje/09-olcu-baglari.pcad` | the dimension link block: one dimension tied to a line, one whose line was erased (broken links) |
 | `proje/10-olcu-bagi-bozuk.pcad` | the same block with one fault per row: a dimension the file does not hold, an anchor past the last, a definition point the dimension lacks, a live link to no object |
+| `proje/11-tarama-baglari.pcad` | the hatch link block: one hatch tied to a parcel, one whose parcel was erased (a broken source) |
+| `proje/12-tarama-bagi-bozuk.pcad` | the same block with one fault per row: a hatch the file does not hold, a live link to no object |
 | `dxf/01-cizgi-ve-parsel.dxf` | a line and a parcel with a hole, with its `.prj` companion |
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |
 | `dxf/03-kesik.dxf` | truncation mid-section |

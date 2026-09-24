@@ -958,6 +958,7 @@ Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tara
 | `aci` | number | isteğe bağlı | Desenin dönme açısı, derece; varsayılan 0 |
 | `olcek` | number | isteğe bağlı | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) |
 | `katalog` | text | isteğe bağlı | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
+| `bagla` | bool | isteğe bağlı | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet |
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
 
@@ -6325,6 +6326,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "katalog": {
           "type": "string",
           "description": "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin)"
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

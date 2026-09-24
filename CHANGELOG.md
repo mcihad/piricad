@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — tarama sınırına bağlı: sınır değişince yeniden kurulur, delikten taşmaz (C-11, 1. aşama)
+
+- **Bağlı tarama.** Seçilen nesnelerden çizilen tarama onlara bağlanır
+  (`core/hatch_link.hpp`, ayrı tarama bağ tablosu; dosyada `0x008F` bloğu). Sınırın
+  köşesi taşınınca, deliği değişince ya da ölçeklenince tarama komutun sonunda, aynı geri
+  alma adımında sınırdan yeniden kurulur; sınır bütün olarak taşınırsa desen de onunla
+  kayar. Yalnız tarama taşınırsa bağından çözülür; sınır silinir ya da artık kapanmazsa
+  bağ kopar, tarama son hâlinde kalır ve tuvalde "sınır bağı koptu" diye işaretlenir;
+  birden çok sınırdan biri silinse de tarama bütünüyle izlemeyi bırakır (kalanlardan
+  kurulsaydı parselin içindeki havuz taranırdı). `bagla=hayır` bağsız çizer.
+- **Delikler iç içelikten.** Bir alanın kendi delikleri, seçili bir nesnenin içindeki
+  başka seçili nesne ve onun içindekiler DXF'in olağan kuralıyla sırayla delik ve dolu
+  olur; her yeniden kuruluşta geometriden bulunur.
+- **NESNEBİLGİ** taramanın desenini, sınır nesnelerini ve kopuk bağlarını, bir nesne
+  için de onu kaç bağlı taramanın izlediğini söyler; DXF'ten "ilişkili" işaretli gelen
+  taramanın bu çizimde bağı olmadığını ayrıca söyler.
+- **Düzeltildi:** araç kutusundan TARAMA ile bir parsele tıklayıp onaylamak **iki**
+  tarama çiziyordu: yeniden kurulan araç, ilk parametresi seçim olmadığı için seçimi
+  temizlemiyor ve aynı parseli yeniden tarıyordu. Artık seçim parametresi olan her araç
+  yeniden kurulurken seçimi temizler.
+
 ### Eklendi — zincir ve baz ölçü, ölçü stilleri (C-10 tamam)
 
 - **ZİNCİRÖLÇÜ** (`core.dimension_continue`) son doğrusal ya da hizalı ölçünün (ya da

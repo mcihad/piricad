@@ -5245,6 +5245,67 @@ int MainWindow::probeRealMouse()
             }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 13. A HATCH BY HAND FOLLOWS ITS PARCEL (TODOS C-11) --------------
+        //
+        // The hatch tool from the column, the parcel clicked inside and the
+        // choice confirmed; then the parcel alone selected and its corner
+        // dragged by the grip. The hatch is tied to the parcel and fills the
+        // parcel's new shape.
+        {
+            fresh({QStringLiteral("ALAN 0,0 20,0 20,10 0,10")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::int64_t hatched = first_key();
+            actHatch_->trigger();
+            QCoreApplication::processEvents();
+            press(screen({10'000, 5'000}));
+            release(screen({10'000, 5'000}));
+            onCanvas(QEvent::MouseButtonPress, screen({10'000, 5'000}), Qt::RightButton);
+            onCanvas(QEvent::MouseButtonRelease, screen({10'000, 5'000}), Qt::RightButton);
+            controller_->cancelInteractive();
+            const core::Document& doc = controller_->document();
+            core::EntityId hatch      = core::kNoEntity;
+            std::size_t hatches       = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kHatchKind) {
+                    hatch = e;
+                    ++hatches;
+                }
+            check(hatches == 1,
+                  QStringLiteral("Tarama: bir tıklama ve onay bir tarama çizdi (%1)").arg(hatches));
+            const auto* sources = hatch == core::kNoEntity ? nullptr : doc.hatch_links().get(hatch);
+            check(sources != nullptr && sources->size() == 1,
+                  QStringLiteral("Tarama: fareyle parselin içine tıklanarak çizilen tarama parsele "
+                                 "bağlandı (son söz: \"%1\")")
+                      .arg(lastSaid()));
+
+            runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1").arg(hatched));
+            QCoreApplication::processEvents();
+            press(screen({20'000, 10'000}));
+            release(screen({20'000, 10'000}));
+            // Inside the view the parcel was zoomed to: a click off the canvas is
+            // no click at all.
+            onCanvas(QEvent::MouseMove, screen({23'000, 11'500}), Qt::NoButton);
+            press(screen({23'000, 11'500}));
+            release(screen({23'000, 11'500}));
+            bool followed = false;
+            if (hatch != core::kNoEntity) {
+                const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[hatch]);
+                for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                    const auto xs = doc.geometry().ring_xs(r);
+                    const auto ys = doc.geometry().ring_ys(r);
+                    for (std::size_t v = 0; v < xs.size(); ++v)
+                        followed = followed || (std::abs(xs[v] - 23'000) <= 300 &&
+                                                std::abs(ys[v] - 11'500) <= 300);
+                }
+            }
+            check(followed, QStringLiteral("Tarama: parselin köşesi tutamaktan sürüklenince tarama "
+                                           "yeni sınıra oturdu (son söz: \"%1\")")
+                                .arg(lastSaid()));
+            shoot("tarama-izler");
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -6790,9 +6851,16 @@ void MainWindow::rearm(QAction* action, const QString& id)
     // the selection left standing, a re-armed TAŞI would take the same objects
     // and ask for a base point the instant the move landed, and a re-armed
     // ALANÖLÇ would measure the same parcel for ever.
+    //
+    // ANY SELECTION PARAMETER, not only the first: TARAMA lists its corners
+    // before its objects (so a typed run of points fills them), and a re-armed
+    // TARAMA took the parcel it had just hatched and hatched it again — two
+    // hatches for one click (TODOS C-11).
     const command::CommandSpec* spec = controller_->registry().resolve(id.toStdString());
-    const bool wants_objects         = spec != nullptr && !spec->params.empty() &&
-                               spec->params.front().kind == command::ParamKind::Selection;
+    const bool wants_objects =
+        spec != nullptr && std::ranges::any_of(spec->params, [](const command::Param& p) {
+            return p.kind == command::ParamKind::Selection;
+        });
     if (wants_objects && !controller_->bus().selection().empty())
         controller_->runLine(QStringLiteral("SEÇ TEMİZLE"), command::Origin::Gui);
 

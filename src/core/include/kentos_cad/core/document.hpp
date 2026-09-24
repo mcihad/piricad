@@ -25,6 +25,7 @@
 #include "kentos_cad/core/foreign_table.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/image_store.hpp"
 #include "kentos_cad/core/layer.hpp"
@@ -139,6 +140,7 @@ struct Op
         DetachForeign,      ///< entity, str_arg (the tag)
         SetAttachment,      ///< entity, has_attach, attach_arg — what it followed before
         SetDimensionLinks,  ///< entity, bytes_arg — the links it had before (encode_dim_links)
+        SetHatchLinks, ///< entity, bytes_arg — the sources it had before (encode_hatch_links)
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -268,6 +270,11 @@ public:
     /// Which geometry each linked dimension measures (core/dimension_link.hpp),
     /// keyed by the dimension's row. Read at commit, never by the frame path.
     const DimLinkTable& dimension_links() const noexcept { return dim_links_; }
+
+    /// Which objects each linked hatch's boundary comes from
+    /// (core/hatch_link.hpp), keyed by the hatch's row. Read at commit, never by
+    /// the frame path.
+    const HatchLinkTable& hatch_links() const noexcept { return hatch_links_; }
 
     /// The drafting guides this document carries. Furniture, not geometry: saved
     /// with the file and invisible to selection, culling, export and area sums
@@ -545,6 +552,12 @@ public:
     /// what it is for. The inverse restores the links it had before.
     Status set_dimension_links(EntityId dim, std::span<const DimLink> links, Op& undo_out);
 
+    /// Replaces the boundary sources of hatch `hatch` (an empty list unlinks
+    /// it). Refused for anything but a live, editable hatch, and a live source
+    /// that does not exist or is the hatch itself — a BROKEN source keeps the
+    /// key of the object that is gone. The inverse restores what it had before.
+    Status set_hatch_links(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out);
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -618,6 +631,10 @@ private:
     /// come back one op BEFORE the source does.
     Status restore_dimension_links(EntityId dim, std::vector<DimLink> links, Op& undo_out);
 
+    /// The undo half of `set_hatch_links`, for the same reason: nothing about
+    /// the sources is checked on the way back.
+    Status restore_hatch_links(EntityId hatch, std::vector<HatchSource> sources, Op& undo_out);
+
     Crs crs_{};
     EntityTable entities_{};
     RingGeometry geometry_{};
@@ -630,6 +647,7 @@ private:
     BlockTable blocks_{};
     AttachTable attachments_{};
     DimLinkTable dim_links_{};
+    HatchLinkTable hatch_links_{};
     GuideStore guides_{};
     LayoutStore layouts_{};
     ImageStore images_{};

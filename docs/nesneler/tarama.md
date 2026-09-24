@@ -14,6 +14,15 @@ bir çizgiden ötekine kayma ve kesik dizisi. Aileler adla
 [desen kataloğundan](../komutlar/hatch.md#desen-kataloğu) alınır ve nesnede saklanır;
 katalog değişse çizim değişmez.
 
+## Bağlar
+
+Seçilen nesnelerden çizilen tarama o nesnelere **bağlıdır**
+([Bağlı tarama](../komutlar/hatch.md#bağlı-tarama)). Bağlar halkalarda değil ayrı bir
+**tarama bağ tablosunda** durur: her taramanın sınır nesneleri, kalıcı anahtarlarıyla,
+ve her birinin kopuk olup olmadığı. Hangi halkanın delik olduğu saklanmaz; her
+yeniden kuruluşta sınırların iç içeliğinden bulunur. Bağlı taraması olmayan bir çizim
+bu tablo için hiçbir şey ödemez: parmak izi de dosyası da aynıdır.
+
 ## Nasıl çizilir
 
 Tarama, stiliyle çizilir: komut nesneyi oluştururken katmanın rengiyle bir sembol
@@ -38,6 +47,11 @@ ve adı korunur ama deseni çizilmez (`düşürme:` satırı söyler). Yazarken 
 döngüsü olarak, desen adı, açısı ve ölçeğiyle `HATCH` olur; desen tanım çizgileri
 yazılmaz, AutoCAD deseni kendi kataloğundan adla bulur. GeoPackage'a çokgen olarak
 yazılır.
+
+Bağlar proje dosyasında kendi bloğunda (`0x008F`, bağ başına 24 bayt: taramanın ve
+sınır nesnesinin anahtarı, kopukluk) durur; blok yalnız bağlı bir tarama varsa yazılır.
+Dosyada olmayan bir nesneye işaret eden bağ okunurken kopuk sayılır. DXF'in "ilişkili"
+işareti (grup 71) gidiş-dönüşte korunur ama bir bağ değildir.
 
 ## Komutlar
 

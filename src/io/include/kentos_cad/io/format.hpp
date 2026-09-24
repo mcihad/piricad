@@ -347,6 +347,12 @@ enum BlockId : std::uint32_t {
     /// it was (R10 makes the block skippable to an older reader).
     kBlkDimensionLinks = 0x008E, ///< DimLinkRecord[]
 
+    /// Which objects each linked hatch's boundary comes from
+    /// (core/hatch_link.hpp), one record per source. OPTIONAL: written only
+    /// when a hatch is linked, so every older file and every drawing without
+    /// one keeps its bytes.
+    kBlkHatchLinks = 0x008F, ///< HatchLinkRecord[]
+
     // ---- sheet layouts (core/layout.hpp). All four or none. ------------------
     //
     // A PAFTA IS DOCUMENT CONTENT, so it is in the file rather than beside it,
@@ -638,6 +644,18 @@ struct DimLinkRecord
 };
 
 static_assert(sizeof(DimLinkRecord) == 32, "wire record");
+
+/// One source of a linked hatch (core/hatch_link.hpp). Both ends by persistent
+/// key, as every cross-reference in this format is.
+struct HatchLinkRecord
+{
+    std::uint64_t hatch_key;  ///<  0  the hatch
+    std::uint64_t source_key; ///<  8  the object its boundary comes from
+    std::uint8_t broken;      ///< 16  1 = erased or no longer closed
+    std::uint8_t reserved[7]; ///< 17  zero
+};
+
+static_assert(sizeof(HatchLinkRecord) == 24, "the hatch link column is a wire record");
 
 /// One sheet layout. Its pages, items and name runs live in the three blocks
 /// beside it.

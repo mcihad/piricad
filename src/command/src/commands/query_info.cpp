@@ -36,6 +36,8 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
@@ -194,6 +196,71 @@ void describe_dimension(const core::Document& doc, core::EntityId slot, core::Dr
     if (def.scale_basis > 0) said += "; 1/" + std::to_string(def.scale_basis) + " paftası için";
 }
 
+/// WHAT A HATCH FOLLOWS, AND WHICH HATCHES FOLLOW AN OBJECT (TODOS C-11): the
+/// pattern, the boundary objects, which of them are gone — and the one thing a
+/// DXF's flag is not, a link this drawing can keep.
+void describe_hatch(const core::Document& doc, core::EntityId slot, core::Json& row,
+                    std::string& said)
+{
+    const core::HatchLinkTable& table = doc.hatch_links();
+    if (doc.entities().kind[slot] == core::kHatchKind) {
+        const std::vector<core::HatchSource>* sources = table.get(slot);
+        auto def = core::hatch_of(doc.geometry(), doc.entities().slot[slot]);
+        if (def) {
+            core::Json hatch;
+            hatch.set("desen", core::Json::string(def.value().name));
+            hatch.set("aci_udeg", core::Json::integer(def.value().angle_udeg));
+            hatch.set("olcek_pay", core::Json::integer(def.value().scale.num));
+            hatch.set("olcek_payda", core::Json::integer(def.value().scale.den));
+            hatch.set("dxf_iliskili", core::Json::boolean(def.value().associative));
+            row.set("tarama", std::move(hatch));
+            said += "; '" + def.value().name + "' deseni";
+            if (def.value().associative && sources == nullptr)
+                said += "; DXF'te ilişkili işaretli geldi, bu çizimde sınırına bağlı değil";
+        }
+        if (sources != nullptr) {
+            core::Json out     = core::Json::array({});
+            std::size_t broken = 0;
+            std::string tied;
+            for (const core::HatchSource& s : *sources) {
+                core::Json one;
+                one.set("nesne",
+                        core::Json::integer(static_cast<std::int64_t>(core::raw(s.source))));
+                one.set("kopuk", core::Json::boolean(s.broken));
+                out.push(std::move(one));
+                if (s.broken) {
+                    ++broken;
+                    continue;
+                }
+                tied += (tied.empty() ? "" : ", ") + std::to_string(core::raw(s.source));
+            }
+            row.set("tarama_sinirlari", std::move(out));
+            if (!tied.empty()) said += "; sınırı: nesne " + tied;
+            if (broken > 0)
+                said += "; " + std::to_string(broken) +
+                        " sınır bağı kopuk (nesnesi silinmiş ya da artık kapanmıyor)";
+        }
+    }
+    if (table.empty()) return;
+    const core::EntityKey key = doc.entities().key[slot];
+    core::Json filled_by      = core::Json::array({});
+    std::size_t count         = 0;
+    for (const core::EntityId hatch : table.linked()) {
+        if (!doc.alive(hatch)) continue;
+        for (const core::HatchSource& s : *table.get(hatch)) {
+            if (s.broken || s.source != key) continue;
+            filled_by.push(core::Json::integer(
+                static_cast<std::int64_t>(core::raw(doc.entities().key[hatch]))));
+            ++count;
+            break;
+        }
+    }
+    if (count > 0) {
+        row.set("taramalar", std::move(filled_by));
+        said += "; " + std::to_string(count) + " bağlı tarama bunun sınırını izliyor";
+    }
+}
+
 // ------------------------------------------------------------ NESNEBİLGİ ----
 
 Task<void> run_entity_info(Context& ctx)
@@ -278,6 +345,7 @@ Task<void> run_entity_info(Context& ctx)
         if (filled > 0) said += ", " + std::to_string(filled) + " öznitelik";
         describe_dimension(doc, slot, ctx.session().bus().drawing_unit(), row, said);
         describe_links(doc, slot, row, said);
+        describe_hatch(doc, slot, row, said);
         ctx.echo(said + ".");
 
         rows.push(std::move(row));

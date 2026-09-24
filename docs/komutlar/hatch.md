@@ -8,6 +8,36 @@ alan, daire, elips, kapalı çoklu çizgi — ya da `noktalar=` ile doğrudan k�
 Sonuç bir [tarama nesnesidir](../nesneler/tarama.md): sınır halkaları ve desen
 birlikte saklanır, DXF'e `HATCH` olarak gider.
 
+### Bağlı tarama
+
+Seçilen nesnelerin içini tarayan tarama o nesnelere **bağlanır** ve TARAMA bunu söyler:
+`1 sınır nesnesine bağlı`. Sınır değişince tarama komutun sonunda, **aynı geri alma
+adımında** yeniden kurulur:
+
+| Ne olursa | Tarama ne yapar |
+|---|---|
+| Sınırın köşesi taşınır, alanın deliği değişir, daire ölçeklenir | Halkaları sınırdan yeniden kurulur; **delikten taşmaz** |
+| Sınır bütün olarak taşınır | Tarama da taşınır; desen parselin üzerinde aynı yerde kalır |
+| Tarama ile sınırı birlikte taşınır | Bağ sürer |
+| Yalnız tarama taşınır | Tarama sınırından **çözülür**; artık bağımsızdır |
+| Sınır silinir | Bağ **kopar**; tarama son hâlinde durur. Birden çok sınırdan biri silinse de tarama bütünüyle izlemeyi bırakır: kalan sınırlardan yeniden kurulsaydı, silinen parselin içindeki havuz taranan alan olurdu |
+| Sınır artık kapanmaz (çizgi açılır) | Bağ **kopar**; tarama son hâlinde durur |
+| Tarama kilitli katmandadır | İzleyemez ve bunu söyler |
+
+**Delikler iç içelikten gelir.** Bir alanın kendi delikleri, seçtiğiniz bir nesnenin
+içindeki başka bir seçili nesne ve onun da içindekiler, DXF'in olağan tarama kuralıyla
+sırayla delik ve dolu olur: bir parsel ve içindeki havuzu birlikte seçerseniz havuz
+taranmaz. Bu, her yeniden kuruluşta geometriden yeniden bulunur.
+
+**Kopuk bağ görünür.** Sınırı silinmiş ya da artık kapanmayan taramanın ortasında
+uyarı renginde üstü çizili bir halka ve **sınır bağı koptu** yazısı durur; pafta
+çıktısına girmez. [`NESNEBİLGİ`](entity_info.md) taramanın hangi nesnelere bağlı
+olduğunu, bir nesne için de onu kaç bağlı taramanın izlediğini söyler.
+
+`noktalar=` ile köşelerden çizilen tarama bağsızdır. Bağlamak istemediğinizde
+`bagla=hayır` verin. DXF'ten gelen bir taramanın "ilişkili" işareti (grup 71) bu
+çizimde bir bağ değildir: NESNEBİLGİ bunu ayrıca söyler.
+
 ### Desen kataloğu
 
 Desenler koddan değil, `data/catalogs/dxf/tarama-desenleri.json` dosyasından gelir
@@ -48,6 +78,7 @@ TARAMA desen=<ad>            ← etkin seçimi tarar
 | `aci` | Desenin dönme açısı, derece; varsayılan 0 |
 | `olcek` | Desen ölçeği; varsayılan pafta ölçeğinin paydası |
 | `katalog` | Desen kataloğu dosyası; varsayılan `TERCİH desen_kataloğu` |
+| `bagla` | Seçilen sınır nesnelerine bağlansın mı; varsayılan `evet`. Bkz. [Bağlı tarama](#bağlı-tarama) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -76,9 +107,38 @@ SEÇ KATMAN katman=PARSEL
 TARAMA desen=EARTH olcek=1000
 ```
 
+Bir parseli taramak ve köşesini taşımak; tarama yeni sınıra oturur:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 20,0 20,10 0,10
+TARAMA nesneler=1 desen=ANSI31
+KÖŞETAŞI nesne=1 kose=3 nokta=26,14
+```
+
+```text
+'ANSI31' deseniyle tarama çizildi (1 sınır halkası); 1 sınır nesnesine bağlı, o değişince tarama da güncellenir.
+Bağlı 1 tarama sınırını izledi ve yeniden kuruldu.
+```
+
+Avlulu bir parsel — ikinci halka delik — ve içindeki bir havuzu birlikte taramak:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 30,0 30,30 0,30 4,4 12,4 12,12 4,12 bolum=4 bolum=4
+DAİRE merkez=20,20 cevre=24,20
+TARAMA nesneler=1 nesneler=2 desen=ANSI31
+```
+
+```text
+'ANSI31' deseniyle tarama çizildi (3 sınır halkası, 2 delik); 2 sınır nesnesine bağlı, o değişince tarama da güncellenir.
+```
+
 ### Arayüz
 
 **Çizim ▸ Tarama**. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
+Seçerek çizilen tarama bu nesnelere bağlıdır: parselin köşesini tutamağından
+sürüklediğinizde tarama da güncellenir.
 
 ### Betik
 
@@ -96,6 +156,7 @@ TARAMA desen=EARTH olcek=1000
 ## Geri alma
 
 Tek adımdır: `GERİAL` taramayı kaldırır; sınır olarak seçilen nesnelere dokunulmaz.
+Bağlı taramanın sınırını izlemesi, onu doğuran komutla aynı adımdadır.
 
 ## Betikten kullanım
 
@@ -104,6 +165,16 @@ Tek adımdır: `GERİAL` taramayı kaldırır; sınır olarak seçilen nesnelere
 de yazılır, böylece pafta ölçeği değişse tekrar aynı taramayı kurar.
 
 ## Hatalar
+
+Bağlı taramaların izlemesi şu satırlarla bildirilir:
+
+| Satır | Ne oldu |
+|---|---|
+| `Bağlı N tarama sınırını izledi ve yeniden kuruldu.` | Sınırları değişti |
+| `Sınırı silindiği için N tarama bağı koptu; tarama son hâlinde duruyor.` | Sınır nesnesi silindi |
+| `Sınırı artık kapanmadığı için N tarama bağı koptu; tarama son hâlinde duruyor.` | Sınır açıldı |
+| `N tarama sınırından ayrı taşındığı için bağından çözüldü.` | Yalnız tarama taşındı |
+| `Bağlı N tarama kilitli katmanda olduğu için sınırını izleyemedi.` | Tarama kilitli katmanda |
 
 > `Tarama sınırı en az üç nokta ister; verilen 2.`
 

@@ -1986,6 +1986,27 @@ void MapCanvas::buildBrokenLinks()
                 .toStdString()});
     }
 
+    // A HATCH WHOSE BOUNDARY IS GONE (TODOS C-11): it fills the shape the
+    // boundary had, and says so at its middle.
+    for (const core::EntityId hatch : doc.hatch_links().linked()) {
+        if (!doc.alive(hatch) || !ents.visible(hatch)) continue;
+        bool broken = false;
+        for (const core::HatchSource& s : *doc.hatch_links().get(hatch))
+            broken = broken || s.broken;
+        if (!broken) continue;
+        const core::Box2 box = ents.box_of(hatch);
+        if (box.empty()) continue;
+        const render::ScreenPointF v = render::to_f(view_.to_screen(
+            core::Point2{(box.min_x + box.max_x) / 2, (box.min_y + box.max_y) / 2}));
+        if (v.x < -8.0F || v.y < -8.0F || v.x > w + 8.0F || v.y > h + 8.0F) continue;
+        const std::size_t mark = nextBatch(tokens_->warn.rgba(), 1.8f, false);
+        addCircle(mark, v.x, v.y, 7.0f);
+        addRun(mark, {{v.x - 5.0F, v.y + 5.0F}, {v.x + 5.0F, v.y - 5.0F}}, false);
+        overlay_.labels.push_back(render::OverlayLabel{
+            tokens_->warn.rgba(), v.x + 12.0F, v.y + 4.0F, static_cast<float>(look_.hint_px), false,
+            tr("sınır bağı koptu").toStdString()});
+    }
+
     if (table.empty()) return;
     std::size_t line = 0;
     bool started     = false;

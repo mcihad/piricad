@@ -4083,6 +4083,109 @@ TEST_CASE(
     CHECK_FALSE(has_link_block);
 }
 
+TEST_CASE(
+    "IO: tarama bağları dosyaya yazılır ve okunur; yeniden açılan çizimde tarama sınırını izler")
+{
+    TempDir tmp("tarama-bagi");
+    const std::string path = tmp.file("tarama.pcad");
+
+    Rig written;
+    for (const char* line :
+         {"ALAN 0,0 20,0 20,10 0,10", "ALAN 40,0 60,0 60,10 40,10",
+          "TARAMA nesneler=1 desen=ANSI31", "TARAMA nesneler=2 desen=ANSI31", "SİL nesneler=2"})
+        REQUIRE_MESSAGE(written.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE_EQ(written.doc.hatch_links().size(), std::size_t{2});
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK(reloaded.transcript.find("parmak izi") == std::string::npos);
+    const auto* intact = reloaded.doc.hatch_links().get(reloaded.doc.slot_of(core::EntityKey{3}));
+    const auto* broken = reloaded.doc.hatch_links().get(reloaded.doc.slot_of(core::EntityKey{4}));
+    REQUIRE(intact != nullptr);
+    REQUIRE(broken != nullptr);
+    CHECK_FALSE((*intact)[0].broken);
+    CHECK((*broken)[0].broken);
+
+    REQUIRE(reloaded.bus.execute_line("KÖŞETAŞI nesne=1 kose=3 nokta=26,14", Origin::Test).ok());
+    const core::EntityId hatch = reloaded.doc.slot_of(core::EntityKey{3});
+    const core::RingSpan span =
+        reloaded.doc.geometry().rings_of(reloaded.doc.entities().slot[hatch]);
+    bool moved = false;
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        const auto xs = reloaded.doc.geometry().ring_xs(r);
+        const auto ys = reloaded.doc.geometry().ring_ys(r);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            moved = moved || (xs[v] == 26'000 && ys[v] == 14'000);
+    }
+    CHECK(moved);
+}
+
+TEST_CASE("IO: tarama bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
+{
+    // CLAUDE.md 6.7, for the hatch link block: written under
+    // KENTOS_TOHUM_UPDATE, read back on every build.
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path good   = corpus / "11-tarama-baglari.pcad";
+    const fs::path bad    = corpus / "12-tarama-bagi-bozuk.pcad";
+    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+        Rig w;
+        for (const char* line :
+             {"ALAN 0,0 20,0 20,10 0,10", "ALAN 40,0 60,0 60,10 40,10",
+              "TARAMA nesneler=1 desen=ANSI31", "TARAMA nesneler=2 desen=ANSI31", "SİL nesneler=2"})
+            REQUIRE(w.bus.execute_line(line, Origin::Test).ok());
+        REQUIRE(w.bus.execute_line("FARKLIKAYDET \"" + good.string() + "\"", Origin::Test).ok());
+
+        std::ifstream in(good, std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        in.close();
+        const auto u32 = [&bytes](std::size_t at) {
+            std::uint32_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 4);
+            return v;
+        };
+        const auto u64 = [&bytes](std::size_t at) {
+            std::uint64_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 8);
+            return v;
+        };
+        std::size_t rows = 0;
+        for (std::uint32_t b = 0; b < u32(20); ++b) {
+            const std::size_t entry = u64(24) + std::size_t{b} * 32;
+            if (u32(entry) == io::kBlkHatchLinks) rows = u64(entry + 8);
+        }
+        REQUIRE(rows != 0);
+        // Row 0 names a hatch the file does not hold; row 1 a live link to no
+        // object at all.
+        const std::uint64_t nobody = 0xFFFF'FFFFu;
+        std::memcpy(bytes.data() + rows, &nobody, 8);
+        const std::uint64_t none = 0;
+        std::memcpy(bytes.data() + rows + 24 + 8, &none, 8);
+        bytes[rows + 24 + 16] = 0;
+        std::ofstream out(bad, std::ios::binary);
+        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    if (!fs::exists(good) || !fs::exists(bad))
+        PENDING("Tarama bağı tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+
+    Rig a;
+    auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(a.doc.hatch_links().size(), std::size_t{2});
+
+    Rig b;
+    auto damaged = b.bus.execute_line("AÇ \"" + bad.string() + "\"", Origin::Test);
+    if (!damaged) FAIL_WITH("AÇ", damaged.error().message);
+    CHECK(b.transcript.find("var olmayan bir taramaya") != std::string::npos);
+    // The surviving row is read as broken: a live link to nothing is no link.
+    for (const core::EntityId hatch : b.doc.hatch_links().linked())
+        for (const core::HatchSource& src : *b.doc.hatch_links().get(hatch))
+            CHECK(src.broken);
+}
+
 TEST_CASE("IO: ölçü bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
 {
     // CLAUDE.md 6.7: the link block ships its seeds with the format. Written by

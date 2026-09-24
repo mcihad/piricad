@@ -1857,6 +1857,39 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("18g-baz-olcu"), &window); });
 
+        // BAĞLI TARAMA (TODOS C-11): a parcel with a courtyard and a pool in
+        // it, hatched together — the courtyard and the pool are holes.
+        later([scene] {
+            scene(QStringLiteral("ALAN 0,0 30,0 30,30 0,30 4,4 12,4 12,12 4,12 bolum=4 bolum=4"));
+        });
+        later([&window] {
+            for (const char* line :
+                 {"DAİRE merkez=20,20 cevre=24,20", "TARAMA nesneler=1 nesneler=2 desen=ANSI31"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+        });
+        later([&window, shot] { shot(QStringLiteral("19a-tarama-bagli"), &window); });
+        // The courtyard grown, the pool moved, a corner pulled out: the hatch
+        // is built again from them and stays out of both holes.
+        later([&window] {
+            for (const char* line : {"KÖŞETAŞI nesne=1 kose=7 nokta=16,16",
+                                     "TAŞI nesneler=2 baslangic=20,20 bitis=22,6",
+                                     "KÖŞETAŞI nesne=1 kose=3 nokta=36,34"}) {
+                window.runScriptLine(QString::fromUtf8(line));
+                window.endCommand();
+            }
+        });
+        later([&window, shot] { shot(QStringLiteral("19b-tarama-izler"), &window); });
+        // The parcel erased: the hatch stays as it was, marked.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SİL nesneler=1"));
+            window.endCommand();
+        });
+        later([&window, shot] { shot(QStringLiteral("19c-tarama-bag-koptu"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

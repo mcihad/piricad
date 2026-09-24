@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 110 (97 tanesi onay ister)
-- Katalog parmak izi: `11223401845461779749`
+- Katalog parmak izi: `5564305447178960474`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -740,6 +740,7 @@ Onay ister.
 | `aci` | number | hayır | Desenin dönme açısı, derece; varsayılan 0 (sayı) |
 | `olcek` | number | hayır | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) (sayı) |
 | `katalog` | string | hayır | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin) |
+| `bagla` | boolean | hayır | Seçilen sınır nesnelerine bağlansın mı; bağlı tarama sınırı değişince yeniden kurulur. Varsayılan evet (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_insert` — Blok Ekle

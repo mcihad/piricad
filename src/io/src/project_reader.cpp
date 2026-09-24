@@ -1508,6 +1508,32 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     Warning{"io.dimlink", "Bir ölçü bağı yüklenemedi: " + st.error().message});
     }
 
+    if (view.has(kBlkHatchLinks)) {
+        auto rows = view.column<HatchLinkRecord>(kBlkHatchLinks, view.count_of(kBlkHatchLinks),
+                                                 "tarama bağları");
+        if (!rows) return rows.error();
+        std::map<core::EntityId, std::vector<core::HatchSource>> per_hatch;
+        for (const HatchLinkRecord& r : rows.value()) {
+            const core::EntityId hatch = doc.slot_of(static_cast<core::EntityKey>(r.hatch_key));
+            if (hatch == core::kNoEntity || !doc.alive(hatch)) {
+                report.warnings.push_back(
+                    Warning{"io.hatchlink_row", "Dosyadaki bir tarama bağı var olmayan bir "
+                                                "taramaya işaret ediyor; yok sayıldı."});
+                continue;
+            }
+            core::HatchSource s{static_cast<core::EntityKey>(r.source_key), r.broken != 0};
+            // A live link to an object the file does not hold is a broken one:
+            // the hatch stays, as it was saved.
+            const core::EntityId src = doc.slot_of(s.source);
+            if (!s.broken && (src == core::kNoEntity || !doc.alive(src))) s.broken = true;
+            per_hatch[hatch].push_back(s);
+        }
+        for (const auto& [hatch, sources] : per_hatch)
+            if (auto st = tx.set_hatch_links(hatch, sources); !st)
+                report.warnings.push_back(
+                    Warning{"io.hatchlink", "Bir tarama bağı yüklenemedi: " + st.error().message});
+    }
+
     // ---- the allocator must not hand out a key the file already used ----
     if (doc.keys().peek_entity() != dr.next_entity_key ||
         doc.keys().peek_layer() != dr.next_layer_key)

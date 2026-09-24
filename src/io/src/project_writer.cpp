@@ -494,6 +494,22 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // ---- hatch links (core/hatch_link.hpp): live hatches only ----
+    std::vector<HatchLinkRecord> hatchlink_rows;
+    {
+        const core::HatchLinkTable& links = doc.hatch_links();
+        for (const core::EntityId hatch : links.linked()) {
+            if (!doc.alive(hatch)) continue;
+            for (const core::HatchSource& s : *links.get(hatch)) {
+                HatchLinkRecord r{};
+                r.hatch_key  = core::raw(doc.key_of(hatch));
+                r.source_key = core::raw(s.source);
+                r.broken     = s.broken ? 1 : 0;
+                hatchlink_rows.push_back(r);
+            }
+        }
+    }
+
     // ---- block definitions (model.md R45) ----
     std::vector<BlockRecord> block_rows;
     std::vector<std::uint64_t> block_members;
@@ -797,6 +813,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     }
     if (!attach_rows.empty()) blocks.push_back(column(kBlkAttachments, attach_rows));
     if (!dimlink_rows.empty()) blocks.push_back(column(kBlkDimensionLinks, dimlink_rows));
+    if (!hatchlink_rows.empty()) blocks.push_back(column(kBlkHatchLinks, hatchlink_rows));
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an
