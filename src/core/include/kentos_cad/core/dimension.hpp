@@ -15,6 +15,7 @@
 // one, is a separate text entity, as it is in every CAD format.
 #pragma once
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
@@ -22,6 +23,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -105,8 +107,11 @@ struct DimensionDef
     DimTolerance tolerance{DimTolerance::None}; ///< how the tolerance is written
     std::int64_t tolerance_plus{0}; ///< the upper deviation, or the ± value: mm, or µ° for an angle
     std::int64_t tolerance_minus{0}; ///< the lower deviation, a magnitude: mm, or µ° for an angle
-    std::uint8_t unit{
-        0}; ///< the unit a length is written in: 0 the drawing's, else DrawingUnit + 1
+    /// THE UNIT THE FIGURE IS WRITTEN IN. A length: 0 the drawing's, else
+    /// DrawingUnit + 1. An angle (TODOS C-17): 0 degrees — which is how every
+    /// angle written before angles had a unit reads — else AngleUnit + 1, so a
+    /// dimension drawn in a grad session says grad on every machine.
+    std::uint8_t unit{0};
 
     /// THE SHEET SCALE THE GROUND SIZES WERE LAID OUT FOR, as its denominator
     /// (`1000` for 1/1000); 0 when not known (a file written before, a DXF).
@@ -167,6 +172,21 @@ std::array<Point2, 2> dimension_diameter_ends(Point2 centre, Mm diameter, Point2
 /// direction — one being rebuilt, one continuing a run — keeps it.
 bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 where,
                       Mm text_height, DimensionLayout& out, bool fixed_rotation = false);
+
+/// Moves a caption that `text` would not fit where it was laid out (ISO 129-1,
+/// TODOS C-17). A linear or aligned one that does not fit between its
+/// extension lines, a gap clear of each, goes past the end the figure reads
+/// toward, clear of that end's arrowhead, half a text height above the line.
+/// An angular or arc-length one stays where the arc was taken through when it
+/// clears both arms there; slides round the arc to the nearest place that
+/// does when the arc is long enough; and otherwise goes past the arm nearer
+/// that place, on its tangent. Radius, diameter and ordinate, and a dimension
+/// that fits, are left as laid out. What ÖLÇÜ, ZİNCİRÖLÇÜ, BAZÖLÇÜ, a rebuild
+/// and the preview under the cursor all call after the layout, so they agree
+/// about where the figure goes; `dimension_outline` draws the arrowheads
+/// outside, and the line on under the figure, from the same sizes.
+void dimension_fit(const DimensionDef& def, DimensionLayout& layout, std::string_view text,
+                   Mm text_height);
 
 /// The inverse of `dimension_layout` for a stored dimension: the picks and the
 /// location its definition points (ring 1) and caption baseline (ring 0) came
@@ -229,6 +249,22 @@ Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
                                           std::span<const std::pair<std::size_t, Point2>> moves,
                                           DrawingUnit unit);
 
+/// What the preview under the cursor needs to lay a dimension out exactly as
+/// the click will: the payload, and the caption's height — which decides how
+/// far the figure stands off its line and whether it fits (`dimension_fit`).
+/// Carried in a prompt's `rubber_payload`.
+struct DimensionGuide
+{
+    DimensionDef def;  ///< what will be written
+    Mm text_height{0}; ///< the caption's height, ground millimetres
+};
+
+/// The guide's bytes: the caption height, then the payload.
+std::vector<std::uint8_t> encode_dimension_guide(const DimensionGuide& guide);
+
+/// The guide back, or nothing for bytes `encode_dimension_guide` does not write.
+std::optional<DimensionGuide> decode_dimension_guide(std::span<const std::uint8_t> bytes);
+
 /// The payload bytes.
 std::vector<std::uint8_t> encode_dimension(const DimensionDef& def);
 
@@ -282,6 +318,31 @@ std::string format_area(Mm2 value, unsigned precision, char separator);
 /// Formats an angle in degrees with `precision` decimals and `separator`, with
 /// the degree sign.
 std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator);
+
+/// Formats an angle of `udeg` micro-degrees in `unit`, with the mark AutoCAD
+/// writes after each: `°` for degrees, `g` for grad (`100,00g`), `r` for
+/// radians. Integers for degrees and grad, so the string is the same on every
+/// platform; radians are one correctly rounded product.
+std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator,
+                                   AngleUnit unit);
+
+/// The unit an angular dimension writes its angle in (`DimensionDef::unit`):
+/// degrees when none is recorded.
+AngleUnit dimension_angle_unit(const DimensionDef& def) noexcept;
+
+/// The `birim=` word for the unit `def` writes its figure in: `grad`, `derece`
+/// or `radyan` for an angle; `cizim` when a length follows the drawing, else
+/// `mm`, `cm`, `m` or `km`. The word ÖLÇÜ and ÖLÇÜDÜZENLE read back.
+const char* dimension_unit_word(const DimensionDef& def) noexcept;
+
+/// The inverse: the `DimensionDef::unit` code `word` gives a dimension of
+/// `def`'s kind — `cizim`, `mm`, `cm`, `m`, `km` for a length; `grad`, `derece`,
+/// `radyan` for an angle. Empty for a word of the other kind or of none, so a
+/// caller says which list applies instead of guessing.
+std::optional<std::uint8_t> dimension_unit_code(const DimensionDef& def, std::string_view word);
+
+/// Whether `def` measures an angle rather than a length.
+bool dimension_is_angle(const DimensionDef& def) noexcept;
 
 /// Appends the DRAWN form of a dimension: extension lines, the dimension line
 /// (or arc), the arrowheads. The text is the entity's caption on ring 0 and is

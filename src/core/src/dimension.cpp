@@ -6,6 +6,7 @@
 #include "kentos_cad/core/angle.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/wire.hpp"
 
@@ -74,6 +75,38 @@ void line(EmitBuffer& into, Point2 a, Point2 b)
     into.push_vertex(b.x, b.y);
 }
 
+/// A linear or aligned dimension's line: its direction and the feet of its two
+/// definition points on it — what its layout, its fit and its picture share.
+bool dimension_feet(const DimensionDef& def, std::span<const Point2> defs, Dir& u, Point2& q1,
+                    Point2& q2)
+{
+    if (defs.size() < 3) return false;
+    u = def.type == DimensionType::Aligned ? unit_between(defs[0], defs[1])
+                                           : unit_at(def.rotation_udeg);
+    if (u.zero()) return false;
+    const Dir n = u.perp();
+    q1          = along(defs[0], n, dot(defs[0], defs[2], n));
+    q2          = along(defs[1], n, dot(defs[1], defs[2], n));
+    return true;
+}
+
+/// Whether two arrowheads fit between the feet `inner` apart, with a stretch
+/// of line between them for the eye to read as a line.
+bool arrows_fit(const DimensionDef& def, double inner)
+{
+    return inner >= 2.5 * static_cast<double>(def.arrow_size);
+}
+
+/// How wide a caption of `text` at `height` is, the way METİN and the caption
+/// baseline measure one.
+double caption_width(std::string_view text, Mm height)
+{
+    std::size_t glyphs = 0;
+    for (const char c : text)
+        if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
+    return static_cast<double>(std::max<Mm>(1, (height * 6 * static_cast<Mm>(glyphs)) / 10));
+}
+
 std::vector<Point2> ring_points(const RingGeometry& geom, std::uint32_t slot, std::uint32_t index)
 {
     std::vector<Point2> pts;
@@ -109,6 +142,95 @@ std::int64_t angle_at(Point2 vertex, Point2 p1, Point2 p2, Point2 arc_pt, bool& 
 {
     from_p1 = on_arc(vertex, p1, p2, arc_pt);
     return from_p1 ? arc_sweep_udeg(vertex, p1, p2) : arc_sweep_udeg(vertex, p2, p1);
+}
+
+/// The dimension arc of an angular or arc-length dimension: its centre, its
+/// radius, its two ends counter-clockwise and where the arms it runs between
+/// were picked — what the layout's fit and the picture share, so a figure
+/// moved clear of an arm and the line drawn under it agree.
+struct ArcFrame
+{
+    Point2 vertex;         ///< the angle's vertex, or the measured arc's centre
+    Point2 p1;             ///< the first arm's point, as picked
+    Point2 p2;             ///< the second arm's point
+    Point2 e1;             ///< where the dimension arc meets the first arm
+    Point2 e2;             ///< where it meets the second
+    bool from_p1{true};    ///< the arc runs counter-clockwise from e1 to e2
+    double radius{0.0};    ///< of the dimension arc
+    std::int64_t start{0}; ///< direction of the counter-clockwise start, µ°
+    std::int64_t sweep{0}; ///< counter-clockwise sweep, µ°
+
+    Point2 first() const noexcept { return from_p1 ? e1 : e2; }
+
+    Point2 last() const noexcept { return from_p1 ? e2 : e1; }
+
+    /// Its length, along the arc.
+    double length() const noexcept
+    {
+        return radius * static_cast<double>(sweep) * (kPi / 180'000'000.0);
+    }
+};
+
+bool arc_frame(const DimensionDef& def, std::span<const Point2> defs, ArcFrame& f)
+{
+    Point2 arc_pt{};
+    switch (def.type) {
+    case DimensionType::Angular3P:
+        if (defs.size() < 4) return false;
+        f.vertex = defs[0];
+        f.p1     = defs[1];
+        f.p2     = defs[2];
+        arc_pt   = defs[3];
+        break;
+    case DimensionType::Angular:
+        if (defs.size() < 5 || !intersect(defs[0], defs[1], defs[2], defs[3], f.vertex))
+            return false;
+        f.p1   = defs[1];
+        f.p2   = defs[3];
+        arc_pt = defs[4];
+        break;
+    case DimensionType::ArcLength:
+        if (defs.size() < 4) return false;
+        f.vertex = defs[0];
+        f.p1     = defs[1];
+        f.p2     = defs[2];
+        arc_pt   = defs[3];
+        break;
+    default: return false;
+    }
+    f.radius = distance(f.vertex, arc_pt);
+    if (f.radius < 1.0) return false;
+    const Dir d1 = unit_between(f.vertex, f.p1);
+    const Dir d2 = unit_between(f.vertex, f.p2);
+    if (d1.zero() || d2.zero()) return false;
+    f.e1 = along(f.vertex, d1, f.radius);
+    f.e2 = along(f.vertex, d2, f.radius);
+    // An arc-length dimension runs the way its arc does, start to end; an
+    // angle the side its arc point is on.
+    if (def.type == DimensionType::ArcLength) {
+        f.from_p1 = true;
+        f.sweep   = arc_sweep_udeg(f.vertex, f.p1, f.p2);
+    } else {
+        f.sweep = angle_at(f.vertex, f.p1, f.p2, arc_pt, f.from_p1);
+    }
+    const Point2 s = f.from_p1 ? f.p1 : f.p2;
+    f.start        = atan2_udeg(s.y - f.vertex.y, s.x - f.vertex.x);
+    return true;
+}
+
+/// How far round the arc from its start `p`'s direction is, µ°, in [0, 360°).
+std::int64_t around(const ArcFrame& f, Point2 p)
+{
+    const std::int64_t at = atan2_udeg(p.y - f.vertex.y, p.x - f.vertex.x) - f.start;
+    return ((at % kUDegFullCircle) + kUDegFullCircle) % kUDegFullCircle;
+}
+
+/// A point `by` from `tip` along `d`, far enough that the direction back to
+/// `tip` survives rounding to the millimetre: an arrowhead aimed through a
+/// point a millimetre away pointed anywhere within 45° of where it meant.
+Point2 aim_from(Point2 tip, Dir d, const DimensionDef& def)
+{
+    return along(tip, d, std::max(1000.0, 2.0 * static_cast<double>(def.arrow_size)));
 }
 
 std::string with_decimals(std::int64_t scaled, unsigned precision, char separator, bool negative)
@@ -382,6 +504,27 @@ std::vector<std::uint8_t> encode_dimension(const DimensionDef& def)
     return out;
 }
 
+std::vector<std::uint8_t> encode_dimension_guide(const DimensionGuide& guide)
+{
+    std::vector<std::uint8_t> out;
+    put_mm(out, guide.text_height);
+    const std::vector<std::uint8_t> payload = encode_dimension(guide.def);
+    out.insert(out.end(), payload.begin(), payload.end());
+    return out;
+}
+
+std::optional<DimensionGuide> decode_dimension_guide(std::span<const std::uint8_t> bytes)
+{
+    if (bytes.size() < 8) return std::nullopt;
+    WireReader in(bytes.first(8));
+    DimensionGuide guide;
+    guide.text_height = in.mm();
+    auto def          = decode_dimension(bytes.subspan(8));
+    if (!def) return std::nullopt;
+    guide.def = std::move(def.value());
+    return guide;
+}
+
 Result<DimensionDef> decode_dimension(std::span<const std::uint8_t> payload)
 {
     WireReader in(payload);
@@ -533,13 +676,85 @@ std::string format_area(Mm2 value, unsigned precision, char separator)
 
 std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator)
 {
+    return format_dimension_angle(udeg, precision, separator, AngleUnit::Degree);
+}
+
+std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator,
+                                   AngleUnit unit)
+{
     std::int64_t pow = 1;
     for (unsigned i = 0; i < precision && i < 8; ++i)
         pow *= 10;
-    const bool negative       = udeg < 0;
-    const std::int64_t mag    = negative ? -udeg : udeg;
-    const std::int64_t scaled = mul_div_round(mag, pow, 1000000);
-    return with_decimals(scaled, precision > 8 ? 8 : precision, separator, negative) + "°";
+    const bool negative    = udeg < 0;
+    const std::int64_t mag = negative ? -udeg : udeg;
+    const unsigned places  = precision > 8 ? 8 : precision;
+    switch (unit) {
+    case AngleUnit::Grad:
+        // A degree is ten ninths of a grad: µ° · 10 / 9 · 10^p / 10^6, rounded
+        // once, half away from zero.
+        return with_decimals(mul_div_round(mag, pow * 10, 9'000'000), places, separator, negative) +
+               "g";
+    case AngleUnit::Radian: {
+        const double rad = static_cast<double>(mag) * (kPi / 180.0) / 1'000'000.0;
+        return with_decimals(mm_round(rad * static_cast<double>(pow)), places, separator,
+                             negative) +
+               "r";
+    }
+    case AngleUnit::Degree: break;
+    }
+    return with_decimals(mul_div_round(mag, pow, 1'000'000), places, separator, negative) + "°";
+}
+
+AngleUnit dimension_angle_unit(const DimensionDef& def) noexcept
+{
+    switch (def.unit) {
+    case 1: return AngleUnit::Grad;
+    case 3: return AngleUnit::Radian;
+    default: return AngleUnit::Degree;
+    }
+}
+
+bool dimension_is_angle(const DimensionDef& def) noexcept
+{
+    return def.type == DimensionType::Angular || def.type == DimensionType::Angular3P;
+}
+
+const char* dimension_unit_word(const DimensionDef& def) noexcept
+{
+    if (dimension_is_angle(def)) {
+        switch (dimension_angle_unit(def)) {
+        case AngleUnit::Grad: return "grad";
+        case AngleUnit::Radian: return "radyan";
+        case AngleUnit::Degree: break;
+        }
+        return "derece";
+    }
+    if (def.unit == 0) return "cizim";
+    switch (static_cast<DrawingUnit>(def.unit - 1)) {
+    case DrawingUnit::Millimetre: return "mm";
+    case DrawingUnit::Centimetre: return "cm";
+    case DrawingUnit::Kilometre: return "km";
+    default: return "m";
+    }
+}
+
+std::optional<std::uint8_t> dimension_unit_code(const DimensionDef& def, std::string_view word)
+{
+    const auto plus_one = [](auto unit) {
+        return static_cast<std::uint8_t>(static_cast<std::uint8_t>(unit) + 1);
+    };
+    if (dimension_is_angle(def)) {
+        if (turkish_key_equals(word, "grad")) return plus_one(AngleUnit::Grad);
+        if (turkish_key_equals(word, "derece")) return plus_one(AngleUnit::Degree);
+        if (turkish_key_equals(word, "radyan")) return plus_one(AngleUnit::Radian);
+        return std::nullopt;
+    }
+    if (turkish_key_equals(word, "cizim")) return std::uint8_t{0};
+    if (turkish_key_equals(word, "mm")) return plus_one(DrawingUnit::Millimetre);
+    if (turkish_key_equals(word, "cm")) return plus_one(DrawingUnit::Centimetre);
+    if (turkish_key_equals(word, "m")) return plus_one(DrawingUnit::Metre);
+    if (turkish_key_equals(word, "km")) return plus_one(DrawingUnit::Kilometre);
+    return std::nullopt;
 }
 
 namespace {
@@ -552,7 +767,9 @@ bool is_angle(DimensionType t) noexcept
 /// A figure of the dimension's kind: a length in its unit, or an angle.
 std::string figure(const DimensionDef& def, std::int64_t v, DrawingUnit unit)
 {
-    if (is_angle(def.type)) return format_dimension_angle(v, def.precision, def.decimal_separator);
+    if (is_angle(def.type))
+        return format_dimension_angle(v, def.precision, def.decimal_separator,
+                                      dimension_angle_unit(def));
     return format_dimension_length(v, dimension_unit(def, unit), def.precision,
                                    def.decimal_separator);
 }
@@ -628,7 +845,10 @@ void arrowhead_outline(Point2 tip, Point2 from, Mm size, ArrowStyle style, EmitB
     const Point2 r    = along(back, n, -len / 3.0);
     switch (style) {
     case ArrowStyle::Closed:
+        // FILLED, as its name says and as every sheet prints it (TODOS C-17):
+        // drawn as an outline alone it read as the open head of another style.
         into.begin_run(true);
+        into.mark_solid();
         into.push_vertex(tip.x, tip.y);
         into.push_vertex(l.x, l.y);
         into.push_vertex(r.x, r.y);
@@ -751,10 +971,15 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
         const double t2 = dot(p2, where, n);
         const Point2 q2 = along(p2, n, t2);
         const Point2 mid{(q1.x + q2.x) / 2, (q1.y + q2.y) / 2};
-        const double side = t1 < 0.0 ? -1.0 : 1.0;
-        out.text_centre   = along(mid, n, side * half_text);
-        out.text_dir_x    = u.x;
-        out.text_dir_y    = u.y;
+        // THE FIGURE STANDS ON ITS LINE (ISO 129-1, TODOS C-17): above the
+        // dimension line as the figure reads — left of a vertical one, which
+        // reads from the bottom — whichever side of the line the measured
+        // points lie. It used to go on the side away from the points, so a
+        // dimension placed below a parcel hung its figure under the line.
+        const Dir reads = (u.x < 0.0 || (u.x == 0.0 && u.y < 0.0)) ? Dir{-u.x, -u.y} : u;
+        out.text_centre = along(mid, reads.perp(), half_text);
+        out.text_dir_x  = u.x;
+        out.text_dir_y  = u.y;
         break;
     }
     case DimensionType::Radial:
@@ -766,23 +991,47 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
         // line with it. The length stays the circle's own
         // (`dimension_rim_point`), so the figure does not move by a millimetre
         // because the line turned.
+        // THE FIGURE SITS ON THE LINE, not across it (ISO 129-1): the caption's
+        // centre is `where`, and the line is turned off it by the angle that
+        // puts the caption half a text height above the line as it reads. The
+        // caption stays where it was put, so a rebuild that reads it back lays
+        // the same line again.
+        const double half =
+            static_cast<double>(def.text_gap) + (static_cast<double>(text_height) / 2.0);
+        const auto aim_at = [&](Point2 centre) {
+            const Dir d0     = unit_between(centre, where);
+            const double far = distance(centre, where);
+            if (d0.zero() || far <= half) return where;
+            // The turn's sine is the caption's height over its distance, and its
+            // cosine the square root that completes it: +, ×, / and `sqrt`
+            // only, all correctly rounded, never libm's trigonometry (§7.3).
+            const double sn = half / far;
+            const double c  = std::sqrt(1.0 - (sn * sn));
+            // Clockwise when the line reads left to right (its figure lies on
+            // its left), counter-clockwise when it reads the other way.
+            const bool rightward = d0.x > 0.0 || (d0.x == 0.0 && d0.y > 0.0);
+            const Dir u = rightward ? Dir{(d0.x * c) + (d0.y * sn), (d0.y * c) - (d0.x * sn)}
+                                    : Dir{(d0.x * c) - (d0.y * sn), (d0.y * c) + (d0.x * sn)};
+            return along(centre, u, far);
+        };
         if (def.type == DimensionType::Radial) {
             const Mm radius = mm_round(distance(p1, p2));
-            out.defs        = {p1, where == p1 ? p2 : dimension_rim_point(p1, radius, where)};
+            out.defs        = {p1, where == p1 ? p2 : dimension_rim_point(p1, radius, aim_at(p1))};
         } else {
             // A DIAMETER ALREADY AIMED AT ITS FIGURE KEEPS ITS ENDS. Re-aiming is
             // for a caption that moved; doing it on every rebuild would walk the
             // ends round by the millimetre the midpoint rounds to, each time.
             const Point2 centre{(p1.x + p2.x) / 2, (p1.y + p2.y) / 2};
-            const Mm across  = mm_round(distance(p1, p2));
-            const Dir line   = unit_between(p1, p2);
-            const Dir aim    = unit_between(centre, where);
-            const double tol = 1e-3 + (16.0 / static_cast<double>(across > 0 ? across : 1));
-            const double off = std::abs((line.x * aim.y) - (line.y * aim.x));
+            const Mm across     = mm_round(distance(p1, p2));
+            const Point2 target = aim_at(centre);
+            const Dir line      = unit_between(p1, p2);
+            const Dir aim       = unit_between(centre, target);
+            const double tol    = 1e-3 + (16.0 / static_cast<double>(across > 0 ? across : 1));
+            const double off    = std::abs((line.x * aim.y) - (line.y * aim.x));
             if (aim.zero() || ((line.x * aim.x) + (line.y * aim.y) > 0.0 && off <= tol)) {
                 out.defs = {p1, p2};
             } else {
-                const std::array<Point2, 2> ends = dimension_diameter_ends(centre, across, where);
+                const std::array<Point2, 2> ends = dimension_diameter_ends(centre, across, target);
                 out.defs                         = {ends[0], ends[1]};
             }
         }
@@ -796,7 +1045,8 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
         const Point2 apex = picks.size() >= 3 ? picks[2] : p1;
         if (apex == p1 || apex == p2) return false;
         out.defs = {apex, p1, p2, where};
-        // The text sits outside the arc, on the bisector through the arc point.
+        // The text sits outside the arc at the point it was taken through;
+        // `dimension_fit` moves it clear of an arm it would cross.
         const Dir outward = unit_between(apex, where);
         if (outward.zero()) return false;
         out.text_centre = along(where, outward, half_text);
@@ -894,6 +1144,58 @@ std::array<Point2, 2> dimension_baseline(Point2 centre, double dx, double dy, Mm
     return {centre, along(centre, u, advance)};
 }
 
+namespace {
+
+/// An angular or arc-length dimension's arc and its heads, SIZED TO FIT the
+/// way a linear dimension's line is (ISO 129-1, TODOS C-17): heads that do not
+/// fit along the arc stand outside its ends pointing in, each on a tangent of
+/// its own, and a figure standing beyond an end (`dimension_fit`) stands on
+/// that end's tangent carried on under it. The heads follow the arc's tangent
+/// at its ends, as a sheet draws them.
+void dimension_arc(const RingGeometry& geom, std::uint32_t slot, const DimensionDef& def,
+                   const ArcFrame& f, EmitBuffer& into)
+{
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+    arc_outline(f.vertex, mm_round(f.radius), f.first(), f.last(), xs, ys);
+    if (xs.size() < 2) return;
+    into.begin_run(false);
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        into.push_vertex(xs[i], ys[i]);
+
+    const Point2 a{xs.front(), ys.front()};
+    const Point2 b{xs.back(), ys.back()};
+    const Dir ra = unit_between(f.vertex, a);
+    const Dir rb = unit_between(f.vertex, b);
+    const Dir out_a{ra.y, -ra.x}; ///< clockwise at the start: away from the arc
+    const Dir out_b{-rb.y, rb.x}; ///< counter-clockwise at the end
+    const bool outside = !arrows_fit(def, f.length());
+    const double tail  = outside ? 2.0 * static_cast<double>(def.arrow_size) : 0.0;
+    double reach_a     = tail;
+    double reach_b     = tail;
+    // A FIGURE BEYOND AN END — round the circle past it, not over the arc —
+    // stands on that end's tangent, carried on to the far end of the words.
+    if (const std::vector<Point2> baseline = ring_points(geom, slot, 0); baseline.size() >= 2) {
+        const Point2 c       = baseline[0];
+        const std::int64_t t = around(f, c);
+        if (t > f.sweep) {
+            const double half = distance(baseline[0], baseline[1]) / 2.0;
+            if (t - f.sweep <= kUDegFullCircle - t)
+                reach_b = std::max(reach_b, dot(b, c, out_b) + half);
+            else
+                reach_a = std::max(reach_a, dot(a, c, out_a) + half);
+        }
+    }
+    if (reach_a > 0.0) line(into, a, along(a, out_a, reach_a));
+    if (reach_b > 0.0) line(into, b, along(b, out_b, reach_b));
+    const Dir in_a{-out_a.x, -out_a.y};
+    const Dir in_b{-out_b.x, -out_b.y};
+    arrowhead_outline(a, aim_from(a, outside ? out_a : in_a, def), def.arrow_size, def.arrow, into);
+    arrowhead_outline(b, aim_from(b, outside ? out_b : in_b, def), def.arrow_size, def.arrow, into);
+}
+
+} // namespace
+
 void dimension_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer& into)
 {
     auto decoded = dimension_of(geom, slot);
@@ -908,16 +1210,15 @@ void dimension_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer&
         const Point2 p1 = defs[0];
         const Point2 p2 = defs[1];
         const Point2 dl = defs[2];
-        const Dir u =
-            def.type == DimensionType::Aligned ? unit_between(p1, p2) : unit_at(def.rotation_udeg);
-        if (u.zero()) return;
-        const Dir n = u.perp();
+        Dir u{};
+        Point2 q1{};
+        Point2 q2{};
         // Each definition point's foot on the dimension line, which runs
         // through `dl` along `u`.
+        if (!dimension_feet(def, defs, u, q1, q2)) return;
+        const Dir n     = u.perp();
         const double t1 = dot(p1, dl, n);
         const double t2 = dot(p2, dl, n);
-        const Point2 q1 = along(p1, n, t1);
-        const Point2 q2 = along(p2, n, t2);
         // Extension lines: from a gap past the point to a little past the line.
         const auto ext = [&](Point2 p, Point2 q, double t) {
             const double sign = t < 0.0 ? -1.0 : 1.0;
@@ -928,88 +1229,96 @@ void dimension_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer&
         };
         ext(p1, q1, t1);
         ext(p2, q2, t2);
-        line(into, q1, q2);
-        arrowhead_outline(q1, q2, def.arrow_size, def.arrow, into);
-        arrowhead_outline(q2, q1, def.arrow_size, def.arrow, into);
+
+        // SIZED TO FIT (ISO 129-1, TODOS C-17). Two heads that do not fit
+        // between the extension lines stand outside them pointing in, on a
+        // stretch of line of their own; and a figure moved outside
+        // (`dimension_fit`) stands on the line carried on under it.
+        const double inner = distance(q1, q2);
+        const Dir along_u  = unit_between(q1, q2);
+        const bool outside = !arrows_fit(def, inner) && !along_u.zero();
+        const double tail  = 2.0 * static_cast<double>(def.arrow_size);
+        Point2 from        = outside ? along(q1, along_u, -tail) : q1;
+        Point2 to          = outside ? along(q2, along_u, tail) : q2;
+        if (const std::vector<Point2> baseline = ring_points(geom, slot, 0);
+            baseline.size() >= 2 && !along_u.zero()) {
+            const double half = distance(baseline[0], baseline[1]) / 2.0;
+            const double at   = dot(q1, baseline[0], along_u);
+            if (at + half > dot(q1, to, along_u)) to = along(q1, along_u, at + half);
+            if (at - half < dot(q1, from, along_u)) from = along(q1, along_u, at - half);
+        }
+        line(into, from, to);
+        if (outside) {
+            arrowhead_outline(q1, aim_from(q1, Dir{-along_u.x, -along_u.y}, def), def.arrow_size,
+                              def.arrow, into);
+            arrowhead_outline(q2, aim_from(q2, along_u, def), def.arrow_size, def.arrow, into);
+        } else {
+            arrowhead_outline(q1, q2, def.arrow_size, def.arrow, into);
+            arrowhead_outline(q2, q1, def.arrow_size, def.arrow, into);
+        }
         break;
     }
-    case DimensionType::Radial: {
-        line(into, defs[0], defs[1]);
-        arrowhead_outline(defs[1], defs[0], def.arrow_size, def.arrow, into);
-        break;
-    }
+    case DimensionType::Radial:
     case DimensionType::Diametric: {
-        line(into, defs[0], defs[1]);
-        arrowhead_outline(defs[0], defs[1], def.arrow_size, def.arrow, into);
-        arrowhead_outline(defs[1], defs[0], def.arrow_size, def.arrow, into);
+        // THE LINE THROUGH THE CENTRE, arrowed where it meets the circle — and
+        // ON, UNDER THE FIGURE, when the figure stands outside the circle
+        // (ISO 129-1, TODOS C-17): a figure written beyond the rim sits on the
+        // line that names it rather than floating beside it. The caption's
+        // place is ring 0, its centre and its width, so the line reaches the
+        // far end of the words.
+        const Point2 from = defs[0]; ///< the centre, or the far end of a diameter
+        const Point2 rim  = defs[1];
+        const Dir u       = unit_between(from, rim);
+        if (u.zero()) break;
+        Point2 end                         = rim;
+        const std::vector<Point2> baseline = ring_points(geom, slot, 0);
+        if (baseline.size() >= 2) {
+            const double reach =
+                dot(from, baseline[0], u) + (distance(baseline[0], baseline[1]) / 2.0);
+            if (reach > distance(from, rim)) end = along(from, u, reach);
+        }
+        line(into, from, end);
+        arrowhead_outline(rim, from, def.arrow_size, def.arrow, into);
+        if (def.type == DimensionType::Diametric)
+            arrowhead_outline(from, rim, def.arrow_size, def.arrow, into);
         break;
     }
     case DimensionType::Angular3P:
     case DimensionType::Angular: {
-        Point2 vertex{};
-        Point2 p1{};
-        Point2 p2{};
-        Point2 arc_pt{};
-        if (def.type == DimensionType::Angular3P) {
-            vertex = defs[0];
-            p1     = defs[1];
-            p2     = defs[2];
-            arc_pt = defs[3];
-        } else {
-            if (!intersect(defs[0], defs[1], defs[2], defs[3], vertex)) return;
-            p1     = defs[1];
-            p2     = defs[3];
-            arc_pt = defs[4];
-        }
-        const double radius = distance(vertex, arc_pt);
-        if (radius < 1.0) return;
-        const Dir d1 = unit_between(vertex, p1);
-        const Dir d2 = unit_between(vertex, p2);
-        if (d1.zero() || d2.zero()) return;
-        const Point2 e1 = along(vertex, d1, radius);
-        const Point2 e2 = along(vertex, d2, radius);
+        ArcFrame f;
+        if (!arc_frame(def, defs, f)) return;
         // Extension lines reach the arc from the points inside it.
-        if (distance(vertex, p1) < radius) line(into, p1, e1);
-        if (distance(vertex, p2) < radius) line(into, p2, e2);
-        bool from_p1 = false;
-        (void)angle_at(vertex, p1, p2, arc_pt, from_p1);
-        std::vector<Mm> xs;
-        std::vector<Mm> ys;
-        if (from_p1)
-            arc_outline(vertex, mm_round(radius), e1, e2, xs, ys);
-        else
-            arc_outline(vertex, mm_round(radius), e2, e1, xs, ys);
-        into.begin_run(false);
-        for (std::size_t i = 0; i < xs.size(); ++i)
-            into.push_vertex(xs[i], ys[i]);
-        // Arrowheads along the arc's tangents at its ends.
-        if (xs.size() >= 2) {
-            arrowhead_outline(Point2{xs.front(), ys.front()}, Point2{xs[1], ys[1]}, def.arrow_size,
-                              def.arrow, into);
-            arrowhead_outline(Point2{xs.back(), ys.back()},
-                              Point2{xs[xs.size() - 2], ys[ys.size() - 2]}, def.arrow_size,
-                              def.arrow, into);
-        }
+        if (distance(f.vertex, f.p1) < f.radius) line(into, f.p1, f.e1);
+        if (distance(f.vertex, f.p2) < f.radius) line(into, f.p2, f.e2);
+        dimension_arc(geom, slot, def, f, into);
         break;
     }
     case DimensionType::ArcLength: {
-        // THE ARC ITSELF, then the two ticks that say where it is measured from.
-        // Drawn by the arc's own outline so a dimensioned curve and the curve it
-        // dimensions are the same picture (CLAUDE.md 5.10).
-        if (defs.size() < 3) break;
-        const Mm radius = segment_length(defs[0], defs[1]);
-        if (radius <= 0) break;
-        std::vector<Mm> xs;
-        std::vector<Mm> ys;
-        arc_outline(defs[0], radius, defs[1], defs[2], xs, ys);
-        into.begin_run(false);
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            into.push_vertex(xs[v], ys[v]);
-
-        // The two radii that say where the length is measured from and to: an
-        // arc on its own does not state its own ends.
-        line(into, defs[0], defs[1]);
-        line(into, defs[0], defs[2]);
+        // A DIMENSION ARC BESIDE THE ARC IT MEASURES (ISO 129-1, TODOS C-17):
+        // concentric with it and through the point the figure stands on
+        // (`defs[3]`), radial extension lines from the arc's two ends, and an
+        // arrowhead at each end of the dimension arc along its tangent. It used
+        // to draw the measured arc a second time over itself and two radii to
+        // its ends, which named nothing on a sheet.
+        ArcFrame f;
+        if (!arc_frame(def, defs, f)) break;
+        const Point2 centre = f.vertex;
+        const double reach  = f.radius;
+        const Dir d1        = unit_between(centre, f.p1);
+        const Dir d2        = unit_between(centre, f.p2);
+        // Extension lines: from a gap off the arc's end to a little past the
+        // dimension arc, whichever side of the arc the figure is on.
+        const auto ext = [&](Point2 from, Dir d) {
+            const double at   = distance(centre, from);
+            const double sign = reach >= at ? 1.0 : -1.0;
+            const double gap  = static_cast<double>(def.extension_offset);
+            if (std::abs(reach - at) <= gap) return;
+            line(into, along(from, d, sign * gap),
+                 along(centre, d, reach + (sign * static_cast<double>(def.extension_beyond))));
+        };
+        ext(f.p1, d1);
+        ext(f.p2, d2);
+        dimension_arc(geom, slot, def, f, into);
         break;
     }
     case DimensionType::Ordinate: {
@@ -1118,6 +1427,70 @@ KENTOS_KIND(leader)
     return s;
 }
 
+void dimension_fit(const DimensionDef& def, DimensionLayout& layout, std::string_view text,
+                   Mm text_height)
+{
+    const double width = caption_width(text, text_height);
+    const double gap   = static_cast<double>(def.text_gap);
+    const double arrow = static_cast<double>(def.arrow_size);
+    const double half  = gap + (static_cast<double>(text_height) / 2.0);
+
+    if (ArcFrame f; arc_frame(def, layout.defs, f)) {
+        // AN ANGLE OR AN ARC LENGTH KEEPS ITS FIGURE WHERE IT WAS PUT — the
+        // point the dimension arc was taken through — unless the words would
+        // cross an arm there. Round the arc from its start, the nearer end
+        // when rounding put it a hair past one.
+        std::int64_t at = around(f, layout.defs.back());
+        if (at > f.sweep) at = at - f.sweep <= kUDegFullCircle - at ? f.sweep : 0;
+        const double inner = f.length();
+        if (inner >= width + (2.0 * gap)) {
+            // IT FITS ALONG THE ARC: as near where it was put as clears both
+            // arms by a gap, outward of the arc like a figure anywhere on it.
+            auto clear = static_cast<std::int64_t>(
+                std::llround(((width / 2.0) + gap) / f.radius * (180'000'000.0 / kPi)));
+            clear                 = std::min(clear, f.sweep / 2);
+            const std::int64_t to = std::clamp(at, clear, f.sweep - clear);
+            if (to == at) return;
+            const Dir r        = unit_at(f.start + to);
+            layout.text_centre = along(f.vertex, r, f.radius + half);
+            layout.text_dir_x  = -r.y;
+            layout.text_dir_y  = r.x;
+            return;
+        }
+        // OUTSIDE, past the arm nearer to where it was put, on that end's
+        // tangent carried on: clear of that end's head when the heads stand
+        // outside too, and half a text height outward, as inside.
+        const bool first   = 2 * at <= f.sweep;
+        const Point2 end   = first ? f.first() : f.last();
+        const Dir r        = unit_between(f.vertex, end);
+        const Dir o        = first ? Dir{r.y, -r.x} : Dir{-r.y, r.x};
+        const double past  = (arrows_fit(def, inner) ? 0.0 : 2.0 * arrow) + gap + (width / 2.0);
+        layout.text_centre = along(along(end, o, past), r, half);
+        layout.text_dir_x  = o.x;
+        layout.text_dir_y  = o.y;
+        return;
+    }
+
+    if (def.type != DimensionType::Linear && def.type != DimensionType::Aligned) return;
+    Dir u{};
+    Point2 q1{};
+    Point2 q2{};
+    if (!dimension_feet(def, layout.defs, u, q1, q2)) return;
+    const double inner = distance(q1, q2);
+    // THE FIGURE STANDS ABOVE THE LINE, so it does not compete with the heads
+    // on it: it fits when it fits between the extension lines, a gap clear of
+    // each.
+    if (inner >= width + (2.0 * gap)) return;
+
+    // OUTSIDE, past the end the figure reads toward, clear of that end's
+    // arrowhead when the heads stand outside too — and half a text height
+    // above the line as it reads, like a figure inside.
+    const Dir reads    = (u.x < 0.0 || (u.x == 0.0 && u.y < 0.0)) ? Dir{-u.x, -u.y} : u;
+    const Point2 last  = dot(q1, q2, reads) >= 0.0 ? q2 : q1;
+    const double past  = (arrows_fit(def, inner) ? 0.0 : 2.0 * arrow) + gap + (width / 2.0);
+    layout.text_centre = along(along(last, reads, past), reads.perp(), half);
+}
+
 Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
                                            const DimensionEdit& edit, DrawingUnit unit)
 {
@@ -1207,8 +1580,9 @@ Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
         return err(ErrorCode::ValidationFailed,
                    "Ölçü yeni noktalarıyla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna "
                    "geldi.");
+    out.text = dimension_text(def, unit);
+    if (!def.user_text_position) dimension_fit(def, layout, out.text, height);
     out.defs     = std::move(layout.defs);
-    out.text     = dimension_text(def, unit);
     out.baseline = dimension_baseline(def.user_text_position ? kept : layout.text_centre,
                                       layout.text_dir_x, layout.text_dir_y, height, out.text);
     out.payload = encode_dimension(def);

@@ -45,7 +45,7 @@ olduğu gibi kalır.
 
 ```text
 ÖLÇÜDÜZENLE [nesneler=<kimlik> …] [metin=<yazı>] [onek=<yazı>] [sonek=<yazı>]
-            [birim=cizim|mm|cm|m|km] [hassasiyet=<0..8>]
+            [birim=cizim|mm|cm|m|km|grad|derece|radyan] [hassasiyet=<0..8>]
             [tolerans=<m>] [tolerans_ust=<m>] [tolerans_alt=<m>] [tolerans_bicim=simetrik|sapma|sinir]
             [stil=<ad>] [yazi_yeri=<nokta>] [sifirla=metin|onek|sonek|tolerans|birim|hassasiyet|yazi_yeri|hepsi …]
 ```
@@ -61,9 +61,9 @@ değerse `<>`). İçinde boşluk olan yazı tırnak içine alınır.
 | `nesneler` | Düzenlenecek ölçüler. Ölçü olmayan nesneler atlanır ve sayılır |
 | `metin` | Yazı. `<>` ölçülen değerdir; `<>` taşımayan yazı elle yazılmış sayılır. `<>` ya da boş yazı ölçüye döndürür |
 | `onek`, `sonek` | Değerin önüne ve ardına yazılanlar: `R`, `Ø`, `≈`, ` m`, ` (eski)` |
-| `birim` | Uzunluğun yazıldığı birim; `cizim` çizimin birimini ([`AYAR çizim_birimi`](setting.md)) izler |
+| `birim` | Değerin yazıldığı birim. Uzunlukta `cizim` çizimin birimini ([`AYAR çizim_birimi`](setting.md)) izler, ya da `mm`, `cm`, `m`, `km`; açı ölçüsünde `grad`, `derece`, `radyan`. `sifirla=birim` uzunluğu çizimin birimine, açıyı projenin [`açı_birimi`](setting.md) ayarına döndürür — yeni bir ölçünün yazacağına |
 | `hassasiyet` | Ondalık basamak sayısı, 0–8. Tolerans da aynı ondalıkla yazılır |
-| `tolerans` | Simetrik tolerans: `±` bu kadar. Uzunlukta **metre**, açıda **derece**. `tolerans=0` toleransı kaldırır |
+| `tolerans` | Simetrik tolerans: `±` bu kadar. Uzunlukta **metre**, açıda **derece** olarak verilir ve ölçünün biriminde yazılır: grad yazan bir açıda `tolerans=0.9` → `±1,00g`. `tolerans=0` toleransı kaldırır |
 | `tolerans_ust`, `tolerans_alt` | Sapma: `+üst/-alt`. İkisi de pozitif yazılır |
 | `tolerans_bicim` | `simetrik`, `sapma` ya da `sinir`: iki sınır değer (`20,05/19,98`), ölçünün yerine |
 | `stil` | Katalogdaki ölçü stili: ok, uzatma çizgileri, yazı boyu, ondalık ve ayraç ondan gelir; sonra verilenler onu değiştirir |
@@ -172,6 +172,8 @@ yazılır.
 | `Nesne bulunamadı veya silinmiş: N` | `nesneler` içinde olmayan bir kimlik var | Kimlikleri [`SEÇ`](select.md) ile denetleyin |
 | `Ölçü N kilitli katmanda; düzenlenemez.` | Ölçünün katmanı kilitli | [`KATMAN`](layer.md) ile kilidi açın |
 | `Tolerans pozitif yazılır; aşağı sapma tolerans_alt= ile verilir.` | Negatif tolerans verildi | Alt sapmayı `tolerans_alt=` ile pozitif yazın |
+| `'grad' bir açı birimi; bu ölçü bir uzunluk yazar: cizim, mm, cm, m ya da km.` | Bir uzunluk ölçüsüne açı birimi verildi | Uzunluk birimlerinden birini yazın |
+| `'m' bir uzunluk birimi; açı ölçüsü grad, derece ya da radyan yazar.` | Bir açı ölçüsüne uzunluk birimi verildi | `grad`, `derece` ya da `radyan` yazın |
 | `Tanınmayan ölçü stili: '…'. Katalogdaki stiller: …` | `stil` katalogda yok | Listelenen stillerden birini yazın |
 | `Değiştirilecek bir şey verilmedi: …` | Betikten hiçbir parametre verilmedi | Değiştireceğiniz alanı verin |
 

@@ -185,7 +185,10 @@ void describe_dimension(const core::Document& doc, core::EntityId slot, core::Dr
         tol.set("alt", core::Json::integer(def.tolerance_minus));
         dim.set("tolerans", std::move(tol));
     }
-    dim.set("birim", core::Json::string(core::drawing_unit_name(core::dimension_unit(def, unit))));
+    dim.set("birim",
+            core::Json::string(core::dimension_is_angle(def)
+                                   ? core::dimension_unit_word(def)
+                                   : core::drawing_unit_name(core::dimension_unit(def, unit))));
     dim.set("hassasiyet", core::Json::integer(def.precision));
     dim.set("stil", core::Json::string(def.style));
     if (def.scale_basis > 0) dim.set("olcek", core::Json::integer(def.scale_basis));

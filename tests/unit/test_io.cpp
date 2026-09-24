@@ -3778,6 +3778,94 @@ TEST_CASE("DXF: süslenmiş ölçü <> ile, elle yazılmış ölçü yazıldığ
     CHECK_EQ(manual, std::size_t{1}); // only the typed one came back typed
 }
 
+TEST_CASE("DXF: kendi birimi olan ölçü ve yay uzunluğu bu programa ölçülen olarak geri gelir")
+{
+    // TODOS C-17: an angle is written in the project's grad, which a DXF reader
+    // would measure in its own degrees, so the figure goes out whole; the
+    // writer's own notes bring it back MEASURED and in grad, and an arc-length
+    // dimension back as one rather than as the angle DXF had to write it as.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-olcu-birimi");
+    const std::string path = dir.file("olcu.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254",
+          "ÖLÇÜ tur=acisal tepe=485300,4310200 birinci=485310,4310200 ikinci=485300,4310210 "
+          "konum=485305,4310205",
+          "ÖLÇÜ tur=acisal tepe=485400,4310200 birinci=485410,4310200 ikinci=485400,4310210 "
+          "konum=485405,4310205 tolerans=0.9",
+          "ÖLÇÜ tur=yay birinci=485500,4310200 ikinci=485512.5,4310200 bitis=485500,4310212.5 "
+          "konum=485510,4310210",
+          "ÖLÇÜ birinci=485300,4310300 ikinci=485320,4310300 konum=485310,4310297 birim=cm",
+          "ÖLÇÜ tur=acisal tepe=485600,4310200 birinci=485610,4310200 ikinci=485600,4310210 "
+          "konum=485605,4310205 birim=derece metin=dik"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    // Another program reads what group 1 says: the figure as this sheet writes it.
+    std::string bytes;
+    {
+        std::ifstream in(path, std::ios::binary);
+        bytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    CHECK(bytes.find("\n100,00g\n") != std::string::npos);
+    CHECK(bytes.find("olcu.birim=grad") != std::string::npos);
+    CHECK(bytes.find("olcu.tur=yay") != std::string::npos);
+
+    struct Back
+    {
+        std::string caption;
+        core::DimensionDef def;
+    };
+
+    const auto read_back = [](const std::string& file) {
+        Rig b;
+        REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+        REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + file + "\"", Origin::Test).ok());
+        std::vector<Back> out;
+        for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+            if (!b.doc.alive(e) || b.doc.entities().kind[e] != core::kDimensionKind) continue;
+            const std::uint32_t row = b.doc.entities().slot[e];
+            auto def                = core::dimension_of(b.doc.geometry(), row);
+            REQUIRE(def.ok());
+            out.push_back(Back{std::string(b.doc.texts().text(row)), def.value()});
+        }
+        return out;
+    };
+    const auto find = [](const std::vector<Back>& all, std::string_view caption) {
+        const auto it =
+            std::ranges::find_if(all, [caption](const Back& b) { return b.caption == caption; });
+        REQUIRE_MESSAGE(it != all.end(), std::string(caption));
+        return *it;
+    };
+
+    const std::vector<Back> back = read_back(path);
+    REQUIRE_EQ(back.size(), std::size_t{5});
+    const Back grad = find(back, "100,00g");
+    CHECK_FALSE(core::dimension_text_is_manual(grad.def));
+    CHECK_EQ(std::string(core::dimension_unit_word(grad.def)), std::string("grad"));
+    CHECK_FALSE(core::dimension_text_is_manual(find(back, "100,00g±1,00g").def));
+    CHECK_FALSE(core::dimension_text_is_manual(find(back, "2000,00").def));
+    const Back arc = find(back, "19,64");
+    CHECK(arc.def.type == core::DimensionType::ArcLength);
+    CHECK_EQ(arc.def.measurement, 19'635); // along the arc, not the 17,68 m chord
+    const Back typed = find(back, "dik");
+    CHECK(core::dimension_text_is_manual(typed.def));
+    CHECK_EQ(std::string(core::dimension_unit_word(typed.def)), std::string("derece"));
+
+    // A CAPTION ANOTHER PROGRAM RETYPED is typed: the pattern is taken back only
+    // while group 1 is still what it gives.
+    const std::string edited = dir.file("duzeltilmis.dxf");
+    {
+        std::string changed = bytes;
+        changed.replace(changed.find("\n100,00g\n"), 9, "\n99,99g\n");
+        std::ofstream(edited, std::ios::binary) << changed;
+    }
+    const std::vector<Back> retyped = read_back(edited);
+    CHECK(core::dimension_text_is_manual(find(retyped, "99,99g").def));
+}
+
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")
 {
     if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");

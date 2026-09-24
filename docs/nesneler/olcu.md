@@ -17,7 +17,9 @@ milimetresine** indirilmiş hâliyle (ok boyu, uzatma fazlası, uzatma boşluğu
 boşluğu), ondalık sayısı, ondalık ayracı, stil adı ve varsa elle yazılan metin durur.
 
 Yükün **ikinci düzeni** bunlara önek, sonek, tolerans (biçimi, üst ve alt sapma),
-ölçünün kendi birimi ve **hangi pafta ölçeği için boyutlandığı** ekler. İkinci düzen
+ölçünün kendi birimi (uzunlukta `0` çizimin birimi; açıda `0` derece — birimi olmayan
+eski açılar böyle yazılmıştı — `1` grad, `2` derece, `3` radyan) ve **hangi pafta
+ölçeği için boyutlandığı** ekler. İkinci düzen
 yalnız bunlardan biri doluysa yazılır: bunları taşımayan ölçü, bu alanlar gelmeden
 önceki baytlarıyla yazılır. Yeni çizilen her ölçü pafta ölçeğini taşır.
 
@@ -29,10 +31,15 @@ yeridir; `<>` taşımayan metin **elle yazılmış** sayılır ve program onu hi
 ## Nasıl çizilir
 
 Resim saklanmaz, her seferinde tanımdan kurulur: tanım noktalarının ölçü çizgisi
-üzerindeki ayakları, uzatma çizgileri, ölçü çizgisi (açısalda yay), uçlarda oklar
-(dolu üçgen, açık ok ya da 45° çentik). Yazı tam sayı aritmetiğiyle biçimlenir:
-12 500 mm, metre, iki ondalık, virgül → `12,50`; 90 000 000 mikroderece → `90,00°`.
-Aynı ölçü her makinede aynı çizgilere ve aynı yazıya düşer.
+üzerindeki ayakları, uzatma çizgileri, ölçü çizgisi (açısalda ve yay uzunluğunda
+yay), uçlarda oklar (kapalı ok çizginin rengiyle dolu bir üçgendir; açık ok ve 45°
+çentik çizgidir). Yazı, ölçü çizgisinin okunduğu yönde üstünde durur; hizalı ve
+doğrusal ölçüde iki uzatma çizgisinin arasına sığmazsa ikincinin dışına çıkar, açı ve
+yay uzunluğunda kola değmeyeceği yere kayar ya da kolun dışına çıkar; sığmayan oklar
+dışarıdan içeri döner ([kurallar](../komutlar/dimension.md#paftadaki-çizimi)).
+Yazı tam sayı aritmetiğiyle biçimlenir: 12 500 mm, metre, iki ondalık, virgül →
+`12,50`; 90 000 000 mikroderece grad ile `100,00g`, derece ile `90,00°`. Aynı ölçü
+her makinede aynı çizgilere ve aynı yazıya düşer.
 
 ## Bağlar
 
@@ -72,9 +79,13 @@ DXF'e bağ yazılmaz; DXF'ten gelen ölçü bağsızdır.
 
 DXF'te ölçünün yazısı (grup 1): ölçülen değeri okuyan program kendisi ölçsün diye
 önekli, sonekli, toleranslı ya da şablonlu yazı `<>` ile gider (`R<>%%p0,05 m`);
-elle yazılmış yazı yazıldığı gibi gider; kendi birimi olan ölçünün yazısı tam olarak
-yazılır. Geri okunduğunda `<>` taşıyan yazı ölçülen değer olarak kalır, elle yazılmış
-yazı elle yazılmış olarak.
+elle yazılmış yazı yazıldığı gibi gider; kendi birimi olan ölçünün — grad yazan her
+açı dahil — yazısı tam olarak yazılır, çünkü okuyan programın `<>`'si onu kendi
+biriminde, açıyı kendi derecesinde ölçerdi. Birimi ve yazının `<>`'li kalıbı bu
+programın kendi notunda (`KENTOSCAD` xdata grubunda `olcu.birim`, `olcu.yazi`) gider.
+Geri okunduğunda `<>` taşıyan yazı ölçülen değer olarak kalır, elle yazılmış yazı elle
+yazılmış olarak; tam yazılmış yazı da, başka bir program onu değiştirmediyse, kendi
+biriminde yeniden **ölçülen** değerdir.
 
 ## Komutlar
 

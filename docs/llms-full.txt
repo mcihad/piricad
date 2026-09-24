@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 112 (99 tanesi onay ister)
-- Katalog parmak izi: `10364539293201148583`
+- Katalog parmak izi: `15176429988968804855`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -441,7 +441,7 @@ Onay ister.
 | `bagla` | boolean | hayır | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır) |
 | `onek` | string | hayır | Değerin önüne yazılan: R, Ø, ≈ … (metin) |
 | `sonek` | string | hayır | Değerin ardına yazılan: " m", " (eski)" … (metin) |
-| `birim` | string | hayır | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin) |
+| `birim` | string | hayır | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) (metin) |
 | `hassasiyet` | integer | hayır | Ondalık basamak sayısı; varsayılan stilinki (tam sayı) |
 | `tolerans` | number | hayır | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır (sayı) |
 | `tolerans_ust` | number | hayır | Üst sapma: + bu kadar; uzunlukta metre, açıda derece (sayı) |
@@ -499,7 +499,7 @@ Onay ister.
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `onek` | string | hayır | Değerin önüne yazılan: R, Ø, ≈ … (metin) |
 | `sonek` | string | hayır | Değerin ardına yazılan: " m", " (eski)" … (metin) |
-| `birim` | string | hayır | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin) |
+| `birim` | string | hayır | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) (metin) |
 | `hassasiyet` | integer | hayır | Ondalık basamak sayısı; varsayılan stilinki (tam sayı) |
 | `tolerans` | number | hayır | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır (sayı) |
 | `tolerans_ust` | number | hayır | Üst sapma: + bu kadar; uzunlukta metre, açıda derece (sayı) |

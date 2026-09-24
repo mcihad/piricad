@@ -201,6 +201,7 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
                         scratch.run_text[r] == kNoRunText ? text : scratch.run_text[r];
                     into.begin_run(scratch.run_closed[r] != 0, scratch.run_hole[r] != 0, rs, rl,
                                    rt);
+                    if (scratch.run_solid[r] != 0) into.mark_solid();
                     const auto xs = scratch.run_xs(r);
                     const auto ys = scratch.run_ys(r);
                     for (std::size_t v = 0; v < xs.size(); ++v) {

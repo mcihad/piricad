@@ -1921,7 +1921,7 @@ cad.dimension(
 | `associate` | `bool` | `bagla` | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
 | `prefix` | `str` | `onek` | Değerin önüne yazılan: R, Ø, ≈ … |
 | `suffix` | `str` | `sonek` | Değerin ardına yazılan: " m", " (eski)" … |
-| `unit` | `str` | `birim` | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `unit` | `str` | `birim` | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
 | `precision` | `int` | `hassasiyet` | Ondalık basamak sayısı; varsayılan stilinki |
 | `tolerance` | `float` | `tolerans` | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
 | `tolerance_upper` | `float` | `tolerans_ust` | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
@@ -1965,7 +1965,7 @@ cad.dimension_edit(
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `prefix` | `str` | `onek` | Değerin önüne yazılan: R, Ø, ≈ … |
 | `suffix` | `str` | `sonek` | Değerin ardına yazılan: " m", " (eski)" … |
-| `unit` | `str` | `birim` | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `unit` | `str` | `birim` | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
 | `precision` | `int` | `hassasiyet` | Ondalık basamak sayısı; varsayılan stilinki |
 | `tolerance` | `float` | `tolerans` | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
 | `tolerance_upper` | `float` | `tolerans_ust` | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |

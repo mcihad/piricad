@@ -6,6 +6,44 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — ölçü paftadaki gibi çizilir (C-17, 2. aşama)
+
+- **Yazı çizginin üstünde.** Ölçünün değeri ölçü çizgisinin okunduğu yönde üstünde durur
+  (ISO 129-1): yatay ölçüde üstte, düşeyde solda. Önceden çizginin ortasına oturuyor,
+  nesnenin altına konan ölçüde çizginin altına sarkıyordu. Nesnenin altındaki bir ölçünün
+  çizgisini kenardan en az yazı boyu ile yazı aralığı kadar uzağa koyun (`ISO-25`, 1/1000:
+  3,125 m); önizleme bunu gösterir.
+- **Dolu oklar.** Kapalı ok çizginin kendi rengiyle dolu bir üçgen; ekranda ve basılan
+  paftada aynı sahneden çizilir. Kılavuz çizginin oku da dolu. Açık ok ve `MIMARI` çentiği
+  çizgi olarak kalır.
+- **Sığmayan yazı dışarıda.** Hizalı ve doğrusal ölçüde iki uzatma çizgisinin arası yazıya
+  yetmezse yazı son uzatma çizgisinin dışına çıkar, ölçü çizgisi altına uzanır; oklar da
+  sığmıyorsa dışarıdan içeri döner. Açı ve yay uzunluğu ölçüsünde yazı yayın geçtiği yerde
+  kalır, kola değecekse yay boyunca kayar, yay yetmiyorsa yakın kolun dışına, teğetine
+  çıkar; önceden 4,9 m'lik bir yayın 9 m'lik yazısı iki kolun ve iki okun üstünden
+  geçiyordu. Elle yerleştirilmiş yazı yerinde kalır. Çizerkenki hayalet de aynı kuralla
+  çizilir.
+- **R ve Ø.** Yarıçap `R7,50`, çap `Ø15,00` yazılır; `onek=""` yazmaz. Yazı çemberin
+  dışındaysa yarıçap çizgisi yazının altından sonuna kadar uzanır.
+- **Yay uzunluğu yayla.** Ölçülen yayla eş merkezli bir ölçü yayı, uçlarında uzatma
+  çizgileri ve oklar; önceden kiriş gibi düz bir çizgi çiziliyordu.
+- **Açı projenin biriminde.** Açı ölçüsü projenin `açı_birimi` ayarıyla yazılır —
+  başlangıçta grad, dik açı `100,00g` (ÖLÇ, AÇIÖLÇ ve yazılan her `@d<a` ile aynı birim).
+  `birim=` artık açıda `grad`, `derece`, `radyan` alır (`90,00°`, `1,57r`); uzunluk
+  birimi açıya, açı birimi uzunluğa verilince nedeni söylenir. Açı toleransı derece olarak
+  verilir, ölçünün biriminde yazılır. Birimi olmayan eski açılar derece okunmaya devam eder.
+- **DXF: birimli ölçü ve yay uzunluğu geri gelir.** Kendi birimi olan ölçünün yazısı başka
+  programlar için tam yazılır; birimi ve `<>`'li kalıbı bu programın notunda
+  (`KENTOSCAD` xdata, `olcu.birim`, `olcu.yazi`) gider ve geri okununca ölçü yine ölçülen
+  değeri yazar — başka bir program yazıyı değiştirdiyse değiştirdiği yazıyı. Yay uzunluğu
+  `olcu.tur=yay` notuyla yay uzunluğu olarak döner.
+- **Düzeltildi:** yay uzunluğu ölçüsü DXF'ten açı ölçüsü olarak dönüyordu; yazıcının
+  yorumu ve belge uzunluğun xdata'da gittiğini söylüyordu, gitmiyordu.
+  `ÖLÇÜDÜZENLE sifirla=birim` bir açıyı projenin birimine değil dereceye döndürüyordu.
+  Dışarıdan içeri dönen oklar bir milimetre ötedeki yuvarlanmış bir noktaya bakılarak
+  yönleniyordu; eğik bir ölçüde ok çizgiden 8°'ye kadar sapıyordu. Açı ve yay ölçüsünün
+  okları artık yayın uçtaki teğetinde.
+
 ### Eklendi — her ölçü türü kendi aracıyla (C-17, 1. aşama)
 
 - **Yedi tür şeritte.** Giriş ▸ Açıklama ve Açıklama ▸ Ölçü'deki **Ölçü** bölünmüş

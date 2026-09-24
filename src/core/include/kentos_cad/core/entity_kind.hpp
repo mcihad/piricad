@@ -62,6 +62,11 @@ struct EmitBuffer
     /// island, a face's interior ring. The fill pass reads it the way it reads
     /// `RingRole::Interior` on a stored ring; a stroke pass ignores it.
     std::vector<std::uint8_t> run_hole;
+    /// 1 = the run is a SOLID MARK: a closed shape filled with the ink it is
+    /// stroked in, whatever the style's own fill says — a dimension's closed
+    /// arrowhead, which a sheet prints black on black (TODOS C-17). Set with
+    /// `mark_solid` right after `begin_run`.
+    std::vector<std::uint8_t> run_solid;
 
     /// THE STYLE, LAYER AND CAPTION OF A RUN, when they are not the entity's own.
     /// A block reference draws its definition's members, and a member keeps its
@@ -88,6 +93,7 @@ struct EmitBuffer
         run_count.push_back(0);
         run_closed.push_back(closed ? std::uint8_t{1} : std::uint8_t{0});
         run_hole.push_back(hole ? std::uint8_t{1} : std::uint8_t{0});
+        run_solid.push_back(std::uint8_t{0});
         run_style.push_back(style);
         run_layer.push_back(layer);
         run_text.push_back(text);
@@ -104,6 +110,10 @@ struct EmitBuffer
     {
         return {ys.data() + run_start[i], run_count[i]};
     }
+
+    /// Makes the run in progress a solid mark (`run_solid`). Undefined before
+    /// `begin_run`.
+    void mark_solid() { run_solid.back() = std::uint8_t{1}; }
 
     /// Appends one vertex to the run in progress. Undefined before `begin_run`,
     /// which is a programming error rather than a data condition.
@@ -124,6 +134,7 @@ struct EmitBuffer
         run_count.clear();
         run_closed.clear();
         run_hole.clear();
+        run_solid.clear();
         run_style.clear();
         run_layer.clear();
         run_text.clear();

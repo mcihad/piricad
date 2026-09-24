@@ -21,6 +21,7 @@
 #include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/transform.hpp"
@@ -421,6 +422,13 @@ private:
     /// A label in the readout ink CENTRED on a place of the drawing: where a
     /// dimension's figure will be written, so the preview writes it there.
     void addCentredReadout(core::Point2 at, const std::string& text);
+
+    /// The dimension `def` laid out from `picks` at `where` — the layout, the
+    /// fit and the outline ÖLÇÜ, ZİNCİRÖLÇÜ and BAZÖLÇÜ build on the click —
+    /// into `batch`, with the figure it will write where it will write it.
+    void addDimensionGhost(std::size_t batch, core::DimensionDef def,
+                           std::span<const core::Point2> picks, core::Point2 where,
+                           core::Mm text_height, bool fixed_rotation);
 
     /// Draws `path` into `batch`: segments as they are, arcs by `arc_outline`.
     void addCurve(std::size_t batch, const core::CurvePath& path);

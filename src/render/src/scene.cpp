@@ -158,6 +158,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     out.passes.clear();
     out.z_keys.clear();
+    out.solid_of.clear();
 
     // Each pass records the layer and the z_order it is drawn at, so the order
     // array can be built without a second walk of the style table.
@@ -377,6 +378,40 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         ++out.fill_count;
     };
 
+    // THE FILL A STROKE'S SOLID MARKS GO INTO: made the first time one reaches
+    // the stroke pass `p`, in the stroke's ink, at its layer and depth — after
+    // it in the draw order, so a head sits on its own line. Indices, never
+    // references, because making it grows the pass arrays.
+    const auto solid_pass = [&](std::uint32_t p) {
+        if (out.solid_of.size() <= p) out.solid_of.resize(p + 1, DrawList::kNoSolidPass);
+        if (out.solid_of[p] != DrawList::kNoSolidPass) return out.solid_of[p];
+
+        const auto at   = static_cast<std::uint32_t>(out.passes.size());
+        PassStyle ps    = out.passes[p];
+        ps.type         = core::SymbolLayerType::SimpleFill;
+        ps.wants_stroke = false;
+        ps.wants_fill   = true;
+        out.passes.push_back(ps);
+        if (out.polylines.size() <= at) out.polylines.resize(at + 1);
+        if (out.polygons.size() <= at) out.polygons.resize(at + 1);
+        PolylineBatch& none = out.polylines[at];
+        none.xs.clear();
+        none.ys.clear();
+        none.runs.clear();
+        none.rgba           = out.polylines[p].rgba;
+        none.width_px       = out.polylines[p].width_px;
+        PolygonBatch& solid = out.polygons[at];
+        solid.xs.clear();
+        solid.ys.clear();
+        solid.runs.clear();
+        solid.is_hole.clear();
+        solid.rgba  = out.polylines[p].rgba;
+        solid.hatch = {};
+        out.z_keys.push_back(DrawList::ZKey{out.z_keys[p].layer, out.z_keys[p].z, at});
+        out.solid_of[p] = at;
+        return at;
+    };
+
     const auto emit = [&](core::EntityId e) {
         // The cull test reads the flags byte and the four bbox arrays, and nothing
         // else. Layer visibility is mirrored into the byte (model.md R6, R7).
@@ -535,6 +570,13 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
                 // parsel ring does, so it takes the same fill; an arc encloses
                 // nothing and takes none.
                 if (fill_wanted && ring_closed(r)) emit_fill_ring(fill, r);
+                // A SOLID MARK is filled in the ink it is stroked in, whatever
+                // the style fills with — a plain line style fills nothing. Last
+                // in the loop: making the solid pass grows the arrays `ps`,
+                // `batch` and `fill` point into.
+                if (curve_active && curve.run_solid[r] != 0 && ps.wants_stroke &&
+                    ps.type == core::SymbolLayerType::SimpleLine && ring_closed(r))
+                    emit_fill_ring(out.polygons[solid_pass(p)], r);
             }
         };
 

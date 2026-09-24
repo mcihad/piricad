@@ -293,6 +293,16 @@ struct DrawList
     /// Fill geometry per pass, parallel to `passes`.
     std::vector<PolygonBatch> polygons;
 
+    /// For each STROKE pass, the pass its solid marks are filled in (a closed
+    /// arrowhead, `core::EmitBuffer::run_solid`), or `kNoSolidPass`. That pass
+    /// is an ordinary fill in the stroke's own ink at the stroke's depth, made
+    /// the first time a solid mark reaches the stroke — so every backend draws
+    /// it the way it draws any fill. Scratch whose capacity survives the frame.
+    std::vector<std::uint32_t> solid_of;
+
+    /// `solid_of`'s "none".
+    static constexpr std::uint32_t kNoSolidPass = 0xFFFFFFFFu;
+
     /// Batch indices in DRAW ORDER, back to front.
     ///
     /// Not the same as index order, and the difference is the point: MPYY

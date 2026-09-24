@@ -1790,6 +1790,34 @@ void MapCanvas::addReadout(float x, float y, const std::string& text)
                                                    static_cast<float>(look_.hint_px), false, text});
 }
 
+void MapCanvas::addDimensionGhost(std::size_t batch, core::DimensionDef def,
+                                  std::span<const core::Point2> picks, core::Point2 where,
+                                  core::Mm text_height, bool fixed_rotation)
+{
+    core::DimensionLayout layout;
+    if (!core::dimension_layout(def, picks, where, text_height, layout, fixed_rotation)) return;
+    const std::string figure = core::dimension_text(def, controller_.bus().drawing_unit());
+    core::dimension_fit(def, layout, figure, text_height);
+    const auto base = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
+                                               layout.text_dir_y, text_height, figure);
+    const std::vector<core::Point2> baseline{base[0], base[1]};
+    const core::RingGeometry::RingInput rings[2]{{baseline, core::RingRole::Open, 0},
+                                                 {layout.defs, core::RingRole::Open, 0}};
+    core::RingGeometry scratch;
+    const std::vector<std::uint8_t> payload = core::encode_dimension(def);
+    if (auto slot = scratch.append(rings, payload)) {
+        core::EmitBuffer buf;
+        core::dimension_outline(scratch, slot.value(), buf);
+        addEmitRuns(batch, buf);
+    }
+    // AND THE FIGURE IT WILL WRITE, WHERE IT WILL WRITE IT (TODOS C-17). The
+    // rubber band's own readout measured from the first point to the cursor —
+    // the distance to the dimension line, which is not what a dimension says —
+    // and a user reading it took the line's offset for the measurement.
+    addCentredReadout(layout.text_centre, figure);
+    guide_label_ = figure;
+}
+
 void MapCanvas::addCentredReadout(core::Point2 at, const std::string& text)
 {
     // Measured in the face the label is drawn in, at its size, so the middle
@@ -2485,68 +2513,23 @@ void MapCanvas::buildOverlay()
         } else if (shape == command::RubberShape::Dimension &&
                    session->prompt().rubber_chain.size() >= 2) {
             // THE DIMENSION laid out at the cursor — extension lines, dimension
-            // line, arrowheads — by the layout ÖLÇÜ will use on the click, drawn
-            // by the kind's own outline over a scratch record.
-            if (auto decoded = core::decode_dimension(session->prompt().rubber_payload)) {
-                core::DimensionDef def = decoded.value();
-                core::DimensionLayout layout;
-                if (core::dimension_layout(def, session->prompt().rubber_chain, cursorWorld(), 0,
-                                           layout)) {
-                    const auto base = core::dimension_baseline(
-                        layout.text_centre, layout.text_dir_x, layout.text_dir_y, 1, "0");
-                    const std::vector<core::Point2> baseline{base[0], base[1]};
-                    const core::RingGeometry::RingInput rings[2]{
-                        {baseline, core::RingRole::Open, 0},
-                        {layout.defs, core::RingRole::Open, 0}};
-                    core::RingGeometry scratch;
-                    const std::vector<std::uint8_t> payload = core::encode_dimension(def);
-                    if (auto slot = scratch.append(rings, payload)) {
-                        core::EmitBuffer buf;
-                        core::dimension_outline(scratch, slot.value(), buf);
-                        addEmitRuns(batch, buf);
-                    }
-                    // AND THE FIGURE IT WILL WRITE, WHERE IT WILL WRITE IT (TODOS
-                    // C-17). The rubber band's own readout measured from the first
-                    // point to the cursor — the distance to the dimension line, which
-                    // is not what a dimension says — and a user reading it took the
-                    // line's offset for the measurement.
-                    const std::string figure =
-                        core::dimension_text(def, controller_.bus().drawing_unit());
-                    addCentredReadout(layout.text_centre, figure);
-                    guide_label_ = figure;
-                }
+            // line, arrowheads and where its figure stands — by the layout and
+            // the fit ÖLÇÜ will use on the click, drawn by the kind's own outline
+            // over a scratch record.
+            if (auto guide = core::decode_dimension_guide(session->prompt().rubber_payload)) {
+                addDimensionGhost(batch, guide->def, session->prompt().rubber_chain, cursorWorld(),
+                                  guide->text_height, false);
             }
         } else if (shape == command::RubberShape::DimensionNext &&
                    session->prompt().rubber_chain.size() >= 2) {
             // THE NEXT FIGURE OF A ROW (ZİNCİRÖLÇÜ, BAZÖLÇÜ): from the run's last
             // point, or its base, to the cursor, on the row's line and in its
             // direction — the layout the click makes, drawn by the kind's outline.
-            if (auto decoded = core::decode_dimension(session->prompt().rubber_payload)) {
-                core::DimensionDef def = decoded.value();
+            if (auto guide = core::decode_dimension_guide(session->prompt().rubber_payload)) {
                 const std::array<core::Point2, 2> picks{session->prompt().rubber_chain[0],
                                                         cursorWorld()};
-                core::DimensionLayout layout;
-                if (core::dimension_layout(def, picks, session->prompt().rubber_chain[1], 0, layout,
-                                           true)) {
-                    const auto base = core::dimension_baseline(
-                        layout.text_centre, layout.text_dir_x, layout.text_dir_y, 1, "0");
-                    const std::vector<core::Point2> baseline{base[0], base[1]};
-                    const std::array<core::RingGeometry::RingInput, 2> rings{
-                        core::RingGeometry::RingInput{baseline, core::RingRole::Open, 0},
-                        core::RingGeometry::RingInput{layout.defs, core::RingRole::Open, 0}};
-                    core::RingGeometry scratch;
-                    const std::vector<std::uint8_t> payload = core::encode_dimension(def);
-                    if (auto slot = scratch.append(rings, payload)) {
-                        core::EmitBuffer buf;
-                        core::dimension_outline(scratch, slot.value(), buf);
-                        addEmitRuns(batch, buf);
-                    }
-                    // And the figure it will write, where it will write it.
-                    const std::string figure =
-                        core::dimension_text(def, controller_.bus().drawing_unit());
-                    addCentredReadout(layout.text_centre, figure);
-                    guide_label_ = figure;
-                }
+                addDimensionGhost(batch, guide->def, picks, session->prompt().rubber_chain[1],
+                                  guide->text_height, true);
             }
         } else if (shape == command::RubberShape::Block) {
             // THE BLOCK under the cursor, expanded by the code that will draw the

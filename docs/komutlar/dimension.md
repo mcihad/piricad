@@ -35,6 +35,20 @@ kendisinden alır — bir merkezi gözle bulmak gerekmez, ölçülen yarıçap d
 yarıçapıdır. Yarıçap ve çap çizgisi **yazıya doğru** uzanır: yazıyı nereye koyarsanız
 çizgi oraya döner, ölçülen değer değişmez.
 
+### Paftadaki çizimi
+
+Ölçü, bir paftada okunduğu gibi çizilir (ISO 129-1:2018, teknik çizimde ölçülendirme):
+
+| Kural | Ne demek |
+|---|---|
+| **Yazı çizginin üstünde** | Değer ölçü çizgisinin ortasında, çizginin **okunduğu yönde** üstünde durur: yatay ölçüde üstte, düşeyde solda. Nesnenin altına konan ölçüde de yazı çizginin altına sarkmaz; bu yüzden böyle bir ölçünün çizgisini kenardan en az yazı boyu ile yazı aralığı kadar uzağa koyun — `ISO-25` ile 1/1000 paftada 3,125 m — yoksa yazı kenara değer. Çizerken önizleme bunu gösterir |
+| **Dolu oklar** | Kapalı ok (`ISO-25`, `ISO-18`, `ISO-35`, `STANDARD`) çizginin kendi rengiyle doludur; ekranda ve basılan paftada aynı. `MIMARI` stilinin 45° çentiği çizgidir |
+| **Sığmayan yazı dışarıda** | Hizalı ve doğrusal ölçüde iki uzatma çizgisinin arası yazıya yetmezse yazı, okunduğu yöndeki son uzatma çizgisinin **dışına** çıkar ve ölçü çizgisi onun altına uzanır; oklar da sığmıyorsa **dışarıdan içeri** döner. Açı ve yay uzunluğu ölçüsünde yazı, yayın geçtiği noktada durur; orada bir kola değecekse yay boyunca kolu açan en yakın yere kayar; yay yazıya hiç yetmiyorsa o noktaya yakın kolun **dışına**, yayın o uçtaki teğetine çıkar ve teğet yazının altına uzanır. Oklar yaya sığmıyorsa onlar da dışarıdan içeri döner. Yazıyı elle yerleştirdiyseniz ([`ÖLÇÜDÜZENLE yazi_yeri=`](dimension_edit.md)) yeri korunur |
+| **R ve Ø** | Yarıçap `R7,50`, çap `Ø15,00` yazılır: yalnız sayı, bir dairenin yanında hangisi olduğunu söylemez. `onek=` başka bir önek yazar, `onek=""` hiçbirini |
+| **Yarıçap çizgisi yazıya kadar** | Yazı çemberin dışındaysa çizgi çemberden yazının altına, yazının sonuna kadar uzanır; ok çemberin üstündedir |
+| **Yay uzunluğu yayla** | Ölçülen yayla **eş merkezli** bir ölçü yayı, yazının geçtiği yarıçapta çizilir; uçlarında merkeze doğru uzatma çizgileri ve oklar vardır |
+| **Açı projenin biriminde** | Açı ölçüsü projenin [`açı_birimi`](setting.md) ayarıyla yazılır — başlangıçta grad: dik açı `100,00g`. `birim=derece` `90,00°`, `birim=radyan` `1,57r` yazar. Ölçülen açı her birimde aynıdır; yalnız yazılışı değişir |
+
 ### Yazı: ölçülen değer ve yazılışı
 
 Ölçünün **ölçtüğü** değer noktalardan hesaplanır ve hep saklanır; **yazısı** bu
@@ -43,9 +57,9 @@ değerin yazılışıdır:
 | Ne | Örnek | Nasıl verilir |
 |---|---|---|
 | Önek, sonek | `R12,50 m` | `onek=R sonek=" m"` |
-| Birim | `1250,00` (cm) | `birim=cm`; varsayılan çizimin birimi |
+| Birim | `1250,00` (cm), `90,00°` | `birim=cm`; varsayılan çizimin birimi. Açıda `birim=derece`; varsayılan projenin açı birimi |
 | Ondalık | `12,500` | `hassasiyet=3`; varsayılan stilinki |
-| Simetrik tolerans | `12,50±0,05` | `tolerans=0.05` (metre; açıda derece) |
+| Simetrik tolerans | `12,50±0,05` | `tolerans=0.05` (metre; açıda derece, ölçünün biriminde yazılır) |
 | Sapma | `12,50+0,05/-0,02` | `tolerans_ust=0.05 tolerans_alt=0.02` |
 | Sınır değerler | `12,55/12,48` | `tolerans_bicim=sinir` |
 | Yazı şablonu | `12,50 (tapu)` | `metin="<> (tapu)"`: `<>` ölçülen değerdir |
@@ -139,9 +153,10 @@ Bir yol geçiş eğrisi, bir bordür dönüşü ve bir boru dirseği hep tekerle
 katettiği mesafeyle ölçülendirilir.
 
 DXF'te R2007 öncesi bir yay uzunluğu ölçüsü yoktur; dışa aktarımda **açısal**
-ölçü olarak yazılır (aynı üç nokta: yay, iki yarıçapı ve bir yazı) ve uzunluğun
-kendisi xdata'da gider — yani bu programdan çıkıp geri girince aynen korunur,
-başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
+ölçü olarak yazılır (aynı üç nokta: yay, iki yarıçapı ve bir yazı) ve bunun bir yay
+uzunluğu olduğunu bu programın kendi notu (`KENTOSCAD` xdata grubunda `olcu.tur=yay`)
+söyler — yani bu programdan çıkıp geri girince yay uzunluğu olarak döner, başka bir
+program ise bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
 
 ## Parametreler
 
@@ -157,10 +172,10 @@ başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona ina
 | `metin` | Yazı; `<>` ölçülen değerdir, `<>` taşımayan metin elle yazılmış sayılır |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
 | `bagla` | Tam denk geldiği köşeye, merkeze ya da yay ucuna bağlansın mı; varsayılan `evet`. Bkz. [Bağlı ölçü](#bağlı-ölçü) |
-| `onek`, `sonek` | Değerin önüne ve ardına yazılanlar. Bkz. [Yazı](#yazı-ölçülen-değer-ve-yazılışı) |
-| `birim` | `cizim` (varsayılan), `mm`, `cm`, `m`, `km` |
+| `onek`, `sonek` | Değerin önüne ve ardına yazılanlar. Yarıçapta `R`, çapta `Ø` kendiliğinden yazılır; `onek=""` yazmaz. Bkz. [Yazı](#yazı-ölçülen-değer-ve-yazılışı) |
+| `birim` | Uzunlukta `cizim` (varsayılan), `mm`, `cm`, `m`, `km`; açıda `grad`, `derece`, `radyan` (varsayılan projenin [`açı_birimi`](setting.md) ayarı) |
 | `hassasiyet` | Ondalık basamak sayısı, 0–8; varsayılan stilinki |
-| `tolerans` | Simetrik tolerans, uzunlukta metre, açıda derece |
+| `tolerans` | Simetrik tolerans, uzunlukta metre, açıda derece; ölçünün biriminde yazılır (grad bir açıda `tolerans=0.9` → `±1,00g`) |
 | `tolerans_ust`, `tolerans_alt` | Sapma; ikisi de pozitif yazılır |
 | `tolerans_bicim` | `simetrik`, `sapma`, `sinir` |
 
@@ -189,7 +204,7 @@ Bir parselin kenarını ölçüp köşesini taşımak; ölçü köşeyi izler ve
 <!-- örnek: yeni çizim -->
 ```
 ALAN 0,0 20,0 20,10 0,10
-ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3
+ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-4
 KÖŞETAŞI nesne=1 kose=2 nokta=25,0
 ```
 
@@ -198,7 +213,7 @@ KÖŞETAŞI nesne=1 kose=2 nokta=25,0
 Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
 ```
 
-Ölçünün yazısı artık `25,00`; ölçü çizgisi kenarın yine 3 m altında.
+Ölçünün yazısı artık `25,00`; ölçü çizgisi kenarın yine 4 m altında, yazı çizgiyle kenar arasında.
 
 Bir havuzun yarıçapı, daireye tek tıklamayla; yazı çemberin dışında, çizgi ona doğru:
 
@@ -209,14 +224,14 @@ DAİRE merkez=0,0 cevre=7.5,0
 ```
 
 ```text
-Ölçü çizildi: 7,50 (ISO-25); 2 noktası ölçtüğü nesneye bağlı, o değişince ölçü de güncellenir.
+Ölçü çizildi: R7,50 (ISO-25); 2 noktası ölçtüğü nesneye bağlı, o değişince ölçü de güncellenir.
 ```
 
 Önek, sonek, tolerans ve üç ondalıkla:
 
 <!-- örnek: yeni çizim -->
 ```
-ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3 onek=R sonek=" m" tolerans=0.05 hassasiyet=3
+ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-4 onek=R sonek=" m" tolerans=0.05 hassasiyet=3
 ```
 
 ```text
@@ -240,7 +255,8 @@ komut satırına bir şey yazmayı gerektirmez:
 | **Koordinat Ölçüsü** | Başlangıç, ölçülecek nokta, yazının yeri |
 
 Son noktayı ararken imlecin altında ölçünün kendisi durur: uzatma çizgileri, oklar ve
-**yazacağı değer, yazacağı yerde**. Okunan sayı ölçünün değeridir — ilk noktadan imlece
+**yazacağı değer, yazacağı yerde** — sığmıyorsa dışarıda, okları dışarıdan içeri dönmüş,
+paftada nasıl çıkacaksa öyle. Okunan sayı ölçünün değeridir — ilk noktadan imlece
 uzaklık değil. Noktaları yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya
 bağlanır; köşeyi tutamağından sürüklediğinizde ölçü onunla birlikte güncellenir.
 
@@ -267,7 +283,9 @@ alır, `YİNELE` ikisini birlikte yineler.
 Günlüğe noktalar, tür, kullanılan stil ve varsa metin yazılır; ölçülen değer yazılmaz,
 tekrar yeniden ölçer. Daireye tıklanarak çizilen bir yarıçap, çap ya da yay uzunluğunda
 tıklama (`nokta`) değil, ölçünün kurulduğu noktalar yazılır (`birinci`, `ikinci`, yayda
-`bitis`): oynatma, dairenin hâlâ orada olmasını gerektirmez. Bağlar günlüğe yazılmaz, çünkü noktalardan yeniden bulunurlar:
+`bitis`): oynatma, dairenin hâlâ orada olmasını gerektirmez. Kendiliğinden yazılan `R` ve
+`Ø` öneki (`onek`) ve açı ölçüsünün birimi (`birim`) de yazılır: oynatılan ölçü, başka bir
+açı birimiyle açılmış bir projede de aynı yazıyı yazar. Bağlar günlüğe yazılmaz, çünkü noktalardan yeniden bulunurlar:
 oynatılan `ÖLÇÜ` aynı köşelere aynı bağları kurar. `bagla=hayır` verilmişse o da yazılır.
 
 Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
@@ -303,6 +321,14 @@ yakın olmalıdır.
 Yay uzunluğu ölçüsünde `nokta` bir yayın üstünde değil. Tam bir daire yay uzunluğuyla
 ölçülmez; onun için yarıçap ya da çap ölçüsünü kullanın.
 
+> `'grad' bir açı birimi; bu ölçü bir uzunluk yazar: cizim, mm, cm, m ya da km.`
+
+Bir uzunluk ölçüsüne açı birimi verildi. Uzunluk birimlerinden birini yazın.
+
+> `'m' bir uzunluk birimi; açı ölçüsü grad, derece ya da radyan yazar.`
+
+Bir açı ölçüsüne uzunluk birimi verildi.
+
 > `Tanınmayan ölçü stili: 'DIN'. Katalogdaki stiller: ISO-25, STANDARD, MIMARI.`
 
 Stil katalogda yok.
@@ -319,5 +345,5 @@ Katalog dosyası bu makinede yok.
 - [ÖLÇÜDÜZENLE](dimension_edit.md) — çizilmiş ölçünün yazısını, birimini, toleransını değiştirmek
 - [ÖLÇÜYENİLE](dimension_refresh.md) — ölçüleri başka bir pafta ölçeğine uyarlamak
 - [ÖLÇ](measure.md) — çizmeden ölçmek
-- [LİDER](leader.md) — oklu not çizgisi
+- [LİDER](leader.md) — kılavuz çizgi: bir noktayı gösteren oklu not
 - [Ölçü türü](../nesneler/olcu.md) — saklanış, çizim, DXF eşlemesi

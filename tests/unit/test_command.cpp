@@ -6928,7 +6928,9 @@ TEST_CASE("Yeni türler: SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ ve LİDER kendi
     CHECK_EQ(kind_count(core::kDimensionKind), 1u);
     CHECK(said.find("Ölçü çizildi: 12,50 (ISO-25)") != std::string::npos);
     run("ÖLÇÜ birinci=100,400 ikinci=100,410 konum=105.4,401.9 tur=acisal tepe=110,400");
-    CHECK(said.find("45,00°") != std::string::npos); // the arms at 180° and 135° from the vertex
+    // The arms at 180° and 135° from the vertex: 45°, written in the session's
+    // unit — grad by default, so 50,00g (TODOS C-17).
+    CHECK(said.find("50,00g") != std::string::npos);
     run("LİDER noktalar=0,500 3,503 6,503 metin=Rögar");
     CHECK_EQ(kind_count(core::kLeaderKind), 1u);
 

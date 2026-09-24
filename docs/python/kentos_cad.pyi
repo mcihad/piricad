@@ -1257,7 +1257,7 @@ def dimension(
         associate — Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet
         prefix — Değerin önüne yazılan: R, Ø, ≈ …
         suffix — Değerin ardına yazılan: " m", " (eski)" …
-        unit — Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan)
+        unit — Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı)
         precision — Ondalık basamak sayısı; varsayılan stilinki
         tolerance — Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır
         tolerance_upper — Üst sapma: + bu kadar; uzunlukta metre, açıda derece
@@ -1293,7 +1293,7 @@ def dimension_edit(
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
         prefix — Değerin önüne yazılan: R, Ø, ≈ …
         suffix — Değerin ardına yazılan: " m", " (eski)" …
-        unit — Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan)
+        unit — Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı)
         precision — Ondalık basamak sayısı; varsayılan stilinki
         tolerance — Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır
         tolerance_upper — Üst sapma: + bu kadar; uzunlukta metre, açıda derece

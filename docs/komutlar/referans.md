@@ -1055,7 +1055,7 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 | `bagla` | bool | isteğe bağlı | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
 | `onek` | text | isteğe bağlı | Değerin önüne yazılan: R, Ø, ≈ … |
 | `sonek` | text | isteğe bağlı | Değerin ardına yazılan: " m", " (eski)" … |
-| `birim` | text | isteğe bağlı | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `birim` | text | isteğe bağlı | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
 | `hassasiyet` | integer | isteğe bağlı | Ondalık basamak sayısı; varsayılan stilinki |
 | `tolerans` | number | isteğe bağlı | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
 | `tolerans_ust` | number | isteğe bağlı | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
@@ -1078,7 +1078,7 @@ Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `onek` | text | isteğe bağlı | Değerin önüne yazılan: R, Ø, ≈ … |
 | `sonek` | text | isteğe bağlı | Değerin ardına yazılan: " m", " (eski)" … |
-| `birim` | text | isteğe bağlı | Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) |
+| `birim` | text | isteğe bağlı | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
 | `hassasiyet` | integer | isteğe bağlı | Ondalık basamak sayısı; varsayılan stilinki |
 | `tolerans` | number | isteğe bağlı | Simetrik tolerans: ± bu kadar; uzunlukta metre, açıda derece. 0 kaldırır |
 | `tolerans_ust` | number | isteğe bağlı | Üst sapma: + bu kadar; uzunlukta metre, açıda derece |
@@ -4699,9 +4699,12 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "mm",
             "cm",
             "m",
-            "km"
+            "km",
+            "grad",
+            "derece",
+            "radyan"
           ],
-          "description": "Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin)"
+          "description": "Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) (metin)"
         },
         "hassasiyet": {
           "type": "integer",
@@ -5060,9 +5063,12 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "mm",
             "cm",
             "m",
-            "km"
+            "km",
+            "grad",
+            "derece",
+            "radyan"
           ],
-          "description": "Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan) (metin)"
+          "description": "Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) (metin)"
         },
         "hassasiyet": {
           "type": "integer",

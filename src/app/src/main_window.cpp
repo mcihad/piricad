@@ -4876,6 +4876,38 @@ int MainWindow::probeRealMouse()
             if (!drawing)
                 (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); ölçü "
                                            "hayaletinin yazdığı değer gerçek pencerede sınanır\n");
+
+            // THE SHEET (TODOS C-17, 2nd stage): every type together and two that
+            // do not fit, on screen and printed from the same scene — the
+            // figures above their lines, the closed heads filled, R and Ø, the
+            // arc length's own arc, the angle in grad; the short line's figure
+            // and heads outside, and the narrow angle's past its upper arm, on
+            // that arm's tangent, with room below the parcel to stand in.
+            if (shooting) {
+                // Four metres out, not three: the figure stands between its line
+                // and the parcel, and ISO-25 at 1/1000 needs 3,125 m for it.
+                fresh({QStringLiteral("ALAN 0,0 20,0 20,10 0,10"),
+                       QStringLiteral("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-4"),
+                       QStringLiteral("ÖLÇÜ tur=dogrusal birinci=20,0 ikinci=20,10 konum=24,5"),
+                       QStringLiteral("ÇİZGİ 0,14 1,14"),
+                       QStringLiteral("ÖLÇÜ birinci=0,14 ikinci=1,14 konum=0.5,16"),
+                       QStringLiteral("DAİRE merkez=34,5 cevre=38,5"),
+                       QStringLiteral("ÖLÇÜ tur=yaricap nokta=38,5 konum=42,10"),
+                       QStringLiteral("ÖLÇÜ tur=cap nokta=30,5 konum=26,-2"),
+                       QStringLiteral("YAY merkez=34,-14 baslangic=40,-14 bitis=28,-14"),
+                       QStringLiteral("ÖLÇÜ tur=yay nokta=34,-8 konum=34,-5"),
+                       QStringLiteral("ÇİZGİ 0,-24 12,-24"), QStringLiteral("ÇİZGİ 0,-24 8,-18"),
+                       QStringLiteral("ÖLÇÜ tur=acisal tepe=0,-24 birinci=12,-24 ikinci=8,-18 "
+                                      "konum=7,-21")});
+                runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+                runScriptLine(QStringLiteral("YAZDIR merkez=20,1 olcek=500 dosya=\"%1\"")
+                                  .arg(into + QStringLiteral("/olcu-paftasi.pdf")));
+                endCommand();
+                QCoreApplication::processEvents();
+                shoot("olcu-paftasi");
+                check(QFileInfo::exists(into + QStringLiteral("/olcu-paftasi.pdf")),
+                      QStringLiteral("Ölçü paftası PDF'e yazıldı"));
+            }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }

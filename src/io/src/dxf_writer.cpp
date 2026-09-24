@@ -623,35 +623,54 @@ private:
         // tolerance, a template — goes out as `<>` in its place, so the reader
         // measures the figure itself and a round trip keeps it measured. Only a
         // dimension with a unit of its own is written out whole: a reader's
-        // `<>` would come back in the file's unit.
+        // `<>` would come back in the file's unit, and an angle in the reader's
+        // degrees on a sheet measured in grad.
+        const bool manual   = core::dimension_text_is_manual(d);
         std::string caption = d.override_text;
-        if (!core::dimension_text_is_manual(d)) {
+        std::string pattern = "<>"; // the caption with `<>` where the figure goes
+        if (!manual) {
             const bool decorated = !d.prefix.empty() || !d.suffix.empty() ||
                                    d.tolerance != core::DimTolerance::None ||
                                    !d.override_text.empty();
-            if (d.unit != 0) {
-                caption = std::string(doc_.texts().text(slot));
-            } else if (decorated) {
+            if (decorated) {
                 std::string tol = core::dimension_tolerance_text(d, unit_);
                 if (tol.starts_with("±")) tol = "%%p" + tol.substr(std::string_view("±").size());
                 const std::string figure = d.tolerance == core::DimTolerance::Limits
                                                ? std::string(doc_.texts().text(slot))
                                                : d.prefix + "<>" + tol + d.suffix;
                 if (d.override_text.empty()) {
-                    caption = figure;
+                    pattern = figure;
                 } else {
-                    caption.clear();
+                    pattern.clear();
                     const std::string_view typed = d.override_text;
                     std::size_t from             = 0;
                     for (std::size_t at = typed.find("<>"); at != std::string_view::npos;
                          at             = typed.find("<>", from)) {
-                        caption += typed.substr(from, at - from);
-                        caption += figure;
+                        pattern += typed.substr(from, at - from);
+                        pattern += figure;
                         from = at + 2;
                     }
-                    caption += typed.substr(from);
+                    pattern += typed.substr(from);
                 }
             }
+            if (d.unit != 0) {
+                caption = std::string(doc_.texts().text(slot));
+            } else if (decorated) {
+                caption = pattern;
+            }
+        }
+
+        // WHAT A DIMENSION RECORD CANNOT SAY, for this program's own reader, in
+        // its XDATA group under reserved `olcu.` keys: that an angular record is
+        // an arc-length dimension (below), and the unit of a figure written out
+        // whole, with the pattern it was written from — so a round trip gets a
+        // MEASURED figure back rather than a typed one that happens to match.
+        // Another program ignores the group and reads what group 1 says.
+        std::vector<std::string> notes;
+        if (d.type == core::DimensionType::ArcLength) notes.emplace_back("olcu.tur=yay");
+        if (d.unit != 0) {
+            notes.push_back(std::string("olcu.birim=") + core::dimension_unit_word(d));
+            if (!manual) notes.push_back("olcu.yazi=" + pattern);
         }
         const auto fill = [&](DRW_Dimension& out, int type_bits) {
             common(out, e);
@@ -663,6 +682,8 @@ private:
             out.setText(caption);
             out.setExtrusion(DRW_Coord(0.0, 0.0, 1.0));
             out.setAlign(5);
+            for (const std::string& note : notes)
+                own_item(out, note);
         };
         switch (d.type) {
         case core::DimensionType::Linear: {
@@ -741,10 +762,10 @@ private:
             // DXF HAS NO ARC-LENGTH DIMENSION BEFORE R2007's `DIMARC`, and
             // libdxfrw does not write one. Exported as an ANGULAR dimension over
             // the same three points, which is the shape a reader can make sense
-            // of: the arc, its two radii and a figure. The length itself travels
-            // in the xdata this writer already attaches, so a round trip through
-            // this program keeps it exactly; another program sees an angle and
-            // says so rather than seeing a chord and believing it.
+            // of: the arc, its two radii and a figure. `olcu.tur=yay` in this
+            // program's XDATA group says what it was, so a round trip through
+            // this program gets the arc length back; another program sees an
+            // angle and says so rather than seeing a chord and believing it.
             DRW_DimAngular out;
             fill(out, 2);
             out.setFirstLine1(defs[0]);
@@ -787,6 +808,26 @@ private:
 
 private:
     double units(Mm mm) const noexcept { return core::drawing_units_from_mm(mm, unit_); }
+
+    /// Appends `item` to this program's own XDATA group, opening the group when
+    /// the entity's last one is not it: the attributes `common` writes and the
+    /// notes a kind adds share one group.
+    static void own_item(DRW_Entity& out, const std::string& item)
+    {
+        bool open = false;
+        for (const auto& v : out.extData)
+            if (v && v->code() == 1001)
+                open = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
+                       *v->content.s == "KENTOSCAD";
+        if (!open) {
+            auto app = std::make_shared<DRW_Variant>();
+            app->addString(1001, "KENTOSCAD");
+            out.extData.push_back(app);
+        }
+        auto v = std::make_shared<DRW_Variant>();
+        v->addString(1000, item.size() > 255 ? item.substr(0, 255) : item);
+        out.extData.push_back(v);
+    }
 
     /// libdxfrw writes an entity's XDATA for tables only, never for entities, and
     /// assigns the handle itself as it writes. So the groups are remembered by

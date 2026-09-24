@@ -129,18 +129,10 @@ core::DrawingUnit drawing_unit(Context& ctx)
 // read the same parameters through the same function, declared once below, so a
 // prefix typed at the drawing and one typed at an edit are the same prefix.
 
-/// The payload's unit code for a `birim=` word: 0 for `cizim`, the drawing's
-/// own; `DrawingUnit + 1` otherwise.
-std::uint8_t unit_code(std::string_view word)
+/// The `DimensionDef::unit` of an angle unit: AngleUnit + 1.
+std::uint8_t angle_code(core::AngleUnit unit)
 {
-    const auto code = [](core::DrawingUnit u) {
-        return static_cast<std::uint8_t>(static_cast<std::uint8_t>(u) + 1);
-    };
-    if (core::turkish_key_equals(word, "mm")) return code(core::DrawingUnit::Millimetre);
-    if (core::turkish_key_equals(word, "cm")) return code(core::DrawingUnit::Centimetre);
-    if (core::turkish_key_equals(word, "m")) return code(core::DrawingUnit::Metre);
-    if (core::turkish_key_equals(word, "km")) return code(core::DrawingUnit::Kilometre);
-    return 0;
+    return static_cast<std::uint8_t>(static_cast<std::uint8_t>(unit) + 1);
 }
 
 /// Reads the presentation parameters into `def` and records each one given.
@@ -154,7 +146,22 @@ bool read_presentation(Context& ctx, core::DimensionDef& def)
         ctx.record(name, v);
     }
     if (const Value v = ctx.argument("birim"); !v.empty()) {
-        def.unit = unit_code(v.as_text());
+        // AN ANGLE IS NOT WRITTEN IN METRES, nor a length in grad: the two word
+        // lists share one parameter, and the wrong one for the type is said.
+        const std::string& word = v.as_text();
+        const auto code         = core::dimension_unit_code(def, word);
+        if (!code) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       core::dimension_is_angle(def)
+                           ? "'" + word +
+                                 "' bir uzunluk birimi; açı ölçüsü grad, derece ya da radyan "
+                                 "yazar."
+                           : "'" + word +
+                                 "' bir açı birimi; bu ölçü bir uzunluk yazar: cizim, mm, cm, m "
+                                 "ya da km.");
+            return false;
+        }
+        def.unit = *code;
         ctx.record("birim", v);
     }
     if (const Value v = ctx.argument("hassasiyet"); !v.empty()) {
@@ -215,8 +222,11 @@ std::vector<Param> presentation_params()
         Param::text("onek", Arity::optional(), "Değerin önüne yazılan: R, Ø, ≈ …").en("prefix"),
         Param::text("sonek", Arity::optional(), "Değerin ardına yazılan: \" m\", \" (eski)\" …")
             .en("suffix"),
-        Param::choice("birim", Arity::optional(), {"cizim", "mm", "cm", "m", "km"},
-                      "Uzunluğun yazıldığı birim; cizim: çizimin birimi (varsayılan)")
+        Param::choice("birim", Arity::optional(),
+                      {"cizim", "mm", "cm", "m", "km", "grad", "derece", "radyan"},
+                      "Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), "
+                      "mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin "
+                      "açı_birimi ayarı)")
             .en("unit"),
         Param::integer_range("hassasiyet", Arity::optional(), 0, 8,
                              "Ondalık basamak sayısı; varsayılan stilinki")
@@ -334,6 +344,26 @@ Task<void> run_dimension(Context& ctx)
     const bool diametric = type == core::DimensionType::Diametric;
     const bool linear    = type == core::DimensionType::Linear;
 
+    // AN ANGLE IN THE PROJECT'S OWN UNIT (TODOS C-17): grad unless the user
+    // said otherwise, the unit ÖLÇ, AÇIÖLÇ and every typed `@d<a` already use —
+    // an angle ölçü written in degrees beside a traverse measured in grad is two
+    // conventions on one sheet. Recorded, so the figure is the same wherever the
+    // drawing is opened.
+    if (angular && !ctx.has_argument("birim")) {
+        const core::AngleUnit unit = ctx.session().bus().angle_convention().unit;
+        def.unit                   = angle_code(unit);
+        ctx.record("birim", Value::text(core::dimension_unit_word(def)));
+    }
+
+    // R AND Ø ARE PART OF THE FIGURE (ISO 129-1, TODOS C-17): a radius is
+    // written R7,50 and a diameter Ø15,00, the way a sheet is read — a bare
+    // 7,50 beside a circle does not say which of the two it is. `onek=` still
+    // decides, and `onek=""` writes none.
+    if ((radial || diametric) && !ctx.has_argument("onek")) {
+        def.prefix = radial ? "R" : "Ø";
+        ctx.record("onek", Value::text(def.prefix));
+    }
+
     // What was picked, in the order `core::dimension_layout` reads it.
     std::vector<core::Point2> picks;
 
@@ -443,7 +473,7 @@ Task<void> run_dimension(Context& ctx)
                      .rubber_origin  = picks.front(),
                      .rubber_shape   = RubberShape::Dimension,
                      .rubber_chain   = picks,
-                     .rubber_payload = core::encode_dimension(def)});
+                     .rubber_payload = core::encode_dimension_guide({def, style->text_height})});
     if (!where) co_return;
 
     if (picks[0] == picks[1]) {
@@ -466,6 +496,7 @@ Task<void> run_dimension(Context& ctx)
         co_return;
     }
     const std::string text = core::dimension_text(def, drawing_unit(ctx));
+    core::dimension_fit(def, layout, text, style->text_height);
 
     const auto base = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
                                                layout.text_dir_y, style->text_height, text);
@@ -724,7 +755,14 @@ Task<void> run_dimension_edit(Context& ctx)
         if (reset("metin")) def.override_text.clear();
         if (reset("onek")) def.prefix.clear();
         if (reset("sonek")) def.suffix.clear();
-        if (reset("birim")) def.unit = 0;
+        // BACK TO WHAT A NEW ONE WOULD WRITE: the drawing's unit for a length,
+        // the project's angle unit for an angle. Code 0 of an angle is degrees
+        // (what every angle was written in before C-17), so resetting to it
+        // would leave a grad sheet with one degree figure on it.
+        if (reset("birim"))
+            def.unit = core::dimension_is_angle(def)
+                           ? angle_code(ctx.session().bus().angle_convention().unit)
+                           : std::uint8_t{0};
         if (reset("tolerans")) {
             def.tolerance       = core::DimTolerance::None;
             def.tolerance_plus  = 0;
@@ -1014,15 +1052,15 @@ Task<void> run_dimension_run(Context& ctx, bool baseline)
                                line.y + core::mm_round(side * ny * static_cast<double>(spacing) *
                                                        static_cast<double>(k))}
                 : line;
-        auto next =
-            co_await ctx.point("noktalar",
-                               baseline ? "Tabandan ölçülecek sonraki nokta; Enter bitirir"
-                                        : "Zincirin sonraki noktası; Enter bitirir",
-                               PointOptions{.rubber_band    = true,
-                                            .rubber_origin  = from,
-                                            .rubber_shape   = RubberShape::DimensionNext,
-                                            .rubber_chain   = {from, at},
-                                            .rubber_payload = core::encode_dimension(proto)});
+        auto next = co_await ctx.point(
+            "noktalar",
+            baseline ? "Tabandan ölçülecek sonraki nokta; Enter bitirir"
+                     : "Zincirin sonraki noktası; Enter bitirir",
+            PointOptions{.rubber_band    = true,
+                         .rubber_origin  = from,
+                         .rubber_shape   = RubberShape::DimensionNext,
+                         .rubber_chain   = {from, at},
+                         .rubber_payload = core::encode_dimension_guide({proto, height})});
         if (!next) break;
         core::DimensionDef def = proto;
         const std::array<core::Point2, 2> picks{from, *next};
@@ -1036,8 +1074,9 @@ Task<void> run_dimension_run(Context& ctx, bool baseline)
             continue;
         }
         const std::string text = core::dimension_text(def, unit);
-        const auto caption     = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
-                                                          layout.text_dir_y, height, text);
+        core::dimension_fit(def, layout, text, height);
+        const auto caption = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
+                                                      layout.text_dir_y, height, text);
         const std::vector<core::RingGeometry::RingInput> rings{
             core::RingGeometry::RingInput{caption, core::RingRole::Open, 0},
             core::RingGeometry::RingInput{layout.defs, core::RingRole::Open, 0},

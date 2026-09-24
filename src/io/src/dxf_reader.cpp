@@ -1260,6 +1260,29 @@ private:
         if (auto st = tx_.set_attribute(col, id, v); !st) fail(st.error());
     }
 
+    /// The value of this program's own note `key` on `e` — a `key=value` string
+    /// in its KENTOSCAD XDATA group, which the writer keeps for what a DXF record
+    /// cannot say. Empty when the file does not carry it.
+    static std::optional<std::string> own_note(const DRW_Entity& e, std::string_view key)
+    {
+        bool ours = false;
+        for (const auto& v : e.extData) {
+            if (!v) continue;
+            if (v->code() == 1001) {
+                ours = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
+                       *v->content.s == "KENTOSCAD";
+                continue;
+            }
+            if (!ours || v->code() != 1000 || v->type() != DRW_Variant::STRING ||
+                v->content.s == nullptr)
+                continue;
+            const std::string& text = *v->content.s;
+            if (text.size() > key.size() && text.starts_with(key) && text[key.size()] == '=')
+                return text.substr(key.size() + 1);
+        }
+        return std::nullopt;
+    }
+
     /// This program's own attributes, written by its exporter under the KENTOSCAD
     /// application name as `id=value` strings, come back into the columns the
     /// drawing already declares — the same type, parsed the way the column's type
@@ -1283,7 +1306,8 @@ private:
             if (eq == std::string::npos) continue;
             std::string cid       = text.substr(0, eq);
             const std::string raw = text.substr(eq + 1);
-            if (cid == "anahtar") continue; // the source's key is its history, not a cell
+            if (cid == "anahtar") continue;         // the source's key is its history, not a cell
+            if (cid.starts_with("olcu.")) continue; // a dimension's own notes (`own_note`)
 
             // `id#T=value`: T is the column's type, so a drawing that never had
             // the column gets it declared with the type the writer meant. The
@@ -1584,6 +1608,15 @@ private:
         for (const DRW_Coord& c : raw)
             defs.push_back(to_mm(dxf::Pt{c.x, c.y}));
 
+        // THIS PROGRAM'S OWN NOTES (the writer's reserved `olcu.` keys). An
+        // arc-length dimension went out as the angular record over its centre,
+        // start and end, and comes back as what it was.
+        if (type == core::DimensionType::Angular && defs.size() == 5 &&
+            own_note(e, "olcu.tur") == "yay") {
+            type = core::DimensionType::ArcLength;
+            defs = {defs[0], defs[1], defs[3], defs[4]};
+        }
+
         const DimStyleFigures fig = figures_of(e.getStyle());
         core::DimensionDef def;
         def.type                = type;
@@ -1605,6 +1638,23 @@ private:
                                                : 0;
         } else {
             def.measurement = core::dimension_measure(type, defs, def.rotation_udeg);
+        }
+
+        // A FIGURE IN A UNIT OF ITS OWN went out whole, for other readers, with
+        // its unit and the pattern it was written from beside it. The pattern
+        // comes back only while group 1 is still what it gives: a caption
+        // another program has since retyped is a typed caption.
+        if (const auto word = own_note(e, "olcu.birim"); word) {
+            if (const auto code = core::dimension_unit_code(def, *word); code) {
+                def.unit = *code;
+                if (const auto pattern = own_note(e, "olcu.yazi"); pattern) {
+                    core::DimensionDef measured = def;
+                    measured.override_text =
+                        *pattern == "<>" ? std::string() : dxf::expand_text_codes(*pattern);
+                    if (core::dimension_text(measured, unit_) == core::dimension_text(def, unit_))
+                        def.override_text = measured.override_text;
+                }
+            }
         }
 
         // The text: centred on the file's text point, along the dimension line.

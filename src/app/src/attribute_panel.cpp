@@ -478,18 +478,16 @@ void AttributePanel::rebuild()
                      false,
                      edit(QStringLiteral("sonek=\"%1\"")),
                      {}});
-                const QStringList units{QStringLiteral("cizim"), QStringLiteral("mm"),
-                                        QStringLiteral("cm"), QStringLiteral("m"),
-                                        QStringLiteral("km")};
-                QString unitWord = QStringLiteral("cizim");
-                if (def.unit != 0) {
-                    switch (core::dimension_unit(def, unit)) {
-                    case core::DrawingUnit::Millimetre: unitWord = QStringLiteral("mm"); break;
-                    case core::DrawingUnit::Centimetre: unitWord = QStringLiteral("cm"); break;
-                    case core::DrawingUnit::Kilometre: unitWord = QStringLiteral("km"); break;
-                    default: unitWord = QStringLiteral("m"); break;
-                    }
-                }
+                // AN ANGLE LISTS ANGLE UNITS: the words ÖLÇÜDÜZENLE takes for it,
+                // and the one it writes in now (`core::dimension_unit_word`).
+                const QStringList units =
+                    core::dimension_is_angle(def)
+                        ? QStringList{QStringLiteral("grad"), QStringLiteral("derece"),
+                                      QStringLiteral("radyan")}
+                        : QStringList{QStringLiteral("cizim"), QStringLiteral("mm"),
+                                      QStringLiteral("cm"), QStringLiteral("m"),
+                                      QStringLiteral("km")};
+                const QString unitWord = QString::fromLatin1(core::dimension_unit_word(def));
                 measure.rows.push_back({tr("birim"),
                                         unitWord,
                                         {},
