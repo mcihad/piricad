@@ -444,15 +444,19 @@ def text(
     height: int = ...,
     end: Coord = ...,
     alignment: str = ...,
+    line_spacing: float = ...,
+    width: float = ...,
 ) -> int:
-    """Çizime metin yazar; yükseklik ve hizalama verilebilir.
+    """Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.
 
     Komut: core.text (METİN)
         points — Yazının başlangıç noktası [mm, Sağa (Y) önce]
         text — Yazılacak metin
         height — Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı
         end — Taban çizgisinin bitişi; yoksa yatay [mm, Sağa (Y) önce]
-        alignment — sol, orta, sag veya merkez
+        alignment — Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde)
+        line_spacing — Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü
+        width — Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m]
     """
 
 def edittext(
@@ -461,14 +465,18 @@ def edittext(
     text: str = ...,
     height: int = ...,
     alignment: str = ...,
+    line_spacing: float = ...,
+    width: float = ...,
 ) -> int:
-    """Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+    """Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 
     Komut: core.edittext (YAZIDÜZENLE)
         objects — Düzenlenecek yazılar; verilmezse seçim [kalıcı nesne anahtarı]
         text — Yeni metin; verilmezse değişmez
         height — Yeni yükseklik, zeminde milimetre; verilmezse değişmez
-        alignment — sol, orta, sag veya merkez; verilmezse değişmez
+        alignment — Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez
+        line_spacing — Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez
+        width — Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m]
     """
 
 def exportstyle(

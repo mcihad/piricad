@@ -1427,8 +1427,29 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             auto content = strings.at(r.content_string, "metin içeriği");
             if (!content) return content.error();
 
+            // A hizalama this program does not have is read as the default and
+            // said, rather than stored as a number nothing can draw.
+            core::TextAnchor anchor = core::TextAnchor::BaselineLeft;
+            if (r.anchor < core::kTextAnchorCount)
+                anchor = static_cast<core::TextAnchor>(r.anchor);
+            else
+                report.warnings.push_back(
+                    Warning{"io.text_anchor", "Bir metnin hizası (" + std::to_string(r.anchor) +
+                                                  ") tanınmıyor; sola hizalı okundu."});
+            core::TextLines lines;
+            lines.wrap = (r.flags & 1U) != 0;
+            if (r.spacing != 0) {
+                if (r.spacing >= core::kTextSpacingMin && r.spacing <= core::kTextSpacingMax)
+                    lines.spacing = r.spacing;
+                else
+                    report.warnings.push_back(
+                        Warning{"io.text_spacing",
+                                "Bir metnin satır aralığı (" + std::to_string(r.spacing) +
+                                    "/1000) aralık dışında; tek aralık okundu."});
+            }
+
             if (auto st = tx.set_text(static_cast<core::EntityId>(r.row), content.value(),
-                                      r.height_mm, static_cast<core::TextAnchor>(r.anchor));
+                                      r.height_mm, anchor, lines);
                 !st)
                 report.warnings.push_back(
                     Warning{"io.text", "Bir metin yüklenemedi: " + st.error().message});
@@ -1516,9 +1537,9 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         for (const HatchLinkRecord& r : rows.value()) {
             const core::EntityId hatch = doc.slot_of(static_cast<core::EntityKey>(r.hatch_key));
             if (hatch == core::kNoEntity || !doc.alive(hatch)) {
-                report.warnings.push_back(
-                    Warning{"io.hatchlink_row", "Dosyadaki bir tarama bağı var olmayan bir "
-                                                "taramaya işaret ediyor; yok sayıldı."});
+                report.warnings.push_back(Warning{"io.hatchlink_row",
+                                                  "Dosyadaki bir tarama bağı var olmayan bir "
+                                                  "taramaya işaret ediyor; yok sayıldı."});
                 continue;
             }
             core::HatchSource s{static_cast<core::EntityKey>(r.source_key), r.broken != 0};

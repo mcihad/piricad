@@ -424,10 +424,13 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             if (!texts.has(row)) continue;
 
             TextRecord r{};
-            r.row            = static_cast<std::uint32_t>(row);
-            r.content_string = pool.intern(std::string(texts.text(row)));
-            r.height_mm      = texts.height(row);
-            r.anchor         = static_cast<std::uint8_t>(texts.anchor(row));
+            r.row                       = static_cast<std::uint32_t>(row);
+            r.content_string            = pool.intern(texts.text(row));
+            r.height_mm                 = texts.height(row);
+            r.anchor                    = static_cast<std::uint8_t>(texts.anchor(row));
+            const core::TextLines lines = texts.lines(row);
+            r.flags                     = lines.wrap ? 1 : 0;
+            r.spacing                   = lines.spacing;
             text_rows.push_back(r);
         }
     }

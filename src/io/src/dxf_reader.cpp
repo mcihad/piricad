@@ -26,6 +26,7 @@
 #include "prj_sidecar.hpp"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <cmath>
 #include <cstdio>
@@ -703,27 +704,36 @@ public:
     {
         defer_or_emit(data, [this](const DRW_MText& e, const Xform& x, const Inherit& in, int) {
             if (!begin(e, "MTEXT", in)) return;
-            // MTEXT attachment point (code 71): 1 TL 2 TC 3 TR 4 ML 5 MC 6 MR 7 BL 8 BC 9 BR.
+            // THE ATTACHMENT POINT IS THE ANCHOR (code 71): 1–3 the top row, 4–6
+            // the middle, 7–9 the bottom, each left, centre, right — the nine
+            // `core::TextAnchor` values, one for one (TODOS C-12).
             core::TextAnchor anchor = core::TextAnchor::BaselineLeft;
-            const int attach        = e.textgen;
-            if (attach == 5)
-                anchor = core::TextAnchor::MiddleCentre;
-            else if (attach == 2 || attach == 8)
-                anchor = core::TextAnchor::BaselineCentre;
-            else if (attach == 3 || attach == 6 || attach == 9)
-                anchor = core::TextAnchor::BaselineRight;
-            if (attach != 1 && attach != 5 && attach != 7 && attach != 2 && attach != 8 &&
-                attach != 3 && attach != 9 && attach != 4 && attach != 6)
+            if (const int attach = e.textgen; attach >= 1 && attach <= 9) {
+                constexpr std::array<int, 3> kRow{2, 1, 0}; // top, middle, bottom
+                anchor = core::text_anchor_at((attach - 1) % 3,
+                                              kRow[static_cast<std::size_t>((attach - 1) / 3)]);
+            } else {
                 ++text_align_approx_;
-            if (attach == 1 || attach == 2 || attach == 3 || attach == 4 || attach == 6)
-                ++text_align_approx_; // top and middle rows have no anchor of their own yet
+            }
+            // The spacing (44), as a share of the standard pitch; the width (41)
+            // the lines break to, when it has one.
+            core::TextLines lines;
+            if (std::isfinite(e.interlin) && e.interlin > 0.0)
+                lines.spacing = static_cast<std::uint16_t>(
+                    std::clamp<long>(std::lround(e.interlin * 1000.0), core::kTextSpacingMin,
+                                     core::kTextSpacingMax));
+            Mm width = 0;
+            if (std::isfinite(e.widthscale) && e.widthscale > 0.0) {
+                width      = to_mm_len(e.widthscale * x.uniform_scale());
+                lines.wrap = width > 0;
+            }
             // Code 11 of an MTEXT is its X-axis direction; when the file gave one
             // it stands in for the angle.
             double angle_deg = e.angle;
             if (e.secPoint.x != 0.0 || e.secPoint.y != 0.0)
                 angle_deg = std::atan2(e.secPoint.y, e.secPoint.x) * 180.0 / core::kPi;
             emit_text(e, x, in, e.basePoint, dxf::strip_mtext(e.text), e.height, angle_deg, anchor,
-                      "MTEXT");
+                      "MTEXT", lines, width);
         });
     }
 
@@ -731,22 +741,42 @@ public:
     {
         defer_or_emit(data, [this](const DRW_Text& e, const Xform& x, const Inherit& in, int) {
             if (!begin(e, "TEXT", in)) return;
-            core::TextAnchor anchor = core::TextAnchor::BaselineLeft;
-            const bool aligned_point =
-                e.alignH != DRW_Text::HLeft || e.alignV != DRW_Text::VBaseLine;
-            if (e.alignV == DRW_Text::VMiddle &&
-                (e.alignH == DRW_Text::HCenter || e.alignH == DRW_Text::HMiddle))
-                anchor = core::TextAnchor::MiddleCentre;
-            else if (e.alignH == DRW_Text::HCenter || e.alignH == DRW_Text::HMiddle)
-                anchor = core::TextAnchor::BaselineCentre;
-            else if (e.alignH == DRW_Text::HRight)
-                anchor = core::TextAnchor::BaselineRight;
-            if (e.alignV == DRW_Text::VTop || e.alignV == DRW_Text::VBottom ||
-                (e.alignV == DRW_Text::VMiddle && anchor != core::TextAnchor::MiddleCentre) ||
-                e.alignH == DRW_Text::HAligned || e.alignH == DRW_Text::HFit)
-                ++text_align_approx_;
-            emit_text(e, x, in, aligned_point ? e.secPoint : e.basePoint,
-                      dxf::expand_text_codes(e.text), e.height, e.angle, anchor, "TEXT");
+            // Code 72 is the column (left, centre, right; aligned, middle, fit),
+            // 73 the row (baseline, bottom, middle, top).
+            int column = 0;
+            switch (e.alignH) {
+            case DRW_Text::HCenter:
+            case DRW_Text::HMiddle: column = 1; break;
+            case DRW_Text::HRight: column = 2; break;
+            default: break;
+            }
+            int row = 0;
+            switch (e.alignV) {
+            case DRW_Text::VMiddle: row = 1; break;
+            case DRW_Text::VTop: row = 2; break;
+            default: break;
+            }
+            // "Middle" (72 = 4) is centred both ways, whatever 73 says.
+            if (e.alignH == DRW_Text::HMiddle) row = 1;
+            const core::TextAnchor anchor = core::text_anchor_at(column, row);
+
+            // WHERE THE ANCHOR IS. A left, baseline text is placed by its first
+            // point (10); every other by its alignment point (11) — except
+            // ALIGNED and FIT, whose two points are both ends of the line: the
+            // first is its start, and the second only its direction. Those, and
+            // a bottom row that sits on the descenders rather than the
+            // baseline, are drawn the nearest way this program has, and said.
+            const bool stretched = e.alignH == DRW_Text::HAligned || e.alignH == DRW_Text::HFit;
+            const bool by_second =
+                !stretched && (e.alignH != DRW_Text::HLeft || e.alignV != DRW_Text::VBaseLine);
+            if (stretched || e.alignV == DRW_Text::VBottom) ++text_align_approx_;
+            double angle = e.angle;
+            if (stretched && (e.secPoint.x != e.basePoint.x || e.secPoint.y != e.basePoint.y))
+                angle = std::atan2(e.secPoint.y - e.basePoint.y, e.secPoint.x - e.basePoint.x) *
+                        180.0 / core::kPi;
+            emit_text(e, x, in, by_second ? e.secPoint : e.basePoint,
+                      dxf::expand_text_codes(e.text), e.height, angle, anchor, "TEXT",
+                      core::TextLines{}, 0);
         });
     }
 
@@ -1782,7 +1812,7 @@ private:
     template<class E>
     void emit_text(const E& e, const Xform& x, const Inherit& in, const DRW_Coord& at,
                    std::string words, double height_units, double angle_deg,
-                   core::TextAnchor anchor, const char* type)
+                   core::TextAnchor anchor, const char* type, core::TextLines lines, Mm width)
     {
         if (words.empty()) {
             skip(type, "boş yazı");
@@ -1798,11 +1828,10 @@ private:
         if (ocs.mirror_only()) angle = core::kUDegFullCircle / 2 - angle;
 
         // The baseline: from the anchor along the text direction, as long as the
-        // caption is wide — the same rule `METİN` and the GDAL path use.
-        std::size_t glyphs = 0;
-        for (const char c : words)
-            if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
-        const Mm advance = std::max<Mm>(1, (height * 6 * static_cast<Mm>(glyphs)) / 10);
+        // caption is wide — the same rule `METİN` uses — or, for a text that
+        // wraps, as long as the width its lines break to.
+        const Mm advance = std::max<Mm>(
+            1, lines.wrap && width > 0 ? width : core::text_width_estimate(words, height));
         const Point2 end = dxf::point_on_circle(where, advance, angle);
         const Point2 baseline[2]{where, end};
         auto made = place_polyline(layer_for(e, in), std::span<const Point2>(baseline, 2));
@@ -1810,7 +1839,7 @@ private:
             fail(err(made.error().code, std::string(type) + " okunamadı: " + made.error().message));
             return;
         }
-        if (auto st = tx_.set_text(made.value(), std::move(words), height, anchor); !st) {
+        if (auto st = tx_.set_text(made.value(), std::move(words), height, anchor, lines); !st) {
             fail(err(st.error().code,
                      std::string(type) + " yazısı yazılamadı: " + st.error().message));
             return;

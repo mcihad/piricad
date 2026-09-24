@@ -755,18 +755,46 @@ bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out)
     const double dx  = static_cast<double>(b.x - a.x);
     const double dy  = static_cast<double>(b.y - a.y);
     const double len = std::sqrt(dx * dx + dy * dy);
+    const double tx  = len > 0.0 ? dx / len : 1.0;
+    const double ty  = len > 0.0 ? dy / len : 0.0;
 
-    const double nx = len > 0.0 ? -dy / len : 0.0;
-    const double ny = len > 0.0 ? dx / len : 1.0;
+    // THE BOX THE LAYOUT FILLS (render/text_layout.hpp), in the caption's own
+    // frame: along the baseline from the anchor, and DOWN across it. The width
+    // is the baseline's length — the text's own estimate, or the width a
+    // wrapping text breaks to; the lines are the text's, stacked at its pitch,
+    // with half a height below the last baseline for the descenders.
+    const TextAnchor anchor = doc.texts().anchor(slot);
+    const TextLines lines   = doc.texts().lines(slot);
+    const auto tall         = static_cast<double>(height);
+    const auto n            = static_cast<double>(
+        text_line_estimate(doc.texts().text(slot), height, lines, static_cast<Mm>(len)));
+    const double pitch = kTextLinePitch * static_cast<double>(lines.spacing) / 1000.0 * tall;
+    const double block = tall + (n - 1.0) * pitch; // first capital top to last baseline
 
-    const double tall = static_cast<double>(height);
-    const Point2 up{mm_round(nx * tall), mm_round(ny * tall)};
-    const Point2 down{mm_round(nx * -tall * 0.5), mm_round(ny * -tall * 0.5)};
+    double top = 0.0; // the first line's capital tops, from the anchor, down
+    switch (text_anchor_row(anchor)) {
+    case 2: top = 0.0; break;          // the first capital tops on the anchor
+    case 1: top = -block * 0.5; break; // the block centred on it
+    default: top = -block; break;      // the last baseline on it
+    }
+    const double bottom = top + block + tall * 0.5;
 
-    out[0] = Point2{a.x + down.x, a.y + down.y};
-    out[1] = Point2{b.x + down.x, b.y + down.y};
-    out[2] = Point2{b.x + up.x, b.y + up.y};
-    out[3] = Point2{a.x + up.x, a.y + up.y};
+    double left = 0.0;
+    switch (text_anchor_column(anchor)) {
+    case 1: left = -len * 0.5; break;
+    case 2: left = -len; break;
+    default: break;
+    }
+    const double right = left + len;
+
+    // Along the baseline, and down: minus the baseline's upward normal.
+    const auto at = [&](double u, double v) {
+        return Point2{a.x + mm_round(u * tx + v * ty), a.y + mm_round(u * ty - v * tx)};
+    };
+    out[0] = at(left, bottom);
+    out[1] = at(right, bottom);
+    out[2] = at(right, top);
+    out[3] = at(left, top);
     return true;
 }
 

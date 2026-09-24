@@ -24,9 +24,14 @@
 #include "kentos_cad/app/qgis_backend.hpp"
 #endif
 
+#include "kentos_cad/app/data_root.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/symbology.hpp"
+#include "kentos_cad/render/text_layout.hpp"
+#if KENTOS_HAVE_TEXT
+#include "kentos_cad/render/text_atlas.hpp"
+#endif
 
 #include <QBrush>
 #include <QColor>
@@ -1021,15 +1026,24 @@ private:
     /// Captions last, over both fills and strokes: a parcel number under its own
     /// boundary is a parcel number nobody can read.
     ///
-    /// MULTI-LINE. A newline stacks the lines centred on the baseline, which is
-    /// what MPYY's `yapılaşma koşulu` gösterim needs: a circle with TAKS over a
-    /// rule and KAKS under it is two lines and a stroke, not one string with a
-    /// slash in it.
+    /// LAID OUT BY THE SAME FUNCTION AND THE SAME MEASURE AS THE GPU CANVAS
+    /// (render/text_layout.hpp): this is the path the PDF and the printer take,
+    /// so where a plan note breaks and how far its second line sits below the
+    /// first is decided once for the screen and the paper. The measure is the
+    /// shaper the canvas uses, over the bundled faces; only a build without the
+    /// text engine falls back to Qt's own metrics of the same face.
     static void drawTexts(QPainter& painter, const render::DrawList& list, double cx, double cy)
     {
         /// Big enough that the face's cap ratio comes back with three digits.
         constexpr int kCapProbePx = 256;
 
+        QFont probe(QStringLiteral("IBM Plex Sans"));
+        probe.setPixelSize(kCapProbePx);
+        const QFontMetricsF probe_metrics(probe);
+        const double qt_cap              = probe_metrics.capHeight();
+        const render::MeasureRun measure = shared_measure(probe_metrics, qt_cap);
+
+        std::vector<render::TextLine> laid;
         for (const auto& item : list.texts) {
             if (item.text.empty() || item.height_px < 3.0f) continue; // unreadable, so not drawn
 
@@ -1046,57 +1060,61 @@ private:
 
             // CAP HEIGHT IN, EM SIZE OUT — see the note in the QRhi backend.
             // `height_px` is the height of a CAPITAL LETTER, `setPixelSize` wants
-            // the EM, and the two differ by about a third. Measured from the face
-            // rather than assumed, at a probe size big enough that the integer
-            // `capHeight()` is not the dominant error.
-            QFont font = painter.font();
-            font.setPixelSize(kCapProbePx);
-            const double cap  = QFontMetricsF(font).capHeight();
+            // the EM, and the two differ by about a third.
             const double tall = static_cast<double>(item.height_px);
-            const double em   = cap > 0.0 ? tall * kCapProbePx / cap : tall;
-            font.setPixelSize(std::max(3, static_cast<int>(em)));
+            const double em   = qt_cap > 0.0 ? tall * kCapProbePx / qt_cap : tall;
+            QFont font(QStringLiteral("IBM Plex Sans"));
+            font.setPixelSize(std::max(3, static_cast<int>(std::lround(em))));
             painter.setFont(font);
             painter.setPen(from_rgba(item.rgba));
 
-            const QFontMetricsF metrics(font);
-            const QStringList lines =
-                QString::fromStdString(item.text).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-            if (lines.isEmpty()) continue;
-
-            // A quarter of the height between lines: tight enough that two numbers
-            // read as one fraction, loose enough that they do not touch.
-            const double step = metrics.height() * 1.25;
+            const core::TextLines lines{item.spacing, item.wrap};
+            render::lay_out_text(item.text, item.height_px,
+                                 static_cast<core::TextAnchor>(item.anchor), lines,
+                                 static_cast<float>(std::hypot(dx, dy)), measure, laid);
+            if (laid.empty()) continue;
 
             painter.save();
             painter.translate(start);
             painter.rotate(degrees);
-
-            for (int line = 0; line < lines.size(); ++line) {
-                const double advance = metrics.horizontalAdvance(lines[line]);
-
-                // The anchor decides where the baseline sits under the glyphs.
-                // Measured from the real font rather than from the advance guess
-                // the command used for the bounding box.
-                double shift_x = 0.0;
-                double shift_y = 0.0;
-                switch (item.anchor) {
-                case 1: shift_x = -advance * 0.5; break; // baseline centre
-                case 2: shift_x = -advance; break;       // baseline right
-                case 3:                                  // middle centre
-                    shift_x = -advance * 0.5;
-                    shift_y = metrics.capHeight() * 0.5;
-                    break;
-                default: break; // baseline left
-                }
-
-                // Stacked around the anchor, so a two-line label sits centred on
-                // the point rather than hanging below it.
-                shift_y += (line - (static_cast<int>(lines.size()) - 1) / 2.0) * step;
-
-                painter.drawText(QPointF(shift_x, shift_y), lines[line]);
-            }
+            for (const render::TextLine& line : laid)
+                if (!line.text.empty())
+                    painter.drawText(
+                        QPointF(static_cast<double>(line.u), static_cast<double>(line.v)),
+                        QString::fromUtf8(line.text.data(),
+                                          static_cast<qsizetype>(line.text.size())));
             painter.restore();
         }
+    }
+
+    /// How wide a run is at a capital height of one pixel, by the shaper the GPU
+    /// canvas measures with — one per thread, opened on first use over the
+    /// bundled faces — or, where the text engine is not built or the faces are
+    /// missing, by Qt's metrics of the same face at `probe`'s size.
+    static render::MeasureRun shared_measure(const QFontMetricsF& probe, double qt_cap)
+    {
+#if KENTOS_HAVE_TEXT
+        thread_local std::unique_ptr<render::TextAtlas> shaper;
+        thread_local bool tried = false;
+        if (!tried) {
+            tried = true;
+            if (auto opened = render::TextAtlas::open(data_path("fonts")); opened)
+                shaper = std::move(opened.value());
+        }
+        if (shaper) {
+            render::TextAtlas* atlas = shaper.get();
+            const float cap          = atlas->cap_height(render::Face::Sans);
+            return [atlas, cap](std::string_view run) {
+                const float advance = atlas->measure(render::Face::Sans, run).advance;
+                return cap > 0.0f ? advance / cap : advance;
+            };
+        }
+#endif
+        return [&probe, qt_cap](std::string_view run) {
+            const double advance = probe.horizontalAdvance(
+                QString::fromUtf8(run.data(), static_cast<qsizetype>(run.size())));
+            return qt_cap > 0.0 ? static_cast<float>(advance / qt_cap) : 0.0f;
+        };
     }
 
     /// The grid, the selection, the snap glyph, the crosshair, the rubber band.

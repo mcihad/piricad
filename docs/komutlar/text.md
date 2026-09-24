@@ -2,12 +2,13 @@
 
 Paftaya ada ve parsel numarası, plan notu, lejant açıklaması ya da herhangi bir
 yazı koyan herkes için; bu sayfayı bitirdiğinizde metni konumlandırmayı,
-yüksekliğini ve hizalamasını vermeyi bileceksiniz.
+yüksekliğini, dokuz hizalamadan birini, çok satırlı bir notun satır aralığını ve
+satırların hangi genişlikte kırılacağını vermeyi bileceksiniz.
 
-> **Faz 0 durumu.** Metin belgeye yazılıyor, ekranda çiziliyor, döndürülebiliyor ve
-> hizalanabiliyor. **Faz 1'de** gelecekler: yazı tipi seçimi (bugün sistem yazı tipi
-> kullanılır), çok satırlı metin, ve öznitelikten üretilen otomatik etiketler —
-> "her parselin ada/parsel numarasını merkezine yaz" gibi.
+Yazılar programla gelen **IBM Plex Sans** yazı tipiyle çizilir; ekranda, PDF'te ve
+yazıcıda aynı yazı tipi ve aynı satır düzeniyle. Yazı tipi seçimi ileride gelecek
+(TODOS C-12'nin sonraki aşamaları); öznitelikten otomatik etiket bugün
+[`ETİKET`](label.md) ile yazılır.
 
 ## Ne yapar
 
@@ -33,6 +34,37 @@ dediğinizde `A` harfi zeminde tam 2,5 m olur. CAD'in her yerinde anlam budur �
 DXF'in 40 grup kodu da, bir paftadaki yazı yüksekliği de aynı şeyi söyler — ve
 içe aktarılan bir yazı bu yüzden dosyadaki boyuyla çizilir.
 
+### Çok satırlı yazı
+
+Yazının içindeki `\n` bir satır sonudur: `yazi="İMAR NOTU\nYapı yaklaşma 5 m"` iki
+satırdır. Boş bir satır (`\n\n`) kalır; iki paragrafı birbirinden böyle
+ayırırsınız.
+
+- Satırlar arası, **yüksekliğin 5/3'ü** kadardır — DXF MTEXT'in "3'e 5" aralığı, yani
+  AutoCAD'in aynı yazıya verdiği aralık. `satir_araligi=1.5` bunu bir buçuk katına
+  çıkarır (0,25–4).
+- `genislik=12` verilirse uzun satırlar **kelime sınırından** alt satıra geçer ve hiçbir
+  satır 12 m'yi aşmaz; tek başına 12 m'den uzun bir kelime kendi satırında kalır.
+  Genişlik verilmezse satır yalnız `\n` olan yerde kırılır.
+- Ekran ve PDF satırları aynı kuralla ve aynı ölçüyle kırar, dizer ve hizalar; DXF'e
+  çok satırlı yazı MTEXT olarak, satırları, aralığı, genişliği ve hizasıyla gider
+  (ayrıntı: [yazı nesnesi](../nesneler/yazi.md)).
+
+### Hizalama
+
+Nokta yazının **neresinde** durur: sütun satırın solu, ortası ya da sağı; sıra ilk
+satırın büyük harflerinin üstü, yazının ortası ya da son satırın tabanı. Her satır
+kendi başına hizalanır — ortalanmış bir notun her satırı ortalıdır.
+
+| | sol | orta | sağ |
+|---|---|---|---|
+| **İlk satırın üstü** | `ust_sol` | `ust_orta` | `ust_sag` |
+| **Ortası** | `orta_sol` | `merkez` | `orta_sag` |
+| **Son satırın tabanı** | `sol` — varsayılan | `orta` | `sag` |
+
+Tek satırlı bir yazıda üç sıra DXF TEXT'in üst, orta ve taban hizalarıdır. Bir parsel
+numarası `merkez` ister; bir başlığın altına sarkan not `ust_sol`.
+
 ## Adlar
 
 | Ad | Tür |
@@ -51,6 +83,7 @@ METİN
 METİN <nokta> <yazı>
 METİN <nokta> <yazı> <yukseklik>
 METİN noktalar=<nokta> yazi=<yazı> yukseklik=<mm> hizalama=<hiza> bitis=<nokta>
+      satir_araligi=<kat> genislik=<metre>
 ```
 
 İçinde boşluk olan yazı tırnak içine alınır.
@@ -63,19 +96,13 @@ METİN noktalar=<nokta> yazi=<yazı> yukseklik=<mm> hizalama=<hiza> bitis=<nokta
 | `yazi` | Yazılacak metin. Zorunlu |
 | `yukseklik` | Zeminde milimetre. Verilmezse proje ayarı `metin_yüksekliği` kullanılır |
 | `bitis` | Taban çizgisinin bitişi. Verilmezse yatay yazılır |
-| `hizalama` | `sol`, `orta`, `sag` veya `merkez` |
-
-Hizalama, taban çizgisinin harflerin neresinde durduğunu belirler:
-
-| Değer | Taban çizgisi nerede |
-|---|---|
-| `sol` | Yazının solunda başlar — varsayılan |
-| `orta` | Yazının yatay ortasında |
-| `sag` | Yazının sağında biter |
-| `merkez` | Hem yatay hem düşey ortada — bir parsel numarasının istediği |
+| `hizalama` | Noktanın yazının neresinde durduğu: yukarıdaki dokuz sözcükten biri; verilmezse `sol` |
+| `satir_araligi` | Satırlar arası, tek aralığın katı: 0,25–4. Tek aralık yüksekliğin 5/3'üdür |
+| `genislik` | Satırların kırılacağı genişlik, metre. Verilmezse satır yalnız `\n`'de kırılır |
 
 `bitis` verildiğinde yazı o yöne döner. Bir yol adını yolun kendi doğrultusunda
-yazmak, ya da bir cephe ölçüsünü cepheye paralel koymak böyle yapılır.
+yazmak, ya da bir cephe ölçüsünü cepheye paralel koymak böyle yapılır. `genislik` ile
+birlikte verilirse yön `bitis`'ten, uzunluk genişlikten gelir.
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -111,6 +138,18 @@ Göreli koordinatla, bir önceki noktadan:
 
 ```
 METIN @0,-5 "Plan notu 3" 1500
+```
+
+Bir başlığın altına sarkan, bir buçuk aralıklı, 30 m'de kırılan plan notu:
+
+```
+METİN noktalar=485300,4310300 yazi="PLAN NOTLARI\nYapı yaklaşma mesafesi ön bahçede 5 m, yan bahçelerde 3 m'dir." yukseklik=2000 hizalama=ust_sol satir_araligi=1.5 genislik=30
+```
+
+İki satırlı, merkezine hizalı bir yapılaşma koşulu — TAKS üstte, KAKS altta:
+
+```
+METİN noktalar=485330,4310225 yazi="TAKS 0,30\nKAKS 1,20" yukseklik=1500 hizalama=merkez
 ```
 
 ### Arayüz
@@ -156,8 +195,8 @@ GERİAL
 Yazı yazılırken **Esc**'e basarsanız hiçbir şey oluşmaz; yarım kalmış bir metin
 nesnesi diye bir şey yoktur.
 
-Var olan bir yazının metnini değiştirmek Faz 1'de gelecek; bugün silip yeniden
-yazmak gerekir.
+Var olan bir yazının metnini, yüksekliğini, hizasını, satır aralığını ya da
+genişliğini [`YAZIDÜZENLE`](edittext.md) değiştirir; o da tek geri alma adımıdır.
 
 ## Betikten kullanım
 
@@ -181,5 +220,8 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Yazı yüksekliği 0 mm geçersiz; sıfırdan büyük olmalı ve zemin sınırını aşmamalı.` | Yükseklik sıfır ya da negatif verilmiş | Milimetre cinsinden pozitif bir değer yazın, örnek `2000` |
 | `Bir geometri en az bir halka ister, verilen: 0.` | Başlangıç noktası çözülememiş | Koordinatı denetleyin |
 | `'core.text' daha fazla argüman almıyor. Fazlalık: '...'` | Fazladan argüman verilmiş | Boşluk içeren yazıyı tırnak içine alın |
+| `'core.text': 'hizalama' için tanınmayan değer 'yukari'. Kabul edilenler: sol / orta / …` | Dokuz sözcükten biri değil | Tablodaki sözcüklerden birini yazın |
+| `Satır aralığı 0,25 ile 4 arasında olmalı; 1 tek aralıktır.` | `satir_araligi` aralık dışında | 0,25 ile 4 arasında bir kat verin |
+| `Genişlik eksi olamaz; satırları kırmamak için genislik=0 verin.` | `genislik` eksi | Pozitif bir genişlik verin |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

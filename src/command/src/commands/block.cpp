@@ -140,9 +140,9 @@ Task<void> run_block(Context& ctx)
                 co_return;
             }
         if (doc.texts().has(gslot))
-            if (auto s = ctx.transaction().set_text(m, std::string(doc.texts().text(gslot)),
-                                                    doc.texts().height(gslot),
-                                                    doc.texts().anchor(gslot));
+            if (auto s = ctx.transaction().set_text(
+                    m, std::string(doc.texts().text(gslot)), doc.texts().height(gslot),
+                    doc.texts().anchor(gslot), doc.texts().lines(gslot));
                 !s) {
                 ctx.refuse(s.error());
                 co_return;

@@ -1926,6 +1926,50 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("19f-tarama-yogun-ton"), &window); });
 
+        // DOKUZ HİZA, İKİ SATIR (TODOS C-12): each caption on a cross that marks
+        // its point, one alignment each, and a note below that breaks at its
+        // width. The same sheet goes to a PDF beside the shot, drawn by the
+        // QPainter path, so the two can be laid over each other.
+        later([scene] { scene(QStringLiteral("ÇİZGİ -1,0 1,0")); });
+        later([&window, into] {
+            const char* words[3][3] = {{"ust_sol", "ust_orta", "ust_sag"},
+                                       {"orta_sol", "merkez", "orta_sag"},
+                                       {"sol", "orta", "sag"}};
+            window.runScriptLine(QStringLiteral("SİL nesneler=1"));
+            window.endCommand();
+            for (int row = 0; row < 3; ++row)
+                for (int col = 0; col < 3; ++col) {
+                    const int x = col * 22;
+                    const int y = -row * 16;
+                    for (const QString& line :
+                         {QStringLiteral("ÇİZGİ %1,%2 %3,%2").arg(x - 1).arg(y).arg(x + 1),
+                          QStringLiteral("ÇİZGİ %1,%2 %1,%3").arg(x).arg(y - 1).arg(y + 1),
+                          QStringLiteral("METİN noktalar=%1,%2 yazi=\"%3\\nİKİNCİ SATIR\" "
+                                         "yukseklik=1500 hizalama=%3")
+                              .arg(x)
+                              .arg(y)
+                              .arg(QString::fromUtf8(words[row][col]))}) {
+                        window.runScriptLine(line);
+                        window.endCommand();
+                    }
+                }
+            window.runScriptLine(QStringLiteral(
+                "METİN noktalar=-8,-44 yazi=\"PLAN NOTU: Yapı yaklaşma mesafesi ön bahçede 5 m, "
+                "yan bahçelerde 3 m'dir.\" yukseklik=1500 hizalama=ust_sol satir_araligi=1.25 "
+                "genislik=30"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("ÇİZGİ -8,-43.5 -8,-44.5"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("ÇİZGİ 22,-43.5 22,-44.5"));
+            window.endCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.85"));
+            window.runScriptLine(QStringLiteral("YAZDIR merkez=22,-22 olcek=500 dosya=\"%1\"")
+                                     .arg(into + QStringLiteral("/20a-yazi-hizalari.pdf")));
+            window.endCommand();
+        });
+        later([&window, shot] { shot(QStringLiteral("20a-yazi-hizalari"), &window); });
+
         // ÇOKGEN aci=25: the rotation is given, so the cursor only sizes the
         // polygon — the ghost stays at 25 grad wherever the hand goes.
         later([scene] { scene(QStringLiteral("ALAN -12,-12 12,-12 12,12 -12,12")); });

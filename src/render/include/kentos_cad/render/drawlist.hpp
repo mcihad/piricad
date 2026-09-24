@@ -166,6 +166,8 @@ struct TextItem
     float x1{0.0f}, y1{0.0f};        ///< baseline end — its direction IS the rotation
     float height_px{0.0f};           ///< derived per frame from the ground height
     std::uint8_t anchor{0};          ///< core::TextAnchor, as a byte
+    std::uint16_t spacing{1000};     ///< core::TextLines::spacing
+    bool wrap{false};                ///< the lines break to fit the baseline's length
     std::string text;                ///< copied, not borrowed — see the note above
 };
 

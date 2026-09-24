@@ -182,6 +182,7 @@ struct Op
 
     Mm text_height{0}; ///< 0 = the slot carries no text
     TextAnchor text_anchor{TextAnchor::BaselineLeft};
+    TextLines text_lines{}; ///< the line layout the text had
 
     /// The geometry slot to put back. A slot number and not a vertex list, because
     /// the arena never drops one: the rings this names are still exactly where the
@@ -536,6 +537,11 @@ public:
 
     /// Attaches or replaces the text on an entity. Height is ground millimetres.
     /// An empty `content` detaches it.
+    Status set_text(EntityId e, std::string_view content, Mm height, TextAnchor anchor,
+                    TextLines lines, Op& undo_out);
+
+    /// The same, keeping the line layout the entity's text already has — what an
+    /// edit of the words or the height means, and the default for a new text.
     Status set_text(EntityId e, std::string content, Mm height, TextAnchor anchor, Op& undo_out);
 
     /// Makes `e` follow `a->source` as `a` says, or follow nothing when `a` is

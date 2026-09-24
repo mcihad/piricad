@@ -59,7 +59,7 @@ nesne 5 katman=OLCU stil=0 halka=2 tur=10 yuk=02000000000000000700022c0000000000
     50000 -100000
     100000 -40000
   alan_mm2 0  cevre_mm 0
-kapsam 0 -100000 153397 50000
+kapsam 0 -100000 151629 50000
 icerik-ozeti 064dd0eecedc6efc
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"OLCU"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}

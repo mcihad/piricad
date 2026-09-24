@@ -110,6 +110,13 @@ public:
     /// (`render.md` R20).
     RunMetrics shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out);
 
+    /// The metrics of `utf8` in EM, rasterising nothing: what a layout needs to
+    /// break and align lines without filling the atlas with them. `missing`,
+    /// when given, receives how many of its characters the face has no glyph
+    /// for — which the face draws as an empty box, and which is a font problem
+    /// a user has to be told about rather than one to guess from the picture.
+    RunMetrics measure(Face face, std::string_view utf8, std::size_t* missing = nullptr);
+
     /// The face's cap height, in EM.
     ///
     /// NEEDED BEFORE ANYTHING IS SHAPED, which is why it is here and not only in

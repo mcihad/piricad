@@ -586,7 +586,13 @@ struct TextRecord
     std::uint32_t content_string; ///< the caption itself, into the string pool
     std::int64_t height_mm;       ///< GROUND millimetres, like every other length
     std::uint8_t anchor;          ///< core::TextAnchor
-    std::uint8_t reserved[7];     ///< alignment, zero-filled
+    /// Bit 0: the lines wrap to the baseline's length (`core::TextLines::wrap`).
+    /// Zero in every file written before line layout existed.
+    std::uint8_t flags;
+    /// Line spacing in thousandths of the standard pitch; ZERO — what every
+    /// older file holds here — means single spacing (1000).
+    std::uint16_t spacing;
+    std::uint8_t reserved[4]; ///< alignment, zero-filled
 };
 
 static_assert(sizeof(TextRecord) == 24, "wire record");

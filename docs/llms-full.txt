@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 111 (98 tanesi onay ister)
-- Katalog parmak izi: `331970401071142881`
+- Katalog parmak izi: `8108488845924018297`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -584,7 +584,7 @@ Onay ister.
 
 ### `core_edittext` — Yazıyı Düzenle
 
-Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 Komut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -595,7 +595,9 @@ Onay ister.
 | `nesneler` | string | hayır | Düzenlenecek yazılar; verilmezse seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `yazi` | string | hayır | Yeni metin; verilmezse değişmez (metin) |
 | `yukseklik` | integer | hayır | Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı) |
-| `hizalama` | string | hayır | sol, orta, sag veya merkez; verilmezse değişmez (metin) |
+| `hizalama` | string | hayır | Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez (metin) |
+| `satir_araligi` | number | hayır | Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez (sayı) |
+| `genislik` | number | hayır | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_ellipse_draw` — Elips
@@ -1592,7 +1594,7 @@ Onay ister.
 
 ### `core_text` — Metin
 
-Çizime metin yazar; yükseklik ve hizalama verilebilir.
+Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.
 Komut: METİN (METIN, YAZI, TEXT, MT)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -1604,7 +1606,9 @@ Onay ister.
 | `yazi` | string | evet | Yazılacak metin (metin) |
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı) |
 | `bitis` | konum (tutamak ya da göreli nokta) | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
-| `hizalama` | string | hayır | sol, orta, sag veya merkez (metin) |
+| `hizalama` | string | hayır | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) (metin) |
+| `satir_araligi` | number | hayır | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü (sayı) |
+| `genislik` | number | hayır | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_to_area` — Alana Çevir

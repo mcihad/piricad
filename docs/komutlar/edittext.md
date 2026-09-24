@@ -3,12 +3,14 @@
 İçe aktardığı paftadaki ada ve parsel numaralarını düzelten, plan notunun
 yüksekliğini paftaya uyduran ya da yanlış yazılmış bir lejant açıklamasını
 değiştiren herkes için; bu sayfayı bitirdiğinizde çizimdeki bir yazının metnini,
-yüksekliğini ve hizalamasını yerinde değiştirmeyi bileceksiniz.
+yüksekliğini, hizalamasını, satır aralığını ve satırlarının kırıldığı genişliği yerinde
+değiştirmeyi bileceksiniz.
 
 ## Ne yapar
 
-`YAZIDÜZENLE`, çizimde **zaten duran** bir yazının metnini, yüksekliğini ya da
-hizalamasını değiştirir. Yeni yazı **çizmez** — onu [`METİN`](text.md) yapar.
+`YAZIDÜZENLE`, çizimde **zaten duran** bir yazının metnini, yüksekliğini,
+hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir. Yeni yazı
+**çizmez** — onu [`METİN`](text.md) yapar.
 
 İkisinin ayrı komut olması bir tercihtir: `METİN` bir yazıyı **çizer** ve nereye
 çizeceğini bilmek için bir nokta ister; `YAZIDÜZENLE` var olan yazıların
@@ -22,6 +24,11 @@ sessizce sıfırlamamalıdır.
 
 Yazı taşımayan nesneler **atlanır**, yazıya çevrilmez. Seçimde hiç yazı yoksa komut
 bunu söyler.
+
+**Taban çizgisi yeni yazıya uzar.** Taban çizgisinin uzunluğu yazının seçme ve ekrana
+girme kutusudur; metin ya da yükseklik değişince yeni yazının tahmini genişliğine,
+`genislik=` verilince o genişliğe uzar ya da kısalır. Başlangıç noktası ve yönü
+değişmez. Uzayan bir yazı böylece eski ucunun ötesinde de tıklanabilir kalır.
 
 ## Adlar
 
@@ -39,6 +46,7 @@ bunu söyler.
 YAZIDÜZENLE yazi=<yazı>
 YAZIDÜZENLE yukseklik=<mm>
 YAZIDÜZENLE nesneler=<kimlik> yazi=<yazı> yukseklik=<mm> hizalama=<hiza>
+YAZIDÜZENLE nesneler=<kimlik> satir_araligi=<kat> genislik=<metre>
 ```
 
 `nesneler` verilmezse **seçim** kullanılır. İçinde boşluk olan yazı tırnak içine
@@ -51,7 +59,9 @@ alınır.
 | `nesneler` | Düzenlenecek yazıların kimlikleri. Verilmezse seçimdeki nesneler |
 | `yazi` | Yeni metin. Verilmezse metin değişmez |
 | `yukseklik` | Yeni yükseklik, **zeminde milimetre**. Verilmezse yükseklik değişmez |
-| `hizalama` | `sol`, `orta`, `sag` ya da `merkez`. Verilmezse hizalama değişmez |
+| `hizalama` | [`METİN`](text.md#hizalama)'deki dokuz sözcükten biri. Verilmezse hizalama değişmez |
+| `satir_araligi` | Tek aralığın katı, 0,25–4. Verilmezse aralık değişmez |
+| `genislik` | Satırların kırılacağı genişlik, metre; `0` kırmayı kapatır. Verilmezse değişmez |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -80,6 +90,12 @@ Kimliğiyle, seçim yapmadan:
 
 ```
 YAZIDÜZENLE nesneler=1 yazi="ADA 128/12" hizalama=merkez
+```
+
+Bir plan notunu iki satıra bölün, bir buçuk aralıkla 20 m'de kırılsın:
+
+```
+YAZIDÜZENLE nesneler=1 yazi="PLAN NOTU\nYapı yaklaşma mesafesi 5 m" satir_araligi=1.5 genislik=20
 ```
 
 ### Arayüz
@@ -114,8 +130,8 @@ günlüğe düşer ve tek adımda geri alınır.
 
 ## Geri alma
 
-Tek adım. Bir çağrıda kaç yazı değiştiyse **hepsi birlikte** geri alınır: metin de,
-yükseklik de, hizalama da eski hâline döner.
+Tek adım. Bir çağrıda kaç yazı değiştiyse **hepsi birlikte** geri alınır: metin,
+yükseklik, hizalama, satır aralığı, genişlik ve taban çizgisi eski hâline döner.
 
 Bir yazı reddedilirse **hiçbiri** yazılmaz — işlem bütün olarak geri sarılır ve
 çizim komut çalışmadan önceki hâlinde kalır.

@@ -283,6 +283,16 @@ Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
     return core::ok();
 }
 
+Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
+                             core::TextAnchor anchor, core::TextLines lines)
+{
+    core::Op undo;
+    auto st = doc_.set_text(e, std::move(content), height, anchor, lines, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 core::Result<core::AttrId> Transaction::declare_attribute(core::AttrSpec spec)
 {
     return doc_.declare_attribute(std::move(spec));
@@ -1255,7 +1265,8 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
             if (auto st = set_entity_style(mine, own_style(ents.style[e])); !st) return st.error();
         if (scratch.texts().has(slot))
             if (auto st = set_text(mine, std::string(scratch.texts().text(slot)),
-                                   scratch.texts().height(slot), scratch.texts().anchor(slot));
+                                   scratch.texts().height(slot), scratch.texts().anchor(slot),
+                                   scratch.texts().lines(slot));
                 !st)
                 return st.error();
 

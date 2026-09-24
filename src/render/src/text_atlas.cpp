@@ -438,6 +438,40 @@ RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<Placed
     return metrics;
 }
 
+RunMetrics TextAtlas::measure(Face face, std::string_view utf8, std::size_t* missing)
+{
+    Impl& impl                 = *impl_;
+    const Impl::FaceSlot& slot = impl.faces[static_cast<std::uint8_t>(face)];
+
+    RunMetrics metrics;
+    metrics.ascent  = slot.ascent;
+    metrics.descent = slot.descent;
+    metrics.cap     = slot.cap;
+    if (missing != nullptr) *missing = 0;
+    if (utf8.empty() || slot.hb == nullptr) return metrics;
+
+    hb_buffer_clear_contents(impl.buffer);
+    hb_buffer_add_utf8(impl.buffer, utf8.data(), static_cast<int>(utf8.size()), 0,
+                       static_cast<int>(utf8.size()));
+    hb_buffer_set_direction(impl.buffer, HB_DIRECTION_LTR);
+    hb_buffer_set_script(impl.buffer, HB_SCRIPT_LATIN);
+    hb_buffer_set_language(impl.buffer, impl.turkish); // the same shaping `shape` does
+    hb_shape(slot.hb, impl.buffer, nullptr, 0);
+
+    unsigned int count             = 0;
+    const hb_glyph_info_t* infos   = hb_buffer_get_glyph_infos(impl.buffer, &count);
+    const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(impl.buffer, &count);
+    const auto to_em               = static_cast<float>(1.0 / slot.upem);
+    float pen_x                    = 0.0f;
+    for (unsigned int i = 0; i < count; ++i) {
+        // Glyph 0 is the font's `.notdef`: the character is not in the face.
+        if (missing != nullptr && infos[i].codepoint == 0) ++*missing;
+        pen_x += static_cast<float>(pos[i].x_advance) * to_em;
+    }
+    metrics.advance = pen_x;
+    return metrics;
+}
+
 const GlyphBox& TextAtlas::box(std::uint32_t index) const
 {
     static const GlyphBox kNone{};

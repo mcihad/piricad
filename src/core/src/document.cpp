@@ -995,7 +995,8 @@ void Document::carry_text(std::uint32_t from, std::uint32_t to)
 {
     if (!texts_.has(from)) return;
     texts_.resize(geometry_.slot_count());
-    (void)texts_.set(to, texts_.text(from), texts_.height(from), texts_.anchor(from));
+    (void)texts_.set(to, texts_.text(from), texts_.height(from), texts_.anchor(from),
+                     texts_.lines(from));
 }
 
 Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
@@ -1211,6 +1212,15 @@ Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor
 {
     if (e >= entities_.size())
         return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    return set_text(e, std::move(content), height, anchor, texts_.lines(entities_.slot[e]),
+                    undo_out);
+}
+
+Status Document::set_text(EntityId e, std::string_view content, Mm height, TextAnchor anchor,
+                          TextLines lines, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
 
     texts_.resize(geometry_.slot_count());
     const std::uint32_t slot = entities_.slot[e];
@@ -1224,6 +1234,7 @@ Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor
     undo_out.str_arg     = std::string(texts_.text(slot));
     undo_out.text_height = texts_.has(slot) ? texts_.height(slot) : 0;
     undo_out.text_anchor = texts_.anchor(slot);
+    undo_out.text_lines  = texts_.lines(slot);
 
     if (content.empty() || height <= 0) {
         texts_.clear(slot);
@@ -1232,7 +1243,7 @@ Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor
         return ok();
     }
 
-    if (auto st = texts_.set(slot, content, height, anchor); !st) return st;
+    if (auto st = texts_.set(slot, content, height, anchor, lines); !st) return st;
 
     // THE BOX FOLLOWS THE TEXT, in both directions. Attaching a caption grows the
     // entity over its letters; detaching one shrinks it back to the line. A box
@@ -1534,7 +1545,8 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetEntityStyle: return set_entity_style(op.entity, op.style_arg, inverse);
     case Op::Kind::SetAttribute: return set_attribute(op.attr_col, op.entity, op.attr_arg, inverse);
     case Op::Kind::SetText:
-        return set_text(op.entity, op.str_arg, op.text_height, op.text_anchor, inverse);
+        return set_text(op.entity, op.str_arg, op.text_height, op.text_anchor, op.text_lines,
+                        inverse);
     case Op::Kind::SetLayerVisible: return set_layer_visible(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerLocked: return set_layer_locked(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerAppearance:

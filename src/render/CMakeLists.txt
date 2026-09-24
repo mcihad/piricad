@@ -12,6 +12,7 @@ add_library(kentos_render STATIC
     src/scene.cpp
     src/snap_marker.cpp
     src/symbology.cpp
+    src/text_layout.cpp
     src/view.cpp
 )
 

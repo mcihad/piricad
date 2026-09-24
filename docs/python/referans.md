@@ -112,8 +112,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.measure_angle`](#cadmeasure_angle) | `core.measure_angle` | `AÇIÖLÇ` | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`cad.stretch`](#cadstretch) | `core.stretch` | `ESNET` | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`cad.tracking`](#cadtracking) | `core.tracking` | `İZ` | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
-| [`cad.text`](#cadtext) | `core.text` | `METİN` | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
-| [`cad.edittext`](#cadedittext) | `core.edittext` | `YAZIDÜZENLE` | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
+| [`cad.text`](#cadtext) | `core.text` | `METİN` | Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir. |
+| [`cad.edittext`](#cadedittext) | `core.edittext` | `YAZIDÜZENLE` | Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir. |
 | [`cad.exportstyle`](#cadexportstyle) | `core.exportstyle` | `STİLAKTAR` | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`cad.area`](#cadarea) | `core.area` | `ALAN` | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`cad.rectangle`](#cadrectangle) | `core.rectangle` | `DİKDÖRTGEN` | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
@@ -751,7 +751,7 @@ cad.tracking(
 
 ### `cad.text`
 
-Çizime metin yazar; yükseklik ve hizalama verilebilir.
+Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.
 
 Komut: `core.text` — `METİN`
 
@@ -762,6 +762,8 @@ cad.text(
     height: int,
     end: Coord,
     alignment: str,
+    line_spacing: float,
+    width: float,
 ) -> int
 ```
 
@@ -771,13 +773,15 @@ cad.text(
 | `text` | `str` | `yazi` | Yazılacak metin |
 | `height` | `int` | `yukseklik` | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
 | `end` | `Coord` | `bitis` | Taban çizgisinin bitişi; yoksa yatay [mm, Sağa (Y) önce] |
-| `alignment` | `str` | `hizalama` | sol, orta, sag veya merkez |
+| `alignment` | `str` | `hizalama` | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
+| `line_spacing` | `float` | `satir_araligi` | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
+| `width` | `float` | `genislik` | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] |
 
 [Komut sayfası](../komutlar/text.md)
 
 ### `cad.edittext`
 
-Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 
 Komut: `core.edittext` — `YAZIDÜZENLE`
 
@@ -787,6 +791,8 @@ cad.edittext(
     text: str,
     height: int,
     alignment: str,
+    line_spacing: float,
+    width: float,
 ) -> int
 ```
 
@@ -795,7 +801,9 @@ cad.edittext(
 | `objects` | `list[int]` | `nesneler` | Düzenlenecek yazılar; verilmezse seçim [kalıcı nesne anahtarı] |
 | `text` | `str` | `yazi` | Yeni metin; verilmezse değişmez |
 | `height` | `int` | `yukseklik` | Yeni yükseklik, zeminde milimetre; verilmezse değişmez |
-| `alignment` | `str` | `hizalama` | sol, orta, sag veya merkez; verilmezse değişmez |
+| `alignment` | `str` | `hizalama` | Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez |
+| `line_spacing` | `float` | `satir_araligi` | Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez |
+| `width` | `float` | `genislik` | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] |
 
 [Komut sayfası](../komutlar/edittext.md)
 

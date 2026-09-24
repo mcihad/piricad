@@ -182,6 +182,7 @@ noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeği
 | [Blok referansı](nesneler/blokreferansi.md) | Blok tanımını yerleştiren nesne; ölçek, açı, dizi |
 | [Ölçü](nesneler/olcu.md) | Uzunluk, yarıçap, çap, açı; stil kataloğu; yazı tam sayıdan |
 | [Lider](nesneler/lider.md) | Oklu not çizgisi |
+| [Yazı](nesneler/yazi.md) | Taban çizgisi ve metin; çok satır, dokuz hizalama, satır aralığı; TEXT ve MTEXT |
 
 ## Yapay zeka
 

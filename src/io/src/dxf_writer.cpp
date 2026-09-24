@@ -26,6 +26,7 @@
 #include "prj_sidecar.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -76,6 +77,19 @@ using core::Point2;
 constexpr int kStopStride = 4096;
 
 /// The source of everything libdxfrw writes.
+/// Groups the library cannot write, to go into one record right after its own
+/// group `after`: a hatch's pattern lines after 78, an MTEXT's direction after
+/// 44 — spliced in once the file is closed (`splice_xdata`).
+struct GroupInsert
+{
+    unsigned handle{0};                              ///< the record, by the handle it was given
+    int after{0};                                    ///< the group they follow
+    std::vector<std::pair<int, std::string>> groups; ///< code and value, in order
+};
+
+/// A number as a DXF value: shortest round-trip form.
+std::string number_text(double d);
+
 class DxfSource final : public DRW_Interface
 {
 public:
@@ -543,7 +557,20 @@ private:
         }
         out_.writeHatch(&h);
         remember_xdata(h);
-        if (!patterns.empty()) pending_patterns_.emplace_back(h.handle, std::move(patterns));
+        if (!patterns.empty()) {
+            GroupInsert lines{h.handle, 78, {}};
+            for (const dxf::PatternLine& l : patterns) {
+                lines.groups.emplace_back(53, number_text(l.angle_deg));
+                lines.groups.emplace_back(43, number_text(l.base_x));
+                lines.groups.emplace_back(44, number_text(l.base_y));
+                lines.groups.emplace_back(45, number_text(l.offset_x));
+                lines.groups.emplace_back(46, number_text(l.offset_y));
+                lines.groups.emplace_back(79, std::to_string(l.dashes.size()));
+                for (const double dash : l.dashes)
+                    lines.groups.emplace_back(49, number_text(dash));
+            }
+            pending_inserts_.push_back(std::move(lines));
+        }
     }
 
     void write_insert(core::EntityId e, std::uint32_t slot)
@@ -778,12 +805,9 @@ public:
         return pending_xdata_;
     }
 
-    /// Each patterned hatch's definition lines, by the handle the library gave
-    /// it; spliced in after its group 78 with the XDATA.
-    std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>>& pending_patterns()
-    {
-        return pending_patterns_;
-    }
+    /// The groups the library could not write inside a record, by the handle it
+    /// gave each one; spliced in with the XDATA.
+    std::vector<GroupInsert>& pending_inserts() { return pending_inserts_; }
 
 private:
     /// Layer, colour, weight and extended data — what every entity carries.
@@ -857,39 +881,88 @@ private:
         const auto ys = geo.ring_ys(span.first);
         if (xs.empty()) return;
 
+        // MORE THAN ONE LINE, OR LINES LAID OUT, IS AN MTEXT (TODOS C-12): a
+        // TEXT holds one line and has no pitch, and a newline written into its
+        // group 1 is a file broken at that byte.
+        const std::string content(doc_.texts().text(slot));
+        if (const core::TextLines lines = doc_.texts().lines(slot);
+            content.find('\n') != std::string::npos || lines != core::TextLines{}) {
+            write_mtext(e, slot, content, lines);
+            return;
+        }
+
         DRW_Text t;
         common(t, e);
         const Point2 at{xs.front(), ys.front()};
         t.basePoint = DRW_Coord(units(at.x), units(at.y), 0.0);
         t.height    = units(doc_.texts().height(slot));
-        t.text      = std::string(doc_.texts().text(slot));
+        t.text      = content;
         if (xs.size() >= 2) {
             const Point2 end{xs.back(), ys.back()};
             t.angle = dxf::degrees_from_udeg(core::atan2_udeg(end.y - at.y, end.x - at.x));
         }
-        switch (doc_.texts().anchor(slot)) {
-        case core::TextAnchor::BaselineLeft:
-            t.alignH = DRW_Text::HLeft;
-            t.alignV = DRW_Text::VBaseLine;
-            break;
-        case core::TextAnchor::BaselineCentre:
-            t.alignH   = DRW_Text::HCenter;
-            t.alignV   = DRW_Text::VBaseLine;
-            t.secPoint = t.basePoint;
-            break;
-        case core::TextAnchor::BaselineRight:
-            t.alignH   = DRW_Text::HRight;
-            t.alignV   = DRW_Text::VBaseLine;
-            t.secPoint = t.basePoint;
-            break;
-        case core::TextAnchor::MiddleCentre:
-            t.alignH   = DRW_Text::HCenter;
-            t.alignV   = DRW_Text::VMiddle;
-            t.secPoint = t.basePoint;
-            break;
-        }
+        // The anchor's column and row (text_store.hpp) are TEXT's own two groups:
+        // 72 left, centre, right; 73 baseline, middle, top. Anything but
+        // baseline-left is placed by its alignment point, group 11 — the anchor.
+        const core::TextAnchor anchor = doc_.texts().anchor(slot);
+        constexpr std::array<DRW_Text::HAlign, 3> kColumn{DRW_Text::HLeft, DRW_Text::HCenter,
+                                                          DRW_Text::HRight};
+        constexpr std::array<DRW_Text::VAlign, 3> kRow{DRW_Text::VBaseLine, DRW_Text::VMiddle,
+                                                       DRW_Text::VTop};
+        t.alignH = kColumn[static_cast<std::size_t>(core::text_anchor_column(anchor))];
+        t.alignV = kRow[static_cast<std::size_t>(core::text_anchor_row(anchor))];
+        if (anchor != core::TextAnchor::BaselineLeft) t.secPoint = t.basePoint;
         out_.writeText(&t);
         remember_xdata(t);
+        ++report_.entities;
+    }
+
+    /// A caption as an MTEXT: the anchor its attachment point, the lines its
+    /// paragraphs, the spacing its line spacing, and — for a text that wraps —
+    /// the width its lines break to. Read back by `addMText` to the same text.
+    void write_mtext(core::EntityId e, std::uint32_t slot, const std::string& content,
+                     core::TextLines lines)
+    {
+        const core::RingGeometry& geo = doc_.geometry();
+        const core::RingSpan span     = geo.rings_of(slot);
+        const auto xs                 = geo.ring_xs(span.first);
+        const auto ys                 = geo.ring_ys(span.first);
+        const Point2 at{xs.front(), ys.front()};
+        const Point2 end{xs.back(), ys.back()};
+        const auto dx    = static_cast<double>(end.x - at.x);
+        const auto dy    = static_cast<double>(end.y - at.y);
+        const double len = std::sqrt(dx * dx + dy * dy);
+
+        DRW_MText m;
+        common(m, e);
+        m.basePoint = DRW_Coord(units(at.x), units(at.y), 0.0);
+        m.height    = units(doc_.texts().height(slot));
+        // 41, the reference width: zero breaks nothing but the text's own breaks.
+        m.widthscale = lines.wrap ? units(static_cast<Mm>(std::llround(len))) : 0.0;
+        // 71, the attachment point: rows top 1–3, middle 4–6, bottom 7–9.
+        const core::TextAnchor anchor = doc_.texts().anchor(slot);
+        constexpr std::array<int, 3> kRowStart{7, 4,
+                                               1}; // by `text_anchor_row`: baseline, middle, top
+        m.textgen = kRowStart[static_cast<std::size_t>(core::text_anchor_row(anchor))] +
+                    core::text_anchor_column(anchor);
+        // THE LIBRARY WRITES TWO MTEXT GROUPS FROM TEXT'S FIELDS: 72 from
+        // `alignH` and 73 from `alignV`. For an MTEXT they are the drawing
+        // direction (1, left to right) and the line spacing style (2, exactly —
+        // so a tall letter does not push the next line down).
+        m.alignH   = static_cast<DRW_Text::HAlign>(1);
+        m.alignV   = static_cast<DRW_Text::VAlign>(2);
+        m.interlin = static_cast<double>(lines.spacing) / 1000.0;
+        m.text     = dxf::escape_mtext(content);
+        // The rotation goes as the X-axis direction (11/21/31), after group 44
+        // — the last the library writes — so it prevails over group 50, which
+        // stays zero: the file's own rule is that the later of the two wins.
+        m.angle = 0.0;
+        out_.writeMText(&m);
+        remember_xdata(m);
+        const double ux = len > 0.0 ? dx / len : 1.0;
+        const double uy = len > 0.0 ? dy / len : 0.0;
+        pending_inserts_.push_back(
+            GroupInsert{m.handle, 44, {{11, number_text(ux)}, {21, number_text(uy)}, {31, "0"}}});
         ++report_.entities;
     }
 
@@ -903,7 +976,7 @@ private:
     std::uint64_t with_attributes_{0};
     bool cancelled_{false};
     std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>> pending_xdata_;
-    std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>> pending_patterns_;
+    std::vector<GroupInsert> pending_inserts_;
 };
 
 /// One XDATA group as DXF text: the code right-aligned in three columns, the
@@ -925,24 +998,6 @@ std::string number_text(double d)
     return buf;
 }
 
-/// A hatch's definition lines as DXF text, in the order group 78 announces
-/// them: angle, base point, offset, and the dashes with their count.
-std::string pattern_text(const std::vector<dxf::PatternLine>& lines)
-{
-    std::string block;
-    for (const dxf::PatternLine& l : lines) {
-        append_group(block, 53, number_text(l.angle_deg));
-        append_group(block, 43, number_text(l.base_x));
-        append_group(block, 44, number_text(l.base_y));
-        append_group(block, 45, number_text(l.offset_x));
-        append_group(block, 46, number_text(l.offset_y));
-        append_group(block, 79, std::to_string(l.dashes.size()));
-        for (const double d : l.dashes)
-            append_group(block, 49, number_text(d));
-    }
-    return block;
-}
-
 /// Splices what the library cannot write into the written file, by the handle
 /// group `5` of each record: the remembered XDATA just before the next `0`
 /// group — the end of that entity's record — and a hatch's definition lines
@@ -952,9 +1007,9 @@ std::string pattern_text(const std::vector<dxf::PatternLine>& lines)
 core::Status splice_xdata(
     const std::string& path,
     const std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>>& pending,
-    const std::vector<std::pair<unsigned, std::vector<dxf::PatternLine>>>& patterns)
+    const std::vector<GroupInsert>& inserts)
 {
-    if (pending.empty() && patterns.empty()) return core::ok();
+    if (pending.empty() && inserts.empty()) return core::ok();
     const auto hex_of = [](unsigned handle) {
         char hex[24];
         (void)std::snprintf(hex, sizeof(hex), "%X", handle);
@@ -963,9 +1018,9 @@ core::Status splice_xdata(
     std::map<std::string, const std::vector<std::shared_ptr<DRW_Variant>>*> by_handle;
     for (const auto& [handle, items] : pending)
         by_handle[hex_of(handle)] = &items;
-    std::map<std::string, const std::vector<dxf::PatternLine>*> lines_by_handle;
-    for (const auto& [handle, lines] : patterns)
-        lines_by_handle[hex_of(handle)] = &lines;
+    std::map<std::string, std::vector<const GroupInsert*>> inserts_by_handle;
+    for (const GroupInsert& ins : inserts)
+        inserts_by_handle[hex_of(ins.handle)].push_back(&ins);
 
     std::ifstream in(path, std::ios::binary);
     if (!in) return err(ErrorCode::IoFailure, "'" + path + "' XDATA için geri okunamadı.");
@@ -985,9 +1040,10 @@ core::Status splice_xdata(
     std::string code_line, value_line;
     bool in_entities                                         = false;
     const std::vector<std::shared_ptr<DRW_Variant>>* current = nullptr;
-    // Blocks carry hatches too, so the lines are looked for in every section.
-    const std::vector<dxf::PatternLine>* lines = nullptr;
-    const auto flush                           = [&] {
+    // Blocks carry hatches and captions too, so inserts are looked for in every
+    // section. What is left of the current record's, until it is written.
+    std::vector<const GroupInsert*> due;
+    const auto flush = [&] {
         if (current == nullptr) return;
         std::string block;
         for (const auto& v : *current) {
@@ -1025,7 +1081,7 @@ core::Status splice_xdata(
         const std::string value = trim(value_line);
         if (code == "0") {
             flush();
-            lines = nullptr;
+            due.clear();
             if (value == "SECTION") in_entities = false;
         } else if (code == "2" && !in_entities && value == "ENTITIES") {
             in_entities = true;
@@ -1033,13 +1089,20 @@ core::Status splice_xdata(
             if (in_entities && current == nullptr)
                 if (const auto at = by_handle.find(value); at != by_handle.end())
                     current = at->second;
-            if (const auto at = lines_by_handle.find(value); at != lines_by_handle.end())
-                lines = at->second;
+            if (const auto at = inserts_by_handle.find(value); at != inserts_by_handle.end())
+                due = at->second;
         }
         out << code_line << '\n' << value_line << '\n';
-        if (code == "78" && lines != nullptr) {
-            out << pattern_text(*lines);
-            lines = nullptr;
+        for (auto it = due.begin(); it != due.end();) {
+            if (std::to_string((*it)->after) != code) {
+                ++it;
+                continue;
+            }
+            std::string block;
+            for (const auto& [group, text] : (*it)->groups)
+                append_group(block, group, text);
+            out << block;
+            it = due.erase(it);
         }
     }
     flush();
@@ -1082,7 +1145,7 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
 
     // The XDATA and the pattern lines the library cannot write, spliced in
     // after the fact.
-    if (const auto st = splice_xdata(path, source.pending_xdata(), source.pending_patterns()); !st)
+    if (const auto st = splice_xdata(path, source.pending_xdata(), source.pending_inserts()); !st)
         co_return st.error();
 
     // The coordinate system beside the file, the only place DXF lets it go.

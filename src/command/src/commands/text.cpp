@@ -23,19 +23,87 @@
 #include "kentos_cad/core/text_store.hpp"
 
 #include <array>
+#include <cmath>
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
 
+/// The `hizalama` words, one per anchor and in its order: the anchor's own
+/// machine name (text_store.hpp), so the word a file, a message and a command
+/// line use for one alignment is one word.
+std::vector<std::string> anchor_words()
+{
+    std::vector<std::string> out;
+    out.reserve(core::kTextAnchorCount);
+    for (std::uint8_t a = 0; a < core::kTextAnchorCount; ++a)
+        out.emplace_back(core::text_anchor_name(static_cast<core::TextAnchor>(a)));
+    return out;
+}
+
 core::TextAnchor anchor_from(const std::string& word)
 {
-    if (core::turkish_key_equals(word, "orta")) return core::TextAnchor::BaselineCentre;
-    if (core::turkish_key_equals(word, "sağ") || core::turkish_key_equals(word, "sag"))
-        return core::TextAnchor::BaselineRight;
-    if (core::turkish_key_equals(word, "merkez")) return core::TextAnchor::MiddleCentre;
-    return core::TextAnchor::BaselineLeft;
+    for (std::uint8_t a = 0; a < core::kTextAnchorCount; ++a)
+        if (core::turkish_key_equals(word,
+                                     core::text_anchor_name(static_cast<core::TextAnchor>(a))))
+            return static_cast<core::TextAnchor>(a);
+    return core::TextAnchor::BaselineLeft; // unreachable: the bus holds the word list
+}
+
+/// `satir_araligi` and `genislik` onto `lines`; the width a wrapping text
+/// breaks to in `width` (zero: `genislik=0`, the text stops wrapping). Only
+/// what is named changes. False after refusing.
+bool read_lines(Context& ctx, core::TextLines& lines, std::optional<core::Mm>& width)
+{
+    if (const Value v = ctx.argument("satir_araligi"); !v.empty()) {
+        const double factor = v.as_number();
+        if (!std::isfinite(factor) || factor < 0.25 || factor > 4.0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Satır aralığı 0,25 ile 4 arasında olmalı; 1 tek aralıktır.");
+            return false;
+        }
+        lines.spacing = static_cast<std::uint16_t>(std::lround(factor * 1000.0));
+        ctx.record("satir_araligi", v);
+    }
+    if (const Value v = ctx.argument("genislik"); !v.empty()) {
+        const double metres = v.as_number();
+        if (!(metres >= 0.0)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Genişlik eksi olamaz; satırları kırmamak için genislik=0 verin.");
+            return false;
+        }
+        width      = core::mm_from_metres(metres);
+        lines.wrap = *width > 0;
+        ctx.record("genislik", v);
+    }
+    return true;
+}
+
+/// `\n` — the two characters — as the line break it means, wherever the words
+/// came from. The command line's lexer turns it into one already; an answer
+/// typed at the prompt, a panel cell and a script's string reach the command
+/// as they were typed, and "ADA 101\nPARSEL 4" is two lines to all of them.
+std::string with_breaks(std::string words)
+{
+    std::size_t at = 0;
+    while ((at = words.find("\\n", at)) != std::string::npos)
+        words.replace(at, 2, "\n");
+    return words;
+}
+
+/// The baseline from `from` along `toward`'s direction for `length`; along the
+/// page's right when `toward` is `from` itself.
+std::array<core::Point2, 2> baseline_of(core::Point2 from, core::Point2 toward, core::Mm length)
+{
+    const auto dx    = static_cast<double>(toward.x - from.x);
+    const auto dy    = static_cast<double>(toward.y - from.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (!(len > 0.0)) return {from, core::Point2{from.x + length, from.y}};
+    const double k = static_cast<double>(length) / len;
+    return {from, core::Point2{from.x + core::mm_round(dx * k), from.y + core::mm_round(dy * k)}};
 }
 
 Task<void> run(Context& ctx)
@@ -45,6 +113,7 @@ Task<void> run(Context& ctx)
 
     auto content = co_await ctx.text("yazi", "Yazılacak metin");
     if (!content || content->empty()) co_return;
+    *content = with_breaks(std::move(*content));
 
     // Height comes from the project setting unless the caller overrides it. The
     // setting is ground millimetres, and so is this: a caption drawn at 2.5 m on
@@ -59,30 +128,35 @@ Task<void> run(Context& ctx)
     const core::TextAnchor anchor =
         align.empty() ? core::TextAnchor::BaselineLeft : anchor_from(align.as_text());
 
-    // The baseline runs to the second point when one is given, and horizontally
-    // for the text's own width when it is not. Either way the entity has two real
-    // vertices, so nothing downstream needs to know it is text to cull it.
-    core::Point2 end = *anchor_point;
-    if (const Value second = ctx.argument("bitis");
-        !second.empty() && !second.as_points().empty()) {
-        end = second.as_points().front();
-    } else {
-        // A rough advance of 0.6 em per character. This decides the entity's
-        // BOUNDING BOX, not where a glyph lands — the backend measures the real
-        // font — so an approximation here costs a slightly loose cull box and
-        // nothing that reaches paper.
-        const auto chars = static_cast<core::Mm>(content->size());
-        end.x += (height * 6 * chars) / 10;
-    }
+    core::TextLines lines;
+    std::optional<core::Mm> width;
+    if (!read_lines(ctx, lines, width)) co_return;
 
-    const std::array<core::Point2, 2> baseline{*anchor_point, end};
+    // The baseline runs to the second point when one is given, and along the
+    // page for the text's own width when it is not. Either way the entity has
+    // two real vertices, so nothing downstream needs to know it is text to cull
+    // it. A text that wraps runs for its width, in the given direction.
+    //
+    // The width, when estimated, decides the entity's BOUNDING BOX, not where a
+    // glyph lands — the backend measures the real font — so the estimate costs
+    // a slightly loose cull box and nothing that reaches paper. It counts
+    // LETTERS: a count of bytes made every `ş` two letters wide.
+    const Value second  = ctx.argument("bitis");
+    core::Point2 toward = *anchor_point;
+    if (!second.empty() && !second.as_points().empty()) toward = second.as_points().front();
+    std::array<core::Point2, 2> baseline{*anchor_point, toward};
+    if (lines.wrap)
+        baseline = baseline_of(*anchor_point, toward, width.value_or(0));
+    else if (toward == *anchor_point)
+        baseline = baseline_of(*anchor_point, toward, core::text_width_estimate(*content, height));
     auto created = ctx.transaction().add_polyline(ctx.active_layer(), baseline);
     if (!created) {
         ctx.refuse(created.error());
         co_return;
     }
 
-    if (auto st = ctx.transaction().set_text(created.value(), *content, height, anchor); !st) {
+    if (auto st = ctx.transaction().set_text(created.value(), *content, height, anchor, lines);
+        !st) {
         ctx.refuse(st.error());
         co_return; // the bus rolls the whole transaction back, baseline included
     }
@@ -90,6 +164,7 @@ Task<void> run(Context& ctx)
     ctx.record("noktalar", Value::points({*anchor_point}));
     ctx.record("yazi", Value::text(*content));
     ctx.record("yukseklik", Value::integer(height));
+    if (!second.empty()) ctx.record("bitis", second);
     if (!align.empty()) ctx.record("hizalama", align);
 
     ctx.echo("Metin yazıldı: \"" + *content + "\"  (yükseklik " + std::to_string(height) + " mm)");
@@ -127,16 +202,18 @@ Task<void> run_edit(Context& ctx)
     // ONLY WHAT IS ASKED FOR CHANGES. An unnamed field keeps the value the
     // caption already has: rewriting a parsel number must not silently reset the
     // height a planner chose for it.
-    Value content     = ctx.argument("yazi");
-    const Value tall  = ctx.argument("yukseklik");
-    const Value align = ctx.argument("hizalama");
+    Value content       = ctx.argument("yazi");
+    const Value tall    = ctx.argument("yukseklik");
+    const Value align   = ctx.argument("hizalama");
+    const Value spacing = ctx.argument("satir_araligi");
+    const Value wide    = ctx.argument("genislik");
 
     // NOTHING NAMED IS A QUESTION: the new words. This is what a hand pressing
     // the menu entry means, and the one change a script that named nothing could
     // have meant too — it is told the same thing it was told before, because it
     // cannot answer. The first caption's own words are offered, so fixing one
     // letter is not retyping the line.
-    if (content.empty() && tall.empty() && align.empty()) {
+    if (content.empty() && tall.empty() && align.empty() && spacing.empty() && wide.empty()) {
         std::vector<std::string> now;
         for (const core::EntityId e : targets)
             if (const std::uint32_t slot = doc.entities().slot[e]; doc.texts().has(slot)) {
@@ -146,7 +223,8 @@ Task<void> run_edit(Context& ctx)
         auto typed = co_await ctx.text("yazi", "Yeni metin", std::move(now));
         if (!typed) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Değiştirilecek bir şey verilmedi: yazi=, yukseklik= ya da hizalama=.");
+                       "Değiştirilecek bir şey verilmedi: yazi=, yukseklik=, hizalama=, "
+                       "satir_araligi= ya da genislik=.");
             co_return;
         }
         content = Value::text(*typed);
@@ -167,7 +245,7 @@ Task<void> run_edit(Context& ctx)
         }
 
         std::string words =
-            content.empty() ? std::string(doc.texts().text(slot)) : content.as_text();
+            content.empty() ? std::string(doc.texts().text(slot)) : with_breaks(content.as_text());
         if (words.empty()) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
                        "Boş bir yazı bir yazı değildir; silmek için SİL kullanın.");
@@ -223,8 +301,39 @@ Task<void> run_edit(Context& ctx)
 
         const core::TextAnchor anchor =
             align.empty() ? doc.texts().anchor(slot) : anchor_from(align.as_text());
+        core::TextLines lines = doc.texts().lines(slot);
+        std::optional<core::Mm> width;
+        if (!read_lines(ctx, lines, width)) co_return;
 
-        if (auto st = ctx.transaction().set_text(e, words, height, anchor); !st) {
+        // THE BASELINE FOLLOWS THE WORDS. Its length is the box the cull and the
+        // pick use — the width a wrapping text breaks to, or the estimate of the
+        // text's own — and a rewrite that kept the old length left a longer
+        // caption unpickable past its old end. The anchor and the direction stay.
+        const core::RingSpan span = doc.geometry().rings_of(slot);
+        if (doc.entities().kind[e] == core::kPolylineKind && span.count == 1 &&
+            doc.geometry().ring_count[span.first] == 2) {
+            const core::Point2 from = doc.geometry().vertex(span.first, 0);
+            const core::Point2 to   = doc.geometry().vertex(span.first, 1);
+            core::Mm length         = 0;
+            if (width.has_value() && lines.wrap)
+                length = *width;
+            else if (!lines.wrap && (!content.empty() || !tall.empty() || width.has_value()))
+                length = core::text_width_estimate(words, height);
+            if (length > 0) {
+                const std::array<core::Point2, 2> base = baseline_of(from, to, length);
+                if (base[1] != to) {
+                    const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
+                    if (auto st = ctx.transaction().set_geometry(
+                            e, std::span<const core::RingGeometry::RingInput>(&ring, 1));
+                        !st) {
+                        ctx.refuse(st.error());
+                        co_return;
+                    }
+                }
+            }
+        }
+
+        if (auto st = ctx.transaction().set_text(e, words, height, anchor, lines); !st) {
             ctx.refuse(st.error());
             co_return; // the bus rolls the whole transaction back
         }
@@ -237,7 +346,7 @@ Task<void> run_edit(Context& ctx)
     }
 
     ctx.record("nesneler", Value::ids(picked));
-    if (!content.empty()) ctx.record("yazi", content);
+    if (!content.empty()) ctx.record("yazi", Value::text(with_breaks(content.as_text())));
     if (!tall.empty()) ctx.record("yukseklik", tall);
     if (!align.empty()) ctx.record("hizalama", align);
 
@@ -266,13 +375,26 @@ KENTOS_COMMAND(text)
                 // point would make every horizontal caption two clicks.
                 Param::points("bitis", Arity::optional(), "Taban çizgisinin bitişi; yoksa yatay")
                     .en("end"),
-                Param::text("hizalama", Arity::optional(), "sol, orta, sag veya merkez")
+                Param::choice("hizalama", Arity::optional(), anchor_words(),
+                              "Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın "
+                              "tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, "
+                              "ust_orta, ust_sag (ilk satırın üstünde)")
                     .en("alignment"),
+                Param::number("satir_araligi", Arity::optional(),
+                              "Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin "
+                              "5/3'ü")
+                    .en("line_spacing"),
+                Param::number("genislik", Arity::optional(),
+                              "Satırların kırılacağı genişlik; verilirse uzun satır kelime "
+                              "sınırından alta geçer")
+                    .measured_in("m")
+                    .en("width"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Çizime metin yazar; yükseklik ve hizalama verilebilir.",
-        .run     = &run,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır "
+                   "aralığı ve kırılma genişliği verilebilir.",
+        .run = &run,
     };
 }
 
@@ -305,13 +427,22 @@ KENTOS_COMMAND(edittext)
                 Param::integer("yukseklik", Arity::optional(),
                                "Yeni yükseklik, zeminde milimetre; verilmezse değişmez")
                     .en("height"),
-                Param::text("hizalama", Arity::optional(),
-                            "sol, orta, sag veya merkez; verilmezse değişmez")
+                Param::choice("hizalama", Arity::optional(), anchor_words(),
+                              "Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez")
                     .en("alignment"),
+                Param::number("satir_araligi", Arity::optional(),
+                              "Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez")
+                    .en("line_spacing"),
+                Param::number("genislik", Arity::optional(),
+                              "Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse "
+                              "değişmez")
+                    .measured_in("m")
+                    .en("width"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.",
+        .summary = "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya "
+                   "da kırılma genişliğini değiştirir.",
         .run = &run_edit,
     };
 }

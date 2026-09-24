@@ -618,7 +618,8 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
     // The text, which is drawing content and not a label (text_store.hpp).
     if (doc.texts().has(gslot)) {
         auto st = ctx.transaction().set_text(fresh, std::string(doc.texts().text(gslot)),
-                                             doc.texts().height(gslot), doc.texts().anchor(gslot));
+                                             doc.texts().height(gslot), doc.texts().anchor(gslot),
+                                             doc.texts().lines(gslot));
         if (!st) return st.error();
     }
 

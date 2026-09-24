@@ -5425,10 +5425,10 @@ TEST_CASE("Alanlar: eksik bir alan sessiz boş metne dönmüyor")
 
 namespace {
 
-/// The groups of the `which`-th HATCH record of a DXF text, code and value,
+/// The groups of the `which`-th `type` record of a DXF text, code and value,
 /// trimmed, in file order.
-std::vector<std::pair<int, std::string>> hatch_groups(const std::string& text,
-                                                      std::size_t which = 0)
+std::vector<std::pair<int, std::string>>
+entity_groups(const std::string& text, const std::string& type, std::size_t which = 0)
 {
     std::vector<std::pair<int, std::string>> out;
     std::istringstream in(text);
@@ -5446,12 +5446,18 @@ std::vector<std::pair<int, std::string>> hatch_groups(const std::string& text,
         const std::string val = trim(value);
         if (c == 0) {
             if (inside) break;
-            if (val == "HATCH" && seen++ == which) inside = true;
+            if (val == type && seen++ == which) inside = true;
             continue;
         }
         if (inside) out.emplace_back(c, val);
     }
     return out;
+}
+
+std::vector<std::pair<int, std::string>> hatch_groups(const std::string& text,
+                                                      std::size_t which = 0)
+{
+    return entity_groups(text, "HATCH", which);
 }
 
 /// Every value of `code` in `groups`, as numbers.
@@ -5625,4 +5631,177 @@ TEST_CASE("DXF: yalan söyleyen desen satırları okunmaz; katalog geçer, dosya
         CHECK_EQ(def.origin, (core::Point2{0, 0}));
     }
     CHECK(said.find("dosyadaki kendi çizgileriyle") == std::string::npos);
+}
+
+TEST_CASE("IO: yazının hizası, satır aralığı ve kırılması dosyaya yazılır ve okunur (TODOS C-12)")
+{
+    // The text record's spare bytes carry the line layout; a file written
+    // before it existed holds zeros there, which read as single spacing.
+    TempDir tmp("yazi-duzeni");
+    const std::string path = tmp.file("yazi.pcad");
+
+    Rig written;
+    REQUIRE(written.bus
+                .execute_line("METİN noktalar=0,0 yazi=\"PLAN\\nNOTU\" hizalama=ust_sag "
+                              "satir_araligi=1.5 genislik=10",
+                              Origin::Test)
+                .ok());
+    REQUIRE(written.bus.execute_line("METİN noktalar=0,20 yazi=ADA hizalama=orta_sol", Origin::Test)
+                .ok());
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    const core::TextTable& texts = reloaded.doc.texts();
+    const std::uint32_t note     = reloaded.doc.entities().slot[0];
+    CHECK_EQ(texts.anchor(note), core::TextAnchor::TopRight);
+    CHECK_EQ(texts.lines(note).spacing, 1500);
+    CHECK(texts.lines(note).wrap);
+    CHECK_EQ(std::string(texts.text(note)), std::string("PLAN\nNOTU"));
+    CHECK_EQ(texts.anchor(reloaded.doc.entities().slot[1]), core::TextAnchor::MiddleLeft);
+}
+
+// ------------------------------------------------ multi-line text in DXF ----
+//
+// TODOS C-12: a caption of more than one line, or one laid out with a spacing
+// or a width, goes as an MTEXT — its anchor the attachment point, its lines the
+// paragraphs, its spacing and width MTEXT's own — and comes back as the same
+// text. A single line goes as a TEXT with the nine alignments of groups 72/73.
+
+namespace {
+
+std::string read_file(const std::string& path)
+{
+    std::ifstream in(path, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+std::string value_of(const std::vector<std::pair<int, std::string>>& groups, int code)
+{
+    for (const auto& [c, v] : groups)
+        if (c == code) return v;
+    return {};
+}
+
+} // namespace
+
+TEST_CASE("DXF: çok satırlı yazı MTEXT olarak gider; hizası, satır aralığı, genişliği ve "
+          "satırları aynı döner (TODOS C-12)")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-mtext");
+    const std::string path = dir.file("yazi.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254",
+          "METİN noktalar=10,20 yazi=\"PLAN NOTU\\nADA {101}\" yukseklik=2000 hizalama=ust_orta "
+          "satir_araligi=1.5 genislik=10 bitis=10,30"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    const std::string text = read_file(path);
+    CHECK(text.find("\nTEXT\n") == std::string::npos); // not a broken one-line TEXT
+    const auto groups = entity_groups(text, "MTEXT");
+    REQUIRE_FALSE(groups.empty());
+    CHECK_EQ(value_of(groups, 71), std::string("2")); // top centre
+    CHECK(std::stod(value_of(groups, 44)) == doctest::Approx(1.5));
+    CHECK(std::stod(value_of(groups, 41)) == doctest::Approx(10.0)); // metres
+    CHECK_EQ(value_of(groups, 1), std::string("PLAN NOTU\\PADA \\{101\\}"));
+    // Turned a quarter: the X-axis direction points north.
+    CHECK(std::stod(value_of(groups, 11)) == doctest::Approx(0.0));
+    CHECK(std::stod(value_of(groups, 21)) == doctest::Approx(1.0));
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    const core::EntityId e = static_cast<core::EntityId>(first_of_kind(b.doc, core::kPolylineKind));
+    const std::uint32_t slot = b.doc.entities().slot[e];
+    CHECK_EQ(std::string(b.doc.texts().text(slot)), std::string("PLAN NOTU\nADA {101}"));
+    CHECK_EQ(b.doc.texts().anchor(slot), core::TextAnchor::TopCentre);
+    CHECK_EQ(b.doc.texts().lines(slot).spacing, 1500);
+    CHECK(b.doc.texts().lines(slot).wrap);
+    const auto ring = first_ring(b.doc, e);
+    REQUIRE_EQ(ring.size(), std::size_t{2});
+    CHECK_EQ(ring[0], (core::Point2{10'000, 20'000}));
+    CHECK_EQ(ring[1], (core::Point2{10'000, 30'000})); // ten metres north: the width
+    CHECK(b.transcript.find("hizası en yakın") == std::string::npos);
+}
+
+TEST_CASE("DXF: tek satırlı yazının dokuz hizası TEXT'in 72/73'üne gider ve aynı döner")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-hiza");
+    const std::string path = dir.file("hiza.dxf");
+    const char* words[9]   = {"sol",      "orta",    "sag",      "merkez",  "ust_sol",
+                              "ust_orta", "ust_sag", "orta_sol", "orta_sag"};
+
+    Rig a;
+    REQUIRE(a.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    for (int i = 0; i < 9; ++i)
+        REQUIRE(a.bus
+                    .execute_line("METİN noktalar=" + std::to_string(i * 10) +
+                                      ",0 yazi=ADA hizalama=" + words[i],
+                                  Origin::Test)
+                    .ok());
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    const std::string text = read_file(path);
+    // Groups 72 and 73 for the nine, in the order they were written.
+    const char* expect72[9] = {"0", "1", "2", "1", "0", "1", "2", "0", "2"};
+    const char* expect73[9] = {"0", "0", "0", "2", "3", "3", "3", "2", "2"};
+    for (int i = 0; i < 9; ++i) {
+        const auto groups   = entity_groups(text, "TEXT", static_cast<std::size_t>(i));
+        const std::string h = value_of(groups, 72);
+        const std::string v = value_of(groups, 73);
+        CHECK_MESSAGE((h.empty() ? std::string("0") : h) == expect72[i], words[i]);
+        CHECK_MESSAGE((v.empty() ? std::string("0") : v) == expect73[i], words[i]);
+    }
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    for (int i = 0; i < 9; ++i) {
+        // Each back at its own point, with its own alignment.
+        bool found = false;
+        for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+            const std::uint32_t slot = b.doc.entities().slot[e];
+            if (!b.doc.texts().has(slot)) continue;
+            if (first_ring(b.doc, e).front() != core::Point2{i * 10'000, 0}) continue;
+            found = true;
+            CHECK_EQ(std::string(core::text_anchor_name(b.doc.texts().anchor(slot))),
+                     std::string(words[i]));
+        }
+        CHECK_MESSAGE(found, words[i]);
+    }
+    CHECK(b.transcript.find("hizası en yakın") == std::string::npos);
+}
+
+TEST_CASE("DXF: MTEXT paragrafları satır olur; alt çizgi anahtarı yazıyı yutmaz; yaslanmış TEXT "
+          "başından başlar")
+{
+    // The codes as a file carries them (tests/fuzz/tohum/dxf/25): paragraphs,
+    // an underline switched on and off, a colour with its argument, a stacked
+    // fraction, escaped braces; a bottom-right MTEXT spaced twice; an ALIGNED
+    // TEXT, whose two points are its two ends.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "25-cok-satirli-yazi.dxf");
+    std::vector<core::EntityId> texts;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+        if (rig.doc.alive(e) && rig.doc.texts().has(rig.doc.entities().slot[e])) texts.push_back(e);
+    REQUIRE_EQ(texts.size(), std::size_t{2});
+    const std::uint32_t note = rig.doc.entities().slot[texts[0]];
+    CHECK_EQ(std::string(rig.doc.texts().text(note)), std::string("İMAR NOTU\nYapı yaklaşma\n5 m"));
+    CHECK_EQ(rig.doc.texts().anchor(note), core::TextAnchor::BaselineRight);
+    CHECK_EQ(rig.doc.texts().lines(note).spacing, 2000);
+    CHECK_FALSE(rig.doc.texts().lines(note).wrap);
+
+    // ALIGNED: anchored at its start (10), turned toward its end (11).
+    const auto aligned = first_ring(rig.doc, texts[1]);
+    CHECK_EQ(aligned.front(), (core::Point2{0, 50'000}));
+    CHECK(aligned.back().y > aligned.front().y);              // toward (10, 60): north-east
+    CHECK(said.find("hizası en yakın") != std::string::npos); // and said to be approximate
 }

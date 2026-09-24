@@ -32,8 +32,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.measure_angle`](measure_angle.md) | Açı Ölç | `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`core.stretch`](stretch.md) | Esnet | `ESNET`, `STRETCH`, `ES` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`core.tracking`](tracking.md) | Geçici İzleme | `İZ`, `IZ`, `TRACK`, `TRK` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
-| [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
-| [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
+| [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir. |
+| [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
@@ -431,7 +431,7 @@ Ayrıntılı kullanım: [İZ](tracking.md)
 
 ### `core.text` — METİN (Metin)
 
-Çizime metin yazar; yükseklik ve hizalama verilebilir.
+Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -439,20 +439,24 @@ Ayrıntılı kullanım: [İZ](tracking.md)
 | `yazi` | text | 1 | Yazılacak metin |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
 | `bitis` | point_list | isteğe bağlı | Taban çizgisinin bitişi; yoksa yatay |
-| `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez |
+| `hizalama` | text | isteğe bağlı | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
+| `satir_araligi` | number | isteğe bağlı | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
+| `genislik` | number | isteğe bağlı | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer |
 
 Ayrıntılı kullanım: [METİN](text.md)
 
 ### `core.edittext` — YAZIDÜZENLE (Yazıyı Düzenle)
 
-Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Düzenlenecek yazılar; verilmezse seçim |
 | `yazi` | text | isteğe bağlı | Yeni metin; verilmezse değişmez |
 | `yukseklik` | integer | isteğe bağlı | Yeni yükseklik, zeminde milimetre; verilmezse değişmez |
-| `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez; verilmezse değişmez |
+| `hizalama` | text | isteğe bağlı | Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez |
+| `satir_araligi` | number | isteğe bağlı | Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez |
+| `genislik` | number | isteğe bağlı | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez |
 
 Ayrıntılı kullanım: [YAZIDÜZENLE](edittext.md)
 
@@ -5393,7 +5397,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_edittext",
     "title": "Yazıyı Düzenle",
-    "description": "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5412,7 +5416,26 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "hizalama": {
           "type": "string",
-          "description": "sol, orta, sag veya merkez; verilmezse değişmez (metin)"
+          "enum": [
+            "sol",
+            "orta",
+            "sag",
+            "merkez",
+            "ust_sol",
+            "ust_orta",
+            "ust_sag",
+            "orta_sol",
+            "orta_sag"
+          ],
+          "description": "Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez (metin)"
+        },
+        "satir_araligi": {
+          "type": "number",
+          "description": "Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez (sayı)"
+        },
+        "genislik": {
+          "type": "number",
+          "description": "Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] (sayı)"
         },
         "varsayimlar": {
           "type": "array",
@@ -11659,7 +11682,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_text",
     "title": "Metin",
-    "description": "Çizime metin yazar; yükseklik ve hizalama verilebilir.\nKomut: METİN (METIN, YAZI, TEXT, MT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.\nKomut: METİN (METIN, YAZI, TEXT, MT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -11753,7 +11776,26 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "hizalama": {
           "type": "string",
-          "description": "sol, orta, sag veya merkez (metin)"
+          "enum": [
+            "sol",
+            "orta",
+            "sag",
+            "merkez",
+            "ust_sol",
+            "ust_orta",
+            "ust_sag",
+            "orta_sol",
+            "orta_sag"
+          ],
+          "description": "Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) (metin)"
+        },
+        "satir_araligi": {
+          "type": "number",
+          "description": "Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü (sayı)"
+        },
+        "genislik": {
+          "type": "number",
+          "description": "Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] (sayı)"
         },
         "varsayimlar": {
           "type": "array",

@@ -632,7 +632,9 @@ void AttributePanel::rebuild()
         // does carry one.
         // A dimension's caption is its figure, edited in the ÖLÇÜ group above.
         if (doc.texts().has(gslot) && kind != core::kDimensionKind) {
-            AttributeGroup says{tr("METİN"), {}, false};
+            // OPEN AND FIRST for a caption: its words are what it is, and the
+            // polyline under them is only its baseline.
+            AttributeGroup says{tr("METİN"), {}, true};
 
             // EDITABLE NOW, and the note that stood here said exactly why it was
             // not: "a row becomes editable when a command exists that changes it,
@@ -642,8 +644,12 @@ void AttributePanel::rebuild()
             const auto id = QString::number(
                 static_cast<qulonglong>(static_cast<std::uint64_t>(doc.key_of(slot))));
 
+            // A LINE BREAK SHOWS AS `\n` in a one-line cell, and is typed back
+            // the same way (`commitEdit` turns it into the line break again).
+            QString words = QString::fromStdString(std::string(doc.texts().text(gslot)));
+            words.replace(QLatin1Char('\n'), QStringLiteral("\\n"));
             says.rows.push_back({tr("icerik"),
-                                 QString::fromStdString(std::string(doc.texts().text(gslot))),
+                                 words,
                                  {},
                                  false,
                                  tr("YAZIDÜZENLE nesneler=%1 yazi=\"%2\"").arg(id),
@@ -658,7 +664,54 @@ void AttributePanel::rebuild()
                                  false,
                                  tr("YAZIDÜZENLE nesneler=%1 yukseklik=%2").arg(id),
                                  {}});
-            groups_.push_back(says);
+
+            // THE LAYOUT (TODOS C-12): where the point sits on the text, the
+            // spacing between its lines and the width they break to — each one
+            // YAZIDÜZENLE line, like the rows above.
+            QStringList anchors;
+            for (std::uint8_t a = 0; a < core::kTextAnchorCount; ++a)
+                anchors << QString::fromLatin1(
+                    core::text_anchor_name(static_cast<core::TextAnchor>(a)));
+            says.rows.push_back(
+                {tr("hizalama"),
+                 QString::fromLatin1(core::text_anchor_name(doc.texts().anchor(gslot))),
+                 {},
+                 false,
+                 QStringLiteral("YAZIDÜZENLE nesneler=%1 hizalama=%2").arg(id),
+                 combo_of(anchors)});
+            const core::TextLines lines = doc.texts().lines(gslot);
+            says.rows.push_back(
+                {tr("satir_araligi"),
+                 QString::number(static_cast<double>(lines.spacing) / 1000.0, 'f', 2),
+                 {},
+                 false,
+                 QStringLiteral("YAZIDÜZENLE nesneler=%1 satir_araligi=%2").arg(id),
+                 {}});
+            QString width = QStringLiteral("—");
+            if (const core::RingSpan base = doc.geometry().rings_of(gslot);
+                lines.wrap && base.count > 0 && doc.geometry().ring_count[base.first] >= 2) {
+                const core::Point2 from = doc.geometry().vertex(base.first, 0);
+                const core::Point2 to   = doc.geometry().vertex(base.first, 1);
+                width = QString::number(std::hypot(static_cast<double>(to.x - from.x),
+                                                   static_cast<double>(to.y - from.y)) /
+                                            1000.0,
+                                        'f', 3);
+            }
+            says.rows.push_back({tr("genislik"),
+                                 width,
+                                 {},
+                                 false,
+                                 QStringLiteral("YAZIDÜZENLE nesneler=%1 genislik=%2").arg(id),
+                                 {}});
+            const QString identity = tr("NESNE");
+            const auto nesne       = std::ranges::find_if(
+                groups_, [&identity](const AttributeGroup& g) { return g.title == identity; });
+            if (nesne != groups_.end()) {
+                nesne->open = false;
+                groups_.insert(nesne, says);
+            } else {
+                groups_.push_back(says);
+            }
         }
     } else if (sel.size() > 1) {
         // MANY OBJECTS: the totals, which is what a user selects a block of
@@ -916,7 +969,16 @@ void AttributePanel::commitEdit(const QString& value)
     // it to the bus; it never writes to the document. Editing `ada_no` here and
     // typing the same line at the command prompt are the same write, land in the
     // same journal and undo in one step (CLAUDE.md 1.1, 5.9).
-    controller_.runLine(command.arg(value), command::Origin::Gui);
+    // THE VALUE AS THE LEXER READS IT: a typed `\n` is a line break again, and a
+    // quote or a backslash in it is escaped, so the words cannot end the quoted
+    // argument they are put into — a `"` typed into a caption used to cut the
+    // command line there.
+    QString typed = value;
+    typed.replace(QStringLiteral("\\n"), QStringLiteral("\n"));
+    typed.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    typed.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    typed.replace(QLatin1Char('\n'), QStringLiteral("\\n"));
+    controller_.runLine(command.arg(typed), command::Origin::Gui);
     refresh();
 }
 

@@ -5367,6 +5367,67 @@ int MainWindow::probeRealMouse()
             }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 14. A TWO-LINE CAPTION BY HAND, LAID OUT FROM THE PANEL (C-12) ---
+        //
+        // The text tool from the column, its point clicked, two lines typed at
+        // the prompt with `\n`; then the caption selected and its alignment,
+        // spacing and words changed cell by cell — the words with a quote in
+        // them, which used to end the command line the cell builds.
+        {
+            fresh({QStringLiteral("ÇİZGİ -10,-10 30,-10")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            actText_->trigger();
+            QCoreApplication::processEvents();
+            press(screen({0, 0}));
+            release(screen({0, 0}));
+            commandLine_->setText(QStringLiteral("ADA 101\\nPARSEL 4"));
+            QKeyEvent typed(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(commandLine_, &typed);
+            QCoreApplication::processEvents();
+            controller_->cancelInteractive();
+            const core::Document& doc = controller_->document();
+            core::EntityId caption    = core::kNoEntity;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.texts().has(doc.entities().slot[e])) caption = e;
+            const auto words = [&doc, caption] {
+                return caption == core::kNoEntity
+                           ? std::string()
+                           : std::string(doc.texts().text(doc.entities().slot[caption]));
+            };
+            check(words() == "ADA 101\nPARSEL 4",
+                  QStringLiteral("Metin: araçla tıklanıp yazılan iki satır iki satır oldu (\"%1\")")
+                      .arg(QString::fromStdString(words())));
+
+            if (caption != core::kNoEntity) {
+                runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1")
+                                  .arg(static_cast<qulonglong>(core::raw(doc.key_of(caption)))));
+                showAttributes();
+                QCoreApplication::processEvents();
+                const bool centred = attributePanel_->editRowForProbe(QStringLiteral("hizalama"),
+                                                                      QStringLiteral("merkez"));
+                const bool spaced  = attributePanel_->editRowForProbe(
+                    QStringLiteral("satir_araligi"), QStringLiteral("1.5"));
+                const std::uint32_t slot = doc.entities().slot[caption];
+                check(
+                    centred && spaced &&
+                        doc.texts().anchor(slot) == core::TextAnchor::MiddleCentre &&
+                        doc.texts().lines(slot).spacing == 1500,
+                    QStringLiteral("Metin: panelde hizalama ve satır aralığı hücreleri yazıya "
+                                   "yazıldı (%1, %2)")
+                        .arg(QString::fromLatin1(core::text_anchor_name(doc.texts().anchor(slot))))
+                        .arg(doc.texts().lines(slot).spacing));
+                const bool rewritten = attributePanel_->editRowForProbe(
+                    QStringLiteral("icerik"), QStringLiteral("\"KÖY\" YOLU\\nADA 101"));
+                check(rewritten && words() == "\"KÖY\" YOLU\nADA 101",
+                      QStringLiteral("Metin: panelde tırnaklı ve iki satırlı yazı olduğu gibi "
+                                     "yazıldı (\"%1\")")
+                          .arg(QString::fromStdString(words())));
+                shoot("yazi-paneli");
+                showTranscript();
+            }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

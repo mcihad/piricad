@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çok satırlı yazı, dokuz hizalama, satır aralığı ve kırılma; ekran, PDF ve DXF aynı düzende (C-12, 1. aşama)
+
+- **Çok satırlı yazı.** `\n` her yerde satır sonudur — komut satırında, istemde,
+  panel hücresinde, betikte; boş satır kalır. Satırlar arası yüksekliğin 5/3'ü (DXF
+  MTEXT'in "3'e 5" aralığı); `satir_araligi=` 0,25–4 kat. `genislik=` verilince uzun
+  satırlar kelime sınırından kırılır.
+- **Dokuz hizalama:** `sol`, `orta`, `sag` (son satırın tabanı), `orta_sol`, `merkez`,
+  `orta_sag` (ortası), `ust_sol`, `ust_orta`, `ust_sag` (ilk satırın üstü); her satır
+  kendi başına hizalanır. Sözcük listesi komutta bildirilir, tanınmayan sözcük
+  reddedilir (önce sessizce sola yaslanıyordu).
+- **Ekran ile PDF aynı düzende.** GPU tuvali ile QPainter yolu (PDF, yazıcı) satırları
+  tek bir yerleşim işleviyle (`render/text_layout.hpp`) ve aynı yazı tipi ölçüsüyle
+  kırar, dizer, hizalar. Önce ikisi ayrı hesaplıyordu: satır aralıkları farklıydı,
+  boş satırlar atılıyordu.
+- **DXF:** çok satırlı ya da düzenli yazı **MTEXT** olarak gider — bağlantı noktası
+  dokuz hizadan biri, paragraflar `\P`, aralık 44, genişlik 41, yön 11/21/31 — ve aynı
+  yazı olarak döner; tek satırlı yazının dokuz hizası TEXT'in 72/73'üne gider.
+  MTEXT okunurken paragraflar satır olarak kalır (önce boşluğa dönüyordu), üst ve orta
+  sıra hizaları artık yaklaşık değil.
+- **Düzeltildi:** satır sonlu bir yazı DXF'e TEXT olarak yazılıyor ve grup 1'in içine
+  ham satır sonu düşüp dosyayı bozuyordu. MTEXT'in alt çizgi/üst çizgi anahtarları
+  (`\L \l \O \o`) ardındaki yazıyı yutuyordu. Yaslanmış ve sığdırılmış TEXT (72 = 3,
+  5) bitiş noktasına konuyordu. Genişlik harf yerine bayt sayıyordu (her `ş` iki
+  harflik); artık harf türüne göre (büyük, küçük, rakam, boşluk) tahmin edilir.
+  YAZIDÜZENLE taban çizgisini yeni yazıya göre uzatmıyordu; ortalı ve sağa yaslı
+  yazıların seçme kutusu yazının sağında kalıyordu — kutu artık hizayı ve satırları
+  izler. Panel hücresine yazılan tırnak komut satırını kesiyordu.
+- Nitelik panelinde yazı seçilince **METİN** grubu açık ve başta; `hizalama`,
+  `satir_araligi`, `genislik` hücreleri. Yeni sayfa: [yazı nesnesi](docs/nesneler/yazi.md).
+
 ### Eklendi — DXF'te tarama deseni çizdiği çizgilerle; ekran, PDF ve DXF aynı aralıkta (C-11 tamam)
 
 - **Desen tanım çizgileri DXF'e yazılır ve DXF'ten okunur.** `HATCH` kaydında grup

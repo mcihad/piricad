@@ -186,8 +186,8 @@ AYAR koordinat_sistemi EPSG:5254
 | Aktarılan | Eksik alınan ya da alınmayan (her biri transkriptte söylenir) |
 |---|---|
 | Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Çizgi tipi (LTYPE): bu sürümde uygulanmaz, çizgiler düz; söylenir |
-| **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Yazı tipi; yazının üst/orta hizaları en yakın desteklenen hizaya çevrilir |
-| **Yazılar**, yüksekliği, **açısı** ve hizasıyla birlikte; MTEXT biçim kodları soyulur | Yalnız uydurma noktası taşıyan spline: uydurma noktaları kontrol noktası sayılır, `düşürme:` ile söylenir |
+| **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Yazı tipi; TEXT'in alt hizası ile yaslanmış/sığdırılmış yazı en yakın hizayla çizilir, söylenir |
+| **Yazılar**, yüksekliği, **açısı**, dokuz hizası, **satırları**, satır aralığı ve kırılma genişliğiyle ([yazı nesnesi](../nesneler/yazi.md)); çok satırlı yazı MTEXT olarak yazılır; MTEXT biçim kodları soyulur | Yalnız uydurma noktası taşıyan spline: uydurma noktaları kontrol noktası sayılır, `düşürme:` ile söylenir |
 | **Daire, yay, elips ve kısmi elips** — gerçek eğri olarak; GeoPackage'a çokgen olarak gider, geri okunuşta eğri olur | Ne katalogda olan ne de kendi çizgilerini taşıyan tarama deseni: sınır, ad, açı korunur, desen çizilmez, söylenir |
 | **Yaylı çoklu çizgi** (şişkinlik): her yay merkezi ve yarıçapıyla; **spline**: derece, düğüm, ağırlık | Kenar boyunca değişen çoklu çizgi kalınlığı |
 | **Blok tanımları ve referansları** (`BLOCK`/`INSERT`): yapısıyla, ölçek, açı, ayna, dizi; iç içe | Anonim bloklar (`*D1`…): ölçünün kendi çizgileri, ölçü nesnesi zaten okunduğu için |

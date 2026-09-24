@@ -1263,20 +1263,23 @@ TEST_CASE("YAZIDÜZENLE: var olan bir yazıyı yerinde değiştirir")
     for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
         if (rig.doc.alive(e) && rig.doc.texts().has(rig.doc.entities().slot[e])) text = e;
     REQUIRE(text != core::kNoEntity);
-    const std::uint32_t slot = rig.doc.entities().slot[text];
+    // THE SLOT IS READ AFRESH after every edit: a rewrite re-measures the
+    // baseline to the new words (TODOS C-12), and a geometry edit is a new slot
+    // (model.md R46) — the entity row is what stays.
+    const auto slot_now = [&rig, text] { return rig.doc.entities().slot[text]; };
 
     if (!rig.line("SEÇ mod=NOKTA noktalar=8,1.5 tolerans=0.2")) FAIL("SEÇ");
     if (!rig.line("YAZIDÜZENLE yazi=\"ADA 128\"")) FAIL("YAZIDÜZENLE");
 
-    CHECK_EQ(std::string(rig.doc.texts().text(slot)), std::string("ADA 128"));
+    CHECK_EQ(std::string(rig.doc.texts().text(slot_now())), std::string("ADA 128"));
 
     // WHAT WAS NOT ASKED FOR DOES NOT MOVE. Rewriting the words must not reset a
     // height somebody chose.
-    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{3000});
+    CHECK_EQ(rig.doc.texts().height(slot_now()), core::Mm{3000});
 
     if (!rig.line("YAZIDÜZENLE yukseklik=4000")) FAIL("YAZIDÜZENLE yukseklik");
-    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{4000});
-    CHECK_EQ(std::string(rig.doc.texts().text(slot)), std::string("ADA 128"));
+    CHECK_EQ(rig.doc.texts().height(slot_now()), core::Mm{4000});
+    CHECK_EQ(std::string(rig.doc.texts().text(slot_now())), std::string("ADA 128"));
 
     // AND THE BOX FOLLOWED IT, which is what keeps the caption clickable after it
     // grows.
@@ -1284,7 +1287,7 @@ TEST_CASE("YAZIDÜZENLE: var olan bir yazıyı yerinde değiştirir")
 
     // ONE UNDO STEP, and it puts back both the words and the height.
     if (!rig.line("GERİAL")) FAIL("GERİAL");
-    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{3000});
+    CHECK_EQ(rig.doc.texts().height(slot_now()), core::Mm{3000});
 
     // A selection with no caption in it is told so rather than silently doing
     // nothing that looks like success.

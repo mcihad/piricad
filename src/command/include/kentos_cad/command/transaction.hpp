@@ -225,8 +225,11 @@ public:
     core::Status amend_attribute(std::string_view id, const core::AttrSpec& next);
 
     /// Attaches or replaces the text on an entity. Height is ground millimetres;
-    /// an empty `content` detaches it. Undoable like any other edit.
+    /// an empty `content` detaches it. Undoable like any other edit. Without
+    /// `lines` the text keeps the line layout it has (a new text, the default).
     Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor);
+    Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor,
+                    core::TextLines lines);
 
     /// Makes `e` FOLLOW `a.source` (`core/attach.hpp`, `Document::set_attachment`).
     Status set_attachment(EntityId e, const core::Attachment& a);

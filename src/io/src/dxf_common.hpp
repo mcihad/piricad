@@ -154,10 +154,17 @@ bool families_from_lines(core::HatchDef& def, std::span<const PatternLine> lines
 /// TEXT with its `%%d`, `%%p`, `%%c`, `%%%` codes expanded to °, ±, Ø, %.
 std::string expand_text_codes(std::string_view raw);
 
-/// MTEXT with its formatting stripped: `\P` becomes a space, `\{ \} \\` their
-/// character, `\S...^...;` its two halves, `\A \C \f \F \H \L \l \O \o \Q \T \W
-/// \p ...;` dropped, `{ }` groups unwrapped, `%%` codes expanded.
+/// MTEXT with its formatting stripped: `\P` becomes a line break, `\{ \} \\`
+/// their character, `\S a/b;` a fraction and `\S a^b;` its two halves side by
+/// side, the switches `\L \l \O \o \K \k` dropped alone, `\A \C \f \F \H \Q \T \W
+/// \p ...;` dropped with their argument, `{ }` groups unwrapped, `%%` codes
+/// expanded.
 std::string strip_mtext(std::string_view raw);
+
+/// A caption as MTEXT content: a line break as `\P`, a backslash and a brace
+/// escaped, everything else as it is — what `strip_mtext` reads back to the
+/// same words.
+std::string escape_mtext(std::string_view text);
 
 #ifdef KENTOS_HAVE_DXFRW
 

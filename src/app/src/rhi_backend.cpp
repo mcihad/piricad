@@ -33,6 +33,7 @@
 #if KENTOS_HAVE_TEXT
 #include "kentos_cad/app/data_root.hpp"
 #include "kentos_cad/render/text_atlas.hpp"
+#include "kentos_cad/render/text_layout.hpp"
 #endif
 
 #include <rhi/qrhi.h>
@@ -463,7 +464,7 @@ private:
     /// The lines of one caption. A member and not a local, because the draw loop
     /// must not allocate (render.md R20, P6) and a two-line TAKS/KAKS label on
     /// every parcel of a sheet would be one vector construction per parcel.
-    std::vector<std::string_view> lines_;
+    std::vector<render::TextLine> lines_;
 #endif
 
     quint32 segment_capacity_{0}; ///< bytes
@@ -1512,6 +1513,14 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
     const std::uint32_t first = static_cast<std::uint32_t>(glyph_data_.size() * sizeof(float));
     std::uint32_t count       = 0;
 
+    // How wide a run is at a capital height of one pixel: its advance in EM over
+    // the face's capital height.
+    const float sans_cap             = atlas_->cap_height(render::Face::Sans);
+    const render::MeasureRun measure = [this, sans_cap](std::string_view run) {
+        const float advance = atlas_->measure(render::Face::Sans, run).advance;
+        return sans_cap > 0.0f ? advance / sans_cap : advance;
+    };
+
     for (const render::TextItem& item : list.texts) {
         // Under three pixels a caption is a smudge rather than a word, and drawing
         // it costs a glyph quad per character for something nobody can read. The
@@ -1542,32 +1551,22 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
         const float cos_a = len > 0.0 ? static_cast<float>(dx / len) : 1.0f;
         const float sin_a = len > 0.0 ? static_cast<float>(dy / len) : 0.0f;
 
-        // Stacked around the anchor, so a two-line label sits centred on the point
-        // rather than hanging below it — a TAKS over a KAKS is one fraction.
-        lines_.clear();
-        std::size_t at = 0;
-        while (at <= item.text.size()) {
-            const std::size_t nl = item.text.find('\n', at);
-            const std::size_t to = nl == std::string::npos ? item.text.size() : nl;
-            if (to > at) lines_.emplace_back(item.text.data() + at, to - at);
-            if (nl == std::string::npos) break;
-            at = nl + 1;
-        }
-        if (lines_.empty()) continue;
+        // THE LAYOUT THE PAPER GETS TOO (render/text_layout.hpp): the breaks, the
+        // stack and each line's alignment, measured by the same shaper. A text
+        // that wraps wraps to its baseline's length.
+        const core::TextLines lines_of{item.spacing, item.wrap};
+        render::lay_out_text(item.text, item.height_px, static_cast<core::TextAnchor>(item.anchor),
+                             lines_of, static_cast<float>(len), measure, lines_);
 
-        const float step = em * 1.25f;
-
-        for (std::size_t line = 0; line < lines_.size(); ++line) {
-            const float offset =
-                (static_cast<float>(line) - static_cast<float>(lines_.size() - 1) * 0.5f) * step;
-
-            // The stack runs perpendicular to the baseline, which is what keeps a
-            // rotated two-line caption stacked across its own direction.
-            const float ox = static_cast<float>(sx) - sin_a * offset;
-            const float oy = static_cast<float>(sy) + cos_a * offset;
-
-            count += emit_line(render::Face::Sans, lines_[line], ox, oy, em, cos_a, sin_a,
-                               item.rgba, item.anchor);
+        for (const render::TextLine& line : lines_) {
+            if (line.text.empty()) continue;
+            // Along the baseline and down across it: the stack runs perpendicular
+            // to the baseline, which keeps a rotated caption stacked across its
+            // own direction.
+            const float ox = static_cast<float>(sx) + cos_a * line.u - sin_a * line.v;
+            const float oy = static_cast<float>(sy) + sin_a * line.u + cos_a * line.v;
+            count += emit_line(render::Face::Sans, line.text, ox, oy, em, cos_a, sin_a, item.rgba,
+                               /*anchor=*/0);
         }
     }
 

@@ -460,7 +460,10 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             // number is part of the drawing (R20).
             item.height_px =
                 static_cast<float>(static_cast<double>(texts.height(tslot)) / view.mm_per_pixel());
-            item.anchor = static_cast<std::uint8_t>(texts.anchor(tslot));
+            item.anchor                 = static_cast<std::uint8_t>(texts.anchor(tslot));
+            const core::TextLines lines = texts.lines(tslot);
+            item.spacing                = lines.spacing;
+            item.wrap                   = lines.wrap;
             item.text.assign(texts.text(tslot));
 
             out.texts.push_back(std::move(item));

@@ -620,31 +620,41 @@ std::string strip_mtext(std::string_view raw)
         if (i + 1 >= raw.size()) break;
         const char k = raw[++i];
         switch (k) {
-        case 'P': out += ' '; break; // paragraph
+        // A PARAGRAPH IS A LINE (TODOS C-12): the text keeps its breaks, so a
+        // three-line plan note arrives as three lines rather than one run.
+        case 'P': out += '\n'; break;
         case '\\':
         case '{':
         case '}': out += k; break;
         case '~': out += ' '; break; // non-breaking space
-        case 'S': {                  // stacked: \S a^b; → "a b"
+        case 'S': {                  // stacked: \S a/b; → "a/b", \S a^b; → "a b"
             std::string frac;
             while (i + 1 < raw.size() && raw[i + 1] != ';')
                 frac += raw[++i];
             if (i + 1 < raw.size()) ++i; // the ';'
             for (char& f : frac)
-                if (f == '^' || f == '/' || f == '#') f = ' ';
+                if (f == '^')
+                    f = ' ';
+                else if (f == '#')
+                    f = '/';
             out += frac;
             break;
         }
+        // Underline, overline and strike-through switched on or off: no
+        // argument, so nothing after them is theirs. Reading them as codes
+        // with one up to ';' swallowed the words that followed.
+        case 'L':
+        case 'l':
+        case 'O':
+        case 'o':
+        case 'K':
+        case 'k': break;
         case 'A':
         case 'C':
         case 'c':
         case 'f':
         case 'F':
         case 'H':
-        case 'L':
-        case 'l':
-        case 'O':
-        case 'o':
         case 'Q':
         case 'T':
         case 'W':
@@ -657,6 +667,22 @@ std::string strip_mtext(std::string_view raw)
         }
     }
     return expand_text_codes(out);
+}
+
+std::string escape_mtext(std::string_view text)
+{
+    std::string out;
+    out.reserve(text.size() + 8);
+    for (const char c : text) {
+        switch (c) {
+        case '\n': out += "\\P"; break;
+        case '\\': out += "\\\\"; break;
+        case '{': out += "\\{"; break;
+        case '}': out += "\\}"; break;
+        default: out += c; break;
+        }
+    }
+    return out;
 }
 
 #ifdef KENTOS_HAVE_DXFRW
