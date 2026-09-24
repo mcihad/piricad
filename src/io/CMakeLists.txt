@@ -30,6 +30,7 @@ add_library(kentos_io STATIC
     src/service.cpp
     src/point_list.cpp
     src/vector.cpp
+    src/dxf_multileader.hpp
 )
 
 target_include_directories(kentos_io

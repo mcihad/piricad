@@ -34,7 +34,9 @@ Köşeler sırayla ve ilk köşede, ilk kenarın doğrultusunda dolu üçgen ok.
 
 Proje dosyasında tür sütunu `11` (`core.leader`). DXF `LEADER` köşeleri ve ok
 bayrağıyla gelir ve gider; dosyanın bağladığı yazı kendi `MTEXT`/`TEXT` nesnesi olarak
-ayrıca gelir. GeoPackage'a çizgi olarak yazılır.
+ayrıca gelir. DXF `MULTILEADER`'ın her kılavuz çizgisi de bir kılavuz çizgi olarak gelir —
+okun ucundan inişin sonuna, oku boyuyla — ve tek satırlı yazısı kılavuzun ucuna bağlanır
+([ayrıntı](../veri/dis-formatlar.md)). GeoPackage'a çizgi olarak yazılır.
 
 ## Komutlar
 

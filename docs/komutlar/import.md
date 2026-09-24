@@ -181,7 +181,12 @@ en yakın hizaya çevrilir; dosyanın yazı stilleri bu programda olmayan bir ya
 istiyorsa (`romans.shx`, `arial.ttf` …) yazılar IBM Plex Sans ile çizilir ve bu, yazı
 tipleri ve kaç yazının istediğiyle birlikte söylenir — `düşürme: 12 yazının istediği
 yazı tipi bu programda yok: 'romans.shx' (12 yazı). …` —, çünkü harf genişlikleri ve
-satır kırılmaları kaynaktan farklı olabilir. **Alınmayanlar**, `atlandı:` ile sayılır: sonsuz doğru, bakış
+satır kırılmaları kaynaktan farklı olabilir. **Çoklu kılavuzlar** (`MULTILEADER`, libdxfrw'nun
+okumadığı varlık) GDAL ile okunur: her kılavuz çizgisi bir kılavuz çizgi, yazısı bir yazı
+nesnesi olur; tek satırlı ve inişin hizasındaki yazı kılavuzun ucuna bağlanır —
+`not: 3 MULTILEADER 3 kılavuz çizgi olarak okundu (GDAL ile); 2 yazı kılavuzun ucuna
+bağlandı; 1 yazı bağlanmadı — çok satırlı, dönük ya da ucundan ayrı; yerinde duruyor.`
+**Alınmayanlar**, `atlandı:` ile sayılır: sonsuz doğru, bakış
 penceresi, raster resim, ağ, anonim bloklar. Bir örnek:
 
 ```text

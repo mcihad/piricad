@@ -186,6 +186,7 @@ AYAR koordinat_sistemi EPSG:5254
 | Aktarılan | Eksik alınan ya da alınmayan (her biri transkriptte söylenir) |
 |---|---|
 | Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Çizgi tipi (LTYPE): bu sürümde uygulanmaz, çizgiler düz; söylenir |
+| Yazı stilinin istediği yazı tipi, raporda — `romans.shx (12 yazı)` | Yazı tipinin kendisi: bütün yazılar IBM Plex Sans ile çizilir; bu programda olmayan her yazı tipi kaç yazının istediğiyle birlikte söylenir |
 | **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Yazı tipi; TEXT'in alt hizası ile yaslanmış/sığdırılmış yazı en yakın hizayla çizilir, söylenir |
 | **Yazılar**, yüksekliği, **açısı**, dokuz hizası, **satırları**, satır aralığı ve kırılma genişliğiyle ([yazı nesnesi](../nesneler/yazi.md)); çok satırlı yazı MTEXT olarak yazılır; MTEXT biçim kodları soyulur | Yalnız uydurma noktası taşıyan spline: uydurma noktaları kontrol noktası sayılır, `düşürme:` ile söylenir |
 | **Daire, yay, elips ve kısmi elips** — gerçek eğri olarak; GeoPackage'a çokgen olarak gider, geri okunuşta eğri olur | Ne katalogda olan ne de kendi çizgilerini taşıyan tarama deseni: sınır, ad, açı korunur, desen çizilmez, söylenir |
@@ -193,6 +194,7 @@ AYAR koordinat_sistemi EPSG:5254
 | **Blok tanımları ve referansları** (`BLOCK`/`INSERT`): yapısıyla, ölçek, açı, ayna, dizi; iç içe | Anonim bloklar (`*D1`…): ölçünün kendi çizgileri, ölçü nesnesi zaten okunduğu için |
 | **Tarama** (`HATCH`): sınır döngüleri, desen adı, açı, çizimin birimine göre ölçek ve **desen tanım çizgileri** (grup 78); dosyanın kendi çizgileri varsa aralık, açı ve başlangıç onlardan, yoksa aileler desen kataloğundan | Tarama sınırındaki yay ve spline kenarlar çizgi parçalarına bölünür; ikili DXF'te desen çizgileri okunmaz, katalog geçer |
 | **Ölçü** (`DIMENSION`: hizalı, doğrusal, yarıçap, çap, açısal, ordinat) ve **kılavuz çizgi** (`LEADER`) | Ölçü stilinin dosyada olmaması: ISO-25 ölçüleri kullanılır, söylenir |
+| **Çoklu kılavuz** (`MULTILEADER`): her kılavuz çizgisi okun ucundan inişin sonuna bir kılavuz çizgi, oku boyuyla; yazısı yeri, yüksekliği, açısı ve hizasıyla bir yazı nesnesi — tek satırlıysa ve inişin hizasındaysa kılavuzun ucuna **bağlı** | Çok satırlı, dönük ya da inişten ayrı yazı bağlanmaz, yerinde durur ve sayılır; blok tanımının içindeki çoklu kılavuz okunmaz. libdxfrw bu varlığı okumadığı için GDAL ile okunur: GDAL'sız bir yapı atlar ve söyler |
 | **Katman adı, rengi, kalınlığı**, dondurulmuş/kapalı (görünmez) ve kilitli durumu | |
 | **Nesnenin kendi rengi ve kalınlığı** (ACI ve gerçek renk); blok üyesinde ByBlock. ACI 7 ("beyaz/siyah", zemine uyan renk) siyah okunur, siyah ACI 7 yazılır | |
 | Boşluklu ve çok parçalı alanlar | |

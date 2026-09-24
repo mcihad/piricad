@@ -18,6 +18,7 @@
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/dimension.hpp"
@@ -4046,6 +4047,242 @@ TEST_CASE(
     CHECK(
         c.transcript.find("2 yazının istediği yazı tipi bu programda yok: 'romans.shx' (2 yazı)") !=
         std::string::npos);
+}
+
+TEST_CASE("DXF: MULTILEADER kılavuz çizgi olarak gelir; ok ucu, iniş ve kılavuza bağlı yazısıyla")
+{
+    // TODOS C-12: libdxfrw has no MULTILEADER at all, and a drawing's notes
+    // made with one simply did not arrive. GDAL's DXF driver reads them.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-mleader");
+    const std::string path = dir.file("mleader.dxf");
+    {
+        // The smallest MULTILEADER GDAL takes: a context with the words at the
+        // landing, one leader, one leader line, and the entity's own tail.
+        const std::vector<std::pair<int, std::string>> groups = {{0, "SECTION"},
+                                                                 {2, "HEADER"},
+                                                                 {9, "$ACADVER"},
+                                                                 {1, "AC1021"},
+                                                                 {9, "$INSUNITS"},
+                                                                 {70, "6"},
+                                                                 {0, "ENDSEC"},
+                                                                 {0, "SECTION"},
+                                                                 {2, "ENTITIES"},
+                                                                 {0, "MULTILEADER"},
+                                                                 {5, "2A"},
+                                                                 {100, "AcDbEntity"},
+                                                                 {8, "NOTLAR"},
+                                                                 {100, "AcDbMLeader"},
+                                                                 {300, "CONTEXT_DATA{"},
+                                                                 {40, "1.0"},
+                                                                 {10, "20.0"},
+                                                                 {20, "10.0"},
+                                                                 {30, "0.0"},
+                                                                 {41, "2.5"},
+                                                                 {140, "2.5"},
+                                                                 {145, "0.625"},
+                                                                 {174, "1"},
+                                                                 {175, "6"},
+                                                                 {176, "0"},
+                                                                 {177, "0"},
+                                                                 {290, "1"},
+                                                                 {304, "Rögar K-12"},
+                                                                 {11, "0.0"},
+                                                                 {21, "0.0"},
+                                                                 {31, "1.0"},
+                                                                 {12, "20.625"},
+                                                                 {22, "11.25"},
+                                                                 {32, "0.0"},
+                                                                 {13, "1.0"},
+                                                                 {23, "0.0"},
+                                                                 {33, "0.0"},
+                                                                 {42, "0.0"},
+                                                                 {43, "0.0"},
+                                                                 {44, "0.0"},
+                                                                 {45, "1.0"},
+                                                                 {170, "1"},
+                                                                 {90, "-1073741824"},
+                                                                 {171, "1"},
+                                                                 {172, "5"},
+                                                                 {91, "-1073741824"},
+                                                                 {141, "0.0"},
+                                                                 {92, "0"},
+                                                                 {291, "0"},
+                                                                 {292, "0"},
+                                                                 {173, "0"},
+                                                                 {293, "0"},
+                                                                 {142, "0.0"},
+                                                                 {143, "0.0"},
+                                                                 {294, "0"},
+                                                                 {295, "0"},
+                                                                 {296, "0"},
+                                                                 {110, "0.0"},
+                                                                 {120, "0.0"},
+                                                                 {130, "0.0"},
+                                                                 {111, "1.0"},
+                                                                 {121, "0.0"},
+                                                                 {131, "0.0"},
+                                                                 {112, "0.0"},
+                                                                 {122, "1.0"},
+                                                                 {132, "0.0"},
+                                                                 {297, "0"},
+                                                                 {302, "LEADER{"},
+                                                                 {290, "1"},
+                                                                 {291, "1"},
+                                                                 {10, "16.0"},
+                                                                 {20, "10.0"},
+                                                                 {30, "0.0"},
+                                                                 {11, "1.0"},
+                                                                 {21, "0.0"},
+                                                                 {31, "0.0"},
+                                                                 {90, "0"},
+                                                                 {40, "4.0"},
+                                                                 {304, "LEADER_LINE{"},
+                                                                 {10, "10.0"},
+                                                                 {20, "4.0"},
+                                                                 {30, "0.0"},
+                                                                 {91, "0"},
+                                                                 {170, "1"},
+                                                                 {92, "-1056964608"},
+                                                                 {305, "}"},
+                                                                 {271, "0"},
+                                                                 {303, "}"},
+                                                                 {272, "9"},
+                                                                 {273, "9"},
+                                                                 {301, "}"},
+                                                                 {340, "0"},
+                                                                 {90, "330752"},
+                                                                 {170, "1"},
+                                                                 {91, "-1056964608"},
+                                                                 {171, "-2"},
+                                                                 {290, "1"},
+                                                                 {291, "1"},
+                                                                 {41, "4.0"},
+                                                                 {42, "2.5"},
+                                                                 {172, "2"},
+                                                                 {343, "0"},
+                                                                 {173, "1"},
+                                                                 {95, "1"},
+                                                                 {174, "1"},
+                                                                 {175, "0"},
+                                                                 {92, "-1056964608"},
+                                                                 {292, "0"},
+                                                                 {344, "0"},
+                                                                 {93, "-1056964608"},
+                                                                 {10, "1.0"},
+                                                                 {20, "1.0"},
+                                                                 {30, "1.0"},
+                                                                 {43, "0.0"},
+                                                                 {176, "0"},
+                                                                 {293, "0"},
+                                                                 {294, "0"},
+                                                                 {178, "0"},
+                                                                 {179, "1"},
+                                                                 {45, "1.0"},
+                                                                 {271, "0"},
+                                                                 {272, "9"},
+                                                                 {273, "9"},
+                                                                 {0, "ENDSEC"},
+                                                                 {0, "EOF"}};
+        std::ofstream out(path, std::ios::binary);
+        for (const auto& [code, value] : groups)
+            out << code << "\n" << value << "\n";
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    INFO(r.transcript);
+    if (r.transcript.find("GDAL'sız") != std::string::npos) PENDING("KENTOS_WITH_GDAL=OFF.");
+    CHECK(r.transcript.find("1 MULTILEADER 1 kılavuz çizgi olarak okundu (GDAL ile); 1 yazı "
+                            "kılavuzun ucuna bağlandı.") != std::string::npos);
+
+    core::EntityId leader = core::kNoEntity;
+    core::EntityId words  = core::kNoEntity;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e)) continue;
+        if (r.doc.entities().kind[e] == core::kLeaderKind) leader = e;
+        if (r.doc.texts().has(r.doc.entities().slot[e])) words = e;
+    }
+    REQUIRE(leader != core::kNoEntity);
+    REQUIRE(words != core::kNoEntity);
+    // From the arrow's tip, through the landing's start, to its end.
+    const std::uint32_t lslot = r.doc.entities().slot[leader];
+    const core::RingSpan ls   = r.doc.geometry().rings_of(lslot);
+    const auto xs             = r.doc.geometry().ring_xs(ls.first);
+    const auto ys             = r.doc.geometry().ring_ys(ls.first);
+    REQUIRE_EQ(xs.size(), std::size_t{3});
+    CHECK_EQ(core::Point2{xs[0], ys[0]}, (core::Point2{10'000, 4'000}));
+    CHECK_EQ(core::Point2{xs[1], ys[1]}, (core::Point2{16'000, 10'000}));
+    CHECK_EQ(core::Point2{xs[2], ys[2]}, (core::Point2{20'000, 10'000}));
+    const auto def = core::leader_of(r.doc.geometry(), lslot);
+    REQUIRE(def.ok());
+    CHECK(def.value().arrow);
+    CHECK(std::abs(def.value().arrow_size - 2'500) <= 1);
+
+    // The words, where the file put them — tied to the landing, a gap off it.
+    const std::uint32_t wslot = r.doc.entities().slot[words];
+    CHECK_EQ(std::string(r.doc.texts().text(wslot)), std::string("Rögar K-12"));
+    CHECK(r.doc.texts().anchor(wslot) == core::TextAnchor::MiddleLeft);
+    const core::RingSpan ws = r.doc.geometry().rings_of(wslot);
+    CHECK_EQ((core::Point2{r.doc.geometry().ring_xs(ws.first)[0],
+                           r.doc.geometry().ring_ys(ws.first)[0]}),
+             (core::Point2{20'625, 10'000}));
+    const core::Attachment* tie = r.doc.attachments().get(words);
+    REQUIRE(tie != nullptr);
+    CHECK(tie->anchor == core::AttachAnchor::Landing);
+    CHECK_EQ(tie->gap, 625);
+    CHECK_EQ(r.doc.layer(r.doc.entities().layer[leader])->name, std::string("NOTLAR"));
+}
+
+TEST_CASE("IO: kılavuz çizginin bağlı yazısı dosyayla ve panoyla bağıyla gider")
+{
+    // TODOS C-12: the landing tie is written to the project file, and a leader
+    // copied with its words through the clipboard file brings the tie along —
+    // the words follow the copy, not the original.
+    TempDir tmp("kilavuz-yazi-bagi");
+    const std::string project = tmp.file("kilavuz.pcad");
+    const std::string clip    = tmp.file("pano.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=NOTLAR", Origin::Test).ok());
+    REQUIRE(
+        written.bus.execute_line("LİDER noktalar=0,0 5,5 10,5 metin=\"Rögar K-12\"", Origin::Test)
+            .ok());
+    auto saved = written.bus.execute_line("FARKLIKAYDET \"" + project + "\"", Origin::Test);
+    if (!saved) FAIL_WITH("FARKLIKAYDET", saved.error().message);
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + project + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const core::EntityId words =
+        reloaded.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{2}));
+    REQUIRE(words != core::kNoEntity);
+    const core::Attachment* tie = reloaded.doc.attachments().get(words);
+    REQUIRE(tie != nullptr);
+    CHECK(tie->anchor == core::AttachAnchor::Landing);
+    CHECK_EQ(core::raw(tie->source), std::uint64_t{1});
+    CHECK_EQ(reloaded.doc.content_hash(), written.doc.content_hash());
+
+    // Through the clipboard file, and pasted 20 m east: the copy's words follow
+    // the copy's leader.
+    REQUIRE(
+        written.bus.execute_line("PANOYAKOPYALA nesneler=1 2 dosya=\"" + clip + "\"", Origin::Test)
+            .ok());
+    REQUIRE(
+        written.bus.execute_line("YAPIŞTIR nokta=20,0 dosya=\"" + clip + "\"", Origin::Test).ok());
+    std::vector<core::EntityId> leaders;
+    std::vector<core::EntityId> captions;
+    for (core::EntityId e = 0; e < written.doc.entities().size(); ++e) {
+        if (!written.doc.alive(e)) continue;
+        if (written.doc.entities().kind[e] == core::kLeaderKind) leaders.push_back(e);
+        if (written.doc.texts().has(written.doc.entities().slot[e])) captions.push_back(e);
+    }
+    REQUIRE_EQ(leaders.size(), std::size_t{2});
+    REQUIRE_EQ(captions.size(), std::size_t{2});
+    const core::Attachment* pasted = written.doc.attachments().get(captions[1]);
+    REQUIRE(pasted != nullptr);
+    CHECK_EQ(written.doc.slot_of(pasted->source), leaders[1]);
 }
 
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")

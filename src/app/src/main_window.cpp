@@ -5220,6 +5220,44 @@ int MainWindow::probeRealMouse()
             shoot("kilavuz-yazi-izler");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 21. A DXF'S MULTILEADER ARRIVES AS A LEADER WITH TIED WORDS (TODOS C-12) ----
+        {
+            fresh({});
+            const QString seed = QString::fromStdString(data_root()) +
+                                 QStringLiteral("/../tests/fuzz/tohum/dxf/26-multileader.dxf");
+            if (QFileInfo::exists(seed)) {
+                runScriptLine(QStringLiteral("İÇEAKTAR dosya=\"%1\"").arg(seed));
+                // The reading is on a worker thread; the drawing lands when it is done.
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 10000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+                runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.6"));
+                const core::Document& doc = controller_->document();
+                std::size_t leaders       = 0;
+                std::size_t tied          = 0;
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+                    if (!doc.alive(e)) continue;
+                    if (doc.entities().kind[e] == core::kLeaderKind) ++leaders;
+                    if (const core::Attachment* tie = doc.attachments().get(e);
+                        tie != nullptr && tie->anchor == core::AttachAnchor::Landing)
+                        ++tied;
+                }
+                check(leaders == 1 && tied == 1,
+                      QStringLiteral("DXF'in MULTILEADER'ı bir kılavuz çizgi ve ona bağlı yazı "
+                                     "olarak geldi (kılavuz %1, bağlı yazı %2)")
+                          .arg(leaders)
+                          .arg(tied));
+                shoot("multileader-ice-aktarim");
+            } else {
+                (void)std::fprintf(stdout, "[fare] BEKLEMEDE: MULTILEADER tohumu bulunamadı\n");
+            }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

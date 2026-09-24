@@ -22,6 +22,7 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/format.hpp"
 
+#include "dxf_multileader.hpp"
 #include "dxf_units.hpp"
 
 #include <algorithm>
@@ -46,6 +47,7 @@
 #include <cpl_conv.h>
 #include <cpl_error.h>
 #include <gdal_priv.h>
+#include <ogr_featurestyle.h>
 #include <ogr_spatialref.h>
 #include <ogrsf_frmts.h>
 #endif
@@ -2102,6 +2104,107 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
                                "türü aktarıldı.");
     co_return report;
 #endif
+}
+
+// ------------------------------------------------------------ MULTILEADER ----
+
+bool dxf_multileaders_supported() noexcept
+{
+#ifdef KENTOS_HAVE_GDAL
+    return true;
+#else
+    return false;
+#endif
+}
+
+core::Result<std::vector<DxfMultiLeader>> read_dxf_multileaders(const std::string& path, bool utf8)
+{
+    std::vector<DxfMultiLeader> out;
+#ifdef KENTOS_HAVE_GDAL
+    if (is_virtual_path(path))
+        return err(ErrorCode::InvalidArgument,
+                   "'" + path + "' sanal dosya sistemi yolu; MULTILEADER okunmadı.");
+    ensure_registered();
+    // BLOCKS STAY BLOCKS — a MULTILEADER in a block definition is not one on
+    // the drawing, and inlined it would be drawn once per insert as a free
+    // object — and the words are UTF-8 when the file's version says so,
+    // whatever its code page claims.
+    const CPLConfigOptionSetter inline_blocks("DXF_INLINE_BLOCKS", "FALSE", true);
+    const CPLConfigOptionSetter encoding("DXF_ENCODING", utf8 ? "UTF-8" : nullptr, true);
+    const char* const dxf_only[] = {"DXF", nullptr};
+    GDALDatasetUniquePtr ds(GDALDataset::FromHandle(
+        ::GDALOpenEx(path.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, dxf_only, nullptr, nullptr)));
+    if (!ds)
+        return err(ErrorCode::IoFailure,
+                   "'" + path + "' MULTILEADER için açılamadı: " + gdal_reason());
+    OGRLayer* entities = ds->GetLayerByName("entities");
+    if (entities == nullptr) return out;
+    if (entities->SetAttributeFilter("SubClasses LIKE '%AcDbMLeader%'") != OGRERR_NONE)
+        return err(ErrorCode::IoFailure, "MULTILEADER süzülemedi: " + gdal_reason());
+
+    std::map<std::string, std::size_t> by_handle;
+    const auto run_of = [](const OGRLineString& line) {
+        std::vector<DxfXY> run;
+        run.reserve(static_cast<std::size_t>(line.getNumPoints()));
+        for (int i = 0; i < line.getNumPoints(); ++i)
+            run.push_back(DxfXY{line.getX(i), line.getY(i)});
+        return run;
+    };
+    for (const auto& feature : *entities) {
+        const int paper = feature->GetFieldIndex("PaperSpace");
+        if (paper >= 0 && feature->IsFieldSetAndNotNull(paper) &&
+            feature->GetFieldAsInteger(paper) != 0)
+            continue;
+        const std::string handle = feature->GetFieldAsString("EntityHandle");
+        const auto [at, fresh]   = by_handle.try_emplace(handle, out.size());
+        if (fresh) {
+            out.emplace_back();
+            out.back().handle = handle;
+            out.back().layer  = feature->GetFieldAsString("Layer");
+        }
+        DxfMultiLeader& ml       = out[at->second];
+        const OGRGeometry* shape = feature->GetGeometryRef();
+        if (shape == nullptr) continue;
+        switch (wkbFlatten(shape->getGeometryType())) {
+        case wkbLineString: ml.lines.push_back(run_of(*shape->toLineString())); break;
+        case wkbMultiLineString:
+            for (const OGRLineString* part : *shape->toMultiLineString())
+                ml.lines.push_back(run_of(*part));
+            break;
+        case wkbPolygon:
+            if (const OGRLinearRing* ring = shape->toPolygon()->getExteriorRing(); ring != nullptr)
+                ml.arrows.push_back(run_of(*ring));
+            break;
+        case wkbPoint: {
+            ml.text    = feature->GetFieldAsString("Text");
+            ml.text_at = DxfXY{shape->toPoint()->getX(), shape->toPoint()->getY()};
+            // THE LABEL'S OWN PARAMETERS, read by GDAL's style parser rather than
+            // by picking the string apart: anchor, height in ground units, turn.
+            OGRStyleMgr styles;
+            styles.InitFromFeature(feature.get());
+            for (int i = 0; i < styles.GetPartCount(); ++i) {
+                const std::unique_ptr<OGRStyleTool> tool(styles.GetPart(i));
+                if (!tool || tool->GetType() != OGRSTCLabel) continue;
+                auto* label = static_cast<OGRStyleLabel*>(tool.get());
+                label->SetUnit(OGRSTUGround, 1.0);
+                GBool unset       = FALSE;
+                const double size = label->Size(unset);
+                if (unset == FALSE) ml.text_height = size;
+                const double turn = label->Angle(unset);
+                if (unset == FALSE) ml.text_angle = turn;
+                const int anchor = label->Anchor(unset);
+                if (unset == FALSE && anchor >= 1 && anchor <= 9) ml.text_anchor = anchor;
+            }
+            break;
+        }
+        default: break;
+        }
+    }
+#else
+    (void)path;
+    (void)utf8;
+#endif
+    return out;
 }
 
 } // namespace kentos::io

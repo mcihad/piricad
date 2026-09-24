@@ -11,6 +11,7 @@
 #include "kentos_cad/command/drawing_catalogs.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/ellipse.hpp"
@@ -21,6 +22,7 @@
 #include "kentos_cad/io/vector.hpp"
 
 #include "dxf_common.hpp"
+#include "dxf_multileader.hpp"
 #include "dxf_units.hpp"
 #include "mapped_file.hpp"
 #include "prj_sidecar.hpp"
@@ -2110,6 +2112,174 @@ public:
     /// file itself once libdxfrw is done with it: each patterned hatch then
     /// draws with the lines the file draws it with — spacing, angle and origin
     /// — and a pattern the catalogue does not know draws at all.
+    /// THE MULTILEADERS, which libdxfrw has no class for (TODOS C-12): read by
+    /// GDAL's DXF driver, and only when the file holds one — a byte search
+    /// first, because a second pass over a large drawing costs time the import
+    /// budget does not have. Each becomes this program's own leader, one per
+    /// leader line, and its words a caption tied to the landing when they
+    /// stand where that tie puts them.
+    core::Status read_multileaders(const std::string& path, bool utf8)
+    {
+        bool present = false;
+        if (auto mapped = MappedFile::open(path); mapped) {
+            const auto bytes = mapped.value().bytes();
+            present = std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size())
+                          .find("MULTILEADER") != std::string_view::npos;
+        }
+        if (!present) return core::ok();
+        if (!dxf_multileaders_supported()) {
+            note(Severity::Skipped,
+                 "Dosyada MULTILEADER var; bu yapı onları okuyamıyor (GDAL'sız derlenmiş), "
+                 "atlandılar.");
+            return core::ok();
+        }
+        auto read = read_dxf_multileaders(path, utf8);
+        if (!read) {
+            note(Severity::Warning, "MULTILEADER'lar okunamadı: " + read.error().message);
+            return core::ok();
+        }
+
+        std::size_t made  = 0;
+        std::size_t tied  = 0;
+        std::size_t loose = 0;
+        const auto close  = [](Point2 a, Point2 b) {
+            return std::abs(a.x - b.x) <= 1 && std::abs(a.y - b.y) <= 1;
+        };
+        for (const DxfMultiLeader& ml : read.value()) {
+            const LayerId layer = layer_slot(ml.layer.empty() ? std::string("0") : ml.layer);
+            if (layer == core::kNoLayer) continue;
+            std::vector<std::vector<Point2>> runs;
+            for (const std::vector<DxfXY>& line : ml.lines) {
+                std::vector<Point2> run;
+                for (const DxfXY& p : line)
+                    push_unique(run, to_mm(dxf::Pt{p.x, p.y}));
+                if (run.size() >= 2) runs.push_back(std::move(run));
+            }
+            // THE LANDING IS ITS OWN RUN, starting where the leader lines end;
+            // each leader line is drawn on into it.
+            std::vector<bool> landing(runs.size(), false);
+            for (std::size_t i = 0; i < runs.size(); ++i)
+                for (std::size_t j = 0; j < runs.size(); ++j)
+                    if (i != j && runs[i].size() == 2 && close(runs[i].front(), runs[j].back()))
+                        landing[i] = true;
+            command::EntityId first = core::kNoEntity;
+            std::vector<Point2> first_points;
+            for (std::size_t i = 0; i < runs.size(); ++i) {
+                if (landing[i]) continue;
+                std::vector<Point2> pts = runs[i];
+                for (std::size_t j = 0; j < runs.size(); ++j)
+                    if (landing[j] && close(runs[j].front(), pts.back())) {
+                        push_unique(pts, runs[j].back());
+                        break;
+                    }
+                // THE ARROW'S TIP: GDAL starts the line at the head's base and
+                // draws the head as its own outline, whose farthest corner from
+                // that base is the point the leader shows.
+                core::LeaderDef def;
+                for (const std::vector<DxfXY>& head : ml.arrows) {
+                    std::vector<Point2> corners;
+                    corners.reserve(head.size());
+                    for (const DxfXY& p : head)
+                        corners.push_back(to_mm(dxf::Pt{p.x, p.y}));
+                    if (corners.empty()) continue;
+                    const Point2 base = pts.front();
+                    const auto far    = std::ranges::max_element(corners, {}, [base](Point2 c) {
+                        return std::hypot(static_cast<double>(c.x - base.x),
+                                             static_cast<double>(c.y - base.y));
+                    });
+                    const double size = std::hypot(static_cast<double>(far->x - base.x),
+                                                   static_cast<double>(far->y - base.y));
+                    // Its own head: the base sits between the other corners.
+                    if (size <= 0.0 || size > 1e7) continue;
+                    bool at_base = false;
+                    for (const Point2 c : corners)
+                        at_base = at_base || std::hypot(static_cast<double>(c.x - base.x),
+                                                        static_cast<double>(c.y - base.y)) < size;
+                    if (!at_base) continue;
+                    // The base lies on the line from the tip on, so the tip takes
+                    // its place: the leader starts where the file's did.
+                    pts.front()    = *far;
+                    def.arrow      = true;
+                    def.arrow_size = core::mm_round(size);
+                    break;
+                }
+                const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
+                auto leader = tx_.add_kind(layer, core::kLeaderKind,
+                                           std::span<const core::RingGeometry::RingInput>(&ring, 1),
+                                           core::encode_leader(def), core::kNoBlock);
+                if (!leader) return leader.error();
+                ++made;
+                if (first == core::kNoEntity) {
+                    first        = leader.value();
+                    first_points = pts;
+                }
+            }
+            if (ml.text.empty()) continue;
+
+            // THE WORDS, where the file put them, anchored as it anchored them.
+            const Mm height =
+                ml.text_height > 0.0 ? to_mm_len(ml.text_height) : core::mm_from_metres(2.5);
+            const int column = (ml.text_anchor - 1) % 3; // left, centre, right
+            int row          = 0;                        // bottom
+            if (ml.text_anchor >= 4) row = 1;
+            if (ml.text_anchor >= 7) row = 2;
+            core::TextAnchor anchor = core::text_anchor_at(column, row);
+            Point2 at               = to_mm(dxf::Pt{ml.text_at.x, ml.text_at.y});
+
+            // TIED TO THE LANDING when they stand exactly where the tie puts
+            // them: one line, not turned, its middle on the landing and its
+            // near edge off the side the last segment points.
+            std::optional<core::Attachment> tie;
+            if (first != core::kNoEntity && first_points.size() >= 2 &&
+                ml.text.find('\n') == std::string::npos && std::abs(ml.text_angle) < 1e-9 &&
+                row >= 1) {
+                const Point2 end   = first_points.back();
+                const Point2 from  = first_points[first_points.size() - 2];
+                const bool right   = end.x >= from.x;
+                const Point2 level = row == 2 ? Point2{at.x, at.y - (height / 2)} : at;
+                const Mm gap       = right ? level.x - end.x : end.x - level.x;
+                if (std::abs(level.y - end.y) <= 1 && gap >= 0 && column == (right ? 0 : 2)) {
+                    core::Attachment a;
+                    a.source = tx_.document().key_of(first);
+                    a.anchor = core::AttachAnchor::Landing;
+                    a.derive = core::AttachDerive::Keep;
+                    a.gap    = gap;
+                    if (const auto place =
+                            core::attach_place(first_points, false, a, height, false);
+                        place && place->anchor) {
+                        at     = place->centre;
+                        anchor = *place->anchor;
+                        tie    = a;
+                    }
+                }
+            }
+            const std::int64_t turn = dxf::udeg_from_degrees(ml.text_angle);
+            const Mm advance        = std::max<Mm>(1, core::text_width_estimate(ml.text, height));
+            const Point2 baseline[2]{at, dxf::point_on_circle(at, advance, turn)};
+            auto caption = place_polyline(layer, baseline);
+            if (!caption) return caption.error();
+            if (auto st = tx_.set_text(caption.value(), ml.text, height, anchor); !st) return st;
+            if (tie) {
+                if (auto st = tx_.set_attachment(caption.value(), *tie); !st) return st;
+                ++tied;
+            } else {
+                ++loose;
+            }
+        }
+        if (made != 0)
+            note(Severity::Info,
+                 std::to_string(read.value().size()) + " MULTILEADER " + std::to_string(made) +
+                     " kılavuz çizgi olarak okundu (GDAL ile)" +
+                     (tied != 0 ? "; " + std::to_string(tied) + " yazı kılavuzun ucuna bağlandı"
+                                : std::string()) +
+                     (loose != 0 ? "; " + std::to_string(loose) +
+                                       " yazı bağlanmadı — çok satırlı, dönük ya da ucundan "
+                                       "ayrı; yerinde duruyor"
+                                 : std::string()) +
+                     ".");
+        return core::ok();
+    }
+
     core::Status read_pattern_lines(const std::string& path)
     {
         if (patterned_.empty()) return core::ok();
@@ -2306,6 +2476,8 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
                           "). Dosya bozuk ya da bu bir DXF değil.");
 
     if (const auto st = sink.read_pattern_lines(path); !st) co_return st.error();
+    if (const auto st = sink.read_multileaders(path, reader.getVersion() >= DRW::AC1021); !st)
+        co_return st.error();
     if (auto st = sink.conclude(); !st) co_return st.error();
     sink.report().version = dxf::acad_name(reader.getVersion());
     co_return std::move(sink.report());

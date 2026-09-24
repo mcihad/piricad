@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — DXF'in çoklu kılavuzu (MULTILEADER) içe aktarılır (C-12, 4. aşama: üçüncü teslim)
+
+- **MULTILEADER.** libdxfrw'nun okumadığı çoklu kılavuzlar GDAL'ın DXF sürücüsüyle okunur:
+  her kılavuz çizgisi okun ucundan inişin sonuna bir kılavuz çizgi (oku ve boyuyla), yazısı
+  yeri, yüksekliği, açısı ve hizasıyla bir yazı nesnesi olur; tek satırlı ve inişin hizasındaki
+  yazı kılavuzun ucuna bağlanır. Çok satırlı, dönük ya da inişten ayrı yazı yerinde, bağsız kalır
+  ve raporda sayılır. Dosya taranır ve GDAL yalnız dosyada gerçekten bir MULTILEADER varsa açılır.
+  Önceden bu notlar içe aktarmada hiç gelmiyordu.
+- **Düzeltildi:** içe aktarma ve pano yapıştırması, nesneleri ara bir belgeden alırken yazıların
+  bağlarını düşürüyordu (bağlı bir etiket ya da kılavuz yazısı bağsız geliyordu).
+
 ### Eklendi — kılavuz çizginin yazısı kılavuza bağlı ve yazının duracağı yerde sorulur (C-12, 4. aşama: ikinci teslim)
 
 - **Bağlı yazı.** `LİDER`'in yazısı kılavuzun ucuna bağlıdır (yeni bağ türü `uc`): son parçanın

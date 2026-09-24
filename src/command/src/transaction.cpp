@@ -1250,6 +1250,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     const core::RingGeometry& geo = scratch.geometry();
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;
+    std::vector<EntityId> adopted(ents.size(), core::kNoEntity); ///< theirs → mine
     for (EntityId e = 0; e < ents.size(); ++e) {
         if (!ents.alive(e)) continue;
         if (!wanted.empty() && !wanted[e]) continue;
@@ -1286,6 +1287,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
         auto made = add_kind(layer, ents.kind[e], rings, geo.payload_of(slot), in_block);
         if (!made) return made.error();
         const EntityId mine = made.value();
+        adopted[e]          = mine;
 
         if ((ents.flags[e] & core::FlagHidden) != 0)
             if (auto st = set_entity_hidden(mine, true); !st) return st.error();
@@ -1312,6 +1314,24 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
                 return st.error();
         }
         ++summary.entities;
+    }
+
+    // ---- ties, once every object they join exists (TODOS C-12) ----
+    //
+    // A caption that follows its object follows it here too — a leader's words
+    // read from a DXF, a label pasted with its parcel — its source named by the
+    // key it has in THIS drawing. A tie whose source was not brought across is
+    // left behind with it: the caption stays, free.
+    for (EntityId e = 0; e < adopted.size(); ++e) {
+        const core::Attachment* tie = scratch.attachments().get(e);
+        if (tie == nullptr || adopted[e] == core::kNoEntity) continue;
+        const EntityId source = scratch.slot_of(tie->source);
+        if (source == core::kNoEntity || source >= adopted.size() ||
+            adopted[source] == core::kNoEntity)
+            continue;
+        core::Attachment mine = *tie;
+        mine.source           = doc_.key_of(adopted[source]);
+        if (auto st = set_attachment(adopted[e], mine); !st) return st.error();
     }
 
     // ---- block uses, once every block exists ----
