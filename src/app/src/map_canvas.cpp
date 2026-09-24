@@ -3,6 +3,7 @@
 
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/text_engine.hpp"
 #include "kentos_cad/command/aids.hpp"
 #include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/path_edit.hpp"
@@ -2055,6 +2056,67 @@ void MapCanvas::buildBrokenLinks()
             tr("elle yazılmış · ölçülen %1")
                 .arg(QString::fromStdString(core::dimension_value_text(def.value(), unit)))
                 .toStdString()});
+    }
+
+    // A CAPTION WITH A LETTER THE TYPEFACE DOES NOT HAVE (TODOS C-12). The
+    // letter prints as the face's own empty box — on the screen and on the
+    // sheet alike, never borrowed from another font — and a box does not say
+    // what it stands for. Said beside the caption, on the canvas only. Plain
+    // ASCII is always in the face, so only a caption with other letters is
+    // asked, and each distinct caption once.
+    if (doc.revision() != glyph_revision_) {
+        glyph_revision_ = doc.revision();
+        glyph_texts_.clear();
+        if (glyph_notes_.size() > 4096) glyph_notes_.clear();
+        for (core::EntityId e = 0; e < ents.size(); ++e) {
+            if (!doc.alive(e)) continue;
+            const std::uint32_t row = ents.slot[e];
+            if (!doc.texts().has(row)) continue;
+            const std::string_view text = doc.texts().text(row);
+            if (std::ranges::all_of(
+                    text, [](char c) { return (static_cast<unsigned char>(c) & 0x80u) == 0; }))
+                continue;
+            auto [known, fresh] = glyph_notes_.try_emplace(std::string(text));
+            if (fresh) {
+                QStringList named;
+                const std::vector<command::MissingGlyph> missing = missing_glyphs(text);
+                for (std::size_t i = 0; i < missing.size() && i < 3; ++i)
+                    named << QStringLiteral("%1 (U+%2)")
+                                 .arg(QString::fromStdString(missing[i].utf8))
+                                 .arg(missing[i].code, 4, 16, QLatin1Char('0'))
+                                 .toUpper();
+                if (missing.size() > 3) named << QStringLiteral("…");
+                if (!named.isEmpty())
+                    known->second = tr("yazı tipinde yok: %1")
+                                        .arg(named.join(QStringLiteral(", ")))
+                                        .toStdString();
+            }
+            if (!known->second.empty()) glyph_texts_.push_back(e);
+        }
+    }
+    for (const core::EntityId e : glyph_texts_) {
+        if (e >= ents.size() || !doc.alive(e) || !ents.visible(e)) continue;
+        std::array<core::Point2, 4> quad;
+        if (!core::text_quad(doc, e, quad)) continue;
+        float right = -1e9F;
+        float top   = 1e9F;
+        float foot  = -1e9F;
+        for (const core::Point2 corner : quad) {
+            const render::ScreenPointF q = render::to_f(view_.to_screen(corner));
+            right                        = std::max(right, q.x);
+            top                          = std::min(top, q.y);
+            foot                         = std::max(foot, q.y);
+        }
+        if (right < -40.0F || foot < -40.0F || top > h + 40.0F || right > w + 400.0F) continue;
+        const auto found = glyph_notes_.find(std::string(doc.texts().text(ents.slot[e])));
+        if (found == glyph_notes_.end()) continue;
+        // Under the "typed by hand" note when a dimension carries both.
+        const float below = std::ranges::find(manual_dims_, e) != manual_dims_.end()
+                                ? static_cast<float>(look_.hint_px) + 4.0F
+                                : 0.0F;
+        overlay_.labels.push_back(render::OverlayLabel{
+            tokens_->warn.rgba(), right + 10.0F, (top + foot) * 0.5F + 4.0F + below,
+            static_cast<float>(look_.hint_px), false, found->second});
     }
 
     // A HATCH WHOSE BOUNDARY IS GONE (TODOS C-11): it fills the shape the
@@ -4280,6 +4342,15 @@ void MapCanvas::editTextAt(core::Point2 world, const QString& text)
     text_editor_->setText(text);
     text_editor_->selectAll();
     text_editor_abandons_ = true;
+}
+
+std::vector<std::string> MapCanvas::noteTextsForProbe() const
+{
+    std::vector<std::string> out;
+    out.reserve(overlay_.labels.size());
+    for (const render::OverlayLabel& label : overlay_.labels)
+        out.push_back(label.text);
+    return out;
 }
 
 bool MapCanvas::textEditorOpen() const noexcept

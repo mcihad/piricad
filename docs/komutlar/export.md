@@ -87,6 +87,10 @@ Dışa aktarıldı: ada12-teslim.dxf  (14 nesne, 3 katman, DXF AC1021, EPSG:5256
   not: Çizgi tipleri bu sürümde DXF'e yazılmadı; her katman CONTINUOUS.
 ```
 
+Yazıların stili (`STANDARD`) yazıların gerçekten çizildiği yazı tipini adlandırır:
+`IBMPlexSans-Regular.ttf`. Bu yazı tipi kurulu bir okuyucu paftadaki harfleri çizer,
+kurulu olmayan bunu bilerek başka bir yazı tipiyle değiştirir.
+
 DXF sürümü `surum=` ile seçilir: `2000`, `2004`, `2007` (varsayılan), `2010`, `2013`,
 `2018`. 2007 ve sonrası UTF-8'dir; daha eski bir sürüm istenirse dosyaya
 `$DWGCODEPAGE ANSI_1254` yazılır ki Türkçe harfler AutoCAD'de doğru çıksın.

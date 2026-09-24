@@ -3932,6 +3932,37 @@ TEST_CASE("KÖŞETAŞI elipsin eksenini çevirir; ikinci eksen dik kalır")
     CHECK_EQ(f.doc.entities().kind[e], core::kEllipseKind);
 }
 
+TEST_CASE("NESNEBİLGİ yazı tipinde olmayan karakterleri adıyla ve koduyla söyler")
+{
+    // TODOS C-12: a letter the typeface lacks prints as a box, which does not
+    // say what it stands for. The shell's text engine is asked through the
+    // bus (`on_glyph_query`); here a stand-in answers for the one letter.
+    Fixture f;
+    std::string said;
+    f.bus.on_echo        = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    f.bus.on_glyph_query = [](std::string_view text) {
+        std::vector<MissingGlyph> out;
+        if (text.find("漢") != std::string_view::npos) out.push_back(MissingGlyph{0x6F22, "漢"});
+        return out;
+    };
+    REQUIRE(f.bus.execute_line("KATMAN ad=YAZI", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("METİN 0,0 \"Ada 漢\" 2500", Origin::Test).ok()); // 1
+    REQUIRE(f.bus.execute_line("METİN 0,10 \"Şişli\" 2500", Origin::Test).ok()); // 2
+    said.clear();
+    auto told = f.bus.execute_line("NESNEBİLGİ nesneler=1 2", Origin::Test);
+    REQUIRE(told.ok());
+    CHECK(said.find("yazı tipinde olmayan karakter: 漢 (U+6F22)") != std::string::npos);
+    CHECK_EQ(said.find("yazı tipinde olmayan karakter"),
+             said.rfind("yazı tipinde olmayan karakter"));
+    CHECK(told.value().report.dump().find("\"eksik_karakter\"") != std::string::npos);
+
+    // A build with no text engine says nothing rather than guessing.
+    f.bus.on_glyph_query = nullptr;
+    said.clear();
+    REQUIRE(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test).ok());
+    CHECK(said.find("yazı tipinde") == std::string::npos);
+}
+
 TEST_CASE("KÖŞETAŞI ölçünün tanım noktasını taşır: çizgi yeniden kurulur, yazı yeniden ölçülür")
 {
     Fixture f;

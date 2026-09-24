@@ -43,6 +43,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -199,6 +200,31 @@ void describe_dimension(const core::Document& doc, core::EntityId slot, core::Dr
     if (def.scale_basis > 0) said += "; 1/" + std::to_string(def.scale_basis) + " paftası için";
 }
 
+/// A CAPTION'S LETTERS THE TYPEFACE DOES NOT HAVE (TODOS C-12): each prints as
+/// the face's empty box, and the box does not say which letter it stands for.
+void describe_glyphs(const Bus& bus, const core::Document& doc, core::EntityId slot,
+                     core::Json& row, std::string& said)
+{
+    const std::uint32_t gslot = doc.entities().slot[slot];
+    if (!bus.on_glyph_query || !doc.texts().has(gslot)) return;
+    const std::vector<MissingGlyph> missing = bus.on_glyph_query(doc.texts().text(gslot));
+    if (missing.empty()) return;
+    core::Json list = core::Json::array({});
+    std::string named;
+    for (const MissingGlyph& g : missing) {
+        char code[16];
+        (void)std::snprintf(code, sizeof(code), "U+%04X", g.code);
+        core::Json one;
+        one.set("karakter", core::Json::string(g.utf8));
+        one.set("kod", core::Json::string(code));
+        list.push(std::move(one));
+        named += (named.empty() ? "" : ", ") + g.utf8 + " (" + code + ")";
+    }
+    row.set("eksik_karakter", std::move(list));
+    said += "; yazı tipinde olmayan karakter: " + named +
+            " — ekranda ve çıktıda boş kutu olarak görünür";
+}
+
 /// WHAT A HATCH FOLLOWS, AND WHICH HATCHES FOLLOW AN OBJECT (TODOS C-11): the
 /// pattern, the boundary objects, which of them are gone — and the one thing a
 /// DXF's flag is not, a link this drawing can keep.
@@ -349,6 +375,7 @@ Task<void> run_entity_info(Context& ctx)
         describe_dimension(doc, slot, ctx.session().bus().drawing_unit(), row, said);
         describe_links(doc, slot, row, said);
         describe_hatch(doc, slot, row, said);
+        describe_glyphs(ctx.session().bus(), doc, slot, row, said);
         ctx.echo(said + ".");
 
         rows.push(std::move(row));

@@ -177,7 +177,11 @@ katman rengi, kalınlığı ve durumu; nesnenin kendi rengi ve kalınlığı; sa
 **Düşürülerek alınanlar**, her biri `düşürme:` ile sayılır: yalnız uydurma noktalı
 spline'ın uydurma noktaları kontrol noktası sayılır; katalogda olmayan tarama deseni
 çizilmez; çizgi tipi ve değişen çoklu çizgi kalınlığı okunmaz; üst/orta yazı hizaları
-en yakın hizaya çevrilir. **Alınmayanlar**, `atlandı:` ile sayılır: sonsuz doğru, bakış
+en yakın hizaya çevrilir; dosyanın yazı stilleri bu programda olmayan bir yazı tipi
+istiyorsa (`romans.shx`, `arial.ttf` …) yazılar IBM Plex Sans ile çizilir ve bu, yazı
+tipleri ve kaç yazının istediğiyle birlikte söylenir — `düşürme: 12 yazının istediği
+yazı tipi bu programda yok: 'romans.shx' (12 yazı). …` —, çünkü harf genişlikleri ve
+satır kırılmaları kaynaktan farklı olabilir. **Alınmayanlar**, `atlandı:` ile sayılır: sonsuz doğru, bakış
 penceresi, raster resim, ağ, anonim bloklar. Bir örnek:
 
 ```text

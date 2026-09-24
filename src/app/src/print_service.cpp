@@ -88,6 +88,55 @@ QString utf8(const std::string& s)
     return QString::fromUtf8(s.data(), static_cast<int>(s.size()));
 }
 
+/// The face every caption of a sheet is set in, and the licence it travels
+/// under — said once, for the file's metadata and for the line that reports it.
+constexpr const char* kSheetFace    = "IBM Plex Sans";
+constexpr const char* kSheetLicence = "SIL Open Font License 1.1";
+
+/// A SHEET'S OWN RECORD OF ITS TYPEFACE (TODOS C-12): the PDF carries the
+/// bundled face embedded, and its metadata says which face that is and under
+/// what licence — XMP's paged-text font list for a reader that looks for
+/// fonts, and a plain line beside it for a person who looks at the file's
+/// properties. Qt's own XMP is replaced by this, so the title is said here too.
+QByteArray sheet_xmp(const QString& title)
+{
+    const QString face = QString::fromLatin1(kSheetFace);
+    const QString text =
+        QStringLiteral("<?xpacket begin=\"\uFEFF\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n"
+                       "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n"
+                       " <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n"
+                       "  <rdf:Description rdf:about=\"\"\n"
+                       "    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n"
+                       "    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n"
+                       "    xmlns:xmpTPg=\"http://ns.adobe.com/xap/1.0/t/pg/\"\n"
+                       "    xmlns:stFnt=\"http://ns.adobe.com/xap/1.0/sType/Font#\"\n"
+                       "    xmlns:kentos=\"https://kentoscad.org/ns/pafta/1.0/\">\n"
+                       "   <dc:title><rdf:Alt><rdf:li "
+                       "xml:lang=\"x-default\">%1</rdf:li></rdf:Alt></dc:title>\n"
+                       "   <xmp:CreatorTool>KentOSCad</xmp:CreatorTool>\n"
+                       "   <xmpTPg:Fonts><rdf:Bag><rdf:li rdf:parseType=\"Resource\">\n"
+                       "    <stFnt:fontName>IBMPlexSans</stFnt:fontName>\n"
+                       "    <stFnt:fontFamily>%2</stFnt:fontFamily>\n"
+                       "    <stFnt:fontFace>Regular</stFnt:fontFace>\n"
+                       "    <stFnt:fontType>TrueType</stFnt:fontType>\n"
+                       "    <stFnt:fontFileName>IBMPlexSans-Regular.ttf</stFnt:fontFileName>\n"
+                       "   </rdf:li></rdf:Bag></xmpTPg:Fonts>\n"
+                       "   <kentos:yaziTipiLisansi>%2 — %3 (ayrılmış yazı tipi adı: "
+                       "Plex)</kentos:yaziTipiLisansi>\n"
+                       "  </rdf:Description>\n"
+                       " </rdf:RDF>\n"
+                       "</x:xmpmeta>\n"
+                       "<?xpacket end=\"w\"?>")
+            .arg(title.toHtmlEscaped(), face, QString::fromLatin1(kSheetLicence));
+    return text.toUtf8();
+}
+
+/// The words that report it with the sheet.
+std::string sheet_face_note()
+{
+    return std::string("; yazı tipi ") + kSheetFace + " gömülü (" + kSheetLicence + ")";
+}
+
 } // namespace
 
 PrintService::PrintService(command::Bus& bus, const core::Document& document, QObject* parent)
@@ -681,7 +730,9 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             writer.setPageLayout(page);
             writer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
             writer.setCreator(QStringLiteral("KentOSCad"));
-            writer.setTitle(request.title.empty() ? utf8(sheet->name) : utf8(request.title));
+            const QString title = request.title.empty() ? utf8(sheet->name) : utf8(request.title);
+            writer.setTitle(title);
+            writer.setDocumentXmpMetadata(sheet_xmp(title));
             draw(writer, writer.resolution());
         }
         // VERIFIED, THEN PUBLISHED. Until this line the user's path still holds
@@ -706,6 +757,7 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             ", " + std::to_string(sheet->pages.size()) + " sayfa";
         if (map != nullptr && core::map_scale(*map) > 0)
             said += ", ölçek 1:" + std::to_string(core::map_scale(*map));
+        said += sheet_face_note();
 
         // REPORTED WITH THE SUCCESS, not instead of it. The sheet printed; these
         // are what it could not honour, and a caller that reports success without
@@ -767,6 +819,7 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
         writer.setResolution(static_cast<int>(profile.dpi));
         writer.setCreator(QStringLiteral("KentOSCad"));
         if (!request.title.empty()) writer.setTitle(utf8(request.title));
+        writer.setDocumentXmpMetadata(sheet_xmp(utf8(request.title)));
         const QRect paint = writer.pageLayout().paintRectPixels(writer.resolution());
         if (paint.isEmpty()) {
             QFile::remove(plain);
@@ -796,6 +849,7 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
                        io::describe_print_profile(profile) +
                        ", ölçek 1:" + std::to_string(static_cast<long long>(std::llround(scale)));
     if (finish.encrypts()) said += ", şifreli";
+    said += sheet_face_note();
     return said;
 }
 

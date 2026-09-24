@@ -90,12 +90,14 @@ qt_add_executable(kentos_cad
     src/panels.cpp
     src/settings_dialog.cpp
     src/shell_chrome.cpp
+    src/text_engine.cpp
     src/theme.cpp
     src/ribbon.cpp
     src/tokens.cpp
     src/swatch_row.cpp
 
     include/kentos_cad/app/about_dialog.hpp
+    include/kentos_cad/app/text_engine.hpp
     include/kentos_cad/app/app_menu.hpp
     include/kentos_cad/app/command_line.hpp
     include/kentos_cad/app/attribute_panel.hpp

@@ -27,7 +27,8 @@ Yanında, yazı tablosunda dört şey durur:
 
 Programla gelen **IBM Plex Sans** yüzüyle; ekranda, PDF'te ve yazıcıda **aynı
 kurallarla ve aynı ölçüyle**, çünkü üçü de satırları tek bir yerleşim işlevine
-sorar:
+sorar. Yüzde olmayan bir harf üçünde de yüzün kendi boş kutusudur; başka bir yazı
+tipinden alınmaz ([METİN](../komutlar/text.md)):
 
 - Satırlar arası **yüksekliğin 5/3'ü** kadardır, satır aralığıyla çarpılır — DXF
   MTEXT'in "3'e 5" aralığı.

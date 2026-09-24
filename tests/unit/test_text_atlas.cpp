@@ -246,3 +246,29 @@ TEST_CASE("TEXT: shaping the same word twice reuses the same cells")
 }
 
 #endif // KENTOS_HAVE_TEXT
+
+TEST_CASE("TEXT: a character the face does not have is named, once, and draws as the box")
+{
+    // TODOS C-12: a caption with a letter the bundled face lacks shows the
+    // font's own box — which says nothing about WHICH letter. The face's
+    // character map names it, and a Turkish sentence names nothing.
+    render::TextAtlas& atlas = shared();
+    CHECK(atlas.uncovered(render::Face::Sans, "Şişli İlçesi ğüöç ıI Ø±°").empty());
+    CHECK(atlas.uncovered(render::Face::Sans, "satır\nsatır").empty()); // a break is not text
+
+    const auto gone = atlas.uncovered(render::Face::Sans, "A漢B⌀漢");
+    REQUIRE_EQ(gone.size(), std::size_t{2}); // 漢 twice, ⌀ once: each named once
+    CHECK_EQ(gone[0].code, 0x6F22u);
+    CHECK_EQ(gone[0].utf8, std::string("漢"));
+    CHECK_EQ(gone[1].code, 0x2300u);
+    CHECK_EQ(gone[1].utf8, std::string("⌀"));
+
+    // And it is the box the canvas draws: a real outline, not a blank.
+    std::vector<render::PlacedGlyph> glyphs;
+    (void)atlas.shape(render::Face::Sans, "A漢B", glyphs);
+    REQUIRE_EQ(glyphs.size(), std::size_t{3});
+    CHECK_FALSE(atlas.box(glyphs[1].box).blank);
+    std::size_t missing = 0;
+    (void)atlas.measure(render::Face::Sans, "A漢B", &missing);
+    CHECK_EQ(missing, std::size_t{1});
+}

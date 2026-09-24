@@ -10,6 +10,15 @@ yazıcıda aynı yazı tipi ve aynı satır düzeniyle. Yazı tipi seçimi ileri
 (TODOS C-12'nin sonraki aşamaları); öznitelikten otomatik etiket bugün
 [`ETİKET`](label.md) ile yazılır.
 
+**Yazı tipinde olmayan bir harf boş bir kutu olarak görünür** — ekranda da, PDF'te ve
+yazıcıda da aynı kutu. Harf, bilgisayarda bulunan başka bir yazı tipinden **ödünç
+alınmaz**: öyle olsaydı pafta ekrandakinden ve başka bir bilgisayarda basılan aynı
+paftadan farklı çıkardı. Türkçe harflerin hepsi (ç, ğ, ı, İ, ö, ş, ü) ve Ø, °, ±
+yazı tipindedir; kutu ancak Çince bir karakter, bir matematik simgesi (`⌀`) gibi
+harflerde çıkar. Tuval böyle bir yazının yanında hangi harfin eksik olduğunu uyarı
+renginde söyler — `yazı tipinde yok: 漢 (U+6F22)`; bu not yalnız ekrandadır, paftaya
+çıkmaz. [`NESNEBİLGİ`](entity_info.md) de aynı harfleri adıyla ve koduyla verir.
+
 ## Ne yapar
 
 `METİN`, çizime bir **yazı nesnesi** koyar. Bu bir etiket değil, çizilmiş bir

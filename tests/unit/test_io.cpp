@@ -3999,6 +3999,55 @@ TEST_CASE("DXF: tutamaktan çekilen ölçü yazısı yerinde kalır ve elle yerl
     CHECK(found);
 }
 
+TEST_CASE(
+    "DXF: bu programda olmayan yazı tipiyle tanımlı yazılar raporda sayılır; kendi dosyası sessiz")
+{
+    // TODOS C-12: every caption is drawn in the bundled IBM Plex, so a drawing
+    // made in another face comes out narrower or wider than its author saw
+    // it — said in the report with the face and how many captions ask for it.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-yazi-tipi");
+    const std::string ours = dir.file("bizim.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254", "METİN 485310,4310210 \"Ada 12\" 2500",
+          "METİN 485310,4310220 \"Parsel 4\" 2500",
+          "ÖLÇÜ birinci=485300,4310200 ikinci=485320,4310200 konum=485310,4310196"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + ours + "\"", Origin::Test).ok());
+
+    std::string bytes;
+    {
+        std::ifstream in(ours, std::ios::binary);
+        bytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    // The style names the face the captions were set in.
+    CHECK(bytes.find("\nIBMPlexSans-Regular.ttf\n") != std::string::npos);
+
+    // Read back, this program's own file says nothing about faces...
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + ours + "\"", Origin::Test).ok());
+    CHECK(b.transcript.find("yazı tipi bu programda yok") == std::string::npos);
+
+    // ...and the same drawing made in romans.shx says which captions asked.
+    const std::string theirs = dir.file("onlarin.dxf");
+    {
+        std::string changed = bytes;
+        changed.replace(changed.find("IBMPlexSans-Regular.ttf"),
+                        std::string_view("IBMPlexSans-Regular.ttf").size(), "romans.shx");
+        std::ofstream(theirs, std::ios::binary) << changed;
+    }
+    Rig c;
+    REQUIRE(c.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(c.bus.execute_line("İÇEAKTAR dosya=\"" + theirs + "\"", Origin::Test).ok());
+    INFO(c.transcript);
+    CHECK(
+        c.transcript.find("2 yazının istediği yazı tipi bu programda yok: 'romans.shx' (2 yazı)") !=
+        std::string::npos);
+}
+
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")
 {
     if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");

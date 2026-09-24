@@ -46,6 +46,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class QLineEdit;
@@ -293,6 +294,10 @@ public:
     /// The dynamic-input label the guide last carried, for `KENTOS_EDIT_PROBE`.
     /// Empty when nothing is being dragged or the reading is switched off.
     const std::string& guideLabelForProbe() const noexcept { return guide_label_; }
+
+    /// The words the canvas last wrote beside objects — a figure typed by hand,
+    /// a broken tie, a letter the typeface lacks — for the mouse probe.
+    std::vector<std::string> noteTextsForProbe() const;
 
     /// The canvas frame as an image, whichever surface this build has.
     ///
@@ -804,6 +809,12 @@ private:
     /// only where it says dimension.
     std::vector<core::EntityId> manual_dims_;
     std::uint64_t manual_revision_{~std::uint64_t{0}};
+    /// The captions with a letter the typeface lacks, and the words that say
+    /// which (TODOS C-12): recomputed when the document changes, each distinct
+    /// caption asked of the text engine once.
+    std::vector<core::EntityId> glyph_texts_;
+    std::unordered_map<std::string, std::string> glyph_notes_;
+    std::uint64_t glyph_revision_{~std::uint64_t{0}};
 
     std::uint64_t seen_revision_{0}; ///< the revision `noteDocumentChange` last saw
     std::uint64_t edits_{0};         ///< how many changes it has seen

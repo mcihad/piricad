@@ -25,6 +25,7 @@
 #endif
 
 #include "kentos_cad/app/data_root.hpp"
+#include "kentos_cad/app/text_engine.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/symbology.hpp"
@@ -1065,6 +1066,12 @@ private:
             const double em   = qt_cap > 0.0 ? tall * kCapProbePx / qt_cap : tall;
             QFont font(QStringLiteral("IBM Plex Sans"));
             font.setPixelSize(std::max(3, static_cast<int>(std::lround(em))));
+            // NO BORROWED LETTERS (TODOS C-12): a character the face lacks is
+            // printed as the face's own empty box, as the canvas draws it —
+            // never taken from whatever other font this machine happens to
+            // have, which would make the sheet differ from the screen and
+            // from the same sheet printed on another computer.
+            font.setStyleStrategy(QFont::NoFontMerging);
             painter.setFont(font);
             painter.setPen(from_rgba(item.rgba));
 
@@ -1094,16 +1101,8 @@ private:
     static render::MeasureRun shared_measure(const QFontMetricsF& probe, double qt_cap)
     {
 #if KENTOS_HAVE_TEXT
-        thread_local std::unique_ptr<render::TextAtlas> shaper;
-        thread_local bool tried = false;
-        if (!tried) {
-            tried = true;
-            if (auto opened = render::TextAtlas::open(data_path("fonts")); opened)
-                shaper = std::move(opened.value());
-        }
-        if (shaper) {
-            render::TextAtlas* atlas = shaper.get();
-            const float cap          = atlas->cap_height(render::Face::Sans);
+        if (render::TextAtlas* atlas = text_engine(); atlas != nullptr) {
+            const float cap = atlas->cap_height(render::Face::Sans);
             return [atlas, cap](std::string_view run) {
                 const float advance = atlas->measure(render::Face::Sans, run).advance;
                 return cap > 0.0f ? advance / cap : advance;

@@ -472,6 +472,36 @@ RunMetrics TextAtlas::measure(Face face, std::string_view utf8, std::size_t* mis
     return metrics;
 }
 
+std::vector<UncoveredCharacter> TextAtlas::uncovered(Face face, std::string_view utf8)
+{
+    std::vector<UncoveredCharacter> out;
+    Impl& impl                 = *impl_;
+    const Impl::FaceSlot& slot = impl.faces[static_cast<std::uint8_t>(face)];
+    if (utf8.empty() || slot.hb == nullptr) return out;
+
+    // BEFORE SHAPING the buffer holds Unicode code points, each with the byte
+    // offset it starts at as its cluster — so the character is the text's own
+    // bytes between two clusters, and nothing here decodes UTF-8 by hand.
+    hb_buffer_clear_contents(impl.buffer);
+    hb_buffer_add_utf8(impl.buffer, utf8.data(), static_cast<int>(utf8.size()), 0,
+                       static_cast<int>(utf8.size()));
+    unsigned int count           = 0;
+    const hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(impl.buffer, &count);
+    for (unsigned int i = 0; i < count; ++i) {
+        const hb_codepoint_t code = infos[i].codepoint;
+        if (code < 0x20 || (code >= 0x7F && code < 0xA0)) continue; // not text
+        hb_codepoint_t glyph = 0;
+        if (hb_font_get_nominal_glyph(slot.hb, code, &glyph) != 0 && glyph != 0) continue;
+        if (std::ranges::any_of(out,
+                                [code](const UncoveredCharacter& c) { return c.code == code; }))
+            continue;
+        const std::size_t from = infos[i].cluster;
+        const std::size_t to   = i + 1 < count ? infos[i + 1].cluster : utf8.size();
+        out.push_back(UncoveredCharacter{code, std::string(utf8.substr(from, to - from))});
+    }
+    return out;
+}
+
 const GlyphBox& TextAtlas::box(std::uint32_t index) const
 {
     static const GlyphBox kNone{};

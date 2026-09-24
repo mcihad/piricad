@@ -73,6 +73,13 @@ struct PlacedGlyph
     float x{0.0f}, y{0.0f}; ///< pen position in EM from the run's origin
 };
 
+/// One character a face has no glyph for, as `TextAtlas::uncovered` finds it.
+struct UncoveredCharacter
+{
+    std::uint32_t code{0}; ///< its Unicode code point
+    std::string utf8;      ///< the character itself, as the text spells it
+};
+
 /// The measurements of one shaped run, in EM.
 struct RunMetrics
 {
@@ -116,6 +123,13 @@ public:
     /// for — which the face draws as an empty box, and which is a font problem
     /// a user has to be told about rather than one to guess from the picture.
     RunMetrics measure(Face face, std::string_view utf8, std::size_t* missing = nullptr);
+
+    /// WHICH characters of `utf8` the face has no glyph for, each once, in the
+    /// order they first appear (TODOS C-12): what a caption that shows a box
+    /// has to say it is missing. Asked of the font's own character map, so it
+    /// agrees with what `shape` draws; a control character — a line break —
+    /// is not text and is never reported.
+    std::vector<UncoveredCharacter> uncovered(Face face, std::string_view utf8);
 
     /// The face's cap height, in EM.
     ///

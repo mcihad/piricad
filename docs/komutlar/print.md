@@ -26,6 +26,13 @@ gerilmez, gerekiyorsa kâğıda biraz daha yer girer.
 
 Çizim, ekrandaki ile aynı boru hattından geçer: aynı semboloji, aynı çizgi
 kalınlıkları, profilin çözünürlüğünde. Ekranda gördüğünüz kâğıt çıkan kâğıttır.
+PDF yalnız programla gelen **IBM Plex** yazı tipini taşır (kullanılan harfleriyle
+gömülü); yazı tipinde olmayan bir harf ekrandaki gibi boş kutu basılır, bilgisayardaki
+başka bir yazı tipinden alınmaz — aynı pafta her bilgisayarda aynı çıkar. Hangi yazı
+tipinin hangi lisansla gömüldüğünü dosyanın kendisi söyler: PDF'in üst verisi (XMP)
+yazı tipini (`IBM Plex Sans`, `IBMPlexSans-Regular.ttf`) ve lisansını (SIL Open Font
+License 1.1, ayrılmış ad "Plex") taşır; komutun iletisi de aynı şeyi yazar:
+`…; yazı tipi IBM Plex Sans gömülü (SIL Open Font License 1.1)`.
 
 > **PDF şifreleme** `qpdf` ile yapılır ve `KENTOS_WITH_QPDF` kapalı derlenmiş bir
 > yapıda yoktur; o zaman `sifre`, `sahip_sifresi` ve `yazar` verilirse komut

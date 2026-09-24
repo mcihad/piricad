@@ -449,7 +449,14 @@ public:
 
     void addVport(const DRW_Vport&) override {}
 
-    void addTextStyle(const DRW_Textstyle&) override {}
+    void addTextStyle(const DRW_Textstyle& data) override
+    {
+        // Which face each text style asks for, so a caption can be counted
+        // against it (`count_face`). A big-font-only style names its face there.
+        const std::string face = !data.font.empty() ? data.font : data.bigFont;
+        if (!data.name.empty() && !face.empty())
+            style_faces_[core::turkish_fold_key(data.name)] = face;
+    }
 
     void addAppId(const DRW_AppId&) override {}
 
@@ -704,6 +711,7 @@ public:
     {
         defer_or_emit(data, [this](const DRW_MText& e, const Xform& x, const Inherit& in, int) {
             if (!begin(e, "MTEXT", in)) return;
+            count_face(e.style);
             // THE ATTACHMENT POINT IS THE ANCHOR (code 71): 1–3 the top row, 4–6
             // the middle, 7–9 the bottom, each left, centre, right — the nine
             // `core::TextAnchor` values, one for one (TODOS C-12).
@@ -741,6 +749,7 @@ public:
     {
         defer_or_emit(data, [this](const DRW_Text& e, const Xform& x, const Inherit& in, int) {
             if (!begin(e, "TEXT", in)) return;
+            count_face(e.style);
             // Code 72 is the column (left, centre, right; aligned, middle, fit),
             // 73 the row (baseline, bottom, middle, top).
             int column = 0;
@@ -972,6 +981,23 @@ public:
             note(Severity::Info, std::to_string(xdata_kept_) +
                                      " öğenin ek verisi (XDATA) bayt bayt korundu; öznitelik "
                                      "panelinde `ek_veri` olarak sayılır.");
+        if (!foreign_faces_.empty()) {
+            // EVERY CAPTION IS SET IN THE BUNDLED FACE (TODOS C-12), so one made
+            // in another is drawn narrower or wider, and its lines break
+            // elsewhere, than its author saw them. Said here, with the faces
+            // and their counts, rather than left to be noticed on the sheet.
+            std::size_t texts = 0;
+            std::string named;
+            for (const auto& [face, count] : foreign_faces_) {
+                texts += count;
+                named +=
+                    (named.empty() ? "'" : ", '") + face + "' (" + std::to_string(count) + " yazı)";
+            }
+            note(Severity::Degraded,
+                 std::to_string(texts) + " yazının istediği yazı tipi bu programda yok: " + named +
+                     ". Bu yazılar IBM Plex Sans ile çizildi; harf genişlikleri ve satır "
+                     "kırılmaları kaynaktan farklı olabilir.");
+        }
         if (!codepage_seen_)
             note(Severity::Warning,
                  "Dosya kod sayfası bildirmiyor ($DWGCODEPAGE yok); 2007 öncesi bir dosyada "
@@ -1258,6 +1284,19 @@ private:
         v.present = true;
         v.text    = value;
         if (auto st = tx_.set_attribute(col, id, v); !st) fail(st.error());
+    }
+
+    /// Counts a caption whose style asks for a face other than the bundled IBM
+    /// Plex every caption is drawn in (TODOS C-12). A style the file never
+    /// declared is no face at all, and says nothing.
+    void count_face(const std::string& style)
+    {
+        const auto at = style_faces_.find(
+            core::turkish_fold_key(style.empty() ? std::string("STANDARD") : style));
+        if (at == style_faces_.end()) return;
+        const std::string& face = at->second;
+        if (face.size() >= 7 && core::turkish_key_equals(face.substr(0, 7), "ibmplex")) return;
+        ++foreign_faces_[face];
     }
 
     /// The value of this program's own note `key` on `e` — a `key=value` string
@@ -2195,6 +2234,10 @@ private:
     std::uint64_t blocks_read_{0}, refs_read_{0}, spline_fit_only_{0}, hatch_unknown_{0},
         dim_style_missing_{0}, widths_dropped_{0}, z_varies_{0}, kot_written_{0},
         text_align_approx_{0}, byblock_seen_{0}, tilted_{0}, xdata_kept_{0}, linetypes_dropped_{0};
+    /// Which face each text style asks for, by folded style name (`addTextStyle`).
+    std::map<std::string, std::string> style_faces_;
+    /// How many captions asked for each face this program does not draw with.
+    std::map<std::string, std::size_t> foreign_faces_;
     std::string first_skip_reason_;
     bool codepage_seen_{false};
     bool cancelled_{false};

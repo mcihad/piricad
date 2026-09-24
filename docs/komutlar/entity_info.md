@@ -140,6 +140,12 @@ Bir ölçüde satır `olcu` taşır: `tur`, `olculen` (milimetre ya da mikrodere
 `onek`, `sonek`, `tolerans` (`bicim`, `ust`, `alt`), `birim`, `hassasiyet`, `stil` ve
 `olcek` (boyutlandığı pafta ölçeği).
 
+Yazısı olan bir nesnede — yazı, ölçü — yazı tipinde olmayan harfler varsa satır
+`eksik_karakter` taşır: her biri için `karakter` ve `kod` (`U+6F22`); cümle de onları
+sayar: `yazı tipinde olmayan karakter: 漢 (U+6F22) — ekranda ve çıktıda boş kutu
+olarak görünür`. Yazı motoru olmadan derlenmiş bir yapı bunu bilemez ve hiçbir şey
+söylemez.
+
 Bir taramada satır `tarama` (`desen`, `aci_udeg`, `olcek_pay`, `olcek_payda`,
 `dxf_iliskili`) ve bağlıysa `tarama_sinirlari` (her biri `nesne`, `kopuk`) taşır;
 bağlı taramaların izlediği bir nesnede `taramalar`, o taramaların kimlikleri.

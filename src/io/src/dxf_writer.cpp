@@ -334,9 +334,14 @@ public:
 
     void writeTextstyles() override
     {
+        // THE FACE THE CAPTIONS WERE SET IN (TODOS C-12): every caption of
+        // this program is drawn in the bundled IBM Plex Sans, so that is what
+        // the style names — a reader that has it draws the sheet's own
+        // letters, and one that does not substitutes knowingly rather than
+        // being told `txt`, which the captions never were.
         DRW_Textstyle t;
         t.name = "STANDARD";
-        t.font = "txt";
+        t.font = "IBMPlexSans-Regular.ttf";
         out_.writeTextstyle(&t);
     }
 

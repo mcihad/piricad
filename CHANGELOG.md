@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — eksik harf ve yazı tipi görünür, paftanın yazı tipi kaydı (C-12, 4. aşama: ilk teslim)
+
+- **Yazı tipinde olmayan harf.** Ekranda da PDF'te de yazı tipinin kendi boş kutusu olarak
+  basılır; artık başka bir yazı tipinden ödünç alınmıyor (önceden PDF, ekranda kutu görünen
+  harfi bilgisayardaki bir sistem yazı tipinden alıyordu: aynı pafta başka bir makinede farklı
+  çıkardı). Tuval böyle bir yazının yanında hangi harfin eksik olduğunu uyarı renginde söyler
+  (`yazı tipinde yok: 漢 (U+6F22)`, yalnız ekranda); `NESNEBİLGİ` harfleri adıyla ve koduyla
+  verir (`eksik_karakter`).
+- **DXF'in istediği yazı tipi.** İçe aktarılan bir DXF'in yazı stilleri bu programda olmayan
+  bir yazı tipi istiyorsa (`romans.shx`, `arial.ttf` …) rapor bunu yazı tipleri ve kaç yazının
+  istediğiyle birlikte söyler. Dışa aktarılan DXF'te yazı stili, yazıların gerçekten çizildiği
+  yazı tipini adlandırır (`IBMPlexSans-Regular.ttf`; önceden `txt`).
+- **Paftanın yazı tipi kaydı.** `YAZDIR`'ın PDF'i üst verisinde (XMP) gömülü yazı tipini ve
+  lisansını (IBM Plex Sans, SIL Open Font License 1.1) taşır; komutun iletisi de söyler.
+
 ### Eklendi — ölçü çift tıklamayla, tutamakla ve dönüşümle düzenlenir; DXF'te kendi resmiyle (C-17, 3. aşama)
 
 - **Çift tıklama.** Komut çalışmıyorken bir nesneye çift tıklamak onu tek başına seçer ve

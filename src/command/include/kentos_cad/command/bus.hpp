@@ -473,6 +473,14 @@ struct ViewInfo
     std::string crs;        ///< the CRS the coordinates are expressed in
 };
 
+/// One character of a caption that the drawing's typeface has no glyph for,
+/// as the shell's text engine reports it (TODOS C-12).
+struct MissingGlyph
+{
+    std::uint32_t code{0}; ///< its Unicode code point
+    std::string utf8;      ///< the character, as the caption spells it
+};
+
 class Bus
 {
 public:
@@ -788,6 +796,14 @@ public:
     /// attached — a headless run — and the reading command says so rather than
     /// inventing a rectangle.
     std::function<ViewInfo()> on_view_query;
+
+    /// WHICH CHARACTERS OF A CAPTION THE TYPEFACE CANNOT DRAW (TODOS C-12).
+    /// Captions are set in the program's own face, and a letter it does not
+    /// have prints as the face's empty box — on the screen and on the sheet
+    /// alike. The engine that knows the face lives in the shell, so the shell
+    /// answers; unset in a build without one, and then a reading command says
+    /// nothing, which is what not knowing is.
+    std::function<std::vector<MissingGlyph>(std::string_view utf8)> on_glyph_query;
 
     /// KAYDIR asks the view to move so that `from` ends up where `to` is.
     ///

@@ -31,6 +31,7 @@
 #include "kentos_cad/app/style_designer.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/swatch_row.hpp"
+#include "kentos_cad/app/text_engine.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/app/tools_panel.hpp"
 #include "kentos_cad/app/widgets.hpp"
@@ -103,6 +104,7 @@
 #include <QSysInfo>
 #include <QTableView>
 #include <QTableWidget>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -1655,6 +1657,9 @@ void MainWindow::buildPanels()
         info.crs         = controller_->document().crs().id();
         return info;
     };
+    // THE LETTERS THE TYPEFACE LACKS (TODOS C-12), asked of the shaper the
+    // canvas draws with, so NESNEBİLGİ names exactly what shows as a box.
+    controller_->bus().on_glyph_query = [](std::string_view utf8) { return missing_glyphs(utf8); };
     // `YARDIM` ANSWERS WITH A PAGE HERE, AND WITH TEXT EVERYWHERE ELSE — the
     // same seam as `on_print_request` and for the same reason: the command knows
     // WHAT to show and nothing about windows, and a headless client still gets
@@ -5064,6 +5069,75 @@ int MainWindow::probeRealMouse()
                       controller_->bus().selection().keys().size() == 1,
                   QStringLiteral("çizgiye çift tıklama onu seçti ve öznitelik panelini öne "
                                  "getirdi"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 19. A LETTER THE TYPEFACE LACKS IS SHOWN, NOT BORROWED (TODOS C-12) ----
+        //
+        // It prints as the face's own box on the screen and on the sheet, the
+        // canvas says which letter it is, and the PDF carries no font but the
+        // bundled one — Qt, left alone, takes the letter from whatever other
+        // font this machine has, and the sheet then differs from the screen.
+        {
+            fresh({QStringLiteral("METİN 0,0 \"Ada 漢 12\" 2500"),
+                   QStringLiteral("METİN 0,-6 \"Şişli İlçesi ğüç\" 2500")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            canvas_->repaint();
+            QCoreApplication::processEvents();
+            if (!canvas_->grabCanvas().isNull()) {
+                int noted  = 0;
+                bool named = false;
+                for (const std::string& note : canvas_->noteTextsForProbe()) {
+                    const QString said = QString::fromStdString(note);
+                    if (!said.startsWith(QStringLiteral("yazı tipinde yok"))) continue;
+                    ++noted;
+                    named = named || said == QStringLiteral("yazı tipinde yok: 漢 (U+6F22)");
+                }
+                check(noted == 1 && named,
+                      QStringLiteral("tuval eksik harfi adıyla söylüyor, Türkçe yazı için bir şey "
+                                     "demiyor (not sayısı %1)")
+                          .arg(noted));
+            } else {
+                (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); eksik "
+                                           "harf notu gerçek pencerede sınanır\n");
+            }
+            shoot("yazi-eksik-harf");
+
+            const QTemporaryDir scratch;
+            const QString sheet =
+                (shooting ? into : scratch.path()) + QStringLiteral("/yazi-eksik-harf.pdf");
+            runScriptLine(QStringLiteral("YAZDIR merkez=10,-3 olcek=500 dosya=\"%1\"").arg(sheet));
+            endCommand();
+            QFile pdf(sheet);
+            QStringList faces;
+            QByteArray bytes;
+            if (pdf.open(QIODevice::ReadOnly)) {
+                bytes = pdf.readAll();
+                for (qsizetype at = bytes.indexOf("/BaseFont"); at >= 0;
+                     at           = bytes.indexOf("/BaseFont", at + 1)) {
+                    const qsizetype slash = bytes.indexOf('/', at + 9);
+                    qsizetype end         = slash + 1;
+                    while (end < bytes.size() && bytes[end] > ' ' && bytes[end] != '/' &&
+                           bytes[end] != '>')
+                        ++end;
+                    faces << QString::fromLatin1(bytes.mid(slash + 1, end - slash - 1));
+                }
+            }
+            (void)std::fprintf(stdout, "[fare] PDF yazı tipleri: %s\n",
+                               faces.join(QStringLiteral(", ")).toUtf8().constData());
+            const bool only_plex =
+                !faces.isEmpty() && std::ranges::all_of(faces, [](const QString& f) {
+                    return f.contains(QStringLiteral("IBMPlex"));
+                });
+            check(only_plex, QStringLiteral("PDF yalnız IBM Plex taşıyor; eksik harf başka yazı "
+                                            "tipinden alınmadı"));
+            // AND SAYS SO, in its metadata and in the line that reports it.
+            check(bytes.contains("<stFnt:fontFamily>IBM Plex Sans</stFnt:fontFamily>") &&
+                      bytes.contains("SIL Open Font License 1.1"),
+                  QStringLiteral("PDF üst verisi yazı tipini ve lisansını söylüyor"));
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("yazı tipi IBM Plex Sans gömülü (SIL Open Font License 1.1)")),
+                  QStringLiteral("YAZDIR iletisi gömülü yazı tipini ve lisansını söylüyor"));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
