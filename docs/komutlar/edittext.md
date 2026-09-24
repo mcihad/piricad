@@ -100,9 +100,9 @@ YAZIDÜZENLE nesneler=1 yazi="PLAN NOTU\nYapı yaklaşma mesafesi 5 m" satir_ara
 
 ### Arayüz
 
-**Araçla.** Sol araç sütununda **Metin** düğmesini basılı tutun ya da sağ
-tıklayın ve **Yazıyı Düzenle**'yi seçin (aynı araç **Değiştir → Yazıyı Düzenle**
-menüsündedir). Yazı seçili değilse komut hangi yazının düzenleneceğini sorar;
+**Araçla.** Şeritte **Açıklama ▸ Yazı ▸ Yazıyı Düzenle**'ye basın (**Giriş ▸ Açıklama**
+panelindeki **Metin** düğmesinin okunda ve bir yazı seçiliyken beliren **Yazı** sekmesinde
+de vardır). Yazı seçili değilse komut hangi yazının düzenleneceğini sorar;
 yazıya tıklayıp Enter'a basın. Sonra yeni metni sorar ve **şimdiki metni önerir**:
 tek harf düzeltmek için bütün satırı yeniden yazmanız gerekmez.
 

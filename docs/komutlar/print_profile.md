@@ -85,8 +85,8 @@ YAZDIRMAPROFİLİ islem=sil ad=Rulo
 vardır: her satır bir kâğıt, `●` olan varsayılandır. Bir satır seçince **Varsayılan
 yap** ve **Sil** düğmeleri açılır (Sil her zaman onay ister). Altındaki **Yeni
 profil** satırında ad, kâğıt, yön, çözünürlük ve kenar boşluğunu verip **Ekle**'ye
-basın. Aynı pencereye araç çubuğundaki Yazdır okunun **Profilleri Yönet…**
-seçeneği de götürür.
+basın. Aynı pencereye şeritteki **Çıktı ▸ Yazdır ▸ Yazdır** düğmesinin okundaki
+**Profilleri Yönet…** de götürür.
 
 Tablo komut satırını izler: `YAZDIRMAPROFİLİ` ile yaptığınız değişiklik pencere
 açıkken de görünür, çünkü ikisi aynı listeye bakar.

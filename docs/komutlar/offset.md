@@ -123,7 +123,7 @@ OFSET nesneler=1 mesafe=5000 taraf=ic oznitelik=aktarma
 
 ### Arayüz
 
-Sol araç sütununda **Ofset** düğmesine basın.
+Şeritte **Giriş ▸ Değiştir ▸ Ofset**'e (ya da **Değiştir ▸ Dizi ve Ofset ▸ Ofset**'e) basın.
 
 1. Nesneler seçili değilse komut sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 2. **Mesafeyi** metre olarak yazın ve Enter'a basın (`3.5`).

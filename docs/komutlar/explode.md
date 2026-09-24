@@ -71,7 +71,8 @@ PATLAT nesne=2
 
 ### Arayüz
 
-**Değiştir > Patlat**. Nesneleri seçip Enter'a basın.
+**Değiştir ▸ Birleştir ▸ Patlat** (aynı düğme **Giriş ▸ Değiştir**'de, **Çizim ▸ Blok**'ta ve
+bir blok seçiliyken beliren **Blok** sekmesinde de vardır). Nesneleri seçip Enter'a basın.
 
 ### Betik
 

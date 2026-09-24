@@ -92,13 +92,15 @@ Alan: 200,00 m²   çevre: 60,000 m   (4 köşe)
 
 ### Arayüz
 
-**Nesneden.** Araç kutusunda **Ölç** ailesinden **Alan Ölç**'e basın. Seçili nesne
+**Nesneden.** Şeritte **Harita ▸ Ölçüm ▸ Alan Ölç**'e (ya da **Kadastro ▸ Denetim ▸ Alan
+Ölç**'e) basın; kapalı bir alan seçiliyken beliren **Alan** sekmesinde de vardır. Seçili nesne
 varsa hemen ölçülür; yoksa komut "Ölçülecek nesneleri seçin" der, tuvalden
 tıkladığınız her nesne seçime eklenir ve **sağ tık** (ya da Enter) ölçtürür. Sonuç
 transkripte ve tuvale düşer, araç elinizde kalır: seçim temizlenir, sıradaki parsel
 için yeniden sorar. Bırakmak için Esc.
 
-**Köşelerden.** Aynı ailede **Alan Ölç — köşelerden**'i seçin. Köşelere sırayla
+**Köşelerden.** **Harita ▸ Ölçüm ▸ Alan Ölç** düğmesinin okundan **Alan Ölç —
+köşelerden**'i seçin. Köşelere sırayla
 tıklayın: ikinci köşeden sonra alan imleçle birlikte dolgulu çizilir, imlecin yanında
 alanı ve çevresi yazar. **Enter** ya da **sağ tık** bitirir.
 

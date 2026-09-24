@@ -29,7 +29,8 @@ Betik bir JSON dosyasıdır. İki biçim kabul edilir.
 }
 ```
 
-`ad` alanı geri alma adımının adı olur; **Düzen > Geri Al** menüsünde bunu görürsünüz.
+`ad` alanı geri alma adımının adı olur; **Geri Al**'dan (**Ctrl+Z**) sonra durum çubuğunda
+`Geri alındı: <ad>` yazar.
 Alan isteğe bağlıdır, verilmezse `Betik` kullanılır.
 
 `komutlar` yerine `commands` de yazılabilir.
@@ -123,7 +124,7 @@ tümüyle uygulanır ya hiç uygulanmaz.
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK tests/journal/ornek-parsel.json` |
-| Menüden | **Dosya > Betik Çalıştır…** veya **Ctrl+R** |
+| Arayüzden | **KentOS CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
 | Açılışta | `kentos_cad --betik <dosya>` |
 | Make ile | `make run-script SCRIPT=<dosya>` |
 

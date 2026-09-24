@@ -102,8 +102,8 @@ Topoloji denetimi (bütün çizim): 2 kusur.
 
 ### Arayüz
 
-Sol araç kutusundaki **Topoloji Denetimi** düğmesi. Seçim boşken bütün çizimi
-denetler.
+Şeritte **Kadastro ▸ Denetim ▸ Topoloji Denetimi** (kapalı bir alan seçiliyken beliren
+**Alan** sekmesinde de vardır). Seçim boşken bütün çizimi denetler.
 
 ### Betik
 

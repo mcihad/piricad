@@ -82,8 +82,8 @@ ARANOKTA 0,0 100,0 sayi=4
 
 ### Arayüz
 
-**Çizim > Ara Nokta** menüsünden ya da araç kutusundaki **Nokta** düğmesini
-basılı tutup karttan seçin. İki noktayı tıklayın; aradaki kılavuz fareyi izler.
+Şeritte **Çizim ▸ Nokta ve Alım ▸ Ara Nokta**'ya basın (okunda **Ara Nokta — mesafeden**
+de vardır) ya da **Giriş ▸ Çizim** panelindeki **Nokta** düğmesinin okundan seçin. İki noktayı tıklayın; aradaki kılavuz fareyi izler.
 Sonra komut satırı oran (ya da `yontem=mesafe` verdiyseniz uzaklık) ister ve
 odak kendiliğinden oraya geçer. Sağ tık ya da **Esc** bitirir.
 

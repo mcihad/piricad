@@ -51,7 +51,7 @@ Daire ve çizgi `KAPAK` tanımına girer; (0,0)'da bir referans kalır.
 
 ### Arayüz
 
-**Çizim ▸ Blok**. Nesneleri seçin, Enter, adı ve taban noktasını verin.
+**Çizim ▸ Blok ▸ Blok**. Nesneleri seçin, Enter, adı ve taban noktasını verin.
 
 ### Betik
 

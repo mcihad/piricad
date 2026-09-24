@@ -117,8 +117,8 @@ DAİRE merkez=0,0 cevre=10,0
 
 ### Arayüz
 
-Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
-**Ölçekle**'yi seçin (ya da `ÖLÇEKLE` yazın), merkezi tıklayın — ve sonra
+Nesneleri seçin, şeritte **Giriş ▸ Değiştir ▸ Ölçekle**'ye basın (ya da `ÖLÇEKLE` yazın),
+merkezi tıklayın — ve sonra
 **çarpanı fareyle gösterin**.
 
 **Nesneler imlecin altında büyür.** Hayalet, komutun uygulayacağı dönüşümün

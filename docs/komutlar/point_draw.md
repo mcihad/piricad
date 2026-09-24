@@ -62,8 +62,9 @@ NOKTA 485300,4310200 485360,4310245 485410,4310190
 
 ### Arayüz
 
-Sol paletteki **nokta** aracına basın ya da `NOKTA` yazın, sonra sırayla
-tıklayın — bir istasyonun yirmi röperi için palete yirmi kez uzanmanız gerekmez.
+Şeritte **Giriş ▸ Çizim ▸ Nokta**'ya (ya da **Çizim ▸ Nokta ve Alım ▸ Nokta**'ya) basın ya
+da `NOKTA` yazın, sonra sırayla tıklayın — bir istasyonun yirmi röperi için düğmeye yirmi
+kez uzanmanız gerekmez.
 Bitirmek için **Esc**.
 
 ### Betik

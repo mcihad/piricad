@@ -135,7 +135,8 @@ tamamıdır, yarım milimetre kayan bir işaret bütün izleri yarım milimetre 
 işaretlendiğini söylemez — kare onu söyler.
 
 Jest komuttan geçer, doğrudan motora değil: fareyle konan bir işaret ile
-komut satırında yazılan bir işaret **tek şey** olmalıdır.
+komut satırında yazılan bir işaret **tek şey** olmalıdır. Komutun kendisi şeritte
+**Harita** sekmesinin sonundaki **Diğer** listesinde **Geçici İzleme** adıyla durur.
 
 ### Betik
 

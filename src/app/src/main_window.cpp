@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/main_window.hpp"
 
+#include "kentos_cad/app/about_dialog.hpp"
 #include "kentos_cad/app/ai_transport.hpp"
 #include "kentos_cad/app/attribute_panel.hpp"
 #include "kentos_cad/app/attribute_table.hpp"
@@ -23,13 +24,14 @@
 #include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/app/python_editor.hpp"
+#include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
 #include "kentos_cad/app/style_designer.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
-#include "kentos_cad/app/title_bar.hpp"
-#include "kentos_cad/app/toolbox.hpp"
+#include "kentos_cad/app/swatch_row.hpp"
+#include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/app/tools_panel.hpp"
 #include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/core/snap.hpp"
@@ -76,6 +78,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QHash>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -94,6 +97,7 @@
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QSysInfo>
 #include <QTableView>
 #include <QTableWidget>
 #include <QTimer>
@@ -177,13 +181,14 @@ constexpr int kLayoutVersion = 6;
 bool probe_run()
 {
     for (const char* probe :
-         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",  "KENTOS_SHOT_DIR",
-          "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE",
-          "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",   "KENTOS_PICK_PROBE",
-          "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",  "KENTOS_CHAT_PROBE",
-          "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",  "KENTOS_FAMILY_PROBE",
-          "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",    "KENTOS_FRAME_DUMP",
-          "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE"})
+         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",   "KENTOS_SHOT_DIR",
+          "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE",  "KENTOS_DIALOG_PROBE",
+          "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",    "KENTOS_PICK_PROBE",
+          "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",   "KENTOS_CHAT_PROBE",
+          "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",   "KENTOS_FAMILY_PROBE",
+          "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",     "KENTOS_FRAME_DUMP",
+          "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE",     "KENTOS_MENU_PROBE",
+          "KENTOS_FIT_PROBE",      "KENTOS_REALMOUSE_PROBE"})
         if (qEnvironmentVariableIsSet(probe)) return true;
     return false;
 }
@@ -195,8 +200,27 @@ QString format_metres(core::Mm v)
 
 } // namespace
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget* parent)
+    : SARibbonMainWindow(parent,
+                         SARibbonMainWindowStyles(SARibbonMainWindowStyleFlag::UseNativeFrame |
+                                                  SARibbonMainWindowStyleFlag::UseRibbonMenuBar))
 {
+    // ONE STYLESHEET (`.claude/ui.md` R49). SARibbon paints itself with a theme
+    // of its own the moment it is built, and once more after the event loop
+    // starts; either would sit on the window above the application's sheet and
+    // win whatever the specificity. `UserDefine` makes the second pass a no-op
+    // and clearing the window's sheet removes the first. The ribbon still wears
+    // SARibbon's Office 2021 theme — its base and template, with our colours —
+    // from `themeStyleSheet`, like every other surface.
+    setRibbonTheme(SARibbonTheme::RibbonThemeUserDefine);
+    setStyleSheet(QString());
+
+    // Every button the ribbon makes from here on knows the keyboard (`ribbon.hpp`).
+    SARibbonElementManager::instance()->setupFactory(new RibbonElementFactory());
+    // And the bar is ours, for the editor tabs' caps (`RibbonBar`); the one the
+    // base class built before the factory was ours goes with it.
+    setRibbonBar(new RibbonBar(this));
+
     controller_ = new Controller(this);
 
     setWindowTitle(tr("KentOSCad — Türkiye Odaklı CBS + CAD"));
@@ -204,10 +228,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     // design.md 7: the frame belongs to the window manager. The shell used to be
     // frameless and drew its own buttons; that cost the resize edges, snapping
-    // and the window menu the platform already gives away for free.
-    titleBar_ = new TitleBar(this);
-    setMenuWidget(titleBar_);
-    connect(titleBar_, &TitleBar::searchRequested, this, [this] { openCommandSearch(); });
+    // and the window menu the platform already gives away for free. The ribbon
+    // is the menu widget now (`buildRibbon`), under the system's own caption.
 
     auto* search = new QAction(this);
     search->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_K));
@@ -233,34 +255,22 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     commandLine_ = new CommandLine(*controller_, this);
     commandLine_->setObjectName(QStringLiteral("commandLine"));
 
-    // design.md 7: the tool box, the canvas column and the right dock sit side by
-    // side inside the body, and the status bar runs under all three. The tool box
-    // is part of the body rather than a dock, so the command line starts at its
-    // right edge exactly as the reference draws it.
-    docTabs_ = new DocumentTabs(this);
-    connect(docTabs_, &DocumentTabs::activated, this, [this](int) { refreshWindowTitle(); });
-    connect(docTabs_, &DocumentTabs::newRequested, this, &MainWindow::newProject);
-    connect(docTabs_, &DocumentTabs::closeRequested, this, [this](int) {
-        onEcho(tr("Birden çok çizim Faz 2'de gelecek; şimdilik tek belge açıktır."));
-    });
-    connect(docTabs_, &DocumentTabs::splitRequested, this,
-            [this] { onEcho(tr("Bölünmüş görünüm Faz 2'de gelecek.")); });
-    connect(docTabs_, &DocumentTabs::expandRequested, this,
-            [this] { isMaximized() ? showNormal() : showMaximized(); });
-
+    // design.md 7: the canvas column and the right dock sit side by side inside
+    // the body, and the status bar runs under both. NO DOCUMENT TAB STRIP over
+    // the canvas: one drawing is open at a time, its name is in the window's
+    // caption, and a strip of one tab was thirty pixels of map spent on a
+    // label — the user asked for it gone. Several open drawings bring it back
+    // with them (Faz 2).
     commandLineRule_ = new QFrame(this);
     commandLineRule_->setFrameShape(QFrame::HLine);
     commandLineRule_->setFrameShadow(QFrame::Plain);
 
     buildActions();
-    buildToolBars();
-    buildToolBox();
 
     auto* column = new QWidget(this);
     auto* stack  = new QVBoxLayout(column);
     stack->setContentsMargins(0, 0, 0, 0);
     stack->setSpacing(0);
-    stack->addWidget(docTabs_);
     stack->addWidget(canvas_, 1);
     stack->addWidget(commandLineRule_);
     stack->addWidget(commandLine_);
@@ -269,7 +279,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     auto* body    = new QHBoxLayout(central);
     body->setContentsMargins(0, 0, 0, 0);
     body->setSpacing(0);
-    body->addWidget(toolBox_);
     body->addWidget(column, 1);
     setCentralWidget(central);
 
@@ -281,7 +290,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // DOCK is a pixel shorter than its widget, because the dock area keeps a
     // separator between itself and the body; the status bar has no such gap.
     setStatusBar(statusStrip_);
-    buildMenus();
+    buildRibbon();
 
     // The command line is the shell's conversation and design.md 7 draws it as a
     // permanent 28 px strip above the status bar. It was hidden while the tool
@@ -289,6 +298,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // hand already reaches for it.
     commandLine_->setVisible(true);
     commandLineRule_->setVisible(false);
+    // ITS SWITCH SAYS SO. `Görünüm ▸ Pencereler ▸ Komut Satırı` and Ctrl+9 read
+    // off while the line was showing, so the first press did nothing a user
+    // could see and only the second one hid it.
+    {
+        const QSignalBlocker quiet(actCommandLine_);
+        actCommandLine_->setChecked(true);
+    }
 
     loadPreferences();
     theme_ = themeFromPreferences();
@@ -315,7 +331,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::selectionChanged, this, [this] {
         attributePanel_->refresh();
         if (toolsPanel_ != nullptr) toolsPanel_->refresh();
-        refreshColourChips();
+        refreshRibbon();
 
         // Picking a parcel on the map and then hunting for its layer in a list of
         // forty is work the program can do. Only when the whole selection agrees:
@@ -725,7 +741,7 @@ void MainWindow::buildActions()
 
     actImport_ = new QAction(tr("İçe Aktar…"), this);
     actImport_->setToolTip(tr("İÇEAKTAR — dış bir veri dosyasını çizime ekler"));
-    actImport_->setData(static_cast<int>(Glyph::Open));
+    actImport_->setData(static_cast<int>(Glyph::Import));
     actImport_->setProperty(kToolCommand, QStringLiteral("İÇEAKTAR"));
     connect(actImport_, &QAction::triggered, this, &MainWindow::importData);
 
@@ -761,7 +777,7 @@ void MainWindow::buildActions()
     actDatabase_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
     actDatabase_->setToolTip(tr("VERİTABANI — PostGIS sunucusuna bağlanır, katmanları tablo, "
                                 "projeleri kayıt olarak yazar"));
-    actDatabase_->setData(static_cast<int>(Glyph::Open));
+    actDatabase_->setData(static_cast<int>(Glyph::Database));
     actDatabase_->setProperty(kToolCommand, QStringLiteral("VERİTABANI"));
     connect(actDatabase_, &QAction::triggered, this, &MainWindow::openDatabase);
 
@@ -769,13 +785,13 @@ void MainWindow::buildActions()
     // file: what it holds travels with the file and nothing on that window is
     // about this computer.
     actProjectSettings_ = new QAction(tr("Proje Ayarları…"), this);
-    actProjectSettings_->setData(static_cast<int>(Glyph::Document));
+    actProjectSettings_->setData(static_cast<int>(Glyph::ProjectSettings));
     actProjectSettings_->setToolTip(
         tr("Çizimle birlikte giden ayarlar ve projenin öznitelik sütunları"));
     actProjectSettings_->setProperty(kToolCommand, QStringLiteral("AYAR"));
     connect(actProjectSettings_, &QAction::triggered, this, &MainWindow::openProjectSettings);
 
-    actSettings_ = new QAction(tr("Ayarlar…"), this);
+    actSettings_ = new QAction(tr("Seçenekler…"), this);
     actSettings_->setData(static_cast<int>(Glyph::Settings));
     actSettings_->setShortcut(QKeySequence::Preferences);
     actSettings_->setToolTip(tr("Bildirilen her ayarı kapsamına göre gösterir; her "
@@ -916,21 +932,22 @@ void MainWindow::buildActions()
     drawingTools_->addAction(actText_);
 
     // ---- Faz 2 türleri: spline, tarama, blok, ölçü, lider ----
-    actSpline_ = drawTool(Glyph::Function, tr("Spline"), QStringLiteral("SPLINE"),
+    actSpline_ = drawTool(Glyph::Spline, tr("Spline"), QStringLiteral("SPLINE"),
                           tr("SPLINE — kontrol noktalarından pürüzsüz eğri  ·  kısaltma: SPL"));
     drawingTools_->addAction(actSpline_);
     // TARAMA and BLOK work on objects, so they go the way BUDA does: the command
     // asks for its objects when nothing is selected (`want_objects`).
-    actHatch_ = modifyTool(Glyph::Grid, tr("Tarama"), QStringLiteral("TARAMA"),
+    actHatch_ = modifyTool(Glyph::Hatch, tr("Tarama"), QStringLiteral("TARAMA"),
                            tr("TARAMA — kapalı nesnelerin içini katalogdaki bir desenle tarar; "
                               "tarama sınırına bağlıdır, sınır değişince güncellenir  ·  "
                               "kısaltma: TRM"));
     // THE HATCH'S OWN EDIT (TODOS C-11): pattern, angle, scale, spacing, origin
     // and island rule of a hatch already drawn, keeping its tie to its parcel.
-    actHatchEdit_ = modifyTool(Glyph::Grid, tr("Taramayı Düzenle"), QStringLiteral("TARAMADÜZENLE"),
-                               tr("TARAMADÜZENLE — taramayı seçin, desenini yazın; açı, ölçek, "
-                                  "aralık, başlangıç ve ada kuralı nitelik panelinde  ·  "
-                                  "kısaltma: TDZ"));
+    actHatchEdit_ =
+        modifyTool(Glyph::Hatch, tr("Taramayı Düzenle"), QStringLiteral("TARAMADÜZENLE"),
+                   tr("TARAMADÜZENLE — taramayı seçin, desenini yazın; açı, ölçek, "
+                      "aralık, başlangıç ve ada kuralı nitelik panelinde  ·  "
+                      "kısaltma: TDZ"));
     actBlock_  = modifyTool(Glyph::Duplicate, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
                                 "referans koyar  ·  kısaltma: BLK"));
@@ -953,9 +970,11 @@ void MainWindow::buildActions()
                                tr("BAZÖLÇÜ — son ölçünün ilk noktasından ölçer, çizgileri stilin "
                                   "aralığıyla üst üste dizer; Enter bitirir  ·  kısaltma: BÖ"));
     drawingTools_->addAction(actDimBaseline_);
-    actLeader_ = drawTool(Glyph::Locate, tr("Lider"), QStringLiteral("LİDER"),
-                          tr("LİDER — bir noktayı gösteren oklu çizgi, istenirse yanına yazı  ·  "
-                             "kısaltma: LD"));
+    // "KILAVUZ ÇİZGİ", the name AutoCAD's Turkish documentation gives LEADER
+    // (MLEADER is "Çoklu Kılavuz"); the command keeps its word LİDER.
+    actLeader_ = drawTool(Glyph::Leader, tr("Kılavuz Çizgi"), QStringLiteral("LİDER"),
+                          tr("LİDER — bir noktayı gösteren oklu kılavuz çizgi, istenirse yanına "
+                             "yazı  ·  kısaltma: LD"));
     drawingTools_->addAction(actLeader_);
 
     // ---- düzenleme ----
@@ -1021,7 +1040,7 @@ void MainWindow::buildActions()
                          "·  kısaltma: PKP"),
                       QKeySequence(Qt::CTRL | Qt::Key_C));
     actCopyBase_ = commandAction(
-        Glyph::Duplicate, tr("Taban Noktasıyla Kopyala"),
+        Glyph::CopyBase, tr("Taban Noktasıyla Kopyala"),
         QStringLiteral("PANOYAKOPYALA tabanli=evet"),
         tr("PANOYAKOPYALA tabanli=evet — nesneleri seçin, sonra taban noktasını gösterin; "
            "yapıştırırken o nokta gösterdiğiniz yere gelir"));
@@ -1070,7 +1089,7 @@ void MainWindow::buildActions()
         modifyTool(Glyph::ParcelSplit, tr("İfraz"), QStringLiteral("İFRAZ"),
                    tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler (kadastro)"));
     actAreaSplit_ =
-        modifyTool(Glyph::ParcelSplit, tr("Alana Göre İfraz"), QStringLiteral("ALANİFRAZ"),
+        modifyTool(Glyph::AreaSplit, tr("Alana Göre İfraz"), QStringLiteral("ALANİFRAZ"),
                    tr("ALANİFRAZ — parselden istenen yüzölçümünde parça ayırır (kadastro)"));
     actMeasureArea_ = modifyTool(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
                                  tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar; sonuç "
@@ -1208,20 +1227,18 @@ void MainWindow::buildActions()
     actOffset_   = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
                               tr("OFSET — seçili nesnelerin paralelini çizer; eksi mesafe içeri"));
 
-    // ONE ACTION, TWO MENUS AND THE COLUMN. POLİGON sat on Çizim and Harita as
-    // two separate rows, so the column had nothing to hold and the two rows
-    // could drift apart in what they said. Made HERE, with the other tools,
-    // because the column is built before the menus: an action a menu builder
-    // makes does not exist yet when the column asks for it.
-    actTraverse_ = commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
+    // ONE ACTION WHEREVER IT IS SHOWN. POLİGON once sat on two menus as two
+    // separate rows, which could drift apart in what they said. Made HERE, with
+    // the other tools, so the ribbon and the palette show this one.
+    actTraverse_ = commandAction(Glyph::Traverse, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
                                  tr("POLİGON — kırılma açısı ve kenarlardan poligon "
                                     "koordinatları, kapanma dağıtımı ve mevzuat toleransı  ·  "
                                     "kısaltma: PLG"));
     actAngledGuide_ =
-        commandAction(Glyph::Ruler, tr("Açılı Kılavuz"), QStringLiteral("KILAVUZ yon=45g"),
+        commandAction(Glyph::Guide, tr("Açılı Cetvel Kılavuzu"), QStringLiteral("KILAVUZ yon=45g"),
                       tr("KILAVUZ yon=<açı> — verilen noktadan geçen açılı kılavuz; açı "
                          "oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV"));
-    actLabel_    = commandAction(Glyph::Text, tr("Etiket"), QStringLiteral("ETİKET"),
+    actLabel_    = commandAction(Glyph::Label, tr("Etiket"), QStringLiteral("ETİKET"),
                                  tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
                                        "etiketler  ·  kısaltma: ETK"));
     actStakeout_ = commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
@@ -1361,6 +1378,7 @@ void MainWindow::buildActions()
     });
 
     actOrtho_ = new QAction(tr("Dik Mod"), this);
+    actOrtho_->setData(static_cast<int>(Glyph::Ortho));
     actOrtho_->setCheckable(true);
     actOrtho_->setShortcut(QKeySequence(Qt::Key_F8));
     actOrtho_->setToolTip(tr("MOD dik_mod — imleci yatay ve düşey eksene kilitler (F8)"));
@@ -1376,6 +1394,7 @@ void MainWindow::buildActions()
     // than eyeballed. Shift held on the canvas engages it for as long as it is
     // held; F10 and `MOD yüzey_normali evet` latch it (Article 1.2).
     actNormal_ = new QAction(tr("Yüzey Normali"), this);
+    actNormal_->setData(static_cast<int>(Glyph::SurfaceNormal));
     actNormal_->setCheckable(true);
     actNormal_->setShortcut(QKeySequence(Qt::Key_F10));
     actNormal_->setToolTip(
@@ -1511,7 +1530,10 @@ void MainWindow::buildActions()
     actAi_->setToolTip(tr("Yapay zeka sohbeti — model komut önerir; ne zaman uygulanacağını "
                           "onay politikanız belirler (Ayarlar ▸ Çalışma Davranışı)"));
     actAi_->setStatusTip(actAi_->toolTip());
-    actAi_->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+A")));
+    // CTRL+SHIFT+K, BESIDE THE PALETTE'S CTRL+K: ask for commands, next to the
+    // key that searches them. Not Ctrl+Shift+A, which clears the selection and
+    // held that key first; two actions on one key trigger neither.
+    actAi_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_K));
     actAi_->setProperty(kToolCommand, QStringLiteral("ÖNERİ"));
     connect(actAi_, &QAction::triggered, this, [this] {
         showChat();
@@ -1520,953 +1542,28 @@ void MainWindow::buildActions()
 
     // ---- arayüz ----
     actTheme_ = new QAction(tr("Koyu Tema"), this);
+    actTheme_->setData(static_cast<int>(Glyph::Theme));
+    actTheme_->setToolTip(tr("Koyu ve açık tema arasında geçer (TERCİH arayüz_teması)"));
     actTheme_->setCheckable(true);
     connect(actTheme_, &QAction::toggled, this, &MainWindow::toggleTheme);
 
     // Render statistics are a developer overlay, never a user-facing feature
     // (kentoscad.md §6.3, .claude/render.md). Off by default.
     actHud_ = new QAction(tr("Geliştirici Bilgisi"), this);
+    actHud_->setData(static_cast<int>(Glyph::Hud));
+    actHud_->setToolTip(tr("Kare süresi, çizilen nesne sayısı ve arka uç: geliştirici için (F12)"));
     actHud_->setCheckable(true);
     actHud_->setShortcut(QKeySequence(Qt::Key_F12));
     connect(actHud_, &QAction::toggled, this, [this](bool on) { canvas_->setDebugHud(on); });
 
-    // The command line is hidden by default in this build. Ctrl+9 matches the
-    // shortcut CAD users already have in their fingers.
+    // The command line shows from the start (see the constructor); this hides
+    // and brings it back. Ctrl+9 matches the shortcut CAD users already have in
+    // their fingers.
     actCommandLine_ = new QAction(tr("Komut Satırı"), this);
+    actCommandLine_->setData(static_cast<int>(Glyph::CommandLine));
     actCommandLine_->setCheckable(true);
     actCommandLine_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_9));
     connect(actCommandLine_, &QAction::toggled, this, &MainWindow::showCommandLine);
-}
-
-void MainWindow::buildToolBars()
-{
-    // ONE BAR, SEVEN GROUPS. design.md 7 draws a single 46 px strip with 1 px
-    // rules between groups; five draggable QToolBars gave five handles, five
-    // wrap points and a different arrangement on every start. The bar is fixed
-    // because its layout is part of the specification, not a preference.
-    //
-    // Two surfaces, two jobs — the left tool box holds the modal DRAWING tools,
-    // this bar holds ACTIONS. Every button dispatches a command; none reaches
-    // the document directly (CLAUDE.md Article 1).
-    tbMain_ = addToolBar(tr("Araçlar"));
-    tbMain_->setObjectName(QStringLiteral("tbMain"));
-    tbMain_->setIconSize(QSize(20, 20));
-    tbMain_->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    tbMain_->setMovable(false);
-    tbMain_->setFloatable(false);
-
-    // file. YAZDIR sits with them, to the right of Kaydet: printing is what a
-    // drafter does with a file, and it belongs in the group the file lives in.
-    tbMain_->addAction(actNew_);
-    tbMain_->addAction(actOpen_);
-    tbMain_->addAction(actSave_);
-    tbMain_->addAction(actPrint_);
-    tbMain_->addAction(actPrintMenu_);
-    if (auto* arrow = qobject_cast<QToolButton*>(tbMain_->widgetForAction(actPrintMenu_))) {
-        printMenu_ = new QMenu(arrow);
-        arrow->setIconSize(QSize(12, 12));
-        arrow->setFixedWidth(20);
-        // The list drops from the arrow's own bottom-left, so it reads as
-        // belonging to the button beside it rather than to the bar.
-        connect(actPrintMenu_, &QAction::triggered, this, [this, arrow] {
-            printMenu_->popup(arrow->mapToGlobal(QPoint(0, arrow->height())));
-        });
-        // REBUILT EVERY TIME IT OPENS, like `Dosya ▸ Çıktı Yerleşimleri` (which is
-        // why that one was right and this one was not).
-        //
-        // It used to be rebuilt from three places: once at startup, when a print
-        // PROFILE changed, and from the one menu entry that creates a layout.
-        // Opening a project was none of those — so a drawing whose layouts came
-        // off disk listed none of them here, while the File menu listed them all.
-        // So could a layout made on the command line, from a script, from a
-        // template or over MCP. Chasing those call sites is a list that is wrong
-        // again the next time somebody adds a way to make a layout; asking the
-        // document when the menu opens is not.
-        connect(printMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildPrintMenu);
-        rebuildPrintMenu();
-        connect(&controller_->printService(), &PrintService::profilesChanged, this,
-                &MainWindow::rebuildPrintMenu);
-    }
-    tbMain_->addSeparator();
-
-    // undo / redo
-    tbMain_->addAction(actUndo_);
-    tbMain_->addAction(actRedo_);
-    tbMain_->addSeparator();
-
-    // clipboard
-    tbMain_->addAction(actCut_);
-    tbMain_->addAction(actCopyClip_);
-    tbMain_->addAction(actPaste_);
-    tbMain_->addSeparator();
-
-    // navigation
-    tbMain_->addAction(actSelect_);
-    tbMain_->addAction(actPan_);
-    tbMain_->addAction(actZoomIn_);
-    tbMain_->addAction(actZoomExtents_);
-    tbMain_->addSeparator();
-
-    // drawing aids
-    tbMain_->addAction(actGridSnap_);
-    tbMain_->addAction(actSnap_);
-    tbMain_->addAction(actMeasure_);
-    tbMain_->addSeparator();
-
-    // windows
-    tbMain_->addAction(actLayerManager_);
-    tbMain_->addAction(actStyle_);
-    tbMain_->addAction(actTable_);
-    tbMain_->addSeparator();
-
-    // the conversation, then the settings
-    tbMain_->addAction(actAi_);
-    tbMain_->addAction(actSettings_);
-
-    // The two readings sit at the far right, so a spacer eats everything between.
-    auto* gap = new QWidget(tbMain_);
-    gap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    gap->setAttribute(Qt::WA_NoSystemBackground, true);
-    tbMain_->addWidget(gap);
-
-    readout_ = new ReadoutStrip(tbMain_);
-    tbMain_->addWidget(readout_);
-}
-
-void MainWindow::buildMenus()
-{
-    // design.md 7: ten titles, in this order. The order is part of the
-    // specification, not a preference — a user who learned where "Harita" sits
-    // finds it in the same place on every platform because the bar is ours.
-    QMenuBar* bar = titleBar_->menus();
-
-    auto* file = bar->addMenu(tr("&Dosya"));
-    file->addAction(actNew_);
-    file->addAction(actOpen_);
-    file->addAction(actSave_);
-    file->addAction(actSaveAs_);
-    file->addSeparator();
-    file->addAction(actImport_);
-    file->addAction(actExport_);
-    file->addAction(actPrint_);
-
-    // ---- ÇIKTIYERLEŞİMİLAR, where a QGIS user looks for layouts -----------------------
-    //
-    // UNDER `Dosya` AND NOT UNDER `Görünüm`, because a layout belongs to the
-    // DOCUMENT: it is saved in the file, it is in the content hash, and it is
-    // part of what gets signed. QGIS puts its layouts under `Project` for the
-    // same reason. The submenu is rebuilt whenever the document changes, so a
-    // sheet added at the command line appears here without anything being told.
-    layoutMenu_ = file->addMenu(tr("&Çıktı Yerleşimleri"));
-    connect(layoutMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildLayoutMenu);
-    rebuildLayoutMenu();
-    file->addSeparator();
-    file->addAction(actProjectSettings_);
-    file->addSeparator();
-    file->addAction(actDatabase_);
-    file->addAction(actScript_);
-    file->addSeparator();
-    file->addAction(actQuit_);
-
-    auto* edit = bar->addMenu(tr("D&üzen"));
-    edit->addAction(actUndo_);
-    edit->addAction(actRedo_);
-    edit->addSeparator();
-    edit->addAction(actCut_);
-    edit->addAction(actCopyClip_);
-    edit->addAction(actCopyBase_);
-    edit->addAction(actPaste_);
-    edit->addSeparator();
-    edit->addAction(actSelectAll_);
-    edit->addAction(actSelectNone_);
-    edit->addSeparator();
-    edit->addAction(actFindReplace_);
-    edit->addSeparator();
-    edit->addAction(actSettings_);
-
-    auto* view = bar->addMenu(tr("&Görünüm"));
-    view->addAction(actZoomExtents_);
-    view->addAction(actZoomIn_);
-    view->addAction(actZoomOut_);
-    view->addSeparator();
-    view->addAction(actSnap_);
-
-    // The keyboard road to the same list the OSNAP chip's right click opens.
-    // ui.md P7: nothing ships reachable only by mouse.
-    auto* snapModes = new QAction(tr("Yakalama Modları…"), this);
-    snapModes->setToolTip(tr("Hangi nesne yakalama modlarının açık olduğunu seçer"));
-    snapModes->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
-    connect(snapModes, &QAction::triggered, this, &MainWindow::openSnapModes);
-    view->addAction(snapModes);
-    addAction(snapModes); // so the shortcut works with focus anywhere in the shell
-    view->addAction(actOrtho_);
-    view->addAction(actNormal_);
-    view->addAction(actGridSnap_);
-    view->addSeparator();
-
-    if (tbMain_) view->addAction(tbMain_->toggleViewAction());
-
-    auto* panels = view->addMenu(tr("Paneller"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, journalDock_, pythonDock_}) {
-        if (dock) panels->addAction(dock->toggleViewAction());
-    }
-    panels->addSeparator();
-    panels->addAction(actCommandLine_);
-
-    view->addSeparator();
-    view->addAction(actTheme_);
-    view->addAction(actHud_);
-
-    auto* draw = bar->addMenu(tr("Çi&zim"));
-    draw->addAction(actLine_);
-    draw->addAction(actPolyline_);
-    draw->addAction(actArc_);
-    draw->addAction(actCircle_);
-    draw->addAction(actEllipse_);
-    draw->addAction(actSector_);
-    draw->addAction(actAnnulus_);
-    draw->addAction(actRectangle_);
-    draw->addAction(actRegular_);
-    draw->addAction(actPoint_);
-    draw->addAction(actText_);
-    draw->addSeparator();
-    draw->addAction(actSpline_);
-    draw->addAction(actHatch_);
-    draw->addAction(actHatchEdit_);
-    draw->addAction(actBoundary_);
-    draw->addAction(actBlock_);
-    draw->addAction(actInsert_);
-    draw->addAction(actDimension_);
-    draw->addAction(actDimChain_);
-    draw->addAction(actDimBaseline_);
-    draw->addAction(commandAction(Glyph::Ruler, tr("Ölçü Stilleri"), QStringLiteral("ÖLÇÜSTİLİ"),
-                                  tr("ÖLÇÜSTİLİ — ölçü stillerini kâğıttaki ve bu paftadaki "
-                                     "boylarıyla listeler; varsayılanı AYAR ölçü_stili "
-                                     "değiştirir  ·  kısaltma: ÖST")));
-    draw->addAction(actLeader_);
-    draw->addSeparator();
-    // THE THREE THAT HAD NO ENTRY AT ALL. A guide line, a label read from a
-    // layer's own attributes and a contour set are drawing tools a surveyor
-    // reaches for, and all three were reachable only by typing their names.
-    // Curated here rather than left to the generated tail, because a tool this
-    // ordinary belongs on the menu a hand already opens.
-    // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
-    // Curated rather than left to the generated tail: this is the first tool a
-    // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
-    draw->addAction(actTraverse_);
-    draw->addAction(commandAction(Glyph::Point, tr("Kesişim Noktası"),
-                                  QStringLiteral("KESİŞİMNOKTA"),
-                                  tr("KESİŞİMNOKTA — iki doğrultunun, iki uzaklığın ya da iki "
-                                     "doğrunun kesişimine nokta koyar  ·  kısaltma: KSN")));
-    draw->addAction(commandAction(Glyph::Point, tr("Ara Nokta"), QStringLiteral("ARANOKTA"),
-                                  tr("ARANOKTA — doğru üzerinde oran, uzaklık ya da eşit bölmeyle "
-                                     "nokta koyar  ·  kısaltma: ARN")));
-    draw->addAction(commandAction(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
-                                  tr("ALIM — istasyondan okunan açı ve kenarlardan nokta "
-                                     "hesaplar  ·  kısaltma: ALM")));
-    draw->addAction(commandAction(Glyph::PerpOffset, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
-                                  tr("DİKAYAK — taban çizgisine göre dik ayak ve dik boy vererek "
-                                     "nokta yerleştirir  ·  kısaltma: DA")));
-    draw->addAction(commandAction(Glyph::Line, tr("Kılavuz"), QStringLiteral("KILAVUZ"),
-                                  tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
-                                     "kısaltma: KLV")));
-    // THE ANGLED GUIDE IS A LINE THE RULER CANNOT GIVE. Dragging off the ruler
-    // yields horizontal and vertical only; an angled one needs an angle, and an
-    // angle is a number — so it has a row of its own that starts the command with
-    // one already chosen and then asks for the point it passes through.
-    draw->addAction(actAngledGuide_);
-    draw->addAction(actLabel_);
-    draw->addAction(
-        commandAction(Glyph::Function, tr("Eşyükselti Eğrileri"), QStringLiteral("EŞYÜKSELTİ"),
-                      tr("EŞYÜKSELTİ — kotlu noktalardan eş yükselti eğrileri çizer  ·  "
-                         "kısaltma: EŞY")));
-
-    auto* modify = bar->addMenu(tr("D&eğiştir"));
-    modify->addAction(actErase_);
-    modify->addSeparator();
-    modify->addAction(actMove_);
-    modify->addAction(actCopy_);
-    modify->addAction(actRotate_);
-    modify->addAction(actRotateRef_);
-    modify->addAction(actScale_);
-    modify->addAction(actScaleRef_);
-    modify->addAction(actMirror_);
-    modify->addAction(actMirrorCopy_);
-    modify->addAction(actArray_);
-    modify->addAction(actArrayPolar_);
-    modify->addAction(actArrayPath_);
-    modify->addSeparator();
-    modify->addAction(actTrim_);
-    modify->addAction(actTrimFence_);
-    modify->addAction(actTrimKeep_);
-    modify->addAction(actTrimCarry_);
-    modify->addAction(actExtend_);
-    modify->addAction(actExtendFence_);
-    modify->addAction(actExtendCarry_);
-    modify->addAction(actSplit_);
-    modify->addAction(actSplitPoint_);
-    modify->addAction(actSplitCross_);
-    modify->addAction(actSplitEqual_);
-    modify->addAction(actSplitDistance_);
-    modify->addAction(actCombine_);
-    modify->addAction(actChamfer_);
-    modify->addAction(actChamferAll_);
-    modify->addAction(actFillet_);
-    modify->addAction(actFilletAll_);
-    modify->addSeparator();
-    modify->addAction(actSetLayer_);
-    modify->addAction(actStyleCopy_);
-    modify->addAction(actColour_);
-    modify->addSeparator();
-    modify->addAction(actOffset_);
-    modify->addSeparator();
-    // THE SEVEN VERBS P3 ADDED, on the menu a hand already opens for the others.
-    // A generated tail would have put them behind `Diğer komutlar`, which is the
-    // right place for a command nobody reaches for and the wrong one for KIR.
-    modify->addAction(actBreak_);
-    modify->addAction(actJoin_);
-    modify->addAction(actLengthen_);
-    modify->addAction(actStretch_);
-    modify->addAction(actExplode_);
-    modify->addAction(actAlign_);
-    modify->addAction(actAlignScaled_);
-    modify->addAction(actDivide_);
-    modify->addAction(actPolylineEdit_);
-    modify->addSeparator();
-    // THE CORNER AND CAPTION EDITS, which lived behind `Diğer komutlar` — the
-    // generated tail — and nowhere a hand looks for them.
-    modify->addAction(actVertexMove_);
-    modify->addAction(actVertexAdd_);
-    modify->addAction(actVertexDelete_);
-    modify->addAction(actEdgeKind_);
-    modify->addAction(actToArea_);
-    modify->addAction(actTextEdit_);
-    modify->addAction(actDimensionEdit_);
-    // A SHEET SCALE IS WHAT A DIMENSION'S SIZES ARE FOR: the whole drawing's
-    // dimensions sized for the plan scale, so they print at the style's paper
-    // size on this sheet (TODOS C-10).
-    modify->addAction(commandAction(
-        Glyph::Ruler, tr("Ölçüleri Pafta Ölçeğine Uyarla"), QStringLiteral("ÖLÇÜYENİLE"),
-        tr("ÖLÇÜYENİLE — çizimin bütün ölçülerini plan ölçeğine uyarlar: oklar, uzatma "
-           "çizgileri ve yazılar kâğıtta stilin boyunda kalır; yazılar çizimin birimiyle "
-           "yeniden yazılır  ·  kısaltma: ÖYN")));
-    modify->addSeparator();
-    // TEMİZLE: what the drawing holds twice or for nothing — found and selected
-    // first, repaired only when asked, in one undo step (TODOS C-09).
-    modify->addAction(commandAction(Glyph::Erase, tr("Temizle — bul"), QStringLiteral("TEMİZLE"),
-                                    tr("TEMİZLE — yinelenen, boş ve tekrarlanan köşeli nesneleri "
-                                       "bulur, seçer ve işaretler; hiçbir şeyi değiştirmez  ·  "
-                                       "kısaltma: TMZ")));
-    modify->addAction(commandAction(Glyph::Erase, tr("Temizle — onar"),
-                                    QStringLiteral("TEMİZLE islem=onar"),
-                                    tr("TEMİZLE islem=onar — yinelenenleri ve boş nesneleri "
-                                       "siler, tekrarlanan köşeleri çıkarır; değişen alanları "
-                                       "önce/sonra söyler, tek adımda geri alınır")));
-
-    // A MENU OF THEIR OWN, because they are a different kind of thing. Each of
-    // these is an act with a regulation behind it, and grouping them says so; the
-    // everyday geometry that resembles them is one menu to the left.
-    auto* cadastre = bar->addMenu(tr("K&adastro"));
-    cadastre->addAction(actParcelSplit_);
-    cadastre->addAction(actAreaSplit_);
-    cadastre->addAction(actUnion_);
-    cadastre->addSeparator();
-    cadastre->addAction(actTopology_);
-
-    auto* map = bar->addMenu(tr("&Harita"));
-    map->addAction(actIdentify_);
-    map->addAction(actEntityInfo_);
-    map->addAction(actMeasure_);
-    map->addAction(actMeasureArea_);
-    map->addAction(actMeasureAngle_);
-    map->addAction(actCoordinate_);
-    map->addSeparator();
-    // THE SURVEY COMPUTATIONS. `APLİKASYON` is what a crew takes to the field
-    // and `HACİM` is what an earthwork report is made of; neither had a way in.
-    map->addAction(actTraverse_);
-    map->addAction(actStakeout_);
-    map->addAction(commandAction(Glyph::Function, tr("Hacim Hesabı"), QStringLiteral("HACİM"),
-                                 tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
-                                    "kısaltma: HCM")));
-    map->addAction(commandAction(Glyph::Function, tr("Oturt (Helmert)"), QStringLiteral("OTURT"),
-                                 tr("OTURT — ortak noktalardan Helmert dönüşümüyle çizimi "
-                                    "oturtur  ·  kısaltma: OTR")));
-    map->addAction(commandAction(Glyph::Layer, tr("Dönüştür"), QStringLiteral("DÖNÜŞTÜR"),
-                                 tr("DÖNÜŞTÜR — çizimi başka bir koordinat sistemine "
-                                    "dönüştürür  ·  kısaltma: DNS")));
-    map->addSeparator();
-    map->addAction(actDatabase_);
-
-    auto* analyse = bar->addMenu(tr("&Analiz"));
-    analyse->addAction(actTable_);
-    analyse->addSeparator();
-
-    // THE PROCESSING TOOLS, from the registry: one entry per tool, and the panel
-    // that shows them as a tree. Nothing here is a second list (CLAUDE.md 5.10).
-    auto* tools = analyse->addMenu(tr("İşlem Araçları"));
-    for (const processing::ProcessingTool* tool : processing::processing_tools()) {
-        const auto& spec = tool->spec();
-        tools->addAction(commandAction(Glyph::Function, QString::fromStdString(spec.title),
-                                       QString::fromStdString(spec.names.front()),
-                                       QString::fromStdString(spec.summary)));
-    }
-    tools->addSeparator();
-    auto* showTools = tools->addAction(tr("Araçlar Paneli"));
-    showTools->setStatusTip(tr("Sağ paneldeki Araçlar sekmesini açar"));
-    connect(showTools, &QAction::triggered, this, [this] {
-        propertyDock_->show();
-        propertyHeader_->setCurrent(2);
-        propertyStack_->setCurrentIndex(2);
-    });
-    analyse->addSeparator();
-    analyse->addAction(actAi_);
-
-    // ---- THE AGENT LISTENER, one entry that toggles ----
-    //
-    // It runs `MCPSUNUCU`, exactly as the status cell does, so there is one road
-    // to the listener and a script can take it too (Article 1.2, 5.15). The
-    // wording follows the state rather than describing both: a menu that says
-    // `Başlat/Durdur` makes the reader work out which one they are about to do.
-    actMcp_ = new QAction(tr("MCP Sunucusunu Başlat"), this);
-    actMcp_->setData(static_cast<int>(Glyph::Server));
-    actMcp_->setStatusTip(tr("Yapay zeka ajanlarının bağlanacağı yerel sunucuyu açar"));
-    actMcp_->setProperty(kToolCommand, QStringLiteral("MCPSUNUCU"));
-    connect(actMcp_, &QAction::triggered, this, [this] {
-#if KENTOS_HAVE_MCP
-        const bool up =
-            controller_->mcpService() != nullptr && controller_->mcpService()->listening();
-        controller_->runLine(up ? QStringLiteral("MCPSUNUCU islem=durdur")
-                                : QStringLiteral("MCPSUNUCU islem=baslat"),
-                             command::Origin::Gui);
-#else
-        onEcho(tr("Bu yapıda MCP sunucusu yok (KENTOS_WITH_MCP kapalı)."));
-#endif
-    });
-    analyse->addAction(actMcp_);
-    QAction* mcpToken = analyse->addAction(tr("MCP Belirteci Üret"));
-    mcpToken->setStatusTip(tr("Yeni bir erişim belirteci üretir; eskisi geçersiz olur"));
-    connect(mcpToken, &QAction::triggered, this, [this] {
-        controller_->runLine(QStringLiteral("MCPSUNUCU islem=belirtec"), command::Origin::Gui);
-    });
-
-    auto* layer = bar->addMenu(tr("&Katman"));
-    layer->addAction(actLayer_);
-    layer->addAction(actLayerManager_);
-
-    // THE TWO THAT NEED NO ROW. `Tümünü göster` and `Gösterimi ters çevir` are
-    // about the whole table, so they belong where a user looks for something that
-    // is not about one layer — and a user whose layers are all hidden has no row
-    // left to right-click. The per-layer visibility entries stay in the panel's
-    // own `Görünüm` submenu, beside the layer they act on.
-    layer->addSeparator();
-    QAction* showAll = layer->addAction(tr("Tümünü Göster"));
-    showAll->setToolTip(tr("KATMANGÖRÜNÜM islem=tumu — gizli bütün katmanları geri getirir"));
-    connect(showAll, &QAction::triggered, this, [this] {
-        controller_->runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tumu"), command::Origin::Gui);
-    });
-    QAction* flipAll = layer->addAction(tr("Gösterimi Ters Çevir")); // ui-label
-    flipAll->setToolTip(tr("KATMANGÖRÜNÜM islem=tersine — görünenleri gizler, gizlileri gösterir"));
-    connect(flipAll, &QAction::triggered, this, [this] {
-        controller_->runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"), command::Origin::Gui);
-    });
-
-    auto* window = bar->addMenu(tr("&Pencere"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, chatDock_, journalDock_, pythonDock_}) {
-        if (dock) window->addAction(dock->toggleViewAction());
-    }
-    window->addSeparator();
-    auto* reset = window->addAction(tr("Yerleşimi Sıfırla"));
-    connect(reset, &QAction::triggered, this, &MainWindow::resetLayout);
-
-    auto* about = bar->addMenu(tr("&Yardım"));
-    auto* ref   = about->addAction(tr("Komut Listesi"));
-    // F1 EXPLICITLY, not `QKeySequence::HelpContents`, which is `Cmd+?` on
-    // macOS: every CAD program this one sits beside answers F1 with help, and a
-    // shortcut the manual prints has to be the shortcut on all three platforms.
-    ref->setShortcut(QKeySequence(Qt::Key_F1));
-    ref->setShortcutContext(Qt::ApplicationShortcut);
-    // THE MENU RUNS THE COMMAND, and the command opens the page. It used to pour
-    // the whole generated reference into a `QMessageBox`, which has no scroll
-    // area for its text and so grew a window taller than the screen — the
-    // user's words were that it does not scroll and is awful. Going through
-    // `YARDIM` rather than calling the page directly keeps the menu an ordinary
-    // client: the same line, the same transcript, the same page a typed `YARDIM`
-    // or `Ctrl+K` gets (Article 1.2).
-    ref->setProperty(kToolCommand, QStringLiteral("YARDIM"));
-    connect(ref, &QAction::triggered, this,
-            [this] { controller_->runLine(QStringLiteral("YARDIM"), command::Origin::Gui); });
-    about->addSeparator();
-    auto* info = about->addAction(tr("Hakkında"));
-    connect(info, &QAction::triggered, this, &MainWindow::showAbout);
-
-    // AND EVERYTHING ELSE THE REGISTRY KNOWS, so the bar is complete rather than
-    // remembered. Last, because it reads what the curated entries above already
-    // offer.
-    completeMenusFromRegistry();
-}
-
-namespace {
-
-/// The mark a generated menu entry wears: its category's, because a generated
-/// entry has no drawing of its own and a wrong picture is worse than a generic
-/// one. A command that deserves its own mark gets a curated entry instead.
-Glyph glyph_of(command::Category c)
-{
-    switch (c) {
-    case command::Category::Draw: return Glyph::Line;
-    case command::Category::Modify: return Glyph::Move;
-    case command::Category::View: return Glyph::ZoomExtents;
-    case command::Category::Layer: return Glyph::Layer;
-    case command::Category::File: return Glyph::Save;
-    case command::Category::Query: return Glyph::Identify;
-    case command::Category::Processing: return Glyph::Function;
-    case command::Category::Script: return Glyph::Script;
-    case command::Category::System: return Glyph::Settings;
-    }
-    return Glyph::Function;
-}
-
-/// `EŞYÜKSELTİ` -> `Eşyükselti`, with Turkish casing.
-///
-/// `QLocale(QLocale::Turkish)` rather than `<cctype>`: the dotted and dotless i
-/// are two letters in this language and `std::tolower('İ')` gets both of them
-/// wrong (CLAUDE.md 5.6). `İŞŞABLONU` lower-cases to `işşablonu` and its first
-/// letter upper-cases back to `İ`, which is the point.
-QString turkish_title(const QString& shouted)
-{
-    static const QLocale tr_TR(QLocale::Turkish, QLocale::Turkey);
-    const QString lower = tr_TR.toLower(shouted);
-    if (lower.isEmpty()) return lower;
-    return tr_TR.toUpper(lower.left(1)) + lower.mid(1);
-}
-
-} // namespace
-
-void MainWindow::completeMenusFromRegistry()
-{
-    QMenuBar* bar = titleBar_->menus();
-
-    // WHICH MENU A CATEGORY BELONGS TO, declared once. The bar has ten titles and
-    // the registry has nine categories, and they are not the same cut: `Kadastro`
-    // is a workflow and `Sorgu` is a kind of command. The curated entries above
-    // already put the regulated cadastral acts where a surveyor looks for them;
-    // this only decides where a command with NO chosen place goes.
-    struct Home
-    {
-        const char* menu;        ///< the menu title, as `addMenu` wrote it
-        command::Category takes; ///< the category whose leftovers land there
-        QAction* before;         ///< the entry it must stay above; null appends
-    };
-
-    // QUIT IS LAST. An entry appended to the file menu lands under it, which is
-    // where nothing belongs: Quit is the floor of that menu on every platform,
-    // and a generated tail below it reads as a mistake — a user reported exactly
-    // that, curious items showing up below the last row. A menu with a terminal
-    // entry names it here and the tail goes above.
-    const Home homes[] = {
-        {"Çi&zim", command::Category::Draw, nullptr},
-        {"D&eğiştir", command::Category::Modify, nullptr},
-        {"&Görünüm", command::Category::View, actTheme_},
-        {"&Katman", command::Category::Layer, nullptr},
-        {"&Dosya", command::Category::File, actQuit_},
-        {"&Harita", command::Category::Query, nullptr},
-        {"&Analiz", command::Category::Processing, nullptr},
-        {"D&üzen", command::Category::System, actSettings_},
-        {"&Dosya", command::Category::Script, actQuit_},
-    };
-
-    // Every command any action in this window can already start, resolved through
-    // the registry so an alias on a button counts as the command it names.
-    QSet<QString> already;
-    for (QAction* action : findChildren<QAction*>()) {
-        QString word = action->property(kToolCommand).toString();
-        if (word.isEmpty() && action->objectName().startsWith(QStringLiteral("toolAction.")))
-            word = action->objectName().section(QLatin1Char('.'), 1);
-        if (word.isEmpty()) continue;
-        if (const command::CommandSpec* spec =
-                controller_->registry().resolve(word.section(QLatin1Char(' '), 0, 0).toStdString());
-            spec != nullptr)
-            already.insert(QString::fromStdString(spec->id));
-    }
-
-    for (const Home& home : homes) {
-        QMenu* menu = nullptr;
-        for (QAction* action : bar->actions())
-            if (action->menu() != nullptr && action->text() == QString::fromUtf8(home.menu))
-                menu = action->menu();
-        if (menu == nullptr) continue;
-
-        QList<QAction*> added;
-        for (const command::CommandSpec& spec : controller_->registry().all()) {
-            if (spec.category != home.takes || spec.names.empty()) continue;
-            if (already.contains(QString::fromStdString(spec.id))) continue;
-
-            const QString word = QString::fromStdString(spec.names.front());
-            // THE SPEC'S OWN LABEL. A name is one word by design (`ÇIKTIYERLEŞİMİ`)
-            // and a menu built from it reads as one word, which is not Turkish;
-            // `title` is where the spaces live. The fallback is right for a
-            // one-word command and the only honest guess for any other.
-            const QString label =
-                spec.title.empty() ? turkish_title(word) : QString::fromStdString(spec.title);
-            QAction* entry =
-                commandAction(glyph_of(spec.category), label, word,
-                              word + QStringLiteral(" — ") + QString::fromStdString(spec.summary));
-            added << entry;
-        }
-        if (added.isEmpty()) continue;
-
-        // ONE ROW, ALWAYS A SUBMENU. `Düzenleme` alone has thirty-one commands
-        // and a menu that runs off the screen is the problem this change is
-        // fixing, not a milder version of it — and a tail of loose rows changes
-        // the shape of a menu the user has learned. One labelled row does not.
-        auto* rest = new QMenu(tr("Diğer komutlar"), menu);
-        for (QAction* entry : added)
-            rest->addAction(entry);
-
-        if (home.before != nullptr && menu->actions().contains(home.before)) {
-            // A rule of its own above the anchor, then the row above that rule:
-            // the result is `… | Diğer komutlar | ─── | Çıkış`, with the menu's
-            // own foot untouched.
-            QAction* rule = menu->insertSeparator(home.before);
-            menu->insertMenu(rule, rest);
-        } else {
-            menu->addSeparator();
-            menu->addMenu(rest);
-        }
-    }
-}
-
-void MainWindow::buildToolBox()
-{
-    // The modal drawing tools only, in the five groups design.md 7 names. File,
-    // edit, view, layer and GIS actions live in the horizontal bar, the way
-    // AutoCAD and QGIS both arrange them.
-    toolBox_ = new ToolBox(this);
-
-    // selection
-    toolBox_->addTool(actSelect_);
-    toolBox_->addTool(actSelectArea_);
-    toolBox_->addTool(actPan_);
-    toolBox_->addSeparator();
-
-    // creation
-    // ÇİZGİ FIRST, and it was missing entirely. It is the one command in this
-    // program that works today end to end — the tool box listed the five that do
-    // not and left out the one that does, which is the opposite of useful.
-    //
-    // FAMILIES, not one button each. Eleven creation tools down a 46 px column is
-    // a list nobody reads. The button shows whichever member was used last and
-    // holds the rest one press away, which is how every CAD tool palette has
-    // answered this since the first one.
-    //
-    // GROUPED BY WHAT COMES OUT, not by whether the pen moves in a straight line.
-    // "Straight edges" put DİKDÖRTGEN and ÇOKGEN under the line button, and a
-    // rectangle is not a kind of line — it is a FACE, with an area, a perimeter
-    // and a fill, and it belongs beside the other tool that makes one. The same
-    // mistake put YAY under DAİRE: a circle is closed and encloses something, an
-    // arc is an open run of edge and encloses nothing.
-    //
-    //   line   — an open run of edges
-    //   face   — a closed face
-    //   circle — a closed curve
-    //   arc    — an open curve, and the sector cut from one
-    //
-    // The flyout also PRINTS THE COMMAND WORD beside each name, so the mouse
-    // teaches the keyboard: a user who found ÇOKLUÇİZGİ under the line button
-    // has just been told what to type tomorrow (CLAUDE.md 5.15).
-    //   spline — an open run of edges too, drawn smooth; it joins the line family
-    //   hatch  — a closed face with a pattern; it joins the face family
-    //   block  — placing and defining: the placement first, it is the daily one
-    //   note   — a dimension and a leader both annotate: one family
-    // THE ANGLED GUIDE IS A CONSTRUCTION LINE, and sits where AutoCAD keeps
-    // XLINE: under the line button. The ruler gives horizontal and vertical
-    // guides by dragging; an angled one has to be asked for.
-    toolBox_->addFamily({actLine_, actPolyline_, actSpline_, actAngledGuide_});
-    toolBox_->addFamily({
-        actRectangle_,
-        methodTool(Glyph::Rectangle, tr("Dikdörtgen — döndürülmüş"),
-                   QStringLiteral("DİKDÖRTGEN yontem=3n"),
-                   tr("Bir kenarın iki köşesi ve yüksekliği veren üçüncü nokta")),
-        actPolygon_,
-        actRegular_,
-        methodTool(Glyph::Polygon, tr("Çokgen — dıştan"), QStringLiteral("ÇOKGEN yontem=dis"),
-                   tr("Kenarlar çembere teğet; yarıçap iç yarıçaptır")),
-        methodTool(Glyph::Polygon, tr("Çokgen — kenardan"), QStringLiteral("ÇOKGEN yontem=kenar"),
-                   tr("Kenar uzunluğundan; yarıçap sorulmaz")),
-        actHatch_,
-        actHatchEdit_,
-        actBoundary_,
-    });
-    toolBox_->addFamily({
-        actCircle_,
-        methodTool(Glyph::Circle, tr("Daire — çapın iki ucu"), QStringLiteral("DAİRE yontem=2n"),
-                   tr("İki nokta çapı verir; merkez ortalarıdır")),
-        methodTool(Glyph::Circle, tr("Daire — üç nokta"), QStringLiteral("DAİRE yontem=3n"),
-                   tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde")),
-        methodTool(Glyph::Circle, tr("Daire — iki doğruya teğet"),
-                   QStringLiteral("DAİRE yontem=ttr"),
-                   tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir")),
-        actEllipse_,
-        methodTool(Glyph::Ellipse, tr("Elips — eksenin iki ucu"),
-                   QStringLiteral("ELİPS yontem=eksen"),
-                   tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni verir")),
-        actAnnulus_,
-    });
-    // YAY was built as a full draw tool and then left out of the column, so the
-    // one curve this program can draw was reachable only by typing its name.
-    // EVERY CLASSICAL METHOD, under the face it belongs to. A family is exactly
-    // the shape this wants: one button a hand reaches for, and the variants a
-    // press-and-hold reveals.
-    toolBox_->addFamily({
-        actArc_,
-        methodTool(Glyph::Arc, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
-                   tr("Başlangıç, üzerinden geçtiği nokta ve bitiş")),
-        methodTool(Glyph::Arc, tr("Yay — başlangıç, merkez, açı"), QStringLiteral("YAY yontem=bma"),
-                   tr("Süpürme açısı oturumun birim ve kuralıyla okunur")),
-        methodTool(Glyph::Arc, tr("Yay — başlangıç, bitiş, yarıçap"),
-                   QStringLiteral("YAY yontem=bby"),
-                   tr("İki çözüm vardır; yon=sol|sag hangisi olduğunu söyler")),
-        methodTool(Glyph::Arc, tr("Yay — teğet devam"), QStringLiteral("YAY yontem=devam"),
-                   tr("Son çizilen çizginin ya da yayın ucundan teğet devam eder")),
-        actSector_,
-    });
-    // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
-    // canvas and a point computed from a baseline are the same kind of thing to
-    // a surveyor, and the second is what a tape survey produces all day.
-    // AND THE METHODS, under the tool they belong to. `KESİŞİMNOKTA` has three
-    // and `ARANOKTA` two, and only the default of each was reachable from the
-    // card — so the two-distance intersection, which is how a boundary is
-    // recovered from two tape measurements, could be run only by typing its
-    // method (§2.6a: a tool that arrives brings its UI with it).
-    toolBox_->addFamily({
-        actPoint_,
-        actPerpOffset_,
-        actSurvey_,
-        actIntersect_,
-        methodTool(Glyph::PointIntersect, tr("Kesişim — iki mesafeden"),
-                   QStringLiteral("KESİŞİMNOKTA yontem=mesafe"),
-                   tr("İki bilinen noktadan ölçülen iki uzaklık; iki çözümden birini "
-                      "gösterirsiniz")),
-        methodTool(Glyph::PointIntersect, tr("Kesişim — iki doğrudan"),
-                   QStringLiteral("KESİŞİMNOKTA yontem=dogru"),
-                   tr("İki doğrunun her birinden iki nokta")),
-        actAlong_,
-        methodTool(Glyph::PointAlong, tr("Ara Nokta — mesafeden"),
-                   QStringLiteral("ARANOKTA yontem=mesafe"),
-                   tr("Oran değil, ilk noktadan metre cinsinden uzaklık")),
-        // AND THE TRAVERSE, which is where a crew's points come from in bulk:
-        // it was on two menus and in no column.
-        actTraverse_,
-    });
-    // WRITING AND REWRITING, under one button: a caption is placed and then
-    // corrected, and the correction was a menu row behind `Diğer komutlar`.
-    toolBox_->addFamily({actText_, actTextEdit_});
-    toolBox_->addFamily({actInsert_, actBlock_});
-    toolBox_->addFamily(
-        {actDimension_, actDimChain_, actDimBaseline_, actDimensionEdit_, actLeader_, actLabel_});
-    toolBox_->addSeparator();
-
-    // editing
-    //
-    // THE GENERIC PAIR, not the cadastral one. `TEVHİT` and `İFRAZ` used to sit
-    // here, which put two regulated cadastral acts among the everyday edit tools
-    // and left the ordinary "merge these two shapes" with no button at all. They
-    // are in the Kadastro menu now; these two are geometry and work on anything.
-    //
-    // EVERY EDIT VERB HAS A BUTTON NOW, in families by what they do to a line.
-    // PAH, YUVARLA, UZAT, KIR, UZUNLUK, the corner tools, UÇUCA, PATLAT and
-    // BÖLÜMLE were menu rows only, and the user looked for PAH in the column
-    // and it was not there. A column that holds half of the edits trains a
-    // hand to believe the other half do not exist.
-    //
-    // AND THE COLUMN DID NOT GROW. Twenty buttons is what a 1080-line screen
-    // shows without the foot of the column running under the status bar, so
-    // the new verbs joined families rather than adding buttons:
-    //
-    //   cut     — back to a boundary, on to one, a piece out, an end along
-    //             itself, through a drawn line, into equal parts
-    //   corner  — cut straight or round, move a corner, add one, and the run's
-    //             own edits: close, open, reverse, thin
-    //   pieces  — merge, join end to end, close into a face, take apart
-    //   move    — the transforms, with HİZALA and ESNET beside them
-    toolBox_->addTool(actErase_);
-    toolBox_->addFamily({actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_, actExtend_,
-                         actExtendFence_, actExtendCarry_, actBreak_, actLengthen_, actSplit_,
-                         actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_,
-                         actDivide_});
-    toolBox_->addFamily({actChamfer_, actChamferAll_, actFillet_, actFilletAll_, actVertexMove_,
-                         actVertexAdd_, actVertexDelete_, actEdgeKind_, actPolylineEdit_});
-    toolBox_->addFamily({actCombine_, actJoin_, actToArea_, actExplode_});
-    // THE SIX THINGS YOU CAN DO TO WHAT IS SELECTED, under one button. Only
-    // TAŞI was in the column; KOPYALA, DÖNDÜR, ÖLÇEKLE, AYNALA and DİZİ lived in
-    // the `Değiştir` menu alone — and three of them have just been given a ghost
-    // that turns, scales and flips under the cursor, which is a thing you cannot
-    // discover from a menu (§2.6a).
-    toolBox_->addFamily({actMove_, actCopy_, actRotate_, actRotateRef_, actScale_, actScaleRef_,
-                         actMirror_, actMirrorCopy_, actArray_, actArrayPolar_, actArrayPath_,
-                         actAlign_, actAlignScaled_, actStretch_});
-    toolBox_->addTool(actOffset_);
-    toolBox_->addSeparator();
-
-    // measurement
-    // AND AN AREA NOBODY HAS DRAWN: the corners are pointed at and the face,
-    // its area and its perimeter follow the cursor.
-    toolBox_->addFamily({actMeasure_, actMeasureArea_,
-                         methodTool(Glyph::MeasureArea, tr("Alan Ölç — köşelerden"),
-                                    QStringLiteral("ALANÖLÇ yontem=nokta"),
-                                    tr("Köşelere tıklayın; alan ve çevre imleçle birlikte yazılır, "
-                                       "Enter bitirir")),
-                         actMeasureAngle_, actCoordinate_, actEntityInfo_, actStakeout_});
-    toolBox_->addSeparator();
-
-    // helpers
-    toolBox_->addFamily({actStyleCopy_, actColour_, actSetLayer_});
-    toolBox_->addTool(actTopology_);
-
-    // THE CHIPS PAINT. They answered "RENK komutu Faz 2" for as long as they
-    // existed; a press now opens the colours beside the chip and a pick runs
-    // RENK on what is selected — or, with nothing selected, RENK asks for it.
-    connect(toolBox_->chips(), &ColourChips::chipActivated, this, &MainWindow::openColourMenu);
-    refreshColourChips();
-}
-
-void MainWindow::refreshColourChips()
-{
-    if (toolBox_ == nullptr) return;
-    const core::Document& doc = controller_->document();
-
-    core::EntityId first = core::kNoEntity;
-    int held             = 0;
-    for (const core::EntityKey k : controller_->bus().selection().keys()) {
-        const core::EntityId e = doc.slot_of(k);
-        if (e == core::kNoEntity || !doc.alive(e)) continue;
-        if (first == core::kNoEntity) first = e;
-        ++held;
-    }
-
-    // WHAT IS DRAWN, the way the scene draws it: an object's own style, or its
-    // layer's when it inherits (`core::drawn_symbol`).
-    const core::Symbol sym = first != core::kNoEntity
-                                 ? core::drawn_symbol(doc, first)
-                                 : core::layer_symbol(doc, controller_->bus().active_layer());
-    // THE FILL CHIP SHOWS WHAT IS PAINTED. The scene fills a face only from a
-    // fill layer, so the fill colour a plain line carries is drawn nowhere and
-    // showing it would put a colour on the chip that is not on the sheet.
-    const std::uint32_t stroke = sym.primary().rgba;
-    std::uint32_t fill         = 0;
-    for (const core::SymbolLayer& l : sym.layers)
-        if (l.enabled && core::draws_fill(l.type)) {
-            fill = l.look.fill_rgba;
-            break;
-        }
-
-    ColourChips* chips = toolBox_->chips();
-    chips->setColours(QColor::fromRgba(stroke), fill != 0 ? QColor::fromRgba(fill) : QColor());
-
-    const auto named = [](std::uint32_t rgba) {
-        const std::string_view word = command::colour_word(rgba);
-        const QString hex           = QString::fromStdString(command::colour_hex(rgba));
-        return word.empty()
-                   ? hex
-                   : QStringLiteral("%1 %2").arg(
-                         QString::fromUtf8(word.data(), static_cast<qsizetype>(word.size())), hex);
-    };
-    const QString fillSaid = fill != 0 ? named(fill) : tr("yok");
-    if (held > 0) {
-        chips->setDescriptions(
-            tr("Çizgi rengi: %1 (seçili nesnenin). Tıklayın: seçili %n nesnenin çizgi rengini "
-               "değiştirin.",
-               nullptr, held)
-                .arg(named(stroke)),
-            tr("Dolgu rengi: %1 (seçili nesnenin). Tıklayın: seçili %n nesnenin dolgu rengini "
-               "değiştirin.",
-               nullptr, held)
-                .arg(fillSaid));
-    } else {
-        chips->setDescriptions(
-            tr("Çizgi rengi: %1 (etkin katmanın). Tıklayın: bir renk seçin, sonra boyanacak "
-               "nesnelere tıklayın.")
-                .arg(named(stroke)),
-            tr("Dolgu rengi: %1 (etkin katmanın). Tıklayın: bir renk seçin, sonra boyanacak "
-               "nesnelere tıklayın.")
-                .arg(fillSaid));
-    }
-}
-
-void MainWindow::openColourMenu(int which)
-{
-    const bool fill = which == 1;
-    int held        = 0;
-    for (const core::EntityKey k : controller_->bus().selection().keys())
-        if (const core::EntityId e = controller_->document().slot_of(k);
-            e != core::kNoEntity && controller_->document().alive(e))
-            ++held;
-
-    auto* menu = new QMenu(this);
-    menu->setAttribute(Qt::WA_DeleteOnClose);
-    menu->setObjectName(fill ? QStringLiteral("colourMenu.fill")
-                             : QStringLiteral("colourMenu.stroke"));
-    menu->setAccessibleName(fill ? tr("Dolgu rengi") : tr("Çizgi rengi"));
-
-    // WHAT A PICK WILL PAINT, said before it is made: with a selection it is
-    // the selection, and without one the next thing RENK does is ask.
-    QString heading;
-    if (held > 0)
-        heading = fill ? tr("Seçili %n nesnenin dolgu rengi", nullptr, held)
-                       : tr("Seçili %n nesnenin çizgi rengi", nullptr, held);
-    else
-        heading = fill ? tr("Dolgu rengi — seçin, sonra nesnelere tıklayın")
-                       : tr("Çizgi rengi — seçin, sonra nesnelere tıklayın");
-    menu->addAction(heading)->setEnabled(false);
-
-    // THE SWATCHES ARE RENK'S OWN WORDS (`command::named_colours`): a colour
-    // picked here is the colour `RENK renk=kırmızı` paints, by construction.
-    QVector<SwatchRow::Swatch> swatches;
-    for (const command::NamedColour& n : command::named_colours())
-        swatches.push_back(
-            {QColor::fromRgba(n.rgba),
-             QString::fromUtf8(n.word.data(), static_cast<qsizetype>(n.word.size()))});
-    auto* row = new SwatchRow(swatches, menu);
-    row->applyTheme(theme_);
-    auto* host = new QWidgetAction(menu);
-    host->setDefaultWidget(row);
-    menu->addAction(host);
-    connect(row, &SwatchRow::picked, this, [this, menu, fill, swatches](int i) {
-        menu->close();
-        applyColour(fill, swatches[i].name);
-    });
-
-    menu->addSeparator();
-    // THE DIALOG OPENS ON THE COLOUR THE CHIP SHOWS, so "a little darker" is a
-    // nudge and not a search from black.
-    const QColor shown   = toolBox_->chips()->colour(which);
-    const QAction* other = menu->addAction(tr("Başka bir renk…"));
-    connect(other, &QAction::triggered, this, [this, fill, shown] {
-        const QColor picked =
-            QColorDialog::getColor(shown, this, fill ? tr("Dolgu rengi") : tr("Çizgi rengi"),
-                                   QColorDialog::ShowAlphaChannel);
-        if (!picked.isValid()) return;
-        applyColour(fill, QString::fromStdString(command::colour_hex(picked.rgba())));
-    });
-    const QAction* layer = menu->addAction(fill ? tr("Katmanın dolgusu") : tr("Katmanın rengi"));
-    connect(layer, &QAction::triggered, this,
-            [this, fill] { applyColour(fill, QStringLiteral("katman")); });
-    if (fill) {
-        const QAction* none = menu->addAction(tr("Dolgu yok"));
-        connect(none, &QAction::triggered, this,
-                [this] { applyColour(true, QStringLiteral("yok")); });
-    }
-
-    // BESIDE THE CHIP, the way the family cards open beside their buttons.
-    const ColourChips* chips = toolBox_->chips();
-    menu->popup(chips->mapToGlobal(ColourChips::chipRect(which).topRight() + QPoint(8, 0)));
-}
-
-void MainWindow::applyColour(bool fill, const QString& word)
-{
-    controller_->runCommand(
-        QStringLiteral("RENK %1=%2")
-            .arg(fill ? QStringLiteral("dolgu") : QStringLiteral("renk"), word));
 }
 
 void MainWindow::buildPanels()
@@ -2976,6 +2073,21 @@ void MainWindow::applyTheme()
 {
     const Palette& p = themePalette(theme_);
     qApp->setStyleSheet(themeStyleSheet(theme_));
+    setStyleSheet(ribbonStyleSheet(theme_));
+
+    // THE APPLICATION BUTTON IS AS WIDE AS ITS NAME. The ribbon sizes it from
+    // its hint scaled to the tab row, which elides a two-word label, and every
+    // sheet re-polishes a `min-width` onto it — so the floor is set after both:
+    // the label in the face the ribbon sheet gives it (12 px, semibold), its
+    // 14 px of padding a side, its 6 + 6 px of margin and a little air.
+    if (appButton_ != nullptr) {
+        QFont face(QStringLiteral("IBM Plex Sans"));
+        face.setPixelSize(12);
+        face.setWeight(QFont::DemiBold);
+        constexpr int kAppButtonChrome = (2 * 14) + 6 + 6 + 8;
+        appButton_->setMinimumWidth(QFontMetrics(face).horizontalAdvance(appButton_->text()) +
+                                    kAppButtonChrome);
+    }
 
     // AlternateBase comes from the palette, not the stylesheet: a stylesheet rule
     // for it loses to the more specific background rule on the same widget, and
@@ -2991,12 +2103,15 @@ void MainWindow::applyTheme()
 
     // Icons are drawn, not loaded, so they re-tint with the palette. Each action
     // carries its glyph in data(), which keeps this loop from being a second list
-    // of actions to maintain.
+    // of actions to maintain. AN ACTION'S PICTURE IS IN COLOUR (`design.md` §5):
+    // each role in its own ink, from the theme's tokens.
+    const GlyphInks inks = actionInks();
     for (QAction* action : findChildren<QAction*>()) {
         const QVariant glyph = action->data();
         if (!glyph.isValid()) continue;
-        action->setIcon(icon(static_cast<Glyph>(glyph.toInt()), p.text, p.accent));
+        action->setIcon(colour_icon(static_cast<Glyph>(glyph.toInt()), inks));
     }
+    refreshRibbonPictures();
 
     // ONE WALK, not a list of calls. A list is a thing to forget an entry in,
     // and the settings window's sidebar proved it: every painted widget declares
@@ -3006,8 +2121,17 @@ void MainWindow::applyTheme()
     if (settings_) settings_->applyTheme(theme_);
 }
 
+GlyphInks MainWindow::actionInks() const
+{
+    const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
+    return GlyphInks{t.iconInk,  t.iconShape, t.iconFill, t.iconCut,
+                     t.iconNote, t.iconData,  t.iconAdd,  t.iconPaper};
+}
+
 void MainWindow::onSettingChanged(const QString& id)
 {
+    // The annotation defaults and the plot scale the ribbon shows are settings.
+    refreshRibbonDefaults();
     // A preference written from the command line, a script or the AI must land on
     // screen exactly as the menu item does. Reading the value back from the store
     // rather than trusting the caller keeps one source of truth.
@@ -3184,15 +2308,6 @@ void MainWindow::showCommandLine(bool visible)
         actCommandLine_->setChecked(visible);
     }
     if (visible) commandLine_->setFocus();
-}
-
-void MainWindow::refreshLayerCombo()
-{
-    // The tool bar combo is gone with design.md 7's single 46 px strip, which has
-    // no combo in it. The active layer is shown and changed in the Katmanlar
-    // panel instead — the same `KATMAN` command either way (Article 1.2), so no
-    // capability moved with the widget.
-    if (layerPanel_) layerPanel_->refresh();
 }
 
 void MainWindow::openAttributeTable(const QString& layerName)
@@ -3535,89 +2650,102 @@ void MainWindow::probeToolFamily()
         (void)std::fflush(stdout);
     };
 
-    if (toolBox_ == nullptr) {
-        say(QStringLiteral("araç kutusu yok"));
+    // THE CIRCLE'S SPLIT BUTTON on the tab the window opens on — found by what
+    // its face sends rather than by its place on the ribbon, so re-ordering a
+    // panel cannot make this probe silently check a different button.
+    const RibbonFamily* circle = nullptr;
+    for (const RibbonFamily* f : std::as_const(families_))
+        if (f->face() != nullptr &&
+            f->face()->property(kToolCommand).toString() == QStringLiteral("DAİRE")) {
+            circle = f;
+            break;
+        }
+    if (circle == nullptr) {
+        say(QStringLiteral("DAİRE ailesi yok"));
+        return;
+    }
+    QMenu* menu  = circle->head()->menu();
+    auto* button = qobject_cast<SARibbonToolButton*>(ribbonButton(circle->head()));
+    if (menu == nullptr || button == nullptr) {
+        say(QStringLiteral("ailenin bölünmüş düğmesi yok"));
         return;
     }
 
-    // The button whose face is ÇİZGİ — found by what it carries rather than by
-    // its position in the column, so re-ordering the palette cannot make this
-    // probe silently check a different button.
-    QToolButton* line = nullptr;
-    for (QToolButton* button : toolBox_->findChildren<QToolButton*>()) {
-        const QAction* face = button->defaultAction();
-        if (face != nullptr && face->property(kToolCommand).toString() == QStringLiteral("ÇİZGİ"))
-            line = button;
-    }
-    if (line == nullptr) {
-        say(QStringLiteral("ÇİZGİ düğmesi yok"));
-        return;
-    }
-
-    // A RIGHT CLICK, which opens the family at once — the held press takes 280 ms
-    // of real time and a probe that slept for it would be a probe that sometimes
-    // did not.
-    const QPointF centre(line->width() / 2.0, line->height() / 2.0);
-    QMouseEvent press(QEvent::MouseButtonPress, centre,
-                      QPointF(line->mapToGlobal(centre.toPoint())), Qt::RightButton,
-                      Qt::RightButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(line, &press);
-
-    // NO `processEvents` between the press and the check. A `Qt::Popup` grabs the
-    // pointer, and the real pointer is not where this synthetic press said it
-    // was — so the first turn of the loop delivers a click outside the card and
-    // Qt closes it. `sendEvent` is synchronous; by the time it returns the card
-    // is up, and everything below drives it directly.
-    auto* card = toolBox_->findChild<ToolFlyout*>();
-    if (card == nullptr) {
-        say(QStringLiteral("kart yok"));
-        return;
-    }
-    if (!card->isVisible()) {
-        say(QStringLiteral("kart görünmez"));
-        return;
-    }
-    say(QStringLiteral("kart açıldı"));
-
-    // THE RELEASE THAT ENDS THE HOLD, and it arrives HERE rather than at the
-    // button: a `Qt::Popup` grabs the pointer the moment it opens. The pointer is
-    // still over the button, so in the card's own coordinates it is off every row
-    // — and closing on that made the card vanish in the same motion that opened
-    // it. Nobody could hold, look, and then choose.
-    const QPointF outside(-20, 10);
-    QMouseEvent letGo(QEvent::MouseButtonRelease, outside,
-                      QPointF(card->mapToGlobal(QPoint(-20, 10))), Qt::LeftButton, Qt::NoButton,
-                      Qt::NoModifier);
-    QCoreApplication::sendEvent(card, &letGo);
-    say(QStringLiteral("bırakınca: %1")
-            .arg(card->isVisible() ? QStringLiteral("açık") : QStringLiteral("kapandı")));
-    if (!card->isVisible()) return;
-
-    // WHAT IT LISTS, in order. The card is the only place a user is told that the
-    // button they pressed sends `ÇİZGİ` and that `ÇOKLUÇİZGİ` is beside it.
+    // WHAT IT LISTS, in order, by the line each member sends. The list is the
+    // only place a user is told that the circle through three points is
+    // `DAİRE yontem=3n`, which is what they will type tomorrow.
     QStringList members;
-    for (const QAction* member : card->members())
-        members << member->property(kToolCommand).toString();
-
-    // The second member, because taking the first would prove nothing the button
-    // did not already do.
+    for (const QAction* member : menu->actions())
+        if (!member->isSeparator()) members << member->property(kToolCommand).toString();
     say(QStringLiteral("üyeler: %1").arg(members.join(QStringLiteral(" · "))));
 
-    QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
-    QKeyEvent again(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
-    QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-    QCoreApplication::sendEvent(card, &down);
-    QCoreApplication::sendEvent(card, &again);
-    QCoreApplication::sendEvent(card, &enter);
+    QString prompt;
+    const QMetaObject::Connection watch =
+        connect(controller_, &Controller::promptChanged, this,
+                [&prompt](const QString& asked) { prompt = asked; });
 
-    const QAction* face = line->defaultAction();
+    // THE ARROW, PRESSED THE WAY A HAND PRESSES IT. A large button opens its
+    // list from its lower half, the label and the arrow; a row button from the
+    // arrow at its right.
+    QCoreApplication::processEvents();
+    const bool large           = button->buttonType() == SARibbonToolButton::LargeButton;
+    const QPoint arrow         = large ? QPoint(button->width() / 2, button->height() - 6)
+                                       : QPoint(button->width() - 6, button->height() / 2);
+    const QPoint arrowOnScreen = button->mapToGlobal(arrow);
+    // The list is modal and runs its own loop, so what happens while it is open
+    // is set up before the press that opens it.
+    QTimer::singleShot(150, menu, [menu, arrowOnScreen, say] {
+        say(menu->isVisible() ? QStringLiteral("liste açıldı") : QStringLiteral("liste açılmadı"));
+        if (!menu->isVisible()) return;
+        // AND IT SURVIVES THE HAND LETTING GO. The press that opened the list
+        // is still down; its release arrives with the pointer on the button,
+        // on no row, and closing on it would make the list open and vanish in
+        // the same motion.
+        QMouseEvent letGo(QEvent::MouseButtonRelease, menu->mapFromGlobal(arrowOnScreen),
+                          arrowOnScreen, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(menu, &letGo);
+        QCoreApplication::processEvents();
+        say(QStringLiteral("bırakınca: %1")
+                .arg(menu->isVisible() ? QStringLiteral("açık") : QStringLiteral("kapalı")));
+        if (!menu->isVisible()) return;
+        // THE SECOND MEMBER, because taking the first would prove nothing the
+        // face did not already do — clicked where it is drawn.
+        QAction* second = nullptr;
+        int seen        = 0;
+        for (QAction* a : menu->actions())
+            if (!a->isSeparator() && ++seen == 2) {
+                second = a;
+                break;
+            }
+        if (second == nullptr) return;
+        const QPoint row         = menu->actionGeometry(second).center();
+        const QPoint rowOnScreen = menu->mapToGlobal(row);
+        QMouseEvent over(QEvent::MouseMove, row, rowOnScreen, Qt::NoButton, Qt::NoButton,
+                         Qt::NoModifier);
+        QCoreApplication::sendEvent(menu, &over);
+        QMouseEvent down(QEvent::MouseButtonPress, row, rowOnScreen, Qt::LeftButton, Qt::LeftButton,
+                         Qt::NoModifier);
+        QCoreApplication::sendEvent(menu, &down);
+        QMouseEvent up(QEvent::MouseButtonRelease, row, rowOnScreen, Qt::LeftButton, Qt::NoButton,
+                       Qt::NoModifier);
+        QCoreApplication::sendEvent(menu, &up);
+    });
+    QMouseEvent press(QEvent::MouseButtonPress, arrow, arrowOnScreen, Qt::LeftButton,
+                      Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(button, &press); // returns when the list has closed
+    QCoreApplication::processEvents();
+
+    // THE FACE FOLLOWS THE CHOICE, and the choice armed that method — not merely
+    // repainted a button.
     say(QStringLiteral("düğmenin yüzü: %1")
-            .arg(face != nullptr ? face->property(kToolCommand).toString() : QString()));
-
+            .arg(circle->face() != nullptr ? circle->face()->property(kToolCommand).toString()
+                                           : QString()));
     const command::Session* running = controller_->session();
     say(QStringLiteral("çalışan komut: %1")
             .arg(running != nullptr ? QString::fromStdString(running->spec().id)
                                     : QStringLiteral("yok")));
+    say(QStringLiteral("istem: %1").arg(prompt));
+    disconnect(watch);
 }
 
 void MainWindow::probeSchemaPage()
@@ -4095,7 +3223,7 @@ int MainWindow::probeFit()
     };
 
     say("pencere en küçük", minimumSizeHint());
-    if (count(toolBox_)) say("araç kolonu en küçük", toolBox_->minimumSizeHint());
+    if (count(ribbonBar())) say("şerit en küçük", ribbonBar()->minimumSizeHint());
     if (count(pythonDock_)) say("Python paneli en küçük", pythonDock_->minimumSizeHint());
     if (count(propertyDock_)) say("özellik paneli en küçük", propertyDock_->minimumSizeHint());
     if (count(layerDock_)) say("katman paneli en küçük", layerDock_->minimumSizeHint());
@@ -4129,25 +3257,20 @@ int MainWindow::probeFit()
                                fits ? "sığıyor" : "EKRANA SIĞMIYOR");
             if (!fits) ++defects;
 
-            // EVERY BUTTON ON SHOW: a button the column cannot hold is a tool
-            // nobody can press.
-            if (toolBox_ != nullptr) {
-                int hidden = 0;
-                for (const QToolButton* b : toolBox_->findChildren<QToolButton*>()) {
-                    if (!b->isVisibleTo(toolBox_)) continue;
-                    const QRect r = b->geometry();
-                    if (r.bottom() > toolBox_->height()) {
-                        (void)std::fprintf(
-                            stderr, "[sığ]   görünmeyen araç: %s\n",
-                            qPrintable(b->toolTip().section(QLatin1Char(' '), 0, 0)));
-                        ++hidden;
-                    }
-                }
-                (void)std::fprintf(hidden == 0 ? stdout : stderr,
-                                   "[sığ]   araç kolonu %d × %d px, %d sütun; %d araç görünmüyor\n",
-                                   toolBox_->width(), toolBox_->height(),
-                                   toolBox_->columnsFor(toolBox_->height()), hidden);
-                defects += hidden;
+            // THE CHROME'S BUDGET (`design.md` §1, `.claude/ui.md` R50): the
+            // ribbon within 134 px and, with the status strip, within 160 px, at
+            // every size. A window too narrow for a tab scrolls its panels
+            // rather than hiding them, so what can go wrong here is height.
+            if (const SARibbonBar* bar = ribbonBar(); bar != nullptr) {
+                constexpr int kRibbonBudget = 134;
+                constexpr int kChromeBudget = 160;
+                const int strip             = statusStrip_ != nullptr ? statusStrip_->height() : 0;
+                const int chrome            = bar->height() + strip;
+                const bool within = bar->height() <= kRibbonBudget && chrome <= kChromeBudget;
+                (void)std::fprintf(within ? stdout : stderr,
+                                   "[sığ]   şerit %d px, şerit ve durum çubuğu %d px — %s\n",
+                                   bar->height(), chrome, within ? "bütçede" : "BÜTÇEYİ AŞIYOR");
+                if (!within) ++defects;
             }
             if (shooting)
                 (void)grab().save(
@@ -4290,15 +3413,18 @@ int MainWindow::probeRealMouse()
 
     // ---- 2. A SLOW CLICK ON A FAMILY BUTTON --------------------------------
     //
-    // A family button opens its card on a press held past `kHoldMs`. A human
-    // click is not instant, so a slow one runs nothing at all: the card opens,
-    // the release lands on the card, and the tool the user reached for never
-    // starts. That is what "drawing never works, all three of them" looks like —
-    // all three are the members of ONE family button.
+    // A family is a split button: its FACE runs the member used last, its
+    // ARROW opens the list. A human click is not instant, and the tool column's
+    // card once opened on a slow press and swallowed the click, so the tool the
+    // user reached for never started ("drawing never works, all three of them").
+    // The ribbon's face has no hold at all — so every interval a hand produces
+    // must run the tool, and none may open a menu in its place.
     const auto clickButton = [](QToolButton* button, int heldMs) {
-        const QPointF centre(button->width() / 2.0, button->height() / 2.0);
-        QMouseEvent down(QEvent::MouseButtonPress, centre, button->mapToGlobal(centre),
-                         Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        // THE FACE: the icon's half of a large split button, above the label
+        // and the arrow.
+        const QPointF face(button->width() / 2.0, button->height() * 0.3);
+        QMouseEvent down(QEvent::MouseButtonPress, face, button->mapToGlobal(face), Qt::LeftButton,
+                         Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(button, &down);
 
         QElapsedTimer waited;
@@ -4306,28 +3432,19 @@ int MainWindow::probeRealMouse()
         while (waited.elapsed() < heldMs)
             QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
 
-        QWidget* card     = QApplication::activePopupWidget();
-        const bool opened = card != nullptr && card->property("kentos.rows").isValid();
+        const bool opened = QApplication::activePopupWidget() != nullptr;
 
-        // RELEASED WHERE IT WAS PRESSED, which is what a click is. A hand that
-        // wanted the card moves onto it first; this one did not move at all.
-        QMouseEvent up(QEvent::MouseButtonRelease, centre, button->mapToGlobal(centre),
-                       Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        // RELEASED WHERE IT WAS PRESSED, which is what a click is.
+        QMouseEvent up(QEvent::MouseButtonRelease, face, button->mapToGlobal(face), Qt::LeftButton,
+                       Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(button, &up);
         QCoreApplication::processEvents();
         return opened;
     };
 
-    QToolButton* lineButton = nullptr;
-    for (QToolButton* button : toolBox_->buttons())
-        if (QAction* face = button->defaultAction();
-            face != nullptr && face->property(kToolCommand).toString() == QStringLiteral("ÇİZGİ"))
-            lineButton = button;
-    // The face follows the last member used, so ask for the family by membership.
-    if (lineButton == nullptr)
-        for (QToolButton* button : toolBox_->buttons())
-            if (button->property("kentos.family").toBool() && lineButton == nullptr)
-                lineButton = button;
+    // The `Giriş` tab's line family: its face runs the tool, its arrow opens the
+    // list — and a slow press on the FACE must still run the tool.
+    QToolButton* lineButton = ribbonButton(actLine_);
 
     if (lineButton == nullptr) {
         check(false, QStringLiteral("Çizgi düğmesi bulundu"));
@@ -4344,17 +3461,17 @@ int MainWindow::probeRealMouse()
         const bool opened            = clickButton(lineButton, heldMs);
         const command::Session* live = controller_->session();
         const bool running           = live != nullptr && live->waiting();
-        (void)std::fprintf(stdout, "[fare] %3d ms basılı: kart=%s komut=%s\n", heldMs,
-                           opened ? "açıldı" : "hayır", running ? "çalıştı" : "HAYIR");
+        (void)std::fprintf(stdout, "[fare] %3d ms basılı: menü=%s komut=%s\n", heldMs,
+                           opened ? "AÇILDI" : "hayır", running ? "çalıştı" : "HAYIR");
         if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
         QCoreApplication::processEvents();
 
         // A CLICK IS A CLICK, at any interval a hand produces. Not "something
-        // happened": the TOOL has to run. A card opening in place of the tool is
+        // happened": the TOOL has to run. A menu opening in place of the tool is
         // the defect — an open Qt popup grabs the mouse, so the next press on the
-        // same button only dismisses the card and is swallowed, and a user whose
+        // same button only dismisses it and is swallowed, and a user whose
         // clicks are all slow never reaches the tool at all.
-        check(running, QStringLiteral("%1 ms'lik tıklama aracı çalıştırdı").arg(heldMs));
+        check(running && !opened, QStringLiteral("%1 ms'lik tıklama aracı çalıştırdı").arg(heldMs));
     }
 
     // ---- 3. DRAWING, THROUGH THE HIT TEST ----------------------------------
@@ -5654,29 +4771,32 @@ int MainWindow::probeOsClicks()
         return word.isEmpty() ? action->text() : word;
     };
 
-    // WHERE EVERYTHING IS, in the coordinates the window system clicks in. A
-    // family button is given twice: its centre, which runs the face, and the
-    // wedge in its corner, which a plain left click opens the card with — the
-    // one card gesture a driver without a right button or a hold can make.
+    // WHERE EVERYTHING IS, in the coordinates the window system clicks in: the
+    // `Giriş` tab's buttons, the one the window opens on. A family's split button
+    // is given twice: its face, which runs the member used last, and its arrow,
+    // which opens the list.
     const QRect frame = frameGeometry();
     say(QStringLiteral("pencere %1 %2 %3 %4")
             .arg(frame.x())
             .arg(frame.y())
             .arg(frame.width())
             .arg(frame.height()));
-    for (QToolButton* button : toolBox_->buttons()) {
-        QAction* face = button->defaultAction();
-        if (face == nullptr) continue;
-        const QPoint at = centre(button);
-        if (button->property("kentos.family").toBool()) {
-            const QPoint corner =
-                button->mapToGlobal(QPoint(button->width() - 2, button->height() - 2));
-            say(QStringLiteral("aile %1 %2 %3 kose %4 %5")
+    if (SARibbonBar* bar = ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+    QCoreApplication::processEvents();
+    for (QToolButton* button : ribbonButtons()) {
+        if (!button->isVisible()) continue;
+        QAction* face   = button->defaultAction();
+        const QPoint at = button->mapToGlobal(
+            QPoint(button->width() / 2, static_cast<int>(button->height() * 0.3)));
+        if (button->popupMode() == QToolButton::MenuButtonPopup) {
+            const QPoint arrow =
+                button->mapToGlobal(QPoint(button->width() / 2, button->height() - 4));
+            say(QStringLiteral("aile %1 %2 %3 ok %4 %5")
                     .arg(name_of(face))
                     .arg(at.x())
                     .arg(at.y())
-                    .arg(corner.x())
-                    .arg(corner.y()));
+                    .arg(arrow.x())
+                    .arg(arrow.y()));
         } else {
             say(QStringLiteral("dugme %1 %2 %3").arg(name_of(face)).arg(at.x()).arg(at.y()));
         }
@@ -5854,7 +4974,7 @@ int MainWindow::probeAccessible()
     // re-trigger the action that is already checked, so pressing a lit tool would
     // report a failure that is Qt's rule rather than this program's defect. The
     // group is parked somewhere else before every press.
-    const auto park = [this](QAction* notThis) {
+    const auto park = [this](const QAction* notThis) {
         if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
         controller_->cancelInteractive();
         QAction* elsewhere = notThis == actSelect_ ? actLine_ : actSelect_;
@@ -5862,40 +4982,58 @@ int MainWindow::probeAccessible()
         QCoreApplication::processEvents();
     };
 
+    // The tools a press ARMS — the draw, edit and query ones and the three that
+    // pick and pan. The rest of the ribbon opens windows and dialogs; the tree
+    // is asked about them too, but a press that would open a file dialog is not
+    // made (it would hold the probe until somebody closed it).
+    const auto arms = [this](const QAction* a) {
+        if (a == actSelect_ || a == actSelectArea_ || a == actPan_) return true;
+        QString line = a->property(kToolCommand).toString();
+        if (line.isEmpty() && a->objectName().startsWith(QStringLiteral("toolAction.")))
+            line = a->objectName().section(QLatin1Char('.'), 1);
+        const command::CommandSpec* spec =
+            line.isEmpty() ? nullptr
+                           : controller_->registry().resolve(
+                                 line.section(QLatin1Char(' '), 0, 0).toStdString());
+        return spec != nullptr && (spec->category == command::Category::Draw ||
+                                   spec->category == command::Category::Modify ||
+                                   spec->category == command::Category::Query);
+    };
+    // A family's head is pressed for its face.
+    const auto faceOf = [this](QAction* carried) -> QAction* {
+        for (const RibbonFamily* f : std::as_const(families_))
+            if (f->head() == carried) return f->face();
+        return carried;
+    };
+
     // ---- 1. WHAT THE TREE SAYS ABOUT EVERY BUTTON --------------------------
     //
-    // `ui.md` R22: an interactive widget carries an `accessibleName` and an
-    // `accessibleDescription`. Qt copies an action's text and tool tip onto a
-    // button but copies neither of those, so a column of buttons can be perfectly
-    // labelled on screen and silent to a screen reader.
-    for (QToolButton* button : toolBox_->buttons()) {
-        QAction* face = button->defaultAction();
-        if (face == nullptr) continue;
+    // A screen reader reads the accessibility tree, not the pixels: every
+    // ribbon button must be in it with a name, a description (its tip), the
+    // press it offers — and, for a tool, whether it is the one lit.
+    int buttons = 0;
+    for (QToolButton* button : ribbonButtons()) {
+        QAction* carried  = button->defaultAction();
+        QAction* face     = faceOf(carried);
         const QString who = name_of(face);
+        ++buttons;
 
         QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(button);
         check(iface != nullptr, QStringLiteral("%1: erişilebilirlik arayüzü var").arg(who));
         if (iface == nullptr) continue;
-
         check(!iface->text(QAccessible::Name).trimmed().isEmpty(),
               QStringLiteral("%1: erişilebilir adı var").arg(who));
-        check(!iface->text(QAccessible::Description).trimmed().isEmpty(),
+        check(!iface->text(QAccessible::Description).trimmed().isEmpty() ||
+                  !button->toolTip().trimmed().isEmpty(),
               QStringLiteral("%1: erişilebilir açıklaması var").arg(who));
 
         QAccessibleActionInterface* actions = iface->actionInterface();
         check(actions != nullptr, QStringLiteral("%1: eylem arayüzü var").arg(who));
         if (actions == nullptr) continue;
-
         check(actions->actionNames().contains(press),
               QStringLiteral("%1: \"%2\" eylemi sunuluyor").arg(who, press));
-        if (button->isCheckable())
-            check(actions->actionNames().contains(toggle),
-                  QStringLiteral("%1: \"%2\" eylemi sunuluyor").arg(who, toggle));
 
-        // THE LIGHT IS STILL SPOKEN. A screen reader saying "işaretli" is the
-        // spoken form of the lit button, and the column's whole job is to say
-        // which command is running — so the fix may not buy the press by
-        // throwing the checked state away.
+        if (!arms(face)) continue;
         if (button->isCheckable()) {
             park(face);
             face->setChecked(true);
@@ -5903,113 +5041,78 @@ int MainWindow::probeAccessible()
             check(iface->state().checkable && iface->state().checked,
                   QStringLiteral("%1: yanan düğme ağaçta da işaretli").arg(who));
         }
-    }
 
-    // ---- 2. THE PRESS RUNS THE COMMAND -------------------------------------
-    //
-    // THE ASSERTION IS `triggered`, NOT THE LIGHT. That distinction is the whole
-    // defect: the exclusive group checks an action when Qt toggles the button, so
-    // the column lit up exactly as it does for a mouse while `runCommand` was
-    // never called. Measured on this machine with real CGEvent clicks the log
-    // read `olay bas QToolButton/ÇİZGİ` then `tetiklendi ÇİZGİ`; with an
-    // accessibility press it read `isaretlendi METİN` and stopped there.
-    for (QToolButton* button : toolBox_->buttons()) {
-        QAction* face = button->defaultAction();
-        if (face == nullptr) continue;
-        QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(button);
-        if (iface == nullptr || iface->actionInterface() == nullptr) continue;
-        const QString who = name_of(face);
-
-        for (const QString& what : iface->actionInterface()->actionNames()) {
-            park(face);
-
-            int fired = 0;
-            const QMetaObject::Connection on =
-                connect(face, &QAction::triggered, this, [&fired] { ++fired; });
-            iface->actionInterface()->doAction(what);
-            QCoreApplication::processEvents();
-            disconnect(on);
-
-            check(fired > 0, QStringLiteral("%1: \"%2\" komutu çalıştırdı").arg(who, what));
-        }
-    }
-
-    // ---- 3. AND THE KEYBOARD, WITH REAL KEY EVENTS -------------------------
-    //
-    // The buttons are `Qt::NoFocus` so that clicking a tool does not take the
-    // keyboard off the canvas; the column itself is the tab stop and the arrow
-    // keys move inside it. A user with no mouse reaches every tool here.
-    park(nullptr);
-    toolBox_->setFocus(Qt::TabFocusReason);
-    QCoreApplication::processEvents();
-    check(toolBox_->hasFocus(), QStringLiteral("araç kolonu Tab ile odak alıyor"));
-
-    const auto typeInto = [this](int key) {
-        QKeyEvent down(QEvent::KeyPress, key, Qt::NoModifier);
-        QCoreApplication::sendEvent(toolBox_, &down);
-        QKeyEvent up(QEvent::KeyRelease, key, Qt::NoModifier);
-        QCoreApplication::sendEvent(toolBox_, &up);
-        QCoreApplication::processEvents();
-    };
-
-    // HOME AND END LAND ON THE ENDS, and Space runs what they landed on. Asked
-    // of the ACTION rather than of a highlight, because a ring drawn in the wrong
-    // place looks exactly like one drawn in the right place — and an off-by-one
-    // here is a key that quietly skips a tool. The first draft of this column had
-    // one: End stepped back from the last index and stopped one short of it.
-    const auto pressWith = [&](std::initializer_list<int> keys, QToolButton* expected,
-                               const QString& what) {
-        QAction* face = expected->defaultAction();
+        // AND THE PRESS IT OFFERS RUNS THE TOOL — the one road a switch user or
+        // a screen reader has to it.
         park(face);
-        toolBox_->setFocus(Qt::TabFocusReason);
-        QCoreApplication::processEvents();
-
         int fired = 0;
         const QMetaObject::Connection on =
             connect(face, &QAction::triggered, this, [&fired] { ++fired; });
-        for (const int key : keys)
-            typeInto(key);
-        typeInto(Qt::Key_Space);
-        disconnect(on);
-
-        check(fired > 0, QStringLiteral("%1: %2 çalıştı").arg(what, name_of(face)));
-    };
-
-    QToolButton* firstTool = nullptr;
-    QToolButton* lastTool  = nullptr;
-    for (QToolButton* button : toolBox_->buttons()) {
-        if (!button->isEnabled() || button->defaultAction() == nullptr) continue;
-        if (firstTool == nullptr) firstTool = button;
-        lastTool = button;
-    }
-
-    if (firstTool == nullptr || lastTool == nullptr) {
-        check(false, QStringLiteral("kolonda etkin araç var"));
-    } else {
-        pressWith({Qt::Key_Home}, firstTool, QStringLiteral("Home ilk araca gidiyor"));
-        pressWith({Qt::Key_End}, lastTool, QStringLiteral("End son araca gidiyor"));
-        pressWith({Qt::Key_Home, Qt::Key_Down, Qt::Key_Up}, firstTool,
-                  QStringLiteral("↓ sonra ↑ başlanan yere dönüyor"));
-    }
-
-    // AND THE CARD, which holds ten of the eleven family members. It answers
-    // arrow keys and Enter already; what was missing was any way to OPEN it
-    // without a mouse.
-    {
-        park(nullptr);
-        toolBox_->setFocus(Qt::TabFocusReason);
-        typeInto(Qt::Key_Home);
-
-        bool opened = false;
-        for (int step = 0; step < toolBox_->buttons().size() && !opened; ++step) {
-            typeInto(Qt::Key_Right);
-            QWidget* popup = QApplication::activePopupWidget();
-            opened         = popup != nullptr && popup->property("kentos.rows").isValid();
-            if (!opened) typeInto(Qt::Key_Down);
-        }
-        check(opened, QStringLiteral("sağ ok tuşu aile kartını açtı"));
-        if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
+        actions->doAction(press);
         QCoreApplication::processEvents();
+        disconnect(on);
+        check(fired > 0, QStringLiteral("%1: \"%2\" komutu çalıştırdı").arg(who, press));
+        if (button->isCheckable() && actions->actionNames().contains(toggle))
+            check(true, QStringLiteral("%1: \"%2\" eylemi sunuluyor").arg(who, toggle));
+    }
+    check(buttons > 0, QStringLiteral("şeritte %1 düğme ağaçta").arg(buttons));
+
+    // ---- 2. THE KEYBOARD'S ROAD ---------------------------------------------
+    //
+    // Tab reaches a ribbon button, Space presses it, and on a split button the
+    // Down arrow opens its list (`.claude/ui.md` R21): a family's other members
+    // are not only the mouse's.
+    park(nullptr);
+    // THE CIRCLE'S FAMILY, a split button on the tab the window opens on.
+    QToolButton* line = ribbonButton(actCircle_);
+    check(line != nullptr && line->defaultAction()->menu() != nullptr,
+          QStringLiteral("Daire ailesinin bölünmüş düğmesi şeritte"));
+    if (line != nullptr && line->defaultAction()->menu() == nullptr) line = nullptr;
+    if (line != nullptr) {
+        // THE WINDOW HAS TO BE THE ACTIVE ONE for anything in it to hold the
+        // focus, and an offscreen run activates nothing by itself.
+        activateWindow();
+        QCoreApplication::processEvents();
+        line->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+        check(line->hasFocus() && line->focusPolicy() != Qt::NoFocus,
+              QStringLiteral("şerit düğmesi Tab ile odak alıyor"));
+
+        const auto key = [line](int code) {
+            QKeyEvent down(QEvent::KeyPress, code, Qt::NoModifier);
+            QCoreApplication::sendEvent(line, &down);
+            QKeyEvent up(QEvent::KeyRelease, code, Qt::NoModifier);
+            QCoreApplication::sendEvent(line, &up);
+            QCoreApplication::processEvents();
+        };
+
+        QAction* face = faceOf(line->defaultAction());
+        int fired     = 0;
+        const QMetaObject::Connection on =
+            connect(face, &QAction::triggered, this, [&fired] { ++fired; });
+        key(Qt::Key_Space);
+        disconnect(on);
+        check(fired > 0,
+              QStringLiteral("Boşluk odaktaki şerit düğmesini bastı (%1)").arg(name_of(face)));
+
+        park(nullptr);
+        line->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+        // Opened asynchronously and closed at once: a menu's `exec` would wait
+        // for a hand that is not there.
+        QTimer::singleShot(0, this, [] {
+            if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) {
+                (void)std::fprintf(stdout, "[erişim] açılan liste: %d satır\n",
+                                   static_cast<int>(open->actions().size()));
+                open->close();
+            }
+        });
+        bool opened                         = false;
+        const QMetaObject::Connection shown = connect(
+            line->defaultAction()->menu(), &QMenu::aboutToShow, this, [&opened] { opened = true; });
+        key(Qt::Key_Down);
+        disconnect(shown);
+        check(opened, QStringLiteral("aşağı ok bölünmüş düğmenin listesini açtı"));
     }
 
     controller_->cancelInteractive();
@@ -6037,142 +5140,52 @@ int MainWindow::probeFlyouts()
     runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
     QCoreApplication::processEvents();
 
-    /// One of the three gestures that open a family card, on a real button.
-    /// Returns the card, which is ours rather than whatever popup happened to be
-    /// up: a completer list is a popup too.
-    enum class How { Hold, RightClick, Mark };
-    const auto ours = [] {
-        QWidget* popup = QApplication::activePopupWidget();
-        return popup != nullptr && popup->property("kentos.rows").isValid() ? popup : nullptr;
-    };
-    const auto open = [&ours](QToolButton* button, How how) {
-        const QPointF centre(button->width() / 2.0, button->height() / 2.0);
-        // The mark is the wedge in the bottom-right corner, so the press has to
-        // land inside it rather than near it.
-        const QPointF corner(button->width() - 2.0, button->height() - 2.0);
-        const QPointF at            = how == How::Mark ? corner : centre;
-        const Qt::MouseButton which = how == How::RightClick ? Qt::RightButton : Qt::LeftButton;
-
-        QMouseEvent down(QEvent::MouseButtonPress, at, button->mapToGlobal(at), which, which,
-                         Qt::NoModifier);
-        QCoreApplication::sendEvent(button, &down);
-        if (how == How::Hold) {
-            // The hold timer IS the gesture, so it is waited out rather than
-            // faked: a change to its interval shows up here instead of in the
-            // field. Bounded, because a card that never opens must not hang.
-            QElapsedTimer waited;
-            waited.start();
-            while (waited.elapsed() < 600 && ours() == nullptr)
-                QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        }
-        QCoreApplication::processEvents();
-
-        // A HAND REACHING FOR THE CARD MOVES OFF THE BUTTON, and that is what
-        // tells the button this was a hold rather than a slow click: released in
-        // place, a hold runs the face tool instead (see `FamilyButton`). The move
-        // has to happen here, or this probe would be testing a gesture it is not
-        // making.
-        if (how == How::Hold && ours() != nullptr) {
-            const QPointF off(button->width() + 20.0, button->height() / 2.0);
-            QMouseEvent away(QEvent::MouseMove, off, button->mapToGlobal(off), Qt::NoButton,
-                             Qt::LeftButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(button, &away);
-            QCoreApplication::processEvents();
-        }
-
-        QMouseEvent up(QEvent::MouseButtonRelease, at, button->mapToGlobal(at), which, Qt::NoButton,
-                       Qt::NoModifier);
-        QCoreApplication::sendEvent(button, &up);
-        QCoreApplication::processEvents();
-        return ours();
-    };
-
-    /// Chooses the `index`-th row on an open card, the way a hand does.
-    const auto choose = [](QWidget* card, int index) {
-        const QPoint first = card->property("kentos.rowCentre").toPoint();
-        const int pitch    = card->property("kentos.rowPitch").toInt();
-        const QPointF on(first.x(), first.y() + (index * pitch));
-        for (const QEvent::Type t :
-             {QEvent::MouseMove, QEvent::MouseButtonPress, QEvent::MouseButtonRelease}) {
-            QMouseEvent ev(t, on, card->mapToGlobal(on),
-                           t == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton,
-                           t == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton,
-                           Qt::NoModifier);
-            QCoreApplication::sendEvent(card, &ev);
-        }
-        QCoreApplication::processEvents();
-    };
-
+    // EVERY FAMILY, EVERY MEMBER. A split button is a list a hand opens with the
+    // arrow; each row must start its own tool and become the face, so the next
+    // click on the face runs what the hand chose last.
     int families = 0;
     int members  = 0;
-    for (QToolButton* button : toolBox_->buttons()) {
-        if (!button->property("kentos.family").toBool()) continue;
+    for (const RibbonFamily* family : std::as_const(families_)) {
         ++families;
+        QAction* head       = family->head();
+        const QString label = QString(family->members().value(0)->text()).remove(QLatin1Char('&'));
+        QToolButton* button = ribbonButton(family->members().value(0));
+        check(button != nullptr && button->popupMode() == QToolButton::MenuButtonPopup,
+              QStringLiteral("%1: şeritte bölünmüş düğme").arg(label));
+        QMenu* list = head->menu();
+        check(list != nullptr && list->actions().size() > 1,
+              QStringLiteral("%1: listede %2 üye var")
+                  .arg(label)
+                  .arg(list != nullptr ? list->actions().size() : 0));
+        if (list == nullptr || button == nullptr) continue;
 
-        QAction* face       = button->defaultAction();
-        const QString label = face == nullptr ? QStringLiteral("?") : face->text();
-
-        QWidget* card = open(button, How::Hold);
-        check(card != nullptr, QStringLiteral("%1: basılı tutmak kartı açıyor").arg(label));
-        if (card == nullptr) continue;
-
-        const int rows = card->property("kentos.rows").toInt();
-        check(rows > 1, QStringLiteral("%1: kartta %2 üye var").arg(label).arg(rows));
-        if (shooting)
-            (void)card->grab().save(into + QStringLiteral("/kart-") + label +
+        if (shooting) {
+            list->popup(button->mapToGlobal(QPoint(0, button->height())));
+            QCoreApplication::processEvents();
+            (void)list->grab().save(into + QStringLiteral("/liste-") + label +
                                     QStringLiteral(".png"));
-        card->close();
-        QCoreApplication::processEvents();
-
-        // THE OTHER TWO GESTURES OPEN IT TOO. A card that only answers a hold is
-        // a card most users never see: the wedge is drawn in the corner, so it
-        // has to be a target, and a right click is what a CAD hand tries first.
-        for (const auto& [how, named] :
-             {std::pair{How::RightClick, "sağ tık"}, std::pair{How::Mark, "köşe işareti"}}) {
-            QWidget* again = open(button, how);
-            check(again != nullptr,
-                  QStringLiteral("%1: %2 kartı açıyor").arg(label, QString::fromUtf8(named)));
-            if (again != nullptr) {
-                again->close();
-                QCoreApplication::processEvents();
-            }
+            list->close();
+            QCoreApplication::processEvents();
         }
 
-        // AND EVERY MEMBER RUNS. Chosen from the card rather than triggered,
-        // because choosing is what a hand does and the card's own signal is what
-        // carries it — eleven tools live only here and none had been pressed.
-        for (int i = 0; i < rows; ++i) {
+        for (QAction* member : list->actions()) {
             controller_->cancelInteractive();
+            actSelect_->setChecked(true);
             QCoreApplication::processEvents();
 
-            QWidget* live = open(button, How::Hold);
-            if (live == nullptr) {
-                check(false,
-                      QStringLiteral("%1: %2. üye için kart açılmadı").arg(label).arg(i + 1));
-                break;
-            }
             const qsizetype transcript_before = transcript_->toPlainText().size();
-            choose(live, i);
+            member->trigger(); // what a row of the list does when it is chosen
+            QCoreApplication::processEvents();
             ++members;
 
-            // The face follows the choice, and the chosen tool is what started.
-            QAction* armed = button->defaultAction();
-            const QString word =
-                armed == nullptr ? QString() : armed->property(kToolCommand).toString();
-            // WHAT "IT RAN" MEANS. A modal draw tool suspends on its first
-            // question and the session is waiting; one that works on the
-            // selection finishes on the spot and lights its button; and one
-            // that has nothing to work on — BLOKEKLE in a drawing with no
-            // block — declines out loud, which puts a line in the transcript.
-            // Any of the three is the tool having run; none of them happening
-            // is the card doing nothing.
+            const QString word              = member->property(kToolCommand).toString();
             const command::Session* running = controller_->session();
             const bool answered             = transcript_->toPlainText().size() > transcript_before;
             const bool started =
                 (running != nullptr && (running->waiting() || running->working())) ||
-                (armed != nullptr && armed->isChecked()) || answered;
-            check(!word.isEmpty() && started,
-                  QStringLiteral("%1 > %2. üye (%3) çalıştı").arg(label).arg(i + 1).arg(word));
+                member->isChecked() || answered;
+            check(!word.isEmpty() && started && family->face() == member,
+                  QStringLiteral("%1 > %2 çalıştı ve yüz oldu").arg(label, word));
         }
         controller_->cancelInteractive();
         QCoreApplication::processEvents();
@@ -6453,15 +5466,25 @@ int MainWindow::probeMenus()
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
-    int failures  = 0;
-    int index     = 0;
-    QMenuBar* bar = titleBar_->menus();
+    int failures     = 0;
+    int index        = 0;
+    SARibbonBar* bar = ribbonBar();
+    if (bar == nullptr) {
+        (void)std::fprintf(stderr, "[menü] BAŞARISIZ: şerit yok\n");
+        return 1;
+    }
+    // THE THEME, when asked for one (`koyu` or `acik`): the window's own state
+    // for the length of the probe; the preference file is not written.
+    if (const QByteArray asked = qgetenv("KENTOS_PROBE_THEME"); !asked.isEmpty()) {
+        theme_ = asked == "acik" ? ThemeMode::Light : ThemeMode::Dark;
+        applyTheme();
+        QCoreApplication::processEvents();
+    }
 
-    /// Every entry on a menu, one line each, submenus indented under their own.
     const auto walk = [](QMenu* menu, const QString& lead, auto&& self) -> int {
         int leaves = 0;
         for (QAction* action : menu->actions()) {
-            if (action->isSeparator()) continue;
+            if (action->isSeparator() || !action->isVisible()) continue;
             if (action->menu() != nullptr) {
                 (void)std::fprintf(stdout, "[menü] %s%s  >\n", lead.toUtf8().constData(),
                                    action->text().toUtf8().constData());
@@ -6476,52 +5499,148 @@ int MainWindow::probeMenus()
         }
         return leaves;
     };
-
-    for (QAction* title : bar->actions()) {
-        QMenu* menu = title->menu();
-        if (menu == nullptr) continue;
-        ++index;
-
-        // OPENED, not read: a menu that cannot be shown is a menu nobody can use,
-        // and its own size is only decided once it lays itself out.
-        menu->popup(mapToGlobal(QPoint(10, 40)));
+    const auto opened = [&](QMenu* menu, const QString& title, QPoint at) {
+        menu->popup(at);
         QCoreApplication::processEvents();
-
-        const QString clean = QString(title->text()).remove(QLatin1Char('&'));
-        (void)std::fprintf(stdout, "[menü] ==== %s (%d px) ====\n", clean.toUtf8().constData(),
+        (void)std::fprintf(stdout, "[menü] ==== %s (%d px) ====\n", title.toUtf8().constData(),
                            menu->height());
         const int leaves = walk(menu, QString(), walk);
-
-        // A MENU TALLER THAN A SCREEN is the defect this probe exists for. 900 px
-        // is a short laptop; a menu past it has rows a user cannot reach.
+        // A LIST TALLER THAN A LAPTOP'S SCREEN is a list whose foot nobody sees.
         if (menu->height() > 900) {
-            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s menüsü %d px — ekranı aşıyor\n",
-                               clean.toUtf8().constData(), menu->height());
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s %d px — ekranı aşıyor\n",
+                               title.toUtf8().constData(), menu->height());
             ++failures;
         }
         if (leaves == 0) {
-            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s menüsü boş\n",
-                               clean.toUtf8().constData());
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s boş\n", title.toUtf8().constData());
             ++failures;
         }
-
-        if (shooting) {
-            const QImage picture = menu->grab().toImage();
-            (void)picture.save(QStringLiteral("%1/menu-%2-%3.png")
-                                   .arg(into)
-                                   .arg(index, 2, 10, QLatin1Char('0'))
-                                   .arg(clean));
-        }
+        if (shooting)
+            (void)menu->grab().toImage().save(QStringLiteral("%1/menu-%2-%3.png")
+                                                  .arg(into)
+                                                  .arg(index, 2, 10, QLatin1Char('0'))
+                                                  .arg(title));
         menu->close();
         QCoreApplication::processEvents();
+    };
+
+    // ---- the application button: KentOS CAD, and quit at its foot ------------
+    if (auto* app = qobject_cast<QToolButton*>(bar->applicationButton());
+        app != nullptr && appMenu_ != nullptr) {
+        ++index;
+        const QString title = app->text();
+        if (title != QStringLiteral("KentOS CAD")) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menü düğmesi \"%s\" diyor\n",
+                               title.toUtf8().constData());
+            ++failures;
+        }
+        openApplicationMenu();
+        QCoreApplication::processEvents();
+        // THE WAY OUT IS THE LAST THING AT ITS FOOT, on every platform.
+        QList<QAbstractButton*> foot;
+        for (QAbstractButton* b : appMenu_->findChildren<QAbstractButton*>())
+            if (b->parentWidget() != nullptr &&
+                b->parentWidget()->objectName() == QStringLiteral("applicationMenuFoot"))
+                foot << b;
+        std::sort(foot.begin(), foot.end(), [](const QAbstractButton* a, const QAbstractButton* b) {
+            return a->x() < b->x();
+        });
+        if (foot.isEmpty() ||
+            foot.back()->text() != QString(actQuit_->text()).remove(QLatin1Char('&'))) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: Çıkış ana menünün en altında değil\n");
+            ++failures;
+        }
+        int verbs = 0;
+        for (QAbstractButton* b : appMenu_->findChildren<QAbstractButton*>())
+            if (b->objectName() == QStringLiteral("applicationMenuVerb")) {
+                ++verbs;
+                (void)std::fprintf(stdout, "[ana menü] %s — %s\n", b->text().toUtf8().constData(),
+                                   b->accessibleDescription().toUtf8().constData());
+            }
+        if (verbs == 0) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menü boş\n");
+            ++failures;
+        }
+        if (shooting)
+            (void)appMenu_->grab().toImage().save(QStringLiteral("%1/menu-%2-%3.png")
+                                                      .arg(into)
+                                                      .arg(index, 2, 10, QLatin1Char('0'))
+                                                      .arg(title));
+        // And with the keyboard on `Yazdır`, whose profiles fill the pane. Found
+        // first and pressed after: landing on it rebuilds the pane, and the rows
+        // a stale list still held are gone by then.
+        QAbstractButton* print = nullptr;
+        for (QAbstractButton* b : appMenu_->findChildren<QAbstractButton*>())
+            if (b->objectName() == QStringLiteral("applicationMenuVerb") &&
+                b->text() == QString(actPrint_->text()).remove(QLatin1Char('&')))
+                print = b;
+        if (print != nullptr) {
+            print->setFocus(Qt::TabFocusReason);
+            QCoreApplication::processEvents();
+            if (shooting)
+                (void)appMenu_->grab().toImage().save(QStringLiteral("%1/menu-%2-%3-yazdir.png")
+                                                          .arg(into)
+                                                          .arg(index, 2, 10, QLatin1Char('0'))
+                                                          .arg(title));
+        }
+        appMenu_->hide();
+        QCoreApplication::processEvents();
+    } else {
+        (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menü düğmesi yok\n");
+        ++failures;
     }
 
-    // AND THE SNAP-MODE POPUP, which is not on the menu bar and so is not in the
-    // loop above. It is built from `core::SnapAllMask`, so every mode the engine
-    // declares has a row — the release list asks for ÇEYREK and TEĞET by name,
-    // and their bits were unreachable through the setting until the range was
-    // widened. A list generated from the mask cannot drift; a list nobody ever
-    // opened can still be empty.
+    // ---- every tab, every panel, every list ------------------------------------
+    for (SARibbonCategory* tab : bar->categoryPages()) {
+        ++index;
+        // AN EDITOR TAB IS SHOWN FOR ITS PICTURE the way a selection would show
+        // it, and put away again after.
+        SARibbonContextCategory* context = nullptr;
+        for (SARibbonContextCategory* c : bar->contextCategoryList())
+            if (c->isHaveCategory(tab)) context = c;
+        if (context != nullptr) bar->setContextCategoryVisible(context, true);
+        bar->raiseCategory(tab);
+        QCoreApplication::processEvents();
+        const QString title = tab->categoryName();
+        int shown           = 0;
+        for (SARibbonToolButton* button : tab->findChildren<SARibbonToolButton*>()) {
+            const QAction* face = button->defaultAction();
+            if (face == nullptr) continue;
+            ++shown;
+            // THE PANEL IT SITS IN and the command it runs, so the line is the
+            // path a page of the manual names: tab, panel, button, word.
+            QString panel;
+            for (QWidget* up = button->parentWidget(); up != nullptr; up = up->parentWidget())
+                if (auto* p = qobject_cast<SARibbonPanel*>(up); p != nullptr) {
+                    panel = p->panelName();
+                    break;
+                }
+            (void)std::fprintf(stdout, "[şerit] %-10s %-22s %-30s %-14s %s\n",
+                               title.toUtf8().constData(), panel.toUtf8().constData(),
+                               QString(face->text()).remove(QLatin1Char('&')).toUtf8().constData(),
+                               face->property(kToolCommand).toString().toUtf8().constData(),
+                               face->menu() != nullptr ? "▾" : "");
+        }
+        (void)std::fprintf(stdout, "[şerit] ==== %s: %d düğme ====\n", title.toUtf8().constData(),
+                           shown);
+        if (shown == 0) {
+            (void)std::fprintf(stderr, "[şerit] BAŞARISIZ: %s sekmesi boş\n",
+                               title.toUtf8().constData());
+            ++failures;
+        }
+        if (shooting)
+            (void)bar->grab().toImage().save(QStringLiteral("%1/serit-%2-%3.png")
+                                                 .arg(into)
+                                                 .arg(index, 2, 10, QLatin1Char('0'))
+                                                 .arg(title));
+        for (SARibbonToolButton* button : tab->findChildren<SARibbonToolButton*>())
+            if (QAction* face = button->defaultAction(); face != nullptr && face->menu() != nullptr)
+                opened(face->menu(), title + QStringLiteral(" / ") + face->text(),
+                       button->mapToGlobal(QPoint(0, button->height())));
+        if (context != nullptr) bar->setContextCategoryVisible(context, false);
+    }
+    bar->setCurrentIndex(0);
+
     {
         QMenu probe(this);
         const core::Settings& session = controller_->bus().session_settings();
@@ -6542,6 +5661,42 @@ int MainWindow::probeMenus()
             ++failures;
         }
         (void)std::fprintf(stdout, "[yakalama] %zu mod listelenebiliyor\n", rows);
+    }
+
+    // ---- one key, one action ----------------------------------------------------
+    // TWO ACTIONS ON ONE KEY IS NO KEY AT ALL: Qt reports the press as
+    // ambiguous and triggers neither. `Ctrl+Shift+A` once cleared the selection
+    // and opened the chat, and so did nothing — every shortcut now lives on the
+    // window (`buildRibbon`), which is what made the collision real everywhere.
+    {
+        QHash<QString, QStringList> owners;
+        for (const QAction* action : findChildren<QAction*>())
+            for (const QKeySequence& key : action->shortcuts())
+                if (!key.isEmpty())
+                    owners[key.toString(QKeySequence::PortableText)]
+                        << QString(action->text()).remove(QLatin1Char('&'));
+        for (auto it = owners.cbegin(); it != owners.cend(); ++it)
+            if (it.value().size() > 1) {
+                (void)std::fprintf(stderr, "[kısayol] BAŞARISIZ: %s iki eylemde: %s\n",
+                                   it.key().toUtf8().constData(),
+                                   it.value().join(QStringLiteral(", ")).toUtf8().constData());
+                ++failures;
+            }
+        (void)std::fprintf(stdout, "[kısayol] %lld tuş, her biri tek eylemde\n",
+                           static_cast<long long>(owners.size()));
+    }
+
+    // ---- a switch says what it switches ------------------------------------------
+    // `Görünüm ▸ Pencereler ▸ Komut Satırı` and Ctrl+9 read off while the line was
+    // showing, so the first press did nothing a user could see.
+    if (actCommandLine_->isChecked() != commandLine_->isVisible()) {
+        (void)std::fprintf(stderr, "[pencere] BAŞARISIZ: Komut Satırı düğmesi %s, satır %s\n",
+                           actCommandLine_->isChecked() ? "basılı" : "basılı değil",
+                           commandLine_->isVisible() ? "görünüyor" : "gizli");
+        ++failures;
+    } else {
+        (void)std::fprintf(stdout, "[pencere] Komut Satırı düğmesi satırla aynı: %s\n",
+                           commandLine_->isVisible() ? "görünüyor" : "gizli");
     }
 
     (void)std::fprintf(stdout, "[menü] %d menü, %d kusur\n", index, failures);
@@ -6597,6 +5752,32 @@ void MainWindow::probeDialogs()
     shoot(this, "ana");
     if (attributePanel_ != nullptr) shoot(attributePanel_, "nesne-paneli");
     if (layerPanel_ != nullptr) shoot(layerPanel_, "katman-paneli");
+
+    {
+        // The About window, and a message box with Qt's own standard buttons —
+        // `Kaydet`, `Kaydetme`, `İptal` must read in Turkish, from Qt's catalogue.
+        AboutFacts facts;
+        facts.version = QStringLiteral(KENTOS_VERSION);
+        facts.qt      = QString::fromLatin1(qVersion());
+        facts.backend = canvas_->backendName();
+        facts.platform =
+            tr("%1 · %2").arg(QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture());
+        facts.commands = static_cast<int>(controller_->registry().size());
+        facts.tools    = static_cast<int>(processing::processing_tools().size());
+        facts.dataRoot = QDir::toNativeSeparators(QString::fromStdString(data_root()));
+        AboutDialog about(facts, this);
+        about.applyTheme(theme_);
+        shoot(&about, "hakkinda");
+        QMessageBox box(QMessageBox::Question, tr("Kaydedilsin mi?"),
+                        tr("Çizimde kaydedilmemiş değişiklikler var."),
+                        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        applyThemeToChildren(&box, theme_);
+        shoot(&box, "mesaj-kutusu");
+        say(QStringLiteral("mesaj kutusu düğmeleri: %1 · %2 · %3")
+                .arg(box.button(QMessageBox::Save)->text(),
+                     box.button(QMessageBox::Discard)->text(),
+                     box.button(QMessageBox::Cancel)->text()));
+    }
 
     {
         SettingsDialog d(*controller_, SettingsDialog::Mode::All, this);
@@ -6837,11 +6018,13 @@ void MainWindow::onEcho(const QString& text)
 void MainWindow::onDocumentChanged()
 {
     canvas_->noteDocumentChange();
-    refreshLayerCombo();
     layerPanel_->refresh();
     attributePanel_->refresh();
     refreshStatus();
-    refreshColourChips();
+    refreshRibbon();
+    // Whichever client opened or saved it — the menu, AÇ at the prompt, a
+    // script — the document goes on the recent list.
+    noteRecentFile(controller_->currentFile());
 
     // Mirroring the journal keeps the architecture visible while using the program.
     journalView_->clear();
@@ -7039,6 +6222,9 @@ void MainWindow::syncToolSelection()
 void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
+    // A command that starts asking puts the editor tabs away; one that ends
+    // brings them back for what is still selected.
+    refreshContextTabs();
 
     // The first line of a new drawing has nothing on the stack to undo, and a
     // disabled action takes no shortcut: Ctrl+Z has to be live for the point.
@@ -7282,7 +6468,7 @@ void MainWindow::refreshStatus()
     } else {
         crsText = tr("%1 · çözümlenmedi").arg(QString::fromStdString(crs.id()));
     }
-    readout_->setCrs(crsText);
+    statusStrip_->setCrs(crsText);
 
     // Every chip re-reads its own setting from the store its scope lives in, so
     // the strip agrees with the store whoever wrote it — the F-keys, the command
@@ -7317,9 +6503,9 @@ void MainWindow::refreshStatus()
     const double ground_mm_per_paper_mm =
         canvas_->view().mm_per_pixel() * canvas_->pixelsPerPaperMm();
 
-    readout_->setScale(ground_mm_per_paper_mm > 0.0
-                           ? tr("1 : %1").arg(groupedNumber(qRound(ground_mm_per_paper_mm)))
-                           : QStringLiteral("—"));
+    statusStrip_->setScale(ground_mm_per_paper_mm > 0.0
+                               ? tr("1 : %1").arg(groupedNumber(qRound(ground_mm_per_paper_mm)))
+                               : QStringLiteral("—"));
 }
 
 void MainWindow::runScriptLine(const QString& line)
@@ -7372,9 +6558,9 @@ void MainWindow::refreshWindowTitle()
 {
     const QString file = controller_->currentFile();
     const QString name = file.isEmpty() ? tr("adsız") : QFileInfo(file).fileName();
-    setWindowTitle(tr("%1 — KentOSCad").arg(name));
-    docTabs_->setDocuments({QFileInfo(name).completeBaseName()}, 0);
-    titleBar_->setDocumentName(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(KENTOS_VERSION)));
+    // `design.md` §7: `<document> — KentOSCad <version>`, in the system's own
+    // caption now that the ribbon is the only bar under it.
+    setWindowTitle(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(KENTOS_VERSION)));
 }
 
 bool MainWindow::confirmDiscard(const QString& question)
@@ -7517,7 +6703,19 @@ void MainWindow::exportData()
 void MainWindow::rebuildLayoutMenu()
 {
     if (layoutMenu_ == nullptr) return;
-    layoutMenu_->clear();
+    // EMPTIED BY HAND, not with `clear()`. `clear()` deletes only the actions
+    // no other widget shows, and every one of these is shown elsewhere too — in
+    // the quick access row's copy of this list — so each rebuild left the last
+    // one's actions alive, and with them a second `Ctrl+Shift+P` on the window
+    // that made the key trigger neither.
+    for (QAction* action : layoutMenu_->actions()) {
+        layoutMenu_->removeAction(action);
+        if (action == actLayoutManager_) continue;
+        if (QMenu* sub = action->menu(); sub != nullptr && sub->parent() == layoutMenu_)
+            sub->deleteLater();
+        else if (action->parent() == layoutMenu_)
+            action->deleteLater();
+    }
 
     QAction* fresh = layoutMenu_->addAction(tr("Yeni Çıktı Yerleşimi…"));
     fresh->setStatusTip(
@@ -7525,11 +6723,17 @@ void MainWindow::rebuildLayoutMenu()
            "gelir"));
     connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
 
-    QAction* manage = layoutMenu_->addAction(tr("Çıktı Yerleşimi Yöneticisi…"));
-    manage->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
-    manage->setStatusTip(
-        tr("Çizimdeki çıktı yerleşimlerini listeler: aç, yeniden adlandır, çoğalt, sil"));
-    connect(manage, &QAction::triggered, this, &MainWindow::openLayoutManager);
+    // THE ONE ENTRY WITH A KEY is made once and kept: a key belongs to one
+    // action for the life of the window, not to whichever list was built last.
+    if (actLayoutManager_ == nullptr) {
+        actLayoutManager_ = new QAction(tr("Çıktı Yerleşimi Yöneticisi…"), this);
+        actLayoutManager_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P));
+        actLayoutManager_->setStatusTip(
+            tr("Çizimdeki çıktı yerleşimlerini listeler: aç, yeniden adlandır, çoğalt, sil"));
+        connect(actLayoutManager_, &QAction::triggered, this, &MainWindow::openLayoutManager);
+        addAction(actLayoutManager_);
+    }
+    layoutMenu_->addAction(actLayoutManager_);
 
     // ---- the office's templates ---------------------------------------------
     //
@@ -8086,16 +7290,21 @@ void MainWindow::openScript()
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, tr("KentOSCad Hakkında"),
-                       tr("<h3>KentOSCad %1</h3>"
-                          "<p>Türkiye odaklı CBS + CAD harita yazılımı.</p>"
-                          "<p><b>Mimari:</b> Uygulamanın durumunu değiştiren her şey bir komuttur. "
-                          "Arayüz, komut veri yolunun yalnızca bir istemcisidir.</p>"
-                          "<p><b>Lisans:</b> GPLv3 veya sonrası<br>"
-                          "<b>Render:</b> %2<br>"
-                          "<b>Komut sayısı:</b> %3</p>")
-                           .arg(QStringLiteral(KENTOS_VERSION), canvas_->backendName())
-                           .arg(controller_->registry().size()));
+    // THE FACTS A BUG REPORT NEEDS, read from the running program rather than
+    // written down: the version it was built as, the Qt under it, the backend
+    // the canvas actually got, and how much of the registry is there.
+    AboutFacts facts;
+    facts.version = QStringLiteral(KENTOS_VERSION);
+    facts.qt      = QString::fromLatin1(qVersion());
+    facts.backend = canvas_->backendName();
+    facts.platform =
+        tr("%1 · %2").arg(QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture());
+    facts.commands = static_cast<int>(controller_->registry().size());
+    facts.tools    = static_cast<int>(processing::processing_tools().size());
+    facts.dataRoot = QDir::toNativeSeparators(QString::fromStdString(data_root()));
+    AboutDialog about(facts, this);
+    about.applyTheme(theme_);
+    about.exec();
 }
 
 // =============================================================================
@@ -8546,7 +7755,7 @@ int MainWindow::probeChat()
     return failures == 0 ? 0 : 1;
 }
 
-void MainWindow::probeToolBox()
+void MainWindow::probeTools()
 {
     // A scene with something of every shape the column's tools act on: one face,
     // two lines that cross inside the box below, and one that touches neither.
@@ -8601,16 +7810,30 @@ void MainWindow::probeToolBox()
 
     QVector<Pressable> pressable;
     QSet<const QAction*> seen;
-    int unbuilt = 0; ///< tools the column was handed before they existed
-    for (QAction* a : toolBox_->tools()) {
+    int unbuilt = 0; ///< a ribbon slot handed an action before it existed
+    // THE RIBBON'S TOOLS, in ribbon order — what the tool column was: the draw,
+    // edit and query tools and the three that pick and pan. The rest of the
+    // ribbon (save, print, the theme, the panels) opens windows and dialogs, and
+    // the menu pass below already reaches every command among them.
+    for (QAction* a : std::as_const(ribbonTools_)) {
         if (a == nullptr) {
             ++unbuilt;
             continue;
         }
-        if (!seen.contains(a)) {
-            seen.insert(a);
-            pressable.push_back({a, "sütun"});
-        }
+        const bool idle = a == actSelect_ || a == actSelectArea_ || a == actPan_;
+        QString line    = a->property(kToolCommand).toString();
+        if (line.isEmpty() && a->objectName().startsWith(QStringLiteral("toolAction.")))
+            line = a->objectName().section(QLatin1Char('.'), 1);
+        const command::CommandSpec* spec =
+            line.isEmpty() ? nullptr
+                           : controller_->registry().resolve(
+                                 line.section(QLatin1Char(' '), 0, 0).toStdString());
+        const bool tool = spec != nullptr && (spec->category == command::Category::Draw ||
+                                              spec->category == command::Category::Modify ||
+                                              spec->category == command::Category::Query);
+        if ((!idle && !tool) || seen.contains(a)) continue;
+        seen.insert(a);
+        pressable.push_back({a, "şerit"});
     }
     for (QAction* a : findChildren<QAction*>()) {
         if (seen.contains(a) || a->isSeparator() || a->menu() != nullptr) continue;
@@ -8634,7 +7857,7 @@ void MainWindow::probeToolBox()
     int dead     = unbuilt;
     QStringList broken;
     if (unbuilt > 0)
-        broken << QStringLiteral("sütuna %1 araç kurulmadan eklenmiş; düğmeleri yok").arg(unbuilt);
+        broken << QStringLiteral("şeride %1 araç kurulmadan eklenmiş; düğmeleri yok").arg(unbuilt);
 
     for (int pass = 0; pass < 2; ++pass) {
         const bool withSelection = pass == 0;

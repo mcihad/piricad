@@ -88,9 +88,7 @@ KÖŞEEKLE nesne=1 kose=1
 
 ### Arayüz
 
-**Araçla.** Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da
-sağ tıklayın ve **Köşe Ekle**'yi seçin (aynı araç **Değiştir → Köşe Ekle**
-menüsündedir).
+**Araçla.** Şeritte **Değiştir ▸ Köşe ▸ Köşe Ekle**'ye basın.
 
 1. Köşe eklenecek kenara tıklayın. Nesne de bu tıklamayla seçilir.
 2. İmleci götürün: kenar, yeni köşe imleçte olacak biçimde kırılarak vurgulu

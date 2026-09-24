@@ -104,7 +104,8 @@ SEMBOL paket=data/catalogs/mpyy/plan-gosterim.json
 ### Arayüz
 
 Uygulama açılırken `sembol_kütüphanesi` ayarındaki paketi kendiliğinden yükler ve
-transkriptte kaç gösterimin rafa girdiğini yazar. Ağaçta gezinmek için komut
+transkriptte kaç gösterimin rafa girdiğini yazar (komutu şeritte **Görünüm** sekmesinin
+sonundaki **Diğer** listesi de başlatır). Ağaçta gezinmek için komut
 satırına yukarıdaki satırların aynısı yazılır — arayüzün ayrı bir yolu yoktur.
 
 ### Betik

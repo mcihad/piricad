@@ -91,6 +91,14 @@ set(KENTOS_DEP_MSDFGEN_SHA    1874bcf7d9624ccc85b4bc9a85d78116f690f35b)  # v1.13
 set(KENTOS_DEP_STB_REPO       https://github.com/nothings/stb.git)
 set(KENTOS_DEP_STB_SHA        2c980bb59875b0d32144a71867fbdebb2f77cd20)
 
+# SARibbon: the shell's ribbon (`.claude/ui.md` R46). MIT, which is GPLv3-compatible;
+# recorded in /NOTICE. v2.9.5 of 2026-09-18, tested upstream on Qt 5.15 and 6.8 LTS
+# on Windows, Linux and macOS. The single-file amalgamation (`src/SARibbon.h`,
+# `src/SARibbon.cpp`, resources inlined) is what is compiled — see the block in
+# `src/app/CMakeLists.txt` for why not its own build.
+set(KENTOS_DEP_SARIBBON_REPO  https://github.com/czyt1988/SARibbon.git)
+set(KENTOS_DEP_SARIBBON_SHA   a21d30c2a8495da92c7db3adcdc124699b0f2a60)  # v2.9.5
+
 set(KENTOS_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
 # v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
 # SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
@@ -373,6 +381,17 @@ if(KENTOS_WITH_DWG)
     kentos_dependency(libredwg
         REPO ${KENTOS_DEP_LIBREDWG_REPO}
         SHA  ${KENTOS_DEP_LIBREDWG_SHA})
+endif()
+
+if(KENTOS_BUILD_APP)
+    # THE RIBBON, fetched here with every other pinned source and built beside Qt
+    # in `src/app/CMakeLists.txt`, which is the only place Qt is found. Populated,
+    # not added: its own CMakeLists installs into the source tree, builds the
+    # examples by default and raises nothing we need.
+    kentos_dependency(saribbon
+        REPO   ${KENTOS_DEP_SARIBBON_REPO}
+        SHA    ${KENTOS_DEP_SARIBBON_SHA}
+        SUBDIR kentos-no-cmake)   # a subdir with no CMakeLists: populate, do not add
 endif()
 
 if(KENTOS_WITH_DXFRW)

@@ -65,8 +65,8 @@ Farklı kaydedildi: ada12-parselasyon.pcad  (14 nesne, 1688 bayt)
 
 ### Arayüz
 
-**Dosya > Farklı Kaydet…** menüsü, **Dosya** araç çubuğundaki **Farklı Kaydet**
-düğmesi veya **Ctrl+Shift+S** bir dosya adı penceresi açar. Pencere yalnızca
+**KentOS CAD ▸ Farklı Kaydet…**, şeritteki **Çıktı ▸ Dosya ▸ Farklı Kaydet…** veya
+**Ctrl+Shift+S** bir dosya adı penceresi açar. Pencere yalnızca
 argümanı toplar; iptal ederseniz hiçbir şey olmaz ve hata da verilmez.
 
 ### Betik

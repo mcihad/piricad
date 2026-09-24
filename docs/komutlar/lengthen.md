@@ -70,7 +70,7 @@ UZUNLUK nesne=1 toplam=120 uc=bas
 
 ### Arayüz
 
-**Değiştir > Uzunluk**. Çizgiyi seçip Enter'a basın; komut **eklenecek uzunluğu
+**Değiştir ▸ Kes ve Uzat ▸ Uzunluk**. Çizgiyi seçip Enter'a basın; komut **eklenecek uzunluğu
 sorar** (eksi değer kısaltır) ve şimdiki uzunluğu istemde yazar.
 
 `yuzde=` ve `toplam=` **yazılan yollardır**: bir sayı hangisi olduğunu söyleyemez,

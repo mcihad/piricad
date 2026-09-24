@@ -19,14 +19,16 @@ Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izle
 Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM
 ```
 
-Üstte beş araç çubuğu, solda araç kutusu, sağda katman ve öznitelik panelleri vardır.
+Üstte **şerit** (sekmelere ve panellere ayrılmış bütün komutlar), sağda katman ve öznitelik
+panelleri, altta komut satırı ve durum çubuğu vardır.
 
-Bu sürümde komut satırı varsayılan olarak gizlidir. Aşağıdaki adımların bir kısmı onu
-kullanıyor; açmak için **Ctrl+9**'a basın (kapatmak için de aynı kısayol).
+Aşağıdaki adımların bir kısmı komut satırını kullanır; her zaman açıktır, **Ctrl+9** onu
+gizler ve geri getirir.
 
 ## 2. Fareyle çizgi çizin
 
-Sol kenardaki araç kutusundan **Çizgi** düğmesine basın. Durum çubuğu ve komut satırı
+Şeridin **Giriş** sekmesinde, **Çizim** panelinin ilk büyük düğmesi olan **Çizgi**'ye basın.
+Durum çubuğu ve komut satırı
 `İlk nokta` ister. Harita alanına sol tıklayın; sonraki istek `Sonraki nokta` olur ve
 imlecinizi takip eden kesikli bir kılavuz çizgi belirir. Birkaç nokta daha tıklayın,
 sonra **Esc**'e basın veya sağ tıklayın.
@@ -83,9 +85,9 @@ Aktif katman: PARSEL
 ```
 
 Sağdaki **Katmanlar** sekmesinde yeni katman, renk kutucuğu ve nesne sayısıyla belirir.
-Üstteki **Katman** araç çubuğundaki liste de artık `PARSEL` gösterir; oradan başka bir
-katman seçmek aynı komutu gönderir. Durum çubuğunun sağında da aktif katman adı yazar. Bundan sonra çizdiğiniz her şey bu
-katmana gider.
+Şeridin **Giriş ▸ Katmanlar** panelindeki katman listesi de artık `PARSEL` gösterir; oradan
+başka bir katman seçmek aynı komutu gönderir. Bundan sonra çizdiğiniz her şey bu katmana
+gider.
 
 `renk` değeri `0xAARRGGBB` biçiminde bir tam sayıdır; `4281236786` yeşile karşılık
 gelir. Ayrıntı: [Katman yönetimi](../komutlar/layer.md).
@@ -162,7 +164,7 @@ komutlar, sağda seçili komutun parametreleri. Tek bir komutun ayrıntısı iç
 YARDIM komut=ÇİZGİ
 ```
 
-Sayfa o komutun üzerinde açılır. Aynı sayfaya **Yardım > Komut Listesi** (`F1`) ve
+Sayfa o komutun üzerinde açılır. Aynı sayfaya **KentOS CAD ▸ Komut Listesi** (`F1`) ve
 `Ctrl+K` ile de ulaşılır; üçü de aynı komutu çalıştırır. Liste komut kaydından üretilir;
 elle tutulan ikinci bir liste yoktur.
 

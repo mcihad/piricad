@@ -79,9 +79,10 @@ Açıldı: yeni-surumden.pcad  (14 nesne, 5 katman, 63 nokta, biçim 1)
 
 ### Arayüz
 
-**Dosya > Aç…** menüsü, **Dosya** araç çubuğundaki **Aç** düğmesi veya **Ctrl+O**
-bir dosya seçme penceresi açar. Pencere yalnızca argümanı toplar; komutun
-kendisi aynı komuttur ve klavyeden de, betikten de çalışır.
+**KentOS CAD ▸ Aç…**, hızlı erişim satırındaki **Aç** simgesi veya **Ctrl+O** bir dosya
+seçme penceresi açar. Pencere yalnızca argümanı toplar; komutun kendisi aynı komuttur ve
+klavyeden de, betikten de çalışır. **KentOS CAD** menüsünün sağındaki **son kullanılan
+belgeler** listesinden birine tıklamak pencereyi atlar ve o dosyayı doğrudan `AÇ` ile açar.
 
 ### Betik
 

@@ -145,6 +145,32 @@ struct Tokens
     QColor syntaxComment; ///< `# ...`, and the one ink that must recede
     QColor syntaxNumber;  ///< a literal quantity
     QColor syntaxDef;     ///< the name being DEFINED by `def` or `class`
+
+    // ---- the ribbon's pictures (`design.md` §5) ----
+    //
+    // AN ACTION'S PICTURE IS IN COLOUR, and each colour is a ROLE, not a mood:
+    // what the tool draws is blue, what it cuts or deletes red, what it writes
+    // or measures orange, the data it keeps amber, what it adds or joins green,
+    // and everything else — the frame, the tool itself — the ink. A panel's own
+    // inline icons stay in one ink (`glyph_pixmap`), because §1 keeps the
+    // chrome neutral and only the commands a hand reaches for are coloured.
+    QColor iconInk;   ///< the frame and the tool itself
+    QColor iconShape; ///< what the command draws or changes
+    QColor iconFill;  ///< the inside of a drawn face, a wash of the shape
+    QColor iconCut;   ///< what it cuts, trims or deletes
+    QColor iconNote;  ///< what it writes or measures: text, dimension, label
+    QColor iconData;  ///< what it keeps: a layer, a table, a folder, the clipboard
+    QColor iconAdd;   ///< what it adds or joins
+    QColor iconPaper; ///< a sheet of paper, the face of a page
+
+    // ---- the ribbon, `design.md` §7 -------------------------------------------
+    //
+    // TWO SURFACES A STEP APART, the way every ribbon since Office 2010 and every
+    // AutoCAD since 2009 draws one: the row the tabs sit on, and the body the
+    // panels sit on — which the chosen tab is cut from, so the tab and its
+    // panels read as one sheet pulled forward.
+    QColor ribbonTabs; ///< the tab row, and the tabs not chosen
+    QColor ribbonBody; ///< the chosen tab and the panels under it
 };
 
 /// The dark tokens — `design.md` §2, verbatim.

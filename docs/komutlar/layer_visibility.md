@@ -106,8 +106,9 @@ Katmanlar panelinde bir satıra **sağ tıklayın** ve **Görünüm** alt menüs
 | **Tümünü göster** | Gizli bütün katmanları geri getirir |
 | **Gösterimi ters çevir** | Görünenleri gizler, gizlileri gösterir |
 
-Menü çubuğunda **Katman ▸ Tümünü Göster** ve **Katman ▸ Gösterimi Ters Çevir** aynı iki
-işi yapar. Onlar orada, çünkü bir satıra bağlı değildirler — bütün katmanları gizlemiş
+Şeritte **Görünüm ▸ Katmanlar ▸ Tümünü Göster** ve **Gösterimi Ters Çevir** aynı iki işi
+yapar (**Tümünü Göster** **Giriş ▸ Katmanlar** panelinde de vardır). Onlar şeritte, çünkü
+bir satıra bağlı değildirler — bütün katmanları gizlemiş
 biri sağ tıklayacak satır bulamaz.
 
 **Birden fazla katman seçebilirsiniz**: Ctrl ile tek tek, Shift ile aralık. Menü
@@ -141,7 +142,7 @@ menüdeki **Aktif katman yap** girişi vardır.
 Her çağrı **tek bir geri alma adımıdır**: `islem=tumu` kırk katmanı gösterse de tek bir
 Ctrl+Z hepsini eski hâline döndürür.
 
-Arayüzde birden fazla katman seçip menüden bir giriş çalıştırdığınızda da öyledir: panel
+Arayüzde birden fazla katman seçip sağ tık menüsünden bir giriş çalıştırdığınızda da öyledir: panel
 katman başına bir komut gönderir, hepsi tek bir kümede birleşir ve tek adımda geri döner.
 
 Görünürlük çizimin kendisine yazılır ve **proje dosyasıyla birlikte kaydedilir**; seçim

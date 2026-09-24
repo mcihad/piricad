@@ -21,125 +21,6 @@ class QTimer;
 
 namespace kentos::app {
 
-/// The two read-only readings at the right end of the tool bar: the plot scale
-/// and the coordinate reference system (`design.md` §7).
-class ReadoutStrip : public QWidget, public Themed
-{
-    Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
-
-public:
-    /// Builds the strip with both cells showing a dash until asked otherwise.
-    explicit ReadoutStrip(QWidget* parent = nullptr);
-
-    /// The PLOT scale, already formatted: `1 : 1 000`.
-    void setScale(const QString& text);
-
-    /// The coordinate system, already formatted: `EPSG:5254 · ITRF96 / TM30`.
-    void setCrs(const QString& text);
-
-    void applyTheme(ThemeMode mode) override;
-
-    /// As wide as the two cells actually need, so the strip sits flush right.
-    QSize sizeHint() const override;
-
-protected:
-    /// Draws both cells and the 1x22 rule between them.
-    void paintEvent(QPaintEvent* event) override;
-
-private:
-    struct Cell
-    {
-        QString caption; ///< 9.5 px, letter-spaced, dim
-        QString value;   ///< 12 px mono, bright
-    };
-
-    int cellWidth(const Cell& cell) const;
-
-    Cell scale_;
-    Cell crs_;
-    ThemeMode theme_ = ThemeMode::Dark;
-};
-
-/// The 30 px document tab strip above the canvas (`design.md` §7).
-class DocumentTabs : public QWidget, public Themed
-{
-    Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
-
-public:
-    /// Builds an empty strip. `setDocuments` fills it.
-    explicit DocumentTabs(QWidget* parent = nullptr);
-
-    /// Replaces the whole strip. `active` indexes `names`.
-    void setDocuments(const QStringList& names, int active);
-
-    void applyTheme(ThemeMode mode) override;
-
-    QSize sizeHint() const override;
-
-signals:
-    /// A tab was clicked. The shell decides what switching means.
-    void activated(int index);
-
-    /// The `+` at the end of the strip was clicked: start a new drawing.
-    ///
-    /// IT ARRIVED WITH THE COMMAND BEHIND IT, and that order is the rule this
-    /// strip has already been taught once. The close mark was removed because
-    /// pressing it answered "Faz 2'de gelecek" — a control that refuses is a
-    /// control that lies (`closable`) — so a `+` went in only in the change
-    /// that made `YENİ` real.
-    void newRequested();
-
-    /// The close mark on the active tab was clicked.
-    void closeRequested(int index);
-
-    /// The split-view button at the right end was clicked.
-    void splitRequested();
-
-    /// The expand button beside it was clicked.
-    void expandRequested();
-
-protected:
-    /// Draws every tab, its rule, and the two buttons at the right end.
-    void paintEvent(QPaintEvent* event) override;
-
-    /// Tracks which tab, close mark or button the pointer is over.
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-
-private:
-    struct Tab
-    {
-        QString name;
-        int left  = 0;
-        int width = 0;
-    };
-
-    void relayout();
-    int tabAt(QPoint at) const;
-
-    /// Where the `+` sits: immediately after the last tab, 26x26 like the
-    /// buttons at the right end. Empty when the strip is too narrow to hold it
-    /// without running under those buttons — a control drawn on top of another
-    /// control is one the user cannot aim at.
-    QRect plusRect() const;
-
-    /// Whether a tab can be closed at all — true only once there is more than
-    /// one drawing open. A close mark that answers "not yet" is an offer this
-    /// window cannot keep; see the source.
-    bool closable() const;
-
-    QVector<Tab> tabs_;
-    int active_      = 0;
-    int hot_         = -1;
-    int hotClose_    = -1;
-    int hotButton_   = -1; ///< 0 = split, 1 = expand
-    bool hotPlus_    = false;
-    ThemeMode theme_ = ThemeMode::Dark;
-};
-
 /// The 26 px status strip across the foot of the window (`design.md` §7).
 ///
 /// Left: the cursor's own coordinate, in mono, because a coordinate is read
@@ -197,6 +78,13 @@ public:
     /// that counts calls as its figure moves (`Controller::jobPermille`).
     void setBusyLabel(const QString& label);
     void setConnection(const QString& text, bool connected);
+
+    /// The PLOT scale, already formatted (`1 : 1 000`), and the coordinate
+    /// system (`EPSG:5254 · ITRF96 / TM30`): the sheet cell, left of the agent's.
+    /// On the strip where a GIS user looks for both — QGIS puts them there — now
+    /// that the ribbon's tab row has no room for a two-line reading.
+    void setScale(const QString& text);
+    void setCrs(const QString& text);
 
     /// What the agent listener is doing. Three states, and each has its own
     /// SHAPE as well as its own colour, because a green dot and a red dot are
@@ -274,6 +162,8 @@ private:
     QString agent_;
     AgentState agentState_{AgentState::Off};
     QRect agentRect_; ///< where the agent cell was last painted
+    QString scale_;   ///< the plot scale, formatted
+    QString crs_;     ///< the coordinate system, formatted
     bool agentHot_{false};
     QString performance_;
     bool connected_  = false;

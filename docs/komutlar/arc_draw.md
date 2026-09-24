@@ -135,7 +135,8 @@ YAY 485300,4310200 @50<0 485350,4310200
 
 ### Arayüz
 
-Sol paletteki **yay** aracına basın ya da komut satırına `YAY` yazın. Üç tıklama:
+Şeritte **Giriş ▸ Çizim ▸ Yay**'a (ya da **Çizim ▸ Şekil ▸ Yay**'a) basın ya da komut
+satırına `YAY` yazın. Üç tıklama:
 merkez, başlangıç, bitiş.
 
 İkinci tıklamaya kadar kılavuz **bütün çemberi** gösterir — çünkü o anda
@@ -145,11 +146,12 @@ büyür: bırakacağınız yay tam olarak gördüğünüz yaydır.
 
 Yakalama açıkken üç nokta da mevcut nesnelere oturur ([`MOD`](mode.md)).
 
-Öteki dört yöntem aynı düğmenin **kartında**: düğmeyi basılı tutun ya da
-köşesindeki işarete tıklayın. `bby`'de yarıçapı yazarken iki uç arasındaki kiriş
+Öteki dört yöntem aynı düğmenin **okundaki** listededir (odak düğmedeyken **↓** ile de
+açılır). `bby`'de yarıçapı yazarken iki uç arasındaki kiriş
 ekranda kalır; yarıçapı yazdıktan sonra komut yayın hangi yandan geçeceğini sorar,
-ve imleci kirişin bir yanından öbürüne geçirdikçe yay taraf değiştirir. Aynı
-karttaki **Daire Dilimi** ayrı bir şekildir ve artık kendi ikonunu taşır.
+ve imleci kirişin bir yanından öbürüne geçirdikçe yay taraf değiştirir. **Daire
+Dilimi** ayrı bir şekildir: **Çizim ▸ Şekil**'de ve Giriş'teki **Alan** düğmesinin okunda
+kendi simgesiyle durur.
 
 `bma`'da merkezi ve başlangıcı verdikten sonra komut **süpürme açısını** ister
 (`Süpürme açısı — yazın ya da gösterin`). Açıyı yazabilir ya da **gösterebilirsiniz**:

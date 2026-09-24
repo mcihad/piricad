@@ -196,8 +196,7 @@ YUVARLA nesne=1 2 hepsi=evet yaricap=2
 
 ### Arayüz
 
-Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da sağ tıklayın ve
-**Yuvarla**'yı seçin; aynı araç **Değiştir → Yuvarla** menüsündedir.
+Şeritte **Giriş ▸ Değiştir ▸ Yuvarla**'ya (ya da **Değiştir ▸ Köşe ▸ Yuvarla**'ya) basın.
 
 1. Yuvarlatılacak köşeye tıklayın. Nesne de bu tıklamayla seçilir.
 2. İmleci köşeden uzaklaştırın: yay ve iki bacak tuvalde vurgulu çizilir.
@@ -209,7 +208,7 @@ nesneye. İmleci iki nesnenin buluştuğu yerden uzaklaştırdıkça yay ve kıs
 nesneler tuvalde çizilir ve imlecin yanında `yarıçap X m` yazar; yarıçap sığmıyorsa
 sebebi yazar. Tıklayın ya da yarıçapı yazın.
 
-**Yuvarla — bütün köşeler** köşe ailesinin kartında ve **Değiştir** menüsündedir:
+**Yuvarla — bütün köşeler** **Yuvarla** düğmesinin okundadır:
 nesneye tıklayın ya da önce birden çok nesne seçip düğmeye basın; yarıçapı yazın ya
 da gösterin. Bütün nesnelerin bütün köşeleri birlikte önizlenir.
 

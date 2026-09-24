@@ -56,6 +56,13 @@ const Palette& themePalette(ThemeMode mode);
 /// The whole application stylesheet for a mode.
 QString themeStyleSheet(ThemeMode mode);
 
+/// The ribbon's sheet (`.claude/ui.md` R49): SARibbon's Office 2021 base and
+/// template with the palette tokens filled from `tokens.hpp`. Set on the MAIN
+/// WINDOW rather than on the application, the way SARibbon's own themes are:
+/// every ribbon button carries a style of its own (`setStyle`), and Qt applies
+/// an ancestor's sheet through it where the application's does not reach.
+QString ribbonStyleSheet(ThemeMode mode);
+
 /// Anything that paints from `tokens.hpp` and must be told when the theme moves.
 ///
 /// WHY AN INTERFACE AND NOT A CONVENTION. Every painted widget needs the same

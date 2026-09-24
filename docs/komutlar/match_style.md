@@ -66,8 +66,8 @@ STİLKOPYALA kaynak=1
 
 ### Arayüz
 
-Kaynağı ve hedefleri **birlikte** seçin, sol araç kutusundaki **Stil Kopyala**
-düğmesine basın, sonra stili **kopyalanacak** nesneye tıklayın. Tıkladığınız nesne
+Kaynağı ve hedefleri **birlikte** seçin, şeritteki **Giriş ▸ Özellikler ▸ Stil Kopyala**
+düğmesine (bir yazı seçiliyken beliren **Yazı** sekmesinde de vardır) basın, sonra stili **kopyalanacak** nesneye tıklayın. Tıkladığınız nesne
 kaynaktır; seçimdeki diğerleri onun stilini alır.
 
 Kaynağı komut satırından da verebilirsiniz: `STİLKOPYALA kaynak=<kimlik>`. O zaman

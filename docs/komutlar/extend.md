@@ -113,7 +113,7 @@ UZAT uzanti=evet sinir=4 nesne=3 nokta=10,-10
 
 ### Arayüz
 
-Sol araç kutusundaki **Uzat** düğmesine basın ya da `UZAT` yazın. Komut satırı
+Şeritte **Değiştir ▸ Kes ve Uzat ▸ Uzat**'a basın ya da `UZAT` yazın. Komut satırı
 `Uzatılacak uca tıklayın — Enter: bitir` der. Önceden nesne seçtiyseniz sınırlar
 onlardır; seçim yoksa imlecin altındaki nesnenin yakınındaki her şey sınırdır.
 
@@ -125,8 +125,8 @@ uzatılanları tutarak bitirir.
 Tıklama bir konum değil, bir seçimdir: nesne yakalama, ızgara ve dik mod tıklamayı
 kaydırmaz.
 
-**Uzat — çitle** ve **Uzat — sınırları uzatarak**, araç kutusunda **Buda** ailesinin
-kartında ve **Değiştir** menüsündedir. Çitte her köşeden sonra çitin şimdiye kadar
+**Uzat — çitle** ve **Uzat — sınırları uzatarak** **Uzat** düğmesinin okundadır (**Giriş ▸
+Değiştir** panelinde **Buda** düğmesinin okunda da). Çitte her köşeden sonra çitin şimdiye kadar
 uzatacağı bütün uçlar kesikli görünür; **Enter** uygular.
 
 ### Betik

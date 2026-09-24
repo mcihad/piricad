@@ -96,7 +96,7 @@ yerinde kaldı.
 
 ### Arayüz
 
-**Değiştir → Esnet**, ya da araç kolonundaki değiştirme ailesinde **Esnet**.
+Şeritte **Değiştir ▸ Dönüştür ▸ Esnet** (ya da **Giriş ▸ Değiştir ▸ Esnet**).
 Pencerenin bir köşesine, sonra karşı köşesine tıklarsınız (arada lastik dikdörtgen
 görünür); sonra ötelemenin başlangıç ve bitiş noktasına. Yakalama açıktır: öteleme
 noktalarını mevcut köşelere `UÇ` ile yakalayabilirsiniz.

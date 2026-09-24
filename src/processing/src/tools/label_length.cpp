@@ -125,7 +125,7 @@ private:
         .summary = "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir "
                    "yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.",
         .group   = "Etiketleme",
-        .icon    = "cetvel",
+        .icon    = "uzunluk",
         .applies = Applies::Lines | Applies::Faces,
         .params =
             {

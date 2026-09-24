@@ -61,7 +61,7 @@ geometridir; totalstation çıktısı da öyle gelir.
 
 ### Arayüz
 
-Sol paletteki **çoklu çizgi** aracına basın ya da `ÇOKLUÇİZGİ` yazın. Köşeleri
+Şeritte **Giriş ▸ Çizim ▸ Çoklu Çizgi**'ye basın ya da `ÇOKLUÇİZGİ` yazın. Köşeleri
 sırayla tıklayın, bitirmek için **Esc**.
 
 Çizerken o ana kadar verdiğiniz **bütün** köşeler kesikli kılavuzla birbirine

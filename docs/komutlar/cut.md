@@ -55,7 +55,7 @@ Panoya alındı: 1 nesne (912 bayt). 1 nesne çizimden silindi.
 
 ### Arayüz
 
-**Düzen > Kes** ya da **Ctrl+X**. Önce nesneleri seçebilirsiniz; seçim boşsa
+**Giriş ▸ Pano ▸ Kes** ya da **Ctrl+X**. Önce nesneleri seçebilirsiniz; seçim boşsa
 komut hangi nesnelerin kesileceğini sorar: tıklayın ya da kutu sürükleyin, sonra
 Enter.
 

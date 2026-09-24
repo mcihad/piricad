@@ -100,10 +100,9 @@ YAKINLAŞ KAPSAM          ← araya girer, görünüm değişir
 
 | Yol | Sonuç |
 |---|---|
-| **Görünüm** araç çubuğunda **Kapsama Yakınlaş** | `YAKINLAŞ KAPSAM` |
-| **Görünüm** araç çubuğunda **Yakınlaştır** | `YAKINLAŞ ÇARPAN carpan=1.25` |
-| **Görünüm** araç çubuğunda **Uzaklaştır** | `YAKINLAŞ ÇARPAN carpan=0.8` |
-| **Görünüm** menüsü | Aynı üç komut |
+| **Görünüm ▸ Gezinme ▸ Kapsama Yakınlaş** | `YAKINLAŞ KAPSAM` |
+| **Görünüm ▸ Gezinme ▸ Yakınlaştır** | `YAKINLAŞ ÇARPAN carpan=1.25` |
+| **Görünüm ▸ Gezinme ▸ Uzaklaştır** | `YAKINLAŞ ÇARPAN carpan=0.8` |
 | **Ctrl+0** | `YAKINLAŞ KAPSAM` |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 

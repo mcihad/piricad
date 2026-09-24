@@ -95,8 +95,8 @@ TAMPON nesneler=4 mesafe=-3 kose=koseli
 
 ### Arayüz
 
-**Analiz ▸ İşlem Araçları** menüsünden ya da sağ paneldeki **Araçlar** sekmesinde
-**Analiz ▸ Tampon bölge**'yi seçin. Kartta kapsamı (Seçili · Görünüm · Proje), mesafeyi
+Şeritte **Analiz ▸ İşlem araçları ▸ Tampon**'a (ya da **Kadastro ▸ Denetim ▸ Tampon**'a)
+basın ya da sağ paneldeki **Araçlar** sekmesinde **Analiz ▸ Tampon bölge**'yi seçin. Kartta kapsamı (Seçili · Görünüm · Proje), mesafeyi
 ve öteki seçenekleri doldurun, çıktı katmanını yazın ve **Çalıştır**'a basın. Kapsam
 seçiliyse ve seçim boşsa araç tuvalden seçtirir: her tık ekler, **sağ tık** başlatır.
 

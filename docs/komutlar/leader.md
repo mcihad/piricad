@@ -42,7 +42,8 @@ LİDER noktalar=10,0 13,3
 
 ### Arayüz
 
-**Çizim ▸ Lider**. Okun ucunu, sonra köşeleri tıklayın; Enter ile bitirin, yazıyı
+**Giriş ▸ Açıklama ▸ Kılavuz Çizgi** (ya da **Açıklama ▸ Etiket ▸ Kılavuz Çizgi**). Okun
+ucunu, sonra köşeleri tıklayın; Enter ile bitirin, yazıyı
 yazın.
 
 ### Betik

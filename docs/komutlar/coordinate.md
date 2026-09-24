@@ -46,8 +46,8 @@ Sağa: 485320,500 m   Yukarı: 4310220,250 m   (TUREF/TM30)
 
 ### Arayüz
 
-Sol araç kutusundaki **Ölç** ailesinden **Koordinat Oku**'yu seçin, sonra noktayı
-tıklayın. Sonuç durum çubuğunda yazar; tam metni sağ paneldeki **Geçmiş** sekmesinde
+Şeritte **Harita ▸ Sorgu ▸ Koordinat Oku**'ya basın (kapalı bir alan seçiliyken beliren
+**Alan** sekmesinde de vardır), sonra noktayı tıklayın. Sonuç durum çubuğunda yazar; tam metni sağ paneldeki **Geçmiş** sekmesinde
 bulursunuz. **Okuma tuvalde de kalır**: noktada küçük bir işaret ve yanında `Y … X …`
 yazar. Birkaç noktayı arka arkaya okuyabilirsiniz; işaretler çizim değişince ya da
 hiçbir komut çalışmıyorken Esc'e basınca silinir.

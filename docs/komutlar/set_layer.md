@@ -60,7 +60,10 @@ KATMANAT katman=PARSEL
 
 ### Arayüz
 
-Nesneleri seçin ve komut satırına `KATMANAT katman=PARSEL` yazın.
+Nesneleri seçin ve şeridin **Giriş ▸ Katmanlar** panelindeki katman listesinden `PARSEL`'i
+seçin: seçim varken liste seçili nesneleri o katmana taşır. Listenin altındaki **Etkin
+Katmana Taşı** simgesi seçili nesneleri etkin katmana taşır. Komut satırında aynısı
+`KATMANAT katman=PARSEL`'dir.
 
 ### Betik
 

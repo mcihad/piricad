@@ -139,9 +139,7 @@ KÖŞETAŞI nesne=1 2 kaynak=10,10 nokta=11,12
 
 ### Arayüz
 
-**Araçla.** Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da
-sağ tıklayın ve **Köşe Taşı**'yı seçin (aynı araç **Değiştir → Köşe Taşı**
-menüsündedir).
+**Araçla.** Şeritte **Değiştir ▸ Köşe ▸ Köşe Taşı**'ya basın.
 
 1. Taşınacak köşeye tıklayın. Nesne de bu tıklamayla seçilir; tek bir nesne
    seçiliyse onun en yakın köşesi alınır.

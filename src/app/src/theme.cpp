@@ -4,6 +4,7 @@
 #include "kentos_cad/app/data_root.hpp"
 
 #include <QApplication>
+#include <QFile>
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QProxyStyle>
@@ -195,6 +196,161 @@ void installShellStyle()
     QApplication::setStyle(style);
 }
 
+namespace {
+
+/// THE RIBBON'S RULES: SARibbon's own Office 2021 theme — its base and its
+/// template, read from the resources the library carries — with the template's
+/// palette tokens filled from ours (`.claude/ui.md` R49). The structure is
+/// upstream's, so the ribbon looks like the one SARibbon ships and follows it
+/// when the pin moves; every colour is `tokens.hpp`'s, so it is this program's
+/// ribbon in both themes and there is still one stylesheet.
+QString ribbonSheet(const Tokens& t)
+{
+    const auto read = [](const QString& path) {
+        QFile file(path);
+        return file.open(QIODevice::ReadOnly | QIODevice::Text) ? QString::fromUtf8(file.readAll())
+                                                                : QString();
+    };
+    QString base = read(QStringLiteral(":/SARibbonTheme/resource/theme-base.qss"));
+    // NOT `*:focus { outline: none; }`: a rule for every widget in the program
+    // would take the keyboard's focus ring off the shell's own controls, which
+    // is the one mark R31 keeps for the keyboard.
+    base.replace(QStringLiteral("*:focus {\n    outline: none;\n}"), QString());
+    QString sheet = base + QStringLiteral("\n") +
+                    read(QStringLiteral(":/SARibbonTheme/resource/templates/office2021.qss"));
+
+    // THE TWO SURFACES, and the states derived from them the way upstream's
+    // palette derives its own: hover and press are the body tinted toward the
+    // accent, so a button under the pointer reads as the program's colour and
+    // not as a grey that could be a disabled one.
+    const auto mix = [](const QColor& a, const QColor& b, double k) {
+        const auto blend = [k](float x, float y) {
+            return static_cast<float>(static_cast<double>(x) * (1.0 - k) +
+                                      static_cast<double>(y) * k);
+        };
+        return QColor::fromRgbF(blend(a.redF(), b.redF()), blend(a.greenF(), b.greenF()),
+                                blend(a.blueF(), b.blueF()));
+    };
+    const QColor hover    = mix(t.ribbonBody, t.accent, 0.12);
+    const QColor pressed  = mix(t.ribbonBody, t.accent, 0.22);
+    const QColor edge     = mix(t.ribbonBody, t.accent, 0.42);
+    const QColor tabHover = mix(t.ribbonTabs, t.text, 0.07);
+
+    const QString wash                              = rgba(t.accentWash);
+    const std::pair<const char*, QString> palette[] = {
+        {"accent", t.ribbonTabs.name()},
+        {"accent-hover", tabHover.name()},
+        {"accent-pressed", mix(t.ribbonTabs, t.text, 0.14).name()},
+        {"accent-text", t.text.name()},
+        {"content-bg", t.ribbonBody.name()},
+        {"content-hover-bg", hover.name()},
+        {"content-pressed-bg", pressed.name()},
+        {"text-color", t.text.name()},
+        {"bar-border", t.lineHard.name()},
+        {"ribbon-text", t.textFaint.name()},
+        {"separator", t.separator.name()},
+        {"subtitle", t.textFaint.name()},
+        {"panel-border", t.border.name()},
+        {"border-color", t.border.name()},
+        {"input-border", t.border.name()},
+        {"input-focus", t.accent.name()},
+        {"selection-bg", wash},
+        {"menu-border", t.border.name()},
+        {"close-bg", t.danger.name()},
+        {"close-bg-pressed", t.dangerEdge.name()},
+        {"sys-button-hover", t.hoverChip.name()},
+        {"sys-button-pressed", t.border.name()},
+        {"white", t.bgInput.name()},
+        {"black", t.text.name()},
+        {"input-base", t.bgInput.name()},
+        {"input-text", t.text.name()},
+        {"tab-accent", t.accent.name()},
+        {"tab-accent-hover", t.border.name()},
+    };
+    for (const auto& [name, colour] : palette)
+        sheet.replace(QStringLiteral("{{") + QString::fromLatin1(name) + QStringLiteral("}}"),
+                      colour);
+
+    // WHAT THE APPLICATION'S RULES WOULD IMPOSE, TAKEN BACK. Every SARibbon
+    // button is a QToolButton, its button groups are QToolBars and the bar is a
+    // QMenuBar, so the shell's 30 x 30 button, 45 px bar and title-bar rule
+    // (`themeStyleSheet`) would clamp the large buttons to icons with their
+    // labels squeezed out. This sheet sits on the window, which outranks the
+    // application's whatever the specificity, so it can undo them here.
+    sheet += QStringLiteral(R"(
+        SARibbonBar                      { border: none; }
+        SARibbonToolButton,
+        SARibbonButtonGroupWidget > QToolButton,
+        SARibbonQuickAccessBar QToolButton { min-width: 0px; max-width: 10000px;
+                                           min-height: 0px; max-height: 10000px; }
+        /* Its floor is its name, set by the shell after every sheet. */
+        SARibbonApplicationButton        { max-width: 10000px;
+                                           min-height: 0px; max-height: 10000px; }
+        SARibbonButtonGroupWidget,
+        SARibbonQuickAccessBar           { min-height: 0px; max-height: 10000px;
+                                           padding: 0px; border: none; }
+    )");
+
+    // THE TABS AS FOLDER TABS (`design.md` §7): quiet words on the darker row,
+    // and the chosen one cut from the body below it — the same surface as its
+    // panels, edged on three sides, open at the foot — so the tab and what it
+    // opens read as one sheet. Office 2021's thin underline was lost at this
+    // size, and a tab told apart by its colour alone is one a colour-blind
+    // user cannot find (ui.md R31).
+    sheet += QStringLiteral(R"(
+        SARibbonTabBar::tab              { color: %1; background: transparent;
+                                           border: 1px solid transparent; border-bottom: none;
+                                           border-top-left-radius: 5px;
+                                           border-top-right-radius: 5px;
+                                           margin: 6px 1px 0px 1px; padding: -3px 12px 0px 12px;
+                                           min-width: 0px; }
+        SARibbonTabBar::tab:hover:!selected { background: %2; color: %3;
+                                           border: 1px solid transparent; border-bottom: none; }
+        SARibbonTabBar::tab:selected     { background: %4; color: %3;
+                                           border: 1px solid %5; border-bottom: 1px solid %4; }
+    )")
+                 .arg(t.textDim.name(), tabHover.name(), t.text.name(), t.ribbonBody.name(),
+                      t.border.name());
+
+    // THE BUTTONS' STATES, in the accent's tint (see `hover` above), with the
+    // label kept in the text colour: upstream writes the hover label in its
+    // pressed grey, which on these surfaces faded the word the hand was on.
+    sheet += QStringLiteral(R"(
+        SARibbonToolButton:hover         { color: %1; border: 1px solid %2; background-color: %3; }
+        SARibbonToolButton:pressed,
+        SARibbonToolButton:checked       { color: %1; border: 1px solid %2; background-color: %4; }
+        SARibbonToolButton:checked:hover { color: %1; border: 1px solid %2; background-color: %4; }
+        SARibbonButtonGroupWidget > QToolButton:hover   { border: 1px solid %2; background-color: %3; }
+        SARibbonButtonGroupWidget > QToolButton:checked,
+        SARibbonButtonGroupWidget > QToolButton:pressed { border: 1px solid %2; background-color: %4; }
+        SARibbonPanel > SARibbonButtonGroupWidget     { border: none; background: transparent; }
+        #ribbonRow                       { background: transparent; }
+        /* The application menu paints its own three grounds (app_menu.cpp). */
+        #applicationMenu, #applicationMenuHead, #applicationMenuBody,
+        #applicationMenuColumn, #applicationMenuPane, #applicationMenuFoot,
+        #applicationMenuRow, #applicationMenuVerb, #applicationMenuRecent,
+        #applicationMenuChoice           { background: transparent; }
+        #ribbonCaption                   { background: transparent; color: %5; }
+    )")
+                 .arg(t.text.name(), edge.name(), hover.name(), pressed.name(), t.textDim.name());
+
+    // AND THE ONE THING OURS OFFERS THAT OFFICE 2021 DOES NOT: the application
+    // button is a filled accent block — the one saturated surface of the
+    // chrome, because it is where the program's own menu lives and a label
+    // that reads like a tab reads like nothing to press.
+    sheet += QStringLiteral(R"(
+        SARibbonApplicationButton        { background-color: %1; color: %2; border: none;
+                                           border-radius: 5px; font-weight: 600;
+                                           padding: 0px 14px; margin: 3px 6px 2px 6px; }
+        SARibbonApplicationButton:hover  { background-color: %3; border: none; }
+        SARibbonApplicationButton:pressed { background-color: %4; border: none; }
+    )")
+                 .arg(t.accent.name(), t.onAccent.name(), t.accentLift.name(), t.accentEdge.name());
+    return sheet;
+}
+
+} // namespace
+
 QString themeStyleSheet(ThemeMode mode)
 {
     const Tokens& t = mode == ThemeMode::Light ? lightTokens() : darkTokens();
@@ -216,43 +372,16 @@ QString themeStyleSheet(ThemeMode mode)
         QToolTip                         { background: %(raised)s; color: %(text)s;
                                            border: 1px solid %(border)s; padding: 4px 7px; }
 
-        /* ---- title bar, §7 ------------------------------------------------- */
-        /*
-         * The bar paints its own gradient, so the menu bar inside it is
-         * TRANSPARENT: a background here would draw a flat rectangle over the two
-         * stops and the seam would show. The 12.5 px label, the 5x9 padding and
-         * the 4 px radius are the mockup's own numbers, and `margin: 0 1px` is
-         * how a stylesheet says the 2 px gap between titles.
-         */
-        QMenuBar#shellMenuBar            { background: transparent; color: %(menuText)s;
-                                           border: none; font-size: 12.5px; padding: 0; }
-        QMenuBar#shellMenuBar::item      { padding: 5px 9px; margin: 0px;
-                                           background: transparent; border-radius: 4px; }
-        QMenuBar#shellMenuBar::item:selected,
-        QMenuBar#shellMenuBar::item:pressed { background: %(hoverChip)s; color: %(onHover)s; }
-        QLabel#shellDocTitle             { background: transparent; color: %(titleText)s;
-                                           font-size: 12px; font-weight: 500; }
+        /* ---- the ribbon's corner, §7 --------------------------------------- */
         /*
          * TRANSPARENT, and this is not cosmetic. `QWidget { background: … }`
-         * above sets WA_StyledBackground on every widget in the program, so a
-         * child of the title bar paints a flat `bgWindow` rectangle over the
-         * gradient before its own paintEvent runs — a pale slab across the two
-         * stops, sitting on top of the first menu title.
+         * above sets WA_StyledBackground on every widget in the program, so the
+         * search and user chips in the tab row's corner (`ribbon.cpp`) would
+         * paint a flat `bgWindow` rectangle under their own drawing. The ribbon
+         * itself is styled by `ribbonStyleSheet`, on the window.
          */
         #titleSearch, #titleUser        { background: transparent; }
 
-        /*
-         * NO `min-height` HERE. A minimum on the bar becomes a minimum on each
-         * ::item, the items grow past the 34 px bar and every title is clipped
-         * away — the menu titles vanish entirely and the bar looks empty. The
-         * height belongs to `TitleBar`, which fixes it.
-         */
-        QMenuBar                         { background: %(titlebar)s; color: %(menuText)s;
-                                           border-bottom: 1px solid %(lineHard)s;
-                                           font-size: 12.5px; }
-        QMenuBar::item                   { padding: 5px 9px; background: transparent;
-                                           border-radius: 4px; }
-        QMenuBar::item:selected          { background: %(hoverChip)s; color: %(onHover)s; }
         QMenu                            { background: %(panel)s; color: %(text)s;
                                            border: 1px solid %(border)s; padding: 4px; }
         QMenu::item                      { padding: 6px 24px 6px 12px; border-radius: 4px; }
@@ -260,24 +389,12 @@ QString themeStyleSheet(ThemeMode mode)
         QMenu::item:disabled             { color: %(textFaint)s; }
         QMenu::separator                 { height: 1px; background: %(lineSoft)s; margin: 4px 8px; }
 
-        /* ---- tool bar, §7 --------------------------------------------------- */
+        /* ---- tool buttons: the icon buttons of tables, fields and dialogs --- */
         /*
-         * Measured off the reference, not guessed: 30x30 buttons on a 34 px
-         * pitch (so a 4 px gap), a 1 px rule with 5 px either side between
-         * groups, 8 px of padding at each end, and 45 px of content under a
-         * 1 px rule, which is the 46 px band the reference measures. Qt puts a
-         * border OUTSIDE min-height, so 45 here is 46 on screen — asking for 46
-         * gives 47 and pushes every band below it down a pixel. Every one of
-         * these numbers is load-bearing: the button pitch is what
-         * button pitch is what puts the seventh group where the screenshot has
-         * it, 300 px along the bar.
+         * A 30 px square, the component standard's icon button (§4). The
+         * ribbon's buttons are QToolButtons too and take their own measures back
+         * in `ribbonStyleSheet`.
          */
-        QToolBar                         { background: %(raised)s; border: none;
-                                           border-bottom: 1px solid %(lineHard)s;
-                                           min-height: 45px; max-height: 45px;
-                                           padding: 0px 8px; spacing: 4px; }
-        QToolBar::separator              { background: %(separator)s; width: 1px;
-                                           margin: 12px 5px; }
         QToolButton                      { background: transparent; border: 1px solid transparent;
                                            border-radius: 4px; padding: 0px; margin: 0px;
                                            min-width: 30px; max-width: 30px;
@@ -288,6 +405,7 @@ QString themeStyleSheet(ThemeMode mode)
         QToolButton:pressed              { background: %(wash)s; color: %(accentHi)s;
                                            border: 1px solid %(accentEdge)s; }
         QToolButton:disabled             { color: %(textFaint)s; }
+
 
         /* ---- docks, §6: one 29 px header, drawn by PanelHeader -------------- */
         /*
@@ -448,6 +566,29 @@ QString themeStyleSheet(ThemeMode mode)
                                            border: none; border-radius: 0px;
                                            padding: 6px 8px; }
 
+        /* ---- the About window, about_dialog.cpp ----------------------------- */
+        QLabel#aboutTitle                { background: transparent; color: %(text)s;
+                                           font-size: 22px; font-weight: 600; }
+        QLabel#aboutTagline              { background: transparent; color: %(textDim)s;
+                                           font-size: 13px; }
+        QLabel#aboutBuild                { background: transparent; color: %(textFaint)s;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 11.5px; }
+        QLabel#aboutKey                  { background: transparent; color: %(textDim)s;
+                                           font-size: 12px; }
+        QLabel#aboutValue                { background: transparent; color: %(readout)s;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 12px; }
+        QLabel#aboutIdea                 { background: transparent; color: %(textFaint)s;
+                                           font-size: 12px; }
+        QStackedWidget#aboutPages,
+        QWidget#aboutGeneral             { background: transparent; }
+        QPlainTextEdit#aboutText         { background: %(input)s; color: %(textDim)s;
+                                           border: 1px solid %(border)s; border-radius: 4px;
+                                           padding: 6px 8px;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 11px; }
+
         /* The statistics panel's head and the two footer switches' words. */
         QLabel#statsTitle                { background: transparent; color: %(text)s;
                                            font-size: 13px; font-weight: 600; }
@@ -466,7 +607,7 @@ QString themeStyleSheet(ThemeMode mode)
          * geometry either, or `polish()` would size it past its own height. The
          * popup is the shell's list: the panel ground, 26 px rows, the hover wash. */
         QComboBox#comboBox               { background: transparent; border: none; padding: 0px;
-                                           min-height: 0px; max-height: 16777215px;
+                                           min-height: 0px; max-height: 10000px;
                                            color: %(text)s; }
         QComboBox#comboBox::drop-down    { width: 0px; border: none; }
         QComboBox#comboBox QAbstractItemView#comboPopup,
@@ -597,7 +738,7 @@ QString themeStyleSheet(ThemeMode mode)
                                            padding: 0px 8px;
                                            selection-background-color: %(accent)s;
                                            selection-color: %(onAccent)s; }
-        QLineEdit#fieldLine[frame="cell"] { min-height: 0px; max-height: 16777215px; }
+        QLineEdit#fieldLine[frame="cell"] { min-height: 0px; max-height: 10000px; }
         QLineEdit#fieldLine[state="invalid"] { color: %(danger)s; }
 
         QToolButton#fieldPicker          { background: transparent; color: %(textDim)s;
@@ -629,7 +770,7 @@ QString themeStyleSheet(ThemeMode mode)
          * (or the cell is the box), so the sheet gives it no ground and no edge. */
         QComboBox#fieldCombo             { background: transparent; border: none;
                                            padding: 0px; min-height: 0px;
-                                           max-height: 16777215px; }
+                                           max-height: 10000px; }
 
         QSlider#fieldSlider::groove:horizontal { background: %(border)s; height: 3px;
                                            border-radius: 1px; }
@@ -720,16 +861,6 @@ QString themeStyleSheet(ThemeMode mode)
                                            border-top: 1px solid %(lineSoft)s;
                                            font-size: 11px; }
 
-        /* ---- left tool box, §7: 46 px, 32x32 buttons ----------------------- */
-        QToolButton#toolBoxButton        { background: transparent; border-radius: 4px;
-                                           border: 1px solid transparent; padding: 0px;
-                                           color: %(textDim)s; }
-        QToolButton#toolBoxButton:hover  { background: %(hoverIcon)s; color: %(onHover)s; }
-        QToolButton#toolBoxButton:checked,
-        QToolButton#toolBoxButton:pressed { background: %(wash)s; color: %(accentHi)s;
-                                           border: 1px solid %(accentEdge)s; }
-        QToolButton#toolBoxButton:disabled { color: %(textFaint)s; }
-
         /* ---- tabs, §4: 30 px, active carries a 2 px accent edge ------------ */
         QTabWidget::pane                 { background: %(panel)s; border: 1px solid %(lineHard)s;
                                            top: -1px; }
@@ -810,7 +941,7 @@ QString themeStyleSheet(ThemeMode mode)
             padding: 4px 9px; min-height: 22px; max-height: 22px;
             selection-background-color: %(accent)s; selection-color: %(onAccent)s;
         }
-        QPlainTextEdit, QTextEdit         { max-height: 16777215px; }
+        QPlainTextEdit, QTextEdit         { max-height: 10000px; }
 
         QLineEdit:hover, QSpinBox:hover,
         QDoubleSpinBox:hover                { border: 1px solid %(separator)s; }
@@ -1021,19 +1152,15 @@ QString themeStyleSheet(ThemeMode mode)
                                                an icon button and wrong for a field: it left
                                                the colour a chip with its hex elided to
                                                "#...6". A field is as wide as its column. */
-                                            min-width: 0px; max-width: 16777215px;
+                                            min-width: 0px; max-width: 10000px;
                                             font-family: "IBM Plex Mono", monospace;
                                             font-size: 11px; }
         QLabel#mono                       { font-family: "IBM Plex Mono", monospace; }
-        QWidget#toolBoxBody               { background: %(panel)s;
-                                            border-right: 1px solid %(lineHard)s; }
-        QFrame#toolBoxRule                { background: %(lineSoft)s; border: none; }
     )")
         .replace(QStringLiteral("%(window)s"), t.bgWindow.name())
         .replace(QStringLiteral("%(panel)s"), t.bgPanel.name())
         .replace(QStringLiteral("%(raised)s"), t.bgRaised.name())
         .replace(QStringLiteral("%(header)s"), t.bgHeader.name())
-        .replace(QStringLiteral("%(titlebar)s"), t.bgTitlebar.name())
         .replace(QStringLiteral("%(input)s"), t.bgInput.name())
         .replace(QStringLiteral("%(lineHard)s"), t.lineHard.name())
         .replace(QStringLiteral("%(lineSoft)s"), t.lineSoft.name())
@@ -1049,8 +1176,6 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(onHover)s"), t.onHover.name())
         .replace(QStringLiteral("%(hoverIcon)s"), t.hoverIcon.name())
         .replace(QStringLiteral("%(hoverChip)s"), t.hoverChip.name())
-        .replace(QStringLiteral("%(menuText)s"), t.menuText.name())
-        .replace(QStringLiteral("%(titleText)s"), t.titleText.name())
         .replace(QStringLiteral("%(strip)s"), t.bgStrip.name())
         .replace(QStringLiteral("%(separator)s"), t.separator.name())
         .replace(QStringLiteral("%(readout)s"), t.readout.name())
@@ -1068,6 +1193,11 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(rowOdd)s"), t.rowOdd.name())
         .replace(QStringLiteral("%(scroll)s"), t.border.name())
         .replace(QStringLiteral("%(scrollHi)s"), t.textFaint.name());
+}
+
+QString ribbonStyleSheet(ThemeMode mode)
+{
+    return ribbonSheet(mode == ThemeMode::Light ? lightTokens() : darkTokens());
 }
 
 } // namespace kentos::app

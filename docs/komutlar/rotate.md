@@ -93,8 +93,8 @@ DÖNDÜR nesneler=1 merkez=0,0 referans=30 aci=90
 
 ### Arayüz
 
-Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
-**Döndür**'ü seçin (ya da `DÖNDÜR` yazın), merkezi tıklayın — ve sonra **açıyı
+Nesneleri seçin, şeritte **Giriş ▸ Değiştir ▸ Döndür**'e basın (ya da `DÖNDÜR` yazın),
+merkezi tıklayın — ve sonra **açıyı
 fareyle gösterin**.
 
 **Nesneler imlecin altında döner.** Hayalet, komutun uygulayacağı dönüşümün

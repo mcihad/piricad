@@ -154,7 +154,7 @@ private:
                    "sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, "
                    "köşe taşınınca izler.",
         .group   = "Etiketleme",
-        .icon    = "koordinat",
+        .icon    = "kose_no",
         .applies = Applies::Faces | Applies::Lines,
         .params =
             {

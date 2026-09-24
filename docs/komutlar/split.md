@@ -144,13 +144,13 @@ BÖL nesne=1 nokta=485330,4310200
 
 ### Arayüz
 
-Sol araç kutusundaki **Böl** düğmesine basın, kesilecek nesneleri tıklayarak
+Şeritte **Değiştir ▸ Kes ve Uzat ▸ Böl**'e basın, kesilecek nesneleri tıklayarak
 seçin, **Enter**'a (ya da sağ tuşa) basın, sonra kesme çizgisinin iki ucunu
 tıklayın. İkinci ucu ararken kesme çizgisi kılavuz olarak fareyi takip eder.
 Yakalama açıkken uçlar mevcut köşelere ve kesişimlere oturur. Nesneleri önceden
 seçtiyseniz doğrudan kesme çizgisine geçer.
 
-Öteki yöntemler aynı düğmenin **kartında** ve **Değiştir** menüsündedir:
+Öteki yöntemler aynı düğmenin **okundaki** listededir:
 
 - **Böl — noktalardan**: nesneyi seçin, sonra bölme noktalarını tıklayın. Nesne,
   verdiğiniz noktalardan ve imlecin durduğu yerden kesilmiş hâliyle, parçaları

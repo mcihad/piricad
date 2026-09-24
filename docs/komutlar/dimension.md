@@ -203,7 +203,8 @@ Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
 
 ### Arayüz
 
-**Çizim ▸ Ölçü**. İki noktayı, sonra ölçü çizgisinin yerini tıklayın. Noktaları
+**Açıklama ▸ Ölçü ▸ Ölçü** (ya da **Giriş ▸ Açıklama ▸ Ölçü**). İki noktayı, sonra ölçü
+çizgisinin yerini tıklayın. Noktaları
 yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya bağlanır; köşeyi tutamağından
 sürüklediğinizde ölçü onunla birlikte güncellenir.
 

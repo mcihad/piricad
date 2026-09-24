@@ -9,11 +9,11 @@
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/provider_dialog.hpp"
+#include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/toolbox.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
 
@@ -44,6 +44,7 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
+#include <QLibraryInfo>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QLocale>
@@ -272,6 +273,17 @@ int main(int argc, char** argv)
     if (translator.load(QLocale(), QStringLiteral("kentos"), QStringLiteral("_"),
                         QStringLiteral(":/i18n")))
         QApplication::installTranslator(&translator);
+
+    // QT'S OWN WORDS IN TURKISH — `Tamam`, `İptal`, `Evet`, `Hayır`, `Kaydet`
+    // on every message box and dialog button box. They are Qt's strings, so our
+    // catalogue cannot carry them: the embedded copy first (`CMakeLists.txt`),
+    // then the directory this Qt was installed with.
+    QTranslator qtTranslator;
+    if (qtTranslator.load(QLocale(), QStringLiteral("qtbase"), QStringLiteral("_"),
+                          QStringLiteral(":/i18n/qt")) ||
+        qtTranslator.load(QLocale(), QStringLiteral("qtbase"), QStringLiteral("_"),
+                          QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
+        QApplication::installTranslator(&qtTranslator);
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
@@ -619,15 +631,15 @@ int main(int argc, char** argv)
             check(window.probeLayoutMenu().contains(QStringLiteral("    Tasarımcıyı Aç")),
                   "yerleşimin alt menüsünde Tasarımcıyı Aç yok");
 
-            // ---- AND THE TOOLBAR'S PRINT LIST, AFTER A ROUND TRIP -----------
+            // ---- AND THE PRINT BUTTON'S LIST, AFTER A ROUND TRIP ------------
             //
             // A REPORTED BUG: a layout saved into a project and read back showed
-            // up under `Dosya ▸ Çıktı Yerleşimleri` and NOT in the list beside
-            // the toolbar's print button. That list was rebuilt from three
-            // places — startup, a print PROFILE changing, and the one menu entry
-            // that makes a layout — and opening a project is none of them. It is
-            // rebuilt on `aboutToShow` now, so the round trip is what this
-            // checks: save, open, walk the menu.
+            // up under `Çıktı Yerleşimleri` and NOT in the list beside the print
+            // button. That list was rebuilt from three places — startup, a print
+            // PROFILE changing, and the one menu entry that makes a layout — and
+            // opening a project is none of them. It is rebuilt on `aboutToShow`
+            // now, so the round trip is what this checks: save, open, walk the
+            // menu.
             check(window.probePrintMenu().contains(QStringLiteral("Ada 1284")),
                   "yerleşim yazdırma listesinde yok");
 
@@ -2016,34 +2028,44 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("16-koseekle-onizleme"), &window); });
         later([&window] { window.cancelCommand(); });
 
-        // AND THE FAMILIES THE EDIT VERBS NOW LIVE IN, opened the way a hand
-        // opens one — a right click on the button — and photographed with the
-        // card over the window, since the card is a popup of its own.
+        // AND THE FAMILIES THE EDIT VERBS LIVE IN, opened the way a hand opens
+        // one — the arrow of the ribbon's split button — and photographed with
+        // the list over the window, since the list is a popup of its own.
         // BY ITS MEMBERS, not its face: the face is whichever member was used
         // last, and the frames above have just used several.
         const auto family = [&window, into](const QStringList& members, const QString& name) {
-            const auto* box = window.findChild<kentos::app::ToolBox*>();
-            if (box == nullptr) return;
-            QToolButton* button = nullptr;
-            for (QToolButton* b : box->buttons())
-                for (const QAction* a : box->tools())
-                    if (a != nullptr && b->defaultAction() == a &&
-                        members.contains(a->property(kentos::app::kToolCommandProperty).toString()))
-                        button = b;
+            SARibbonBar* bar = window.ribbonBar();
+            if (bar == nullptr) return;
+            const kentos::app::RibbonFamily* found = nullptr;
+            for (const kentos::app::RibbonFamily* f :
+                 window.findChildren<kentos::app::RibbonFamily*>())
+                for (const QAction* a : f->members())
+                    if (found == nullptr &&
+                        members.contains(a->property(kentos::app::kToolCommandProperty)
+                                             .toString()
+                                             .section(QLatin1Char(' '), 0, 0)))
+                        found = f;
+            if (found == nullptr || found->head()->menu() == nullptr) return;
+            SARibbonToolButton* button = nullptr;
+            for (SARibbonToolButton* b : bar->findChildren<SARibbonToolButton*>())
+                if (b->defaultAction() == found->head() && button == nullptr) button = b;
             if (button == nullptr) return;
-            const QPointF centre(button->width() / 2.0, button->height() / 2.0);
-            QMouseEvent press(QEvent::MouseButtonPress, centre,
-                              QPointF(button->mapToGlobal(centre.toPoint())), Qt::RightButton,
-                              Qt::RightButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(button, &press);
-            auto* card   = box->findChild<kentos::app::ToolFlyout*>();
+            for (QWidget* w = button->parentWidget(); w != nullptr; w = w->parentWidget())
+                if (auto* tab = qobject_cast<SARibbonCategory*>(w); tab != nullptr) {
+                    bar->raiseCategory(tab);
+                    break;
+                }
+            QCoreApplication::processEvents();
+            QMenu* list = found->head()->menu();
+            list->popup(button->mapToGlobal(QPoint(0, button->height())));
+            QCoreApplication::processEvents();
             QImage frame = window_shot(&window);
-            if (card != nullptr && card->isVisible()) {
+            if (list->isVisible()) {
                 QPainter paint(&frame);
-                paint.drawPixmap(card->mapToGlobal(QPoint(0, 0)) - window.mapToGlobal(QPoint(0, 0)),
-                                 card->grab());
+                paint.drawPixmap(list->mapToGlobal(QPoint(0, 0)) - window.mapToGlobal(QPoint(0, 0)),
+                                 list->grab());
                 paint.end();
-                card->close();
+                list->close();
             }
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
             (void)std::fprintf(frame.save(path) ? stdout : stderr, "[kentos] %s\n",
@@ -2115,27 +2137,24 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("24-ofset-sol"), &window); });
         later([&window] { window.cancelCommand(); });
 
-        // RENK: the chips at the foot of the column paint. A parcel is selected,
-        // the fill chip pressed and its menu photographed over the window — the
-        // menu is a popup of its own, so it is composited in where it opened,
-        // on a frame grown to hold it when it hangs past the window's edge.
-        const auto chips = [&window]() -> kentos::app::ColourChips* {
-            const auto* box = window.findChild<kentos::app::ToolBox*>();
-            return box == nullptr ? nullptr : box->chips();
-        };
+        // RENK: the colour boxes of the `Giriş` tab's `Özellikler` panel paint. A parcel is
+        // selected, the fill box opened and its menu photographed over the
+        // window — the menu is a popup of its own, so it is composited in where
+        // it opened, on a frame grown to hold it when it hangs past the edge.
         later([scene] { scene(QStringLiteral("ALAN 0,0 20,0 20,12 0,12")); });
         later([&window] {
             window.runScriptLine(QStringLiteral("ÇOKLUÇİZGİ -4,-3 24,-3 24,16"));
             window.endCommand();
             window.runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 21,13"));
         });
-        later([chips] {
-            kentos::app::ColourChips* c = chips();
-            if (c == nullptr) return;
-            const QPointF at = QRectF(c->chipRect(1)).center();
-            QMouseEvent press(QEvent::MouseButtonPress, at, c->mapToGlobal(at), Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(c, &press);
+        later([&window] {
+            if (auto* fill = window.findChild<kentos::app::RibbonColourBox*>(
+                    QStringLiteral("ribbonFillBox"));
+                fill != nullptr) {
+                if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+                QCoreApplication::processEvents();
+                fill->showPopup();
+            }
         });
         // A POPUP IS A WINDOW OF ITS OWN, so a window grab leaves it out: it is
         // painted in where it opened, on a frame grown to hold it when it hangs
@@ -2365,7 +2384,7 @@ int main(int argc, char** argv)
 
     if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
-            window.probeToolBox();
+            window.probeTools();
             QApplication::exit(0);
         });
     }

@@ -197,7 +197,7 @@ private:
             "alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince "
             "yeniden yazılır.",
         .group   = "Etiketleme",
-        .icon    = "yazi",
+        .icon    = "bagla",
         .applies = Applies::Texts,
         .params =
             {

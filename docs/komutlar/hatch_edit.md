@@ -90,11 +90,13 @@ Tarama düzenlendi: 1 tarama; 'ANSI37' deseni, açı 15,00°.
 
 ### Arayüz
 
-**Çizim ▸ Taramayı Düzenle**, ya da araç kutusunda tarama ailesinin **Taramayı
-Düzenle** düğmesi: taramayı tıklayın, Enter'a basın, deseni yazın. Açıyı, ölçeği,
-aralığı, çapraz çizimi ve ada kuralını tek tek değiştirmek için taramayı seçin:
-nitelik panelinin **TARAMA** grubunda her biri bir hücredir; hücreyi düzenlemek bu
-komutun ilgili satırını çalıştırır.
+**Çizim ▸ Tarama ▸ Taramayı Düzenle**, ya da **Giriş ▸ Çizim** panelindeki **Tarama**
+düğmesinin okundan **Taramayı Düzenle**: taramayı tıklayın, Enter'a basın, deseni yazın.
+
+Açıyı, ölçeği, çapraz çizimi ve ada kuralını tek tek değiştirmek için taramayı seçin:
+beliren **Tarama** sekmesinde desen galerisi, **Açı** ve **Ölçek** kutuları, **Çapraz** ve
+üç ada kuralı vardır; her biri seçili taramalarda bu komutun ilgili satırını çalıştırır.
+Aynı değerler nitelik panelinin **TARAMA** grubunda da birer hücredir.
 
 ### Betik
 

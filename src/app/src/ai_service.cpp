@@ -107,7 +107,7 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
             co_return core::err(core::ErrorCode::Unsupported,
                                 "Bir öneri ancak öneri kartındaki düğmeyle uygulanır ya da "
                                 "reddedilir; komut satırı kararı veremez. Kartı görmek için "
-                                "Pencere ▸ Yapay Zeka'yı açın.");
+                                "Görünüm ▸ Pencereler ▸ Yapay Zeka'yı açın (Ctrl+Shift+K).");
 
         case Verb::ServerStart:
         case Verb::ServerStop:

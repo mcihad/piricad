@@ -123,8 +123,9 @@ Tapu kaydındaki değeri yazmak zorundaysanız — elle yazılmış olarak kalı
 
 ### Arayüz
 
-**Değiştir ▸ Ölçüyü Düzenle**, ya da araç kutusunda Ölçü ailesinin **Ölçüyü
-Düzenle** düğmesi: ölçüyü tıklayın, Enter'a basın, yazıyı yazın (`<>` ölçülen
+**Açıklama ▸ Ölçü ▸ Ölçüyü Düzenle**, ya da **Giriş ▸ Açıklama** panelindeki **Ölçü**
+düğmesinin okundan **Ölçüyü Düzenle** (bir ölçü seçiliyken beliren **Ölçü** sekmesinde de
+vardır): ölçüyü tıklayın, Enter'a basın, yazıyı yazın (`<>` ölçülen
 değerdir). Öneki, soneki, birimi, ondalığı ve toleransı tek tek değiştirmek için
 ölçüyü seçin: nitelik panelinin **ÖLÇÜ** grubunda her biri bir hücredir; hücreyi
 düzenlemek bu komutun ilgili satırını çalıştırır.

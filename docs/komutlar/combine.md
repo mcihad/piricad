@@ -118,7 +118,7 @@ BİRLEŞTİR nesneler=1 2
 
 ### Arayüz
 
-Nesneleri seçin, sol araç kutusundaki **Birleştir** düğmesine basın.
+Nesneleri seçin, şeritte **Değiştir ▸ Birleştir ▸ Birleştir**'e basın.
 
 Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
 yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.

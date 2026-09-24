@@ -146,7 +146,8 @@ BUDA uzanti=evet sinir=2 nesne=1 nokta=80,0
 
 ### Arayüz
 
-Sol araç kutusundaki **Buda** düğmesine basın ya da `BUDA` yazın. Komut satırı
+Şeritte **Giriş ▸ Değiştir ▸ Buda**'ya (ya da **Değiştir ▸ Kes ve Uzat ▸ Buda**'ya) basın ya
+da `BUDA` yazın. Komut satırı
 `Atılacak parçaya tıklayın — Enter: bitir` der.
 
 - Önceden nesne seçtiyseniz sınırlar onlardır ve vurgulu kalırlar.
@@ -166,9 +167,9 @@ tıklamayı kaydırmaz; bir kesişimin yakınına tıklamak parçayı kesişimin
 **Esc** komutu Enter gibi bitirir: o ana kadar budananlar budanmış kalır. Hiç
 tıklamadan Esc'e basarsanız hiçbir şey olmaz.
 
-Öteki yollar aynı düğmenin ailesindedir: **Buda**'yı basılı tutun (ya da sağ tıklayın,
-ya da köşesindeki küçük üçgene tıklayın) ve kartta seçin — **Buda — çitle**, **Buda —
-tıklanan kalsın**, **Buda — sınırları uzatarak**. Hepsi **Değiştir** menüsünde de var.
+Öteki yollar aynı düğmenin ailesindedir: **Buda** düğmesinin okundan (odak düğmedeyken
+**↓** ile de) seçin — **Buda — çitle**, **Buda — tıklanan kalsın**, **Buda — sınırları
+uzatarak**.
 
 - **Buda — çitle:** çitin köşelerini tıklayın; her köşeden sonra çitin şimdiye kadar
   alacağı bütün parçalar kırmızı ve kesikli görünür, imlecin yanında kaç parça

@@ -111,7 +111,8 @@ Bir hücreyi boşaltın:
 ### Arayüz
 
 Sağdaki **Öznitelikler** panelinde seçili nesnenin bütün sütunları görünür ve
-düzenlenebilir. Panelden yapılan her değişiklik bu komutu gönderir — panel ikinci bir
+düzenlenebilir (panel kapalıysa **Görünüm ▸ Pencereler ▸ Öznitelikler**). Komutun kendisi
+şeritte **Değiştir** sekmesinin sonundaki **Diğer** listesindedir. Panelden yapılan her değişiklik bu komutu gönderir — panel ikinci bir
 yazma yolu değildir, komutun bir istemcisidir.
 
 ### Betik

@@ -77,21 +77,6 @@ QString value_text(const command::Value& v)
     }
 }
 
-/// The glyph a spec's icon NAME means. The processing module is Qt-free and
-/// names its mark in words; this is the one place the words become a picture,
-/// and a word it does not know gets the generic tool mark rather than nothing.
-Glyph glyph_named(const std::string& name)
-{
-    if (name == "cetvel") return Glyph::Ruler;
-    if (name == "koordinat") return Glyph::Coordinate;
-    if (name == "yazi") return Glyph::Text;
-    if (name == "alan") return Glyph::Polygon;
-    if (name == "cizgi") return Glyph::Line;
-    if (name == "nokta") return Glyph::Point;
-    if (name == "sigma") return Glyph::Sigma;
-    return Glyph::Function;
-}
-
 /// The field a parameter is edited with. Its kind decides the editor and its
 /// choices, range and default decide what the editor offers.
 FieldSpec field_for(const processing::ToolParam& p)

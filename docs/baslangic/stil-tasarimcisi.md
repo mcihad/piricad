@@ -7,8 +7,8 @@ kurduğunuz her sembolü bir betik de yazabilir.
 ## Nasıl açılır
 
 - Katmanlar panelinde katmana **sağ tıklayın → Katman Özellikleri…**
-- Araç çubuğunda *pencereler* grubundaki **palet** düğmesi
-- **Katman ▸ Stil Tasarımcısı**
+- Şeritte **Görünüm ▸ Katmanlar ▸ Stil Tasarımcısı**
+- **Giriş ▸ Özellikler** panelinin adının yanındaki **↘** başlatıcı
 
 Pencere seçili katmanın şu an ne çizdiğiyle açılır: nesneleri bir gösterim
 taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
@@ -287,7 +287,7 @@ satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvi
 kelimelik segment.
 
 **Buradan tanımlanan sütun yalnız bu katmana aittir.** Çizimin tamamına ait bir alan
-— `ada`, `parsel` gibi — **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
+— `ada`, `parsel` gibi — **KentOS CAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
 tanımlanır.
 
 Sayfa proje sütunlarını da listeler, `proje sütunu` diye işaretli ve düzenlenemez

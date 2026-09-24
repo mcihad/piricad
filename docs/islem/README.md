@@ -62,7 +62,7 @@ kutu ada, açıklamaya ya da komut adına göre süzer. Bir satırı seçince al
   yazılacak olan odur; bu satırı kopyalayıp bir betiğe koyabilirsiniz;
 - **Çalıştır**. Ağaçta bir satıra çift tıklamak ya da Enter da çalıştırır.
 
-Kartın **kendi penceresinde** açılmasını isterseniz `Ayarlar ▸ Uygulama ▸ Görünüm ve Tema`
+Kartın **kendi penceresinde** açılmasını isterseniz **Seçenekler ▸ Görünüm ve Tema**
 altındaki **Araç penceresi** tercihini (`TERCİH araç_penceresi evet`) açın: ağaçta bir
 araca tıklamak kartı bir pencerede açar, **Çalıştır** çalıştırıp pencereyi kapatır.
 Kapalıyken kart ağacın altında açılır. İki yol da aynı komut satırını gönderir.
@@ -97,7 +97,7 @@ taşınan yazının başına gelen [Bağlı nesneler](bagli-nesneler.md) sayfas�
 | Geometri | Çizgilerden alan üret | `ALANÜRET` | [Çizgilerden alan üretme](../komutlar/alan_uret.md) |
 | Düzenleme | Alanı düzenle | `ALANDÜZENLE` | [Alanı istenen değere getirme](../komutlar/alan_duzenle.md) |
 
-Yeni bir araç eklendiğinde ağaçta, **Analiz** menüsünde ve
+Yeni bir araç eklendiğinde ağaçta, şeritte **Analiz ▸ İşlem araçları** listesinde ve
 [komut referansında](../komutlar/referans.md) kendiliğinden görünür; üçü de aynı
 kayıttan üretilir.
 

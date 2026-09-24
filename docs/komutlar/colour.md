@@ -2,7 +2,7 @@
 
 Bir yolu kırmızıya, bir yeşil alanı yeşile boyamak ya da bir nesneyi katmanının
 rengine geri döndürmek isteyen herkes için; bu sayfayı bitirdiğinizde nesnelerin
-çizgi ve dolgu rengini araç kutusundaki renk kutularından, komut satırından ve
+çizgi ve dolgu rengini şeritteki renk kutularından, komut satırından ve
 betikten değiştirmeyi bileceksiniz.
 
 ## Ne yapar
@@ -112,19 +112,22 @@ RENK nesneler=1 renk=katman dolgu=katman
 
 ### Arayüz
 
-Sol araç kutusunun en altındaki iki **renk kutusu** o anda elinizde olanı gösterir:
-seçim varsa seçili ilk nesnenin çizgi ve dolgu rengini, yoksa etkin katmanınkini —
-yeni çizilecek nesnenin rengini. Dolgusuz olan kutu boş ve çaprazlıdır.
+Şeridin **Giriş ▸ Özellikler** panelindeki **Çizgi** ve **Dolgu** kutuları o anda elinizde
+olanı gösterir: seçim varsa seçili ilk nesnenin çizgi ve dolgu rengini, yoksa etkin
+katmanınkini — yeni çizilecek nesnenin rengini. Nesne kendi rengini taşımıyorsa kutu
+**Katmandan**, dolgusuzsa **Dolgu yok** yazar.
 
 1. Boyamak istediğiniz nesneleri seçin (seçmeden de başlayabilirsiniz).
-2. Üstteki kutuya (çizgi) ya da alttakine (dolgu) tıklayın. Kutunun yanında renk
-   menüsü açılır: dokuz renk örneği, **Başka bir renk…** (renk seçici),
-   **Katmanın rengi** ve dolgu için **Dolgu yok**.
+2. **Çizgi** ya da **Dolgu** kutusunu açın. Kutunun altında renk listesi açılır: dokuz
+   renk örneği, **Başka bir renk…** (renk seçici), **Katmanın rengi** (dolguda **Katmanın
+   dolgusu**) ve dolgu için **Dolgu yok**.
 3. Bir renge tıklayın. Seçim varsa hemen boyanır; yoksa komut boyanacak nesneleri
    sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 
-Aynı komut **Değiştir → Renk** menüsünde ve araç kutusunda **Stil Kopyala**
-ailesindedir; oradan başlatınca renk komut satırında sorulur.
+Kutular bu komutun tek yoludur: şeritte ayrı bir **Renk** düğmesi yoktur. Rengi yazarak
+vermek için komut satırına `RENK` yazın; renk sorulur. Bir nesnenin renklerini başka
+nesnelere aktarmak için **Giriş ▸ Özellikler ▸ Stil Kopyala** vardır
+([`STİLKOPYALA`](match_style.md)).
 
 Klavyeyle: Tab renk kutularına gelir, yukarı/aşağı ok iki kutu arasında gezer,
 Enter ya da Boşluk menüyü açar; menüdeki renk sırasında sol/sağ ok gezer, Enter

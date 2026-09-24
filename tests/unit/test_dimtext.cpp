@@ -483,10 +483,10 @@ TEST_CASE("BAZÖLÇÜ: her ölçü ilk noktadan, çizgiler stilin aralığıyla 
 TEST_CASE("ZİNCİRÖLÇÜ: hizalı ölçünün doğrultusunda sürer; ölçüler köşelere bağlanır ve izler")
 {
     Rig r;
-    r.run("ÇİZGİ 0,0 3,3");                                // 1
-    r.run("ÇİZGİ 3,3 6,6");                                // 2
+    r.run("ÇİZGİ 0,0 3,3");                                     // 1
+    r.run("ÇİZGİ 3,3 6,6");                                     // 2
     r.run("ÖLÇÜ tur=hizali birinci=0,0 ikinci=3,3 konum=-1,1"); // 3
-    r.run("ZİNCİRÖLÇÜ noktalar=6,6");                      // 4
+    r.run("ZİNCİRÖLÇÜ noktalar=6,6");                           // 4
     const DimensionDef d = r.def(4);
     CHECK_EQ(d.type, DimensionType::Linear);
     CHECK_EQ(d.rotation_udeg, 45'000'000);
@@ -499,7 +499,7 @@ TEST_CASE("ZİNCİRÖLÇÜ: hizalı ölçünün doğrultusunda sürer; ölçüle
 TEST_CASE("BAĞLI ÖLÇÜ: doğrusal ölçü izlerken doğrultusunu korur, yatay dikeye dönmez")
 {
     Rig r;
-    r.run("ÇİZGİ 0,0 10,0");                                  // 1
+    r.run("ÇİZGİ 0,0 10,0");                                       // 1
     r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=10,0 konum=5,-1"); // 2, horizontal
     CHECK_EQ(r.def(2).rotation_udeg, 0);
     // Far to the right and a little up: the line's place now lies BESIDE the

@@ -74,9 +74,10 @@ Kesişim noktası yerleştirildi.
 
 ### Arayüz
 
-**Çizim > Kesişim Noktası** menüsünden ya da araç kutusundaki **Nokta** düğmesini
-basılı tutup karttan seçin. Yöntem `yontem=` ile verilir; verilmezse
-`dogrultu`dur. Komut ne istediğini sırayla sorar ve yazı isteyen her istemde odak
+Şeritte **Çizim ▸ Nokta ve Alım ▸ Kesişim**'e basın ya da **Giriş ▸ Çizim** panelindeki
+**Nokta** düğmesinin okundan **Kesişim Noktası**'nı seçin. Yöntem `yontem=` ile verilir;
+verilmezse `dogrultu`dur; **Kesişim** düğmesinin okunda **Kesişim — iki mesafeden** ve
+**Kesişim — iki doğrudan** hazır durur. Komut ne istediğini sırayla sorar ve yazı isteyen her istemde odak
 komut satırına geçer.
 
 **Bilinen noktalar ekranda kalır.** Uzaklığı ya da doğrultuyu yazarken ilk

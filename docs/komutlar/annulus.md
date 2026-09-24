@@ -42,7 +42,8 @@ HALKA merkez=0,0 ic=5,0 dis=10,0
 
 ### Arayüz
 
-**Çizim ▸ Halka**, ya da araç kutusundaki daire düğmesinin kartından **Halka**.
+**Çizim ▸ Şekil ▸ Halka**, ya da **Giriş ▸ Çizim** panelindeki **Alan** düğmesinin okundan
+**Halka**.
 Merkezi tıklayın, sonra iki çember noktasını.
 
 **İç çember, dış çemberi ararken ekranda kalır.** Yapılan şey iki çemberin

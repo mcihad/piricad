@@ -94,9 +94,10 @@ AYAR core.plan.olcek 5000
 
 ### Arayüz
 
-**Değiştir ▸ Ölçüleri Pafta Ölçeğine Uyarla**: çizimin bütün ölçüleri plan ölçeğine
-uyarlanır. Yalnız bazılarını uyarlamak ya da başka bir ölçek vermek için komut
-satırını kullanın.
+**Açıklama ▸ Ölçü ▸ Pafta Ölçeğine Uyarla**: çizimin bütün ölçüleri plan ölçeğine
+uyarlanır. Yalnız bazılarını uyarlamak için onları seçin: beliren **Ölçü** sekmesindeki
+aynı ada sahip düğme yalnız seçili ölçüleri uyarlar (`ÖLÇÜYENİLE nesneler=…`). Başka bir
+ölçek vermek için komut satırını kullanın.
 
 ### Betik
 
@@ -112,7 +113,7 @@ satırını kullanın.
 
 ### Üçü de aynı
 
-Menü girişi, komut satırı ve betik aynı belgeyi bırakır (`tests/unit/test_dimtext.cpp`,
+Şerit düğmesi, komut satırı ve betik aynı belgeyi bırakır (`tests/unit/test_dimtext.cpp`,
 `ÖLÇÜDÜZENLE KANIT`).
 
 ## Geri alma

@@ -85,7 +85,7 @@ Kapalı şekil kırıldı; açık bir parça kaldı.
 
 ### Arayüz
 
-**Değiştir > Kır**. Nesneyi seçip Enter'a basın, sonra iki noktayı tıklayın.
+**Değiştir ▸ Kes ve Uzat ▸ Kır**. Nesneyi seçip Enter'a basın, sonra iki noktayı tıklayın.
 Nokta yakalama açıkken kırılma yerini mevcut bir kesişime yakalayabilirsiniz.
 
 İkinci nokta aranırken **gidecek parça işaretli çizilir**: birinci nokta ile imleç

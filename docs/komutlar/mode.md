@@ -356,7 +356,7 @@ MOD kural matematik
 MOD kural semt
 ```
 
-**Ayarlar** penceresi (menüde `Düzen > Ayarlar…`, kısayolu **Ctrl+,**) bildirilen her
+**Seçenekler** penceresi (**KentOS CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
 ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
 kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
 üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
@@ -369,8 +369,8 @@ hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
 
 ## Proje Ayarları penceresi
 
-`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **`Dosya ▸ Proje
-Ayarları…`** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
+`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **KentOS CAD ▸ Proje
+Ayarları…** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
 penceredir, çünkü ikinci soruyu soran biri genellikle dosyayı birine vermek
 üzeredir — ve ikisi çoğu zaman aynı anda açık durur.
 
@@ -404,11 +404,11 @@ MOD yakalama_modları varsayilan
 ### Arayüz
 
 Komutu pencerenin altındaki **komut satırına** yazın; sonuç **Transkript** panelinde
-görünür. Arayüzün ayrıcalığı yoktur: menüden yapılan da, komut satırından yazılan da aynı
+görünür. Arayüzün ayrıcalığı yoktur: şeritten yapılan da, komut satırından yazılan da aynı
 komuttur.
 
-**Görünüm** menüsündeki üç kalem ve kısayolları bu komutu çalıştırır; ikinci bir mod
-listesi yoktur:
+Şeridin **Görünüm ▸ Yardımcılar** panelindeki dört düğme ve kısayolları bu komutu
+çalıştırır; ikinci bir mod listesi yoktur:
 
 | Kalem | Kısayol | Gönderdiği komut |
 |---|---|---|
@@ -422,7 +422,7 @@ Yüzey normalinin bir de **basılı tutma** yolu vardır: bir komut nokta bekler
 kapanır. **F10** ise kilidi mandallar. İkisi de aynı ayarı yazar; hangisini
 kullandığınızın komutun gördüğü değere etkisi yoktur.
 
-Menü kalemlerinin işareti değerin kendisinden okunur: komut satırına
+Düğmelerin basılı hâli değerin kendisinden okunur: komut satırına
 `MOD dik_mod evet` yazdığınızda **F8**'e basmışsınız gibi işaret gelir.
 
 F3 yakalamayı kapatırken maskeyi hatırlar; yeniden açtığınızda seçtiğiniz modlar geri

@@ -100,8 +100,8 @@ GERİAL
 ### Arayüz
 
 Nesneleri fareyle seçin (tek tık ya da kutu sürükleyin), sonra **Del** tuşuna basın —
-ya da araç kutusundaki, **Düzen** araç çubuğundaki **Sil** düğmesini, ya da
-**Düzen > Sil** menüsünü kullanın. Dördü de aynı komutu gönderir.
+ya da şeritteki **Sil** düğmesini (**Giriş ▸ Değiştir**, **Değiştir ▸ Sil ve Temizle**)
+kullanın. Hepsi aynı komutu gönderir.
 
 **Del** pencerenin tamamında çalışır: odak tuvalde, katman listesinde ya da öznitelik
 tablosunda olsun fark etmez, silinen hep aynı seçimdir.
@@ -113,7 +113,7 @@ ya da kutu sürükleyin, sonra Enter'a basın; Esc vazgeçer. Seçim yapmayı
 
 #### Silmeden önce onay isteme
 
-**Ayarlar > Genel** altındaki **silme onayı** (`core.duzenleme.silme_onayi`) açıksa
+**Seçenekler ▸ Genel** altındaki **silme onayı** (`core.duzenleme.silme_onayi`) açıksa
 arayüz, silmeden önce kaç nesnenin gideceğini yazan bir pencere gösterir. Pencerenin
 öntanımlı düğmesi **Vazgeç**'tir: bu onay, Del'e yanlışlıkla basan kullanıcı için
 vardır, dolayısıyla düşünmeden basılan bir Enter hiçbir şey silmez.

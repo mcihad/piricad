@@ -13,7 +13,7 @@ listesi ile seçenekler değişir:
 
 | Konu | Nereden açılır | Çalıştırdığı komut |
 |---|---|---|
-| **Çizim** | **Dosya ▸ Dışa Aktar…**, araç çubuğundaki **Dışa Aktar**, öznitelik tablosundaki **Dışa aktar** işareti | [`DIŞAAKTAR`](../komutlar/export.md) |
+| **Çizim** | **KentOS CAD ▸ Dışa Aktar…**, şeritte **Harita ▸ Veri ▸ Dışa Aktar…** ya da **Çıktı ▸ Dosya ▸ Dışa Aktar…**, öznitelik tablosundaki **Dışa aktar** işareti | [`DIŞAAKTAR`](../komutlar/export.md) |
 | **Bir nesnenin köşeleri** | Öznitelikler panelinde nesneye **sağ tık ▸ Koordinatları dışa aktar…** | [`NOKTALAR … yon=yaz nesneler=…`](../komutlar/points.md) |
 | **Bir katmanın stili** | Katman Özellikleri ▸ **Stil ▸ QGIS stiline aktar…** | [`STİLAKTAR`](../komutlar/exportstyle.md) |
 

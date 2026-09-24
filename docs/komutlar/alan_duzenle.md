@@ -85,7 +85,9 @@ ALANDÜZENLE nesneler=1 alan=1300 mod=kose kose=3 nokta=485360,4310258
 
 ### Arayüz
 
-Parseli seçin; **Araçlar ▸ Düzenleme ▸ Alanı düzenle**. Kartta parselin şimdiki alanı
+Parseli seçin; **Araçlar ▸ Düzenleme ▸ Alanı düzenle** (şeritteki **Değiştir ▸ Köşe ▸ Alanı
+Düzenle** ve alan seçiliyken beliren **Alan** sekmesindeki **Alanı Düzenle…** aynı kartı
+açar). Kartta parselin şimdiki alanı
 yazar; `alan` kutusuna hedefi, `mod` listesinden `kenar` ya da `kose` seçin ve
 **Çalıştır**'a basın. Komut "Çekilecek kenarı tıklayın" der; tıklayın, sürükleyin,
 hayalet hedefe oturunca **Enter**. Durum çubuğu ne beklendiğini ve Enter'ın kabul

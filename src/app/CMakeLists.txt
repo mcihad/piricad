@@ -12,10 +12,37 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg Xml PrintSupport N
 
 qt_standard_project_setup()
 
+# ---- the ribbon (`.claude/ui.md` R46) ---------------------------------------
+# SARibbon, from the pinned source `cmake/KentOSCadDependencies.cmake` fetched.
+# THE ONE-FILE AMALGAMATION, not its own build: upstream's CMakeLists installs
+# into the source tree, builds eleven examples unless told otherwise, and sets
+# C++17 at directory scope. `src/SARibbon.cpp` carries every class and its
+# resources inlined, so one static target is the whole library — built with the
+# Article 2.5 floating-point flags like every other TU, its header a SYSTEM
+# include so its warnings are not ours (CLAUDE.md 5.14 is about our warnings,
+# and this is neither our warning nor our file — the libdxfrw reasoning).
+# No frameless window: the frame is the system's (`design.md` §7), so
+# QWindowKit is neither fetched nor enabled.
+FetchContent_GetProperties(saribbon)
+add_library(saribbon STATIC "${saribbon_SOURCE_DIR}/src/SARibbon.cpp"
+                            "${saribbon_SOURCE_DIR}/src/SARibbon.h")
+target_include_directories(saribbon SYSTEM PUBLIC "${saribbon_SOURCE_DIR}/src")
+target_link_libraries(saribbon PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_definitions(saribbon PUBLIC SARIBBON_USE_3RDPARTY_FRAMELESSHELPER=0
+                                           SARIBBON_ENABLE_SNAP_LAYOUT=0)
+set_target_properties(saribbon PROPERTIES AUTOMOC ON CXX_CLANG_TIDY "")
+if(MSVC)
+    target_compile_options(saribbon PRIVATE /fp:precise /W3)
+else()
+    target_compile_options(saribbon PRIVATE -fno-fast-math -ffp-contract=off -w)
+endif()
+
 # Q_OBJECT headers must be listed so AUTOMOC processes them: they live under
 # include/kentos_cad/app/ rather than beside their .cpp, which is the layout the rest
 # of the project uses.
 qt_add_executable(kentos_cad
+    src/about_dialog.cpp
+    src/app_menu.cpp
     src/attribute_panel.cpp
     src/tools_panel.cpp
     src/fields.cpp
@@ -47,6 +74,7 @@ qt_add_executable(kentos_cad
     src/import_wizard.cpp
     src/main.cpp
     src/main_window.cpp
+    src/main_window_ribbon.cpp
     src/map_canvas.cpp
     src/layout_render.cpp
     src/layout_designer.cpp
@@ -63,10 +91,12 @@ qt_add_executable(kentos_cad
     src/settings_dialog.cpp
     src/shell_chrome.cpp
     src/theme.cpp
-    src/title_bar.cpp
+    src/ribbon.cpp
     src/tokens.cpp
-    src/toolbox.cpp
+    src/swatch_row.cpp
 
+    include/kentos_cad/app/about_dialog.hpp
+    include/kentos_cad/app/app_menu.hpp
     include/kentos_cad/app/command_line.hpp
     include/kentos_cad/app/attribute_panel.hpp
     include/kentos_cad/app/datagrid.hpp
@@ -108,11 +138,40 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/shell_chrome.hpp
     include/kentos_cad/app/style_designer.hpp
     include/kentos_cad/app/flow_layout.hpp
-    include/kentos_cad/app/title_bar.hpp
-    include/kentos_cad/app/toolbox.hpp
+    include/kentos_cad/app/ribbon.hpp
+    include/kentos_cad/app/swatch_row.hpp
 )
 
 target_include_directories(kentos_cad PRIVATE include)
+
+# ---- what the About window shows, and Qt's own Turkish ------------------------
+# THE NOTICE AND THE LICENCES, as the repository carries them: the About window
+# reads the third-party list from NOTICE rather than from a second copy of it
+# in C++ (CLAUDE.md 5.12 makes NOTICE the one record of what is linked).
+qt_add_resources(kentos_cad "kentos_about"
+    PREFIX "/about"
+    BASE "${CMAKE_SOURCE_DIR}"
+    FILES
+        "${CMAKE_SOURCE_DIR}/NOTICE"
+        "${CMAKE_SOURCE_DIR}/LICENSE"
+        "${CMAKE_SOURCE_DIR}/LICENSES/AGPL-3.0-or-later.txt")
+
+# QT'S OWN STRINGS IN TURKISH: the standard buttons of every message box, file
+# and colour dialog (`Tamam`, `İptal`, `Evet`, `Hayır`, `Kaydet`) come from Qt's
+# catalogue, not from ours. Embedded when this Qt carries it, so the program
+# does not depend on where an installer puts Qt's translations; `main.cpp` falls
+# back to Qt's own translations directory when it is not embedded.
+set(_kentos_qt_translations "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS}")
+if(EXISTS "${_kentos_qt_translations}/qtbase_tr.qm")
+    qt_add_resources(kentos_cad "kentos_qt_tr"
+        PREFIX "/i18n/qt"
+        BASE "${_kentos_qt_translations}"
+        FILES "${_kentos_qt_translations}/qtbase_tr.qm")
+else()
+    message(STATUS "KentOSCad: Qt's Turkish catalogue (qtbase_tr.qm) is not in "
+                   "${_kentos_qt_translations}; the standard dialog buttons will read in "
+                   "the language of whatever catalogue Qt finds at run time")
+endif()
 target_compile_definitions(kentos_cad PRIVATE
     KENTOS_VERSION="${PROJECT_VERSION}"
     KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
@@ -129,6 +188,7 @@ target_link_libraries(kentos_cad PRIVATE
     kentos_script
     kentos_ai
     kentos_flags
+    saribbon
     Qt6::Core
     Qt6::Gui
     Qt6::PrintSupport

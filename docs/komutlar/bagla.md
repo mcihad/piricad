@@ -108,7 +108,8 @@ KÖŞETAŞI nesne=1 kose=3 nokta=20,20
 
 ### Arayüz
 
-Sağ panelde **Araçlar ▸ Etiketleme ▸ Yazıyı nesneye bağla**. Bağlanacak yazıları seçin
+Sağ panelde **Araçlar ▸ Etiketleme ▸ Yazıyı nesneye bağla** (şeritteki **Açıklama ▸ Etiket
+▸ Bağla** ve yazı seçiliyken beliren **Yazı** sekmesindeki **Bağla** aynı kartı açar). Bağlanacak yazıları seçin
 ya da kapsamı **Seçili** bırakıp aracın seçtirmesini bekleyin. **kaynak** alanının
 yanındaki nişan düğmesine basın: işaretçi seçim işaretçisine döner, durum satırı
 "Sahneden bir nesne tıklayın" der; çizgiye tıklayın, kimliği alana yazılır. (Klavyeyle:

@@ -80,7 +80,8 @@ Aplikasyon — istasyon 485320,000 / 4310220,000
 
 ### Arayüz
 
-`APLİKASYON` yazın ve istasyonu tıklayın; bağlama isterseniz onu da. Liste sağ
+Şeritte **Harita ▸ Jeodezi ▸ Aplikasyon**'a basın ya da `APLİKASYON` yazın ve istasyonu
+tıklayın; bağlama isterseniz onu da. Liste sağ
 paneldeki **Geçmiş** sekmesinde durur, son satırı durum çubuğunda.
 
 ### Betik

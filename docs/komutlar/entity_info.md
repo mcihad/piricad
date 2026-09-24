@@ -87,8 +87,8 @@ bir kimlik kendi satırında söylenir ve komut kalanlarla devam eder.
 
 ### Arayüz
 
-**Harita → Nesne Bilgisi**, ya da araç kolonundaki ölçüm ailesinde **Nesne Bilgisi**
-(ölçüm düğmesini basılı tutunca açılan listede). Araç kollanır, tuvalde nesneleri
+Şeritte **Harita ▸ Sorgu ▸ Nesne Bilgisi** (bir alan ya da blok seçiliyken beliren **Alan**
+ve **Blok** sekmelerinde de vardır). Araç kollanır, tuvalde nesneleri
 seçer, `Enter`'a basarsınız. Cevap sözle geldiği için **komut günlüğü paneli
 kendiliğinden açılır** — cevabın kapalı bir çekmeceye yazılmaması için.
 

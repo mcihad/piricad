@@ -105,7 +105,8 @@ alma adımı. Bu yüzden büyük betikler hızlı çalışır ve tek hamlede ger
 
 ## Komutu iptal etmek
 
-Girdi bekleyen bir komut **Esc**, sağ tık veya araç kutusundaki **Seç** düğmesiyle
+Girdi bekleyen bir komut **Esc**, sağ tık veya şeritteki **Seç** düğmesiyle (her sekmenin
+ilk öğesi)
 iptal edilir. Hiçbir komut çalışmıyorken **Esc** seçimi temizler. Hiçbir şey çizilmeden iptal edilen komut sanki hiç çalışmamış gibidir:
 geri alma adımı bırakmaz, günlüğe de yazılmaz. Transkriptte görürsünüz:
 

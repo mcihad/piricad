@@ -127,8 +127,8 @@ kurar ve değeri yerine koyar.
 
 ### Arayüz
 
-**Dosya > Dışa Aktar…** menüsü, **Dosya** araç çubuğundaki **Dışa Aktar** düğmesi
-ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti aynı
+**KentOS CAD ▸ Dışa Aktar…**, şeritteki **Dışa Aktar…** (**Harita ▸ Veri**, **Çıktı ▸
+Dosya**) ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti aynı
 [Dışa Aktar](../baslangic/disa-aktarma.md) penceresini açar: solda yazılabilen
 biçimler, sağda dosya, altta pencerenin çalıştıracağı `DIŞAAKTAR` satırı. Pencere
 yalnızca argümanları toplar; dosyayı komut yazar.

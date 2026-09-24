@@ -96,7 +96,8 @@ ALANAÇEVİR
 ### Arayüz
 
 Çevrilecek çizgileri seçin — kutu sürükleyerek hepsini birden alabilirsiniz — sonra
-komut satırına `ALANAÇEVİR` yazın. Kimlik yazmanız gerekmez; komut seçimi kullanır.
+şeritte **Değiştir ▸ Birleştir ▸ Alana Çevir**'e basın ya da komut satırına `ALANAÇEVİR`
+yazın. Kimlik yazmanız gerekmez; komut seçimi kullanır.
 
 Arayüzün ayrıcalığı yoktur: seçip çevirdiğiniz alan ile komut satırına yazdığınız
 alan aynı komuttur ve komut günlüğüne aynı satır olarak düşer.

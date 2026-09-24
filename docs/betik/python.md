@@ -185,7 +185,7 @@ de aynı kaynağı okur.
 
 ## Editör
 
-**Pencere > Python Konsolu** panelindeki istem bir kod editörüdür:
+**Görünüm ▸ Pencereler ▸ Python Konsolu** panelindeki istem bir kod editörüdür:
 
 | Tuş | Ne yapar |
 |---|---|
@@ -402,7 +402,7 @@ ve **İptal** düğmesini ekleyen çalışma Faz 2'dedir; motor tarafı hazırd�
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK olcum.py` |
-| Menüden | **Dosya > Betik Çalıştır…** veya **Ctrl+R** |
+| Arayüzden | **KentOS CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
 | Açılışta | `kentos_cad --betik olcum.py` |
 | Make ile | `make run-script SCRIPT=olcum.py` |
 

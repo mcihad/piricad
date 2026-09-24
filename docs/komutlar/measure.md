@@ -85,7 +85,7 @@ Toplam uzunluk: 70,000 m   (2 kenar)
 
 ### Arayüz
 
-Sol araç sütununda **Ölç** düğmesine basın (ya da `ÖLÇ` yazın) ve noktaları sırayla
+Şeritte **Harita ▸ Ölçüm ▸ Ölç**'e basın (ya da `ÖLÇ` yazın) ve noktaları sırayla
 tıklayın. İmleç hareket ettikçe ölçülen hat ve imlece giden kenar çizilir; biten her
 kenarın üstünde uzunluğu, imlecin yanında o kenarın uzunluğu, açısı ve **toplam**
 yazar. Yakalama açıkken noktalar mevcut köşelere oturur, yani parsel köşeleri

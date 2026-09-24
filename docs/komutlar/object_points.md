@@ -83,7 +83,8 @@ NESNENOKTALARI nesneler=1 tur=orta_noktalar
 
 Komut bir ajan içindir; arayüzde karşılığı nesneye tıklarken çalışan **yakalamadır**:
 merkez, uç, orta nokta ve çeyrek yakalamaları aynı noktaları verir. Komutun kendisi
-**Sorgu → Nesne Noktaları** menüsündedir ya da **Ctrl+K** ile bulunur: nesne seçili
+şeritte **Harita** sekmesinin sonundaki **Diğer** listesindedir ya da **Ctrl+K** ile
+bulunur: nesne seçili
 değilse hangi nesnelerin noktalarının isteneceğini sorar; seçiliyse onları okur.
 
 ### Betik

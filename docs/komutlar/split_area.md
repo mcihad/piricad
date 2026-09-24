@@ -72,7 +72,8 @@ Alana göre ifraz:
 
 ### Arayüz
 
-**Kadastro ▸ Alana Göre İfraz** menüsünü tıklayın ya da `ALANİFRAZ` yazın. Parsel
+Şeritte **Kadastro ▸ Parsel ▸ Alana Göre İfraz**'a basın (kapalı bir alan seçiliyken
+beliren **Alan** sekmesinde de vardır) ya da `ALANİFRAZ` yazın. Parsel
 seçili değilse komut hangi parselin ifraz edileceğini sorar: parsele tıklayıp
 Enter'a basın. Sonra yön çizgisinin iki ucunu tıklayın ve alanı girin.
 

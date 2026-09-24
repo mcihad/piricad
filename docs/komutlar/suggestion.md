@@ -155,7 +155,7 @@ gerektiğini söyler:
 
 ```text
 Bir öneri ancak öneri kartındaki düğmeyle uygulanır ya da reddedilir; komut satırı
-kararı veremez. Kartı görmek için Pencere ▸ Yapay Zeka'yı açın.
+kararı veremez. Kartı görmek için Görünüm ▸ Pencereler ▸ Yapay Zeka'yı açın (Ctrl+Shift+K).
 ```
 
 ### Arayüz
@@ -172,8 +172,8 @@ Satır dökümde **kalır**: öneri karara bağlandıktan sonra da orada durur, 
 çizime bakarken gelen bir öneri sessiz bir sürpriz olmamalıdır.
 
 **Öneri kartı** — kararın verildiği yer — [Yapay Zeka panelindedir](../yapay-zeka/sohbet.md)
-ve öneriyi açan cevabın altında görünür. Panel **Pencere ▸ Yapay Zeka**, **Analiz ▸
-Yapay Zeka**, **Ctrl+Shift+A** ya da araç çubuğundaki simgeyle açılır.
+ve öneriyi açan cevabın altında görünür. Panel şeritte **Analiz ▸ Yapay zekâ ▸ Yapay Zeka**
+ya da **Görünüm ▸ Pencereler ▸ Yapay Zeka** ile, klavyeden **Ctrl+Shift+K** ile açılır.
 
 Kartta uygulanacak komut satırları olduğu gibi yazılıdır; yanında koordinatların hangi
 **tutamaklardan** geldiği, isteyenin adı ve varsa modelin kimliği durur. Çizim öneriden
@@ -236,7 +236,7 @@ soracak kimse olmadığı için ikisini de yazın.
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Bir öneri ancak öneri kartındaki düğmeyle uygulanır ya da reddedilir; komut satırı kararı veremez. Kartı görmek için Pencere ▸ Yapay Zeka'yı açın.` | `uygula` ya da `reddet` komut satırından veya betikten çağrıldı | Kararı kartta verin; komut yalnız kararın sonucunu taşır |
+| `Bir öneri ancak öneri kartındaki düğmeyle uygulanır ya da reddedilir; komut satırı kararı veremez. Kartı görmek için Görünüm ▸ Pencereler ▸ Yapay Zeka'yı açın (Ctrl+Shift+K).` | `uygula` ya da `reddet` komut satırından veya betikten çağrıldı | Kararı kartta verin; komut yalnız kararın sonucunu taşır |
 | `Tanınmayan işlem: 'parlat'. İşlemler: uygula / reddet / durum / listele` | `islem` dört sözcükten biri değil (komut satırında sorulan işlem) | Dört sözcükten birini yazın |
 | `'core.suggestion': 'islem' için tanınmayan değer 'parlat'. Kabul edilenler: uygula / reddet / durum / listele` | Aynı hata, betikten geldiğinde: veri yolu gövde çalışmadan önce yakalar | Dört sözcükten birini yazın |
 | `'uygula' için öneri kimliği gerekir: oneri=<kimlik>. Bekleyenleri ÖNERİ islem=listele ile görün.` | `uygula`, `reddet` ya da `durum` kimliksiz çağrıldı | `oneri=<kimlik>` ekleyin |

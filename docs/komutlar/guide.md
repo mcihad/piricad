@@ -115,6 +115,9 @@ KILAVUZ yon=yatay deger=4310220500 sil=evet
 
 Vazgeçmek için cetvele **geri bırakın** — kılavuz konmaz.
 
+Şeritteki **Çizim ▸ Çizgi ▸ Kılavuz** düğmesinin okunda iki satır vardır: **Cetvel
+Kılavuzu** (`KILAVUZ`) ve **Açılı Cetvel Kılavuzu** (`KILAVUZ yon=45g`).
+
 **Açılı kılavuz için** komutu açıyla çalıştırın: `KILAVUZ yon=45g` yazın, program
 kılavuzun geçtiği noktayı sorar, tuvalde tıklarsınız. Yakalama açıktır, yani
 kılavuzu mevcut bir parsel köşesinden geçirebilirsiniz. Cetvelden sürüklemek

@@ -71,7 +71,8 @@ EŞYÜKSELTİ aralik=500
 
 ### Arayüz
 
-Kotlu bir nokta listesi okuyun, sonra `EŞYÜKSELTİ aralik=500` yazın. Eğriler
+Kotlu bir nokta listesi okuyun, sonra şeritte **Harita ▸ Arazi ▸ Eşyükselti**'ye basın
+(aralığı sorar) ya da `EŞYÜKSELTİ aralik=500` yazın. Eğriler
 kendi katmanına düşer; **Katmanlar** panelinden biçimlendirebilir ya da
 kapatabilirsiniz.
 

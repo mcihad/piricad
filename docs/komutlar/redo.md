@@ -49,8 +49,7 @@ Yinelendi: İki veya daha fazla nokta arasında doğru parçaları çizer.
 
 ### Arayüz
 
-**Ctrl+Shift+Z**, **Düzen** araç çubuğundaki **Yinele** düğmesi veya
-**Düzen > Yinele** menüsü.
+**Ctrl+Shift+Z** ya da sekme satırının sağındaki hızlı erişim düğmelerinden **Yinele**.
 Klavye düzeninize göre **Ctrl+Y** de çalışabilir.
 
 Yinelenecek bir şey olmadığında düğme ve menü öğesi pasifleşir.

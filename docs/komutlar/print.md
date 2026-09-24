@@ -112,7 +112,8 @@ YAZDIR pencere=485300,4310200 pencere=485400,4310280 dosya=gizli.pdf sifre=2026 
 
 ### Arayüz
 
-Araç çubuğunda **Yazdır** simgesine (Ctrl+P) basın: tuvalin ortasında, varsayılan
+Hızlı erişim satırındaki **Yazdır** simgesine (yazıcı; **Ctrl+P**) ya da şeritte **Çıktı ▸
+Yazdır ▸ Yazdır**'a basın: tuvalin ortasında, varsayılan
 profilin kâğıt oranında bir **yazdırma çerçevesi** açılır, dışı grileşir. Haritayı
 sürükleyip tekerlekle yaklaşarak çerçeveye ne gireceğini seçin; çerçevenin
 ortasındaki **+** işareti kâğıdın merkezini, yanındaki sayılar o noktanın `Sağa (Y)`

@@ -1049,11 +1049,12 @@ KENTOS_SETTING(olcu_stili)
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
-        .summary  = "ÖLÇÜ, ZİNCİRÖLÇÜ, BAZÖLÇÜ ve LİDER'in stil= verilmediğinde kullandığı " // ui-label
-                    "ölçü stili: ok, uzatma çizgileri, yazı ve ondalıklar ondan gelir. "
-                    "Stiller ölçü stili kataloğundadır; ÖLÇÜSTİLİ listeler. Paftanın "
-                    "görünüşüdür ve dosyayla birlikte gider, bu yüzden proje kapsamındadır.",
-        .section  = "Plot ve Çıktı", // ui-label
+        .summary =
+            "ÖLÇÜ, ZİNCİRÖLÇÜ, BAZÖLÇÜ ve LİDER'in stil= verilmediğinde kullandığı " // ui-label
+            "ölçü stili: ok, uzatma çizgileri, yazı ve ondalıklar ondan gelir. "
+            "Stiller ölçü stili kataloğundadır; ÖLÇÜSTİLİ listeler. Paftanın "
+            "görünüşüdür ve dosyayla birlikte gider, bu yüzden proje kapsamındadır.",
+        .section = "Plot ve Çıktı", // ui-label
     };
 }
 

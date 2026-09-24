@@ -23,7 +23,7 @@ Yapıştırılan nesneler öntanımlı olarak **sol alt köşelerinden** göster
 konur. Bir yapının köşesini komşu parselin köşesine oturtmak gibi belli bir nokta
 gerekiyorsa kopyalarken **taban noktası** verin: `taban=<nokta>` ya da
 `tabanli=evet` (nesneleri seçtikten sonra sorulur). Yapıştırırken o nokta tam
-gösterdiğiniz yere gelir. Düzen menüsündeki **Taban Noktasıyla Kopyala** bunu yapar.
+gösterdiğiniz yere gelir. Şeritteki **Giriş ▸ Pano ▸ Taban Noktasıyla Kopyala** bunu yapar.
 
 ## Pano nerede
 
@@ -89,7 +89,7 @@ PANOYAKOPYALA nesneler=1 taban=40,30
 
 ### Arayüz
 
-**Düzen > Panoya Kopyala** ya da **Ctrl+C**; araç çubuğunda da bir düğmesi var.
+**Giriş ▸ Pano ▸ Panoya Kopyala** ya da **Ctrl+C**.
 Önce nesneleri seçebilirsiniz; seçim boşsa komut hangi nesnelerin kopyalanacağını
 sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 

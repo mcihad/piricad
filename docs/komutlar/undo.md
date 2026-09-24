@@ -51,8 +51,7 @@ Arka arkaya birkaç kez yazarak birkaç işlem geri gidebilirsiniz.
 
 ### Arayüz
 
-**Ctrl+Z**, **Düzen** araç çubuğundaki **Geri Al** düğmesi veya **Düzen > Geri Al**
-menüsü.
+**Ctrl+Z** ya da sekme satırının sağındaki hızlı erişim düğmelerinden **Geri Al**.
 
 **Çizerken** — [`ÇİZGİ`](line.md), [`ÇOKLUÇİZGİ`](polyline.md), [`ALAN`](area.md) ya da
 [`SPLINE`](spline.md) nokta beklerken — Ctrl+Z ve **Geri Al** komutu değil yalnız **son

@@ -206,7 +206,7 @@ private:
                    "adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden "
                    "kapanmaz.",
         .group   = "Geometri",
-        .icon    = "alan",
+        .icon    = "alan_uret",
         .applies = Applies::Lines | Applies::Faces | Applies::Curves,
         .params =
             {

@@ -81,8 +81,8 @@ DÖNÜŞTÜR hedef=EPSG:5254
 
 ### Arayüz
 
-**Harita → Dönüştür** menüsü ya da komut satırından `DÖNÜŞTÜR hedef=EPSG:5254`.
-Menüden başlatıldığında komut hedef sistemi sorar ve veri paketindeki TM 3° dilimlerini
+Şeritte **Harita ▸ Jeodezi ▸ Dönüştür** ya da komut satırından `DÖNÜŞTÜR hedef=EPSG:5254`.
+Şeritten başlatıldığında komut hedef sistemi sorar ve veri paketindeki TM 3° dilimlerini
 (`TUREF/TM27` … `TUREF/TM45`) önerir; listede olmayan bir EPSG kodu ya da PROJ
 tanımı da yazılabilir. Durum çubuğundaki koordinat sistemi okuması dönüşümden sonra
 yeni sistemi gösterir.

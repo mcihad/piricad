@@ -49,7 +49,7 @@ private:
         .summary = "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne "
                    "bundan sonra tek başına taşınır.",
         .group         = "Etiketleme",
-        .icon          = "yazi",
+        .icon          = "bag_coz",
         .applies       = Applies::Texts,
         .params        = {},
         .output        = OutputShape::InPlace,

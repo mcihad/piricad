@@ -67,6 +67,20 @@ Currently linked
                           nothing else. Only the C++ port under CPP/ is used;
                           the C#, Delphi and DLL trees are not compiled.
 
+  SARibbon                MIT                   2.9.5     a21d30c2
+                          The ribbon the shell's commands are laid out on
+                          (.claude/ui.md R46): the tab bar, the panels, the
+                          buttons, the galleries and the contextual tabs.
+                          Copyright (c) 2020 czyt1988; the MIT text was read in
+                          the pinned checkout and is GPLv3-compatible. Built from
+                          upstream's one-file amalgamation (src/SARibbon.cpp and
+                          src/SARibbon.h, resources inlined) as one static target
+                          inside /src/app, with the Article 2.5 floating-point
+                          flags and its header as a SYSTEM include; without the
+                          frameless helper (the window frame is the system's) and
+                          without snap layouts. Fetched by FetchContent at the
+                          pinned commit, populate-only, like libdxfrw.
+
   libdxfrw                GPL-2.0-or-later      1.0.1+    92d7466e
                           Reads and writes AutoCAD DXF behind kentos_cad/io/dxf.hpp
                           — the library .claude/io.md R13 names for "DXF is

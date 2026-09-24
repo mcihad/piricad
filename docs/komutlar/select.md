@@ -246,8 +246,8 @@ Harita alanında hiçbir komut çalışmıyorken sol fare tuşu seçim yapar:
 | **Ctrl** + tık/sürükle | Seçimden **çıkarır** |
 | **Esc** | Seçimi temizler |
 
-Menüden: **Düzen > Tümünü Seç** (**Ctrl+A**) ve **Düzen > Seçimi Temizle**
-(**Ctrl+Shift+A**).
+Şeritte her sekmenin ilk öğesi olan **Seç** düğmesinin okunda **Tümünü Seç** (**Ctrl+A**)
+ve **Seçimi Temizle** (**Ctrl+Shift+A**) vardır.
 
 Seçili nesneler tuvalde kalın ve renkli çizilir. Sürükleme sırasında kutunun kendisi
 de görünür: pencere kutusu düz çerçeveli, kesen kutu kesik çerçevelidir.

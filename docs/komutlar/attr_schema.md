@@ -85,11 +85,12 @@ Kısaltmayla aynı iş:
 
 **Öznitelikler** panelinin **Şema** sayfası aynı sütunları bir tabloda gösterir:
 `Kimlik`, `Ad`, `Tür`, `Ayrıntı`, `Zorunlu` ve `Açıklama`. Panel kapalıysa **Görünüm ▸
-Paneller ▸ Öznitelikler** ile açılır; yeni sütun eklemek de o sayfadadır ve her
+Pencereler ▸ Öznitelikler** ile açılır; yeni sütun eklemek de o sayfadadır ve her
 düzenlemesini [`SÜTUN`](column.md) komutuyla yapar.
 
-Komutun kendisini çalıştırmak için **Ctrl+K** ile komut aramayı açıp `ÖZNİTELİKŞEMASI`
-yazın; ad komut satırına yerleşir, **Enter** çalıştırır.
+Komutun kendisini çalıştırmak için şeritte **Harita** sekmesinin sonundaki **Diğer**
+listesinden **Öznitelik Şeması**'nı seçin ya da **Ctrl+K** ile komut aramayı açıp
+`ÖZNİTELİKŞEMASI` yazın; ad komut satırına yerleşir, **Enter** çalıştırır.
 
 ### Betik
 

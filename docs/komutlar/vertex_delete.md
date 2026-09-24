@@ -92,8 +92,7 @@ KÖŞESİL nesne=1 2 kaynak=10,5
 
 ### Arayüz
 
-Sol araç sütununda **köşe ailesinin** düğmesini basılı tutun ya da sağ tıklayın ve
-**Köşe Sil**'i seçin; aynı araç **Değiştir → Köşe Sil** menüsündedir.
+Şeritte **Değiştir ▸ Köşe ▸ Köşe Sil**'e basın.
 
 1. Silinecek köşeye tıklayın. Nesne de bu tıklamayla seçilir; köşe hemen silinir.
 2. Araç açık kalır: sıradaki köşeye tıklayarak devam edebilirsiniz, Esc bırakır.

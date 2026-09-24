@@ -53,7 +53,8 @@ DİLİM merkez=0,0 baslangic=10,0 bitis=0,10
 
 ### Arayüz
 
-**Çizim ▸ Daire Dilimi**. Merkezi tıklayın, sonra ilk kenarı — kılavuz o yarıçapın
+**Çizim ▸ Şekil ▸ Daire Dilimi** (ya da **Giriş ▸ Çizim** panelindeki **Alan** düğmesinin
+okundan). Merkezi tıklayın, sonra ilk kenarı — kılavuz o yarıçapın
 çemberini gösterir — sonra ikinci kenarı; kılavuz artık süpürülecek yayı çizer.
 
 ### Betik

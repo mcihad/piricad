@@ -119,7 +119,7 @@ UÇUCA nesne=1 2 cakisma=reddet
 
 ### Arayüz
 
-**Değiştir > Uç Uca Ekle**. Çizgileri seçip Enter'a basın. Önce seçtiğiniz nesne
+**Değiştir ▸ Birleştir ▸ Uç Uca Ekle**. Çizgileri seçip Enter'a basın. Önce seçtiğiniz nesne
 yönü, katmanı ve öznitelikleri verir; transkript, kapatılan boşlukları ve farklı
 olan katman ve öznitelikleri yazar.
 

@@ -123,9 +123,9 @@ boşluğu denemek için önce yakınlaşın.
 
 ### Arayüz
 
-Sol araç sütununda **alan ailesinin** düğmesini (Dikdörtgen, Çokgen, Tarama) basılı
-tutun ya da sağ tıklayın ve **Sınır Bul**'u seçin; aynı araç **Çizim → Sınır Bul**
-menüsündedir.
+Şeritte **Çizim ▸ Tarama ▸ Sınır Bul**'a basın ya da **Giriş ▸ Çizim** panelindeki
+**Tarama** düğmesinin okundan **Sınır Bul**'u seçin (bir tarama seçiliyken beliren
+**Tarama** sekmesinde de vardır).
 
 1. İmleci bir bölgenin içine götürün. İmlecin bulunduğu bölge vurgulanır, adaları
    delik olarak boş bırakılır ve alanı imlecin yanında yazar — tıklamanın çizeceği

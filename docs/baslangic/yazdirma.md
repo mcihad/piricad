@@ -6,8 +6,9 @@ profilleri ayarlamayı ve şifreli PDF almayı bileceksiniz.
 
 ## İki adım: önce alanı seçin, sonra yazdırın
 
-Araç çubuğundaki **Yazdır** simgesi (Ctrl+P, Kaydet'in sağında) tek başına
-yazdırmaz; önce **nereyi** yazdıracağınızı sorar.
+Hızlı erişim satırındaki **Yazdır** simgesi (yazıcı; **Ctrl+P**, Kaydet'in sağında) ve
+şeritteki **Çıktı ▸ Yazdır ▸ Yazdır** tek başına yazdırmaz; önce **nereyi**
+yazdıracağınızı sorar. Yazıcının sağındaki ok çizimin çıktı yerleşimlerini listeler.
 
 **Birinci basış** tuvalin ortasında bir **yazdırma çerçevesi** açar. Çerçeve
 varsayılan profilin kâğıdı kadar bir dikdörtgendir, köşelerinde **L** işaretleri
@@ -100,7 +101,7 @@ profil söyler.
 
 Bir **profil** adlandırılmış bir kâğıttır: kâğıt boyu, yön, çözünürlük, kenar
 boşluğu. `Seçenekler ▸ Plot ve Çıktı` sayfasının başındaki tabloda durur; `●` olan
-varsayılandır ve araç çubuğundaki Yazdır onu kullanır. Ekleme, silme ve varsayılan
+varsayılandır ve hızlı erişimdeki Yazdır onu kullanır. Ekleme, silme ve varsayılan
 yapma [`YAZDIRMAPROFİLİ`](../komutlar/print_profile.md) sayfasında anlatılır.
 
 Yazdır simgesinin yanındaki küçük ok profilleri listeler: birine basmak **o
@@ -124,4 +125,4 @@ Dosyanın yolu ayarlar sayfasının altında yazılıdır.
 - [`YAZDIR`](../komutlar/print.md) — komutun bütün parametreleri
 - [`YAZDIRMAPROFİLİ`](../komutlar/print_profile.md) — profiller
 - [Dışa Aktar penceresi](disa-aktarma.md) — çizimi başka bir biçime yazma
-- [Arayüz](arayuz.md) — araç çubuğu ve durum çubuğu
+- [Arayüz](arayuz.md) — şerit, hızlı erişim ve durum çubuğu

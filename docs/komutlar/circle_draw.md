@@ -145,15 +145,16 @@ DAİRE 485300,4310200 @50,0
 
 ### Arayüz
 
-Sol paletteki **daire** aracına basın ya da komut satırına `DAİRE` yazın; ikisi aynı
+Şeritte **Giriş ▸ Çizim ▸ Daire**'ye (ya da **Çizim ▸ Şekil ▸ Daire**'ye) basın ya da
+komut satırına `DAİRE` yazın; ikisi aynı
 komutu gönderir. Önce merkeze, sonra çember üzerinde bir yere tıklayın. İki tıklama
 arasında merkezden imlecinize kesikli bir kılavuz uzanır: göreceğiniz uzunluk
 yarıçaptır.
 
-Öteki üç yöntem aynı düğmenin **kartında**: düğmeyi basılı tutun ya da köşesindeki
-işarete tıklayın. Kartta **Daire — çapın iki ucu**, **Daire — üç nokta** ve
-**Daire — iki doğruya teğet** vardır; aynı karttaki **Elips** ve **Halka** ayrı
-şekillerdir ve artık kendi ikonlarını taşırlar.
+Öteki üç yöntem aynı düğmenin **okundaki** listededir (odak düğmedeyken **↓** ile de
+açılır): **Daire — çapın iki ucu**, **Daire — üç nokta** ve **Daire — iki doğruya
+teğet**. **Elips** ve **Halka** ayrı şekillerdir ve kendi simgeleriyle kendi yerlerinde
+dururlar: **Giriş ▸ Çizim ▸ Elips** ve **Alan** düğmesinin okunda **Halka**.
 
 **İki doğruya teğet**te (`ttr`) birinci doğru, ikinci doğruyu çizerken ekranda
 kalır; yarıçapı yazarken iki doğru da görünür. Yarıçaptan sonra dairenin hangi

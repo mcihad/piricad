@@ -136,8 +136,9 @@ Sorgunun gündelik arayüz karşılığı **Öznitelikler** panelidir: tablo sat
 süzülen satırları seçime çevirir ve seçim sayısını durum çubuğunda gösterir
 ([Öznitelik tablosu](../veri/oznitelik-tablosu.md)).
 
-Komutun kendisini arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp `SORGULA`
-yazın: ad komut satırına yerleşir, parametreleri yazıp **Enter**'a basarsınız. Yanıt
+Komutun kendisini arayüzden çalıştırmak için şeritte **Harita ▸ Sorgu ▸ Sorgula**'ya basın
+ya da **Ctrl+K** ile komut aramayı açıp `SORGULA` yazın: ad komut satırına yerleşir,
+parametreleri yazıp **Enter**'a basarsınız. Yanıt
 komut satırının üstündeki döküm alanında görünür.
 
 Eşleşen nesneleri ekranda **seçili** hâle getirmek `SORGULA`'nın işi değildir; onu

@@ -114,9 +114,8 @@ Aynı üç nokta, başka bir sözleşme. `core.aci.birim` bir **proje** ayarıd�
 
 ### Arayüz
 
-**Harita → Açı Ölç**, ya da araç kolonundaki ölçüm ailesinde **Açı Ölç** (artık
-kendi ikonunu taşıyor; eskiden `ÖLÇ` ile aynı cetveli kullanıyordu). Araç
-kollanır; tepeye, sonra birinci kola, sonra ikinci kola tıklarsınız.
+Şeritte **Harita ▸ Ölçüm ▸ Açı Ölç** (kendi simgesi vardır; eskiden `ÖLÇ` ile aynı
+cetveli kullanıyordu). Araç kollanır; tepeye, sonra birinci kola, sonra ikinci kola tıklarsınız.
 
 **Üçüncü tıklamaya kadar ölçtüğünüz açı ekranda durur.** Birinci kol yerinde
 kalır, imlece ikinci kol uzanır, ve tepede ikisi arasındaki **süpürme bir yay

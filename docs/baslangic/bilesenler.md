@@ -14,7 +14,8 @@ aynı renklerde çizilir; bir pencerede öğrendiğiniz kural hepsinde geçerlid
 ## Ortak kurallar
 
 - **Üç boy vardır:** 24, 30 ve 36 piksel. Formlarda ve iletişim pencerelerinde
-  denetimler 30 piksel yüksekliğindedir; araç çubuğu ve satır içi eylemler 24, vurgulu
+  denetimler 30 piksel yüksekliğindedir; panel başlıklarındaki simge düğmeleri ve satır içi
+  eylemler 24, vurgulu
   eylemler 36.
 - **Köşe yarıçapı 4 piksel**, kenar çizgisi tema renginden gelir. Köşesi tam yuvarlak
   olan tek şey çiplerdir.

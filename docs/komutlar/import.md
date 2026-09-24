@@ -212,8 +212,8 @@ okunmadığı sessizce geçmez.
 
 ### Arayüz
 
-**Dosya > İçe Aktar…** menüsü veya **Dosya** araç çubuğundaki **İçe Aktar**
-düğmesi **iki adımlı içe aktarma sihirbazını** açar.
+**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **iki adımlı içe
+aktarma sihirbazını** açar.
 
 **1 · DOSYA.** Sayfanın en üstünde ne olacağı yazar: dosya önce yalnızca okunur,
 çizime hiçbir şey eklenmez. Yolu yazın ya da **Gözat…** ile seçin. Sayfa dosyanın

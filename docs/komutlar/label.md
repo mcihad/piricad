@@ -222,7 +222,9 @@ KÖŞETAŞI nesne=1 kose=3 nokta=485340,4310240
 
 ### Arayüz
 
-Katmanlar panelinde katmana **sağ tık → Özniteliklerden etiketle…**, biçimi yazın.
+Katmanlar panelinde katmana **sağ tık → Özniteliklerden etiketle…**, biçimi yazın. Şeritteki
+**Açıklama ▸ Etiket ▸ Etiket** (**Giriş ▸ Açıklama**'da ve **Kadastro ▸ Yazım**'da da vardır)
+aynı komutu başlatır ve katmanı ile biçimi sorar.
 
 ### Betik
 

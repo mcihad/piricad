@@ -51,7 +51,7 @@ SPLINE noktalar=40,0 50,10 60,0 50,-10 derece=2 kapali=evet
 
 ### Arayüz
 
-**Çizim ▸ Spline**. Kontrol noktalarını sırayla tıklayın, bitirmek için Enter.
+**Giriş ▸ Çizim ▸ Spline** (ya da **Çizim ▸ Çizgi ▸ Spline**). Kontrol noktalarını sırayla tıklayın, bitirmek için Enter.
 
 **Yanlış bir kontrol noktasını geri almak.** Çizerken **⌫** (Backspace) ya da **Ctrl+Z**'ye
 basın, veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur). Yalnız **son

@@ -4,9 +4,9 @@ Klavyeden hızlı çalışmak isteyen kullanıcı için; bu sayfayı bitirdiğin
 dört ayrı biçimde girebilecek, satır içi hesap yapabilecek ve hata mesajlarını
 çözebileceksiniz.
 
-Komut satırı harita alanının hemen altındadır. **Bu sürümde varsayılan olarak
-gizlidir**; **Ctrl+9** ile veya **Görünüm > Paneller > Komut Satırı** ile açılır, aynı
-kısayolla kapanır. Açtığınızda odak doğrudan oraya gelir.
+Komut satırı harita alanının hemen altındadır ve **her zaman açıktır**; **Ctrl+9** ile ya da
+**Görünüm ▸ Pencereler ▸ Komut Satırı** ile gizlenir, aynı yolla geri gelir. Geri
+geldiğinde odak doğrudan oraya gelir.
 
 ## Komut çağırmak
 

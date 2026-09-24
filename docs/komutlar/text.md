@@ -154,7 +154,8 @@ METİN noktalar=485330,4310225 yazi="TAKS 0,30\nKAKS 1,20" yukseklik=1500 hizala
 
 ### Arayüz
 
-Sol paletteki **metin** aracına basın ya da komut satırına `METİN` yazın. Önce
+Şeritte **Giriş ▸ Açıklama ▸ Metin**'e (ya da **Açıklama ▸ Yazı ▸ Metin**'e) basın ya da
+komut satırına `METİN` yazın. Önce
 başlangıç noktasını tıklayın, sonra yazıyı girin. Yakalama açıkken başlangıç noktası
 mevcut nesnelere oturur — bir parsel köşesinden tam ölçülü bir yere yazı koymak için
 [`MOD`](mode.md) ile uç nokta yakalamasını açık tutun.

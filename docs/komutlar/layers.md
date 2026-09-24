@@ -85,11 +85,12 @@ KTL
 ### Arayüz
 
 **Katmanlar** paneli aynı listeyi sürekli gösterir: her satırda katmanın adı, göz
-simgesiyle görünürlüğü, kilidi ve grubu vardır. Panel kapalıysa **Görünüm ▸ Paneller ▸
+simgesiyle görünürlüğü, kilidi ve grubu vardır. Panel kapalıysa **Görünüm ▸ Pencereler ▸
 Katmanlar** ile açılır.
 
-Komutun kendisini arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp
-`KATMANLAR` yazın: seçtiğiniz ad komut satırına yerleşir, **Enter** çalıştırır. Yanıt
+Komutun kendisini arayüzden çalıştırmak için şeritte **Harita** sekmesinin sonundaki
+**Diğer** listesinden **Katmanları Listele**'yi seçin ya da **Ctrl+K** ile komut aramayı
+açıp `KATMANLAR` yazın: seçtiğiniz ad komut satırına yerleşir, **Enter** çalıştırır. Yanıt
 komut satırının üstündeki döküm alanında görünür.
 
 Aktif katman **durum çubuğunda** yazılıdır; koordinat sistemi de öyle.

@@ -95,7 +95,8 @@ ALAN 485370,4310200 485430,4310200 485430,4310245 485370,4310245 485385,4310212 
 
 ### Arayüz
 
-Sol paletteki **alan** aracına basın ya da komut satırına `ALAN` yazın; ikisi aynı
+Şeritte **Giriş ▸ Çizim ▸ Alan**'a (ya da **Çizim ▸ Şekil ▸ Alan**'a) basın ya da komut
+satırına `ALAN` yazın; ikisi aynı
 komutu gönderir. Köşeleri sırayla tıklayın ve **Esc** ile alanı kapatın. Yakalama
 açıkken köşeler mevcut nesnelere oturur — komşu parselin köşesine tam oturmak için
 [`MOD`](mode.md) ile uç nokta yakalamasını açık tutun.

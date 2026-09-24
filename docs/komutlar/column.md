@@ -84,7 +84,7 @@ Arayüzde ikisinin iki ayrı yeri vardır:
 
 | Sütun | Nereden tanımlanır |
 |---|---|
-| Proje sütunu | **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** |
+| Proje sütunu | **KentOS CAD ▸ Proje Ayarları… ▸ Öznitelikler** |
 | Katman sütunu | Katmana **sağ tık → Katman Özellikleri… → Öznitelikler** |
 
 Katmanın sayfası proje sütunlarını da listeler — `proje sütunu` diye işaretli ve
@@ -171,7 +171,7 @@ Düzenlemede **Kimlik** ve **Tür** kutuları kapalıdır — komut da onları r
 bir formun reddedilecek bir şeyi yazdırması yanıltıcı olurdu.
 
 Bu sayfadan tanımlanan sütun **yalnız o katmana** aittir. Çizimin tamamına ait bir
-alan için **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** sayfasını kullanın; sayfanın
+alan için **KentOS CAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasını kullanın; sayfanın
 üstündeki not hangisinde olduğunuzu yazar.
 
 ## Örnekler
@@ -215,7 +215,9 @@ SÜTUN
 
 ### Arayüz
 
-Katmanlar panelinde katmana **sağ tık → Katman Özellikleri… → Öznitelikler**; sayfanın
+Komutun kendisi şeritte **Değiştir** sekmesinin sonundaki **Diğer** listesindedir; sütunları
+tablo hâlinde düzenlemek için Katmanlar panelinde katmana **sağ tık → Katman Özellikleri… →
+Öznitelikler**; sayfanın
 altındaki **Ekle…**, **Düzenle…** ve **Sil** düğmeleri bu komutu gönderir. Sayfadan
 tanımlanan bir sütun ile komut satırından tanımlanan bir sütun arasında hiçbir fark
 yoktur; ikinci bir şema listesi yoktur.

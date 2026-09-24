@@ -76,7 +76,8 @@ SÇB
 Seçimi yapmanın yolu faredir: bir nesneye tıklamak, soldan sağa sürükleyerek **pencere
 seçim**, sağdan sola sürükleyerek **kesen seçim**. Seçili nesneler tuvalde vurgulanır.
 
-Komutun kendisini arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp
+Komutun kendisini arayüzden çalıştırmak için şeritte **Harita** sekmesinin sonundaki
+**Diğer** listesinden **Seçim Bilgisi**'ni seçin ya da **Ctrl+K** ile komut aramayı açıp
 `SEÇİMBİLGİSİ` yazın; ad komut satırına yerleşir, **Enter** çalıştırır. Yanıt komut
 satırının üstündeki döküm alanında görünür — anahtarları görmek istediğinizde asıl
 sebebi budur, çünkü tuvaldeki vurgu size kaç tane olduğunu söyler, hangileri olduğunu

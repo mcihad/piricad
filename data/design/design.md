@@ -9,8 +9,10 @@ tüm çizim uygulama tarafından yapılır, yerel tema devre dışıdır (`Fusio
 
 ## 1. Tasarım ilkeleri
 
-1. **Çizim alanı efendidir.** Kromun tamamı (menü + araç çubuğu + durum çubuğu) dikeyde 134 px'i
-   geçmez. Renk, kontrast ve doygunluk yalnızca harita/çizim içeriğinde serbesttir; panellerde
+1. **Çizim alanı efendidir.** Kromun tamamı (şerit + durum çubuğu) dikeyde 160 px'i, şerit tek
+   başına 134 px'i geçmez. (Eski sınır menü + araç çubuğu + durum çubuğu için 134 px idi; şerit
+   sol araç kutusunun 46 px'lik sütununu tuvale geri verdi ve sekme satırı okunur olsun diye
+   40 px'e çıktı — §7.) Renk, kontrast ve doygunluk yalnızca harita/çizim içeriğinde serbesttir; panellerde
    nötr gridir. Kullanıcının gözü ekranda hiçbir zaman arayüz tarafından çekilmez.
 2. **Tek vurgu rengi.** Mavi (`--accent`) yalnızca üç şey demektir: *seçim*, *aktif araç*,
    *birincil eylem*. Turuncu (`--warn`) yalnızca *yakalama / düzenlenmiş veri / kilit* demektir.
@@ -79,6 +81,34 @@ harfi harfine geçer.
 | `--readout-dim` | `#C4CCD3` | Aynısı bir adım geri: durum koordinatı, ölçek çubuğu |
 | `--on-accent-dark` | `#0B1116` | Vurgu üzerine KOYU glif isteyen rozetin yazısı |
 
+### Simge ve şerit jetonları
+
+**Simgeler renklidir, anlamları da rolleridir.** Bir eylemin resmi tek renk değil; her
+parçası rolünün mürekkebiyle çizilir: çerçeve ve aletin kendisi `--icon-ink`, komutun
+çizdiği ya da değiştirdiği şekil `--icon-shape`, kestiği ya da sildiği `--icon-cut`,
+yazdığı `--icon-note`, veri ve katman `--icon-data`, eklediği ya da birleştirdiği
+`--icon-add`. Aynı rol her simgede aynı renktir; göz bir simgeyi tanımadan önce ne
+yaptığını okur. Devre dışı simge solar (üçte bir güç), griye dönmez.
+
+| Jeton | Değer | Kullanım |
+|---|---|---|
+| `--icon-ink` | `#C9D2DB` | Simgenin çerçevesi, aletin kendisi |
+| `--icon-shape` | `#4FA9F2` | Komutun çizdiği ya da değiştirdiği şekil |
+| `--icon-fill` | `rgba(79,169,242,.25)` | O şeklin içi (`#4FA9F2`, saydam) |
+| `--icon-cut` | `#F2766E` | Kestiği, sildiği, çıkardığı |
+| `--icon-note` | `#F4A640` | Yazdığı: yazı, ölçü, etiket |
+| `--icon-data` | `#F2C14E` | Veri, katman, tablo başlığı |
+| `--icon-add` | `#5CCB8D` | Eklediği, birleştirdiği, onayladığı |
+| `--icon-paper` | `#DDE3E8` | Kâğıt: sayfa, belge yüzü |
+| `--ribbon-tabs` | `#15181B` | Şeridin sekme satırı ve seçili olmayan sekmeler |
+| `--ribbon-body` | `#24292E` | Seçili sekme ve altındaki paneller — tek yaprak |
+
+**Şeridin iki yüzeyi bir adım ayrıdır** (§7): sekmeler koyu satırın üzerinde sakin
+sözcüklerdir, seçili sekme altındaki gövdeden kesilmiş bir klasör sekmesidir. Seçimle
+açılan düzenleyici sekmeleri (`Yazı`, `Ölçü`, `Tarama`, `Alan`, `Blok`) sekmenin
+üstünde 3 px `--accent` bir başlık taşır — mavi seçim demektir; sekmenin arkasına renk
+bloğu konmaz.
+
 **Dördüncü anlam: DANGER.** §2'nin ilk dört anlamı — vurgu, uyarı, onay, sükûnet —
 "bu geri alınamaz" ve "bu değer yanlış" cümlelerini söyleyemiyordu. `--danger`
 yalnızca bu iki iş için vardır: yıkıcı bir eylemin konturu ve geçersiz bir alanın
@@ -124,10 +154,8 @@ Temel birim **2 px**, bileşen ritmi **4 px**.
 
 | Öğe | Ölçü |
 |---|---|
-| Menü şeridi (ana pencere) | 34 px |
-| Araç çubuğu | 46 px (ikon 20 px, buton 30×30, boşluk 4 px) |
-| Sol araç kutusu | 46 px genişlik (buton 32×32) |
-| Doküman sekmesi | 30 px |
+| Şerit: sekme satırı | 40 px (sekme 6 px'ten başlar, yazı sekmede dikey ortalı) |
+| Şerit: paneller | 91 px (büyük düğme simgesi 32 px, satır ve simge düğmesi 16 px, 3 satır) |
 | Panel sekme başlığı | 29 px |
 | Tablo başlığı / satırı | 30 / 26 px |
 | Komut satırı | 28 px |
@@ -147,11 +175,18 @@ Tek kaynak: **çizgi ikon seti, 20 px kutu, 1.6 px kontur, yuvarlatılmamış u�
 uygulamada Material Symbols Outlined (weight 400, FILL 0) kullanılır; üretimde aynı metriklerde
 SVG seti gömülür (`QIcon` + `.svgz`, 1x/2x otomatik).
 
-- Araç çubuğu ikonu 20 px, araç kutusu 19 px, panel başlığı 14 px, satır içi 13–15 px.
-- Renk: pasif `--text-dim`, hover `#FFFFFF`, aktif `--accent-hi`.
-- **Alt araç göstergesi:** araç kutusu butonunun sağ alt köşesinde 4 px'lik üçgen
-  (`#7D868D`) — basılı tutunca yan açılır menü (Adobe kalıbı).
-- Renk kuyusu: 22×22 px, 1 px açık kenar; ön/arka plan çifti araç kutusunun altında.
+- Şeritte büyük düğme ikonu 32 px, satır ve simge düğmesi 16 px, uygulama menüsü satırı
+  24 px; panel başlığı 14 px, satır içi 13–15 px.
+- **Eylem simgeleri renklidir** (§2 simge jetonları): her parçası rolünün mürekkebiyle —
+  çerçeve `--icon-ink`, çizilen şekil `--icon-shape`, kesilen `--icon-cut`, yazılan
+  `--icon-note`, veri `--icon-data`, eklenen `--icon-add`. Simgeler kod içinde yol olarak
+  çizilir (`icons.cpp`), bu yüzden her temada yeniden boyanır ve hiçbir yazı tipine ya da
+  dosyaya bağlı değildir. Devre dışı simge üçte bir güce solar.
+- Kabuk kromunun tek renkli işaretleri (panel başlığı, arama, oklar) eskisi gibidir: pasif
+  `--text-dim`, hover `#FFFFFF`, aktif `--accent-hi`.
+- **Veri olan resimler çizilir, saklanmaz:** tarama galerisindeki desenler desen
+  kataloğundaki çizgi ailelerinden, metin hizalama düğmeleri dokuz çapadan çizilir.
+- Renk kuyusu: şeritte 24 px'lik renk kutusu, içinde 14 × 14 örnek; "yok" çizili bir kare.
 
 ---
 
@@ -181,7 +216,7 @@ profil başına saklanır; Görünüm ▸ Yerleşim menüsünden *Kadastro Üret
 
 ## 7. Ekran 1 — Ana Ekran
 
-Dikey sıra: sistem başlık çubuğu → menü şeridi → araç çubuğu → gövde → durum çubuğu.
+Dikey sıra: sistem başlık çubuğu → şerit → gövde → durum çubuğu.
 
 **Pencere çerçevesi.** Çerçeve, başlık çubuğu ve pencere düğmeleri **işletim sisteminindir**.
 Uygulama kendi çerçevesini çizmez: yeniden boyutlandırma kenarları, kenara yapıştırma
@@ -189,24 +224,42 @@ Uygulama kendi çerçevesini çizmez: yeniden boyutlandırma kenarları, kenara 
 bunların hiçbirini veremez. Pencere başlığı `<doküman> — KentOSCad <sürüm>`, diyaloglarda
 `<ad> <nitelik>`; pencere simgesi diyalogun `Glyph`'inden üretilir.
 
-**Menü şeridi (34 px).** Sistem başlık çubuğunun hemen altında, soldan sağa: 10 menü —
-Dosya, Düzen, Görünüm, Çizim, Değiştir, Harita, Analiz, Katman, Pencere, Yardım. Ortada
-doküman adı + sürüm. Sağda komut arama (`⌘K` / `Ctrl+K`) ve kullanıcı baş harfi.
+**Şerit (131 px).** Menü çubuğunun, araç çubuğunun ve sol araç kutusunun yerine tek yüzey:
+SARibbon'un sıkı üç satırlı Office düzeni, iki yüzeyle (§2 `--ribbon-tabs`, `--ribbon-body`).
 
-**Araç çubuğu (46 px).** 1 px ayraçlarla 7 grup: dosya · geri/yinele · pano · gezinme
-(seç, kaydır, yakınlaş, tümünü göster) · yardımcılar (ızgara, yakalama, ölçüm) ·
-pencereler (katman, stil, tablo) · çıktı. Sağ uçta iki salt-okunur okuma: **ÖLÇEK** `1 : 1 000`
-ve **KOORDİNAT SİSTEMİ** `EPSG:5254 · ITRF96 / TM30`. Araç çubuğu taşarsa son grup
-`»` taşma menüsüne girer, asla satır kırmaz.
+- **Sekme satırı (40 px).** Solda **KentOS CAD** düğmesi — dolu `--accent` blok, beyaz 12 px
+  yarı kalın yazı, uygulama menüsünü açar. Sonra sekmeler: Giriş · Çizim · Değiştir ·
+  Açıklama · Kadastro · Harita · Analiz · Görünüm · Çıktı ve seçimle açılan düzenleyici
+  sekmeleri. Sekme bir **klasör sekmesidir**: seçili olan gövdeden kesilir (`--ribbon-body`
+  zemin, üç kenarda `--border`, altı açık); ötekiler koyu satırın üzerinde `--text-dim`
+  sözcüklerdir, imleç altında `--ribbon-tabs`'ın bir adım açığı. Düzenleyici sekmesi
+  üstünde 3 px `--accent` başlık taşır. Sağda hızlı erişim (Yeni · Aç · Kaydet · Yazdır ▾ ·
+  Geri Al · Yinele), şeridi daraltan ⌃, komut arama (`Ctrl+K`) ve kullanıcı baş harfi.
+- **Paneller (91 px).** Her sekme panellerden oluşur, panelin adı altında `--text-faint`.
+  Üç düğme boyu: **büyük** (32 px simge, ad altta) en sık iş için; **satır** (16 px simge +
+  ad) ikinci sıradakiler için; **simge** (yalnız 16 px simge) herkesin resminden tanıdığı
+  araçlar için. Bir araç ailesi **bölünmüş düğmedir**: yüz son kullanılan üyeyi çalıştırır,
+  ▾ ailenin listesini açar. Her sekmenin ilk paneli **Seçim**'dir. Canlı kutular (katman
+  listesi, renk kutuları, ölçek, yazı yüksekliği, ölçü stili) 24 px girdilerdir (§5
+  `ComboBox` kompakt). Panel adının sağında ↘ panelin tam penceresini açar.
+- **Durumlar.** İmleç altındaki düğme: gövde, `--accent`'e %12 yaklaştırılmış zemin ve
+  %42 yaklaştırılmış kenar; basılı ya da çalışan araç %22. Yazı her durumda `--text`.
+- **Genişlik.** Giriş ve Çizim sekmeleri 1440 px pencereye kaydırmasız sığar; daha dar bir
+  pencerede sekmenin iki ucunda kaydırma okları belirir, hiçbir düğme gizlenmez.
 
-**Sol araç kutusu (46 px).** 5 grup, toplam 20 araç:
-seçim (nesne, alan, kaydır) · oluşturma (çizgi, polyline, poligon, dikdörtgen, daire/yay, nokta, metin) ·
-düzenleme (böl/trim, birleştir, parsel böl, taşı/döndür, ofset) · ölçüm (uzunluk, alan, koordinat) ·
-yardımcı (stil kopyala, topoloji denetimi). Aktif araç: `--accent-wash` zemin +
-`inset 0 0 0 1px #3F7FA5`.
+**Uygulama menüsü (660 px).** KentOS CAD düğmesinin altında açılan panel (menü değil, pencereyi
+örten bir sayfa da değil): üstte komut arama; solda dosya fiilleri 42 px satırlar hâlinde, 24 px
+renkli simge, 13 px ad ve altında 11 px `--text-faint` açıklama; sağda son belgeler ya da imlecin
+üstündeki fiilin seçenekleri (Yazdır'ın profilleri, yerleşimler); altta Komut Listesi, Hakkında,
+Ayarlar ve Çıkış. Baş, sağ bölme ve ayak `--ribbon-body` ile `--ribbon-tabs` arasında bir tondur;
+seçili satır `--accent` sol çizgi taşır.
 
-**Tuval.** Üstte doküman sekmeleri (30 px; aktif sekmede 2 px `--accent` üst çizgi ve
-kapatma ikonu, sağ uçta bölünmüş görünüm düğmeleri). Tuvalin kendisi: 20 px + 100 px iki
+**Durum çubuğunun sağ ucu.** Eski araç çubuğunun iki salt-okunur okuması buraya geldi:
+**ölçek** `1 : 1 000` ve **koordinat sistemi** `EPSG:5254 · ITRF96 / TM30`, mono.
+
+**Tuval.** Şeridin hemen altında başlar; **doküman sekmesi şeridi yoktur** — tek belge açıktır
+ve adı sistem başlık çubuğundadır (birden çok belge Faz 2'de geldiğinde şerit de gelir).
+Tuvalin kendisi: 20 px + 100 px iki
 katmanlı ızgara, üst ve sol kenarda 20 px cetvel (mono 8.5 px, 100 px'te bölme çizgisi).
 Tuval üstü öğeler:
 - **Seçili nesne:** `--accent` konturu + %14 dolgu + her köşede 9×9 px koyu tutamak.
@@ -227,11 +280,12 @@ kilit; iç içe girinti 14 px (ada sınırları ve yapılar kadastro altında). 
 
 **Komut satırı (28 px).** `Komut:` + aktif komut (`_PARSELBOL`) + istem metni +
 yanıp sönen `--accent` imleç. AutoCAD/Netcad kullanıcısı için klavye yolu birinci sınıftır:
-her araç kutusu aracının bir komut adı vardır ve durum çubuğu ipucunda gösterilir.
+şeritteki her aracın bir komut adı vardır ve düğmenin ipucunda gösterilir.
 
 **Durum çubuğu (26 px).** Solda mono `X / Y / Z` okuması; sonra tıklanabilir kip anahtarları
 (IZGARA, YAKALAMA, DİK, POLAR, OSNAP, DİNAMİK GİRDİ, KALINLIK) — açık olan `--accent-wash`
-zeminli; sağda veri kaynağı durumu (`cloud_done`, yeşil) ve `60 fps · 128 MB`.
+zeminli; sağda ölçek ve koordinat sistemi, veri kaynağı durumu (`cloud_done`, yeşil) ve
+`60 fps · 128 MB`.
 
 ---
 
@@ -428,6 +482,10 @@ Bir bandın bildirilen yüksekliği **alt çizgisini içerir**:
 aşağı kaydırır.
 
 ### 14.4 Yatay ölçüler
+
+> Bu bölümdeki **menü şeridi, araç çubuğu ve sol araç kutusu** ölçüleri referans mockup'ın
+> ölçüleridir; uygulamada bu üç yüzeyin yerini §7'nin **şeridi** aldı ve onların ölçüleri
+> artık hiçbir bileşeni bağlamaz. Referansla karşılaştırma için kayıtta tutulurlar.
 
 - Sol araç kutusu **46 px** (45 içerik + 1 px sağ çizgi); buton **32 × 32**,
   adım **34** (2 px boşluk), grup ayracı **24 × 1**, üstünde ve altında 7 px hava.

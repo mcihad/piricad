@@ -133,11 +133,14 @@ KATMAN ad=NOT grup=""
 
 ### Arayüz
 
-**Katman** araç çubuğundaki **Katman** düğmesi veya **Çizim > Katman** menüsü komutu
-başlatır ve katman adını sorar.
+Şeridin **Giriş ▸ Katmanlar** panelindeki **katman listesi** doğrudan çalışır: renk
+kutucuklarıyla katmanları gösterir, seçim yokken seçtiğiniz katmanı `KATMAN ad="..."` ile
+aktif yapar. (Seçim varken aynı liste seçili nesneleri o katmana taşır; bkz.
+[`KATMANAT`](set_layer.md).) Listenin altındaki **Etkin Yap** simgesi seçili nesnenin
+katmanını aktif yapar.
 
-Aynı araç çubuğundaki **aktif katman listesi** doğrudan çalışır: renk kutucuklarıyla
-katmanları gösterir, seçtiğinizde `KATMAN ad="..."` komutunu gönderir.
+Yeni bir katmanı **Katmanlar** panelinin başlığındaki **+** açar; büyük **Katmanlar**
+düğmesi (**Giriş ▸ Katmanlar**, **Görünüm ▸ Pencereler**) paneli gösterir.
 
 Sağdaki **Katmanlar** paneli her katmanı tek bir satırda gösterir: solda **göz**,
 yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
@@ -157,8 +160,8 @@ yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 açar. **Sağ tıkladığınız katmanın**, aktif katmanın değil: bir katmanın
 özniteliklerine bakmak için önce onu aktif yapmanız gerekmez. Pencere başlığı
 hangi katmanda olduğunuzu yazar ve alt satır kaç nesne gösterdiğini söyler —
-`Katman` menüsündeki aynı adlı öğe ise aktif katmanı açar, çünkü orada işaret
-edilmiş bir katman yoktur.
+şeritteki **Analiz ▸ Tablo ▸ Öznitelik Tablosu** (**F6**) ise aktif katmanı açar, çünkü
+orada işaret edilmiş bir katman yoktur.
 
 Çizimde bir nesne seçtiğinizde **panel o nesnenin katmanını kendiliğinden
 işaretler**, böylece kırk katmanlı bir listede aramak zorunda kalmazsınız.

@@ -259,7 +259,8 @@ Başlığı yazmak:
 
 ### Arayüz
 
-**Çıktı yerleşimi tasarımcısında** (araç çubuğu ▸ yazdırma oku ▸ bir yerleşim) sol
+**Çıktı yerleşimi tasarımcısında** (**Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri** ya da hızlı
+erişimdeki yazıcının oku ▸ bir yerleşim) sol
 sütun sayfayı ve üzerindeki öğeleri, orta sütun kâğıdı, sağ sütun seçili öğenin
 ayarlarını taşır.
 

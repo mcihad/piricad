@@ -89,7 +89,7 @@ Temizlik onarıldı (3 nesne): 2 nesne silindi, 1 nesneden 1 köşe çıkarıld�
 
 ### Arayüz
 
-**Değiştir** menüsünde **Temizle — bul** ve **Temizle — onar**. Önce "bul" deyin:
+Şeritte **Değiştir ▸ Sil ve Temizle** panelinde **Temizle — bul** ve **Temizle — onar**. Önce "bul" deyin:
 bulunan nesneler seçilir ve her biri tuvalde "yinelenen", "boş" ya da "tekrarlanan
 köşe" diye işaretlenir. Onaylıyorsanız "onar"; beğenmezseniz tek [`GERİAL`](undo.md).
 Belli nesnelere bakmak için önce onları seçin.

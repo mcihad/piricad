@@ -69,7 +69,8 @@ ALAN noktalar=0,0 20,0 20,10 0,10
 
 ### Arayüz
 
-**Kadastro ▸ İfraz** menüsünü tıklayın. Parsel seçili değilse komut hangi
+Şeritte **Kadastro ▸ Parsel ▸ İfraz**'a basın (kapalı bir alan seçiliyken beliren **Alan**
+sekmesinde de vardır). Parsel seçili değilse komut hangi
 parselin ifraz edileceğini sorar: parsele tıklayıp Enter'a basın. Sonra ayırma
 çizgisinin iki ucunu tıklayın. Yakalama açıkken uçlar mevcut köşelere oturur.
 Birden çok nesne seçiliyken de reddetmez; istediği parseli sorar.

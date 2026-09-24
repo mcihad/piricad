@@ -97,7 +97,7 @@ HİZALA nesne=1 kaynak=0,0 hedef=100,0 kaynak2=10,0 hedef2=110,0 kaynak3=0,5 hed
 
 ### Arayüz
 
-**Değiştir > Hizala**, ya da araç kolonundaki değiştirme ailesinde **Hizala**.
+Şeritte **Değiştir ▸ Dönüştür ▸ Hizala** (okunda **Hizala — ölçekleyerek** de vardır).
 
 1. Nesneleri seçip Enter'a basın.
 2. Birinci kaynağı tıklayın, sonra hedefini: nesneler **imleçle birlikte taşınır**.

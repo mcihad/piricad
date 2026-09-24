@@ -131,8 +131,7 @@ Ret hâlinde **hiçbir şey çizilmez**: işlemin tamamı geri sarılır (Articl
 
 ### Arayüz
 
-**Çizim > Poligon Hesabı**, **Harita > Poligon Hesabı** ya da sol araç sütununda
-**nokta ailesi**. Komut başlangıç istasyonunu ve bağlamayı sorar — bağlama
+Şeritte **Harita ▸ Jeodezi ▸ Poligon Hesabı**. Komut başlangıç istasyonunu ve bağlamayı sorar — bağlama
 gösterilirken istasyondan imlece kılavuz çizgi durur — sonra **her istasyon için
 sırayla kırılma açısını ve ondan sonraki kenarı sorar**; bu sırada istasyon ve
 bağlaması tuvalde çizili kalır:
@@ -152,7 +151,7 @@ istemcinin kim olduğu değil (CLAUDE.md 1.2).
 
 > Bu komut bir süre yalnız argüman okuyordu — gerekçe "bir poligon ölçü
 > karnesinden aktarılır, tıklanmaz" idi. Bu, sayıların NEREDEN geldiği için doğru,
-> nasıl İÇERİ GİRDİĞİ için yanlıştı: araç kolonundan `POLİGON`'a basan kullanıcı
+> nasıl İÇERİ GİRDİĞİ için yanlıştı: düğmesinden `POLİGON`'a basan kullanıcı
 > iki bilinen noktayı veriyor ve sonra "aci= ve kenar= gerekir" cevabını alıyordu.
 > Fareyle ulaşılabilen ama fareyle bitirilemeyen bir komut, CLAUDE.md 5.15'in
 > yasakladığı şeydir.

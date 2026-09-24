@@ -96,11 +96,10 @@ ya da açılı bir dörtgen çizmek [`ALAN`](area.md) işidir.
 
 ## Örnekler
 
-**Arayüzden.** Araç kutusundan dikdörtgen aracını seçin, bir köşeye tıklayın,
+**Arayüzden.** Şeritte **Giriş ▸ Çizim ▸ Dikdörtgen**'e basın, bir köşeye tıklayın,
 karşı köşeye tıklayın. Kare için ikinci tıklamada **Ctrl** basılı tutun.
 
-**Döndürülmüş dikdörtgen arayüzden.** Araç kutusundaki dikdörtgen düğmesini
-basılı tutun (ya da köşesindeki işarete tıklayın) ve karttan **Dikdörtgen —
+**Döndürülmüş dikdörtgen arayüzden.** **Dikdörtgen** düğmesinin okundan **Dikdörtgen —
 döndürülmüş**'ü seçin. Bir kenarın iki köşesini tıklayın; üçüncü tıklamaya kadar
 dikdörtgenin tamamı fareyi izler ve yüksekliği gösterir.
 

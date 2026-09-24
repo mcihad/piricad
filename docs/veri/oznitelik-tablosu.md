@@ -3,9 +3,8 @@
 Bir katmanın satırlarını ve sütunlarını bir tabloda açar; süzer, sıralar, düzenler
 ve seçili sütunun sayısal özetini çıkarır.
 
-**F6** ile ya da **Analiz ▸ Öznitelik Tablosu** ile açılır. Araç çubuğundaki
-*pencereler* grubunda da bir düğmesi vardır. Bu üç yol tabloyu **aktif katmanda**
-açar.
+**F6** ile ya da şeritte **Analiz ▸ Tablo ▸ Öznitelik Tablosu** ile açılır. İki yol da
+tabloyu **aktif katmanda** açar.
 
 Başka bir katmanın tablosunu açmak için katman panelinde o satıra **sağ tıklayıp
 Öznitelik tablosu** deyin — katmanı aktif yapmanız gerekmez

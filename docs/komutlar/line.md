@@ -100,8 +100,7 @@ Adım adım, noktaları teker teker vererek:
 
 ### Arayüz
 
-Sol kenardaki araç kutusundan **Çizgi** düğmesine basın veya **Çizim > Çizgi**
-menüsünü kullanın. Durum çubuğu `İlk nokta` ister; harita alanına sol tıklayın.
+Şeritte **Giriş ▸ Çizim ▸ Çizgi**'ye (ya da **Çizim ▸ Çizgi ▸ Çizgi**'ye) basın. Durum çubuğu `İlk nokta` ister; harita alanına sol tıklayın.
 
 Sonraki istek `Sonraki nokta` olur ve son noktadan imlecinize kesikli bir kılavuz çizgi
 uzanır. İstediğiniz kadar nokta tıklayın.

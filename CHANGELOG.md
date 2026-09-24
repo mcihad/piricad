@@ -6,6 +6,48 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — menü, araç çubuğu ve araç kutusunun yerine şerit
+
+- **Şerit (SARibbon 2.9.5, MIT).** Menü çubuğu, araç çubuğu, sol araç kutusu ve tuvalin
+  üstündeki belge sekmesi şeridi kalktı; komutlar sekmelere ve panellere ayrılmış tek bir
+  şeritte: Giriş · Çizim · Değiştir · Açıklama · Kadastro · Harita · Analiz · Görünüm ·
+  Çıktı. Giriş AutoCAD'in Giriş düzenindedir: büyük çizim araçları, 3 × 4 Değiştir ızgarası,
+  Metin ve Ölçü, katman listesi, renk kutuları, pano. Her sekmenin ilk öğesi **Seç**'tir.
+- **Canlı kutular.** Katman listesi seçim yokken etkin katmanı gösterir ve değiştirir
+  (`KATMAN`), seçim varken seçilenlerin katmanını gösterir ve onları taşır (`KATMANAT`);
+  Çizgi ve Dolgu kutuları `RENK`'i açar; Açıklama'da varsayılan yazı yüksekliği ve ölçü
+  stili, Çıktı'da pafta ölçeği (`AYAR`).
+- **Düzenleyici sekmeleri.** Yazı, ölçü, tarama, kapalı alan ya da blok seçilince kendi
+  sekmesi belirir (üstünde ince mavi şerit): yazı yüksekliği, satır aralığı ve dokuz
+  hizalama; ölçü stili, ondalık, birim; desen galerisi, açı, ölçek, ada kuralı; alan için
+  Alan Ölç, Köşe Numarala, Uzunluk Yaz, İfraz, Tevhit, Tarama — hepsi seçilide çalışır.
+- **Desen galerisi** tarama desenlerini katalogdaki çizgi ailelerinden çizilmiş hâlleriyle
+  gösterir; **↘ başlatıcılar** panellerin tam pencerelerini açar; **ipuçları** komut
+  kaydından üretilir (ad, kısayol, ne yaptığı, nasıl yazıldığı, ailenin öteki üyeleri).
+- **KentOS CAD menüsü** AutoCAD'in uygulama menüsü gibi: dosya fiilleri açıklamalarıyla,
+  sağda **son kullanılan belgeler** (yeni; `TERCİH son_dosya_sayısı` kadar) ya da imlecin
+  üstündeki fiilin seçenekleri, altta Ayarlar ve Çıkış. Hızlı erişimdeki yazıcının yanındaki
+  ok çıktı yerleşimlerini açar.
+- **Renkli simgeler** rol renkleriyle (çizilen, kesilen, yazılan, veri, eklenen); tek
+  resmi paylaşan araçlara ayrı simgeler (Spline, Poligon, Oturt, Eşyükselti, Hacim, İfraz ve
+  Alana Göre İfraz, Etiket, Tarama, Taban Noktasıyla Kopyala, katman işlemleri, ada
+  kuralları…). Pafta ölçeği ve koordinat sistemi durum çubuğuna geçti.
+- **Yeni Hakkında penceresi:** sürüm, Qt, çizim motoru, platform ve komut sayısı; NOTICE'ten
+  okunan bileşen listesi ve lisans metni; bilgileri panoya kopyalama.
+- **Değişti:** Yapay Zeka panelinin kısayolu **Ctrl+Shift+K** oldu (komut paletinin
+  **Ctrl+K**'sinin yanında). **Ctrl+Shift+A** hem Seçimi Temizle'ye hem Yapay Zeka'ya
+  bağlıydı ve Qt iki eyleme bağlı bir tuşta hiçbirini çalıştırmadığı için ikisi de
+  çalışmıyordu; tuş artık yalnız seçimi temizler. **Seçenekler** penceresini açan düğme
+  de artık penceresinin adını taşıyor: **Ayarlar…** yerine **Seçenekler…** (**Ctrl+,**).
+- **Düzeltildi:** ileti kutularının ve iletişim pencerelerinin Qt'ye ait düğmeleri
+  İngilizceydi (`OK`, `Cancel`, `Save`); Qt'nin Türkçe kataloğu artık programa gömülü ve
+  yükleniyor (`Tamam`, `İptal`, `Kaydet`). Bir kısayol yalnız düğmesinin sekmesi açıkken
+  çalışıyordu; hepsi pencereye bağlandı. Çıktı yerleşimleri listesi her açılışta yeni bir
+  **Ctrl+Shift+P** bırakıyordu, tuş ikinci açılıştan sonra çalışmıyordu. **Görünüm ▸
+  Pencereler ▸ Komut Satırı** ve **Ctrl+9** satır görünürken "kapalı" başlıyordu, ilk basış
+  hiçbir şey yapmıyordu. Bölünmüş düğmeler ekran okuyucuya yalnız "menüyü göster"
+  sunuyordu; artık önce "bas".
+
 ### Eklendi — yazılarda toplu bul ve değiştir, önizlemeli (C-12, 3. aşama)
 
 - **BULDEĞİŞTİR** (`BUL`) bir sözcüğü çizimin bütün yazılarında bulur. `degistir`

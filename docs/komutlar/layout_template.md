@@ -105,7 +105,8 @@ Kitaplığı görmek ve bir şablonu atmak:
 
 ### Arayüz
 
-**`Dosya ▸ Çıktı Yerleşimleri ▸ Şablonlar`** kayıtlı şablonları listeler. Birine
+**Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri ▸ Şablonlar** (aynı liste **KentOS CAD ▸ Çıktı
+Yerleşimleri**'nde) kayıtlı şablonları listeler. Birine
 tıklamak yerleşimin adını sorar, kurar ve **tasarımcıyı açar** — çünkü şablondan gelen
 bir yerleşimin haritası hâlâ hedeflenmeyi bekler.
 

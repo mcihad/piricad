@@ -90,12 +90,13 @@ GRB
 Aynı iki bilgi **durum çubuğunda** sürekli yazılıdır: ölçek `1:N` olarak ve koordinat
 sistemi `EPSG:…` olarak. İmlecin o andaki konumu da oradadır.
 
-Komutun kendisini arayüzden çalıştırmak için **Ctrl+K** ile komut aramayı açıp
+Komutun kendisini arayüzden çalıştırmak için şeritte **Harita** sekmesinin sonundaki
+**Diğer** listesinden **Görünüm Bilgisi**'ni seçin ya da **Ctrl+K** ile komut aramayı açıp
 `GÖRÜNÜMBİLGİSİ` yazın; ad komut satırına yerleşir, **Enter** çalıştırır. Köşe
 koordinatlarını okumak istediğinizde asıl sebebi budur: durum çubuğu ölçeği söyler,
 görünen dikdörtgenin köşelerini söylemez.
 
-Görünümü değiştirmek için araç çubuğundaki yakınlaştırma düğmeleri, tekerlek ve
+Görünümü değiştirmek için şeritteki **Görünüm ▸ Gezinme** düğmeleri, tekerlek ve
 [`YAKINLAŞ`](zoom.md) vardır.
 
 ### Betik

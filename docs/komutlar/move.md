@@ -63,8 +63,8 @@ TAŞI nesneler=1 nesneler=2 baslangic=0,0 bitis=@25,0
 
 ### Arayüz
 
-Nesneleri seçin, sol araç kutusundaki **Taşı** düğmesine basın, sonra iki noktayı
-tıklayın.
+Nesneleri seçin, şeritte **Giriş ▸ Değiştir ▸ Taşı**'ya (ya da **Değiştir ▸ Dönüştür ▸
+Taşı**'ya) basın, sonra iki noktayı tıklayın.
 İki tıklama arasında kesikli bir kılavuz uzanır. Yakalama açıkken iki nokta da
 mevcut nesnelere oturur — bir köşeyi komşu parselin köşesine tam oturtmak için
 [`MOD`](mode.md) ile uç nokta yakalamasını açık tutun.

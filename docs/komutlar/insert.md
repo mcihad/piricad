@@ -55,7 +55,8 @@ Sırayla: olduğu gibi, iki kat büyütülüp çeyrek tur dönmüş, x'te aynala
 
 ### Arayüz
 
-**Çizim ▸ Blok Ekle**. Bloğun adını yazın, ekleme noktasını tıklayın.
+**Çizim ▸ Blok ▸ Blok Ekle** (bir blok seçiliyken beliren **Blok** sekmesinde de vardır).
+Bloğun adını yazın, ekleme noktasını tıklayın.
 
 ### Betik
 

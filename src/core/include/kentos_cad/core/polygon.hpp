@@ -144,8 +144,8 @@ std::optional<PolygonGuide> decode_polygon_guide(std::span<const std::uint8_t> b
 struct PolygonPick
 {
     double measured{0.0}; ///< the fit's measurement, metres — what the size parameter records
-    bool angle_pointed{false}; ///< the rotation came from the point, and `aci` records it
-    double angle{0.0};         ///< that rotation, in the convention's unit
+    bool angle_pointed{false};   ///< the rotation came from the point, and `aci` records it
+    double angle{0.0};           ///< that rotation, in the convention's unit
     std::vector<Point2> corners; ///< counter-clockwise in the drawing, as ÇOKGEN writes them
 };
 

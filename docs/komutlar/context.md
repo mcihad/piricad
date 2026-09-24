@@ -74,7 +74,8 @@ Bağlam: 1 nesne, 2 katman, 1 çıktı yerleşimi, 0 seçili.
 
 ### Arayüz
 
-Komut satırına `BAĞLAM` yazmak yeter; yapısal sonuç komut günlüğünde durur.
+Komut satırına `BAĞLAM` yazmak ya da şeritte **Harita** sekmesinin sonundaki **Diğer**
+listesinden **Bağlam**'ı seçmek yeter; yapısal sonuç komut günlüğünde durur.
 
 ### Betik
 

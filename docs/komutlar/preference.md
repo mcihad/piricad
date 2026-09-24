@@ -9,8 +9,8 @@ tercihleri listelemeyi, okumayı ve değiştirmeyi bileceksiniz.
 > geri geliyor. Kaydedilen dosya, işletim sisteminizin standart uygulama ayarları
 > dosyasıdır ve her tercih kendi kimliğiyle (`core.arayuz.tema` gibi) yazılır.
 >
-> Tema, `TERCİH tema koyu` yazdığınızda da, **Görünüm > Koyu Tema** menüsünü
-> işaretlediğinizde de aynı yoldan geçer: menü de komut yolunun bir istemcisidir, ikinci
+> Tema, `TERCİH tema koyu` yazdığınızda da, şeritteki **Görünüm ▸ Tema ▸ Koyu Tema**'ya
+> bastığınızda da aynı yoldan geçer: şerit de komut yolunun bir istemcisidir, ikinci
 > bir tercih listesi yoktur. Arayüz dilinin değişmesi için programın yeniden başlatılması
 > **Faz 1'de** kalkacaktır; ayrıntısı `.claude/model.md` R38 ve R39'dadır.
 
@@ -199,10 +199,10 @@ TERCIH tema varsayilan
 ### Arayüz
 
 Komutu pencerenin altındaki **komut satırına** yazın; sonuç **Transkript** panelinde
-görünür. Arayüzün ayrıcalığı yoktur: menüden yapılan da, komut satırından yazılan da aynı
+görünür. Arayüzün ayrıcalığı yoktur: şeritten yapılan da, komut satırından yazılan da aynı
 komuttur.
 
-**Ayarlar** penceresi (menüde `Düzen > Ayarlar…`, kısayolu **Ctrl+,**) bildirilen her
+**Seçenekler** penceresi (**KentOS CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
 ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
 kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
 üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
@@ -215,8 +215,8 @@ hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
 
 ## Proje Ayarları penceresi
 
-`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **`Dosya ▸ Proje
-Ayarları…`** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
+`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **KentOS CAD ▸ Proje
+Ayarları…** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
 penceredir, çünkü ikinci soruyu soran biri genellikle dosyayı birine vermek
 üzeredir — ve ikisi çoğu zaman aynı anda açık durur.
 

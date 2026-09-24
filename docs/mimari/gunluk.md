@@ -55,7 +55,7 @@ bir komuttur:
 
 | Değer | Anlamı |
 |---|---|
-| `gui` | Araç kutusu düğmesi, menü veya harita alanına tıklama |
+| `gui` | Şerit düğmesi, KentOS CAD menüsü, kısayol tuşu veya harita alanına tıklama |
 | `cli` | Komut satırına yazıldı |
 | `script` | Bir betikten geldi |
 | `ai` | AI önerisinden geldi (Faz 3) |

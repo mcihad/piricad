@@ -41,8 +41,8 @@ MCP sunucusu açık: http://127.0.0.1:8765/mcp/<belirteç> (MCP 2026-07-28). Bel
 ```
 
 Durumunu sormak, kapatmak ve belirteci yenilemek de aynı komuttadır
-([`MCPSUNUCU`](../komutlar/mcp.md)). Aynı işleri **Analiz ▸ MCP Sunucusunu Başlat**,
-**Analiz ▸ MCP Belirteci Üret** ve durum çubuğundaki **ajan hücresi** de yapar; hepsi
+([`MCPSUNUCU`](../komutlar/mcp.md)). Aynı işleri şeritte **Analiz ▸ Yapay zekâ ▸ MCP
+Sunucusunu Başlat** ve **MCP Belirteci Üret** ile durum çubuğundaki **ajan hücresi** de yapar; hepsi
 bu komutu çağırır.
 
 `Seçenekler ▸ MCP Sunucusu` sayfası üç ayarı — port (`ajan_sunucu_portu`, öntanımlı

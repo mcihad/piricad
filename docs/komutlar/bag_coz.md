@@ -64,7 +64,8 @@ BAĞÇÖZ kapsam=proje
 
 ### Arayüz
 
-Sağ panelde **Araçlar ▸ Etiketleme ▸ Yazının bağını çöz**. Yazıları seçin ya da kapsamı
+Sağ panelde **Araçlar ▸ Etiketleme ▸ Yazının bağını çöz** (şeritteki **Açıklama ▸ Etiket ▸
+Bağı Çöz** ve yazı seçiliyken beliren **Yazı** sekmesindeki **Bağı Çöz** aynı kartı açar). Yazıları seçin ya da kapsamı
 **Proje** yapın, **Çalıştır**'a basın. Kartın altındaki satır komut satırına yazılacak
 olanın kendisidir.
 

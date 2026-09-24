@@ -69,7 +69,7 @@ YAPIŞTIR nokta=0,0 dosya="/tmp/blok.pcad"
 
 ### Arayüz
 
-**Düzen > Yapıştır** ya da **Ctrl+V**; komut yapıştırılacak yeri sorar. Aynı
+**Giriş ▸ Pano ▸ Yapıştır** ya da **Ctrl+V**; komut yapıştırılacak yeri sorar. Aynı
 koordinatlara koymak için komut satırına `YAPIŞTIR yerinde=evet` yazın.
 
 ### Betik

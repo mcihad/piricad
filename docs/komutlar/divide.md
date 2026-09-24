@@ -70,7 +70,7 @@ BÖLÜMLE nesne=1 aralik=20
 
 ### Arayüz
 
-**Değiştir > Bölümle**. Nesneyi seçip Enter'a basın; komut **kaç eşit parçaya**
+**Değiştir ▸ Kes ve Uzat ▸ Bölümle**. Nesneyi seçip Enter'a basın; komut **kaç eşit parçaya**
 bölüneceğini sorar ve nesnenin uzunluğunu istemde yazar.
 
 `aralik=` **yazılan yoldur**: bir sayı, eşit parça sayısı mı sabit aralık mı olduğunu

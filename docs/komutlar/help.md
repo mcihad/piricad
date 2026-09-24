@@ -90,7 +90,7 @@ Kısaltma da çalışır:
 
 ### Arayüz
 
-**Yardım > Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
+**KentOS CAD ▸ Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
 yazmak da aynı sayfayı açar. Üçü de aynı komutu çalıştırır, ayrı bir yol yoktur.
 
 Sayfanın düzeni:
@@ -105,7 +105,10 @@ Sayfanın düzeni:
 Tuşlar: `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazar (parametrelerini
 orada tamamlarsınız), `Esc` kapatır. Süzgeç alanındaki imleç hiç oradan ayrılmaz.
 
-**Yardım > Hakkında** sürüm, lisans, etkin çizim arka ucu ve komut sayısını gösterir.
+**KentOS CAD ▸ Hakkında** sürümü, Qt'yi, çizim motorunu, platformu ve komut sayısını
+gösterir; **Bileşenler** sayfası programın üzerine kurulduğu açık kaynak bileşenleri,
+**Lisans** sayfası lisans metnini taşır. **Bilgileri Kopyala** bu bilgileri bir hata
+bildirimine yapıştırmak için panoya alır.
 
 ### Betik
 

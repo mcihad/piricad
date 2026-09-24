@@ -92,9 +92,9 @@ bekle "[sema] silindikten sonra: 4 sütun"
 
 # THE PROJECT HALF OF THE STORY, and both halves have to exist for either to make
 # sense: a layer page that declares layer columns is only honest if there is
-# somewhere else to declare the project's. It is its OWN WINDOW — `Dosya ▸ Proje
-# Ayarları…` — with the settings that travel in the file beside the schema that
-# does.
+# somewhere else to declare the project's. It is its OWN WINDOW — `KentOS CAD ▸
+# Proje Ayarları…` — with the settings that travel in the file beside the schema
+# that does.
 bekle "[sema] proje penceresi: Ayarlar | Öznitelikler"
 
 # AND `Seçenekler` DOES NOT ALSO CARRY THEM. Two windows both holding the
@@ -104,8 +104,11 @@ bekle "[sema] seçenekler son bölüm: Ağ ve Kimlik"
 
 # EVERY PROJECT-SCOPED SETTING, and the page is generated from the catalogue —
 # so this count moves when a setting is declared, never because somebody
-# remembered to add a row (CLAUDE.md 5.10).
-bekle "[sema] proje ayarı: 12"
+# remembered to add a row (CLAUDE.md 5.10). Fourteen since the angle and area
+# units travel with the drawing and the dimension style joined them; the count
+# said twelve for two weeks after that, unseen, because this gate waits when
+# there is no display and nothing ran it with one.
+bekle "[sema] proje ayarı: 14"
 
 # The two nobody would think to look for outside their own topic page, which is
 # the reason the gathered page exists at all.

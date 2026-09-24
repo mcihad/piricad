@@ -84,7 +84,10 @@ UZUNLUKYAZ nesneler=1 taraf=dis enaz=35000
 
 Sağ panelde **Araçlar ▸ Etiketleme ▸ Kenar uzunluklarını yaz**. Kartta kapsamı seçin,
 birimi ve biçimi ayarlayın, gerekirse bir katman adı yazın ve **Çalıştır**'a basın; ya
-da **Analiz ▸ İşlem Araçları ▸ Kenar uzunluklarını yaz**. Seçim boşsa araç
+da şeritte **Açıklama ▸ Etiket ▸ Uzunluk Yaz** (aynı kart **Kadastro ▸ Yazım**'dan ve **Analiz
+▸ İşlem araçları** listesinden de açılır). Kapalı bir alan seçiliyken beliren **Alan**
+sekmesindeki **Uzunluk Yaz** ise kartı açmadan seçili alanlarda varsayılan ayarlarla hemen
+çalışır. Seçim boşsa araç
 "nesneleri seçin" der: tuvalden tıklayın, **sağ tık** başlatır. Durum çubuğu yüzdeyi
 gösterir; **Durdur** keser.
 

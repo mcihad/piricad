@@ -19,15 +19,30 @@
 // perspectives (kentoscad.md §6.3, .claude/ui.md).
 #pragma once
 
+#include "kentos_cad/app/app_menu.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <memory>
 #include <vector>
 
-#include <QMainWindow>
 #include <QPointer>
+
+// The ribbon's window (`.claude/ui.md` R46): SARibbon's one-file header, a
+// SYSTEM include of the `saribbon` target.
+#include "SARibbon.h"
+
+namespace kentos::command {
+/// The registry's categories (`spec.hpp`), declared here so the ribbon's
+/// leftovers can be asked for by category without pulling the spec in.
+enum class Category : std::uint8_t;
+} // namespace kentos::command
 
 /// Qt widgets this header only holds pointers to. Forward-declared rather than
 /// included so that touching a widget's header does not rebuild everything that
@@ -41,6 +56,7 @@ class QLabel;
 class QMenu;
 class QPlainTextEdit;
 class QToolBar;
+class QToolButton;
 
 namespace kentos::app {
 
@@ -58,20 +74,17 @@ class LayerPanel;
 class MapCanvas;
 class CommandPalette;
 class AttributePanel;
-class DocumentTabs;
 class PanelHeader;
 class StatusStrip;
-class ReadoutStrip;
-class TitleBar;
-class ToolBox;
 class ToolsPanel;
 
-class MainWindow : public QMainWindow
+class MainWindow : public SARibbonMainWindow
 {
     Q_OBJECT
 
 public:
-    /// Builds the shell: canvas, docks, toolbars, menus and the command line,
+    /// Builds the shell: canvas, docks, the ribbon and its application menu and
+    /// the command line,
     /// then connects them to the controller. Every action created here dispatches
     /// a command; none of them touches the document directly (Article 1.2, 5.9).
     explicit MainWindow(QWidget* parent = nullptr);
@@ -137,7 +150,8 @@ public:
 
     /// Opens the chat dock where it belongs — docked on the right unless the
     /// person floated it on purpose — and brings it forward. Every road that
-    /// opens it comes here: the tool bar, an outside client's suggestion.
+    /// opens it comes here: the ribbon, Ctrl+Shift+K, an outside client's
+    /// suggestion.
     void showChat();
 
     /// Types into the Python prompt without sending, so a probe can photograph
@@ -209,7 +223,7 @@ public:
     /// Asks for a name, creates a layout and opens the designer on it.
     void newLayout();
 
-    /// Rebuilds `Dosya ▸ Çıktı Yerleşimleri` from the document. Wired to the menu's own
+    /// Rebuilds `Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri` from the document. Wired to the menu's own
     /// `aboutToShow`, so a sheet added at the command line is there the next
     /// time the menu opens without anything having to be told.
     void rebuildLayoutMenu();
@@ -276,10 +290,10 @@ public:
     /// it. `scripts/ci-gate-yuzey-normali.sh` drives it.
     void probeSurfaceNormal();
 
-    /// Presses and holds the line tool button, prints the family card that opens
-    /// and takes a row other than the first.
+    /// Presses the arrow of the ribbon's circle split button, prints the family
+    /// list that opens, lets the press go and clicks a row other than the first.
     ///
-    /// Same bargain as the probes around it: a flyout nothing opens is a flyout
+    /// Same bargain as the probes around it: a list nothing opens is a list
     /// nothing checks. `scripts/ci-gate-arac-ailesi.sh` drives it.
     void probeToolFamily();
 
@@ -392,7 +406,7 @@ public:
     /// evidence. A picture is left at the end.
     int probeOsClicks();
 
-    /// `KENTOS_ACCESS_PROBE`: the tool column reached the way a SCREEN READER
+    /// `KENTOS_ACCESS_PROBE`: the ribbon's tools reached the way a SCREEN READER
     /// reaches it. Returns the failure count.
     ///
     /// This is the probe the accessibility hole got past, and it got past
@@ -429,10 +443,10 @@ public:
     /// DOES THE WINDOW FIT A LAPTOP? Asks for the sizes of the screens this
     /// program is run on — 1280×720 and 1440×860 of usable desktop — and reports
     /// the size the window actually took, the minimum each part of it imposes,
-    /// and every tool-column button that lies outside the column's visible
-    /// height. A window taller than the screen puts its status bar, its console
-    /// and the foot of the tool column below the edge, where nobody can see
-    /// them; the defect is invisible on the machine that has the big screen.
+    /// and whether the ribbon and the status strip fit their budgets. A window
+    /// taller than the screen puts its status bar and its console below the
+    /// edge, where nobody can see them; the defect is invisible on the machine that has the big
+    /// screen.
     int probeFit();
 
     /// THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so
@@ -496,7 +510,7 @@ public:
     ///
     /// WHY THE DECISION IS EXPOSED RATHER THAN THE DIALOG. Both destinations are
     /// modal, so a headless probe cannot let either open — but the routing is
-    /// exactly where the bug was: the toolbar's printer icon captured a frame
+    /// exactly where the bug was: the printer button captured a frame
     /// begun for a layout into the plain print dialog, throwing the sheet away
     /// without a word, while the layout's own menu entry did the right thing.
     QString probeFrameDestination() const;
@@ -507,7 +521,7 @@ public:
     /// Starts one the way a paper profile does, for the probe.
     void probeBeginPlainFrame();
 
-    /// Presses every button on the tool column in turn and prints what the
+    /// Presses every tool button on the ribbon in turn and prints what the
     /// program answered, one line per tool.
     ///
     /// THE CHECK NOTHING ELSE MAKES. A tool button is four things that have to
@@ -520,7 +534,7 @@ public:
     ///
     /// Developer tooling behind `KENTOS_TOOL_PROBE`, the same category as
     /// `KENTOS_EDIT_PROBE`; nothing user-facing calls it.
-    void probeToolBox();
+    void probeTools();
 
     /// Drives a RECORDED provider stream into the chat dock and reports what the
     /// panel did with it, one line at a time.
@@ -535,14 +549,14 @@ public:
     /// Developer tooling behind `KENTOS_CHAT_PROBE`.
     int probeChat();
 
-    /// Every entry of `Dosya ▸ Çıktı Yerleşimleri`, as a menu walk would find it, one
+    /// Every entry of `Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri`, as a menu walk would find it, one
     /// line per action and indented for a submenu.
     ///
     /// THE CHECK NOTHING ELSE MAKES. A menu entry is four things that have to
     /// agree — the submenu exists, it is rebuilt from the document, each sheet
     /// has its own entries, and each entry is CONNECTED. A screenshot shows the
     /// first; only walking the actions and triggering one shows the rest.
-    /// Every entry of the toolbar's print list, as a menu walk would find it.
+    /// Every entry of the print button's list, as a menu walk would find it.
     /// For the probe that proves a layout read off disk reaches it.
     QStringList probePrintMenu();
 
@@ -552,7 +566,7 @@ public:
     /// does — `action->trigger()`, then presses on the canvas, then Enter sent to
     /// whatever actually holds focus.
     ///
-    /// `probeToolBox` above calls `supplyPoint`/`supplyObjects` directly, which
+    /// `probeTools` above calls `supplyPoint`/`supplyObjects` directly, which
     /// proves the session accepts a value and proves NOTHING about whether the
     /// user can give it one. That gap is exactly where "Alan Seç" hid, and it is
     /// where the next one will hide too.
@@ -570,7 +584,7 @@ private slots:
     void onPromptChanged(const QString& prompt);
 
     /// Re-arms a modal draw tool after it has finished a shape, so the next one
-    /// can be drawn without going back to the tool column.
+    /// can be drawn without going back to the ribbon.
     /// Starts `action`'s tool again after a run of `id` finished, clearing a
     /// standing selection first for a tool that begins by asking for objects.
     void rearm(QAction* action, const QString& id);
@@ -590,7 +604,7 @@ private slots:
     void onCommandSubmitted(const QString& line);
 
     /// Re-reads the session modes and re-checks the F3 / F8 / F9 items. Every
-    /// client writes those modes through `MOD`, so the toolbar state is derived
+    /// client writes those modes through `MOD`, so the buttons' state is derived
     /// from the store and never held separately (CLAUDE.md 5.10).
     void refreshAidActions();
 
@@ -655,7 +669,6 @@ protected:
 
 private:
     void buildActions();
-    void buildToolBars();
 
     /// Lights the tool whose command is actually running, and the select tool when
     /// none is.
@@ -723,7 +736,6 @@ private:
     /// which drawing they are about to overwrite.
     void refreshWindowTitle();
 
-    void refreshLayerCombo();
     /// A tabified dock shows its name on the tab, so its own title bar would say
     /// it twice. Hidden while tabbed, restored when the dock is floated or torn
     /// out — dragging the tab still detaches it.
@@ -732,37 +744,115 @@ private:
     void loadSymbolLibrary();
 
     void syncDockTitles();
-    void buildMenus();
 
-    /// Appends every command the menus do not already offer, to the menu of its
-    /// category — GENERATED FROM `Registry`, run once after the menus are built.
-    ///
-    /// The curated entries above it are the ones with a chosen place, a shortcut
-    /// and a hand-written label; this is what makes the bar COMPLETE. Without it
-    /// the menus were a hand-kept list of the commands somebody remembered, and
-    /// what that cost was measurable: of 97 commands, 64 could be started from a
-    /// button or a menu and 33 could be started only by typing their name. A
-    /// mouse user simply did not have them.
-    ///
-    /// That is CLAUDE.md 5.10 read the way it is written — a menu table not
-    /// generated from `Registry` is forbidden — and Article 1.2, which makes the
-    /// GUI an equal client rather than a poorer one. It also means the next
-    /// command to be declared arrives in its menu with nothing told to do it.
-    void completeMenusFromRegistry();
-    void buildToolBox();
+    /// THE RIBBON (`.claude/ui.md` R46–R50): the application button and its
+    /// menu, the quick access row, the tabs and their panels, and the corner of
+    /// the tab row. It replaces the menu bar, the tool bar and the left tool
+    /// column, and it is the ONE place the shell's commands are laid out: every
+    /// button carries an action `buildActions` made, and every command with no
+    /// chosen place lands in its tab's "Diğer" menu — GENERATED FROM `Registry`
+    /// (`ribbonLeftovers`), so the next command declared arrives with a button
+    /// and nothing told to give it one (CLAUDE.md 5.10, Article 1.2).
+    void buildRibbon();
+
+    /// Every command in `categories` (or whose id starts with one of
+    /// `prefixes`) that no action in this window starts yet, as actions for a
+    /// "Diğer" menu. Resolved through `Registry`, so an alias on a button counts
+    /// as the command it names.
+    QList<QAction*> ribbonLeftovers(std::initializer_list<command::Category> categories,
+                                    std::initializer_list<const char*> prefixes);
+
+    /// The ribbon's button for `action` — a family member's is its family's
+    /// split button — with its tab raised when `raise`, so a click reaches it the
+    /// way a hand's would. Null when the ribbon does not show the action.
+    QToolButton* ribbonButton(const QAction* action, bool raise = true);
+
+    /// Every button of the ribbon, on every tab, in the order the tabs show them.
+    QList<QToolButton*> ribbonButtons() const;
+
+    /// THE EDITOR TABS (`.claude/ui.md` R48): `Yazı`, `Ölçü`, `Tarama`, `Alan`, `Blok`,
+    /// each a face on the commands that edit what is selected.
+    void buildContextTabs(SARibbonBar* bar);
+
+    /// Reads the hatch pattern and dimension style catalogues the galleries and
+    /// lists show, from the files the App settings name.
+    void loadRibbonCatalogues();
+
+    /// Wires a ribbon box that takes a figure: a pick from its list takes the
+    /// item's value, a figure typed in `unit` and entered is read, anything else
+    /// puts the box back. `take` runs the command.
+    void connectMetres(ComboBox* box, const std::function<void(double)>& take,
+                       const QString& unit = QStringLiteral("m"));
+
+    /// A processing tool as a ribbon button: its mark, summary and name from the
+    /// processing registry, labelled `word` (empty: the tool's own title), and
+    /// a press opens it in the Araçlar panel where its parameters are.
+    QAction* processingAction(const QString& id, const QString& word);
+
+    /// Brings up the Araçlar panel, with the tool `id` open when one is named.
+    void showToolsPanel(const QString& id);
+
+    /// Brings up the Katmanlar panel.
+    void showLayerPanel();
+
+    /// The layer verbs the ribbon offers from where the drawing is — make
+    /// active, move onto the active one, hide, isolate, show all, invert, lock,
+    /// new — made once and shown on `Giriş` and `Görünüm`.
+    QList<QAction*> layerActions();
+
+    /// The layer of the first selected object; with none selected, the active
+    /// layer, or empty when `selectionOnly`.
+    QString ribbonLayerInHand(bool selectionOnly) const;
+
+    /// The layer box's pick: moves the selection there, or makes it active.
+    void pickRibbonLayer(const QString& name);
+
+    /// ` nesneler=K` for every selected object of `kind` (`core::kNoKind`: all),
+    /// for a command whose default is not the selection.
+    QString selectionArgs(core::KindId kind) const;
+
+    /// Reads the document into the ribbon: the layer box, the colour boxes,
+    /// the annotation defaults and the editor tabs.
+    void refreshRibbon();
+    void refreshLayerBox();
+    void refreshColourBoxes();
+    void refreshRibbonDefaults();
+
+    /// Shows the editor tab of each kind the selection holds — while no command
+    /// is asking for anything — brings a new one forward when the selection is
+    /// only its kind, and reads the first object's values into its boxes.
+    void refreshContextTabs();
+
+    /// Draws again the pictures that are data rather than glyphs — hatch
+    /// patterns, text anchors — and the editor tabs' colours, in the theme.
+    void refreshRibbonPictures();
+
+    /// The rich tip a ribbon button shows for `action`: its name and shortcut,
+    /// what it does, how it is typed, and a family's other members.
+    QString ribbonTip(const QAction* action) const;
+
+    /// Opens the application menu under the `KentOS CAD` button, with the
+    /// documents opened last in its pane.
+    void openApplicationMenu();
+
+    /// The documents opened or saved last, most recent first, as many as
+    /// `core.dosya.son_dosya_sayisi` keeps — a per-machine list, like the
+    /// window's geometry, and so a raw QSettings key rather than a setting.
+    QVector<ApplicationMenu::Recent> recentDocuments() const;
+
+    /// Puts `path` at the head of the recent documents.
+    void noteRecentFile(const QString& path);
     void buildPanels();
     void buildStatusBar();
     void applyTheme();
+
+    /// The inks an action's picture is drawn in, from the theme's tokens.
+    GlyphInks actionInks() const;
     void refreshStatus();
 
-    /// Paints the colour chips with what is in hand: the first selected
-    /// object's stroke and fill, or the active layer's with nothing selected —
-    /// the colours a new object is drawn in.
-    void refreshColourChips();
-
-    /// Opens the menu of chip `which` (0 stroke, 1 fill) beside it: the named
-    /// colours as swatches, any other colour, the layer's, and — for a fill —
-    /// none. Every choice runs `RENK` (`applyColour`).
+    /// Opens the menu of colour box `which` (0 stroke, 1 fill) under it: the
+    /// named colours as swatches, any other colour, the layer's, and — for a
+    /// fill — none. Every choice runs `RENK` (`applyColour`).
     void openColourMenu(int which);
 
     /// Runs `RENK` with `word` as the stroke or the fill. On the selection when
@@ -795,10 +885,29 @@ private:
     /// The form field waiting for a scene pick, as the function that takes the
     /// answer; empty when none is (`ScenePicker`, tools_panel.hpp).
     std::function<void(std::optional<QString>)> pendingPick_;
-    TitleBar* titleBar_      = nullptr;
     CommandPalette* palette_ = nullptr;
     CommandLine* commandLine_{nullptr};
-    ToolBox* toolBox_{nullptr};
+
+    /// The right end of the tab row: the command search and the user chip.
+    ShellCorner* corner_{nullptr};
+    /// `KentOS CAD`, the application button; its floor is set after every sheet.
+    QToolButton* appButton_{nullptr};
+    /// Everything on the ribbon that reads the document (`ribbon.hpp`).
+    std::unique_ptr<RibbonLive> ribbonLive_ = std::make_unique<RibbonLive>();
+    /// The layer verbs, made once (`layerActions`).
+    QList<QAction*> layerActions_;
+    /// Puts the select tool's panel first on a tab (`buildRibbon`).
+    std::function<void(SARibbonCategory*)> selectFirst_;
+    /// What the `KentOS CAD` button opens.
+    ApplicationMenu* appMenu_{nullptr};
+    /// The document last put on the recent list, so a refresh does not write
+    /// the list again for the same file.
+    QString lastRecent_;
+    /// Every tool the ribbon shows, family members included, in ribbon order —
+    /// what the tool, reach and accessibility probes walk.
+    QList<QAction*> ribbonTools_;
+    /// The split buttons, one per family.
+    QList<RibbonFamily*> families_;
     LayerPanel* layerPanel_{nullptr};
     AttributePanel* attributePanel_{nullptr};
     QStackedWidget* propertyStack_{nullptr};
@@ -811,20 +920,14 @@ private:
     QPlainTextEdit* transcript_{nullptr};
     QPlainTextEdit* journalView_{nullptr};
 
-    /// design.md 7 draws ONE 46 px strip, so there is one bar. The old five —
-    /// dosya, düzen, görünüm, katman, CBS — are its seven groups, separated by
-    /// 1 px rules rather than by five drag handles.
-    QToolBar* tbMain_{nullptr};
-    ReadoutStrip* readout_{nullptr};
     StatusStrip* statusStrip_{nullptr};
-    DocumentTabs* docTabs_{nullptr};
     QFrame* commandLineRule_{nullptr};
 
     QDockWidget* layerDock_{nullptr};
     QDockWidget* propertyDock_{nullptr};
 
     /// The conversation panel and its dock. Built with the window rather than on
-    /// demand, so the toolbar mark and `Pencere ▸ Yapay Zeka` both just show it.
+    /// demand, so `Analiz ▸ Yapay zekâ` and `Görünüm ▸ Pencereler` both just show it.
     class ChatPanel* chatPanel_{nullptr};
     PanelHeader* chatHeader_{nullptr};
     class PythonConsole* pythonConsole_{nullptr};
@@ -850,17 +953,15 @@ private:
     QAction* actPaste_{nullptr};
     QAction* actStyle_{nullptr};
 
-    /// The five tool-box groups of design.md 7. Several are Phase 2 commands;
-    /// they exist as disabled buttons so the column has the shape the reference
-    /// draws, with the phase named in each tooltip rather than silently absent.
+    /// The drawing and editing tools the ribbon's panels carry (design.md 7).
     QAction* actSelectArea_{nullptr};
     QAction* actPolygon_{nullptr};
     QAction* actRegular_{nullptr};
     QAction* actTrim_{nullptr};
-    QAction* actCombine_{nullptr};     ///< BİRLEŞTİR — generic; on the tool column
-    QAction* actUnion_{nullptr};       ///< TEVHİT — cadastral; Kadastro menu
-    QAction* actParcelSplit_{nullptr}; ///< İFRAZ — cadastral; Kadastro menu
-    QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; Kadastro menu
+    QAction* actCombine_{nullptr};     ///< BİRLEŞTİR — generic; `Değiştir ▸ Birleştir`
+    QAction* actUnion_{nullptr};       ///< TEVHİT — cadastral; `Kadastro ▸ Parsel`
+    QAction* actParcelSplit_{nullptr}; ///< İFRAZ — cadastral; `Kadastro ▸ Parsel`
+    QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; `Kadastro ▸ Parsel`
     QAction* actMeasureArea_{nullptr};
     QAction* actCoordinate_{nullptr};
     QAction* actEntityInfo_{nullptr};   ///< NESNEBİLGİ — what is this
@@ -936,8 +1037,15 @@ private:
     /// windows to open.
     QString pendingLayout_;
 
-    /// `Dosya ▸ Çıktı Yerleşimleri`, rebuilt from the document each time it opens.
+    /// `Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri`, rebuilt from the document each time
+    /// it opens — the same list the quick access row's printer arrow and the
+    /// application menu show.
     QMenu* layoutMenu_{nullptr};
+
+    /// The layout manager, the one entry of that list with a key (`Ctrl+Shift+P`):
+    /// made once and kept, so the key has one owner however often the list is
+    /// rebuilt.
+    QAction* actLayoutManager_{nullptr};
 
     /// Rebuilds the print button's menu from `PrintService::profiles()`. There
     /// is no second profile list: the menu is the store, drawn (CLAUDE.md 5.10).
@@ -991,8 +1099,8 @@ private:
     QAction* actFillet_{nullptr};
     QAction* actFilletAll_{nullptr}; ///< YUVARLA hepsi=evet
     QAction* actSetLayer_{nullptr};
-    // THE EDIT VERBS THAT WERE MENU ROWS ONLY. Held as tools now, so the column
-    // can carry them in families and the menus and the column press one action.
+    // THE EDIT VERBS THAT WERE MENU ROWS ONLY. Held as tools now, so the ribbon
+    // carries them in families and every place that shows one presses one action.
     QAction* actBreak_{nullptr};         ///< KIR
     QAction* actLengthen_{nullptr};      ///< UZUNLUK
     QAction* actJoin_{nullptr};          ///< UÇUCA

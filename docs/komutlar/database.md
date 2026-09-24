@@ -171,7 +171,8 @@ tıpkı [AÇ](open.md) gibi. Kaydedilmemiş işiniz varsa önce kaydedin.
 
 ### Arayüz
 
-**Dosya > Veritabanı…** (`Ctrl+Shift+D`) modsuz bir pencere açar: üstte bağlantı
+**KentOS CAD ▸ Veritabanı…** ya da şeritteki **Harita ▸ Veri ▸ Veritabanı…**
+(`Ctrl+Shift+D`) modsuz bir pencere açar: üstte bağlantı
 alanları ve bağlantı durumu, altta solda sunucudaki mekansal tablolar, sağda
 kayıtlı KentOSCad projeleri bulunur. Bağlantı kurulduktan sonra **Yenile** düğmesi
 iki listeyi sunucudan yeniden okur.

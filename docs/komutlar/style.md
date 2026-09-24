@@ -519,8 +519,8 @@ katmanı tek tek kodlamak gerekmeyecektir.
 ### Arayüz
 
 Komutu pencerenin altındaki **komut satırına** yazın; sonuç **Transkript** panelinde
-görünür. Arayüzün hiçbir ayrıcalığı yoktur: menüden yapılan da, komut satırından yazılan
-da aynı komuttur, aynı doğrulamadan geçer ve aynı günlüğe yazılır.
+görünür. Arayüzün hiçbir ayrıcalığı yoktur: şeritten ya da bir pencereden yapılan da, komut
+satırından yazılan da aynı komuttur, aynı doğrulamadan geçer ve aynı günlüğe yazılır.
 
 Komut satırına `STİL` yazıp **Enter**'a basarsanız katman adı sorulur; adı yazıp yeniden
 **Enter**'a basmak yeter. **Esc** komutu iptal eder ve çizimde hiçbir iz bırakmaz.

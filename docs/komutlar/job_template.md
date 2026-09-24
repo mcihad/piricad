@@ -108,10 +108,11 @@ Yer tutucuları doldurup satırları sırayla yazarsınız:
 
 ### Arayüz
 
-Arayüzde şablonun karşılığı, adımları **elle** yapmaktır: `Çıktı ▸ Çıktı Yerleşimleri`
-penceresinden yerleşimi kurar, öğeleri koyar, **Atlas** sekmesinden katmanı seçer,
+Arayüzde şablonun karşılığı, adımları **elle** yapmaktır: **Çıktı ▸ Yazdır ▸ Çıktı
+Yerleşimleri** listesinden yerleşimi kurar, öğeleri koyar, **Atlas** sekmesinden katmanı seçer,
 **Denetle** ile eksikleri okur ve **Yazdır** dersiniz. Şablon aynı sırayı yazılı hâlde
-verir — özellikle bir ajanın okuyabileceği hâlde. Menüden başlatıldığında komut
+verir — özellikle bir ajanın okuyabileceği hâlde. Şeritten (**Harita** sekmesinin sonundaki
+**Diğer** listesi) başlatıldığında komut
 önce ne yapılacağını (`listele` ya da `goster`) sorar; `goster` için şablonun
 kimliğini, kataloğun kimliklerini önererek sorar.
 

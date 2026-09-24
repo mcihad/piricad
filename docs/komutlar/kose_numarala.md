@@ -78,7 +78,8 @@ KÖŞENUMARALA nesneler=1 yon=saat ilk=7 sonek="." katman=NUMARA
 
 ### Arayüz
 
-Sağ panelde **Araçlar ▸ Etiketleme ▸ Köşeleri numarala**. **baslangic** alanının yanındaki
+Sağ panelde **Araçlar ▸ Etiketleme ▸ Köşeleri numarala** (şeritteki **Kadastro ▸ Yazım ▸
+Köşe Numarala** de aynı kartı açar). **baslangic** alanının yanındaki
 nişan düğmesine basın (ya da alandayken **F4**): işaretçi seçim işaretçisine döner,
 parselin numaralamanın başlayacağı köşesine tıklayın — köşe yakalanır ve koordinatı alana
 yazılır. `x,y` yazmak ya da boş bırakmak da olur. Öneki ve basamak sayısını verin,

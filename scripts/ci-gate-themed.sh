@@ -11,6 +11,12 @@
 # That is not hypothetical. `SettingsDialog` themed itself and not its
 # `SectionList`, so the settings window kept a black sidebar in the light theme —
 # reported by a user, not by a test. This is that test.
+#
+# A class that DERIVES a component which already declares the interface — the
+# ribbon's layer box is a `ComboBox` — has it by inheritance: the walk's
+# `dynamic_cast<Themed*>` finds it through the base, and naming `Themed` a
+# second time would make the base ambiguous. So the declaring classes are read
+# from every header first, and a base among them counts as the declaration.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,13 +29,22 @@ if [[ ! -d "$app" ]]; then
 fi
 
 checked=0
+# Every class that declares the interface itself, in any header.
+declared="$(cat "$app"/*.hpp | python3 -c '
+import re, sys
+text = sys.stdin.read()
+for m in re.finditer(r"^class\s+(\w+)\s*:([^{]*)\{(.*?)^\};", text, re.S | re.M):
+    if "public Themed" in m.group(2) and "Q_INTERFACES(kentos::app::Themed)" in m.group(3):
+        print(m.group(1))
+')"
 while IFS= read -r header; do
     # Every class in the file, with the body that follows it, so the interface
     # declaration is looked for in the SAME class rather than anywhere nearby.
-    python3 - "$header" <<'PY' || fail=1
+    python3 - "$header" "$declared" <<'PY' || fail=1
 import re, sys
 
 path = sys.argv[1]
+declared = set(sys.argv[2].split())
 text = open(path, encoding="utf-8").read()
 bad  = []
 
@@ -40,6 +55,8 @@ for match in re.finditer(r"^class\s+(\w+)\s*:([^{]*)\{(.*?)^\};", text, re.S | r
         continue
     # A class that inherits a Themed base already answers the walk.
     if "DialogFrame" in bases:
+        continue
+    if any(re.search(r"public\s+" + re.escape(base) + r"\b", bases) for base in declared):
         continue
     if "public Themed" in bases and "Q_INTERFACES(kentos::app::Themed)" in body:
         continue

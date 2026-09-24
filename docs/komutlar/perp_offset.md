@@ -101,8 +101,8 @@ DİKAYAK 0,0 100,0 ayak=12 boy=4 ayak=12 boy=9 ayak=28 boy=9 ayak=28 boy=4 cizgi
 
 ### Arayüz
 
-**Çizim > Dik Ayak** menüsünden ya da araç kutusundaki **Nokta** düğmesini
-basılı tutup açılan karttan **Dik Ayak**'ı seçin.
+Şeritte **Çizim ▸ Nokta ve Alım ▸ Dik Ayak**'a basın ya da **Giriş ▸ Çizim** panelindeki
+**Nokta** düğmesinin okundan **Dik Ayak**'ı seçin.
 
 1. Taban çizgisinin ilk noktasına tıklayın.
 2. İkinci noktasına tıklayın — aradaki kılavuz fareyi izler.

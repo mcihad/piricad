@@ -11,14 +11,13 @@ bağlam ölçerinin ne ölçtüğünü bileceksiniz.
 
 ## Paneli açmak
 
-Dört yol aynı paneli açar; pencerenin sağında bir yuva olarak gelir:
+Üç yol aynı paneli açar; pencerenin sağında bir yuva olarak gelir:
 
 | Yol | Nerede |
 |---|---|
-| **Pencere ▸ Yapay Zeka** | Menü çubuğu; yuvayı açıp kapatır |
-| **Analiz ▸ Yapay Zeka** | Menü çubuğu |
-| **Ctrl+Shift+A** | Klavye |
-| **Yapay Zeka** simgesi | Üst araç çubuğu |
+| **Analiz ▸ Yapay zekâ ▸ Yapay Zeka** | Şerit; paneli açar ve sohbete geçer |
+| **Görünüm ▸ Pencereler ▸ Yapay Zeka** | Şerit; yuvayı açıp kapatır |
+| **Ctrl+Shift+K** | Klavye — komut paletinin **Ctrl+K**'sinin yanında |
 
 Panelin en üstünde **model seçici** vardır ve tanımlı sağlayıcı profillerini listeler;
 listeyi `Seçenekler ▸ Yapay Zeka Modelleri` sayfası ya da

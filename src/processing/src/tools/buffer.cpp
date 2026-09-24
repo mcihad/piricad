@@ -159,7 +159,7 @@ private:
                    "çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen "
                    "tamponlar tek alan olur.",
         .group   = "Analiz",
-        .icon    = "alan",
+        .icon    = "tampon",
         .applies = Applies::Points | Applies::Lines | Applies::Faces | Applies::Curves,
         .params =
             {

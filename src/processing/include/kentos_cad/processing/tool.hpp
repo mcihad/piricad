@@ -155,10 +155,12 @@ struct ToolSpec
 
     std::string summary; ///< one Turkish sentence
     std::string group;   ///< the tree branch: `Etiketleme`
-    /// The mark the tree row wears, by NAME, so the Qt-free module never
-    /// names a glyph: `cetvel` (a ruler), `koordinat`, `yazi`, `alan`, `cizgi`,
-    /// `nokta`, `sigma`, `islev`. The panel maps a name it does not know to
-    /// the generic tool mark.
+    /// The mark the tree row and the ribbon button wear, by NAME, so the
+    /// Qt-free module never names a glyph: `cetvel` (a ruler), `koordinat`,
+    /// `yazi`, `alan`, `cizgi`, `nokta`, `sigma`, `islev`, and the marks of
+    /// one tool each — `tampon`, `kose_no`, `uzunluk`, `bagla`, `bag_coz`,
+    /// `alan_uret`, `alan_duzenle`. The shell maps a name it does not know to
+    /// the generic tool mark (`app::glyph_named`).
     std::string icon;
     Applies applies{
         Applies::None}; ///< the classes it takes; others in scope are skipped and counted

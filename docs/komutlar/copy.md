@@ -77,8 +77,7 @@ KOPYALA nesneler=1 baslangic=0,0 bitis=10,0 bitis=20,0 bitis=30,0
 
 ### Arayüz
 
-Araç kutusunda **Taşı** ailesinden Kopyala'yı seçin ya da komut satırına `KOPYALA`
-yazın. Nesneler seçili değilse komut sorar: tuvalden tıklayın (her tık seçime
+Şeritte **Giriş ▸ Değiştir ▸ Kopyala**'ya basın ya da komut satırına `KOPYALA` yazın. Nesneler seçili değilse komut sorar: tuvalden tıklayın (her tık seçime
 **ekler**) ve sağ tıklayın. Sonra başlangıç noktasını verin; imlecin altında
 kopyalanacak nesnelerin **hayaleti** taşınır. Her sol tık bir kopya bırakır; **sağ
 tık** bitirir ve araç elinizde kalır. Vazgeçmek için Esc: bırakılmış kopyalar kalır,

@@ -246,9 +246,10 @@ Kuruma özel bir kâğıt:
 
 ### Arayüz
 
-#### Menüden
+#### Çıktı Yerleşimleri listesinden
 
-**`Dosya ▸ Çıktı Yerleşimleri`** yerleşimlerin ana kapısıdır:
+**Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri** yerleşimlerin ana kapısıdır; aynı liste hızlı
+erişimdeki yazıcının okunda ve **KentOS CAD ▸ Çıktı Yerleşimleri**'nde de açılır:
 
 | Giriş | Ne yapar |
 |---|---|
@@ -258,7 +259,7 @@ Kuruma özel bir kâğıt:
 | *yerleşim adı* ▸ **Tuvalden Alan Seç…** | Haritanın bakacağı alanı tuvalden çerçeveletir, sonra tasarımcıyı açar |
 | *yerleşim adı* ▸ **PDF'e Aktar…** | `YAZDIR yerlesim=` çalıştırır |
 
-Menü her açılışta çizimden yeniden kurulur: komut satırından eklediğiniz bir yerleşim
+Liste her açılışta çizimden yeniden kurulur: komut satırından eklediğiniz bir yerleşim
 orada olur.
 
 **Çıktı Yerleşimi Yöneticisi**'ndeki **Çoğalt**, yerleşimi bütün öğeleriyle kopyalar.
@@ -266,9 +267,9 @@ Bunu tek bir "kopyala" fiiliyle değil, bir elin yazacağı satırlarla yapar �
 `ÇIKTIYERLEŞİMİ islem=ekle` ve her öğe için bir `ÇIKTIÖĞE` — hepsi tek toplu iş, yani
 tek `Ctrl+Z`. Günlükte gerçekte ne kurulduğu görünür, fiilin arkasına saklanmaz.
 
-#### Araç çubuğundan
+#### Yazdır düğmesinden
 
-Araç çubuğundaki **yazdırma düğmesinin yanındaki ok** hem yazdırma profillerini hem
+Şeritteki **Çıktı ▸ Yazdır ▸ Yazdır** düğmesinin **oku** hem yazdırma profillerini hem
 çizimdeki **çıktı yerleşimlerini** listeler. Listeden bir yerleşim seçtiğinizde:
 
 1. Tuval, o yerleşimin **harita çerçevesinin en-boy oranında** bir seçme çerçevesi açar

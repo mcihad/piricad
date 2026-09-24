@@ -211,7 +211,7 @@ private:
         .summary = "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp "
                    "genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.",
         .group   = "Düzenleme",
-        .icon    = "alan",
+        .icon    = "alan_duzenle",
         .applies = Applies::Faces,
         .params =
             {

@@ -257,8 +257,8 @@ kullanamayacağını.
 Belirteç zorunluluğu kapalıyken blok bunu sözle yazar ve geri açılacak ayarı adıyla
 gösterir.
 
-Aynı işleri menüden de yaparsınız: **Analiz ▸ MCP Sunucusunu Başlat** (sunucu açıkken
-giriş **MCP Sunucusunu Durdur** olur) ve **Analiz ▸ MCP Belirteci Üret**.
+Aynı işleri şeritten de yaparsınız: **Analiz ▸ Yapay zekâ ▸ MCP Sunucusunu Başlat** (sunucu
+açıkken düğme **MCP Sunucusunu Durdur** olur) ve **MCP Belirteci Üret**.
 
 Durum çubuğundaki **ajan hücresi** sunucunun hâlini sürekli gösterir:
 

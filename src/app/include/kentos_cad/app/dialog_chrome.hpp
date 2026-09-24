@@ -7,7 +7,7 @@
 // lesson once — the dialogs used to carry their own stylesheets and matched
 // neither each other nor the shell (see `tokens.hpp`).
 //
-// SYSTEM-FRAMED, for the reason `title_bar.hpp` gives: the drawn title bar these
+// SYSTEM-FRAMED, for the reason `design.md` §7 gives: the drawn title bar these
 // dialogs used to wear had no resize edges, no window menu and no snapping, and
 // §7 now puts the frame back in the window manager's hands. The heading the
 // caller sets becomes the window's title and icon; the help mark moved to the

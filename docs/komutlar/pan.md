@@ -44,7 +44,7 @@ KAYDIR baslangic=485300,4310200 bitis=485400,4310200
 
 ### Arayüz
 
-Sol araç kutusundaki **Kaydır** düğmesine basın, sonra iki nokta tıklayın.
+Şeritte **Görünüm ▸ Gezinme ▸ Kaydır**'a basın, sonra iki nokta tıklayın.
 Aradaki kılavuz ne kadar kaydıracağınızı gösterir.
 
 Fare orta tuşuyla sürüklemek de aynı işi yapar ve komut istemez; orta tuşu olmayan

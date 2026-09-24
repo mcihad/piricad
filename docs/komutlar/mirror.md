@@ -87,8 +87,8 @@ AYNALA nesneler=1 baslangic=0,-5 bitis=0,5 kopya=evet
 
 ### Arayüz
 
-Nesneleri seçin, araç kutusundaki **Taşı** düğmesini basılı tutup karttan
-**Aynala**'yı seçin (ya da `AYNALA` yazın), ayna ekseninin iki noktasını
+Nesneleri seçin, şeritte **Giriş ▸ Değiştir ▸ Aynala**'ya basın (ya da `AYNALA` yazın;
+okunda **Aynala — kopyalayarak** da vardır), ayna ekseninin iki noktasını
 tıklayın.
 
 **Nesneler ikinci tıklamaya kadar aynalanmış hâlde görünür.** Eskiden yalnız

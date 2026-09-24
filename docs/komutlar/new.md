@@ -35,8 +35,8 @@ Yer değiştirmeyle birlikte **sıfırlananlar**:
 - **Oturum modları** (`MOD`): yakalama, dik mod, kutupsal izleme.
 
 **`YENİ` komutun kendisi sormaz.** Kaydedilmemiş çalışmanız varsa soruyu
-*pencere* sorar: `Dosya ▸ Yeni`, **Ctrl+N** ya da sekme şeridindeki **+**
-düğmesi, komutu göndermeden önce **Kaydet / Atla / Vazgeç** seçeneklerini
+*pencere* sorar: **KentOS CAD ▸ Yeni**, **Ctrl+N** ya da hızlı erişimdeki **Yeni**
+simgesi, komutu göndermeden önce **Kaydet / Atla / Vazgeç** seçeneklerini
 gösterir. Komut satırına doğrudan `YENİ` yazarsanız ya da bir betikten
 çağırırsanız soru sorulmaz — `AÇ` da aynı şekilde davranır. Sebebi mimaridir:
 komut gövdesi fare, klavye, betik ve yapay zekâ için aynı çalışır ve toplu bir
@@ -93,9 +93,9 @@ KATMAN ad=PARSEL
 
 | Yol | Nerede |
 |---|---|
-| **Dosya ▸ Yeni** | Menü çubuğu |
+| **KentOS CAD ▸ Yeni** | Şeridin solundaki uygulama menüsü |
+| **Yeni** simgesi | Sekme satırının sağındaki hızlı erişim düğmeleri |
 | **Ctrl+N** | Klavye; fare gerekmez |
-| **+** | Tuvalin üstündeki doküman sekmesi şeridinin sonunda |
 
 Çizimde kaydedilmemiş değişiklik varsa önce şu soru gelir:
 

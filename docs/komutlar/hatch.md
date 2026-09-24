@@ -184,7 +184,8 @@ TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet
 
 ### Arayüz
 
-**Çizim ▸ Tarama**. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
+**Çizim ▸ Tarama** panelinin galerisinden bir desene ya da **Tarama** düğmesine (**Giriş ▸
+Çizim**'de de vardır) basın. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
 Çizilmiş bir taramanın desenini, açısını, ölçeğini, aralığını ve ada kuralını
 nitelik panelinin **TARAMA** grubundan ya da [`TARAMADÜZENLE`](hatch_edit.md) ile
 değiştirin.
