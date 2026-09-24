@@ -73,6 +73,7 @@ const char* attach_anchor_name(AttachAnchor a) noexcept
     case AttachAnchor::Vertex: return "kose";
     case AttachAnchor::Edge: return "kenar";
     case AttachAnchor::Centre: return "merkez";
+    case AttachAnchor::Landing: return "uc";
     }
     return "kenar";
 }
@@ -137,7 +138,21 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
     AttachPlacement out;
     Dir frame_u{1.0, 0.0}; // the reading frame the hand offset is measured in
 
-    if (a.anchor == AttachAnchor::Centre) {
+    if (a.anchor == AttachAnchor::Landing) {
+        // A LEADER'S LANDING: its last point, the words beside it on the side
+        // the last segment points — right of it for a line coming in from the
+        // left, left of it for one coming in from the right — reading along
+        // the page, their near edge a gap away. Only an open line has a free
+        // end to hang words on.
+        if (closed) return std::nullopt;
+        const Point2 end  = ring[n - 1];
+        const Point2 from = ring[n - 2];
+        const bool right  = end.x >= from.x;
+        out.centre        = Point2{end.x + (right ? a.gap : -a.gap), end.y};
+        out.dir_x         = 1.0;
+        out.dir_y         = 0.0;
+        out.anchor        = right ? TextAnchor::MiddleLeft : TextAnchor::MiddleRight;
+    } else if (a.anchor == AttachAnchor::Centre) {
         // The middle of the ring's box, read along the page — where ETİKET has
         // always put a parcel's number, so a label that follows its parcel sits
         // where the one that did not used to.

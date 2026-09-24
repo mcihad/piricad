@@ -6,6 +6,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kılavuz çizginin yazısı kılavuza bağlı ve yazının duracağı yerde sorulur (C-12, 4. aşama: ikinci teslim)
+
+- **Bağlı yazı.** `LİDER`'in yazısı kılavuzun ucuna bağlıdır (yeni bağ türü `uc`): son parçanın
+  gösterdiği tarafta, ucun bir yazı aralığı ötesinde ve o taraftan uzağa akarak durur — soldan
+  gelen kılavuzda sağda ve sola yaslı, sağdan gelende solda ve sağa yaslı. Uç tutamaktan ya da
+  bir dönüşümle taşınınca yazı onu izler, uç öbür tarafa dönerse yazı da döner; elle taşınan
+  yazının kayması korunur; kılavuz silinince yazısı da silinir. Önceden yazı her zaman sağa
+  yazılıyordu (sağdan gelen kılavuzda çizginin üstüne) ve ucu taşınınca geride kalıyordu.
+- **Yazı soruluyor.** Şeritten çizilen kılavuz, noktalar Enter'la bitince yazısını ucunun
+  yanında açılan kutuda sorar (boş Enter yazısız bırakır); önceden yalnız `metin=` ile
+  verilebiliyordu. Bir istemin yazısının duracağı yer istemle gelir (`Prompt::text_at`), tuval
+  kutuyu orada açar.
+
 ### Eklendi — eksik harf ve yazı tipi görünür, paftanın yazı tipi kaydı (C-12, 4. aşama: ilk teslim)
 
 - **Yazı tipinde olmayan harf.** Ekranda da PDF'te de yazı tipinin kendi boş kutusu olarak

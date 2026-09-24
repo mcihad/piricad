@@ -659,7 +659,13 @@ private:
     /// bottom of the window — and until this existed the prompt reached the
     /// command line's placeholder while focus stayed here, so METİN took its
     /// anchor and then hung waiting for a value nothing could send.
-    void openTextEditor(const QPointF& where, bool centred = false);
+    /// Which edge of the caption box `openTextEditor` puts at the point.
+    enum class BoxAlign : std::uint8_t {
+        Left,   ///< the box starts at the point: words that run to the right of it
+        Centre, ///< centred on it: words already standing there
+        Right,  ///< the box ends at it: words that run to the left of it
+    };
+    void openTextEditor(const QPointF& where, BoxAlign align = BoxAlign::Left);
     void closeTextEditor();
     /// The box was opened by `editTextAt`: Esc gives up the edit that asked.
     bool text_editor_abandons_{false};

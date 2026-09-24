@@ -867,3 +867,112 @@ TEST_CASE("DÖNDÜR: yarım tur dönen ölçünün yazısı yine çizginin üst�
     CHECK(r.def(2).user_text_position);
     CHECK_EQ(caption_centre(r, 2), (Point2{-14'000, -26'000}));
 }
+
+// ------------------------------------------------- the leader's words (C-12) ----
+
+namespace {
+
+/// Where object `key`'s caption is anchored, and how.
+std::pair<Point2, core::TextAnchor> caption_at(const Rig& r, std::int64_t key)
+{
+    const core::EntityId e   = r.entity(key);
+    const std::uint32_t slot = r.doc.entities().slot[e];
+    const core::RingSpan rs  = r.doc.geometry().rings_of(slot);
+    return {Point2{r.doc.geometry().ring_xs(rs.first)[0], r.doc.geometry().ring_ys(rs.first)[0]},
+            r.doc.texts().anchor(slot)};
+}
+
+} // namespace
+
+TEST_CASE(
+    "KILAVUZ ÇİZGİ YAZISI kılavuzun ucuna bağlıdır: ucu izler, yön dönünce taraf ve hiza döner")
+{
+    // TODOS C-12: the words were a free caption placed once, always to the
+    // right — over the line itself when it came in from the right, and left
+    // behind when its end moved.
+    Rig r;
+    r.run("LİDER noktalar=0,0 5,5 10,5 metin=Rögar"); // 1 the leader, 2 its words
+    auto [at, anchor] = caption_at(r, 2);
+    CHECK_EQ(at, (Point2{10'000 + 625, 5'000}));
+    CHECK(anchor == core::TextAnchor::MiddleLeft);
+    const core::Attachment* tie = r.doc.attachments().get(r.entity(2));
+    REQUIRE(tie != nullptr);
+    CHECK(tie->anchor == core::AttachAnchor::Landing);
+    CHECK_EQ(core::raw(tie->source), std::uint64_t{1});
+
+    // Its end moved by a grip: the words go with it.
+    r.run("KÖŞETAŞI nesne=1 kose=3 nokta=12,8");
+    std::tie(at, anchor) = caption_at(r, 2);
+    CHECK_EQ(at, (Point2{12'000 + 625, 8'000}));
+    CHECK(anchor == core::TextAnchor::MiddleLeft);
+
+    // Turned round — the last segment now comes in from the right — the
+    // words go to the other side and run away from the line.
+    r.run("KÖŞETAŞI nesne=1 kose=3 nokta=2,8");
+    std::tie(at, anchor) = caption_at(r, 2);
+    CHECK_EQ(at, (Point2{2'000 - 625, 8'000}));
+    CHECK(anchor == core::TextAnchor::MiddleRight);
+
+    // Moved together, nothing is re-placed; moved alone, the leader carries them.
+    r.run("TAŞI nesneler=1 2 baslangic=0,0 bitis=10,0");
+    std::tie(at, anchor) = caption_at(r, 2);
+    CHECK_EQ(at, (Point2{12'000 - 625, 8'000}));
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=0,-3");
+    std::tie(at, anchor) = caption_at(r, 2);
+    CHECK_EQ(at, (Point2{12'000 - 625, 5'000}));
+
+    // A leader drawn without words is asked for none by a script, and has none.
+    r.run("LİDER noktalar=20,0 25,5"); // 3
+    CHECK_EQ(r.doc.attachments().get(r.entity(3)), nullptr);
+
+    // And its words go with it when it is erased.
+    r.run("SİL nesneler=1");
+    CHECK_FALSE(r.doc.alive(r.entity(2)));
+}
+
+TEST_CASE("KILAVUZ ÇİZGİ KANIT: yazısı sorulan arayüz, komut satırı, betik ve oynatma aynı çizim")
+{
+    // The words asked for after the points (TODOS C-12) are an answer like any
+    // other: the same line in the journal as a typed `metin=`, and the same tie.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("LİDER", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& s = *started.value();
+        CHECK(s.supply(Value::point(Point2{0, 0})).ok());
+        CHECK(s.supply(Value::point(Point2{5'000, 5'000})).ok());
+        CHECK(s.supply(Value::point(Point2{-3'000, 5'000})).ok()); // comes in from the right
+        CHECK(s.supply(Value{}).ok());                             // the points end
+        CHECK(s.supply(Value::text("Rögar K-12")).ok());           // and the words are asked
+        REQUIRE(gui.bus.finish(s).ok());
+    }
+
+    Rig cli;
+    REQUIRE(
+        cli.bus
+            .execute_line("LİDER noktalar=0,0 5,5 -3,5 metin=\"Rögar K-12\"", Origin::CommandLine)
+            .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.leader","args":{"noktalar":[[0,0],[5000,5000],[-3000,5000]],
+                        "metin":"Rögar K-12"}}]})")
+                    .ok());
+    }
+
+    const auto [at, anchor] = caption_at(gui, 2);
+    CHECK_EQ(at, (Point2{-3'000 - 625, 5'000}));
+    CHECK(anchor == core::TextAnchor::MiddleRight);
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}

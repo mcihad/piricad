@@ -91,6 +91,14 @@ private:
     bool cancelled_{false};
 };
 
+/// Where the words a text prompt asks for will stand (`Prompt::text_at`) — a
+/// hint for the clients that present, like `PointOptions` below.
+struct TextPlace
+{
+    Point2 at{};          ///< the point the words begin from
+    bool leftward{false}; ///< they run to the left of it
+};
+
 /// How a point request should be presented, for the clients that present.
 ///
 /// Purely a hint: a headless replay ignores it entirely, and the command body is
@@ -187,6 +195,9 @@ public:
     /// what is acceptable (`Prompt::choices`).
     InputAwaiter<std::string> text(std::string param, std::string message,
                                    std::vector<std::string> choices = {});
+    /// Asks for words that will stand at `place` — the canvas opens its caption
+    /// box there, so they are typed where they go.
+    InputAwaiter<std::string> text(std::string param, std::string message, TextPlace place);
     InputAwaiter<bool> boolean(std::string param, std::string message);
 
     /// Asks which objects the command is to act on.

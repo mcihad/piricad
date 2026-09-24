@@ -23,6 +23,7 @@
 
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
@@ -39,6 +40,11 @@ enum class AttachAnchor : std::uint8_t {
     Vertex = 0, ///< one corner of one ring
     Edge   = 1, ///< one edge of one ring: from vertex `index` to the next
     Centre = 2, ///< the middle of the ring's box: where a parcel's number and area sit
+    /// The free end of an open line — a leader's landing (TODOS C-12): the
+    /// caption stands beside it on the side the last segment points, reading
+    /// along the page, its near edge `gap` from the point and aligned to that
+    /// side, so however long the words are they run away from the line.
+    Landing = 3,
 };
 
 /// Which side of the anchored edge the dependent sits on. `Outside`/`Inside` are
@@ -94,9 +100,14 @@ struct Attachment
 /// Where the rule puts the dependent's caption, and which way it reads.
 struct AttachPlacement
 {
-    Point2 centre{};   ///< the caption's centre (its `MiddleCentre` anchor)
+    Point2 centre{};   ///< where the caption's anchor goes: its middle, unless `anchor` says
     double dir_x{1.0}; ///< the reading direction, unit length: x
     double dir_y{0.0}; ///< and y
+    /// The caption's own anchor at `centre`, when the rule decides it: a
+    /// landing's caption is aligned to the side it stands on, and changes
+    /// alignment when the line turns round. Empty for every other rule, whose
+    /// caption keeps the anchor it has.
+    std::optional<TextAnchor> anchor{};
 };
 
 /// The rule's place for a caption of height `height` attached by `a` to the

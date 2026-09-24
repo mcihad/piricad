@@ -9,8 +9,10 @@ not düşer. DXF `LEADER` budur.
 
 Tek açık halka: okun ucundan yazının yanına köşeler. Yükte okun olup olmadığı, ok
 boyu (zemin milimetresi) ve kaynağın spline olarak çizdiğine dair bayrak durur. Yazı
-kılavuz çizginin parçası **değildir**: `LİDER metin=` verilirse son köşenin yanına ayrı bir
-yazı nesnesi konur, her CAD biçiminin yaptığı gibi.
+kılavuz çizginin parçası **değildir**: son köşenin yanına ayrı bir yazı nesnesi konur, her
+CAD biçiminin yaptığı gibi — ama kılavuzun ucuna **bağlıdır** (bağ türü `uc`): ucu izler,
+son parça yön değiştirince tarafını ve yaslanışını değiştirir, kılavuz silinince silinir
+([LİDER](../komutlar/leader.md)). Bağ proje dosyasına yazılır.
 
 ## Nasıl çizilir
 

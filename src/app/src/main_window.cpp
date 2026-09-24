@@ -5140,6 +5140,86 @@ int MainWindow::probeRealMouse()
                   QStringLiteral("YAZDIR iletisi gömülü yazı tipini ve lisansını söylüyor"));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 20. A LEADER'S WORDS, TYPED WHERE THEY GO AND TIED TO IT (TODOS C-12) ----
+        //
+        // Drawn from the ribbon with clicks and ended with Enter: the words are
+        // asked in the box beside the landing, and once written they follow the
+        // landing and change side when the line comes in from the other way.
+        {
+            fresh({QStringLiteral("DAİRE merkez=0,0 cevre=2,0")});
+            // Out far enough that the leader's points and its turned end are on
+            // the canvas: a click off it still reaches the canvas, but the box
+            // is kept inside it and would not stand where the words go.
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.2"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::int64_t circle = first_key();
+            const auto click          = [&onCanvas](QPointF at) {
+                onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+            };
+            actLeader_->trigger();
+            QCoreApplication::processEvents();
+            for (const core::Point2 at : {core::Point2{1'414, 1'414}, core::Point2{8'000, 6'000},
+                                          core::Point2{14'000, 6'000}})
+                click(screen(at));
+            {
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(commandLine_, &enter);
+                QCoreApplication::processEvents();
+            }
+            const core::Document& doc = controller_->document();
+            const core::EntityId leader =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(circle + 1)));
+            core::Point2 landing{};
+            if (leader != core::kNoEntity && doc.alive(leader)) {
+                const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[leader]);
+                const auto xs           = doc.geometry().ring_xs(rs.first);
+                const auto ys           = doc.geometry().ring_ys(rs.first);
+                landing                 = core::Point2{xs.back(), ys.back()};
+            }
+            auto* box = canvas_->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+            const QPointF where = screen(core::Point2{landing.x + 625, landing.y});
+            check(box != nullptr && box->isVisible() &&
+                      std::abs(box->geometry().left() - where.x()) <= 3.0 &&
+                      window()->focusWidget() == box,
+                  QStringLiteral("kılavuzun yazısı ucunun yanındaki kutuda soruluyor, klavye "
+                                 "orada (kutu x=%1, uç x=%2)")
+                      .arg(box != nullptr ? box->geometry().left() : -1)
+                      .arg(where.x(), 0, 'f', 0));
+            shoot("kilavuz-yazi-kutusu");
+            if (box != nullptr && box->isVisible()) {
+                box->setText(QStringLiteral("Rögar K-12"));
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(box, &enter);
+                QCoreApplication::processEvents();
+            }
+            controller_->cancelInteractive(); // the tool re-armed for the next leader
+            QCoreApplication::processEvents();
+            const core::EntityId words =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(circle + 2)));
+            const core::Attachment* tie =
+                words != core::kNoEntity ? doc.attachments().get(words) : nullptr;
+            check(tie != nullptr && tie->anchor == core::AttachAnchor::Landing &&
+                      core::raw(tie->source) == static_cast<std::uint64_t>(circle + 1) &&
+                      doc.texts().text(doc.entities().slot[words]) == "Rögar K-12",
+                  QStringLiteral("yazı kılavuzun ucuna bağlı"));
+            runScriptLine(QStringLiteral("KÖŞETAŞI nesne=%1 kose=3 nokta=4,10").arg(circle + 1));
+            endCommand();
+            bool turned = false;
+            if (words != core::kNoEntity && doc.alive(words)) {
+                const std::uint32_t slot = doc.entities().slot[words];
+                const core::RingSpan rs  = doc.geometry().rings_of(slot);
+                turned = doc.texts().anchor(slot) == core::TextAnchor::MiddleRight &&
+                         doc.geometry().ring_xs(rs.first)[0] == 4'000 - 625 &&
+                         doc.geometry().ring_ys(rs.first)[0] == 10'000;
+            }
+            check(turned, QStringLiteral("kılavuzun ucu sola dönünce yazı ucu izledi, sola geçti "
+                                         "ve sağa yaslandı"));
+            shoot("kilavuz-yazi-izler");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

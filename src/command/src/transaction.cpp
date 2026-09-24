@@ -590,11 +590,15 @@ Transaction::SettleReport Transaction::settle_attachments()
                                         geom.vertex(rs.first, 0) == base[0] &&
                                         geom.vertex(rs.first, 1) == base[1];
                 const bool same_text = text == texts.text(dslot);
+                // A landing's caption changes its alignment with the side it
+                // stands on; every other caption keeps the one it has.
+                const core::TextAnchor anchor = place->anchor.value_or(texts.anchor(dslot));
+                const bool same_anchor        = anchor == texts.anchor(dslot);
 
                 if (a != *stored && !set_attachment(d, a)) continue;
-                if (!same_text) {
-                    if (!set_text(d, text, height, texts.anchor(dslot))) continue;
-                    ++rep.relabelled;
+                if (!same_text || !same_anchor) {
+                    if (!set_text(d, text, height, anchor)) continue;
+                    if (!same_text) ++rep.relabelled;
                 }
                 if (!same_place) {
                     const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};

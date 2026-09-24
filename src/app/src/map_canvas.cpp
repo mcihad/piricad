@@ -88,9 +88,22 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     // an empty box floating over the drawing, and it took every click that
     // landed on it: a dimension placed there simply never happened.
     connect(&controller_, &Controller::promptChanged, this, [this](const QString&) {
-        if (text_editor_ == nullptr || !text_editor_->isVisible()) return;
-        if (controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text)
+        const bool asking_text =
+            controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text;
+        const bool open = text_editor_ != nullptr && text_editor_->isVisible();
+        // A QUESTION THAT SAYS WHERE ITS WORDS WILL STAND opens the box there
+        // (TODOS C-12): a leader's words are typed beside its landing, not at
+        // the bottom of the window after the last point was clicked.
+        if (asking_text && !open) {
+            const command::Session* live = controller_.session();
+            if (live != nullptr && live->prompt().text_at) {
+                const render::ScreenPoint at = view_.to_screen(*live->prompt().text_at);
+                openTextEditor(QPointF(at.x, at.y),
+                               live->prompt().text_leftward ? BoxAlign::Right : BoxAlign::Left);
+            }
             return;
+        }
+        if (!open || asking_text) return;
         closeTextEditor();
     });
 }
@@ -4287,7 +4300,7 @@ QCursor MapCanvas::captureCursor() const
 
 // ------------------------------------------------------ the text editor ----
 
-void MapCanvas::openTextEditor(const QPointF& where, bool centred)
+void MapCanvas::openTextEditor(const QPointF& where, BoxAlign align)
 {
     if (text_editor_ == nullptr) {
         text_editor_ = new QLineEdit(this);
@@ -4323,11 +4336,13 @@ void MapCanvas::openTextEditor(const QPointF& where, bool centred)
     // Placed where the caption will start, and nudged back inside when the click
     // was near the right or bottom edge — a box drawn off the canvas is a box the
     // user cannot type into.
-    const int w    = std::max(180, width() / 4);
-    const int h    = text_editor_->sizeHint().height();
-    const int left = static_cast<int>(where.x()) - (centred ? w / 2 : 0);
-    const int x    = std::clamp(left, 0, std::max(0, width() - w));
-    const int y    = std::clamp(static_cast<int>(where.y()) - h / 2, 0, std::max(0, height() - h));
+    const int w = std::max(180, width() / 4);
+    const int h = text_editor_->sizeHint().height();
+    int left    = static_cast<int>(where.x());
+    if (align == BoxAlign::Centre) left -= w / 2;
+    if (align == BoxAlign::Right) left -= w;
+    const int x = std::clamp(left, 0, std::max(0, width() - w));
+    const int y = std::clamp(static_cast<int>(where.y()) - h / 2, 0, std::max(0, height() - h));
 
     text_editor_->setGeometry(x, y, w, h);
     text_editor_->clear();
@@ -4338,7 +4353,7 @@ void MapCanvas::openTextEditor(const QPointF& where, bool centred)
 void MapCanvas::editTextAt(core::Point2 world, const QString& text)
 {
     const render::ScreenPoint at = view_.to_screen(world);
-    openTextEditor(QPointF(at.x, at.y), true);
+    openTextEditor(QPointF(at.x, at.y), BoxAlign::Centre);
     text_editor_->setText(text);
     text_editor_->selectAll();
     text_editor_abandons_ = true;

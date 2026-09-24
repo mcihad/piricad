@@ -16,6 +16,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/json.hpp"
@@ -581,22 +582,51 @@ Task<void> run_leader(Context& ctx)
         co_return;
     }
 
+    // BESIDE THE LANDING AND TIED TO IT (TODOS C-12): on the side the last
+    // segment points, aligned away from the line, a gap off its end — and the
+    // words follow that end when a grip or a transform moves it, and turn to
+    // the other side when the line does.
+    core::Attachment tie;
+    tie.source       = ctx.document().key_of(created.value());
+    tie.anchor       = core::AttachAnchor::Landing;
+    tie.derive       = core::AttachDerive::Keep;
+    tie.gap          = style->figures.text_gap;
+    const auto place = core::attach_place(points, false, tie, style->text_height, false);
+    if (!place) {
+        ctx.refuse(core::ErrorCode::Internal, "Kılavuz çizginin yazısı yerleştirilemedi.");
+        co_return;
+    }
+
+    // THE WORDS ARE ASKED FOR when the hand drew it, in the box where they will
+    // stand (TODOS C-12): a leader points at something to say something about
+    // it, and one drawn from the ribbon used to end with no way to say it.
+    // Enter with nothing leaves it bare; a script that gave none is not asked.
     std::string words;
-    if (const Value m = ctx.argument("metin"); !m.empty()) words = m.as_text();
+    if (const Value m = ctx.argument("metin"); !m.empty()) {
+        words = m.as_text();
+    } else if (auto typed = co_await ctx.text(
+                   "metin", "Kılavuzun yazısı; boş Enter yazısız bırakır",
+                   TextPlace{place->centre, place->anchor == core::TextAnchor::MiddleRight});
+               typed) {
+        words = *typed;
+    }
     if (!words.empty()) {
-        // The caption beside the last vertex, a gap away, reading to the right —
-        // its own entity, so it moves and edits like any METİN.
-        const core::Point2 last = points.back();
-        const core::Point2 start{last.x + style->figures.text_gap, last.y - style->text_height / 2};
-        const auto base = core::dimension_baseline(start, 1.0, 0.0, style->text_height, words);
-        auto caption    = ctx.transaction().add_polyline(ctx.active_layer(), base);
+        // Its own entity, so it edits like any METİN.
+        const auto base =
+            core::dimension_baseline(place->centre, 1.0, 0.0, style->text_height, words);
+        auto caption = ctx.transaction().add_polyline(ctx.active_layer(), base);
         if (!caption) {
             ctx.refuse(caption.error());
             co_return;
         }
-        if (auto st = ctx.transaction().set_text(caption.value(), words, style->text_height,
-                                                 core::TextAnchor::BaselineLeft);
+        if (auto st =
+                ctx.transaction().set_text(caption.value(), words, style->text_height,
+                                           place->anchor.value_or(core::TextAnchor::MiddleLeft));
             !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
+        if (auto st = ctx.transaction().set_attachment(caption.value(), tie); !st) {
             ctx.refuse(st.error());
             co_return;
         }

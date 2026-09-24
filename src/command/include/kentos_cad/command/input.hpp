@@ -161,6 +161,14 @@ struct Prompt
     /// name is by definition not among the ones a drawing already has.
     std::vector<std::string> choices{};
 
+    /// WHERE THE WORDS WILL STAND, for a text prompt that has a place: a
+    /// leader's words beside its landing (TODOS C-12). The canvas opens its
+    /// caption box there, so they are typed where they go rather than at the
+    /// bottom of the window; `text_leftward` says they run to the left of the
+    /// point, as a leader coming in from the right writes them.
+    std::optional<Point2> text_at{};
+    bool text_leftward{false};
+
     /// The kind payload of the thing about to be made, for a preview that needs
     /// more than points: the block reference BLOKEKLE will place (its block,
     /// scale and turn), the dimension ÖLÇÜ will lay out (its type and figures),

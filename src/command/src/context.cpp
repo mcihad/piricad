@@ -201,6 +201,17 @@ InputAwaiter<std::string> Context::text(std::string param, std::string message,
     return InputAwaiter<std::string>(session_, std::move(p), std::move(prompt), &to_text);
 }
 
+InputAwaiter<std::string> Context::text(std::string param, std::string message, TextPlace place)
+{
+    Param p = Param::text(param, Arity::exactly(1));
+    Prompt prompt{.message       = std::move(message),
+                  .kind          = ParamKind::Text,
+                  .param         = param,
+                  .text_at       = place.at,
+                  .text_leftward = place.leftward};
+    return InputAwaiter<std::string>(session_, std::move(p), std::move(prompt), &to_text);
+}
+
 InputAwaiter<bool> Context::boolean(std::string param, std::string message)
 {
     Param p = Param::boolean(param, Arity::exactly(1));

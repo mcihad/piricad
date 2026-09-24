@@ -1481,6 +1481,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             a.anchor = core::AttachAnchor::Edge;
             if (r.anchor == 0) a.anchor = core::AttachAnchor::Vertex;
             if (r.anchor == 2) a.anchor = core::AttachAnchor::Centre;
+            if (r.anchor == 3) a.anchor = core::AttachAnchor::Landing;
             a.side   = static_cast<core::AttachSide>(r.side > 3 ? 0 : r.side);
             a.derive = core::AttachDerive::Keep;
             if (r.derive == 1) a.derive = core::AttachDerive::Length;

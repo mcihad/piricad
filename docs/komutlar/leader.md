@@ -7,6 +7,13 @@ yanına bir yazı koyar. Ok boyu ve yazı yüksekliği [ölçü stilinden](dimen
 Sonuç bir [kılavuz çizgi nesnesidir](../nesneler/lider.md); yazı ayrı bir metin nesnesidir ve `METİN` gibi
 düzenlenir.
 
+**Yazı kılavuzun ucuna bağlıdır.** Son parçanın gösterdiği tarafta, ucun bir yazı aralığı
+ötesinde durur ve o taraftan uzağa akar: soldan gelen kılavuzda sağda ve sola yaslı,
+sağdan gelende solda ve sağa yaslı — yazı ne kadar uzun olursa olsun çizginin üstüne
+binmez. Kılavuzun ucu tutamaktan ya da `TAŞI`, `DÖNDÜR`, `ÖLÇEKLE` ile taşınınca yazı onu
+izler; uç öbür tarafa dönerse yazı da döner ve yaslanışını değiştirir. Yazıyı elle
+taşırsanız o kayma korunur. Kılavuz silinince yazısı da silinir.
+
 ## Adlar
 
 | Türkçe | ASCII | İngilizce | Kısaltma |
@@ -28,7 +35,7 @@ LİDER noktalar=<sağa>,<yukarı> <sağa>,<yukarı> ... [metin=<yazı>] [stil=<a
 | Parametre | Ne yapar |
 |---|---|
 | `noktalar` | Okun ucundan yazının yanına köşeler, en az iki |
-| `metin` | Son köşenin yanına yazılacak metin |
+| `metin` | Son köşenin yanına yazılacak metin; verilmezse arayüzde sorulur, betikte yazısız kalır |
 | `stil` | Ok ve yazı boyunu veren ölçü stili; verilmezse projenin [`ölçü_stili`](dimension_style.md) ayarı (başlangıçta `ISO-25`) |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
 
@@ -47,8 +54,9 @@ LİDER noktalar=10,0 13,3
 ### Arayüz
 
 **Giriş ▸ Açıklama ▸ Kılavuz Çizgi** (ya da **Açıklama ▸ Etiket ▸ Kılavuz Çizgi**). Okun
-ucunu, sonra köşeleri tıklayın; Enter ile bitirin, yazıyı
-yazın.
+ucunu, sonra köşeleri tıklayın; Enter ile bitirin. Yazı, kılavuzun ucunun yanında —
+yazının duracağı yerde — açılan kutuda sorulur: yazıp **Enter**'a basın; boş **Enter**
+kılavuzu yazısız bırakır.
 
 ### Betik
 
@@ -68,7 +76,10 @@ Tek adımdır: `GERİAL` kılavuz çizgiyi ve yazısını birlikte kaldırır.
 
 ## Betikten kullanım
 
-Günlüğe köşeler, stil ve varsa metin yazılır.
+Günlüğe köşeler, stil ve varsa metin yazılır. Arayüzde sorulan yazı günlüğe `metin`
+olarak yazılır, yani arayüz, komut satırı ve betik aynı satırı bırakır. Betik `metin`
+vermezse yazı sorulmaz; kılavuz yazısız çizilir. Yazının bağı günlüğe yazılmaz, çünkü
+oynatılan `LİDER` onu aynı biçimde yeniden kurar.
 
 ## Hatalar
 

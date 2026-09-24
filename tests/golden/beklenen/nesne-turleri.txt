@@ -102,11 +102,11 @@ nesne 16 katman=OLCULER stil=0 halka=1 tur=11 yuk=0100010000000000c4090000000000
   alan_mm2 0  cevre_mm 7243
 nesne 17 katman=OLCULER stil=0 halka=1
   halka rol=0 parca=0 tepe=2
-    485806625 4310201750
-    485814125 4310201750
+    485806625 4310203000
+    485814125 4310203000
   alan_mm2 0  cevre_mm 7500
 kapsam 485300000 4310190000 485814125 4310320000
-icerik-ozeti 8cc78e342ce6d4fc
+icerik-ozeti b48931a33db40b5b
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"EGRILER"},"origin":"test","crs":"TUREF/TM36","katman":"EGRILER"}
   {"seq":2,"cmd":"core.spline","args":{"noktalar":[[485300000,4310200000],[485310000,4310220000],[485320000,4310220000],[485330000,4310200000]],"derece":3},"origin":"test","crs":"TUREF/TM36","katman":"EGRILER"}
