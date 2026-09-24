@@ -3788,6 +3788,32 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
+void MapCanvas::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    // A DOUBLE CLICK ON AN OBJECT OPENS WHAT EDITS IT (TODOS C-17) — a caption
+    // its words, a dimension its figure — the gesture every CAD has for it.
+    // Only when nothing owns the click: while a command asks for a point or
+    // for objects, a form field's pick is armed, the print frame is up or the
+    // press is on a ruler, the second press is the press it always was.
+    const auto band  = static_cast<double>(look_.ruler ? look_.ruler_px : 0);
+    const bool ruler = event->position().x() < band || event->position().y() < band;
+    const bool owned = controller_.awaitingInput() || capture_.has_value() || print_aspect_ > 0.0 ||
+                       dragging_grip_ || dragging_guide_ >= 0 || ruler;
+    if (event->button() == Qt::LeftButton && !owned) {
+        const core::Point2 at =
+            view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
+        std::vector<core::EntityId> under;
+        core::pick_all(controller_.document(), at, controller_.bus().aid_settings().pick_radius,
+                       under);
+        if (!under.empty()) {
+            selecting_ = false;
+            emit entityActivated(controller_.document().key_of(under.front()));
+            return;
+        }
+    }
+    mousePressEvent(event);
+}
+
 double wheel_zoom_factor(const core::Settings& store, double notches)
 {
     if (notches == 0.0) return 1.0;
@@ -4199,7 +4225,7 @@ QCursor MapCanvas::captureCursor() const
 
 // ------------------------------------------------------ the text editor ----
 
-void MapCanvas::openTextEditor(const QPointF& where)
+void MapCanvas::openTextEditor(const QPointF& where, bool centred)
 {
     if (text_editor_ == nullptr) {
         text_editor_ = new QLineEdit(this);
@@ -4218,7 +4244,9 @@ void MapCanvas::openTextEditor(const QPointF& where)
         auto* give_up = new QShortcut(QKeySequence(Qt::Key_Escape), text_editor_);
         give_up->setContext(Qt::WidgetShortcut);
         connect(give_up, &QShortcut::activated, this, [this] {
+            const bool abandon = text_editor_abandons_;
             closeTextEditor();
+            if (abandon) controller_.cancelInteractive();
             update();
         });
 
@@ -4233,10 +4261,11 @@ void MapCanvas::openTextEditor(const QPointF& where)
     // Placed where the caption will start, and nudged back inside when the click
     // was near the right or bottom edge — a box drawn off the canvas is a box the
     // user cannot type into.
-    const int w = std::max(180, width() / 4);
-    const int h = text_editor_->sizeHint().height();
-    const int x = std::clamp(static_cast<int>(where.x()), 0, std::max(0, width() - w));
-    const int y = std::clamp(static_cast<int>(where.y()) - h / 2, 0, std::max(0, height() - h));
+    const int w    = std::max(180, width() / 4);
+    const int h    = text_editor_->sizeHint().height();
+    const int left = static_cast<int>(where.x()) - (centred ? w / 2 : 0);
+    const int x    = std::clamp(left, 0, std::max(0, width() - w));
+    const int y    = std::clamp(static_cast<int>(where.y()) - h / 2, 0, std::max(0, height() - h));
 
     text_editor_->setGeometry(x, y, w, h);
     text_editor_->clear();
@@ -4244,8 +4273,23 @@ void MapCanvas::openTextEditor(const QPointF& where)
     text_editor_->setFocus(Qt::OtherFocusReason);
 }
 
+void MapCanvas::editTextAt(core::Point2 world, const QString& text)
+{
+    const render::ScreenPoint at = view_.to_screen(world);
+    openTextEditor(QPointF(at.x, at.y), true);
+    text_editor_->setText(text);
+    text_editor_->selectAll();
+    text_editor_abandons_ = true;
+}
+
+bool MapCanvas::textEditorOpen() const noexcept
+{
+    return text_editor_ != nullptr && text_editor_->isVisible();
+}
+
 void MapCanvas::closeTextEditor()
 {
+    text_editor_abandons_ = false;
     if (text_editor_ == nullptr) return;
     text_editor_->hide();
     text_editor_->clear();

@@ -22,9 +22,11 @@
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/core/identity.hpp"
 
 #include <array>
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include <QColor>
@@ -43,6 +45,11 @@ class SARibbonToolButton;
 
 // SARibbon's element factory, which this program subclasses below.
 #include "SARibbon.h"
+
+namespace kentos::core {
+/// The drawing `ribbon_context_of` reads an object's kind and caption from.
+class Document;
+} // namespace kentos::core
 
 namespace kentos::app {
 
@@ -270,6 +277,10 @@ enum class RibbonContext : std::uint8_t {
 /// How many editor tabs there are.
 inline constexpr std::size_t kRibbonContextCount = 5;
 
+/// The editor tab object `e` of `doc` belongs to, if any: what brings a tab
+/// up for a selection and what a double click on the object opens.
+std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::EntityId e);
+
 /// EVERYTHING ON THE RIBBON THAT READS THE DOCUMENT (`.claude/ui.md` R47, R48):
 /// the boxes that say where the next object goes and what colour it wears, the
 /// defaults the annotation commands fall back to, and the editor tabs with the
@@ -290,6 +301,11 @@ struct RibbonLive
     std::array<SARibbonContextCategory*, kRibbonContextCount> contexts{};
     /// Which of them the selection has up now.
     std::array<bool, kRibbonContextCount> showing{};
+    /// What each tab edits its object with, and what a double click on such an
+    /// object runs (TODOS C-17): the caption's, the dimension's and the
+    /// hatch's own edit. Null where the object has none — an area or a block
+    /// goes to the attribute panel instead.
+    std::array<QAction*, kRibbonContextCount> editors{};
     /// The tab that was up before an editor tab raised itself, to go back to.
     QPointer<SARibbonCategory> before;
 

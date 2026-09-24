@@ -90,10 +90,12 @@ struct GripEdit
         payload; ///< the payload to store alongside — the old bytes when unchanged
 
     /// A dimension's caption must be re-laid after its definition changes: where
-    /// it is centred and which way it reads, from `dimension_layout`. The text
-    /// itself needs the drawing unit, which the command has and this does not,
-    /// so the command redoes ring 0 with `dimension_baseline` once it has the
-    /// text. Unset for every other kind.
+    /// it is centred and which way it reads, from `dimension_layout` — or, for a
+    /// caption placed by hand, where it stands. The text itself needs the
+    /// drawing unit, which the command has and this does not, so the command
+    /// finishes ring 0 with `dimension_caption_baseline` once it has the text,
+    /// fitting it for the words it will actually carry. Unset for every other
+    /// kind, and for a caption that only slid.
     std::optional<Point2> caption_centre;
     double caption_dir_x{1.0};
     double caption_dir_y{0.0};

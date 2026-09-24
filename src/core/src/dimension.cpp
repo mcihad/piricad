@@ -1491,6 +1491,15 @@ void dimension_fit(const DimensionDef& def, DimensionLayout& layout, std::string
     layout.text_centre = along(along(last, reads, past), reads.perp(), half);
 }
 
+std::array<Point2, 2> dimension_caption_baseline(const DimensionDef& def, DimensionLayout& layout,
+                                                 std::string_view text, Mm text_height,
+                                                 Point2 by_hand)
+{
+    if (!def.user_text_position) dimension_fit(def, layout, text, text_height);
+    return dimension_baseline(def.user_text_position ? by_hand : layout.text_centre,
+                              layout.text_dir_x, layout.text_dir_y, text_height, text);
+}
+
 Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
                                            const DimensionEdit& edit, DrawingUnit unit)
 {
@@ -1580,13 +1589,11 @@ Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
         return err(ErrorCode::ValidationFailed,
                    "Ölçü yeni noktalarıyla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna "
                    "geldi.");
-    out.text = dimension_text(def, unit);
-    if (!def.user_text_position) dimension_fit(def, layout, out.text, height);
+    out.text     = dimension_text(def, unit);
+    out.baseline = dimension_caption_baseline(def, layout, out.text, height, kept);
     out.defs     = std::move(layout.defs);
-    out.baseline = dimension_baseline(def.user_text_position ? kept : layout.text_centre,
-                                      layout.text_dir_x, layout.text_dir_y, height, out.text);
-    out.payload = encode_dimension(def);
-    out.def     = std::move(def);
+    out.payload  = encode_dimension(def);
+    out.def      = std::move(def);
     return out;
 }
 

@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ölçü çift tıklamayla, tutamakla ve dönüşümle düzenlenir; DXF'te kendi resmiyle (C-17, 3. aşama)
+
+- **Çift tıklama.** Komut çalışmıyorken bir nesneye çift tıklamak onu tek başına seçer ve
+  düzenleyicisini açar: yazıda `YAZIDÜZENLE`, ölçüde `ÖLÇÜDÜZENLE` — metin, yazının üstünde
+  açılan kutuda şimdiki hâliyle seçili durur (ölçülen değer `<>`); **Enter** yazar, **Esc**
+  düzenlemeden vazgeçer —, taramada `TARAMADÜZENLE`; başka her nesnede **Öznitelikler** paneli
+  öne gelir. Tek bir düzenlemedir: araç kendini yeniden kurup sonraki tıklamayı beklemez.
+- **Tutamaklar.** Yazı tutamağından sürüklenen yazı elle yerleştirilmiş sayılır; sonraki bir
+  düzenleme ya da ölçtüğü köşenin taşınması onu ortaya geri çekmez, DXF'e de öyle gider.
+  Yarıçap ve çapın yazısı çizgiyi yanında götürür. Tanım noktası sürüklenen doğrusal ölçü
+  doğrultusunu korur, kısalıp yazısı sığmayan ölçünün yazısı dışarı çıkar.
+- **Dönüşümler.** Yarım tur döndürülen ölçünün yazısı yine çizginin üstünde ve düz okunur;
+  doğrusal ölçü döndürüldüğü doğrultuyu korur; elle yerleştirilmiş yazı dönüşümün götürdüğü
+  yere gider; sığmayan yazı dönüşümden sonra da dışarıdadır.
+- **DXF'te ölçünün resmi.** Her `DIMENSION` çizildiği hâlini adsız bir blokta (`*D1` …: çizgiler,
+  dolu oklar `SOLID`, yazı `TEXT`, BYBLOCK) taşır ve grup 2'de adlandırır; ölçüyü bloğundan
+  çizen okuyucular (QGIS/GDAL dahil) paftadaki resmi görür. Ölçü stili tablosu yazının
+  çizginin üstünde ve boyunca olduğunu (`DIMTAD`, `DIMTIH`, `DIMTOH`), ok türünü (`MIMARI` için
+  eğik çentik `DIMTSZ`) ve açı birimini (`DIMAUNIT`, `DIMADEC`) söyler. Geri okurken bu bloklar
+  blok tanımı olarak alınmaz.
+- **Düzeltildi:** yazı tutamağından çekilen yazı sonraki yenilemede ortaya dönüyordu; tanım
+  noktası sürüklenen doğrusal ölçü düşeye dönebiliyordu; döndürülen doğrusal ölçünün yazısı
+  çizginin altına düşüyordu; dönüşüm elle yerleştirilmiş yazıyı ortalıyor ve sığdırmayı
+  atlıyordu.
+
 ### Değişti — ölçü paftadaki gibi çizilir (C-17, 2. aşama)
 
 - **Yazı çizginin üstünde.** Ölçünün değeri ölçü çizgisinin okunduğu yönde üstünde durur

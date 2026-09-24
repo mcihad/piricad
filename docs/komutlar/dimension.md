@@ -152,6 +152,16 @@ kirişi basan bir pafta yanlış boyda bordür sipariş ettirir.
 Bir yol geçiş eğrisi, bir bordür dönüşü ve bir boru dirseği hep tekerleğin
 katettiği mesafeyle ölçülendirilir.
 
+**DXF'te her ölçü kendi resmini taşır.** Her `DIMENSION`, ölçünün bu programda çizildiği
+hâlini — uzatma çizgileri, yaylar, dolu oklar (`SOLID`), yazı (`TEXT`) — adsız bir blokta
+(`*D1`, `*D2` …) taşır ve grup 2'de onu adlandırır. Ölçüyü bloğundan çizen her okuyucu
+(QGIS/GDAL, görüntüleyiciler) paftadaki resmi görür; ölçüyü yeniden kuran bir okuyucu da
+ölçü stili tablosundan yazının çizginin üstünde ve çizgi boyunca olduğunu (`DIMTAD 1`,
+`DIMTIH`/`DIMTOH 0`), ok türünü (`MIMARI` için eğik çentik, `DIMTSZ`) ve açı birimini
+(`DIMAUNIT`: grad 2, radyan 3, derece 0) okur. Bir stilin tablo satırı tektir: aynı stilde
+farklı birimli açılar varsa satır ilkinin birimini taşır, her ölçünün kendi yazısı yine
+tam yazılır.
+
 DXF'te R2007 öncesi bir yay uzunluğu ölçüsü yoktur; dışa aktarımda **açısal**
 ölçü olarak yazılır (aynı üç nokta: yay, iki yarıçapı ve bir yazı) ve bunun bir yay
 uzunluğu olduğunu bu programın kendi notu (`KENTOSCAD` xdata grubunda `olcu.tur=yay`)
@@ -256,7 +266,22 @@ komut satırına bir şey yazmayı gerektirmez:
 
 Son noktayı ararken imlecin altında ölçünün kendisi durur: uzatma çizgileri, oklar ve
 **yazacağı değer, yazacağı yerde** — sığmıyorsa dışarıda, okları dışarıdan içeri dönmüş,
-paftada nasıl çıkacaksa öyle. Okunan sayı ölçünün değeridir — ilk noktadan imlece
+paftada nasıl çıkacaksa öyle.
+
+**Çizilmiş bir ölçüyü düzenlemek.** Ölçüye **çift tıklayın**: yazısı, yazının üstündeki
+kutuda açılır ([`ÖLÇÜDÜZENLE`](dimension_edit.md)). Ölçüyü seçince görünen **tutamaklar**:
+
+| Tutamak | Sürükleyince |
+|---|---|
+| Tanım noktası | Ölçü yeniden kurulur ve yeniden ölçülür; **doğrusal ölçü doğrultusunu korur** — yatay bir ölçünün ucunu yana çekmek onu düşeye çevirmez. Yazı sığmazsa dışarı çıkar, çizerkenki kuralla |
+| Yazı | Hizalı, doğrusal, açı, yay uzunluğu ve koordinat ölçüsünde yazı bırakılan yerde kalır ve **elle yerleştirilmiş** sayılır: sonraki bir düzenleme ya da ölçtüğü köşenin taşınması onu ortaya geri çekmez, DXF'e de öyle gider. Yarıçap ve çapta yazı çizgiyi yanında götürür: çizgi yazıya döner, ölçülen değer değişmez |
+
+Elle yerleştirilmiş yazıyı ölçü çizgisinin ortasına döndürmek için:
+`ÖLÇÜDÜZENLE sifirla=yazi_yeri`.
+
+`TAŞI`, `DÖNDÜR`, `ÖLÇEKLE` ve `AYNALA` bir ölçüyü yeniden kurar: yarım tur döndürülen bir
+ölçünün yazısı yine çizginin üstünde ve düz okunur, doğrusal ölçü döndürüldüğü
+doğrultuyu korur; elle yerleştirilmiş yazı dönüşümün götürdüğü yere gider. Okunan sayı ölçünün değeridir — ilk noktadan imlece
 uzaklık değil. Noktaları yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya
 bağlanır; köşeyi tutamağından sürüklediğinizde ölçü onunla birlikte güncellenir.
 

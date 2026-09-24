@@ -264,6 +264,11 @@ public:
     /// Public for the same reason the three windows above are: `KENTOS_PICK_PROBE`
     /// drives it, and a chooser nothing constructs is a chooser nothing checks.
     void choosePick(const std::vector<core::EntityId>& candidates, Qt::KeyboardModifiers modifiers);
+    /// What a double click on object `key` opens (TODOS C-17): the object
+    /// selected alone, then its editor tab's own edit — a caption's words, a
+    /// dimension's figure, a hatch's pattern — or, for an object with no
+    /// editor of its own, the attribute panel. Public for the mouse probe.
+    void activateEntity(core::EntityKey key);
     /// Opens (or brings forward) the find-and-replace window.
     void openFindReplace();
 

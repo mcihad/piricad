@@ -129,6 +129,12 @@ değerdir). Öneki, soneki, birimi, ondalığı ve toleransı tek tek değiştir
 ölçüyü seçin: nitelik panelinin **ÖLÇÜ** grubunda her biri bir hücredir; hücreyi
 düzenlemek bu komutun ilgili satırını çalıştırır.
 
+**Çift tıklayarak.** Komut çalışmıyorken ölçüye **çift tıklayın**: ölçü tek başına seçilir,
+komut başlar ve ölçünün yazısı, yazının üstünde açılan kutuda **seçili** durur — ölçülen
+değerse `<>`. `<> (tapu)` yazıp **Enter**'a basmak ölçülen değerin yanına not ekler,
+`12,48` yazmak yazıyı elle yazılmış yapar; **Esc** düzenlemeden vazgeçer. Komut
+satırındaki `ÖLÇÜDÜZENLE` ile aynı komuttur, aynı günlük satırını bırakır.
+
 Araç yalnız ölçü sorduğu için, ölçünün üst üste bindiği bir kenara tıklamak "hangisi?"
 diye sormadan ölçüyü seçer; altta birden çok ölçü varsa seçim listesi açılır.
 

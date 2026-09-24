@@ -1196,6 +1196,18 @@ void MainWindow::noteRecentFile(const QString& path)
 // The editor tabs a selection brings up
 // =============================================================================
 
+std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::EntityId e)
+{
+    const core::KindId kind   = doc.entities().kind[e];
+    const std::uint32_t gslot = doc.entities().slot[e];
+    if (kind == core::kDimensionKind) return RibbonContext::Dimension;
+    if (kind == core::kHatchKind) return RibbonContext::Hatch;
+    if (kind == core::kBlockReferenceKind) return RibbonContext::Block;
+    if (doc.texts().has(gslot)) return RibbonContext::Text;
+    if (doc.entity_area(e) != 0) return RibbonContext::Area;
+    return std::nullopt;
+}
+
 void MainWindow::buildContextTabs(SARibbonBar* bar)
 {
     const Tokens& t = tokensFor(theme_);
@@ -1237,6 +1249,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         context(RibbonContext::Text, tr("Yazı Araçları"), tr("Yazı"), t.accent);
     SARibbonPanel* textEdit = text->addPanel(tr("Düzenle"));
     textEdit->addLargeAction(actTextEdit_);
+    ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Text)] = actTextEdit_;
     textEdit->addSmallAction(actFindReplace_);
     textEdit->addSmallAction(actStyleCopy_);
 
@@ -1321,6 +1334,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         context(RibbonContext::Dimension, tr("Ölçü Araçları"), tr("Ölçü"), t.accent);
     SARibbonPanel* dimEdit = dim->addPanel(tr("Düzenle"));
     dimEdit->addLargeAction(actDimensionEdit_);
+    ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Dimension)] = actDimensionEdit_;
     auto* dimReset = new QAction(tr("Stile Döndür"), this);
     dimReset->setObjectName(QStringLiteral("ribbonDimReset"));
     dimReset->setData(static_cast<int>(Glyph::Refresh));
@@ -1395,6 +1409,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     // -------------------------------------------------------------- `Tarama`
     SARibbonCategory* hatch =
         context(RibbonContext::Hatch, tr("Tarama Araçları"), tr("Tarama"), t.accent);
+    ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Hatch)] = actHatchEdit_;
     SARibbonPanel* hatchPattern = hatch->addPanel(tr("Desen"));
     if (!ribbonLive_->patterns.empty()) {
         SARibbonGallery* gallery = hatchPattern->addGallery();
@@ -1881,19 +1896,7 @@ void MainWindow::refreshContextTabs()
         const core::EntityId e = doc.slot_of(k);
         if (e == core::kNoEntity || !doc.alive(e)) continue;
         ++total;
-        const core::KindId kind   = doc.entities().kind[e];
-        const std::uint32_t gslot = doc.entities().slot[e];
-        std::optional<RibbonContext> which;
-        if (kind == core::kDimensionKind)
-            which = RibbonContext::Dimension;
-        else if (kind == core::kHatchKind)
-            which = RibbonContext::Hatch;
-        else if (kind == core::kBlockReferenceKind)
-            which = RibbonContext::Block;
-        else if (doc.texts().has(gslot))
-            which = RibbonContext::Text;
-        else if (doc.entity_area(e) != 0)
-            which = RibbonContext::Area;
+        const std::optional<RibbonContext> which = ribbon_context_of(doc, e);
         if (!which) continue;
         const auto i = static_cast<std::size_t>(*which);
         if (count[i]++ == 0) first[i] = e;

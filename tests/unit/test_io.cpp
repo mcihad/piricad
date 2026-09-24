@@ -54,6 +54,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -3858,12 +3859,144 @@ TEST_CASE("DXF: kendi birimi olan ölçü ve yay uzunluğu bu programa ölçüle
     // while group 1 is still what it gives.
     const std::string edited = dir.file("duzeltilmis.dxf");
     {
+        // The DIMENSION's own group 1, in ENTITIES — not its picture's TEXT,
+        // which the BLOCKS section holds before it.
         std::string changed = bytes;
-        changed.replace(changed.find("\n100,00g\n"), 9, "\n99,99g\n");
+        changed.replace(changed.find("\n100,00g\n", changed.find("ENTITIES")), 9, "\n99,99g\n");
         std::ofstream(edited, std::ios::binary) << changed;
     }
     const std::vector<Back> retyped = read_back(edited);
     CHECK(core::dimension_text_is_manual(find(retyped, "99,99g").def));
+}
+
+TEST_CASE("DXF: her ölçü kendi resmini taşır — *D bloğu, grup 2, dolu ok SOLID, yazı TEXT; "
+          "stil yazıyı üstte, ok türünü ve açı birimini söyler")
+{
+    // TODOS C-17: a DIMENSION without its picture block is drawn by each
+    // reader from its own idea of a dimension — or not at all.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-olcu-resmi");
+    const std::string path = dir.file("resim.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254",
+          "ÖLÇÜ birinci=485300,4310200 ikinci=485320,4310200 konum=485310,4310196",
+          "ÖLÇÜ tur=acisal tepe=485400,4310200 birinci=485420,4310200 ikinci=485400,4310220 "
+          "konum=485414.142,4310214.142",
+          "ÖLÇÜ birinci=485300,4310300 ikinci=485320,4310300 konum=485310,4310296 stil=MIMARI"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    std::string bytes;
+    {
+        std::ifstream in(path, std::ios::binary);
+        bytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    const auto count = [&bytes](std::string_view what) {
+        std::size_t n = 0;
+        for (std::size_t at = bytes.find(what); at != std::string::npos;
+             at             = bytes.find(what, at + 1))
+            ++n;
+        return n;
+    };
+    // Each DIMENSION names its picture in its own subclass, right after the
+    // marker, and each picture is a block record and a block.
+    CHECK_EQ(count("AcDbDimension\n  2\n*D"), std::size_t{3});
+    for (const char* name : {"\n*D1\n", "\n*D2\n", "\n*D3\n"})
+        CHECK_GE(count(name), std::size_t{4}); // record, block (2 and 3), DIMENSION
+    // Closed heads filled, two for each of the ISO-25 dimensions; the tick
+    // style's heads are strokes.
+    CHECK_EQ(count("\nSOLID\n"), std::size_t{4});
+    // The captions are TEXTs in the pictures: two "20,00"s; the grad angle is
+    // there and in its DIMENSION's group 1, which carries it whole.
+    CHECK_EQ(count("\n20,00\n"), std::size_t{2});
+    CHECK_EQ(count("\n100,00g\n"), std::size_t{2});
+
+    // The style table, read group by group.
+    std::map<std::string, std::map<std::string, std::string>> styles;
+    {
+        std::istringstream lines(bytes);
+        std::string code;
+        std::string value;
+        std::map<std::string, std::string>* row = nullptr;
+        bool in_style                           = false;
+        const auto trim                         = [](std::string t) {
+            while (!t.empty() && (t.back() == '\r' || t.back() == ' '))
+                t.pop_back();
+            return t.substr(std::min(t.find_first_not_of(' '), t.size()));
+        };
+        while (std::getline(lines, code) && std::getline(lines, value)) {
+            code  = trim(code);
+            value = trim(value);
+            if (code == "0") {
+                in_style = value == "DIMSTYLE";
+                row      = nullptr;
+                continue;
+            }
+            if (!in_style) continue;
+            if (code == "2" && row == nullptr) {
+                row = &styles[value];
+                continue;
+            }
+            if (row != nullptr) row->emplace(code, value);
+        }
+    }
+    REQUIRE(styles.contains("ISO-25"));
+    REQUIRE(styles.contains("MIMARI"));
+    CHECK_EQ(styles["ISO-25"]["77"], std::string("1"));  // the figure above its line
+    CHECK_EQ(styles["ISO-25"]["73"], std::string("0"));  // along it, inside
+    CHECK_EQ(styles["ISO-25"]["74"], std::string("0"));  // and outside
+    CHECK_EQ(styles["ISO-25"]["275"], std::string("2")); // angles in grad
+    CHECK_EQ(styles["ISO-25"]["179"], std::string("2")); // to two decimals
+    CHECK_GT(std::stod(styles["MIMARI"]["142"]), 0.0);   // a tick, not an arrowhead
+    CHECK_EQ(std::stod(styles["ISO-25"]["142"]), 0.0);
+
+    // Read back, the pictures are not block definitions of the drawing, and
+    // the dimensions are dimensions again.
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    CHECK(b.doc.blocks().all().empty());
+    std::size_t dims = 0;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e)
+        if (b.doc.alive(e) && b.doc.entities().kind[e] == core::kDimensionKind) ++dims;
+    CHECK_EQ(dims, std::size_t{3});
+}
+
+TEST_CASE("DXF: tutamaktan çekilen ölçü yazısı yerinde kalır ve elle yerleştirilmiş döner")
+{
+    // TODOS C-17: a caption the hand put somewhere goes out at that place with
+    // the flag that says so (group 70, bit 128), and comes back placed by hand.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-yazi-yeri");
+    const std::string path = dir.file("yazi-yeri.dxf");
+
+    Rig a;
+    for (const char* line :
+         {"AYAR core.crs.id EPSG:5254",
+          "ÖLÇÜ birinci=485300,4310200 ikinci=485320,4310200 konum=485310,4310196",
+          "KÖŞETAŞI nesne=1 kose=4 nokta=485304,4310192"})
+        REQUIRE_MESSAGE(a.bus.execute_line(line, Origin::Test).ok(), line);
+    REQUIRE(a.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    bool found = false;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+        if (!b.doc.alive(e) || b.doc.entities().kind[e] != core::kDimensionKind) continue;
+        const std::uint32_t row = b.doc.entities().slot[e];
+        auto def                = core::dimension_of(b.doc.geometry(), row);
+        REQUIRE(def.ok());
+        CHECK(def.value().user_text_position);
+        const core::RingSpan rs = b.doc.geometry().rings_of(row);
+        const core::Point2 at{b.doc.geometry().ring_xs(rs.first)[0],
+                              b.doc.geometry().ring_ys(rs.first)[0]};
+        CHECK_EQ(at, (core::Point2{485'304'000, 4'310'192'000}));
+        found = true;
+    }
+    CHECK(found);
 }
 
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")

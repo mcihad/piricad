@@ -773,3 +773,97 @@ TEST_CASE("ÖLÇÜ ÖNİZLEMESİ: yük ve yazı yüksekliği birlikte gider, eks
     CHECK(back->def == d);
     CHECK_FALSE(core::decode_dimension_guide(std::span<const std::uint8_t>(bytes).first(4)));
 }
+
+// ------------------------------------------ edited like the sheet (3rd stage) ----
+
+TEST_CASE("YAZI TUTAMAĞI: çekilen yazı elle yerleştirilmiş sayılır; yenileme onu ortalamaz")
+{
+    // TODOS C-17: the caption grip slid the text and said nothing about it, so
+    // the next rebuild — any edit, any followed corner — centred it again.
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");                 // 1
+    r.run("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-4"); // 2, on the parcel's corners
+    r.run("KÖŞETAŞI nesne=2 kose=4 nokta=4,-8");       // three points, then the caption
+    CHECK(r.def(2).user_text_position);
+    CHECK_EQ(caption_centre(r, 2), (Point2{4'000, -8'000}));
+
+    // An edit of its words rebuilds it and leaves it where the hand put it.
+    r.run("ÖLÇÜDÜZENLE nesneler=2 sonek=\" m\"");
+    CHECK_EQ(r.caption(2), std::string("20,00 m"));
+    CHECK_EQ(caption_centre(r, 2), (Point2{4'000, -8'000}));
+
+    // The corner it measures moves: re-measured, and the hand-placed caption
+    // travels with what moved rather than going back to the middle.
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=24,0");
+    CHECK_EQ(r.caption(2), std::string("24,00 m"));
+    CHECK(r.def(2).user_text_position);
+    CHECK_EQ(caption_centre(r, 2), (Point2{8'000, -8'000}));
+
+    // And back to the middle only when asked.
+    r.run("ÖLÇÜDÜZENLE nesneler=2 sifirla=yazi_yeri");
+    CHECK_FALSE(r.def(2).user_text_position);
+    CHECK_EQ(caption_centre(r, 2).x, 12'000);
+}
+
+TEST_CASE("YARIÇAP YAZISI tutamaktan çekilince çizgi ona döner, yarıçap aynı kalır")
+{
+    Rig r;
+    r.run("DAİRE merkez=0,0 cevre=5,0");           // 1
+    r.run("ÖLÇÜ tur=yaricap nokta=5,0 konum=8,1"); // 2
+    r.run("KÖŞETAŞI nesne=2 kose=3 nokta=-7,6");   // centre, rim, then the caption
+    CHECK_EQ(caption_centre(r, 2), (Point2{-7'000, 6'000}));
+    CHECK_EQ(r.def(2).measurement, 5'000);
+    const std::uint32_t slot = r.doc.entities().slot[r.entity(2)];
+    const core::RingSpan rs  = r.doc.geometry().rings_of(slot);
+    const Point2 rim{r.doc.geometry().ring_xs(rs.first + 1)[1],
+                     r.doc.geometry().ring_ys(rs.first + 1)[1]};
+    // The rim point went round to the caption's side of the circle.
+    CHECK_LT(std::abs(length(Point2{0, 0}, rim) - 5'000.0), 1.0);
+    CHECK_GT((static_cast<double>(rim.x) * -7'000.0) + (static_cast<double>(rim.y) * 6'000.0), 0.0);
+}
+
+TEST_CASE("DOĞRUSAL ÖLÇÜNÜN UCU sürüklenince doğrultusu kalır; kısalan ölçünün yazısı dışarı çıkar")
+{
+    Rig r;
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=20,0 konum=10,4"); // 1: horizontal
+    CHECK_EQ(r.def(1).rotation_udeg, 0);
+
+    // The end dragged where a fresh layout would call the dimension vertical
+    // (its line point now beside the points' middle, not above it): it stays
+    // horizontal and measures across.
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=-20,6");
+    CHECK_EQ(r.def(1).rotation_udeg, 0);
+    CHECK_EQ(r.def(1).measurement, 20'000);
+
+    // Shortened to 3 m by the same grip, its figure no longer fits between
+    // the extension lines and goes past the one it reads toward, as ÖLÇÜ
+    // would have put it: past the heads' tails (5 m), a gap and half of
+    // "3,00" (3 m).
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,20 ikinci=20,20 konum=10,24"); // 2
+    r.run("KÖŞETAŞI nesne=2 kose=2 nokta=3,20");
+    CHECK_EQ(r.caption(2), std::string("3,00"));
+    CHECK_EQ(caption_centre(r, 2), (Point2{3'000 + 5'000 + 625 + 3'000, 24'000 + 1'875}));
+}
+
+TEST_CASE("DÖNDÜR: yarım tur dönen ölçünün yazısı yine çizginin üstünde; elle konmuş yazı taşınır")
+{
+    Rig r;
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=10,0 konum=5,-4"); // 1: line below, at y = -4
+    CHECK_EQ(caption_centre(r, 1), (Point2{5'000, -4'000 + 1'875}));
+
+    // Turned half a circle the line is above the points, at y = +4; carried
+    // as it was, the figure would hang under it upside down.
+    r.run("DÖNDÜR nesneler=1 merkez=0,0 aci=180");
+    CHECK_EQ(r.def(1).measurement, 10'000);
+    CHECK_EQ(caption_centre(r, 1), (Point2{-5'000, 4'000 + 1'875}));
+    const std::uint32_t slot = r.doc.entities().slot[r.entity(1)];
+    const core::RingSpan rs  = r.doc.geometry().rings_of(slot);
+    CHECK_GT(r.doc.geometry().ring_xs(rs.first)[1], r.doc.geometry().ring_xs(rs.first)[0]);
+
+    // A caption placed by hand goes where the turn takes it.
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,20 ikinci=10,20 konum=5,24"); // 2
+    r.run("KÖŞETAŞI nesne=2 kose=4 nokta=14,26");
+    r.run("DÖNDÜR nesneler=2 merkez=0,0 aci=180");
+    CHECK(r.def(2).user_text_position);
+    CHECK_EQ(caption_centre(r, 2), (Point2{-14'000, -26'000}));
+}

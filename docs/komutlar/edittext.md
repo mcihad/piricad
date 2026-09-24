@@ -106,6 +106,11 @@ de vardır). Yazı seçili değilse komut hangi yazının düzenleneceğini sora
 yazıya tıklayıp Enter'a basın. Sonra yeni metni sorar ve **şimdiki metni önerir**:
 tek harf düzeltmek için bütün satırı yeniden yazmanız gerekmez.
 
+**Çift tıklayarak.** Komut çalışmıyorken yazıya **çift tıklayın**: yazı tek başına seçilir,
+komut başlar ve şimdiki metin yazının üstünde açılan kutuda **seçili** durur. Yazmaya
+başlamak onu değiştirir; **Enter** yazar, **Esc** düzenlemeden vazgeçer ve yazı olduğu
+gibi kalır. Komut satırındaki `YAZIDÜZENLE` ile aynı komuttur, aynı günlük satırını bırakır.
+
 **Panelden.** Yazıya **tıklayın** — harflerin üstüne, taban çizgisine değil; yazı harflerinin
 çevresinden tutulur. **Öznitelikler** panelindeki **METİN** bölümünde `icerik` ve
 `yukseklik` satırları düzenlenebilir: hücreye yeni değeri yazıp **Enter**'a basın.

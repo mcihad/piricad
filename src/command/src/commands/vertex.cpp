@@ -356,10 +356,12 @@ bool write_grip_edit(Context& ctx, core::EntityId slot, core::GripEdit& g)
     core::Mm height = 0;
     if (kind == core::kDimensionKind && g.caption_centre) {
         if (auto def = core::decode_dimension(g.payload)) {
-            height          = ctx.document().texts().height(ctx.document().entities().slot[slot]);
-            text            = core::dimension_text(def.value(), drawing_unit(ctx));
-            const auto base = core::dimension_baseline(*g.caption_centre, g.caption_dir_x,
-                                                       g.caption_dir_y, height, text);
+            height = ctx.document().texts().height(ctx.document().entities().slot[slot]);
+            text   = core::dimension_text(def.value(), drawing_unit(ctx));
+            core::DimensionLayout layout{g.points[1], *g.caption_centre, g.caption_dir_x,
+                                         g.caption_dir_y};
+            const auto base = core::dimension_caption_baseline(def.value(), layout, text, height,
+                                                               *g.caption_centre);
             g.points[0]     = {base[0], base[1]};
         }
     }

@@ -373,22 +373,49 @@ Result<GripEdit> dimension_move(const Document& doc, EntityId e, GripEdit edit, 
     std::vector<Point2>& defs = edit.points[1];
     auto decoded              = decode_dimension(edit.payload);
     if (!decoded) return decoded.error();
-    DimensionDef def = std::move(decoded.value());
-
-    if (index == defs.size()) {
-        // The caption slides; nothing else moves.
-        const Mm dx = to.x - base[0].x;
-        const Mm dy = to.y - base[0].y;
-        for (Point2& p : base)
-            p = shifted(p, dx, dy);
-        return edit;
-    }
-    if (index > defs.size()) return no_such_grip(index, defs.size() + 1);
+    DimensionDef def            = std::move(decoded.value());
+    const std::uint32_t slot    = doc.entities().slot[e];
+    const Mm height             = doc.texts().height(slot);
+    const std::string_view text = doc.texts().text(slot);
+    const auto refused          = [] {
+        return err(ErrorCode::ValidationFailed,
+                            "Ölçü bu noktayla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna geldi.");
+    };
 
     std::vector<Point2> picks;
     Point2 where{};
     const bool relaid = dimension_picks(def.type, defs, base[0], picks, where);
-    defs[index]       = to;
+
+    if (index == defs.size()) {
+        // A RADIUS OR A DIAMETER IS AIMED AT ITS CAPTION, so the caption carries
+        // the line round the circle with it, as ÖLÇÜ's own placing does.
+        if (relaid && (def.type == DimensionType::Radial || def.type == DimensionType::Diametric)) {
+            DimensionLayout layout;
+            if (!dimension_layout(def, picks, to, height, layout)) return refused();
+            defs                = layout.defs;
+            edit.caption_centre = layout.text_centre;
+            edit.caption_dir_x  = layout.text_dir_x;
+            edit.caption_dir_y  = layout.text_dir_y;
+            const auto bl       = dimension_caption_baseline(def, layout, text, height, to);
+            base                = {bl[0], bl[1]};
+            edit.payload        = encode_dimension(def);
+            return edit;
+        }
+        // Every other caption slides, and is PLACED BY HAND from then on
+        // (TODOS C-17): the next rebuild — a moved corner, an edit, another
+        // sheet scale — leaves it where the hand put it instead of centring
+        // it again, and a DXF says so in its flags.
+        const Mm dx = to.x - base[0].x;
+        const Mm dy = to.y - base[0].y;
+        for (Point2& p : base)
+            p = shifted(p, dx, dy);
+        def.user_text_position = true;
+        edit.payload           = encode_dimension(def);
+        return edit;
+    }
+    if (index > defs.size()) return no_such_grip(index, defs.size() + 1);
+
+    defs[index] = to;
     if (!relaid) {
         // An ordinate or a four-point angular dimension (from a file): the point
         // moves and the figure is re-measured; the caption stays where it was.
@@ -398,21 +425,22 @@ Result<GripEdit> dimension_move(const Document& doc, EntityId e, GripEdit edit, 
     }
     // Re-lay the dimension out from the edited picks, exactly as ÖLÇÜ laid it
     // out from the clicks — so the line, the extension lines and the caption
-    // follow the point rather than only the point moving.
+    // follow the point rather than only the point moving. A LINEAR ONE KEEPS
+    // ITS DIRECTION, as a rebuild keeps it: an end dragged sideways does not
+    // turn a horizontal dimension vertical.
     if (!dimension_picks(def.type, defs, base[0], picks, where)) return no_such_grip(index, 0);
-    const Mm height = doc.texts().height(doc.entities().slot[e]);
     DimensionLayout layout;
-    if (!dimension_layout(def, picks, where, height, layout))
-        return err(ErrorCode::ValidationFailed,
-                   "Ölçü bu noktayla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna geldi.");
-    defs                = layout.defs;
-    edit.caption_centre = layout.text_centre;
+    if (!dimension_layout(def, picks, where, height, layout, def.type == DimensionType::Linear))
+        return refused();
+    defs = layout.defs;
+    // The command re-says the caption in the drawing's unit and finishes it
+    // from here: the layout's own place, fitted, or where the hand put it.
+    edit.caption_centre = def.user_text_position ? base[0] : layout.text_centre;
     edit.caption_dir_x  = layout.text_dir_x;
     edit.caption_dir_y  = layout.text_dir_y;
-    const auto bl = dimension_baseline(layout.text_centre, layout.text_dir_x, layout.text_dir_y,
-                                       height, doc.texts().text(doc.entities().slot[e]));
-    base          = {bl[0], bl[1]};
-    edit.payload  = encode_dimension(def);
+    const auto bl       = dimension_caption_baseline(def, layout, text, height, base[0]);
+    base                = {bl[0], bl[1]};
+    edit.payload        = encode_dimension(def);
     return edit;
 }
 

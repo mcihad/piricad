@@ -341,15 +341,15 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
         d.extension_offset = apply_length(x, d.extension_offset);
         d.text_gap         = apply_length(x, d.text_gap);
 
-        // RE-LAID, NOT ONLY CARRIED (TODOS C-08). An aligned, radial,
-        // diametric or three-point angular dimension is measured again from
-        // the points it now has and its caption set where ÖLÇÜ would set it,
-        // the right way up. A LINEAR one measures along its own direction,
-        // which the layout would square to the sheet, so it keeps that
-        // direction turned with the drawing, is measured again along it, and
-        // has its caption turned about its centre when it would read
-        // backwards. An ordinate or a four-point angle from a file is
-        // re-measured and keeps its caption.
+        // RE-LAID, NOT ONLY CARRIED (TODOS C-08, C-17). A dimension is
+        // measured again from the points it now has and its caption set —
+        // and fitted — where ÖLÇÜ would set it, above its line the right way
+        // up; a caption placed by hand goes where the transform takes it,
+        // reading along the dimension. A LINEAR one keeps the direction the
+        // drawing was turned to (the layout's fixed rotation) and is measured
+        // along it: turned half a circle, its figure is above its line again
+        // rather than hanging under it. An ordinate or a four-point angle
+        // from a file is re-measured and keeps its caption.
         const core::Mm height =
             doc.texts().has(gslot) ? apply_height(x, doc.texts().height(gslot)) : 0;
         const core::DrawingUnit unit = core::drawing_unit_from_setting(
@@ -358,14 +358,14 @@ bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
             std::vector<core::Point2> picks;
             core::Point2 where{};
             core::DimensionLayout layout;
-            if (d.type != core::DimensionType::Linear &&
-                core::dimension_picks(d.type, rings[1], rings[0][0], picks, where) &&
-                core::dimension_layout(d, picks, where, height, layout)) {
-                rings[1]        = layout.defs;
-                relaid_text     = core::dimension_text(d, unit);
-                const auto base = core::dimension_baseline(layout.text_centre, layout.text_dir_x,
-                                                           layout.text_dir_y, height, relaid_text);
-                rings[0]        = {base[0], base[1]};
+            if (core::dimension_picks(d.type, rings[1], rings[0][0], picks, where) &&
+                core::dimension_layout(d, picks, where, height, layout,
+                                       d.type == core::DimensionType::Linear)) {
+                rings[1]    = layout.defs;
+                relaid_text = core::dimension_text(d, unit);
+                const auto base =
+                    core::dimension_caption_baseline(d, layout, relaid_text, height, rings[0][0]);
+                rings[0] = {base[0], base[1]};
             } else {
                 if (x.kind == Xform::Kind::Stretch)
                     d.measurement = core::dimension_measure(d.type, rings[1], d.rotation_udeg);

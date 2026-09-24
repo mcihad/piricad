@@ -273,6 +273,14 @@ public:
     /// the pick takes the click while it is armed.
     void beginCapture(Capture kind);
 
+    /// Opens the caption box centred on `world`, holding `text` selected, for a
+    /// text question already asked — what a double click on a caption or a
+    /// dimension does (TODOS C-17): the words are edited where they stand.
+    /// Enter answers the question; Esc gives the edit up, question and all.
+    void editTextAt(core::Point2 world, const QString& text);
+    /// Whether the caption box is up, a question's words being typed in it.
+    bool textEditorOpen() const noexcept;
+
     /// Puts the pick away with no answer. `captureEnded` follows.
     void cancelCapture();
 
@@ -318,6 +326,12 @@ signals:
     /// what to show, and whatever it shows sends `SEÇ` like every other client.
     void pickAmbiguous(const std::vector<core::EntityId>& candidates,
                        Qt::KeyboardModifiers modifiers);
+
+    /// A double click landed on an object while nothing was asking for a
+    /// click (TODOS C-17): open what edits it. The canvas says which object;
+    /// the shell decides what edits it, and that sends a command like every
+    /// other client.
+    void entityActivated(core::EntityKey key);
 
     /// A line for the transcript and the status strip, from the canvas itself.
     ///
@@ -374,6 +388,7 @@ protected:
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
@@ -639,8 +654,10 @@ private:
     /// bottom of the window — and until this existed the prompt reached the
     /// command line's placeholder while focus stayed here, so METİN took its
     /// anchor and then hung waiting for a value nothing could send.
-    void openTextEditor(const QPointF& where);
+    void openTextEditor(const QPointF& where, bool centred = false);
     void closeTextEditor();
+    /// The box was opened by `editTextAt`: Esc gives up the edit that asked.
+    bool text_editor_abandons_{false};
 
     /// The box itself, created on first use and reused after: a `QLineEdit`
     /// parented to the canvas, so it dies with the canvas and needs no separate

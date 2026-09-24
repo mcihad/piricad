@@ -77,6 +77,11 @@ kaynağın anahtarı, özellik, halka, sıra, kopukluk) durur; blok yalnız bağ
 varsa yazılır. Dosyada olmayan bir nesneye işaret eden bağ okunurken **kopuk** sayılır.
 DXF'e bağ yazılmaz; DXF'ten gelen ölçü bağsızdır.
 
+Her `DIMENSION` kendi resmini adsız bir blokta (`*D1` …) taşır: çizgiler, dolu oklar
+`SOLID`, yazı `TEXT`, katman 0 ve BYBLOCK; ölçü stili tablosu yazının yerini, ok türünü ve
+açı birimini söyler ([ayrıntı](../komutlar/dimension.md#yay-uzunluğu-ölçüsü)). Geri
+okunurken bu bloklar blok tanımı olarak alınmaz; ölçü tanım noktalarından yeniden kurulur.
+
 DXF'te ölçünün yazısı (grup 1): ölçülen değeri okuyan program kendisi ölçsün diye
 önekli, sonekli, toleranslı ya da şablonlu yazı `<>` ile gider (`R<>%%p0,05 m`);
 elle yazılmış yazı yazıldığı gibi gider; kendi birimi olan ölçünün — grad yazan her
@@ -97,8 +102,8 @@ biriminde yeniden **ölçülen** değerdir.
 
 ## Sınırlar
 
-Yazı konumu komutta ölçü çizgisinin ortasıdır; `ÖLÇÜDÜZENLE yazi_yeri=` ile elle
-yerleştirilen ya da dosyadan elle taşınmış gelen yazı yerinde kalır ve ölçü
-kaynağını izleyince onunla taşınır. Tolerans, ölçünün ondalığıyla yazılır; ayrı bir
+Yazı konumu komutta ölçü çizgisinin ortasıdır (sığmıyorsa dışında); yazı tutamağından
+sürüklenen, `ÖLÇÜDÜZENLE yazi_yeri=` ile elle yerleştirilen ya da dosyadan elle taşınmış
+gelen yazı yerinde kalır ve ölçü kaynağını izleyince onunla taşınır. Tolerans, ölçünün ondalığıyla yazılır; ayrı bir
 tolerans ondalığı yoktur. Ölçek değiştirildiğinde (`ÖLÇEKLE`) ölçülen değer ve yazı da değişir; yazının
 yüksekliği değişmez.

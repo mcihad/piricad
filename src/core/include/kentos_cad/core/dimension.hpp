@@ -188,6 +188,16 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
 void dimension_fit(const DimensionDef& def, DimensionLayout& layout, std::string_view text,
                    Mm text_height);
 
+/// The caption's baseline once a dimension's points have changed — what a
+/// rebuild, a grip and a transform all end with, so none of them has an
+/// opinion of its own about where the figure goes (TODOS C-17): fitted where
+/// ÖLÇÜ would set it (`dimension_fit`), or at `by_hand` when the caption was
+/// placed by hand (`user_text_position`), reading along the dimension either
+/// way. `layout` is the layout of the new points and is fitted in place.
+std::array<Point2, 2> dimension_caption_baseline(const DimensionDef& def, DimensionLayout& layout,
+                                                 std::string_view text, Mm text_height,
+                                                 Point2 by_hand);
+
 /// The inverse of `dimension_layout` for a stored dimension: the picks and the
 /// location its definition points (ring 1) and caption baseline (ring 0) came
 /// from. False for a type `dimension_layout` cannot lay out.

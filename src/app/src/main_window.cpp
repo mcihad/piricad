@@ -96,6 +96,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSettings>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
@@ -359,6 +360,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(canvas_, &MapCanvas::echoRequested, this, &MainWindow::onEcho);
     connect(canvas_, &MapCanvas::pickAmbiguous, this, &MainWindow::choosePick);
+    connect(canvas_, &MapCanvas::entityActivated, this, &MainWindow::activateEntity);
 
     // A FORM FIELD PICKED FROM THE SCENE (tools_panel.hpp `ScenePicker`). The
     // canvas says what landed; the field that asked gets the text the command
@@ -2344,6 +2346,60 @@ void MainWindow::openFindReplace()
     findReplace_->show();
     findReplace_->raise();
     findReplace_->activateWindow();
+}
+
+void MainWindow::activateEntity(core::EntityKey key)
+{
+    const core::Document& doc = controller_->document();
+    const core::EntityId e    = doc.slot_of(key);
+    if (e == core::kNoEntity || !doc.alive(e)) return;
+    // EXACTLY THIS ONE, through SEÇ like every other pick: the first of the two
+    // clicks chose it already unless it was added to a selection, and an edit
+    // opened on a selection of five would edit all five.
+    controller_->runLine(QStringLiteral("SEÇ mod=NESNE nesneler=%1").arg(core::raw(key)),
+                         command::Origin::Gui);
+    // Its editor tab's own edit, the one list that says what edits what.
+    if (const std::optional<RibbonContext> which = ribbon_context_of(doc, e)) {
+        const QAction* editor = ribbonLive_->editors[static_cast<std::size_t>(*which)];
+        if (editor != nullptr && editor->isEnabled()) {
+            // ONE EDIT, NOT A TOOL PICKED UP: the tool re-arms itself when its
+            // run ends and would sit asking for the next objects, so the next
+            // double click would be taken as its answer (`beginOneShot`).
+            controller_->beginOneShot(editor->property(kToolCommand).toString(),
+                                      command::Origin::Gui);
+            // AND WHEN THE EDIT ASKS FOR WORDS FIRST — a caption's, a
+            // dimension's — they are answered where they stand, in the box over
+            // them holding what they say now, instead of at the bottom of the
+            // window (`MapCanvas::editTextAt`).
+            const command::Session* live = controller_->session();
+            if (live != nullptr && live->waiting() &&
+                live->prompt().kind == command::ParamKind::Text && doc.alive(e)) {
+                const command::Prompt& asked = live->prompt();
+                const QString now            = asked.choices.empty()
+                                                   ? QString()
+                                                   : QString::fromStdString(asked.choices.front());
+                const std::uint32_t slot     = doc.entities().slot[e];
+                const core::RingSpan rs      = doc.geometry().rings_of(slot);
+                if (rs.count > 0 && doc.geometry().ring_count[rs.first] > 0) {
+                    // A dimension's caption is centred on its first point; any
+                    // other caption runs along its baseline, first point to last.
+                    const auto xs         = doc.geometry().ring_xs(rs.first);
+                    const auto ys         = doc.geometry().ring_ys(rs.first);
+                    const bool dim        = doc.entities().kind[e] == core::kDimensionKind;
+                    const core::Point2 at = dim ? core::Point2{xs.front(), ys.front()}
+                                                : core::Point2{(xs.front() + xs.back()) / 2,
+                                                               (ys.front() + ys.back()) / 2};
+                    canvas_->editTextAt(at, now);
+                }
+            }
+            return;
+        }
+    }
+    // Anything else is edited where its geometry and attributes are: the
+    // attribute panel, brought forward on it.
+    propertyDock_->show();
+    propertyDock_->raise();
+    propertyHeader_->setCurrent(0);
 }
 
 void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
@@ -4907,7 +4963,107 @@ int MainWindow::probeRealMouse()
                 shoot("olcu-paftasi");
                 check(QFileInfo::exists(into + QStringLiteral("/olcu-paftasi.pdf")),
                       QStringLiteral("Ölçü paftası PDF'e yazıldı"));
+                // AND THE SAME SHEET AS A DXF (TODOS C-17, 3rd stage): every
+                // dimension with its picture block, for a reader that draws
+                // DIMENSION from it to be compared against the screen and the PDF.
+                runScriptLine(QStringLiteral("DIŞAAKTAR dosya=\"%1\"")
+                                  .arg(into + QStringLiteral("/olcu-paftasi.dxf")));
+                endCommand();
+                check(QFileInfo::exists(into + QStringLiteral("/olcu-paftasi.dxf")),
+                      QStringLiteral("Ölçü paftası DXF'e yazıldı"));
             }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 18. A DOUBLE CLICK OPENS WHAT EDITS IT (TODOS C-17, 3rd stage) ----
+        //
+        // With nothing asking for a click, a double click on a dimension opens
+        // its figure in the box over it, on a caption its words, and on anything
+        // else the attribute panel — each through the real hit test, press,
+        // release, double click, release, as a hand sends them.
+        {
+            fresh({QStringLiteral("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-4"),
+                   QStringLiteral("METİN 0,12 \"Ada 12\" 2500"),
+                   QStringLiteral("ÇİZGİ 0,24 20,24")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            const auto twice = [&onCanvas](QPointF at) {
+                onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonDblClick, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+            };
+            const auto asked = [this] {
+                const command::Session* live = controller_->session();
+                return live != nullptr && live->waiting()
+                           ? QString::fromStdString(live->prompt().message)
+                           : QString();
+            };
+            const auto caption = [this](std::int64_t key) {
+                const core::Document& doc = controller_->document();
+                const core::EntityId e =
+                    doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                return e == core::kNoEntity ? QString()
+                                            : QString::fromUtf8(std::string(
+                                                  doc.texts().text(doc.entities().slot[e])));
+            };
+            const std::int64_t dim = first_key();
+
+            // THE DIMENSION: on its line, between the heads.
+            twice(screen(core::Point2{10'000, -4'000}));
+            check(asked().contains(QStringLiteral("Ölçünün yazısı")),
+                  QStringLiteral("ölçüye çift tıklama ÖLÇÜDÜZENLE'nin yazı sorusunu açtı (soru: "
+                                 "\"%1\")")
+                      .arg(asked()));
+            auto* box = canvas_->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+            check(box != nullptr && box->isVisible() && box->text() == QStringLiteral("<>") &&
+                      box->selectedText() == QStringLiteral("<>"),
+                  QStringLiteral("yazı kutusu ölçünün üstünde açıldı, içinde seçili <> (kutu: "
+                                 "\"%1\")")
+                      .arg(box != nullptr ? box->text() : QStringLiteral("-")));
+            check(box != nullptr && window()->focusWidget() == box,
+                  QStringLiteral("klavye kutuda, komut satırında değil"));
+            shoot("olcu-cift-tiklama");
+            if (box != nullptr && box->isVisible()) {
+                box->setText(QStringLiteral("<> (tapu)"));
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(box, &enter);
+                QCoreApplication::processEvents();
+            }
+            check(caption(dim) == QStringLiteral("20,00 (tapu)"),
+                  QStringLiteral("kutuya yazılan kalıp ölçünün yazısı oldu (yazı: \"%1\")")
+                      .arg(caption(dim)));
+            shoot("olcu-cift-tiklama-sonuc");
+
+            // THE CAPTION: its words in the box, and Esc gives the edit up.
+            twice(screen(core::Point2{3'000, 12'500}));
+            box = canvas_->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+            check(asked().contains(QStringLiteral("Yeni metin")) && box != nullptr &&
+                      box->isVisible() && box->text() == QStringLiteral("Ada 12"),
+                  QStringLiteral("yazıya çift tıklama YAZIDÜZENLE'yi yazının kendisiyle açtı "
+                                 "(soru: \"%1\", kutu: \"%2\")")
+                      .arg(asked(), box != nullptr ? box->text() : QStringLiteral("-")));
+            // ESC IS THE BOX'S OWN SHORTCUT, which a key sent straight to the box
+            // never reaches: Qt matches shortcuts on the window's key path, before
+            // delivery. So the shortcut is taken the way that path takes it.
+            if (box != nullptr && box->isVisible()) {
+                for (QShortcut* esc : box->findChildren<QShortcut*>())
+                    if (esc->key() == QKeySequence(Qt::Key_Escape)) emit esc->activated();
+                QCoreApplication::processEvents();
+            }
+            check(asked().isEmpty() && (box == nullptr || !box->isVisible()) &&
+                      caption(first_key() + 1) == QStringLiteral("Ada 12"),
+                  QStringLiteral("Esc düzenlemeyi bıraktı: soru da kutu da kapandı, yazı aynı"));
+
+            // ANYTHING ELSE: the attribute panel, on the object.
+            propertyHeader_->setCurrent(1);
+            twice(screen(core::Point2{10'000, 24'000}));
+            check(asked().isEmpty() && propertyDock_->isVisible() &&
+                      propertyHeader_->current() == 0 &&
+                      controller_->bus().selection().keys().size() == 1,
+                  QStringLiteral("çizgiye çift tıklama onu seçti ve öznitelik panelini öne "
+                                 "getirdi"));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
@@ -4922,6 +5078,11 @@ QImage MainWindow::probePicture()
     if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
         QPainter painter(&picture);
         painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
+        // AND WHAT STANDS ON THE CANVAS: its own child widgets — the caption box
+        // a double click opens — which the drawn frame above has just covered.
+        for (QWidget* child : canvas_->findChildren<QWidget*>(Qt::FindDirectChildrenOnly))
+            if (child->isVisible())
+                painter.drawPixmap(canvas_->mapTo(this, child->pos()), child->grab());
     }
     return picture;
 }
@@ -6460,7 +6621,10 @@ void MainWindow::onPromptChanged(const QString& prompt)
         const bool typed             = asked.kind == command::ParamKind::Text ||
                            asked.kind == command::ParamKind::Number ||
                            asked.kind == command::ParamKind::Integer;
-        if (typed) {
+        // UNLESS THE WORDS ARE ALREADY BEING TYPED WHERE THEY GO: the box over
+        // a caption opened for this question (`MapCanvas::editTextAt`) keeps
+        // the keyboard.
+        if (typed && !canvas_->textEditorOpen()) {
             showCommandLine(true);
             commandLine_->setFocus(Qt::OtherFocusReason);
         }

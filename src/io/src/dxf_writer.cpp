@@ -85,6 +85,9 @@ struct GroupInsert
     unsigned handle{0};                              ///< the record, by the handle it was given
     int after{0};                                    ///< the group they follow
     std::vector<std::pair<int, std::string>> groups; ///< code and value, in order
+    /// When not empty, the group they follow must also carry this value — a
+    /// subclass marker (`100 AcDbDimension`) is one of several 100s in a record.
+    std::string after_value{};
 };
 
 /// A number as a DXF value: shortest round-trip form.
@@ -208,6 +211,9 @@ public:
     {
         for (const core::BlockDef& def : doc_.blocks().all())
             out_.writeBlockRecord(def.name);
+        name_pictures();
+        for (const auto& [e, name] : pictures_)
+            out_.writeBlockRecord(name);
     }
 
     void writeBlocks() override
@@ -227,6 +233,16 @@ public:
             }
             ++report_.blocks;
         }
+        // Every DIMENSION's own picture, the anonymous block its group 2 names.
+        name_pictures();
+        for (const auto& [e, name] : pictures_) {
+            DRW_Block blk;
+            blk.name      = name;
+            blk.flags     = 1; // anonymous
+            blk.basePoint = DRW_Coord(0.0, 0.0, 0.0);
+            out_.writeBlock(&blk);
+            write_picture(e);
+        }
     }
 
     void writeObjects() override {}
@@ -243,31 +259,75 @@ public:
         // STANDARD always, then every style a dimension names, with the figures
         // that dimension carries brought back to drawing units — so a reader
         // that trusts the table draws the arrows the size this drawing drew them.
-        std::vector<std::string> written{"STANDARD"};
         const core::EntityTable& ents = doc_.entities();
         DRW_Dimstyle standard;
         standard.name = "STANDARD";
         out_.writeDimstyle(&standard);
+
+        // In order of first use: the first dimension of each style gives its
+        // figures, the first ANGLE of it the angle unit — a style's table row
+        // is one row, whichever of its dimensions comes first.
+        struct Use
+        {
+            std::string name;
+            core::EntityId first{core::kNoEntity};
+            core::EntityId angle{core::kNoEntity};
+        };
+
+        std::vector<Use> uses;
         for (core::EntityId e = 0; e < ents.size(); ++e) {
             if (!ents.alive(e) || ents.kind[e] != core::kDimensionKind) continue;
             auto def = core::dimension_of(doc_.geometry(), ents.slot[e]);
+            if (!def || core::turkish_key_equals(def.value().style, "STANDARD")) continue;
+            auto use = std::ranges::find_if(uses, [&def](const Use& u) {
+                return core::turkish_key_equals(u.name, def.value().style);
+            });
+            if (use == uses.end()) {
+                uses.push_back(Use{def.value().style, e, core::kNoEntity});
+                use = std::prev(uses.end());
+            }
+            if (use->angle == core::kNoEntity && core::dimension_is_angle(def.value()))
+                use->angle = e;
+        }
+        for (const Use& use : uses) {
+            auto def = core::dimension_of(doc_.geometry(), ents.slot[use.first]);
             if (!def) continue;
-            bool seen = false;
-            for (const std::string& w : written)
-                if (core::turkish_key_equals(w, def.value().style)) seen = true;
-            if (seen) continue;
-            written.push_back(def.value().style);
             DRW_Dimstyle d;
-            d.name     = def.value().style;
+            d.name     = use.name;
             d.dimscale = 1.0;
             d.dimasz   = units(def.value().arrow_size);
             d.dimexe   = units(def.value().extension_beyond);
             d.dimexo   = units(def.value().extension_offset);
             d.dimgap   = units(def.value().text_gap);
-            d.dimtxt   = doc_.texts().has(ents.slot[e]) ? units(doc_.texts().height(ents.slot[e]))
-                                                        : d.dimasz;
+            d.dimtxt   = doc_.texts().has(ents.slot[use.first])
+                             ? units(doc_.texts().height(ents.slot[use.first]))
+                             : d.dimasz;
             d.dimdec   = def.value().precision;
             d.dimdsep  = static_cast<unsigned char>(def.value().decimal_separator);
+            // THE SHEET'S OWN RULES, for a reader that regenerates a dimension
+            // rather than drawing its picture (TODOS C-17): the figure above
+            // its line and along it (ISO 129-1), and the head this style draws
+            // — the default closed one filled, an architectural tick as the
+            // oblique stroke DIMTSZ asks for, an open head by its block name.
+            d.dimtad = 1;
+            d.dimtih = 0;
+            d.dimtoh = 0;
+            switch (def.value().arrow) {
+            case core::ArrowStyle::Tick: d.dimtsz = d.dimasz; break;
+            case core::ArrowStyle::Open: d.dimblk = "_OPEN"; break;
+            case core::ArrowStyle::Closed: break;
+            }
+            if (use.angle != core::kNoEntity) {
+                if (auto angle = core::dimension_of(doc_.geometry(), ents.slot[use.angle])) {
+                    // DIMAUNIT: 0 decimal degrees, 2 grad, 3 radians.
+                    switch (core::dimension_angle_unit(angle.value())) {
+                    case core::AngleUnit::Grad: d.dimaunit = 2; break;
+                    case core::AngleUnit::Radian: d.dimaunit = 3; break;
+                    case core::AngleUnit::Degree: d.dimaunit = 0; break;
+                    }
+                    d.dimadec = angle.value().precision;
+                }
+            }
             out_.writeDimstyle(&d);
         }
     }
@@ -695,6 +755,7 @@ private:
             out.setAngle(dxf::degrees_from_udeg(d.rotation_udeg));
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Aligned: {
@@ -705,6 +766,7 @@ private:
             out.setDimPoint(defs[2]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Radial: {
@@ -714,6 +776,7 @@ private:
             out.setDiameterPoint(defs[1]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Diametric: {
@@ -723,6 +786,7 @@ private:
             out.setDiameter2Point(defs[1]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Angular: {
@@ -735,6 +799,7 @@ private:
             out.setDimPoint(defs[4]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Angular3P: {
@@ -746,6 +811,7 @@ private:
             out.setDimPoint(defs[3]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::Ordinate: {
@@ -756,6 +822,7 @@ private:
             out.setSecondLine(defs[2]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         case core::DimensionType::ArcLength: {
@@ -775,9 +842,117 @@ private:
             out.setDimPoint(defs.size() > 3 ? defs[3] : defs[2]);
             out_.writeDimension(&out);
             remember_xdata(out);
+            name_picture(e, out);
             break;
         }
         }
+    }
+
+    /// Every DIMENSION that will be written — on the drawing or inside a block
+    /// definition — gets the name of its picture, `*D1` onward, before the
+    /// tables are written: the block record table comes first in the file and
+    /// libdxfrw finds a block by its record.
+    void name_pictures()
+    {
+        if (pictures_named_) return;
+        pictures_named_               = true;
+        const core::EntityTable& ents = doc_.entities();
+        const auto name               = [this](core::EntityId e) {
+            if (!doc_.entities().alive(e) || doc_.entities().kind[e] != core::kDimensionKind)
+                return;
+            pictures_.emplace(e, "*D" + std::to_string(pictures_.size() + 1));
+        };
+        for (const core::BlockDef& def : doc_.blocks().all())
+            for (const core::EntityKey key : def.members)
+                if (const core::EntityId m = doc_.slot_of(key); m != core::kNoEntity) name(m);
+        for (core::EntityId e = 0; e < ents.size(); ++e)
+            if (ents.visible(e) && doc_.kind_known(e)) name(e);
+    }
+
+    /// A DIMENSION'S PICTURE, the anonymous block its group 2 names (TODOS
+    /// C-17): the lines, arcs and heads `dimension_outline` draws — a closed
+    /// head a SOLID, filled as the sheet prints it — and the caption a TEXT,
+    /// on layer 0 and BYBLOCK so they take the dimension's own layer and ink.
+    /// A reader that draws a DIMENSION from its block, which is every reader
+    /// that does not regenerate it, shows exactly what this program showed.
+    void write_picture(core::EntityId e)
+    {
+        const core::RingGeometry& geo = doc_.geometry();
+        const std::uint32_t slot      = doc_.entities().slot[e];
+        core::EmitBuffer runs;
+        core::dimension_outline(geo, slot, runs);
+        const auto by_block = [](DRW_Entity& x) {
+            x.layer    = "0";
+            x.color    = 0; // BYBLOCK
+            x.lineType = "BYBLOCK";
+            x.lWeight  = DRW_LW_Conv::widthByBlock;
+        };
+        const auto at = [&](std::uint32_t v) {
+            return DRW_Coord(units(runs.xs[v]), units(runs.ys[v]), 0.0);
+        };
+        for (std::size_t r = 0; r < runs.run_total(); ++r) {
+            const std::uint32_t first = runs.run_start[r];
+            const std::uint32_t count = runs.run_count[r];
+            if (count < 2) continue;
+            if (runs.run_solid[r] != 0 && count == 3) {
+                DRW_Solid head;
+                by_block(head);
+                head.basePoint  = at(first);
+                head.secPoint   = at(first + 1);
+                head.thirdPoint = at(first + 2);
+                head.fourPoint  = at(first + 2);
+                out_.writeSolid(&head);
+                continue;
+            }
+            if (count == 2 && runs.run_closed[r] == 0) {
+                DRW_Line l;
+                by_block(l);
+                l.basePoint = at(first);
+                l.secPoint  = at(first + 1);
+                out_.writeLine(&l);
+                continue;
+            }
+            DRW_LWPolyline pl;
+            by_block(pl);
+            pl.flags = runs.run_closed[r] != 0 ? 1 : 0;
+            for (std::uint32_t v = first; v < first + count; ++v) {
+                DRW_Vertex2D vert;
+                vert.x = units(runs.xs[v]);
+                vert.y = units(runs.ys[v]);
+                pl.addVertex(vert);
+            }
+            pl.vertexnum = static_cast<int>(count);
+            out_.writeLWPolyline(&pl);
+        }
+        const core::RingSpan span = geo.rings_of(slot);
+        if (span.count == 0 || !doc_.texts().has(slot)) return;
+        const auto xs = geo.ring_xs(span.first);
+        const auto ys = geo.ring_ys(span.first);
+        if (xs.size() < 2) return;
+        DRW_Text t;
+        by_block(t);
+        t.basePoint = DRW_Coord(units(xs[0]), units(ys[0]), 0.0);
+        t.secPoint  = t.basePoint;
+        t.height    = units(doc_.texts().height(slot));
+        t.text      = std::string(doc_.texts().text(slot));
+        t.angle     = dxf::degrees_from_udeg(core::atan2_udeg(ys[1] - ys[0], xs[1] - xs[0]));
+        t.alignH    = DRW_Text::HCenter;
+        t.alignV    = DRW_Text::VMiddle;
+        out_.writeText(&t);
+    }
+
+    /// Names a DIMENSION's picture in its group 2, which libdxfrw does not
+    /// write: spliced in right after the record's `AcDbDimension` marker,
+    /// where the group belongs (after the layer in a file without markers).
+    void name_picture(core::EntityId e, const DRW_Entity& written)
+    {
+        const auto at = pictures_.find(e);
+        if (at == pictures_.end()) return;
+        if (version_ > DRW::AC1009)
+            pending_inserts_.push_back(
+                GroupInsert{written.handle, 100, {{2, at->second}}, "AcDbDimension"});
+        else
+            pending_inserts_.push_back(GroupInsert{written.handle, 8, {{2, at->second}}});
     }
 
     void write_leader(core::EntityId e, std::uint32_t slot)
@@ -1018,6 +1193,9 @@ private:
     bool cancelled_{false};
     std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>> pending_xdata_;
     std::vector<GroupInsert> pending_inserts_;
+    /// Each DIMENSION's picture block, by entity (`name_pictures`).
+    std::map<core::EntityId, std::string> pictures_;
+    bool pictures_named_{false};
 };
 
 /// One XDATA group as DXF text: the code right-aligned in three columns, the
@@ -1135,7 +1313,8 @@ core::Status splice_xdata(
         }
         out << code_line << '\n' << value_line << '\n';
         for (auto it = due.begin(); it != due.end();) {
-            if (std::to_string((*it)->after) != code) {
+            if (std::to_string((*it)->after) != code ||
+                (!(*it)->after_value.empty() && (*it)->after_value != value)) {
                 ++it;
                 continue;
             }
