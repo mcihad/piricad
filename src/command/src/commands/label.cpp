@@ -18,9 +18,14 @@
 // So a label is an ordinary drawing object. It can be moved, restyled, put on its
 // own layer and switched off, it round-trips through `.pcad` and DXF without
 // anything new, and it is exactly what a CAD label has always been — AutoCAD's
-// labels are TEXT entities too. The cost is that a label does not follow a later
-// attribute edit; re-running the command refreshes them, and that is the same
-// bargain every CAD annotation makes.
+// labels are TEXT entities too.
+//
+// AND A LABEL FOLLOWS WHAT IT NAMES (TODOS C-12). Each one is attached to its
+// feature (core/attach.hpp: the middle of it, its words the format filled from
+// it), so a corner dragged, a parcel moved or a column edited rewrites it at the
+// commit of that edit — and running the command again refreshes the labels it
+// wrote rather than writing a second set over them. `bagla=hayır` writes plain
+// captions, as it always did.
 //
 // THE FORMAT STRING IS A SUBSTITUTION, NOT A LANGUAGE. `{sutun}` is replaced by
 // that column's value and nothing else happens: there is no operator, no nesting,
@@ -35,7 +40,12 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/command/text_fields.hpp"
+#include "kentos_cad/command/transaction.hpp"
+
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/text_store.hpp"
 
 #include <array>
 #include <string>
@@ -50,52 +60,6 @@ namespace {
 /// A starting point the caller overrides, not a figure from a regulation: MPYY
 /// prescribes text heights per plan type and those live in /data, not here.
 constexpr core::Mm kDefaultHeight = 2000;
-
-/// One value as it should read on paper — the shared formatter, with the mark
-/// a Turkish plan sheet uses. It lives in `core` because the attribute table
-/// needs the same arithmetic with the other mark, and two copies would drift.
-std::string as_text(const core::AttrValue& value)
-{
-    return core::attr_display(value, core::DecimalMark::Comma);
-}
-
-/// Replaces every `{sutun}` in `format` with that column's value for `e`.
-///
-/// A brace that names no declared column is left ALONE, braces and all. Silently
-/// deleting it would hide a typo in a format string that a plan sheet is about to
-/// be printed from; leaving it visible is how the user sees the mistake.
-core::Result<std::string> render(const core::Document& doc, const std::string& format,
-                                 core::EntityId e)
-{
-    std::string out;
-    out.reserve(format.size());
-
-    for (std::size_t i = 0; i < format.size();) {
-        if (format[i] != '{') {
-            out += format[i++];
-            continue;
-        }
-
-        const std::size_t close = format.find('}', i + 1);
-        if (close == std::string::npos) {
-            out += format[i++];
-            continue;
-        }
-
-        const std::string name = format.substr(i + 1, close - i - 1);
-        const core::AttrId col = doc.attributes().find(name);
-
-        if (col == core::kNoAttr) {
-            out += format.substr(i, close - i + 1);
-        } else {
-            auto value = doc.attribute(col, e);
-            if (!value) return value.error();
-            out += as_text(value.value());
-        }
-        i = close + 1;
-    }
-    return out;
-}
 
 /// One text slot a symbol declares: which column it reads, where it sits
 /// relative to the object's centre, and how tall it is written.
@@ -225,81 +189,70 @@ Task<void> run(Context& ctx)
     // is the point — there is one lexer in this program (CLAUDE.md 5.11).
     const std::string& lines = format_text;
 
+    // FOLLOWING, unless told not to: each label attached to its feature.
+    const Value follow_arg = ctx.argument("bagla");
+    const bool follow      = follow_arg.empty() || follow_arg.as_bool();
+
     // ---- pass 1: decide. Nothing below this point may fail. ----
     //
     // Every text is rendered and every position computed before the first write,
     // so a format string naming a column that turns out to be unreadable leaves
-    // the drawing untouched instead of half-labelled (Article 1.6).
-    std::vector<core::Point2> where;
-    std::vector<std::string> texts;
-    std::vector<core::Mm> heights;
+    // the drawing untouched instead of half-labelled (Article 1.6). A symbol's
+    // slot is the format `{sutun}` at its own offset and height, so both roads
+    // come out as one list.
+    struct Planned
+    {
+        core::EntityId source{core::kNoEntity};
+        std::string format;
+        std::string text;
+        core::Point2 at{};
+        core::Mm height{0};
+    };
+
+    std::vector<Planned> planned;
 
     if (!slots.empty()) {
-        // COLUMNS RESOLVED ONCE, not per entity. `AttrTable::find` folds a Turkish
-        // string and walks a map; doing it inside the entity loop would pay for it
-        // 71 820 times on the sheet this feature was written for, for an answer
-        // that cannot change while the loop runs.
-        std::vector<core::AttrId> columns;
-        columns.reserve(slots.size());
-        for (const Slot& slot : slots) {
-            const core::AttrId col = bus.document().attributes().find(slot.field);
-            if (col == core::kNoAttr) {
+        // COLUMNS CHECKED ONCE, not per entity: a slot naming a column the
+        // drawing does not have is a mistake in the symbol, said up front.
+        for (const Slot& slot : slots)
+            if (bus.document().attributes().find(slot.field) == core::kNoAttr) {
                 ctx.session().fail(core::err(core::ErrorCode::NotFound,
                                              "Sembolün istediği sütun çizimde yok: '" + slot.field +
                                                  "'. SÜTUN ile tanımlayın."));
                 co_return;
             }
-            columns.push_back(col);
-        }
-
-        const auto& entities = bus.document().entities();
-        for (core::EntityId e = 0; e < entities.size(); ++e) {
-            if (!entities.alive(e) || entities.layer[e] != source) continue;
-
-            const core::Point2 centre = entities.box_of(e).centre();
-            for (std::size_t s = 0; s < slots.size(); ++s) {
-                auto value = bus.document().attribute(columns[s], e);
-                if (!value) {
-                    ctx.session().fail(value.error());
-                    co_return;
-                }
-                // AN EMPTY CELL WRITES NOTHING. A parcel whose TAKS has not been
-                // entered yet gets no figure rather than a `yok` printed inside
-                // its circle.
-                if (!value.value().present) continue;
-
-                std::string words = as_text(value.value());
-                if (words.empty()) continue;
-
-                where.push_back(core::Point2{centre.x, centre.y + slots[s].offset});
-                texts.push_back(std::move(words));
-                heights.push_back(slots[s].height > 0 ? slots[s].height : height);
-            }
-        }
-    } else {
-        const auto& entities = bus.document().entities();
-        for (core::EntityId e = 0; e < entities.size(); ++e) {
-            if (!entities.alive(e) || entities.layer[e] != source) continue;
-
-            auto text = render(bus.document(), lines, e);
+    }
+    const auto& entities = bus.document().entities();
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e) || entities.layer[e] != source) continue;
+        // The bounding-box centre, which is where a plan puts a number inside
+        // its lekesi; the attachment's centre anchor is the same point.
+        const core::Point2 centre = entities.box_of(e).centre();
+        const auto plan           = [&](std::string format, core::Mm lift, core::Mm tall) -> bool {
+            auto text = fill_fields(bus.document(), e, format);
             if (!text) {
                 ctx.session().fail(text.error());
-                co_return;
+                return false;
             }
-            if (text.value().empty()) continue; // nothing to say about this one
-
-            // The bounding-box centre, which is where a plan puts a number inside
-            // its lekesi. The area centroid of a ring with holes is a different
-            // computation and belongs in core rather than in a command.
-            core::Point2 at = entities.box_of(e).centre();
-            at.y += offset;
-            where.push_back(at);
-            texts.push_back(std::move(text.value()));
-            heights.push_back(height);
+            // AN EMPTY CELL WRITES NOTHING. A parcel whose TAKS has not been
+            // entered yet gets no figure rather than a `yok` printed inside its
+            // circle.
+            if (text.value().empty()) return true;
+            planned.push_back(Planned{e, std::move(format), std::move(text.value()),
+                                      core::Point2{centre.x, centre.y + lift}, tall});
+            return true;
+        };
+        if (!slots.empty()) {
+            for (const Slot& slot : slots)
+                if (!plan("{" + slot.field + "}", slot.offset,
+                          slot.height > 0 ? slot.height : height))
+                    co_return;
+        } else if (!plan(lines, offset, height)) {
+            co_return;
         }
     }
 
-    if (texts.empty()) {
+    if (planned.empty()) {
         ctx.refuse(core::ErrorCode::NotFound,
                    "'" + *source_name + "' katmanında etiketlenecek bir şey bulunamadı.");
         co_return;
@@ -310,17 +263,44 @@ Task<void> run(Context& ctx)
                                      ? bus.document().find_layer(target_name)
                                      : bus.document().ensure_layer(target_name);
 
-    for (std::size_t i = 0; i < texts.size(); ++i) {
+    std::size_t written   = 0;
+    std::size_t refreshed = 0;
+    std::vector<core::EntityId> dependents;
+    for (const Planned& p : planned) {
+        const core::Document& doc = bus.document();
+
+        // A LABEL THIS COMMAND ALREADY WROTE is refreshed, not written again: the
+        // caption that follows this feature, on this layer, with this format.
+        if (follow) {
+            core::EntityId found = core::kNoEntity;
+            doc.attachments().dependents_of(doc.key_of(p.source), dependents);
+            for (const core::EntityId d : dependents) {
+                const core::Attachment* a = doc.attachments().get(d);
+                if (a != nullptr && a->derive == core::AttachDerive::Fields &&
+                    a->anchor == core::AttachAnchor::Centre && a->format == p.format &&
+                    doc.alive(d) && doc.entities().layer[d] == target)
+                    found = d;
+            }
+            if (found != core::kNoEntity) {
+                const std::uint32_t slot = doc.entities().slot[found];
+                if (doc.texts().text(slot) != p.text)
+                    if (auto st = ctx.transaction().set_text(
+                            found, p.text, doc.texts().height(slot), doc.texts().anchor(slot));
+                        !st) {
+                        ctx.session().fail(st.error());
+                        co_return;
+                    }
+                ++refreshed;
+                continue;
+            }
+        }
+
         // The baseline is an ordinary open ring, so the label is culled, snapped
         // and hit-tested by the same code every other entity uses. Its advance is
-        // approximate on purpose: it sets the cull box, and the backend measures
+        // an estimate on purpose: it sets the cull box, and the backend measures
         // the real font when it draws.
-        const core::Mm tall      = heights[i];
-        const auto chars         = static_cast<core::Mm>(texts[i].size());
-        const core::Point2 start = where[i];
-        const core::Point2 end{start.x + (tall * 6 * chars) / 10, start.y};
-
-        const std::array<core::Point2, 2> baseline{start, end};
+        const core::Point2 end{p.at.x + core::text_width_estimate(p.text, p.height), p.at.y};
+        const std::array<core::Point2, 2> baseline{p.at, end};
         auto created = ctx.transaction().add_polyline(target, baseline);
         if (!created) {
             ctx.session().fail(created.error());
@@ -330,9 +310,34 @@ Task<void> run(Context& ctx)
         // Centred on the point both ways, because a label that names a face sits in
         // the middle of it — which is also what puts it inside a `merkez-isaretci`
         // circle drawn by the face's own symbol.
-        if (auto st = ctx.transaction().set_text(created.value(), texts[i], tall,
+        if (auto st = ctx.transaction().set_text(created.value(), p.text, p.height,
                                                  core::TextAnchor::MiddleCentre);
             !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        ++written;
+        if (!follow) continue;
+
+        // FOLLOWING ITS FEATURE: the middle of its outer ring, its words the
+        // format, the lift the hand's offset from that middle.
+        core::Attachment a;
+        a.source                  = doc.key_of(p.source);
+        a.anchor                  = core::AttachAnchor::Centre;
+        a.derive                  = core::AttachDerive::Fields;
+        a.format                  = p.format;
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[p.source]);
+        if (span.count == 0) continue;
+        std::vector<core::Point2> outer;
+        const auto xs = doc.geometry().ring_xs(span.first);
+        const auto ys = doc.geometry().ring_ys(span.first);
+        outer.reserve(xs.size());
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            outer.push_back(core::Point2{xs[v], ys[v]});
+        const bool closed = doc.geometry().ring_role[span.first] != core::RingRole::Open;
+        if (const auto rule = core::attach_place(outer, closed, a, p.height, false); rule)
+            core::attach_measure_offset(*rule, p.at, a);
+        if (auto st = ctx.transaction().set_attachment(created.value(), a); !st) {
             ctx.session().fail(st.error());
             co_return;
         }
@@ -343,8 +348,11 @@ Task<void> run(Context& ctx)
     ctx.record("hedef", Value::text(target_name));
     ctx.record("yukseklik", Value::integer(height));
     ctx.record("kaydirma", Value::integer(offset));
+    if (!follow_arg.empty()) ctx.record("bagla", follow_arg);
 
-    ctx.echo(std::to_string(texts.size()) + " etiket yazıldı: '" + target_name + "' katmanına.");
+    std::string said = std::to_string(written) + " etiket yazıldı: '" + target_name + "' katmanına";
+    if (refreshed != 0) said += "; " + std::to_string(refreshed) + " etiket yenilendi";
+    ctx.echo(said + ".");
 }
 
 } // namespace
@@ -366,8 +374,8 @@ KENTOS_COMMAND(label)
                 // when the symbol declares none, so a bare ETİKET on an ordinary
                 // layer prompts exactly as it did.
                 Param::text("bicim", Arity::optional(),
-                            "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. "
-                            "Sembol alan bildiriyorsa gerekmez")
+                            "Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} "
+                            "çevreyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez")
                     .en("format"),
                 Param::text("hedef", Arity::optional(),
                             "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'")
@@ -378,10 +386,16 @@ KENTOS_COMMAND(label)
                                "Nesnenin ortasından dikey kaydırma, zemin milimetresi; "
                                "artı yukarı")
                     .en("offset"),
+                Param::boolean("bagla", Arity::optional(),
+                               "Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu "
+                               "değişince yeniden yazılır, komut yeniden çalışınca yenilenir; "
+                               "varsayılan evet")
+                    .en("follow"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.",
+        .summary = "Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; "
+                   "etiket nesnesini izler.",
         .run     = &run,
     };
 }

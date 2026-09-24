@@ -2,6 +2,7 @@
 #include "kentos_cad/command/transaction.hpp"
 
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/text_fields.hpp"
 
 #include "kentos_cad/core/dimension_link.hpp"
 
@@ -460,6 +461,7 @@ Transaction::SettleReport Transaction::settle_attachments()
     for (int round = 0; round < 16; ++round) {
         std::vector<EntityId> moved;
         std::vector<EntityId> erased;
+        std::vector<EntityId> restated; // a column changed: a caption filled from it is stale
         std::map<EntityId, std::uint32_t> before; // the slot an entity had before this range
         for (std::size_t i = settled_upto_; i < inverse_.size(); ++i) {
             const Op& op = inverse_[i];
@@ -469,14 +471,25 @@ Transaction::SettleReport Transaction::settle_attachments()
             } else if (op.kind == Op::Kind::SetEntityAlive && op.bool_arg) {
                 // The inverse restores it, so the command erased it.
                 erased.push_back(op.entity);
+            } else if (op.kind == Op::Kind::SetAttribute) {
+                restated.push_back(op.entity);
             }
         }
         settled_upto_ = inverse_.size();
-        if (moved.empty() && erased.empty()) break;
+        if (moved.empty() && erased.empty() && restated.empty()) break;
         std::sort(moved.begin(), moved.end());
         moved.erase(std::unique(moved.begin(), moved.end()), moved.end());
         std::sort(erased.begin(), erased.end());
         erased.erase(std::unique(erased.begin(), erased.end()), erased.end());
+        // Every source whose captions may say something new: the moved ones, and
+        // the ones whose columns a caption is filled from (TODOS C-12). A source
+        // that only changed its columns is placed where it was, and only the
+        // words of a `Fields` caption can come out different.
+        std::ranges::sort(restated);
+        restated.erase(std::ranges::unique(restated).begin(), restated.end());
+        std::vector<EntityId> carrying;
+        std::ranges::set_union(moved, restated, std::back_inserter(carrying));
+        carrying.erase(std::ranges::unique(carrying).begin(), carrying.end());
 
         // ---- an erased source takes its dependents with it ----
         for (const EntityId src : erased) {
@@ -513,7 +526,7 @@ Transaction::SettleReport Transaction::settle_attachments()
         }
 
         // ---- a moved source carries its dependents ----
-        for (const EntityId src : moved) {
+        for (const EntityId src : carrying) {
             if (!doc_.alive(src)) continue;
             tab.dependents_of(doc_.key_of(src), deps);
             if (deps.empty()) continue;
@@ -553,6 +566,17 @@ Transaction::SettleReport Transaction::settle_attachments()
                 std::string text(texts.text(dslot));
                 if (const auto derived = core::attach_text(now.points, now.closed, a); derived)
                     text = *derived;
+                // A column emptied leaves the caption blank rather than gone: an
+                // empty text detaches the words from the entity, and the label
+                // would not come back when the column is filled again.
+                if (a.derive == core::AttachDerive::Fields)
+                    if (auto filled =
+                            fill_fields(doc_, src, a.format,
+                                        FieldFormat{a.precision, a.separator,
+                                                    static_cast<core::DrawingUnit>(a.unit)});
+                        filled)
+                        text =
+                            filled.value().empty() ? std::string(" ") : std::move(filled.value());
                 const auto base = core::dimension_baseline(place->centre, place->dir_x,
                                                            place->dir_y, height, text);
 

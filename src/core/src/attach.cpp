@@ -69,7 +69,12 @@ std::size_t segment_count(std::size_t n, bool closed) noexcept
 
 const char* attach_anchor_name(AttachAnchor a) noexcept
 {
-    return a == AttachAnchor::Vertex ? "kose" : "kenar";
+    switch (a) {
+    case AttachAnchor::Vertex: return "kose";
+    case AttachAnchor::Edge: return "kenar";
+    case AttachAnchor::Centre: return "merkez";
+    }
+    return "kenar";
 }
 
 const char* attach_side_name(AttachSide s) noexcept
@@ -85,7 +90,12 @@ const char* attach_side_name(AttachSide s) noexcept
 
 const char* attach_derive_name(AttachDerive d) noexcept
 {
-    return d == AttachDerive::Length ? "uzunluk" : "sabit";
+    switch (d) {
+    case AttachDerive::Keep: return "sabit";
+    case AttachDerive::Length: return "uzunluk";
+    case AttachDerive::Fields: return "bicim";
+    }
+    return "sabit";
 }
 
 std::optional<AttachSide> attach_side_from_name(std::string_view word) noexcept
@@ -127,7 +137,17 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
     AttachPlacement out;
     Dir frame_u{1.0, 0.0}; // the reading frame the hand offset is measured in
 
-    if (a.anchor == AttachAnchor::Edge) {
+    if (a.anchor == AttachAnchor::Centre) {
+        // The middle of the ring's box, read along the page — where ETİKET has
+        // always put a parcel's number, so a label that follows its parcel sits
+        // where the one that did not used to.
+        Box2 box;
+        for (const Point2 p : ring)
+            box.extend(p);
+        out.centre = box.centre();
+        out.dir_x  = 1.0;
+        out.dir_y  = 0.0;
+    } else if (a.anchor == AttachAnchor::Edge) {
         if (a.index >= segment_count(n, closed)) return std::nullopt;
         const Point2 p = ring[a.index];
         const Point2 q = ring[(a.index + 1) % n];
@@ -296,6 +316,8 @@ Attachment attach_reanchor(std::span<const Point2> was, bool was_closed,
                            std::span<const Point2> now, bool now_closed, const Attachment& a)
 {
     if (was.size() == now.size() || was.empty() || now.empty()) return a;
+    // The centre names no corner and no edge: there is nothing to re-anchor.
+    if (a.anchor == AttachAnchor::Centre) return a;
 
     // Where the named feature stood: a corner, or an edge's midpoint. A feature
     // that was not on the old ring either falls back to its first vertex.

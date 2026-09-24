@@ -53,12 +53,26 @@ public:
                              "Kaynak nesnenin bağlanılacak bir kenarı ya da köşesi yok: " +
                                  std::to_string(source.key));
 
-        const bool by_vertex         = input.args.get("bag").as_text() == "kose";
-        const bool derive_length     = input.args.get("tur").as_text() == "uzunluk";
+        const std::string bag        = input.args.get("bag").as_text();
+        const std::string tur        = input.args.get("tur").as_text();
+        const bool by_vertex         = bag == "kose";
+        const bool by_centre         = bag == "merkez";
+        const bool derive_length     = tur == "uzunluk";
         const core::DrawingUnit unit = unit_named(input.args.get("birim").as_text());
         const auto precision = static_cast<std::uint8_t>(input.args.get("ondalik").as_int());
         const char separator = input.args.get("ayrac").as_text() == "nokta" ? '.' : ',';
         std::string format   = input.args.get("bicim").as_text();
+        // WHAT A CAPTION FILLED FROM ITS SOURCE SAYS (command/text_fields.hpp):
+        // its area, its length when it hangs off the whole object rather than
+        // one edge, or the user's own format with any of those and any column.
+        const bool derive_fields = tur == "alan" || tur == "bicim" || (derive_length && by_centre);
+        if (tur == "alan" && format.empty()) format = "{#alan} m²";
+        if (derive_length && by_centre && format.empty())
+            format = std::string("{#uzunluk}") +
+                     core::attach_unit_suffix(static_cast<std::uint8_t>(unit));
+        if (tur == "bicim" && format.empty())
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "tur=bicim bir kalıp ister: bicim=\"Ada {ada} · {#alan} m²\" gibi.");
         if (format.empty())
             format = std::string("{}") + core::attach_unit_suffix(static_cast<std::uint8_t>(unit));
 
@@ -72,6 +86,34 @@ public:
             }
             // The caption's centre is the first vertex of its baseline.
             const core::Point2 at = e.rings.front().points.front();
+
+            // THE MIDDLE OF THE OBJECT: its outer ring's box, and the offset that
+            // keeps the caption where it stands.
+            if (by_centre) {
+                const InputEntity::Ring& outer = source.rings.front();
+                core::Attachment a;
+                a.source = static_cast<core::EntityKey>(static_cast<std::uint64_t>(source.key));
+                a.anchor = core::AttachAnchor::Centre;
+                if (derive_fields) {
+                    a.derive    = core::AttachDerive::Fields;
+                    a.unit      = static_cast<std::uint8_t>(unit);
+                    a.precision = precision;
+                    a.separator = separator;
+                    a.format    = format;
+                }
+                const auto rule = core::attach_place(
+                    outer.points, outer.role != core::RingRole::Open, a, e.text_height, false);
+                if (rule) {
+                    core::attach_measure_offset(*rule, at, a);
+                    ToolOutput::Replacement r;
+                    r.key    = e.key;
+                    r.attach = a;
+                    output.replacements.push_back(std::move(r));
+                    ++output.touched;
+                }
+                progress.at(++done, input.entities.size());
+                continue;
+            }
 
             // The ring of the source nearest the caption, then the feature of
             // that ring nearest it.
@@ -112,9 +154,9 @@ public:
             a.side   = by_vertex ? core::AttachSide::Outside
                                  : core::attach_side_of(ring.points, closed, a.index, at);
             a.gap    = e.text_height > 0 ? e.text_height / 2 : 0;
-            if (derive_length && !by_vertex) {
-                a.derive    = core::AttachDerive::Length;
-                a.unit      = static_cast<std::uint8_t>(unit);
+            if (derive_fields || (derive_length && !by_vertex)) {
+                a.derive = derive_fields ? core::AttachDerive::Fields : core::AttachDerive::Length;
+                a.unit   = static_cast<std::uint8_t>(unit);
                 a.precision = precision;
                 a.separator = separator;
                 a.format    = format;
@@ -149,8 +191,11 @@ private:
         .python = "attach",
         .names  = {"BAĞLA", "BAGLA", "ATTACH", "BĞ", "BG"},
         .title  = "Yazıyı nesneye bağla",
-        .summary = "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: "
-                   "nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.",
+        .summary =
+            "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına "
+            "bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin "
+            "alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince "
+            "yeniden yazılır.",
         .group   = "Etiketleme",
         .icon    = "yazi",
         .applies = Applies::Texts,
@@ -158,12 +203,15 @@ private:
             {
                 ToolParam::object("kaynak", "Yazıların bağlanacağı nesne (çizgi ya da alan)")
                     .en("source"),
-                ToolParam::choice("bag", "Neye bağlanacağı: en yakın kenar ya da en yakın köşe",
-                                  {"kenar", "kose"}, "kenar")
+                ToolParam::choice("bag",
+                                  "Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin "
+                                  "ortası",
+                                  {"kenar", "kose", "merkez"}, "kenar")
                     .en("attach_to"),
                 ToolParam::choice("tur",
-                                  "Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur",
-                                  {"sabit", "uzunluk"}, "sabit")
+                                  "Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin "
+                                  "uzunluğu, nesnenin alanı ya da bicim kalıbı",
+                                  {"sabit", "uzunluk", "alan", "bicim"}, "sabit")
                     .en("type"),
                 ToolParam::choice("birim", "Uzunluğun birimi (tur=uzunluk)",
                                   {"metre", "santimetre", "milimetre", "kilometre"}, "metre")
@@ -172,7 +220,8 @@ private:
                                    0, 6)
                     .en("decimals"),
                 ToolParam::text("bicim",
-                                "Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk)")
+                                "Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, "
+                                "{#uzunluk} ölçülür, {sutun} sütunun değeridir")
                     .en("format"),
                 ToolParam::choice("ayrac", "Ondalık ayracı (tur=uzunluk)", {"virgul", "nokta"},
                                   "virgul")

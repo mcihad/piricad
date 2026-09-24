@@ -79,7 +79,9 @@ void lay_out_text(std::string_view text, float height_px, core::TextAnchor ancho
         TextLine& line = out[i];
         line.advance   = line.text.empty() ? 0.0f : measure(line.text) * height_px;
         line.v         = first + static_cast<float>(i) * pitch;
-        line.u         = column == 1 ? -line.advance * 0.5f : column == 2 ? -line.advance : 0.0f;
+        line.u         = 0.0f; // the left column
+        if (column == 1) line.u = -line.advance * 0.5f;
+        if (column == 2) line.u = -line.advance;
     }
 }
 

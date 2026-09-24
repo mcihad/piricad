@@ -47,6 +47,7 @@ add_executable(kentos_tests
     unit/test_dimtext.cpp
     unit/test_hatchlink.cpp
     unit/test_textlayout.cpp
+    unit/test_textfields.cpp
     unit/test_planar.cpp
     unit/test_processing.cpp
     unit/test_ai_catalog.cpp

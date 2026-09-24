@@ -38,6 +38,7 @@ namespace kentos::core {
 enum class AttachAnchor : std::uint8_t {
     Vertex = 0, ///< one corner of one ring
     Edge   = 1, ///< one edge of one ring: from vertex `index` to the next
+    Centre = 2, ///< the middle of the ring's box: where a parcel's number and area sit
 };
 
 /// Which side of the anchored edge the dependent sits on. `Outside`/`Inside` are
@@ -54,6 +55,11 @@ enum class AttachSide : std::uint8_t {
 enum class AttachDerive : std::uint8_t {
     Keep   = 0, ///< its own words: a corner number, a note
     Length = 1, ///< the anchored edge's length, in the unit and format recorded
+    /// `format` filled from the source each time it changes: a column's value
+    /// for `{sutun}`, and a figure measured from its geometry for `{#alan}`,
+    /// `{#cevre}` and `{#uzunluk}` (command/text_fields.hpp) — a parcel's
+    /// number with its area, which says the new area the moment a corner moves.
+    Fields = 2,
 };
 
 /// Stable machine names, for a message, a file and a test.
@@ -103,7 +109,9 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
                                             bool with_offset = true);
 
 /// The text the rule derives for `a` over `ring`, or nothing when the dependent
-/// keeps its own words (`AttachDerive::Keep`) or the anchor is not on the ring.
+/// keeps its own words (`AttachDerive::Keep`), when its words are filled from
+/// the whole source rather than one ring (`AttachDerive::Fields`, which the
+/// command layer does) or when the anchor is not on the ring.
 std::optional<std::string> attach_text(std::span<const Point2> ring, bool closed,
                                        const Attachment& a);
 

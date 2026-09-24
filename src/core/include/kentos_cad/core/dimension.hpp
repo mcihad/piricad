@@ -257,6 +257,11 @@ std::string dimension_tolerance_text(const DimensionDef& def, DrawingUnit unit);
 /// Formats a length in `unit` with `precision` decimals and `separator`.
 std::string format_dimension_length(Mm value, DrawingUnit unit, unsigned precision, char separator);
 
+/// An area in square metres with `precision` decimals (0–8) and `separator`:
+/// `format_area(1'234'560'000, 2, ',')` is "1234,56". Integers throughout,
+/// rounded half away from zero, like every figure a caption writes.
+std::string format_area(Mm2 value, unsigned precision, char separator);
+
 /// Formats an angle in degrees with `precision` decimals and `separator`, with
 /// the degree sign.
 std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator);

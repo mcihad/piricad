@@ -5428,6 +5428,57 @@ int MainWindow::probeRealMouse()
             }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 15. A LABEL SAYS THE NEW AREA WHEN THE CORNER IS DRAGGED (C-12) --
+        //
+        // A parcel labelled with its number and its measured area; then the
+        // parcel alone selected and its corner dragged by the grip. The label
+        // follows the parcel's middle and writes the area the drag made.
+        {
+            fresh({QStringLiteral("SÜTUN kimlik=ada tur=tam_sayi"),
+                   QStringLiteral("ALAN 0,0 20,0 20,10 0,10")});
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            const std::int64_t labelled = first_key();
+            runScriptLine(QStringLiteral("ÖZNİTELİK ada %1 101").arg(labelled));
+            const core::Document& doc = controller_->document();
+            const core::EntityId parcel_row =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(labelled)));
+            const core::Layer* on = parcel_row == core::kNoEntity
+                                        ? nullptr
+                                        : doc.layer(doc.entities().layer[parcel_row]);
+            runScriptLine(
+                QStringLiteral("ETİKET katman=\"%1\" bicim=\"{ada}\\n{#alan} m²\" hedef=PROBETIKET")
+                    .arg(on == nullptr ? QString() : QString::fromStdString(on->name)));
+            endCommand();
+            const auto label_text = [&doc] {
+                const core::LayerId l = doc.find_layer("PROBETIKET");
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                    if (doc.alive(e) && doc.entities().layer[e] == l &&
+                        doc.texts().has(doc.entities().slot[e]))
+                        return std::string(doc.texts().text(doc.entities().slot[e]));
+                return std::string();
+            };
+            check(label_text() == "101\n200,00 m²",
+                  QStringLiteral("Etiket: numara ve ölçülen alan yazıldı (\"%1\")")
+                      .arg(QString::fromStdString(label_text())));
+
+            runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1").arg(labelled));
+            QCoreApplication::processEvents();
+            press(screen({20'000, 10'000}));
+            release(screen({20'000, 10'000}));
+            // Inside the view the parcel was zoomed to (see section 13).
+            onCanvas(QEvent::MouseMove, screen({23'000, 11'500}), Qt::NoButton);
+            press(screen({23'000, 11'500}));
+            release(screen({23'000, 11'500}));
+            // (0,0) (20,0) (23,11.5) (0,10): 230 m² by the shoelace.
+            check(label_text() == "101\n230,00 m²",
+                  QStringLiteral("Etiket: köşe tutamaktan sürüklenince alan yeniden yazıldı "
+                                 "(\"%1\"; son söz: \"%2\")")
+                      .arg(QString::fromStdString(label_text()), lastSaid()));
+            shoot("etiket-izler");
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

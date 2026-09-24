@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — nesnesini izleyen etiket: alan ve sütun değişince yeniden yazılır (C-12, 2. aşama)
+
+- **Ölçülen alanlar.** Etiket kalıbında `{#alan}` nesnenin alanını (m²), `{#cevre}`
+  çevresini, `{#uzunluk}` uzunluğunu yazar; `{sutun}` bir sütunun değeridir. Kalıp bir
+  dil değildir: işleç, işlev, iç içe yazım yok; bilinmeyen ad olduğu gibi kalır.
+- **ETİKET etiketi nesnesine bağlar** (`bagla=evet`, varsayılan): nesnenin köşesi
+  çekilince, nesne taşınınca ya da bir sütunu `ÖZNİTELİK` ile değişince etiket o işlemin
+  içinde yeniden yazılır ve nesnenin ortasına geçer; nesne silinince etiketi de silinir.
+  Sütunu boşalan etiket boş kalır, sütun dolunca geri gelir.
+- **Düzeltildi:** ETİKET'i yeniden çalıştırmak etiketleri tazelemek yerine üstlerine
+  ikinci bir takım yazıyordu; artık aynı nesnenin aynı katmandaki aynı biçimli etiketi
+  yerinde yenilenir (`0 etiket yazıldı; 1 etiket yenilendi`). `bagla=hayır` eski serbest
+  yazıyı yazar. Etiket genişliği bayt yerine harf türüyle tahmin edilir.
+- **BAĞLA** nesnenin ortasına da bağlar (`bag=merkez`) ve yazıya alanı (`tur=alan`) ya
+  da bir kalıbı (`tur=bicim bicim="Ada {ada}: {#alan} m²"`) söyletir; yazı bağlandığı
+  anda doldurulur.
+- Gerçek fare probu 15. bölüm: ETİKET'le yazılmış "101 / 200,00 m²", parselin köşesi
+  tutamaktan sürüklenince "101 / 230,00 m²" oldu ve yeni ortaya geçti.
+
 ### Eklendi — çok satırlı yazı, dokuz hizalama, satır aralığı ve kırılma; ekran, PDF ve DXF aynı düzende (C-12, 1. aşama)
 
 - **Çok satırlı yazı.** `\n` her yerde satır sonudur — komut satırında, istemde,

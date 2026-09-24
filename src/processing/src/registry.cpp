@@ -22,6 +22,7 @@
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/text_fields.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -478,6 +479,31 @@ Task<void> run_tool(Context& ctx)
             if (auto st = ctx.transaction().set_attachment(e, *attach); !st) {
                 ctx.refuse(st.error());
                 co_return;
+            }
+            // A CAPTION FILLED FROM ITS SOURCE says what the source says the
+            // moment it is attached — and afterwards whenever the source moves or
+            // a column of it changes (`Transaction::settle_attachments`). The
+            // tool cannot fill it: it sees a snapshot of rings, not the columns.
+            const core::EntityId src = doc.slot_of(attach->source);
+            const std::uint32_t slot = doc.entities().slot[e];
+            if (attach->derive == core::AttachDerive::Fields && src != core::kNoEntity &&
+                doc.alive(src) && doc.texts().has(slot)) {
+                auto words = command::fill_fields(
+                    doc, src, attach->format,
+                    command::FieldFormat{attach->precision, attach->separator,
+                                         static_cast<core::DrawingUnit>(attach->unit)});
+                if (!words) {
+                    ctx.refuse(words.error());
+                    co_return;
+                }
+                if (words.value().empty()) words = std::string(" "); // blank, not detached
+                if (words.value() != doc.texts().text(slot))
+                    if (auto st = ctx.transaction().set_text(
+                            e, words.value(), doc.texts().height(slot), doc.texts().anchor(slot));
+                        !st) {
+                        ctx.refuse(st.error());
+                        co_return;
+                    }
             }
         }
         ++made;

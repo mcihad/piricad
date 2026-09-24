@@ -12,14 +12,17 @@ yazı yerinde kalırsa yanlış yerde yanlış sayıyı söyler. Bir köşenin n
 aittir, yazıldığı koordinata değil.
 
 KentOSCad bu ilişkiyi bir **bağ** olarak kaydeder. Bağlı nesne (**bağımlı**) kaynağını
-(**kaynak**), kaynağın hangi özelliğine bağlı olduğunu — bir halkanın bir **köşesi** ya da
-bir **kenarı** — nasıl yerleştiğini (hangi yan, ne kadar açıkta), sözünün ne olduğunu
-(kendi yazısı ya da kenarın **uzunluğu**) ve elle verdiğiniz **el payını** bilir.
+(**kaynak**), kaynağın hangi özelliğine bağlı olduğunu — bir halkanın bir **köşesi**, bir
+**kenarı** ya da nesnenin **ortası** — nasıl yerleştiğini (hangi yan, ne kadar açıkta),
+sözünün ne olduğunu (kendi yazısı, kenarın **uzunluğu**, ya da nesneden doldurulan bir
+**kalıp**: sütunları ve ölçülen alanı, çevresi, uzunluğu) ve elle verdiğiniz **el
+payını** bilir.
 
 Bugün bağımlı nesne **yazıdır**: [`UZUNLUKYAZ`](../komutlar/uzunluk_yaz.md)'ın yazdığı
 uzunluklar kenarlarına, [`KÖŞENUMARALA`](../komutlar/kose_numarala.md)'nın yazdığı
-numaralar köşelerine bağlı doğar. Serbest bir yazıyı [`BAĞLA`](../komutlar/bagla.md)
-bağlar, [`BAĞÇÖZ`](../komutlar/bag_coz.md) çözer.
+numaralar köşelerine, [`ETİKET`](../komutlar/label.md)'in yazdığı etiketler nesnenin
+ortasına bağlı doğar. Serbest bir yazıyı [`BAĞLA`](../komutlar/bagla.md) bağlar,
+[`BAĞÇÖZ`](../komutlar/bag_coz.md) çözer.
 
 ## Kaynak değişince ne olur
 
@@ -32,6 +35,8 @@ bir tutamağı sürüklemek — bittiğinde bağlı yazılar aynı işlem içind
 |---|---|
 | Kaynak taşındı, döndü, ölçeklendi | Yazı aynı kenarın/köşenin yanına, aynı kurala göre yeniden yerleşir; kenar yazısı kenara paralel kalır |
 | Kenar uzadı ya da kısaldı | `uzunluk` türünde yazının sayısı yeniden yazılır: `10,00 m` → `20,00 m` |
+| Nesnenin biçimi değişti | Kalıplı yazının `{#alan}`, `{#cevre}`, `{#uzunluk}`'u yeniden ölçülür: `200,00 m²` → `300,00 m²`; ortadaki yazı yeni ortaya geçer |
+| Bir sütunu değişti ([`ÖZNİTELİK`](../komutlar/attribute.md)) | Kalıplı yazının `{sutun}`'u yeni değerle yazılır; boşalan sütunun yazısı boş kalır |
 | Kenara köşe eklendi, köşe silindi | Yazı en yakın kenara/köşeye yeniden bağlanır; komşusuna sıçramaz |
 | Kaynak silindi | Bağlı yazılar da silinir; durum satırı "Silinen nesnelere bağlı N nesne de silindi" der |
 | Bağlı yazı silindi | Yalnız yazı gider; kaynak etkilenmez |

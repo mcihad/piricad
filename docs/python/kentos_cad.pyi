@@ -1468,15 +1468,17 @@ def label(
     target_layer: str = ...,
     height: int = ...,
     offset: int = ...,
+    follow: bool = ...,
 ) -> int:
-    """Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+    """Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler.
 
     Komut: core.label (ETİKET)
         layer — Etiketlenecek katmanın adı
-        format — Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez
+        format — Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez
         target_layer — Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'
         height — Yazı yüksekliği, zemin milimetresi
         offset — Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı
+        follow — Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet
     """
 
 def layer(
@@ -2103,7 +2105,7 @@ def attach(
     format: str = ...,
     decimal_separator: str = ...,
 ) -> int:
-    """Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+    """Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
 
     Komut: islem.bagla (BAĞLA)
         objects — Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz [kalıcı nesne anahtarı]
@@ -2111,11 +2113,11 @@ def attach(
         window — gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce]
         layer — Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman
         source — Yazıların bağlanacağı nesne (çizgi ya da alan) [kalıcı nesne anahtarı]
-        attach_to — Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar
-        type — Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit
+        attach_to — Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin ortası (kenar / kose / merkez); varsayılan kenar
+        type — Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin uzunluğu, nesnenin alanı ya da bicim kalıbı (sabit / uzunluk / alan / bicim); varsayılan sabit
         unit — Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre
         decimals — Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2
-        format — Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk)
+        format — Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, {#uzunluk} ölçülür, {sutun} sütunun değeridir
         decimal_separator — Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul
     """
 

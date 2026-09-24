@@ -74,6 +74,14 @@ yönüyle — çizilir ve bu transkriptte söylenir.
 
 GeoPackage'a nokta ve `yazi`, `yukseklik_mm`, `aci`, `hizalama` alanlarıyla gider.
 
+## Nesnesini izleyen yazı
+
+Bir yazı bir nesneye [bağlanabilir](../islem/bagli-nesneler.md): kenarına, köşesine ya da
+ortasına. Bağlı yazı nesneyle birlikte yer değiştirir; sözü bir kalıpsa (`{ada}`,
+`{#alan} m²`) nesnenin köşesi çekildiğinde ya da bir sütunu değiştiğinde o işlemin içinde
+yeniden yazılır. [ETİKET](../komutlar/label.md) yazdığı etiketleri böyle bağlar,
+[BAĞLA](../komutlar/bagla.md) var olan bir yazıyı bağlar.
+
 ## Komutlar
 
 ```

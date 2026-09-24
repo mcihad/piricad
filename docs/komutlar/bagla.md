@@ -1,22 +1,35 @@
 # BAĞLA — Yazıyı Nesneye Bağlama
 
 Elle yazdığı ya da dışarıdan aldığı bir yazının bir çizgiyi ya da parseli izlemesini
-isteyen herkes için; bu sayfayı bitirdiğinizde bir yazıyı en yakın kenara ya da köşeye
-bağlamayı, yazının kenar uzunluğunu söylemesini sağlamayı ve kaynak nesneyi sahneden
-seçmeyi bileceksiniz.
+isteyen herkes için; bu sayfayı bitirdiğinizde bir yazıyı en yakın kenara, köşeye ya da
+nesnenin ortasına bağlamayı, yazının kenar uzunluğunu, parselin alanını ya da bir
+kalıpla sütun değerlerini söylemesini sağlamayı ve kaynak nesneyi sahneden seçmeyi
+bileceksiniz.
 
 ## Ne yapar
 
 `BAĞLA`, kapsamındaki **yazıları** seçtiğiniz bir nesneye — çizgiye ya da alana —
 **bağlar**. Bağlı bir yazı [bağlı nesnedir](../islem/bagli-nesneler.md): nesne
 taşındığında, döndürüldüğünde ya da bir köşesi çekildiğinde yazı onunla birlikte gider.
-Her yazı, kaynağın **en yakın kenarına** (`bag=kenar`, varsayılan) ya da **en yakın
-köşesine** (`bag=kose`) bağlanır.
+Her yazı, kaynağın **en yakın kenarına** (`bag=kenar`, varsayılan), **en yakın
+köşesine** (`bag=kose`) ya da **ortasına** (`bag=merkez`, dış halkasının kutusunun
+ortası — bir parsel numarasının durduğu yer) bağlanır.
 
 Bağlamak yazıyı **yerinden oynatmaz**: yazının o anki yeri ile kuralın yeri arasındaki
-fark "el payı" olarak saklanır ve izleme oradan başlar. `tur=uzunluk` verilirse yazının
-sözü kenarın uzunluğu olur ve kenar uzadıkça yeniden yazılır; `tur=sabit` (varsayılan)
-yazının kendi sözünü korur.
+fark "el payı" olarak saklanır ve izleme oradan başlar. Yazının sözü `tur` ile seçilir:
+
+| `tur` | Yazı ne söyler |
+|---|---|
+| `sabit` (varsayılan) | Kendi sözünü korur |
+| `uzunluk` | Kenarın uzunluğunu; `bag=merkez` ile nesnenin bütün uzunluğunu |
+| `alan` | Nesnenin alanını, metrekare: `200,00 m²` |
+| `bicim` | `bicim` kalıbını, nesneden doldurulmuş olarak |
+
+Kalıpta `{}` sayının yerini tutar; `{#alan}` alan, `{#cevre}` çevre, `{#uzunluk}` uzunluk
+olarak ölçülür, `{sutun}` o sütunun değeridir: `bicim="Ada {ada}: {#alan} m²"`. Uzunluk,
+alan ve kalıplı yazı **nesne değiştikçe** — köşesi çekilince, ölçeklenince ya da bir
+sütunu değişince — o işlemin içinde yeniden yazılır; bağlandığı anda da hemen doldurulur.
+Sütunu boşalan bir yazı silinmez, boş kalır ve sütun dolunca geri gelir.
 
 [`UZUNLUKYAZ`](uzunluk_yaz.md) ve [`KÖŞENUMARALA`](kose_numarala.md) yazdıkları yazıyı
 zaten bağlar; `BAĞLA`, [`METİN`](text.md) ile yazılmış ya da DXF'ten gelmiş serbest
@@ -41,6 +54,8 @@ anlatılır. Yerinde değiştiren bir araçtır; çıktı katmanı kullanmaz.
 BAĞLA kaynak=<kimlik>
 BAĞLA nesneler=<yazı> kaynak=<kimlik> bag=kose
 BAĞLA nesneler=<yazı> kaynak=<kimlik> tur=uzunluk birim=metre ondalik=2
+BAĞLA nesneler=<yazı> kaynak=<kimlik> bag=merkez tur=alan
+BAĞLA nesneler=<yazı> kaynak=<kimlik> bag=merkez tur=bicim bicim="Ada {ada}: {#alan} m²"
 ```
 
 ## Parametreler
@@ -52,12 +67,12 @@ BAĞLA nesneler=<yazı> kaynak=<kimlik> tur=uzunluk birim=metre ondalik=2
 | `pencere` | `gorunum` için görünümün iki köşesi |
 | `katman` | Bu araçta kullanılmaz; yazı kendi katmanında kalır |
 | `kaynak` | Yazıların bağlanacağı nesne (çizgi ya da alan), **zorunlu**; kartta sahneden seçilir |
-| `bag` | Neye bağlanacağı: `kenar` (varsayılan) ya da `kose` |
-| `tur` | Yazının sözü: `sabit` (varsayılan; kendi yazısı kalır) ya da `uzunluk` (kenarın uzunluğu olur) |
+| `bag` | Neye bağlanacağı: `kenar` (varsayılan), `kose` ya da `merkez` |
+| `tur` | Yazının sözü: `sabit` (varsayılan), `uzunluk`, `alan` ya da `bicim` (yukarıdaki tablo) |
 | `birim` | `tur=uzunluk` için birim: `metre` (varsayılan), `santimetre`, `milimetre`, `kilometre` |
-| `ondalik` | `tur=uzunluk` için virgülden sonraki basamak sayısı, 0–6; varsayılan 2 |
-| `bicim` | `tur=uzunluk` için kalıp; `{}` sayının yerini tutar (örnek: `"L={}"`) |
-| `ayrac` | `tur=uzunluk` için ondalık ayracı: `virgul` (varsayılan) ya da `nokta` |
+| `ondalik` | Ölçülen sayının virgülden sonraki basamak sayısı, 0–6; varsayılan 2 |
+| `bicim` | Kalıp; `{}` sayının yerini tutar, `{#alan}`, `{#cevre}`, `{#uzunluk}` ölçülür, `{sutun}` sütunun değeridir. `tur=bicim` için zorunlu |
+| `ayrac` | Ondalık ayracı: `virgul` (varsayılan) ya da `nokta` |
 
 ## Örnekler
 
@@ -78,6 +93,17 @@ Aynı not kenarın uzunluğunu söylesin; çizgi uzayınca sayı değişir:
 ```
 BAĞLA nesneler=2 kaynak=1 tur=uzunluk bicim="L={}"
 ÖLÇEKLE nesneler=1 merkez=20,0 carpan=2
+```
+
+Bir parselin ortasındaki yazı parselin alanını söylesin; köşe çekilince alan yeniden
+yazılır:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 20,0 20,10 0,10
+METİN noktalar=10,5 yazi=? hizalama=merkez
+BAĞLA nesneler=2 kaynak=1 bag=merkez tur=alan
+KÖŞETAŞI nesne=1 kose=3 nokta=20,20
 ```
 
 ### Arayüz
@@ -124,7 +150,8 @@ aynı bağı kurar.
 | `Kapsamda bu araca uygun nesne yok …` | Kapsamda yazı yok | Yazıları seçin |
 | `Bir nesne kendisine bağlanamaz.` | Yazı kendi kimliğine bağlanmak istendi | Başka bir kaynak verin |
 | `Bağ döngüsü: …` | Kaynak zaten bu yazıyı dolaylı olarak izliyor | Zinciri kırın: önce `BAĞÇÖZ` |
-| `'tur' için tanınmayan değer …` | `tur` sözcüğü `sabit` ya da `uzunluk` değil | Birini yazın |
+| `'tur' için tanınmayan değer …` | `tur` sözcüğü `sabit`, `uzunluk`, `alan` ya da `bicim` değil | Birini yazın |
+| `tur=bicim bir kalıp ister: bicim="Ada {ada} · {#alan} m²" gibi.` | `tur=bicim` verildi ama `bicim` yok | Kalıbı verin |
 | `İşlem durduruldu; çizim değişmedi.` | Durdur'a basıldı | Yeniden çalıştırın |
 
 ## İlgili

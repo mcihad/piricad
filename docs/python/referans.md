@@ -167,7 +167,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.column`](#cadcolumn) | `core.column` | `SÜTUN` | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
 | [`cad.erase`](#caderase) | `core.erase` | `SİL` | Seçilen nesneleri siler. |
 | [`cad.select`](#cadselect) | `core.select` | `SEÇ` | Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne ya da tek nokta. |
-| [`cad.label`](#cadlabel) | `core.label` | `ETİKET` | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
+| [`cad.label`](#cadlabel) | `core.label` | `ETİKET` | Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler. |
 | [`cad.layer`](#cadlayer) | `core.layer` | `KATMAN` | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`cad.layer_visibility`](#cadlayer_visibility) | `core.layer_visibility` | `KATMANGÖRÜNÜM` | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
@@ -198,7 +198,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.label_length`](#cadlabel_length) | `islem.uzunluk_yaz` | `UZUNLUKYAZ` | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
 | [`cad.number_vertices`](#cadnumber_vertices) | `islem.kose_numarala` | `KÖŞENUMARALA` | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
 | [`cad.detach`](#caddetach) | `islem.bag_coz` | `BAĞÇÖZ` | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
-| [`cad.attach`](#cadattach) | `islem.bagla` | `BAĞLA` | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`cad.attach`](#cadattach) | `islem.bagla` | `BAĞLA` | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır. |
 | [`cad.polygonize`](#cadpolygonize) | `islem.alan_uret` | `ALANÜRET` | Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz. |
 | [`cad.fit`](#cadfit) | `core.fit` | `OTURT` | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
 | [`cad.stakeout`](#cadstakeout) | `core.stakeout` | `APLİKASYON` | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
@@ -2215,7 +2215,7 @@ cad.select(
 
 ### `cad.label`
 
-Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler.
 
 Komut: `core.label` — `ETİKET`
 
@@ -2226,16 +2226,18 @@ cad.label(
     target_layer: str,
     height: int,
     offset: int,
+    follow: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `layer` | `str` | `katman` | Etiketlenecek katmanın adı |
-| `format` | `str` | `bicim` | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
+| `format` | `str` | `bicim` | Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
 | `target_layer` | `str` | `hedef` | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
 | `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi |
 | `offset` | `int` | `kaydirma` | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı |
+| `follow` | `bool` | `bagla` | Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet |
 
 [Komut sayfası](../komutlar/label.md)
 
@@ -3079,7 +3081,7 @@ cad.detach(
 
 ### `cad.attach`
 
-Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
 
 Komut: `islem.bagla` — `BAĞLA`
 
@@ -3106,11 +3108,11 @@ cad.attach(
 | `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `source` | `list[int]` | `kaynak` | Yazıların bağlanacağı nesne (çizgi ya da alan) [kalıcı nesne anahtarı] |
-| `attach_to` | `str` | `bag` | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar |
-| `type` | `str` | `tur` | Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit |
+| `attach_to` | `str` | `bag` | Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin ortası (kenar / kose / merkez); varsayılan kenar |
+| `type` | `str` | `tur` | Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin uzunluğu, nesnenin alanı ya da bicim kalıbı (sabit / uzunluk / alan / bicim); varsayılan sabit |
 | `unit` | `str` | `birim` | Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre |
 | `decimals` | `int` | `ondalik` | Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 |
-| `format` | `str` | `bicim` | Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) |
+| `format` | `str` | `bicim` | Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, {#uzunluk} ölçülür, {sutun} sütunun değeridir |
 | `decimal_separator` | `str` | `ayrac` | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul |
 
 [Komut sayfası](../komutlar/bagla.md)

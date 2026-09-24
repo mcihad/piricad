@@ -12,9 +12,21 @@ Her etiket, bildiğiniz bir **yazı nesnesidir**. Taşınabilir, stili
 değiştirilebilir, kendi katmanına konup kapatılabilir; `.pcad` ve DXF ile hiçbir
 şey eklemeden gidip gelir. CAD'de etiket zaten hep böyle olmuştur.
 
-Bunun bedeli şudur: etiket, sonradan değişen bir özniteliği **takip etmez**.
-Komutu yeniden çalıştırmak hepsini tazeler ve bu, her CAD açıklamasının yaptığı
-pazarlıktır.
+### Etiket nesnesini izler
+
+Her etiket etiketlediği nesneye [bağlanır](../islem/bagli-nesneler.md) (ortasına, sözü
+biçimden doldurulmuş olarak). Nesnenin bir köşesi çekilince, nesne taşınınca ya da bir
+sütunu [`ÖZNİTELİK`](attribute.md) ile değişince etiket **o işlemin içinde** yeniden
+yazılır ve yerini alır; nesne silinince etiketi de silinir.
+
+Komutu **yeniden çalıştırmak** yazdığı etiketleri **yeniler**, üstlerine ikinci bir
+takım yazmaz: aynı nesneyi izleyen, aynı katmandaki, aynı biçimli etiket yerinde tazelenir
+(`0 etiket yazıldı; 12 etiket yenilendi`). Başka bir biçim başka bir etikettir.
+
+Etiketin nesneyi izlemesini istemiyorsanız `bagla=hayır` verin: yazı eskisi gibi serbest
+yazılır ve yeniden çalıştırmak yeni bir takım yazar.
+
+Sütunu boşalan bir nesnenin etiketi silinmez, boş kalır; sütun dolunca geri gelir.
 
 ### Neden bir sembol katmanı değil
 
@@ -60,8 +72,8 @@ seferlik başka bir etiket atmak böyle mümkün kalır.
 
 ## Sözdizimi
 
-```
-ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
+```text
+ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>] [kaydirma=<tam sayı>] [bagla=hayır]
 ```
 
 ## Parametreler
@@ -69,10 +81,11 @@ ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
 | Parametre | Ne yapar |
 |---|---|
 | `katman` | Etiketlenecek katmanın adı. Zorunlu |
-| `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle değişir. Sembol **alan** bildiriyorsa gerekmez |
+| `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle, `{#alan}` nesnenin alanıyla (m²), `{#cevre}` çevresiyle ve `{#uzunluk}` uzunluğuyla (m) değişir. Sembol **alan** bildiriyorsa gerekmez |
 | `hedef` | Etiketlerin yazılacağı katman. Verilmezse `<katman> ETİKET` |
 | `yukseklik` | Yazı yüksekliği, **zemin milimetresi**. Verilmezse 2000 (2 m) |
 | `kaydirma` | Nesnenin ortasından dikey kaydırma, **zemin milimetresi**. Artı yukarı |
+| `bagla` | Etiket nesnesini izlesin mi; varsayılan `evet`. `hayır` serbest yazı yazar |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -92,14 +105,16 @@ sonunun yazılamadığı tek yer olan komut satırı içindir.
 
 **Tek kaçış, başka yok.** İkincisi bir dilbilgisi olmaya başlardı.
 
-Satırlar noktanın **etrafına** yığılır: iki satırlı bir etiket noktanın altına
-sarkmaz, ortasında durur. Daireyi ve ortadaki çizgiyi katmanın kendi sembolü
+Satırlar noktanın **etrafına** yığılır (`merkez` hizası): iki satırlı bir etiket
+noktanın altına sarkmaz, ortasında durur. Daireyi ve ortadaki çizgiyi katmanın kendi sembolü
 çizer; bkz. [STİL](style.md).
 
 ### Biçim bir dil değildir
 
 `{sutun}` o sütunun değeriyle değişir ve **başka hiçbir şey olmaz**: işleç yok,
-iç içe yazım yok, fonksiyon yok, koşul yok, sayı biçimlendirme yok.
+iç içe yazım yok, fonksiyon yok, koşul yok, sayı biçimlendirme yok. `#` ile başlayan üç
+ad bir sütun değil, geometriden ölçülen bir sayıdır: `{#alan}` (m², iki ondalık),
+`{#cevre}` ve `{#uzunluk}` (m, iki ondalık). Başka bir `{#...}` olduğu gibi kalır.
 
 CLAUDE.md 5.11 bu projeye tam olarak bir dilbilgisi tanıyor
 (`kentos_cad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
@@ -148,9 +163,9 @@ düşer. Her sayının kendi `ETİKET` satırı ve kendi kaydırması vardır.
 **Neden sembolün kendisi özniteliği okumuyor.** `.claude/model.md` R29 ve P7:
 öznitelik sütunları çerçeve yolunda asla okunmaz ve çerçeve yolunda asla ifade
 değerlendirilmez. Kare başına nesne başına bir sütun araması, 16 ms bütçesinin içine
-bir tablo araması koymak demektir. Bunun karşılığında bir şey kaybedilir ve söylenmesi
-gerekir: **etiket, sonradan değişen bir özniteliği takip etmez.** Komutu yeniden
-çalıştırmak onları tazeler; bu, her CAD açıklamasının yaptığı pazarlığın aynısıdır.
+bir tablo araması koymak demektir. Etiket bu yüzden bir yazı nesnesidir — ve nesnesine
+bağlı olduğu için, parselin sütunu ya da sınırı değiştiğinde **o işlemin içinde**
+yeniden yazılır (yukarıda: [Etiket nesnesini izler](#etiket-nesnesini-izler)).
 
 ### Değerler nasıl yazılır
 
@@ -198,6 +213,13 @@ Etiketleri ayrı bir katmana:
 ETİKET katman=PARSEL bicim="{ada}/{parsel}" hedef=NUMARALAR
 ```
 
+Numara ve ölçülen alan, iki satır; köşe çekilince alan yeniden yazılır:
+
+```
+ETİKET katman=PARSEL bicim="{ada}/{parsel}\n{#alan} m²" hedef=ALANLAR
+KÖŞETAŞI nesne=1 kose=3 nokta=485340,4310240
+```
+
 ### Arayüz
 
 Katmanlar panelinde katmana **sağ tık → Özniteliklerden etiketle…**, biçimi yazın.
@@ -219,7 +241,9 @@ katmanı, sütunu ve nesneyi de kendisi kurar:
 
 ## Geri alma
 
-Tek bir geri alma adımıdır: `GERİAL` bütün etiketleri birlikte kaldırır.
+Tek bir geri alma adımıdır: `GERİAL` o çağrının yazdığı bütün etiketleri birlikte
+kaldırır, yenilediklerini eski sözlerine döndürür. Nesnenin değişmesiyle kendiliğinden
+yeniden yazılan etiket, o değişikliğin geri alma adımının içindedir.
 
 Komut **iki geçişlidir**: her yazı üretilir ve her konum hesaplanır, ancak ondan
 sonra ilk yazma yapılır. Yani okunamayan bir sütun adı çizimi yarı etiketli

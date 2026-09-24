@@ -1473,10 +1473,18 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 continue;
             }
             core::Attachment a;
-            a.source    = static_cast<core::EntityKey>(r.source_key);
-            a.anchor    = r.anchor == 0 ? core::AttachAnchor::Vertex : core::AttachAnchor::Edge;
-            a.side      = static_cast<core::AttachSide>(r.side > 3 ? 0 : r.side);
-            a.derive    = r.derive == 1 ? core::AttachDerive::Length : core::AttachDerive::Keep;
+            a.source = static_cast<core::EntityKey>(r.source_key);
+            // Bytes this program does not have read as the nearest it does: an
+            // unknown anchor as an edge, an unknown derive as the caption's own
+            // words — which is what a reader before the centre and the filled
+            // format existed made of them too.
+            a.anchor = core::AttachAnchor::Edge;
+            if (r.anchor == 0) a.anchor = core::AttachAnchor::Vertex;
+            if (r.anchor == 2) a.anchor = core::AttachAnchor::Centre;
+            a.side   = static_cast<core::AttachSide>(r.side > 3 ? 0 : r.side);
+            a.derive = core::AttachDerive::Keep;
+            if (r.derive == 1) a.derive = core::AttachDerive::Length;
+            if (r.derive == 2) a.derive = core::AttachDerive::Fields;
             a.ring      = r.ring;
             a.index     = r.index;
             a.gap       = r.gap_mm;

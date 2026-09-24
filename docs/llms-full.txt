@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 111 (98 tanesi onay ister)
-- Katalog parmak izi: `8108488845924018297`
+- Katalog parmak izi: `7983898881643889654`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -844,7 +844,7 @@ Onay ister.
 
 ### `core_label` — Etiket
 
-Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler.
 Komut: ETİKET (ETIKET, LABEL, ETK)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -853,10 +853,11 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `katman` | string | evet | Etiketlenecek katmanın adı (metin) |
-| `bicim` | string | hayır | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez (metin) |
+| `bicim` | string | hayır | Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez (metin) |
 | `hedef` | string | hayır | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' (metin) |
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi (tam sayı) |
 | `kaydirma` | integer | hayır | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı) |
+| `bagla` | boolean | hayır | Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layer` — Katman
@@ -1837,7 +1838,7 @@ Onay ister.
 
 ### `islem_bagla` — BAĞLA
 
-Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
 Komut: BAĞLA (BAGLA, ATTACH, BĞ, BG)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -1850,11 +1851,11 @@ Onay ister.
 | `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 | `kaynak` | string | hayır | Yazıların bağlanacağı nesne (çizgi ya da alan) — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bag` | string | hayır | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar (metin) |
-| `tur` | string | hayır | Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit (metin) |
+| `bag` | string | hayır | Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin ortası (kenar / kose / merkez); varsayılan kenar (metin) |
+| `tur` | string | hayır | Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin uzunluğu, nesnenin alanı ya da bicim kalıbı (sabit / uzunluk / alan / bicim); varsayılan sabit (metin) |
 | `birim` | string | hayır | Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre (metin) |
 | `ondalik` | integer | hayır | Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 (tam sayı) |
-| `bicim` | string | hayır | Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) (metin) |
+| `bicim` | string | hayır | Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, {#uzunluk} ölçülür, {sutun} sütunun değeridir (metin) |
 | `ayrac` | string | hayır | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 

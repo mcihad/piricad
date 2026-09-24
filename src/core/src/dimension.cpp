@@ -520,6 +520,17 @@ std::string format_dimension_length(Mm value, DrawingUnit unit, unsigned precisi
     return with_decimals(scaled, precision > 8 ? 8 : precision, separator, negative);
 }
 
+std::string format_area(Mm2 value, unsigned precision, char separator)
+{
+    std::int64_t pow = 1;
+    for (unsigned i = 0; i < precision && i < 8; ++i)
+        pow *= 10;
+    const bool negative       = value < 0;
+    const std::int64_t mag    = negative ? -value : value;
+    const std::int64_t scaled = mul_div_round(mag, pow, 1'000'000); // mm² to m², × 10^p
+    return with_decimals(scaled, precision > 8 ? 8 : precision, separator, negative);
+}
+
 std::string format_dimension_angle(std::int64_t udeg, unsigned precision, char separator)
 {
     std::int64_t pow = 1;

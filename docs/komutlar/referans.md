@@ -87,7 +87,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.column`](column.md) | Sütun | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
 | [`core.erase`](erase.md) | Sil | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.select`](select.md) | Seç | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne ya da tek nokta. |
-| [`core.label`](label.md) | Etiket | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
+| [`core.label`](label.md) | Etiket | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler. |
 | [`core.layer`](layer.md) | Katman | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.layer_visibility`](layer_visibility.md) | Katman Görünümü | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
@@ -118,7 +118,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`islem.uzunluk_yaz`](uzunluk_yaz.md) | — | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
 | [`islem.kose_numarala`](kose_numarala.md) | — | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
 | [`islem.bag_coz`](bag_coz.md) | — | `BAĞÇÖZ`, `BAGCOZ`, `DETACH`, `BÇ`, `BC` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
-| [`islem.bagla`](bagla.md) | — | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`islem.bagla`](bagla.md) | — | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır. |
 | [`islem.alan_uret`](alan_uret.md) | — | `ALANÜRET`, `ALANURET`, `POLYGONIZE`, `ALÜ` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz. |
 | [`core.fit`](fit.md) | Oturt (Helmert) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
 | [`core.stakeout`](stakeout.md) | Aplikasyon | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
@@ -1218,15 +1218,16 @@ Ayrıntılı kullanım: [SEÇ](select.md)
 
 ### `core.label` — ETİKET (Etiket)
 
-Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `katman` | text | 1 | Etiketlenecek katmanın adı |
-| `bicim` | text | isteğe bağlı | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
+| `bicim` | text | isteğe bağlı | Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
 | `hedef` | text | isteğe bağlı | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi |
 | `kaydirma` | integer | isteğe bağlı | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı |
+| `bagla` | bool | isteğe bağlı | Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet |
 
 Ayrıntılı kullanım: [ETİKET](label.md)
 
@@ -1684,7 +1685,7 @@ Ayrıntılı kullanım: [BAĞÇÖZ](bag_coz.md)
 
 ### `islem.bagla` — BAĞLA
 
-Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1693,11 +1694,11 @@ Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine ba�
 | `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
 | `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `kaynak` | selection | isteğe bağlı | Yazıların bağlanacağı nesne (çizgi ya da alan) |
-| `bag` | text | isteğe bağlı | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar |
-| `tur` | text | isteğe bağlı | Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit |
+| `bag` | text | isteğe bağlı | Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin ortası (kenar / kose / merkez); varsayılan kenar |
+| `tur` | text | isteğe bağlı | Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin uzunluğu, nesnenin alanı ya da bicim kalıbı (sabit / uzunluk / alan / bicim); varsayılan sabit |
 | `birim` | text | isteğe bağlı | Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre |
 | `ondalik` | integer | isteğe bağlı | Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 |
-| `bicim` | text | isteğe bağlı | Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) |
+| `bicim` | text | isteğe bağlı | Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, {#uzunluk} ölçülür, {sutun} sütunun değeridir |
 | `ayrac` | text | isteğe bağlı | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul |
 
 Ayrıntılı kullanım: [BAĞLA](bagla.md)
@@ -7128,7 +7129,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_label",
     "title": "Etiket",
-    "description": "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.\nKomut: ETİKET (ETIKET, LABEL, ETK)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler.\nKomut: ETİKET (ETIKET, LABEL, ETK)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7138,7 +7139,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "bicim": {
           "type": "string",
-          "description": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez (metin)"
+          "description": "Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez (metin)"
         },
         "hedef": {
           "type": "string",
@@ -7151,6 +7152,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "kaydirma": {
           "type": "integer",
           "description": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı)"
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",
@@ -13248,7 +13253,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_bagla",
     "title": "BAĞLA",
-    "description": "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.\nKomut: BAĞLA (BAGLA, ATTACH, BĞ, BG)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.\nKomut: BAĞLA (BAGLA, ATTACH, BĞ, BG)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13321,17 +13326,20 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "enum": [
             "kenar",
-            "kose"
+            "kose",
+            "merkez"
           ],
-          "description": "Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar (metin)"
+          "description": "Neye bağlanacağı: en yakın kenar, en yakın köşe ya da nesnenin ortası (kenar / kose / merkez); varsayılan kenar (metin)"
         },
         "tur": {
           "type": "string",
           "enum": [
             "sabit",
-            "uzunluk"
+            "uzunluk",
+            "alan",
+            "bicim"
           ],
-          "description": "Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit (metin)"
+          "description": "Yazının sözü: kendi yazısı (sabit), kenarın ya da nesnenin uzunluğu, nesnenin alanı ya da bicim kalıbı (sabit / uzunluk / alan / bicim); varsayılan sabit (metin)"
         },
         "birim": {
           "type": "string",
@@ -13351,7 +13359,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "bicim": {
           "type": "string",
-          "description": "Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) (metin)"
+          "description": "Yazının kalıbı: {} sayının yerini tutar; {#alan}, {#cevre}, {#uzunluk} ölçülür, {sutun} sütunun değeridir (metin)"
         },
         "ayrac": {
           "type": "string",
