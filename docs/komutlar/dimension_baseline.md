@@ -67,8 +67,7 @@ Baz ölçü: 2 ölçü eklendi (12,50 · 16,75).
 
 ### Arayüz
 
-**Açıklama ▸ Ölçü ▸ Baz Ölçü**, ya da **Giriş ▸ Açıklama** panelindeki **Ölçü** düğmesinin
-okundan **Baz Ölçü** (bir ölçü seçiliyken beliren **Ölçü** sekmesinde de vardır).
+**Açıklama ▸ Ölçü ▸ Baz Ölçü** (bir ölçü seçiliyken beliren **Ölçü** sekmesinde de vardır).
 Önce bir doğrusal ya da hizalı ölçü çizin; sonra ölçülecek noktaları sırayla tıklayın
 ve **Enter** ile bitirin. İmleçte sıradaki ölçü, gideceği çizgide önizlenir.
 

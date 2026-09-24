@@ -1224,6 +1224,7 @@ def dimension(
     first: Coord = ...,
     second: Coord = ...,
     position: Coord = ...,
+    point: Coord = ...,
     type: str = ...,
     apex: Coord = ...,
     end: Coord = ...,
@@ -1243,9 +1244,10 @@ def dimension(
     """İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
 
     Komut: core.dimension (ÖLÇÜ)
-        first — Birinci nokta; açısal ölçüde birinci kolun ucu [mm, Sağa (Y) önce]
-        second — İkinci nokta; açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce]
-        position — Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta [mm, Sağa (Y) önce]
+        first — Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde birinci kolun ucu, koordinatta başlangıç [mm, Sağa (Y) önce]
+        second — İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda başlangıç, açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce]
+        position — Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, yarıçap ve çapta yazının yeri [mm, Sağa (Y) önce]
+        point — Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci verilmediğinde sorulur [mm, Sağa (Y) önce]
         type — hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay
         apex — Açısal ölçünün tepe noktası [mm, Sağa (Y) önce]
         end — Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce]

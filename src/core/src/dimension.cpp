@@ -648,6 +648,71 @@ void arrowhead_outline(Point2 tip, Point2 from, Mm size, ArrowStyle style, EmitB
     }
 }
 
+Point2 dimension_rim_point(Point2 centre, Mm radius, Point2 toward) noexcept
+{
+    if (radius <= 0) return centre;
+    const Dir u = unit_between(centre, toward);
+    if (u.zero()) return Point2{centre.x + radius, centre.y};
+    const Point2 rough = along(centre, u, static_cast<double>(radius));
+    // A RADIUS BEYOND A THOUSAND KILOMETRES keeps the rounded point: its square
+    // no longer fits the integers the search below compares.
+    constexpr Mm kSearchable = 1'000'000'000;
+    if (radius > kSearchable) return rough;
+
+    // THE NEIGHBOUR WHOSE DISTANCE IS THE RADIUS. The rounded point lies up to
+    // seven tenths of a millimetre off the circle, which a figure written to the
+    // millimetre shows; among the points three millimetres round it, the one whose
+    // squared distance from the centre is nearest the radius squared lies well
+    // within half of one, so the figure rounds to the radius — and the line
+    // turns by a few millionths of a radian. Integers only, and ties broken by
+    // position, so every machine picks the same point (§7.3).
+    const std::int64_t want = radius * radius;
+    Point2 best             = rough;
+    std::int64_t best_off   = -1;
+    for (Mm dy = -3; dy <= 3; ++dy)
+        for (Mm dx = -3; dx <= 3; ++dx) {
+            const Point2 at{rough.x + dx, rough.y + dy};
+            const std::int64_t rx  = at.x - centre.x;
+            const std::int64_t ry  = at.y - centre.y;
+            const std::int64_t got = (rx * rx) + (ry * ry);
+            const std::int64_t off = got > want ? got - want : want - got;
+            if (best_off < 0 || off < best_off) {
+                best     = at;
+                best_off = off;
+            }
+        }
+    return best;
+}
+
+std::array<Point2, 2> dimension_diameter_ends(Point2 centre, Mm diameter, Point2 toward) noexcept
+{
+    const Point2 near =
+        dimension_rim_point(centre, mm_round(static_cast<double>(diameter) / 2.0), toward);
+    const Point2 mirror{(2 * centre.x) - near.x, (2 * centre.y) - near.y};
+    // THE FAR END MAKES THE LENGTH. Mirrored through the centre, the two ends
+    // double the near one's rounding, and at forty-five degrees that is more
+    // than half a millimetre; among the points one millimetre round the
+    // mirror, the one whose distance from the near end is nearest the diameter
+    // lies within a third of one. The mirror itself first on a tie.
+    if (diameter <= 0 || diameter > 2'000'000'000) return {mirror, near};
+    const std::int64_t want = diameter * diameter;
+    Point2 far              = mirror;
+    std::int64_t best_off   = -1;
+    for (const Mm dy : {Mm{0}, Mm{-1}, Mm{1}})
+        for (const Mm dx : {Mm{0}, Mm{-1}, Mm{1}}) {
+            const Point2 at{mirror.x + dx, mirror.y + dy};
+            const std::int64_t rx  = near.x - at.x;
+            const std::int64_t ry  = near.y - at.y;
+            const std::int64_t got = (rx * rx) + (ry * ry);
+            const std::int64_t off = got > want ? got - want : want - got;
+            if (best_off < 0 || off < best_off) {
+                far      = at;
+                best_off = off;
+            }
+        }
+    return {far, near};
+}
+
 bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 where,
                       Mm text_height, DimensionLayout& out, bool fixed_rotation)
 {
@@ -694,9 +759,35 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
     }
     case DimensionType::Radial:
     case DimensionType::Diametric: {
-        out.defs        = {p1, p2};
+        // THE LINE AIMS AT ITS FIGURE (TODOS C-17). The rim point is where the
+        // line from the centre toward the caption meets the circle, so a radius
+        // or a diameter is always read along the line it names — the way every
+        // CAD draws one — and a caption dragged round the circle carries the
+        // line with it. The length stays the circle's own
+        // (`dimension_rim_point`), so the figure does not move by a millimetre
+        // because the line turned.
+        if (def.type == DimensionType::Radial) {
+            const Mm radius = mm_round(distance(p1, p2));
+            out.defs        = {p1, where == p1 ? p2 : dimension_rim_point(p1, radius, where)};
+        } else {
+            // A DIAMETER ALREADY AIMED AT ITS FIGURE KEEPS ITS ENDS. Re-aiming is
+            // for a caption that moved; doing it on every rebuild would walk the
+            // ends round by the millimetre the midpoint rounds to, each time.
+            const Point2 centre{(p1.x + p2.x) / 2, (p1.y + p2.y) / 2};
+            const Mm across  = mm_round(distance(p1, p2));
+            const Dir line   = unit_between(p1, p2);
+            const Dir aim    = unit_between(centre, where);
+            const double tol = 1e-3 + (16.0 / static_cast<double>(across > 0 ? across : 1));
+            const double off = std::abs((line.x * aim.y) - (line.y * aim.x));
+            if (aim.zero() || ((line.x * aim.x) + (line.y * aim.y) > 0.0 && off <= tol)) {
+                out.defs = {p1, p2};
+            } else {
+                const std::array<Point2, 2> ends = dimension_diameter_ends(centre, across, where);
+                out.defs                         = {ends[0], ends[1]};
+            }
+        }
         out.text_centre = where;
-        const Dir u     = unit_between(p1, p2);
+        const Dir u     = unit_between(out.defs[0], out.defs[1]);
         out.text_dir_x  = u.x;
         out.text_dir_y  = u.y;
         break;

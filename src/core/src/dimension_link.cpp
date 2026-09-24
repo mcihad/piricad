@@ -283,4 +283,39 @@ std::optional<Point2> dim_anchor_point(const Document& doc, const DimLink& link)
     return std::nullopt;
 }
 
+std::optional<DimCurve> dim_curve_at(const Document& doc, Point2 p, Mm reach, bool arcs_only)
+{
+    if (reach < 0) reach = 0;
+    const RingGeometry& geom = doc.geometry();
+    const EntityTable& ents  = doc.entities();
+    std::optional<DimCurve> best;
+    double best_off = 0.0;
+    for (const EntityId e : near(doc, Box2{p.x - reach, p.y - reach, p.x + reach, p.y + reach})) {
+        const KindId kind = ents.kind[e];
+        if (kind != kArcKind && (arcs_only || kind != kCircleKind)) continue;
+        const std::uint32_t slot = ents.slot[e];
+        DimCurve curve;
+        curve.entity = e;
+        curve.arc    = kind == kArcKind;
+        if (!circle_of(doc, e, curve.centre, curve.radius)) continue;
+        if (curve.arc) {
+            curve.start = arc_start_of(geom, slot);
+            curve.end   = arc_end_of(geom, slot);
+            // ON THE ARC, not on the rest of its circle: a click on the gap an
+            // arc leaves names nothing.
+            if (!on_arc(curve.centre, curve.start, curve.end, p)) continue;
+        }
+        const auto dx = static_cast<double>(p.x - curve.centre.x);
+        const auto dy = static_cast<double>(p.y - curve.centre.y);
+        const double off =
+            std::abs(std::sqrt((dx * dx) + (dy * dy)) - static_cast<double>(curve.radius));
+        if (off > static_cast<double>(reach)) continue;
+        if (!best || off < best_off) {
+            best     = curve;
+            best_off = off;
+        }
+    }
+    return best;
+}
+
 } // namespace kentos::core

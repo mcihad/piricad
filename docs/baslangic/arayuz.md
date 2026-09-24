@@ -114,7 +114,7 @@ daire vardır; **Buda**'nın okunda çitle budama, tıklananı tutma, sınırı 
 | Yuvarla | `YUVARLA` · bütün köşeler · `PAH` · bütün köşeler |
 | Dizi | `DİZİ` · kutupsal · yol boyunca |
 | Metin | `METİN` · `YAZIDÜZENLE` |
-| Ölçü | `ÖLÇÜ` · `ZİNCİRÖLÇÜ` · `BAZÖLÇÜ` · `ÖLÇÜDÜZENLE` |
+| Ölçü | Hizalı · Doğrusal · Açı · Yay Uzunluğu · Yarıçap · Çap · Koordinat — yedi `ÖLÇÜ tur=` |
 
 Listedeki bir inşa yöntemi — üç noktadan daire, teğet devam eden yay — komut satırında
 `yontem=` ile yazılır, ama yazmak zorunda değilsiniz: ailede kendi satırı vardır ve

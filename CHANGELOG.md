@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — her ölçü türü kendi aracıyla (C-17, 1. aşama)
+
+- **Yedi tür şeritte.** Giriş ▸ Açıklama ve Açıklama ▸ Ölçü'deki **Ölçü** bölünmüş
+  düğmesinin okunda Hizalı, Doğrusal, Açı, Yay Uzunluğu, Yarıçap, Çap ve Koordinat ölçüsü
+  kendi simgeleriyle durur; hiçbiri komut satırına `tur=` yazmayı gerektirmez. Önceden
+  düğme yalnız hizalı ölçü çiziyordu.
+- **Daireye tek tıklama.** Yarıçap, çap ve yay uzunluğu ölçtükleri eğriye bir tıklamayla
+  kurulur (`ÖLÇÜ tur=yaricap nokta=…`): merkez, yarıçap ve yayın uçları eğrinin kendisinden
+  alınır, ölçülen yarıçap dairenin kendi yarıçapıdır. Yarıçap ve çap çizgisi yazıya doğru
+  uzanır; yazı nereye konursa çizgi oraya döner, değer değişmez (45 derecede bile: iki ucu
+  merkezden aynalamak çapı bir milimetre kaçırıyordu, uzak uç artık çap için seçiliyor).
+- **Açı önce tepeyi sorar**, sonra kolları; ikinci kol aranırken AÇIÖLÇ gibi taraması ve
+  değeri görünür. Her türün istemi o türün noktalarını adıyla ister.
+- **Hayalet ölçünün değerini yazar.** Son nokta aranırken imlecin altındaki ölçü, yazacağı
+  değeri yazacağı yerde gösterir; tuvalin okuması önceden ilk noktadan imlece uzaklığı
+  yazıyordu — ölçünün söylemediği tek sayı.
+- **Düzeltildi:** tuvaldeki yazı kutusu yalnız Enter ve Esc ile kapanıyordu; yazı istemi
+  başka bir yoldan bitince (şeritten başka bir araç, komut satırından iptal) kutu tuvalin
+  üstünde asılı kalıyor ve oraya gelen tıklamaları yutuyordu.
+
 ### Değişti — menü, araç çubuğu ve araç kutusunun yerine şerit
 
 - **Şerit (SARibbon 2.9.5, MIT).** Menü çubuğu, araç çubuğu, sol araç kutusu ve tuvalin

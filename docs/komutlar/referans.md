@@ -1042,9 +1042,10 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `birinci` | point | 1 | Birinci nokta; açısal ölçüde birinci kolun ucu |
-| `ikinci` | point | 1 | İkinci nokta; açısal ölçüde ikinci kolun ucu |
-| `konum` | point | 1 | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta |
+| `birinci` | point | isteğe bağlı | Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde birinci kolun ucu, koordinatta başlangıç |
+| `ikinci` | point | isteğe bağlı | İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda başlangıç, açısal ölçüde ikinci kolun ucu |
+| `konum` | point | 1 | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, yarıçap ve çapta yazının yeri |
+| `nokta` | point | isteğe bağlı | Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci verilmediğinde sorulur |
 | `tur` | text | isteğe bağlı | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
 | `tepe` | point_list | isteğe bağlı | Açısal ölçünün tepe noktası |
 | `bitis` | point_list | isteğe bağlı | Yay uzunluğu ölçüsünün bitiş noktası |
@@ -4468,7 +4469,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde birinci kolun ucu, koordinatta başlangıç — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "ikinci": {
           "anyOf": [
@@ -4501,7 +4502,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda başlangıç, açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "konum": {
           "anyOf": [
@@ -4534,7 +4535,40 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, yarıçap ve çapta yazının yeri — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci verilmediğinde sorulur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "tur": {
           "type": "string",
@@ -4706,8 +4740,6 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         }
       },
       "required": [
-        "birinci",
-        "ikinci",
         "konum"
       ],
       "additionalProperties": false

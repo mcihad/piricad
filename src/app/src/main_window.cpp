@@ -79,10 +79,12 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QHash>
+#include <QImage>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -955,9 +957,12 @@ void MainWindow::buildActions()
                           tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
                              "yerleştirir  ·  kısaltma: BE"));
     drawingTools_->addAction(actInsert_);
-    actDimension_ = drawTool(Glyph::Ruler, tr("Ölçü"), QStringLiteral("ÖLÇÜ"),
-                             tr("ÖLÇÜ — iki nokta arasını, yarıçapı, çapı ya da açıyı ölçüp yazısı "
-                                "ve oklarıyla çizer  ·  kısaltma: ÖÇ"));
+    // THE ALIGNED ONE, which is what ÖLÇÜ draws when no type is named; the other
+    // six types are method tools beside it in the ribbon's Ölçü family.
+    actDimension_ =
+        drawTool(Glyph::DimAligned, tr("Hizalı Ölçü"), QStringLiteral("ÖLÇÜ"),
+                 tr("ÖLÇÜ — iki noktanın arasını aralarındaki doğru boyunca ölçüp yazısı "
+                    "ve oklarıyla çizer; öteki türler düğmenin okunda  ·  kısaltma: ÖÇ"));
     drawingTools_->addAction(actDimension_);
     // A ROW OF FIGURES (TODOS C-10): each from the last point, or each from
     // the first, carried on the newest linear or aligned dimension.
@@ -4734,6 +4739,145 @@ int MainWindow::probeRealMouse()
             }
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 17. EVERY DIMENSION TYPE FROM ITS OWN TOOL (TODOS C-17) ---------------
+        //
+        // Each of the seven from its row of the ribbon's Ölçü family, drawn with
+        // the mouse and nothing typed: a radius, a diameter and an arc length take
+        // the curve they are clicked on, an angle asks for its vertex first. While
+        // the last point is aimed the canvas writes the figure the click will
+        // write, where it will write it — it used to write the distance from the
+        // first point, which is the one number a dimension does not say.
+        {
+            struct Case
+            {
+                const char* name;                 ///< the pictures' name
+                const char* line;                 ///< the tool's command line
+                QStringList scene;                ///< drawn first
+                std::vector<core::Point2> clicks; ///< the points before the last
+                core::Point2 last;                ///< where the figure goes
+                core::DimensionType type;         ///< what must be drawn
+                std::int64_t measured;            ///< and what it must measure
+            };
+
+            using T = core::DimensionType;
+            const std::vector<Case> cases{
+                {"olcu-hizali",
+                 "ÖLÇÜ",
+                 {QStringLiteral("ALAN 0,0 20,0 20,10 0,10")},
+                 {{0, 0}, {20'000, 0}},
+                 {10'000, -3'000},
+                 T::Aligned,
+                 20'000},
+                {"olcu-dogrusal",
+                 "ÖLÇÜ tur=dogrusal",
+                 {QStringLiteral("ÇİZGİ 0,0 16,12")},
+                 {{0, 0}, {16'000, 12'000}},
+                 {8'000, 15'000},
+                 T::Linear,
+                 16'000},
+                {"olcu-aci",
+                 "ÖLÇÜ tur=acisal",
+                 {QStringLiteral("ÇİZGİ 0,0 20,0"), QStringLiteral("ÇİZGİ 0,0 0,15")},
+                 {{0, 0}, {20'000, 0}, {0, 15'000}},
+                 {6'000, 6'000},
+                 T::Angular3P,
+                 90'000'000},
+                {"olcu-yay",
+                 "ÖLÇÜ tur=yay",
+                 {QStringLiteral("YAY merkez=10,0 baslangic=20,0 bitis=0,0")},
+                 {{10'000, 10'000}},
+                 {10'000, 14'000},
+                 T::ArcLength,
+                 31'416},
+                {"olcu-yaricap",
+                 "ÖLÇÜ tur=yaricap",
+                 {QStringLiteral("DAİRE merkez=10,6 cevre=16,6")},
+                 {{16'000, 6'000}},
+                 {19'000, 12'000},
+                 T::Radial,
+                 6'000},
+                {"olcu-cap",
+                 "ÖLÇÜ tur=cap",
+                 {QStringLiteral("DAİRE merkez=10,6 cevre=16,6")},
+                 {{10'000, 12'000}},
+                 {17'000, 14'000},
+                 T::Diametric,
+                 12'000},
+                {"olcu-koordinat",
+                 "ÖLÇÜ tur=koordinat",
+                 {QStringLiteral("ALAN 0,0 20,0 20,10 0,10")},
+                 {{0, 0}, {20'000, 10'000}},
+                 {26'000, 10'000},
+                 T::Ordinate,
+                 20'000},
+            };
+            // NO TEXT BOX LEFT FLOATING over the drawing by the captions above: it
+            // closed on Enter and Esc only, stayed where a caption was given up
+            // another way, and swallowed the click that placed a dimension there.
+            const auto* box = canvas_->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+            check(box == nullptr || !box->isVisible(),
+                  QStringLiteral("Tuval: yazı istemi bittiğinde yazı kutusu kapandı"));
+
+            const bool drawing = !canvas_->grabCanvas().isNull();
+            for (const Case& c : cases) {
+                fresh(c.scene);
+                // ROOM FOR THE FIGURE: the caption goes beyond what is measured,
+                // and a click past the canvas's edge lands on the ribbon.
+                runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.6"));
+                runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+                const QString line = QString::fromUtf8(c.line);
+                QAction* tool      = line == QStringLiteral("ÖLÇÜ")
+                                         ? actDimension_
+                                         : findChild<QAction*>(QStringLiteral("toolAction.") + line);
+                check(tool != nullptr && ribbonButton(tool, false) != nullptr,
+                      QStringLiteral("Ölçü: %1 şeritteki Ölçü ailesinde").arg(line));
+                if (tool == nullptr) continue;
+                tool->trigger();
+                QCoreApplication::processEvents();
+                for (const core::Point2 at : c.clicks) {
+                    press(screen(at));
+                    release(screen(at));
+                }
+                // THE LAST POINT AIMED, the pointer over it and not yet pressed.
+                onCanvas(QEvent::MouseMove, screen(c.last), Qt::NoButton);
+                (void)canvas_->grabCanvas();
+                QCoreApplication::processEvents();
+                const QString ghost = QString::fromStdString(canvas_->guideLabelForProbe());
+                shoot((std::string(c.name) + "-hayalet").c_str());
+                press(screen(c.last));
+                release(screen(c.last));
+                const core::Document& doc = controller_->document();
+                core::EntityId dim        = core::kNoEntity;
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                    if (doc.alive(e) && doc.entities().kind[e] == core::kDimensionKind) dim = e;
+                core::DimensionDef def;
+                QString caption;
+                if (dim != core::kNoEntity) {
+                    const std::uint32_t slot = doc.entities().slot[dim];
+                    if (auto d = core::dimension_of(doc.geometry(), slot); d) def = d.value();
+                    caption = QString::fromUtf8(doc.texts().text(slot));
+                }
+                check(
+                    dim != core::kNoEntity && def.type == c.type && def.measurement == c.measured,
+                    QStringLiteral("Ölçü: %1 fareyle çizildi, türü %2, ölçtüğü %3 (yazısı \"%4\"; "
+                                   "son söz: \"%5\")")
+                        .arg(line, QString::fromLatin1(core::dimension_type_name(def.type)))
+                        .arg(def.measurement)
+                        .arg(caption, lastSaid()));
+                if (drawing)
+                    check(!ghost.isEmpty() && ghost == caption,
+                          QStringLiteral("Ölçü: %1 nişanlanırken hayalet yazacağı değeri yazdı "
+                                         "(\"%2\", yazısı \"%3\")")
+                              .arg(line, ghost, caption));
+                shoot(c.name);
+                controller_->cancelInteractive();
+            }
+            if (!drawing)
+                (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); ölçü "
+                                           "hayaletinin yazdığı değer gerçek pencerede sınanır\n");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -5515,11 +5659,15 @@ int MainWindow::probeMenus()
             (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s boş\n", title.toUtf8().constData());
             ++failures;
         }
+        // The title names the tab AND the list (`Giriş / Ölçü`), and the slash
+        // in it made the file a path into a folder that is not there: every
+        // family list was grabbed and none was ever written.
         if (shooting)
-            (void)menu->grab().toImage().save(QStringLiteral("%1/menu-%2-%3.png")
-                                                  .arg(into)
-                                                  .arg(index, 2, 10, QLatin1Char('0'))
-                                                  .arg(title));
+            (void)menu->grab().toImage().save(
+                QStringLiteral("%1/menu-%2-%3.png")
+                    .arg(into)
+                    .arg(index, 2, 10, QLatin1Char('0'))
+                    .arg(QString(title).replace(QStringLiteral(" / "), QStringLiteral("-"))));
         menu->close();
         QCoreApplication::processEvents();
     };
@@ -5750,6 +5898,37 @@ void MainWindow::probeDialogs()
     };
 
     shoot(this, "ana");
+
+    // EVERY PICTURE THE PROGRAM DRAWS, at the size a large ribbon button shows
+    // it and twice that, numbered in the order `Glyph` declares them: the one
+    // sheet an icon is judged on before it reaches a button (design.md §5).
+    {
+        constexpr int kCell    = 76;
+        constexpr int kColumns = 16;
+        const int count        = static_cast<int>(Glyph::DimArcLength) + 1;
+        const int rows         = (count + kColumns - 1) / kColumns;
+        const Tokens& t        = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
+        QImage sheet(kColumns * kCell, rows * kCell, QImage::Format_ARGB32_Premultiplied);
+        sheet.fill(t.ribbonBody);
+        QPainter paint(&sheet);
+        paint.setRenderHint(QPainter::Antialiasing, true);
+        paint.setPen(t.textDim);
+        const GlyphInks inks = actionInks();
+        for (int i = 0; i < count; ++i) {
+            const int x = (i % kColumns) * kCell;
+            const int y = (i / kColumns) * kCell;
+            paint.drawPixmap(x + 6, y + 6,
+                             colour_icon(static_cast<Glyph>(i), inks, 48).pixmap(48, 48));
+            paint.drawPixmap(x + 56, y + 6,
+                             colour_icon(static_cast<Glyph>(i), inks, 16).pixmap(16, 16));
+            paint.drawText(QRect(x, y + 56, kCell, 18), Qt::AlignCenter, QString::number(i));
+        }
+        paint.end();
+        const QString file = dir + QStringLiteral("/simgeler.png");
+        say(sheet.save(file) ? QStringLiteral("kare: simgeler.png")
+                             : QStringLiteral("yazılamadı: %1").arg(file));
+    }
+
     if (attributePanel_ != nullptr) shoot(attributePanel_, "nesne-paneli");
     if (layerPanel_ != nullptr) shoot(layerPanel_, "katman-paneli");
 

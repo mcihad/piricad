@@ -461,6 +461,30 @@ void MainWindow::buildRibbon()
                                 tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
                                    "kısaltma: KLV"));
 
+    // EVERY DIMENSION TYPE ITS OWN TOOL (TODOS C-17). The one Ölçü button drew
+    // an aligned dimension and nothing else: a radius, an angle or an ordinate
+    // needed `tur=` typed at the command line, which is a capability the mouse
+    // did not have (CLAUDE.md 5.15). The family is AutoCAD's Home ▸ Dimension
+    // list; the face runs whichever type was drawn last.
+    const QList<QAction*> dimensionTypes{
+        actDimension_,
+        methodTool(Glyph::DimLinear, tr("Doğrusal Ölçü"), QStringLiteral("ÖLÇÜ tur=dogrusal"),
+                   tr("Yatay ya da düşey ölçü: çizgiyi üste çekmek yatay, yana çekmek düşey "
+                      "ölçer")),
+        methodTool(Glyph::DimAngular, tr("Açı Ölçüsü"), QStringLiteral("ÖLÇÜ tur=acisal"),
+                   tr("Önce tepe, sonra iki kolun ucu; yay hangi açının içinden geçerse o "
+                      "ölçülür")),
+        methodTool(Glyph::DimArcLength, tr("Yay Uzunluğu Ölçüsü"), QStringLiteral("ÖLÇÜ tur=yay"),
+                   tr("Yaya tıklayın: yayın boyu, kirişi değil")),
+        methodTool(Glyph::DimRadius, tr("Yarıçap Ölçüsü"), QStringLiteral("ÖLÇÜ tur=yaricap"),
+                   tr("Daireye ya da yaya tıklayın; çizgi yazıya doğru uzanır")),
+        methodTool(Glyph::DimDiameter, tr("Çap Ölçüsü"), QStringLiteral("ÖLÇÜ tur=cap"),
+                   tr("Daireye ya da yaya tıklayın; çap yazıya doğru döner")),
+        methodTool(Glyph::DimOrdinate, tr("Koordinat Ölçüsü"), QStringLiteral("ÖLÇÜ tur=koordinat"),
+                   tr("Başlangıç, ölçülecek nokta ve yazının yeri; yana çekmek sağa, yukarı "
+                      "çekmek yukarı değerini okur")),
+    };
+
     // THE SHORT WORDS a family's button wears while one of these is on its face.
     for (QAction* a : {actExtend_, actExtendFence_, actExtendCarry_})
         a->setProperty(kRibbonShortLabel, tr("Uzat"));
@@ -528,8 +552,7 @@ void MainWindow::buildRibbon()
 
     SARibbonPanel* note = home->addPanel(tr("Açıklama"));
     family(note, {actText_, actTextEdit_}, Size::Large, tr("Metin"));
-    family(note, {actDimension_, actDimChain_, actDimBaseline_, actDimensionEdit_}, Size::Large,
-           tr("Ölçü"));
+    family(note, dimensionTypes, Size::Large, tr("Ölçü"));
     small(note, actLeader_);
     small(note, actLabel_);
     small(note, actFindReplace_);
@@ -749,7 +772,7 @@ void MainWindow::buildRibbon()
     words->addSmallWidget(captioned(words, tr("Yükseklik"), ribbonLive_->textHeightDefault, 58));
 
     SARibbonPanel* measures = annotateTab->addPanel(tr("Ölçü"));
-    large(measures, actDimension_);
+    family(measures, dimensionTypes, Size::Large, tr("Ölçü"));
     small(measures, actDimChain_);
     small(measures, actDimBaseline_);
     small(measures, actDimensionEdit_);

@@ -36,6 +36,7 @@
 #include <QApplication>
 #include <QElapsedTimer>
 #include <QFocusEvent>
+#include <QFontMetricsF>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMouseEvent>
@@ -79,6 +80,18 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
 
     reloadGridSettings();
     publishViewScale();
+
+    // THE TEXT BOX LIVES AS LONG AS THE QUESTION IT ANSWERS. It closed on Enter
+    // and on Esc only, so a caption given up any other way — another tool
+    // pressed on the ribbon, the command cancelled at the command line — left
+    // an empty box floating over the drawing, and it took every click that
+    // landed on it: a dimension placed there simply never happened.
+    connect(&controller_, &Controller::promptChanged, this, [this](const QString&) {
+        if (text_editor_ == nullptr || !text_editor_->isVisible()) return;
+        if (controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text)
+            return;
+        closeTextEditor();
+    });
 }
 
 void MapCanvas::publishViewScale()
@@ -1777,6 +1790,20 @@ void MapCanvas::addReadout(float x, float y, const std::string& text)
                                                    static_cast<float>(look_.hint_px), false, text});
 }
 
+void MapCanvas::addCentredReadout(core::Point2 at, const std::string& text)
+{
+    // Measured in the face the label is drawn in, at its size, so the middle
+    // of the figure is the middle of the caption it stands for.
+    QFont face = font();
+    face.setPixelSize(std::max(1, look_.hint_px));
+    const QFontMetricsF metrics(face);
+    const render::ScreenPointF on = render::to_f(view_.to_screen(at));
+    const auto half_width =
+        static_cast<float>(metrics.horizontalAdvance(QString::fromStdString(text)) / 2.0);
+    const auto half_height = static_cast<float>((metrics.ascent() - metrics.descent()) / 2.0);
+    addReadout(on.x - half_width, on.y + half_height, text);
+}
+
 double MapCanvas::addAngleSweep(std::size_t batch, core::Point2 vertex, core::Point2 arm_a,
                                 core::Point2 arm_b)
 {
@@ -2478,6 +2505,15 @@ void MapCanvas::buildOverlay()
                         core::dimension_outline(scratch, slot.value(), buf);
                         addEmitRuns(batch, buf);
                     }
+                    // AND THE FIGURE IT WILL WRITE, WHERE IT WILL WRITE IT (TODOS
+                    // C-17). The rubber band's own readout measured from the first
+                    // point to the cursor — the distance to the dimension line, which
+                    // is not what a dimension says — and a user reading it took the
+                    // line's offset for the measurement.
+                    const std::string figure =
+                        core::dimension_text(def, controller_.bus().drawing_unit());
+                    addCentredReadout(layout.text_centre, figure);
+                    guide_label_ = figure;
                 }
             }
         } else if (shape == command::RubberShape::DimensionNext &&
@@ -2506,10 +2542,10 @@ void MapCanvas::buildOverlay()
                         addEmitRuns(batch, buf);
                     }
                     // And the figure it will write, where it will write it.
-                    const render::ScreenPointF at =
-                        render::to_f(view_.to_screen(layout.text_centre));
-                    addReadout(at.x + 8.0F, at.y - 8.0F,
-                               core::dimension_text(def, controller_.bus().drawing_unit()));
+                    const std::string figure =
+                        core::dimension_text(def, controller_.bus().drawing_unit());
+                    addCentredReadout(layout.text_centre, figure);
+                    guide_label_ = figure;
                 }
             }
         } else if (shape == command::RubberShape::Block) {
@@ -3262,7 +3298,9 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::MeasureRing && shape != command::RubberShape::Parallel &&
             shape != command::RubberShape::Corner && shape != command::RubberShape::Break &&
             shape != command::RubberShape::TrimFence && shape != command::RubberShape::ArcSweep &&
-            shape != command::RubberShape::PairCorner && shape != command::RubberShape::EdgeArc) {
+            shape != command::RubberShape::PairCorner && shape != command::RubberShape::EdgeArc &&
+            shape != command::RubberShape::Dimension &&
+            shape != command::RubberShape::DimensionNext) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point

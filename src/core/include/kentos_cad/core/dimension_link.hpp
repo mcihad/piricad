@@ -125,4 +125,24 @@ std::optional<DimLink> dim_anchor_at(const Document& doc, Point2 p, DimRole role
 /// no longer has that feature (a vertex index past the ring's end).
 std::optional<Point2> dim_anchor_point(const Document& doc, const DimLink& link);
 
+/// A circle or an arc, as a click on it names one: what a radius, a diameter
+/// or an arc-length dimension measures (TODOS C-17).
+struct DimCurve
+{
+    EntityId entity{kNoEntity}; ///< the circle or the arc
+    bool arc{false};            ///< an arc, with the two ends below; otherwise a whole circle
+    Point2 centre{};            ///< its centre
+    Mm radius{0};               ///< its radius, exact as stored
+    Point2 start{};             ///< an arc's start, counter-clockwise to `end`
+    Point2 end{};               ///< an arc's end
+};
+
+/// The visible standalone circle or arc `p` lies on to within `reach` —
+/// measured to the curve itself rather than to the chords it is drawn with, so
+/// a point exactly on a fifty-metre circle is on it — the nearest first and
+/// the oldest on a tie. `arcs_only` leaves the whole circles out. Nothing when
+/// no curve passes there. One click on the circle is how ÖLÇÜ takes the centre
+/// and the radius of what it measures, for every client alike (Article 1.2).
+std::optional<DimCurve> dim_curve_at(const Document& doc, Point2 p, Mm reach, bool arcs_only);
+
 } // namespace kentos::core

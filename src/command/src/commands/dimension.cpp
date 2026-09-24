@@ -330,54 +330,123 @@ Task<void> run_dimension(Context& ctx)
     const bool angular   = type == core::DimensionType::Angular3P;
     const bool ordinate  = type == core::DimensionType::Ordinate;
     const bool arclength = type == core::DimensionType::ArcLength;
+    const bool radial    = type == core::DimensionType::Radial;
+    const bool diametric = type == core::DimensionType::Diametric;
+    const bool linear    = type == core::DimensionType::Linear;
 
-    // WHAT EACH TYPE ASKS FOR FIRST, in its own words. A prompt that said
-    // "birinci nokta" for an ordinate would be asking for the origin without
-    // saying so, and an origin picked by mistake moves every figure on the sheet.
-    auto p1 = co_await ctx.point("birinci", angular ? "Birinci kolun ucu"
-                                            : ordinate ? "Ordinatların okunduğu başlangıç noktası"
-                                            : arclength ? "Yayın merkezi"
-                                                        : "Birinci nokta");
-    if (!p1) co_return;
-    auto p2 = co_await ctx.point(
-        "ikinci",
-        angular     ? "İkinci kolun ucu"
-        : ordinate  ? "Ölçülecek nokta"
-        : arclength ? "Yayın başlangıç noktası"
-                    : "İkinci nokta",
-        PointOptions{.rubber_band = true, .rubber_origin = *p1, .rubber_shape = RubberShape::Line});
-    if (!p2) co_return;
-    std::vector<core::Point2> picks{*p1, *p2};
-    if (angular) {
-        auto v = co_await ctx.point("tepe", "Açının tepe noktası");
-        if (!v) co_return;
-        picks.push_back(*v);
+    // What was picked, in the order `core::dimension_layout` reads it.
+    std::vector<core::Point2> picks;
+
+    if ((radial || diametric || arclength) && !ctx.has_argument("birinci")) {
+        // A CIRCLE OR AN ARC IS TAKEN WITH ONE CLICK (TODOS C-17). Asking for its
+        // centre and then for a point on it made the user find by eye the one
+        // point a radius dimension exists to report, and a centre picked a hair
+        // off gave a radius a hair off — on a sheet somebody signs. The click
+        // names the curve; the centre, the radius and an arc's ends are its
+        // own, exact as stored. Recorded as the points they gave, so a replay
+        // needs neither the click nor the curve to still be there.
+        auto on = co_await ctx.point("nokta", arclength ? "Ölçülecek yaya tıklayın"
+                                                        : "Ölçülecek daireye ya da yaya tıklayın");
+        if (!on) co_return;
+        // The click's own pick box — the one SEÇ uses — and a millimetre for a
+        // client with no screen, which names a point ON the curve.
+        const core::Mm reach =
+            std::max<core::Mm>(ctx.session().bus().aid_settings().pick_radius, 1);
+        const auto curve = core::dim_curve_at(ctx.document(), *on, reach, arclength);
+        if (!curve) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       arclength ? "Orada bir yay yok. Yay uzunluğu için yayın kendisine tıklayın; "
+                                   "yayı noktalarıyla vermek için: ÖLÇÜ tur=yay birinci=<merkez> "
+                                   "ikinci=<başlangıç> bitis=<bitiş> konum=<yazı>."
+                                 : "Orada bir daire ya da yay yok. Çemberin kendisine tıklayın; "
+                                   "merkezi ve çemberden bir noktayı kendiniz vermek için: ÖLÇÜ "
+                                   "tur=yaricap birinci=<merkez> ikinci=<çemberde> konum=<yazı>.");
+            co_return;
+        }
+        ctx.record("nokta", Value{});
+        if (arclength) {
+            picks = {curve->centre, curve->start, curve->end};
+        } else {
+            if (radial) {
+                picks = {curve->centre,
+                         core::dimension_rim_point(curve->centre, curve->radius, *on)};
+            } else {
+                const auto ends =
+                    core::dimension_diameter_ends(curve->centre, 2 * curve->radius, *on);
+                picks = {ends[0], ends[1]};
+            }
+        }
+    } else if (angular) {
+        // THE VERTEX FIRST, then the arms from it (TODOS C-17): the order a hand
+        // measures an angle in, and the one AÇIÖLÇ asks — so each arm is drawn
+        // from the vertex while it is aimed, and the second one shows the sweep
+        // between them and its reading.
+        auto apex = co_await ctx.point("tepe", "Açının tepe noktası");
+        if (!apex) co_return;
+        auto arm_a = co_await ctx.point("birinci", "Birinci kolun ucu",
+                                        PointOptions{.rubber_band   = true,
+                                                     .rubber_origin = *apex,
+                                                     .rubber_shape  = RubberShape::Line});
+        if (!arm_a) co_return;
+        auto arm_b = co_await ctx.point("ikinci", "İkinci kolun ucu",
+                                        PointOptions{.rubber_band   = true,
+                                                     .rubber_origin = *apex,
+                                                     .rubber_shape  = RubberShape::Angle,
+                                                     .rubber_chain  = {*arm_a}});
+        if (!arm_b) co_return;
+        picks = {*arm_a, *arm_b, *apex};
+    } else {
+        // WHAT EACH TYPE ASKS FOR, in its own words. A prompt that said "birinci
+        // nokta" for an ordinate would be asking for the origin without saying
+        // so, and an origin picked by mistake moves every figure on the sheet.
+        auto p1 = co_await ctx.point("birinci", ordinate ? "Ordinatların okunduğu başlangıç noktası"
+                                                : arclength ? "Yayın merkezi"
+                                                : radial    ? "Dairenin merkezi"
+                                                : diametric ? "Çapın bir ucu"
+                                                            : "Ölçülecek ilk nokta");
+        if (!p1) co_return;
+        auto p2 = co_await ctx.point("ikinci",
+                                     ordinate    ? "Ölçülecek nokta"
+                                     : arclength ? "Yayın başlangıç noktası"
+                                     : radial    ? "Çember üzerinde bir nokta"
+                                     : diametric ? "Çapın öbür ucu"
+                                                 : "Ölçülecek ikinci nokta",
+                                     PointOptions{.rubber_band   = true,
+                                                  .rubber_origin = *p1,
+                                                  .rubber_shape  = RubberShape::Line});
+        if (!p2) co_return;
+        picks = {*p1, *p2};
+        if (arclength) {
+            auto e = co_await ctx.point("bitis", "Yayın bitiş noktası (saat yönünün tersine)",
+                                        PointOptions{.rubber_band   = true,
+                                                     .rubber_origin = *p1,
+                                                     .rubber_shape  = RubberShape::Arc,
+                                                     .rubber_chain  = {*p2}});
+            if (!e) co_return;
+            picks.push_back(*e);
+        }
     }
-    if (arclength) {
-        auto e = co_await ctx.point("bitis", "Yayın bitiş noktası (saat yönünün tersine)",
-                                    PointOptions{.rubber_band   = true,
-                                                 .rubber_origin = *p1,
-                                                 .rubber_shape  = RubberShape::Arc,
-                                                 .rubber_chain  = {*p2}});
-        if (!e) co_return;
-        picks.push_back(*e);
-    }
-    // The whole dimension under the cursor — line, extension lines, arrows —
-    // laid out by the same function that will lay it out on the click.
+
+    // The whole dimension under the cursor — line, extension lines, arrows and
+    // the figure it will write — laid out by the same function that will lay it
+    // out on the click.
     auto where = co_await ctx.point(
         "konum",
-        angular ? "Ölçü yayının geçeceği nokta"
+        angular ? "Ölçü yayının geçeceği nokta; yay hangi açının içindeyse o ölçülür"
         : ordinate ? "Yazının geleceği yer; yana çekmek sağa, yukarı çekmek yukarı değerini okur"
+        : radial    ? "Yazının yeri; yarıçap çizgisi ona doğru uzanır"
+        : diametric ? "Yazının yeri; çap çizgisi ona doğru uzanır"
         : arclength ? "Yazının geleceği yer"
-                    : "Ölçü çizgisinin yeri",
+        : linear ? "Ölçü çizgisinin yeri; üste ya da alta çekmek yatay, yana çekmek düşey ölçer"
+                 : "Ölçü çizgisinin yeri",
         PointOptions{.rubber_band    = true,
-                     .rubber_origin  = *p1,
+                     .rubber_origin  = picks.front(),
                      .rubber_shape   = RubberShape::Dimension,
                      .rubber_chain   = picks,
                      .rubber_payload = core::encode_dimension(def)});
     if (!where) co_return;
 
-    if (*p1 == *p2) {
+    if (picks[0] == picks[1]) {
         ctx.refuse(core::ErrorCode::InvalidArgument, "İki nokta aynı; ölçülecek bir uzunluk yok.");
         co_return;
     }
@@ -423,9 +492,14 @@ Task<void> run_dimension(Context& ctx)
     const auto linked = link ? link_points(ctx, created.value(), type, defs) : std::size_t{0};
     if (!linked) co_return;
 
-    ctx.record("birinci", Value::point(*p1));
-    ctx.record("ikinci", Value::point(*p2));
+    // THE POINTS THE DIMENSION WAS BUILT ON — for a radius and a diameter, the
+    // ends the line was turned to (`core::dimension_layout`), so the journal says
+    // where the dimension is rather than where the hand first was.
+    const bool turned = radial || diametric;
+    ctx.record("birinci", Value::point(turned ? defs[0] : picks[0]));
+    ctx.record("ikinci", Value::point(turned ? defs[1] : picks[1]));
     if (angular) ctx.record("tepe", Value::point(picks[2]));
+    if (arclength) ctx.record("bitis", Value::point(picks[2]));
     ctx.record("konum", Value::point(*where));
     ctx.record("tur", Value::text(core::dimension_type_name(type)));
     ctx.record("stil", Value::text(def.style));
@@ -1128,10 +1202,25 @@ KENTOS_COMMAND(dimension)
         .title    = "Ölçü",
         .category = Category::Draw,
         .params   = with_presentation({
-            Param::point("birinci", "Birinci nokta; açısal ölçüde birinci kolun ucu").en("first"),
-            Param::point("ikinci", "İkinci nokta; açısal ölçüde ikinci kolun ucu").en("second"),
-            Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta")
+            // OPTIONAL SINCE A CLICK ON THE CIRCLE GIVES THEM (`nokta`): a radius,
+            // a diameter and an arc length are built on the curve's own points.
+            // Every other type asks for them, and the body records them for all.
+            Param{"birinci", ParamKind::Point, Arity::optional(),
+                  "Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde "
+                    "birinci kolun ucu, koordinatta başlangıç"}
+                .en("first"),
+            Param{"ikinci", ParamKind::Point, Arity::optional(),
+                  "İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda "
+                    "başlangıç, açısal ölçüde ikinci kolun ucu"}
+                .en("second"),
+            Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, "
+                                      "yarıçap ve çapta yazının yeri")
                 .en("position"),
+            Param{"nokta", ParamKind::Point, Arity::optional(),
+                  "Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir "
+                    "nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci "
+                    "verilmediğinde sorulur"}
+                .en("point"),
             Param::text("tur", Arity::optional(),
                           "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, "
                             "yay")
@@ -1154,7 +1243,7 @@ KENTOS_COMMAND(dimension)
                                "bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet")
                 .en("associate"),
         }),
-        .undo     = UndoPolicy::SingleTransaction,
+          .undo = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.",

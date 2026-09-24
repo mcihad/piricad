@@ -1887,6 +1887,7 @@ cad.dimension(
     first: Coord,
     second: Coord,
     position: Coord,
+    point: Coord,
     type: str,
     apex: Coord,
     end: Coord,
@@ -1907,9 +1908,10 @@ cad.dimension(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `first` | `Coord` | `birinci` | Birinci nokta; açısal ölçüde birinci kolun ucu [mm, Sağa (Y) önce] |
-| `second` | `Coord` | `ikinci` | İkinci nokta; açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce] |
-| `position` | `Coord` | `konum` | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta [mm, Sağa (Y) önce] |
+| `first` | `Coord` | `birinci` | Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde birinci kolun ucu, koordinatta başlangıç [mm, Sağa (Y) önce] |
+| `second` | `Coord` | `ikinci` | İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda başlangıç, açısal ölçüde ikinci kolun ucu [mm, Sağa (Y) önce] |
+| `position` | `Coord` | `konum` | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, yarıçap ve çapta yazının yeri [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci verilmediğinde sorulur [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
 | `apex` | `Coord` | `tepe` | Açısal ölçünün tepe noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Yay uzunluğu ölçüsünün bitiş noktası [mm, Sağa (Y) önce] |

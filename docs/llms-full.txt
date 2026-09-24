@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 112 (99 tanesi onay ister)
-- Katalog parmak izi: `18038967844655025711`
+- Katalog parmak izi: `10364539293201148583`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -428,9 +428,10 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `birinci` | konum (tutamak ya da göreli nokta) | evet | Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `ikinci` | konum (tutamak ya da göreli nokta) | evet | İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `konum` | konum (tutamak ya da göreli nokta) | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `birinci` | konum (tutamak ya da göreli nokta) | hayır | Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde birinci kolun ucu, koordinatta başlangıç — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ikinci` | konum (tutamak ya da göreli nokta) | hayır | İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda başlangıç, açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `konum` | konum (tutamak ya da göreli nokta) | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, yarıçap ve çapta yazının yeri — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci verilmediğinde sorulur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay (metin) |
 | `tepe` | konum (tutamak ya da göreli nokta) | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |

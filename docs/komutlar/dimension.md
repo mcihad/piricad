@@ -23,11 +23,17 @@ birimindedir: 12 500 mm metrede `12,50`.
 |---|---|---|
 | `hizali` (varsayılan) | İki nokta arasındaki uzaklığı, kendi doğrultusunda | `birinci`, `ikinci`, `konum` |
 | `dogrusal` | Yatay ya da düşey uzaklığı; ölçü çizgisi noktaların üstünde/altındaysa yatay, yanındaysa düşey | `birinci`, `ikinci`, `konum` |
-| `yaricap` | Merkezden çember üstü noktaya | `birinci` merkez, `ikinci` çember üstü, `konum` yazı yeri |
-| `cap` | İki karşı nokta arasını | `birinci`, `ikinci`, `konum` yazı yeri |
-| `acisal` | Tepeden çıkan iki kol arasındaki açıyı | `birinci`, `ikinci` kol uçları, `tepe`, `konum` yayın geçtiği nokta |
+| `yaricap` | Bir dairenin ya da yayın yarıçapını; çizgi yazıya doğru uzanır | `nokta` çemberin üstünde, `konum` yazı yeri — ya da `birinci` merkez, `ikinci` çember üstü |
+| `cap` | Bir dairenin ya da yayın çapını; çap yazıya doğru döner | `nokta` çemberin üstünde, `konum` yazı yeri — ya da `birinci`, `ikinci` çapın uçları |
+| `acisal` | Tepeden çıkan iki kol arasındaki açıyı | `tepe`, `birinci`, `ikinci` kol uçları, `konum` yayın geçtiği nokta |
 | `koordinat` | Bir noktanın başlangıçtan **sağa** ya da **yukarı** değerini | `birinci` başlangıç, `ikinci` ölçülecek nokta, `konum` yazının yeri |
-| `yay` | Bir yayın **boyunca** uzunluğunu | `birinci` merkez, `ikinci` başlangıç, `bitis` bitiş, `konum` yazının yeri |
+| `yay` | Bir yayın **boyunca** uzunluğunu | `nokta` yayın üstünde, `konum` yazının yeri — ya da `birinci` merkez, `ikinci` başlangıç, `bitis` bitiş |
+
+**Daireye tek tıklama.** Yarıçap, çap ve yay uzunluğu ölçtükleri eğriden kurulur:
+`nokta` eğrinin üstünde bir noktadır ve merkezi, yarıçapı ve yayın uçlarını eğrinin
+kendisinden alır — bir merkezi gözle bulmak gerekmez, ölçülen yarıçap dairenin kendi
+yarıçapıdır. Yarıçap ve çap çizgisi **yazıya doğru** uzanır: yazıyı nereye koyarsanız
+çizgi oraya döner, ölçülen değer değişmez.
 
 ### Yazı: ölçülen değer ve yazılışı
 
@@ -105,6 +111,9 @@ bağsızdır: kopya, kopyalanan nesneye bağlanmaz.
 ```text
 ÖLÇÜ birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı> konum=<sağa>,<yukarı> [tur=<tür>] [stil=<ad>] [metin=<yazı>]
 ÖLÇÜ birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı> tepe=<sağa>,<yukarı> konum=<sağa>,<yukarı> tur=acisal
+ÖLÇÜ tur=yaricap nokta=<çemberde> konum=<yazının yeri>
+ÖLÇÜ tur=cap nokta=<çemberde> konum=<yazının yeri>
+ÖLÇÜ tur=yay nokta=<yayda> konum=<yazının yeri>
 ```
 
 ### Koordinat (ordinat) ölçüsü
@@ -138,7 +147,8 @@ başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona ina
 
 | Parametre | Ne yapar |
 |---|---|
-| `birinci`, `ikinci` | Ölçülen iki nokta; açısalda kolların uçları |
+| `birinci`, `ikinci` | Ölçülen iki nokta; açısalda kolların uçları, yarıçapta merkez ve çember üstü, yayda merkez ve başlangıç. Yarıçap, çap ve yay uzunluğunda `nokta` verilince gerekmez |
+| `nokta` | Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir nokta; merkez, yarıçap ve uçlar ondan alınır. Arayüzde çembere yapılan tıklamadır |
 | `konum` | Ölçü çizgisinin yeri; yarıçap ve çapta yazının yeri; açısalda yayın geçtiği nokta |
 | `tur` | `hizali`, `dogrusal`, `yaricap`, `cap`, `acisal`, `koordinat`, `yay`; varsayılan `hizali` |
 | `tepe` | Açısal ölçünün tepe noktası |
@@ -190,6 +200,18 @@ Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
 
 Ölçünün yazısı artık `25,00`; ölçü çizgisi kenarın yine 3 m altında.
 
+Bir havuzun yarıçapı, daireye tek tıklamayla; yazı çemberin dışında, çizgi ona doğru:
+
+<!-- örnek: yeni çizim -->
+```
+DAİRE merkez=0,0 cevre=7.5,0
+ÖLÇÜ tur=yaricap nokta=0,7.5 konum=6,9
+```
+
+```text
+Ölçü çizildi: 7,50 (ISO-25); 2 noktası ölçtüğü nesneye bağlı, o değişince ölçü de güncellenir.
+```
+
 Önek, sonek, tolerans ve üç ondalıkla:
 
 <!-- örnek: yeni çizim -->
@@ -203,10 +225,24 @@ Bağlı 1 ölçü kaynağını izledi ve yeniden ölçüldü.
 
 ### Arayüz
 
-**Açıklama ▸ Ölçü ▸ Ölçü** (ya da **Giriş ▸ Açıklama ▸ Ölçü**). İki noktayı, sonra ölçü
-çizgisinin yerini tıklayın. Noktaları
-yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya bağlanır; köşeyi tutamağından
-sürüklediğinizde ölçü onunla birlikte güncellenir.
+Şeritte **Giriş ▸ Açıklama** ve **Açıklama ▸ Ölçü** panellerindeki **Ölçü** bölünmüş
+düğmesinin okunda yedi tür vardır; düğmenin yüzü en son çizdiğiniz türü çalıştırır. Hiçbiri
+komut satırına bir şey yazmayı gerektirmez:
+
+| Satır | Ne ister |
+|---|---|
+| **Hizalı Ölçü** | İki nokta, sonra ölçü çizgisinin yeri |
+| **Doğrusal Ölçü** | İki nokta, sonra çizginin yeri: üste ya da alta çekmek yatay, yana çekmek düşey ölçer |
+| **Açı Ölçüsü** | Önce **tepe**, sonra iki kolun ucu — ikinci kol aranırken açının taraması ve değeri görünür — sonra yayın geçeceği nokta |
+| **Yay Uzunluğu Ölçüsü** | Yaya bir tık, sonra yazının yeri |
+| **Yarıçap Ölçüsü** | Daireye ya da yaya bir tık, sonra yazının yeri; çizgi yazıya doğru uzanır |
+| **Çap Ölçüsü** | Daireye ya da yaya bir tık, sonra yazının yeri; çap yazıya doğru döner |
+| **Koordinat Ölçüsü** | Başlangıç, ölçülecek nokta, yazının yeri |
+
+Son noktayı ararken imlecin altında ölçünün kendisi durur: uzatma çizgileri, oklar ve
+**yazacağı değer, yazacağı yerde**. Okunan sayı ölçünün değeridir — ilk noktadan imlece
+uzaklık değil. Noktaları yakalamayla bir köşeye ya da merkeze oturtursanız ölçü oraya
+bağlanır; köşeyi tutamağından sürüklediğinizde ölçü onunla birlikte güncellenir.
 
 ### Betik
 
@@ -229,7 +265,9 @@ alır, `YİNELE` ikisini birlikte yineler.
 ## Betikten kullanım
 
 Günlüğe noktalar, tür, kullanılan stil ve varsa metin yazılır; ölçülen değer yazılmaz,
-tekrar yeniden ölçer. Bağlar günlüğe yazılmaz, çünkü noktalardan yeniden bulunurlar:
+tekrar yeniden ölçer. Daireye tıklanarak çizilen bir yarıçap, çap ya da yay uzunluğunda
+tıklama (`nokta`) değil, ölçünün kurulduğu noktalar yazılır (`birinci`, `ikinci`, yayda
+`bitis`): oynatma, dairenin hâlâ orada olmasını gerektirmez. Bağlar günlüğe yazılmaz, çünkü noktalardan yeniden bulunurlar:
 oynatılan `ÖLÇÜ` aynı köşelere aynı bağları kurar. `bagla=hayır` verilmişse o da yazılır.
 
 Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
@@ -253,6 +291,17 @@ Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
 > `İki nokta aynı; ölçülecek bir uzunluk yok.`
 
 `birinci` ve `ikinci` çakışıyor.
+
+> `Orada bir daire ya da yay yok. Çemberin kendisine tıklayın; merkezi ve çemberden bir noktayı kendiniz vermek için: ÖLÇÜ tur=yaricap birinci=<merkez> ikinci=<çemberde> konum=<yazı>.`
+
+Yarıçap ya da çap ölçüsünde `nokta` bir dairenin ya da yayın üstünde değil. Arayüzde
+çemberin çizgisine tıklayın; komut satırında ve betikte nokta çembere bir milimetreden
+yakın olmalıdır.
+
+> `Orada bir yay yok. Yay uzunluğu için yayın kendisine tıklayın; yayı noktalarıyla vermek için: ÖLÇÜ tur=yay birinci=<merkez> ikinci=<başlangıç> bitis=<bitiş> konum=<yazı>.`
+
+Yay uzunluğu ölçüsünde `nokta` bir yayın üstünde değil. Tam bir daire yay uzunluğuyla
+ölçülmez; onun için yarıçap ya da çap ölçüsünü kullanın.
 
 > `Tanınmayan ölçü stili: 'DIN'. Katalogdaki stiller: ISO-25, STANDARD, MIMARI.`
 

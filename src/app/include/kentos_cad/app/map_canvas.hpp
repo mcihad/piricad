@@ -418,6 +418,10 @@ private:
     /// A label at a pixel position in the readout ink.
     void addReadout(float x, float y, const std::string& text);
 
+    /// A label in the readout ink CENTRED on a place of the drawing: where a
+    /// dimension's figure will be written, so the preview writes it there.
+    void addCentredReadout(core::Point2 at, const std::string& text);
+
     /// Draws `path` into `batch`: segments as they are, arcs by `arc_outline`.
     void addCurve(std::size_t batch, const core::CurvePath& path);
 

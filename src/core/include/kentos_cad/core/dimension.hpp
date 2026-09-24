@@ -135,10 +135,27 @@ struct DimensionLayout
     double text_dir_y{0.0};   ///< and y
 };
 
+/// The point of the circle round `centre` with `radius` that lies toward
+/// `toward` — where a radius or a diameter aimed at its caption meets the
+/// circle. Chosen among the whole millimetres around the exact point as the one
+/// whose distance from the centre is nearest the radius, so a dimension
+/// measured to it is the circle's own radius rather than one rounded a
+/// millimetre either side. `toward` on the centre gives the point at angle zero.
+Point2 dimension_rim_point(Point2 centre, Mm radius, Point2 toward) noexcept;
+
+/// The two ends of a diameter of `diameter` through `centre`, aimed at `toward`:
+/// the far end first, as a diametric dimension stores them. The near end is
+/// on the circle (`dimension_rim_point`) and the far one beside its mirror
+/// through the centre, chosen so the distance between them rounds to
+/// `diameter` — mirroring alone doubles the near end's rounding.
+std::array<Point2, 2> dimension_diameter_ends(Point2 centre, Mm diameter, Point2 toward) noexcept;
+
 /// Lays a dimension out from what was picked — `picks` is `{p1, p2}` for a
 /// linear, aligned, radial or diametric dimension and `{p1, p2, apex}` for a
 /// three-point angular one; `where` is the dimension line's location, or the
-/// caption's place for a radial or diametric one. Sets `def.rotation_udeg` for a
+/// caption's place for a radial or diametric one — whose line is turned to aim
+/// at it, the rim point moved round the circle and the radius kept
+/// (`dimension_rim_point`). Sets `def.rotation_udeg` for a
 /// linear dimension (horizontal when the line lies above or below the points,
 /// vertical beside them) and `def.measurement`. False when the picks cannot
 /// make one: coincident points, an apex on a pick, or a type this cannot lay

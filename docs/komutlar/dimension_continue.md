@@ -68,8 +68,7 @@ Zincir ölçü: 2 ölçü eklendi (7,50 · 4,25); toplam 11,75.
 
 ### Arayüz
 
-**Açıklama ▸ Ölçü ▸ Zincir Ölçü**, ya da **Giriş ▸ Açıklama** panelindeki **Ölçü**
-düğmesinin okundan **Zincir Ölçü** (bir ölçü seçiliyken beliren **Ölçü** sekmesinde de
+**Açıklama ▸ Ölçü ▸ Zincir Ölçü** (bir ölçü seçiliyken beliren **Ölçü** sekmesinde de
 vardır). Önce bir doğrusal ya da hizalı ölçü çizin; sonra zincirin noktalarını
 sırayla tıklayın — yakalama köşelere oturtur — ve **Enter** ile bitirin.
 

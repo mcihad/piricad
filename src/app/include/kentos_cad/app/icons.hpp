@@ -229,6 +229,14 @@ enum class Glyph {
     ProjectSettings, ///< a sheet with a gear on it: the project's own settings
     Layout,          ///< a sheet with its map frame and title block: a çıktı yerleşimi
     More,            ///< three dots: the commands with no place of their own
+    // ---- one picture per dimension type (TODOS C-17) --------------------------
+    DimAligned,   ///< a slanted edge with its dimension line along it: ÖLÇÜ tur=hizali
+    DimLinear,    ///< two points at two heights measured straight across: ÖLÇÜ tur=dogrusal
+    DimRadius,    ///< a circle, one radius to the rim and R beyond: ÖLÇÜ tur=yaricap
+    DimDiameter,  ///< a circle, the diameter through it and Ø: ÖLÇÜ tur=cap
+    DimAngular,   ///< two arms and the arrowed arc between them: ÖLÇÜ tur=acisal
+    DimOrdinate,  ///< an origin's two axes and a point's jogged line: ÖLÇÜ tur=koordinat
+    DimArcLength, ///< an arc, the arc beside it that measures it and ⌒: ÖLÇÜ tur=yay
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

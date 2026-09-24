@@ -2081,6 +2081,136 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
             p.drawEllipse(QPointF(6.0 + i * 6.0, 12.0), 1.8, 1.8);
         break;
 
+    case Glyph::DimAligned: {
+        // THE EDGE AND ITS DIMENSION ALONG IT: two points on a slant and the
+        // line that measures them parallel to the slant, arrowed at both ends.
+        const QPointF a(9.0, 21.0);
+        const QPointF b(21.0, 9.0);
+        const QPointF n(-4.6, -4.6); ///< toward the side the dimension line lies on
+        p.setPen(stroke(k.shape, 1.4));
+        p.drawLine(a, b);
+        p.setPen(stroke(c, 1.1));
+        p.drawLine(a + (n * 0.25), a + (n * 1.2));
+        p.drawLine(b + (n * 0.25), b + (n * 1.2));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(a + n, b + n);
+        arrowHead(p, a + n, b + n, k.note, 3.6);
+        arrowHead(p, b + n, a + n, k.note, 3.6);
+        grip(p, a, c);
+        grip(p, b, c);
+        break;
+    }
+
+    case Glyph::DimLinear: {
+        // TWO POINTS AT TWO HEIGHTS, MEASURED STRAIGHT ACROSS: the slant
+        // between them is not what is measured, so it is only dashed in.
+        const QPointF a(5.0, 19.6);
+        const QPointF b(19.0, 12.6);
+        p.setPen(QPen(k.shape, 1.1, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(a, b);
+        p.setPen(stroke(c, 1.1));
+        p.drawLine(QPointF(a.x(), a.y() - 2.2), QPointF(a.x(), 4.2));
+        p.drawLine(QPointF(b.x(), b.y() - 2.2), QPointF(b.x(), 4.2));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(a.x(), 6.6), QPointF(b.x(), 6.6));
+        arrowHead(p, QPointF(a.x(), 6.6), QPointF(b.x(), 6.6), k.note, 3.6);
+        arrowHead(p, QPointF(b.x(), 6.6), QPointF(a.x(), 6.6), k.note, 3.6);
+        grip(p, a, c);
+        grip(p, b, c);
+        break;
+    }
+
+    case Glyph::DimRadius: {
+        // THE CIRCLE AND ONE RADIUS: from the centre, the arrow on the rim, the
+        // line running on to where its R is written.
+        const QPointF centre(9.6, 14.4);
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawEllipse(centre, 7.4, 7.4);
+        const QPointF rim(centre.x() + 5.23, centre.y() - 5.23);
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(centre, QPointF(19.4, 4.6));
+        arrowHead(p, rim, centre, k.note, 3.6);
+        grip(p, centre, c);
+        writeSmall(p, QPointF(20.2, 10.4), QStringLiteral("R"), k.note, 8);
+        break;
+    }
+
+    case Glyph::DimDiameter: {
+        // THE CIRCLE AND THE DIAMETER THROUGH IT, arrowed at both rims, and Ø.
+        const QPointF centre(10.8, 13.2);
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawEllipse(centre, 7.6, 7.6);
+        const QPointF far(centre.x() - 5.37, centre.y() + 5.37);
+        const QPointF near(centre.x() + 5.37, centre.y() - 5.37);
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(far, near);
+        arrowHead(p, far, near, k.note, 3.6);
+        arrowHead(p, near, far, k.note, 3.6);
+        writeSmall(p, QPointF(19.8, 4.4), QStringLiteral("Ø"), k.note, 8);
+        break;
+    }
+
+    case Glyph::DimAngular: {
+        // TWO ARMS AND THE ARROWED ARC BETWEEN THEM: the angle, measured.
+        const QPointF v(4.0, 19.6);
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawLine(v, QPointF(21.0, 19.6));
+        p.drawLine(v, QPointF(16.4, 5.2));
+        constexpr qreal kReach = 12.0;
+        const QRectF round(v.x() - kReach, v.y() - kReach, 2.0 * kReach, 2.0 * kReach);
+        QPainterPath sweep;
+        sweep.arcMoveTo(round, 0.0);
+        sweep.arcTo(round, 0.0, 49.3);
+        p.setPen(stroke(k.note, 1.6));
+        p.drawPath(sweep);
+        arrowHead(p, QPointF(v.x() + kReach, v.y()), QPointF(v.x() + kReach, v.y() - 3.0), k.note,
+                  3.4);
+        const QPointF end = sweep.currentPosition();
+        arrowHead(p, end, QPointF(end.x() + 2.3, end.y() + 2.0), k.note, 3.4);
+        grip(p, v, c);
+        break;
+    }
+
+    case Glyph::DimOrdinate: {
+        // AN ORIGIN'S TWO AXES AND A POINT, the jogged line that carries its
+        // figure out to where it is written.
+        p.setPen(stroke(c, 1.1));
+        p.drawLine(QPointF(3.6, 20.4), QPointF(20.8, 20.4));
+        p.drawLine(QPointF(3.6, 20.4), QPointF(3.6, 3.2));
+        grip(p, QPointF(3.6, 20.4), c);
+        const QPointF feature(12.6, 14.6);
+        p.setPen(stroke(k.note, 1.6));
+        p.drawPolyline(
+            QPolygonF({feature, QPointF(12.6, 9.6), QPointF(16.2, 6.0), QPointF(20.8, 6.0)}));
+        p.setPen(stroke(k.note, 1.3));
+        p.drawLine(QPointF(15.8, 3.2), QPointF(20.8, 3.2));
+        grip(p, feature, k.shape);
+        break;
+    }
+
+    case Glyph::DimArcLength: {
+        // THE ARC AND THE ARC BESIDE IT THAT MEASURES IT — the length along,
+        // not the chord across — with the arc mark over the figure.
+        const QPointF centre(12.0, 25.0);
+        const auto ring = [&centre](qreal r) {
+            return QRectF(centre.x() - r, centre.y() - r, 2.0 * r, 2.0 * r);
+        };
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawArc(ring(10.0), 50 * 16, 80 * 16);
+        QPainterPath along;
+        along.arcMoveTo(ring(14.6), 50.0);
+        const QPointF right = along.currentPosition();
+        along.arcTo(ring(14.6), 50.0, 80.0);
+        const QPointF left = along.currentPosition();
+        p.setPen(stroke(k.note, 1.6));
+        p.drawPath(along);
+        arrowHead(p, right, QPointF(right.x() - 2.5, right.y() - 2.1), k.note, 3.4);
+        arrowHead(p, left, QPointF(left.x() + 2.5, left.y() - 2.1), k.note, 3.4);
+        p.setPen(stroke(k.note, 1.3));
+        p.drawArc(QRectF(8.8, 3.0, 6.4, 4.4), 0, 180 * 16);
+        break;
+    }
+
     case Glyph::Plug:
         // A two-pin plug on its lead: a client that is actually connected.
         p.setPen(stroke(c, 1.7));
