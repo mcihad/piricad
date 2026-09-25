@@ -3501,6 +3501,7 @@ Komut: `core.contour` — `EŞYÜKSELTİ`
 cad.contour(
     interval: int,
     layer: str,
+    objects: list[int],
 ) -> int
 ```
 
@@ -3508,6 +3509,7 @@ cad.contour(
 |---|---|---|---|
 | `interval` | `int` | `aralik` | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) |
 | `layer` | `str` | `katman` | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI |
+| `objects` | `list[int]` | `nesneler` | Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/contour.md)
 

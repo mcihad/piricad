@@ -710,6 +710,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
                     o.operation_string = op;
                     o.first_source     = static_cast<std::uint32_t>(result_sources.size());
                     o.source_count     = static_cast<std::uint32_t>(origin.sources.size());
+                    o.arguments_string =
+                        origin.arguments.empty() ? 0 : pool.intern(origin.arguments) + 1;
                     result_origins.push_back(o);
                     for (std::size_t i = 0; i < origin.sources.size(); ++i)
                         result_sources.push_back(

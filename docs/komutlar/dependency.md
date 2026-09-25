@@ -40,7 +40,12 @@ Güncel olmayan için verilecek kararlar:
 - **Yenile** (`islem=yenile`): bağlı nesne kaynağına yetişir — yazı kenarına yerleşir ve
   sayısını yeniden yazar, ölçü köşesine oturup yeniden ölçer, tarama sınırından yeniden
   kurulur. Kilitli katmandaki nesneye dokunulmaz; kilit açıldığı anda o zaten
-  kendiliğinden yetişir.
+  kendiliğinden yetişir. Güncel olmayan bir **sonuç** ise **yeniden hesaplanır**: onu
+  üreten komut, ilk çalıştırıldığı değerlerle, kaynaklarının şimdiki hâli üzerinde yeniden
+  çalışır. Tek nesnelik sonuç (bir koruma alanı, bir sınır alanı) **yerinde** yenilenir:
+  kimliği, değerleri, stili ve ona bağlı yazılar kalır, yalnız biçimi değişir. Birden çok
+  nesnelik sonucun (bir çalışmanın eş yükselti eğrileri) eskileri silinir, yenileri aynı
+  katmana çizilir.
 - **Kabul** (`islem=kabul`): sonuç olduğu gibi doğrudur; kaynaklarının şimdiki hâli
   kaydedilir ve sonuç yeniden güncel sayılır.
 - **Çöz** (`islem=coz`): bağ kalkar. Bağlı nesne yerinde kalır ve kaynağını artık izlemez;
@@ -69,7 +74,7 @@ BAĞIMLILIK [islem=durum|yenile|kabul|coz] [nesneler=<kimlik…>]
 
 | Parametre | Ne yapar |
 |---|---|
-| `islem` | `durum` (varsayılan): bağlı nesneleri ve sonuçları sayar, güncel olmayanları yazar. `yenile`: geride kalan bağlı nesneleri kaynağına yetiştirir. `kabul`: sonucun kaynaklarını şimdiki hâliyle kaydeder. `coz`: bağlı nesnenin bağını kaldırır, sonucu kaynağından çözer |
+| `islem` | `durum` (varsayılan): bağlı nesneleri ve sonuçları sayar, güncel olmayanları yazar. `yenile`: geride kalan bağlı nesneleri kaynağına yetiştirir, güncel olmayan sonuçları yeniden hesaplar. `kabul`: sonucun kaynaklarını şimdiki hâliyle kaydeder. `coz`: bağlı nesnenin bağını kaldırır, sonucu kaynağından çözer |
 | `nesneler` | Sorulacak nesneler. Verilmezse `durum` çizimdeki bütün bağlı nesnelere ve sonuçlara, `yenile`, `kabul` ve `coz` güncel olmayanlara bakar |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
@@ -101,11 +106,22 @@ BAĞIMLILIK
 ```text
 1 sonuç: 0 güncel, 1 güncel değil, 0 kaynaksız.
   güncel değil: nesne 2 (TAMPON) — değişen kaynak: nesne 1
-Kaynakların şimdiki hâlini kabul etmek için: BAĞIMLILIK islem=kabul — sonucu kaynağından çözmek için: BAĞIMLILIK islem=coz
+Sonuçları yeniden hesaplamak için: BAĞIMLILIK islem=yenile — şimdiki hâliyle kabul etmek için: BAĞIMLILIK islem=kabul — kaynağından çözmek için: BAĞIMLILIK islem=coz
 ```
 
-Koruma alanı olduğu gibi doğruysa kabul edin; artık kuyuya bağlı saymak istemiyorsanız
-çözün:
+Koruma alanını kuyunun yeni yerine göre yeniden hesaplatın — aynı nesne, aynı değerlerle,
+yeni biçimiyle:
+
+```
+BAĞIMLILIK islem=yenile nesneler=2
+```
+
+```text
+1 sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (TAMPON).
+```
+
+Koruma alanı olduğu gibi doğruysa yeniden hesaplamak yerine kabul edebilir, artık kuyuya
+bağlı saymak istemiyorsanız çözebilirsiniz:
 
 ```
 BAĞIMLILIK islem=kabul nesneler=2
@@ -147,7 +163,8 @@ Kilidi açılan 2 bağlı nesne kaynağına yetişti.
 
 Şeritte **Analiz ▸ Denetim ▸ Bağımlılıklar**'a (ya da **Kadastro ▸ Denetim ▸
 Bağımlılıklar**'a) basın: komut satırı çizimdeki bağlı nesneleri ve sonuçları sayar ve
-güncel olmayanları yazar. Güncel olmayan nesne tuvalde uyarı renginde işaretlidir;
+güncel olmayanları yazar. Yanındaki **Güncelle** (`BAĞIMLILIK islem=yenile`) geride
+kalanları yetiştirir ve güncel olmayan sonuçları yeniden hesaplar. Güncel olmayan nesne tuvalde uyarı renginde işaretlidir;
 seçtiğinizde öznitelik panelindeki `koken` (sonuç), `bag` (bağlı yazı), `baglar` (ölçü)
 ya da `sinir` (tarama) satırı **GÜNCEL DEĞİL** rozetini taşır.
 
@@ -166,8 +183,8 @@ Bir kuyunun koruma alanını çizmek, kuyuyu taşımak ve koruma alanını kabul
 ]}
 ```
 
-Python'dan: `cad.dependency()` durumu, `cad.dependency(action="yenile")` yetiştirmeyi,
-`cad.dependency(action="kabul")` kabulü yapar.
+Python'dan: `cad.dependency()` durumu, `cad.dependency(action="yenile")` yetiştirmeyi ve
+yeniden hesaplamayı, `cad.dependency(action="kabul")` kabulü yapar.
 
 ### Üçü de aynı
 
@@ -178,9 +195,14 @@ aynılarını işler.
 ## Geri alma
 
 `durum` çizimi değiştirmez ve geri alma adımı bırakmaz. `yenile`, `kabul` ve `coz` tek
-adımda geri alınır (Ctrl+Z ya da `GERİAL`): yenileme geri alınınca bağlı nesne yine
-geride, kabul geri alınınca sonuç yine güncel değil, çözme geri alınınca bağ yeniden
-yerindedir. Yapılacak bir şey yoksa geri alma adımı da bırakılmaz.
+adımda geri alınır (Ctrl+Z ya da `GERİAL`): yenileme geri alınınca bağlı nesne yine geride,
+yeniden hesaplanan sonuç eski biçimine döner; kabul geri alınınca sonuç yine güncel değil,
+çözme geri alınınca bağ yeniden yerindedir. Yapılacak bir şey yoksa geri alma adımı da
+bırakılmaz.
+
+Yeniden hesaplamayı yapan komut (TAMPON, EŞYÜKSELTİ …) günlüğe ayrıca yazılmaz: günlükte
+yalnız `BAĞIMLILIK islem=yenile nesneler=…` satırı durur; günlüğü oynatmak aynı
+yeniden hesaplamayı yapar.
 
 Katmanın kilidini açan komut, geride kalanları aynı adımda yetiştirir; kilidi geri almak
 ikisini birlikte geri alır.
@@ -203,9 +225,12 @@ nesne için `nesne`, `tur` (`yazi`, `olcu`, `tarama`), `durum` (`guncel`, `gunce
 | `Seçilen nesnelerin hiçbiri kaynağına bağlı değil.` | Verilen nesneler ne bağlı nesne ne sonuç: çizilmiş, kopyalanmış ya da çözülmüş | Hata değildir |
 | `Çizimde kaynağına bağlı bir nesne yok.` | Çizimde hiç bağlı nesne ya da sonuç yok | Hata değildir |
 | `Güncel olmayan bir sonuç yok; değişen bir şey olmadı.` | `kabul` ya da `coz` için güncel olmayan yok | Hata değildir |
-| `Kaynağının gerisinde kalmış bir bağlı nesne yok.` | `yenile` için geride kalan yok | Hata değildir |
+| `Kaynağının gerisinde kalmış bir bağlı nesne ya da sonuç yok.` | `yenile` için geride kalan yok | Hata değildir |
 | `N bağlı nesne kilitli katmanda; katmanın kilidi açılınca kaynağına yetişir.` | `yenile` kilitli katmandaki nesneye dokunmaz | Katmanın kilidini açın ([KATMAN](layer.md)); açıldığı anda yetişir |
-| `N sonuç yeniden hesaplanmaz; kabul etmek için islem=kabul, kaynağından çözmek için islem=coz.` | `yenile` sonuçları yeniden hesaplamaz | Kabul edin, çözün ya da sonucu silip üreten komutu yeniden çalıştırın |
+| `N sonucun kaynağı silinmiş; yeniden hesaplanmaz. Kabul etmek için islem=kabul, kaynağından çözmek için islem=coz.` | Kaynaksız bir sonuç yeniden hesaplanmaz | Kabul edin ya da çözün |
+| `… sonucu (nesne N) yeniden hesaplanamaz: nasıl hesaplandığı kayıtlı değil. …` | Sonuç, nasıl hesaplandığını kaydetmeyen bir sürümde üretildi | Kabul edin, çözün ya da silip üreten komutu yeniden çalıştırın |
+| `… sonucunun (nesne N) hiçbir kaynağı kalmadı; yeniden hesaplanamaz.` | Sonucun bütün kaynakları silinmiş | Kabul edin ya da çözün |
+| `… sonucu (nesne N) yeniden hesaplanamadı: …` | Üreten komut yeni kaynaklarla çalışamadı (örneğin çizgiler artık bir alan kapatmıyor); sebebi mesajın sonundadır. Hiçbir şey değişmez | Kaynakları düzeltin ya da o sonucu çözün (`islem=coz nesneler=N`) |
 | `N bağlı nesne kabul edilmez: kaynağına yetiştirmek için islem=yenile, bağından çözmek için islem=coz.` | `kabul` yalnız sonuçlar içindir | `yenile` ya da `coz` kullanın |
 | `N nesne kaynağına bağlı değil; atlandı.` | Verilenlerin bir kısmı bağımlı nesne değil | Hata değildir; yalnız bağımlı olanlar işlendi |
 | `Yazı N kaynağına yerleştirilemedi: bağlı olduğu kenar ya da köşe artık yok. …` | Yazının izlediği kenar ya da köşe kaynaktan kalkmış | `BAĞIMLILIK islem=coz` ile bağından çözün ya da [BAĞLA](bagla.md) ile yeniden bağlayın |

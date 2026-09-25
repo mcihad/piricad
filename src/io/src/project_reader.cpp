@@ -1684,6 +1684,11 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (!op) return op.error();
             core::Lineage origin;
             origin.operation = std::string(op.value());
+            if (o.arguments_string != 0) {
+                auto args = strings.at(o.arguments_string - 1, "sonuç argümanları");
+                if (!args) return args.error();
+                origin.arguments = std::string(args.value());
+            }
             origin.sources.reserve(o.source_count);
             origin.revisions.reserve(o.source_count);
             for (std::uint64_t i = o.first_source; i < end; ++i) {

@@ -579,7 +579,8 @@ TEST_CASE("BAĞIMLILIK yenile: dışarıda değişmiş bir kaynağa bağlı öl�
     const std::size_t depth = r.undo.undo_depth();
     r.said.clear();
     r.run("BAĞIMLILIK islem=yenile");
-    CHECK(r.said.find("Kaynağının gerisinde kalmış bir bağlı nesne yok.") != std::string::npos);
+    CHECK(r.said.find("Kaynağının gerisinde kalmış bir bağlı nesne ya da sonuç yok.") !=
+          std::string::npos);
     CHECK_EQ(r.undo.undo_depth(), depth);
 
     // Cut loose: the dimension stays and measures nothing more.
@@ -669,9 +670,13 @@ TEST_CASE("BAĞIMLILIK: kılavuzdaki örnekler kelimesi kelimesine")
     r.run("BAĞIMLILIK");
     CHECK_EQ(r.said, std::string("1 sonuç: 0 güncel, 1 güncel değil, 0 kaynaksız.\n"
                                  "  güncel değil: nesne 2 (TAMPON) — değişen kaynak: nesne 1\n"
-                                 "Kaynakların şimdiki hâlini kabul etmek için: BAĞIMLILIK "
-                                 "islem=kabul — sonucu kaynağından çözmek için: BAĞIMLILIK "
-                                 "islem=coz\n"));
+                                 "Sonuçları yeniden hesaplamak için: BAĞIMLILIK islem=yenile — "
+                                 "şimdiki hâliyle kabul etmek için: BAĞIMLILIK islem=kabul — "
+                                 "kaynağından çözmek için: BAĞIMLILIK islem=coz\n"));
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile nesneler=2");
+    CHECK(r.said.find("1 sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (TAMPON).\n") !=
+          std::string::npos);
 
     Rig l;
     for (const char* line :
@@ -691,12 +696,172 @@ TEST_CASE("BAĞIMLILIK: kılavuzdaki örnekler kelimesi kelimesine")
     CHECK(l.said.find("Kilidi açılan 2 bağlı nesne kaynağına yetişti.\n") != std::string::npos);
 }
 
+// ============================================================== recompute ===
+
+TEST_CASE("YENİDEN HESAPLAMA: kuyusu taşınan tampon yerinde yeniden çizilir; kimliği, değeri ve "
+          "ona bağlı yazı korunur; tek adımda geri alınır")
+{
+    Rig r;
+    r.run("SÜTUN kimlik=not tur=metin");
+    r.run("NOKTA 0,0");                           // 1, the well
+    r.run("TAMPON nesneler=1 mesafe=5 katman=K"); // 2, its zone
+    r.run("ÖZNİTELİK ad=not nesne=2 deger=koruma");
+    r.run("METİN 0,6 \"A bölgesi\""); // 3
+    r.run("BAĞLA nesneler=3 kaynak=2");
+    const auto middle_of = [&r](std::int64_t key) {
+        const core::Box2 box = r.doc.entities().box_of(r.entity(key));
+        return core::Point2{(box.min_x + box.max_x) / 2, (box.min_y + box.max_y) / 2};
+    };
+    CHECK_EQ(middle_of(2), (core::Point2{0, 0}));
+
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=20,10");
+    CHECK_EQ(r.state(2), core::ResultState::Stale);
+    const core::Point2 caption_before = middle_of(3);
+    const std::size_t journal_before  = r.journal.entries().size();
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile");
+    CHECK(r.said.find("1 sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (TAMPON).") !=
+          std::string::npos);
+    // The same object, round the well where it is now, current, its value kept.
+    REQUIRE(r.doc.alive(r.entity(2)));
+    CHECK_EQ(middle_of(2), (core::Point2{20'000, 10'000}));
+    CHECK_EQ(r.state(2), core::ResultState::Current);
+    CHECK(r.doc.lineage().get(r.entity(2))->result());
+    const auto note = r.doc.attribute(r.doc.attributes().find("not"), r.entity(2));
+    REQUIRE(note.ok());
+    CHECK_EQ(note.value().text, std::string("koruma"));
+    // What follows it followed it — to the nearest edge of the new ring: a
+    // buffer traced again round a point elsewhere can have a corner more or
+    // less, so the caption keeps its side and its gap on the edge nearest the
+    // one it had, within a few decimetres of the plain move.
+    CHECK(std::llabs(middle_of(3).x - caption_before.x - 20'000) < 500);
+    CHECK(std::llabs(middle_of(3).y - caption_before.y - 10'000) < 500);
+    // One line in the journal: the nested buffer run belongs to the dependency command.
+    REQUIRE_EQ(r.journal.entries().size(), journal_before + 1);
+    CHECK_EQ(r.journal.entries().back().command_id, std::string("core.dependency"));
+
+    r.run("GERİAL");
+    CHECK_EQ(middle_of(2), (core::Point2{0, 0}));
+    CHECK_EQ(r.state(2), core::ResultState::Stale);
+}
+
+TEST_CASE(
+    "YENİDEN HESAPLAMA: kotu değişen noktaların eş yükselti eğrileri yeniden izlenir; eskiler "
+    "gider, yeniler güncel ve aynı katmanda")
+{
+    if (!domain::surface::available()) PENDING("KENTOS_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
+    Rig r;
+    levelled_points(r);
+    r.run("EŞYÜKSELTİ aralik=500");
+    std::vector<core::EntityId> before;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+        if (r.doc.alive(e) && r.doc.lineage().get(e) != nullptr) before.push_back(e);
+    REQUIRE(!before.empty());
+    const core::LayerId layer = r.doc.entities().layer[before.front()];
+
+    r.run("KATMAN ad=BASKA"); // another layer active: the new lines must not go there
+    r.run("ÖZNİTELİK ad=kot nesne=5 deger=103000");
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile");
+    CHECK(r.said.find("sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (EŞYÜKSELTİ).") !=
+          std::string::npos);
+    for (const core::EntityId e : before)
+        CHECK_FALSE(r.doc.alive(e));
+    std::size_t current = 0;
+    for (const core::Tie& t : core::every_tie(r.doc)) {
+        CHECK_EQ(t.state, core::TieState::Current);
+        CHECK_EQ(r.doc.entities().layer[t.dependent], layer);
+        current += 1;
+    }
+    CHECK(current > 0);
+
+    r.run("GERİAL");
+    for (const core::EntityId e : before)
+        CHECK(r.doc.alive(e));
+    CHECK_EQ(core::check_result(r.doc, before.front()).state, core::ResultState::Stale);
+}
+
+TEST_CASE("YENİDEN HESAPLAMA: SINIR'ın alanı çizgisi oynayınca yerinde yeniden bulunur")
+{
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    Rig r;
+    r.run("ÇİZGİ 0,0 20,0");   // 1
+    r.run("ÇİZGİ 20,0 20,10"); // 2
+    r.run("ÇİZGİ 20,10 0,10"); // 3
+    r.run("ÇİZGİ 0,10 0,0");   // 4
+    r.run("SINIR nokta=5,5");  // 5
+    CHECK_EQ(r.doc.entity_area(r.entity(5)), core::Mm2{200'000'000});
+    r.run("KÖŞETAŞI nesne=1 kose=1 nokta=0,-10");
+    r.run("KÖŞETAŞI nesne=4 kose=2 nokta=0,-10");
+    CHECK_EQ(r.state(5), core::ResultState::Stale);
+    r.run("BAĞIMLILIK islem=yenile nesneler=5");
+    CHECK_EQ(r.state(5), core::ResultState::Current);
+    CHECK_EQ(r.doc.entity_area(r.entity(5)), core::Mm2{300'000'000});
+}
+
+TEST_CASE("YENİDEN HESAPLAMA: nasıl hesaplandığı kayıtlı olmayan sonuç yeniden hesaplanmaz; çizim "
+          "olduğu gibi kalır")
+{
+    // The first result format kept no arguments: its origins cannot be run again.
+    namespace fs          = std::filesystem;
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path good   = corpus / "16-sonuc-kokenleri.pcad";
+    if (!fs::exists(good)) PENDING("Sonuç kökeni tohumu yok.");
+    Rig r;
+    r.run("AÇ \"" + good.string() + "\"");
+    const std::uint64_t before = r.doc.content_hash();
+    auto refused               = r.bus.execute_line("BAĞIMLILIK islem=yenile", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("nasıl hesaplandığı kayıtlı değil") != std::string::npos);
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("YENİDEN HESAPLAMA KANIT: arayüz, komut satırı, betik ve oynatma aynı belgeyi ve günlüğü "
+          "bırakır")
+{
+    const auto journal_of = [](const Journal& j) {
+        std::string out;
+        for (const auto& e : j.entries())
+            out += e.command_id + ' ' + e.args.to_json().dump() + '\n';
+        return out;
+    };
+    const auto prepared = [](Rig& r) {
+        r.run("NOKTA 0,0");
+        r.run("TAMPON nesneler=1 mesafe=5 katman=K");
+        r.run("TAŞI nesneler=1 baslangic=0,0 bitis=3,4");
+    };
+    Rig gui;
+    prepared(gui);
+    gui.run("BAĞIMLILIK islem=yenile", Origin::Gui);
+    Rig cli;
+    prepared(cli);
+    cli.run("BAĞIMLILIK islem=yenile", Origin::CommandLine);
+    Rig scr;
+    prepared(scr);
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto done = runner.run_text(
+            R"({"ad":"Y","komutlar":[{"cmd":"core.dependency","args":{"islem":"yenile"}}]})");
+        REQUIRE_MESSAGE(done.ok(), (done.ok() ? std::string() : done.error().message));
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(journal_of(gui.journal), journal_of(cli.journal));
+    CHECK_EQ(journal_of(cli.journal), journal_of(scr.journal));
+    CHECK_EQ(cli.state(2), core::ResultState::Current);
+
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        REQUIRE(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+}
+
 // ============================================================ the bytes ===
 
 TEST_CASE("SONUÇ: kökenin geri alma baytları sürümlerini taşır; geçmiş kökeni eskisi gibi "
           "kodlanır")
 {
-    core::Lineage history{"core.copy", keys({3, 7}), {}};
+    core::Lineage history{"core.copy", keys({3, 7}), {}, {}};
     const std::vector<std::uint8_t> old_bytes = core::encode_lineage(&history);
     REQUIRE_FALSE(old_bytes.empty());
     CHECK_EQ(old_bytes[0], 1); // the layout every drawing before results was written in
@@ -704,7 +869,7 @@ TEST_CASE("SONUÇ: kökenin geri alma baytları sürümlerini taşır; geçmiş 
     REQUIRE(back.ok());
     CHECK_EQ(back.value(), history);
 
-    core::Lineage result{"islem.tampon", keys({3, 7}), {0x1234567890ABCDEFull, 42}};
+    core::Lineage result{"islem.tampon", keys({3, 7}), {0x1234567890ABCDEFull, 42}, {}};
     const std::vector<std::uint8_t> bytes = core::encode_lineage(&result);
     CHECK_EQ(bytes[0], 2);
     auto again = core::decode_lineage(bytes);
@@ -796,6 +961,61 @@ TEST_CASE("SONUÇ: sonuç kökeni tohumları korpusta; bozuk satırlar uyarıyla
     auto refused = c.bus.execute_line("AÇ \"" + run.string() + "\"", Origin::Test);
     REQUIRE_FALSE(refused.ok());
     CHECK(refused.error().message.find("sonuç kökeninin kaynakları") != std::string::npos);
+}
+
+TEST_CASE("YENİDEN HESAPLAMA: nasıl hesaplandığını taşıyan köken tohumları korpusta; dizin dışını "
+          "gösteren argüman adıyla reddedilir")
+{
+    // CLAUDE.md 6.7, for the arguments a result's origin keeps (TODOS F-04).
+    namespace fs          = std::filesystem;
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path good   = corpus / "19-sonuc-argumanli.pcad";
+    const fs::path bad    = corpus / "20-sonuc-argumani-tasan.pcad";
+    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+        Rig w;
+        for (const char* line : {"NOKTA 0,0", "TAMPON nesneler=1 mesafe=5 katman=K",
+                                 "TAŞI nesneler=1 baslangic=0,0 bitis=2,0"})
+            w.run(line);
+        w.run("FARKLIKAYDET \"" + good.string() + "\"");
+        std::ifstream in(good, std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        in.close();
+        const auto u32 = [&bytes](std::size_t at) {
+            std::uint32_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 4);
+            return v;
+        };
+        const auto u64 = [&bytes](std::size_t at) {
+            std::uint64_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 8);
+            return v;
+        };
+        std::size_t origins = 0;
+        for (std::uint32_t b = 0; b < u32(20); ++b) {
+            const std::size_t entry = u64(24) + std::size_t{b} * 32;
+            if (u32(entry) == io::kBlkResultOrigins) origins = u64(entry + 8);
+        }
+        REQUIRE(origins != 0);
+        REQUIRE(u32(origins + 12) != 0); // the arguments are there
+        const std::uint32_t nowhere = 0x7FFF'FFFFu;
+        std::memcpy(bytes.data() + origins + 12, &nowhere, 4);
+        std::ofstream(bad, std::ios::binary)
+            .write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    if (!fs::exists(good) || !fs::exists(bad))
+        PENDING("Argümanlı sonuç tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+
+    // Read back, it can be computed again: the arguments travelled.
+    Rig a;
+    a.run("AÇ \"" + good.string() + "\"");
+    CHECK_EQ(a.state(2), core::ResultState::Stale);
+    a.run("BAĞIMLILIK islem=yenile");
+    CHECK_EQ(a.state(2), core::ResultState::Current);
+
+    Rig b;
+    auto refused = b.bus.execute_line("AÇ \"" + bad.string() + "\"", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("sonuç argümanları") != std::string::npos);
 }
 
 // ================================================================== proof ===

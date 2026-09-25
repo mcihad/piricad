@@ -15,7 +15,7 @@ bağ kopmaz ([nesne kimliği](kimlik-ve-koken.md)).
 | **Bağlı yazı** — [UZUNLUKYAZ](../komutlar/uzunluk_yaz.md), [KÖŞENUMARALA](../komutlar/kose_numarala.md), [ETİKET](../komutlar/label.md), [BAĞLA](../komutlar/bagla.md) | Bir kenar, köşe ya da nesnenin ortası | **İzler**: yeniden yerleşir, sayısı ya da kalıbı yeniden yazılır | Yazı da silinir (kilitliyse kalır, bağı kopuk olur) |
 | **Bağlı ölçü** — [ÖLÇÜ](../komutlar/dimension.md) | Bir köşe, merkez, yay ucu | **İzler**: yeniden yerleşir ve yeniden ölçülür | Bağ kopar: ölçü yerinde durur, tuvalde **bağ koptu** |
 | **Bağlı tarama** — [TARAMA](../komutlar/hatch.md) | Sınırını veren nesneler | **İzler**: sınırdan yeniden kurulur | Bağ kopar: tarama son hâlinde durur, tuvalde **sınır bağı koptu** |
-| **Sonuç** — [TAMPON](../komutlar/tampon.md), [ALANÜRET](../komutlar/alan_uret.md), [SINIR](../komutlar/boundary.md), [EŞYÜKSELTİ](../komutlar/contour.md) | Hesaplandığı nesneler | **Güncel değil** olur ve bunu söyler; kendi kendine yeniden hesaplanmaz | **Kaynaksız** olur; son hâlinde kendi başına durur |
+| **Sonuç** — [TAMPON](../komutlar/tampon.md), [ALANÜRET](../komutlar/alan_uret.md), [SINIR](../komutlar/boundary.md), [EŞYÜKSELTİ](../komutlar/contour.md) | Hesaplandığı nesneler | **Güncel değil** olur ve bunu söyler; kendi kendine yeniden hesaplanmaz, istenince hesaplanır | **Kaynaksız** olur; son hâlinde kendi başına durur |
 
 Bir de bağ olmayan ilişki vardır: **köken**. Bir kopya, bir budamanın parçası, bir
 ifrazın parseli hangi nesneden yapıldığını bilir, ama o nesne hakkında bir şey söylemez;
@@ -90,14 +90,23 @@ söylenir ve komutla birlikte geri alınır.
 
 [BAĞIMLILIK](../komutlar/dependency.md) üç karar verir:
 
-- `islem=yenile` — geride kalan bağlı yazı, ölçü ya da tarama kaynağına yetişir.
+- `islem=yenile` — geride kalan bağlı yazı, ölçü ya da tarama kaynağına yetişir; güncel
+  olmayan sonuç **yeniden hesaplanır**.
 - `islem=kabul` — sonuç olduğu gibi doğrudur; kaynaklarının şimdiki hâli kaydedilir.
 - `islem=coz` — bağ kalkar: bağlı nesne yerinde durup kaynağını artık izlemez, sonuç
   kendi başına bir nesne olur; kökeni kalır, güncel olup olmadığı bir daha sorulmaz.
 
-Sonucu yeniden hesaplamak için bugün onu silip üreten komutu yeniden çalıştırın; eski
-çıktının kökeni hangi komutun, hangi nesnelerden yaptığını söyler
-([NESNEBİLGİ](../komutlar/entity_info.md)).
+**Yeniden hesaplamak** sonucu üreten komutu, ilk çalıştırıldığı değerlerle (tamponun
+mesafesi, eş yükseltinin aralığı, sınırın tıklanan noktası) ve kaynaklarının şimdiki
+hâliyle yeniden çalıştırır; sonuç her zaman nasıl hesaplandığını kökeninde taşır.
+
+| Sonuç | Yeniden hesaplanınca |
+|---|---|
+| Tek nesne: bir koruma alanı, bir sınır alanı, bir üretilen alan | **Yerinde** yenilenir: kimliği, değerleri, stili ve ona bağlı yazılar kalır; yalnız biçimi değişir. Ona bağlı yazı yeni biçimin en yakın kenarına yetişir |
+| Birden çok nesne: bir çalışmanın eş yükselti eğrileri | Eskiler silinir — onlara bağlı yazılar da —, yenileri aynı katmana çizilir |
+
+Yeniden hesaplamanın bütün işleri tek geri alma adımıdır. Üreten komut yeni kaynaklarla
+çalışamazsa (çizgiler artık bir alan kapatmıyorsa) hiçbir şey değişmez ve sebebi söylenir.
 
 ## Zincir ve döngü
 
@@ -135,7 +144,6 @@ olmadığını bilemez.
 
 | Yetenek | Ne zaman |
 |---|---|
-| Güncel olmayan bir sonucu tek komutla yeniden hesaplamak | Faz 1 |
 | EŞYÜKSELTİ'den sonra çizime eklenen yeni bir kotlu noktanın eğrileri güncel değil yapması (bugün eğriler yalnız hesaplandıkları noktaları bilir) | Faz 1, kalıcı arazi yüzeyiyle |
 | Pafta tablosunun, grafiğinin ve lejantının kopan bağlarının (silinen ya da adı değişen katman) çizimde görünmesi | Faz 1 |
 

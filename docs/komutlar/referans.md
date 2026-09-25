@@ -1916,6 +1916,7 @@ Kotlu noktalardan eş yükselti eğrileri çizer.
 |---|---|---|---|
 | `aralik` | integer | isteğe bağlı | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) |
 | `katman` | text | isteğe bağlı | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI |
+| `nesneler` | selection | en az 0 | Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar |
 
 Ayrıntılı kullanım: [EŞYÜKSELTİ](contour.md)
 
@@ -4318,6 +4319,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "katman": {
           "type": "string",
           "description": "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "varsayimlar": {
           "type": "array",

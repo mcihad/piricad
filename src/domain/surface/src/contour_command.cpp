@@ -71,12 +71,27 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    // What to level from: the selection when there is one, otherwise every point
-    // in the drawing that carries a height.
+    // What to level from: the points named, else the selection when there is
+    // one, otherwise every point in the drawing that carries a height.
     std::vector<core::EntityId> slots;
-    for (core::EntityKey k : ctx.session().bus().selection().keys()) {
-        const core::EntityId slot = doc.slot_of(k);
-        if (slot != core::kNoEntity && doc.alive(slot)) slots.push_back(slot);
+    bool from_selection = false;
+    if (const Value named = ctx.argument("nesneler"); !named.empty()) {
+        for (const std::int64_t id : named.as_ids()) {
+            const core::EntityId slot =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(id)));
+            if (slot == core::kNoEntity || !doc.alive(slot)) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
+                co_return;
+            }
+            slots.push_back(slot);
+        }
+    } else {
+        for (core::EntityKey k : ctx.session().bus().selection().keys()) {
+            const core::EntityId slot = doc.slot_of(k);
+            if (slot != core::kNoEntity && doc.alive(slot)) slots.push_back(slot);
+        }
+        from_selection = !slots.empty();
     }
     if (slots.empty())
         for (core::EntityId e = 0; e < doc.entities().size(); ++e)
@@ -169,13 +184,25 @@ Task<void> run(Context& ctx)
     read.reserve(slots.size());
     for (const core::EntityId slot : slots)
         read.push_back(doc.key_of(slot));
-    if (auto st = ctx.derive_results(lines, read); !st) {
+    // And how they were traced, so the run can be traced again (TODOS F-04).
+    Args traced_with;
+    traced_with.set("aralik", Value::integer(interval));
+    if (!layer_arg.empty()) traced_with.set("katman", layer_arg);
+    if (auto st = ctx.derive_results(lines, read, &traced_with); !st) {
         ctx.refuse(st.error());
         co_return;
     }
 
     ctx.record("aralik", Value::integer(interval));
     if (!layer_arg.empty()) ctx.record("katman", layer_arg);
+    // THE SELECTION IT READ, named: a replay runs with no selection, and would
+    // otherwise trace every point in the drawing.
+    if (from_selection) {
+        Value::Ints keys;
+        for (const core::EntityId slot : slots)
+            keys.push_back(static_cast<std::int64_t>(core::raw(doc.key_of(slot))));
+        ctx.record("nesneler", Value::ids(std::move(keys)));
+    }
 
     ctx.echo(std::to_string(drawn) + " eş yükselti eğrisi çizildi (" + metres(interval) +
              " m aralıkla, " + std::to_string(levels.size()) + " kotlu noktadan), '" + layer_name +
@@ -199,6 +226,9 @@ KENTOS_COMMAND(contour)
                 Param::text("katman", Arity::optional(),
                             "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI")
                     .en("layer"),
+                Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar"}
+                    .en("objects"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

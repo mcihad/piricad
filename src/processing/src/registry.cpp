@@ -382,15 +382,27 @@ Task<void> run_tool(Context& ctx)
     // it, so the day a source changes the output says it is out of date. A
     // caption that FOLLOWS its source is kept up to date instead and records
     // history only (`c.attach`).
-    const auto derive = [&ctx, &used](core::EntityId made_one, const std::vector<std::int64_t>& own,
-                                      bool follows) {
+    //
+    // HOW IT RAN goes with a result's origin: every argument the tool was given
+    // but the objects it read and the scope that found them — those are the
+    // sources — so it can be computed again from them (TODOS F-04).
+    // Built as the record below writes it — the layer and every parameter the
+    // tool used, its defaults included — so the journal's replay of this run
+    // records the same.
+    command::Args ran;
+    if (!layer_name.empty()) ran.set("katman", Value::text(layer_name));
+    for (const ToolParam& p : spec.params)
+        if (const Value* v = input.args.find(p.name); v != nullptr && !v->empty())
+            ran.set(p.name, *v);
+    const auto derive = [&ctx, &used, &ran](core::EntityId made_one,
+                                            const std::vector<std::int64_t>& own, bool follows) {
         const std::vector<std::int64_t>& from = own.empty() ? used : own;
         std::vector<core::EntityKey> keys;
         keys.reserve(from.size());
         for (const std::int64_t k : from)
             keys.push_back(static_cast<core::EntityKey>(static_cast<std::uint64_t>(k)));
         return follows ? ctx.derive(made_one, std::span<const core::EntityKey>(keys))
-                       : ctx.derive_result(made_one, std::span<const core::EntityKey>(keys));
+                       : ctx.derive_result(made_one, std::span<const core::EntityKey>(keys), &ran);
     };
 
     std::size_t made = 0;

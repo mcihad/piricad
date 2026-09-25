@@ -42,7 +42,7 @@ bastığı sayılar bunlardır.
 ## Sözdizimi
 
 ```text
-EŞYÜKSELTİ [aralik=<mm>] [katman=<ad>]
+EŞYÜKSELTİ [aralik=<mm>] [katman=<ad>] [nesneler=<kimlik…>]
 ```
 
 ## Parametreler
@@ -51,9 +51,16 @@ EŞYÜKSELTİ [aralik=<mm>] [katman=<ad>]
 |---|---|
 | `aralik` | Eş yükselti aralığı, **milimetre**; varsayılan `1000` (1 m) |
 | `katman` | Eğrilerin çizileceği katman; varsayılan `ESYUKSELTI` |
+| `nesneler` | Kullanılacak kotlu noktalar |
 
-Seçim varsa yalnız seçili noktalar, yoksa çizimdeki bütün kotlu noktalar
-kullanılır.
+`nesneler` verilmezse seçim varsa yalnız seçili noktalar, yoksa çizimdeki bütün kotlu
+noktalar kullanılır. Seçimle çalıştırıldığında günlüğe seçili noktaların kimlikleri
+yazılır; günlüğü oynatmak aynı noktalardan çizer.
+
+**Eğriler bir sonuçtur.** Her eğri, hesaplandığı noktaları ve onların o anki konumunu ve
+kotunu bilir; bir nokta taşınınca ya da kotu değişince çalışmanın bütün eğrileri **güncel
+değil** olur ve bu söylenir. `BAĞIMLILIK islem=yenile` eğrileri aynı aralıkla, aynı
+katmana yeniden izler ([BAĞIMLILIK](dependency.md)).
 
 ## Örnekler
 

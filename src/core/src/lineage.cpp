@@ -18,6 +18,8 @@ constexpr std::uint64_t kLineageSeed = fnv1a("kentos.core.lineage");
 /// result's, which carries its revisions after its sources.
 constexpr std::uint8_t kLayout       = 1;
 constexpr std::uint8_t kLayoutResult = 2;
+/// A result's, with how it was run after its revisions.
+constexpr std::uint8_t kLayoutRerun = 3;
 
 } // namespace
 
@@ -34,7 +36,7 @@ std::uint64_t hash_of(const Lineage& origin)
         h = fnv1a_int(static_cast<std::int64_t>(raw(k)), h);
     for (const std::uint64_t r : origin.revisions)
         h = fnv1a_int(static_cast<std::int64_t>(r), h);
-    return h;
+    return fnv1a(origin.arguments, h);
 }
 
 } // namespace
@@ -109,6 +111,10 @@ std::uint64_t LineageTable::fold(std::uint64_t seed, std::span<const std::uint32
             h = fnv1a_int(-3, h);
             for (const std::uint64_t r : origin.revisions)
                 h = fnv1a_int(static_cast<std::int64_t>(r), h);
+            if (!origin.arguments.empty()) {
+                h = fnv1a_int(static_cast<std::int64_t>(origin.arguments.size()), h);
+                h = fnv1a(origin.arguments, h);
+            }
         }
     }
     return h;
@@ -179,10 +185,13 @@ std::vector<std::uint8_t> encode_lineage(const Lineage* origin)
     const auto name   = static_cast<std::uint32_t>(origin->operation.size());
     const auto count  = static_cast<std::uint32_t>(origin->sources.size());
     const bool result = origin->result() && origin->revisions.size() == origin->sources.size();
+    const bool rerun  = result && !origin->arguments.empty();
+    const auto args   = static_cast<std::uint32_t>(rerun ? origin->arguments.size() : 0);
     std::vector<std::uint8_t> out(1 + 4 + name + 4 +
-                                  ((result ? 16 : 8) * static_cast<std::size_t>(count)));
+                                  ((result ? 16 : 8) * static_cast<std::size_t>(count)) +
+                                  (rerun ? 4 + std::size_t{args} : 0));
     std::size_t at = 0;
-    out[at++]      = result ? kLayoutResult : kLayout;
+    out[at++]      = rerun ? kLayoutRerun : result ? kLayoutResult : kLayout;
     std::memcpy(out.data() + at, &name, 4);
     at += 4;
     std::memcpy(out.data() + at, origin->operation.data(), name);
@@ -199,6 +208,11 @@ std::vector<std::uint8_t> encode_lineage(const Lineage* origin)
             std::memcpy(out.data() + at, &r, 8);
             at += 8;
         }
+    if (rerun) {
+        std::memcpy(out.data() + at, &args, 4);
+        at += 4;
+        std::memcpy(out.data() + at, origin->arguments.data(), args);
+    }
     return out;
 }
 
@@ -209,9 +223,11 @@ Result<Lineage> decode_lineage(std::span<const std::uint8_t> bytes)
     const auto refused = [] {
         return err(ErrorCode::InvalidArgument, "Köken kaydının baytları tanınmıyor.");
     };
-    if ((bytes[0] != kLayout && bytes[0] != kLayoutResult) || bytes.size() < 1 + 4)
+    if ((bytes[0] != kLayout && bytes[0] != kLayoutResult && bytes[0] != kLayoutRerun) ||
+        bytes.size() < 1 + 4)
         return refused();
-    const bool result  = bytes[0] == kLayoutResult;
+    const bool rerun   = bytes[0] == kLayoutRerun;
+    const bool result  = rerun || bytes[0] == kLayoutResult;
     std::uint32_t name = 0;
     std::memcpy(&name, bytes.data() + 1, 4);
     std::size_t at = 1 + 4;
@@ -221,8 +237,8 @@ Result<Lineage> decode_lineage(std::span<const std::uint8_t> bytes)
     std::uint32_t count = 0;
     std::memcpy(&count, bytes.data() + at, 4);
     at += 4;
-    if (bytes.size() != at + ((result ? 16 : 8) * static_cast<std::size_t>(count)) ||
-        (result && count == 0))
+    const std::size_t body = at + ((result ? 16 : 8) * static_cast<std::size_t>(count));
+    if ((rerun ? bytes.size() < body + 4 : bytes.size() != body) || (result && count == 0))
         return refused();
     out.sources.reserve(count);
     for (std::uint32_t i = 0; i < count; ++i, at += 8) {
@@ -237,6 +253,13 @@ Result<Lineage> decode_lineage(std::span<const std::uint8_t> bytes)
             std::memcpy(&r, bytes.data() + at, 8);
             out.revisions.push_back(r);
         }
+    }
+    if (rerun) {
+        std::uint32_t args = 0;
+        std::memcpy(&args, bytes.data() + at, 4);
+        at += 4;
+        if (bytes.size() != at + std::size_t{args} || args == 0) return refused();
+        out.arguments.assign(reinterpret_cast<const char*>(bytes.data() + at), args);
     }
     return out;
 }

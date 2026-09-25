@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — güncel olmayan sonuç yeniden hesaplanıyor (F-04, 3. aşama)
+
+- **`BAĞIMLILIK islem=yenile` sonuçları yeniden hesaplıyor** (şeritte Analiz ▸ Denetim ▸
+  **Güncelle**). Sonucu üreten komut — TAMPON, ALANÜRET, SINIR, EŞYÜKSELTİ — ilk
+  çalıştırıldığı değerlerle (mesafe, aralık, tıklanan nokta, katman) ve kaynaklarının
+  şimdiki hâliyle yeniden çalışıyor; her sonuç artık nasıl hesaplandığını kökeninde
+  taşıyor. Önceden sonucu silip komutu aynı değerlerle elle yeniden çalıştırmak
+  gerekiyordu.
+- **Tek nesnelik sonuç yerinde yenileniyor:** koruma alanının, sınır alanının kimliği,
+  değerleri, stili ve ona bağlı yazılar kalıyor; yalnız biçimi değişiyor. Bir çalışmanın
+  eş yükselti eğrileri ise yeniden izlenip eskilerinin yerine aynı katmana çiziliyor.
+- Yeniden hesaplama tek geri alma adımı; komut yeni kaynaklarla çalışamazsa hiçbir şey
+  değişmiyor ve sebebi söyleniyor. Günlüğe yalnız BAĞIMLILIK satırı yazılıyor; oynatmak
+  aynı yeniden hesaplamayı yapıyor.
+- EŞYÜKSELTİ'ye `nesneler` parametresi: kullanılacak kotlu noktalar. Seçimle
+  çalıştırıldığında günlüğe seçili noktalar yazılıyor; önceden oynatma seçimsiz olduğu
+  için bütün noktalardan çiziyordu.
+- **Düzeltildi:** günlüğün kurallı biçimi (parametre sırası, sayı türü) tek fonksiyonda;
+  sonucun kaydı da aynı biçimde, oynatma aynı baytları yazıyor.
+
 ### Eklendi — kilitli bağlı nesne geride kaldığını söylüyor, kilit açılınca yetişiyor (F-04, 2. aşama)
 
 - **Kilitli katmandaki bağlı yazı, ölçü ve tarama artık sessizce eskimiyor.** Kaynağı

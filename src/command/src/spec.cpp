@@ -184,6 +184,27 @@ Effect effect_of(const CommandSpec& spec, const Args& args)
     return effect_of(spec);
 }
 
+Args canonical_arguments(const CommandSpec& spec, Args args)
+{
+    std::vector<std::string> declared;
+    declared.reserve(spec.params.size());
+    for (const Param& p : spec.params)
+        declared.push_back(p.name);
+    args.reorder_like(declared);
+    for (const Param& p : spec.params)
+        if (const Value* held = args.find(p.name); held != nullptr && held->empty())
+            args.erase(p.name);
+    for (const Param& p : spec.params) {
+        const Value* held = args.find(p.name);
+        if (held == nullptr) continue;
+        if (p.kind == ParamKind::Number && held->kind() == Value::Kind::Int)
+            args.set(p.name, Value::number(held->as_number()));
+        else if (p.kind == ParamKind::Integer && held->kind() == Value::Kind::Number)
+            args.set(p.name, Value::integer(held->as_int()));
+    }
+    return args;
+}
+
 std::string python_callable_name(const CommandSpec& spec)
 {
     if (!spec.python.empty()) return spec.python;

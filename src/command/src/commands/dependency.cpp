@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <array>
+#include <map>
 #include <span>
 #include <string>
 #include <vector>
@@ -95,6 +96,129 @@ struct Counts
     std::array<std::size_t, 4> followers{}; ///< by `TieState`
 };
 
+/// How many results one origin's recompute left, and which way.
+struct Recomputed
+{
+    std::size_t in_place{0}; ///< one old result given the new shape: its key, values, ties kept
+    std::size_t replaced{0}; ///< old results erased for the ones the run made
+};
+
+/// Computes the results of the origin `at` again (TODOS F-04): the operation
+/// that made them runs INSIDE this command (`Bus::run_nested`) with the
+/// arguments it was run with and its sources as they are now. One result made
+/// one again takes the new shape IN PLACE — its key, its values, its style and
+/// what follows it stay, so a label on a buffer follows the new buffer; any
+/// other count replaces the old results with the new ones.
+core::Status recompute(Context& ctx, std::uint32_t at, const std::vector<core::EntityId>& olds,
+                       Recomputed& done)
+{
+    const core::Document& doc  = ctx.document();
+    const core::Lineage origin = doc.lineage().origin(at); // a copy: the table grows below
+    Bus& bus                   = ctx.session().bus();
+    const CommandSpec* spec    = bus.registry().by_id(origin.operation);
+    const std::string named_as = spec != nullptr && !spec->names.empty()
+                                     ? std::string(spec->names.front())
+                                     : origin.operation;
+    const auto takes           = [spec](const char* param) {
+        return spec != nullptr && std::ranges::any_of(spec->params, [param](const Param& p) {
+                   return p.name == param;
+               });
+    };
+    if (spec == nullptr || origin.arguments.empty() || !takes("nesneler"))
+        return core::err(core::ErrorCode::InvalidArgument,
+                         named_as + " sonucu (nesne " +
+                             std::to_string(core::raw(doc.key_of(olds.front()))) +
+                             ") yeniden hesaplanamaz: nasıl hesaplandığı kayıtlı değil. Kabul "
+                             "edin (islem=kabul), çözün (islem=coz) ya da silip yeniden üretin.");
+    auto json = core::Json::parse(origin.arguments);
+    if (!json) return json.error();
+    auto parsed = Args::from_json(json.value());
+    if (!parsed) return parsed.error();
+    Args args = std::move(parsed.value());
+
+    // FROM ITS SOURCES AS THEY ARE NOW — the ones still there.
+    Value::Ints live;
+    for (const core::EntityKey k : origin.sources) {
+        const core::EntityId e = doc.slot_of(k);
+        if (e != core::kNoEntity && doc.alive(e))
+            live.push_back(static_cast<std::int64_t>(core::raw(k)));
+    }
+    if (live.empty())
+        return core::err(core::ErrorCode::NotFound,
+                         named_as + " sonucunun (nesne " +
+                             std::to_string(core::raw(doc.key_of(olds.front()))) +
+                             ") hiçbir kaynağı kalmadı; yeniden hesaplanamaz.");
+    args.set("nesneler", Value::ids(std::move(live)));
+    // The new ones land where the old ones stood, whatever layer is active now.
+    if (olds.size() != 1 && takes("katman") && !args.has("katman")) {
+        const core::LayerId l = doc.entities().layer[olds.front()];
+        if (l < doc.layers().size()) args.set("katman", Value::text(doc.layers()[l].name));
+    }
+
+    Transaction& tx        = ctx.transaction();
+    const std::size_t mark = tx.size();
+    auto ran = bus.run_nested(Invocation{spec->id, std::move(args), Origin::Batch}, tx);
+    if (!ran)
+        return core::err(ran.error().code, named_as + " sonucu (nesne " +
+                                               std::to_string(core::raw(doc.key_of(olds.front()))) +
+                                               ") yeniden hesaplanamadı: " + ran.error().message);
+    std::vector<core::EntityId> news;
+    for (const core::EntityId e : tx.created_since(mark)) {
+        const core::Lineage* made = doc.alive(e) ? doc.lineage().get(e) : nullptr;
+        if (made != nullptr && made->result() && made->operation == origin.operation)
+            news.push_back(e);
+    }
+
+    const core::RingGeometry& geom = doc.geometry();
+    if (olds.size() == 1 && news.size() == 1) {
+        // IN PLACE: the old result takes the new one's shape, words, values and
+        // origin, and the new one goes.
+        const core::EntityId old  = olds.front();
+        const core::EntityId made = news.front();
+        const std::uint32_t slot  = doc.entities().slot[made];
+        const core::RingSpan span = geom.rings_of(slot);
+        std::vector<std::vector<core::Point2>> points(span.count);
+        std::vector<core::RingGeometry::RingInput> rings;
+        rings.reserve(span.count);
+        for (std::uint32_t r = 0; r < span.count; ++r) {
+            const auto xs = geom.ring_xs(span.first + r);
+            const auto ys = geom.ring_ys(span.first + r);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                points[r].push_back(core::Point2{xs[v], ys[v]});
+            rings.push_back(core::RingGeometry::RingInput{points[r], geom.ring_role[span.first + r],
+                                                          geom.ring_part[span.first + r]});
+        }
+        const auto payload_view = geom.payload_of(slot);
+        const std::vector<std::uint8_t> payload(payload_view.begin(), payload_view.end());
+        if (auto st = tx.set_kind_geometry(old, doc.entities().kind[made], rings, payload); !st)
+            return st;
+        const std::uint32_t made_slot = doc.entities().slot[made];
+        if (doc.texts().has(made_slot))
+            if (auto st = tx.set_text(old, std::string(doc.texts().text(made_slot)),
+                                      doc.texts().height(made_slot), doc.texts().anchor(made_slot));
+                !st)
+                return st;
+        const core::AttrTable& attrs = doc.attributes();
+        for (std::size_t column = 0; column < attrs.columns(); ++column) {
+            const auto c = static_cast<core::AttrId>(column);
+            auto cell    = doc.attribute(c, made);
+            if (cell && cell.value().present)
+                if (auto st = tx.set_attribute(c, old, cell.value()); !st) return st;
+        }
+        const core::Lineage renewed = *doc.lineage().get(made);
+        if (auto st = tx.set_lineage(old, renewed); !st) return st;
+        if (auto st = tx.erase_entity(made); !st) return st;
+        ++done.in_place;
+        return core::ok();
+    }
+    // ANY OTHER COUNT: the old results go, the new ones stay.
+    for (const core::EntityId old : olds)
+        if (doc.alive(old))
+            if (auto st = tx.erase_entity(old); !st) return st;
+    done.replaced += olds.size();
+    return core::ok();
+}
+
 Task<void> run_dependency(Context& ctx)
 {
     const core::Document& doc = ctx.document();
@@ -155,11 +279,18 @@ Task<void> run_dependency(Context& ctx)
         std::size_t refused   = 0; // a result asked to follow, a follower asked to be accepted
         std::vector<std::int64_t> keys;
         Transaction::SettleReport quiet;
+        // THE RESULTS TO COMPUTE AGAIN, by the run that made them: thirty
+        // contours are traced again once.
+        std::map<std::uint32_t, std::vector<core::EntityId>> runs;
+        std::size_t sourceless = 0;
         for (const core::Tie* t : acting) {
             const core::EntityId e = t->dependent;
             if (verb == "yenile") {
                 if (is_result(*t)) {
-                    if (t->state != core::TieState::Current) ++refused;
+                    if (t->state == core::TieState::Behind)
+                        runs[doc.lineage().origin_of(e)].push_back(e);
+                    else if (t->state == core::TieState::Sourceless)
+                        ++sourceless;
                     continue;
                 }
                 if (t->state != core::TieState::Behind) continue;
@@ -221,6 +352,21 @@ Task<void> run_dependency(Context& ctx)
             }
             keys.push_back(key_of(*t));
         }
+        Recomputed recomputed;
+        std::vector<std::string> recomputed_by;
+        for (const auto& [at, olds] : runs) {
+            for (const core::EntityId e : olds)
+                keys.push_back(static_cast<std::int64_t>(core::raw(doc.key_of(e))));
+            const std::string operation = doc.lineage().origin(at).operation;
+            if (auto st = recompute(ctx, at, olds, recomputed); !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+            recomputed_by.push_back(named_as(operation));
+        }
+        std::ranges::sort(recomputed_by);
+        recomputed_by.erase(std::ranges::unique(recomputed_by).begin(), recomputed_by.end());
+        refused += sourceless;
         std::ranges::sort(keys);
         keys.erase(std::ranges::unique(keys).begin(), keys.end());
 
@@ -229,7 +375,7 @@ Task<void> run_dependency(Context& ctx)
                 ctx.echo(untied != 0 ? "Seçilen nesnelerin hiçbiri kaynağına bağlı değil."
                                      : "Çizimde kaynağına bağlı bir nesne yok.");
             else if (verb == "yenile")
-                ctx.echo("Kaynağının gerisinde kalmış bir bağlı nesne yok.");
+                ctx.echo("Kaynağının gerisinde kalmış bir bağlı nesne ya da sonuç yok.");
             else
                 ctx.echo("Güncel olmayan bir sonuç yok; değişen bir şey olmadı.");
             co_return;
@@ -250,14 +396,21 @@ Task<void> run_dependency(Context& ctx)
                      " bağlı nesne bağından çözüldü: yerinde duruyor, kaynağını artık izlemiyor.");
         if (verb == "yenile" && followers != 0)
             ctx.echo(std::to_string(followers) + " bağlı nesne kaynağına yetiştirildi.");
+        if (verb == "yenile" && (recomputed.in_place != 0 || recomputed.replaced != 0)) {
+            std::string by;
+            for (const std::string& n : recomputed_by)
+                by += (by.empty() ? "" : ", ") + n;
+            ctx.echo(std::to_string(recomputed.in_place + recomputed.replaced) +
+                     " sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (" + by + ").");
+        }
         if (locked != 0)
             ctx.echo(std::to_string(locked) +
                      " bağlı nesne kilitli katmanda; katmanın kilidi açılınca kaynağına yetişir.");
         if (refused != 0)
             ctx.echo(verb == "yenile"
                          ? std::to_string(refused) +
-                               " sonuç yeniden hesaplanmaz; kabul etmek için islem=kabul, "
-                               "kaynağından çözmek için islem=coz."
+                               " sonucun kaynağı silinmiş; yeniden hesaplanmaz. Kabul etmek için "
+                               "islem=kabul, kaynağından çözmek için islem=coz."
                          : std::to_string(refused) +
                                " bağlı nesne kabul edilmez: kaynağına yetiştirmek için "
                                "islem=yenile, bağından çözmek için islem=coz.");
@@ -334,8 +487,12 @@ Task<void> run_dependency(Context& ctx)
         if (lines.size() > kListed)
             ctx.echo("  … ve " + std::to_string(lines.size() - kListed) + " nesne daha.");
         if (r[kBehind] != 0 || r[kSourceless] != 0)
-            ctx.echo("Kaynakların şimdiki hâlini kabul etmek için: BAĞIMLILIK islem=kabul — "
-                     "sonucu kaynağından çözmek için: BAĞIMLILIK islem=coz");
+            ctx.echo(
+                std::string(r[kBehind] != 0
+                                ? "Sonuçları yeniden hesaplamak için: BAĞIMLILIK islem=yenile — "
+                                : "") +
+                "şimdiki hâliyle kabul etmek için: BAĞIMLILIK islem=kabul — kaynağından "
+                "çözmek için: BAĞIMLILIK islem=coz");
         if (f[kBehind] != 0)
             ctx.echo("Bağlı nesneleri kaynağına yetiştirmek için: BAĞIMLILIK islem=yenile");
         say_untied();

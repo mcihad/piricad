@@ -1325,6 +1325,16 @@ void Transaction::rollback()
     rollback_to(0);
 }
 
+std::vector<EntityId> Transaction::created_since(std::size_t mark) const
+{
+    std::vector<EntityId> out;
+    for (std::size_t i = mark; i < inverse_.size(); ++i)
+        if (inverse_[i].kind == Op::Kind::SetEntityAlive && !inverse_[i].bool_arg &&
+            std::ranges::find(out, inverse_[i].entity) == out.end())
+            out.push_back(inverse_[i].entity);
+    return out;
+}
+
 Transaction::SettleReport Transaction::settle_unlocked(core::DrawingUnit unit)
 {
     SettleReport rep;
@@ -1392,8 +1402,10 @@ Transaction::SettleReport Transaction::settle_results()
     std::vector<EntityId> touched;
     std::vector<EntityId> reshaped; // shape or words: what a result itself is
     std::vector<EntityId> created;
+    std::vector<EntityId> recomputed; // a result whose origin this range wrote
     for (std::size_t i = from; i < inverse_.size(); ++i) {
-        const Op& op     = inverse_[i];
+        const Op& op = inverse_[i];
+        if (op.kind == Op::Kind::SetLineage) recomputed.push_back(op.entity);
         const bool shape = op.kind == Op::Kind::SetGeometry ||
                            op.kind == Op::Kind::SetKindGeometry || op.kind == Op::Kind::SetText;
         if (shape) reshaped.push_back(op.entity);
@@ -1402,7 +1414,7 @@ Transaction::SettleReport Transaction::settle_results()
             touched.push_back(op.entity);
         if (op.kind == Op::Kind::SetEntityAlive && !op.bool_arg) created.push_back(op.entity);
     }
-    for (std::vector<EntityId>* list : {&touched, &reshaped, &created}) {
+    for (std::vector<EntityId>* list : {&touched, &reshaped, &created, &recomputed}) {
         std::ranges::sort(*list);
         list->erase(std::ranges::unique(*list).begin(), list->end());
     }
@@ -1417,7 +1429,9 @@ Transaction::SettleReport Transaction::settle_results()
     // moved away from its boundary are (core/dimension_link.hpp, hatch_link.hpp).
     std::vector<EntityId> answered;
     for (const EntityId e : reshaped) {
-        if (contains(created, e) || !doc_.alive(e)) continue;
+        // RECOMPUTED, NOT RESHAPED BY HAND: a result whose shape and origin the
+        // same range wrote was computed again (BAĞIMLILIK islem=yenile).
+        if (contains(created, e) || contains(recomputed, e) || !doc_.alive(e)) continue;
         const core::Lineage* origin = table.get(e);
         if (origin == nullptr || !origin->result()) continue;
         // A COPY: the write below may grow the table and move what `origin` points at.

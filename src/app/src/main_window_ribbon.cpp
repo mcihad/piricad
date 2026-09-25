@@ -916,6 +916,7 @@ void MainWindow::buildRibbon()
     // WHAT THE TOOLS MADE, asked whether it still holds (TODOS F-04).
     SARibbonPanel* audit = analyseTab->addPanel(tr("Denetim"));
     large(audit, actDependency_);
+    small(audit, actDependencyRefresh_);
     small(audit, actTopology_);
 
     SARibbonPanel* agents = analyseTab->addPanel(tr("Yapay zekâ"));

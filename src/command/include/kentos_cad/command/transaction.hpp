@@ -453,6 +453,10 @@ public:
     /// the same transaction. Its own cursor, like the dimensions'.
     SettleReport settle_results();
 
+    /// The objects this transaction created after `mark` — a `size()` read
+    /// earlier — in the order it made them: what a nested run left behind.
+    std::vector<EntityId> created_since(std::size_t mark) const;
+
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 

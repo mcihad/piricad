@@ -529,6 +529,15 @@ public:
     // ---- the single entry point for every client ----
     core::Result<DispatchResult> dispatch(const Invocation& inv);
 
+    /// Runs `inv` INSIDE the command that is running now (TODOS F-04): its edits
+    /// go into `tx`, that command's transaction, so both are one undo step and
+    /// fail together; nothing is journalled — the running command is, and a
+    /// replay of it runs this again — and no undo entry is pushed. What
+    /// `BAĞIMLILIK islem=yenile` computes a result again with, through the same
+    /// validation, body and commit-time settles as any other run. The command
+    /// must take everything it needs from `inv`: one that would ask is refused.
+    core::Result<DispatchResult> run_nested(const Invocation& inv, Transaction& tx);
+
     /// Parses and dispatches one command line. Used by the CLI widget, by macro
     /// playback and by the script engine — one grammar, one path (§3).
     core::Result<DispatchResult> execute_line(std::string_view line, Origin origin);
@@ -1025,6 +1034,9 @@ private:
     core::Result<DispatchResult> run_to_completion(Session& session);
     void journal_entry(const Session& session);
 
+    /// `dispatch`, with its edits going into `nested` when given (`run_nested`).
+    core::Result<DispatchResult> dispatch_into(const Invocation& inv, Transaction* nested);
+
     /// Says what followed a commit: dependents re-placed, re-worded, erased
     /// with their source, or left behind on a locked layer.
     void say_settled(const Transaction::SettleReport& settled) const;
@@ -1039,6 +1051,8 @@ private:
     /// Where `echo` also writes while an `EchoCapture` is alive. `mutable`
     /// because `echo` is const and saying a line is not a change to the bus.
     mutable std::vector<std::string>* echo_sink_{nullptr};
+    /// Set while a nested run speaks (`run_nested`): its lines go to its result only.
+    mutable bool echo_muted_{false};
 
     core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
     core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};

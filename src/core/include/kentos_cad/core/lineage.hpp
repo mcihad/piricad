@@ -66,6 +66,13 @@ struct Lineage
     /// its sources and cannot go out of date.
     std::vector<std::uint64_t> revisions;
 
+    /// HOW IT WAS RUN (TODOS F-04): the arguments the operation was given, as
+    /// the journal writes them (a JSON object), less the objects it read —
+    /// those are `sources`. What computing the result again passes back, with
+    /// the sources as they are now. Opaque here; empty for history and for a
+    /// result recorded before this existed, which cannot be computed again.
+    std::string arguments;
+
     /// Whether this origin is a result's: whether it can go out of date.
     bool result() const noexcept { return !revisions.empty(); }
 

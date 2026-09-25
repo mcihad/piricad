@@ -736,7 +736,11 @@ struct ResultOriginRecord
     std::uint32_t operation_string; ///<  0  the command's or tool's id, into the string pool
     std::uint32_t first_source;     ///<  4  its first row in kBlkResultSources
     std::uint32_t source_count;     ///<  8  how many rows it has there, at least one
-    std::uint32_t reserved;         ///< 12  zero
+    /// 12  how it was run — its arguments as JSON — into the string pool PLUS
+    /// ONE; zero when not recorded, which is what a file of the first result
+    /// format wrote here (it was reserved, zero), so that file reads as "cannot
+    /// be computed again" rather than as the pool's first string.
+    std::uint32_t arguments_string;
 };
 
 static_assert(sizeof(ResultOriginRecord) == 16, "the result origin column is a wire record");

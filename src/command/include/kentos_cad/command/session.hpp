@@ -127,6 +127,13 @@ public:
 
     bool client_driven() const noexcept { return client_driven_; }
 
+    /// Whether this session runs INSIDE another command's (`Bus::run_nested`):
+    /// its edits are that command's, and so is the journal line — the outer
+    /// command is recorded, and a replay runs it again, which runs this.
+    void set_nested(bool on) noexcept { nested_ = on; }
+
+    bool nested() const noexcept { return nested_; }
+
     /// The job this session is parked on, or null.
     Job* job() const noexcept { return job_; }
 
@@ -258,6 +265,7 @@ private:
     std::size_t transaction_mark_{0};
 
     bool client_driven_{false};
+    bool nested_{false};
     Job* job_{nullptr};
     bool cancel_requested_{false};
 };

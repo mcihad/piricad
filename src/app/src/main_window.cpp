@@ -1282,6 +1282,15 @@ void MainWindow::buildActions()
     actDependency_->setObjectName(QStringLiteral("toolAction.BAĞIMLILIK"));
     connect(actDependency_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("BAĞIMLILIK")); });
+    actDependencyRefresh_ = new QAction(tr("Güncelle"), this);
+    actDependencyRefresh_->setToolTip(
+        tr("BAĞIMLILIK islem=yenile — kaynağının gerisinde kalan bağlı yazıları, ölçüleri ve "
+           "taramaları yetiştirir; güncel olmayan sonuçları yeniden hesaplar"));
+    actDependencyRefresh_->setData(static_cast<int>(Glyph::Refresh));
+    actDependencyRefresh_->setObjectName(QStringLiteral("toolAction.BAĞIMLILIK.yenile"));
+    connect(actDependencyRefresh_, &QAction::triggered, this, [this] {
+        controller_->runLine(QStringLiteral("BAĞIMLILIK islem=yenile"), command::Origin::Gui);
+    });
 
     actStyle_ = new QAction(tr("Stil Tasarımcısı"), this);
     actStyle_->setData(static_cast<int>(Glyph::Palette));
@@ -7327,6 +7336,68 @@ int MainWindow::probeRealMouse()
                       canvas_->staleFollowerCountForProbe() == 0,
                   QStringLiteral("kilit açılınca iki yazı kaynağına yetişti, işaret kalktı"));
             shoot("kilitli-yazi-yetisti");
+        }
+
+        // ---- 40. AN OUT-OF-DATE RESULT COMPUTED AGAIN, IN PLACE (TODOS F-04) ----
+        //
+        // A well and its protection zone, the zone given a value; the well is
+        // moved. The ribbon's Güncelle runs the buffer again round the well where
+        // it is now: the same object — key, value — with its new shape, current,
+        // and the mark gone. One undo takes the shape back.
+        {
+            const auto settled = [this] {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 20000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                QCoreApplication::processEvents();
+            };
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=KUYU", "SÜTUN kimlik=not tur=metin", "NOKTA 485320,4310220",
+                  "TAMPON nesneler=1 mesafe=8 katman=KORUMA",
+                  "ÖZNİTELİK ad=not nesne=2 deger=A-bolgesi",
+                  "TAŞI nesneler=1 baslangic=485320,4310220 bitis=485330,4310225"}) {
+                runScriptLine(QString::fromUtf8(line));
+                settled();
+            }
+            canvas_->zoomToBox(core::Box2{485'300'000, 4'310'200'000, 485'350'000, 4'310'245'000});
+            canvas_->update();
+            QCoreApplication::processEvents();
+            check(canvas_->staleResultCountForProbe() == 1,
+                  QStringLiteral("kuyu taşınınca koruma alanı güncel değil"));
+            shoot("yeniden-hesaplama-once");
+
+            transcript_->clear();
+            actDependencyRefresh_->trigger();
+            settled();
+            canvas_->update();
+            QCoreApplication::processEvents();
+            const core::Document& doc = controller_->document();
+            const core::EntityId zone = doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{2}));
+            const core::Box2 box =
+                zone != core::kNoEntity ? doc.entities().box_of(zone) : core::Box2{};
+            const core::Point2 middle{(box.min_x + box.max_x) / 2, (box.min_y + box.max_y) / 2};
+            const auto note = doc.attribute(doc.attributes().find("not"), zone);
+            check(transcript_->toPlainText().contains(QStringLiteral(
+                      "1 sonuç kaynaklarının şimdiki hâlinden yeniden hesaplandı (TAMPON).")) &&
+                      middle == core::Point2{485'330'000, 4'310'225'000} && note.ok() &&
+                      note.value().text == "A-bolgesi" && canvas_->staleResultCountForProbe() == 0,
+                  QStringLiteral("Güncelle koruma alanını yeni konumda, aynı nesne ve değerle "
+                                 "yeniden çizdi; işaret kalktı (orta %1, %2)")
+                      .arg(middle.x)
+                      .arg(middle.y));
+            runScriptLine(QStringLiteral("SEÇ nesneler=2"));
+            attributePanel_->refresh();
+            QCoreApplication::processEvents();
+            check(attributePanel_->probeRowBadge(QStringLiteral("koken")) ==
+                      QStringLiteral("GÜNCEL"),
+                  QStringLiteral("panelde koruma alanı GÜNCEL"));
+            shoot("yeniden-hesaplama-sonra");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
 

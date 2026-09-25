@@ -371,7 +371,8 @@ core::Status Context::derive(core::EntityId made, std::span<const core::EntityId
 }
 
 core::Status Context::derive_results(std::span<const core::EntityId> made,
-                                     std::span<const core::EntityKey> sources)
+                                     std::span<const core::EntityKey> sources,
+                                     const Args* arguments)
 {
     const core::Document& doc = document();
     std::vector<core::EntityKey> made_keys;
@@ -390,6 +391,9 @@ core::Status Context::derive_results(std::span<const core::EntityId> made,
     origin.sources   = core::lineage_sources(read);
     if (origin.sources.empty()) return core::ok();
     origin.revisions = core::lineage_revisions(doc, origin.sources);
+    // IN THE JOURNAL'S OWN FORM, so a replay of this run records the same.
+    if (arguments != nullptr && arguments->size() != 0)
+        origin.arguments = canonical_arguments(session_.spec(), *arguments).to_json().dump();
     for (const core::EntityId e : made) {
         if (e >= doc.entities().size()) continue;
         if (auto st = tx_.set_lineage(e, origin); !st) return st;
@@ -397,19 +401,21 @@ core::Status Context::derive_results(std::span<const core::EntityId> made,
     return core::ok();
 }
 
-core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityKey> sources)
+core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityKey> sources,
+                                    const Args* arguments)
 {
-    return derive_results(std::span<const core::EntityId>(&made, 1), sources);
+    return derive_results(std::span<const core::EntityId>(&made, 1), sources, arguments);
 }
 
-core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityId> sources)
+core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityId> sources,
+                                    const Args* arguments)
 {
     std::vector<core::EntityKey> keys;
     keys.reserve(sources.size());
     for (const core::EntityId e : sources)
         if (e < document().entities().size()) keys.push_back(document().entities().key[e]);
     return derive_results(std::span<const core::EntityId>(&made, 1),
-                          std::span<const core::EntityKey>(keys));
+                          std::span<const core::EntityKey>(keys), arguments);
 }
 
 void Context::report(core::Json data) const

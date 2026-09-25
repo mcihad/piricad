@@ -449,6 +449,9 @@ void Bus::echo(std::string_view message) const
     // TEED, NOT REROUTED: the transcript still gets every line. The sink exists
     // so the CALLER can read what its own dispatch said (DispatchResult::lines).
     if (echo_sink_ != nullptr) echo_sink_->emplace_back(message);
+    // A NESTED RUN SPEAKS THROUGH ITS HOST (`run_nested`): what it said is in
+    // its result, and the host says what it did with it in its own words.
+    if (echo_muted_) return;
     if (on_echo)
         on_echo(message);
     else
@@ -467,6 +470,16 @@ Bus::EchoCapture::~EchoCapture()
 }
 
 core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
+{
+    return dispatch_into(inv, nullptr);
+}
+
+core::Result<DispatchResult> Bus::run_nested(const Invocation& inv, Transaction& tx)
+{
+    return dispatch_into(inv, &tx);
+}
+
+core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transaction* nested)
 {
     const CommandSpec* spec = reg_.resolve(inv.name);
     if (!spec)
@@ -593,24 +606,33 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
     ValidationRequest req{*spec, *args, inv.origin, doc_};
     if (auto st = validator_.run(req); !st) return st.error();
 
-    const bool borrow = batch_ && spec->undo == UndoPolicy::SingleTransaction;
+    if (nested != nullptr && spec->undo != UndoPolicy::SingleTransaction)
+        return core::err(ErrorCode::InvalidArgument,
+                         "'" + spec->id + "' başka bir komutun içinde çalıştırılamaz.");
+    const bool borrow =
+        nested != nullptr || (batch_ && spec->undo == UndoPolicy::SingleTransaction);
+    Transaction* const borrowed = nested != nullptr ? nested : batch_.get();
 
     Session session(*this, *spec, std::make_unique<ArgInputSource>(*args, inv.origin),
                     borrow ? nullptr
                            : std::make_unique<Transaction>(
                                  doc_, spec->summary.empty() ? spec->id : spec->summary),
-                    borrow ? batch_.get() : nullptr);
+                    borrow ? borrowed : nullptr);
+    session.set_nested(nested != nullptr);
 
     std::vector<std::string> said;
+    const bool was_muted = echo_muted_;
+    if (nested != nullptr) echo_muted_ = true;
     core::Result<DispatchResult> result = [&] {
         const EchoCapture capture(*this, said);
         return run_to_completion(session);
     }();
+    echo_muted_ = was_muted;
     if (result) {
         result.value().lines  = std::move(said);
         result.value().report = session.report();
     }
-    if (result && borrow) ++batch_commands_;
+    if (result && borrow && nested == nullptr) ++batch_commands_;
     return result;
 }
 
@@ -835,6 +857,10 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // during the `supply` calls the host made, each outside this call.
     result.report = session.report();
 
+    // A NESTED RUN IS ITS HOST'S: the host's line is the record, and a replay
+    // of it runs this again (`run_nested`).
+    if (session.nested()) return result;
+
     if (!read_only) journal_entry(session);
 
     if (result.mutated && on_document_changed) on_document_changed();
@@ -848,49 +874,20 @@ void Bus::journal_entry(const Session& session)
     e.command_id = session.spec().id;
     e.args       = session.resolved();
 
-    // WRITTEN IN THE DECLARED ORDER, not the typing order. `Args` keeps insertion
-    // order, so one invocation typed two ways wrote two different journal lines —
-    // and Article 6.4 asks for a byte-identical journal from the GUI, the command
-    // line and a script. The three cannot be made to agree on a typing order: a
-    // tool that starts `KILAVUZ yon=45g` and then asks for the point binds `yon`
-    // first, while a typed line puts the positional point first. The declared
-    // order is the one thing every client shares.
-    std::vector<std::string> declared;
-    declared.reserve(session.spec().params.size());
-    for (const Param& p : session.spec().params)
-        declared.push_back(p.name);
-    e.args.reorder_like(declared);
-
-    // AND IN THE DECLARED KIND, for the same reason and the same article. A whole
-    // number reaches a `Number` parameter as `Number` from the command line
-    // (`delta=25` → 25.0) and as `Int` from a script (`"delta": 25` → 25), so one
-    // invocation wrote `"delta":25.0` down one road and `"delta":25` down the
-    // other — byte-different for a value that is the same number.
-    //
-    // Only a SCALAR on a numeric parameter is touched, and only between the two
-    // numeric shapes: a list already round-trips through `Value::from_json`'s
-    // fractional check, and a word, a point or a selection is left exactly as it
-    // arrived. Nothing about the value changes — `25` and `25.0` are one number,
-    // and the record now says so the same way whoever asked.
-    // AND NOT AT ALL WHEN IT IS EMPTY. An `Empty` value means "nothing was
-    // accepted" — that is the documented meaning, and it is what a command
-    // writes to take back an answer it asked for but did not build its result
-    // from (ÇOKGEN's pointed corner) or refused outright (`want_objects`). The
-    // record used to print it as `"kose":null`, which is a non-answer written as
-    // an answer: it made two clients doing the same job write different lines,
-    // and a replay would hand the body a key it has to know to ignore.
-    for (const Param& p : session.spec().params)
-        if (const Value* held = e.args.find(p.name); held != nullptr && held->empty())
-            e.args.erase(p.name);
-
-    for (const Param& p : session.spec().params) {
-        const Value* held = e.args.find(p.name);
-        if (held == nullptr) continue;
-        if (p.kind == ParamKind::Number && held->kind() == Value::Kind::Int)
-            e.args.set(p.name, Value::number(held->as_number()));
-        else if (p.kind == ParamKind::Integer && held->kind() == Value::Kind::Number)
-            e.args.set(p.name, Value::integer(held->as_int()));
-    }
+    // WRITTEN IN THE DECLARED ORDER, not the typing order, AND IN THE DECLARED
+    // KIND (`canonical_arguments`). `Args` keeps insertion order, so one
+    // invocation typed two ways wrote two different journal lines — and Article
+    // 6.4 asks for a byte-identical journal from the GUI, the command line and a
+    // script. The three cannot be made to agree on a typing order: a tool that
+    // starts `KILAVUZ yon=45g` and then asks for the point binds `yon` first,
+    // while a typed line puts the positional point first. The declared order is
+    // the one thing every client shares. A whole number reaches a `Number`
+    // parameter as `Number` from the command line (`delta=25` → 25.0) and as
+    // `Int` from a script (`"delta": 25` → 25): the record says it one way. An
+    // `Empty` value means "nothing was accepted" — a command writes one to take
+    // back an answer it asked for — and the record leaves it out rather than
+    // print a non-answer as `null`.
+    e.args = canonical_arguments(session.spec(), std::move(e.args));
 
     e.origin       = session.input().origin();
     e.crs          = doc_.crs().id();
@@ -948,8 +945,9 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
     // WHAT FOLLOWED IS SAID, because it happened to objects the user did not
     // name: captions that re-placed themselves beside a moved edge, a length
     // re-written, and — the one that matters most — a caption on a locked layer
-    // left standing apart from the edge it describes (TODOS C-07).
-    if (!on_echo) return;
+    // left standing apart from the edge it describes (TODOS C-07). A nested run's
+    // are its host's to say (`run_nested`).
+    if (!on_echo || echo_muted_) return;
     if (settled.erased != 0)
         on_echo("Silinen nesnelere bağlı " + std::to_string(settled.erased) + " nesne de silindi.");
     if (settled.followed != 0 || settled.relabelled != 0) {

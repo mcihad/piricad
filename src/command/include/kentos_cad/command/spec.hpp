@@ -403,6 +403,14 @@ Effect effect_of(const CommandSpec& spec, const Args& args);
 /// decided what to send.
 Effect effect_of(const CommandSpec& spec);
 
+/// `args` as the journal writes them for `spec` (command.md, Article 6.4): in
+/// the parameters' declared order, a whole number on a `Number` parameter as a
+/// number and a fraction on an `Integer` one as an integer, and an empty value
+/// dropped — the one form every client's run of one invocation agrees on. The
+/// journal writes this, and so does a result's record of how it was run
+/// (TODOS F-04), so a replay records the same.
+Args canonical_arguments(const CommandSpec& spec, Args args);
+
 /// Declares the factory for one built-in command. The body returns its CommandSpec.
 /// Registration happens in exactly one place (commands/builtin.cpp) from one list,
 /// which keeps the static-initialisation order defined and survives static linking.

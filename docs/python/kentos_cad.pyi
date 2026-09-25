@@ -2373,12 +2373,14 @@ def contour(
     *,
     interval: int = ...,
     layer: str = ...,
+    objects: list[int] = ...,
 ) -> int:
     """Kotlu noktalardan eş yükselti eğrileri çizer.
 
     Komut: core.contour (EŞYÜKSELTİ)
         interval — Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m)
         layer — Eğrilerin çizileceği katman; varsayılan ESYUKSELTI
+        objects — Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar [kalıcı nesne anahtarı]
     """
 
 def earthwork(

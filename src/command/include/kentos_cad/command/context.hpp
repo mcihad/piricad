@@ -233,15 +233,24 @@ public:
     /// says it is out of date. For an analysis output — a buffer, an area
     /// generated from lines, a boundary, a contour — never for a copy or a
     /// piece, which are history (`derive`).
-    core::Status derive_result(core::EntityId made, std::span<const core::EntityKey> sources);
+    ///
+    /// `arguments`, when given, is HOW IT WAS RUN — this command's arguments
+    /// less the objects it read (`nesneler`) — kept with the origin so the
+    /// result can be computed again from its sources as they are then
+    /// (`BAĞIMLILIK islem=yenile`). Without it the result can go out of date
+    /// but cannot be recomputed.
+    core::Status derive_result(core::EntityId made, std::span<const core::EntityKey> sources,
+                               const Args* arguments = nullptr);
 
     /// The same, from the sources' rows.
-    core::Status derive_result(core::EntityId made, std::span<const core::EntityId> sources);
+    core::Status derive_result(core::EntityId made, std::span<const core::EntityId> sources,
+                               const Args* arguments = nullptr);
 
     /// The same for every object one run made from the same sources: the
     /// revisions are read once and the origin is held once.
     core::Status derive_results(std::span<const core::EntityId> made,
-                                std::span<const core::EntityKey> sources);
+                                std::span<const core::EntityKey> sources,
+                                const Args* arguments = nullptr);
 
     // ---- read access ----
     const core::Document& document() const noexcept { return doc_; }
