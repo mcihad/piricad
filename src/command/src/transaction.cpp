@@ -24,7 +24,15 @@
 
 namespace kentos::command {
 
-Transaction::Transaction(Document& doc, std::string label) : doc_(doc), label_(std::move(label)) {}
+Transaction::Transaction(Document& doc, std::string label)
+    : doc_(doc), label_(std::move(label)), first_born_(static_cast<EntityId>(doc.entities().size()))
+{}
+
+Status Transaction::may_change(EntityId e) const
+{
+    if (e >= first_born_) return core::ok();
+    return doc_.editable(e);
+}
 
 LayerId Transaction::ensure_layer(std::string_view name)
 {
@@ -60,6 +68,7 @@ Result<EntityId> Transaction::add_area(LayerId layer,
 
 Status Transaction::set_entity_layer(EntityId e, LayerId layer)
 {
+    if (auto st = may_change(e); !st) return st;
     core::Op undo;
     auto st = doc_.set_entity_layer(e, layer, undo);
     if (!st) return st;
@@ -250,6 +259,7 @@ Status Transaction::set_layer_style(LayerId l, StyleId style)
 
 Status Transaction::set_entity_style(EntityId e, StyleId style)
 {
+    if (auto st = may_change(e); !st) return st;
     core::Op undo;
     auto st = doc_.set_entity_style(e, style, undo);
     if (!st) return st;
@@ -381,6 +391,7 @@ core::Result<core::DashId> Transaction::intern_dash(const core::DashPattern& pat
 
 Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v)
 {
+    if (auto st = may_change(e); !st) return st;
     core::Op undo;
     auto st = doc_.set_attribute(col, e, v, undo);
     if (!st) return st;
@@ -391,6 +402,7 @@ Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::Attr
 Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
                              core::TextAnchor anchor)
 {
+    if (auto st = may_change(e); !st) return st;
     core::Op undo;
     auto st = doc_.set_text(e, std::move(content), height, anchor, undo);
     if (!st) return st;
@@ -401,6 +413,7 @@ Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
 Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
                              core::TextAnchor anchor, core::TextLines lines)
 {
+    if (auto st = may_change(e); !st) return st;
     core::Op undo;
     auto st = doc_.set_text(e, std::move(content), height, anchor, lines, undo);
     if (!st) return st;

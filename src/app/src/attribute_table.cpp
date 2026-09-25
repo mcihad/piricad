@@ -105,16 +105,18 @@ AttributeModel::AttributeModel(Controller& controller, QString layerName, QObjec
     refresh();
 }
 
-QString AttributeModel::rawText(core::EntityId slot, int column) const
+QString AttributeModel::rawText(core::EntityId e, int column) const
 {
     const core::Document& doc = controller_.document();
-    if (column == 0) return QString::number(static_cast<qulonglong>(doc.entities().key[slot]));
+    if (column == 0) return QString::number(static_cast<qulonglong>(doc.entities().key[e]));
     if (column < 1 || column > columns_.size()) return {};
 
-    const core::AttrColumn* held = doc.attributes().column(columns_[column - 1]);
-    if (!held || slot >= held->rows() || !held->present(slot)) return {};
-    const auto cell = held->get(slot);
-    if (!cell) return {};
+    // THROUGH THE DOCUMENT, which reads the entity's geometry slot — the row
+    // its cells live in. `e` is not that row once a grip has moved the entity
+    // to a new slot, and reading by `e` showed the parcel's pre-edit value, or
+    // another parcel's, after the first drag (TODOS F-02).
+    const auto cell = doc.attribute(columns_[column - 1], e);
+    if (!cell || !cell.value().present) return {};
     return QString::fromStdString(core::attr_display(cell.value(), core::DecimalMark::Point));
 }
 
@@ -163,27 +165,32 @@ void AttributeModel::refresh()
     // The predicate reads THIS row's cells. Nothing about the grammar knows what
     // an attribute is, which is what lets the same expression filter a PostGIS
     // result set the day that lands.
+    // A BLOCK'S OR A REFERENCE'S MEMBER IS NOT A ROW: it is part of a
+    // definition, drawn wherever the block is placed, and a value typed into it
+    // here would edit every placement at once — or, in an external reference,
+    // be lost at the next reload of its file.
+    const auto listed = [&doc, scoped, only](core::EntityId e) {
+        return doc.alive(e) && (doc.entities().flags[e] & core::FlagInBlock) == 0 &&
+               (!scoped || doc.entities().layer[e] == only);
+    };
+
     std::size_t total = 0;
-    for (core::EntityId slot = 0; slot < doc.entities().size(); ++slot) {
-        if (!doc.alive(slot)) continue;
-        if (scoped && doc.entities().layer[slot] != only) continue;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!listed(e)) continue;
         ++total;
 
-        if (onlySelected_ && !picked.contains(doc.entities().key[slot])) continue;
+        if (onlySelected_ && !picked.contains(doc.entities().key[e])) continue;
 
         const command::FieldReader field =
-            [&table, slot](std::string_view name) -> std::optional<std::string> {
+            [&doc, &table, e](std::string_view name) -> std::optional<std::string> {
             const core::AttrId col = table.find(name);
             if (col == core::kNoAttr) return std::nullopt;
-
-            const core::AttrColumn* column = table.column(col);
-            if (!column || slot >= column->rows() || !column->present(slot)) return std::nullopt;
 
             // The shared formatter with the POINT mark and NO thousands
             // grouping: the predicate compares numbers, and `2 940.12` is not a
             // number to anything that has to parse it back.
-            const auto cell = column->get(slot);
-            if (!cell) return std::nullopt;
+            const auto cell = doc.attribute(col, e);
+            if (!cell || !cell.value().present) return std::nullopt;
             return core::attr_display(cell.value(), core::DecimalMark::Point);
         };
 
@@ -193,11 +200,8 @@ void AttributeModel::refresh()
             // mistake and repeating it a thousand times helps nobody.
             error_ = QString::fromStdString(matched.error().message);
             rows_.clear();
-            for (core::EntityId all = 0; all < doc.entities().size(); ++all) {
-                if (!doc.alive(all)) continue;
-                if (scoped && doc.entities().layer[all] != only) continue;
-                rows_.push_back(doc.entities().key[all]);
-            }
+            for (core::EntityId all = 0; all < doc.entities().size(); ++all)
+                if (listed(all)) rows_.push_back(doc.entities().key[all]);
             break;
         }
         if (!matched.value()) continue;
@@ -206,11 +210,11 @@ void AttributeModel::refresh()
         if (!needle.isEmpty()) {
             bool found = false;
             for (int c = 0; c <= columns_.size() && !found; ++c)
-                found = folded(rawText(slot, c)).contains(needle);
+                found = folded(rawText(e, c)).contains(needle);
             if (!found) continue;
         }
 
-        rows_.push_back(doc.entities().key[slot]);
+        rows_.push_back(doc.entities().key[e]);
     }
 
     applySort();
@@ -292,22 +296,20 @@ QVariant AttributeModel::data(const QModelIndex& index, int role) const
 
     const core::Document& doc = controller_.document();
     const core::EntityKey key = keyAt(index.row());
-    const core::EntityId slot = doc.slot_of(key);
+    const core::EntityId e    = doc.slot_of(key);
 
     if (role == Qt::DisplayRole || role == Qt::EditRole) {
         if (index.column() == 0) return static_cast<qulonglong>(key);
-
-        const core::AttrColumn* column = doc.attributes().column(columns_[index.column() - 1]);
-        if (!column || slot >= column->rows() || !column->present(slot))
-            return role == Qt::EditRole ? QVariant{} : QStringLiteral("—");
 
         // `AttrColumn::text` is empty for a NUMERIC column — it returns the
         // interned string and a number has none — so an `ada_no` declared
         // `tam_sayi` came out blank in every row. The shared formatter renders
         // every type, and with the POINT mark, because the filter grammar, the
-        // sort and every export read a point (`core::DecimalMark`).
-        const auto cell = column->get(slot);
-        if (!cell) return QStringLiteral("—");
+        // sort and every export read a point (`core::DecimalMark`). The cell
+        // is read through the document, by the entity's geometry slot.
+        const auto cell = doc.attribute(columns_[index.column() - 1], e);
+        if (!cell || !cell.value().present)
+            return role == Qt::EditRole ? QVariant{} : QStringLiteral("—");
 
         const QString text =
             QString::fromStdString(core::attr_display(cell.value(), core::DecimalMark::Point));
@@ -326,8 +328,8 @@ QVariant AttributeModel::data(const QModelIndex& index, int role) const
 
     if (role == GridRole::Null) {
         if (index.column() == 0) return false;
-        const core::AttrColumn* column = doc.attributes().column(columns_[index.column() - 1]);
-        return !column || slot >= column->rows() || !column->present(slot);
+        const auto cell = doc.attribute(columns_[index.column() - 1], e);
+        return !cell || !cell.value().present;
     }
 
     if (role == GridRole::Edited) {
@@ -362,13 +364,13 @@ QString AttributeModel::validateRow(int row) const
     if (row < 0 || row >= rows_.size()) return {};
 
     const core::Document& doc = controller_.document();
-    const core::EntityId slot = doc.slot_of(rows_[row]);
-    if (slot == core::kNoEntity || !doc.alive(slot)) return {};
+    const core::EntityId e    = doc.slot_of(rows_[row]);
+    if (e == core::kNoEntity || !doc.alive(e)) return {};
 
     // THE DOCUMENT'S OWN CHECK, not a second one written here. `validate_row`
     // is what a command runs before it commits, and a table that judged by a
     // different rule would call a row good that the next save refuses.
-    const auto checked = doc.attributes().validate_row(doc.entities().slot[slot], doc.catalogues());
+    const auto checked = doc.attributes().validate_row(doc.entities().slot[e], doc.catalogues());
     return checked.ok() ? QString() : QString::fromStdString(checked.error().message);
 }
 
@@ -1257,6 +1259,8 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
     }
 
     if (action == QStringLiteral("sikayet")) return complaint_->text();
+
+    if (action == QStringLiteral("satirlar")) return QString::number(model_->rowCount());
 
     return QStringLiteral("bilinmeyen eylem");
 }

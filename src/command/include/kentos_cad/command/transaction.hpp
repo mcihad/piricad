@@ -199,6 +199,18 @@ public:
     core::Result<AdoptSummary> adopt_from(const core::Document& scratch,
                                           const AdoptOptions& options);
 
+    /// Whether this transaction may change a PROPERTY of `e` — its layer,
+    /// style, text or a cell (TODOS F-02). An entity born inside this
+    /// transaction always may: a copy, a piece, a member being assembled, a
+    /// reference's file being read in. One that was already there may only
+    /// where the document allows an edit (`Document::editable`): not on a
+    /// locked layer, not a member of a block or an external reference. The
+    /// geometry setters ask the document the same question themselves; these
+    /// four did not, so a locked parcel's ada number could be retyped, moved to
+    /// another layer or restyled, and a reference's member edited until the
+    /// next reload quietly undid it.
+    Status may_change(EntityId e) const;
+
     /// Moves an entity to another layer, keeping its identity.
     Status set_entity_layer(EntityId e, LayerId layer);
 
@@ -421,6 +433,10 @@ private:
     std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
     std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
     std::size_t texts_settled_upto_{0};   ///< how far `settle_texts` has read
+
+    /// The first entity row this transaction can have created: rows are
+    /// append-only, so everything at or past it was born inside it.
+    EntityId first_born_{0};
 
     /// Whether `hatch`'s rings are exactly what `sources` give it now.
     bool fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const;

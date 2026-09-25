@@ -131,7 +131,7 @@ struct Op
         SetLayerStyle,      ///< layer,  style_arg
         SetLayerGroup,      ///< layer,  str_arg
         SetCrs,             ///< crs_arg
-        SetAttribute,       ///< attr_col, entity (as the row), attr_arg
+        SetAttribute,       ///< attr_col, entity (as the row), attr_arg, str_arg (the column's id)
         SetText,            ///< entity, str_arg, text_height, text_anchor
         SetGeometry,        ///< entity, geometry_slot
         SetKindGeometry,    ///< entity, geometry_slot, kind_arg — the kind it had before
@@ -595,6 +595,13 @@ public:
     /// reader installs what it read.
     void set_guides(std::vector<GuideRow> rows);
 
+    /// The cell of entity `e` in column `col` — `present` false when empty.
+    ///
+    /// READ THROUGH THE ENTITY'S GEOMETRY SLOT, the row every side table is
+    /// indexed by. It is not `e`: a geometry edit gives the entity a new slot
+    /// and carries its cells there (`set_geometry`), so a caller that indexed
+    /// a column by `e` read the old, pre-edit value — or another entity's —
+    /// after the first grip drag (TODOS F-02). Read cells through this.
     Result<AttrValue> attribute(AttrId col, EntityId e) const;
 
     /// Attaches or replaces the text on an entity. Height is ground millimetres.

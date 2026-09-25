@@ -97,6 +97,8 @@ Betikten çağrıldığında `nesneler` ve `katman` verilmelidir.
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 | `'<katman>' katmanı kilitli.` | Hedef katman kilitli | [`KATMAN`](layer.md) ile kilidi açın |
 | `Katman adı boş olamaz.` | Boş ad verildi | Bir katman adı yazın |
+| `'<katman>' katmanı kilitli; üzerindeki nesne düzenlenemez. Kilidi KATMAN ad=<katman> kilitli=hayır ile açın.` | Nesne kilitli bir katmanda: değeri, katmanı, stili ve yazısı da kilitlidir | Kilidi [`KATMAN`](layer.md) ile açın |
+| `Bu nesne '<ad>' dış referansının parçası ('<dosya>'); kendi dosyasında düzenlenir ve yenilenince oradan yeniden okunur. …` | Nesne bir [dış referansın](xref.md) içinde; buradaki bir değişiklik bir sonraki yenilemede kaybolurdu | Kaynak dosyada düzenleyin, ya da referansı `DIŞREFERANS islem=bagla ad=<ad>` ile çizime bağlayın |
 
 ## İlgili
 

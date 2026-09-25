@@ -6689,6 +6689,90 @@ int MainWindow::probeRealMouse()
                       .arg(from, 0, 'f', 4));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 31. A PARCEL DRAGGED BY ITS CORNER IS STILL ITS ROW (TODOS F-02) ----
+        //
+        // The attribute table read a cell by the object's ROW NUMBER, and a
+        // grip moves an object to a new geometry slot — so after the first drag
+        // the table showed the parcel's old value, or its neighbour's, and a
+        // value typed into its row seemed not to stick. Two parcels with values
+        // of their own; the first dragged by a corner with the mouse; then the
+        // table asked, and written through.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL", "SÜTUN kimlik=ada tur=tam_sayi", "ALAN 0,0 20,0 20,10 0,10",
+                  "ALAN 30,0 40,0 40,10 30,10", "ÖZNİTELİK ada 1 101", "ÖZNİTELİK ada 2 202"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{-5'000, -10'000, 50'000, 20'000});
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            QCoreApplication::processEvents();
+            const auto at = [this](core::Point2 world) {
+                const auto on = canvas_->view().to_screen(world);
+                return QPointF(on.x, on.y);
+            };
+            onCanvas(QEvent::MouseMove, at(core::Point2{20'000, 0}), Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, at(core::Point2{20'000, 0}), Qt::LeftButton);
+            onCanvas(QEvent::MouseMove, at(core::Point2{22'500, 0}), Qt::LeftButton);
+            onCanvas(QEvent::MouseMove, at(core::Point2{25'000, 0}), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, at(core::Point2{25'000, 0}), Qt::LeftButton);
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+
+            const core::Document& doc = controller_->document();
+            const core::EntityId dragged =
+                doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+            const core::RingSpan outline = doc.geometry().rings_of(doc.entities().slot[dragged]);
+            const core::Point2 corner{doc.geometry().ring_xs(outline.first)[1],
+                                      doc.geometry().ring_ys(outline.first)[1]};
+            check(std::llabs(corner.x - 25'000) <= 300 && std::llabs(corner.y) <= 300 &&
+                      doc.entities().slot[dragged] != static_cast<std::uint32_t>(dragged),
+                  QStringLiteral("parselin köşesi fareyle 25 m'ye çekildi; nesne yeni geometri "
+                                 "yuvasında (%1, %2)")
+                      .arg(static_cast<double>(corner.x) / 1000.0)
+                      .arg(static_cast<double>(corner.y) / 1000.0));
+
+            AttributeTable table(*controller_, QString(), this);
+            table.applyTheme(theme_);
+            table.resize(900, 360);
+            table.show();
+            QCoreApplication::processEvents();
+            const auto grid = [&table](const char* action, const QString& value = QString()) {
+                return table.probeGrid(QString::fromUtf8(action), value);
+            };
+            check(grid("satirlar") == QStringLiteral("2") &&
+                      grid("hucre", QStringLiteral("0,0")) == QStringLiteral("1") &&
+                      grid("hucre", QStringLiteral("0,1")) == QStringLiteral("101") &&
+                      grid("hucre", QStringLiteral("1,1")) == QStringLiteral("202"),
+                  QStringLiteral("tabloda çekilen parselin satırı kendi değerini gösteriyor "
+                                 "(%1 satır; 1: %2, 2: %3)")
+                      .arg(grid("satirlar"), grid("hucre", QStringLiteral("0,1")),
+                           grid("hucre", QStringLiteral("1,1"))));
+            if (shooting) (void)table.grab().save(into + QStringLiteral("/kimlik-tablo.png"));
+
+            grid("kip", QStringLiteral("evet"));
+            grid("git", QStringLiteral("0,1"));
+            grid("ac");
+            grid("yaz", QStringLiteral("103"));
+            const auto value_of = [&doc](std::uint64_t key) {
+                const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+                const auto v           = doc.attribute(doc.attributes().find("ada"), e);
+                return v.ok() && v.value().present ? v.value().number : std::int64_t{-1};
+            };
+            check(value_of(1) == 103 && value_of(2) == 202 &&
+                      grid("hucre", QStringLiteral("0,1")) == QStringLiteral("103"),
+                  QStringLiteral("tabloya yazılan değer çekilen parsele gitti ve orada göründü "
+                                 "(1: %1, 2: %2)")
+                      .arg(value_of(1))
+                      .arg(value_of(2)));
+            if (shooting)
+                (void)table.grab().save(into + QStringLiteral("/kimlik-tablo-yazildi.png"));
+            table.close();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

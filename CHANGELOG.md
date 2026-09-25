@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — tek nesne kimliği, 1. aşama (F-02)
+
+- **Öznitelik tablosu** tutamakla düzenlenen bir nesnenin hücrelerini yanlış satırdan
+  okuyordu: ilk sürüklemeden sonra parselin eski değeri — ya da sonra çizilen bir
+  nesnede başkasının değeri — görünüyor, tabloya yazılan değer tutmuyormuş gibi
+  kalıyordu. Artık her hücre nesnenin kendisinden okunur; alan istatistikleri, süzme
+  ve arama da.
+- Bir sütun silindikten sonra **GERİAL** eski bir değeri **komşu sütuna** yazıyordu
+  (sütunlar yeniden numaralanıyordu). Artık değer kendi sütununa döner; silinmiş bir
+  sütunun değeri hiçbir yere yazılmaz.
+- **Kilitli katman** kilidi artık nesnenin değerini, katmanını, stilini ve yazısını da
+  korur: ÖZNİTELİK, tablodan yazma, KATMANAT, STİLKOPYALA, STİL ve YAZIDÜZENLE kilitli
+  bir nesneyi adıyla reddeder (önceden yalnız geometri kilitliydi).
+- **Dış referansın parçasına** değer yazılamaz; ileti referansın adını, dosyasını ve
+  `DIŞREFERANS islem=bagla` yolunu söyler. Blok ve dış referans parçaları öznitelik
+  tablosunda satır olarak görünmez.
+
 ### Düzeltildi — yazı genişliğinin tek ölçüsü (C-18)
 
 - Bir yazının **seçme kutusu**, bir ölçü yazısının uzatma çizgileri arasına **sığıp

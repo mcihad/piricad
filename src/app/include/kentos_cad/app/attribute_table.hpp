@@ -143,7 +143,7 @@ signals:
 private:
     /// The text of one cell as the filter, the search and the sort read it: the
     /// point mark, no grouping, empty for an absent value.
-    QString rawText(core::EntityId slot, int column) const;
+    QString rawText(core::EntityId e, int column) const;
 
     /// Puts `rows_` in the order `sortColumn_` asks for.
     void applySort();

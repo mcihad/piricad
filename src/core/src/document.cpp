@@ -487,10 +487,28 @@ Status Document::editable(EntityId e) const
     if (!kind_known(e))
         return err(ErrorCode::Unsupported,
                    "Bu yapının tanımadığı türdeki nesne düzenlenemez; olduğu gibi korunur.");
-    if ((entities_.flags[e] & FlagInBlock) != 0)
+    if ((entities_.flags[e] & FlagInBlock) != 0) {
+        // A REFERENCE'S MEMBER IS NOT THIS DRAWING'S TO EDIT: it comes from its
+        // file and is read again from there, so the answer names the file and
+        // the two ways out — not BLOKDÜZENLE, which refuses a reference.
+        const EntityKey key = entities_.key[e];
+        for (BlockId b = 0; b < blocks_.size(); ++b) {
+            const BlockDef& def = blocks_.at(b);
+            if (!def.external() || std::ranges::find(def.members, key) == def.members.end())
+                continue;
+            const std::string_view file = file_name_of(def.path);
+            return err(ErrorCode::ValidationFailed,
+                       "Bu nesne '" + def.name + "' dış referansının parçası" +
+                           (file.empty() ? std::string() : " ('" + std::string(file) + "')") +
+                           "; kendi dosyasında düzenlenir ve yenilenince oradan yeniden okunur. "
+                           "Burada düzenlemek için referansı çizime bağlayın: DIŞREFERANS "
+                           "islem=bagla ad=" +
+                           def.name + ".");
+        }
         return err(ErrorCode::ValidationFailed,
                    "Blok tanımındaki nesne doğrudan düzenlenemez; tanımı BLOKDÜZENLE ile "
                    "açıp düzenleyin.");
+    }
 
     // AND THE LAYER'S LOCK, which was missing and made `kilitli` mean almost
     // nothing. The lock was checked on every `add_*` and on nothing else, so a
@@ -1267,6 +1285,7 @@ Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& u
     undo_out.entity   = e;
     undo_out.attr_col = col;
     undo_out.attr_arg = was.value();
+    undo_out.str_arg  = column->spec().id; // the column by NAME: see `apply`
     return ok();
 }
 
@@ -1681,7 +1700,24 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetEntityAlive: return set_entity_alive(op.entity, op.bool_arg, inverse);
     case Op::Kind::SetEntityHidden: return set_entity_hidden(op.entity, op.bool_arg, inverse);
     case Op::Kind::SetEntityStyle: return set_entity_style(op.entity, op.style_arg, inverse);
-    case Op::Kind::SetAttribute: return set_attribute(op.attr_col, op.entity, op.attr_arg, inverse);
+    case Op::Kind::SetAttribute: {
+        // A COLUMN IS FOUND BY ITS NAME, not its number (TODOS F-02). Dropping a
+        // column renumbers every one after it, and a record that addressed
+        // its column by number wrote a parcel's old value into the NEIGHBOURING
+        // column on undo. A column that is gone — dropped, or declared again
+        // as another type — has no cell to put the value back into: nothing
+        // is written, and nothing is there to redo.
+        AttrId col = op.attr_col;
+        if (!op.str_arg.empty()) {
+            col                       = attributes_.find(op.str_arg);
+            const AttrColumn* current = attributes_.column(col);
+            if (current == nullptr || current->type() != op.attr_arg.type) {
+                inverse = Op{};
+                return ok();
+            }
+        }
+        return set_attribute(col, op.entity, op.attr_arg, inverse);
+    }
     case Op::Kind::SetText:
         return set_text(op.entity, op.str_arg, op.text_height, op.text_anchor, op.text_lines,
                         inverse);

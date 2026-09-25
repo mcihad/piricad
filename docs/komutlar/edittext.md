@@ -159,6 +159,8 @@ Yapay zekâ da bu komutu çağırabilir (`AiAccessible`), ama her öneri gibi
 | `Boş bir yazı bir yazı değildir; silmek için SİL kullanın.` | `yazi=""` verildi | Silmek istiyorsanız [SİL](erase.md) kullanın |
 | `Yazı yüksekliği sıfırdan büyük olmalı.` | `yukseklik` sıfır ya da negatif | Milimetre cinsinden pozitif bir değer yazın, örnek `3000` |
 | `Nesne bulunamadı veya silinmiş: <kimlik>` | `nesneler` içinde olmayan bir kimlik | Kimliği öznitelik tablosundan doğrulayın |
+| `'<katman>' katmanı kilitli; üzerindeki nesne düzenlenemez. Kilidi KATMAN ad=<katman> kilitli=hayır ile açın.` | Nesne kilitli bir katmanda: değeri, katmanı, stili ve yazısı da kilitlidir | Kilidi [`KATMAN`](layer.md) ile açın |
+| `Bu nesne '<ad>' dış referansının parçası ('<dosya>'); kendi dosyasında düzenlenir ve yenilenince oradan yeniden okunur. …` | Nesne bir [dış referansın](xref.md) içinde; buradaki bir değişiklik bir sonraki yenilemede kaybolurdu | Kaynak dosyada düzenleyin, ya da referansı `DIŞREFERANS islem=bagla ad=<ad>` ile çizime bağlayın |
 
 ## İlgili
 

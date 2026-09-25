@@ -175,5 +175,8 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Bilinmeyen nesne: 99. Nesne kimliklerini SEÇ ile görebilirsiniz.` | O kimlikte nesne yok ya da silinmiş | `SEÇ TÜMÜ` ile mevcut kimlikleri listeleyin |
 | `'ada_no' özniteliği tam sayı bekliyor. Girilen: 'bin iki yüz'` | Sayı isteyen bir sütuna metin verilmiş | Rakamla yazın; eski değer yerinde kalır |
 | `'ada_no' özniteliği evet/hayır bekliyor. Girilen: 'belki'` | Evet/hayır sütununa başka bir şey verilmiş | `evet`, `hayır`, `1` veya `0` yazın |
+| `'<katman>' katmanı kilitli; üzerindeki nesne düzenlenemez. Kilidi KATMAN ad=<katman> kilitli=hayır ile açın.` | Nesne kilitli bir katmanda: değeri, katmanı, stili ve yazısı da kilitlidir | Kilidi [`KATMAN`](layer.md) ile açın |
+| `Bu nesne '<ad>' dış referansının parçası ('<dosya>'); kendi dosyasında düzenlenir ve yenilenince oradan yeniden okunur. …` | Nesne bir [dış referansın](xref.md) içinde; buradaki bir değişiklik bir sonraki yenilemede kaybolurdu | Kaynak dosyada düzenleyin, ya da referansı `DIŞREFERANS islem=bagla ad=<ad>` ile çizime bağlayın |
+| `Blok tanımındaki nesne doğrudan düzenlenemez; tanımı BLOKDÜZENLE ile açıp düzenleyin.` | Nesne bir blok tanımının parçası | Tanımı [`BLOKDÜZENLE`](block_edit.md) ile açın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

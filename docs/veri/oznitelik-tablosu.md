@@ -204,6 +204,19 @@ düğmeleri sayfa sayfa kaydırır, uçtakiler başa ve sona gider), **Yalnızca
 göster** ve **Haritayla eşitle** anahtarları, en sağda seçili sütunun toplamı ve
 ortalaması.
 
+## Satır nesnenin kendisidir
+
+Her satır bir nesnedir ve **fid** sütunu onun kalıcı kimliğidir. Nesneyi tuvalde
+tutamağından çekmek, taşımak, döndürmek ya da ölçeklemek yalnız biçimini değiştirir:
+satırı, değerleri, seçimi, ona bağlı etiket ve ölçüleri onunla kalır; dosyaya
+kaydedip açınca da. Bir blok tanımının ya da [dış referansın](../komutlar/xref.md)
+parçaları satır olarak görünmez: bir blok her yerleştirildiği yerde aynı parçalarla
+çizilir, dış referansın parçaları da kendi dosyasından okunur — buradan yazılan bir
+değer ya bütün yerleşimleri birden değiştirir ya da bir sonraki yenilemede kaybolurdu.
+
+Kilitli bir katmandaki nesnenin değeri de kilitlidir: tabloda yazılan değer
+reddedilir ve ileti hangi katmanın kilitli olduğunu söyler.
+
 ## Seçim haritayla ortaktır
 
 Tabloda bir satır seçmek çizimde o nesneyi seçer; ikisi aynı nesnenin iki
@@ -246,6 +259,7 @@ Bugün olmayanlar ve hangi fazda gelecekleri:
 
 | İleti | Sebep | Çözüm |
 |---|---|---|
+| `'<katman>' katmanı kilitli; üzerindeki nesne düzenlenemez. …` | Değer yazılan nesne kilitli bir katmanda | Kilidi [`KATMAN`](../komutlar/layer.md) ile açın |
 | `Kapanmayan sütun adı tırnağı` | `"alan_m2` gibi, çift tırnak kapanmamış | Tırnağı kapatın |
 | `Kapanmayan metin tırnağı` | `'Konut` gibi | Tırnağı kapatın |
 | `Beklenen bir karşılaştırma: = != < <= > >= veya IS NULL` | `"alan_m2" 2000` — işleç yok | Aradaki işleci yazın |
