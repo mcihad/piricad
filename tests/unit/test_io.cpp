@@ -3292,6 +3292,51 @@ int first_of_kind(const core::Document& doc, core::KindId kind)
 
 } // namespace
 
+TEST_CASE("DXF: milimetrenin altındaki ayrıntı sayılır ve söylenir — örnek veriyle karar (F-03)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // THE SAMPLE THE SUB-MILLIMETRE DECISION WAS MADE ON (docs/veri/hassasiyet.md).
+    // Seed 29 is a detail drawn in millimetres, finer than the store: a 12,345 mm
+    // line, a 0,3 mm gap after it, a circle of 0,4 mm radius and a 2,5 mm text.
+    // Read into a millimetre drawing, every value is rounded once to the
+    // millimetre — and that is now COUNTED and SAID, with the worst case, where
+    // it used to happen in silence.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("AYAR cizim_birimi milimetre", Origin::Test).ok());
+    const std::string said = import_seed(rig, "29-milimetre-alti.dxf");
+    CHECK(said.find("değer milimetrenin altında ayrıntı taşıyordu") != std::string::npos);
+    CHECK(said.find("en çok 0,50 mm") != std::string::npos); // the 2,5 mm text height
+
+    // What the millimetre made of each.
+    std::vector<std::vector<core::Point2>> lines;
+    core::Mm text_height = 0;
+    bool circle          = false;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+        const std::uint32_t slot = rig.doc.entities().slot[e];
+        if (rig.doc.texts().has(slot)) {
+            text_height = rig.doc.texts().height(slot);
+        } else if (rig.doc.entities().kind[e] == core::kCircleKind) {
+            circle = true;
+        } else {
+            lines.push_back(first_ring(rig.doc, e));
+        }
+    }
+    REQUIRE_EQ(lines.size(), std::size_t{2});
+    CHECK_EQ(lines[0][1].x - lines[0][0].x, core::Mm{12}); // 12,345 mm → 12
+    CHECK_EQ(lines[1][0].x - lines[0][1].x, core::Mm{1});  // the 0,3 mm gap → 1 mm
+    CHECK(!circle);                                        // 0,4 mm radius → nothing
+    CHECK(said.find("atlandı") != std::string::npos);      // and that is said too
+    CHECK_EQ(text_height, core::Mm{3});                    // 2,5 mm → 3
+
+    // A map drawn in metres to the millimetre carries nothing finer, and the
+    // note does not appear — it is not a warning every GIS file earns.
+    Rig metres;
+    const std::string plain = import_seed(metres, "01-cizgi-ve-parsel.dxf");
+    CHECK(plain.find("milimetrenin altında ayrıntı") == std::string::npos);
+}
+
 TEST_CASE("DXF: $INSUNITS başlığı ayarın yerine geçmez, yalnız karşılaştırılır")
 {
     if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");

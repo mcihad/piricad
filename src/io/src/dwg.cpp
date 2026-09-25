@@ -154,9 +154,13 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                       "INSUNITS=" + std::to_string(code) + " bu sürümde çevrilmiyor; çizim " +
                           core::drawing_unit_name(unit) + " olarak okundu (AYAR çizim_birimi).");
     }
-    const auto mm = [unit](double x, double y) {
-        return core::Point2{core::mm_from_drawing_units(x, unit),
-                            core::mm_from_drawing_units(y, unit)};
+    // By THE rounding, with what it took counted (TODOS F-03).
+    const auto mm = [unit, &diag](double x, double y) {
+        const double ex = core::drawing_units_to_mm_exact(x, unit);
+        const double ey = core::drawing_units_to_mm_exact(y, unit);
+        diag.rounded(ex);
+        diag.rounded(ey);
+        return core::Point2{core::mm_round(ex), core::mm_round(ey)};
     };
 
     // The wizard's tick boxes. Empty means every layer, which is what a bare

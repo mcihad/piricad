@@ -358,6 +358,15 @@ constexpr Mm mm_from_drawing_units(double value, DrawingUnit unit) noexcept
     return mm_round(value * static_cast<double>(r.num) / static_cast<double>(r.den));
 }
 
+/// A file value in `unit` as millimetres BEFORE the one rounding — exactly what
+/// `mm_from_drawing_units` rounds, bit for bit — for a reader that reports how
+/// much the rounding took (TODOS F-03). Never stored.
+constexpr double drawing_units_to_mm_exact(double value, DrawingUnit unit) noexcept
+{
+    const UnitRatio r = drawing_unit_ratio(unit);
+    return value * static_cast<double>(r.num) / static_cast<double>(r.den);
+}
+
 /// Millimetres to a file value in `unit`. A transient `double` for a writer;
 /// never stored (R3).
 constexpr double drawing_units_from_mm(Mm mm, DrawingUnit unit) noexcept

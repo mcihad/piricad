@@ -22,6 +22,8 @@
 #include "kentos_cad/script/json_runner.hpp"
 
 #include "kentos_cad/core/block_reference.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
@@ -1485,4 +1487,147 @@ TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür
     // One step back, whole.
     run("GERİAL");
     CHECK_EQ(r.doc.content_hash(), before);
+}
+
+// =============================================================================
+// F-03's proof: a millimetre survives every step at TUREF coordinates
+// =============================================================================
+
+namespace {
+
+/// What a 1 mm drawing at TM30 coordinates must keep: a 1 × 1 mm parcel, a 1 mm
+/// line and two points 1 mm apart.
+struct Millimetre
+{
+    core::Mm2 area{-1};
+    core::Mm perimeter{-1};
+    core::Mm line{-1};
+    core::Point2 first{};
+    core::Point2 second{};
+    std::size_t points{0};
+};
+
+Millimetre millimetre_of(const core::Document& doc)
+{
+    Millimetre m;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e)) continue;
+        const std::uint32_t slot  = doc.entities().slot[e];
+        const core::RingSpan span = doc.geometry().rings_of(slot);
+        if (span.count == 0) continue;
+        const auto xs = doc.geometry().ring_xs(span.first);
+        const auto ys = doc.geometry().ring_ys(span.first);
+        if (doc.entities().kind[e] == core::kPointKind) {
+            (m.points++ == 0 ? m.first : m.second) = core::Point2{xs[0], ys[0]};
+        } else if (doc.geometry().ring_role[span.first] != core::RingRole::Open) {
+            m.area      = doc.geometry().area_of(slot);
+            m.perimeter = doc.geometry().perimeter_of(slot);
+        } else if (xs.size() == 2) {
+            m.line = core::segment_length(core::Point2{xs[0], ys[0]}, core::Point2{xs[1], ys[1]});
+        }
+    }
+    return m;
+}
+
+} // namespace
+
+TEST_CASE("F-03 KANIT: büyük koordinatta 1 mm her adımda korunur, ara hesap taşmaz")
+{
+    // THE ACCEPTANCE, end to end. At TUREF/TM30 coordinates — a northing of
+    // 4 310 220 m is 4,3·10⁹ mm, whose square leaves 64 bits — a one-millimetre
+    // parcel keeps its one square millimetre, a one-millimetre line its length,
+    // two points a millimetre apart their millimetre, through every exact step
+    // the program has: a move a thousand kilometres away and back, a quarter
+    // turn and back, a save and an open, a DXF and a GeoPackage out and in.
+    // A reprojection rounds each coordinate to the millimetre on the way, so it
+    // keeps each point within that and no more.
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    REQUIRE(catalogue.ok());
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+    domain::geodesy::register_geodesy_commands(reg);
+    io::FileService files{bus};
+    domain::geodesy::CrsService service(bus, std::move(catalogue.value()));
+    const auto run = [&bus](const std::string& line) {
+        auto r = bus.execute_line(line, command::Origin::Test);
+        if (!r) FAIL_WITH(line.c_str(), r.error().message);
+    };
+
+    run("AYAR koordinat_sistemi EPSG:5254");
+    run("KATMAN ad=PARSEL");
+    run("ALAN 485320.150,4310220.400 485320.151,4310220.400 485320.151,4310220.401 "
+        "485320.150,4310220.401");
+    run("ÇİZGİ 485320.150,4310220.410 485320.151,4310220.410");
+    run("NOKTA 485320.150,4310220.420");
+    run("NOKTA 485320.151,4310220.420");
+
+    const auto kept = [](const core::Document& d, core::Point2 at, const char* step) {
+        const Millimetre m = millimetre_of(d);
+        INFO(step);
+        CHECK_EQ(m.area, core::Mm2{1});
+        CHECK_EQ(m.perimeter, core::Mm{4});
+        CHECK_EQ(m.line, core::Mm{1});
+        CHECK_EQ(m.points, std::size_t{2});
+        CHECK_EQ(m.first, at);
+        CHECK_EQ(m.second.x - m.first.x, core::Mm{1});
+        CHECK_EQ(m.second.y, m.first.y);
+    };
+    const core::Point2 home{485'320'150, 4'310'220'420};
+    kept(bus.document(), home, "çizildiği gibi");
+    const std::uint64_t drawn = bus.document().content_hash();
+
+    // A thousand kilometres away and back: exact, bit for bit.
+    run("SEÇ mod=TÜMÜ");
+    run("TAŞI baslangic=0,0 bitis=1000000,1000000");
+    kept(bus.document(), core::Point2{home.x + 1'000'000'000, home.y + 1'000'000'000}, "taşındı");
+    run("SEÇ mod=TÜMÜ");
+    run("TAŞI baslangic=1000000,1000000 bitis=0,0");
+    CHECK_EQ(bus.document().content_hash(), drawn);
+
+    // A quarter turn and back about a corner: exact too.
+    run("SEÇ mod=TÜMÜ");
+    run("DÖNDÜR merkez=485320,4310220 aci=90");
+    CHECK_EQ(millimetre_of(bus.document()).area, core::Mm2{1});
+    run("SEÇ mod=TÜMÜ");
+    run("DÖNDÜR merkez=485320,4310220 aci=-90");
+    CHECK_EQ(bus.document().content_hash(), drawn);
+
+    // Saved and opened, and out to the two exchange formats and back in.
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "kentoscad-f03-milimetre";
+    std::filesystem::create_directories(dir);
+    run("FARKLIKAYDET \"" + (dir / "mm.pcad").string() + "\"");
+    run("AÇ \"" + (dir / "mm.pcad").string() + "\"");
+    CHECK_EQ(bus.document().content_hash(), drawn);
+
+    for (const char* name : {"mm.dxf", "mm.gpkg"}) {
+        run("DIŞAAKTAR \"" + (dir / name).string() + "\"");
+        run("YENİ");
+        run("AYAR koordinat_sistemi EPSG:5254");
+        run("İÇEAKTAR \"" + (dir / name).string() + "\"");
+        kept(bus.document(), home, name);
+        run("AÇ \"" + (dir / "mm.pcad").string() + "\"");
+    }
+
+    // TM30 → TM33 → TM30: PROJ is exact to the nanometre, and each leg rounds
+    // every coordinate to the millimetre once — so each point comes home
+    // within a millimetre of where it was, and the parcel keeps a face.
+    if (!Transform::available()) {
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        PENDING("PROJ kapalı: yeniden izdüşüm adımı sınanamıyor.");
+    }
+    run("DÖNÜŞTÜR hedef=EPSG:5255");
+    run("DÖNÜŞTÜR hedef=EPSG:5254");
+    const Millimetre back = millimetre_of(bus.document());
+    CHECK(std::llabs(back.first.x - home.x) <= 1);
+    CHECK(std::llabs(back.first.y - home.y) <= 1);
+    CHECK(back.area > 0);
+
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
 }

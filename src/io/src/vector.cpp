@@ -219,14 +219,24 @@ struct DatasetHandle
 /// `mm_from_metres` is the ONE rounding helper (core.md R20). A raw
 /// `static_cast<Mm>` here would truncate towards zero and put a southern or
 /// western coordinate one millimetre off from its northern twin.
-void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, core::DrawingUnit unit)
+/// One value to millimetres by THE rounding, with what the rounding took
+/// counted when a report is kept (TODOS F-03).
+core::Mm value_to_mm(double v, core::DrawingUnit unit, ImportDiagnostics* diag)
+{
+    const double exact = core::drawing_units_to_mm_exact(v, unit);
+    if (diag != nullptr) diag->rounded(exact);
+    return core::mm_round(exact);
+}
+
+void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, core::DrawingUnit unit,
+                ImportDiagnostics* diag = nullptr)
 {
     out.clear();
     const int n = ring->getNumPoints();
     out.reserve(static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
-        out.push_back(core::Point2{core::mm_from_drawing_units(ring->getX(i), unit),
-                                   core::mm_from_drawing_units(ring->getY(i), unit)});
+        out.push_back(core::Point2{value_to_mm(ring->getX(i), unit, diag),
+                                   value_to_mm(ring->getY(i), unit, diag)});
 
     // RingGeometry stores the corners and implies the closing segment, so the
     // duplicate OGR always writes is dropped here rather than argued about there.
@@ -234,14 +244,15 @@ void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, core:
         out.pop_back();
 }
 
-void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out, core::DrawingUnit unit)
+void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out, core::DrawingUnit unit,
+                ImportDiagnostics* diag = nullptr)
 {
     out.clear();
     const int n = line->getNumPoints();
     out.reserve(static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
-        out.push_back(core::Point2{core::mm_from_drawing_units(line->getX(i), unit),
-                                   core::mm_from_drawing_units(line->getY(i), unit)});
+        out.push_back(core::Point2{value_to_mm(line->getX(i), unit, diag),
+                                   value_to_mm(line->getY(i), unit, diag)});
 }
 
 /// Whether any vertex of `g` sits off the ground plane. A DXF is three-
@@ -1320,13 +1331,13 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             const auto push_polygon = [&](const OGRPolygon* polygon, std::uint16_t part) {
                 if (const OGRLinearRing* outer = polygon->getExteriorRing()) {
                     ring_store.emplace_back();
-                    ring_to_mm(outer, ring_store.back(), unit);
+                    ring_to_mm(outer, ring_store.back(), unit, &diag);
                     rings.push_back(
                         core::RingGeometry::RingInput{{}, core::RingRole::Exterior, part});
                 }
                 for (int h = 0; h < polygon->getNumInteriorRings(); ++h) {
                     ring_store.emplace_back();
-                    ring_to_mm(polygon->getInteriorRing(h), ring_store.back(), unit);
+                    ring_to_mm(polygon->getInteriorRing(h), ring_store.back(), unit, &diag);
                     rings.push_back(
                         core::RingGeometry::RingInput{{}, core::RingRole::Interior, part});
                 }
@@ -1339,8 +1350,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             // parsel number — which is most of what makes the sheet readable.
             if (type == wkbPoint) {
                 const OGRPoint* p = geometry->toPoint();
-                const core::Point2 where{core::mm_from_drawing_units(p->getX(), unit),
-                                         core::mm_from_drawing_units(p->getY(), unit)};
+                const core::Point2 where{value_to_mm(p->getX(), unit, &diag),
+                                         value_to_mm(p->getY(), unit, &diag)};
 
                 const char* label = text_field >= 0 && feature->IsFieldSetAndNotNull(text_field)
                                         ? feature->GetFieldAsString(text_field)
@@ -1443,7 +1454,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             switch (type) {
             case wkbLineString:
                 ring_store.emplace_back();
-                line_to_mm(geometry->toLineString(), ring_store.back(), unit);
+                line_to_mm(geometry->toLineString(), ring_store.back(), unit, &diag);
                 rings.push_back(core::RingGeometry::RingInput{{}, core::RingRole::Open, 0});
                 break;
 
@@ -1451,7 +1462,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 const OGRMultiLineString* multi = geometry->toMultiLineString();
                 for (int g = 0; g < multi->getNumGeometries(); ++g) {
                     ring_store.emplace_back();
-                    line_to_mm(multi->getGeometryRef(g), ring_store.back(), unit);
+                    line_to_mm(multi->getGeometryRef(g), ring_store.back(), unit, &diag);
                     rings.push_back(core::RingGeometry::RingInput{
                         {}, core::RingRole::Open, static_cast<std::uint16_t>(g)});
                 }

@@ -2,6 +2,8 @@
 #include "kentos_cad/io/diagnostics.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <utility>
 
 namespace kentos::io {
@@ -45,6 +47,17 @@ void ImportDiagnostics::tally(std::string_view type, std::uint64_t read_count,
     at->degraded += degraded_count;
 }
 
+void ImportDiagnostics::rounded(double scaled) noexcept
+{
+    // A THOUSANDTH OF A MILLIMETRE separates a file's own digits from a binary
+    // fraction's: 485320,15 m is 485 320 150,000 000 03 mm in a double, and that
+    // tail is no detail anybody drew.
+    const double took = std::abs(scaled - static_cast<double>(core::mm_round(scaled)));
+    if (!(took > 1e-3)) return;
+    ++sub_mm_rounded;
+    sub_mm_worst = std::max(sub_mm_worst, took);
+}
+
 void ImportDiagnostics::merge(const ImportDiagnostics& other)
 {
     for (const TypeTally& row : other.types)
@@ -55,6 +68,8 @@ void ImportDiagnostics::merge(const ImportDiagnostics& other)
         declared_unit = other.declared_unit;
     }
     paper_space_skipped += other.paper_space_skipped;
+    sub_mm_rounded += other.sub_mm_rounded;
+    sub_mm_worst = std::max(sub_mm_worst, other.sub_mm_worst);
     skipped += other.skipped;
     if (skipped_reason.empty()) skipped_reason = other.skipped_reason;
     for (const Diagnostic& d : other.notes)
@@ -70,7 +85,7 @@ bool ImportDiagnostics::empty() const noexcept
         unit_source != UnitSource::Setting ||
         (declared_unit.has_value() && *declared_unit == unit && unit == core::DrawingUnit::Metre);
     return types.empty() && notes.empty() && paper_space_skipped == 0 && skipped == 0 &&
-           dropped_notes == 0 && unit_quiet;
+           dropped_notes == 0 && sub_mm_rounded == 0 && unit_quiet;
 }
 
 std::string ImportDiagnostics::type_summary() const
@@ -152,6 +167,26 @@ std::vector<Diagnostic> ImportDiagnostics::lines() const
                                          " olarak okundu (AYAR çizim_birimi); dosya başlığı da "
                                          "öyle diyor. Koordinatlar milimetreye ölçeklendi."});
         }
+    }
+
+    // WHAT THE MILLIMETRE TOOK (TODOS F-03). A note, not a warning: rounding to
+    // the storage unit is the contract, and a map drawn in metres loses nothing
+    // it had. Said anyway, with the worst case, because a detail drawn in
+    // millimetres can lose a gap or a text height to it.
+    if (sub_mm_rounded != 0) {
+        char worst[16];
+        (void)std::snprintf(worst, sizeof worst, "%.2f", sub_mm_worst);
+        std::string w(worst);
+        for (char& ch : w)
+            if (ch == '.') ch = ',';
+        out.push_back(
+            Diagnostic{Severity::Info,
+                       std::to_string(sub_mm_rounded) +
+                           " değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre "
+                           "çözünürlükte saklar ve bunları en çok " +
+                           w +
+                           " mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı bu "
+                           "çözünürlükte kaybolur."});
     }
 
     if (paper_space_skipped != 0)

@@ -97,8 +97,21 @@ struct ImportDiagnostics
     std::uint64_t skipped{0};
     std::string skipped_reason;
 
+    /// Coordinates the file carried FINER than the millimetre the store keeps,
+    /// and the most the rounding moved one (TODOS F-03). Counted rather than
+    /// lost in silence: the store is exact at a millimetre, and a 0,3 mm gap or
+    /// a 2,5 mm text in a drawing made in millimetres is rounded away.
+    std::uint64_t sub_mm_rounded{0};
+    double sub_mm_worst{0.0}; ///< millimetres, at most one half
+
     std::vector<Diagnostic> notes;  ///< in emission order, at most `kMaxNotes`
     std::uint64_t dropped_notes{0}; ///< how many `note()` refused past the cap
+
+    /// Records what the one rounding takes from a value — `scaled` is the value
+    /// in millimetres before it (`core::drawing_units_to_mm_exact`) — when that is
+    /// real detail rather than the noise of a binary fraction: more than a
+    /// thousandth of a millimetre.
+    void rounded(double scaled) noexcept;
 
     /// Appends a note, or counts it when the cap is reached.
     void note(Severity level, std::string text);

@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — milimetre altı ayrıntı söyleniyor; 1 mm uçtan uca kanıtlandı (F-03, 4. aşama)
+
+- **İçe aktarma milimetrenin altındaki ayrıntıyı sayıyor ve söylüyor.** DXF, DWG ya da CBS
+  dosyasından okunan bir değer milimetreye yuvarlanırken milimetrenin binde birinden fazla
+  kayıyorsa sayılıyor; sonuç kaç değerin etkilendiğini ve en büyük kaymayı yazıyor:
+  "4 değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre çözünürlükte saklar
+  ve bunları en çok 0,50 mm kaydırarak yuvarladı." Metre biriminde, milimetresine kadar
+  çizilmiş bir harita bu notu görmez.
+- **Karar: saklama milimetrede kalıyor, biçim göçü gerekmiyor.** Karar milimetre biriminde
+  çizilmiş bir detay üzerinde verildi: 12,345 mm'lik çizgi 12 mm, aradaki 0,3 mm'lik boşluk
+  1 mm, 2,5 mm'lik yazı 3 mm oluyor; 0,4 mm yarıçaplı daire okunmuyor ve bu söyleniyor.
+  Gerekçe: [Sayısal doğruluk ve toleranslar](docs/veri/hassasiyet.md).
+- **1 mm büyük koordinatta uçtan uca korunuyor.** TM30 koordinatlarında (sağa 485 320 m,
+  yukarı 4 310 220 m) 1 mm'lik bir kare, bir çizgi ve bir nokta çifti bin kilometre öteye
+  taşınıp geri getirilince, çeyrek tur döndürülüp geri çevrilince, kaydedilip açılınca, DXF
+  ve GeoPackage'a yazılıp geri okununca bit bit aynı kalıyor. TM30 → TM33 → TM30 dönüşümü
+  her noktayı en çok 1 mm yakına getiriyor.
+
 ### Düzeltildi — toleranslar ayrıldı; eğriler dosyaya söylenen bir hatayla gider (F-03, 3. aşama)
 
 - **GeoPackage ve PostGIS'e eğriler şekliyle, bir kiriş toleransıyla gidiyor.** Yeni proje

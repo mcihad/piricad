@@ -7114,6 +7114,46 @@ int MainWindow::probeRealMouse()
                 project.hide();
             }
         }
+
+        // ---- 37. WHAT THE MILLIMETRE TAKES IS SAID (TODOS F-03) ----
+        //
+        // The sample the sub-millimetre decision was made on: a detail drawn in
+        // millimetres, finer than the store. Imported into a millimetre drawing,
+        // the transcript says how many values carried detail below the storage
+        // unit and how far the rounding moved them.
+        {
+            const QString seed = QString::fromStdString(data_root()) +
+                                 QStringLiteral("/../tests/fuzz/tohum/dxf/29-milimetre-alti.dxf");
+            if (!QFileInfo::exists(seed)) {
+                (void)std::fprintf(stdout, "[fare] not: tohum 29 yok; milimetre altı sınanmadı\n");
+            } else {
+                runScriptLine(QStringLiteral("YENİ"));
+                endCommand();
+                runScriptLine(QStringLiteral("AYAR cizim_birimi milimetre"));
+                endCommand();
+                runScriptLine(QStringLiteral("AYAR koordinat_sistemi EPSG:5254"));
+                endCommand();
+                transcript_->clear();
+                runScriptLine(QStringLiteral("İÇEAKTAR dosya=\"%1\"").arg(seed));
+                {
+                    QElapsedTimer waited;
+                    waited.start();
+                    while (controller_->session() != nullptr && controller_->session()->working() &&
+                           waited.elapsed() < 20000)
+                        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                    endCommand();
+                    QCoreApplication::processEvents();
+                }
+                canvas_->zoomToBox(core::Box2{990, 990, 1060, 1020});
+                QCoreApplication::processEvents();
+                check(transcript_->toPlainText().contains(
+                          QStringLiteral("4 değer milimetrenin altında ayrıntı taşıyordu")),
+                      QStringLiteral("milimetre altı ayrıntı içe aktarmada sayıldı ve söylendi"));
+                shoot("milimetre-alti-ayrinti");
+                runScriptLine(QStringLiteral("AYAR cizim_birimi metre"));
+                endCommand();
+            }
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

@@ -1433,13 +1433,17 @@ private:
 
     // ---- units --------------------------------------------------------------
 
-    Point2 to_mm(const dxf::Pt& p) const noexcept
+    /// A file value to millimetres by THE rounding, and what the rounding took
+    /// counted (TODOS F-03): a drawing made in millimetres can carry a 0,3 mm
+    /// gap or a 2,5 mm text height, and neither survives the storage unit.
+    Mm to_mm_len(double v) noexcept
     {
-        return Point2{core::mm_from_drawing_units(p.x, unit_),
-                      core::mm_from_drawing_units(p.y, unit_)};
+        const double exact = core::drawing_units_to_mm_exact(v, unit_);
+        report_.diagnostics.rounded(exact);
+        return core::mm_round(exact);
     }
 
-    Mm to_mm_len(double v) const noexcept { return core::mm_from_drawing_units(v, unit_); }
+    Point2 to_mm(const dxf::Pt& p) noexcept { return Point2{to_mm_len(p.x), to_mm_len(p.y)}; }
 
     // ---- curves -------------------------------------------------------------
 

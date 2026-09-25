@@ -526,6 +526,15 @@ TEST_CASE("ALAN: tam yazılamayacak kadar büyük halka saklanmaz; sınırın al
         must_add(g, {ring(rect(kTmX, kTmY, fits, fits), RingRole::Exterior)});
     CHECK_EQ(g.area_of(slot), Mm2{4'000'000'000'000'000'000});
 
+    // And a millimetre square out at 2·10¹⁸ mm — near the store's coordinate
+    // limit, where one coordinate squared is 4·10³⁶ — keeps its square millimetre
+    // and its four millimetres of boundary: every product is of differences, in
+    // 128 bits.
+    const Mm edge           = 2'000'000'000'000'000'000;
+    const std::uint32_t far = must_add(g, {ring(rect(edge, edge, 1, 1), RingRole::Exterior)});
+    CHECK_EQ(g.area_of(far), Mm2{1});
+    CHECK_EQ(g.perimeter_of(far), Mm{4});
+
     // Two faces each under the limit whose SUM is over it are refused as well:
     // `area_of` adds them in the same 64 bits.
     const Mm half = 2'100'000'000; // 4,41e18 mm² each, 8,82e18 together

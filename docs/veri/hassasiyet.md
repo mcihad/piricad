@@ -44,6 +44,46 @@ büyük bir halka saklanmaz ve bunun nedeni söylenir. Böyle bir halka neredeys
 birimi yanlış okunmuş bir dosyadan gelir: milimetre diye okunan metreler uzunluğu bin,
 alanı bir milyon kat büyütür.
 
+### Neler sınandı
+
+Bir parselin 1 mm × 1 mm'lik köşesi, 1 mm'lik bir çizgi ve 1 mm arayla iki nokta TM30
+koordinatlarında (sağa 485 320 m, yukarı 4 310 220 m) şu adımların her birinden
+**bit bit aynı** çıkar: bin kilometre uzağa taşıyıp geri getirmek, çeyrek tur döndürüp
+geri çevirmek, kaydedip açmak, DXF'e ve GeoPackage'a yazıp geri okumak. Alan her adımda
+1 mm², çevre 4 mm, çizgi 1 mm'dir. TM30'dan TM33'e ve geri dönüştürmek her koordinatı her
+adımda bir kez milimetreye yuvarlar; noktalar yerlerine en çok 1 mm yakın döner.
+
+## Milimetre altı: karar
+
+KentOSCad **milimetre** çözünürlükte kalır; saklama biçimi değişmez ve bir biçim göçü
+gerekmez. Karar bir örnek çizim üzerinde verildi: milimetre biriminde çizilmiş, saklama
+çözünürlüğünden ince bir detay (`tests/fuzz/tohum/dxf/29-milimetre-alti.dxf`).
+
+| Çizimdeki | KentOSCad'de |
+|---|---|
+| 12,345 mm'lik çizgi | 12 mm |
+| Çizgiden sonra 0,3 mm'lik boşluk | 1 mm |
+| 0,4 mm yarıçaplı daire | Okunmaz; atlanır ve bu söylenir |
+| 2,5 mm yüksekliğinde yazı | 3 mm |
+
+İçe aktarma bunu her seferinde söyler:
+
+```text
+not: 4 değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre çözünürlükte
+saklar ve bunları en çok 0,50 mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı
+bu çözünürlükte kaybolur.
+```
+
+Kayıp yalnız milimetreden küçük **ayrıntılarda** ortaya çıkar: bir makine parçası ya da
+milimetre biriminde çizilmiş bir mimari detay. Metre biriminde, milimetresine kadar
+çizilmiş bir harita ya da kadastro paftası hiçbir şey kaybetmez ve bu not görünmez.
+KentOSCad'in işi haritacılık, kadastro, imar ve arazi işidir; bu işlerde milimetre
+yeterlidir.
+
+Daha ince bir çözünürlük (mikrometre) bugünkü aralığı taşıyabilirdi; ama kaydedilmiş her
+çizimin, her günlüğün ve her altın örneğin sayılarını değiştirirdi. Bunu haklı çıkaracak
+bir iş bugün yoktur. Böyle bir gereksinim çıkarsa sürümlü bir biçim göçüyle gelir.
+
 ## Hesap: milimetreden türeyen eşikler
 
 Bir kesişim, bir teğet ya da bir bölme noktası hesaplandığında sonuç milimetreye
@@ -120,11 +160,11 @@ DXF eğriyi eğri olarak yazar: `CIRCLE`, `ARC`, `ELLIPSE`, `SPLINE` ve şişkin
 **Ekrandaki çizim bundan ayrıdır.** Tuval her daireyi sabit bir sıklıkla, 128 kirişle
 çizer; bu bir resimdir ve dosyaya gitmez:
 
-| Yarıçap | Ekranda kirişin sapması | GeoPackage'da (1 mm ile) |
+| Yarıçap | Ekranda kirişin sapması | GeoPackage'da (varsayılan 1 mm ile) |
 |---|---|---|
-| 5 m | 1,5 mm | 1 mm'den az |
-| 50 m | 15 mm | 1 mm'den az |
-| 300 m | 90 mm | 1 mm'den az |
+| 5 m | 1,5 mm | en çok 1 mm |
+| 50 m | 15 mm | en çok 1 mm |
+| 300 m | 90 mm | en çok 1 mm |
 
 ## Hata mesajları
 
