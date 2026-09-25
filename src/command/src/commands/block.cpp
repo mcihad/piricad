@@ -22,6 +22,8 @@
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_fields.hpp"
+#include "kentos_cad/core/transform.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -50,6 +52,32 @@ std::string blocks_known(const core::Document& doc)
         known += (known.empty() ? "" : ", ") + d.name;
     return known.empty() ? "Çizimde tanımlı blok yok; önce BLOK ile tanımlayın."
                          : "Tanımlı bloklar: " + known + ".";
+}
+
+/// Where the caption that names `field` stands when reference `e` draws it —
+/// the first member caption of its block that names it — so its value is asked
+/// for there. The insertion point for a field only a block inside names.
+core::Point2 field_place(const core::Document& doc, core::EntityId e, const std::string& field)
+{
+    const std::uint32_t gslot = doc.entities().slot[e];
+    const core::Point2 at     = core::block_reference_insertion(doc.geometry(), gslot);
+    auto ref                  = core::block_reference_of(doc.geometry(), gslot);
+    if (!ref || ref.value().block >= doc.blocks().size()) return at;
+    const core::BlockDef& def = doc.blocks().at(ref.value().block);
+    for (const core::EntityKey key : def.members) {
+        const core::EntityId m = doc.slot_of(key);
+        if (m == core::kNoEntity || !doc.alive(m)) continue;
+        const std::uint32_t slot = doc.entities().slot[m];
+        if (!doc.texts().has(slot)) continue;
+        const std::vector<std::string> named = core::field_names(doc.texts().text(slot));
+        if (std::find(named.begin(), named.end(), field) == named.end()) continue;
+        const core::RingSpan span = doc.geometry().rings_of(slot);
+        if (span.count == 0 || doc.geometry().ring_xs(span.first).empty()) continue;
+        const core::Point2 start{doc.geometry().ring_xs(span.first)[0],
+                                 doc.geometry().ring_ys(span.first)[0]};
+        return core::place_block_point(ref.value(), at, def.base, start, 0, 0);
+    }
+    return at;
 }
 
 /// Places one reference entity with `ref` at `at`, bounds computed here.
@@ -139,13 +167,24 @@ Task<void> run_block(Context& ctx)
         ctx.refuse(placed.error());
         co_return;
     }
+    // A caption naming `{no}` makes `no` a field of the block: its column is
+    // declared now, so every reference has a cell to carry its value.
+    auto declared = ensure_field_columns(ctx, block.value());
+    if (!declared) {
+        ctx.refuse(declared.error());
+        co_return;
+    }
 
     ctx.record("ad", Value::text(*name));
     ctx.record("taban", Value::point(*base));
     ctx.record("nesneler", Value::ids(requested));
     if (!description.empty()) ctx.record("aciklama", Value::text(description));
+    std::string fields;
+    for (const std::string& f : core::block_fields(ctx.document(), block.value()))
+        fields += (fields.empty() ? "" : ", ") + f;
     ctx.echo("'" + *name + "' bloğu " + std::to_string(slots.size()) +
-             " nesneyle tanımlandı ve yerine bir referans kondu.");
+             " nesneyle tanımlandı ve yerine bir referans kondu" +
+             (fields.empty() ? std::string(".") : "; alanları: " + fields + "."));
 }
 
 // --------------------------------------------------------------- BLOKEKLE ----
@@ -241,6 +280,74 @@ Task<void> run_insert(Context& ctx)
         co_return;
     }
 
+    // THE BLOCK'S FIELDS, each given this reference's value (TODOS C-13): a
+    // member caption naming `{no}` is drawn with the reference's own `no`
+    // cell — the ATTRIB a DXF writes on the insert. Given as `deger=no:12`;
+    // asked, where each will stand, when a hand placed the block and gave
+    // none, as AutoCAD asks for attribute values; a script that gave none is
+    // not asked, and an empty answer leaves the cell empty.
+    auto declared = ensure_field_columns(ctx, block);
+    if (!declared) {
+        ctx.refuse(declared.error());
+        co_return;
+    }
+    const core::Document& doc             = ctx.document();
+    const std::vector<std::string> fields = core::block_fields(doc, block);
+    std::vector<std::pair<std::string, std::string>> given;
+    const Value asked_for = ctx.argument("deger");
+    for (const std::string& pair : asked_for.as_texts()) {
+        const std::size_t colon = pair.find(':');
+        if (colon == std::string::npos || colon == 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "deger 'sutun:değer' biçiminde yazılır; verilen: '" + pair +
+                           "'.\n  Örnek: BLOKEKLE ad=ROGAR nokta=10,10 deger=no:R-12");
+            co_return;
+        }
+        std::string field = pair.substr(0, colon);
+        if (std::find(fields.begin(), fields.end(), field) == fields.end()) {
+            std::string known;
+            for (const std::string& f : fields)
+                known += (known.empty() ? "" : ", ") + f;
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Blok '" + *name + "' '" + field + "' alanını taşımıyor. " +
+                           (known.empty() ? std::string("Bu bloğun alanı yok.")
+                                          : "Alanları: " + known + "."));
+            co_return;
+        }
+        given.emplace_back(std::move(field), pair.substr(colon + 1));
+    }
+    std::vector<std::string> recorded;
+    for (const std::string& field : fields) {
+        std::string value;
+        bool have = false;
+        for (const auto& [f, v] : given)
+            if (f == field) {
+                value = v;
+                have  = true;
+            }
+        if (!have && asked_for.empty())
+            if (auto typed =
+                    co_await ctx.text("deger", "'" + field + "' değeri — boş Enter boş bırakır",
+                                      TextPlace{field_place(doc, placed.value(), field), false});
+                typed)
+                value = *typed;
+        if (value.empty()) continue;
+        const core::AttrId col         = doc.attributes().find(field);
+        const core::AttrColumn* column = doc.attributes().column(col);
+        if (column == nullptr) continue;
+        auto parsed = core::attr_parse(column->spec(), value);
+        if (!parsed) {
+            ctx.refuse(parsed.error().code,
+                       "'" + field + "' değeri okunamadı: " + parsed.error().message);
+            co_return;
+        }
+        if (auto st = ctx.transaction().set_attribute(col, placed.value(), parsed.value()); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
+        recorded.push_back(field + ":" + value);
+    }
+
     ctx.record("ad", Value::text(*name));
     ctx.record("nokta", Value::point(*at));
     ctx.record("olcek", Value::number(sx));
@@ -252,10 +359,21 @@ Task<void> run_insert(Context& ctx)
         ctx.record("sutun_aralik", Value::integer(column_spacing));
         ctx.record("satir_aralik", Value::integer(row_spacing));
     }
-    ctx.echo("'" + *name + "' bloğu yerleştirildi" +
-             (columns > 1 || rows > 1
-                  ? " (" + std::to_string(columns) + "×" + std::to_string(rows) + " dizi)."
-                  : "."));
+    if (!recorded.empty()) ctx.record("deger", Value::texts(recorded));
+    std::string said = "'" + *name + "' bloğu yerleştirildi";
+    if (columns > 1 || rows > 1)
+        said += " (" + std::to_string(columns) + "×" + std::to_string(rows) + " dizi)";
+    if (!recorded.empty()) {
+        said += "; değerler:";
+        for (const std::string& pair : recorded)
+            said += " " + pair;
+    }
+    if (!declared.value().empty()) {
+        said += "; alan sütunu tanımlandı:";
+        for (const std::string& column : declared.value())
+            said += " " + column;
+    }
+    ctx.echo(said + ".");
 }
 
 // ------------------------------------------------------------ BLOKDÜZENLE ----
@@ -390,6 +508,95 @@ Task<bool> edit_objects(Context& ctx, const EditTarget& target, std::vector<core
     co_return true;
 }
 
+/// THE BASE POINT MOVED, THE PICTURE KEPT (TODOS C-13). The new base is shown
+/// on a reference — undone through that reference's placement back to the
+/// definition — or, with `ad=`, given in the definition's own coordinates.
+/// Every reference of the block, on the sheet or inside another definition,
+/// is then stood where its new base is drawn now, so nothing on the sheet
+/// moves: only where the next BLOKEKLE puts the block by does.
+Task<void> move_base(Context& ctx, const EditTarget& target, const std::string& name,
+                     core::Json report)
+{
+    const core::Document& doc = ctx.document();
+    const core::Point2 was    = doc.blocks().at(target.block).base;
+    std::vector<core::EntityId> references;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e) || doc.entities().kind[e] != core::kBlockReferenceKind) continue;
+        auto ref = core::block_reference_of(doc.geometry(), doc.entities().slot[e]);
+        if (!ref || ref.value().block != target.block) continue;
+        // AN OPEN EDIT is out at its reference's insertion point less this
+        // base; moving the base under it would save it to the wrong place.
+        if ((doc.entities().flags[e] & core::FlagHidden) != 0 &&
+            (doc.entities().flags[e] & core::FlagInBlock) == 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'" + name + "' bloğunun bir düzenlemesi açık (referans " +
+                           std::to_string(core::raw(doc.key_of(e))) +
+                           " gizli). Taban noktasını değiştirmeden önce düzenlemeyi kaydedin ya "
+                           "da vazgeçin.");
+            co_return;
+        }
+        references.push_back(e);
+    }
+
+    // Asked with a band from where the base is drawn now, on that reference.
+    core::Point2 shown_at = was;
+    std::optional<core::Xform> back;
+    if (target.reference != core::kNoEntity) {
+        const std::uint32_t gslot = doc.entities().slot[target.reference];
+        const auto ref            = core::block_reference_of(doc.geometry(), gslot).value();
+        const core::Point2 at     = core::block_reference_insertion(doc.geometry(), gslot);
+        shown_at                  = at;
+        back                      = core::block_placement_inverse(ref, at, was);
+        if (!back) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Referans " + std::to_string(target.reference_key) +
+                           " x ve y'de farklı ölçekli: bir nokta onun çiziminden tanıma tek "
+                           "biçimde geri götürülemez. Yeni taban noktasını eşit ölçekli bir "
+                           "referansta gösterin ya da ad= ile tanımın kendi koordinatında verin.");
+            co_return;
+        }
+    }
+    auto point = co_await ctx.point("taban", "Bloğun yeni taban noktası",
+                                    PointOptions{.rubber_band = true, .rubber_origin = shown_at});
+    if (!point) co_return;
+    const core::Point2 base = back ? core::transformed(*back, *point) : *point;
+    ctx.record("taban", Value::point(*point));
+    if (base == was) {
+        ctx.echo("'" + name + "' bloğunun taban noktası zaten orada; bir şey değişmedi.");
+        co_return;
+    }
+
+    // Where each reference draws the new base NOW, found before the base moves;
+    // then the base, then the references — whose boxes are worked out against
+    // the new base.
+    std::vector<core::Point2> stands;
+    stands.reserve(references.size());
+    for (const core::EntityId e : references) {
+        const std::uint32_t gslot = doc.entities().slot[e];
+        const auto ref            = core::block_reference_of(doc.geometry(), gslot).value();
+        stands.push_back(core::place_block_point(
+            ref, core::block_reference_insertion(doc.geometry(), gslot), was, base, 0, 0));
+    }
+    if (auto st = ctx.transaction().set_block_base(target.block, base); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
+    for (std::size_t i = 0; i < references.size(); ++i)
+        if (auto st = ctx.transaction().move_reference(references[i], stands[i]); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
+
+    report.set("taban",
+               core::Json::array({core::Json::integer(base.x), core::Json::integer(base.y)}));
+    report.set("referans_sayisi",
+               core::Json::integer(static_cast<std::int64_t>(references.size())));
+    ctx.report(std::move(report));
+    ctx.echo("'" + name + "' bloğunun taban noktası değişti; " + std::to_string(references.size()) +
+             " referansı çizildiği yerde tutuldu. Bundan sonra BLOKEKLE bloğu bu noktasından "
+             "yerleştirir.");
+}
+
 /// The keys of `slots`, for the report.
 core::Json keys_json(const core::Document& doc, const std::vector<core::EntityId>& slots)
 {
@@ -405,14 +612,16 @@ Task<void> run_block_edit(Context& ctx)
     if (const Value v = ctx.argument("islem"); !v.empty()) step = v.as_text();
     const bool opening = core::turkish_key_equals(step, "ac");
     const bool saving  = core::turkish_key_equals(step, "kaydet");
+    const bool basing  = core::turkish_key_equals(step, "taban");
     // The word as the spec spells it, whatever folding the caller typed.
     std::string word = "vazgec";
     if (opening) word = "ac";
     if (saving) word = "kaydet";
+    if (basing) word = "taban";
     ctx.record("islem", Value::text(word));
 
     EditTarget target;
-    if (!co_await edit_target(ctx, opening, target)) co_return;
+    if (!co_await edit_target(ctx, opening || basing, target)) co_return;
     const core::Document& doc = ctx.document();
     const std::string name    = doc.blocks().at(target.block).name;
     const bool from_reference = target.reference != core::kNoEntity;
@@ -422,6 +631,11 @@ Task<void> run_block_edit(Context& ctx)
     report.set("islem", core::Json::string(word));
     report.set("blok", core::Json::string(name));
     if (from_reference) report.set("referans", core::Json::integer(target.reference_key));
+
+    if (basing) {
+        co_await move_base(ctx, target, name, report);
+        co_return;
+    }
 
     if (opening) {
         if (from_reference) {
@@ -570,6 +784,10 @@ Task<void> run_block_edit(Context& ctx)
         ctx.refuse(boxes.error());
         co_return;
     }
+    if (auto declared = ensure_field_columns(ctx, target.block); !declared) {
+        ctx.refuse(declared.error());
+        co_return;
+    }
     std::size_t references = 0;
     for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
         if (!doc.alive(e) || doc.entities().kind[e] != core::kBlockReferenceKind) continue;
@@ -626,9 +844,10 @@ KENTOS_COMMAND(block_edit)
         .category = Category::Modify,
         .params =
             {
-                Param::choice("islem", Arity::optional(), {"ac", "kaydet", "vazgec"},
+                Param::choice("islem", Arity::optional(), {"ac", "kaydet", "vazgec", "taban"},
                               "ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen "
-                              "nesnelerden yeniden kurar; vazgec: açılanı siler")
+                              "nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban "
+                              "noktasını taşır, referanslar yerinde kalır")
                     .en("action"),
                 Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim"}
@@ -639,6 +858,10 @@ KENTOS_COMMAND(block_edit)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler"}
                     .en("objects"),
+                Param{"taban", ParamKind::Point, Arity::optional(),
+                      "taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın "
+                      "kendi koordinatında"}
+                    .en("base"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -677,6 +900,10 @@ KENTOS_COMMAND(insert)
                 Param::integer("satir_aralik", Arity::optional(),
                                "Satırlar arası, milimetre, döndürülmüş eksende")
                     .en("row_spacing"),
+                Param::text("deger", Arity{0, 0xFFFFFFFFu},
+                            "Bloğun alanlarının değerleri, sutun:değer; verilmezse elle "
+                            "yerleştirmede her alan sorulur")
+                    .en("values"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

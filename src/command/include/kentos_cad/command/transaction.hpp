@@ -177,6 +177,14 @@ public:
     /// and refuses anything that is not a member.
     Status erase_member(EntityId e);
 
+    /// Moves the base point of `block` (`Document::set_block_base`).
+    Status set_block_base(core::BlockId block, Point2 base);
+
+    /// Stands block reference `e` at `insertion`, box refreshed
+    /// (`Document::move_reference`): the reference's half of keeping a picture
+    /// in place while its definition's base moves.
+    Status move_reference(EntityId e, Point2 insertion);
+
     /// Brings the drawn box a block reference stores up to date with what its
     /// definition draws now (`Document::refresh_reference_bounds`). A cache, not
     /// an edit of the reference: a reference on a locked layer, or inside

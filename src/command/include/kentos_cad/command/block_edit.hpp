@@ -18,6 +18,8 @@
 #include "kentos_cad/core/transform.hpp"
 
 #include <cstddef>
+#include <string>
+#include <vector>
 
 namespace kentos::command {
 
@@ -29,6 +31,7 @@ struct PlacedMember
     bool onto_reference{false};            ///< set down on the reference's layer, off `0`
     bool reference_look{false};            ///< given the reference's look, or its layer's
     bool hidden{false};                    ///< the member was hidden, and so is the piece
+    bool filled{false}; ///< a caption with fields, written with the reference's values
 };
 
 /// `member`, of the definition the reference in `reference` places, made again
@@ -64,6 +67,12 @@ core::Result<core::EntityId> copy_out_of_block(Context& ctx, core::EntityId memb
 /// as it was, so opening a block and saving it changes nothing.
 bool same_as_member(const core::Document& doc, core::EntityId e, core::Mm dx, core::Mm dy,
                     core::EntityId member);
+
+/// Declares a TEXT column for every field `block`'s captions name that the
+/// drawing has no column for (`core::block_fields`), so a reference has a cell
+/// to hold its value and the caption does not stand there reading `{no}`.
+/// The names declared, in order — none when every field had its column.
+core::Result<std::vector<std::string>> ensure_field_columns(Context& ctx, core::BlockId block);
 
 /// Brings the stored box of every block reference that draws `block` — itself,
 /// or through a block inside a block, on the sheet or inside another

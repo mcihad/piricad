@@ -1554,6 +1554,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     SARibbonPanel* blockEdit = block->addPanel(tr("Blok"));
     blockEdit->addLargeAction(actBlockEdit_);
     ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Block)] = actBlockEdit_;
+    blockEdit->addLargeAction(actBlockBase_);
     blockEdit->addLargeAction(actExplode_);
     blockEdit->addLargeAction(actInsert_);
     blockEdit->addSmallAction(actBlock_);

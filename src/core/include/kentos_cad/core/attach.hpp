@@ -63,7 +63,7 @@ enum class AttachDerive : std::uint8_t {
     Length = 1, ///< the anchored edge's length, in the unit and format recorded
     /// `format` filled from the source each time it changes: a column's value
     /// for `{sutun}`, and a figure measured from its geometry for `{#alan}`,
-    /// `{#cevre}` and `{#uzunluk}` (command/text_fields.hpp) — a parcel's
+    /// `{#cevre}` and `{#uzunluk}` (core/text_fields.hpp) — a parcel's
     /// number with its area, which says the new area the moment a corner moves.
     Fields = 2,
 };

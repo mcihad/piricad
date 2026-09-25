@@ -773,3 +773,146 @@ TEST_CASE("C-13 BLOKDÜZENLE: kılavuzdaki komut satırı örneği yazıldığı
     r.run("BLOKDÜZENLE islem=vazgec nesne=5 nesneler=" + opened_keys(r));
     CHECK_EQ(r.doc.live_entity_count(), opened - 3);
 }
+
+TEST_CASE("C-13 ÖZNİTELİK: {no} alanlı blokta her referans kendi değerini çizer; PATLAT değeri "
+          "yazıya işler")
+{
+    Rig r;
+    r.run("METİN noktalar=0,1.5 yazi={no} yukseklik=500"); // 1: the field
+    r.run("DAİRE merkez=0,0 cevre=1,0");                   // 2
+    r.said.clear();
+    r.run("BLOK ad=NOKTA taban=0,0 nesneler=1 nesneler=2");
+    CHECK(r.said.find("alanları: no") != std::string::npos);
+    REQUIRE(r.doc.attributes().find("no") != core::kNoAttr); ///< its column, declared
+    CHECK_EQ(core::block_fields(r.doc, r.doc.blocks().find("NOKTA")),
+             (std::vector<std::string>{"no"}));
+
+    r.said.clear();
+    r.run("BLOKEKLE ad=NOKTA nokta=10,0 deger=no:K-1");
+    CHECK(r.said.find("değerler: no:K-1") != std::string::npos);
+    const std::int64_t first = r.last_reference();
+    r.run("BLOKEKLE ad=NOKTA nokta=20,0 deger=no:K-2");
+    const std::int64_t second = r.last_reference();
+    const core::AttrId no     = r.doc.attributes().find("no");
+    CHECK_EQ(r.doc.attribute(no, r.slot(first)).value().text, "K-1");
+    CHECK_EQ(r.doc.attribute(no, r.slot(second)).value().text, "K-2");
+
+    // DRAWN: one caption, three pictures of it — each with its reference's value.
+    render::ViewTransform view;
+    view.set_viewport(1200, 600);
+    view.set_centre(Point2{10'000, 0}, 50.0);
+    render::DrawList list;
+    render::build_scene(r.doc, view, render::SceneOptions{}, list);
+    std::vector<std::string> said;
+    for (const render::TextItem& t : list.texts)
+        said.push_back(t.text);
+    CHECK(std::find(said.begin(), said.end(), "K-1") != said.end());
+    CHECK(std::find(said.begin(), said.end(), "K-2") != said.end());
+    CHECK(std::find(said.begin(), said.end(), "{no}") == said.end()); ///< never the placeholder
+
+    // A name the block does not carry, and a pair without its colon, are said.
+    CHECK(r.refused("BLOKEKLE ad=NOKTA nokta=30,0 deger=nox:1")
+              .find("'nox' alanını taşımıyor. "
+                    "Alanları: no.") != std::string::npos);
+    CHECK(r.refused("BLOKEKLE ad=NOKTA nokta=30,0 deger=no").find("sutun:değer") !=
+          std::string::npos);
+
+    // TAKEN APART: the caption comes out saying what it said.
+    r.said.clear();
+    r.run("PATLAT nesne=" + std::to_string(second));
+    const std::vector<core::EntityId> made = r.pieces();
+    REQUIRE_EQ(made.size(), std::size_t{2});
+    CHECK_EQ(std::string(r.doc.texts().text(r.doc.entities().slot[made[0]])), "K-2");
+    const core::Json& row = r.report.find("nesneler")->as_array().front();
+    CHECK_EQ(row.find("yazilan_deger")->as_int(), 1);
+    CHECK_EQ(row.find("birakilan_oznitelik")->as_int(), 0);
+    CHECK(r.said.find("1 yazıya referansın öznitelik değeri işlendi") != std::string::npos);
+
+    // OPENED FOR EDITING, the definition shows its field, not a value.
+    r.run("BLOKDÜZENLE nesne=" + std::to_string(first));
+    const std::string keys       = opened_keys(r);
+    const core::EntityId caption = r.slot(std::stoll(keys.substr(0, keys.find(' '))));
+    CHECK_EQ(std::string(r.doc.texts().text(r.doc.entities().slot[caption])), "{no}");
+}
+
+namespace {
+
+/// Every vertex reference `key` draws, run by run.
+std::vector<Point2> drawn(const Rig& r, std::int64_t key)
+{
+    core::EmitBuffer runs;
+    std::vector<Point2> out;
+    if (!core::entity_outline(r.doc, r.slot(key), runs)) return out;
+    for (std::size_t i = 0; i < runs.xs.size(); ++i)
+        out.push_back(Point2{runs.xs[i], runs.ys[i]});
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("C-13 TABAN: taban noktası taşınır, bütün referanslar çizildikleri yerde kalır")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 2,0");
+    r.run("DAİRE merkez=1,1 cevre=1.5,1");
+    r.run("BLOK ad=B taban=0,0 nesneler=1 nesneler=2");
+    const std::int64_t at_base = r.last_reference();
+    r.run("BLOKEKLE ad=B nokta=10,0 olcek=2 aci=90");
+    const std::int64_t turned = r.last_reference();
+    r.run("BLOKEKLE ad=B nokta=30,0 olcek=-1 olcek_y=1");
+    const std::int64_t mirrored = r.last_reference();
+    r.run("BLOKEKLE ad=B nokta=50,0");
+    const std::int64_t inner = r.last_reference();
+    r.run("BLOK ad=G taban=50,0 nesneler=" + std::to_string(inner)); // B inside G
+    const std::int64_t group = r.last_reference();
+    const std::vector<std::int64_t> all{at_base, turned, mirrored, group};
+    std::vector<std::vector<Point2>> before;
+    for (const std::int64_t k : all)
+        before.push_back(drawn(r, k));
+
+    // Shown on the turned, doubled reference: the line's far end, (2,0) in
+    // the definition, drawn at (10,4) — a quarter turn and ×2 are exact.
+    const Point2 far = r.placed(turned, {2'000, 0});
+    CHECK_EQ(far, (Point2{10'000, 4'000}));
+    r.said.clear();
+    r.run("BLOKDÜZENLE islem=taban nesne=" + std::to_string(turned) + " taban=10,4");
+    const core::BlockId b = r.doc.blocks().find("B");
+    CHECK_EQ(r.doc.blocks().at(b).base, (Point2{2'000, 0}));
+    CHECK(r.said.find("taban noktası değişti; 4 referansı çizildiği yerde tutuldu") !=
+          std::string::npos); ///< the three on the sheet and the one inside G
+
+    // NOTHING ON THE SHEET MOVED — the one inside G included.
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        CAPTURE(i);
+        CHECK_EQ(drawn(r, all[i]), before[i]);
+    }
+    // And the next insertion stands the block on its new base: the line's end
+    // lands on the point clicked.
+    r.run("BLOKEKLE ad=B nokta=100,0");
+    const std::vector<Point2> fresh = drawn(r, r.last_reference());
+    REQUIRE_FALSE(fresh.empty());
+    CHECK_EQ(fresh[1], (Point2{100'000, 0}));
+    r.run("GERİAL");
+
+    // One step back puts the base and every reference back.
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.blocks().at(b).base, (Point2{0, 0}));
+    for (std::size_t i = 0; i < all.size(); ++i)
+        CHECK_EQ(drawn(r, all[i]), before[i]);
+
+    // By name, in the definition's own coordinates.
+    r.run("BLOKDÜZENLE islem=taban ad=B taban=1,1");
+    CHECK_EQ(r.doc.blocks().at(b).base, (Point2{1'000, 1'000}));
+    for (std::size_t i = 0; i < all.size(); ++i)
+        CHECK_EQ(drawn(r, all[i]), before[i]);
+
+    // Not while an edit is out, and not through a reference that leans.
+    r.run("BLOKDÜZENLE nesne=" + std::to_string(at_base));
+    CHECK(r.refused("BLOKDÜZENLE islem=taban ad=B taban=0,0").find("düzenlemesi açık") !=
+          std::string::npos);
+    r.run("GERİAL");
+    r.run("BLOKEKLE ad=B nokta=70,0 olcek=2 olcek_y=1");
+    CHECK(r.refused("BLOKDÜZENLE islem=taban nesne=" + std::to_string(r.last_reference()) +
+                    " taban=70,0")
+              .find("farklı ölçekli") != std::string::npos);
+}

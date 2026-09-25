@@ -37,8 +37,10 @@ yüzden bir parçanın köşesi, referansın o köşeyi çizdiği milimetrededir
 | İç içe bir blok | **Bir kat** açılır: iç blok, bileşik yerleşimiyle yine bir blok referansı olur |
 | Yazı | Harfleri referansın ölçeğiyle büyür; taban çizgisi referansın çizdiği yönde kalır |
 
-Referansın **kendi** öznitelik değerleri parçalara geçmez; kaç tane olduğu çıktıda
-söylenir. Bileşenlerin kendi öznitelikleri parçalarıyla gider.
+Bir **alan** yazısı (`{no}`) referansın değeriyle yazılmış düz yazı olarak çıkar: parça
+çizimde ne yazıyorsa onu yazar. Referansın hiçbir yazıda görünmeyen öznitelik değerleri
+parçalara geçmez; kaç tane olduğu çıktıda söylenir. Bileşenlerin kendi öznitelikleri
+parçalarıyla gider.
 
 ## Ne reddeder ve neden
 
@@ -123,7 +125,8 @@ satırı eklenir.
 ### Yapılandırılmış rapor
 
 Betik ve yapay zekâ istemcisi raporu okur: her nesne için `tur`, blok için `blok`,
-`kopya`, `katman_devri`, `gorunus_devri`, `gizli`, `birakilan_oznitelik`, türlere göre
+`kopya`, `katman_devri`, `gorunus_devri`, `gizli`, `yazilan_deger` (değeri yazıya işlenen
+alan yazıları), `birakilan_oznitelik`, türlere göre
 parça sayısı (`turler`) ve parçaların kimlikleri (`parcalar`); en üstte `patlatilan` ve
 `parca` toplamları.
 

@@ -19,7 +19,6 @@ add_library(kentos_command STATIC
     src/selection.cpp
     src/session.cpp
     src/spec.cpp
-    src/text_fields.cpp
     src/transaction.cpp
     src/validation.cpp
     src/value.cpp

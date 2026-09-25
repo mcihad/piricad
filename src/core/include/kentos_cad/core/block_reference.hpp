@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace kentos::core {
@@ -90,6 +91,13 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
 /// have — what a creator stores in `BlockReference::bounds` before `add_kind`.
 /// Empty for a definition with no drawable member.
 Box2 block_reference_bounds(const Document& doc, Point2 insertion, const BlockReference& ref);
+
+/// THE BLOCK'S FIELDS: the columns its member captions name (`{no}`, core/
+/// text_fields.hpp), members of blocks inside it included, each once in the
+/// order first met. A reference draws each such caption with ITS OWN cell of
+/// that column — the attribute a DXF writes as ATTDEF in the block and ATTRIB
+/// on the insert (TODOS C-13).
+std::vector<std::string> block_fields(const Document& doc, BlockId block);
 
 /// Whether a member's style takes anything from the reference that places it
 /// — a colour, a width, a dash or a fill written "ByBlock". Such a member is

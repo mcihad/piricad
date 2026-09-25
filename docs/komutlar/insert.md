@@ -19,6 +19,7 @@ saklanır; 90° döndürülmüş bir sembol tam olarak 90° döner.
 ```text
 BLOKEKLE ad=<ad> nokta=<sağa>,<yukarı> [olcek=<çarpan>] [olcek_y=<çarpan>] [aci=<derece>]
          [sutun=<n> satir=<n> sutun_aralik=<mm> satir_aralik=<mm>]
+         [deger=<sütun>:<değer> …]
 ```
 
 ## Parametreler
@@ -32,6 +33,18 @@ BLOKEKLE ad=<ad> nokta=<sağa>,<yukarı> [olcek=<çarpan>] [olcek_y=<çarpan>] [
 | `aci` | Dönme açısı, derece, saat yönünün tersine; varsayılan 0 |
 | `sutun`, `satir` | Dizi sütun ve satır sayısı; varsayılan 1 |
 | `sutun_aralik`, `satir_aralik` | Dizide kopyalar arası, **milimetre**, döndürülmüş eksende, ölçeklenmez |
+| `deger` | Bloğun alanlarının bu referanstaki değerleri, `sütun:değer` biçiminde; birden çok alan için anahtarı yineleyin. Verilmezse elle yerleştirmede her alan sorulur |
+
+### Alanlar ve değerleri
+
+Bloğun içinde `{no}` gibi süslü ayraçlı bir yazı varsa `no` o bloğun **alanıdır**
+(AutoCAD'deki öznitelik tanımı, DXF'in `ATTDEF`'i). Her referans alanın **kendi değerini**
+taşır — referansın `no` sütunundaki hücresi — ve yazıyı o değerle çizer; aynı nokta
+sembolü her yerde kendi numarasını yazar. Değeri eklerken `deger=no:K-12` ile verirsiniz;
+arayüzde bloğu tıklayıp yerleştirince her alan, yazısının duracağı yerde açılan kutuda
+sorulur (boş Enter boş bırakır). Sonradan değiştirmek için referansı seçip nitelik
+panelinde ya da [`ÖZNİTELİK`](attribute.md) ile hücresini düzenleyin. Alanın sütunu yoksa
+metin sütunu olarak tanımlanır.
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -52,6 +65,16 @@ BLOKEKLE ad=BACA nokta=80,0 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000
 
 Sırayla: olduğu gibi, iki kat büyütülüp çeyrek tur dönmüş, x'te aynalanmış, ve 5 m'ye
 4 m aralıklı 3×2 dizi.
+
+Numaralı bir nokta sembolü, iki kez, kendi numaralarıyla:
+
+```text
+METİN noktalar=0,1 yazi={no} yukseklik=500
+DAİRE merkez=0,0 cevre=0.3,0
+BLOK ad=NOKTA taban=0,0 nesneler=1 nesneler=2
+BLOKEKLE ad=NOKTA nokta=10,10 deger=no:K-1
+BLOKEKLE ad=NOKTA nokta=20,10 deger=no:K-2
+```
 
 ### Arayüz
 

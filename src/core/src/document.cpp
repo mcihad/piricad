@@ -616,6 +616,47 @@ Status Document::refresh_reference_bounds(EntityId e, Op& undo_out)
     return write_payload(e, encode_block_reference(next), undo_out);
 }
 
+Status Document::set_block_base(BlockId block, Point2 base, Op& undo_out)
+{
+    undo_out = Op{};
+    if (block >= blocks_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(block));
+    const Point2 was = blocks_.at(block).base;
+    if (auto st = blocks_.set_base(block, base); !st) return st;
+    ++revision_;
+    undo_out.kind      = Op::Kind::SetBlockBase;
+    undo_out.block_arg = block;
+    undo_out.point_arg = was;
+    return ok();
+}
+
+Status Document::move_reference(EntityId e, Point2 insertion, Op& undo_out)
+{
+    undo_out = Op{};
+    if (e >= entities_.size() || !entities_.alive(e) || entities_.kind[e] != kBlockReferenceKind)
+        return err(ErrorCode::InvalidArgument,
+                   "Taşınacak nesne yaşayan bir blok referansı değil: " + std::to_string(e));
+    auto ref = block_reference_of(geometry_, entities_.slot[e]);
+    if (!ref) return ref.error();
+    BlockReference next                     = ref.value();
+    next.bounds                             = block_reference_bounds(*this, insertion, next);
+    const std::vector<std::uint8_t> payload = encode_block_reference(next);
+    const Point2 at[1]{insertion};
+    const RingGeometry::RingInput ring{std::span<const Point2>(at, 1), RingRole::Open, 0};
+    auto slot = geometry_.append(std::span<const RingGeometry::RingInput>(&ring, 1), payload);
+    if (!slot) return slot.error();
+    const std::uint32_t was = entities_.slot[e];
+    entities_.slot[e]       = slot.value();
+    carry_text(was, slot.value());
+    carry_attributes(was, slot.value());
+    refresh_box(e);
+    ++revision_;
+    undo_out.kind          = Op::Kind::SetGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    return ok();
+}
+
 Status Document::write_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out)
 {
     // The same rings, re-described for `append`: the arena stores eastings and
@@ -1614,6 +1655,7 @@ Status Document::apply(const Op& op, Op* undo_out)
         if (!sources) return sources.error();
         return restore_hatch_links(op.entity, std::move(sources.value()), inverse);
     }
+    case Op::Kind::SetBlockBase: return set_block_base(op.block_arg, op.point_arg, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

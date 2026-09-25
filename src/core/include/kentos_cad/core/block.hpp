@@ -75,6 +75,10 @@ public:
     /// references, or kNoBlock. Refuses a membership that would make a cycle.
     Status add_member(BlockId id, EntityKey member, BlockId uses);
 
+    /// Moves the base point of `id` — BLOKDÜZENLE's `taban` (TODOS C-13). The
+    /// references are the caller's to keep in place; this is the one field.
+    Status set_base(BlockId id, Point2 base);
+
     /// Whether placing a reference to `referenced` inside `container` would let
     /// `container` reach itself: true when `referenced` is `container` or uses
     /// it at any depth.

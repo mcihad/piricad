@@ -49,6 +49,7 @@ add_library(kentos_core STATIC
     src/style_library.cpp
     src/style_rule.cpp
     src/text.cpp
+    src/text_fields.cpp
     src/text_store.cpp
 )
 

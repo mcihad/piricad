@@ -3632,7 +3632,11 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             // first and its string second, so the prompt turns into a text prompt
             // inside the call above — and waiting for another click would make the
             // user click twice in the same place with nothing to tell them why.
-            if (controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text)
+            // UNLESS THE QUESTION SAID WHERE ITS WORDS STAND: it opened the box
+            // there already (`promptChanged`), and moving it to the click put a
+            // block's attribute value a metre from the number it becomes.
+            if (controller_.awaitingInput() &&
+                controller_.promptKind() == command::ParamKind::Text && !textEditorOpen())
                 openTextEditor(at);
 
             snap_preview_valid_ = false;

@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/text_fields.hpp"
+#include "kentos_cad/core/text_fields.hpp"
 
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/dimension.hpp"
 
-namespace kentos::command {
+#include <algorithm>
+#include <optional>
+
+namespace kentos::core {
 namespace {
 
 /// The figure a `#` name measures, or nothing for a name that is not one.
-std::optional<std::string> figure(const core::Document& doc, core::EntityId e,
-                                  std::string_view name, const FieldFormat& how)
+std::optional<std::string> figure(const Document& doc, EntityId e, std::string_view name,
+                                  const FieldFormat& how)
 {
-    if (name == "alan") return core::format_area(doc.entity_area(e), how.precision, how.separator);
+    if (name == "alan") return format_area(doc.entity_area(e), how.precision, how.separator);
     if (name == "cevre" || name == "uzunluk")
-        return core::format_dimension_length(doc.entity_perimeter(e), how.unit, how.precision,
-                                             how.separator);
+        return format_dimension_length(doc.entity_perimeter(e), how.unit, how.precision,
+                                       how.separator);
     return std::nullopt;
 }
 
 } // namespace
 
-core::Result<std::string> fill_fields(const core::Document& doc, core::EntityId e,
-                                      std::string_view format, const FieldFormat& how)
+Result<std::string> fill_fields(const Document& doc, EntityId e, std::string_view format,
+                                const FieldFormat& how)
 {
     std::string out;
     out.reserve(format.size());
@@ -46,14 +49,28 @@ core::Result<std::string> fill_fields(const core::Document& doc, core::EntityId 
                 out += whole;
             continue;
         }
-        const core::AttrId col = doc.attributes().find(name);
-        if (col == core::kNoAttr) {
+        const AttrId col = doc.attributes().find(name);
+        if (col == kNoAttr) {
             out += whole;
             continue;
         }
         auto value = doc.attribute(col, e);
         if (!value) return value.error();
-        out += core::attr_display(value.value(), core::DecimalMark::Comma);
+        out += attr_display(value.value(), DecimalMark::Comma);
+    }
+    return out;
+}
+
+std::vector<std::string> field_names(std::string_view format)
+{
+    std::vector<std::string> out;
+    for (std::size_t open = format.find('{'); open != std::string_view::npos;
+         open             = format.find('{', open + 1)) {
+        const std::size_t close = format.find('}', open + 1);
+        if (close == std::string_view::npos) break;
+        const std::string_view name = format.substr(open + 1, close - open - 1);
+        if (name.empty() || name.starts_with('#')) continue;
+        if (std::find(out.begin(), out.end(), name) == out.end()) out.emplace_back(name);
     }
     return out;
 }
@@ -64,4 +81,4 @@ bool has_fields(std::string_view format)
     return open != std::string_view::npos && format.find('}', open + 1) != std::string_view::npos;
 }
 
-} // namespace kentos::command
+} // namespace kentos::core

@@ -972,6 +972,12 @@ void MainWindow::buildActions()
                                tr("BLOKDÜZENLE — seçili bloğun tanımını düzenlemeye açar; Bloğu "
                                   "Kaydet ile bütün referanslar yeni biçimi çizer  ·  "
                                   "kısaltma: BDZ"));
+    // THE BASE POINT, shown on the selected reference; the references stay
+    // where they are drawn and the next insertion stands on the new point.
+    actBlockBase_ =
+        methodTool(Glyph::BlockBase, tr("Taban Noktası"), QStringLiteral("BLOKDÜZENLE islem=taban"),
+                   tr("BLOKDÜZENLE islem=taban — seçili bloğun taban noktasını "
+                      "taşır; referanslar çizildikleri yerde kalır  ·  kısaltma: BDZ"));
     // SAVE AND GIVE UP take the objects of the open edit, which only the shell
     // knows (`blockEditLine`), so their lines are made when they are pressed.
     const auto editStep = [this](Glyph glyph, const QString& text, const QString& name,
@@ -5581,6 +5587,125 @@ int MainWindow::probeRealMouse()
             check(!blockEdit_.has_value() && !hidden(home) &&
                       drawn_end(home) == core::Point2{3'000, 0},
                   QStringLiteral("Vazgeç açılanı kaldırdı; tanım eski hâlinde"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 24. A NUMBERED SYMBOL: ITS VALUE ASKED WHERE IT STANDS, ITS BASE MOVED (C-13) ----
+        //
+        // A block whose caption is the field `{no}`: placed from the ribbon, its
+        // value is asked in the box where the number will stand and drawn so;
+        // its base point, moved from the ribbon, leaves the symbol where it is.
+        {
+            fresh({QStringLiteral("METİN noktalar=0,1 yazi={no} yukseklik=600"),
+                   QStringLiteral("DAİRE merkez=0,0 cevre=0.4,0")});
+            const std::int64_t opening = first_key();
+            runScriptLine(QStringLiteral("BLOK ad=NOKTA taban=0,0 nesneler=%1 nesneler=%2")
+                              .arg(opening)
+                              .arg(opening + 1));
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.5"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            const core::Document& doc = controller_->document();
+
+            // BLOK EKLE from the ribbon: the name, the click, then the value.
+            actInsert_->trigger();
+            QCoreApplication::processEvents();
+            controller_->supplyText(QStringLiteral("NOKTA"));
+            QCoreApplication::processEvents();
+            // In the left half of the canvas, so the box that opens to the
+            // right of the number is not nudged back off it by the edge.
+            const core::Point2 aimed = canvas_->view().to_world(
+                render::ScreenPoint{canvas_->width() * 0.3, canvas_->height() * 0.6});
+            const core::Point2 where{(aimed.x / 1'000) * 1'000, (aimed.y / 1'000) * 1'000};
+            onCanvas(QEvent::MouseMove, screen(where), Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, screen(where), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(where), Qt::LeftButton);
+            QCoreApplication::processEvents();
+            auto* box = canvas_->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+            // The number stands at (0,1) inside the block: 1 m above where the
+            // click landed — read from the document, since a hand's click is a
+            // few centimetres off the point aimed at.
+            core::Point2 landed = where;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind &&
+                    (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                    landed =
+                        core::block_reference_insertion(doc.geometry(), doc.entities().slot[e]);
+            // Where the caption's baseline begins inside the block, placed.
+            core::Point2 caption_start{0, 1'000};
+            if (const core::BlockId symbol = doc.blocks().find("NOKTA"); symbol != core::kNoBlock)
+                for (const core::EntityKey k : doc.blocks().at(symbol).members) {
+                    const core::EntityId m = doc.slot_of(k);
+                    if (m == core::kNoEntity || !doc.texts().has(doc.entities().slot[m])) continue;
+                    const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[m]);
+                    caption_start           = core::Point2{doc.geometry().ring_xs(rs.first)[0],
+                                                 doc.geometry().ring_ys(rs.first)[0]};
+                }
+            const QPointF number_at =
+                screen(core::Point2{landed.x + caption_start.x, landed.y + caption_start.y});
+            const command::Session* live = controller_->session();
+            const bool asked_there =
+                live != nullptr && live->waiting() &&
+                QString::fromStdString(live->prompt().message).contains(QStringLiteral("'no'")) &&
+                box != nullptr && box->isVisible() &&
+                std::abs(box->geometry().left() - number_at.x()) <= 3.0 &&
+                std::abs(box->geometry().center().y() - number_at.y()) <= 3.0;
+            check(asked_there, QStringLiteral("alanın değeri, sayının duracağı yerde açılan kutuda "
+                                              "soruluyor (kutu %1,%2; yazı %3,%4)")
+                                   .arg(box != nullptr ? box->geometry().left() : -1)
+                                   .arg(box != nullptr ? box->geometry().center().y() : -1)
+                                   .arg(number_at.x(), 0, 'f', 0)
+                                   .arg(number_at.y(), 0, 'f', 0));
+            shoot("oznitelik-deger-kutusu");
+            if (box != nullptr && box->isVisible()) {
+                box->setText(QStringLiteral("K-7"));
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(box, &enter);
+                QCoreApplication::processEvents();
+            }
+            controller_->cancelInteractive(); // the tool re-armed for the next one
+            QCoreApplication::processEvents();
+            std::int64_t placed = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind &&
+                    (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                    placed = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+            const core::EntityId placed_slot =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(placed)));
+            const core::AttrId no = doc.attributes().find("no");
+            const bool valued     = placed_slot != core::kNoEntity && no != core::kNoAttr &&
+                                doc.attribute(no, placed_slot).value().text == "K-7";
+            check(valued, QStringLiteral("yazılan değer referansın 'no' hücresinde: K-7"));
+            shoot("oznitelik-cizildi");
+
+            // THE BASE, moved from the ribbon to the circle's east point: the
+            // symbol stays where it is drawn.
+            core::EmitBuffer before_runs;
+            (void)core::entity_outline(doc, placed_slot, before_runs);
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(placed));
+            QCoreApplication::processEvents();
+            actBlockBase_->trigger();
+            QCoreApplication::processEvents();
+            const core::Point2 east{landed.x + 400, landed.y};
+            onCanvas(QEvent::MouseMove, screen(east), Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, screen(east), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(east), Qt::LeftButton);
+            endCommand();
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+            core::EmitBuffer after_runs;
+            (void)core::entity_outline(doc, placed_slot, after_runs);
+            const core::BlockId nokta = doc.blocks().find("NOKTA");
+            const core::Point2 base =
+                nokta != core::kNoBlock ? doc.blocks().at(nokta).base : core::Point2{};
+            const bool kept = before_runs.xs == after_runs.xs && before_runs.ys == after_runs.ys;
+            check(std::abs(base.x - 400) <= 60 && std::abs(base.y) <= 60 && kept,
+                  QStringLiteral("Taban Noktası tabanı dairenin doğusuna taşıdı (%1, %2); "
+                                 "sembol çizildiği yerde kaldı")
+                      .arg(static_cast<double>(base.x) / 1000.0, 0, 'f', 3)
+                      .arg(static_cast<double>(base.y) / 1000.0, 0, 'f', 3));
+            shoot("blok-taban-tasindi");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }

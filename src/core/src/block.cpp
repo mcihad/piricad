@@ -35,6 +35,14 @@ BlockId BlockTable::find(std::string_view name) const
     return kNoBlock;
 }
 
+Status BlockTable::set_base(BlockId id, Point2 base)
+{
+    if (id >= defs_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(id));
+    defs_[id].base = base;
+    return ok();
+}
+
 Status BlockTable::add_member(BlockId id, EntityKey member, BlockId uses)
 {
     if (id >= defs_.size())

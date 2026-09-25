@@ -790,6 +790,22 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(12.4, 20.4), QPointF(11.4, 21.6));
         break;
 
+    case Glyph::BlockBase:
+        // A BLOCK'S SQUARE AND ITS BASE CROSS, moved from one corner to another
+        // with the square staying where it is: the base changes, the picture
+        // does not.
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(k.data);
+        p.drawRect(QRectF(6.0, 4.0, 12.0, 12.0));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(c, 1.0, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(4.0, 16.0), QPointF(8.0, 16.0));
+        p.drawLine(QPointF(6.0, 14.0), QPointF(6.0, 18.0));
+        p.setPen(stroke(k.note, 1.8));
+        p.drawLine(QPointF(15.0, 20.0), QPointF(21.0, 20.0));
+        p.drawLine(QPointF(18.0, 17.0), QPointF(18.0, 23.0));
+        break;
+
     case Glyph::MeasureAngle: {
         // TWO ARMS AND THE SWEEP BETWEEN THEM, which is what the tool measures
         // and what its preview now draws on the canvas.

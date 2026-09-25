@@ -127,6 +127,14 @@ Point2 transformed(const Xform& x, Point2 p);
 Xform block_placement(const BlockReference& ref, Point2 insertion, Point2 base, int column,
                       int row) noexcept;
 
+/// The transform that takes a point where copy (0, 0) of `ref` — standing at
+/// `insertion` over a definition based at `base` — is drawn back to the
+/// definition: `block_placement` undone. A placement scales before it turns,
+/// so its inverse must turn before it scales, and only a scale that is the same
+/// across and up lets the two orders meet; nothing for any other.
+std::optional<Xform> block_placement_inverse(const BlockReference& ref, Point2 insertion,
+                                             Point2 base) noexcept;
+
 /// Whether a `Place` keeps shapes — the same magnitude across and up, so a
 /// circle stays a circle and a caption its proportions. Every other kind
 /// answers for itself (`Stretch` by its two factors).

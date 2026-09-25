@@ -2056,6 +2056,23 @@ TEST_CASE("PROOF: BLOKDÜZENLE açma ve kaydetme gui, komut satırı ve betikten
                     "islem":"kaydet","nesne":[3],"nesneler":[5]}}]})"});
 }
 
+TEST_CASE("PROOF: BLOKEKLE alan değeri gui'de sorulur, komut satırında ve betikte verilir; aynı "
+          "belge ve aynı günlük")
+{
+    // The block carries a `{no}` field: the hand is asked for it where the
+    // caption will stand, the command line and the script give `deger=`.
+    prove_verb(
+        {.name    = "BLOKEKLE ad=NOKTA",
+         .id      = "core.insert",
+         .setup   = {"METİN noktalar=0,1.5 yazi={no} yukseklik=500", "DAİRE merkez=0,0 cevre=1,0",
+                     "BLOK ad=NOKTA taban=0,0 nesneler=1 nesneler=2"},
+         .objects = {},
+         .answers = {Value::point(core::Point2{10'000, 0}), Value::text("K-1")},
+         .typed   = "BLOKEKLE ad=NOKTA nokta=10,0 deger=no:K-1",
+         .scripted = R"({"ad":"BLOKEKLE","komutlar":[{"cmd":"core.insert","args":{
+                    "ad":"NOKTA","nokta":[10000,0],"deger":["no:K-1"]}}]})"});
+}
+
 TEST_CASE("PROOF: HİZALA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // One pair: the move. The GUI is asked for a second source and answers it

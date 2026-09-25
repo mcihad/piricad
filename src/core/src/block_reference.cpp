@@ -5,6 +5,7 @@
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_fields.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/wire.hpp"
 
@@ -55,6 +56,33 @@ void member_runs(const Document& doc, EntityId m, EmitBuffer& scratch, int depth
 }
 
 } // namespace
+
+std::vector<std::string> block_fields(const Document& doc, BlockId block)
+{
+    std::vector<std::string> out;
+    std::vector<BlockId> seen;
+    const auto walk = [&doc, &out, &seen](const auto& self, BlockId b, int depth) -> void {
+        if (depth > kMaxBlockDepth || b >= doc.blocks().size()) return;
+        if (std::find(seen.begin(), seen.end(), b) != seen.end()) return;
+        seen.push_back(b);
+        for (const EntityKey key : doc.blocks().at(b).members) {
+            const EntityId m = doc.slot_of(key);
+            if (m == kNoEntity || !doc.alive(m)) continue;
+            const std::uint32_t slot = doc.entities().slot[m];
+            if (doc.entities().kind[m] == kBlockReferenceKind) {
+                if (auto inner = block_reference_of(doc.geometry(), slot); inner)
+                    self(self, inner.value().block, depth + 1);
+                continue;
+            }
+            if (!doc.texts().has(slot)) continue;
+            for (std::string& name : field_names(doc.texts().text(slot)))
+                if (std::find(out.begin(), out.end(), name) == out.end())
+                    out.push_back(std::move(name));
+        }
+    };
+    walk(walk, block, 0);
+    return out;
+}
 
 bool style_by_block(const Document& doc, StyleId style)
 {

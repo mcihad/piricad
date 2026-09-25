@@ -104,6 +104,7 @@ struct Pieces
     std::size_t onto_reference{0};           ///< pieces set down on the reference's layer
     std::size_t reference_look{0};           ///< pieces given the reference's look
     std::size_t hidden{0};                   ///< pieces of hidden members, kept hidden
+    std::size_t values_written{0};           ///< captions written with the reference's values
     std::size_t values_left{0};              ///< the reference's own attribute cells, not carried
     std::string block;                       ///< the definition's name
 };
@@ -117,15 +118,20 @@ core::Json keys_of(const core::Document& doc, const std::vector<core::EntityId>&
     return out;
 }
 
-/// The attribute cells `e` carries.
-std::size_t filled_cells(const core::Document& doc, core::EntityId e)
+/// The attribute cells reference `e` carries that none of its block's fields
+/// names (`core::block_fields`): the values a piece has nowhere to show.
+std::size_t unshown_cells(const core::Document& doc, core::EntityId e, core::BlockId block)
 {
-    std::size_t filled = 0;
+    const std::vector<std::string> fields = core::block_fields(doc, block);
+    std::size_t left                      = 0;
     for (std::size_t c = 0; c < doc.attributes().columns(); ++c) {
+        const core::AttrColumn* col = doc.attributes().column(static_cast<core::AttrId>(c));
+        if (col == nullptr) continue;
         auto held = doc.attribute(static_cast<core::AttrId>(c), e);
-        if (held && held.value().present) ++filled;
+        if (!held || !held.value().present) continue;
+        if (std::find(fields.begin(), fields.end(), col->spec().id) == fields.end()) ++left;
     }
-    return filled;
+    return left;
 }
 
 /// A BLOCK REFERENCE TAKEN APART: every member, of every copy of its grid, made
@@ -158,7 +164,7 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
     out.block                                  = doc.blocks().at(placed.block).name;
     const core::Point2 insertion = core::block_reference_insertion(doc.geometry(), gslot);
     out.copies                   = static_cast<std::size_t>(placed.rows) * placed.columns;
-    out.values_left              = filled_cells(doc, slot);
+    out.values_left              = unshown_cells(doc, slot, placed.block);
 
     for (int row = 0; row < static_cast<int>(placed.rows); ++row) {
         for (int column = 0; column < static_cast<int>(placed.columns); ++column) {
@@ -177,6 +183,7 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
                 if (made.value().onto_reference) ++out.onto_reference;
                 if (made.value().reference_look) ++out.reference_look;
                 if (made.value().hidden) ++out.hidden;
+                if (made.value().filled) ++out.values_written;
                 out.made.push_back(made.value().piece);
                 ++out.kind[kind_word(kind)];
             }
@@ -354,8 +361,11 @@ Task<void> run_explode(Context& ctx)
         if (pieces.reference_look > 0)
             said += "; " + std::to_string(pieces.reference_look) + " parça referansın görünüşünde";
         if (pieces.hidden > 0) said += "; " + std::to_string(pieces.hidden) + " gizli parça";
+        if (pieces.values_written > 0)
+            said += "; " + std::to_string(pieces.values_written) +
+                    " yazıya referansın öznitelik değeri işlendi";
         if (pieces.values_left > 0)
-            said += "; referansın " + std::to_string(pieces.values_left) +
+            said += "; referansın hiçbir yazıda görünmeyen " + std::to_string(pieces.values_left) +
                     " öznitelik değeri parçalara geçmedi";
         ctx.echo(said + ".");
 
@@ -370,6 +380,8 @@ Task<void> run_explode(Context& ctx)
             row.set("gorunus_devri",
                     core::Json::integer(static_cast<std::int64_t>(pieces.reference_look)));
             row.set("gizli", core::Json::integer(static_cast<std::int64_t>(pieces.hidden)));
+            row.set("yazilan_deger",
+                    core::Json::integer(static_cast<std::int64_t>(pieces.values_written)));
             row.set("birakilan_oznitelik",
                     core::Json::integer(static_cast<std::int64_t>(pieces.values_left)));
         }

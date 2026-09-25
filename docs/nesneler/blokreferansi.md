@@ -26,6 +26,14 @@ Bir üye yazısının harfleri, taban çizgisi ne kadar uzadıysa o kadar büyü
 ölçekli bir referansta 0,5 m'lik yazı 1 m çizilir. x ve y ölçeği farklıysa harfler
 taban çizgisinin uzadığı kadar büyür; harfin eni ayrıca esnetilmez.
 
+## Öznitelikler
+
+Tanımdaki `{no}` gibi süslü ayraçlı bir yazı bloğun **alanıdır**; referans onu kendi `no`
+hücresinin değeriyle çizer (DXF'in `ATTDEF` ve `ATTRIB` ikilisi). Değerler referansın
+sıradan öznitelik hücreleridir: nitelik panelinde görünür, `ÖZNİTELİK` ile değişir,
+dosyaya yazılır. Değeri olmayan referansın alan yazısı boş çizilir. İç içe bir bloğun
+alanları en dıştaki referansın değerleriyle çizilir.
+
 ## Yakalama noktaları
 
 Yakalama, referansın **çizdiği** şeyi tutar; her nokta üyeyi çizen yerleşimden geçer, bu

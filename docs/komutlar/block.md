@@ -8,6 +8,10 @@ yazısı ve öznitelikleriyle tanıma kopyalanır, kendileri silinir; taban nokt
 referans onları tam durdukları yerde çizer. Sonra aynı bloğu
 [`BLOKEKLE`](insert.md) ile istediğiniz kadar yerleştirirsiniz.
 
+Nesnelerin arasında `{no}` gibi süslü ayraçlı bir yazı varsa `no` bloğun **alanı** olur:
+her referans o yazıyı kendi `no` değeriyle çizer ([BLOKEKLE](insert.md#alanlar-ve-değerleri)).
+Alanın sütunu yoksa metin sütunu olarak tanımlanır ve çıktı bloğun alanlarını sayar.
+
 Blok adları Türkçe katlanmış hâliyle benzersizdir: `Kapak` ve `KAPAK` aynı bloktur.
 Tanım tablosu ekle-yalnızdır; bir tanım silinemez, `GERİAL` referansı ve kopyaları
 kaldırıp özgün nesneleri geri getirir ama boş tanım dosyada kalır. Tanımı sonradan

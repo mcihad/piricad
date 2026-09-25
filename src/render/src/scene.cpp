@@ -6,6 +6,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
+#include "kentos_cad/core/text_fields.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
@@ -482,7 +483,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         /// One caption: the baseline from `x0,y0` to `x1,y1` in document
         /// millimetres, the text-table entry at `tslot`, in `rgba`.
         const auto emit_caption = [&](std::uint32_t tslot, core::Mm x0, core::Mm y0, core::Mm x1,
-                                      core::Mm y1, std::uint32_t rgba, core::Mm height) {
+                                      core::Mm y1, std::uint32_t rgba, core::Mm height,
+                                      std::string_view words) {
             TextItem item;
             item.rgba = rgba;
             item.x0   = view.offset_x_f(x0);
@@ -499,7 +501,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             const core::TextLines lines = texts.lines(tslot);
             item.spacing                = lines.spacing;
             item.wrap                   = lines.wrap;
-            item.text.assign(texts.text(tslot));
+            item.text.assign(words);
 
             out.texts.push_back(std::move(item));
             ++out.text_count;
@@ -515,7 +517,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             const auto ys = geometry.ring_ys(span.first);
             if (xs.size() >= 2) {
                 emit_caption(entities.slot[e], xs.front(), ys.front(), xs.back(), ys.back(),
-                             out.polylines[first].rgba, texts.height(entities.slot[e]));
+                             out.polylines[first].rgba, texts.height(entities.slot[e]),
+                             texts.text(entities.slot[e]));
                 ++out.entity_count;
                 if (entities.kind[e] == core::kPolylineKind || !curve_active) return;
             }
@@ -629,6 +632,14 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
                 // letters grow with the reference's scale, as much as the
                 // baseline did (TODOS C-13): a symbol inserted twice the size
                 // with its number the old size read as a different symbol.
+                // AND A FIELD IS THE REFERENCE'S OWN VALUE: a member caption
+                // naming `{no}` is drawn with the number of the reference that
+                // draws it — the attribute a DXF writes as ATTDEF and ATTRIB.
+                const std::string_view said = texts.text(rt);
+                const bool fields           = core::has_fields(said);
+                std::string filled;
+                if (fields)
+                    if (auto f = core::fill_fields(doc, e, said); f) filled = std::move(f.value());
                 const auto xs = curve.run_xs(r);
                 const auto ys = curve.run_ys(r);
                 if (xs.size() >= 2)
@@ -636,7 +647,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
                                  out.polylines[r_first].rgba,
                                  core::caption_height_along(
                                      geometry, rt, core::Point2{xs.front(), ys.front()},
-                                     core::Point2{xs.back(), ys.back()}, texts.height(rt)));
+                                     core::Point2{xs.back(), ys.back()}, texts.height(rt)),
+                                 fields ? std::string_view(filled) : said);
                 continue;
             }
             emit_run_into(r_first, r_count, r);

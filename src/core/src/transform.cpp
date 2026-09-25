@@ -110,6 +110,27 @@ Xform block_placement(const BlockReference& ref, Point2 insertion, Point2 base, 
     return x;
 }
 
+std::optional<Xform> block_placement_inverse(const BlockReference& ref, Point2 insertion,
+                                             Point2 base) noexcept
+{
+    Xform forward = block_placement(ref, insertion, base, 0, 0);
+    if (!place_uniform(forward)) return std::nullopt;
+    // 1/s with the sign kept in the numerator, where a Ratio keeps it.
+    const auto inverted = [](Ratio r) {
+        return r.num < 0 ? Ratio{-r.den, -r.num} : Ratio{r.den, r.num};
+    };
+    // S⁻¹·R(−ρ) written as R(ρ')·S⁻¹: a mirror turns the other way round.
+    const bool mirrored = (ref.sx.num < 0) != (ref.sy.num < 0);
+    Xform back;
+    back.kind       = Xform::Kind::Place;
+    back.base       = insertion;
+    back.axis_b     = base;
+    back.place_sx   = inverted(ref.sx);
+    back.place_sy   = inverted(ref.sy);
+    back.place_udeg = mirrored ? ref.rotation_udeg : -ref.rotation_udeg;
+    return back;
+}
+
 bool place_uniform(const Xform& x) noexcept
 {
     if (x.kind != Xform::Kind::Place) return false;

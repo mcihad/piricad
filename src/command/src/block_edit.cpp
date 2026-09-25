@@ -5,6 +5,7 @@
 
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/text_fields.hpp"
 
 #include <algorithm>
 #include <string>
@@ -43,6 +44,19 @@ core::Result<PlacedMember> place_member(Context& ctx, core::EntityId member, con
     if ((doc.entities().flags[member] & core::FlagHidden) != 0) {
         if (auto st = ctx.transaction().set_entity_hidden(out.piece, true); !st) return st.error();
         out.hidden = true;
+    }
+    // A CAPTION WITH FIELDS comes out saying what it said on the sheet: the
+    // reference's own values written in, since the piece has no reference to
+    // read them from any more (the attribute's value, kept — TODOS C-13).
+    const std::uint32_t slot = doc.entities().slot[out.piece];
+    if (doc.texts().has(slot) && core::has_fields(doc.texts().text(slot))) {
+        auto words = core::fill_fields(doc, reference, doc.texts().text(slot));
+        if (!words) return words.error();
+        if (auto st = ctx.transaction().set_text(out.piece, words.value(), doc.texts().height(slot),
+                                                 doc.texts().anchor(slot), doc.texts().lines(slot));
+            !st)
+            return st.error();
+        out.filled = true;
     }
     return out;
 }
@@ -146,6 +160,23 @@ bool same_as_member(const core::Document& doc, core::EntityId e, core::Mm dx, co
         if (has_a != has_b || (has_a && !(a.value() == b.value()))) return false;
     }
     return true;
+}
+
+core::Result<std::vector<std::string>> ensure_field_columns(Context& ctx, core::BlockId block)
+{
+    std::vector<std::string> declared;
+    for (const std::string& name : core::block_fields(ctx.document(), block)) {
+        if (ctx.document().attributes().find(name) != core::kNoAttr) continue;
+        core::AttrSpec spec;
+        spec.id         = name;
+        spec.name_tr    = name;
+        spec.summary_tr = "Blok alanı: bir blok referansının " + name + " değeri";
+        spec.type       = core::AttrType::Text;
+        auto made       = ctx.transaction().declare_attribute(std::move(spec));
+        if (!made) return made.error();
+        declared.push_back(name);
+    }
+    return declared;
 }
 
 core::Result<std::size_t> refresh_references(Context& ctx, core::BlockId block)

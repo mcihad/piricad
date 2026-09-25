@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — öznitelikli blok ve taban noktası (C-13, 3. aşama)
+
+- **Blok alanları.** Bir bloğun içindeki `{no}` gibi süslü ayraçlı yazı bloğun **alanıdır**
+  (DXF'in `ATTDEF`'i); her referans onu **kendi** `no` hücresinin değeriyle çizer (`ATTRIB`) —
+  aynı nokta sembolü her yerde kendi numarasını yazar. `BLOK` alanları sayar ve sütunu yoksa
+  metin sütunu olarak tanımlar. `BLOKEKLE deger=no:K-12` değeri verir; arayüzde bloğu
+  yerleştirince her alan, **yazısının duracağı yerde** açılan kutuda sorulur (boş Enter boş
+  bırakır; betik bir şey vermediyse sorulmaz). Bloğun taşımadığı alan adı ve `:`'sız değer
+  adıyla reddedilir. Değerler referansın sıradan öznitelik hücreleridir: nitelik panelinde
+  görünür, `ÖZNİTELİK` ile değişir. `PATLAT` alan yazısını referansın değeriyle yazılmış düz
+  yazı olarak çıkarır ve rapor bunu sayar; `BLOKDÜZENLE` tanımı açınca alan yer tutucusu
+  (`{no}`) görünür. Yazı alanlarının doldurulması (`fill_fields`) çizimin de kullanabilmesi
+  için çekirdeğe taşındı.
+- **Taban noktası.** `BLOKDÜZENLE islem=taban` (şeritte **Blok ▸ Taban Noktası**): yeni taban
+  bir referansın üstünde gösterilir — dönük, ölçekli, aynalı olabilir; nokta o referansın
+  yerleşiminden geri tanıma götürülür — ya da `ad=` ile tanımın kendi koordinatında verilir.
+  Çizimdeki **hiçbir referans yerinden oynamaz** (başka bir bloğun içindekiler de): ekleme
+  noktaları yeni tabanın çizildiği yere taşınır; bundan sonra `BLOKEKLE` bloğu yeni noktasından
+  yerleştirir. x ve y ölçeği farklı referansta ve açık bir düzenleme sırasında reddedilir.
+- **Düzeltildi:** yerini söyleyen bir yazı sorusu (kılavuzun yazısı, bloğun alan değeri)
+  tıklamayla açıldığında kutu önce doğru yerde açılıyor, sonra aynı tıklama onu tıklama
+  noktasına taşıyordu.
+
 ### Eklendi — blok tanımı çizimin üstünde düzenlenir, bütün referanslar değişir (C-13, 2. aşama)
 
 - **BLOKDÜZENLE.** Bir bloğa çift tıklayınca (ya da **Blok ▸ Bloğu Düzenle**) tanımın üyeleri

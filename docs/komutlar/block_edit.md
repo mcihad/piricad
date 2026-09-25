@@ -14,6 +14,7 @@ geri alma adımıdır:
 | `islem=ac` | Tanımın üyeleri, sıradan nesneler olarak — kendi türleri, katmanları, renkleri ve yazılarıyla, tanımda nasılsalar öyle — referansın ekleme noktasına çıkar. Referans, düzenleme bitene dek gizlenir. |
 | `islem=kaydet` | Tanım, verdiğiniz nesnelerden yeniden kurulur. Değişmeden dönen nesne, karşılığı olan üyeyi **olduğu gibi** bırakır; değişen ya da yeni çizilen nesne tanıma yazılır; karşılığı dönmeyen üye tanımdan çıkar. Bloğu çizen her referansın kutusu yenilenir, gizli referans geri gelir. |
 | `islem=vazgec` | Açılan nesneler kaldırılır, referans geri gelir; tanım değişmez. |
+| `islem=taban` | Bloğun **taban noktası** taşınır; bütün referanslar çizildikleri yerde kalır, bundan sonra `BLOKEKLE` bloğu yeni noktasından yerleştirir. |
 
 ### Nerede açılır
 
@@ -48,6 +49,8 @@ BLOKDÜZENLE ad=<blok>
 BLOKDÜZENLE islem=kaydet nesne=<referans> nesneler=<kimlik> [nesneler=<kimlik> …]
 BLOKDÜZENLE islem=kaydet ad=<blok> nesneler=<kimlik> [nesneler=<kimlik> …]
 BLOKDÜZENLE islem=vazgec nesne=<referans> nesneler=<kimlik> [nesneler=<kimlik> …]
+BLOKDÜZENLE islem=taban nesne=<referans> taban=<nokta>
+BLOKDÜZENLE islem=taban ad=<blok> taban=<nokta>
 ```
 
 ## Parametreler
@@ -58,6 +61,7 @@ BLOKDÜZENLE islem=vazgec nesne=<referans> nesneler=<kimlik> [nesneler=<kimlik> 
 | `nesne` | Düzenlenen blok referansı. Açarken verilmezse etkin seçim, o da yoksa sorulur; kaydederken ve vazgeçerken açtığınız referansın kimliğini verin (gizli olduğu için tıklanamaz) |
 | `ad` | Referans yerine bloğun adı: tanım kendi yerinde açılır |
 | `nesneler` | `kaydet` ve `vazgec` için bloğun nesneleri: açılanlar ve sonradan çizilenler. Birden çok nesne için anahtarı yineleyin |
+| `taban` | `taban` için yeni taban noktası: `nesne=` ile verilen referansın çiziminde gösterilir; `ad=` ile tanımın kendi koordinatında verilir. Verilmezse sorulur |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -102,9 +106,30 @@ Vazgeçmek için, açtıktan sonra:
 BLOKDÜZENLE islem=vazgec nesne=5 nesneler=6 nesneler=7
 ```
 
+### Taban noktasını taşımak
+
+Taban noktası, `BLOKEKLE`'nin bloğu yerleştirirken tıkladığınız noktaya oturttuğu
+noktadır. Yeni tabanı bir referansın üstünde gösterirsiniz — dönük, ölçekli ya da aynalı
+olabilir, program noktayı o referansın yerleşiminden geri, tanıma götürür:
+
+```text
+BLOKDÜZENLE islem=taban nesne=5 taban=0.6,0
+```
+
+```text
+'KAPAK' bloğunun taban noktası değişti; 1 referansı çizildiği yerde tutuldu. Bundan sonra BLOKEKLE bloğu bu noktasından yerleştirir.
+```
+
+Çizimdeki **hiçbir referans yerinden oynamaz**: her birinin ekleme noktası, yeni tabanın
+onda çizildiği yere taşınır — başka bir bloğun içindeki referanslar da. x ve y ölçeği
+farklı bir referansta gösterilen nokta tanıma tek biçimde geri götürülemez; öyle bir
+referansta taban noktası reddedilir, noktayı eşit ölçekli bir referansta gösterin ya da
+`ad=` ile tanımın kendi koordinatında verin. Düzenleme açıkken taban noktası değişmez.
+
 ### Arayüz
 
-Bir bloğa **çift tıklayın** — ya da bloğu seçip **Blok ▸ Bloğu Düzenle**. Şeritte
+Bir bloğa **çift tıklayın** — ya da bloğu seçip **Blok ▸ Bloğu Düzenle**. Taban noktası
+için bloğu seçip **Blok ▸ Taban Noktası**, sonra yeni noktayı tıklayın. Şeritte
 **Blok: KAPAK** sekmesi açılır. Nesneleri her zamanki araçlarla düzenleyin, yeni
 nesneler çizin; bitince **Bloğu Kaydet** ya da **Vazgeç**. Düzenleme açıkken projeyi
 kaydetmek, yeni bir çizim açmak ya da pencereyi kapatmak istediğinizde program önce
@@ -144,7 +169,8 @@ kaldırır ve referansı gösterir.
 
 Betiklenebilir ve yapay zekâya açıktır. Açmanın raporu: `islem`, `blok`, `referans`,
 `oteleme` (milimetre, sağa ve yukarı) ve `parcalar`. Kaydetmenin raporu: `korunan`,
-`yazilan`, `cikarilan`, `referans_sayisi`, `kutusu_yenilenen`. Günlüğe `islem`, `nesne`
+`yazilan`, `cikarilan`, `referans_sayisi`, `kutusu_yenilenen`. Tabanın raporu: yeni `taban`
+(tanımın koordinatında, milimetre) ve `referans_sayisi`. Günlüğe `islem`, `nesne`
 ya da `ad` ve `nesneler` yazılır.
 
 ## Hatalar
@@ -158,6 +184,8 @@ ya da `ad` ve `nesneler` yazılır.
 | `Hangi bloğun düzenlendiğini söyleyin: nesne=<açılan referans> ya da ad=<blok>.` | Kaydederken referans ya da ad verilmedi | `nesne=` ya da `ad=` ekleyin |
 | `'X' adında bir blok yok.` | `ad=` bilinmeyen bir blok | Tanımlı blokların adı mesajda yazılıdır |
 | `'…' katmanı kilitli.` | Açılacak üyenin katmanı kilitli | `KATMAN` ile kilidi kaldırın |
+| `'X' bloğunun bir düzenlemesi açık … Taban noktasını değiştirmeden önce düzenlemeyi kaydedin ya da vazgeçin.` | `taban` açık bir düzenleme sırasında | Önce `kaydet` ya da `vazgec` |
+| `Referans N x ve y'de farklı ölçekli …` | `taban` eşit olmayan ölçekli bir referansta gösterildi | Eşit ölçekli bir referansta gösterin ya da `ad=` kullanın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

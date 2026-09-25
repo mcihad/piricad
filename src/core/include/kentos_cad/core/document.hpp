@@ -158,6 +158,9 @@ struct Op
         /// carries a handful of sheets, so putting the previous list back is
         /// both correct and smaller than that bookkeeping would be.
         SetLayouts, ///< layouts_arg
+
+        /// A block's base point, put back (`Document::set_block_base`).
+        SetBlockBase, ///< block_arg, point_arg — the base it had before
     };
 
     Kind kind{Kind::None};
@@ -208,6 +211,10 @@ struct Op
     /// back "attached to nothing" (see `Document::set_attachment`).
     bool has_attach{false};
     Attachment attach_arg{};
+
+    /// The block and the base to put back; see `Kind::SetBlockBase`.
+    BlockId block_arg{kNoBlock};
+    Point2 point_arg{};
 };
 
 class Document
@@ -425,6 +432,18 @@ public:
     /// so the inverse is the old slot number (`Op::Kind::SetGeometry`) and no new
     /// Op variant exists. The kind validates the pair before anything is written.
     Status set_kind_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out);
+
+    /// Moves the base point of `block` (`BlockTable::set_base`); the inverse is
+    /// `Op::SetBlockBase` with the base it had. The references are the caller's
+    /// to keep in place (`move_reference`).
+    Status set_block_base(BlockId block, Point2 base, Op& undo_out);
+
+    /// Stands block reference `e` at `insertion`, its stored box refreshed with
+    /// it — what keeps a reference's picture where it is when its definition's
+    /// base point moves by the matching amount. Like `refresh_reference_bounds`
+    /// not an edit of what the sheet shows, so a lock does not stop it, nor the
+    /// reference being a member of another definition. `Op::SetGeometry`.
+    Status move_reference(EntityId e, Point2 insertion, Op& undo_out);
 
     /// Rewrites the drawn box block reference `e` stores (`BlockReference::bounds`)
     /// from what its definition draws now — after BLOKDÜZENLE changed the

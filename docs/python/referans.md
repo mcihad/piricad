@@ -1855,15 +1855,17 @@ cad.block_edit(
     reference: list[int],
     name: str,
     objects: list[int],
+    base: Coord,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `action` | `str` | `islem` | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler |
+| `action` | `str` | `islem` | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban noktasını taşır, referanslar yerinde kalır |
 | `reference` | `list[int]` | `nesne` | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim [kalıcı nesne anahtarı] |
 | `name` | `str` | `ad` | Referans yerine bloğun adı: tanım kendi yerinde açılır |
 | `objects` | `list[int]` | `nesneler` | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler [kalıcı nesne anahtarı] |
+| `base` | `Coord` | `taban` | taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın kendi koordinatında [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/block_edit.md)
 
@@ -1884,6 +1886,7 @@ cad.insert(
     rows: int,
     column_spacing: int,
     row_spacing: int,
+    values: list[str],
 ) -> int
 ```
 
@@ -1898,6 +1901,7 @@ cad.insert(
 | `rows` | `int` | `satir` | Dizi satır sayısı; varsayılan 1 |
 | `column_spacing` | `int` | `sutun_aralik` | Sütunlar arası, milimetre, döndürülmüş eksende |
 | `row_spacing` | `int` | `satir_aralik` | Satırlar arası, milimetre, döndürülmüş eksende |
+| `values` | `list[str]` | `deger` | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
 
 [Komut sayfası](../komutlar/insert.md)
 

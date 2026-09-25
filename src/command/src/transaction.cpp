@@ -94,6 +94,24 @@ Status Transaction::erase_member(EntityId e)
     return core::ok();
 }
 
+Status Transaction::set_block_base(core::BlockId block, Point2 base)
+{
+    core::Op undo;
+    auto st = doc_.set_block_base(block, base, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::move_reference(EntityId e, Point2 insertion)
+{
+    core::Op undo;
+    auto st = doc_.move_reference(e, insertion, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::refresh_reference_bounds(EntityId e)
 {
     core::Op undo;

@@ -1025,10 +1025,11 @@ Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; b�
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `islem` | text | isteğe bağlı | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler |
+| `islem` | text | isteğe bağlı | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban noktasını taşır, referanslar yerinde kalır |
 | `nesne` | selection | en az 0 | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim |
 | `ad` | text | isteğe bağlı | Referans yerine bloğun adı: tanım kendi yerinde açılır |
 | `nesneler` | selection | en az 0 | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler |
+| `taban` | point | isteğe bağlı | taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın kendi koordinatında |
 
 Ayrıntılı kullanım: [BLOKDÜZENLE](block_edit.md)
 
@@ -1047,6 +1048,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 | `satir` | integer | isteğe bağlı | Dizi satır sayısı; varsayılan 1 |
 | `sutun_aralik` | integer | isteğe bağlı | Sütunlar arası, milimetre, döndürülmüş eksende |
 | `satir_aralik` | integer | isteğe bağlı | Satırlar arası, milimetre, döndürülmüş eksende |
+| `deger` | text | en az 0 | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
 
 Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
@@ -3170,9 +3172,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "enum": [
             "ac",
             "kaydet",
-            "vazgec"
+            "vazgec",
+            "taban"
           ],
-          "description": "ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler (metin)"
+          "description": "ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban noktasını taşır, referanslar yerinde kalır (metin)"
         },
         "nesne": {
           "type": "string",
@@ -3187,6 +3190,39 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
           "description": "kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "taban": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın kendi koordinatında — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
         "varsayimlar": {
           "type": "array",
@@ -6852,6 +6888,13 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "satir_aralik": {
           "type": "integer",
           "description": "Satırlar arası, milimetre, döndürülmüş eksende (tam sayı)"
+        },
+        "deger": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin)"
         },
         "varsayimlar": {
           "type": "array",

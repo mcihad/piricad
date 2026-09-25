@@ -1199,14 +1199,16 @@ def block_edit(
     reference: list[int] = ...,
     name: str = ...,
     objects: list[int] = ...,
+    base: Coord = ...,
 ) -> int:
     """Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
 
     Komut: core.block_edit (BLOKDÜZENLE)
-        action — ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler
+        action — ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban noktasını taşır, referanslar yerinde kalır
         reference — Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim [kalıcı nesne anahtarı]
         name — Referans yerine bloğun adı: tanım kendi yerinde açılır
         objects — kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler [kalıcı nesne anahtarı]
+        base — taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın kendi koordinatında [mm, Sağa (Y) önce]
     """
 
 def insert(
@@ -1220,6 +1222,7 @@ def insert(
     rows: int = ...,
     column_spacing: int = ...,
     row_spacing: int = ...,
+    values: list[str] = ...,
 ) -> int:
     """Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
@@ -1233,6 +1236,7 @@ def insert(
         rows — Dizi satır sayısı; varsayılan 1
         column_spacing — Sütunlar arası, milimetre, döndürülmüş eksende
         row_spacing — Satırlar arası, milimetre, döndürülmüş eksende
+        values — Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur
     """
 
 def dimension(

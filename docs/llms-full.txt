@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 113 (100 tanesi onay ister)
-- Katalog parmak izi: `4388797865245167697`
+- Katalog parmak izi: `10409035983491911130`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -230,10 +230,11 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `islem` | string | hayır | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler (metin) |
+| `islem` | string | hayır | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler; taban: taban noktasını taşır, referanslar yerinde kalır (metin) |
 | `nesne` | string | hayır | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `ad` | string | hayır | Referans yerine bloğun adı: tanım kendi yerinde açılır (metin) |
 | `nesneler` | string | hayır | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `taban` | konum (tutamak ya da göreli nokta) | hayır | taban için yeni taban noktası: referansın çiziminde, ad= ile tanımın kendi koordinatında — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_boundary` — Sınır Bul
@@ -824,6 +825,7 @@ Onay ister.
 | `satir` | integer | hayır | Dizi satır sayısı; varsayılan 1 (tam sayı) |
 | `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
+| `deger` | array | hayır | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_intersect_point` — Kesişim Noktası
