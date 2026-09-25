@@ -741,6 +741,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
 
     if (session.state() == SessionState::Failed) {
         session.transaction().rollback_to(mark);
+        cut_back(session.tail_at_start(), session.active_layer_at_start());
         return session.error();
     }
 
@@ -762,6 +763,9 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // a validation error for a user who simply changed their mind. Cancelling is
     // not a failure, whatever the command does to the document.
     if (ops == 0 && session.state() == SessionState::Cancelled) {
+        // Nothing to undo, and nothing it made either: a layer or a column a
+        // cancelled run created on the way goes with it (TODOS F-05).
+        cut_back(session.tail_at_start(), session.active_layer_at_start());
         result.mutated = false;
         result.message = "İptal edildi";
         if (on_command_finished) on_command_finished(result);
@@ -796,6 +800,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         ValidationRequest req{spec, session.resolved(), session.input().origin(), doc_};
         if (auto st = validator_.run(req); !st) {
             session.transaction().rollback_to(mark); // no partial application, ever (§2.5)
+            cut_back(session.tail_at_start(), session.active_layer_at_start());
             return st.error();
         }
     }
@@ -872,6 +877,23 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     return result;
 }
 
+void Bus::cut_back(const core::Document::Tail& tail, LayerId active)
+{
+    // WHAT THE ROLLED-BACK STEP APPENDED GOES WITH ITS EDITS (TODOS F-05,
+    // model.md R4a). A tail of another document — the step opened a file —
+    // is refused by the document and nothing is cut.
+    if (auto st = doc_.truncate_to(tail); !st && tail.generation == doc_.generation())
+        log_warn("Geri alınan adımın izleri kesilemedi: " + st.error().message);
+    if (active < doc_.layers().size()) active_layer_ = active;
+    if (active_layer_ >= doc_.layers().size()) active_layer_ = 0;
+
+    // A key the step minted and selected names nothing now.
+    bool pruned = false;
+    for (const core::EntityKey key : std::vector<core::EntityKey>(selection_.keys()))
+        if (doc_.slot_of(key) == core::kNoEntity) pruned |= selection_.remove(key);
+    if (pruned && on_selection_changed) on_selection_changed();
+}
+
 void Bus::journal_entry(const Session& session)
 {
     JournalEntry e;
@@ -905,7 +927,15 @@ void Bus::journal_entry(const Session& session)
     // succeeded, described edits no longer in the drawing — a replay rebuilt
     // half a script. The lines are appended in order when the batch closes and
     // dropped when it is aborted, so the journal holds what the drawing holds.
-    if (batch_ && !session.owns_transaction()) {
+    //
+    // Every command of the batch waits, whether it borrowed the batch's
+    // transaction or ran on its own like SÜTUN: what it appended is cut back
+    // with the batch, and its project setting put back (`abort_batch`), so its
+    // line goes too — and the lines stay in the order they ran. The one that
+    // REPLACED the document is written at once: an opened drawing is not
+    // un-opened, and the lines before it were written when it arrived
+    // (`document_replaced`).
+    if (batch_ && session.tail_at_start().generation == doc_.generation()) {
         batch_journal_.push_back(std::move(e));
         return;
     }
@@ -924,6 +954,9 @@ void Bus::document_replaced()
         // replay those inverses against the document that has just arrived.
         (void)batch_->release();
         batch_revision_at_start_ = doc_.revision();
+        batch_tail_              = doc_.tail();
+        batch_active_layer_      = active_layer_;
+        batch_settings_          = project_settings_;
         // What the batch did to the drawing that has gone is past, and the
         // journal says it happened.
         for (JournalEntry& e : batch_journal_)
@@ -945,6 +978,9 @@ core::Status Bus::begin_batch(std::string label)
     batch_label_             = std::move(label);
     batch_commands_          = 0;
     batch_revision_at_start_ = doc_.revision();
+    batch_tail_              = doc_.tail();
+    batch_active_layer_      = active_layer_;
+    batch_settings_          = project_settings_;
     batch_                   = std::make_unique<Transaction>(doc_, batch_label_);
     return core::ok();
 }
@@ -1104,6 +1140,11 @@ void Bus::abort_batch()
     // the way closing the batch and undoing it left one.
     batch_->rollback();
     batch_journal_.clear();
+    cut_back(batch_tail_, batch_active_layer_);
+    // A PROJECT SETTING the batch wrote goes back too: `AYAR` writes outside the
+    // transaction until the document owns the store (settings.cpp, PHASE-0
+    // SEAM), and its journal line has just been dropped with the others.
+    project_settings_.restore(batch_settings_);
     const bool moved = doc_.revision() != batch_revision_at_start_;
     batch_.reset();
     batch_commands_          = 0;

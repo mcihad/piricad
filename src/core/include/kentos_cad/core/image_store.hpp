@@ -135,6 +135,10 @@ public:
     /// file and fixture written before images existed keeps its fingerprint.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// Forgets every picture at or past `count` (TODOS F-05): the ones a
+    /// rolled-back step interned. The caller guarantees no style names one.
+    void truncate(std::size_t count);
+
 private:
     struct Entry
     {

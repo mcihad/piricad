@@ -386,6 +386,16 @@ const Appearance& StyleTable::at(StyleId id) const
     return id < entries_.size() ? entries_[id] : entries_[kByLayerStyle];
 }
 
+void StyleTable::truncate(std::size_t count)
+{
+    // Never the sentinel: id 0 is what every table starts with.
+    if (count == 0 || count >= entries_.size()) return;
+    std::erase_if(intern_, [count](const auto& kv) { return kv.second >= count; });
+    std::erase_if(symbol_intern_, [count](const auto& kv) { return kv.second >= count; });
+    entries_.resize(count);
+    symbols_.resize(count);
+}
+
 std::uint64_t StyleTable::fold(std::uint64_t seed) const
 {
     // In id order, and with the id mixed in: the id is what every entity stores,

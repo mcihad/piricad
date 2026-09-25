@@ -20,6 +20,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/io/service.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
@@ -32,7 +33,9 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -576,4 +579,162 @@ TEST_CASE("DEĞİŞİKLİK: kılavuzdaki geri alma ve yineleme çıktıları kel
         CHECK_EQ(r.doc.layer_table().at(parsel)->appearance.rgba, 0xFF000000u);
         CHECK_EQ(after(r, "GERİAL"), "Geri alındı: " + line + "\nGeri almayla 1 nesne silindi.\n");
     }
+}
+
+namespace {
+
+/// The bytes of `path`.
+std::string bytes_of(const std::string& path)
+{
+    std::ifstream in(path, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+} // namespace
+
+TEST_CASE("TEK İŞLEM: yarıda kalan betik hiçbir türde iz bırakmaz; kaydedilen dosya bayt bayt aynı "
+          "(F-05)")
+{
+    // WHAT A ROLLBACK USED TO LEAVE, one kind at a time: a dead row (in the file
+    // and in the fingerprint), a layer the script made — and the active layer
+    // switched to it — a column, an interned style, a processing tool's output
+    // layer and its origin, a block, a hatch, a linked dimension, a caption's
+    // tie, and a key counter further on than any journal could replay. Each
+    // kind is appended by a script that then fails; the drawing, the active
+    // layer, the next key and the saved FILE must be exactly as before.
+    Rig r;
+    io::FileService files{r.bus};
+    r.run("KATMAN ad=PARSEL");
+    r.run("SÜTUN kimlik=ada tur=tam_sayi");
+    r.run("ALAN 0,0 20000,0 20000,10000 0,10000");
+    r.run("ÖZNİTELİK ad=ada nesne=1 deger=101");
+    r.run("ÇİZGİ 0,20000 30000,20000");
+    const auto dir = std::filesystem::temp_directory_path() / "kentoscad-tek-islem-dosya";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::string first = (dir / "once.pcad").string();
+    r.run("FARKLIKAYDET \"" + first + "\"");
+    const std::string saved     = bytes_of(first);
+    const Mark before           = mark(r);
+    const core::LayerId active  = r.bus.active_layer();
+    const std::uint64_t key_was = r.doc.keys().peek_entity();
+
+    const std::vector<std::pair<const char*, std::string>> kinds = {
+        {"çizgi", R"({"cmd": "core.line", "args": {"noktalar": [[0, 5000], [10000, 5000]]}})"},
+        {"alan ve değer",
+         R"({"cmd": "core.area", "args": {"noktalar": [[40000, 0], [50000, 0], [50000, 9000]]}},
+                            {"cmd": "core.attribute", "args": {"ad": "ada", "nesne": 3, "deger": "7"}})"},
+        {"katman", R"({"cmd": "core.layer", "args": {"ad": "YENİ", "renk": 4281236786}},
+                     {"cmd": "core.line", "args": {"noktalar": [[0, 0], [1000, 1000]]}})"},
+        {"sütun", R"({"cmd": "core.column", "args": {"kimlik": "no", "tur": "metin"}},
+                    {"cmd": "core.attribute", "args": {"ad": "no", "nesne": 1, "deger": "A-1"}})"},
+        {"stil", R"({"cmd": "core.colour", "args": {"nesneler": [2], "renk": "#FF0000"}})"},
+        {"işlem aracı",
+         R"({"cmd": "islem.tampon", "args": {"nesneler": [2], "mesafe": 2, "katman": "BANT"}})"},
+        {"blok",
+         R"({"cmd": "core.block", "args": {"ad": "KAPAK", "taban": [0, 20000], "nesneler": [2]}})"},
+        {"tarama",
+         R"({"cmd": "core.hatch", "args": {"noktalar": [[0, 30000], [9000, 30000], [9000, 39000], [0, 39000]], "desen": "ANSI37", "olcek": 1000}})"},
+        {"ölçü",
+         R"({"cmd": "core.dimension", "args": {"birinci": [0, 0], "ikinci": [20000, 0], "konum": [0, -3000]}})"},
+        {"etiket", R"({"cmd": "core.label", "args": {"katman": "PARSEL", "bicim": "{ada}"}})"},
+        {"yazı", R"({"cmd": "core.text", "args": {"noktalar": [[1000, 1000]], "yazi": "DENEME"}})"},
+    };
+    for (const auto& [name, steps] : kinds) {
+        CAPTURE(name);
+        script::JsonRunner runner(r.bus, script::Sandbox::Project);
+        auto ran = runner.run_text(std::string(R"({"ad": "Yarım", "komutlar": [)") + steps +
+                                   R"(, {"cmd": "core.erase", "args": {"nesneler": [999999]}}]})");
+        REQUIRE_FALSE(ran.ok());
+        // Failed where it was meant to: at the last line, after every append.
+        CHECK_MESSAGE(ran.error().message.find("999999") != std::string::npos, ran.error().message);
+        CHECK_EQ(mark(r), before);
+        CHECK_EQ(r.bus.active_layer(), active);
+        CHECK_EQ(r.doc.keys().peek_entity(), key_was);
+        const std::string again = (dir / "sonra.pcad").string();
+        r.run("FARKLIKAYDET \"" + again + "\"");
+        CHECK(bytes_of(again) == saved);
+    }
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("TEK İŞLEM: yarıda kalan betikten sonra günlük aynı anahtarlarla oynatılır (F-05, R4a)")
+{
+    // THE KEYS A ROLLED-BACK STEP MINTED WERE NEVER ISSUED (model.md R4a), and
+    // this is why it matters: the journal holds no line of the failed script,
+    // so a replay mints no key for it. Had the live session burned them, its
+    // next line would have a key the replay gives to nothing — and the erase
+    // that named it would reach a different object, or none.
+    Rig live;
+    live.run("ÇİZGİ 0,0 10000,0");
+    script::JsonRunner runner(live.bus, script::Sandbox::Project);
+    auto failed = runner.run_text(R"({"ad": "Yarım", "komutlar": [
+        {"cmd": "core.line", "args": {"noktalar": [[0, 1000], [10000, 1000], [10000, 2000]]}},
+        {"cmd": "core.circle_draw", "args": {"merkez": [5000, 5000], "cevre": [6000, 5000]}},
+        {"cmd": "core.erase", "args": {"nesneler": [999999]}}]})");
+    REQUIRE_FALSE(failed.ok());
+    live.run("ÇİZGİ 0,3000 10000,3000");
+    CHECK(live.doc.slot_of(static_cast<core::EntityKey>(2)) != core::kNoEntity);
+    live.run("ÇİZGİ 0,4000 10000,4000");
+    live.run("SİL nesneler=2");
+
+    Rig replay;
+    for (const auto& e : live.journal.entries()) {
+        auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        CHECK(r.ok());
+    }
+    CHECK_EQ(replay.doc.content_hash(), live.doc.content_hash());
+    CHECK_EQ(replay.doc.live_entity_count(), live.doc.live_entity_count());
+    CHECK_EQ(replay.doc.keys().peek_entity(), live.doc.keys().peek_entity());
+}
+
+TEST_CASE("SÜTUN: bir betiğin içinde silinmez ve tanımı değiştirilmez (F-05)")
+{
+    // A drop takes its cells with it and keeps no record; a scale change
+    // rescales every cell. Neither could be given back if the script failed
+    // after it, and a script that fails leaves nothing behind — so inside one
+    // both are refused, with the way out.
+    Rig r;
+    r.run("SÜTUN kimlik=ada tur=tam_sayi");
+    r.run("ALAN 0,0 10,0 10,10");
+    r.run("ÖZNİTELİK ad=ada nesne=1 deger=7");
+    script::JsonRunner runner(r.bus, script::Sandbox::Project);
+    auto dropped =
+        runner.run_text(R"([{"cmd": "core.column", "args": {"kimlik": "ada", "sil": true}}])");
+    REQUIRE_FALSE(dropped.ok());
+    CHECK(dropped.error().message.find(
+              "'ada' sütunu bir betiğin ya da toplu işin içinde silinmez") != std::string::npos);
+    CHECK(dropped.error().message.find("SÜTUN komutunu betikten önce ayrıca çalıştırın") !=
+          std::string::npos);
+    CHECK(r.doc.attributes().find("ada") != core::kNoAttr);
+    auto amended =
+        runner.run_text(R"([{"cmd": "core.column", "args": {"kimlik": "ada", "ad": "Ada no"}}])");
+    REQUIRE_FALSE(amended.ok());
+    CHECK(amended.error().message.find("değiştirilmez") != std::string::npos);
+
+    // Outside a script both still work.
+    r.run("SÜTUN kimlik=ada ad=\"Ada no\"");
+    r.run("SÜTUN kimlik=ada sil=evet");
+    CHECK(r.doc.attributes().find("ada") == core::kNoAttr);
+}
+
+TEST_CASE("KUYRUK: yerini başka bir çizime bırakan belgeye eski kuyruk kesilmez (F-05)")
+{
+    // AÇ and YENİ replace a drawing by move-assigning into the bus's document; a
+    // tail taken before must not cut the drawing that arrived. The move carries
+    // the content's generation forward.
+    core::Document doc;
+    const core::Document::Tail before = doc.tail();
+    core::Op undo;
+    REQUIRE(doc.add_polyline(0, std::vector<core::Point2>{{0, 0}, {1000, 0}}, undo).ok());
+    doc = core::Document{};
+    CHECK_NE(doc.generation(), before.generation);
+    CHECK_FALSE(doc.truncate_to(before).ok());
+
+    // A row still alive past the tail is refused too, and nothing is cut.
+    core::Document live;
+    const core::Document::Tail empty = live.tail();
+    REQUIRE(live.add_polyline(0, std::vector<core::Point2>{{0, 0}, {1000, 0}}, undo).ok());
+    CHECK_FALSE(live.truncate_to(empty).ok());
+    CHECK_EQ(live.live_entity_count(), std::size_t{1});
 }

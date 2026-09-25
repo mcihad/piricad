@@ -639,6 +639,34 @@ void RingGeometry::clear()
     payload.clear();
 }
 
+RingGeometry::Tail RingGeometry::tail() const noexcept
+{
+    return Tail{xs.size(),          ring_start.size(),    first_ring.size(),
+                payload_ref.size(), payload_start.size(), payload.size()};
+}
+
+Status RingGeometry::truncate(const Tail& t)
+{
+    if (t.vertices > xs.size() || t.rings > ring_start.size() || t.slot_total > first_ring.size() ||
+        t.payload_refs > payload_ref.size() || t.payload_records > payload_start.size() ||
+        t.payload_bytes > payload.size())
+        return err(ErrorCode::InvalidArgument,
+                   "Geometri deposu kaydedilen boyundan kısa; geri kesilemez.");
+    xs.resize(t.vertices);
+    ys.resize(t.vertices);
+    ring_start.resize(t.rings);
+    ring_count.resize(t.rings);
+    ring_part.resize(t.rings);
+    ring_role.resize(t.rings);
+    first_ring.resize(t.slot_total);
+    ring_total.resize(t.slot_total);
+    payload_ref.resize(t.payload_refs);
+    payload_start.resize(t.payload_records);
+    payload_bytes.resize(t.payload_records);
+    payload.resize(t.payload_bytes);
+    return core::ok();
+}
+
 void RingGeometry::reserve_vertices(std::size_t extra)
 {
     reserve_for(xs, extra);

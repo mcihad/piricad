@@ -513,6 +513,11 @@ public:
     /// Folds a hash of every entry into `seed`, for `Document::content_hash()`.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// Forgets every style at or past `count` (TODOS F-05): the looks a
+    /// rolled-back step interned. The caller guarantees no row, layer or later
+    /// style names one — what cutting the document back leaves.
+    void truncate(std::size_t count);
+
 private:
     struct Hash
     {

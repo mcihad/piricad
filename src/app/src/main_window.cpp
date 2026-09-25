@@ -7488,7 +7488,7 @@ int MainWindow::probeRealMouse()
             endCommand();
             check(QFileInfo(dxf).isFile() && QFileInfo(prj).isFile() && !staging_left(),
                   QStringLiteral("DXF ve .prj birlikte yerine kondu, hazırlık kalmadı"));
-            const qint64 first = QFileInfo(dxf).size();
+            const qint64 first_size = QFileInfo(dxf).size();
 
             // The `.prj`'s place taken by a directory.
             QFile::remove(prj);
@@ -7506,7 +7506,7 @@ int MainWindow::probeRealMouse()
                   QStringLiteral("yarım taşıma dosya dosya söylendi"));
             check(!said.contains(QStringLiteral("Dışa aktarıldı")),
                   QStringLiteral("yarım taşıma başarı sayılmadı"));
-            check(QFileInfo(dxf).size() > first && QFileInfo(prj).isDir() && !staging_left(),
+            check(QFileInfo(dxf).size() > first_size && QFileInfo(prj).isDir() && !staging_left(),
                   QStringLiteral("çizim yenilendi, klasöre dokunulmadı, hazırlık kalmadı"));
             shoot("disa-aktarim-yarim");
 
@@ -7578,8 +7578,8 @@ int MainWindow::probeRealMouse()
             runScriptLine(QStringLiteral("ETİKET katman=PARSEL bicim=\"{ada}\" yukseklik=2500"));
             endCommand();
             canvas_->zoomToBox(core::Box2{485'295'000, 4'310'195'000, 485'610'000, 4'310'450'000});
-            const std::uint64_t before    = controller_->document().content_hash();
-            const std::size_t undo_before = controller_->bus().undo_stack().undo_depth();
+            const std::uint64_t hash_before = controller_->document().content_hash();
+            const std::size_t undo_before   = controller_->bus().undo_stack().undo_depth();
 
             transcript_->clear();
             runScriptLine(
@@ -7601,7 +7601,7 @@ int MainWindow::probeRealMouse()
             check(transcript_->toPlainText().contains(QStringLiteral(
                       "Geri almayla 1000 nesnenin yeri ya da biçimi, 500 yazının metni ve 500 "
                       "nesnenin öznitelik değeri değişti.")) &&
-                      controller_->document().content_hash() == before,
+                      controller_->document().content_hash() == hash_before,
                   QStringLiteral("tek GERİAL hepsini geri aldı ve ne yaptığını söyledi"));
             shoot("tek-islem-geri");
             runScriptLine(QStringLiteral("YİNELE"));
@@ -7620,7 +7620,7 @@ int MainWindow::probeRealMouse()
                       QStringLiteral("Betik hatası: Betik satırı 501 (core.erase)")),
                   QStringLiteral("yarıda kalan betik hata olarak söylendi"));
             check(
-                controller_->document().content_hash() == before &&
+                controller_->document().content_hash() == hash_before &&
                     controller_->bus().undo_stack().undo_depth() == undo_before &&
                     controller_->bus().undo_stack().redo_depth() == redo_before,
                 QStringLiteral("yarıda kalan betik çizimde, geri alma ve yinelemede iz bırakmadı"));

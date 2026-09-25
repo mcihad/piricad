@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yarıda kalan adım katman, sütun, blok ya da ölü satır bırakmıyor (F-05, 2. aşama devamı)
+
+- **Hata veren betiğin açtığı katman kalıyordu** — üstelik etkin katman o katmana geçmiş
+  oluyordu; tanımladığı sütun, verdiği renk (yeni stil), yaptığı blok, işlem aracının açtığı
+  çıktı katmanı da kalıyordu. Geri sarılan her oluşturma belgede **ölü bir satır**
+  bırakıyor, bu satır dosyaya da yazılıyordu; kimlik sayacı ileride kalıyor, sonraki
+  nesnelerin anahtarı kayıyordu. Artık hata veren komut, iptal edilen komut ve iptal edilen
+  toplu iş belgeyi başladığı yere keser: satırlar, geometri, yazılar, hücreler, bağlar,
+  kökenler, katmanlar, stiller, sütunlar, bloklar ve iki anahtar sayacı. Etkin katman ve
+  proje ayarları (`AYAR`) geri veriliyor; seçimde artık olmayan anahtar kalmıyor.
+  Sınandı: on bir tür ekleme için kaydedilen dosya betikten önceki kayıtla bayt bayt aynı.
+- **Günlük, yarıda kalan betikten sonra da aynı anahtarlarla oynatılıyor:** geri sarılan
+  adımın anahtarları hiç verilmemiş sayılıyor (model.md R4a); oynatma bir sonraki nesneye
+  canlı oturumdaki anahtarı veriyor, `SİL nesneler=…` doğru nesneyi siliyor.
+- Toplu iş içindeki her komutun günlük satırı (kendi işlemiyle koşan `SÜTUN` dahil) toplu iş
+  kapanınca yazılıyor; belgeyi değiştiren `AÇ`/`YENİ` anında.
+- **Bir betiğin içinde sütun silinmiyor ve tanımı değiştirilmiyor:** ikisi de kayıt
+  bırakmaz; betik yarıda kalsaydı silinen değerler geri getirilemezdi. Betikten önce ayrı
+  çalıştırın.
+
 ### Düzeltildi — yarıda kalan iş iz bırakmıyor; her adım ne değiştirdiğini söylüyor (F-05, 2. aşama)
 
 - **Yinele aynı nesneye iki kez dokunan adımı yanlış kuruyordu.** Bir parseli iki kez

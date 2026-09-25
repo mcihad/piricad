@@ -180,6 +180,19 @@ std::uint64_t ImageStore::content_key(ImageId id) const noexcept
     return id < images_.size() ? images_[id].key : 0;
 }
 
+void ImageStore::truncate(std::size_t count)
+{
+    if (count == 0 || count >= images_.size()) return;
+    for (std::size_t i = count; i < images_.size(); ++i) {
+        total_bytes_ -= images_[i].bytes.size();
+        if (const auto it = by_content_.find(images_[i].key); it != by_content_.end()) {
+            std::erase(it->second, static_cast<ImageId>(i));
+            if (it->second.empty()) by_content_.erase(it);
+        }
+    }
+    images_.resize(count);
+}
+
 std::uint64_t ImageStore::fold(std::uint64_t seed) const
 {
     // A store holding only the sentinel folds to the seed UNCHANGED, so every

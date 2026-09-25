@@ -380,6 +380,14 @@ panelindeki **Kapsam** grubu `boş çizim` yazar.
 **Çözüm.** Betiği KentOSCad uygulaması içinden çalıştırın; uygulama `proje` seviyesini
 kullanır.
 
+### `'X' sütunu bir betiğin ya da toplu işin içinde silinmez: …`
+
+**Sebep.** Betik (ya da uygulanan bir yapay zekâ önerisi) var olan bir sütunu siliyor ya
+da tanımını değiştiriyor. İkisi de kayıt bırakmaz; betik sonradan yarıda kalsaydı silinen
+değerler geri getirilemezdi.
+
+**Çözüm.** O `SÜTUN` satırını betikten çıkarıp betikten önce tek başına çalıştırın.
+
 ### `Betik ya bir komut dizisi ya da "komutlar" alanı olan bir nesne olmalı`
 
 **Sebep.** Dosyanın kök yapısı beklenen iki biçimden hiçbirine uymuyor.

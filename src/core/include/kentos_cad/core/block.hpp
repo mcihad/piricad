@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace kentos::core {
@@ -122,6 +123,21 @@ public:
 
     /// Folds into the document hash. An empty table folds to the seed unchanged.
     std::uint64_t fold(std::uint64_t seed) const;
+
+    /// How big the table is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        /// Per definition that existed: its member and use counts.
+        std::vector<std::pair<std::size_t, std::size_t>> sizes;
+    };
+
+    /// The table's size now.
+    Tail tail() const;
+
+    /// CUTS THE TABLE BACK TO `t` (TODOS F-05): the definitions a rolled-back
+    /// step made go, and the members and uses it added to older ones. The caller
+    /// guarantees no live row names a definition past the tail.
+    void truncate(const Tail& t);
 
 private:
     std::vector<BlockDef> defs_;

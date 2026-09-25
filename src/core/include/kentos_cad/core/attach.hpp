@@ -206,6 +206,24 @@ public:
     /// its fingerprint.
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> position = {}) const;
 
+    /// How big the table is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        std::size_t count{0};            ///< logical rows
+        bool materialised{false};        ///< whether the per-row column existed
+        std::size_t records{0};          ///< records, live or free
+        std::vector<std::uint32_t> free; ///< the free list, in its order
+    };
+
+    /// The table's size now.
+    Tail tail() const;
+
+    /// CUTS THE TABLE BACK TO `t` (TODOS F-05): the rows and records a
+    /// rolled-back step added go and the free list is what it was, so the next
+    /// attachment lands where it would have. The caller guarantees every record
+    /// at or past `t.records` is free — what a rollback leaves.
+    void truncate(const Tail& t);
+
 private:
     void materialise();
 

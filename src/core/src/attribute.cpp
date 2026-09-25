@@ -617,6 +617,35 @@ Status AttrColumn::amend(const AttrSpec& next)
     return ok();
 }
 
+void AttrColumn::truncate_pool(std::size_t size)
+{
+    if (size >= pool_.size()) return;
+    for (std::size_t i = size; i < pool_.size(); ++i)
+        intern_.erase(pool_[i]);
+    pool_.resize(size);
+}
+
+AttrTable::Tail AttrTable::tail() const
+{
+    Tail t;
+    t.rows = rows_;
+    t.pools.reserve(columns_.size());
+    for (const AttrColumn& c : columns_)
+        t.pools.push_back(c.pool_size());
+    return t;
+}
+
+void AttrTable::truncate(const Tail& t)
+{
+    if (t.rows > rows_ || t.pools.size() > columns_.size()) return;
+    columns_.erase(columns_.begin() + static_cast<std::ptrdiff_t>(t.pools.size()), columns_.end());
+    for (std::size_t i = 0; i < columns_.size(); ++i) {
+        columns_[i].resize(t.rows);
+        columns_[i].truncate_pool(t.pools[i]);
+    }
+    rows_ = t.rows;
+}
+
 bool AttrTable::remove(AttrId col)
 {
     if (col >= columns_.size()) return false;

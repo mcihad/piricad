@@ -157,6 +157,12 @@ SÜTUN kimlik=oran sil=evet
 adreslendiği şey şemanın kendisidir), ve sütunla birlikte içindeki bütün değerler
 gider. Arayüzde bu işlem bir onay sorusu sorar.
 
+**Bir betiğin içinde silinmez**, bir sütunun tanımı da betiğin içinde değiştirilmez:
+betik yarıda kalırsa bütünüyle geri alınır, ama silinen değerler ya da yeni basamak
+sayısıyla ölçeklenen hücreler geri getirilemezdi. İkisini betikten önce, ayrı birer
+komut olarak çalıştırın. Betiğin içinde yeni bir sütun **tanımlamak** serbesttir; betik
+yarıda kalırsa o sütun da kaldırılır.
+
 Silinen sütunu bir paftanın tablosu, grafiği ya da atlası okuyorsa bu **o anda**
 söylenir:
 
@@ -258,7 +264,9 @@ sütunun kendisi belgede kalır ama hiçbir şey söylemez.
 ## Betikten kullanım
 
 `SÜTUN` betiklenebilir. Bir çizim şablonu betiğinin ilk satırları tipik olarak budur:
-şema kurulur, sonra geometri gelir.
+şema kurulur, sonra geometri gelir. Betik yarıda kalırsa tanımladığı sütunlar da
+kaldırılır; var olan bir sütunu silmek ya da tanımını değiştirmek betiğin içinde
+reddedilir (yukarıda, [Sütunu silmek](#sütunu-silmek)).
 
 `SÜTUN` **AI erişimine kapalıdır**: bir belgenin hangi alanları taşıdığı, imzalayan
 mühendisin kararıdır ve bir öneri motorunun sessizce genişleteceği bir şey değildir.
@@ -273,5 +281,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Bilinmeyen öznitelik türü: 'ondalik'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin.` | Listede olmayan bir tür yazılmış | Ondalık sayı yoktur; `uzunluk` milimetre tam sayısıdır |
 | `Aynı kimlikte bir öznitelik zaten var: 'ada_no'` | Sütun daha önce tanımlanmış | Argümansız `SÜTUN` ile listeyi görün |
 | `Öznitelik kimliği boş olamaz.` | Kimlik boş dize verilmiş | Bir kimlik yazın |
+| `'X' sütunu bir betiğin ya da toplu işin içinde silinmez: bu değişiklik geri alınamaz, iş yarıda kalırsa geri getirilemezdi. SÜTUN komutunu betikten önce ayrıca çalıştırın.` | Betikte ya da yapay zekâ önerisinde `sil=evet` | Silmeyi betikten önce tek başına çalıştırın |
+| `'X' sütunu bir betiğin ya da toplu işin içinde değiştirilmez: …` | Betikte var olan bir sütunun tanımı değiştirildi | Değişikliği betikten önce tek başına çalıştırın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

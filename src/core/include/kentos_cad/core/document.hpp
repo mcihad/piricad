@@ -36,6 +36,7 @@
 #include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -382,6 +383,55 @@ public:
     /// moves it back, since a key is never handed out twice (R4); false when
     /// `next` is out of the key space.
     bool skip_entity_keys_to(EntityKey next) noexcept;
+
+    // ---- the tail: how far every append-only store reaches (TODOS F-05) ----
+
+    /// How long every append-only store of the document is at one moment — the
+    /// rows, the geometry arena and the slot tables, the side tables and their
+    /// pools, the layers, styles, columns, blocks, pictures and patterns, and
+    /// the two key counters. Taken where a step begins; what `truncate_to`
+    /// cuts back to when the step is rolled back.
+    struct Tail
+    {
+        std::uint64_t generation{0}; ///< which content it was taken of (`generation`)
+        std::size_t rows{0};
+        bool keys_sorted{true};
+        std::uint64_t next_entity_key{1};
+        std::uint64_t next_layer_key{1};
+        RingGeometry::Tail geometry{};
+        TextTable::Tail texts{};
+        AttrTable::Tail attributes{};
+        ForeignTable::Tail foreign{};
+        AttachTable::Tail attachments{};
+        std::size_t lineage_pool{0};
+        BlockTable::Tail blocks{};
+        std::size_t layers{0};
+        std::size_t styles{0};
+        std::size_t images{0};
+        std::size_t dashes{0};
+    };
+
+    /// The document's tail now.
+    Tail tail() const;
+
+    /// Which content this document holds (`Tail::generation`): moved with the
+    /// content by a move construction, and moved ON by a move assignment — the
+    /// way AÇ and YENİ replace a drawing — so a tail taken before the drawing was
+    /// replaced is never cut into the one that replaced it.
+    std::uint64_t generation() const noexcept { return generation_.value; }
+
+    /// CUTS THE DOCUMENT BACK TO `t` (TODOS F-05, model.md R4a): after a step
+    /// was ROLLED BACK — a failed command, an aborted batch, a preview — what it
+    /// appended goes: its rows, their slots, cells, captions and ties, the
+    /// layers, styles, columns and blocks it made, and the keys it minted, which
+    /// were never issued, since the step never was. Without this a failed
+    /// script left a layer, a column, a dead row in the file and a key counter
+    /// further on than the journal can replay. Never after an UNDO, whose rows
+    /// the redo stack still holds.
+    ///
+    /// Refused, changing nothing, when `t` was taken of another content or a
+    /// row past it is still alive: that is not what a rollback leaves.
+    Status truncate_to(const Tail& t);
 
     // ---- spatial index: a cache, rebuilt lazily (R6, §10.5) ----
     const SpatialIndex& spatial_index() const;
@@ -807,6 +857,31 @@ private:
 
     std::uint64_t revision_{0};
     std::size_t live_count_{0};
+
+    /// A number a move ASSIGNMENT moves past both sides', and a move
+    /// construction carries: see `generation()`. A type of its own so the
+    /// defaulted moves of `Document` do the right thing without listing every
+    /// member by hand — and not a counter shared between documents, which
+    /// core has none of (P10).
+    struct Generation
+    {
+        std::uint64_t value{0};
+        Generation()                             = default;
+        Generation(const Generation&)            = delete;
+        Generation& operator=(const Generation&) = delete;
+
+        Generation(Generation&& other) noexcept : value(other.value) {}
+
+        Generation& operator=(Generation&& other) noexcept
+        {
+            value = std::max(value, other.value) + 1;
+            return *this;
+        }
+
+        ~Generation() = default;
+    };
+
+    Generation generation_{};
 
     // A cache, not state: rebuilding it never changes what the document contains.
     mutable std::unique_ptr<SpatialIndex> index_{};

@@ -203,6 +203,27 @@ public:
 
     void clear();
 
+    /// How long every column is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        std::size_t vertices{0};        ///< `xs`, `ys`
+        std::size_t rings{0};           ///< `ring_start`, `ring_count`, `ring_part`, `ring_role`
+        std::size_t slot_total{0};      ///< `first_ring`, `ring_total`
+        std::size_t payload_refs{0};    ///< `payload_ref`: zero or `slot_total`, as it was
+        std::size_t payload_records{0}; ///< `payload_start`, `payload_bytes`
+        std::size_t payload_bytes{0};   ///< `payload`
+    };
+
+    /// The columns' lengths now.
+    Tail tail() const noexcept;
+
+    /// CUTS EVERY COLUMN BACK TO `t` (TODOS F-05): what a rolled-back step
+    /// appended — slots, rings, vertices, payload — goes, so a step that failed
+    /// or was previewed leaves the arena as it found it. The caller guarantees
+    /// nothing refers past `t` any more, which is what a rollback leaves; a `t`
+    /// longer than a column is refused and changes nothing.
+    Status truncate(const Tail& t);
+
 private:
     void reserve_vertices(std::size_t extra);
 };

@@ -10,6 +10,7 @@
 // The renderer reads a StyleId, resolved at commit time. An attribute is what the
 // parcel IS; the style column is what the parcel LOOKS LIKE, and the second is
 // derived from the first by a rule, never looked up per frame.
+#include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
@@ -182,6 +183,18 @@ namespace {
 /// `core::attr_type_from_name`).
 const char* kTypeWords = "tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod";
 
+/// Refuses a schema edit that keeps no record while a batch is open, with the
+/// way out; true when it refused.
+bool refuse_in_batch(Context& ctx, const std::string& column, const char* verb)
+{
+    if (!ctx.session().bus().in_batch()) return false;
+    ctx.refuse(core::ErrorCode::Unsupported,
+               "'" + column + "' sütunu bir betiğin ya da toplu işin içinde " + verb +
+                   ": bu değişiklik geri alınamaz, iş yarıda kalırsa geri getirilemezdi. "
+                   "SÜTUN komutunu betikten önce ayrıca çalıştırın.");
+    return true;
+}
+
 Task<void> run_column(Context& ctx)
 {
     // NAMED, AND NOT FOR TIDINESS. `Context::argument` returns a `Value` BY
@@ -196,6 +209,10 @@ Task<void> run_column(Context& ctx)
 
     // ---- drop ----
     if (ctx.argument("sil").as_bool()) {
+        // NOT INSIDE A BATCH (TODOS F-05): a drop takes its cells with it and
+        // keeps no record, so a script that failed after it could not give them
+        // back — and a script that fails leaves nothing behind.
+        if (refuse_in_batch(ctx, column, "silinmez")) co_return;
         auto dropped = ctx.transaction().drop_attribute(column);
         if (!dropped) {
             ctx.refuse(dropped.error());
@@ -260,6 +277,9 @@ Task<void> run_column(Context& ctx)
             next.type = *wanted;
         }
 
+        // Nor amended inside one: a new scale rescales every cell, and an aborted
+        // script could not scale them back.
+        if (refuse_in_batch(ctx, column, "değiştirilmez")) co_return;
         auto amended = ctx.transaction().amend_attribute(column, next);
         if (!amended) {
             ctx.refuse(amended.error());

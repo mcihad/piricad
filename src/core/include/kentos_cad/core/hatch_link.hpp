@@ -70,6 +70,10 @@ public:
     /// fingerprint.
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> position = {}) const;
 
+    /// Drops the links of every row at or past `rows` (TODOS F-05): what a
+    /// rolled-back step added to rows it appended.
+    void truncate(EntityId rows) { rows_.erase(rows_.lower_bound(rows), rows_.end()); }
+
 private:
     std::map<EntityId, std::vector<HatchSource>> rows_;
 };

@@ -77,6 +77,25 @@ Status BlockTable::add_member(BlockId id, EntityKey member, BlockId uses)
     return ok();
 }
 
+BlockTable::Tail BlockTable::tail() const
+{
+    Tail t;
+    t.sizes.reserve(defs_.size());
+    for (const BlockDef& d : defs_)
+        t.sizes.emplace_back(d.members.size(), d.uses.size());
+    return t;
+}
+
+void BlockTable::truncate(const Tail& t)
+{
+    if (t.sizes.size() > defs_.size()) return;
+    defs_.erase(defs_.begin() + static_cast<std::ptrdiff_t>(t.sizes.size()), defs_.end());
+    for (std::size_t b = 0; b < defs_.size(); ++b) {
+        if (defs_[b].members.size() > t.sizes[b].first) defs_[b].members.resize(t.sizes[b].first);
+        if (defs_[b].uses.size() > t.sizes[b].second) defs_[b].uses.resize(t.sizes[b].second);
+    }
+}
+
 bool BlockTable::would_cycle(BlockId container, BlockId referenced) const
 {
     if (container == referenced) return true;

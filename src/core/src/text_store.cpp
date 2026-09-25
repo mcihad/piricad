@@ -209,6 +209,36 @@ void TextTable::resize(std::size_t count)
     }
 }
 
+TextTable::Tail TextTable::tail() const noexcept
+{
+    return Tail{count_, !ref_.empty(), !spacing_.empty(), pool_.size()};
+}
+
+void TextTable::truncate(const Tail& t)
+{
+    if (t.count > count_ || t.pool > pool_.size()) return;
+    count_ = t.count;
+    if (!t.materialised) {
+        ref_.clear();
+        height_.clear();
+        anchor_.clear();
+    } else if (!ref_.empty()) {
+        ref_.resize(t.count);
+        height_.resize(t.count);
+        anchor_.resize(t.count);
+    }
+    if (!t.laid_out) {
+        spacing_.clear();
+        wrap_.clear();
+    } else if (!spacing_.empty()) {
+        spacing_.resize(t.count);
+        wrap_.resize(t.count);
+    }
+    for (std::size_t i = t.pool; i < pool_.size(); ++i)
+        intern_.erase(pool_[i]);
+    pool_.resize(t.pool);
+}
+
 void TextTable::materialise()
 {
     if (!ref_.empty() || count_ == 0) return;

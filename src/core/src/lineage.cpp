@@ -88,6 +88,19 @@ void LineageTable::made_from(EntityKey source, std::vector<EntityId>& out) const
     }
 }
 
+void LineageTable::truncate(EntityId rows, std::size_t pool)
+{
+    rows_.erase(rows_.lower_bound(rows), rows_.end());
+    if (pool >= pool_.size()) return;
+    for (const auto& [row, at] : rows_)
+        if (at >= pool) return; // an origin past the cut is still named: keep the pool whole
+    for (auto it = by_hash_.begin(); it != by_hash_.end();) {
+        std::erase_if(it->second, [pool](std::uint32_t at) { return at >= pool; });
+        it = it->second.empty() ? by_hash_.erase(it) : std::next(it);
+    }
+    pool_.resize(pool);
+}
+
 std::uint32_t LineageTable::origin_of(EntityId e) const
 {
     const auto it = rows_.find(e);

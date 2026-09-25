@@ -99,6 +99,13 @@ public:
     /// written before line types existed keeps its fingerprint.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// Forgets every pattern at or past `count` (TODOS F-05): the ones a
+    /// rolled-back step interned. The caller guarantees no style names one.
+    void truncate(std::size_t count)
+    {
+        if (count != 0 && count < patterns_.size()) patterns_.resize(count);
+    }
+
 private:
     struct Entry
     {

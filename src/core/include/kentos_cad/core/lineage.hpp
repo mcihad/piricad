@@ -120,6 +120,14 @@ public:
     /// results existed.
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> position = {}) const;
 
+    /// How many origins the pool holds: what `truncate` cuts back to.
+    std::size_t pool_size() const noexcept { return pool_.size(); }
+
+    /// CUTS THE TABLE BACK (TODOS F-05): the origins of rows at or past `rows`
+    /// go, and the pooled origins at or past `pool` when no row names one — what
+    /// a rolled-back step recorded.
+    void truncate(EntityId rows, std::size_t pool);
+
 private:
     /// Every origin recorded this session, each once. Append-only, like the
     /// geometry arena: a record an edit replaced stays for the undo that may

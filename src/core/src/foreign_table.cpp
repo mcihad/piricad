@@ -140,6 +140,22 @@ Status ForeignTable::copy_slot(std::uint32_t from, std::uint32_t to)
     return ok();
 }
 
+ForeignTable::Tail ForeignTable::tail(std::uint32_t slot_total) const noexcept
+{
+    return Tail{slot_total, tags_.size(), pool_.size()};
+}
+
+void ForeignTable::truncate(const Tail& t)
+{
+    std::erase_if(records_, [&t](const Record& r) { return r.slot >= t.slot_total; });
+    const bool tags_free =
+        std::ranges::none_of(records_, [&t](const Record& r) { return r.tag >= t.tags; });
+    if (tags_free && t.tags < tags_.size()) tags_.resize(t.tags);
+    const bool pool_free = std::ranges::none_of(
+        records_, [&t](const Record& r) { return r.start + r.bytes > t.pool; });
+    if (pool_free && t.pool < pool_.size()) pool_.resize(t.pool);
+}
+
 void ForeignTable::clear()
 {
     records_.clear();

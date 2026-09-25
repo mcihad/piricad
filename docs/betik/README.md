@@ -117,7 +117,12 @@ Betiğin tamamı tek bir işlemdir:
 - **Tek doğrulama geçişinden** geçer, bu yüzden büyük betikler hızlı çalışır
 - Bir satır başarısız olursa **tamamı geri alınır** — yarım uygulanmış betik bırakılmaz.
   Geri alınan kısım `YİNELE` ile geri getirilemez ve [komut günlüğünde](../mimari/gunluk.md)
-  de iz bırakmaz: günlük yeniden oynatıldığında yarım betik geri gelmez
+  de iz bırakmaz: günlük yeniden oynatıldığında yarım betik geri gelmez. Betiğin açtığı
+  katmanlar, tanımladığı sütunlar, blokları ve verdiği renkler de kaldırılır; etkin katman
+  ve proje ayarları betikten önceki hâline döner. Kaydedilen dosya, betikten önceki
+  kayıtla **bayt bayt aynıdır**
+- Var olan bir sütunu silmek ya da tanımını değiştirmek betiğin içinde reddedilir: iş
+  yarıda kalırsa geri getirilemezdi ([SÜTUN](../komutlar/column.md#sütunu-silmek))
 - Satırlardan biri **bozuksa** — nesne değilse, `cmd` alanı yoksa, `args` okunamıyorsa —
   betik **hiç çalıştırılmaz**; hata satırın numarasını söyler
 

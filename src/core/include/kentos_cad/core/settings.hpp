@@ -457,6 +457,11 @@ public:
 
     void clear();
 
+    /// Puts back every value `earlier` held — a copy of this store taken before —
+    /// and moves the revision on, as any write does (TODOS F-05: what an aborted
+    /// batch changed goes back with it).
+    void restore(const Settings& earlier);
+
     // ---- hashing ----
 
     /// Folds the PROJECT-scope entries and nothing else (R39, R43). App and Session

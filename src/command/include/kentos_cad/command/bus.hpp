@@ -1044,6 +1044,11 @@ public:
 
 private:
     core::Result<DispatchResult> run_to_completion(Session& session);
+    /// Cuts the document back to `tail` after a rollback and gives the active
+    /// layer back (TODOS F-05): what a failed or cancelled command, and an
+    /// aborted batch, leave behind is nothing.
+    void cut_back(const core::Document::Tail& tail, LayerId active);
+
     void journal_entry(const Session& session);
 
     /// `dispatch`, with its edits going into `nested` when given (`run_nested`).
@@ -1083,6 +1088,12 @@ private:
     /// The journal lines of the batch's commands, appended when it closes and
     /// dropped when it is aborted (`journal_entry`, TODOS F-05).
     std::vector<JournalEntry> batch_journal_;
+    /// How far the document reached, and which layer was active, when the batch
+    /// began: what `abort_batch` cuts back to (`cut_back`).
+    core::Document::Tail batch_tail_{};
+    LayerId batch_active_layer_{0};
+    /// The project settings when the batch began, put back when it is aborted.
+    core::Settings batch_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
 };
 
 } // namespace kentos::command

@@ -2397,6 +2397,12 @@ Status Settings::reset(std::string_view id)
     return ok();
 }
 
+void Settings::restore(const Settings& earlier)
+{
+    values_ = earlier.values_;
+    ++revision_;
+}
+
 void Settings::clear()
 {
     values_.clear();

@@ -177,6 +177,15 @@ public:
     /// edits past it are this command's, and only those go back on a failure.
     std::size_t transaction_mark() const noexcept { return transaction_mark_; }
 
+    /// How far the document's append-only stores reached when this command
+    /// began: what a failed or cancelled run is cut back to, after its edits
+    /// are rolled back (`Document::truncate_to`, TODOS F-05).
+    const core::Document::Tail& tail_at_start() const noexcept { return tail_at_start_; }
+
+    /// The active layer when this command began: what a failed or cancelled run
+    /// gives back, since a layer it made current may be one it made.
+    LayerId active_layer_at_start() const noexcept { return active_layer_at_start_; }
+
     /// Arguments as actually resolved, in declaration order. This is what the
     /// journal records, so a replay reproduces the run bit for bit.
     const Args& resolved() const noexcept { return resolved_; }
@@ -279,6 +288,8 @@ private:
     core::Error error_{};
     std::uint64_t document_revision_at_start_{0};
     std::size_t transaction_mark_{0};
+    core::Document::Tail tail_at_start_{};
+    LayerId active_layer_at_start_{0};
 
     bool client_driven_{false};
     bool nested_{false};

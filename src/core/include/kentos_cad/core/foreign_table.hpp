@@ -98,6 +98,23 @@ public:
 
     void clear();
 
+    /// How big the table is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        std::uint32_t slot_total{0}; ///< geometry slots that existed
+        std::size_t tags{0};         ///< interned tags
+        std::size_t pool{0};         ///< bytes in the pool
+    };
+
+    /// The table's size now, for a document of `slot_total` geometry slots.
+    Tail tail(std::uint32_t slot_total) const noexcept;
+
+    /// CUTS THE TABLE BACK TO `t` (TODOS F-05): the records a rolled-back step
+    /// put on slots it appended go, and the tags and pool bytes after the tail
+    /// when nothing left refers to them. A record the rollback re-attached to an
+    /// older slot keeps its bytes, so the pool is then left as it is.
+    void truncate(const Tail& t);
+
 private:
     /// Where (slot, tag) sits or would sit; `found` says which.
     std::size_t locate(std::uint32_t slot, std::string_view tag, bool& found) const noexcept;

@@ -379,6 +379,11 @@ public:
     /// change under them. Losing digits is refused rather than rounded.
     Status amend(const AttrSpec& next);
 
+    /// Forgets the strings interned after the first `size` (TODOS F-05): what a
+    /// rolled-back step wrote into cells it no longer holds. The caller
+    /// guarantees no cell refers past `size` any more.
+    void truncate_pool(std::size_t size);
+
 private:
     Result<std::uint32_t> intern(const std::string& s);
 
@@ -452,6 +457,22 @@ public:
     /// Every cell of `row` that holds a value, column by column (`fold_cell`):
     /// what one object says, for its content revision.
     std::uint64_t fold_cells(std::uint64_t seed, std::size_t row) const;
+
+    /// How big the table is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        std::size_t rows{0};            ///< slots every column holds
+        std::vector<std::size_t> pools; ///< each column's interned strings, by column
+    };
+
+    /// The table's size now.
+    Tail tail() const;
+
+    /// CUTS THE TABLE BACK TO `t` (TODOS F-05): the columns a rolled-back step
+    /// declared go, and the slots and strings it added to the others. A column
+    /// removed or amended inside such a step is not brought back — the batch
+    /// refuses both (`core.column`). A longer `t` changes nothing.
+    void truncate(const Tail& t);
 
 private:
     std::vector<AttrColumn> columns_;

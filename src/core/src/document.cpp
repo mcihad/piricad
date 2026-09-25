@@ -44,6 +44,86 @@ Document::Document()
     layer_live_.assign(layers_.size(), 0);
 }
 
+Document::Tail Document::tail() const
+{
+    Tail t;
+    t.generation      = generation_.value;
+    t.rows            = entities_.size();
+    t.keys_sorted     = keys_sorted_;
+    t.next_entity_key = keys_.peek_entity();
+    t.next_layer_key  = keys_.peek_layer();
+    t.geometry        = geometry_.tail();
+    t.texts           = texts_.tail();
+    t.attributes      = attributes_.tail();
+    t.foreign         = foreign_.tail(static_cast<std::uint32_t>(geometry_.slot_count()));
+    t.attachments     = attachments_.tail();
+    t.lineage_pool    = lineage_.pool_size();
+    t.blocks          = blocks_.tail();
+    t.layers          = layers_.size();
+    t.styles          = styles_.size();
+    t.images          = images_.size();
+    t.dashes          = dashes_.size();
+    return t;
+}
+
+Status Document::truncate_to(const Tail& t)
+{
+    if (t.generation != generation_.value)
+        return err(ErrorCode::InvalidArgument,
+                   "Kuyruk başka bir belgeden alınmış; bu belge geri kesilemez.");
+    if (t.rows > entities_.size() || t.layers > layers_.size() || t.styles > styles_.size())
+        return err(ErrorCode::InvalidArgument, "Kuyruk belgeden uzun; geri kesilecek bir şey yok.");
+    for (EntityId e = static_cast<EntityId>(t.rows); e < entities_.size(); ++e)
+        if (entities_.alive(e))
+            return err(ErrorCode::Internal,
+                       "Geri alınan adımın bir nesnesi hâlâ yaşıyor; belge olduğu gibi bırakıldı.");
+
+    const auto rows = static_cast<EntityId>(t.rows);
+    entities_.min_x.resize(t.rows);
+    entities_.min_y.resize(t.rows);
+    entities_.max_x.resize(t.rows);
+    entities_.max_y.resize(t.rows);
+    entities_.flags.resize(t.rows);
+    entities_.layer.resize(t.rows);
+    entities_.style.resize(t.rows);
+    entities_.kind.resize(t.rows);
+    entities_.slot.resize(t.rows);
+    entities_.key.resize(t.rows);
+    keys_sorted_ = t.keys_sorted;
+
+    attachments_.truncate(t.attachments);
+    dim_links_.truncate(rows);
+    hatch_links_.truncate(rows);
+    lineage_.truncate(rows, t.lineage_pool);
+
+    if (auto st = geometry_.truncate(t.geometry); !st) return st;
+    texts_.truncate(t.texts);
+    attributes_.truncate(t.attributes);
+    foreign_.truncate(t.foreign);
+    blocks_.truncate(t.blocks);
+
+    layers_.truncate(t.layers);
+    layer_live_.resize(t.layers, 0);
+    styles_.truncate(t.styles);
+    images_.truncate(t.images);
+    dashes_.truncate(t.dashes);
+
+    // THE KEYS THE STEP MINTED WERE NEVER ISSUED (model.md R4a): no file, no
+    // journal line and no committed state holds one, and handing them out
+    // again is what lets the journal — which holds no line of the step — replay
+    // to the same keys.
+    keys_.seek_entity(t.next_entity_key);
+    keys_.seek_layer(t.next_layer_key);
+
+    // An index built while the step ran may name rows that are gone.
+    if (indexed_upto_ > rows) {
+        indexed_upto_ = rows;
+        index_stale_  = true;
+    }
+    ++revision_;
+    return core::ok();
+}
+
 // ------------------------------------------------------------------ read ----
 
 LayerId Document::find_layer(std::string_view name) const

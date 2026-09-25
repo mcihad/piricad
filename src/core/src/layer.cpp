@@ -85,6 +85,15 @@ Result<LayerId> LayerTable::add(Layer layer, KeyAllocator& keys)
     return slot;
 }
 
+void LayerTable::truncate(std::size_t count)
+{
+    for (std::size_t l = count; l < layers_.size(); ++l) {
+        by_folded_.erase(layers_[l].folded);
+        by_key_.erase(raw(layers_[l].key));
+    }
+    if (count < layers_.size()) layers_.resize(count);
+}
+
 LayerId LayerTable::find(std::string_view name) const
 {
     // Folded, so "parsel", "PARSEL" and "Parsel" are one layer — and so that

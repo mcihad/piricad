@@ -198,6 +198,25 @@ public:
     /// geometry edit left behind is history, not content, and never folds.
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> slots) const;
 
+    /// How big the table is at one moment: what `truncate` cuts back to.
+    struct Tail
+    {
+        std::size_t count{0};     ///< logical slots
+        bool materialised{false}; ///< whether the three columns existed
+        bool laid_out{false};     ///< whether the line-layout columns existed
+        std::size_t pool{0};      ///< interned strings
+    };
+
+    /// The table's size now.
+    Tail tail() const noexcept;
+
+    /// CUTS THE TABLE BACK TO `t` (TODOS F-05): the slots and strings a
+    /// rolled-back step added go, and the columns it materialised with them, so a
+    /// text-free drawing stays free of them. The caller guarantees no slot below
+    /// `t.count` refers past `t.pool` and none carries text the tail did not have
+    /// room for — what a rollback leaves. A longer `t` changes nothing.
+    void truncate(const Tail& t);
+
 private:
     std::uint32_t intern(std::string_view s);
 

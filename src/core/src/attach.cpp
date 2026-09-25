@@ -379,6 +379,26 @@ void AttachTable::resize(std::size_t entity_count)
     if (!ref_.empty() && ref_.size() < count_) ref_.resize(count_, kNoAttach);
 }
 
+AttachTable::Tail AttachTable::tail() const
+{
+    return Tail{count_, !ref_.empty(), records_.size(), free_};
+}
+
+void AttachTable::truncate(const Tail& t)
+{
+    if (t.count > count_ || t.records > records_.size()) return;
+    for (std::size_t r = t.records; r < owner_.size(); ++r)
+        if (owner_[r] != kNoEntity) return; // still in use: leave everything as it is
+    count_ = t.count;
+    if (!t.materialised)
+        ref_.clear();
+    else if (ref_.size() > t.count)
+        ref_.resize(t.count);
+    records_.resize(t.records);
+    owner_.resize(t.records);
+    free_ = t.free;
+}
+
 void AttachTable::materialise()
 {
     if (ref_.empty()) ref_.assign(count_, kNoAttach);

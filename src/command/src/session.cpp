@@ -89,6 +89,10 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
     ctx_                        = std::make_unique<Context>(*this, *tx_, bus.document());
     document_revision_at_start_ = bus.document().revision();
     transaction_mark_           = tx_->size();
+    // WHERE THE DOCUMENT REACHED, so a failed or cancelled run leaves nothing it
+    // appended (TODOS F-05): `Bus::finish` cuts back to this after the rollback.
+    tail_at_start_         = bus.document().tail();
+    active_layer_at_start_ = bus.active_layer();
 
     // Start from whatever the client supplied up front. A command that answers a
     // prompt overwrites the entry; a command that reads an argument directly

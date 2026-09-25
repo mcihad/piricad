@@ -109,6 +109,11 @@ public:
 
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// Removes every layer at or past `count` (TODOS F-05): the layers a
+    /// rolled-back step created. The caller guarantees no row stands on one —
+    /// what cutting the rows back leaves.
+    void truncate(std::size_t count);
+
 private:
     std::vector<Layer> layers_;
     std::unordered_map<std::string, LayerId> by_folded_;
