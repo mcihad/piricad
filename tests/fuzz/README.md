@@ -69,6 +69,8 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `proje/10-olcu-bagi-bozuk.pcad` | the same block with one fault per row: a dimension the file does not hold, an anchor past the last, a definition point the dimension lacks, a live link to no object |
 | `proje/11-tarama-baglari.pcad` | the hatch link block: one hatch tied to a parcel, one whose parcel was erased (a broken source) |
 | `proje/12-tarama-bagi-bozuk.pcad` | the same block with one fault per row: a hatch the file does not hold, a live link to no object |
+| `proje/14-kokenler.pcad` | the lineage block: a trimmed line's new piece and a copied parcel whose source was erased — a dead source, which a lineage keeps |
+| `proje/15-koken-bozuk.pcad` | the same block with one fault per row: an object the file does not hold, an operation string past the end of the pool |
 | `proje/13-tarih-yuvalari.pcad` | written by the build before format 3: geometry slots no row holds (a moved point's ada number, a moved-then-corrected caption, a moved line's XDATA) — the history the reader must pass over, and the file it used to refuse (io.md R10a) |
 | `dxf/01-cizgi-ve-parsel.dxf` | a line and a parcel with a hole, with its `.prj` companion |
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |

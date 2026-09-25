@@ -211,6 +211,11 @@ Task<void> run(Context& ctx)
         ctx.refuse(made.error());
         co_return;
     }
+    // The boundary's origin: every object whose linework drew it (core/lineage.hpp).
+    if (auto st = ctx.derive(made.value(), std::span<const core::EntityId>(region.sources)); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
 
     ctx.record("nokta", Value::point(query.at));
     if (ctx.has_argument("ada")) ctx.record("ada", Value::boolean(query.islands));

@@ -27,6 +27,7 @@ add_library(kentos_core STATIC
     src/spline.cpp
     src/entity_kind.cpp
     src/foreign_table.cpp
+    src/lineage.cpp
     src/outline.cpp
     src/transform.cpp
     src/geometry.cpp

@@ -31,6 +31,7 @@ nesne 4 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000000008af2f0
     38544 2547
     39089 1656
   alan_mm2 0  cevre_mm 1891
+  koken core.trim 3
 nesne 5 katman=EGRI stil=0 halka=1 tur=5 yuk=01000000000000000000000000000000d810270700000000
   halka rol=0 parca=0 tepe=3
     60000 0
@@ -54,8 +55,9 @@ nesne 8 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000002bac2c360
     39544 911
     40000 0
   alan_mm2 0  cevre_mm 1891
+  koken core.split 5
 kapsam -20000 -10000 70000 35000
-icerik-ozeti cc81b1e6f20147c6
+icerik-ozeti 15626ddef624b321
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"EGRI"},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
   {"seq":2,"cmd":"core.ellipse_draw","args":{"merkez":[0,0],"birinci":[10000,0],"ikinci":[0,5000]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}

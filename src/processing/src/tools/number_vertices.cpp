@@ -136,6 +136,7 @@ public:
                 cap.height = height;
                 cap.text = label(first + static_cast<std::int64_t>(k), prefix, width, fill, suffix);
                 if (attach) cap.attach = rule;
+                cap.sources = {e.key}; // the corner it numbers is this object's
                 output.captions.push_back(std::move(cap));
             }
             ++output.touched;

@@ -32,6 +32,8 @@ Her nesne için yazılanlar:
 | Onu ölçen ölçüler | Herhangi bir nesnede: onu kaç bağlı ölçünün ölçtüğü — silmeden önce bilinmesi gereken |
 | Tarama sınırları | Bir [bağlı taramada](hatch.md#bağlı-tarama): deseni, hangi nesnelere bağlı olduğu, kaç sınır bağının kopuk olduğu; DXF'ten "ilişkili" işaretli gelip bağı olmadığı |
 | Onu izleyen taramalar | Herhangi bir nesnede: kaç bağlı taramanın onun sınırını izlediği |
+| Kökeni | Başka nesnelerden üretilmiş bir nesnede: hangi işlemle (`İFRAZ`, `TAMPON`, `BUDA` …) ve hangi nesnelerden üretildiği; artık çizimde olmayan kaynak da adıyla — [nesne kimliği ve kökeni](../veri/kimlik-ve-koken.md) |
+| Bundan türetilen | Herhangi bir nesnede: ondan üretilip çizimde duran nesneler |
 
 Tür adı bu komutun içine **yazılmamıştır**: nesne türleri tablosundan okunur. Bir
 eklenti yeni bir tür tanımladığında adı kendiliğinden buradan da çıkar.
@@ -145,6 +147,11 @@ Yazısı olan bir nesnede — yazı, ölçü — yazı tipinde olmayan harfler v
 sayar: `yazı tipinde olmayan karakter: 漢 (U+6F22) — ekranda ve çıktıda boş kutu
 olarak görünür`. Yazı motoru olmadan derlenmiş bir yapı bunu bilemez ve hiçbir şey
 söylemez.
+
+Başka nesnelerden üretilmiş bir nesnede satır `koken` taşır: `islem` (üreten komutun ya da
+aracın [komut referansındaki](referans.md) kalıcı kimliği, örneğin `core.split_parcel`),
+`ad` (yazılan adı, `İFRAZ`) ve `kaynaklar` (her biri `nesne` ve
+`silinmis`). Ondan üretilip çizimde duran nesneler varsa `turetilen`, onların kimlikleri.
 
 Bir taramada satır `tarama` (`desen`, `aci_udeg`, `olcek_pay`, `olcek_payda`,
 `dxf_iliskili`) ve bağlıysa `tarama_sinirlari` (her biri `nesne`, `kopuk`) taşır;

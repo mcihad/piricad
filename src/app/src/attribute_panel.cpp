@@ -269,6 +269,31 @@ void AttributePanel::rebuild()
                              {},
                              {}});
         what.rows.push_back({tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, {}});
+        // WHERE IT CAME FROM (TODOS F-02, core/lineage.hpp): the operation by
+        // the name a user types and the objects it was made from, a source
+        // that is gone said to be. History, so it reads and never edits.
+        if (const core::Lineage* origin = doc.lineage().get(slot); origin != nullptr) {
+            const command::CommandSpec* spec =
+                controller_.bus().registry().by_id(origin->operation);
+            const QString made_by =
+                spec != nullptr && !spec->names.empty()
+                    ? QString::fromUtf8(spec->names.front().data(),
+                                        static_cast<qsizetype>(spec->names.front().size()))
+                    : QString::fromStdString(origin->operation);
+            QStringList from;
+            for (const core::EntityKey k : origin->sources) {
+                const core::EntityId src = doc.slot_of(k);
+                const bool gone          = src == core::kNoEntity || !doc.alive(src);
+                from << (gone ? tr("%1 (silinmiş)") : QStringLiteral("%1"))
+                            .arg(static_cast<qulonglong>(core::raw(k)));
+            }
+            what.rows.push_back({tr("koken"),
+                                 tr("%1 ← %2").arg(made_by, from.join(QStringLiteral(", "))),
+                                 tr("GEÇMİŞ"),
+                                 true,
+                                 {},
+                                 {}});
+        }
         // FOREIGN DATA IS COUNTED, NEVER SHOWN (model.md R26a): bytes another
         // program owns, kept for the round trip, in a vocabulary this program
         // does not read. The count tells the user they are there.
@@ -987,6 +1012,14 @@ QStringList AttributePanel::probeRowKeys() const
         for (const AttributeRow& row : group.rows)
             out << row.key;
     return out;
+}
+
+QString AttributePanel::probeRowValue(const QString& key) const
+{
+    for (const AttributeGroup& group : groups_)
+        for (const AttributeRow& row : group.rows)
+            if (row.key == key) return row.value;
+    return {};
 }
 
 bool AttributePanel::openRowForProbe(const QString& key)

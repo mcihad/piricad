@@ -1633,6 +1633,31 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     Warning{"io.hatchlink", "Bir tarama bağı yüklenemedi: " + st.error().message});
     }
 
+    if (view.has(kBlkLineage)) {
+        auto rows = view.column<LineageRecord>(kBlkLineage, view.count_of(kBlkLineage), "kökenler");
+        if (!rows) return rows.error();
+        std::map<core::EntityId, core::Lineage> per_object;
+        for (const LineageRecord& r : rows.value()) {
+            // A dead row carries history too: it is written dead, with its key.
+            const core::EntityId made = doc.slot_of(static_cast<core::EntityKey>(r.made_key));
+            if (made == core::kNoEntity) {
+                report.warnings.push_back(Warning{"io.lineage_row",
+                                                  "Dosyadaki bir köken kaydı var olmayan bir "
+                                                  "nesneye işaret ediyor; yok sayıldı."});
+                continue;
+            }
+            auto op = strings.at(r.operation_string, "köken işlemi");
+            if (!op) return op.error();
+            core::Lineage& origin = per_object[made];
+            if (origin.operation.empty()) origin.operation = std::string(op.value());
+            origin.sources.push_back(static_cast<core::EntityKey>(r.source_key));
+        }
+        for (auto& [made, origin] : per_object)
+            if (auto st = tx.set_lineage(made, std::move(origin)); !st)
+                report.warnings.push_back(
+                    Warning{"io.lineage", "Bir köken kaydı yüklenemedi: " + st.error().message});
+    }
+
     // ---- the allocator must not hand out a key the file already used ----
     //
     // A drawing with an external reference stopped the counter past its

@@ -72,16 +72,19 @@ nesne 12 katman=KOPYALAR stil=0 halka=1 tur=4
   halka rol=0 parca=0 tepe=1
     485620000 4310200000
   alan_mm2 0  cevre_mm 0
+  koken core.copy 12
 nesne 13 katman=KOPYALAR stil=0 halka=1 tur=4
   halka rol=0 parca=0 tepe=1
     485640000 4310200000
   alan_mm2 0  cevre_mm 0
+  koken core.copy 12
 nesne 14 katman=KOPYALAR stil=0 halka=1 tur=4
   halka rol=0 parca=0 tepe=1
     485660000 4310200000
   alan_mm2 0  cevre_mm 0
+  koken core.copy 12
 kapsam 485300000 4310190000 485660000 4310540000
-icerik-ozeti 4a83b789b5c7da97
+icerik-ozeti f07f305563f7ded5
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"ROPER"},"origin":"test","crs":"TUREF/TM36","katman":"ROPER"}
   {"seq":2,"cmd":"core.point_draw","args":{"noktalar":[[485300000,4310200000],[485360000,4310245000],[485410000,4310190000]]},"origin":"test","crs":"TUREF/TM36","katman":"ROPER"}

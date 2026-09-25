@@ -217,6 +217,16 @@ public:
     // ---- mutation, always through the transaction ----
     Transaction& transaction() noexcept { return tx_; }
 
+    /// Records that `made` was made by THIS command from `sources` (TODOS F-02,
+    /// core/lineage.hpp): the command's id and the objects' keys, kept with the
+    /// drawing and undone with it — so an analysis result, a piece of a trim or
+    /// a parcel of an ifraz knows what it came from after this call is over.
+    /// Nothing is recorded for an empty `sources`, or a `made` among them.
+    core::Status derive(core::EntityId made, std::span<const core::EntityKey> sources);
+
+    /// The same, from the sources' rows.
+    core::Status derive(core::EntityId made, std::span<const core::EntityId> sources);
+
     // ---- read access ----
     const core::Document& document() const noexcept { return doc_; }
 

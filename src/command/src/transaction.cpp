@@ -514,6 +514,15 @@ Status Transaction::set_dimension_links(EntityId dim, std::span<const core::DimL
     return core::ok();
 }
 
+Status Transaction::set_lineage(EntityId e, core::Lineage origin)
+{
+    core::Op undo;
+    auto st = doc_.set_lineage(e, std::move(origin), undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_hatch_links(EntityId hatch, std::span<const core::HatchSource> sources)
 {
     core::Op undo;

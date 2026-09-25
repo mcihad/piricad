@@ -278,6 +278,10 @@ Task<void> run(Context& ctx)
 
             auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
             if (!created) return created.error();
+            // The parent, by key: it leaves the sheet, the piece remembers it.
+            const core::EntityId parent[] = {slot};
+            if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(parent)); !st)
+                return st.error();
 
             for (std::size_t c = 0; c < table.columns(); ++c) {
                 const auto col = static_cast<core::AttrId>(c);

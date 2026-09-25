@@ -106,6 +106,7 @@ public:
                     cap.height = height;
                     cap.text   = *text;
                     if (attach) cap.attach = rule;
+                    cap.sources = {e.key}; // the side it measures is this object's
                     output.captions.push_back(std::move(cap));
                     any = true;
                 }

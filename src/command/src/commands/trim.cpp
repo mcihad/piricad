@@ -119,6 +119,12 @@ bool cut_face(Context& ctx, core::EntityId slot, const core::Polygon& face, core
                 return false;
             }
         }
+        // Both halves remember the face they were cut from (core/lineage.hpp).
+        const core::EntityId whole[] = {slot};
+        if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(whole)); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
 
         // EVERY COLUMN TRAVELS TO BOTH HALVES. Splitting a shape does not change
         // what it IS — both halves of a cut woodland are still woodland — so

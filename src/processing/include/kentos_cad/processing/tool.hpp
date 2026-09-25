@@ -244,13 +244,18 @@ struct ToolOutput
         /// and the command that later moves the source re-places the caption
         /// (core/attach.hpp). Nothing for a free caption.
         std::optional<core::Attachment> attach;
+        /// The input objects it was made from, by key — its ORIGIN, which the
+        /// runner records (core/lineage.hpp). Empty: every object the tool ran
+        /// over, which is what it came from when nothing narrower is known.
+        std::vector<std::int64_t> sources;
     };
 
     /// A run of points, open or closed.
     struct Polyline
     {
-        std::vector<core::Point2> points; ///< the vertices, no repeated closing point
-        bool closed{false};               ///< a face (exterior ring) rather than a line
+        std::vector<core::Point2> points;  ///< the vertices, no repeated closing point
+        bool closed{false};                ///< a face (exterior ring) rather than a line
+        std::vector<std::int64_t> sources; ///< its origin, as `Caption::sources`
     };
 
     /// One input object CHANGED IN PLACE, for `OutputShape::InPlace`: the same
@@ -272,6 +277,7 @@ struct ToolOutput
     {
         std::vector<core::Point2> exterior;           ///< the outer boundary
         std::vector<std::vector<core::Point2>> holes; ///< the holes, each a ring
+        std::vector<std::int64_t> sources;            ///< its origin, as `Caption::sources`
     };
 
     /// AN OBJECT OF AN EXISTING KIND, GIVEN WHOLE: its kind, its one ring and
@@ -284,6 +290,7 @@ struct ToolOutput
         std::vector<core::Point2> ring;            ///< that kind's one ring
         core::RingRole role{core::RingRole::Open}; ///< open, or exterior for a face
         std::vector<std::uint8_t> payload;         ///< the kind's payload
+        std::vector<std::int64_t> sources;         ///< its origin, as `Caption::sources`
     };
 
     std::vector<Caption> captions;   ///< text objects to create

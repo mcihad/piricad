@@ -374,6 +374,20 @@ Task<void> run_tool(Context& ctx)
         layer_name = doc.layers()[layer].name;
     }
 
+    // ---- where each result came from (TODOS F-02, core/lineage.hpp) ----
+    //
+    // The inputs the tool names for it, or every object it ran over when it
+    // names none: an analysis result knows its origin after this call is over.
+    const auto derive = [&ctx, &used](core::EntityId made_one,
+                                      const std::vector<std::int64_t>& own) {
+        const std::vector<std::int64_t>& from = own.empty() ? used : own;
+        std::vector<core::EntityKey> keys;
+        keys.reserve(from.size());
+        for (const std::int64_t k : from)
+            keys.push_back(static_cast<core::EntityKey>(static_cast<std::uint64_t>(k)));
+        return ctx.derive(made_one, std::span<const core::EntityKey>(keys));
+    };
+
     std::size_t made = 0;
     for (const ToolOutput::Caption& c : output.captions) {
         if (c.text.empty() || c.height <= 0) continue;
@@ -395,6 +409,10 @@ Task<void> run_tool(Context& ctx)
                 ctx.refuse(st.error());
                 co_return;
             }
+        if (auto st = derive(created.value(), c.sources); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
         ++made;
     }
     for (const ToolOutput::Polyline& p : output.polylines) {
@@ -410,6 +428,10 @@ Task<void> run_tool(Context& ctx)
         }
         if (!created) {
             ctx.refuse(created.error());
+            co_return;
+        }
+        if (auto st = derive(created.value(), p.sources); !st) {
+            ctx.refuse(st.error());
             co_return;
         }
         ++made;
@@ -428,6 +450,10 @@ Task<void> run_tool(Context& ctx)
             ctx.refuse(created.error());
             co_return;
         }
+        if (auto st = derive(created.value(), f.sources); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
         ++made;
     }
 
@@ -438,6 +464,10 @@ Task<void> run_tool(Context& ctx)
             layer, rec.kind, std::span<const core::RingGeometry::RingInput>(&ring, 1), rec.payload);
         if (!created) {
             ctx.refuse(created.error());
+            co_return;
+        }
+        if (auto st = derive(created.value(), rec.sources); !st) {
+            ctx.refuse(st.error());
             co_return;
         }
         ++made;

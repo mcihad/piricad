@@ -51,10 +51,12 @@ bool write_path(Context& ctx, core::EntityId slot, const core::CurvePath& path);
 bool rewrite_path(Context& ctx, core::EntityId slot, const core::CurvePath& path);
 
 /// A new object holding `path`, drawn like `like`: its layer, its style and
-/// every attribute cell. Its key is appended to `keys`. False, having refused,
+/// every attribute cell. Its key is appended to `keys`, and its ORIGIN is
+/// recorded (TODOS F-02): the objects in `from`, or `like` alone when `from`
+/// is empty — a piece of a thing came from that thing. False, having refused,
 /// when the document refuses the geometry.
 bool add_path_like(Context& ctx, core::EntityId like, const core::CurvePath& path,
-                   std::vector<std::int64_t>& keys);
+                   std::vector<std::int64_t>& keys, std::span<const core::EntityKey> from = {});
 
 /// Replaces the object in `slot` by `pieces`, in order: the first written in
 /// place when the slot's kind holds it, every other piece — or all of them,

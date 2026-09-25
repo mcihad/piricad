@@ -331,6 +331,10 @@ public:
     /// Replaces the boundary sources of hatch `hatch` (`Document::set_hatch_links`).
     Status set_hatch_links(EntityId hatch, std::span<const core::HatchSource> sources);
 
+    /// Records where `e` came from (`Document::set_lineage`, core/lineage.hpp).
+    /// Undoable with the edit that made it.
+    Status set_lineage(EntityId e, core::Lineage origin);
+
     /// What `settle_attachments` did.
     struct SettleReport
     {

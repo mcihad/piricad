@@ -153,6 +153,13 @@ Task<void> run(Context& ctx)
             ctx.refuse(created.error());
             co_return;
         }
+        // THE PARENT, remembered by key (core/lineage.hpp): it leaves the sheet
+        // below, and the piece still says which parcel it was cut from.
+        const core::EntityId parent[] = {slot};
+        if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(parent)); !st) {
+            ctx.refuse(st.error());
+            co_return;
+        }
 
         for (std::size_t c = 0; c < table.columns(); ++c) {
             const auto col = static_cast<core::AttrId>(c);

@@ -679,6 +679,28 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // ---- lineage (core/lineage.hpp), a source by its key ----
+    //
+    // DEAD ROWS TOO: a parcel two ifraz ago is gone from the sheet and still
+    // the link between today's parcel and the one it all came from. Its row is
+    // written dead with its key, so its history can be written beside it.
+    std::vector<LineageRecord> lineage_rows;
+    {
+        const core::LineageTable& table = doc.lineage();
+        for (const core::EntityId made : table.derived()) {
+            if (is_external(made)) continue;
+            const core::Lineage& origin = *table.get(made);
+            const std::uint32_t op      = pool.intern(origin.operation);
+            for (const core::EntityKey source : origin.sources) {
+                LineageRecord r{};
+                r.made_key         = core::raw(doc.key_of(made));
+                r.source_key       = core::raw(source);
+                r.operation_string = op;
+                lineage_rows.push_back(r);
+            }
+        }
+    }
+
     // ---- block definitions (model.md R45) ----
     std::vector<BlockRecord> block_rows;
     std::vector<std::uint64_t> block_members;
@@ -998,6 +1020,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (!attach_rows.empty()) blocks.push_back(column(kBlkAttachments, attach_rows));
     if (!dimlink_rows.empty()) blocks.push_back(column(kBlkDimensionLinks, dimlink_rows));
     if (!hatchlink_rows.empty()) blocks.push_back(column(kBlkHatchLinks, hatchlink_rows));
+    if (!lineage_rows.empty()) blocks.push_back(column(kBlkLineage, lineage_rows));
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

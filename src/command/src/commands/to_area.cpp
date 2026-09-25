@@ -205,6 +205,15 @@ Task<void> run(Context& ctx)
         ctx.refuse(created.error());
         co_return; // the bus rolls the transaction back
     }
+    // The face remembers the lines it was closed from (core/lineage.hpp).
+    std::vector<core::EntityId> lines;
+    lines.reserve(strands.size());
+    for (const Strand& s : strands)
+        lines.push_back(s.entity);
+    if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(lines)); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
 
     // The lines are GONE, in the same transaction that made the face. A boundary
     // that exists both as a face and as the lines beneath it is a duplicate the

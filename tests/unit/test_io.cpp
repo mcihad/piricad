@@ -4908,6 +4908,69 @@ TEST_CASE("IO: tarama bağı tohumları korpusta; bozuk bağ satırları uyarıy
             CHECK(src.broken);
 }
 
+TEST_CASE("IO: köken tohumları korpusta; bozuk köken satırları uyarıyla atlanır")
+{
+    // CLAUDE.md 6.7, for the lineage block (core/lineage.hpp): written under
+    // KENTOS_TOHUM_UPDATE — a parcel trimmed into a new piece, one copied and
+    // the copy's source erased — and read back on every build.
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path good   = corpus / "14-kokenler.pcad";
+    const fs::path bad    = corpus / "15-koken-bozuk.pcad";
+    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+        Rig w;
+        for (const char* line : {"ÇİZGİ 0,0 20,0", "ÇİZGİ 10,-5 10,5", "BÖL nesne=1 nokta=5,0",
+                                 "ALAN 40,0 60,0 60,10 40,10",
+                                 "KOPYALA nesneler=4 baslangic=40,0 bitis=70,0", "SİL nesneler=4"})
+            REQUIRE(w.bus.execute_line(line, Origin::Test).ok());
+        REQUIRE(w.doc.lineage().size() == 2);
+        REQUIRE(w.bus.execute_line("FARKLIKAYDET \"" + good.string() + "\"", Origin::Test).ok());
+
+        std::ifstream in(good, std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        in.close();
+        const auto u32 = [&bytes](std::size_t at) {
+            std::uint32_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 4);
+            return v;
+        };
+        const auto u64 = [&bytes](std::size_t at) {
+            std::uint64_t v = 0;
+            std::memcpy(&v, bytes.data() + at, 8);
+            return v;
+        };
+        std::size_t rows = 0;
+        for (std::uint32_t b = 0; b < u32(20); ++b) {
+            const std::size_t entry = u64(24) + std::size_t{b} * 32;
+            if (u32(entry) == io::kBlkLineage) rows = u64(entry + 8);
+        }
+        REQUIRE(rows != 0);
+        // Row 0 names an object the file does not hold; row 1 an operation
+        // string past the end of the pool.
+        const std::uint64_t nobody = 0xFFFF'FFFFu;
+        std::memcpy(bytes.data() + rows, &nobody, 8);
+        const std::uint32_t nowhere = 0x7FFF'FFFFu;
+        std::memcpy(bytes.data() + rows + 24 + 16, &nowhere, 4);
+        std::ofstream out(bad, std::ios::binary);
+        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    if (!fs::exists(good) || !fs::exists(bad))
+        PENDING("Köken tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+
+    Rig a;
+    auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(a.doc.lineage().size(), std::size_t{2});
+
+    // The damaged file: a row for nobody is passed over and said; a string past
+    // the pool is a damaged file, refused by name rather than read wrong.
+    Rig b;
+    auto damaged = b.bus.execute_line("AÇ \"" + bad.string() + "\"", Origin::Test);
+    if (damaged)
+        CHECK(b.transcript.find("var olmayan bir nesneye") != std::string::npos);
+    else
+        CHECK(damaged.error().message.find("köken") != std::string::npos);
+}
+
 TEST_CASE("IO: ölçü bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
 {
     // CLAUDE.md 6.7: the link block ships its seeds with the format. Written by

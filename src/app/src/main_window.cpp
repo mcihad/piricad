@@ -6773,6 +6773,41 @@ int MainWindow::probeRealMouse()
             table.close();
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 32. A PIECE OF AN IFRAZ KNOWS ITS PARCEL (TODOS F-02) ----
+        //
+        // A parcel cut in two leaves the sheet; each piece still says what it
+        // was cut from — in the attribute panel, by the name a user types, the
+        // parcel marked as gone — and NESNEBİLGİ says the same to the command
+        // line and, in its report, to every other client.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {"KATMAN ad=PARSEL", "ALAN 0,0 20,0 20,10 0,10",
+                                     "İFRAZ nesneler=1 noktalar=10,-5 10,15"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{-5'000, -10'000, 25'000, 20'000});
+            runScriptLine(QStringLiteral("SEÇ nesneler=2"));
+            attributePanel_->refresh();
+            QCoreApplication::processEvents();
+            const QString origin = attributePanel_->probeRowValue(QStringLiteral("koken"));
+            check(origin == QStringLiteral("İFRAZ ← 1 (silinmiş)"),
+                  QStringLiteral("seçilen ifraz parçasının panelinde kökeni yazıyor (\"%1\")")
+                      .arg(origin));
+            if (shooting) {
+                attributePanel_->resize(420, 560);
+                (void)attributePanel_->grab().save(into + QStringLiteral("/koken-panel.png"));
+            }
+            shoot("koken-ifraz");
+            runScriptLine(QStringLiteral("NESNEBİLGİ nesneler=3"));
+            endCommand();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("kökeni: İFRAZ (kaynak: nesne 1 (artık çizimde değil))")),
+                  QStringLiteral("NESNEBİLGİ öbür parçanın kökenini söylüyor"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

@@ -355,6 +355,15 @@ Task<void> run_explode(Context& ctx)
         }
         if (!taken) co_return;
 
+        // Every piece remembers what it came apart from (core/lineage.hpp): the
+        // object leaves the sheet below, and its key still names it.
+        const core::EntityId whole[] = {slot};
+        for (const core::EntityId piece : pieces.made)
+            if (auto told = ctx.derive(piece, std::span<const core::EntityId>(whole)); !told) {
+                ctx.session().fail(told.error());
+                co_return;
+            }
+
         auto st = ctx.transaction().erase_entity(slot);
         if (!st) {
             ctx.session().fail(st.error());

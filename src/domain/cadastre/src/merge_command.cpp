@@ -136,6 +136,11 @@ Task<void> run(Context& ctx)
         ctx.refuse(created.error());
         co_return;
     }
+    // Every parcel merged into it, by key (core/lineage.hpp).
+    if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(slots)); !st) {
+        ctx.refuse(st.error());
+        co_return;
+    }
 
     // ---- the attributes, only where every input agrees ----
     const core::AttrTable& table = doc.attributes();

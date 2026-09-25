@@ -357,6 +357,28 @@ void Context::record(std::string param, Value v)
     session_.record(std::move(param), std::move(v));
 }
 
+core::Status Context::derive(core::EntityId made, std::span<const core::EntityKey> sources)
+{
+    const core::Document& doc = document();
+    if (made >= doc.entities().size()) return core::ok();
+    core::Lineage origin;
+    origin.operation = session_.spec().id;
+    for (const core::EntityKey k : sources)
+        if (k != core::EntityKey::None && k != doc.entities().key[made])
+            origin.sources.push_back(k);
+    if (origin.sources.empty()) return core::ok();
+    return tx_.set_lineage(made, std::move(origin));
+}
+
+core::Status Context::derive(core::EntityId made, std::span<const core::EntityId> sources)
+{
+    std::vector<core::EntityKey> keys;
+    keys.reserve(sources.size());
+    for (const core::EntityId e : sources)
+        if (e < document().entities().size()) keys.push_back(document().entities().key[e]);
+    return derive(made, std::span<const core::EntityKey>(keys));
+}
+
 void Context::report(core::Json data) const
 {
     session_.set_report(std::move(data));

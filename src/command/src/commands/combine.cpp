@@ -253,6 +253,16 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
                 co_return false;
             }
         }
+        // Every input merged, by key (core/lineage.hpp): a piece of a merge came
+        // from all of them, whichever it happens to overlap.
+        std::vector<core::EntityId> inputs;
+        inputs.reserve(pieces.size());
+        for (const Piece& p : pieces)
+            inputs.push_back(p.entity);
+        if (auto st = ctx.derive(created.value(), std::span<const core::EntityId>(inputs)); !st) {
+            ctx.refuse(st.error());
+            co_return false;
+        }
         made.push_back(created.value());
     }
 

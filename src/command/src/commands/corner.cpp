@@ -236,7 +236,10 @@ Task<void> run_pair(Context& ctx, bool fillet, std::int64_t id_a, core::Point2 p
         core::CurvePath link;
         link.pieces.push_back(corner.link);
         const core::EntityId like = ctx.document().alive(slot_a) ? slot_a : slot_b;
-        if (!add_path_like(ctx, like, link, added)) co_return;
+        // The corner's own piece came from the two objects it joins.
+        const core::EntityKey both[] = {ctx.document().entities().key[slot_a],
+                                        ctx.document().entities().key[slot_b]};
+        if (!add_path_like(ctx, like, link, added, both)) co_return;
     }
 
     ctx.record("nesne", Value::ids({id_a, id_b}));

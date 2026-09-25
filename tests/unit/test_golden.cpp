@@ -118,6 +118,16 @@ std::string dump_document(const core::Document& doc)
 
         out += "  alan_mm2 " + std::to_string(doc.entity_area(e)) + "  cevre_mm " +
                std::to_string(doc.entity_perimeter(e)) + "\n";
+
+        // Where it came from (core/lineage.hpp), when it was made from others:
+        // history is content, and a fixture that did not say it would hide a
+        // change to it inside the fingerprint.
+        if (const core::Lineage* origin = doc.lineage().get(e); origin != nullptr) {
+            out += "  koken " + origin->operation;
+            for (const core::EntityKey k : origin->sources)
+                out += " " + std::to_string(core::raw(k));
+            out += "\n";
+        }
     }
 
     const core::Box2 box = doc.extent();

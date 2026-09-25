@@ -387,6 +387,12 @@ enum BlockId : std::uint32_t {
     /// one keeps its bytes.
     kBlkHatchLinks = 0x008F, ///< HatchLinkRecord[]
 
+    /// Where each derived object came from (core/lineage.hpp), one record per
+    /// source. OPTIONAL: written only when an object has an origin, so a
+    /// drawing without one keeps its bytes, and an older reader steps over it
+    /// (R10) — losing the history, never the drawing.
+    kBlkLineage = 0x0096, ///< LineageRecord[]
+
     // ---- sheet layouts (core/layout.hpp). All four or none. ------------------
     //
     // A PAFTA IS DOCUMENT CONTENT, so it is in the file rather than beside it,
@@ -696,6 +702,19 @@ struct HatchLinkRecord
 };
 
 static_assert(sizeof(HatchLinkRecord) == 24, "the hatch link column is a wire record");
+
+/// One source of a derived object (core/lineage.hpp): the object, one of the
+/// objects it was made from — both by persistent key; a source may be dead,
+/// which is the point — and the operation that made it.
+struct LineageRecord
+{
+    std::uint64_t made_key;         ///<  0  the derived object
+    std::uint64_t source_key;       ///<  8  one object it was made from
+    std::uint32_t operation_string; ///< 16  the command's or tool's id, into the string pool
+    std::uint32_t reserved;         ///< 20  zero
+};
+
+static_assert(sizeof(LineageRecord) == 24, "the lineage column is a wire record");
 
 /// One sheet layout. Its pages, items and name runs live in the three blocks
 /// beside it.

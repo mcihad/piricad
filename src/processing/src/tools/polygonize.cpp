@@ -109,17 +109,36 @@ public:
         bool approximate                           = false;
         std::size_t holes                          = 0;
         core::Mm2 area                             = 0;
+        // A FACE'S ORIGIN is the linework that bounds it: every input that drew
+        // a piece of its outer ring or of a hole (TODOS F-02).
+        const auto drawn_by = [&input](const core::NetworkFace& face) {
+            std::vector<std::int64_t> keys;
+            const auto take = [&](const core::FaceRing& ring) {
+                for (const std::vector<std::uint32_t>& piece : ring.sources)
+                    for (const std::uint32_t i : piece)
+                        if (i < input.entities.size()) keys.push_back(input.entities[i].key);
+            };
+            take(face.outer);
+            for (const core::FaceRing& hole : face.holes)
+                take(hole);
+            std::ranges::sort(keys);
+            keys.erase(std::ranges::unique(keys).begin(), keys.end());
+            return keys;
+        };
+
         for (std::size_t f = 0; f < faces.size(); ++f) {
             if (progress.cancelled()) return cancelled();
             const core::NetworkFace& face = faces[f];
             const core::FaceShape shape   = core::face_shape(face);
             if (shape.whole) {
-                output.records.push_back(ToolOutput::Record{
-                    shape.record.kind, shape.record.ring, shape.record.role, shape.record.payload});
+                output.records.push_back(ToolOutput::Record{shape.record.kind, shape.record.ring,
+                                                            shape.record.role, shape.record.payload,
+                                                            drawn_by(face)});
             } else {
                 ToolOutput::Face out;
                 out.exterior = shape.rings.front();
                 out.holes.assign(shape.rings.begin() + 1, shape.rings.end());
+                out.sources = drawn_by(face);
                 output.faces.push_back(std::move(out));
             }
             chords      = std::max(chords, shape.chords);

@@ -55,7 +55,7 @@ bool rewrite_path(Context& ctx, core::EntityId slot, const core::CurvePath& path
 }
 
 bool add_path_like(Context& ctx, core::EntityId like, const core::CurvePath& path,
-                   std::vector<std::int64_t>& keys)
+                   std::vector<std::int64_t>& keys, std::span<const core::EntityKey> from)
 {
     const core::Document& doc  = ctx.document();
     const core::PathRecord rec = core::path_record(path);
@@ -81,6 +81,15 @@ bool add_path_like(Context& ctx, core::EntityId like, const core::CurvePath& pat
             ctx.refuse(st.error());
             return false;
         }
+    }
+    // WHERE IT CAME FROM (core/lineage.hpp): the pieces of a trim know the
+    // object they were cut from after the object itself is gone.
+    const core::EntityKey self[] = {doc.entities().key[like]};
+    if (const auto st =
+            ctx.derive(made.value(), from.empty() ? std::span<const core::EntityKey>(self) : from);
+        !st) {
+        ctx.refuse(st.error());
+        return false;
     }
     keys.push_back(key_of(doc, made.value()));
     return true;

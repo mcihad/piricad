@@ -111,9 +111,12 @@ public:
         const core::EndStyle end   = end_named(input.args.get("uc").as_text());
         const bool dissolve        = input.args.get("birlestir").as_bool(true);
 
-        const auto publish = [&output](const std::vector<core::Polygon>& made) {
+        // Each face with its origin: the one object a kept-apart buffer was
+        // drawn round, or — dissolved — every object, which the runner assumes.
+        const auto publish = [&output](const std::vector<core::Polygon>& made,
+                                       std::vector<std::int64_t> from) {
             for (const core::Polygon& p : made)
-                output.faces.push_back(ToolOutput::Face{p.exterior, p.holes});
+                output.faces.push_back(ToolOutput::Face{p.exterior, p.holes, from});
         };
 
         // ONE ANSWER, or one per object. Dissolved is what a protection band
@@ -130,7 +133,7 @@ public:
                 gather(e, one);
                 auto made = core::buffer(one, distance, join, end);
                 if (!made) return made.error();
-                publish(made.value());
+                publish(made.value(), {e.key});
             }
             ++output.touched;
             progress.at(++done, input.entities.size());
@@ -138,7 +141,7 @@ public:
         if (dissolve && output.touched > 0) {
             auto made = core::buffer(all, distance, join, end);
             if (!made) return made.error();
-            publish(made.value());
+            publish(made.value(), {});
         }
 
         // NOTHING IS AN ANSWER, and it is said: eroding a face past half its

@@ -250,6 +250,12 @@ Task<void> run(Context& ctx)
                 ctx.refuse(added.error());
                 co_return;
             }
+            // The parallel's origin is the object it runs beside (core/lineage.hpp).
+            const core::EntityId beside[] = {e};
+            if (auto st = ctx.derive(added.value(), std::span<const core::EntityId>(beside)); !st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
             // THE SOURCE'S LOOK TRAVELS WITH ITS LAYER: a road edge drawn in the
             // road style has a parallel in the road style.
             if (!on_active && style != core::kByLayerStyle) {

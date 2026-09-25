@@ -768,6 +768,12 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
         if (!st) return st.error();
     }
 
+    // AND WHAT IT IS A COPY OF (core/lineage.hpp): a new key, and the old one
+    // remembered — the copy's ada number came from somewhere, and this says where.
+    const core::EntityId original[] = {slot};
+    if (auto st = ctx.derive(fresh, std::span<const core::EntityId>(original)); !st)
+        return st.error();
+
     // THEN THE TRANSFORM, by the one function every verb uses. It has refused
     // with its reason when it returns false, and that reason is what goes back
     // — a caller that refused again with a generic "could not transform" wrote

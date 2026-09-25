@@ -16,7 +16,10 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/io/service.hpp"
+#include "kentos_cad/processing/registry.hpp"
 
 #include <filesystem>
 #include <string>
@@ -43,7 +46,25 @@ struct Rig
     Rig()
     {
         register_builtin_commands(reg);
+        processing::register_processing_commands(reg);
+        domain::cadastre::register_cadastre_commands(reg);
         bus.on_echo = [this](std::string_view s) { said.append(s).append("\n"); };
+    }
+
+    /// The origin of object `key`: its operation and its sources' keys, or
+    /// an empty operation when it has none.
+    core::Lineage origin(std::int64_t key) const
+    {
+        const core::Lineage* got = doc.lineage().get(entity(key));
+        return got == nullptr ? core::Lineage{} : *got;
+    }
+
+    /// The newest live object's key.
+    std::int64_t newest() const
+    {
+        for (auto e = static_cast<core::EntityId>(doc.entities().size()); e-- > 0;)
+            if (doc.alive(e)) return static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+        return 0;
     }
 
     void run(const std::string& line)
@@ -244,4 +265,99 @@ TEST_CASE("KİMLİK: dış referansın parçasına değer yazılmaz; ret dosyay�
     const auto v = host.doc.attribute(host.doc.attributes().find("ad"), member);
     REQUIRE(v.ok());
     CHECK_EQ(v.value().text, std::string("Cumhuriyet Caddesi"));
+}
+
+// ------------------------------------------------------------ lineage ----
+
+namespace {
+
+std::vector<core::EntityKey> keys(std::initializer_list<std::uint64_t> raw)
+{
+    std::vector<core::EntityKey> out;
+    for (const std::uint64_t k : raw)
+        out.push_back(static_cast<core::EntityKey>(k));
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("KÖKEN: analiz çıktısı kökenini bilir — tampon her kuyusunu, birleşik tampon hepsini")
+{
+    Rig r;
+    r.run("NOKTA 0,0");                                                  // 1
+    r.run("NOKTA 50,0");                                                 // 2
+    r.run("TAMPON nesneler=1 2 mesafe=5 birlestir=hayir katman=KORUMA"); // 3, 4
+    const core::Lineage a = r.origin(3);
+    const core::Lineage b = r.origin(4);
+    CHECK_EQ(a.operation, "islem.tampon");
+    CHECK_EQ(b.operation, "islem.tampon");
+    CHECK((a.sources == keys({1}) || a.sources == keys({2})));
+    CHECK((b.sources == keys({1}) || b.sources == keys({2})));
+    CHECK_NE(a.sources, b.sources);
+
+    r.run("TAMPON nesneler=1 2 mesafe=40 katman=BIRLESIK"); // one face round both
+    CHECK_EQ(r.origin(r.newest()).sources, keys({1, 2}));
+
+    // Undone, the result goes and its history with it; redone, both come back.
+    r.run("GERİAL");
+    CHECK(r.doc.lineage().get(r.entity(5)) == nullptr);
+    r.run("YİNELE");
+    CHECK_EQ(r.origin(5).sources, keys({1, 2}));
+}
+
+TEST_CASE(
+    "KÖKEN: ifraz parçaları silinen parseli, tevhit parseli ikisini bilir; NESNEBİLGİ söyler; "
+    "kaydedilip açılınca da")
+{
+    TempDir tmp("koken");
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");              // 1
+    r.run("İFRAZ nesneler=1 noktalar=10,-5 10,15"); // 2, 3; 1 erased
+    CHECK_FALSE(r.doc.alive(r.entity(1)));
+    CHECK_EQ(r.origin(2).operation, "core.split_parcel");
+    CHECK_EQ(r.origin(2).sources, keys({1}));
+    CHECK_EQ(r.origin(3).sources, keys({1}));
+    r.run("TEVHİT nesneler=2 3"); // 4
+    CHECK_EQ(r.origin(4).operation, "core.merge");
+    CHECK_EQ(r.origin(4).sources, keys({2, 3}));
+
+    // NESNEBİLGİ says it by the name a user types, and that the parents are gone.
+    auto told = r.bus.execute_line("NESNEBİLGİ nesneler=4", Origin::Test);
+    REQUIRE(told.ok());
+    CHECK(r.said.find("kökeni: TEVHİT (kaynak: nesne 2 (artık çizimde değil), 3 (artık çizimde "
+                      "değil))") != std::string::npos);
+    const core::Json* rows = told.value().report.find("nesneler");
+    REQUIRE(rows != nullptr);
+    const core::Json* origin = rows->as_array().front().find("koken");
+    REQUIRE(origin != nullptr);
+    CHECK_EQ(origin->find("islem")->as_string(), std::string("core.merge"));
+    CHECK(origin->find("kaynaklar")->as_array().front().find("silinmis")->as_bool());
+
+    // And the parent is asked what was made from it — though it is gone.
+    r.said.clear();
+    r.run("NESNEBİLGİ nesneler=4");
+    CHECK(r.said.find("bundan türetilen") == std::string::npos); // nothing made from 4
+
+    // The history is kept with the drawing.
+    const std::string path = tmp.file("ifraz.pcad");
+    r.run("FARKLIKAYDET \"" + path + "\"");
+    Rig back;
+    back.run("AÇ \"" + path + "\"");
+    CHECK_EQ(back.origin(4).operation, "core.merge");
+    CHECK_EQ(back.origin(4).sources, keys({2, 3}));
+    CHECK_EQ(back.origin(2).sources, keys({1})); // a dead row's history too
+    CHECK_EQ(back.doc.content_hash(), r.doc.content_hash());
+}
+
+TEST_CASE("KÖKEN: BUDA'nın ve BÖL'ün yeni parçası kaynağını bilir; yerinde kalan parça kendisidir")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 20,0");   // 1
+    r.run("ÇİZGİ 10,-5 10,5"); // 2, the cutting edge
+    r.run("BÖL nesne=1 nokta=5,0");
+    // The first piece stays in object 1 — the same object, no origin — and the
+    // second is new, made from it.
+    CHECK(r.doc.lineage().get(r.entity(1)) == nullptr);
+    CHECK_EQ(r.origin(3).operation, "core.split");
+    CHECK_EQ(r.origin(3).sources, keys({1}));
 }

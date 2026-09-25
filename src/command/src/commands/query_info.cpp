@@ -290,6 +290,54 @@ void describe_hatch(const core::Document& doc, core::EntityId slot, core::Json& 
     }
 }
 
+/// WHERE AN OBJECT CAME FROM, AND WHAT WAS MADE FROM IT (TODOS F-02,
+/// core/lineage.hpp): the operation by the name a user types — İFRAZ, not
+/// `cadastre.split` — and its sources, each said to be gone when it is.
+void describe_lineage(Bus& bus, const core::Document& doc, core::EntityId slot, core::Json& row,
+                      std::string& said)
+{
+    const core::LineageTable& table = doc.lineage();
+    if (table.empty()) return;
+    const auto named = [&bus](const std::string& id) {
+        const CommandSpec* spec = bus.registry().by_id(id);
+        return spec != nullptr && !spec->names.empty() ? std::string(spec->names.front()) : id;
+    };
+    if (const core::Lineage* origin = table.get(slot); origin != nullptr) {
+        core::Json out = core::Json::object({});
+        out.set("islem", core::Json::string(origin->operation));
+        out.set("ad", core::Json::string(named(origin->operation)));
+        core::Json from = core::Json::array({});
+        std::string listed;
+        for (const core::EntityKey k : origin->sources) {
+            const core::EntityId src = doc.slot_of(k);
+            const bool gone          = src == core::kNoEntity || !doc.alive(src);
+            core::Json one;
+            one.set("nesne", core::Json::integer(static_cast<std::int64_t>(core::raw(k))));
+            one.set("silinmis", core::Json::boolean(gone));
+            from.push(std::move(one));
+            listed += (listed.empty() ? "" : ", ") + std::to_string(core::raw(k)) +
+                      (gone ? " (artık çizimde değil)" : "");
+        }
+        out.set("kaynaklar", std::move(from));
+        row.set("koken", std::move(out));
+        said += "; kökeni: " + named(origin->operation) + " (kaynak: nesne " + listed + ")";
+    }
+    std::vector<core::EntityId> made;
+    table.made_from(doc.entities().key[slot], made);
+    std::erase_if(made, [&doc](core::EntityId e) { return !doc.alive(e); });
+    if (!made.empty()) {
+        core::Json out = core::Json::array({});
+        std::string listed;
+        for (const core::EntityId e : made) {
+            const auto key = static_cast<std::int64_t>(core::raw(doc.entities().key[e]));
+            out.push(core::Json::integer(key));
+            listed += (listed.empty() ? "" : ", ") + std::to_string(key);
+        }
+        row.set("turetilen", std::move(out));
+        said += "; bundan türetilen: nesne " + listed;
+    }
+}
+
 // ------------------------------------------------------------ NESNEBİLGİ ----
 
 Task<void> run_entity_info(Context& ctx)
@@ -375,6 +423,7 @@ Task<void> run_entity_info(Context& ctx)
         describe_dimension(doc, slot, ctx.session().bus().drawing_unit(), row, said);
         describe_links(doc, slot, row, said);
         describe_hatch(doc, slot, row, said);
+        describe_lineage(ctx.session().bus(), doc, slot, row, said);
         describe_glyphs(ctx.session().bus(), doc, slot, row, said);
         ctx.echo(said + ".");
 

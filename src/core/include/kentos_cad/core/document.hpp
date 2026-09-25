@@ -30,6 +30,7 @@
 #include "kentos_cad/core/image_store.hpp"
 #include "kentos_cad/core/layer.hpp"
 #include "kentos_cad/core/layout.hpp"
+#include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text_store.hpp"
@@ -164,6 +165,9 @@ struct Op
 
         /// A block's external reference, put back (`Document::set_block_external`).
         SetBlockExternal, ///< block_arg, str_arg (path), byte_arg (flags) — as it was
+
+        /// An object's origin, put back (`Document::set_lineage`).
+        SetLineage, ///< entity, bytes_arg — the origin it had before (`encode_lineage`)
     };
 
     Kind kind{Kind::None};
@@ -289,6 +293,10 @@ public:
     /// (core/hatch_link.hpp), keyed by the hatch's row. Read at commit, never by
     /// the frame path.
     const HatchLinkTable& hatch_links() const noexcept { return hatch_links_; }
+
+    /// What each derived object was made by and from (core/lineage.hpp), keyed
+    /// by its row. History, not a tie: read when an object is asked about.
+    const LineageTable& lineage() const noexcept { return lineage_; }
 
     /// The drafting guides this document carries. Furniture, not geometry: saved
     /// with the file and invisible to selection, culling, export and area sums
@@ -633,6 +641,13 @@ public:
     /// key of the object that is gone. The inverse restores what it had before.
     Status set_hatch_links(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out);
 
+    /// Records where `e` came from (core/lineage.hpp): the operation and the
+    /// objects, by key; an origin with no operation clears it. A source need
+    /// not be alive — an ifraz erases the parcel its pieces came from, and the
+    /// key still names it — but it must be a key this document has handed out.
+    /// The inverse restores the origin it had before.
+    Status set_lineage(EntityId e, Lineage origin, Op& undo_out);
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -735,6 +750,7 @@ private:
     AttachTable attachments_{};
     DimLinkTable dim_links_{};
     HatchLinkTable hatch_links_{};
+    LineageTable lineage_{};
     GuideStore guides_{};
     LayoutStore layouts_{};
     ImageStore images_{};

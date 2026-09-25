@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — türetilen nesnenin kökeni (F-02, 2. aşama)
+
+- Başka nesnelerden üretilen her nesne **kökenini** bilir: hangi işle ve hangi
+  nesnelerden üretildiğini. İFRAZ, ALANİFRAZ, TEVHİT, BİRLEŞTİR, BUDA/BÖL/KIR/UZAT
+  parçaları, UÇUCA, YUVARLA ve PAH köşe parçası, PATLAT, OFSET, SINIR, ALANAÇEVİR,
+  KOPYALA/DİZİ ve bütün analiz araçlarının çıktıları (TAMPON her kuyusunu, ALAN
+  OLUŞTUR her alanı çizen çizgileri, UZUNLUKYAZ ve KÖŞENUMARALA ölçtükleri nesneyi)
+  kaydeder.
+- Köken öznitelik panelinde **GEÇMİŞ** rozetli `koken` satırında (`İFRAZ ← 1
+  (silinmiş)`) ve NESNEBİLGİ'de görünür; NESNEBİLGİ kaynak nesne için "bundan
+  türetilen" nesneleri de söyler, yapılandırılmış cevapta `koken` ve `turetilen`.
+- Silinmiş kaynak da adıyla kalır: kimlikler yeniden verilmediği için iki ifraz sonra
+  bile bugünkü parselden ilk parsele zincir izlenir. Köken proje dosyasında saklanır
+  (eski sürüm bloğu atlar), geri almayla gider, belge parmak izine katılır.
+- Yeni sayfa: [Nesne kimliği ve kökeni](docs/veri/kimlik-ve-koken.md).
+
 ### Düzeltildi — tek nesne kimliği, 1. aşama (F-02)
 
 - **Öznitelik tablosu** tutamakla düzenlenen bir nesnenin hücrelerini yanlış satırdan

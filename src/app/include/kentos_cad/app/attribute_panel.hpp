@@ -117,6 +117,10 @@ public:
     /// Every row key the panel is currently showing, for the same probe.
     QStringList probeRowKeys() const;
 
+    /// The value the row named `key` shows, empty when there is no such row —
+    /// what a probe reads to check what the panel says, not what it stores.
+    QString probeRowValue(const QString& key) const;
+
 signals:
     /// The user asked for the shown object's corners as a file. The shell opens
     /// the export window; the panel does not own it.

@@ -283,10 +283,14 @@ Task<void> run_join(Context& ctx)
         return static_cast<std::int64_t>(core::raw(doc.key_of(e)));
     };
     const bool in_place = core::path_record(join.chain).kind == doc.entities().kind[first];
+    // A new object's origin is every object joined into it (core/lineage.hpp).
+    std::vector<core::EntityKey> joined;
+    for (const std::size_t j : join.joined)
+        joined.push_back(doc.entities().key[slots[j]]);
     if (in_place) {
         if (!write_path(ctx, first, join.chain)) co_return;
         result.push_back(key_of(first));
-    } else if (!add_path_like(ctx, first, join.chain, result)) {
+    } else if (!add_path_like(ctx, first, join.chain, result, joined)) {
         co_return;
     }
     for (const std::size_t j : join.joined) {

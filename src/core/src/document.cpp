@@ -167,6 +167,7 @@ std::uint64_t Document::content_hash() const
     h                                     = attachments_.fold(h, position);
     h                                     = dim_links_.fold(h, position);
     h                                     = hatch_links_.fold(h, position);
+    h                                     = lineage_.fold(h, position);
 
     // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
     // deliverable, even when every parcel in it is identical. Folding an EMPTY
@@ -1522,6 +1523,38 @@ Status Document::restore_hatch_links(EntityId hatch, std::vector<HatchSource> so
     return ok();
 }
 
+Status Document::set_lineage(EntityId e, Lineage origin, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    origin.sources = lineage_sources(origin.sources);
+    if (!origin.operation.empty()) {
+        if (origin.sources.empty())
+            return err(ErrorCode::InvalidArgument,
+                       "Bir kökenin en az bir kaynak nesnesi olmalı: " + origin.operation);
+        const std::uint64_t issued = keys_.peek_entity(); // the next key to be handed out
+        for (const EntityKey k : origin.sources)
+            if (k == EntityKey::None || raw(k) >= issued)
+                return err(ErrorCode::NotFound,
+                           "Kökendeki kaynak bu çizimin verdiği bir kimlik değil: " +
+                               std::to_string(raw(k)));
+        if (std::ranges::binary_search(origin.sources, entities_.key[e]))
+            return err(ErrorCode::InvalidArgument, "Bir nesne kendi kökeni olamaz.");
+    }
+    undo_out           = Op{};
+    undo_out.kind      = Op::Kind::SetLineage;
+    undo_out.entity    = e;
+    const Lineage* was = lineage_.get(e);
+    if (was == nullptr && origin.operation.empty()) {
+        undo_out = Op{}; // had none, gets none: no change, no inverse
+        return ok();
+    }
+    undo_out.bytes_arg = encode_lineage(was);
+    lineage_.set(e, std::move(origin));
+    ++revision_;
+    return ok();
+}
+
 Status Document::restore_dimension_links(EntityId dim, std::vector<DimLink> links, Op& undo_out)
 {
     if (dim >= entities_.size())
@@ -1759,6 +1792,11 @@ Status Document::apply(const Op& op, Op* undo_out)
         auto links = decode_dim_links(op.bytes_arg);
         if (!links) return links.error();
         return restore_dimension_links(op.entity, std::move(links.value()), inverse);
+    }
+    case Op::Kind::SetLineage: {
+        auto origin = decode_lineage(op.bytes_arg);
+        if (!origin) return origin.error();
+        return set_lineage(op.entity, std::move(origin.value()), inverse);
     }
     case Op::Kind::SetHatchLinks: {
         auto sources = decode_hatch_links(op.bytes_arg);
