@@ -205,7 +205,7 @@ Task<void> run_local_copy(Context& ctx)
             members = taking.only;
         }
 
-        core::Json made              = core::Json::array({});
+        core::Json made = core::Json::array({});
         const std::array<core::EntityKey, 1> from{doc.entities().key[reference]};
         for (int row = 0; row < static_cast<int>(placed.rows); ++row)
             for (int column = 0; column < static_cast<int>(placed.columns); ++column) {
