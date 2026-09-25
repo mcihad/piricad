@@ -20,9 +20,22 @@
 // these three questions exactly, and linking it for three closed forms — one of
 // which, the circle–circle meet, this core already has (`circle_intersection`) —
 // would bring the kernel and GMP into every build for none of CGAL's real
-// strengths. Ellipses and splines are NOT paths yet: their crossings need an
-// iterative solve, which is where a library earns its place, and they arrive
-// with it.
+// strengths.
+//
+// ELLIPSES AND SPLINES ARE PATHS TOO, for the tools that can take them
+// (`PathScope::Curves`). Their crossings have no closed form a solver can
+// trust, so they are found the way every CAD kernel finds them: candidates
+// where the drawn chords of the two curves cross or pass within the chords'
+// own deviation, each refined by Newton's method on the exact curves
+// (`core/src/curve_eval.hpp`). A library was weighed here too and the
+// hand-rolled solve is the stated exception (CLAUDE.md Article 9): OpenCASCADE
+// answers it and brings a CAD kernel of its own into every build; SISL is
+// AGPL; CGAL's Bézier arrangement is exact but takes no rational curve and
+// needs CORE; and none of them pins its operation order, which is what makes
+// an answer the same on three platforms (§7.3) — the reason `spline.hpp` draws
+// with its own de Boor. The solve SAYS when it could not decide: a candidate
+// the refinement cannot settle is reported, never silently dropped
+// (`PathMeets::unresolved`).
 //
 // TANGENCY AND OVERLAP ARE SAID, NOT GUESSED. A line that touches a circle meets
 // it at one point marked `touching`; two collinear segments share a stretch
@@ -33,6 +46,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/core/spline.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -47,18 +61,33 @@ namespace kentos::core {
 /// when it is negative. A path is WALKED, and an arc-polyline edge that bends
 /// the other way, or a chain turned round to join another, walks its arcs
 /// clockwise; a sign keeps the direction and every arc still its definition.
+///
+/// Under `PathScope::Curves` a piece may also be an ELLIPSE — an arc of one,
+/// swept in the ellipse's own parameter (ellipse.hpp: the point at t is
+/// `centre + cos t · (major − centre) + sin t · (minor − centre)`) from
+/// `start_udeg`, the sign of `sweep_udeg` again the way it is walked — or a
+/// SPLINE: a whole NURBS curve (`controls`, `spline` with its knots written
+/// out), walked from the first point of its domain to the last. A spline piece
+/// cut short is re-made as the shorter curve it is (knot insertion), so every
+/// spline piece is walked over its whole domain.
 struct PathPiece
 {
-    /// Which of the two a piece is.
-    enum class Kind : std::uint8_t { Segment, Arc };
+    /// Which of the four a piece is.
+    enum class Kind : std::uint8_t { Segment, Arc, Ellipse, Spline };
 
-    Kind kind{Kind::Segment};   ///< which it is
-    Point2 from{};              ///< where the piece starts along the path
-    Point2 to{};                ///< where it ends
-    Point2 centre{};            ///< Arc: the centre
-    Mm radius{0};               ///< Arc: the radius
-    std::int64_t sweep_udeg{0}; ///< Arc: the signed sweep from `from`, whole micro-degrees;
-                                ///< ±360° is a circle
+    Kind kind{Kind::Segment};     ///< which it is
+    Point2 from{};                ///< where the piece starts along the path
+    Point2 to{};                  ///< where it ends
+    Point2 centre{};              ///< Arc and Ellipse: the centre
+    Mm radius{0};                 ///< Arc: the radius
+    std::int64_t sweep_udeg{0};   ///< Arc: the signed sweep from `from`, whole micro-degrees;
+                                  ///< ±360° is a circle. Ellipse: the signed sweep of its
+                                  ///< parameter; ±360° is the whole ellipse
+    Point2 major{};               ///< Ellipse: the end of its first axis
+    Point2 minor{};               ///< Ellipse: the end of its second axis
+    std::int64_t start_udeg{0};   ///< Ellipse: its parameter at `from`, in [0, 360°)
+    std::vector<Point2> controls; ///< Spline: its control points, first to last
+    SplineDef spline{};           ///< Spline: degree, knots (always written out), weights
 
     friend bool operator==(const PathPiece&, const PathPiece&) = default;
 };
@@ -87,11 +116,24 @@ bool comes_before(PathPlace a, PathPlace b) noexcept;
 /// or clockwise — the one place a direction becomes a signed sweep.
 PathPiece arc_piece(Point2 centre, Mm radius, Point2 from, Point2 to, bool ccw) noexcept;
 
+/// Which kinds `path_of` walks.
+enum class PathScope : std::uint8_t {
+    /// Lines, arcs, circles and arc-polylines — every piece a segment or an
+    /// arc: what a tool that bends, joins or edits vertices can take.
+    Circular,
+    /// And ellipses and splines, their pieces `Kind::Ellipse` and
+    /// `Kind::Spline`: what BUDA, UZAT, BÖL and KIR take (TODOS C-01).
+    Curves,
+};
+
 /// The path `e` is drawn along: a polyline's single ring, open or closed; an
-/// arc; a circle; an arc-polyline, its bent edges as arcs. Nothing for every
-/// other kind, for a polyline of several rings (a face with holes), and for a
-/// caption's baseline.
-std::optional<CurvePath> path_of(const Document& doc, EntityId e);
+/// arc; a circle; an arc-polyline, its bent edges as arcs; under
+/// `PathScope::Curves` an ellipse, whole or partial, and a spline — a closed
+/// one only when its curve returns to its start. Nothing for every other kind,
+/// for a polyline of several rings (a face with holes), and for a caption's
+/// baseline.
+std::optional<CurvePath> path_of(const Document& doc, EntityId e,
+                                 PathScope scope = PathScope::Circular);
 
 /// The same path walked the other way: the pieces in reverse order, each from
 /// its end to its start, every arc's sweep negated.
@@ -112,8 +154,13 @@ PathPlace place_of(const CurvePath& path, Point2 probe);
 PathPlace path_start(const CurvePath& path) noexcept;
 PathPlace path_end(const CurvePath& path) noexcept;
 
-/// The length of `path`, in millimetres.
+/// The length of `path`, in millimetres — an ellipse's and a spline's along the
+/// curve itself (Gauss–Legendre quadrature over the exact derivative), not
+/// along the chords it is drawn with.
 Mm path_length(const CurvePath& path);
+
+/// The box `path` occupies — the curve's own, not its control points'.
+Box2 path_bounds(const CurvePath& path);
 
 /// The place `length` millimetres along `path` from its start, clamped to the
 /// path — what a split at a distance and a split into equal parts walk to.
@@ -205,6 +252,28 @@ struct PathCrossing
 /// and is not reported.
 std::vector<PathCrossing> path_crossings(const CurvePath& path, const CurvePath& other);
 
+/// A stretch two paths share: the same curve for a while, not a point.
+struct PathOverlap
+{
+    PathPlace from{}; ///< where it begins on the path walked
+    PathPlace to{};   ///< where it ends
+};
+
+/// Everything two paths have in common, told apart (TODOS C-01): the points
+/// where they cross, each `touching` when they meet without crossing; the
+/// stretches they share; and whether the solve could not decide somewhere —
+/// a candidate the refinement did not settle, which is NOT the same answer as
+/// "they do not meet", and a tool must not treat it as one.
+struct PathMeets
+{
+    std::vector<PathCrossing> crossings; ///< ordered along the path walked
+    std::vector<PathOverlap> overlaps;   ///< shared stretches, ordered likewise
+    bool unresolved{false};              ///< a candidate the solve could not settle
+};
+
+/// `path_crossings` with the overlaps and the solver's own verdict.
+PathMeets path_meets(const CurvePath& path, const CurvePath& other);
+
 /// One place an infinite line meets a piece.
 struct LineMeet
 {
@@ -220,6 +289,10 @@ std::vector<LineMeet> line_meets(Point2 a, Point2 b, const PathPiece& piece);
 /// Where the WHOLE circle of the arc piece `arc` meets `piece`, on `piece`: what
 /// an arc's end is carried round to.
 std::vector<Point2> circle_meets(const PathPiece& arc, const PathPiece& piece);
+
+/// Where the WHOLE ellipse of the ellipse piece `arc` meets `piece`, on
+/// `piece`: what an elliptic arc's end is carried round to.
+std::vector<Point2> ellipse_meets(const PathPiece& arc, const PathPiece& piece);
 
 /// The part of `path` from `a` to `b`, along it. On a closed path, `b` before `a`
 /// wraps past the seam; on an open one it is empty. Pieces that shrink to nothing

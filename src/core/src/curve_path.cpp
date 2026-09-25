@@ -5,9 +5,12 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
+
+#include "curve_eval.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -43,13 +46,33 @@ Point2 on_circle(Point2 centre, Mm radius, std::int64_t udeg) noexcept
                   centre.y + mm_round(static_cast<double>(radius) * sc.sin)};
 }
 
-Point2 piece_point(const PathPiece& p, double t) noexcept
+/// Whether a piece is one of the kinds only `PathScope::Curves` walks.
+bool curved(const PathPiece& p) noexcept
+{
+    return p.kind == PathPiece::Kind::Ellipse || p.kind == PathPiece::Kind::Spline;
+}
+
+/// The point of an ellipse piece's ellipse at parameter `udeg`, as the
+/// ellipse kind draws it (`sin_cos_udeg`, one rounding).
+Point2 ellipse_at(const PathPiece& e, std::int64_t udeg) noexcept
+{
+    const SinCos sc = sin_cos_udeg(wrap(udeg));
+    const auto ux   = static_cast<double>(e.major.x - e.centre.x);
+    const auto uy   = static_cast<double>(e.major.y - e.centre.y);
+    const auto vx   = static_cast<double>(e.minor.x - e.centre.x);
+    const auto vy   = static_cast<double>(e.minor.y - e.centre.y);
+    return Point2{e.centre.x + mm_round((sc.cos * ux) + (sc.sin * vx)),
+                  e.centre.y + mm_round((sc.cos * uy) + (sc.sin * vy))};
+}
+
+Point2 piece_point(const PathPiece& p, double t)
 {
     if (t <= 0.0) return p.from;
     if (t >= 1.0) return p.to;
     if (p.kind == PathPiece::Kind::Segment)
         return Point2{p.from.x + mm_round(static_cast<double>(p.to.x - p.from.x) * t),
                       p.from.y + mm_round(static_cast<double>(p.to.y - p.from.y) * t)};
+    if (curved(p)) return curve::Eval(p, p.from).world(t);
     const auto turn =
         static_cast<std::int64_t>(std::llround(static_cast<double>(p.sweep_udeg) * t));
     return on_circle(p.centre, p.radius, angle_of(p.centre, p.from) + turn);
@@ -88,6 +111,33 @@ double segment_fraction(const PathPiece& p, Point2 q) noexcept
     return (mm_to_metres(q.x - p.from.x) * ex + mm_to_metres(q.y - p.from.y) * ey) / len2;
 }
 
+/// The fraction of a piece nearest `q`: closed forms for a segment and an arc
+/// (unclamped), the numerical nearest for an ellipse and a spline.
+double fraction_of(const PathPiece& p, Point2 q)
+{
+    switch (p.kind) {
+    case PathPiece::Kind::Segment: return segment_fraction(p, q);
+    case PathPiece::Kind::Arc: return arc_fraction(p, q);
+    case PathPiece::Kind::Ellipse:
+    case PathPiece::Kind::Spline: return curve::nearest_t(p, q);
+    }
+    return 0.0;
+}
+
+/// How long a piece is, in metres.
+double piece_metres(const PathPiece& p)
+{
+    switch (p.kind) {
+    case PathPiece::Kind::Segment: return mm_to_metres(segment_length(p.from, p.to));
+    case PathPiece::Kind::Arc:
+        // r · θ, the sweep in radians from whole micro-degrees.
+        return mm_to_metres(p.radius) * static_cast<double>(turn_of(p)) * (kPi / 180.0 / 1000000.0);
+    case PathPiece::Kind::Ellipse:
+    case PathPiece::Kind::Spline: return curve::length(p, 0.0, 1.0);
+    }
+    return 0.0;
+}
+
 /// Whether a point already known to be on the circle lies on the piece's arc.
 bool on_piece_arc(const PathPiece& p, Point2 q) noexcept
 {
@@ -96,11 +146,13 @@ bool on_piece_arc(const PathPiece& p, Point2 q) noexcept
     return f >= -kSame && f <= 1.0 + kSame;
 }
 
-/// A meet found between two pieces: the point, and whether it only touches.
+/// A meet found between two pieces: the point, whether it only touches, and
+/// — when the solve that found it knows — where it lies on the first piece.
 struct Meet
 {
     Point2 point{};
     bool touching{false};
+    double s{-1.0}; ///< on the first piece, or negative when not known
 };
 
 /// Where the infinite line through `a`-`b` meets the circle of the arc piece
@@ -162,10 +214,29 @@ void segment_circle(const PathPiece& s, const PathPiece& c, std::vector<Meet>& o
     }
 }
 
+/// An arc piece as the ellipse piece it is: the same circle, its axes due east
+/// and due north — so two arcs of one circle share their stretch through the
+/// ellipse's overlap test.
+PathPiece as_ellipse(const PathPiece& arc)
+{
+    PathPiece e  = arc;
+    e.kind       = PathPiece::Kind::Ellipse;
+    e.major      = Point2{arc.centre.x + arc.radius, arc.centre.y};
+    e.minor      = Point2{arc.centre.x, arc.centre.y + arc.radius};
+    e.start_udeg = wrap(angle_of(arc.centre, arc.from));
+    return e;
+}
+
 /// Every meet between two pieces, each point on both.
 void piece_meets(const PathPiece& p, const PathPiece& q, std::vector<Meet>& out)
 {
     using K = PathPiece::Kind;
+    if (curved(p) || curved(q)) {
+        const curve::Meets m = curve::meets(p, q);
+        for (const curve::Hit& h : m.hits)
+            out.push_back(Meet{h.point, h.touching, h.s});
+        return;
+    }
     std::vector<Meet> found;
     if (p.kind == K::Segment && q.kind == K::Segment) {
         Point2 at{};
@@ -197,9 +268,62 @@ void piece_meets(const PathPiece& p, const PathPiece& q, std::vector<Meet>& out)
     }
 }
 
-/// Merges two arcs of one circle meeting end to start — the two halves of a
-/// closed path's sub-path across its seam.
-void merge_arcs(std::vector<PathPiece>& pieces)
+/// Two spline pieces of one degree, the first ending where the second
+/// begins, as the one spline they make: both clamped, the knots run on with
+/// the joint a knot `degree` times over, so each keeps its shape exactly.
+std::optional<PathPiece> joined_splines(const PathPiece& a, const PathPiece& b)
+{
+    if (a.spline.degree != b.spline.degree || a.to != b.from) return std::nullopt;
+    curve::SplineParts first  = curve::clamped({a.controls, a.spline});
+    curve::SplineParts second = curve::clamped({b.controls, b.spline});
+    const auto p              = static_cast<std::size_t>(a.spline.degree);
+    if (first.controls.size() < p + 1 || second.controls.size() < p + 1) return std::nullopt;
+    const std::vector<std::int64_t>& ka = first.def.knots_nano;
+    const std::vector<std::int64_t>& kb = second.def.knots_nano;
+    const std::int64_t end              = ka.back();
+    const std::int64_t shift            = end - kb.front();
+
+    PathPiece out;
+    out.kind            = PathPiece::Kind::Spline;
+    out.from            = a.from;
+    out.to              = b.to;
+    out.spline          = first.def;
+    out.spline.closed   = false;
+    out.controls        = first.controls;
+    out.controls.back() = a.to;
+    out.controls.insert(out.controls.end(), second.controls.begin() + 1, second.controls.end());
+    std::vector<std::int64_t> knots(
+        ka.begin(), ka.begin() + static_cast<std::ptrdiff_t>(first.controls.size()));
+    for (std::size_t i = 0; i < p; ++i)
+        knots.push_back(end);
+    for (std::size_t i = p + 1; i < kb.size(); ++i)
+        knots.push_back(kb[i] + shift);
+    out.spline.knots_nano = std::move(knots);
+    const bool rational   = !first.def.weights_nano.empty() || !second.def.weights_nano.empty();
+    out.spline.weights_nano.clear();
+    if (rational) {
+        // A NURBS curve does not change when all its weights scale alike, so
+        // the second's are scaled to meet the first's at the joint.
+        const auto weights = [](const curve::SplineParts& s) {
+            return s.def.weights_nano.empty() ? std::vector<std::int64_t>(s.controls.size(), kNano)
+                                              : s.def.weights_nano;
+        };
+        std::vector<std::int64_t> wa = weights(first);
+        std::vector<std::int64_t> wb = weights(second);
+        const double scale =
+            wb.front() > 0 ? static_cast<double>(wa.back()) / static_cast<double>(wb.front()) : 1.0;
+        for (std::size_t i = 1; i < wb.size(); ++i)
+            wa.push_back(std::llround(static_cast<double>(wb[i]) * scale));
+        out.spline.rational     = true;
+        out.spline.weights_nano = std::move(wa);
+    }
+    return out;
+}
+
+/// Merges neighbours that are one curve: two arcs of one circle, two arcs of
+/// one ellipse, walked the same way and meeting end to start — the two halves
+/// of a closed path's sub-path across its seam — and two splines.
+void merge_pieces(std::vector<PathPiece>& pieces)
 {
     std::vector<PathPiece> out;
     for (const PathPiece& p : pieces) {
@@ -214,6 +338,26 @@ void merge_arcs(std::vector<PathPiece>& pieces)
                 last.sweep_udeg += p.sweep_udeg;
                 continue;
             }
+            // One ellipse likewise, the second starting where the first ends
+            // (to the micro-degree or two a cut rounds to).
+            if (last.kind == PathPiece::Kind::Ellipse && p.kind == PathPiece::Kind::Ellipse &&
+                last.centre == p.centre && last.major == p.major && last.minor == p.minor &&
+                last.to == p.from && (last.sweep_udeg < 0) == (p.sweep_udeg < 0) &&
+                turn_of(last) + turn_of(p) <= kTurn) {
+                std::int64_t gap = wrap(last.start_udeg + last.sweep_udeg) - wrap(p.start_udeg);
+                if (gap > kTurn / 2) gap -= kTurn;
+                if (gap < -kTurn / 2) gap += kTurn;
+                if (gap >= -2 && gap <= 2) {
+                    last.to = p.to;
+                    last.sweep_udeg += p.sweep_udeg;
+                    continue;
+                }
+            }
+            if (last.kind == PathPiece::Kind::Spline && p.kind == PathPiece::Kind::Spline)
+                if (auto joined = joined_splines(last, p)) {
+                    last = std::move(*joined);
+                    continue;
+                }
         }
         out.push_back(p);
     }
@@ -242,7 +386,7 @@ PathPiece arc_piece(Point2 centre, Mm radius, Point2 from, Point2 to, bool ccw) 
     return p;
 }
 
-std::optional<CurvePath> path_of(const Document& doc, EntityId e)
+std::optional<CurvePath> path_of(const Document& doc, EntityId e, PathScope scope)
 {
     const EntityTable& ents = doc.entities();
     if (e >= ents.size() || !ents.alive(e)) return std::nullopt;
@@ -333,6 +477,65 @@ std::optional<CurvePath> path_of(const Document& doc, EntityId e)
         }
         break;
     }
+    case kEllipseKind: {
+        // THE ELLIPSE'S OWN PARAMETER, as the kind stores it: a partial one
+        // sweeps counter-clockwise from its start to its end, a whole one a
+        // full turn from its first axis.
+        if (scope != PathScope::Curves) return std::nullopt;
+        PathPiece p;
+        p.kind   = PathPiece::Kind::Ellipse;
+        p.centre = ellipse_centre_of(geom, slot);
+        p.major  = ellipse_major_of(geom, slot);
+        p.minor  = ellipse_minor_of(geom, slot);
+        if (p.major == p.centre || p.minor == p.centre) return std::nullopt;
+        if (const auto arc = ellipse_arc_of(geom, slot); arc.has_value()) {
+            std::int64_t sweep = arc->end_udeg - arc->start_udeg;
+            if (sweep <= 0) sweep += kTurn;
+            p.start_udeg = wrap(arc->start_udeg);
+            p.sweep_udeg = sweep;
+        } else {
+            p.start_udeg = 0;
+            p.sweep_udeg = kTurn;
+            path.closed  = true;
+        }
+        p.from = ellipse_at(p, p.start_udeg);
+        p.to   = path.closed ? p.from : ellipse_at(p, p.start_udeg + p.sweep_udeg);
+        path.pieces.push_back(p);
+        break;
+    }
+    case kSplineKind: {
+        // THE CURVE, whole: its control points and its knots written out. A
+        // closed spline is a closed path only when the curve itself returns to
+        // its start; one the drawing closes with a chord is not a path.
+        if (scope != PathScope::Curves) return std::nullopt;
+        auto def = spline_of(geom, slot);
+        if (!def) return std::nullopt;
+        const RingSpan span = geom.rings_of(slot);
+        if (span.count == 0) return std::nullopt;
+        const auto xs = geom.ring_xs(span.first);
+        const auto ys = geom.ring_ys(span.first);
+        PathPiece p;
+        p.kind   = PathPiece::Kind::Spline;
+        p.spline = def.value();
+        for (std::size_t i = 0; i < xs.size(); ++i)
+            p.controls.push_back(Point2{xs[i], ys[i]});
+        const auto degree = static_cast<std::size_t>(p.spline.degree);
+        if (p.spline.knots_nano.empty())
+            p.spline.knots_nano = uniform_clamped_knots(p.controls.size(), p.spline.degree);
+        if (p.spline.degree < 1 || p.controls.size() < degree + 1 ||
+            p.spline.knots_nano.size() != p.controls.size() + degree + 1 ||
+            p.spline.knots_nano[p.controls.size()] <= p.spline.knots_nano[degree])
+            return std::nullopt;
+        const curve::Eval eval(p, p.controls.front());
+        p.from = eval.world(0.0);
+        p.to   = eval.world(1.0);
+        if (p.spline.closed) {
+            if (p.from != p.to) return std::nullopt;
+            path.closed = true;
+        }
+        path.pieces.push_back(p);
+        break;
+    }
     default: return std::nullopt;
     }
     if (path.pieces.empty()) return std::nullopt;
@@ -352,10 +555,8 @@ PathPlace place_of(const CurvePath& path, Point2 probe)
     double nearest = -1.0;
     for (std::size_t i = 0; i < path.pieces.size(); ++i) {
         const PathPiece& p = path.pieces[i];
-        const double t = std::clamp(p.kind == PathPiece::Kind::Segment ? segment_fraction(p, probe)
-                                                                       : arc_fraction(p, probe),
-                                    0.0, 1.0);
-        const double d = distance_squared(piece_point(p, t), probe);
+        const double t     = std::clamp(fraction_of(p, probe), 0.0, 1.0);
+        const double d     = distance_squared(piece_point(p, t), probe);
         if (nearest < 0.0 || d < nearest) {
             nearest = d;
             best    = PathPlace{i, t};
@@ -369,6 +570,14 @@ std::int64_t direction_at(const CurvePath& path, PathPlace at)
     if (path.pieces.empty()) return 0;
     const PathPiece& p = path.pieces[std::min(at.piece, path.pieces.size() - 1)];
     if (p.kind == PathPiece::Kind::Segment) return atan2_udeg(p.to.y - p.from.y, p.to.x - p.from.x);
+    if (curved(p)) {
+        // The exact derivative, the way the piece is walked, as a unit vector
+        // scaled into integers `atan2_udeg` reads without libm.
+        const curve::Vec v = curve::Eval(p, p.from).tangent(std::clamp(at.t, 0.0, 1.0));
+        const double n     = std::sqrt((v.x * v.x) + (v.y * v.y));
+        if (n <= 0.0) return 0;
+        return atan2_udeg(std::llround(v.y / n * 1e12), std::llround(v.x / n * 1e12));
+    }
     // An arc's tangent is its radius turned a quarter, forward the way the
     // arc is walked.
     const Point2 q          = point_at(path, at);
@@ -392,32 +601,69 @@ PathPlace path_end(const CurvePath& path) noexcept
 Mm path_length(const CurvePath& path)
 {
     double metres = 0.0;
-    for (const PathPiece& p : path.pieces) {
-        if (p.kind == PathPiece::Kind::Segment) {
-            metres += mm_to_metres(segment_length(p.from, p.to));
-        } else {
-            // r · θ, the sweep in radians from whole micro-degrees.
-            metres += mm_to_metres(p.radius) * static_cast<double>(turn_of(p)) *
-                      (kPi / 180.0 / 1000000.0);
-        }
-    }
+    for (const PathPiece& p : path.pieces)
+        metres += piece_metres(p);
     return mm_round(metres * static_cast<double>(kMmPerMetre));
 }
 
-std::vector<PathCrossing> path_crossings(const CurvePath& path, const CurvePath& other)
+Box2 path_bounds(const CurvePath& path)
 {
+    Box2 box;
+    for (const PathPiece& p : path.pieces) {
+        if (p.kind == PathPiece::Kind::Segment) {
+            box.extend(p.from);
+            box.extend(p.to);
+            continue;
+        }
+        const Box2 piece = curve::bounds(p);
+        box.extend(Point2{piece.min_x, piece.min_y});
+        box.extend(Point2{piece.max_x, piece.max_y});
+    }
+    return box;
+}
+
+PathMeets path_meets(const CurvePath& path, const CurvePath& other)
+{
+    PathMeets result;
     std::vector<PathCrossing> out;
     std::vector<Meet> meets;
     for (std::size_t i = 0; i < path.pieces.size(); ++i) {
         const PathPiece& p = path.pieces[i];
         for (const PathPiece& q : other.pieces) {
+            // A SHARED STRETCH is a stretch, not a point: two segments on one
+            // line, two arcs of one circle, one ellipse twice, one spline twice.
+            if (p.kind == PathPiece::Kind::Segment && q.kind == PathPiece::Kind::Segment) {
+                const auto side = [&p](Point2 r) {
+                    return (static_cast<Int128>(p.to.x - p.from.x) * (r.y - p.from.y)) -
+                           (static_cast<Int128>(p.to.y - p.from.y) * (r.x - p.from.x));
+                };
+                if (p.from != p.to && side(q.from) == 0 && side(q.to) == 0) {
+                    const double a = std::clamp(segment_fraction(p, q.from), 0.0, 1.0);
+                    const double b = std::clamp(segment_fraction(p, q.to), 0.0, 1.0);
+                    if (std::abs(b - a) > kSame)
+                        result.overlaps.push_back(PathOverlap{PathPlace{i, std::min(a, b)},
+                                                              PathPlace{i, std::max(a, b)}});
+                    continue;
+                }
+            }
+            if (curved(p) || curved(q) ||
+                (p.kind == PathPiece::Kind::Arc && q.kind == PathPiece::Kind::Arc &&
+                 p.centre == q.centre && p.radius == q.radius)) {
+                const PathPiece a    = p.kind == PathPiece::Kind::Arc ? as_ellipse(p) : p;
+                const PathPiece b    = q.kind == PathPiece::Kind::Arc ? as_ellipse(q) : q;
+                const curve::Meets m = curve::meets(a, b);
+                for (const curve::Hit& h : m.hits)
+                    out.push_back(
+                        PathCrossing{PathPlace{i, std::clamp(h.s, 0.0, 1.0)}, h.point, h.touching});
+                for (const curve::Span& o : m.overlaps)
+                    result.overlaps.push_back(PathOverlap{PathPlace{i, o.s0}, PathPlace{i, o.s1}});
+                result.unresolved = result.unresolved || m.unresolved;
+                continue;
+            }
             meets.clear();
             piece_meets(p, q, meets);
             for (const Meet& m : meets) {
-                const double t =
-                    std::clamp(p.kind == PathPiece::Kind::Segment ? segment_fraction(p, m.point)
-                                                                  : arc_fraction(p, m.point),
-                               0.0, 1.0);
+                const double t = std::clamp(fraction_of(p, m.point), 0.0, 1.0);
                 out.push_back(PathCrossing{PathPlace{i, t}, m.point, m.touching});
             }
         }
@@ -439,12 +685,54 @@ std::vector<PathCrossing> path_crossings(const CurvePath& path, const CurvePath&
     if (path.closed && unique.size() >= 2 &&
         distance_squared(unique.front().point, unique.back().point) <= 1.0)
         unique.pop_back();
-    return unique;
+    result.crossings = std::move(unique);
+    std::ranges::sort(result.overlaps, [](const PathOverlap& a, const PathOverlap& b) {
+        return comes_before(a.from, b.from);
+    });
+    return result;
+}
+
+std::vector<PathCrossing> path_crossings(const CurvePath& path, const CurvePath& other)
+{
+    return path_meets(path, other).crossings;
 }
 
 std::vector<LineMeet> line_meets(Point2 a, Point2 b, const PathPiece& piece)
 {
     std::vector<LineMeet> out;
+    if (curved(piece)) {
+        // THE LINE WHERE IT CAN MEET THE CURVE: clipped to the curve's box and
+        // a metre round it, then met as a segment, each meet put back on the
+        // infinite line by where it falls along it.
+        Box2 box = curve::bounds(piece);
+        box      = Box2{box.min_x - kMmPerMetre, box.min_y - kMmPerMetre, box.max_x + kMmPerMetre,
+                   box.max_y + kMmPerMetre};
+        const auto dx   = static_cast<double>(b.x - a.x);
+        const auto dy   = static_cast<double>(b.y - a.y);
+        double lo       = -1e300;
+        double hi       = 1e300;
+        const auto slab = [&lo, &hi](double from, double d, double min, double max) {
+            if (d == 0.0) return from >= min && from <= max;
+            const double t1 = (min - from) / d;
+            const double t2 = (max - from) / d;
+            lo              = std::max(lo, std::min(t1, t2));
+            hi              = std::min(hi, std::max(t1, t2));
+            return true;
+        };
+        if (!slab(static_cast<double>(a.x), dx, static_cast<double>(box.min_x),
+                  static_cast<double>(box.max_x)) ||
+            !slab(static_cast<double>(a.y), dy, static_cast<double>(box.min_y),
+                  static_cast<double>(box.max_y)) ||
+            lo >= hi)
+            return out;
+        const PathPiece reach{.from = Point2{a.x + mm_round(dx * lo), a.y + mm_round(dy * lo)},
+                              .to   = Point2{a.x + mm_round(dx * hi), a.y + mm_round(dy * hi)}};
+        if (reach.from == reach.to) return out;
+        for (const curve::Hit& h : curve::meets(reach, piece).hits)
+            out.push_back(LineMeet{lo + ((hi - lo) * h.s), h.point, h.touching});
+        std::ranges::sort(out, [](const LineMeet& x, const LineMeet& y) { return x.t < y.t; });
+        return out;
+    }
     if (piece.kind == PathPiece::Kind::Segment) {
         Point2 at{};
         double t = 0.0;
@@ -475,6 +763,18 @@ std::vector<Point2> circle_meets(const PathPiece& arc, const PathPiece& piece)
     return out;
 }
 
+std::vector<Point2> ellipse_meets(const PathPiece& arc, const PathPiece& piece)
+{
+    PathPiece whole  = arc;
+    whole.sweep_udeg = kTurn;
+    whole.from       = ellipse_at(arc, arc.start_udeg);
+    whole.to         = whole.from;
+    std::vector<Point2> out;
+    for (const curve::Hit& h : curve::meets(whole, piece).hits)
+        out.push_back(h.point);
+    return out;
+}
+
 CurvePath sub_path(const CurvePath& path, PathPlace a, PathPlace b)
 {
     CurvePath out;
@@ -489,12 +789,50 @@ CurvePath sub_path(const CurvePath& path, PathPlace a, PathPlace b)
         PathPiece q        = p;
         q.from             = piece_point(p, t0);
         q.to               = piece_point(p, t1);
-        if (p.kind == PathPiece::Kind::Arc) {
+        switch (p.kind) {
+        case PathPiece::Kind::Arc:
             q.sweep_udeg = static_cast<std::int64_t>(
                 std::llround(static_cast<double>(p.sweep_udeg) * (t1 - t0)));
             if (q.sweep_udeg == 0) return;
-        } else if (q.from == q.to) {
-            return;
+            break;
+        case PathPiece::Kind::Ellipse:
+            q.start_udeg = wrap(p.start_udeg + static_cast<std::int64_t>(std::llround(
+                                                   static_cast<double>(p.sweep_udeg) * t0)));
+            q.sweep_udeg = static_cast<std::int64_t>(
+                std::llround(static_cast<double>(p.sweep_udeg) * (t1 - t0)));
+            if (q.sweep_udeg == 0) return;
+            break;
+        case PathPiece::Kind::Spline: {
+            // THE SHORTER CURVE IT IS, re-made by knot insertion, its ends the
+            // cut points exactly.
+            curve::SplineParts parts{p.controls, p.spline};
+            const std::size_t n   = p.controls.size();
+            const auto deg        = static_cast<std::size_t>(p.spline.degree);
+            const std::int64_t ua = p.spline.knots_nano[deg];
+            const std::int64_t ub = p.spline.knots_nano[n];
+            const auto u_at       = [ua, ub](double t) {
+                return ua +
+                       static_cast<std::int64_t>(std::llround(static_cast<double>(ub - ua) * t));
+            };
+            if (t1 < 1.0) {
+                const std::int64_t u = u_at(t1);
+                if (u > ua && u < ub) parts = curve::split_spline(parts, u).first;
+            }
+            if (t0 > 0.0) {
+                const std::int64_t u = u_at(t0);
+                if (u > ua && u < u_at(t1)) parts = curve::split_spline(parts, u).second;
+            }
+            if (parts.controls.size() < deg + 1) return;
+            if (t0 > 0.0) parts.controls.front() = q.from;
+            if (t1 < 1.0) parts.controls.back() = q.to;
+            q.controls = std::move(parts.controls);
+            q.spline   = std::move(parts.def);
+            if (q.from == q.to) return;
+            break;
+        }
+        case PathPiece::Kind::Segment:
+            if (q.from == q.to) return;
+            break;
         }
         out.pieces.push_back(q);
     };
@@ -516,7 +854,7 @@ CurvePath sub_path(const CurvePath& path, PathPlace a, PathPlace b)
         run(a.piece, a.t, last, 1.0);
         run(0, 0.0, b.piece, b.t);
     }
-    merge_arcs(out.pieces);
+    merge_pieces(out.pieces);
     return out;
 }
 
@@ -527,7 +865,14 @@ CurvePath reversed(const CurvePath& path)
     out.pieces.reserve(path.pieces.size());
     for (PathPiece q : std::views::reverse(path.pieces)) {
         std::swap(q.from, q.to);
-        q.sweep_udeg = -q.sweep_udeg;
+        if (q.kind == PathPiece::Kind::Ellipse) q.start_udeg = wrap(q.start_udeg + q.sweep_udeg);
+        if (q.kind == PathPiece::Kind::Spline) {
+            curve::SplineParts turned = curve::reversed_spline({q.controls, q.spline});
+            q.controls                = std::move(turned.controls);
+            q.spline                  = std::move(turned.def);
+        } else {
+            q.sweep_udeg = -q.sweep_udeg;
+        }
         out.pieces.push_back(q);
     }
     return out;
@@ -539,12 +884,10 @@ PathPlace place_at_length(const CurvePath& path, Mm length)
     double left = mm_to_metres(length);
     for (std::size_t i = 0; i < path.pieces.size(); ++i) {
         const PathPiece& p  = path.pieces[i];
-        const double metres = p.kind == PathPiece::Kind::Segment
-                                  ? mm_to_metres(segment_length(p.from, p.to))
-                                  : mm_to_metres(p.radius) * static_cast<double>(turn_of(p)) *
-                                        (kPi / 180.0 / 1000000.0);
+        const double metres = piece_metres(p);
         if (metres <= 0.0) continue;
-        if (left <= metres) return PathPlace{i, left / metres};
+        if (left <= metres)
+            return PathPlace{i, curved(p) ? curve::t_at_length(p, left) : left / metres};
         left -= metres;
     }
     return path_end(path);
@@ -653,16 +996,67 @@ PathJoin join_paths(std::span<const CurvePath> paths, Mm tolerance)
             grew = true;
         }
     }
-    merge_arcs(chain);
+    merge_pieces(chain);
     out.chain.pieces = std::move(chain);
     out.ends_meet    = out.joined.size() >= 2 && distance_squared(out.chain.pieces.front().from,
                                                                   out.chain.pieces.back().to) <= reach;
     return out;
 }
 
-PathRecord path_record(const CurvePath& path)
+PathRecord path_record(const CurvePath& input)
 {
     PathRecord out;
+    CurvePath path = input;
+    if (std::ranges::any_of(path.pieces, curved)) {
+        // ONE CURVE, ONCE: an ellipse or a spline cut into pieces at a seam
+        // comes back as the pieces of one curve, which are that curve. Only
+        // here: arcs keep the vertices they were given, which an arc-polyline
+        // needs three of to close.
+        merge_pieces(path.pieces);
+        if (path.pieces.size() == 1 && path.pieces.front().kind == PathPiece::Kind::Ellipse) {
+            // AN ELLIPSE, whole or partial; a partial one stored counter-
+            // clockwise, the way the kind defines its sweep.
+            const PathPiece& e      = path.pieces.front();
+            out.kind                = kEllipseKind;
+            out.ring                = {e.centre, e.major, e.minor};
+            out.role                = RingRole::Open;
+            const std::int64_t span = turn_of(e);
+            if (span < kTurn) {
+                EllipseArc arc;
+                arc.start_udeg =
+                    wrap(e.sweep_udeg >= 0 ? e.start_udeg : e.start_udeg + e.sweep_udeg);
+                arc.end_udeg = wrap(arc.start_udeg + span);
+                out.payload  = encode_ellipse_arc(arc);
+            }
+            return out;
+        }
+        if (path.pieces.size() == 1 && path.pieces.front().kind == PathPiece::Kind::Spline) {
+            const PathPiece& c = path.pieces.front();
+            out.kind           = kSplineKind;
+            out.ring           = c.controls;
+            out.role           = RingRole::Open;
+            SplineDef def      = c.spline;
+            def.closed         = path.closed;
+            def.has_fit        = false;
+            out.payload        = encode_spline(def);
+            return out;
+        }
+        // CURVES OF DIFFERENT KINDS in one run have no kind of their own; they
+        // are kept as the line they are drawn with. No command of this program
+        // makes such a run — UÇUCA does not join an ellipse or a spline — so
+        // this is the honest answer for one that arrives, not a road anybody
+        // walks.
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        path_outline(path, xs, ys);
+        out.kind = kPolylineKind;
+        for (std::size_t i = 0; i < xs.size(); ++i)
+            out.ring.push_back(Point2{xs[i], ys[i]});
+        if (path.closed && out.ring.size() >= 2 && out.ring.front() == out.ring.back())
+            out.ring.pop_back();
+        out.role = path.closed ? RingRole::Exterior : RingRole::Open;
+        return out;
+    }
     const bool straight = std::ranges::all_of(
         path.pieces, [](const PathPiece& p) { return p.kind == PathPiece::Kind::Segment; });
     if (straight) {
@@ -839,6 +1233,42 @@ std::vector<Point2> path_vertices(const CurvePath& path)
 void path_outline(const CurvePath& path, std::vector<Mm>& xs, std::vector<Mm>& ys)
 {
     for (const PathPiece& p : path.pieces) {
+        if (curved(p)) {
+            // THE KIND'S OWN DRAWING: `ellipse_arc_outline` counter-clockwise
+            // (read backwards when walked clockwise; a whole turn in two
+            // halves), `spline_points` for a spline.
+            std::vector<Mm> ax;
+            std::vector<Mm> ay;
+            if (p.kind == PathPiece::Kind::Spline) {
+                spline_points(p.controls, p.spline, kSplineSamplesPerSpan, ax, ay);
+            } else {
+                const std::int64_t span = turn_of(p);
+                const std::int64_t low =
+                    wrap(p.sweep_udeg >= 0 ? p.start_udeg : p.start_udeg + p.sweep_udeg);
+                if (span >= kTurn) {
+                    ellipse_arc_outline(p.centre, p.major, p.minor, low, wrap(low + (kTurn / 2)),
+                                        ax, ay);
+                    std::vector<Mm> bx;
+                    std::vector<Mm> by;
+                    ellipse_arc_outline(p.centre, p.major, p.minor, wrap(low + (kTurn / 2)), low,
+                                        bx, by);
+                    ax.insert(ax.end(), bx.begin() + (bx.empty() ? 0 : 1), bx.end());
+                    ay.insert(ay.end(), by.begin() + (by.empty() ? 0 : 1), by.end());
+                } else {
+                    ellipse_arc_outline(p.centre, p.major, p.minor, low, wrap(low + span), ax, ay);
+                }
+                if (p.sweep_udeg < 0) {
+                    std::ranges::reverse(ax);
+                    std::ranges::reverse(ay);
+                }
+            }
+            for (std::size_t i = 0; i < ax.size(); ++i) {
+                if (i == 0 && !xs.empty() && xs.back() == ax[0] && ys.back() == ay[0]) continue;
+                xs.push_back(ax[i]);
+                ys.push_back(ay[i]);
+            }
+            continue;
+        }
         if (p.kind == PathPiece::Kind::Segment) {
             if (xs.empty() || xs.back() != p.from.x || ys.back() != p.from.y) {
                 xs.push_back(p.from.x);

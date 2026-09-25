@@ -14,6 +14,7 @@ add_library(kentos_core STATIC
     src/fillet.cpp
     src/break_run.cpp
     src/curve_path.cpp
+    src/curve_eval.cpp
     src/trim_curve.cpp
     src/block.cpp
     src/block_reference.cpp

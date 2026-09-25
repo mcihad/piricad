@@ -38,6 +38,7 @@
 
 #include "kentos_cad/core/units.hpp"
 
+#include <cmath>
 #include <cstdint>
 
 namespace kentos::core {
@@ -139,6 +140,45 @@ constexpr SinCos sin_cos_udeg(std::int64_t udeg) noexcept
     const double fc = folded ? s : c;
 
     switch (q) {
+    case 0: return SinCos{fs, fc};
+    case 1: return SinCos{fc, -fs};
+    case 2: return SinCos{-fs, -fc};
+    default: return SinCos{-fc, fs};
+    }
+}
+
+/// Sine and cosine of an angle in RADIANS, deterministic like `sin_cos_udeg`.
+///
+/// For the CONTINUOUS parameter a solver walks — an ellipse's while it
+/// converges on a crossing (core/curve_path.hpp) — where whole micro-degrees
+/// would stall the iteration one micro-degree short of the answer. Not for a
+/// stored angle: those are micro-degrees and go through `sin_cos_udeg`.
+///
+/// The reduction is IEEE-754's exact operations — a quotient rounded once, a
+/// floor that is exact, a product and a difference rounded once each under
+/// `-ffp-contract=off` — so every platform reduces alike; the octant then
+/// reaches the same polynomials `sin_cos_udeg` uses. Accurate to a few ulps for
+/// the few turns a parameter spans; not meant for arguments of millions of
+/// radians, where the reduction itself loses the digits.
+inline SinCos sin_cos_rad(double radians) noexcept
+{
+    constexpr double kHalfPi    = kPi / 2.0;
+    constexpr double kQuarterPi = kPi / 4.0;
+    const double q              = std::floor(radians / kHalfPi);
+    double rest                 = radians - (q * kHalfPi);
+    if (rest < 0.0) rest = 0.0;
+    if (rest > kHalfPi) rest = kHalfPi;
+
+    const bool folded  = rest > kQuarterPi;
+    const double inner = folded ? kHalfPi - rest : rest;
+    const double s     = detail::sin_poly(inner);
+    const double c     = detail::cos_poly(inner);
+    const double fs    = folded ? c : s;
+    const double fc    = folded ? s : c;
+
+    std::int64_t quadrant = static_cast<std::int64_t>(q) % 4;
+    if (quadrant < 0) quadrant += 4;
+    switch (quadrant) {
     case 0: return SinCos{fs, fc};
     case 1: return SinCos{fc, -fs};
     case 2: return SinCos{-fs, -fc};
