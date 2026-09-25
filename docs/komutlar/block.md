@@ -10,7 +10,8 @@ referans onları tam durdukları yerde çizer. Sonra aynı bloğu
 
 Blok adları Türkçe katlanmış hâliyle benzersizdir: `Kapak` ve `KAPAK` aynı bloktur.
 Tanım tablosu ekle-yalnızdır; bir tanım silinemez, `GERİAL` referansı ve kopyaları
-kaldırıp özgün nesneleri geri getirir ama boş tanım dosyada kalır.
+kaldırıp özgün nesneleri geri getirir ama boş tanım dosyada kalır. Tanımı sonradan
+değiştirmek için [`BLOKDÜZENLE`](block_edit.md).
 
 ## Adlar
 
@@ -86,12 +87,14 @@ yerleştirin.
 
 `nesneler` içinde olmayan bir kimlik.
 
-> `Blok tanımındaki nesne doğrudan düzenlenemez; BLOKDÜZENLE (Faz 2).`
+> `Blok tanımındaki nesne doğrudan düzenlenemez; tanımı BLOKDÜZENLE ile açıp düzenleyin.`
 
-Bir tanımın üyesi başka bir bloğa alınamaz.
+Bir tanımın üyesi başka bir bloğa alınamaz; tanımı değiştirmek için
+[`BLOKDÜZENLE`](block_edit.md).
 
 ## İlgili
 
 - [BLOKEKLE](insert.md) — tanımı yerleştirmek
+- [BLOKDÜZENLE](block_edit.md) — tanımı düzenlemek; bütün referanslar değişir
 - [SEÇ](select.md) — bloğa girecek nesneleri seçmek
 - [Blok referansı türü](../nesneler/blokreferansi.md)

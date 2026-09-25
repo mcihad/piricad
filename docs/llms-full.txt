@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 112 (99 tanesi onay ister)
-- Katalog parmak izi: `12240169605656833979`
+- Araç sayısı: 113 (100 tanesi onay ister)
+- Katalog parmak izi: `4388797865245167697`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -218,6 +218,22 @@ Onay ister.
 | `taban` | konum (tutamak ya da göreli nokta) | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aciklama` | string | hayır | Serbest açıklama (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_block_edit` — Bloğu Düzenle
+
+Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
+Komut: BLOKDÜZENLE (BLOKDUZENLE, BEDIT, BDZ)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | hayır | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler (metin) |
+| `nesne` | string | hayır | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ad` | string | hayır | Referans yerine bloğun adı: tanım kendi yerinde açılır (metin) |
+| `nesneler` | string | hayır | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_boundary` — Sınır Bul
@@ -801,7 +817,7 @@ Onay ister.
 |---|---|---|---|
 | `ad` | string | evet | Yerleştirilecek bloğun adı (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | evet | Ekleme noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `olcek` | number | hayır | Ölçek; eksi değer x'te aynalar; varsayılan 1 (sayı) |
+| `olcek` | number | hayır | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür (sayı) |
 | `olcek_y` | number | hayır | Y ölçeği, farklıysa; varsayılan olcek (sayı) |
 | `aci` | number | hayır | Dönme açısı, derece; varsayılan 0 (sayı) |
 | `sutun` | integer | hayır | Dizi sütun sayısı; varsayılan 1 (tam sayı) |

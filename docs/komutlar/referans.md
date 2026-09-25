@@ -74,6 +74,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.hatch`](hatch.md) | Tarama | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
 | [`core.hatch_edit`](hatch_edit.md) | Tarama Düzenle | `TARAMADÜZENLE`, `TARAMADUZENLE`, `HATCHEDIT`, `TDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
+| [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
@@ -1018,6 +1019,19 @@ Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
 
 Ayrıntılı kullanım: [BLOK](block.md)
 
+### `core.block_edit` — BLOKDÜZENLE (Bloğu Düzenle)
+
+Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | isteğe bağlı | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler |
+| `nesne` | selection | en az 0 | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim |
+| `ad` | text | isteğe bağlı | Referans yerine bloğun adı: tanım kendi yerinde açılır |
+| `nesneler` | selection | en az 0 | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler |
+
+Ayrıntılı kullanım: [BLOKDÜZENLE](block_edit.md)
+
 ### `core.insert` — BLOKEKLE (Blok Ekle)
 
 Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
@@ -1026,7 +1040,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 |---|---|---|---|
 | `ad` | text | 1 | Yerleştirilecek bloğun adı |
 | `nokta` | point | 1 | Ekleme noktası |
-| `olcek` | number | isteğe bağlı | Ölçek; eksi değer x'te aynalar; varsayılan 1 |
+| `olcek` | number | isteğe bağlı | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `olcek_y` | number | isteğe bağlı | Y ölçeği, farklıysa; varsayılan olcek |
 | `aci` | number | isteğe bağlı | Dönme açısı, derece; varsayılan 0 |
 | `sutun` | integer | isteğe bağlı | Dizi sütun sayısı; varsayılan 1 |
@@ -3141,6 +3155,66 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BLOK",
         "BLOCK",
         "BLK"
+      ]
+    }
+  },
+  {
+    "name": "core_block_edit",
+    "title": "Bloğu Düzenle",
+    "description": "Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.\nKomut: BLOKDÜZENLE (BLOKDUZENLE, BEDIT, BDZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "ac",
+            "kaydet",
+            "vazgec"
+          ],
+          "description": "ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler (metin)"
+        },
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ad": {
+          "type": "string",
+          "description": "Referans yerine bloğun adı: tanım kendi yerinde açılır (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.block_edit",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "BLOKDÜZENLE",
+        "BLOKDUZENLE",
+        "BEDIT",
+        "BDZ"
       ]
     }
   },
@@ -6753,7 +6827,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "olcek": {
           "type": "number",
-          "description": "Ölçek; eksi değer x'te aynalar; varsayılan 1 (sayı)"
+          "description": "Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür (sayı)"
         },
         "olcek_y": {
           "type": "number",

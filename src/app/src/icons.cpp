@@ -777,6 +777,19 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.setBrush(Qt::NoBrush);
         break;
 
+    case Glyph::BlockEdit:
+        // A BLOCK'S SQUARE AND THE PENCIL OVER IT: the definition changed, and
+        // every placed copy with it.
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(k.data);
+        p.drawRect(QRectF(3.6, 3.6, 12.0, 12.0));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(k.note, 1.9));
+        p.drawLine(QPointF(12.4, 20.4), QPointF(20.4, 12.4));
+        p.drawLine(QPointF(18.2, 10.2), QPointF(22.0, 14.0));
+        p.drawLine(QPointF(12.4, 20.4), QPointF(11.4, 21.6));
+        break;
+
     case Glyph::MeasureAngle: {
         // TWO ARMS AND THE SWEEP BETWEEN THEM, which is what the tool measures
         // and what its preview now draws on the canvas.

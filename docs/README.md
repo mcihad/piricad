@@ -124,6 +124,7 @@ Tek tek komutlar:
 | `TARAMADÜZENLE` | [Çizilmiş taramayı düzenleme](komutlar/hatch_edit.md) |
 | `BLOK` | [Blok tanımlama](komutlar/block.md) |
 | `BLOKEKLE` | [Blok yerleştirme](komutlar/insert.md) |
+| `BLOKDÜZENLE` | [Bloğu düzenleme](komutlar/block_edit.md) |
 | `ÖLÇÜ` | [Ölçülendirme](komutlar/dimension.md) |
 | `ÖLÇÜDÜZENLE` | [Çizilmiş ölçüyü düzenleme](komutlar/dimension_edit.md) |
 | `ÖLÇÜYENİLE` | [Ölçüleri pafta ölçeğine uyarlama](komutlar/dimension_refresh.md) |

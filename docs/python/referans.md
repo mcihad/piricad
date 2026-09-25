@@ -154,6 +154,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.hatch`](#cadhatch) | `core.hatch` | `TARAMA` | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
 | [`cad.hatch_edit`](#cadhatch_edit) | `core.hatch_edit` | `TARAMADÜZENLE` | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
+| [`cad.block_edit`](#cadblock_edit) | `core.block_edit` | `BLOKDÜZENLE` | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`cad.dimension_edit`](#caddimension_edit) | `core.dimension_edit` | `ÖLÇÜDÜZENLE` | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
@@ -1842,6 +1843,30 @@ cad.block(
 
 [Komut sayfası](../komutlar/block.md)
 
+### `cad.block_edit`
+
+Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
+
+Komut: `core.block_edit` — `BLOKDÜZENLE`
+
+```python
+cad.block_edit(
+    action: str,
+    reference: list[int],
+    name: str,
+    objects: list[int],
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `action` | `str` | `islem` | ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler |
+| `reference` | `list[int]` | `nesne` | Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim [kalıcı nesne anahtarı] |
+| `name` | `str` | `ad` | Referans yerine bloğun adı: tanım kendi yerinde açılır |
+| `objects` | `list[int]` | `nesneler` | kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler [kalıcı nesne anahtarı] |
+
+[Komut sayfası](../komutlar/block_edit.md)
+
 ### `cad.insert`
 
 Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
@@ -1866,7 +1891,7 @@ cad.insert(
 |---|---|---|---|
 | `name` | `str` | `ad` | Yerleştirilecek bloğun adı |
 | `point` | `Coord` | `nokta` | Ekleme noktası [mm, Sağa (Y) önce] |
-| `scale` | `float` | `olcek` | Ölçek; eksi değer x'te aynalar; varsayılan 1 |
+| `scale` | `float` | `olcek` | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `scale_y` | `float` | `olcek_y` | Y ölçeği, farklıysa; varsayılan olcek |
 | `angle` | `float` | `aci` | Dönme açısı, derece; varsayılan 0 |
 | `columns` | `int` | `sutun` | Dizi sütun sayısı; varsayılan 1 |

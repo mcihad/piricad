@@ -337,6 +337,12 @@ signals:
     /// without a prompt cannot re-arm itself into a loop.
     void interactiveFinished(const QString& id, bool mutated, bool dismissed);
 
+    /// A command FINISHED — typed, pressed, run by a script or by an agent —
+    /// with its id and its structured report as JSON text (`Context::report`;
+    /// `null` when it has none). How the shell follows an edit that spans
+    /// commands, BLOKDÜZENLE's open and save, whichever client ran each step.
+    void commandFinished(const QString& id, const QString& report);
+
     /// A command handed work to a thread (job.hpp): the status strip shows
     /// `label` and a Durdur, and stays live while the read runs.
     void jobStarted(const QString& label);

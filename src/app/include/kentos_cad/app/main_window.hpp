@@ -30,6 +30,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <QPointer>
@@ -1077,6 +1078,47 @@ private:
     QAction* actHatchEdit_{nullptr}; ///< TARAMADÜZENLE
     QAction* actBlock_{nullptr};
     QAction* actInsert_{nullptr};
+    QAction* actBlockEdit_{nullptr};   ///< BLOKDÜZENLE — opens the selected block's definition
+    QAction* actBlockSave_{nullptr};   ///< the open block edit, saved into the definition
+    QAction* actBlockCancel_{nullptr}; ///< the open block edit, given up
+
+    /// The tab that is up while a block is out for editing: its save and its
+    /// way back, and the block's name in its title.
+    SARibbonContextCategory* blockEditTab_{nullptr};
+    /// The tab the hand was on when an edit raised its own, to go back to.
+    QPointer<SARibbonCategory> beforeBlockEdit_;
+
+    /// A BLOCK DEFINITION OUT ON THE SHEET for editing (`BLOKDÜZENLE aç`). What
+    /// belongs to the edit is the client's to say — the command is stateless so
+    /// every step is complete as data — and this is the shell saying it: what
+    /// the open made, and what was drawn after it (TODOS C-13).
+    struct BlockEditSession
+    {
+        QString block;                    ///< the definition's name
+        std::int64_t reference{0};        ///< the reference it came from; 0 when opened by name
+        std::vector<std::int64_t> opened; ///< the objects the open made
+        std::uint64_t watermark{0};       ///< keys above this were drawn during the edit
+    };
+
+    std::optional<BlockEditSession> blockEdit_;
+    /// The last edit that ended — saved, given up, or undone past its open —
+    /// kept so an undo of the save, or a redo of the open, takes the user back
+    /// INTO it: the opened objects are on the sheet again and the reference is
+    /// hidden again, and without this nothing would say they belong together.
+    std::optional<BlockEditSession> dormantBlockEdit_;
+
+    /// Follows a finished command: BLOKDÜZENLE's open starts the edit above,
+    /// its save or its discard ends it — whichever client ran them.
+    void onCommandFinished(const QString& id, const QString& report);
+    /// Brings the edit up to date with the document — an undo past the open
+    /// ends it — and shows or hides its tab.
+    void refreshBlockEdit();
+    /// The line that saves (`save`) or gives up the open edit: its reference
+    /// or name, and every live object of it.
+    QString blockEditLine(bool save) const;
+    /// Asks what to do with an open block edit before `why` happens: save it,
+    /// give it up, or stay. False when the user chose to stay.
+    bool settleBlockEdit(const QString& why);
     QAction* actDimension_{nullptr};
     QAction* actLeader_{nullptr};
     QAction* actScale_{nullptr};

@@ -426,6 +426,14 @@ public:
     /// Op variant exists. The kind validates the pair before anything is written.
     Status set_kind_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out);
 
+    /// Rewrites the drawn box block reference `e` stores (`BlockReference::bounds`)
+    /// from what its definition draws now — after BLOKDÜZENLE changed the
+    /// definition, or one it places. A CACHE, so neither the layer's lock nor
+    /// the reference being a member of another definition stops it, as neither
+    /// stops the reference drawing the new members. Nothing, and an empty
+    /// inverse, when the box is already right; otherwise `Op::SetGeometry`.
+    Status refresh_reference_bounds(EntityId e, Op& undo_out);
+
     /// Replaces an entity's rings AND its kind payload together, keeping its
     /// identity — what a transform of a kind whose payload holds coordinates
     /// needs (an arc polyline's centres, a block reference's turn), since the
@@ -597,6 +605,11 @@ public:
 
 private:
     Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot, KindId kind);
+
+    /// `set_kind_payload` without the editability question: the same rings, the
+    /// new bytes, one new slot, the inverse `Op::SetGeometry`. For a caller that
+    /// has decided the write is not an edit of the object (a derived cache).
+    Status write_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out);
     /// Recomputes `e`'s bounding box from its geometry, and then grows it over
     /// the letters when it carries text.
     ///

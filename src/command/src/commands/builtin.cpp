@@ -75,6 +75,7 @@ namespace kentos::command {
     X(hatch)                                                                                       \
     X(hatch_edit)                                                                                  \
     X(block)                                                                                       \
+    X(block_edit)                                                                                  \
     X(insert)                                                                                      \
     X(dimension)                                                                                   \
     X(dimension_edit)                                                                              \

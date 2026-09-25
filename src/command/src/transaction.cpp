@@ -80,6 +80,29 @@ Status Transaction::erase_entity(EntityId e)
     return core::ok();
 }
 
+Status Transaction::erase_member(EntityId e)
+{
+    const core::EntityTable& ents = doc_.entities();
+    if (e >= ents.size() || (ents.flags[e] & core::FlagInBlock) == 0)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Blok tanımının üyesi olmayan bir nesne tanımdan çıkarılamaz: " +
+                             std::to_string(e));
+    core::Op undo;
+    auto st = doc_.set_entity_alive(e, false, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::refresh_reference_bounds(EntityId e)
+{
+    core::Op undo;
+    auto st = doc_.refresh_reference_bounds(e, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::restore_entity(EntityId e)
 {
     core::Op undo;

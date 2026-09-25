@@ -1552,11 +1552,31 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     SARibbonCategory* block =
         context(RibbonContext::Block, tr("Blok Araçları"), tr("Blok"), t.accent);
     SARibbonPanel* blockEdit = block->addPanel(tr("Blok"));
+    blockEdit->addLargeAction(actBlockEdit_);
+    ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Block)] = actBlockEdit_;
     blockEdit->addLargeAction(actExplode_);
     blockEdit->addLargeAction(actInsert_);
     blockEdit->addSmallAction(actBlock_);
     blockEdit->addSmallAction(actEntityInfo_);
     closer(block);
+
+    // ------------------------------------------------------- `Blok: <ad>`
+    //
+    // UP FOR AS LONG AS A BLOCK IS OUT FOR EDITING, whatever is selected: the
+    // save that puts the new picture into every reference, and the way back.
+    // Not a selection's editor tab — the edit spans commands, and what belongs
+    // to it is what the shell tracks (`MainWindow::blockEditLine`).
+    blockEditTab_ = bar->addContextCategory(tr("Blok Düzenleme"), t.accent, kBlockEditContextId);
+    SARibbonCategory* editing = blockEditTab_->addCategoryPage(tr("Blok"));
+    editing->setObjectName(QStringLiteral("ribbonBlockEdit"));
+    SARibbonPanel* finish = editing->addPanel(tr("Düzenlemeyi Bitir"));
+    finish->addLargeAction(actBlockSave_);
+    finish->addLargeAction(actBlockCancel_);
+    SARibbonPanel* inside = editing->addPanel(tr("Bloğun İçinde"));
+    inside->addLargeAction(actLine_);
+    inside->addLargeAction(actCircle_);
+    inside->addSmallAction(actMove_);
+    inside->addSmallAction(actErase_);
 }
 
 void MainWindow::loadRibbonCatalogues()

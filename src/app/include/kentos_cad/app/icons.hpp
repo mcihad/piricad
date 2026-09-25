@@ -161,6 +161,7 @@ enum class Glyph {
     Mirror,       ///< a shape and its reflection across a dashed axis: AYNALA
     Array,        ///< a grid of small squares: DİZİ
     BlockInsert,  ///< a square dropped onto an insertion cross: BLOKEKLE
+    BlockEdit,    ///< a block's square with the pencil over it: BLOKDÜZENLE
     MeasureAngle, ///< two arms and the sweep between them: AÇIÖLÇ, which wore ÖLÇ's own mark
 
     // ---- the corner, end and piece tools the column did not have --------------

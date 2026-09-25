@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — blok tanımı çizimin üstünde düzenlenir, bütün referanslar değişir (C-13, 2. aşama)
+
+- **BLOKDÜZENLE.** Bir bloğa çift tıklayınca (ya da **Blok ▸ Bloğu Düzenle**) tanımın üyeleri
+  sıradan nesneler olarak — kendi türleri, katmanları, renkleri ve yazılarıyla — referansın
+  ekleme noktasına çıkar, referans gizlenir ve şeritte **Blok: <ad>** sekmesi açılır.
+  Nesneler her zamanki araçlarla düzenlenir, yeni nesneler çizilebilir; **Bloğu Kaydet**
+  tanımı bunlardan yeniden kurar ve bloğu çizen **bütün** referanslar — iç içe bloklardakiler
+  dahil — yeni biçimi çizer, kutuları yenilenir; **Vazgeç** açılanı kaldırır. Değişmeden
+  dönen nesne üyesini olduğu gibi bırakır: açıp dokunmadan kaydetmek tanımı bayt bayt aynı
+  bırakır. Tanım referansın ekleme noktasında kendi yönünde ve 1:1 açılır; ölçeksiz ve
+  dönmesiz bir referans tam yerinde düzenlenir. Üç adımın her biri ayrı komut, ayrı geri alma
+  adımıdır ve günlüğe kendi başına oynatılabilir yazılır (`islem=ac|kaydet|vazgec`); kaydetmeyi
+  geri almak düzenlemeye geri götürür. Düzenleme açıkken proje kaydetmek, yeni çizime geçmek ya
+  da pencereyi kapatmak önce bloğun ne olacağını sorar.
+- **Düzeltildi:** BLOK'u geri alınmış (ya da tanımından üye çıkmış) bir çizim kaydedilince dosya
+  **hiç açılmıyordu** ("Blok tanımındaki nesne doğrudan düzenlenemez"): ölü üye satırı, sayfadaki
+  nesnelerin yolundan silinmeye çalışılıyordu.
+- **Belge:** yeni `docs/komutlar/block_edit.md`; BLOK, BLOKEKLE, PATLAT ve blok referansı
+  sayfaları BLOKDÜZENLE'yi anıyor; çekirdeğin "BLOKDÜZENLE (Faz 2)" iletisi artık komutu
+  gösteriyor.
+
 ### Eklendi — blok referansı kendi türündeki parçalarına ayrılır, çizdiği yerden yakalanır (C-13, 1. aşama)
 
 - **PATLAT bloğu açar.** Blok referansı patlatılınca tanımın her üyesi **kendi türünde** —

@@ -256,6 +256,10 @@ void Controller::wireBus()
     bus_.on_pan_request = [this](core::Point2 from, core::Point2 to) {
         emit panRequested(from, to);
     };
+    bus_.on_command_finished = [this](const command::DispatchResult& done) {
+        emit commandFinished(QString::fromStdString(done.command_id),
+                             QString::fromStdString(done.report.dump()));
+    };
 }
 
 void Controller::settle()

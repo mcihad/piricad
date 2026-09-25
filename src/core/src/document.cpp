@@ -436,7 +436,8 @@ Status Document::editable(EntityId e) const
                    "Bu yapının tanımadığı türdeki nesne düzenlenemez; olduğu gibi korunur.");
     if ((entities_.flags[e] & FlagInBlock) != 0)
         return err(ErrorCode::ValidationFailed,
-                   "Blok tanımındaki nesne doğrudan düzenlenemez; BLOKDÜZENLE (Faz 2).");
+                   "Blok tanımındaki nesne doğrudan düzenlenemez; tanımı BLOKDÜZENLE ile "
+                   "açıp düzenleyin.");
 
     // AND THE LAYER'S LOCK, which was missing and made `kilitli` mean almost
     // nothing. The lock was checked on every `add_*` and on nothing else, so a
@@ -594,7 +595,29 @@ Status Document::set_kind_payload(EntityId e, std::span<const std::uint8_t> payl
     if (e >= entities_.size())
         return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
     if (auto st = editable(e); !st) return st;
+    return write_payload(e, payload, undo_out);
+}
 
+Status Document::refresh_reference_bounds(EntityId e, Op& undo_out)
+{
+    undo_out = Op{};
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e) || entities_.kind[e] != kBlockReferenceKind)
+        return err(ErrorCode::InvalidArgument,
+                   "Kutusu yenilenecek nesne yaşayan bir blok referansı değil: " +
+                       std::to_string(e));
+    auto ref = block_reference_of(geometry_, entities_.slot[e]);
+    if (!ref) return ref.error();
+    BlockReference next = ref.value();
+    next.bounds         = block_reference_bounds(
+        *this, block_reference_insertion(geometry_, entities_.slot[e]), next);
+    if (next.bounds == ref.value().bounds) return ok();
+    return write_payload(e, encode_block_reference(next), undo_out);
+}
+
+Status Document::write_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out)
+{
     // The same rings, re-described for `append`: the arena stores eastings and
     // northings apart, and a RingInput wants points, so they meet in one buffer
     // for the length of this call.

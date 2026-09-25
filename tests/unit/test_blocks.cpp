@@ -565,3 +565,211 @@ TEST_CASE("C-13 KOPYA: dönüşümün ret sebebi 'kopya dönüştürülemedi' il
     CHECK(no.find("yaylı bir çoklu çizgi") != std::string::npos);
     CHECK(no.find("Kopya dönüştürülemedi") == std::string::npos);
 }
+
+namespace {
+
+/// The keys BLOKDÜZENLE aç reported, joined for the next command line.
+std::string opened_keys(const Rig& r)
+{
+    std::string out;
+    const core::Json* made = r.report.find("parcalar");
+    if (made == nullptr) return out;
+    for (const core::Json& k : made->as_array())
+        out += (out.empty() ? "" : " nesneler=") + std::to_string(k.as_int());
+    return out;
+}
+
+/// A fingerprint of one block definition's live members: kind, layer, style,
+/// rings and payload, in member order — what "unchanged" has to mean.
+std::string definition_of(const Rig& r, const std::string& name)
+{
+    const core::BlockId b = r.doc.blocks().find(name);
+    std::string out;
+    for (const core::EntityKey k : r.doc.blocks().at(b).members) {
+        const core::EntityId m = r.doc.slot_of(k);
+        if (m == core::kNoEntity || !r.doc.alive(m)) continue;
+        out += std::to_string(core::raw(k)) + ":" + std::to_string(r.doc.entities().kind[m]) + ":" +
+               std::to_string(r.doc.entities().layer[m]) + ":" +
+               std::to_string(r.doc.entities().style[m]);
+        for (const Point2 p : r.ring(m))
+            out += "(" + std::to_string(p.x) + "," + std::to_string(p.y) + ")";
+        const auto bytes = r.doc.geometry().payload_of(r.doc.entities().slot[m]);
+        out += "#" + std::to_string(bytes.size()) + ";";
+    }
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("C-13 BLOKDÜZENLE: açıp dokunmadan kaydetmek tanımı bayt bayt aynı bırakır")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 3,0 3,1");
+    r.run("DAİRE merkez=1,3 cevre=2,3");
+    r.run("METİN noktalar=0,6 yazi=K1 yukseklik=500");
+    r.run("BLOK ad=KAPAK taban=0,0 nesneler=1 nesneler=2 nesneler=3");
+    r.run("BLOKEKLE ad=KAPAK nokta=100,200 olcek=2 aci=30");
+    const std::int64_t turned = r.last_reference();
+    const std::string was     = definition_of(r, "KAPAK");
+    const auto sheet          = r.standalone();
+    const auto payload        = [&r](std::int64_t k) {
+        const auto bytes = r.doc.geometry().payload_of(r.doc.entities().slot[r.slot(k)]);
+        return std::vector<std::uint8_t>(bytes.begin(), bytes.end());
+    };
+    const std::vector<std::uint8_t> placed = payload(turned);
+
+    // Opened from the turned reference: upright and full size at its point.
+    r.run("BLOKDÜZENLE nesne=" + std::to_string(turned));
+    CHECK((r.doc.entities().flags[r.slot(turned)] & core::FlagHidden) != 0);
+    const std::string keys = opened_keys(r);
+    REQUIRE_FALSE(keys.empty());
+    const core::EntityId first = r.slot(std::stoll(keys.substr(0, keys.find(' '))));
+    CHECK_EQ(r.ring(first).front(), (Point2{100'000, 200'000})); ///< (0,0) moved to the point
+    CHECK_EQ(r.ring(first)[1], (Point2{103'000, 200'000}));      ///< and not turned
+    CHECK(r.said.find("kendi yönünde ve 1:1") != std::string::npos);
+
+    r.run("BLOKDÜZENLE islem=kaydet nesne=" + std::to_string(turned) + " nesneler=" + keys);
+    CHECK_EQ(definition_of(r, "KAPAK"), was);
+    CHECK_EQ(r.report.find("korunan")->as_int(), 3);
+    CHECK_EQ(r.report.find("yazilan")->as_int(), 0);
+    CHECK_EQ(r.report.find("cikarilan")->as_int(), 0);
+    CHECK((r.doc.entities().flags[r.slot(turned)] & core::FlagHidden) == 0);
+    // Nothing on the sheet changed either: the same objects, the reference's
+    // record byte for byte (its box needed no refresh).
+    CHECK_EQ(r.standalone(), sheet);
+    CHECK(payload(turned) == placed);
+    CHECK_EQ(r.report.find("kutusu_yenilenen")->as_int(), 0);
+}
+
+TEST_CASE("C-13 BLOKDÜZENLE: değişen tanım bütün referanslara ve kutularına yansır")
+{
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 2,0");           // 1
+    r.run("DAİRE merkez=1,1 cevre=1.5,1"); // 2
+    r.run("BLOK ad=ISARET taban=0,0 nesneler=1 nesneler=2");
+    const std::int64_t at_base = r.last_reference();
+    r.run("BLOKEKLE ad=ISARET nokta=50,0 olcek=3");
+    const std::int64_t big = r.last_reference();
+    r.run("BLOK ad=GRUP taban=50,0 nesneler=" + std::to_string(big)); // ISARET inside GRUP
+    const std::int64_t group = r.last_reference();
+    r.run("BLOKEKLE ad=GRUP nokta=200,0 aci=90");
+    const std::int64_t group_turned = r.last_reference();
+    const core::Box2 before         = r.doc.entities().box_of(r.slot(group_turned));
+
+    // Opened by name, edited: the line made longer, the circle deleted, a
+    // new point drawn.
+    r.run("BLOKDÜZENLE ad=ISARET");
+    const std::string keys  = opened_keys(r);
+    const std::int64_t line = std::stoll(keys.substr(0, keys.find(' ')));
+    const std::int64_t ring = std::stoll(keys.substr(keys.rfind('=') + 1));
+    r.run("KÖŞETAŞI nesne=" + std::to_string(line) + " kose=2 nokta=6,0");
+    r.run("SİL nesneler=" + std::to_string(ring));
+    r.run("NOKTA 3,2");
+    const std::int64_t drawn = r.standalone().back();
+    r.run("BLOKDÜZENLE islem=kaydet ad=ISARET nesneler=" + std::to_string(line) +
+          " nesneler=" + std::to_string(drawn));
+    CHECK_EQ(r.report.find("korunan")->as_int(), 0);
+    CHECK_EQ(r.report.find("yazilan")->as_int(), 2);
+    CHECK_EQ(r.report.find("cikarilan")->as_int(), 2);
+    CHECK(r.said.find("'ISARET' bloğu kaydedildi") != std::string::npos);
+    // Nothing stray left on the sheet: only the references.
+    for (const std::int64_t k : r.standalone())
+        CHECK(r.doc.entities().kind[r.slot(k)] == core::kBlockReferenceKind);
+
+    // EVERY reference draws the new definition: the one at the base, the big
+    // one inside GRUP, and GRUP's turned reference — the line now 6 m long.
+    core::EmitBuffer runs;
+    REQUIRE(core::entity_outline(r.doc, r.slot(at_base), runs));
+    REQUIRE_EQ(runs.run_total(), std::size_t{2});
+    CHECK_EQ(runs.run_xs(0)[1], 6'000);
+    runs.clear();
+    REQUIRE(core::entity_outline(r.doc, r.slot(group_turned), runs));
+    REQUIRE_EQ(runs.run_total(), std::size_t{2});
+    // (6,0) in ISARET → ×3 at (50,0) → (68,0) in GRUP → turned 90° about its
+    // base (50,0) and set on (200,0): (200, 18).
+    CHECK_EQ((Point2{runs.run_xs(0)[1], runs.run_ys(0)[1]}), (Point2{200'000, 18'000}));
+    // And the boxes the index culls by followed: GRUP's grew with the line.
+    const core::Box2 after = r.doc.entities().box_of(r.slot(group_turned));
+    CHECK(after.max_y > before.max_y);
+    CHECK_EQ(after.max_y, 18'000);
+    CHECK_EQ(core::pick_nearest(r.doc, Point2{200'000, 17'000}, 100), r.slot(group_turned));
+
+    // One step back: the old definition, everywhere.
+    r.run("GERİAL");
+    runs.clear();
+    REQUIRE(core::entity_outline(r.doc, r.slot(at_base), runs));
+    CHECK_EQ(runs.run_xs(0)[1], 2'000);
+    CHECK_EQ(r.doc.entities().box_of(r.slot(group_turned)), before);
+    (void)group;
+}
+
+TEST_CASE("C-13 BLOKDÜZENLE: vazgeç açılanı kaldırır; açık olmayan referans kaydedilmez; "
+          "blok kendini içeremez")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 1,0");
+    r.run("BLOK ad=TEK taban=0,0 nesneler=1");
+    const std::int64_t ref  = r.last_reference();
+    const std::string was   = definition_of(r, "TEK");
+    const std::size_t alive = r.doc.live_entity_count();
+
+    const std::string closed = r.refused("BLOKDÜZENLE islem=kaydet nesne=" + std::to_string(ref) +
+                                         " nesneler=" + std::to_string(ref));
+    CHECK(closed.find("düzenlemeye açık değil") != std::string::npos);
+
+    r.run("SEÇ nesneler=" + std::to_string(ref));
+    r.run("BLOKDÜZENLE nesne=" + std::to_string(ref));
+    const std::string keys = opened_keys(r);
+    CHECK_EQ(r.doc.live_entity_count(), alive + 1);
+    // Hidden, and out of the selection: one SİL away from deleted unseen.
+    CHECK_FALSE(
+        r.bus.selection().contains(static_cast<core::EntityKey>(static_cast<std::uint64_t>(ref))));
+    CHECK(r.refused("BLOKDÜZENLE nesne=" + std::to_string(ref)).find("zaten düzenlemeye açık") !=
+          std::string::npos);
+
+    // A reference to the block being edited cannot go into it.
+    r.run("BLOKEKLE ad=TEK nokta=5,5");
+    const std::int64_t inside = r.last_reference();
+    const std::string loop    = r.refused("BLOKDÜZENLE islem=kaydet nesne=" + std::to_string(ref) +
+                                          " nesneler=" + keys + " nesneler=" + std::to_string(inside));
+    CHECK(loop.find("Blok 'TEK' kaydedilemedi") != std::string::npos);
+    CHECK_EQ(definition_of(r, "TEK"), was);
+    r.run("SİL nesneler=" + std::to_string(inside));
+
+    r.run("BLOKDÜZENLE islem=vazgec nesne=" + std::to_string(ref) + " nesneler=" + keys);
+    CHECK_EQ(r.doc.live_entity_count(), alive);
+    CHECK((r.doc.entities().flags[r.slot(ref)] & core::FlagHidden) == 0);
+    CHECK_EQ(definition_of(r, "TEK"), was);
+    CHECK(r.said.find("vazgeçildi") != std::string::npos);
+}
+
+TEST_CASE("C-13 BLOKDÜZENLE: kılavuzdaki komut satırı örneği yazıldığı gibi çalışır")
+{
+    // docs/komutlar/block_edit.md, line for line: the keys it names and the
+    // sentences it prints (CLAUDE.md 11.6).
+    Rig r;
+    r.run("DAİRE merkez=0,0 cevre=0.6,0");
+    r.run("ÇİZGİ -0.6,0 0.6,0");
+    r.run("BLOK ad=KAPAK taban=0,0 nesneler=1 nesneler=2");
+    CHECK_EQ(r.last_reference(), 5);
+    r.said.clear();
+    r.run("BLOKDÜZENLE nesne=5");
+    CHECK(r.said.find("'KAPAK' bloğu düzenlemeye açıldı: 2 nesne referansın yerinde; referans "
+                      "düzenleme bitene dek gizli. Bitirince BLOKDÜZENLE islem=kaydet (ya da "
+                      "vazgec).") != std::string::npos);
+    CHECK_EQ(r.doc.entities().kind[r.slot(6)], core::kCircleKind);
+    CHECK_EQ(r.doc.entities().kind[r.slot(7)], core::kPolylineKind);
+    r.run("KÖŞETAŞI nesne=7 kose=2 nokta=1,0");
+    r.run("NOKTA 0,0.8");
+    CHECK_EQ(r.standalone().back(), 8);
+    r.said.clear();
+    r.run("BLOKDÜZENLE islem=kaydet nesne=5 nesneler=6 nesneler=7 nesneler=8");
+    CHECK(r.said.find("'KAPAK' bloğu kaydedildi: 1 üye olduğu gibi kaldı, 2 üye yazıldı, 1 üye "
+                      "çıkarıldı. Bloğun 1 referansı yeni biçimi çiziyor.") != std::string::npos);
+
+    // And the way back, from a second open.
+    r.run("BLOKDÜZENLE nesne=5");
+    const std::size_t opened = r.doc.live_entity_count();
+    r.run("BLOKDÜZENLE islem=vazgec nesne=5 nesneler=" + opened_keys(r));
+    CHECK_EQ(r.doc.live_entity_count(), opened - 3);
+}

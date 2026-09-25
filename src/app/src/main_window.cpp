@@ -51,6 +51,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/settings.hpp"
 
@@ -329,6 +330,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(controller_, &Controller::promptChanged, this, &MainWindow::onPromptChanged);
     connect(controller_, &Controller::interactiveFinished, this,
             &MainWindow::onInteractiveFinished);
+    connect(controller_, &Controller::commandFinished, this, &MainWindow::onCommandFinished);
 
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
@@ -962,6 +964,46 @@ void MainWindow::buildActions()
                           tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
                              "yerleştirir  ·  kısaltma: BE"));
     drawingTools_->addAction(actInsert_);
+    // THE DEFINITION EDITED ON THE SHEET (TODOS C-13): the block's members out
+    // as ordinary objects where the reference stands, and back in with the
+    // ribbon's save — every reference then draws the new picture. A double
+    // click on a block runs it (`activateEntity`).
+    actBlockEdit_ = modifyTool(Glyph::BlockEdit, tr("Bloğu Düzenle"), QStringLiteral("BLOKDÜZENLE"),
+                               tr("BLOKDÜZENLE — seçili bloğun tanımını düzenlemeye açar; Bloğu "
+                                  "Kaydet ile bütün referanslar yeni biçimi çizer  ·  "
+                                  "kısaltma: BDZ"));
+    // SAVE AND GIVE UP take the objects of the open edit, which only the shell
+    // knows (`blockEditLine`), so their lines are made when they are pressed.
+    const auto editStep = [this](Glyph glyph, const QString& text, const QString& name,
+                                 const QString& tip, bool save) {
+        auto* a = new QAction(text, this);
+        a->setData(static_cast<int>(glyph));
+        a->setObjectName(name);
+        a->setToolTip(tip);
+        a->setStatusTip(tip);
+        a->setProperty(kToolCommand, QStringLiteral("BLOKDÜZENLE"));
+        // ALWAYS PRESSABLE, like every button on the ribbon (the accessibility
+        // tree offers a press a switch user can reach): with no edit open it
+        // says how to open one rather than lying dead.
+        connect(a, &QAction::triggered, this, [this, save] {
+            refreshBlockEdit();
+            if (blockEdit_)
+                controller_->runLine(blockEditLine(save), command::Origin::Gui);
+            else
+                onEcho(tr("Açık bir blok düzenlemesi yok: bir bloğa çift tıklayın ya da "
+                          "BLOKDÜZENLE ile açın."));
+        });
+        return a;
+    };
+    actBlockSave_   = editStep(Glyph::Check, tr("Bloğu Kaydet"), QStringLiteral("blockEditSave"),
+                               tr("BLOKDÜZENLE islem=kaydet — bloğun tanımını düzenlenen "
+                                    "nesnelerden yeniden kurar; bütün referanslar yeni biçimi "
+                                    "çizer"),
+                               true);
+    actBlockCancel_ = editStep(Glyph::Close, tr("Vazgeç"), QStringLiteral("blockEditCancel"),
+                               tr("BLOKDÜZENLE islem=vazgec — açılan nesneleri kaldırır, tanım "
+                                  "değişmez"),
+                               false);
     // THE ALIGNED ONE, which is what ÖLÇÜ draws when no type is named; the other
     // six types are method tools beside it in the ribbon's Ölçü family.
     actDimension_ =
@@ -3056,7 +3098,8 @@ void MainWindow::probeAttributeGrid()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    if (!confirmDiscard(tr("Kapatmadan önce kaydedilsin mi?"))) {
+    if (!settleBlockEdit(tr("Pencere kapanmadan önce")) ||
+        !confirmDiscard(tr("Kapatmadan önce kaydedilsin mi?"))) {
         event->ignore();
         return;
     }
@@ -5394,10 +5437,297 @@ int MainWindow::probeRealMouse()
             controller_->cancelInteractive();
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 23. A BLOCK EDITED WHERE IT STANDS CHANGES EVERY COPY (TODOS C-13) ----
+        //
+        // A double click on a block opens its definition in place; a corner of
+        // it is dragged by hand; the ribbon's save puts the change into every
+        // reference — the one edited, a doubled one and a turned one — and an
+        // undo of the save takes the user back into the edit.
+        {
+            fresh({QStringLiteral("ÇİZGİ 0,0 3,0"),
+                   QStringLiteral("DAİRE merkez=1.5,1.5 cevre=2.5,1.5")});
+            const std::int64_t opening = first_key();
+            runScriptLine(QStringLiteral("BLOK ad=DIREK taban=0,0 nesneler=%1 nesneler=%2")
+                              .arg(opening)
+                              .arg(opening + 1));
+            endCommand();
+            const core::Document& doc   = controller_->document();
+            const auto newest_reference = [&doc] {
+                std::int64_t found = 0;
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                    if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind &&
+                        (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                        found = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+                return found;
+            };
+            const std::int64_t home = newest_reference();
+            runScriptLine(QStringLiteral("BLOKEKLE ad=DIREK nokta=12,-2 olcek=2"));
+            endCommand();
+            const std::int64_t doubled = newest_reference();
+            runScriptLine(QStringLiteral("BLOKEKLE ad=DIREK nokta=26,-2 aci=45"));
+            endCommand();
+            const std::int64_t turned = newest_reference();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            shoot("blok-duzenle-once");
+
+            const auto slot_of = [&doc](std::int64_t key) {
+                return doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            };
+            const auto hidden = [&doc, &slot_of](std::int64_t key) {
+                const core::EntityId e = slot_of(key);
+                return e != core::kNoEntity && (doc.entities().flags[e] & core::FlagHidden) != 0;
+            };
+            // THE DOUBLE CLICK, on the reference's drawn line, as a hand sends it.
+            SARibbonBar* bar = ribbonBar();
+            if (bar != nullptr) bar->setCurrentIndex(0);
+            QCoreApplication::processEvents();
+            const int tab_before  = bar != nullptr ? bar->currentIndex() : -1;
+            const QPointF on_line = screen(core::Point2{1'500, 0});
+            onCanvas(QEvent::MouseMove, on_line, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, on_line, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, on_line, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonDblClick, on_line, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, on_line, Qt::LeftButton);
+            endCommand();
+            const auto tab_up = [this, bar] {
+                return bar != nullptr && blockEditTab_ != nullptr &&
+                       bar->isContextCategoryVisible(blockEditTab_);
+            };
+            check(blockEdit_.has_value() && blockEdit_->reference == home && hidden(home) &&
+                      blockEdit_->opened.size() == 2 && tab_up() &&
+                      !controller_->bus().selection().contains(
+                          static_cast<core::EntityKey>(static_cast<std::uint64_t>(home))),
+                  QStringLiteral("çift tıklama bloğu yerinde açtı: referans gizli ve seçimden "
+                                 "çıktı, iki nesne sayfada, 'Blok: DIREK' sekmesi açık"));
+            shoot("blok-duzenle-acik");
+
+            // THE LINE'S FAR END, dragged by hand: a click makes the corner hot,
+            // the next click puts it down (TODOS C-07's grips).
+            std::int64_t line = 0;
+            if (blockEdit_)
+                for (const std::int64_t k : blockEdit_->opened)
+                    if (const core::EntityId e = slot_of(k);
+                        e != core::kNoEntity && doc.entities().kind[e] == core::kPolylineKind)
+                        line = k;
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(line));
+            QCoreApplication::processEvents();
+            const QPointF end_now  = screen(core::Point2{3'000, 0});
+            const QPointF end_then = screen(core::Point2{3'000, 2'500});
+            onCanvas(QEvent::MouseMove, end_now, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, end_now, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, end_now, Qt::LeftButton);
+            onCanvas(QEvent::MouseMove, end_then, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, end_then, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, end_then, Qt::LeftButton);
+            endCommand();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            // Where the corner landed, from the document: a hand is a few pixels off.
+            core::Point2 moved{};
+            if (const core::EntityId e = slot_of(line); e != core::kNoEntity && doc.alive(e)) {
+                const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
+                moved                   = core::Point2{doc.geometry().ring_xs(rs.first).back(),
+                                     doc.geometry().ring_ys(rs.first).back()};
+            }
+            check(std::abs(moved.y - 2'500) <= 300,
+                  QStringLiteral("açılan çizginin ucu tutamaktan sürüklendi (%1, %2)")
+                      .arg(static_cast<double>(moved.x) / 1000.0, 0, 'f', 3)
+                      .arg(static_cast<double>(moved.y) / 1000.0, 0, 'f', 3));
+            shoot("blok-duzenle-degisti");
+
+            // THE RIBBON'S SAVE: every reference draws the moved end.
+            actBlockSave_->trigger();
+            QCoreApplication::processEvents();
+            endCommand();
+            const auto drawn_end = [&doc, &slot_of](std::int64_t key) {
+                core::EmitBuffer runs;
+                const core::EntityId e = slot_of(key);
+                if (e == core::kNoEntity || !core::entity_outline(doc, e, runs))
+                    return core::Point2{};
+                for (std::size_t r = 0; r < runs.run_total(); ++r)
+                    if (runs.run_count[r] == 2)
+                        return core::Point2{runs.run_xs(r)[1], runs.run_ys(r)[1]};
+                return core::Point2{};
+            };
+            const auto placed = [&doc, &slot_of](std::int64_t key, core::Point2 p) {
+                const core::EntityId e = slot_of(key);
+                const std::uint32_t gs = doc.entities().slot[e];
+                const auto ref         = core::block_reference_of(doc.geometry(), gs);
+                if (!ref) return core::Point2{};
+                return core::place_block_point(ref.value(),
+                                               core::block_reference_insertion(doc.geometry(), gs),
+                                               doc.blocks().at(ref.value().block).base, p, 0, 0);
+            };
+            const bool everywhere = drawn_end(home) == placed(home, moved) &&
+                                    drawn_end(doubled) == placed(doubled, moved) &&
+                                    drawn_end(turned) == placed(turned, moved);
+            check(!blockEdit_.has_value() && !hidden(home) && everywhere && !tab_up() &&
+                      bar != nullptr && bar->currentIndex() == tab_before,
+                  QStringLiteral("Bloğu Kaydet değişikliği üç referansın üçüne de işledi; "
+                                 "sekme kapandı, şerit önceki sekmesine döndü, referans göründü"));
+            shoot("blok-duzenle-kaydedildi");
+
+            // AN UNDO OF THE SAVE takes the user back into the edit.
+            runScriptLine(QStringLiteral("GERİAL"));
+            QCoreApplication::processEvents();
+            check(blockEdit_.has_value() && hidden(home) && tab_up(),
+                  QStringLiteral("kaydetmeyi geri almak düzenlemeye geri götürdü"));
+            actBlockCancel_->trigger();
+            QCoreApplication::processEvents();
+            endCommand();
+            check(!blockEdit_.has_value() && !hidden(home) &&
+                      drawn_end(home) == core::Point2{3'000, 0},
+                  QStringLiteral("Vazgeç açılanı kaldırdı; tanım eski hâlinde"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
+}
+
+void MainWindow::onCommandFinished(const QString& id, const QString& report)
+{
+    if (id != QLatin1String("core.block_edit")) return;
+    auto parsed = core::Json::parse(report.toStdString());
+    if (!parsed) return;
+    const core::Json& said  = parsed.value();
+    const core::Json* step  = said.find("islem");
+    const core::Json* block = said.find("blok");
+    if (step == nullptr || block == nullptr) return;
+    if (step->as_string() != "ac") {
+        if (blockEdit_) dormantBlockEdit_ = std::move(blockEdit_);
+        blockEdit_.reset();
+        refreshBlockEdit();
+        return;
+    }
+
+    BlockEditSession edit;
+    edit.block = QString::fromStdString(block->as_string());
+    if (const core::Json* ref = said.find("referans"); ref != nullptr)
+        edit.reference = ref->as_int();
+    if (const core::Json* made = said.find("parcalar"); made != nullptr)
+        for (const core::Json& k : made->as_array())
+            edit.opened.push_back(k.as_int());
+    // EVERYTHING DRAWN FROM HERE ON BELONGS TO THE EDIT, the way AutoCAD's
+    // reference edit takes what is drawn while it is open: keys only grow, so
+    // the largest one now is the line.
+    const core::Document& doc = controller_->document();
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+        edit.watermark = std::max<std::uint64_t>(edit.watermark, core::raw(doc.key_of(e)));
+    blockEdit_ = std::move(edit);
+    dormantBlockEdit_.reset();
+    SARibbonBar* bar = ribbonBar();
+    if (bar != nullptr && !beforeBlockEdit_)
+        beforeBlockEdit_ = bar->categoryByIndex(bar->currentIndex());
+    refreshBlockEdit();
+    if (bar != nullptr && blockEditTab_ != nullptr)
+        if (SARibbonCategory* page = blockEditTab_->categoryPage(0); page != nullptr)
+            bar->raiseCategory(page);
+    statusBar()->showMessage(
+        tr("'%1' bloğu düzenleniyor — bitirince Bloğu Kaydet ya da Vazgeç").arg(blockEdit_->block),
+        8000);
+}
+
+void MainWindow::refreshBlockEdit()
+{
+    const core::Document& doc = controller_->document();
+    // AN EDIT IS OPEN while what its open made is on the sheet — and, opened
+    // from a reference, while that reference is hidden. An undo past the open
+    // ends it; an undo of the save, or a redo of the open, brings it back.
+    const auto still_open = [&doc](const BlockEditSession& edit) {
+        bool any = false;
+        for (const std::int64_t k : edit.opened) {
+            const core::EntityId e =
+                doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(k)));
+            if (e != core::kNoEntity && doc.alive(e)) any = true;
+        }
+        if (edit.reference == 0) return any;
+        const core::EntityId r =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(edit.reference)));
+        return any && r != core::kNoEntity && doc.alive(r) &&
+               (doc.entities().flags[r] & core::FlagHidden) != 0;
+    };
+    if (blockEdit_ && !still_open(*blockEdit_)) {
+        dormantBlockEdit_ = std::move(blockEdit_);
+        blockEdit_.reset();
+    } else if (!blockEdit_ && dormantBlockEdit_ && still_open(*dormantBlockEdit_)) {
+        blockEdit_ = std::move(dormantBlockEdit_);
+        dormantBlockEdit_.reset();
+    }
+    const bool editing = blockEdit_.has_value();
+    if (SARibbonBar* bar = ribbonBar(); bar != nullptr && blockEditTab_ != nullptr) {
+        if (editing)
+            if (SARibbonCategory* page = blockEditTab_->categoryPage(0); page != nullptr)
+                page->setCategoryName(tr("Blok: %1").arg(blockEdit_->block));
+        if (bar->isContextCategoryVisible(blockEditTab_) != editing) {
+            bar->setContextCategoryVisible(blockEditTab_, editing);
+            // THE EDIT OVER, the hand goes back to the tab it was on — not
+            // to whichever tab the bar falls on when one goes away.
+            if (!editing) {
+                if (beforeBlockEdit_ != nullptr)
+                    bar->raiseCategory(beforeBlockEdit_);
+                else
+                    bar->setCurrentIndex(0);
+                beforeBlockEdit_.clear();
+            }
+        }
+    }
+}
+
+QString MainWindow::blockEditLine(bool save) const
+{
+    if (!blockEdit_) return {};
+    const core::Document& doc = controller_->document();
+    QString line              = QStringLiteral("BLOKDÜZENLE islem=%1")
+                       .arg(save ? QStringLiteral("kaydet") : QStringLiteral("vazgec"));
+    if (blockEdit_->reference != 0)
+        line += QStringLiteral(" nesne=%1").arg(blockEdit_->reference);
+    else
+        line += QStringLiteral(" ad=\"%1\"").arg(blockEdit_->block);
+    // What the open made and is still there, then what was drawn since.
+    std::vector<std::int64_t> objects;
+    for (const std::int64_t k : blockEdit_->opened) {
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(k)));
+        if (e != core::kNoEntity && doc.alive(e)) objects.push_back(k);
+    }
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.entities().standalone(e)) continue;
+        const std::uint64_t k = core::raw(doc.key_of(e));
+        if (k <= blockEdit_->watermark) continue;
+        if (static_cast<std::int64_t>(k) == blockEdit_->reference) continue;
+        objects.push_back(static_cast<std::int64_t>(k));
+    }
+    for (const std::int64_t k : objects)
+        line += QStringLiteral(" nesneler=%1").arg(k);
+    return line;
+}
+
+bool MainWindow::settleBlockEdit(const QString& why)
+{
+    refreshBlockEdit();
+    if (!blockEdit_) return true;
+    // THREE ANSWERS, as `confirmDiscard` gives: save the block, give the edit
+    // up, or stay — a hand that reached for the wrong control must be able to
+    // say it did not mean it.
+    QMessageBox ask(QMessageBox::Question, tr("Blok düzenleniyor"),
+                    tr("'%1' bloğunun düzenlemesi açık. %2 bloğu kaydedin ya da düzenlemeden "
+                       "vazgeçin.")
+                        .arg(blockEdit_->block, why),
+                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+    ask.button(QMessageBox::Save)->setText(tr("Bloğu Kaydet"));
+    ask.button(QMessageBox::Discard)->setText(tr("Düzenlemeden Vazgeç"));
+    ask.button(QMessageBox::Cancel)->setText(tr("İptal"));
+    ask.setDefaultButton(QMessageBox::Save);
+    const int answer = ask.exec();
+    if (answer != QMessageBox::Save && answer != QMessageBox::Discard) return false;
+    controller_->runLine(blockEditLine(answer == QMessageBox::Save), command::Origin::Gui);
+    refreshBlockEdit();
+    return !blockEdit_.has_value();
 }
 
 QImage MainWindow::probePicture()
@@ -6718,6 +7048,7 @@ void MainWindow::onEcho(const QString& text)
 void MainWindow::onDocumentChanged()
 {
     canvas_->noteDocumentChange();
+    refreshBlockEdit();
     layerPanel_->refresh();
     attributePanel_->refresh();
     refreshStatus();
@@ -7297,7 +7628,9 @@ bool MainWindow::confirmDiscard(const QString& question)
 
 void MainWindow::newProject()
 {
-    if (!confirmDiscard(tr("Yeni çizime geçmeden önce kaydedilsin mi?"))) return;
+    if (!settleBlockEdit(tr("Yeni çizime geçmeden önce")) ||
+        !confirmDiscard(tr("Yeni çizime geçmeden önce kaydedilsin mi?")))
+        return;
 
     // AND THEN THE COMMAND, exactly as typed. The window's whole contribution is
     // the question above it: the drawing, the undo stack, the file the document
@@ -7309,6 +7642,7 @@ void MainWindow::newProject()
 
 void MainWindow::openProject()
 {
+    if (!settleBlockEdit(tr("Başka bir proje açılmadan önce"))) return;
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Proje aç"), QFileInfo(controller_->currentFile()).absolutePath(),
         tr("KentOSCad projesi (*.pcad);;Tüm dosyalar (*)"));
@@ -7321,6 +7655,10 @@ void MainWindow::openProject()
 
 void MainWindow::saveProject()
 {
+    // AN OPEN BLOCK EDIT IS FINISHED FIRST: saved mid-edit, the file would hold
+    // the opened objects on the sheet and the reference hidden, with nothing to
+    // say they belong together.
+    if (!settleBlockEdit(tr("Proje kaydedilmeden önce"))) return;
     // A drawing with no file yet has nothing to save TO, and the command says so.
     // The window turns that into the dialog a user expects rather than showing
     // them an error they cannot act on from a menu.
@@ -7334,6 +7672,7 @@ void MainWindow::saveProject()
 
 void MainWindow::saveProjectAs()
 {
+    if (!settleBlockEdit(tr("Proje kaydedilmeden önce"))) return;
     QString path = QFileDialog::getSaveFileName(
         this, tr("Farklı kaydet"), controller_->currentFile(), tr("KentOSCad projesi (*.pcad)"));
     if (path.isEmpty()) return;

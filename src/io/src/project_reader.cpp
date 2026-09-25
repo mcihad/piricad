@@ -1176,8 +1176,13 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         const std::uint8_t flags = cols.flags[static_cast<std::size_t>(e)];
         if ((flags & core::FlagHidden) != 0)
             if (auto st = tx.set_entity_hidden(id, true); !st) return st.error();
-        if ((flags & core::FlagAlive) == 0)
-            if (auto st = tx.erase_entity(id); !st) return st.error();
+        // A MEMBER WRITTEN DEAD — a BLOK undone, a member BLOKDÜZENLE took out
+        // — goes back out of its definition by the definition's road: the
+        // command road refuses a member, and a file holding one did not open.
+        if ((flags & core::FlagAlive) == 0) {
+            auto st = in_block != core::kNoBlock ? tx.erase_member(id) : tx.erase_entity(id);
+            if (!st) return st.error();
+        }
     }
 
     if (members_seen != block_of_key.size())

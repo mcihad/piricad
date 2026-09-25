@@ -30,6 +30,7 @@
 //
 // ÇİZGİDÜZENLE is the small edits a run needs and nothing else does: close it,
 // open it, reverse it, thin it out.
+#include "kentos_cad/command/block_edit.hpp"
 #include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/path_edit.hpp"
@@ -131,9 +132,8 @@ std::size_t filled_cells(const core::Document& doc, core::EntityId e)
 /// again in its own kind — a circle a circle, a caption a caption, a block
 /// inside the block a reference — and carried by the placement the reference
 /// draws it with (`core::block_placement`), so each piece lands on the
-/// millimetre it was drawn on. It keeps what the drawing gave it: a member on
-/// the drawing's `0` layer goes onto the reference's layer; a ByLayer member
-/// there, and a ByBlock member anywhere, takes the look it was drawn in.
+/// millimetre it was drawn on, with the layer and the look the drawing gave it
+/// (`place_member`, the rule BLOKDÜZENLE shares).
 ///
 /// WHAT CANNOT BE WRITTEN IS NAMED, not approximated: under a placement that
 /// differs across and up, an arc polyline's arcs and a turned inner block would
@@ -157,9 +157,6 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
     const core::Point2 base                    = doc.blocks().at(placed.block).base;
     out.block                                  = doc.blocks().at(placed.block).name;
     const core::Point2 insertion = core::block_reference_insertion(doc.geometry(), gslot);
-    const core::LayerId home     = doc.entities().layer[slot];
-    const core::StyleId look     = doc.entities().style[slot];
-    const core::LayerId zero     = doc.find_layer("0");
     out.copies                   = static_cast<std::size_t>(placed.rows) * placed.columns;
     out.values_left              = filled_cells(doc, slot);
 
@@ -169,43 +166,18 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
             for (const core::EntityKey key : members) {
                 const core::EntityId member = doc.slot_of(key);
                 if (member == core::kNoEntity || !doc.alive(member)) continue;
-                const core::KindId kind  = doc.entities().kind[member];
-                const core::LayerId own  = doc.entities().layer[member];
-                const bool on_zero       = own == zero && zero != core::kNoLayer;
-                const core::StyleId mine = doc.entities().style[member];
-
-                auto made = clone_entity(ctx, member, x, on_zero ? home : core::kNoLayer);
+                const core::KindId kind = doc.entities().kind[member];
+                auto made               = place_member(ctx, member, x, slot);
                 if (!made) {
                     ctx.refuse(made.error().code, "Blok '" + out.block + "' içindeki bir " +
                                                       kind_word(kind) +
                                                       " yerine konamadı: " + made.error().message);
                     return false;
                 }
-                const core::EntityId piece = made.value();
-                if (on_zero && home != own) ++out.onto_reference;
-
-                // THE LOOK IT WAS DRAWN IN. A hatch keeps its own: its style
-                // is its pattern, set again by the transform.
-                const bool inherits =
-                    mine == core::kByLayerStyle || core::style_by_block(doc, mine);
-                if (inherits && kind != core::kHatchKind) {
-                    const core::StyleId want = on_zero ? look : core::kByLayerStyle;
-                    if (doc.entities().style[piece] != want)
-                        if (auto st = ctx.transaction().set_entity_style(piece, want); !st) {
-                            ctx.refuse(st.error());
-                            return false;
-                        }
-                    if (want != core::kByLayerStyle || core::style_by_block(doc, mine))
-                        ++out.reference_look;
-                }
-                if ((doc.entities().flags[member] & core::FlagHidden) != 0) {
-                    if (auto st = ctx.transaction().set_entity_hidden(piece, true); !st) {
-                        ctx.refuse(st.error());
-                        return false;
-                    }
-                    ++out.hidden;
-                }
-                out.made.push_back(piece);
+                if (made.value().onto_reference) ++out.onto_reference;
+                if (made.value().reference_look) ++out.reference_look;
+                if (made.value().hidden) ++out.hidden;
+                out.made.push_back(made.value().piece);
                 ++out.kind[kind_word(kind)];
             }
         }

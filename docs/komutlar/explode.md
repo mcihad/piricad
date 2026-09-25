@@ -164,5 +164,6 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 
 - [BLOK](block.md) — bileşenlerden blok tanımlar
 - [BLOKEKLE](insert.md) — tanımlı bloğu yerleştirir
+- [BLOKDÜZENLE](block_edit.md) — tanımı düzenler; bütün referanslar birden değişir
 - [Blok referansı](../nesneler/blokreferansi.md) — referansın nasıl çizildiği ve yakalandığı
 - [ALANAÇEVİR](to_area.md) — kapalı çizgiyi alana çevirir

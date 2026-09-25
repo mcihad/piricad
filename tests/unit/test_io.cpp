@@ -6312,3 +6312,26 @@ TEST_CASE("DXF: MTEXT paragrafları satır olur; alt çizgi anahtarı yazıyı y
     CHECK(aligned.back().y > aligned.front().y);              // toward (10, 60): north-east
     CHECK(said.find("hizası en yakın") != std::string::npos); // and said to be approximate
 }
+
+TEST_CASE("IO: tanımında silinmiş üye olan blokla kaydedilen dosya yine açılır")
+{
+    // A definition keeps the keys of members that died — a BLOK undone, a
+    // member BLOKDÜZENLE took out — because its table is append-only. The file
+    // writes those rows dead, and reading one back put it to death through the
+    // road a COMMAND takes, which refuses a block's member: the file did not
+    // open at all.
+    TempDir dir("olu-uye");
+    const std::string path = dir.file("olu-uye.pcad");
+    Rig written;
+    REQUIRE(written.bus.execute_line("DAİRE merkez=0,0 cevre=1,0", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("BLOK ad=GERI taban=0,0 nesneler=1", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("GERİAL", Origin::Test).ok());
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK_EQ(reloaded.doc.live_entity_count(), written.doc.live_entity_count());
+}

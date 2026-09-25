@@ -67,12 +67,14 @@ BLOK ad=BACA taban=0,0
 BLOKEKLE ad=BACA nokta=20,0 olcek=2 aci=90
 ```
 
-[BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md).
+[BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md),
+[BLOKDÜZENLE](../komutlar/block_edit.md).
 
 ## Sınırlar
 
-Tanımın üyeleri yerinde düzenlenemez; `BLOKDÜZENLE` Faz 2'nin sonraki işidir. Bir
-üyeyi tek başına düzenlemek için referansı [PATLAT](../komutlar/explode.md) ile
-açın: her üye kendi türünde, referansın çizdiği yerde çıkar. Blok tanımı silinemez
-(ekle-yalnız tablo); kullanılmayan tanım dosyada kalır. Aynalanmış bir referanstaki
+Tanımın üyeleri doğrudan düzenlenemez; tanımı [BLOKDÜZENLE](../komutlar/block_edit.md)
+ile açıp düzenlersiniz ve kaydettiğinizde bütün referanslar yeni biçimi çizer. Tek bir
+referansı tanımdan koparmak için onu [PATLAT](../komutlar/explode.md) ile açın: her üye
+kendi türünde, referansın çizdiği yerde çıkar. Blok tanımı silinemez (ekle-yalnız
+tablo); kullanılmayan tanım dosyada kalır. Aynalanmış bir referanstaki
 üye yazısı, taban çizgisi ters döndüğü için baş aşağı okunur; ekran harfi aynalamaz.

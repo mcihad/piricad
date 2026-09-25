@@ -40,8 +40,10 @@ struct BlockDef
     Point2 base{};           ///< the base point references are placed by
 
     /// The definition's entities, by persistent key (R1: a stored membership is
-    /// a key, never a slot). Fixed at creation of each member; `BLOKDÜZENLE`
-    /// (Phase 2) is what changes it.
+    /// a key, never a slot). APPEND-ONLY like the table: `BLOKDÜZENLE` writes a
+    /// changed member in as a new one and takes the old one out by killing it,
+    /// so a key here may name a dead entity — every reader skips those, and a
+    /// file writes them dead and reads them back so (TODOS C-13).
     std::vector<EntityKey> members;
 
     /// The blocks this definition's members REFERENCE, so a cycle can be refused

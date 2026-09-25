@@ -2029,6 +2029,33 @@ TEST_CASE("PROOF: PATLAT gui, komut satırı ve betikten aynı belgeyi ve aynı 
                     "nesne":[6]}}]})"});
 }
 
+TEST_CASE("PROOF: BLOKDÜZENLE açma ve kaydetme gui, komut satırı ve betikten aynı belgeyi ve aynı "
+          "günlüğü bırakır")
+{
+    // Key 1 goes into the block as member 2; 3 is the reference BLOK leaves and
+    // 4 the one inserted. Opened from 3, the member comes out as 5; saved, 5
+    // goes back with its far end moved, and 4 draws it too.
+    prove_verb({.name     = "BLOKDÜZENLE",
+                .id       = "core.block_edit",
+                .setup    = {"ÇİZGİ 0,0 2,0", "BLOK ad=B taban=0,0 nesneler=1",
+                             "BLOKEKLE ad=B nokta=30,0 olcek=2"},
+                .objects  = {3},
+                .answers  = {},
+                .typed    = "BLOKDÜZENLE nesne=3",
+                .scripted = R"({"ad":"BLOKDÜZENLE","komutlar":[{"cmd":"core.block_edit","args":{
+                    "nesne":[3]}}]})"});
+    prove_verb({.name     = "BLOKDÜZENLE islem=kaydet nesne=3",
+                .id       = "core.block_edit",
+                .setup    = {"ÇİZGİ 0,0 2,0", "BLOK ad=B taban=0,0 nesneler=1",
+                             "BLOKEKLE ad=B nokta=30,0 olcek=2", "BLOKDÜZENLE nesne=3",
+                             "KÖŞETAŞI nesne=5 kose=2 nokta=6,0"},
+                .objects  = {5},
+                .answers  = {},
+                .typed    = "BLOKDÜZENLE islem=kaydet nesne=3 nesneler=5",
+                .scripted = R"({"ad":"BLOKDÜZENLE","komutlar":[{"cmd":"core.block_edit","args":{
+                    "islem":"kaydet","nesne":[3],"nesneler":[5]}}]})"});
+}
+
 TEST_CASE("PROOF: HİZALA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // One pair: the move. The GUI is asked for a second source and answers it

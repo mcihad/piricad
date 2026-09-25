@@ -169,6 +169,19 @@ public:
 
     Status erase_entity(EntityId e);
     Status restore_entity(EntityId e);
+
+    /// Takes a MEMBER out of its block definition — what BLOKDÜZENLE does to a
+    /// member the edit removed, and what reading a file does to a member row
+    /// written dead. `erase_entity` is the road a command takes to an object ON
+    /// the sheet and refuses a member by design; this one is for the definition
+    /// and refuses anything that is not a member.
+    Status erase_member(EntityId e);
+
+    /// Brings the drawn box a block reference stores up to date with what its
+    /// definition draws now (`Document::refresh_reference_bounds`). A cache, not
+    /// an edit of the reference: a reference on a locked layer, or inside
+    /// another definition, is refreshed too.
+    Status refresh_reference_bounds(EntityId e);
     Status set_layer_visible(LayerId l, bool visible);
     Status set_layer_locked(LayerId l, bool locked);
     Status set_layer_appearance(LayerId l, const Appearance& a);

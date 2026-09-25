@@ -1193,6 +1193,22 @@ def block(
         note — Serbest açıklama
     """
 
+def block_edit(
+    *,
+    action: str = ...,
+    reference: list[int] = ...,
+    name: str = ...,
+    objects: list[int] = ...,
+) -> int:
+    """Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
+
+    Komut: core.block_edit (BLOKDÜZENLE)
+        action — ac: tanımı düzenlemeye açar (varsayılan); kaydet: tanımı düzenlenen nesnelerden yeniden kurar; vazgec: açılanı siler
+        reference — Düzenlenen blok referansı, bir tane; açarken yoksa etkin seçim [kalıcı nesne anahtarı]
+        name — Referans yerine bloğun adı: tanım kendi yerinde açılır
+        objects — kaydet ve vazgec için bloğun nesneleri: açılanlar ve sonradan çizilenler [kalıcı nesne anahtarı]
+    """
+
 def insert(
     *,
     name: str = ...,
@@ -1210,7 +1226,7 @@ def insert(
     Komut: core.insert (BLOKEKLE)
         name — Yerleştirilecek bloğun adı
         point — Ekleme noktası [mm, Sağa (Y) önce]
-        scale — Ölçek; eksi değer x'te aynalar; varsayılan 1
+        scale — Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür
         scale_y — Y ölçeği, farklıysa; varsayılan olcek
         angle — Dönme açısı, derece; varsayılan 0
         columns — Dizi sütun sayısı; varsayılan 1

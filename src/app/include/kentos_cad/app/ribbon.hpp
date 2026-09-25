@@ -277,6 +277,10 @@ enum class RibbonContext : std::uint8_t {
 /// How many editor tabs there are.
 inline constexpr std::size_t kRibbonContextCount = 5;
 
+/// The id of the tab that is up while a block is out for editing — not a
+/// selection's editor tab, so past `RibbonContext`'s range (TODOS C-13).
+inline constexpr int kBlockEditContextId = 100;
+
 /// The editor tab object `e` of `doc` belongs to, if any: what brings a tab
 /// up for a selection and what a double click on the object opens.
 std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::EntityId e);
@@ -303,8 +307,8 @@ struct RibbonLive
     std::array<bool, kRibbonContextCount> showing{};
     /// What each tab edits its object with, and what a double click on such an
     /// object runs (TODOS C-17): the caption's, the dimension's and the
-    /// hatch's own edit. Null where the object has none — an area or a block
-    /// goes to the attribute panel instead.
+    /// hatch's own edit, and a block's BLOKDÜZENLE (TODOS C-13). Null where the
+    /// object has none — an area goes to the attribute panel instead.
     std::array<QAction*, kRibbonContextCount> editors{};
     /// The tab that was up before an editor tab raised itself, to go back to.
     QPointer<SARibbonCategory> before;
