@@ -1261,6 +1261,24 @@ def xref(
         angle — ekle için dönme açısı, derece; varsayılan 0
     """
 
+def block_clip(
+    *,
+    action: str = ...,
+    reference: list[int] = ...,
+    shape: str = ...,
+    points: Coords = ...,
+    boundary: list[int] = ...,
+) -> int:
+    """Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
+
+    Komut: core.block_clip (BLOKKIRP)
+        action — yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer
+        reference — Kırpılacak blok referansı ya da dış referans, bir tane; yoksa etkin seçim [kalıcı nesne anahtarı]
+        shape — noktalar verilmediğinde sınırın nasıl gösterileceği: dikdortgen iki köşe (varsayılan), cokgen köşe köşe, cizgi var olan kapalı bir çizgi, alan, daire ya da elips
+        points — Sınırın köşeleri, çizimde: iki köşe dikdörtgen, üç ya da daha çok köşe çokgen [mm, Sağa (Y) önce]
+        boundary — Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips [kalıcı nesne anahtarı]
+    """
+
 def dimension(
     *,
     first: Coord = ...,

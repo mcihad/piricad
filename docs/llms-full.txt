@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 114 (101 tanesi onay ister)
-- Katalog parmak izi: `16375509218676202410`
+- Araç sayısı: 115 (102 tanesi onay ister)
+- Katalog parmak izi: `10385266272081990172`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -218,6 +218,23 @@ Onay ister.
 | `taban` | konum (tutamak ya da göreli nokta) | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aciklama` | string | hayır | Serbest açıklama (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_block_clip` — Blok Kırp
+
+Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
+Komut: BLOKKIRP (BLOKKIRP, XCLIP, BKR)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | hayır | yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer (metin) |
+| `nesne` | string | hayır | Kırpılacak blok referansı ya da dış referans, bir tane; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tur` | string | hayır | noktalar verilmediğinde sınırın nasıl gösterileceği: dikdortgen iki köşe (varsayılan), cokgen köşe köşe, cizgi var olan kapalı bir çizgi, alan, daire ya da elips (metin) |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | Sınırın köşeleri, çizimde: iki köşe dikdörtgen, üç ya da daha çok köşe çokgen — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `cizgi` | string | hayır | Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_block_edit` — Bloğu Düzenle

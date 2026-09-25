@@ -194,6 +194,22 @@ Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject
 /// closed) comes back as it went in.
 std::vector<Point2> simplify_ring(const std::vector<Point2>& ring, Mm tolerance, bool closed);
 
+/// The pieces of the run `path` that lie inside the closed ring `window`, each
+/// in the order the run goes: an open path clipped by a face (Clipper2's
+/// open-subject intersection, CLAUDE.md 5.16). A closed run is passed with its
+/// first vertex repeated at the end, and one wholly inside comes back as one
+/// piece holding every vertex it went in with. `window` may be wound either
+/// way (non-zero fill); what a block clip crops a drawn line with
+/// (`BlockReference::clip`).
+std::vector<std::vector<Point2>> clip_path_to(const std::vector<Point2>& path,
+                                              const std::vector<Point2>& window);
+
+/// The faces of the closed ring `ring` that lie inside the closed ring
+/// `window` — the intersection of two faces, non-zero filled, so either may be
+/// wound either way. What a block clip leaves of a filled shape it cuts.
+std::vector<std::vector<Point2>> clip_ring_to(const std::vector<Point2>& ring,
+                                              const std::vector<Point2>& window);
+
 Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left);
 
 /// The signed area a ring encloses, in square millimetres.

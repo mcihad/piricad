@@ -39,6 +39,7 @@
 //                                    reach the file.
 #include "kentos_cad/io/project.hpp"
 
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/format.hpp"
 
@@ -357,6 +358,16 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     const auto is_external           = [&external](core::EntityId e) {
         return !external.empty() && e < external.size() && external[e];
     };
+
+    // A CLIPPED REFERENCE is written in a payload layout an older reader
+    // refuses (format.hpp `kMinReaderVersionClip`). Every written row counts,
+    // live or not: a row the file holds is a row a reader decodes.
+    bool any_clip = false;
+    for (core::EntityId e = 0; e < ents.size() && !any_clip; ++e) {
+        if (is_external(e) || ents.kind[e] != core::kBlockReferenceKind) continue;
+        auto ref = core::block_reference_of(geo, ents.slot[e]);
+        any_clip = ref && !ref.value().clip.empty();
+    }
     const auto ext_min_x = without_external(ents.min_x, external);
     const auto ext_min_y = without_external(ents.min_y, external);
     const auto ext_max_x = without_external(ents.max_x, external);
@@ -1014,10 +1025,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     FileHeader header{};
     std::memcpy(header.magic, kMagic, sizeof(kMagic));
     header.format_version = kFormatVersion;
-    // THE FILE SAYS WHAT IT NEEDS, per drawing rather than per build. Only an
-    // angled guide raises it, because only that uses a new value of an OLD block
-    // (format.hpp `kMinReaderVersionAngledGuide`).
-    header.min_reader_version = any_external                ? kMinReaderVersionExternal
+    // THE FILE SAYS WHAT IT NEEDS, per drawing rather than per build: the
+    // highest of what it holds asks — a clipped reference, an external
+    // reference, an angled guide (format.hpp `kMinReaderVersion…`).
+    header.min_reader_version = any_clip                    ? kMinReaderVersionClip
+                                : any_external              ? kMinReaderVersionExternal
                                 : doc.guides().any_angled() ? kMinReaderVersionAngledGuide
                                                             : kMinReaderVersion;
     header.header_bytes       = static_cast<std::uint32_t>(sizeof(FileHeader));

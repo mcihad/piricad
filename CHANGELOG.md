@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — blok ve dış referans kırpma: BLOKKIRP (C-14, 4. aşama)
+
+- **BLOKKIRP** (`XCLIP`, `BKR`): bir blok referansı ya da dış referans bir **sınırla**
+  kırpılır — iki köşeli dikdörtgen, köşe köşe çokgen ya da çizimdeki kapalı bir çizgi, alan,
+  daire veya elips. Sınırın dışı çizilmez, yakalanmaz, seçilmez; referansın kutusu görünen
+  kısmın kutusu olur. Sınır referansın üzerinde, tanımın kendi koordinatlarında durur:
+  referansla taşınır, döner, ölçeklenir; tanım ve aynı bloğun öbür referansları değişmez.
+  `islem=sinir` sınırı etkin katmana kapalı çizgi olarak çizer, `islem=kaldir` kaldırır;
+  her işlem tek geri alma adımı.
+- Sınırın kestiği kapalı şeklin **dolgusu** (tarama, dolu alan) içeride dolu kalır ve kesik
+  boyunca çizgi çizilmez; yakalama yalnız görünen köşe, orta, merkez ve çeyrek noktalarını
+  sunar (dönük ve aynalı referansta da).
+- Kırpılmış referans seçiliyken sınırı ekranda ince, kesikli çizilir (yazdırılmaz).
+- Şeritte **Çizim ▸ Blok ▸ Kırp** (Kırp / Çokgenle Kırp / Nesneyle Kırp), **Harita ▸ Veri ▸
+  Kırp** ve blok seçiliyken **Blok ▸ Kırpma** paneli (… Kırpma Sınırını Çiz, Kırpmayı Kaldır).
+- Proje dosyası **biçim 5**: kırpılmış referansı olan dosya en az 5. sürüm okuyucu ister;
+  kırpması olmayan dosyalar eski sürümlerde açılmaya devam eder.
+- PATLAT kırpılmış referansı kırpmayı yok sayarak açar ve bunu söyler; DXF dışa aktarımı
+  kırpmanın taşınmadığını söyler (AutoCAD `SPATIAL_FILTER`, I-03).
+
 ### Eklendi — dönüşümlü ve iç içe dış referanslar (C-14, 3. aşama)
 
 - Başka koordinat sisteminde çizilmiş bir proje dosyası, dış referans olarak okunurken

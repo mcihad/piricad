@@ -568,7 +568,9 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
                 // The line to walk along and the ring to clip to come from the
                 // same geometry; what differs is which buffer they land in.
-                if (ps.wants_stroke) emit_ring(batch, r);
+                // A FILL-ONLY run is a face a clip cut: filled, never stroked
+                // along the cut (`EmitBuffer::run_fill_only`).
+                if (ps.wants_stroke && (!curve_active || curve.run_edge(r))) emit_ring(batch, r);
                 // A CLOSED CURVE IS A FACE. A circle encloses ground exactly as a
                 // parsel ring does, so it takes the same fill; an arc encloses
                 // nothing and takes none.

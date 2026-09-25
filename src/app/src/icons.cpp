@@ -836,6 +836,70 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         break;
     }
 
+    case Glyph::BlockClip:
+    case Glyph::BlockClipPolygon:
+    case Glyph::BlockClipObject: {
+        // WHAT A CLIP LEAVES: the block's circle faint where the boundary
+        // hides it and whole inside, under the boundary itself — a crop's two
+        // brackets, a dashed polygon drawn corner by corner, or a ring that is
+        // already on the drawing.
+        QPainterPath window;
+        if (g == Glyph::BlockClip)
+            window.addRect(QRectF(7.0, 7.0, 10.0, 10.0));
+        else if (g == Glyph::BlockClipPolygon)
+            window =
+                polygonPath(QPolygonF({QPointF(6.0, 9.0), QPointF(14.0, 4.6), QPointF(19.6, 10.4),
+                                       QPointF(16.4, 19.0), QPointF(7.4, 17.6)}));
+        else
+            window = polygonPath(
+                QPolygonF({QPointF(8.0, 5.0), QPointF(16.0, 5.0), QPointF(20.0, 12.0),
+                           QPointF(16.0, 19.0), QPointF(8.0, 19.0), QPointF(4.0, 12.0)}));
+        const QRectF circle(4.4, 4.4, 15.2, 15.2);
+        p.setPen(stroke(washed(c, 0.35f), 1.3));
+        p.drawEllipse(circle);
+        p.save();
+        p.setClipPath(window, Qt::IntersectClip);
+        p.setPen(stroke(c, 1.6));
+        p.setBrush(k.data);
+        p.drawEllipse(circle);
+        p.restore();
+        p.setBrush(Qt::NoBrush);
+        if (g == Glyph::BlockClip) {
+            p.setPen(stroke(k.note, 1.8));
+            p.drawPolyline(QPolygonF({QPointF(7.0, 2.4), QPointF(7.0, 17.0), QPointF(21.6, 17.0)}));
+            p.drawPolyline(QPolygonF({QPointF(2.4, 7.0), QPointF(17.0, 7.0), QPointF(17.0, 21.6)}));
+        } else if (g == Glyph::BlockClipPolygon) {
+            p.setPen(QPen(k.note, 1.6, Qt::DashLine, Qt::FlatCap));
+            p.drawPath(window);
+        } else {
+            p.setPen(stroke(k.note, 1.8));
+            p.drawPath(window);
+        }
+        break;
+    }
+
+    case Glyph::BlockClipBoundary:
+        // THE CROP'S FRAME DRAWN OUT: the dashed boundary, and beside it the
+        // solid line it becomes on the active layer.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(3.4, 3.4, 11.0, 11.0));
+        p.setPen(stroke(k.note, 1.8));
+        p.drawRect(QRectF(9.6, 9.6, 11.0, 11.0));
+        break;
+
+    case Glyph::BlockUnclip:
+        // THE WHOLE CIRCLE AGAIN, the crop's brackets set aside and struck.
+        p.setPen(stroke(c, 1.6));
+        p.setBrush(k.data);
+        p.drawEllipse(QRectF(3.4, 5.4, 13.2, 13.2));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(washed(c, 0.45f), 1.3));
+        p.drawPolyline(QPolygonF({QPointF(6.0, 2.4), QPointF(6.0, 16.0), QPointF(19.6, 16.0)}));
+        p.setPen(stroke(k.note, 1.9));
+        p.drawLine(QPointF(15.0, 15.0), QPointF(21.4, 21.4));
+        p.drawLine(QPointF(21.4, 15.0), QPointF(15.0, 21.4));
+        break;
+
     case Glyph::MeasureAngle: {
         // TWO ARMS AND THE SWEEP BETWEEN THEM, which is what the tool measures
         // and what its preview now draws on the canvas.

@@ -26,6 +26,7 @@ add_library(kentos_command STATIC
     src/drawing_catalogs.cpp
     src/commands/block.cpp
     src/commands/xref.cpp
+    src/commands/block_clip.cpp
     src/commands/dimension.cpp
     src/commands/hatch.cpp
     src/commands/spline.cpp

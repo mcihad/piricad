@@ -114,6 +114,11 @@ struct Runs
         return doc.geometry().ring_role[rs.first + i] != RingRole::Open;
     }
 
+    /// Whether this run is a line of the drawing. A fill-only run — a face a
+    /// block clip cut — is not: its edge along the cut is measured by nobody,
+    /// and only the face test below finds it (`EmitBuffer::run_fill_only`).
+    bool edge(std::uint32_t i) const { return !is_curve || curve.run_edge(i); }
+
     /// Whether this run is a VOID in the entity rather than its outline: a
     /// face's interior ring, or a run the kind marked as one (a hatch island).
     bool hole(const Document& doc, EntityId e, std::uint32_t i) const
@@ -154,7 +159,7 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
     for (std::uint32_t r = 0; r < runs.count; ++r) {
         const auto xs = runs.xs(doc, e, r);
         const auto ys = runs.ys(doc, e, r);
-        if (xs.empty()) continue;
+        if (xs.empty() || !runs.edge(r)) continue;
 
         if (xs.size() == 1) {
             const double d = distance_squared(Point2{xs[0], ys[0]}, p);

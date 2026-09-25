@@ -243,14 +243,16 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
   çizimde dış referans o anki içeriğiyle sıradan bir blok olarak yazılır ve adlardaki `|`,
   AutoCAD'in bağlanmış dış referansları adlandırdığı gibi `$0$` olur (`altlik$0$YOL`).
   DXF'in dış referans yolunu okuyup yazmak DXF uyumluluk işinde (I-03) gelecek.
-- Kırpma (dış referansın yalnız bir bölgesini göstermek) C-14'ün sonraki aşamasında
-  gelecek.
+- Dış referansın yalnız bir bölgesini göstermek için [BLOKKIRP](block_clip.md) ile
+  kırpın: sınır referansın üzerinde durur, yenilemede ve yeniden açılışta kalır. Kırpma DXF'e
+  taşınmaz.
 
 ## İlgili
 
 - [BLOKEKLE](insert.md) — kitaplık dosyasından bir bloğu **kopyalayarak** getirmek:
   getirilen blok çizimin olur, dosyası değişse de değişmez
 - [BLOKDÜZENLE](block_edit.md) — çizime katılmış (bağlanmış) bir bloğu düzenlemek
+- [BLOKKIRP](block_clip.md) — dış referansın yalnız bir bölgesini göstermek
 - [İÇEAKTAR](import.md) — bir dosyanın nesnelerini çizimin **kendi** nesneleri yapmak
 - [Blok referansı türü](../nesneler/blokreferansi.md)
 - [Proje dosyası](../veri/proje-dosyasi.md)

@@ -268,6 +268,23 @@ birden çok nesne seçiliyken bir betikten ulaşılmış. Arayüzde araç reddet
 **Çözüm.** İstenen nesneye tıklayıp Enter'a basın, betikte ise `nesne=` ile tek bir
 kimlik verin.
 
+### `Kırpma sınırı, nesne N ('AD') referansının çizdiği hiçbir şeyi içine almıyor; referans görünmez olurdu.`
+
+**Sebep.** [BLOKKIRP](komutlar/block_clip.md) sınırı, referansın çizdiği her şeyin
+dışında çizildi. Böyle bir kırpma referansı görünmez, seçilmez ve bulunmaz yapardı; bu
+yüzden reddedilir ve hiçbir şey değişmez.
+
+**Çözüm.** Sınırı referansın üzerine çizin. Referansın nerede olduğunu KAPSAM ile görün;
+kırpılmış bir referansın eski sınırı, referans seçiliyken kesikli çizilir.
+
+### `Kırpma sınırı verilmedi: noktalar= ile köşelerini ya da cizgi= ile kapalı bir nesneyi verin.`
+
+**Sebep.** BLOKKIRP bir betikten ya da tek satırdan sınırsız çağrıldı; arayüzde sınırın
+köşelerini sorar.
+
+**Çözüm.** `noktalar=` ile iki köşe (dikdörtgen) ya da üç ve daha çok köşe (çokgen), ya da
+`cizgi=` ile çizimdeki kapalı bir nesneyi verin.
+
 ## Seçim
 
 ### `Beklenen mod: TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA. Girilen: 'OLMAYAN'`
@@ -555,6 +572,14 @@ dosyada değil kaynağındadır ve bunu ancak 4. sürüm biçimi okuyan bir Kent
 **Çözüm.** KentOSCad'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
 `DIŞREFERANS islem=bagla` ile dış referansı çizime katıp kaydedin.
 
+### `io.format_too_new: … en az 5. sürüm biçim okuyucusu istiyor`
+
+**Sebep.** Dosyada [BLOKKIRP](komutlar/block_clip.md) ile kırpılmış bir blok referansı ya
+da dış referans var; kırpma sınırını ancak 5. sürüm biçimi okuyan bir KentOSCad bilir.
+
+**Çözüm.** KentOSCad'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
+kırpmaları `BLOKKIRP islem=kaldir` ile kaldırıp kaydedin.
+
 ## Dış veri biçimleri
 
 ### `io.no_driver: Dış biçim desteği KAPALI.`
@@ -613,6 +638,16 @@ bıraktığı artıklardır.
 not, kaç öğenin neden atlandığını söyler. Atlanan sayı beklediğinizden çoksa
 dosyayı üreten programda bir temizleme (`PURGE`, `OVERKILL`) çalıştırıp yeniden
 aktarın.
+
+### `N blok referansının BLOKKIRP sınırı DXF'e taşınmadı; bu referanslar DXF'te kırpılmadan, bütün görünür.`
+
+**Sebep.** DXF'e dışa aktarılan çizimde [kırpılmış](komutlar/block_clip.md) blok
+referansları var. AutoCAD kırpmayı bir `SPATIAL_FILTER` nesnesinde tutar ve DXF yazıcısı
+onu yazamaz; referanslar DXF'te bütün görünür.
+
+**Çözüm.** DXF'te yalnız görünen kısım isteniyorsa referansı dışa aktarmadan önce
+[PATLAT](komutlar/explode.md) ile açıp sınırın dışında kalanı [BUDA](komutlar/trim.md) ile
+kesin; ya da AutoCAD'de XCLIP ile yeniden kırpın.
 
 ## Program çöktüğünde
 

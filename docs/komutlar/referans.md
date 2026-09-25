@@ -77,6 +77,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`core.xref`](xref.md) | Dış Referans | `DIŞREFERANS`, `DISREFERANS`, `XREF`, `DRF` | Dosya | tek işlem | betiklenebilir, AI erişimli | Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
+| [`core.block_clip`](block_clip.md) | Blok Kırp | `BLOKKIRP`, `BLOKKIRP`, `XCLIP`, `BKR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`core.dimension_refresh`](dimension_refresh.md) | Ölçüleri Yenile | `ÖLÇÜYENİLE`, `OLCUYENILE`, `DIMREFRESH`, `ÖYN`, `OYN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
@@ -1068,6 +1069,20 @@ Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yeri
 | `aci` | number | isteğe bağlı | ekle için dönme açısı, derece; varsayılan 0 |
 
 Ayrıntılı kullanım: [DIŞREFERANS](xref.md)
+
+### `core.block_clip` — BLOKKIRP (Blok Kırp)
+
+Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | isteğe bağlı | yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer |
+| `nesne` | selection | isteğe bağlı | Kırpılacak blok referansı ya da dış referans, bir tane; yoksa etkin seçim |
+| `tur` | text | isteğe bağlı | noktalar verilmediğinde sınırın nasıl gösterileceği: dikdortgen iki köşe (varsayılan), cokgen köşe köşe, cizgi var olan kapalı bir çizgi, alan, daire ya da elips |
+| `noktalar` | point_list | en az 0 | Sınırın köşeleri, çizimde: iki köşe dikdörtgen, üç ya da daha çok köşe çokgen |
+| `cizgi` | selection | isteğe bağlı | Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips |
+
+Ayrıntılı kullanım: [BLOKKIRP](block_clip.md)
 
 ### `core.dimension` — ÖLÇÜ (Ölçü)
 
@@ -3174,6 +3189,117 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BLOK",
         "BLOCK",
         "BLK"
+      ]
+    }
+  },
+  {
+    "name": "core_block_clip",
+    "title": "Blok Kırp",
+    "description": "Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.\nKomut: BLOKKIRP (BLOKKIRP, XCLIP, BKR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "yeni",
+            "kaldir",
+            "sinir"
+          ],
+          "description": "yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer (metin)"
+        },
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kırpılacak blok referansı ya da dış referans, bir tane; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "tur": {
+          "type": "string",
+          "enum": [
+            "dikdortgen",
+            "cokgen",
+            "cizgi"
+          ],
+          "description": "noktalar verilmediğinde sınırın nasıl gösterileceği: dikdortgen iki köşe (varsayılan), cokgen köşe köşe, cizgi var olan kapalı bir çizgi, alan, daire ya da elips (metin)"
+        },
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              }
+            }
+          ],
+          "description": "Sınırın köşeleri, çizimde: iki köşe dikdörtgen, üç ya da daha çok köşe çokgen — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "cizgi": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.block_clip",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "BLOKKIRP",
+        "BLOKKIRP",
+        "XCLIP",
+        "BKR"
       ]
     }
   },

@@ -59,6 +59,10 @@ getirin ([ÖLÇEKLE](scale.md)). Böyle bir referanstaki daire ise **elips** ola
 Daire, yay, elips, nokta ve yazı zaten tek parçadır; doğrudan seçilirlerse PATLAT
 bunu söyler.
 
+[BLOKKIRP](block_clip.md) ile **kırpılmış** bir referans, kırpması yok sayılarak açılır —
+AutoCAD'in EXPLODE'u gibi: parçalar tanımın bütün bileşenleridir ve çıktı bunu söyler
+(`kırpma sınırı yok sayıldı, parçalar bütün çıktı`).
+
 ## Adlar
 
 | Ad | Tür |
@@ -126,9 +130,9 @@ satırı eklenir.
 
 Betik ve yapay zekâ istemcisi raporu okur: her nesne için `tur`, blok için `blok`,
 `kopya`, `katman_devri`, `gorunus_devri`, `gizli`, `yazilan_deger` (değeri yazıya işlenen
-alan yazıları), `birakilan_oznitelik`, türlere göre
-parça sayısı (`turler`) ve parçaların kimlikleri (`parcalar`); en üstte `patlatilan` ve
-`parca` toplamları.
+alan yazıları), `birakilan_oznitelik`, `kirpma_yok_sayildi` (referans kırpılmışsa `true`),
+türlere göre parça sayısı (`turler`) ve parçaların kimlikleri (`parcalar`); en üstte
+`patlatilan` ve `parca` toplamları.
 
 ### Arayüz
 

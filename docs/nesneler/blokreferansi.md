@@ -10,7 +10,8 @@ dizi hâlinde koyar. DXF `INSERT` budur.
 
 Halka tek tepe noktasıdır: **ekleme noktası**. Yükte hangi blok, x ve y ölçeği
 (kesin oran; eksi ölçek aynalar), dönme açısı (mikroderece), dizi sütun/satır sayısı
-ve aralıkları, ve çizilen biçimin kutusu durur. Tanımın nesneleri aynı nesne
+ve aralıkları, ve çizilen biçimin kutusu durur; referans [kırpılmışsa](#kırpma) sınırının
+köşeleri de, tanımın kendi koordinatlarında. Tanımın nesneleri aynı nesne
 tablosunda "blok içinde" bayrağıyla durur ([Nesne türleri](README.md#bloklar));
 referans onları **kopyalamaz**, çizerken yerleştirir.
 
@@ -51,7 +52,18 @@ oturur — ve referans [patlatıldığında](../komutlar/explode.md) aynı nokta
 | Düğüm | Üye noktalara |
 | En yakın, dik, kesişim | Üyelerin çizilen kenarlarına |
 
-Dizili bir referansta her kopyanın noktaları ayrı ayrı sunulur.
+Dizili bir referansta her kopyanın noktaları ayrı ayrı sunulur. Kırpılmış bir referans
+yalnız sınırının içindeki noktaları sunar.
+
+## Kırpma
+
+[BLOKKIRP](../komutlar/block_clip.md) bir referansa bir **sınır** verir: sınırın içi çizilir,
+dışı çizilmez, yakalanmaz ve seçilmez; referansın kutusu görünen kısmın kutusudur. Sınır
+referansın yükünde, tanımın kendi koordinatlarında durur — referansla taşınır, döner ve
+ölçeklenir; dizinin her kopyasını aynı yerinden kırpar. Tanım değişmez: aynı bloğun öbür
+referansları bütün çizilir. Sınırın kestiği kapalı bir şeklin dolgusu içeride dolu kalır ve
+kesik boyunca çizgi çizilmez. Seçili kırpılmış referans sınırını ekranda kesikli çizgiyle
+gösterir.
 
 ## Dış referans
 
@@ -69,9 +81,11 @@ Referansın kendi alanı ve çevresi sıfırdır; ölçmek istediğiniz üyeyi t
 ## Dosya ve dış biçimler
 
 Proje dosyasında tür sütunu `9` (`core.block_reference`); blok tanımları kendi
-tablosunda ([proje dosyası](../veri/proje-dosyasi.md)). DXF `BLOCK` tanımları ve
-`INSERT` referansları yapısıyla gelir ve gider: dosyadaki blok yapısı korunur, açılmaz.
-GeoPackage'a üyelerin çizilen biçimleri yazılır.
+tablosunda ([proje dosyası](../veri/proje-dosyasi.md)). Kırpılmış referansın yükü ikinci
+düzendedir ve böyle bir referans taşıyan dosya biçim 5 okuyucusu ister. DXF `BLOCK`
+tanımları ve `INSERT` referansları yapısıyla gelir ve gider: dosyadaki blok yapısı korunur,
+açılmaz; kırpma DXF'e taşınmaz, referans orada bütün görünür. GeoPackage'a üyelerin çizilen
+biçimleri yazılır.
 
 ## Komutlar
 
@@ -85,7 +99,7 @@ BLOKEKLE ad=BACA nokta=20,0 olcek=2 aci=90
 
 [BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md) (bir kitaplık dosyasından da:
 `BLOKEKLE dosya=`), [BLOKDÜZENLE](../komutlar/block_edit.md),
-[DIŞREFERANS](../komutlar/xref.md).
+[DIŞREFERANS](../komutlar/xref.md), [BLOKKIRP](../komutlar/block_clip.md).
 
 ## Sınırlar
 

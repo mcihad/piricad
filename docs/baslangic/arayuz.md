@@ -186,7 +186,7 @@ sekme de kaybolur.
 | **Ölçü** | ölçü | Ölçüyü Düzenle, Stile Döndür, Pafta Ölçeğine Uyarla · **Stil**, **Ondalık**, **Birim** kutuları · Zincir Ölçü, Baz Ölçü |
 | **Tarama** | tarama | desen galerisi · **Açı**, **Ölçek**, Çapraz · adalar: Normal, Yalnız dış, Adasız · Sınır Bul, Taramayı Düzenle |
 | **Alan** | kapalı alan (parsel) | Alan Ölç, Nesne Bilgisi, Koordinat Oku · Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · Tarama, Ofset, Tampon…, Alanı Düzenle… |
-| **Blok** | blok | Patlat, Blok Ekle, Blok, Nesne Bilgisi |
+| **Blok** | blok | Bloğu Düzenle, Taban Noktası, Patlat, Blok Ekle, Blok, Nesne Bilgisi, Dış Referansları Yenile · **Kırpma**: Kırp, Çokgenle Kırp, Nesneyle Kırp, Kırpma Sınırını Çiz, Kırpmayı Kaldır ([BLOKKIRP](../komutlar/block_clip.md)) |
 
 Bu sekmedeki her şey **seçili nesnelerde** çalışır: Yazı sekmesinde yüksekliği 3,50 m
 seçmek seçili yazılarda `YAZIDÜZENLE yukseklik=3500` çalıştırır. Kutular seçilen ilk
@@ -393,9 +393,10 @@ kutuya **tamamen giren** nesneler seçilir ve çerçeve düz çizilir; **sağdan
 sürüklerseniz kutuya **değen** her nesne seçilir ve çerçeve kesik çizilir. Bu, CAD
 dünyasının kırk yıllık ayrımıdır ve KentOSCad'de de aynıdır.
 
-Seçili nesneler kalın ve renkli çizilir. Seçim çizimin verisi değildir: dosyaya
-yazılmaz, `GERİAL` ile geri alınmaz ve komut günlüğüne belge değişikliği olarak
-düşmez.
+Seçili nesneler kalın ve renkli çizilir. [Kırpılmış](../komutlar/block_clip.md) bir blok
+ya da dış referans seçiliyken kırpma sınırı da ince, kesikli çizilir — yalnız ekranda;
+yazdırılmaz. Seçim çizimin verisi değildir: dosyaya yazılmaz, `GERİAL` ile geri alınmaz
+ve komut günlüğüne belge değişikliği olarak düşmez.
 
 Fareyle yaptığınız her seçim, komut satırına `SEÇ ...` yazmakla aynı komuttur.
 Ayrıntı: [Nesne seçme](../komutlar/select.md).

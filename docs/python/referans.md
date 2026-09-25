@@ -157,6 +157,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.block_edit`](#cadblock_edit) | `core.block_edit` | `BLOKDÜZENLE` | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
 | [`cad.xref`](#cadxref) | `core.xref` | `DIŞREFERANS` | Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
+| [`cad.block_clip`](#cadblock_clip) | `core.block_clip` | `BLOKKIRP` | Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`cad.dimension_edit`](#caddimension_edit) | `core.dimension_edit` | `ÖLÇÜDÜZENLE` | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`cad.dimension_refresh`](#caddimension_refresh) | `core.dimension_refresh` | `ÖLÇÜYENİLE` | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
@@ -1935,6 +1936,32 @@ cad.xref(
 | `angle` | `float` | `aci` | ekle için dönme açısı, derece; varsayılan 0 |
 
 [Komut sayfası](../komutlar/xref.md)
+
+### `cad.block_clip`
+
+Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
+
+Komut: `core.block_clip` — `BLOKKIRP`
+
+```python
+cad.block_clip(
+    action: str,
+    reference: list[int],
+    shape: str,
+    points: Coords,
+    boundary: list[int],
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `action` | `str` | `islem` | yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer |
+| `reference` | `list[int]` | `nesne` | Kırpılacak blok referansı ya da dış referans, bir tane; yoksa etkin seçim [kalıcı nesne anahtarı] |
+| `shape` | `str` | `tur` | noktalar verilmediğinde sınırın nasıl gösterileceği: dikdortgen iki köşe (varsayılan), cokgen köşe köşe, cizgi var olan kapalı bir çizgi, alan, daire ya da elips |
+| `points` | `Coords` | `noktalar` | Sınırın köşeleri, çizimde: iki köşe dikdörtgen, üç ya da daha çok köşe çokgen [mm, Sağa (Y) önce] |
+| `boundary` | `list[int]` | `cizgi` | Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips [kalıcı nesne anahtarı] |
+
+[Komut sayfası](../komutlar/block_clip.md)
 
 ### `cad.dimension`
 

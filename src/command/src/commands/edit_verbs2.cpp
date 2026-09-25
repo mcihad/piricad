@@ -108,6 +108,7 @@ struct Pieces
     std::size_t values_written{0};           ///< captions written with the reference's values
     std::size_t values_left{0};              ///< the reference's own attribute cells, not carried
     std::string block;                       ///< the definition's name
+    bool clipped{false}; ///< the reference had a BLOKKIRP boundary, which exploding sets aside
 };
 
 /// The pieces' keys, for the report.
@@ -175,6 +176,9 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
     const core::Point2 insertion = core::block_reference_insertion(doc.geometry(), gslot);
     out.copies                   = static_cast<std::size_t>(placed.rows) * placed.columns;
     out.values_left              = unshown_cells(doc, slot, placed.block);
+    // A CLIP IS SET ASIDE, as AutoCAD's EXPLODE sets an XCLIP aside: the
+    // pieces are the definition's members, whole, and the report says so.
+    out.clipped = !placed.clip.empty();
 
     for (int row = 0; row < static_cast<int>(placed.rows); ++row) {
         for (int column = 0; column < static_cast<int>(placed.columns); ++column) {
@@ -371,6 +375,7 @@ Task<void> run_explode(Context& ctx)
         if (pieces.reference_look > 0)
             said += "; " + std::to_string(pieces.reference_look) + " parça referansın görünüşünde";
         if (pieces.hidden > 0) said += "; " + std::to_string(pieces.hidden) + " gizli parça";
+        if (pieces.clipped) said += "; kırpma sınırı yok sayıldı, parçalar bütün çıktı";
         if (pieces.values_written > 0)
             said += "; " + std::to_string(pieces.values_written) +
                     " yazıya referansın öznitelik değeri işlendi";
@@ -394,6 +399,7 @@ Task<void> run_explode(Context& ctx)
                     core::Json::integer(static_cast<std::int64_t>(pieces.values_written)));
             row.set("birakilan_oznitelik",
                     core::Json::integer(static_cast<std::int64_t>(pieces.values_left)));
+            row.set("kirpma_yok_sayildi", core::Json::boolean(pieces.clipped));
         }
         core::Json kinds = core::Json::object({});
         for (const auto& [word, count] : pieces.kind)

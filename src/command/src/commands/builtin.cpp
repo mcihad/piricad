@@ -78,6 +78,7 @@ namespace kentos::command {
     X(block_edit)                                                                                  \
     X(insert)                                                                                      \
     X(xref)                                                                                        \
+    X(block_clip)                                                                                  \
     X(dimension)                                                                                   \
     X(dimension_edit)                                                                              \
     X(dimension_refresh)                                                                           \

@@ -11,6 +11,7 @@
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <span>
 #include <vector>
@@ -140,8 +141,11 @@ void for_each_chain(const Document& doc, EntityId e, EmitBuffer& scratch, Fn&& f
     if (outline_kind(entities.kind[e])) {
         scratch.clear();
         if (entity_outline(doc, e, scratch)) {
+            // A fill-only run's edge is a clip's cut, not a line of the
+            // drawing, and offers nothing (`EmitBuffer::run_fill_only`).
             for (std::size_t r = 0; r < scratch.run_total(); ++r)
-                fn(Chain{scratch.run_xs(r), scratch.run_ys(r), scratch.run_closed[r] != 0});
+                if (scratch.run_edge(r))
+                    fn(Chain{scratch.run_xs(r), scratch.run_ys(r), scratch.run_closed[r] != 0});
             return;
         }
         // A kind this build does not know has no outline of its own and is
@@ -387,6 +391,35 @@ Point2 place_through(std::span<const Placement> chain, Point2 p)
     return p;
 }
 
+/// Whether `p`, a point of the innermost definition, is SHOWN through `chain`:
+/// inside the clip of every reference on the way out (`BlockReference::clip`,
+/// tested in that reference's own definition space). A point a clip hides is
+/// not a point the drawing offers.
+bool shown_through(std::span<const Placement> chain, Point2 p)
+{
+    for (std::size_t i = chain.size(); i-- > 0;) {
+        if (!inside_clip(chain[i].ref->clip, p)) return false;
+        p = place_block_point(*chain[i].ref, chain[i].insertion, chain[i].base, p, chain[i].column,
+                              chain[i].row);
+    }
+    return true;
+}
+
+/// Whether any reference on `chain` is clipped.
+bool chain_clipped(std::span<const Placement> chain)
+{
+    return std::any_of(chain.begin(), chain.end(),
+                       [](const Placement& p) { return !p.ref->clip.empty(); });
+}
+
+/// Whether quadrant `q` of the placed circle (centre `c`) is shown. The point
+/// of the definition's circle (centre `c0`, radius `r0`) that lands on it is
+/// found by undoing the chain: a uniform chain is one similarity, whose two
+/// columns are where the definition's east and north of the centre land, so
+/// its inverse is plain arithmetic — no trigonometry, which core.md R9 keeps
+/// out of anything a result could depend on.
+bool shown_on_circle(std::span<const Placement> chain, Point2 c0, Mm r0, Point2 c, Point2 q);
+
 /// Whether every level keeps circles circles: one magnitude across and up.
 bool chain_uniform(std::span<const Placement> chain)
 {
@@ -396,6 +429,24 @@ bool chain_uniform(std::span<const Placement> chain)
             mag(p.ref->sy.num) * static_cast<Int128>(p.ref->sx.den))
             return false;
     return true;
+}
+
+bool shown_on_circle(std::span<const Placement> chain, Point2 c0, Mm r0, Point2 c, Point2 q)
+{
+    const Point2 e_at = place_through(chain, Point2{c0.x + r0, c0.y});
+    const Point2 n_at = place_through(chain, Point2{c0.x, c0.y + r0});
+    const double ex   = static_cast<double>(e_at.x - c.x);
+    const double ey   = static_cast<double>(e_at.y - c.y);
+    const double nx   = static_cast<double>(n_at.x - c.x);
+    const double ny   = static_cast<double>(n_at.y - c.y);
+    const double det  = ex * ny - ey * nx;
+    if (det == 0.0) return false;
+    const double dx    = static_cast<double>(q.x - c.x);
+    const double dy    = static_cast<double>(q.y - c.y);
+    const double scale = static_cast<double>(r0) / det;
+    const Point2 on_def{c0.x + mm_round(scale * (ny * dx - nx * dy)),
+                        c0.y + mm_round(scale * (ex * dy - ey * dx))};
+    return shown_through(chain, on_def);
 }
 
 /// The key points of the members of `block`, placed by `chain`, into `pts`
@@ -434,7 +485,7 @@ void member_key_points(const Document& doc, BlockId block, std::vector<Placement
             if (!inner || inner.value().block >= doc.blocks().size()) continue;
             const BlockReference nested = inner.value();
             const Point2 at             = block_reference_insertion(geometry, slot);
-            give(place_through(chain, at), SnapInsertion);
+            if (shown_through(chain, at)) give(place_through(chain, at), SnapInsertion);
             const Point2 base = doc.blocks().at(nested.block).base;
             for (int row = 0; row < static_cast<int>(nested.rows); ++row)
                 for (int col = 0; col < static_cast<int>(nested.columns); ++col) {
@@ -455,31 +506,53 @@ void member_key_points(const Document& doc, BlockId block, std::vector<Placement
                 const auto ry = geometry.ring_ys(r);
                 xs.clear();
                 ys.clear();
+                std::vector<bool> seen;
                 for (std::size_t v = 0; v < rx.size(); ++v) {
-                    const Point2 p = place_through(chain, Point2{rx[v], ry[v]});
+                    const Point2 at_def = Point2{rx[v], ry[v]};
+                    const Point2 p      = place_through(chain, at_def);
                     xs.push_back(p.x);
                     ys.push_back(p.y);
-                    give(p, SnapEndpoint);
+                    seen.push_back(shown_through(chain, at_def));
+                    if (seen.back()) give(p, SnapEndpoint);
                 }
                 const bool closed          = geometry.ring_role[r] != RingRole::Open;
                 const std::size_t n        = xs.size();
                 const std::size_t segments = n < 2 ? 0 : (closed ? n : n - 1);
+                // A middle the clip shows, of an edge whose ends it shows; a
+                // centroid only of a ring whose corners and centre it shows.
+                // Each is tested where it lies in the definition, which the
+                // placement carries onto the placed middle and centre.
+                const bool clipped = chain_clipped(chain);
                 for (std::size_t v = 0; v < segments; ++v) {
                     const std::size_t w = (v + 1) % n;
+                    if (clipped &&
+                        (!seen[v] || !seen[w] ||
+                         !shown_through(chain, Point2{(rx[v] + rx[w]) / 2, (ry[v] + ry[w]) / 2})))
+                        continue;
                     give(Point2{(xs[v] + xs[w]) / 2, (ys[v] + ys[w]) / 2}, SnapMidpoint);
                 }
                 Point2 centre{};
-                if (closed && points_centroid(xs, ys, centre)) give(centre, SnapCentroid);
+                if (!closed || !points_centroid(xs, ys, centre)) continue;
+                if (clipped) {
+                    const bool corners =
+                        std::all_of(seen.begin(), seen.end(), [](bool b) { return b; });
+                    Point2 centre_def{};
+                    if (!corners || !points_centroid(rx, ry, centre_def) ||
+                        !shown_through(chain, centre_def))
+                        continue;
+                }
+                give(centre, SnapCentroid);
             }
             continue;
         }
 
         if (kind == kPointKind) {
             const RingSpan span = geometry.rings_of(slot);
-            if (span.count > 0 && !geometry.ring_xs(span.first).empty())
-                give(place_through(chain, Point2{geometry.ring_xs(span.first)[0],
-                                                 geometry.ring_ys(span.first)[0]}),
-                     SnapNode);
+            if (span.count > 0 && !geometry.ring_xs(span.first).empty()) {
+                const Point2 at_def{geometry.ring_xs(span.first)[0],
+                                    geometry.ring_ys(span.first)[0]};
+                if (shown_through(chain, at_def)) give(place_through(chain, at_def), SnapNode);
+            }
             continue;
         }
 
@@ -493,7 +566,7 @@ void member_key_points(const Document& doc, BlockId block, std::vector<Placement
             spec->key_points(geometry, slot, sink);
         }
         for (std::size_t k = 0; k < own.size(); ++k)
-            give(place_through(chain, own[k]), own_modes[k]);
+            if (shown_through(chain, own[k])) give(place_through(chain, own[k]), own_modes[k]);
 
         // A CIRCLE'S QUADRANTS are the drawing's north, east, south and west
         // of it, not its definition's: taken of the placed centre and radius,
@@ -506,11 +579,15 @@ void member_key_points(const Document& doc, BlockId block, std::vector<Placement
             const double dx = static_cast<double>(on.x - c.x);
             const double dy = static_cast<double>(on.y - c.y);
             const Mm r      = mm_round(std::sqrt(dx * dx + dy * dy));
+            // A quadrant is offered where the clip shows it: the point is
+            // tested where it lies on the circle in the definition, which a
+            // uniform chain maps onto the quadrant exactly.
             if (r > 0) {
-                give(Point2{c.x + r, c.y}, SnapQuadrant);
-                give(Point2{c.x, c.y + r}, SnapQuadrant);
-                give(Point2{c.x - r, c.y}, SnapQuadrant);
-                give(Point2{c.x, c.y - r}, SnapQuadrant);
+                const bool clipped      = chain_clipped(chain);
+                const Point2 quarter[4] = {Point2{c.x + r, c.y}, Point2{c.x, c.y + r},
+                                           Point2{c.x - r, c.y}, Point2{c.x, c.y - r}};
+                for (const Point2 q : quarter)
+                    if (!clipped || shown_on_circle(chain, c0, r0, c, q)) give(q, SnapQuadrant);
             }
         }
     }

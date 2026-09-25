@@ -1024,6 +1024,29 @@ void MainWindow::buildActions()
                                    tr("DIŞREFERANS islem=yenile — bağlı dış referansları "
                                       "dosyalarından yeniden okur"));
     actXrefReload_->setObjectName(QStringLiteral("xrefReload"));
+    // A REFERENCE CLIPPED (TODOS C-14): it shows what a boundary holds — two
+    // corners of a rectangle, a polygon's corners, or a closed object already
+    // on the drawing — and the boundary can be drawn out and taken off again.
+    // Each is BLOKKIRP's own line, so the button and the typed line are one.
+    actBlockClip_ =
+        modifyTool(Glyph::BlockClip, tr("Kırp"), QStringLiteral("BLOKKIRP"),
+                   tr("BLOKKIRP — blok ya da dış referansı iki köşeli bir dikdörtgenle "
+                      "kırpar: içi çizilir, dışı çizilmez ve yakalanmaz  ·  kısaltma: BKR"));
+    actBlockClipPolygon_ = modifyTool(
+        Glyph::BlockClipPolygon, tr("Çokgenle Kırp"), QStringLiteral("BLOKKIRP tur=cokgen"),
+        tr("BLOKKIRP tur=cokgen — sınırı köşe köşe çizerek kırpar; Enter sınırı kapatır"));
+    actBlockClipObject_ = modifyTool(
+        Glyph::BlockClipObject, tr("Nesneyle Kırp"), QStringLiteral("BLOKKIRP tur=cizgi"),
+        tr("BLOKKIRP tur=cizgi — çizimdeki kapalı bir çizgi, alan, daire ya da "
+           "elipsle kırpar"));
+    actBlockClipBoundary_ = modifyTool(
+        Glyph::BlockClipBoundary, tr("Kırpma Sınırını Çiz"), QStringLiteral("BLOKKIRP islem=sinir"),
+        tr("BLOKKIRP islem=sinir — kırpma sınırını etkin katmana kapalı çizgi olarak "
+           "çizer"));
+    actBlockUnclip_ = modifyTool(
+        Glyph::BlockUnclip, tr("Kırpmayı Kaldır"), QStringLiteral("BLOKKIRP islem=kaldir"),
+        tr("BLOKKIRP islem=kaldir — kırpma sınırını kaldırır; referans yeniden bütün "
+           "çizilir"));
     // SAVE AND GIVE UP take the objects of the open edit, which only the shell
     // knows (`blockEditLine`), so their lines are made when they are pressed.
     const auto editStep = [this](Glyph glyph, const QString& text, const QString& name,
@@ -5270,10 +5293,12 @@ int MainWindow::probeRealMouse()
         // landing and change side when the line comes in from the other way.
         {
             fresh({QStringLiteral("DAİRE merkez=0,0 cevre=2,0")});
-            // Out far enough that the leader's points and its turned end are on
-            // the canvas: a click off it still reaches the canvas, but the box
-            // is kept inside it and would not stand where the words go.
-            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.2"));
+            // FRAMED, not zoomed by a factor: the leader's points, its turned end
+            // and the room its words take to the right of the landing are all on
+            // the canvas whatever its shape. A click off it still reaches the
+            // canvas, but the box is kept inside it and would not stand where the
+            // words go — which a fixed factor let happen on a narrower canvas.
+            canvas_->zoomToBox(core::Box2{-6'000, -8'000, 40'000, 14'000});
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
             const std::int64_t circle = first_key();
             const auto click          = [&onCanvas](QPointF at) {
@@ -6153,6 +6178,224 @@ int MainWindow::probeRealMouse()
             check(
                 out && shown("halihazir|BINA") && shown("halihazir|YOL"),
                 QStringLiteral("satırın gözü dış referansın katmanlarını gizledi ve geri getirdi"));
+        }
+
+        // ---- 28. A REFERENCE CLIPPED TO THE STUDY AREA (TODOS C-14) ----
+        //
+        // A zoning plan attached whole, and the sheet wants the part round the
+        // study area. The ribbon's clip button is pressed with a real click,
+        // the two corners are clicked on the canvas, and what is outside goes:
+        // not drawn, not snapped to; the park's fill stays filled inside and is
+        // not stroked along the cut. A polygon drawn corner by corner replaces
+        // it; the boundary is drawn out as a line; the remove button brings the
+        // whole plan back and one undo clips it again. Saved, the file asks for
+        // a reader that knows a clip.
+        {
+            const QString folder =
+                (shooting ? into : QDir::tempPath()) + QStringLiteral("/blokkirp-probe");
+            QDir(folder).removeRecursively();
+            QDir().mkpath(folder);
+            const QString plan    = folder + QStringLiteral("/imar.pcad");
+            const QString project = folder + QStringLiteral("/pafta.pcad");
+            {
+                core::Document side_doc;
+                command::Registry side_reg;
+                command::Journal side_journal;
+                command::UndoStack side_undo;
+                command::Bus side{side_doc, side_reg, side_journal, side_undo};
+                command::register_builtin_commands(side_reg);
+                io::FileService side_files{side};
+                for (const std::string& line :
+                     {std::string("KATMAN ad=PARSEL"), std::string("ALAN 0,0 20,0 20,15 0,15"),
+                      std::string("ALAN 20,0 40,0 40,15 20,15"),
+                      std::string("ALAN 40,0 60,0 60,15 40,15"),
+                      std::string("ALAN 0,15 20,15 20,30 0,30"),
+                      std::string("ALAN 20,15 40,15 40,30 20,30"),
+                      std::string("ALAN 40,15 60,15 60,30 40,30"), std::string("KATMAN ad=PARK"),
+                      std::string("TARAMA noktalar=21,16 39,16 39,29 21,29"),
+                      std::string("KATMAN ad=YOL"), std::string("ÇİZGİ -5,-4 65,-4"),
+                      std::string("KATMAN ad=AGAC"), std::string("DAİRE merkez=50,22 cevre=52,22")})
+                    (void)side.execute_line(line, command::Origin::Test);
+                (void)side.execute_line("FARKLIKAYDET \"" + plan.toStdString() + "\"",
+                                        command::Origin::Test);
+            }
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(project));
+            endCommand();
+            runScriptLine(QStringLiteral("DIŞREFERANS dosya=imar.pcad"));
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.75"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            const core::Document& doc = controller_->document();
+            std::int64_t plan_key     = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.entities().standalone(e) &&
+                    doc.entities().kind[e] == core::kBlockReferenceKind)
+                    plan_key = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+            const auto plan_slot = [&doc, &plan_key] {
+                return doc.slot_of(
+                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(plan_key)));
+            };
+            const auto clip_of = [&doc, &plan_slot] {
+                auto ref =
+                    core::block_reference_of(doc.geometry(), doc.entities().slot[plan_slot()]);
+                return ref ? ref.value().clip : std::vector<core::Point2>{};
+            };
+            check(plan_key != 0 && doc.entities().box_of(plan_slot()).max_x == 65'000,
+                  QStringLiteral("imar planı dış referans olarak bağlandı, bütün çiziliyor"));
+            shoot("blokkirp-oncesi");
+
+            // KIRP, PRESSED BY HAND, then the rectangle's two corners clicked.
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(plan_key));
+            QCoreApplication::processEvents();
+            QToolButton* clip_button = ribbonButton(actBlockClip_, true);
+            if (clip_button != nullptr) clickButton(clip_button, 60);
+            const command::Session* asking = controller_->session();
+            check(clip_button != nullptr && asking != nullptr && asking->waiting() &&
+                      QString::fromStdString(asking->prompt().message)
+                          .contains(QStringLiteral("ilk köşesi")),
+                  QStringLiteral("şeritteki Kırp düğmesi seçili referans için köşe soruyor"));
+            const core::Point2 from{10'000, -8'000};
+            const core::Point2 to{45'000, 25'000};
+            onCanvas(QEvent::MouseMove, screen(from), Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, screen(from), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(from), Qt::LeftButton);
+            onCanvas(QEvent::MouseMove, screen(to), Qt::NoButton);
+            QCoreApplication::processEvents();
+            shoot("blokkirp-dikdortgen");
+            onCanvas(QEvent::MouseButtonPress, screen(to), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(to), Qt::LeftButton);
+            endCommand();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            // Clicks land on what the pointer is near (`probe-yazili-nokta`), so
+            // the box is read from the document, not assumed.
+            const core::Box2 kept = doc.entities().box_of(plan_slot());
+            check(clip_of().size() == 4 && kept.min_x >= 9'000 && kept.max_x <= 46'000 &&
+                      kept.max_y <= 26'000,
+                  QStringLiteral("iki tıkla kırpıldı: çizilen kutu %1–%2 m doğu, en çok %3 m kuzey")
+                      .arg(static_cast<double>(kept.min_x) / 1000.0, 0, 'f', 1)
+                      .arg(static_cast<double>(kept.max_x) / 1000.0, 0, 'f', 1)
+                      .arg(static_cast<double>(kept.max_y) / 1000.0, 0, 'f', 1));
+            // THE PARK STAYS FILLED where the clip shows it: a fill-only face.
+            core::EmitBuffer cropped;
+            core::entity_outline(doc, plan_slot(), cropped);
+            std::size_t faces = 0;
+            for (std::size_t r = 0; r < cropped.run_total(); ++r)
+                if (!cropped.run_edge(r)) ++faces;
+            check(faces > 0,
+                  QStringLiteral("kesilen parkın dolgusu içeride kaldı (%1 yüz)").arg(faces));
+            shoot("blokkirp-dikdortgen-sonrasi");
+
+            // SELECTED, it shows where its boundary runs — dashed, on the
+            // screen only, as AutoCAD's clip frame.
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(plan_key));
+            canvas_->repaint();
+            QCoreApplication::processEvents();
+            if (!canvas_->grabCanvas().isNull())
+                check(canvas_->clipFrameCountForProbe() == 1,
+                      QStringLiteral("seçili kırpılmış referans sınırını kesik çizgiyle gösteriyor "
+                                     "(%1 çerçeve)")
+                          .arg(canvas_->clipFrameCountForProbe()));
+            shoot("blokkirp-secili");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+
+            // SNAPPED where it shows, and nowhere it does not.
+            runScriptLine(QStringLiteral("ÇİZGİ"));
+            QCoreApplication::processEvents();
+            const core::Point2 shown_corner{20'000, 15'000};
+            onCanvas(QEvent::MouseMove, screen(shown_corner) + QPointF(4.0, -3.0), Qt::NoButton);
+            const core::SnapResult* near_shown = canvas_->snapPreviewForProbe();
+            const bool took_shown              = near_shown != nullptr &&
+                                    near_shown->mode == core::SnapEndpoint &&
+                                    near_shown->point == shown_corner;
+            const core::Point2 hidden_corner{60'000, 30'000};
+            onCanvas(QEvent::MouseMove, screen(hidden_corner) + QPointF(4.0, -3.0), Qt::NoButton);
+            const core::SnapResult* near_hidden = canvas_->snapPreviewForProbe();
+            const bool took_hidden              = near_hidden != nullptr &&
+                                     near_hidden->mode == core::SnapEndpoint &&
+                                     near_hidden->point == hidden_corner;
+            check(took_shown && !took_hidden,
+                  QStringLiteral("görünen parsel köşesi yakalandı, sınır dışındaki köşe "
+                                 "yakalanmadı"));
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+
+            // A POLYGON, corner by corner, from the ribbon's own button; the
+            // right click closes it.
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(plan_key));
+            QCoreApplication::processEvents();
+            // Its own button on the block context tab: the family's face on the
+            // drawing tab runs whichever member was used last.
+            QToolButton* polygon_button = ribbonButton(actBlockClipPolygon_, true, true);
+            QCoreApplication::processEvents();
+            shoot("blokkirp-serit");
+            if (polygon_button != nullptr) clickButton(polygon_button, 60);
+            const core::Point2 outline[5] = {{5'000, -6'000},
+                                             {50'000, -6'000},
+                                             {58'000, 20'000},
+                                             {30'000, 33'000},
+                                             {2'000, 20'000}};
+            for (const core::Point2 c : outline) {
+                onCanvas(QEvent::MouseMove, screen(c), Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, screen(c), Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, screen(c), Qt::LeftButton);
+            }
+            QCoreApplication::processEvents();
+            shoot("blokkirp-cokgen-cizilirken");
+            onCanvas(QEvent::MouseButtonPress, screen(outline[4]), Qt::RightButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(outline[4]), Qt::RightButton);
+            endCommand();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            check(polygon_button != nullptr && clip_of().size() == 5,
+                  QStringLiteral("Çokgenle Kırp beş köşeli sınırı koydu (%1 köşe)")
+                      .arg(clip_of().size()));
+            shoot("blokkirp-cokgen");
+
+            // THE BOUNDARY DRAWN OUT, from the context tab's button.
+            const std::size_t before_line = doc.live_entity_count();
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(plan_key));
+            QCoreApplication::processEvents();
+            QToolButton* boundary_button = ribbonButton(actBlockClipBoundary_, true);
+            if (boundary_button != nullptr) clickButton(boundary_button, 60);
+            endCommand();
+            check(boundary_button != nullptr && doc.live_entity_count() == before_line + 1,
+                  QStringLiteral("Kırpma Sınırını Çiz sınırı kapalı çizgi olarak çizdi"));
+
+            // TAKEN OFF, by hand; one undo clips it again.
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(plan_key));
+            QCoreApplication::processEvents();
+            QToolButton* unclip_button = ribbonButton(actBlockUnclip_, true);
+            if (unclip_button != nullptr) clickButton(unclip_button, 60);
+            endCommand();
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            const bool whole =
+                clip_of().empty() && doc.entities().box_of(plan_slot()).max_x == 65'000;
+            shoot("blokkirp-kaldirildi");
+            runScriptLine(QStringLiteral("GERİAL"));
+            endCommand();
+            QCoreApplication::processEvents();
+            check(unclip_button != nullptr && whole && clip_of().size() == 5,
+                  QStringLiteral("Kırpmayı Kaldır bütün planı getirdi, tek geri alma yeniden "
+                                 "kırptı"));
+
+            // SAVED: a clip asks for a reader that knows one.
+            runScriptLine(QStringLiteral("KAYDET"));
+            endCommand();
+            QFile saved(project);
+            io::FileHeader header{};
+            if (saved.open(QIODevice::ReadOnly))
+                (void)saved.read(reinterpret_cast<char*>(&header), sizeof(header));
+            saved.close();
+            check(header.min_reader_version == io::kMinReaderVersionClip,
+                  QStringLiteral("kırpılmış referanslı proje biçim %1 istiyor")
+                      .arg(header.min_reader_version));
         }
     }
 

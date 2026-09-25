@@ -687,6 +687,9 @@ void MainWindow::buildRibbon()
     small(blocks, actBlock_);
     small(blocks, actExplode_);
     small(blocks, actXref_);
+    // THE THREE WAYS TO CLIP, one split button: the face runs the one used last.
+    family(blocks, {actBlockClip_, actBlockClipPolygon_, actBlockClipObject_}, Size::Small,
+           tr("Kırp"));
 
     // ================================================================ `Değiştir`
     SARibbonCategory* modifyTab = bar->addCategoryPage(tr("Değiştir"));
@@ -880,6 +883,7 @@ void MainWindow::buildRibbon()
     small(sources, actExport_);
     large(sources, actXref_);
     small(sources, actXrefReload_);
+    small(sources, actBlockClip_);
 
     // ================================================================== `Analiz`
     SARibbonCategory* analyseTab = bar->addCategoryPage(tr("Analiz"));
@@ -1564,6 +1568,15 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     blockEdit->addSmallAction(actBlock_);
     blockEdit->addSmallAction(actEntityInfo_);
     blockEdit->addSmallAction(actXrefReload_);
+    // CLIPPING THE SELECTED REFERENCE (TODOS C-14): every way to give the
+    // boundary, the boundary drawn out, and the clip taken off.
+    SARibbonPanel* clipping = block->addPanel(tr("Kırpma"));
+    clipping->setObjectName(QStringLiteral("ribbonBlockClipPanel"));
+    clipping->addLargeAction(actBlockClip_);
+    clipping->addSmallAction(actBlockClipPolygon_);
+    clipping->addSmallAction(actBlockClipObject_);
+    clipping->addSmallAction(actBlockClipBoundary_);
+    clipping->addLargeAction(actBlockUnclip_);
     closer(block);
 
     // ------------------------------------------------------- `Blok: <ad>`
@@ -2190,17 +2203,19 @@ QList<QAction*> MainWindow::ribbonLeftovers(std::initializer_list<command::Categ
     return added;
 }
 
-QToolButton* MainWindow::ribbonButton(const QAction* action, bool raise)
+QToolButton* MainWindow::ribbonButton(const QAction* action, bool raise, bool own)
 {
     SARibbonBar* bar = ribbonBar();
     if (bar == nullptr || action == nullptr) return nullptr;
-    // A member is pressed through its family's face.
+    // A member is pressed through its family's face, unless its own button
+    // elsewhere is asked for.
     const QAction* carried = action;
-    for (const RibbonFamily* f : std::as_const(families_))
-        if (f->members().contains(const_cast<QAction*>(action))) {
-            carried = f->head();
-            break;
-        }
+    if (!own)
+        for (const RibbonFamily* f : std::as_const(families_))
+            if (f->members().contains(const_cast<QAction*>(action))) {
+                carried = f->head();
+                break;
+            }
     for (SARibbonToolButton* button : bar->findChildren<SARibbonToolButton*>()) {
         if (button->defaultAction() != carried) continue;
         if (raise) {

@@ -220,6 +220,10 @@ public:
     /// from one lit by its first line.
     std::size_t selectionRunCountForProbe() const noexcept { return selection_runs_; }
 
+    /// For the probe: how many clip frames the selection drew at the last
+    /// overlay build — one per copy of each selected clipped reference.
+    std::size_t clipFrameCountForProbe() const noexcept { return clip_frames_; }
+
     /// The snap the marker shows now — what a click here would land on — or
     /// null when no aid fires. A probe moves the pointer over a drawn corner and
     /// asks whether the marker sits on it.
@@ -785,6 +789,12 @@ private:
     /// Scratch for a curve guide, kept so the frame path does not allocate.
     std::vector<core::Mm> curve_scratch_x_;
     std::vector<core::Mm> curve_scratch_y_;
+
+    /// Scratch for a selected reference's clip frame, for the same reason.
+    std::vector<render::ScreenPointF> clip_frame_;
+
+    /// Clip frames the selection drew at the last overlay build.
+    std::size_t clip_frames_{0};
 
     /// A measurement left on the canvas, and how many document changes the
     /// canvas had seen when it was taken: a mark older than the drawing

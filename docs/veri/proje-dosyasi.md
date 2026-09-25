@@ -98,12 +98,20 @@ kaybolmuş olan XDATA geri gelmez. 3. biçim dosyalar önceki sürümlerde de a�
 
 ### Biçim 4: dış referanslar
 
-Bu sürüm dosyayı **4. biçimle** yazar. Bir [dış referans](../komutlar/xref.md) taşıyan
+4. biçim bir [dış referans](../komutlar/xref.md) taşıyan
 çizimde dosya, dış referansın adını, yolunu (proje dosyasının klasörüne göre) ve
 boşaltılıp boşaltılmadığını tutar; **nesnelerini tutmaz** — onlar her açılışta kendi
 dosyalarından okunur. Böyle bir dosya en az 4. sürüm okuyucu ister: eski bir KentOSCad
 onu açmaz ve bunu söyler. Dış referansı olmayan bir çizimin dosyası önceki sürümlerde de
 açılır.
+
+### Biçim 5: kırpılmış blok referansları
+
+Bu sürüm dosyayı **5. biçimle** yazar. [BLOKKIRP](../komutlar/block_clip.md) ile kırpılmış
+bir blok referansı ya da dış referans, sınırının köşelerini kendi kaydında taşır; böyle bir
+referansı olan dosya en az 5. sürüm okuyucu ister, eski bir KentOSCad onu açmaz ve bunu
+söyler. Kırpılmış referansı olmayan bir çizimin dosyası önceki sürümlerde de açılır —
+kırpmayı kaldırıp kaydettiğinizde dosya yeniden eski okuyuculara açılır.
 
 ## Kaydetme kesintiye dayanıklıdır
 

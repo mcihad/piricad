@@ -67,6 +67,11 @@ struct EmitBuffer
     /// arrowhead, which a sheet prints black on black (TODOS C-17). Set with
     /// `mark_solid` right after `begin_run`.
     std::vector<std::uint8_t> run_solid;
+    /// 1 = the run is ONLY A FILL: a face a clip cut (`BLOKKIRP`), whose edge
+    /// along the cut is not a line anybody drew. The fill pass fills it; a
+    /// stroke, a snap and a pick edge walk past it, and the pick's face test
+    /// still finds it. Set with `mark_fill_only` right after `begin_run`.
+    std::vector<std::uint8_t> run_fill_only;
 
     /// THE STYLE, LAYER AND CAPTION OF A RUN, when they are not the entity's own.
     /// A block reference draws its definition's members, and a member keeps its
@@ -94,6 +99,7 @@ struct EmitBuffer
         run_closed.push_back(closed ? std::uint8_t{1} : std::uint8_t{0});
         run_hole.push_back(hole ? std::uint8_t{1} : std::uint8_t{0});
         run_solid.push_back(std::uint8_t{0});
+        run_fill_only.push_back(std::uint8_t{0});
         run_style.push_back(style);
         run_layer.push_back(layer);
         run_text.push_back(text);
@@ -115,6 +121,13 @@ struct EmitBuffer
     /// `begin_run`.
     void mark_solid() { run_solid.back() = std::uint8_t{1}; }
 
+    /// Makes the run in progress fill-only (`run_fill_only`). Undefined before
+    /// `begin_run`.
+    void mark_fill_only() { run_fill_only.back() = std::uint8_t{1}; }
+
+    /// Whether run `i` is a line of the drawing: anything but a fill-only run.
+    bool run_edge(std::size_t i) const noexcept { return run_fill_only[i] == 0; }
+
     /// Appends one vertex to the run in progress. Undefined before `begin_run`,
     /// which is a programming error rather than a data condition.
     void push_vertex(Mm x, Mm y)
@@ -135,6 +148,7 @@ struct EmitBuffer
         run_closed.clear();
         run_hole.clear();
         run_solid.clear();
+        run_fill_only.clear();
         run_style.clear();
         run_layer.clear();
         run_text.clear();

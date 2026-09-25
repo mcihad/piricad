@@ -938,6 +938,53 @@ TEST_CASE("YÜK: tür yükü yuvayla birlikte saklanır, bayt bayt geri okunur")
 }
 
 // ============================================================================
+// clip_path_to / clip_ring_to — a block clip's crop, Clipper2 behind the facade
+// ============================================================================
+
+TEST_CASE("clip_path_to: çizgi sınırın içindeki parçalarına ayrılır, bütün içerideki bütün kalır")
+{
+    const std::vector<Point2> window{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
+
+    // A line through the window keeps the piece between the crossings.
+    const auto through = clip_path_to({{-5'000, 5'000}, {15'000, 5'000}}, window);
+    REQUIRE_EQ(through.size(), std::size_t{1});
+    REQUIRE_EQ(through.front().size(), std::size_t{2});
+    CHECK_EQ(std::min(through.front()[0].x, through.front()[1].x), 0);
+    CHECK_EQ(std::max(through.front()[0].x, through.front()[1].x), 10'000);
+
+    // A U that leaves and comes back is two pieces; one wholly outside, none.
+    const auto u =
+        clip_path_to({{2'000, 2'000}, {2'000, 20'000}, {8'000, 20'000}, {8'000, 2'000}}, window);
+    CHECK_EQ(u.size(), std::size_t{2});
+    CHECK(clip_path_to({{20'000, 0}, {30'000, 0}}, window).empty());
+
+    // A closed ring inside, passed with its first vertex again at the end,
+    // comes back as one piece carrying every vertex — how the crop knows it is
+    // untouched. The window's winding does not matter.
+    const std::vector<Point2> inner{{2'000, 2'000}, {4'000, 2'000}, {4'000, 4'000}, {2'000, 2'000}};
+    std::vector<Point2> clockwise(window.rbegin(), window.rend());
+    const auto kept = clip_path_to(inner, clockwise);
+    REQUIRE_EQ(kept.size(), std::size_t{1});
+    CHECK_EQ(kept.front().size(), inner.size());
+}
+
+TEST_CASE("clip_ring_to: yüz sınırla kesişir; dışarıdaki yüz kalmaz")
+{
+    const std::vector<Point2> window{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
+    const auto half =
+        clip_ring_to({{5'000, 2'000}, {15'000, 2'000}, {15'000, 8'000}, {5'000, 8'000}}, window);
+    REQUIRE_EQ(half.size(), std::size_t{1});
+    Box2 box;
+    for (const Point2 p : half.front())
+        box.extend(p);
+    CHECK_EQ(box.min_x, 5'000);
+    CHECK_EQ(box.max_x, 10'000);
+    CHECK_EQ(box.min_y, 2'000);
+    CHECK_EQ(box.max_y, 8'000);
+    CHECK(clip_ring_to({{20'000, 0}, {30'000, 0}, {30'000, 5'000}}, window).empty());
+}
+
+// ============================================================================
 // simplify_ring — Clipper2, not a loop written here
 // ============================================================================
 

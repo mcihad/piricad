@@ -75,7 +75,11 @@ inline constexpr const char* kProjectExtension = ".pcad";
 /// 4 because a block record's `flags` and its old padding now say something:
 /// an EXTERNAL REFERENCE, its path, and the rows the file leaves out because
 /// the reference's own file supplies them (`kMinReaderVersionExternal`).
-inline constexpr std::uint32_t kFormatVersion = 4;
+///
+/// 5 because a block reference's payload has a second layout: a CLIPPED
+/// reference carries its boundary after layout 1's fields
+/// (`core::kBlockReferenceClipLayout`, `kMinReaderVersionClip`).
+inline constexpr std::uint32_t kFormatVersion = 5;
 
 /// The first version whose writer lays the slot-indexed blocks out by row. A
 /// file older than this may hold the geometry versions an edit left behind for
@@ -104,6 +108,13 @@ inline constexpr std::uint32_t kMinReaderVersionAngledGuide = 2;
 /// as an empty block it thinks is complete. Raising the field makes the
 /// refusal say what it is: this file needs a newer KentOSCad.
 inline constexpr std::uint32_t kMinReaderVersionExternal = 4;
+
+/// What a drawing holding a CLIPPED block reference writes (`BLOKKIRP`), and
+/// only such a drawing. The clip rides in the reference's payload, in a layout
+/// an older reader does not know and would refuse as a corrupt payload — a
+/// true refusal with a misleading reason, for one object, which here would be
+/// the whole file. Raising the field makes the refusal say what it is.
+inline constexpr std::uint32_t kMinReaderVersionClip = 5;
 
 /// Stable error tokens. `core::Error` carries an `ErrorCode` enum rather than the
 /// string code io.md R9 writes, so the token is placed at the FRONT of the

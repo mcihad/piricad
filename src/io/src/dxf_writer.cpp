@@ -419,6 +419,14 @@ public:
             report_.diagnostics.note(
                 Severity::Skipped, std::to_string(unknown_) +
                                        " nesne bu yapının tanımadığı türdeydi ve DXF'e yazılmadı.");
+        // A CLIP IS NOT CARRIED: AutoCAD keeps one in a SPATIAL_FILTER object
+        // libdxfrw cannot write, so the INSERT goes out whole and says so.
+        if (clipped_ != 0)
+            report_.diagnostics.note(
+                Severity::Degraded,
+                std::to_string(clipped_) +
+                    " blok referansının BLOKKIRP sınırı DXF'e taşınmadı; bu referanslar DXF'te "
+                    "kırpılmadan, bütün görünür.");
     }
 
 private:
@@ -662,6 +670,7 @@ private:
         auto def                      = core::block_reference_of(geo, slot);
         if (!def || def.value().block >= doc_.blocks().size()) return;
         const core::BlockReference& r = def.value();
+        if (!r.clip.empty()) ++clipped_;
         DRW_Insert ins;
         common(ins, e);
         ins.name        = dxf_symbol(doc_.blocks().at(r.block).name);
@@ -1213,6 +1222,8 @@ private:
     std::stop_token stop_;
     DxfReport report_;
     std::uint64_t unknown_{0};
+    /// Block references whose clip the DXF does not carry (`write_insert`).
+    std::uint64_t clipped_{0};
     std::uint64_t with_attributes_{0};
     bool cancelled_{false};
     std::vector<std::pair<unsigned, std::vector<std::shared_ptr<DRW_Variant>>>> pending_xdata_;

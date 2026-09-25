@@ -2834,3 +2834,62 @@ TEST_CASE("PROOF: DIŞREFERANS arayüz, komut satırı, betik ve oynatmadan ayn�
     CHECK_EQ(scr.undo.undo_depth(), std::size_t{1});
     std::filesystem::remove_all(dir, ec);
 }
+
+TEST_CASE("PROOF: BLOKKIRP arayüz, komut satırı, betik ve oynatmadan aynı belgeyi ve günlüğü "
+          "bırakır")
+{
+    // TODOS C-14, fourth stage. The GUI points at the reference and gives the
+    // rectangle's two corners; a line types them; a script names them. Key 1
+    // and 2 go into the block, 3 and 4 are its members, 5 the reference BLOK
+    // leaves and 6 the one inserted — turned and doubled, so the boundary is
+    // carried back through a real placement on every road alike.
+    const std::vector<const char*> setup = {"ÇİZGİ 0,0 100,0", "DAİRE merkez=80,0 cevre=90,0",
+                                            "BLOK ad=B taban=0,0 nesneler=1 nesneler=2",
+                                            "BLOKEKLE ad=B nokta=200,0 aci=30 olcek=2"};
+    prove_verb({.name     = "BLOKKIRP",
+                .id       = "core.block_clip",
+                .setup    = setup,
+                .objects  = {6},
+                .answers  = {Value::point(core::Point2{190'000, -20'000}),
+                             Value::point(core::Point2{300'000, 60'000})},
+                .typed    = "BLOKKIRP nesne=6 noktalar=190,-20 300,60",
+                .scripted = R"({"ad":"BLOKKIRP","komutlar":[{"cmd":"core.block_clip","args":{
+                    "nesne":[6],"noktalar":[[190000,-20000],[300000,60000]]}}]})"});
+
+    // A POLYGON, drawn corner by corner: the GUI ends it with an empty answer,
+    // which is what Enter is.
+    prove_verb({.name     = "BLOKKIRP tur=cokgen",
+                .id       = "core.block_clip",
+                .setup    = setup,
+                .objects  = {6},
+                .answers  = {Value::point(core::Point2{190'000, -20'000}),
+                             Value::point(core::Point2{300'000, -20'000}),
+                             Value::point(core::Point2{190'000, 90'000}), Value{}},
+                .typed    = "BLOKKIRP tur=cokgen nesne=6 noktalar=190,-20 300,-20 190,90",
+                .scripted = R"({"ad":"BLOKKIRP","komutlar":[{"cmd":"core.block_clip","args":{
+                    "tur":"cokgen","nesne":[6],
+                    "noktalar":[[190000,-20000],[300000,-20000],[190000,90000]]}}]})"});
+
+    // TAKEN OFF again, on every road.
+    std::vector<const char*> clipped = setup;
+    clipped.push_back("BLOKKIRP nesne=6 noktalar=190,-20 300,60");
+    prove_verb({.name     = "BLOKKIRP islem=kaldir",
+                .id       = "core.block_clip",
+                .setup    = clipped,
+                .objects  = {6},
+                .answers  = {},
+                .typed    = "BLOKKIRP islem=kaldir nesne=6",
+                .scripted = R"({"ad":"BLOKKIRP","komutlar":[{"cmd":"core.block_clip","args":{
+                    "islem":"kaldir","nesne":[6]}}]})"});
+
+    // AND THE JOURNAL REPLAYS to the same drawing and the same record.
+    Rig cli;
+    for (const char* line : clipped)
+        REQUIRE_MESSAGE(cli.bus.execute_line(line, Origin::CommandLine).ok(), line);
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        if (auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}); !r.ok())
+            FAIL_WITH(e.command_id, r.error().message);
+    CHECK_EQ(cli.doc.content_hash(), replay.doc.content_hash());
+    CHECK_EQ(what_happened(cli.journal), what_happened(replay.journal));
+}

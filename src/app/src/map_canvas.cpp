@@ -469,6 +469,32 @@ void MapCanvas::buildSelection()
     const core::EntityTable& table = doc.entities();
     const core::RingGeometry& geom = doc.geometry();
 
+    // A CLIPPED REFERENCE SHOWS ITS BOUNDARY while it is selected, dashed: the
+    // frame AutoCAD shows on the screen and never prints, so a user can see
+    // where the drawing stops on purpose (`BlockReference::clip`). Its batch
+    // is made first — the selection's own is taken by reference below and
+    // must be the last one made.
+    clip_frames_             = 0;
+    const std::size_t frames = nextBatch(palette_.selection.rgba(), 1.5f, true);
+    for (core::EntityId e : selected) {
+        if (e >= table.size() || !table.visible(e) || table.kind[e] != core::kBlockReferenceKind)
+            continue;
+        auto ref = core::block_reference_of(geom, table.slot[e]);
+        if (!ref || ref.value().clip.empty() || ref.value().block >= doc.blocks().size()) continue;
+        const core::BlockReference& placed = ref.value();
+        const core::Point2 at              = core::block_reference_insertion(geom, table.slot[e]);
+        const core::Point2 base            = doc.blocks().at(placed.block).base;
+        for (int row = 0; row < static_cast<int>(placed.rows); ++row)
+            for (int col = 0; col < static_cast<int>(placed.columns); ++col) {
+                clip_frame_.clear();
+                for (const core::Point2 p : placed.clip)
+                    clip_frame_.push_back(render::to_f(
+                        view_.to_screen(core::place_block_point(placed, at, base, p, col, row))));
+                addRun(frames, clip_frame_, true);
+                ++clip_frames_;
+            }
+    }
+
     // Taken by reference AFTER the last `nextBatch` of this function, which is
     // the only shape in which that is safe: nothing below grows the vector.
     render::OverlayBatch& batch =
@@ -527,7 +553,9 @@ void MapCanvas::buildSelection()
                 std::size_t at = 0;
                 for (std::size_t r = 0; r < outline.run_total(); ++r) {
                     const std::size_t n = outline.run_count[r];
-                    if (n >= 2) {
+                    // A fill-only run's edge is a clip's cut; the highlight
+                    // lights what is drawn (`EmitBuffer::run_fill_only`).
+                    if (n >= 2 && outline.run_edge(r)) {
                         const auto before = static_cast<std::uint32_t>(batch.xs.size());
                         for (std::size_t v = at; v < at + n; ++v) {
                             const render::ScreenPointF q = render::to_f(
@@ -1572,7 +1600,8 @@ void MapCanvas::addWorldRun(std::size_t batch, std::span<const core::Mm> xs,
 void MapCanvas::addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, const core::Xform& map)
 {
     for (std::size_t r = 0; r < buf.run_total(); ++r)
-        addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, map);
+        if (buf.run_edge(r))
+            addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, map);
 }
 
 void MapCanvas::addGhost(std::size_t batch, const core::Xform& map,

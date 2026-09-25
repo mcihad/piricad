@@ -770,9 +770,10 @@ private:
                                     std::initializer_list<const char*> prefixes);
 
     /// The ribbon's button for `action` — a family member's is its family's
-    /// split button — with its tab raised when `raise`, so a click reaches it the
-    /// way a hand's would. Null when the ribbon does not show the action.
-    QToolButton* ribbonButton(const QAction* action, bool raise = true);
+    /// split button, unless `own` asks for a button of the action's own on
+    /// some other panel — with its tab raised when `raise`, so a click reaches
+    /// it the way a hand's would. Null when the ribbon does not show the action.
+    QToolButton* ribbonButton(const QAction* action, bool raise = true, bool own = false);
 
     /// Every button of the ribbon, on every tab, in the order the tabs show them.
     QList<QToolButton*> ribbonButtons() const;
@@ -1086,8 +1087,13 @@ private:
     QAction* actBlockLibrary_{nullptr}; ///< BLOKEKLE dosya= — a block from a library file
     QAction* actXref_{nullptr};         ///< DIŞREFERANS — a drawing kept in its own file
     QAction* actXrefReload_{nullptr}; ///< DIŞREFERANS islem=yenile — every reference, read again
-    QAction* actBlockSave_{nullptr};  ///< the open block edit, saved into the definition
-    QAction* actBlockCancel_{nullptr}; ///< the open block edit, given up
+    QAction* actBlockClip_{nullptr};  ///< BLOKKIRP — a reference clipped by a rectangle
+    QAction* actBlockClipPolygon_{nullptr};  ///< BLOKKIRP tur=cokgen — by a polygon
+    QAction* actBlockClipObject_{nullptr};   ///< BLOKKIRP tur=cizgi — by a closed object
+    QAction* actBlockClipBoundary_{nullptr}; ///< BLOKKIRP islem=sinir — the boundary drawn out
+    QAction* actBlockUnclip_{nullptr};       ///< BLOKKIRP islem=kaldir — the clip taken off
+    QAction* actBlockSave_{nullptr};         ///< the open block edit, saved into the definition
+    QAction* actBlockCancel_{nullptr};       ///< the open block edit, given up
 
     /// The tab that is up while a block is out for editing: its save and its
     /// way back, and the block's name in its title.

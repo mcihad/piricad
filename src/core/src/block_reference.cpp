@@ -2,6 +2,7 @@
 #include "kentos_cad/core/block_reference.hpp"
 
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -20,6 +21,77 @@ namespace {
 
 constexpr std::size_t kPayloadBytes = kind::kHeaderBytes + std::size_t{4} + std::size_t{8} * 4 + 8 +
                                       2 + 2 + 8 + 8 + std::size_t{8} * 4;
+
+/// How many vertices a clip may carry: far beyond any boundary a hand draws,
+/// and a bound on what a payload off disk may claim.
+constexpr std::uint32_t kMaxClipVertices = 65'535;
+
+/// `runs`, cropped to `clip`, into `out` — in DEFINITION space, before any
+/// placement, so one clip crops every copy alike.
+///
+/// An open run keeps its pieces inside. A closed run wholly inside is kept as
+/// it is. One the boundary cuts becomes two things: the pieces of its outline
+/// inside, open, and its face inside, closed and FILL-ONLY
+/// (`EmitBuffer::run_fill_only`) — filled where it fills, and never stroked
+/// along the cut, which is a line nobody drew. A caption shows whole or not at
+/// all, by where it stands. The clipping is Clipper2's, through the facade in
+/// `core/offset.hpp` (CLAUDE.md 5.16).
+void clip_runs(const EmitBuffer& runs, std::span<const Point2> clip, EmitBuffer& out)
+{
+    const std::vector<Point2> window(clip.begin(), clip.end());
+    const auto copy_run = [&runs, &out](std::size_t r, bool closed) {
+        out.begin_run(closed, runs.run_hole[r] != 0, runs.run_style[r], runs.run_layer[r],
+                      runs.run_text[r]);
+        if (runs.run_solid[r] != 0) out.mark_solid();
+        if (!runs.run_edge(r)) out.mark_fill_only();
+        const auto xs = runs.run_xs(r);
+        const auto ys = runs.run_ys(r);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            out.push_vertex(xs[v], ys[v]);
+    };
+
+    std::vector<Point2> path;
+    for (std::size_t r = 0; r < runs.run_total(); ++r) {
+        const auto xs = runs.run_xs(r);
+        const auto ys = runs.run_ys(r);
+        if (xs.empty()) continue;
+        if (runs.run_text[r] != kNoRunText) {
+            if (inside_clip(clip, Point2{xs[0], ys[0]})) copy_run(r, runs.run_closed[r] != 0);
+            continue;
+        }
+        const bool closed = runs.run_closed[r] != 0;
+        path.clear();
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            path.push_back(Point2{xs[v], ys[v]});
+        if (closed) path.push_back(path.front());
+        const std::vector<std::vector<Point2>> pieces = clip_path_to(path, window);
+        // WHOLE AND INSIDE: one piece carrying every vertex of the run, which
+        // is what an untouched run comes back as.
+        if (closed && pieces.size() == 1 && pieces.front().size() == path.size()) {
+            copy_run(r, true);
+            continue;
+        }
+        // A fill-only run is a face already; it has no outline to keep.
+        if (runs.run_edge(r))
+            for (const std::vector<Point2>& piece : pieces) {
+                if (piece.size() < 2) continue;
+                out.begin_run(false, false, runs.run_style[r], runs.run_layer[r], runs.run_text[r]);
+                for (const Point2 q : piece)
+                    out.push_vertex(q.x, q.y);
+            }
+        if (!closed) continue;
+        path.pop_back();
+        for (const std::vector<Point2>& face : clip_ring_to(path, window)) {
+            if (face.size() < 3) continue;
+            out.begin_run(true, runs.run_hole[r] != 0, runs.run_style[r], runs.run_layer[r],
+                          runs.run_text[r]);
+            if (runs.run_solid[r] != 0) out.mark_solid();
+            out.mark_fill_only();
+            for (const Point2 q : face)
+                out.push_vertex(q.x, q.y);
+        }
+    }
+}
 
 Point2 insertion_of(const RingGeometry& geom, std::uint32_t slot)
 {
@@ -92,10 +164,35 @@ bool style_by_block(const Document& doc, StyleId style)
            a.src_dash == Source::ByBlock || a.src_fill == Source::ByBlock;
 }
 
+bool inside_clip(std::span<const Point2> clip, Point2 p) noexcept
+{
+    if (clip.size() < 3) return true;
+    // The crossing count `ring_contains` makes, over the corners as they are
+    // stored — no copy, so the test the snap asks per point allocates nothing
+    // — and ON THE BOUNDARY counts as inside: a corner the clip was drawn
+    // through is shown, and snapped to.
+    bool inside = false;
+    for (std::size_t i = 0, j = clip.size() - 1; i < clip.size(); j = i++) {
+        const Point2 a     = clip[j];
+        const Point2 b     = clip[i];
+        const Int128 cross = (static_cast<Int128>(b.x - a.x) * (p.y - a.y)) -
+                             (static_cast<Int128>(b.y - a.y) * (p.x - a.x));
+        if (cross == 0 && p.x >= std::min(a.x, b.x) && p.x <= std::max(a.x, b.x) &&
+            p.y >= std::min(a.y, b.y) && p.y <= std::max(a.y, b.y))
+            return true;
+        if ((b.y > p.y) == (a.y > p.y)) continue;
+        // Where the edge crosses the probe's row, compared without dividing:
+        // which way the edge runs says which side of it counts.
+        const bool upward = b.y > a.y;
+        if (upward ? cross > 0 : cross < 0) inside = !inside;
+    }
+    return inside;
+}
+
 std::vector<std::uint8_t> encode_block_reference(const BlockReference& ref)
 {
     std::vector<std::uint8_t> out;
-    kind::put_header(out, kBlockReferenceLayout, 0);
+    kind::put_header(out, ref.clip.empty() ? kBlockReferenceLayout : kBlockReferenceClipLayout, 0);
     put_u32(out, ref.block);
     put_i64(out, ref.sx.num);
     put_i64(out, ref.sx.den);
@@ -110,6 +207,13 @@ std::vector<std::uint8_t> encode_block_reference(const BlockReference& ref)
     put_mm(out, ref.bounds.min_y);
     put_mm(out, ref.bounds.max_x);
     put_mm(out, ref.bounds.max_y);
+    if (!ref.clip.empty()) {
+        put_u32(out, static_cast<std::uint32_t>(ref.clip.size()));
+        for (const Point2 p : ref.clip) {
+            put_mm(out, p.x);
+            put_mm(out, p.y);
+        }
+    }
     return out;
 }
 
@@ -117,14 +221,18 @@ Result<BlockReference> decode_block_reference(std::span<const std::uint8_t> payl
 {
     WireReader in(payload);
     kind::Header h;
-    if (payload.size() != kPayloadBytes || !kind::read_header(in, h))
-        return err(ErrorCode::ParseError, "Blok referansı yükü " + std::to_string(kPayloadBytes) +
-                                              " bayt olmalı; verilen " +
-                                              std::to_string(payload.size()) + ".");
-    if (h.version != kBlockReferenceLayout)
+    if (payload.size() < kPayloadBytes || !kind::read_header(in, h))
+        return err(ErrorCode::ParseError,
+                   "Blok referansı yükü en az " + std::to_string(kPayloadBytes) +
+                       " bayt olmalı; verilen " + std::to_string(payload.size()) + ".");
+    if (h.version != kBlockReferenceLayout && h.version != kBlockReferenceClipLayout)
         return err(ErrorCode::Unsupported,
                    "Blok referansı yükünün düzeni bu yapının tanımadığı bir sürümde: " +
                        std::to_string(h.version));
+    if (h.version == kBlockReferenceLayout && payload.size() != kPayloadBytes)
+        return err(ErrorCode::ParseError, "Blok referansı yükü " + std::to_string(kPayloadBytes) +
+                                              " bayt olmalı; verilen " +
+                                              std::to_string(payload.size()) + ".");
     BlockReference ref;
     ref.block          = in.u32();
     ref.sx.num         = in.i64();
@@ -140,6 +248,24 @@ Result<BlockReference> decode_block_reference(std::span<const std::uint8_t> payl
     ref.bounds.min_y   = in.mm();
     ref.bounds.max_x   = in.mm();
     ref.bounds.max_y   = in.mm();
+    if (h.version == kBlockReferenceClipLayout) {
+        // Bounded against the bytes that are actually there: a count off disk
+        // is a claim, and a claim is checked before anything is reserved.
+        const std::size_t left = payload.size() - kPayloadBytes;
+        if (left < 4)
+            return err(ErrorCode::ParseError, "Kırpılmış blok referansının köşe sayısı eksik.");
+        const std::uint32_t count = in.u32();
+        if (count < 3 || count > kMaxClipVertices || left != 4 + std::size_t{16} * count)
+            return err(ErrorCode::ParseError,
+                       "Kırpılmış blok referansının köşeleri yükle uyuşmuyor (" +
+                           std::to_string(count) + " köşe).");
+        ref.clip.reserve(count);
+        for (std::uint32_t i = 0; i < count; ++i) {
+            const Mm x = in.mm();
+            const Mm y = in.mm();
+            ref.clip.push_back(Point2{x, y});
+        }
+    }
     if (ref.block == kNoBlock)
         return err(ErrorCode::ValidationFailed, "Blok referansı bir blok tanımı adlandırmıyor.");
     if (ref.sx.den <= 0 || ref.sy.den <= 0 || ref.sx.num == 0 || ref.sy.num == 0)
@@ -174,6 +300,20 @@ Point2 place_block_point(const BlockReference& ref, Point2 insertion, Point2 bas
     return Point2{insertion.x + turned.x, insertion.y + turned.y};
 }
 
+Point2 unplace_block_point(const BlockReference& ref, Point2 insertion, Point2 base,
+                           Point2 world) noexcept
+{
+    // The steps of `place_block_point` backwards: unplace, turn back, unscale.
+    // A ratio's sign lives in its numerator and `mul_div_round` divides by a
+    // positive number, so the sign moves across.
+    const Point2 turned{world.x - insertion.x, world.y - insertion.y};
+    const Point2 local = rotate_udeg(turned, Point2{0, 0}, -ref.rotation_udeg);
+    const auto unscale = [](Mm v, Ratio r) {
+        return r.num < 0 ? mul_div_round(v, -r.den, -r.num) : mul_div_round(v, r.den, r.num);
+    };
+    return Point2{base.x + unscale(local.x, ref.sx), base.y + unscale(local.y, ref.sy)};
+}
+
 bool expand_block_reference(const Document& doc, EntityId e, EmitBuffer& into, int depth)
 {
     const EntityTable& ents  = doc.entities();
@@ -204,6 +344,13 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
             !doc.layers()[ents.layer[m]].visible)
             continue;
         member_runs(doc, m, scratch, depth);
+        if (!ref.clip.empty()) {
+            // CROPPED WHERE IT IS DEFINED: the clip is in the definition's own
+            // coordinates, so every copy below is cropped alike.
+            EmitBuffer cropped;
+            clip_runs(scratch, ref.clip, cropped);
+            scratch = std::move(cropped);
+        }
         if (scratch.run_total() == 0) continue;
 
         // What the member keeps of its own: its layer, unless it is the
@@ -231,6 +378,7 @@ bool expand_block_definition(const Document& doc, Point2 insertion, const BlockR
                     into.begin_run(scratch.run_closed[r] != 0, scratch.run_hole[r] != 0, rs, rl,
                                    rt);
                     if (scratch.run_solid[r] != 0) into.mark_solid();
+                    if (!scratch.run_edge(r)) into.mark_fill_only();
                     const auto xs = scratch.run_xs(r);
                     const auto ys = scratch.run_ys(r);
                     for (std::size_t v = 0; v < xs.size(); ++v) {
@@ -252,10 +400,17 @@ Box2 block_reference_bounds(const Document& doc, Point2 insertion, const BlockRe
     const BlockDef& def     = doc.blocks().at(ref.block);
     const EntityTable& ents = doc.entities();
     EmitBuffer scratch;
+    EmitBuffer cropped;
     for (const EntityKey key : def.members) {
         const EntityId m = doc.slot_of(key);
         if (m == kNoEntity || !ents.alive(m)) continue;
         member_runs(doc, m, scratch, 0);
+        // The box of what is DRAWN: a clipped reference's box is its crop's.
+        if (!ref.clip.empty()) {
+            cropped.clear();
+            clip_runs(scratch, ref.clip, cropped);
+            std::swap(scratch, cropped);
+        }
         for (int row = 0; row < static_cast<int>(ref.rows); ++row)
             for (int col = 0; col < static_cast<int>(ref.columns); ++col)
                 for (std::size_t v = 0; v < scratch.xs.size(); ++v)

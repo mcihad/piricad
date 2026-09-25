@@ -157,14 +157,19 @@ enum class Glyph {
     // shared the two-outlines mark with `BLOKEKLE`. Each of the five does a
     // different thing to the same objects, which is exactly when an icon has to
     // say which.
-    Scale,        ///< a small square growing into a large one: ÖLÇEKLE
-    Mirror,       ///< a shape and its reflection across a dashed axis: AYNALA
-    Array,        ///< a grid of small squares: DİZİ
-    BlockInsert,  ///< a square dropped onto an insertion cross: BLOKEKLE
-    BlockEdit,    ///< a block's square with the pencil over it: BLOKDÜZENLE
-    BlockBase,    ///< a block's square, its base cross moved to a new corner: BLOKDÜZENLE taban
-    Xref,         ///< a page and the dashed square it becomes on the sheet: DIŞREFERANS
-    XrefReload,   ///< a dashed square inside a turning arrow: DIŞREFERANS islem=yenile
+    Scale,       ///< a small square growing into a large one: ÖLÇEKLE
+    Mirror,      ///< a shape and its reflection across a dashed axis: AYNALA
+    Array,       ///< a grid of small squares: DİZİ
+    BlockInsert, ///< a square dropped onto an insertion cross: BLOKEKLE
+    BlockEdit,   ///< a block's square with the pencil over it: BLOKDÜZENLE
+    BlockBase,   ///< a block's square, its base cross moved to a new corner: BLOKDÜZENLE taban
+    Xref,        ///< a page and the dashed square it becomes on the sheet: DIŞREFERANS
+    XrefReload,  ///< a dashed square inside a turning arrow: DIŞREFERANS islem=yenile
+    BlockClip,   ///< a crop's two brackets over a circle they cut: BLOKKIRP
+    BlockClipPolygon,  ///< a dashed polygon over a circle it cuts: BLOKKIRP tur=cokgen
+    BlockClipObject,   ///< a drawn ring over a circle it cuts: BLOKKIRP tur=cizgi
+    BlockClipBoundary, ///< the crop's frame drawn out as a line: BLOKKIRP islem=sinir
+    BlockUnclip,       ///< a whole circle, the crop's brackets struck: BLOKKIRP islem=kaldir
     MeasureAngle, ///< two arms and the sweep between them: AÇIÖLÇ, which wore ÖLÇ's own mark
 
     // ---- the corner, end and piece tools the column did not have --------------

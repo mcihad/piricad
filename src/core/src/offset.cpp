@@ -205,6 +205,40 @@ Mm2 ring_area(const std::vector<Point2>& ring) noexcept
     return static_cast<Mm2>(twice / 2);
 }
 
+std::vector<std::vector<Point2>> clip_path_to(const std::vector<Point2>& path,
+                                              const std::vector<Point2>& window)
+{
+    std::vector<std::vector<Point2>> out;
+    if (path.size() < 2 || window.size() < 3) return out;
+    Clipper2Lib::Clipper64 clipper;
+    clipper.AddOpenSubject(Clipper2Lib::Paths64{to_path(path)});
+    clipper.AddClip(Clipper2Lib::Paths64{to_path(window)});
+    Clipper2Lib::Paths64 closed;
+    Clipper2Lib::Paths64 open;
+    clipper.Execute(Clipper2Lib::ClipType::Intersection, Clipper2Lib::FillRule::NonZero, closed,
+                    open);
+    out.reserve(open.size());
+    for (const Clipper2Lib::Path64& piece : open)
+        out.push_back(from_path(piece));
+    return out;
+}
+
+std::vector<std::vector<Point2>> clip_ring_to(const std::vector<Point2>& ring,
+                                              const std::vector<Point2>& window)
+{
+    std::vector<std::vector<Point2>> out;
+    if (ring.size() < 3 || window.size() < 3) return out;
+    Clipper2Lib::Clipper64 clipper;
+    clipper.AddSubject(Clipper2Lib::Paths64{to_path(ring)});
+    clipper.AddClip(Clipper2Lib::Paths64{to_path(window)});
+    Clipper2Lib::Paths64 faces;
+    clipper.Execute(Clipper2Lib::ClipType::Intersection, Clipper2Lib::FillRule::NonZero, faces);
+    out.reserve(faces.size());
+    for (const Clipper2Lib::Path64& face : faces)
+        out.push_back(from_path(face));
+    return out;
+}
+
 std::vector<Point2> simplify_ring(const std::vector<Point2>& ring, Mm tolerance, bool closed)
 {
     // NOTHING CARRIES LESS THAN NO INFORMATION, and a run too short to thin has

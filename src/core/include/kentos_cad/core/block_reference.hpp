@@ -44,13 +44,29 @@ struct BlockReference
     Mm row_spacing{0};             ///< between copies along y, unscaled, in the turned frame
     Box2 bounds{};                 ///< the drawn form's box, computed when the reference is made
 
+    /// THE CLIP (TODOS C-14, `BLOKKIRP`): a closed boundary in the DEFINITION's
+    /// own coordinates, so it turns, scales and moves with the reference and
+    /// crops every copy of a grid alike. Empty draws the whole definition. What
+    /// lies outside is not drawn, not snapped to and not picked; the members
+    /// themselves are untouched.
+    std::vector<Point2> clip;
+
     /// Member-wise equality.
     friend constexpr bool operator==(const BlockReference&,
                                      const BlockReference&) noexcept = default;
 };
 
-/// The payload layout version `encode_block_reference` writes.
+/// The payload layout version `encode_block_reference` writes for a reference
+/// with no clip — every reference before clips existed, byte for byte.
 inline constexpr std::uint16_t kBlockReferenceLayout = 1;
+
+/// The layout of a CLIPPED reference: layout 1's fields, then the clip's
+/// vertex count and vertices.
+inline constexpr std::uint16_t kBlockReferenceClipLayout = 2;
+
+/// Whether `p` is inside `clip`, or on its boundary — the clip's own test, so
+/// the drawing, the snap and the pick agree about what a clip shows.
+bool inside_clip(std::span<const Point2> clip, Point2 p) noexcept;
 
 /// How deep references inside definitions are followed when drawing.
 inline constexpr int kMaxBlockDepth = 32;
@@ -72,6 +88,13 @@ Point2 block_reference_insertion(const RingGeometry& geom, std::uint32_t slot);
 /// of its grid: `insertion + rotate(scale(p − base) + grid offset)`.
 Point2 place_block_point(const BlockReference& ref, Point2 insertion, Point2 base, Point2 p,
                          int column, int row) noexcept;
+
+/// The definition-space point that copy (0, 0) of `ref`, placed at
+/// `insertion`, lands at `world` — `place_block_point` undone, to the
+/// millimetre. What a boundary drawn over a reference is carried back
+/// through, so it can be kept where the definition is (`BlockReference::clip`).
+Point2 unplace_block_point(const BlockReference& ref, Point2 insertion, Point2 base,
+                           Point2 world) noexcept;
 
 /// Appends the members of the reference `e` places, transformed, as runs — a
 /// member's own style, layer and caption on each run (`EmitBuffer::run_style`
