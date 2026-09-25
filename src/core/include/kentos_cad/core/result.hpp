@@ -53,6 +53,13 @@ struct Error
     /// correct (kentoscad.md §3, §13).
     std::string message;
 
+    /// THE WAY OUT, when there is one: a command line that does what the
+    /// refused call could not — `YERELKOPYA nesneler=12` for an edit of an
+    /// object a linked file owns (TODOS F-02). Every client can offer it: the
+    /// shell as a button beside the message, the command line as the next line
+    /// to type, an agent as its next step. Empty when there is none.
+    std::string remedy;
+
     /// An `Internal` error with no message. Exists so `Error` can sit inside a
     /// variant and be default-constructed; a real failure always sets both.
     Error() = default;
@@ -67,6 +74,14 @@ struct Error
 inline Error err(ErrorCode c, std::string m)
 {
     return Error{c, std::move(m)};
+}
+
+/// The same, with the command line that is the way out (`Error::remedy`).
+inline Error err(ErrorCode c, std::string m, std::string remedy)
+{
+    Error e{c, std::move(m)};
+    e.remedy = std::move(remedy);
+    return e;
 }
 
 /// A value or the reason there is none.

@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 115 (102 tanesi onay ister)
-- Katalog parmak izi: `3441478472014667903`
+- Araç sayısı: 116 (103 tanesi onay ister)
+- Katalog parmak izi: `5397145271987286574`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1069,6 +1069,22 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_local_copy` — Yerel Kopya
+
+Bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu çizime alır; bağlantı olduğu gibi kalır.
+Komut: YERELKOPYA (LOCALCOPY, YK)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kopyası alınacak dış referans ya da onun nesneleri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ad` | string | hayır | Kopyası alınacak dış referansın adı; nesneler yerine (metin) |
+| `katman` | string | hayır | Kopyaların katmanı; yoksa her biri kaynağındaki katmanın adıyla (metin) |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | Yalnız bu dikdörtgene değen nesneler: iki köşe — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_match_style` — Stil Kopyala

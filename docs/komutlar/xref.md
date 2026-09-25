@@ -7,7 +7,8 @@ ya da makineye taşıdığınızda neyin kendiliğinden bulunduğunu bileceksini
 
 ## Ne yapar
 
-Bir proje (`.pcad`), DXF ya da DWG dosyasını çizime **dış referans** olarak bağlar. Dosya
+Bir proje (`.pcad`), DXF, DWG ya da **CBS dosyasını** (GeoPackage, Shapefile) çizime
+**dış referans** olarak bağlar. Dosya
 çizimde, **kendi koordinatlarında, yerinde** çizilir; köşelerine, merkezlerine ve
 kenarlarına her zamanki gibi yakalanırsınız. Ama **düzenlenmez**: onu değiştirmenin yeri
 kendi dosyasıdır. Kaynak değişince `DIŞREFERANS islem=yenile` değişikliği getirir; çizimi
@@ -35,6 +36,20 @@ uyarı hangi dosyanın eksik olduğunu söyler. `islem=yol` ile yeni yerini gös
 
 Dış referans taşıyan bir proje dosyası, bu sürümden eski KentOSCad'lerde açılmaz; eski
 sürüm bunu "daha yeni bir okuyucu istiyor" diye söyler ([Proje dosyası](../veri/proje-dosyasi.md)).
+
+### İçe almak ile bağlamak
+
+İki ayrı iştir. [İÇEAKTAR](import.md) dosyanın nesnelerini **bir kez kopyalar**: gelen
+nesneler çizimin kendisidir, düzenlenir, dosya sonradan değişse de değişmez.
+DIŞREFERANS dosyayı **canlı bağlar**: nesneleri her açılışta ve yenilemede dosyasından
+okunur, burada düzenlenmez. Bağlı bir dosyanın bir nesnesini burada değiştirmek
+isterseniz program [YERELKOPYA](local_copy.md)'yı önerir: nesnenin çizimin olan bir
+kopyası, bağlantı yerinde.
+
+Bir **CBS dosyası** bağlandığında katmanları ve **bütün alanları** gelir: parsellerin
+ada ve parsel numaraları öznitelik olarak okunur (İÇEAKTAR alanları yalnız `alanlar=`
+ile ister). Dosyanın kendi koordinat sistemi okunur ve bir proje dosyası gibi çizimin
+sistemine taşınır.
 
 ### Katmanlar ve bloklar
 
@@ -227,8 +242,10 @@ yazılır.
 | `'X' zaten yüklü; …` / `'X' zaten boşaltılmış.` | İşlem zaten yapılmış | — |
 | `'X' boşaltılmış; bağlanacak bir şey yok. …` | Boşaltılmış dış referans çizime katılmak istendi | Önce `islem=yukle` |
 | `'X' 'Y' bloğunun içinde kullanılıyor; …` | Kaldırılacak dış referans başka bir bloğun içinde | O bloktan [BLOKDÜZENLE](block_edit.md) ile çıkarın |
-| `'X' bir dış referansın parçası; tanımı kendi dosyasında düzenlenir. …` | [BLOKDÜZENLE](block_edit.md) bir dış referansa uygulandı | Dosyasını düzenleyip `islem=yenile`; burada düzenlemek için önce `islem=bagla` |
-| `'X' bir dış referans; patlatılamaz. …` | [PATLAT](explode.md) bir dış referansa uygulandı | Önce `islem=bagla` |
+| `'X' bir dış referansın parçası; tanımı kendi dosyasında düzenlenir. …` | [BLOKDÜZENLE](block_edit.md) bir dış referansa uygulandı | Dosyasını düzenleyip `islem=yenile`; burada düzenlemek için önerilen [YERELKOPYA](local_copy.md) ya da `islem=bagla` |
+| `'X' bir dış referans; patlatılamaz. …` | [PATLAT](explode.md) bir dış referansa uygulandı | Önerilen [YERELKOPYA](local_copy.md) ya da önce `islem=bagla` |
+| `Bu nesne 'X' dış referansının parçası ('dosya'); kendi dosyasında düzenlenir …` | Bağlı dosyanın bir nesnesine değer yazılmak istendi | Önerilen [YERELKOPYA](local_copy.md) |
+| `Bu yapıda CBS okuyucu (GDAL) yok; dosya dış referans olarak bağlanamaz.` | GDAL'sız derlenmiş bir yapı | GDAL'lı bir yapı kullanın |
 | `uyarı: 'X' dış referansı yüklenemedi: … Çizim açıldı; referans boş çizilir. …` | Açılışta kaynak okunamadı | `islem=yol` ile yeni yerini gösterin |
 | `uyarı: 'X' dış referansı kayıtlı yerinde yoktu, proje klasöründe bulundu: …` | Kaynak proje dosyasının yanında adıyla bulundu | Bir şey gerekmez; kaydettiğinizde yeni yer yazılır |
 | `Dosya motoru bağlı değil; dış referans bu yapıda okunamıyor.` | Dosya motoru olmayan bir istemci | Uygulamayı ya da dosya motoru bağlı bir istemciyi kullanın |
@@ -254,5 +271,6 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 - [BLOKDÜZENLE](block_edit.md) — çizime katılmış (bağlanmış) bir bloğu düzenlemek
 - [BLOKKIRP](block_clip.md) — dış referansın yalnız bir bölgesini göstermek
 - [İÇEAKTAR](import.md) — bir dosyanın nesnelerini çizimin **kendi** nesneleri yapmak
+- [YERELKOPYA](local_copy.md) — bağlı bir dosyanın nesnelerinin düzenlenebilir kopyası
 - [Blok referansı türü](../nesneler/blokreferansi.md)
 - [Proje dosyası](../veri/proje-dosyasi.md)

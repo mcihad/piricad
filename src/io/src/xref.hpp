@@ -28,6 +28,11 @@ bool looks_like_dxf(const std::string& path);
 /// `.dwg` by extension, case-folded.
 bool looks_like_dwg(const std::string& path);
 
+/// A GIS file the vector reader may read — GeoPackage, Shapefile and the rest of
+/// the allow-list (`vector_formats`) — by extension; never a DXF, which has its
+/// own reader.
+bool looks_like_gis(const std::string& path);
+
 /// What a reader should be told coordinates are in: the EPSG code of a
 /// resolved system, its id otherwise.
 std::string crs_for_reading(const core::Crs& crs);

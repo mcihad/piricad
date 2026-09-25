@@ -836,6 +836,19 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         break;
     }
 
+    case Glyph::XrefLocalCopy:
+        // THE DASHED SQUARE AND THE SOLID ONE IT IS COPIED TO: a linked file's
+        // object, not this drawing's, and its copy that is — the link stays.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(3.4, 3.4, 9.2, 9.2));
+        p.setPen(stroke(c, 1.4));
+        p.drawRect(QRectF(11.4, 11.4, 9.2, 9.2));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(8.0, 8.0), QPointF(14.6, 14.6));
+        p.drawLine(QPointF(14.6, 14.6), QPointF(14.6, 11.2));
+        p.drawLine(QPointF(14.6, 14.6), QPointF(11.2, 14.6));
+        break;
+
     case Glyph::BlockClip:
     case Glyph::BlockClipPolygon:
     case Glyph::BlockClipObject: {

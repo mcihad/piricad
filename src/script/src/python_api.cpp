@@ -399,9 +399,14 @@ void bind_commands(Host& host, py::object& cad)
                 inv.origin = command::Origin::Script;
 
                 auto result = host.bus.dispatch(inv);
+                // THE WAY OUT TRAVELS WITH THE ERROR (`core::Error::remedy`):
+                // a script that catches it can run the command it names.
                 if (!result)
                     host.fail(result.error().code, command::python_callable_name(*spec) +
-                                                       "(): " + result.error().message);
+                                                       "(): " + result.error().message +
+                                                       (result.error().remedy.empty()
+                                                            ? std::string()
+                                                            : " Öneri: " + result.error().remedy));
 
                 ++host.commands;
                 return result.value().ops;

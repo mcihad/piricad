@@ -163,10 +163,13 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
     // AN EXTERNAL REFERENCE IS NOT TAKEN APART (TODOS C-14): its pieces would
     // be copies of a file's objects that no reload reaches.
     if (is_external_block(doc, placed.block)) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "'" + doc.blocks().at(placed.block).name +
-                       "' bir dış referans; patlatılamaz. Parçalarını bu çizime almak için önce "
-                       "DIŞREFERANS islem=bagla ile çizime bağlayın.");
+        ctx.refuse(core::err(
+            core::ErrorCode::InvalidArgument,
+            "'" + doc.blocks().at(placed.block).name +
+                "' bir dış referans; patlatılamaz. Parçalarını bu çizime almak için bir yerel "
+                "kopyasını alın (YERELKOPYA) ya da önce DIŞREFERANS islem=bagla ile çizime "
+                "bağlayın.",
+            "YERELKOPYA nesneler=" + std::to_string(core::raw(doc.key_of(slot)))));
         return false;
     }
     // Copied, not referred to: the pieces are added to the document under it.

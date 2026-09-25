@@ -688,11 +688,20 @@ Task<void> run_block_edit(Context& ctx)
     // until then.
     if (is_external_block(ctx.document(), target.block)) {
         const std::string name = ctx.document().blocks().at(target.block).name;
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "'" + name +
-                       "' bir dış referansın parçası; tanımı kendi dosyasında düzenlenir. "
-                       "Değişikliği görmek için DIŞREFERANS islem=yenile; burada düzenlemek "
-                       "için önce DIŞREFERANS islem=bagla ile çizime bağlayın.");
+        // THE WAY OUT, when a placement was pointed at: its objects taken out
+        // as this drawing's own, the link left as it is.
+        const std::string remedy =
+            target.reference != core::kNoEntity
+                ? "YERELKOPYA nesneler=" +
+                      std::to_string(core::raw(ctx.document().key_of(target.reference)))
+                : std::string();
+        ctx.refuse(core::err(core::ErrorCode::InvalidArgument,
+                             "'" + name +
+                                 "' bir dış referansın parçası; tanımı kendi dosyasında "
+                                 "düzenlenir. Değişikliği görmek için DIŞREFERANS islem=yenile; "
+                                 "burada düzenlemek için bir yerel kopyasını alın (YERELKOPYA) ya "
+                                 "da önce DIŞREFERANS islem=bagla ile çizime bağlayın.",
+                             remedy));
         co_return;
     }
     const core::Document& doc = ctx.document();

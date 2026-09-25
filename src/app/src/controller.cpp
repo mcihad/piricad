@@ -301,7 +301,7 @@ void Controller::runLines(const QStringList& lines, const QString& label, comman
     }
 
     if (auto opened = bus_.begin_batch(label.toStdString()); !opened) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(opened.error().message)));
+        refused(opened.error());
         return;
     }
     for (const QString& line : lines) {
@@ -310,14 +310,14 @@ void Controller::runLines(const QStringList& lines, const QString& label, comman
             // WHOLE, OR NOT AT ALL (Article 1.6). Nine layers hidden and the tenth
             // refused is a state nobody asked for.
             bus_.abort_batch();
-            emit echoed(tr("Hata: %1").arg(QString::fromStdString(step.error().message)));
+            refused(step.error());
             settle();
             return;
         }
     }
     auto done = bus_.end_batch();
     if (!done)
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+        refused(done.error());
     else if (!done.value().message.empty())
         emit echoed(QString::fromStdString(done.value().message));
     settle();
@@ -436,8 +436,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                 !spec->params.empty()) {
                 auto started = bus_.begin_interactive(trimmed.toStdString(), origin);
                 if (!started) {
-                    emit echoed(
-                        tr("Hata: %1").arg(QString::fromStdString(started.error().message)));
+                    refused(started.error());
                     settle();
                     return started.error();
                 }
@@ -458,7 +457,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                 session_.reset();
                 armedLine_.clear();
                 if (!done) {
-                    emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+                    refused(done.error());
                 } else if (!done.value().message.empty()) {
                     emit echoed(QString::fromStdString(done.value().message));
                 }
@@ -470,7 +469,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
 
     auto result = bus_.execute_line(trimmed.toStdString(), origin);
     if (!result) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(result.error().message)));
+        refused(result.error());
     } else if (!result.value().message.empty()) {
         emit echoed(QString::fromStdString(result.value().message));
     }
@@ -482,7 +481,7 @@ void Controller::runInvocation(const command::Invocation& invocation)
 {
     auto result = bus_.dispatch(invocation);
     if (!result) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(result.error().message)));
+        refused(result.error());
     } else if (!result.value().message.empty()) {
         emit echoed(QString::fromStdString(result.value().message));
     }
@@ -566,7 +565,7 @@ void Controller::runCommand(const QString& line)
     // out with the one parser (CLAUDE.md 5.11) and the rest travels with it.
     auto parsed = command::parse_line(line.toStdString());
     if (!parsed) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(parsed.error().message)));
+        refused(parsed.error());
         return;
     }
 
@@ -638,7 +637,7 @@ void Controller::startInteractive(const QString& line, command::Origin origin, b
 
     auto started = bus_.begin_interactive(line.toStdString(), origin);
     if (!started) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(started.error().message)));
+        refused(started.error());
         return;
     }
 
@@ -668,7 +667,7 @@ void Controller::settleSession()
         auto done    = bus_.finish(*session_);
         bool mutated = false;
         if (!done) {
-            emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+            refused(done.error());
         } else {
             mutated = done.value().mutated;
             if (!done.value().message.empty())
@@ -749,13 +748,25 @@ void Controller::supplyText(const QString& text)
     supplyValue(command::Value::text(text.toStdString()));
 }
 
+void Controller::refused(const core::Error& error)
+{
+    emit echoed(tr("Hata: %1").arg(QString::fromStdString(error.message)));
+    // THE WAY OUT, when the refusal names one (`core::Error::remedy`): said on
+    // the transcript as the line to type, and offered to the shell as a button.
+    if (!error.remedy.empty()) {
+        emit echoed(tr("  Öneri: %1").arg(QString::fromStdString(error.remedy)));
+        emit remedyOffered(QString::fromStdString(error.message),
+                           QString::fromStdString(error.remedy));
+    }
+}
+
 void Controller::supplyValue(command::Value value)
 {
     if (!session_ || !session_->waiting()) return;
 
     auto st = session_->supply(std::move(value));
     if (!st) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(st.error().message)));
+        refused(st.error());
     }
 
     settleSession();
@@ -771,7 +782,7 @@ bool Controller::retractPoint()
     if (!canRetract()) return false;
     const auto st = session_->retract();
     if (!st) {
-        emit echoed(tr("Hata: %1").arg(QString::fromStdString(st.error().message)));
+        refused(st.error());
         return false;
     }
     emit echoed(tr("Son nokta geri alındı."));

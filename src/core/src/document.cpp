@@ -502,9 +502,10 @@ Status Document::editable(EntityId e) const
                        "Bu nesne '" + def.name + "' dış referansının parçası" +
                            (file.empty() ? std::string() : " ('" + std::string(file) + "')") +
                            "; kendi dosyasında düzenlenir ve yenilenince oradan yeniden okunur. "
-                           "Burada düzenlemek için referansı çizime bağlayın: DIŞREFERANS "
-                           "islem=bagla ad=" +
-                           def.name + ".");
+                           "Burada düzenlemek için bir yerel kopyasını alın (YERELKOPYA) ya da "
+                           "referansı çizime bağlayın: DIŞREFERANS islem=bagla ad=" +
+                           def.name + ".",
+                       "YERELKOPYA nesneler=" + std::to_string(raw(key)));
         }
         return err(ErrorCode::ValidationFailed,
                    "Blok tanımındaki nesne doğrudan düzenlenemez; tanımı BLOKDÜZENLE ile "

@@ -72,13 +72,29 @@ parsel değişince güncellenir ([bağlı nesneler](../islem/bagli-nesneler.md))
 geçmiştir: tampon, kuyuların o anki yerinden çizildi ve kuyular taşınınca kendiliğinden
 taşınmaz.
 
-## Kilitli katman ve dış referans
+## Kilitli katman ve bağlı dosya
 
 Kilitli bir katmandaki nesnenin yalnız geometrisi değil **değeri, katmanı, stili ve
 yazısı** da kilitlidir: ÖZNİTELİK, tablodan yazma, KATMANAT, STİLKOPYALA, STİL ve
-YAZIDÜZENLE onu adıyla reddeder. Bir [dış referansın](../komutlar/xref.md) parçası bu
-çizimin değil kendi dosyasınındır; buradan bir değer yazılamaz ve ileti referansın
-adını, dosyasını ve `DIŞREFERANS islem=bagla` yolunu söyler.
+YAZIDÜZENLE onu adıyla reddeder.
+
+Bir [dış referansın](../komutlar/xref.md) — bağlı bir proje, DXF, DWG ya da CBS
+dosyasının — nesnesi bu çizimin değil kendi dosyasınındır: burada değiştirilemez, çünkü
+bir sonraki yenilemede dosyasından yeniden okunur. Onu değiştirmek isteyen her iş
+reddedilir ve ret **yolu gösterir**: [YERELKOPYA](../komutlar/local_copy.md). Arayüzde
+tuvalin üstünde **Yerel Kopya** düğmeli bir şerit çıkar, komut satırına
+`Öneri: YERELKOPYA nesneler=…` yazılır, bir betiğin ya da yapay zekânın aldığı hata da
+aynı öneriyi taşır. Yerel kopya nesnenin çizimin olan, düzenlenebilir kopyasıdır;
+bağlantı yerinde kalır ve kopya hangi referanstan alındığını bilir.
+
+## İçe almak ve bağlamak
+
+| | [İÇEAKTAR](../komutlar/import.md) | [DIŞREFERANS](../komutlar/xref.md) |
+|---|---|---|
+| Nesneler | Çizimin kendisi olur | Dosyanın kalır |
+| Düzenlenir mi | Evet | Hayır — yerel kopyası alınır |
+| Dosya değişince | Çizimdeki değişmez | Yenilemede ve açılışta değişir |
+| Proje dosyasında | Nesneler yazılır | Yalnız adı ve yolu yazılır |
 
 ## Dosyada
 
@@ -91,5 +107,5 @@ eski bir sürüm bloğu tanımasa da dosyayı açar — yalnız kökenleri görm
 - İçe aktarılan bir dosyanın (DXF, GeoPackage) kaynağı — dosya yolu, katman, dosyadaki
   kimliği — nesnenin kökeni olarak kaydedilmez; DXF'in kendi kimliği `kaynak_kimlik`
   sütununa yazılır. Veri kaynağı kaydı F-02'nin sonraki aşamasında gelecek.
-- Salt okunur bir kaynaktaki nesneyi düzenleme isteği bugün adıyla reddedilir; aynı
-  istekte **yerel kopya** oluşturma önerisi sonraki aşamada gelecek.
+- PostGIS'ten canlı okuma ve düzenleme yok; veritabanı bugün yalnız yazılır
+  ([VERİTABANI](../komutlar/database.md)). Canlı PostGIS düzenlemesi I-04 işinde gelecek.

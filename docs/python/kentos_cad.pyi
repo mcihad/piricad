@@ -283,6 +283,22 @@ def explode(
         object — Patlatılacak nesneler [kalıcı nesne anahtarı]
     """
 
+def local_copy(
+    *,
+    objects: list[int] = ...,
+    name: str = ...,
+    layer: str = ...,
+    window: Coords = ...,
+) -> int:
+    """Bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu çizime alır; bağlantı olduğu gibi kalır.
+
+    Komut: core.local_copy (YERELKOPYA)
+        objects — Kopyası alınacak dış referans ya da onun nesneleri [kalıcı nesne anahtarı]
+        name — Kopyası alınacak dış referansın adı; nesneler yerine
+        layer — Kopyaların katmanı; yoksa her biri kaynağındaki katmanın adıyla
+        window — Yalnız bu dikdörtgene değen nesneler: iki köşe [mm, Sağa (Y) önce]
+    """
+
 def align(
     *,
     object: list[int] = ...,

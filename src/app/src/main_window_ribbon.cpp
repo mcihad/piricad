@@ -883,6 +883,7 @@ void MainWindow::buildRibbon()
     small(sources, actExport_);
     large(sources, actXref_);
     small(sources, actXrefReload_);
+    small(sources, actLocalCopy_);
     small(sources, actBlockClip_);
 
     // ================================================================== `Analiz`

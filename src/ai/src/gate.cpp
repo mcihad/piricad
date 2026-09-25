@@ -88,13 +88,18 @@ core::Status Gate::decide(const Approval& approval)
                                : core::err(core::ErrorCode::Unsupported,
                                            "Öneri uygulayıcı bağlı değil; bu yapıda uygulanamaz.");
     if (!ran) {
-        record.outcome = ran.error().message;
+        // The way out, when the refusal names one (`core::Error::remedy`): the
+        // agent reads the plan's outcome, and this is its next step.
+        const std::string said =
+            ran.error().message +
+            (ran.error().remedy.empty() ? std::string() : " Öneri: " + ran.error().remedy);
+        record.outcome = said;
         audit_.write(std::move(record));
         // The runner rolled the batch back, so the document is bit-identical to
         // what it was before the attempt (ai.md R20). The plan is `Failed`
         // rather than `Rejected`: the person said yes and the program said no,
         // and those are different answers to record.
-        (void)plans_.settle(plan->id, PlanState::Failed, ran.error().message);
+        (void)plans_.settle(plan->id, PlanState::Failed, said);
         return ran;
     }
 

@@ -34,6 +34,7 @@ Tek tek komutlar:
 | `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `DIŞREFERANS` | [Dış referans: başka dosyadaki çizimi bağlama](komutlar/xref.md) |
+| `YERELKOPYA` | [Dış referanstan düzenlenebilir yerel kopya](komutlar/local_copy.md) |
 | `YAZDIR` | [Yazdırma ve PDF](komutlar/print.md) |
 | `YAZDIRMAPROFİLİ` | [Yazdırma profilleri](komutlar/print_profile.md) |
 | `ÇIKTIYERLEŞİMİ` | [Çıktı yerleşimi](komutlar/layout.md) |

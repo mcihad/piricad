@@ -23,6 +23,7 @@ namespace kentos::command {
     X(join_lines)                                                                                  \
     X(lengthen)                                                                                    \
     X(explode)                                                                                     \
+    X(local_copy)                                                                                  \
     X(align)                                                                                       \
     X(divide)                                                                                      \
     X(pedit)                                                                                       \

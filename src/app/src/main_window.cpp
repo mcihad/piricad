@@ -286,6 +286,17 @@ MainWindow::MainWindow(QWidget* parent)
     auto* stack  = new QVBoxLayout(column);
     stack->setContentsMargins(0, 0, 0, 0);
     stack->setSpacing(0);
+    // THE WAY OUT OF A REFUSAL, over the canvas it is about (`offerRemedy`).
+    remedyBanner_ = new Banner(Tone::Warn, tr("Bu nesne burada düzenlenemez"), QString(), column);
+    remedyButton_ = remedyBanner_->addButton(tr("Yerel Kopya"));
+    remedyBanner_->setVisible(false);
+    connect(remedyButton_, &QPushButton::clicked, this, [this] {
+        const QString line = remedy_;
+        remedy_.clear();
+        remedyBanner_->setVisible(false);
+        if (!line.isEmpty()) runScriptLine(line);
+    });
+    stack->addWidget(remedyBanner_);
     stack->addWidget(canvas_, 1);
     stack->addWidget(commandLineRule_);
     stack->addWidget(commandLine_);
@@ -339,6 +350,13 @@ MainWindow::MainWindow(QWidget* parent)
     connect(controller_, &Controller::interactiveFinished, this,
             &MainWindow::onInteractiveFinished);
     connect(controller_, &Controller::commandFinished, this, &MainWindow::onCommandFinished);
+    connect(controller_, &Controller::remedyOffered, this, &MainWindow::offerRemedy);
+    // An offer is about the refusal just made: the next command that finishes
+    // — the offered one, or any other — has moved past it.
+    connect(controller_, &Controller::commandFinished, this, [this] {
+        remedy_.clear();
+        if (remedyBanner_ != nullptr) remedyBanner_->setVisible(false);
+    });
 
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
@@ -1012,14 +1030,14 @@ void MainWindow::buildActions()
     // No `kToolCommand`, for the library button's reason: the press opens a
     // file window before any command runs.
     actXref_->setObjectName(QStringLiteral("xrefAttach"));
-    actXref_->setToolTip(tr("DIŞREFERANS — bir proje, DXF ya da DWG dosyasını dış referans "
-                            "olarak bağlar: yerinde çizilir, düzenlenmez, dosyası değişince "
-                            "yenilenir  ·  kısaltma: DRF"));
+    actXref_->setToolTip(tr("DIŞREFERANS — bir proje, DXF, DWG ya da CBS dosyasını (GeoPackage, "
+                            "Shapefile) dış referans olarak bağlar: yerinde çizilir, düzenlenmez, "
+                            "dosyası değişince yenilenir  ·  kısaltma: DRF"));
     actXref_->setStatusTip(actXref_->toolTip());
     connect(actXref_, &QAction::triggered, this, [this] {
         const QString path = QFileDialog::getOpenFileName(
             this, tr("Dış referans"), QFileInfo(controller_->currentFile()).absolutePath(),
-            tr("Çizim dosyası (*.pcad *.dxf *.dwg);;Tüm dosyalar (*)"));
+            tr("Çizim ya da CBS dosyası (*.pcad *.dxf *.dwg *.gpkg *.shp);;Tüm dosyalar (*)"));
         if (path.isEmpty()) return;
         controller_->runLine(QStringLiteral("DIŞREFERANS dosya=\"%1\"").arg(path),
                              command::Origin::Gui);
@@ -1029,6 +1047,13 @@ void MainWindow::buildActions()
                                    tr("DIŞREFERANS islem=yenile — bağlı dış referansları "
                                       "dosyalarından yeniden okur"));
     actXrefReload_->setObjectName(QStringLiteral("xrefReload"));
+    // A LINKED FILE'S OBJECTS, COPIED AS THIS DRAWING'S (TODOS F-02): the way
+    // out every refused edit of one offers, as a tool of its own too.
+    actLocalCopy_ = modifyTool(
+        Glyph::XrefLocalCopy, tr("Yerel Kopya"), QStringLiteral("YERELKOPYA"),
+        tr("YERELKOPYA — bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu "
+           "çizime alır, kaynak katman adlarıyla; bağlantı yerinde kalır  ·  kısaltma: YK"));
+    actLocalCopy_->setObjectName(QStringLiteral("xrefLocalCopy"));
     // A REFERENCE CLIPPED (TODOS C-14): it shows what a boundary holds — two
     // corners of a rectangle, a polygon's corners, or a closed object already
     // on the drawing — and the boundary can be drawn out and taken off again.
@@ -6808,10 +6833,95 @@ int MainWindow::probeRealMouse()
                   QStringLiteral("NESNEBİLGİ öbür parçanın kökenini söylüyor"));
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 33. A LINKED FILE'S OBJECT: REFUSED, AND THE WAY OUT OFFERED (TODOS F-02) ----
+        //
+        // A parcel sheet linked as an external reference is drawn here and
+        // edited in its own file. Taking it apart is refused — and the refusal
+        // is not a dead end: a strip over the canvas says why and offers Yerel
+        // Kopya, which, pressed, brings the parcels in as this drawing's own on
+        // the layer their file calls them by, the link left as it was.
+        {
+            const QTemporaryDir scratch;
+            const QString folder = shooting ? into : scratch.path();
+            const QString source = folder + QStringLiteral("/altlik-kaynak.pcad");
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL", "ALAN 0,0 20,0 20,10 0,10", "ALAN 20,0 40,0 40,10 20,10"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            runScriptLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(source));
+            endCommand();
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("DIŞREFERANS dosya=\"%1\" ad=altlik").arg(source));
+            endCommand();
+            canvas_->zoomToBox(core::Box2{-5'000, -10'000, 45'000, 20'000});
+            const core::Document& doc = controller_->document();
+            std::int64_t reference    = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.entities().standalone(e) &&
+                    doc.entities().kind[e] == core::kBlockReferenceKind)
+                    reference = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
+            runScriptLine(QStringLiteral("PATLAT nesne=%1").arg(reference));
+            endCommand();
+            QCoreApplication::processEvents();
+            const QString offered = remedyForProbe();
+            check(offered == QStringLiteral("YERELKOPYA nesneler=%1").arg(reference) &&
+                      transcript_->toPlainText().contains(
+                          QStringLiteral("Öneri: YERELKOPYA nesneler=%1").arg(reference)),
+                  QStringLiteral("dış referansı patlatma reddi yolu gösteriyor: şeritte ve "
+                                 "transkriptte \"%1\"")
+                      .arg(offered));
+            shoot("yerel-kopya-oneri");
+            check(pressRemedyForProbe(), QStringLiteral("şeritteki Yerel Kopya düğmesine basıldı"));
+            QCoreApplication::processEvents();
+            std::size_t own             = 0;
+            const core::LayerId parcels = doc.find_layer("PARSEL");
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().standalone(e) &&
+                    doc.entities().layer[e] == parcels &&
+                    doc.entities().kind[e] != core::kBlockReferenceKind)
+                    ++own;
+            check(own == 2 && remedyForProbe().isEmpty() &&
+                      doc.blocks().find("altlik") != core::kNoBlock,
+                  QStringLiteral("iki parsel PARSEL katmanına bu çizimin kendi nesnesi olarak "
+                                 "geldi, bağlantı yerinde, şerit kapandı (%1 nesne)")
+                      .arg(own));
+            shoot("yerel-kopya-sonra");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
     return failures;
+}
+
+void MainWindow::offerRemedy(const QString& message, const QString& remedy)
+{
+    if (remedyBanner_ == nullptr || remedy.isEmpty()) return;
+    // The button says what it will do: the title of the command it runs.
+    const QString word               = remedy.section(QLatin1Char(' '), 0, 0);
+    const command::CommandSpec* spec = controller_->bus().registry().resolve(word.toStdString());
+    remedyButton_->setText(
+        spec != nullptr && !spec->title.empty() ? QString::fromStdString(spec->title) : word);
+    remedyBanner_->setText(message);
+    remedy_ = remedy;
+    remedyBanner_->setVisible(true);
+}
+
+QString MainWindow::remedyForProbe() const
+{
+    return remedyBanner_ != nullptr && remedyBanner_->isVisible() ? remedy_ : QString();
+}
+
+bool MainWindow::pressRemedyForProbe()
+{
+    if (remedyForProbe().isEmpty()) return false;
+    remedyButton_->click();
+    return true;
 }
 
 void MainWindow::onCommandFinished(const QString& id, const QString& report)

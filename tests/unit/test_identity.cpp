@@ -19,7 +19,9 @@
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/io/service.hpp"
+#include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/processing/registry.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include <filesystem>
 #include <string>
@@ -360,4 +362,281 @@ TEST_CASE("KÖKEN: BUDA'nın ve BÖL'ün yeni parçası kaynağını bilir; yeri
     CHECK(r.doc.lineage().get(r.entity(1)) == nullptr);
     CHECK_EQ(r.origin(3).operation, "core.split");
     CHECK_EQ(r.origin(3).sources, keys({1}));
+}
+
+// ----------------------------------------------------------- data sources ----
+
+namespace {
+
+/// A GeoPackage of `count` parcels on `PARSEL`, each with its `ada`, at `path`.
+void write_parcels(const std::string& path, int count)
+{
+    Rig src;
+    src.run("AYAR core.crs.id EPSG:5254"); // a system GeoPackage can name
+    src.run("KATMAN ad=PARSEL");
+    src.run("SÜTUN kimlik=ada tur=tam_sayi");
+    for (int i = 0; i < count; ++i) {
+        const int x = i * 30;
+        src.run("ALAN " + std::to_string(x) + ",0 " + std::to_string(x + 20) + ",0 " +
+                std::to_string(x + 20) + ",10 " + std::to_string(x) + ",10");
+        src.run("ÖZNİTELİK ada " + std::to_string(i + 1) + " " + std::to_string(101 * (i + 1)));
+    }
+    std::error_code ec;
+    fs::remove(path, ec);
+    src.run("DIŞAAKTAR \"" + path + "\"");
+}
+
+/// The live members of external reference `name`.
+std::vector<core::EntityId> members_of(const core::Document& doc, const std::string& name)
+{
+    std::vector<core::EntityId> out;
+    const core::BlockId b = doc.blocks().find(name);
+    if (b == core::kNoBlock) return out;
+    for (const core::EntityKey k : doc.blocks().at(b).members)
+        if (const core::EntityId m = doc.slot_of(k); m != core::kNoEntity && doc.alive(m))
+            out.push_back(m);
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("VERİ KAYNAĞI: bir CBS dosyası içe alınınca kopyalanır; bağlanınca salt okunur kalır ve "
+          "her açılışta dosyasından okunur")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; CBS dosyası okunamıyor.");
+    TempDir tmp("cbs");
+    const std::string gpkg = tmp.file("parseller.gpkg");
+    write_parcels(gpkg, 2);
+
+    // İÇEAKTAR: the drawing's own objects, editable like anything drawn here.
+    {
+        Rig copy;
+        copy.run("AYAR core.crs.id EPSG:5254");
+        copy.run("İÇEAKTAR \"" + gpkg + "\"");
+        std::size_t own = 0;
+        for (core::EntityId e = 0; e < copy.doc.entities().size(); ++e)
+            if (copy.doc.alive(e) && (copy.doc.entities().flags[e] & core::FlagInBlock) == 0 &&
+                copy.doc.entities().kind[e] != core::kBlockReferenceKind)
+                ++own;
+        CHECK_EQ(own, std::size_t{2});
+        CHECK(copy.doc.blocks().find("parseller") == core::kNoBlock);
+    }
+
+    // DIŞREFERANS: a live link — the file's parcels drawn in place, their
+    // values readable, nothing of theirs editable here.
+    Rig host;
+    host.run("AYAR core.crs.id EPSG:5254"); // the file's own: nothing to carry across
+    host.run("DIŞREFERANS dosya=\"" + gpkg + "\"");
+    const core::BlockId linked = host.doc.blocks().find("parseller");
+    REQUIRE(linked != core::kNoBlock);
+    CHECK((host.doc.blocks().at(linked).flags & core::kBlockExternal) != 0);
+    std::vector<core::EntityId> parcels = members_of(host.doc, "parseller");
+    REQUIRE_EQ(parcels.size(), std::size_t{2});
+    CHECK(host.doc.find_layer("parseller|PARSEL") != core::kNoLayer);
+    std::vector<std::int64_t> adas;
+    for (const core::EntityId m : parcels) {
+        const auto v = host.doc.attribute(host.doc.attributes().find("ada"), m);
+        REQUIRE(v.ok());
+        adas.push_back(v.value().number);
+    }
+    std::ranges::sort(adas);
+    CHECK_EQ(adas, (std::vector<std::int64_t>{101, 202}));
+    const std::string member = std::to_string(core::raw(host.doc.key_of(parcels.front())));
+    CHECK(host.refused("ÖZNİTELİK ada " + member + " 999")
+              .find("'parseller' dış referansının "
+                    "parçası ('parseller.gpkg')") != std::string::npos);
+
+    // The file changes; the link sees it on reload, and again on the next open.
+    write_parcels(gpkg, 3);
+    host.run("DIŞREFERANS islem=yenile ad=parseller");
+    CHECK_EQ(members_of(host.doc, "parseller").size(), std::size_t{3});
+    const std::string project = tmp.file("pafta.pcad");
+    host.run("FARKLIKAYDET \"" + project + "\"");
+    write_parcels(gpkg, 4);
+    Rig back;
+    back.run("AÇ \"" + project + "\"");
+    CHECK_EQ(members_of(back.doc, "parseller").size(), std::size_t{4});
+}
+
+// ------------------------------------------------------------- local copy ----
+
+namespace {
+
+/// The error a line is refused with.
+core::Error refusal(Rig& r, const std::string& line)
+{
+    auto got = r.bus.execute_line(line, Origin::Test);
+    REQUIRE_FALSE(got.ok());
+    return got.error();
+}
+
+/// The live objects on layer `name` that are this drawing's own (no member).
+std::vector<core::EntityId> own_on(const core::Document& doc, const std::string& name)
+{
+    std::vector<core::EntityId> out;
+    const core::LayerId layer = doc.find_layer(name);
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+        if (doc.alive(e) && doc.entities().standalone(e) && doc.entities().layer[e] == layer)
+            out.push_back(e);
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("YERELKOPYA: bağlı dosyanın nesnesini düzenleme isteği yerel kopyayı önerir; kopya bu "
+          "çizimin, bağlantı yerinde kalır")
+{
+    TempDir tmp("yerel");
+    const std::string source = tmp.file("altlik.pcad");
+    {
+        Rig src;
+        src.run("KATMAN ad=PARSEL");
+        src.run("SÜTUN kimlik=ada tur=tam_sayi");
+        src.run("ALAN 0,0 20,0 20,10 0,10"); // 1
+        src.run("ÖZNİTELİK ada 1 101");
+        src.run("KATMAN ad=YOL");
+        src.run("ÇİZGİ 0,20 100,20"); // 2
+        src.run("FARKLIKAYDET \"" + source + "\"");
+    }
+    Rig host;
+    host.run("DIŞREFERANS dosya=\"" + source + "\" nokta=1000,0");
+    const std::vector<core::EntityId> members = members_of(host.doc, "altlik");
+    REQUIRE_EQ(members.size(), std::size_t{2});
+    core::EntityId parcel = core::kNoEntity;
+    for (const core::EntityId m : members)
+        if (host.doc.entities().kind[m] == core::kPolylineKind &&
+            host.doc.attribute(host.doc.attributes().find("ada"), m).value().present)
+            parcel = m;
+    REQUIRE(parcel != core::kNoEntity);
+    core::EntityId reference = core::kNoEntity;
+    for (core::EntityId e = 0; e < host.doc.entities().size(); ++e)
+        if (host.doc.entities().standalone(e) &&
+            host.doc.entities().kind[e] == core::kBlockReferenceKind)
+            reference = e;
+    REQUIRE(reference != core::kNoEntity);
+    const std::string member_key = std::to_string(core::raw(host.doc.key_of(parcel)));
+    const std::string ref_key    = std::to_string(core::raw(host.doc.key_of(reference)));
+
+    // EVERY REFUSAL NAMES THE WAY OUT, as a command line any client can run.
+    CHECK_EQ(refusal(host, "ÖZNİTELİK ada " + member_key + " 102").remedy,
+             "YERELKOPYA nesneler=" + member_key);
+    CHECK_EQ(refusal(host, "PATLAT nesne=" + ref_key).remedy, "YERELKOPYA nesneler=" + ref_key);
+    CHECK_EQ(refusal(host, "BLOKDÜZENLE nesne=" + ref_key).remedy,
+             "YERELKOPYA nesneler=" + ref_key);
+
+    // The way out taken: both objects, where the reference draws them, on the
+    // layers their file calls them by, with their values — and the link intact.
+    const std::size_t depth = host.undo.undo_depth();
+    host.run("YERELKOPYA nesneler=" + ref_key);
+    CHECK_EQ(host.undo.undo_depth(), depth + 1);
+    const std::vector<core::EntityId> parcels = own_on(host.doc, "PARSEL");
+    const std::vector<core::EntityId> roads   = own_on(host.doc, "YOL");
+    REQUIRE_EQ(parcels.size(), std::size_t{1});
+    REQUIRE_EQ(roads.size(), std::size_t{1});
+    const core::EntityId copy = parcels.front();
+    CHECK_EQ(host.doc.entities().box_of(copy).min_x, 1'000'000); // placed as the reference draws it
+    CHECK_EQ(host.doc.attribute(host.doc.attributes().find("ada"), copy).value().number, 101);
+    const core::Lineage* origin = host.doc.lineage().get(copy);
+    REQUIRE(origin != nullptr);
+    CHECK_EQ(origin->operation, "core.local_copy");
+    CHECK_EQ(origin->sources, std::vector<core::EntityKey>{host.doc.key_of(reference)});
+    CHECK_EQ(members_of(host.doc, "altlik").size(), std::size_t{2}); // the link is as it was
+
+    // And the copy is this drawing's own: its value and its corner can change.
+    const std::string copy_key = std::to_string(core::raw(host.doc.key_of(copy)));
+    host.run("ÖZNİTELİK ada " + copy_key + " 102");
+    host.run("KÖŞETAŞI nesne=" + copy_key + " kose=2 nokta=1025,0");
+    CHECK_EQ(host.doc.attribute(host.doc.attributes().find("ada"), copy).value().number, 102);
+
+    // One object only, from its member; or only what a window touches.
+    host.run("YERELKOPYA nesneler=" + member_key + " katman=TASLAK");
+    CHECK_EQ(own_on(host.doc, "TASLAK").size(), std::size_t{1});
+    host.run("YERELKOPYA nesneler=" + ref_key + " katman=PENCERE pencere=1050,15 1060,25");
+    CHECK_EQ(own_on(host.doc, "PENCERE").size(), std::size_t{1}); // the road alone
+
+    // By the name it was linked under, which is what a script knows it by.
+    host.run("YERELKOPYA ad=altlik katman=ADIYLA");
+    CHECK_EQ(own_on(host.doc, "ADIYLA").size(), std::size_t{2});
+    CHECK(refusal(host, "YERELKOPYA ad=yok").message.find("'yok' adında bir dış referans yok") !=
+          std::string::npos);
+
+    // What is not a linked file's is refused by name, pointing at KOPYALA.
+    CHECK(refusal(host, "YERELKOPYA nesneler=" + copy_key).message.find("KOPYALA") !=
+          std::string::npos);
+}
+
+TEST_CASE("YERELKOPYA KANIT: arayüz, komut satırı, betik ve oynatma aynı belgeyi ve günlüğü "
+          "bırakır; iptal hiçbir şey bırakmaz")
+{
+    TempDir tmp("yerel-kanit");
+    const std::string source = tmp.file("altlik.pcad");
+    {
+        Rig src;
+        src.run("KATMAN ad=PARSEL");
+        src.run("ALAN 0,0 20,0 20,10 0,10");
+        src.run("FARKLIKAYDET \"" + source + "\"");
+    }
+    const std::string linked = "DIŞREFERANS dosya=\"" + source + "\"";
+    const auto journal_of    = [](const Journal& j) {
+        std::string out;
+        for (const auto& e : j.entries())
+            out += e.command_id + ' ' + e.args.to_json().dump() + '\n';
+        return out;
+    };
+    const auto reference_of = [](const Rig& r) {
+        for (core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+            if (r.doc.entities().standalone(e) &&
+                r.doc.entities().kind[e] == core::kBlockReferenceKind)
+                return static_cast<std::int64_t>(core::raw(r.doc.key_of(e)));
+        return std::int64_t{0};
+    };
+
+    Rig gui;
+    gui.run(linked);
+    const std::int64_t ref = reference_of(gui);
+    REQUIRE(ref != 0);
+    {
+        auto started = gui.bus.begin_interactive("YERELKOPYA", Origin::Gui);
+        REQUIRE(started.ok());
+        CHECK(started.value()->supply(Value::ids({ref})).ok());
+        auto done = gui.bus.finish(*started.value());
+        REQUIRE_MESSAGE(done.ok(), (done.ok() ? std::string() : done.error().message));
+    }
+    Rig cli;
+    cli.run(linked);
+    REQUIRE(cli.bus.execute_line("YERELKOPYA nesneler=" + std::to_string(ref), Origin::CommandLine)
+                .ok());
+    Rig scr;
+    scr.run(linked);
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(
+            R"({"ad":"Y","komutlar":[{"cmd":"core.local_copy","args":{"nesneler":[)" +
+            std::to_string(ref) + "]}}]}");
+        REQUIRE_MESSAGE(r.ok(), (r.ok() ? std::string() : r.error().message));
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(journal_of(gui.journal), journal_of(cli.journal));
+    CHECK_EQ(journal_of(cli.journal), journal_of(scr.journal));
+
+    // The journal replays to the same drawing.
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        REQUIRE(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+
+    // Asked and not answered, it leaves nothing — not even an undo step.
+    Rig asked;
+    asked.run(linked);
+    const std::uint64_t before = asked.doc.content_hash();
+    const std::size_t depth    = asked.undo.undo_depth();
+    {
+        auto started = asked.bus.begin_interactive("YERELKOPYA", Origin::Gui);
+        REQUIRE(started.ok());
+        started.value()->cancel();
+        (void)asked.bus.finish(*started.value());
+    }
+    CHECK_EQ(asked.doc.content_hash(), before);
+    CHECK_EQ(asked.undo.undo_depth(), depth);
 }

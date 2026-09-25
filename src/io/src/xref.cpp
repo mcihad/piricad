@@ -8,6 +8,7 @@
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
 #include "kentos_cad/io/options.hpp"
+#include "kentos_cad/io/vector.hpp"
 
 #include <filesystem>
 #include <string>
@@ -81,6 +82,12 @@ bool looks_like_dwg(const std::string& path)
     return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
 }
 
+bool looks_like_gis(const std::string& path)
+{
+    const VectorFormat* format = vector_format_for_path(path);
+    return format != nullptr && format->read && !looks_like_dxf(path);
+}
+
 std::string crs_for_reading(const core::Crs& crs)
 {
     if (crs.resolved()) return "EPSG:" + std::to_string(crs.epsg());
@@ -104,6 +111,24 @@ command::Task<core::Status> read_drawing(core::Document& scratch, std::string pa
                           "Bu yapıda DWG okuyucu yok; dosyayı DXF olarak kaydedin.");
         auto read = co_await import_dwg(into, path, reading, stop);
         if (!read) co_return read.error();
+    } else if (looks_like_gis(path)) {
+        // A GIS FILE, LINKED RATHER THAN COPIED (TODOS F-02): its layers and
+        // fields through the same reader İÇEAKTAR uses, re-read on every open
+        // and reload. It carries its own coordinate system, which is stamped on
+        // the scratch so the drawing's is compared with it and carried across
+        // below, exactly as a project file's is.
+        if (!vector_backend_available())
+            co_return err(ErrorCode::Unsupported,
+                          "Bu yapıda CBS okuyucu (GDAL) yok; dosya dış referans olarak "
+                          "bağlanamaz.");
+        // EVERY FIELD, which İÇEAKTAR asks for and a link cannot: a linked
+        // layer is its features WITH their values — a parcel layer without its
+        // ada numbers is a picture of parcels.
+        reading.fields = {"*"};
+        auto read      = co_await import_vector(into, path, reading, stop);
+        if (!read) co_return read.error();
+        if (!read.value().crs.empty())
+            if (auto st = into.set_crs(core::Crs(read.value().crs)); !st) co_return st.error();
     } else {
         core::Settings ignored{core::builtin_settings(), core::SettingScopeMask::Project};
         auto read = co_await read_project(into, path, ignored, stop);

@@ -76,6 +76,8 @@ class XrefPanel;
 class MapCanvas;
 class CommandPalette;
 class AttributePanel;
+class Banner;
+class Button;
 class PanelHeader;
 class StatusStrip;
 class ToolsPanel;
@@ -1087,7 +1089,9 @@ private:
     QAction* actBlockLibrary_{nullptr}; ///< BLOKEKLE dosya= — a block from a library file
     QAction* actXref_{nullptr};         ///< DIŞREFERANS — a drawing kept in its own file
     QAction* actXrefReload_{nullptr}; ///< DIŞREFERANS islem=yenile — every reference, read again
-    QAction* actBlockClip_{nullptr};  ///< BLOKKIRP — a reference clipped by a rectangle
+    QAction* actLocalCopy_{
+        nullptr}; ///< YERELKOPYA — a linked file's objects, copied as this drawing's
+    QAction* actBlockClip_{nullptr};         ///< BLOKKIRP — a reference clipped by a rectangle
     QAction* actBlockClipPolygon_{nullptr};  ///< BLOKKIRP tur=cokgen — by a polygon
     QAction* actBlockClipObject_{nullptr};   ///< BLOKKIRP tur=cizgi — by a closed object
     QAction* actBlockClipBoundary_{nullptr}; ///< BLOKKIRP islem=sinir — the boundary drawn out
@@ -1123,6 +1127,25 @@ private:
     /// Follows a finished command: BLOKDÜZENLE's open starts the edit above,
     /// its save or its discard ends it — whichever client ran them.
     void onCommandFinished(const QString& id, const QString& report);
+
+    /// A REFUSAL THAT NAMES ITS WAY OUT (`core::Error::remedy`, TODOS F-02),
+    /// offered over the canvas: why it was refused, and one button that runs
+    /// the command that can — `YERELKOPYA` for an edit of a linked file's
+    /// object. Gone when pressed, or when the next command finishes.
+    void offerRemedy(const QString& message, const QString& remedy);
+    Banner* remedyBanner_{nullptr}; ///< the strip over the canvas; hidden until offered
+    Button* remedyButton_{nullptr}; ///< its one button
+    QString remedy_;                ///< the command line the button runs
+
+public:
+    /// The command line the canvas's remedy strip offers, empty when none is
+    /// shown — for the real-window probe.
+    QString remedyForProbe() const;
+
+    /// Presses the strip's button as a user would; false when none is shown.
+    bool pressRemedyForProbe();
+
+private:
     /// Brings the edit up to date with the document — an undo past the open
     /// ends it — and shows or hides its tab.
     void refreshBlockEdit();

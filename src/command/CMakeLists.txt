@@ -65,6 +65,7 @@ add_library(kentos_command STATIC
     src/commands/polygon_regular.cpp
     src/commands/edit_verbs.cpp
     src/commands/edit_verbs2.cpp
+    src/commands/local_copy.cpp
     src/commands/clipboard.cpp
     src/commands/query_info.cpp
     src/commands/stretch.cpp

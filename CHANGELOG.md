@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — CBS dosyasını canlı bağlama ve yerel kopya (F-02, 3. aşama)
+
+- **DIŞREFERANS** artık bir **CBS dosyasını** (GeoPackage, Shapefile) da bağlar: katmanları
+  `AD|KATMAN` olarak, **bütün alanlarıyla** gelir; dosyanın koordinat sistemi okunur ve bir
+  proje dosyası gibi çizimin sistemine taşınır; her açılışta ve yenilemede dosyasından
+  okunur, burada düzenlenmez. **İÇEAKTAR** ise dosyayı bir kez kopyalar — iki ayrı iş.
+- Yeni komut **YERELKOPYA** (`LOCALCOPY`, `YK`): bir dış referansın nesnelerinin
+  düzenlenebilir kopyalarını, referansın çizdiği yerde, değerleri ve görünüşüyle, kaynağın
+  kendi katman adıyla (`altlik|PARSEL` → `PARSEL`) bu çizime alır; bağlantı olduğu gibi
+  kalır, her kopya hangi referanstan alındığını bilir. `ad=` ile adından, `pencere=` ile
+  yalnız bir bölgeden. Şeritte **Harita ▸ Veri ▸ Yerel Kopya**.
+- **Ret yolu gösterir.** Bağlı bir dosyanın nesnesini değiştirmek isteyen her iş
+  (PATLAT, BLOKDÜZENLE, değer yazmak) reddedilir ve YERELKOPYA'yı önerir: arayüzde
+  tuvalin üstünde **Yerel Kopya** düğmeli bir şeritle, komut satırında
+  `Öneri: YERELKOPYA nesneler=…` satırıyla; Python istisnası ve yapay zekâ önerisinin
+  sonucu da aynı öneriyi taşır.
+
 ### Eklendi — türetilen nesnenin kökeni (F-02, 2. aşama)
 
 - Başka nesnelerden üretilen her nesne **kökenini** bilir: hangi işle ve hangi

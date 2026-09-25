@@ -102,6 +102,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.join`](#cadjoin) | `core.join` | `UÇUCA` | Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir. |
 | [`cad.lengthen`](#cadlengthen) | `core.lengthen` | `UZUNLUK` | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
 | [`cad.explode`](#cadexplode) | `core.explode` | `PATLAT` | Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır. |
+| [`cad.local_copy`](#cadlocal_copy) | `core.local_copy` | `YERELKOPYA` | Bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu çizime alır; bağlantı olduğu gibi kalır. |
 | [`cad.align`](#cadalign) | `core.align` | `HİZALA` | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
 | [`cad.divide`](#caddivide) | `core.divide` | `BÖLÜMLE` | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir. |
 | [`cad.pedit`](#cadpedit) | `core.pedit` | `ÇİZGİDÜZENLE` | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
@@ -518,6 +519,30 @@ cad.explode(
 | `object` | `list[int]` | `nesne` | Patlatılacak nesneler [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/explode.md)
+
+### `cad.local_copy`
+
+Bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu çizime alır; bağlantı olduğu gibi kalır.
+
+Komut: `core.local_copy` — `YERELKOPYA`
+
+```python
+cad.local_copy(
+    objects: list[int],
+    name: str,
+    layer: str,
+    window: Coords,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Kopyası alınacak dış referans ya da onun nesneleri [kalıcı nesne anahtarı] |
+| `name` | `str` | `ad` | Kopyası alınacak dış referansın adı; nesneler yerine |
+| `layer` | `str` | `katman` | Kopyaların katmanı; yoksa her biri kaynağındaki katmanın adıyla |
+| `window` | `Coords` | `pencere` | Yalnız bu dikdörtgene değen nesneler: iki köşe [mm, Sağa (Y) önce] |
+
+[Komut sayfası](../komutlar/local_copy.md)
 
 ### `cad.align`
 

@@ -353,7 +353,16 @@ signals:
     void panRequested(core::Point2 from, core::Point2 to);
     void settingChanged(const QString& id);
 
+    /// A refusal that names its way out (`core::Error::remedy`, TODOS F-02):
+    /// what was refused, and the command line that does what it could not —
+    /// for the shell to offer as a button beside the message.
+    void remedyOffered(const QString& message, const QString& remedy);
+
 private:
+    /// Says a refusal on the transcript — and, when it names a way out, that
+    /// line too, and `remedyOffered` for the shell.
+    void refused(const core::Error& error);
+
     /// The one body behind `supplyPoint` and `supplyText`: feed the value in, then
     /// finish the command or re-prompt. One place, because a second answer path
     /// that forgot to emit `interactiveFinished` would leave the tool column lit
