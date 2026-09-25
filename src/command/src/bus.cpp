@@ -795,6 +795,9 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         // alike; its figure is worded in the project's unit.
         say_settled(session.transaction().settle_dimensions(drawing_unit(), node_tolerance()));
         say_settled(session.transaction().settle_hatches());
+        // LAST: a result is compared with its sources as everything above left
+        // them (TODOS F-04, core/lineage.hpp).
+        say_settled(session.transaction().settle_results());
     }
 
     result.ops = session.owns_transaction() ? session.transaction().size() : 0;
@@ -996,6 +999,32 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
         on_echo("Bağlı " + std::to_string(settled.dims_left) +
                 " ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını "
                 "izleyemedi.");
+
+    // A RESULT PUT OUT OF DATE IS SAID the moment it happens (TODOS F-04): a
+    // buffer, a generated area, a boundary or a contour whose source this
+    // command changed no longer says what its source says, and nothing about
+    // it moved, so nothing else would tell the user.
+    const auto named = [this](const std::vector<std::string>& ops) {
+        std::string by;
+        for (const std::string& op : ops) {
+            const CommandSpec* spec = reg_.by_id(op);
+            by += (by.empty() ? "" : ", ") +
+                  (spec != nullptr && !spec->names.empty() ? std::string(spec->names.front()) : op);
+        }
+        return by;
+    };
+    if (settled.results_stale != 0)
+        on_echo("Kaynağı değiştiği için " + std::to_string(settled.results_stale) +
+                " sonuç artık güncel değil (" + named(settled.stale_by) +
+                "). Hangileri olduğunu görmek için: BAĞIMLILIK");
+    if (settled.results_sourceless != 0)
+        on_echo("Kaynağı silindiği için " + std::to_string(settled.results_sourceless) +
+                " sonuç artık kaynaksız (" + named(settled.stale_by) +
+                "); son hâlinde kendi başına duruyor.");
+    if (settled.results_released != 0)
+        on_echo(std::to_string(settled.results_released) + " sonuç (" + named(settled.released_by) +
+                ") kaynağından ayrı değiştirildiği için kaynağından çözüldü; kökeni geçmiş "
+                "olarak duruyor.");
 }
 
 core::Result<DispatchResult> Bus::end_batch()
@@ -1007,6 +1036,7 @@ core::Result<DispatchResult> Bus::end_batch()
     say_settled(batch_->settle_attachments());
     say_settled(batch_->settle_dimensions(drawing_unit(), node_tolerance()));
     say_settled(batch_->settle_hatches());
+    say_settled(batch_->settle_results());
 
     DispatchResult result;
     result.command_id = "core.batch";

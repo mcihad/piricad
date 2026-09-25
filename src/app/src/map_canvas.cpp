@@ -22,6 +22,7 @@
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/parallel.hpp"
@@ -51,6 +52,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -2066,6 +2069,34 @@ void MapCanvas::buildMeasureMarks()
     }
 }
 
+void MapCanvas::refreshStaleResults()
+{
+    const core::Document& doc = controller_.document();
+    if (doc.revision() == stale_revision_) return;
+    stale_revision_ = doc.revision();
+    stale_results_.clear();
+    const core::LineageTable& lineage = doc.lineage();
+    std::map<std::uint32_t, bool> asked; // origin -> out of date
+    for (const core::EntityId e : lineage.derived()) {
+        if (!doc.alive(e)) continue;
+        const std::uint32_t at = lineage.origin_of(e);
+        if (!lineage.origin(at).result()) continue;
+        auto it = asked.find(at);
+        if (it == asked.end())
+            it = asked
+                     .emplace(at, core::check_origin(doc, lineage.origin(at)).state ==
+                                      core::ResultState::Stale)
+                     .first;
+        if (it->second) stale_results_.push_back(e);
+    }
+}
+
+std::size_t MapCanvas::staleResultCountForProbe()
+{
+    refreshStaleResults();
+    return stale_results_.size();
+}
+
 void MapCanvas::buildBrokenLinks()
 {
     // A DIMENSION THAT NO LONGER MEASURES ANYTHING SAYS SO WHERE IT STANDS
@@ -2208,6 +2239,38 @@ void MapCanvas::buildBrokenLinks()
         overlay_.labels.push_back(render::OverlayLabel{
             tokens_->warn.rgba(), v.x + 12.0F, v.y + 4.0F, static_cast<float>(look_.hint_px), false,
             tr("sınır bağı koptu").toStdString()});
+    }
+
+    // A RESULT OUT OF DATE WITH ITS SOURCE (TODOS F-04): a buffer whose well
+    // moved, a contour whose point was re-read. Nothing about the result itself
+    // moved, so nothing else on the sheet would say it: a ring with a bar in
+    // the warning ink on each object, the words once per run. On the canvas
+    // only, like the broken links above: a question for the author.
+    refreshStaleResults();
+    std::set<std::uint32_t> worded;
+    for (const core::EntityId e : stale_results_) {
+        if (e >= ents.size() || !doc.alive(e) || !ents.visible(e)) continue;
+        const core::RingSpan span = geom.rings_of(ents.slot[e]);
+        if (span.count == 0 || geom.ring_count[span.first] == 0) continue;
+        // ON THE OBJECT: a face's middle, the middle corner of a line — a
+        // contour's box middle is often nowhere near the contour.
+        core::Point2 at{};
+        if (geom.ring_role[span.first] == core::RingRole::Open) {
+            at = geom.vertex(span.first, geom.ring_count[span.first] / 2);
+        } else {
+            const core::Box2 box = ents.box_of(e);
+            at = core::Point2{(box.min_x + box.max_x) / 2, (box.min_y + box.max_y) / 2};
+        }
+        const render::ScreenPointF v = render::to_f(view_.to_screen(at));
+        if (v.x < -8.0F || v.y < -8.0F || v.x > w + 8.0F || v.y > h + 8.0F) continue;
+        const std::size_t mark = nextBatch(tokens_->warn.rgba(), 1.8f, false);
+        addCircle(mark, v.x, v.y, 7.0f);
+        addRun(mark, {{v.x, v.y - 3.8F}, {v.x, v.y + 1.2F}}, false);
+        addRun(mark, {{v.x, v.y + 3.0F}, {v.x, v.y + 3.8F}}, false);
+        if (worded.insert(doc.lineage().origin_of(e)).second)
+            overlay_.labels.push_back(render::OverlayLabel{
+                tokens_->warn.rgba(), v.x + 12.0F, v.y + 4.0F, static_cast<float>(look_.hint_px),
+                false, tr("güncel değil").toStdString()});
     }
 
     if (table.empty()) return;

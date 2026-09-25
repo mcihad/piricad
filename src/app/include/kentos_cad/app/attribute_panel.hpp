@@ -121,6 +121,10 @@ public:
     /// what a probe reads to check what the panel says, not what it stores.
     QString probeRowValue(const QString& key) const;
 
+    /// The badge the row named `key` carries — `GÜNCEL DEĞİL` on a result out of
+    /// date — empty when there is no such row or it carries none.
+    QString probeRowBadge(const QString& key) const;
+
 signals:
     /// The user asked for the shown object's corners as a file. The shell opens
     /// the export window; the panel does not own it.

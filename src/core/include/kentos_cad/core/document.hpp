@@ -341,6 +341,16 @@ public:
     /// from the same input agree (§7.3).
     std::uint64_t content_hash() const;
 
+    /// WHAT ONE OBJECT IS, AS A NUMBER (TODOS F-04): its kind, its definition,
+    /// its rings, its caption and every cell it holds a value in — the content
+    /// a result computed from it read. Not its layer, style, visibility or key:
+    /// drawing an object differently changes no buffer and no contour. Equal
+    /// content gives an equal number on every platform (§7.3), after a save and
+    /// an open, and after an undo — which is what lets a result say it is out
+    /// of date (`core::check_result`) without a flag an undo would have to find.
+    /// A dead row answers for the content it had.
+    std::uint64_t content_revision(EntityId e) const;
+
     /// The geometry slot every row holds NOW, in row order — dead rows too,
     /// since a dead row keeps its key and its file row (model.md R4). The slots
     /// the project file writes as its own, one per row, and the ones

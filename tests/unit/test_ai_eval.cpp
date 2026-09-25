@@ -37,6 +37,7 @@
 
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/processing/registry.hpp"
 
 #include "kentos_cad/script/json_runner.hpp"
 
@@ -71,6 +72,10 @@ struct Rig
     Rig()
     {
         register_builtin_commands(reg);
+        // The processing tools are commands a model is offered too
+        // (`ai::build_catalog` walks the whole registry), so an answer key may
+        // use one — a buffer whose well then moves, say.
+        processing::register_processing_commands(reg);
         ai::register_ai_commands(reg);
     }
 };

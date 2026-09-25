@@ -39,6 +39,7 @@
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -319,8 +320,24 @@ void describe_lineage(Bus& bus, const core::Document& doc, core::EntityId slot, 
                       (gone ? " (artık çizimde değil)" : "");
         }
         out.set("kaynaklar", std::move(from));
-        row.set("koken", std::move(out));
         said += "; kökeni: " + named(origin->operation) + " (kaynak: nesne " + listed + ")";
+        // A RESULT SAYS WHETHER IT STILL HOLDS (TODOS F-04): history says nothing.
+        if (origin->result()) {
+            const core::ResultCheck c = core::check_result(doc, slot);
+            out.set("durum", core::Json::string(core::result_state_id(c.state)));
+            core::Json changed = core::Json::array({});
+            std::string which;
+            for (const core::EntityKey k : c.changed) {
+                changed.push(core::Json::integer(static_cast<std::int64_t>(core::raw(k))));
+                which += (which.empty() ? "" : ", ") + std::to_string(core::raw(k));
+            }
+            out.set("degisen", std::move(changed));
+            said += c.state == core::ResultState::Stale
+                        ? "; güncel değil: kaynağı değişti (nesne " + which + ")"
+                    : c.state == core::ResultState::Sourceless ? "; kaynaksız: kaynağı silindi"
+                                                               : "; kaynaklarına göre güncel";
+        }
+        row.set("koken", std::move(out));
     }
     std::vector<core::EntityId> made;
     table.made_from(doc.entities().key[slot], made);

@@ -982,6 +982,7 @@ private:
     QAction* actStyleCopy_{nullptr};
     QAction* actColour_{nullptr}; ///< RENK — the colour chips' command, on a menu row too
     QAction* actTopology_{nullptr};
+    QAction* actDependency_{nullptr}; ///< BAĞIMLILIK — which results still hold (TODOS F-04)
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};
     /// ⌫: the run's last point while ÇİZGİ, ÇOKLUÇİZGİ, ALAN or SPLINE is

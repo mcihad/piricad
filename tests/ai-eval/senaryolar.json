@@ -319,6 +319,24 @@
    "komutlar": [
     "DAİRE merkez=20,15 cevre=23,15"
    ]
+  },
+  {
+   "id": "tampon-guncel-mi",
+   "istek": "Kuyunun yerini düzelttim; koruma alanı hâlâ güncel mi, öyle kalsın.",
+   "terimler": [
+    "kuyu",
+    "koruma alanı",
+    "güncel"
+   ],
+   "kurulum": [
+    "NOKTA 0,0",
+    "TAMPON nesneler=1 mesafe=5 katman=KORUMA",
+    "TAŞI nesneler=1 baslangic=0,0 bitis=2,0"
+   ],
+   "komutlar": [
+    "BAĞIMLILIK",
+    "BAĞIMLILIK islem=kabul nesneler=2"
+   ]
   }
  ]
 }

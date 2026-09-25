@@ -212,6 +212,35 @@ std::uint64_t Document::content_hash() const
     return h;
 }
 
+std::uint64_t Document::content_revision(EntityId e) const
+{
+    // A NEW seed, carrying the program's present name (CLAUDE.md 0.5a froze
+    // only the seeds already folded into fixtures).
+    static constexpr std::uint64_t kRevisionSeed = fnv1a("kentos.core.content_revision");
+    if (e >= entities_.size()) return kRevisionSeed;
+    const std::uint32_t slot = entities_.slot[e];
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(entities_.kind[e]), kRevisionSeed);
+    if (const auto bytes = geometry_.payload_of(slot); !bytes.empty()) {
+        h = fnv1a_int(static_cast<std::int64_t>(bytes.size()), h);
+        h = fnv1a(std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()), h);
+    }
+    const RingSpan span = geometry_.rings_of(slot);
+    h                   = fnv1a_int(static_cast<std::int64_t>(span.count), h);
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        h             = fnv1a_int(static_cast<std::int64_t>(geometry_.ring_role[r]), h);
+        h             = fnv1a_int(geometry_.ring_part[r], h);
+        const auto xs = geometry_.ring_xs(r);
+        const auto ys = geometry_.ring_ys(r);
+        h             = fnv1a_int(static_cast<std::int64_t>(xs.size()), h);
+        for (std::size_t i = 0; i < xs.size(); ++i) {
+            h = fnv1a_int(xs[i], h);
+            h = fnv1a_int(ys[i], h);
+        }
+    }
+    h = texts_.fold(h, std::span<const std::uint32_t>(&slot, 1));
+    return attributes_.fold_cells(h, slot);
+}
+
 std::vector<std::uint32_t> Document::row_slots() const
 {
     const std::vector<bool> external = external_rows();
@@ -1528,7 +1557,29 @@ Status Document::set_lineage(EntityId e, Lineage origin, Op& undo_out)
 {
     if (e >= entities_.size())
         return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
-    origin.sources = lineage_sources(origin.sources);
+    if (origin.revisions.empty()) {
+        origin.sources = lineage_sources(origin.sources);
+    } else {
+        // A RESULT'S EVIDENCE STAYS BESIDE ITS SOURCE: sorted as pairs, a key
+        // given twice kept once with the revision it was first given.
+        if (origin.revisions.size() != origin.sources.size())
+            return err(ErrorCode::InvalidArgument,
+                       "Bir sonucun her kaynağının bir sürümü olmalı: " + origin.operation);
+        std::vector<std::pair<EntityKey, std::uint64_t>> pairs;
+        pairs.reserve(origin.sources.size());
+        for (std::size_t i = 0; i < origin.sources.size(); ++i)
+            pairs.emplace_back(origin.sources[i], origin.revisions[i]);
+        std::ranges::stable_sort(pairs, {}, &std::pair<EntityKey, std::uint64_t>::first);
+        pairs.erase(
+            std::ranges::unique(pairs, {}, &std::pair<EntityKey, std::uint64_t>::first).begin(),
+            pairs.end());
+        origin.sources.clear();
+        origin.revisions.clear();
+        for (const auto& [k, r] : pairs) {
+            origin.sources.push_back(k);
+            origin.revisions.push_back(r);
+        }
+    }
     if (!origin.operation.empty()) {
         if (origin.sources.empty())
             return err(ErrorCode::InvalidArgument,

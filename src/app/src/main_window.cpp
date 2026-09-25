@@ -1271,6 +1271,16 @@ void MainWindow::buildActions()
     actTopology_->setObjectName(QStringLiteral("toolAction.TOPOLOJİ"));
     connect(actTopology_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("TOPOLOJİ")); });
+    // THE WHOLE DRAWING by default, like the topology check: which results are
+    // out of date with their sources (TODOS F-04).
+    actDependency_ = new QAction(tr("Bağımlılıklar"), this);
+    actDependency_->setToolTip(tr("BAĞIMLILIK — tampon, üretilen alan, sınır ve eş yükselti "
+                                  "eğrileri kaynaklarına göre güncel mi; güncel olmayanları "
+                                  "yazar  ·  kısaltma: BĞM"));
+    actDependency_->setData(static_cast<int>(Glyph::Dependency));
+    actDependency_->setObjectName(QStringLiteral("toolAction.BAĞIMLILIK"));
+    connect(actDependency_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("BAĞIMLILIK")); });
 
     actStyle_ = new QAction(tr("Stil Tasarımcısı"), this);
     actStyle_->setData(static_cast<int>(Glyph::Palette));
@@ -7154,6 +7164,92 @@ int MainWindow::probeRealMouse()
                 endCommand();
             }
         }
+
+        // ---- 38. A RESULT SAYS IT IS OUT OF DATE (TODOS F-04) ----
+        //
+        // Two wells and a protection zone round each. One well is moved: its
+        // zone says so at once — on the command line, on the canvas where it
+        // stands, and in the panel's origin row — and the other zone does not.
+        // The ribbon's dependency button counts them; accepting the moved one
+        // makes it current, and the mark goes.
+        {
+            // A processing tool runs on a worker; its output lands when the
+            // worker is done, and not a line before.
+            const auto settled = [this] {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 20000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                QCoreApplication::processEvents();
+            };
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=KUYU", "NOKTA 485320,4310220", "NOKTA 485360,4310220",
+                  "TAMPON nesneler=1 2 mesafe=8 birlestir=hayir katman=KORUMA"}) {
+                runScriptLine(QString::fromUtf8(line));
+                settled();
+            }
+            canvas_->zoomToBox(core::Box2{485'300'000, 4'310'200'000, 485'380'000, 4'310'240'000});
+            const auto painted = [this] {
+                canvas_->update();
+                QCoreApplication::processEvents();
+                canvas_->repaint();
+                QCoreApplication::processEvents();
+            };
+            painted();
+            check(canvas_->staleResultCountForProbe() == 0,
+                  QStringLiteral("iki koruma alanı çizildiğinde ikisi de güncel"));
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("TAŞI nesneler=1 baslangic=485320,4310220 "
+                                         "bitis=485324,4310222"));
+            endCommand();
+            painted();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("Kaynağı değiştiği için 1 sonuç artık güncel değil (TAMPON)")),
+                  QStringLiteral("kuyu taşınınca koruma alanının güncel olmadığı söylendi"));
+            check(canvas_->staleResultCountForProbe() == 1,
+                  QStringLiteral("tuvalde yalnız taşınan kuyunun koruma alanı işaretli (%1)")
+                      .arg(canvas_->staleResultCountForProbe()));
+            runScriptLine(QStringLiteral("SEÇ nesneler=3"));
+            attributePanel_->refresh();
+            QCoreApplication::processEvents();
+            check(attributePanel_->probeRowBadge(QStringLiteral("koken")) ==
+                          QStringLiteral("GÜNCEL DEĞİL") &&
+                      attributePanel_->probeRowValue(QStringLiteral("koken"))
+                          .contains(QStringLiteral("(değişti)")),
+                  QStringLiteral("panelde köken satırı GÜNCEL DEĞİL ve değişen kaynağı gösteriyor "
+                                 "(\"%1\")")
+                      .arg(attributePanel_->probeRowValue(QStringLiteral("koken"))));
+            if (shooting) {
+                attributePanel_->resize(420, 560);
+                (void)attributePanel_->grab().save(into + QStringLiteral("/sonuc-panel.png"));
+            }
+            shoot("sonuc-guncel-degil");
+
+            transcript_->clear();
+            actDependency_->trigger();
+            endCommand();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("2 sonuç: 1 güncel, 1 güncel değil, 0 kaynaksız.")),
+                  QStringLiteral("şeritteki Bağımlılıklar sonuçları saydı"));
+            shoot("sonuc-bagimlilik");
+
+            runScriptLine(QStringLiteral("BAĞIMLILIK islem=kabul nesneler=3"));
+            endCommand();
+            painted();
+            attributePanel_->refresh();
+            QCoreApplication::processEvents();
+            check(canvas_->staleResultCountForProbe() == 0 &&
+                      attributePanel_->probeRowBadge(QStringLiteral("koken")) ==
+                          QStringLiteral("GÜNCEL"),
+                  QStringLiteral("kabul edilen koruma alanı güncel; tuvaldeki işaret kalktı"));
+            shoot("sonuc-kabul");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -8363,7 +8459,7 @@ void MainWindow::probeDialogs()
     {
         constexpr int kCell    = 76;
         constexpr int kColumns = 16;
-        const int count        = static_cast<int>(Glyph::DimArcLength) + 1;
+        const int count        = static_cast<int>(Glyph::Dependency) + 1;
         const int rows         = (count + kColumns - 1) / kColumns;
         const Tokens& t        = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
         QImage sheet(kColumns * kCell, rows * kCell, QImage::Format_ARGB32_Premultiplied);

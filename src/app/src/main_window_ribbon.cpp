@@ -841,6 +841,7 @@ void MainWindow::buildRibbon()
     large(checks, actTopology_);
     small(checks, actMeasureArea_);
     small(checks, bufferZone);
+    small(checks, actDependency_);
 
     // ================================================================== `Harita`
     SARibbonCategory* mapTab = bar->addCategoryPage(tr("Harita"));
@@ -911,6 +912,11 @@ void MainWindow::buildRibbon()
     process->addSmallAction(showTools);
     small(process, bufferZone);
     small(process, makeAreas);
+
+    // WHAT THE TOOLS MADE, asked whether it still holds (TODOS F-04).
+    SARibbonPanel* audit = analyseTab->addPanel(tr("Denetim"));
+    large(audit, actDependency_);
+    small(audit, actTopology_);
 
     SARibbonPanel* agents = analyseTab->addPanel(tr("Yapay zekâ"));
     large(agents, actAi_);

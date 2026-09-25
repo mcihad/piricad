@@ -111,6 +111,7 @@ Tek tek komutlar:
 | `ALANÖLÇ` | [Alan ve çevre ölçme](komutlar/measure_area.md) |
 | `AÇIÖLÇ` | [Bir köşedeki açıyı ölçme](komutlar/measure_angle.md) |
 | `NESNEBİLGİ` | [Nesnenin türü, katmanı, çevresi, alanı ve öznitelikleri](komutlar/entity_info.md) |
+| `BAĞIMLILIK` | [Sonuçlar kaynaklarına göre güncel mi: tampon, üretilen alan, sınır, eş yükselti](komutlar/dependency.md) |
 | `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
 | `KAYDIR` | [Görünümü kaydırma](komutlar/pan.md) |
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
@@ -220,6 +221,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
 | [Sayısal doğruluk ve toleranslar](veri/hassasiyet.md) | Milimetre depolama, hesap eşikleri, ekrandaki yakalama pikseli, topoloji düğüm toleransı ve dışa aktarmadaki eğri sapması: hangi sayı neye karar verir |
 | [Nesne kimliği ve kökeni](veri/kimlik-ve-koken.md) | Kimliği neyin değiştirmediği, neyin yeni nesne doğurduğu; türetilen nesnenin hangi işle ve nereden geldiği |
+| [Bağımlılıklar ve sonuçlar](veri/bagimliliklar.md) | Hangi nesne kaynağını izler, hangisi "güncel değil" der; kaynak silinince, geri alınınca, sonucun kendisi değişince ne olur |
 | [MPYY plan gösterimleri](veri/mpyy-gosterimleri.md) | Gösterim veri paketi: hangi RG sürümü, ne çıkarıldı, ne eksik, nasıl yeniden üretilir |
 | [Sürüm ve uyumluluk politikası](api-stability.md) | Neyin sabit kaldığı, neyin değişebileceği |
 

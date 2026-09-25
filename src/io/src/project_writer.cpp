@@ -47,6 +47,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -684,13 +685,42 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // DEAD ROWS TOO: a parcel two ifraz ago is gone from the sheet and still
     // the link between today's parcel and the one it all came from. Its row is
     // written dead with its key, so its history can be written beside it.
+    //
+    // A RESULT'S ORIGIN IS WRITTEN ONCE PER RUN (TODOS F-04): the objects one
+    // run made share one record, and the file keeps it that way — thirty
+    // contours through two thousand points are two thousand source rows, not
+    // sixty thousand. A history origin stays one row per source, as it was.
     std::vector<LineageRecord> lineage_rows;
+    std::vector<ResultOriginRecord> result_origins;
+    std::vector<ResultSourceRecord> result_sources;
+    std::vector<ResultRowRecord> result_rows;
     {
         const core::LineageTable& table = doc.lineage();
+        std::map<std::uint32_t, std::uint32_t> written; // pool record -> file origin row
         for (const core::EntityId made : table.derived()) {
             if (is_external(made)) continue;
             const core::Lineage& origin = *table.get(made);
             const std::uint32_t op      = pool.intern(origin.operation);
+            if (origin.result()) {
+                const std::uint32_t at = table.origin_of(made);
+                auto [it, fresh] =
+                    written.try_emplace(at, static_cast<std::uint32_t>(result_origins.size()));
+                if (fresh) {
+                    ResultOriginRecord o{};
+                    o.operation_string = op;
+                    o.first_source     = static_cast<std::uint32_t>(result_sources.size());
+                    o.source_count     = static_cast<std::uint32_t>(origin.sources.size());
+                    result_origins.push_back(o);
+                    for (std::size_t i = 0; i < origin.sources.size(); ++i)
+                        result_sources.push_back(
+                            ResultSourceRecord{core::raw(origin.sources[i]), origin.revisions[i]});
+                }
+                ResultRowRecord r{};
+                r.made_key = core::raw(doc.key_of(made));
+                r.origin   = it->second;
+                result_rows.push_back(r);
+                continue;
+            }
             for (const core::EntityKey source : origin.sources) {
                 LineageRecord r{};
                 r.made_key         = core::raw(doc.key_of(made));
@@ -1021,6 +1051,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (!dimlink_rows.empty()) blocks.push_back(column(kBlkDimensionLinks, dimlink_rows));
     if (!hatchlink_rows.empty()) blocks.push_back(column(kBlkHatchLinks, hatchlink_rows));
     if (!lineage_rows.empty()) blocks.push_back(column(kBlkLineage, lineage_rows));
+    if (!result_rows.empty()) {
+        blocks.push_back(column(kBlkResultOrigins, result_origins));
+        blocks.push_back(column(kBlkResultSources, result_sources));
+        blocks.push_back(column(kBlkResultRows, result_rows));
+    }
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

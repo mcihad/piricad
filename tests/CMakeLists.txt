@@ -53,6 +53,7 @@ add_executable(kentos_tests
     unit/test_hatchlink.cpp
     unit/test_textlayout.cpp
     unit/test_identity.cpp
+    unit/test_dependency.cpp
     unit/test_textfields.cpp
     unit/test_planar.cpp
     unit/test_processing.cpp

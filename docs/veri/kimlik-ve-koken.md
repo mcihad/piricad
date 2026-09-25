@@ -53,8 +53,8 @@ işle birlikte geri alınır.
 
 | Nerede görünür | Nasıl |
 |---|---|
-| Öznitelik paneli | `koken` satırı, **GEÇMİŞ** rozetiyle: `İFRAZ ← 1 (silinmiş)` |
-| [NESNEBİLGİ](../komutlar/entity_info.md) | `kökeni: TEVHİT (kaynak: nesne 2, 3)`; yapılandırılmış cevapta `koken` (`islem`, `ad`, `kaynaklar`) |
+| Öznitelik paneli | `koken` satırı, **GEÇMİŞ** rozetiyle: `İFRAZ ← 1 (silinmiş)`; bir sonuçta **GÜNCEL**, **GÜNCEL DEĞİL** ya da **KAYNAKSIZ** |
+| [NESNEBİLGİ](../komutlar/entity_info.md) | `kökeni: TEVHİT (kaynak: nesne 2, 3)`; yapılandırılmış cevapta `koken` (`islem`, `ad`, `kaynaklar`); bir sonuçta `durum` ve `degisen` |
 | Kaynak nesnede | NESNEBİLGİ `bundan türetilen: nesne 14, 15` der (`turetilen`) |
 
 **Silinmiş kaynak da adıyla kalır.** İFRAZ ebeveyn parseli çizimden kaldırır; kimlik
@@ -71,6 +71,13 @@ nesneleri kaynak sayar.
 parsel değişince güncellenir ([bağlı nesneler](../islem/bagli-nesneler.md)). Köken ise
 geçmiştir: tampon, kuyuların o anki yerinden çizildi ve kuyular taşınınca kendiliğinden
 taşınmaz.
+
+**Ama bir sonuç güncel olmadığını bilir.** Tampon, ALANÜRET'in alanları, SINIR'ın alanı ve
+EŞYÜKSELTİ'nin eğrileri kaynakları **hakkında** bir cümledir; bunlar hesaplandıkları anda
+kaynaklarının içeriğini de kaydeder. Kuyu taşınınca tampon yerinde kalır ama **güncel
+değil** olur ve bunu söyler; `koken` satırı **GEÇMİŞ** yerine **GÜNCEL DEĞİL** rozetini
+taşır. Ayrıntı: [Bağımlılıklar ve sonuçlar](bagimliliklar.md),
+[BAĞIMLILIK](../komutlar/dependency.md).
 
 ## Kilitli katman ve bağlı dosya
 

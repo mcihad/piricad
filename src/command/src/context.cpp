@@ -9,8 +9,10 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -366,6 +368,48 @@ core::Status Context::derive(core::EntityId made, std::span<const core::EntityId
     for (const core::EntityId e : sources)
         if (e < document().entities().size()) keys.push_back(document().entities().key[e]);
     return derive(made, std::span<const core::EntityKey>(keys));
+}
+
+core::Status Context::derive_results(std::span<const core::EntityId> made,
+                                     std::span<const core::EntityKey> sources)
+{
+    const core::Document& doc = document();
+    std::vector<core::EntityKey> made_keys;
+    made_keys.reserve(made.size());
+    for (const core::EntityId e : made)
+        if (e < doc.entities().size()) made_keys.push_back(doc.entities().key[e]);
+    std::ranges::sort(made_keys);
+    // What the run read, less what it made: an object is never its own source.
+    std::vector<core::EntityKey> read;
+    read.reserve(sources.size());
+    for (const core::EntityKey k : sources)
+        if (k != core::EntityKey::None && !std::ranges::binary_search(made_keys, k))
+            read.push_back(k);
+    core::Lineage origin;
+    origin.operation = session_.spec().id;
+    origin.sources   = core::lineage_sources(read);
+    if (origin.sources.empty()) return core::ok();
+    origin.revisions = core::lineage_revisions(doc, origin.sources);
+    for (const core::EntityId e : made) {
+        if (e >= doc.entities().size()) continue;
+        if (auto st = tx_.set_lineage(e, origin); !st) return st;
+    }
+    return core::ok();
+}
+
+core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityKey> sources)
+{
+    return derive_results(std::span<const core::EntityId>(&made, 1), sources);
+}
+
+core::Status Context::derive_result(core::EntityId made, std::span<const core::EntityId> sources)
+{
+    std::vector<core::EntityKey> keys;
+    keys.reserve(sources.size());
+    for (const core::EntityId e : sources)
+        if (e < document().entities().size()) keys.push_back(document().entities().key[e]);
+    return derive_results(std::span<const core::EntityId>(&made, 1),
+                          std::span<const core::EntityKey>(keys));
 }
 
 void Context::report(core::Json data) const

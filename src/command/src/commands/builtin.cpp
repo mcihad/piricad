@@ -31,6 +31,7 @@ namespace kentos::command {
     X(cut)                                                                                         \
     X(paste)                                                                                       \
     X(entity_info)                                                                                 \
+    X(dependency)                                                                                  \
     X(measure_angle)                                                                               \
     X(stretch)                                                                                     \
     X(tracking)                                                                                    \

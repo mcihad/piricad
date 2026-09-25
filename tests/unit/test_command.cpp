@@ -6030,8 +6030,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + ÖLÇÜDÜZENLE, ÖLÇÜYENİLE, ZİNCİRÖLÇÜ, BAZÖLÇÜ, ÖLÇÜSTİLİ (TODOS C-10)
     // + TARAMADÜZENLE (TODOS C-11) + BULDEĞİŞTİR (TODOS C-12)
     // + BLOKDÜZENLE (TODOS C-13) + DIŞREFERANS, BLOKKIRP (TODOS C-14)
-    // + YERELKOPYA (TODOS F-02)
-    CHECK_EQ(f.reg.size(), std::size_t{108});
+    // + YERELKOPYA (TODOS F-02) + BAĞIMLILIK (TODOS F-04)
+    CHECK_EQ(f.reg.size(), std::size_t{109});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

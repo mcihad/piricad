@@ -393,6 +393,20 @@ enum BlockId : std::uint32_t {
     /// (R10) — losing the history, never the drawing.
     kBlkLineage = 0x0096, ///< LineageRecord[]
 
+    /// A RESULT's origin (core/lineage.hpp, TODOS F-04): what an analysis
+    /// output was computed from and each source's content revision then, so it
+    /// can say when it is out of date. ONE ORIGIN PER RUN — thirty contours
+    /// traced through two thousand points write the points once — in three
+    /// blocks: the origins, their sources as contiguous runs, and one row per
+    /// result naming its origin. OPTIONAL, all three or none: written only
+    /// when the drawing holds a result, so every other drawing keeps its
+    /// bytes; history origins stay in `kBlkLineage`, where they always were.
+    /// An older reader steps over them (R10) and loses the evidence, never
+    /// the drawing.
+    kBlkResultOrigins = 0x0097, ///< ResultOriginRecord[]
+    kBlkResultSources = 0x0098, ///< ResultSourceRecord[], per origin a contiguous run
+    kBlkResultRows    = 0x0099, ///< ResultRowRecord[]
+
     // ---- sheet layouts (core/layout.hpp). All four or none. ------------------
     //
     // A PAFTA IS DOCUMENT CONTENT, so it is in the file rather than beside it,
@@ -715,6 +729,37 @@ struct LineageRecord
 };
 
 static_assert(sizeof(LineageRecord) == 24, "the lineage column is a wire record");
+
+/// One run's origin (TODOS F-04): the operation, and where its sources are.
+struct ResultOriginRecord
+{
+    std::uint32_t operation_string; ///<  0  the command's or tool's id, into the string pool
+    std::uint32_t first_source;     ///<  4  its first row in kBlkResultSources
+    std::uint32_t source_count;     ///<  8  how many rows it has there, at least one
+    std::uint32_t reserved;         ///< 12  zero
+};
+
+static_assert(sizeof(ResultOriginRecord) == 16, "the result origin column is a wire record");
+
+/// One source of a run, by key, with its content revision when the run was
+/// computed (`core::Document::content_revision`).
+struct ResultSourceRecord
+{
+    std::uint64_t source_key; ///<  0  the object read; it may be dead, which is the point
+    std::uint64_t revision;   ///<  8  what its content was then
+};
+
+static_assert(sizeof(ResultSourceRecord) == 16, "the result source column is a wire record");
+
+/// One result: the object, and the origin it was computed by.
+struct ResultRowRecord
+{
+    std::uint64_t made_key; ///<  0  the result
+    std::uint32_t origin;   ///<  8  its row in kBlkResultOrigins
+    std::uint32_t reserved; ///< 12  zero
+};
+
+static_assert(sizeof(ResultRowRecord) == 16, "the result row column is a wire record");
 
 /// One sheet layout. Its pages, items and name runs live in the three blocks
 /// beside it.

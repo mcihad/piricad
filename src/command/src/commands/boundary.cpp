@@ -212,7 +212,8 @@ Task<void> run(Context& ctx)
         co_return;
     }
     // The boundary's origin: every object whose linework drew it (core/lineage.hpp).
-    if (auto st = ctx.derive(made.value(), std::span<const core::EntityId>(region.sources)); !st) {
+    if (auto st = ctx.derive_result(made.value(), std::span<const core::EntityId>(region.sources));
+        !st) {
         ctx.refuse(st.error());
         co_return;
     }

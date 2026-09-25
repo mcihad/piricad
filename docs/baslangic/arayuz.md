@@ -55,7 +55,7 @@ AutoCAD kullanıcısı `Çizgi`'yi, `Buda`'yı ve katman listesini aradığı ye
 | **Açıklama** | Seçim · Yazı · Ölçü · Etiket |
 | **Kadastro** | Seçim · Parsel (İfraz, Alana Göre İfraz, Tevhit) · Yazım · Denetim |
 | **Harita** | Seçim · Sorgu · Ölçüm · Jeodezi · Arazi · Veri |
-| **Analiz** | Seçim · Tablo · İşlem araçları · Yapay zekâ |
+| **Analiz** | Seçim · Tablo · İşlem araçları · Denetim · Yapay zekâ |
 | **Görünüm** | Seçim · Gezinme · Yardımcılar · Katmanlar · Pencereler · Tema |
 | **Çıktı** | Seçim · Yazdır · Dosya |
 

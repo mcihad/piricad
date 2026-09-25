@@ -378,14 +378,19 @@ Task<void> run_tool(Context& ctx)
     //
     // The inputs the tool names for it, or every object it ran over when it
     // names none: an analysis result knows its origin after this call is over.
-    const auto derive = [&ctx, &used](core::EntityId made_one,
-                                      const std::vector<std::int64_t>& own) {
+    // And it is a RESULT (TODOS F-04): each source's content is recorded with
+    // it, so the day a source changes the output says it is out of date. A
+    // caption that FOLLOWS its source is kept up to date instead and records
+    // history only (`c.attach`).
+    const auto derive = [&ctx, &used](core::EntityId made_one, const std::vector<std::int64_t>& own,
+                                      bool follows) {
         const std::vector<std::int64_t>& from = own.empty() ? used : own;
         std::vector<core::EntityKey> keys;
         keys.reserve(from.size());
         for (const std::int64_t k : from)
             keys.push_back(static_cast<core::EntityKey>(static_cast<std::uint64_t>(k)));
-        return ctx.derive(made_one, std::span<const core::EntityKey>(keys));
+        return follows ? ctx.derive(made_one, std::span<const core::EntityKey>(keys))
+                       : ctx.derive_result(made_one, std::span<const core::EntityKey>(keys));
     };
 
     std::size_t made = 0;
@@ -409,7 +414,7 @@ Task<void> run_tool(Context& ctx)
                 ctx.refuse(st.error());
                 co_return;
             }
-        if (auto st = derive(created.value(), c.sources); !st) {
+        if (auto st = derive(created.value(), c.sources, c.attach.has_value()); !st) {
             ctx.refuse(st.error());
             co_return;
         }
@@ -430,7 +435,7 @@ Task<void> run_tool(Context& ctx)
             ctx.refuse(created.error());
             co_return;
         }
-        if (auto st = derive(created.value(), p.sources); !st) {
+        if (auto st = derive(created.value(), p.sources, false); !st) {
             ctx.refuse(st.error());
             co_return;
         }
@@ -450,7 +455,7 @@ Task<void> run_tool(Context& ctx)
             ctx.refuse(created.error());
             co_return;
         }
-        if (auto st = derive(created.value(), f.sources); !st) {
+        if (auto st = derive(created.value(), f.sources, false); !st) {
             ctx.refuse(st.error());
             co_return;
         }
@@ -466,7 +471,7 @@ Task<void> run_tool(Context& ctx)
             ctx.refuse(created.error());
             co_return;
         }
-        if (auto st = derive(created.value(), rec.sources); !st) {
+        if (auto st = derive(created.value(), rec.sources, false); !st) {
             ctx.refuse(st.error());
             co_return;
         }

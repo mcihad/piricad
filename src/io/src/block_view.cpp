@@ -90,6 +90,10 @@ std::string known_block_name(std::uint32_t id)
     case kBlkAttachments: return "bağlar";
     case kBlkDimensionLinks: return "ölçü bağları";
     case kBlkHatchLinks: return "tarama bağları";
+    case kBlkLineage: return "kökenler";
+    case kBlkResultOrigins:
+    case kBlkResultSources:
+    case kBlkResultRows: return "sonuç kökenleri";
     case kBlkLayouts:
     case kBlkLayoutPages:
     case kBlkLayoutItems:

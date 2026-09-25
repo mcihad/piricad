@@ -350,11 +350,18 @@ public:
         std::size_t dims_released{0};   ///< links released: the dimension's own point was moved off
         std::size_t dims_left{0};       ///< linked dimensions that could not follow: locked
         std::size_t dims_manual{0}; ///< followed and re-measured, but the caption is typed by hand
-        std::size_t hatches_followed{0}; ///< linked hatches rebuilt from their moved boundary
-        std::size_t hatches_broken{0};   ///< sources broken: the boundary object was erased
-        std::size_t hatches_open{0};     ///< sources broken: the boundary object no longer closes
-        std::size_t hatches_released{0}; ///< hatches moved on their own, unlinked
-        std::size_t hatches_left{0};     ///< linked hatches that could not follow: locked
+        std::size_t hatches_followed{0};   ///< linked hatches rebuilt from their moved boundary
+        std::size_t hatches_broken{0};     ///< sources broken: the boundary object was erased
+        std::size_t hatches_open{0};       ///< sources broken: the boundary object no longer closes
+        std::size_t hatches_released{0};   ///< hatches moved on their own, unlinked
+        std::size_t hatches_left{0};       ///< linked hatches that could not follow: locked
+        std::size_t results_stale{0};      ///< results a source of which this changed: out of date
+        std::size_t results_sourceless{0}; ///< results a source of which this erased
+        std::size_t results_released{0};   ///< results reshaped on their own: released
+        std::size_t results_carried{0};    ///< results reshaped with their sources: still current
+        std::size_t results_asked{0};      ///< shared origins compared: the cost, for a test
+        std::vector<std::string> stale_by; ///< what made the stale and sourceless ones, once
+        std::vector<std::string> released_by; ///< what made the released ones, once
     };
 
     /// Keeps every TEXT this transaction touched standing on a baseline exactly
@@ -402,6 +409,17 @@ public:
     /// moved on its own is released. Its own cursor, like the dimensions'.
     SettleReport settle_hatches();
 
+    /// Says which RESULTS this transaction put out of date (TODOS F-04,
+    /// core/lineage.hpp): of the objects it reshaped, re-worded, re-valued or
+    /// erased, the ones a result was computed from — and only those results
+    /// are compared with their sources, so an edit far from any result costs
+    /// nothing. Whether a result is current is read from the drawing, never
+    /// stored. What it writes is for a result that was ITSELF reshaped: carried
+    /// with every source it has, it is recorded against them as they are now;
+    /// reshaped on its own, it is released — history kept, claim dropped — in
+    /// the same transaction. Its own cursor, like the dimensions'.
+    SettleReport settle_results();
+
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 
@@ -437,6 +455,7 @@ private:
     std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
     std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
     std::size_t texts_settled_upto_{0};   ///< how far `settle_texts` has read
+    std::size_t results_settled_upto_{0}; ///< how far `settle_results` has read
 
     /// The first entity row this transaction can have created: rows are
     /// append-only, so everything at or past it was born inside it.

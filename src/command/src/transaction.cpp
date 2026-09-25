@@ -11,6 +11,7 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/text_store.hpp"
 
 #include <algorithm>
@@ -1211,6 +1212,114 @@ void Transaction::rollback()
     rollback_to(0);
 }
 
+Transaction::SettleReport Transaction::settle_results()
+{
+    SettleReport rep;
+    const core::LineageTable& table = doc_.lineage();
+    const std::size_t from          = std::min(results_settled_upto_, inverse_.size());
+    if (table.empty()) {
+        results_settled_upto_ = inverse_.size();
+        return rep;
+    }
+
+    // WHAT THIS RANGE CHANGED about an object's content: its shape, its
+    // words, a value in its row, or its being there at all — and what it
+    // made, which nothing has had a chance to change under yet.
+    std::vector<EntityId> touched;
+    std::vector<EntityId> reshaped; // shape or words: what a result itself is
+    std::vector<EntityId> created;
+    for (std::size_t i = from; i < inverse_.size(); ++i) {
+        const Op& op     = inverse_[i];
+        const bool shape = op.kind == Op::Kind::SetGeometry ||
+                           op.kind == Op::Kind::SetKindGeometry || op.kind == Op::Kind::SetText;
+        if (shape) reshaped.push_back(op.entity);
+        if (shape || op.kind == Op::Kind::SetAttribute ||
+            (op.kind == Op::Kind::SetEntityAlive && op.bool_arg))
+            touched.push_back(op.entity);
+        if (op.kind == Op::Kind::SetEntityAlive && !op.bool_arg) created.push_back(op.entity);
+    }
+    for (std::vector<EntityId>* list : {&touched, &reshaped, &created}) {
+        std::ranges::sort(*list);
+        list->erase(std::ranges::unique(*list).begin(), list->end());
+    }
+
+    // ---- a result that was itself reshaped ----
+    //
+    // CARRIED WITH ITS SOURCES — a move, a turn of the well and its buffer
+    // together — it still says what they say, and is recorded against them as
+    // they are now. RESHAPED ON ITS OWN, it is no longer what was computed: the
+    // user has made it theirs, and it is released — its history kept, the
+    // claim dropped — the way a dimension dragged off its feature and a hatch
+    // moved away from its boundary are (core/dimension_link.hpp, hatch_link.hpp).
+    std::vector<EntityId> answered;
+    for (const EntityId e : reshaped) {
+        if (contains(created, e) || !doc_.alive(e)) continue;
+        const core::Lineage* origin = table.get(e);
+        if (origin == nullptr || !origin->result()) continue;
+        // A COPY: the write below may grow the table and move what `origin` points at.
+        const core::Lineage was = *origin;
+        core::Lineage next      = was;
+        bool carried            = false;
+        bool left_behind        = false;
+        for (std::size_t i = 0; i < next.sources.size(); ++i) {
+            const EntityId src = doc_.slot_of(next.sources[i]);
+            if (src == core::kNoEntity || !doc_.alive(src)) continue;
+            if (!contains(reshaped, src)) {
+                left_behind = true;
+                break;
+            }
+            next.revisions[i] = doc_.content_revision(src);
+            carried           = true;
+        }
+        if (carried && !left_behind) {
+            if (next != was && set_lineage(e, std::move(next))) ++rep.results_carried;
+        } else {
+            next.revisions.clear();
+            if (set_lineage(e, std::move(next))) {
+                ++rep.results_released;
+                rep.released_by.push_back(was.operation);
+            }
+        }
+        answered.push_back(e);
+    }
+
+    // ---- the results made from what changed, and only those ----
+    std::vector<EntityId> results;
+    std::vector<EntityId> made;
+    for (const EntityId e : touched) {
+        if (e >= doc_.entities().size()) continue;
+        table.made_from(doc_.key_of(e), made);
+        results.insert(results.end(), made.begin(), made.end());
+    }
+    std::ranges::sort(results);
+    results.erase(std::ranges::unique(results).begin(), results.end());
+
+    std::map<std::uint32_t, core::ResultState> asked; // one answer per shared origin
+    for (const EntityId r : results) {
+        if (!doc_.alive(r) || contains(created, r) || contains(answered, r)) continue;
+        const std::uint32_t at = table.origin_of(r);
+        if (at == core::kNoOrigin || !table.origin(at).result()) continue;
+        auto it = asked.find(at);
+        if (it == asked.end())
+            it = asked.emplace(at, core::check_origin(doc_, table.origin(at)).state).first;
+        if (it->second == core::ResultState::Stale)
+            ++rep.results_stale;
+        else if (it->second == core::ResultState::Sourceless)
+            ++rep.results_sourceless;
+        else
+            continue;
+        rep.stale_by.push_back(table.origin(at).operation);
+    }
+    rep.results_asked = asked.size();
+    for (std::vector<std::string>* list : {&rep.stale_by, &rep.released_by}) {
+        std::ranges::sort(*list);
+        list->erase(std::ranges::unique(*list).begin(), list->end());
+    }
+    // Past the lineage writes above too: they are this settle's own answer.
+    results_settled_upto_ = inverse_.size();
+    return rep;
+}
+
 void Transaction::rollback_to(std::size_t mark)
 {
     // Newest first: the inverse of a sequence is the reversed sequence of inverses.
@@ -1218,6 +1327,10 @@ void Transaction::rollback_to(std::size_t mark)
         (void)doc_.apply(inverse_.back());
         inverse_.pop_back();
     }
+    // A cursor past what is left would pass over the next command's first ops.
+    for (std::size_t* cursor : {&settled_upto_, &dims_settled_upto_, &hatches_settled_upto_,
+                                &texts_settled_upto_, &results_settled_upto_})
+        *cursor = std::min(*cursor, inverse_.size());
 }
 
 std::vector<core::Op> Transaction::release()

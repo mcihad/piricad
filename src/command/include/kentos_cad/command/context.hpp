@@ -227,6 +227,22 @@ public:
     /// The same, from the sources' rows.
     core::Status derive(core::EntityId made, std::span<const core::EntityId> sources);
 
+    /// Records that `made` is a RESULT computed by this command from
+    /// `sources` (TODOS F-04, core/lineage.hpp): its origin, and each source's
+    /// content revision as it is now, so the day a source changes the result
+    /// says it is out of date. For an analysis output — a buffer, an area
+    /// generated from lines, a boundary, a contour — never for a copy or a
+    /// piece, which are history (`derive`).
+    core::Status derive_result(core::EntityId made, std::span<const core::EntityKey> sources);
+
+    /// The same, from the sources' rows.
+    core::Status derive_result(core::EntityId made, std::span<const core::EntityId> sources);
+
+    /// The same for every object one run made from the same sources: the
+    /// revisions are read once and the origin is held once.
+    core::Status derive_results(std::span<const core::EntityId> made,
+                                std::span<const core::EntityKey> sources);
+
     // ---- read access ----
     const core::Document& document() const noexcept { return doc_; }
 

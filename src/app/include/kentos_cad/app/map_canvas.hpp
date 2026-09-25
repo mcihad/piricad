@@ -179,6 +179,10 @@ public:
     /// How many measurement marks are on the canvas, for the probes.
     std::size_t measureMarkCount() const noexcept { return marks_.size(); }
 
+    /// How many results the canvas marks out of date (TODOS F-04), for the
+    /// probes: the list the marks are drawn from, brought up to date first.
+    std::size_t staleResultCountForProbe();
+
     void zoomBy(double factor);
 
     /// Moves the view's centre without changing its scale. KAYDIR's landing point.
@@ -839,6 +843,13 @@ private:
     std::vector<core::EntityId> glyph_texts_;
     std::unordered_map<std::string, std::string> glyph_notes_;
     std::uint64_t glyph_revision_{~std::uint64_t{0}};
+    /// The results out of date with their sources (TODOS F-04), found once per
+    /// document revision: each shared origin compared once, however many
+    /// objects one run made — thirty contours are one comparison.
+    std::vector<core::EntityId> stale_results_;
+    std::uint64_t stale_revision_{~std::uint64_t{0}};
+    /// Finds `stale_results_` again when the document has changed since.
+    void refreshStaleResults();
 
     std::uint64_t seen_revision_{0}; ///< the revision `noteDocumentChange` last saw
     std::uint64_t edits_{0};         ///< how many changes it has seen

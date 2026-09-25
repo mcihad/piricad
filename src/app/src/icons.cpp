@@ -2347,6 +2347,24 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         break;
     }
 
+    case Glyph::Dependency: {
+        // A SOURCE, THE ARROW TO WHAT WAS MADE FROM IT, AND THE MARK ON THAT:
+        // is the result still what its source says?
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(6.0, 18.0), 2.6, 2.6);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(k.shape, 1.5));
+        p.drawRect(QRectF(11.5, 3.5, 9.0, 9.0));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(8.0, 16.0), QPointF(12.6, 11.4));
+        arrowHead(p, QPointF(12.6, 11.4), QPointF(8.0, 16.0), k.note, 3.4);
+        p.setPen(stroke(k.note, 1.7));
+        p.drawLine(QPointF(16.0, 5.6), QPointF(16.0, 8.4));
+        p.drawLine(QPointF(16.0, 10.0), QPointF(16.0, 10.4));
+        break;
+    }
+
     case Glyph::Plug:
         // A two-pin plug on its lead: a client that is actually connected.
         p.setPen(stroke(c, 1.7));

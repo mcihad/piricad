@@ -411,6 +411,18 @@ def entity_info(
         objects — Bilgisi istenen nesneler [kalıcı nesne anahtarı]
     """
 
+def dependency(
+    *,
+    action: str = ...,
+    objects: list[int] = ...,
+) -> int:
+    """Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.
+
+    Komut: core.dependency (BAĞIMLILIK)
+        action — durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz
+        objects — Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar [kalıcı nesne anahtarı]
+    """
+
 def measure_angle(
     *,
     apex: Coord = ...,

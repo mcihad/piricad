@@ -1658,6 +1658,56 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     Warning{"io.lineage", "Bir köken kaydı yüklenemedi: " + st.error().message});
     }
 
+    // ---- a result's origin: one per run, its sources a run of rows (F-04) ----
+    if (view.has(kBlkResultRows) || view.has(kBlkResultOrigins) || view.has(kBlkResultSources)) {
+        auto origins = view.column<ResultOriginRecord>(
+            kBlkResultOrigins, view.count_of(kBlkResultOrigins), "sonuç kökenleri");
+        if (!origins) return origins.error();
+        auto sources = view.column<ResultSourceRecord>(
+            kBlkResultSources, view.count_of(kBlkResultSources), "sonuç kaynakları");
+        if (!sources) return sources.error();
+        auto rows =
+            view.column<ResultRowRecord>(kBlkResultRows, view.count_of(kBlkResultRows), "sonuçlar");
+        if (!rows) return rows.error();
+        // Each origin built once, checked against the sources block before any
+        // row names it: a run that points past the block is a corrupt file.
+        std::vector<core::Lineage> built;
+        built.reserve(origins.value().size());
+        for (const ResultOriginRecord& o : origins.value()) {
+            const std::uint64_t end = std::uint64_t{o.first_source} + o.source_count;
+            if (o.source_count == 0 || end > sources.value().size())
+                return core::err(core::ErrorCode::ParseError,
+                                 std::string(kErrConsist) +
+                                     ": bir sonuç kökeninin kaynakları dosyadaki kaynak "
+                                     "satırlarının dışını gösteriyor. Dosya bozuk.");
+            auto op = strings.at(o.operation_string, "sonuç işlemi");
+            if (!op) return op.error();
+            core::Lineage origin;
+            origin.operation = std::string(op.value());
+            origin.sources.reserve(o.source_count);
+            origin.revisions.reserve(o.source_count);
+            for (std::uint64_t i = o.first_source; i < end; ++i) {
+                origin.sources.push_back(
+                    static_cast<core::EntityKey>(sources.value()[i].source_key));
+                origin.revisions.push_back(sources.value()[i].revision);
+            }
+            built.push_back(std::move(origin));
+        }
+        for (const ResultRowRecord& r : rows.value()) {
+            const core::EntityId made = doc.slot_of(static_cast<core::EntityKey>(r.made_key));
+            if (made == core::kNoEntity || r.origin >= built.size()) {
+                report.warnings.push_back(Warning{"io.result_row",
+                                                  "Dosyadaki bir sonuç kaydı var olmayan bir "
+                                                  "nesneye ya da kökene işaret ediyor; yok "
+                                                  "sayıldı."});
+                continue;
+            }
+            if (auto st = tx.set_lineage(made, built[r.origin]); !st)
+                report.warnings.push_back(
+                    Warning{"io.result", "Bir sonuç kökeni yüklenemedi: " + st.error().message});
+        }
+    }
+
     // ---- the allocator must not hand out a key the file already used ----
     //
     // A drawing with an external reference stopped the counter past its

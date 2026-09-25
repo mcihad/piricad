@@ -5291,6 +5291,10 @@ TEST_CASE("IO: köken tohumları korpusta; bozuk köken satırları uyarıyla at
     auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
     if (!opened) FAIL_WITH("AÇ", opened.error().message);
     CHECK_EQ(a.doc.lineage().size(), std::size_t{2});
+    // Read in full, so not reported as a block this build does not know: the
+    // lineage block was missing from that list and every drawing with an
+    // origin opened saying part of it had not been kept (TODOS F-04).
+    CHECK(a.transcript.find("tanımadığı") == std::string::npos);
 
     // The damaged file: a row for nobody is passed over and said; a string past
     // the pool is a damaged file, refused by name rather than read wrong.

@@ -11,6 +11,12 @@
 //
 // THE TRIANGULATION IS NOT STORED. It is an intermediate; keeping it would add an
 // entity kind the whole program has to learn about for a thing nobody draws.
+//
+// THE CONTOURS ARE A RESULT (TODOS F-04, core/lineage.hpp): every line records
+// the points it was traced from and what each one said, once for the run. A
+// point moved, a height re-read, a point erased — and every contour of the run
+// says it is out of date, because a surface is one thing and any of its points
+// can bend any of its lines.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -124,6 +130,8 @@ Task<void> run(Context& ctx)
     core::AttrId height_column = table.find("kot");
 
     std::size_t drawn = 0;
+    std::vector<core::EntityId> lines;
+    lines.reserve(traced.value().size());
     for (const domain::surface::Contour& c : traced.value()) {
         // CLOSED IS NOT THE SAME AS ENCLOSING. A run whose two ends meet but whose
         // area is zero is a line that went out and came back along itself — which
@@ -150,7 +158,20 @@ Task<void> run(Context& ctx)
             ctx.refuse(st.error());
             co_return;
         }
+        lines.push_back(created.value());
         ++drawn;
+    }
+
+    // WHAT THEY WERE TRACED FROM: every point the run looked at, a point with
+    // no height included — reading one in later changes the surface as surely
+    // as moving one does.
+    std::vector<core::EntityKey> read;
+    read.reserve(slots.size());
+    for (const core::EntityId slot : slots)
+        read.push_back(doc.key_of(slot));
+    if (auto st = ctx.derive_results(lines, read); !st) {
+        ctx.refuse(st.error());
+        co_return;
     }
 
     ctx.record("aralik", Value::integer(interval));

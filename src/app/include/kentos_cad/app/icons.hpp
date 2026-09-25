@@ -247,6 +247,8 @@ enum class Glyph {
     DimAngular,   ///< two arms and the arrowed arc between them: ÖLÇÜ tur=acisal
     DimOrdinate,  ///< an origin's two axes and a point's jogged line: ÖLÇÜ tur=koordinat
     DimArcLength, ///< an arc, the arc beside it that measures it and ⌒: ÖLÇÜ tur=yay
+    // ---- ties between objects (TODOS F-04) ------------------------------------
+    Dependency, ///< a source, the arrow to what was made from it, a mark on that: BAĞIMLILIK
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

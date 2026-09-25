@@ -537,6 +537,20 @@ std::uint64_t AttrColumn::fold(std::uint64_t seed, std::span<const std::uint32_t
     return h;
 }
 
+std::uint64_t AttrColumn::fold_cell(std::uint64_t seed, std::size_t row) const
+{
+    if (!present(row)) return seed;
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(spec_.id.size()), seed);
+    h               = fnv1a(spec_.id, h);
+    h               = fnv1a_int(static_cast<std::int64_t>(spec_.type), h);
+    if (is_text_shaped(spec_.type)) {
+        const std::string& text = pool_[codes_[row]];
+        h                       = fnv1a_int(static_cast<std::int64_t>(text.size()), h);
+        return fnv1a(text, h);
+    }
+    return fnv1a_int(numbers_[row], h);
+}
+
 // ------------------------------------------------------------- AttrTable -----
 
 Result<AttrId> AttrTable::add(AttrSpec spec)
@@ -735,6 +749,15 @@ std::uint64_t AttrTable::fold(std::uint64_t seed, std::span<const std::uint32_t>
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows.size()), seed);
     for (const auto& c : columns_)
         h = c.fold(h, rows);
+    return h;
+}
+
+std::uint64_t AttrTable::fold_cells(std::uint64_t seed, std::size_t row) const
+{
+    std::uint64_t h = seed;
+    if (row >= rows_) return h;
+    for (const auto& c : columns_)
+        h = c.fold_cell(h, row);
     return h;
 }
 

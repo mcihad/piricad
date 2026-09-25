@@ -13,6 +13,7 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/lineage.hpp"
 
 #include <QClipboard>
 #include <QColorDialog>
@@ -272,6 +273,9 @@ void AttributePanel::rebuild()
         // WHERE IT CAME FROM (TODOS F-02, core/lineage.hpp): the operation by
         // the name a user types and the objects it was made from, a source
         // that is gone said to be. History, so it reads and never edits.
+        //
+        // A RESULT SAYS WHETHER IT STILL HOLDS (TODOS F-04): the badge is its
+        // state, and a source that changed since it was computed is marked.
         if (const core::Lineage* origin = doc.lineage().get(slot); origin != nullptr) {
             const command::CommandSpec* spec =
                 controller_.bus().registry().by_id(origin->operation);
@@ -280,16 +284,24 @@ void AttributePanel::rebuild()
                     ? QString::fromUtf8(spec->names.front().data(),
                                         static_cast<qsizetype>(spec->names.front().size()))
                     : QString::fromStdString(origin->operation);
+            const core::ResultCheck check = core::check_result(doc, slot);
             QStringList from;
             for (const core::EntityKey k : origin->sources) {
                 const core::EntityId src = doc.slot_of(k);
                 const bool gone          = src == core::kNoEntity || !doc.alive(src);
-                from << (gone ? tr("%1 (silinmiş)") : QStringLiteral("%1"))
+                const bool changed       = std::ranges::binary_search(check.changed, k);
+                from << (gone      ? tr("%1 (silinmiş)")
+                         : changed ? tr("%1 (değişti)")
+                                   : QStringLiteral("%1"))
                             .arg(static_cast<qulonglong>(core::raw(k)));
             }
+            const QString state = check.state == core::ResultState::Current ? tr("GÜNCEL")
+                                  : check.state == core::ResultState::Stale ? tr("GÜNCEL DEĞİL")
+                                  : check.state == core::ResultState::Sourceless ? tr("KAYNAKSIZ")
+                                                                                 : tr("GEÇMİŞ");
             what.rows.push_back({tr("koken"),
                                  tr("%1 ← %2").arg(made_by, from.join(QStringLiteral(", "))),
-                                 tr("GEÇMİŞ"),
+                                 state,
                                  true,
                                  {},
                                  {}});
@@ -1022,6 +1034,14 @@ QString AttributePanel::probeRowValue(const QString& key) const
     return {};
 }
 
+QString AttributePanel::probeRowBadge(const QString& key) const
+{
+    for (const AttributeGroup& group : groups_)
+        for (const AttributeRow& row : group.rows)
+            if (row.key == key) return row.badge;
+    return {};
+}
+
 bool AttributePanel::openRowForProbe(const QString& key)
 {
     for (int g = 0; g < groups_.size(); ++g)
@@ -1322,9 +1342,13 @@ void AttributePanel::paintEvent(QPaintEvent*)
                 // fact with no urgency — `SABİT`, `MİRAS` — is neutral. This panel
                 // used to paint derived values in the warn colour, which said "you
                 // changed this" about a number the user never touched.
+                // A tie that no longer holds is a warning too: a link broken, a
+                // result out of date with its source (TODOS F-04).
                 Tone tone = Tone::Neutral;
                 if (row.derived) tone = Tone::Accent;
-                if (row.badge == tr("BOŞ")) tone = Tone::Warn;
+                if (row.badge == tr("BOŞ") || row.badge == tr("KOPUK") ||
+                    row.badge == tr("GÜNCEL DEĞİL"))
+                    tone = Tone::Warn;
                 Badge::paint(p, box, row.badge, tone, theme_);
                 right -= w + 6;
             }

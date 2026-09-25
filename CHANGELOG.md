@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — sonuç kaynağıyla uyuşmadığını söylüyor: BAĞIMLILIK (F-04, 1. aşama)
+
+- **Kaynağı değişen sonuç "güncel değil" oluyor.** TAMPON'un koruma alanı, ALANÜRET'in
+  alanları, SINIR'ın bulduğu alan ve EŞYÜKSELTİ'nin eğrileri hesaplandıkları anda
+  kaynaklarının içeriğini (şekil, yazı, değerler) kaydediyor. Kuyu taşınınca, bir çizgi
+  oynayınca, bir noktanın kotu değişince sonuç yerinde kalıyor ama bunu söylüyor: komut
+  bittiği anda komut satırında (`Kaynağı değiştiği için 1 sonuç artık güncel değil
+  (TAMPON).`), tuvalde sonucun üstünde uyarı renkli **güncel değil** işareti, öznitelik
+  panelinde `koken` satırında **GÜNCEL DEĞİL** rozeti ve değişen kaynağın yanında
+  `(değişti)`; NESNEBİLGİ de söylüyor. Önceden sonuç eskidiğini hiçbir yerde belli
+  etmiyordu.
+- **Yeni komut BAĞIMLILIK** (Analiz ▸ Denetim ▸ Bağımlılıklar): çizimdeki ya da verilen
+  sonuçları güncel, güncel değil, kaynaksız diye sayar ve hangisinin hangi kaynağı
+  değiştiği için güncel olmadığını yazar; `islem=kabul` kaynakların şimdiki hâlini kabul
+  eder, `islem=coz` sonucu kaynağından çözer. Tek adımda geri alınır.
+- **Durum saklanmıyor, çizimden okunuyor:** kaynağı değiştiren işi geri alınca ya da
+  kaynağı eski hâline getirince sonuç yeniden güncel; kaynağı silinince kaynaksız, geri
+  alınınca yine güncel. Katman, renk ya da görünürlük değişikliği sonucu eskitmiyor.
+- **Sonucun kendisi değişince:** kaynaklarıyla birlikte taşınan sonuç güncel kalıyor;
+  kaynağından ayrı değiştirilen sonuç kaynağından çözülüyor ve bu söyleniyor — bağlı
+  ölçünün ve taramanın davranışı gibi.
+- Yalnız değişen kaynaktan yapılan sonuçlar karşılaştırılıyor; bir çalışmanın bütün
+  çıktıları (örneğin otuz eş yükselti eğrisi) tek kökeni paylaşıyor ve dosyada
+  kaynaklarını bir kez yazıyor.
+- **Düzeltildi:** kökeni olan her çizim açılırken "Dosyada bu sürümün tanımadığı 1 blok
+  var" diye yanlış uyarı veriyordu; köken bloğu okunduğu hâlde tanınanlar listesinde
+  değildi.
+- Yeni belgeler: [BAĞIMLILIK](docs/komutlar/dependency.md),
+  [Bağımlılıklar ve sonuçlar](docs/veri/bagimliliklar.md).
+
 ### Eklendi — milimetre altı ayrıntı söyleniyor; 1 mm uçtan uca kanıtlandı (F-03, 4. aşama)
 
 - **İçe aktarma milimetrenin altındaki ayrıntıyı sayıyor ve söylüyor.** DXF, DWG ya da CBS

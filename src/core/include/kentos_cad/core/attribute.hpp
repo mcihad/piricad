@@ -359,6 +359,11 @@ public:
     /// The same fold over `rows`, in that order (`AttrTable::fold`).
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const;
 
+    /// One cell, with the column's id and type, when it holds a value; the seed
+    /// unchanged when it does not — so a column declared later, empty on every
+    /// row, changes no object's content revision (`Document::content_revision`).
+    std::uint64_t fold_cell(std::uint64_t seed, std::size_t row) const;
+
     /// Changes what the column SAYS about itself without touching what it holds:
     /// display name, description, whether it is required, its catalogue, and —
     /// for a `Decimal` — how many digits it carries.
@@ -443,6 +448,10 @@ public:
     /// each the slot its geometry holds NOW (`Document::content_hash`). A slot a
     /// geometry edit left behind keeps its cells for undo and never folds.
     std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const;
+
+    /// Every cell of `row` that holds a value, column by column (`fold_cell`):
+    /// what one object says, for its content revision.
+    std::uint64_t fold_cells(std::uint64_t seed, std::size_t row) const;
 
 private:
     std::vector<AttrColumn> columns_;

@@ -71,6 +71,9 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `proje/12-tarama-bagi-bozuk.pcad` | the same block with one fault per row: a hatch the file does not hold, a live link to no object |
 | `proje/14-kokenler.pcad` | the lineage block: a trimmed line's new piece and a copied parcel whose source was erased — a dead source, which a lineage keeps |
 | `proje/15-koken-bozuk.pcad` | the same block with one fault per row: an object the file does not hold, an operation string past the end of the pool |
+| `proje/16-sonuc-kokenleri.pcad` | the three result blocks (TODOS F-04): two wells, a buffer round each, one well moved after — one buffer out of date, the other current |
+| `proje/17-sonuc-satiri-bozuk.pcad` | the same with two faulty result rows: an object the file does not hold, an origin past the origins block — each passed over and said |
+| `proje/18-sonuc-kaynagi-tasan.pcad` | the same with an origin whose sources run past the sources block — refused by name |
 | `proje/13-tarih-yuvalari.pcad` | written by the build before format 3: geometry slots no row holds (a moved point's ada number, a moved-then-corrected caption, a moved line's XDATA) — the history the reader must pass over, and the file it used to refuse (io.md R10a) |
 | `dxf/01-cizgi-ve-parsel.dxf` | a line and a parcel with a hole, with its `.prj` companion |
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |
