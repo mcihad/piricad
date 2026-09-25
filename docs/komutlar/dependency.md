@@ -20,6 +20,9 @@ kaynağıyla artık uyuşmadığını görecek, bağlı olanı kaynağına yeti�
   kaydederler; kaynak değişince kendiliğinden yeniden hesaplanmazlar ama **güncel
   olmadıklarını söylerler**.
 
+Paftalar da sayılır: bir tablonun, grafiğin, haritanın ya da atlasın adıyla okuduğu
+katman ya da sütun çizimde yoksa o **pafta bağı kopuktur** ([Pafta](../veri/bagimliliklar.md#pafta)).
+
 Kaynağıyla uyuşmayan bir nesne üç yerde görünür: kaynağı değiştiren komut bittiği anda
 komut satırında, tuvalde uyarı renkli işaretle (**güncel değil**, kilitli bir bağlı nesne
 için **kilitli: kaynağının gerisinde**) ve öznitelik panelinde **GÜNCEL DEĞİL** rozetiyle.
@@ -209,13 +212,15 @@ ikisini birlikte geri alır.
 
 ## Betikten kullanım
 
-`durum`'un yapılandırılmış cevabı iki liste taşır. `sonuclar`: her sonuç için `nesne`
+`durum`'un yapılandırılmış cevabı üç liste taşır. `sonuclar`: her sonuç için `nesne`
 (kimliği), `islem` (onu yapan işin kimliği, örneğin `islem.tampon`), `ad` (`TAMPON`),
 `durum` (`guncel`, `guncel_degil`, `kaynaksiz`), `degisen` ve `silinen` (kaynakların
 kimlikleri); yanında üç sayı: `guncel`, `guncel_degil`, `kaynaksiz`. `baglilar`: her bağlı
 nesne için `nesne`, `tur` (`yazi`, `olcu`, `tarama`), `durum` (`guncel`, `guncel_degil`,
-`kopuk`), `kaynaklar`, `degisen` ve `silinen`. `yenile`, `kabul` ve `coz`'un cevabı
-`islem` ve `nesneler` (işlenen nesnelerin kimlikleri) taşır.
+`kopuk`), `kaynaklar`, `degisen` ve `silinen`. `paftalar`: bir çıktı yerleşiminin
+çizimden adıyla okuduğu her katman ve sütun için `yerlesim`, `oge` (öğenin adı; atlas için
+boş), `tur` (`katman`, `sutun`), `ad` ve `durum` (`guncel`, `kopuk`). `yenile`, `kabul` ve
+`coz`'un cevabı `islem` ve `nesneler` (işlenen nesnelerin kimlikleri) taşır.
 
 ## Hatalar
 

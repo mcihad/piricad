@@ -633,6 +633,39 @@ LayoutItem default_item(LayoutItemKind kind);
 /// belong to `/src/app` and are added to this list there.
 std::vector<std::string> layout_trouble(const Layout& layout);
 
+/// What a sheet reads from the drawing BY NAME (TODOS F-04).
+enum class SheetTieKind : std::uint8_t {
+    Layer  = 0, ///< a layer a map draws, a table or a chart writes, an atlas walks
+    Column = 1, ///< a column a table prints, a chart counts, an atlas sorts by
+};
+
+/// One name a sheet item — or its atlas — reads from the drawing.
+///
+/// A SHEET IS NEVER OUT OF DATE, ONLY UNHOOKED. Its tables, charts and maps are
+/// read from the drawing each time the sheet is drawn, so a parcel's new area
+/// is on the next print by itself. What CAN go wrong is the name: a template
+/// made for another drawing, a column deleted since. Until this was asked, a
+/// table naming a layer the drawing lacks drew its header over no rows — an
+/// empty area table on a submitted sheet, printed as if there were no parcels.
+struct SheetTie
+{
+    std::string layout;                     ///< the layout's name
+    std::string item;                       ///< the item's id; empty for the layout's atlas
+    SheetTieKind kind{SheetTieKind::Layer}; ///< what it names
+    std::string name;                       ///< the layer or column named
+    bool broken{false};                     ///< the drawing has none by that name
+};
+
+/// Every name `layout`'s items and atlas read from `doc`, in item order.
+std::vector<SheetTie> sheet_ties(const Document& doc, const Layout& layout);
+
+/// The same for every layout the drawing holds.
+std::vector<SheetTie> sheet_ties(const Document& doc);
+
+/// `layout_trouble`, and every name it reads from `doc` that points at nothing,
+/// one sentence each: the report a preflight reads when it has the drawing.
+std::vector<std::string> layout_trouble(const Layout& layout, const Document& doc);
+
 /// One item drawn over another, and how much of the lower one it hides.
 ///
 /// WHY OVERLAPS ARE REPORTED SEPARATELY FROM TROUBLE. Most of them are the

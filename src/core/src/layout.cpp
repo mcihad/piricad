@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/layout.hpp"
 
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -8,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iterator>
 
 namespace kentos::core {
 namespace {
@@ -675,6 +677,87 @@ bool Layout::rename_item(std::string_view from, std::string to)
     // `linked_map` the file will carry.
     relink();
     return true;
+}
+
+namespace {
+
+/// Whether `doc` has a column named `name`, folded the way a table matches it.
+bool has_column(const Document& doc, std::string_view name)
+{
+    const AttrTable& attrs = doc.attributes();
+    for (std::size_t c = 0; c < attrs.columns(); ++c)
+        if (const AttrColumn* held = attrs.column(static_cast<AttrId>(c));
+            held != nullptr && turkish_key_equals(name, held->spec().id))
+            return true;
+    return false;
+}
+
+} // namespace
+
+std::vector<SheetTie> sheet_ties(const Document& doc, const Layout& layout)
+{
+    std::vector<SheetTie> out;
+    const auto layer = [&](const std::string& item, const std::string& name) {
+        if (!name.empty())
+            out.push_back(SheetTie{layout.name, item, SheetTieKind::Layer, name,
+                                   doc.find_layer(name) == kNoLayer});
+    };
+    const auto column = [&](const std::string& item, const std::string& name) {
+        if (!name.empty())
+            out.push_back(
+                SheetTie{layout.name, item, SheetTieKind::Column, name, !has_column(doc, name)});
+    };
+    for (const LayoutItem& item : layout.items) {
+        switch (item.kind) {
+        case LayoutItemKind::Map:
+            for (const std::string& l : item.layers)
+                layer(item.id, l);
+            break;
+        case LayoutItemKind::Table:
+        case LayoutItemKind::Chart:
+            layer(item.id, item.text);
+            for (const std::string& c : item.columns)
+                column(item.id, c);
+            break;
+        default: break;
+        }
+    }
+    layer({}, layout.atlas.coverage_layer);
+    column({}, layout.atlas.sort_by);
+    return out;
+}
+
+std::vector<SheetTie> sheet_ties(const Document& doc)
+{
+    std::vector<SheetTie> out;
+    for (const Layout& layout : doc.layouts().all()) {
+        std::vector<SheetTie> its = sheet_ties(doc, layout);
+        out.insert(out.end(), std::make_move_iterator(its.begin()),
+                   std::make_move_iterator(its.end()));
+    }
+    return out;
+}
+
+std::vector<std::string> layout_trouble(const Layout& layout, const Document& doc)
+{
+    std::vector<std::string> out = layout_trouble(layout);
+    for (const SheetTie& t : sheet_ties(doc, layout)) {
+        if (!t.broken) continue;
+        const bool layer = t.kind == SheetTieKind::Layer;
+        if (t.item.empty())
+            out.push_back(layer ? "Atlas '" + t.name +
+                                      "' katmanının nesnelerini dolaşıyor ama çizimde öyle bir "
+                                      "katman yok; hiç sayfa çıkmayacak."
+                                : "Atlas '" + t.name +
+                                      "' sütununa göre sıralanıyor ama çizimde öyle bir sütun "
+                                      "yok; sayfalar çizimdeki sırayla çıkacak.");
+        else
+            out.push_back("'" + t.item + "' '" + t.name + "' " +
+                          (layer ? "katmanını okuyor ama çizimde öyle bir katman yok; boş çıkacak."
+                                 : "sütununu yazıyor ama çizimde öyle bir sütun yok; o sütun "
+                                   "çıkmayacak."));
+    }
+    return out;
 }
 
 std::vector<std::string> layout_trouble(const Layout& layout)

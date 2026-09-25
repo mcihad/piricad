@@ -23,6 +23,7 @@
 
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/ties.hpp"
 
@@ -462,6 +463,36 @@ Task<void> run_dependency(Context& ctx)
         lines.push_back(std::move(line));
     }
 
+    // ---- and the sheets: a name a layout reads that points at nothing ----
+    //
+    // A sheet is read from the drawing each time it is drawn, so it is never
+    // out of date — but a table or a map can name a layer or a column the
+    // drawing does not have (TODOS F-04). Asked for the whole drawing only: a
+    // sheet item is not an object `nesneler` can name.
+    core::Json sheet_rows    = core::Json::array({});
+    std::size_t sheet_count  = 0;
+    std::size_t sheet_broken = 0;
+    std::vector<std::string> sheet_lines;
+    if (named.empty())
+        for (const core::SheetTie& t : core::sheet_ties(doc)) {
+            ++sheet_count;
+            core::Json row = core::Json::object({});
+            row.set("yerlesim", core::Json::string(t.layout));
+            row.set("oge", core::Json::string(t.item));
+            row.set("tur",
+                    core::Json::string(t.kind == core::SheetTieKind::Layer ? "katman" : "sutun"));
+            row.set("ad", core::Json::string(t.name));
+            row.set("durum", core::Json::string(t.broken ? "kopuk" : "guncel"));
+            sheet_rows.push(std::move(row));
+            if (!t.broken) continue;
+            ++sheet_broken;
+            sheet_lines.push_back("  bağı kopuk: '" + t.layout + "' ▸ " +
+                                  (t.item.empty() ? std::string("atlas") : "'" + t.item + "'") +
+                                  " — '" + t.name + "' " +
+                                  (t.kind == core::SheetTieKind::Layer ? "katmanı" : "sütunu") +
+                                  " çizimde yok");
+        }
+
     const std::size_t results   = result_rows.as_array().size();
     const std::size_t followers = follower_rows.as_array().size();
     const auto& r               = counts.results;
@@ -470,7 +501,7 @@ Task<void> run_dependency(Context& ctx)
     constexpr auto kBehind      = static_cast<std::size_t>(core::TieState::Behind);
     constexpr auto kBroken      = static_cast<std::size_t>(core::TieState::Broken);
     constexpr auto kSourceless  = static_cast<std::size_t>(core::TieState::Sourceless);
-    if (ties.empty()) {
+    if (ties.empty() && sheet_count == 0) {
         ctx.echo(untied != 0 ? "Seçilen nesnelerin hiçbiri kaynağına bağlı değil."
                              : "Çizimde kaynağına bağlı bir nesne yok.");
     } else {
@@ -482,6 +513,11 @@ Task<void> run_dependency(Context& ctx)
             ctx.echo(std::to_string(followers) + " bağlı nesne: " + std::to_string(f[kCurrent]) +
                      " güncel, " + std::to_string(f[kBehind]) + " güncel değil, " +
                      std::to_string(f[kBroken]) + " bağı kopuk.");
+        if (sheet_count != 0)
+            ctx.echo(std::to_string(sheet_count) +
+                     " pafta bağı: " + std::to_string(sheet_count - sheet_broken) + " güncel, " +
+                     std::to_string(sheet_broken) + " bağı kopuk.");
+        lines.insert(lines.end(), sheet_lines.begin(), sheet_lines.end());
         for (std::size_t i = 0; i < lines.size() && i < kListed; ++i)
             ctx.echo(lines[i]);
         if (lines.size() > kListed)
@@ -495,6 +531,9 @@ Task<void> run_dependency(Context& ctx)
                 "çözmek için: BAĞIMLILIK islem=coz");
         if (f[kBehind] != 0)
             ctx.echo("Bağlı nesneleri kaynağına yetiştirmek için: BAĞIMLILIK islem=yenile");
+        if (sheet_broken != 0)
+            ctx.echo("Kopuk pafta bağını düzeltmek için öğeye var olan bir katman ya da sütun "
+                     "verin: ÇIKTIÖĞE");
         say_untied();
     }
 
@@ -504,6 +543,7 @@ Task<void> run_dependency(Context& ctx)
     report.set("guncel_degil", core::Json::integer(static_cast<std::int64_t>(r[kBehind])));
     report.set("kaynaksiz", core::Json::integer(static_cast<std::int64_t>(r[kSourceless])));
     report.set("baglilar", std::move(follower_rows));
+    report.set("paftalar", std::move(sheet_rows));
     ctx.report(std::move(report));
 }
 

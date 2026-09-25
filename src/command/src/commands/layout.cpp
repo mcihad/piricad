@@ -478,7 +478,7 @@ Task<void> run_layout(Context& ctx)
                 core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
-        const std::vector<std::string> trouble      = core::layout_trouble(*found);
+        const std::vector<std::string> trouble      = core::layout_trouble(*found, ctx.document());
         const std::vector<core::LayoutOverlap> over = core::layout_overlaps(*found);
 
         // WHAT COVERS WHAT, as structured data beside the prose. Most overlaps

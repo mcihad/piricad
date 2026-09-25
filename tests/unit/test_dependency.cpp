@@ -20,6 +20,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/ties.hpp"
@@ -854,6 +855,65 @@ TEST_CASE("YENİDEN HESAPLAMA KANIT: arayüz, komut satırı, betik ve oynatma a
     for (const auto& e : cli.journal.entries())
         REQUIRE(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
     CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+}
+
+// ================================================================= sheets ===
+
+TEST_CASE("PAFTA: var olmayan katmanı ya da sütunu okuyan pafta öğesi kopuk görünür; denetim ve "
+          "BAĞIMLILIK söyler; sütun silinince o anda söylenir")
+{
+    Rig r;
+    r.run("KATMAN ad=PARSEL");
+    r.run("SÜTUN kimlik=ada tur=tam_sayi");
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta");
+    r.run("ÇIKTIÖĞE islem=ekle tur=tablo ad=liste");
+    r.run("ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL sutunlar=ada");
+    const auto broken = [&r] {
+        std::size_t n = 0;
+        for (const core::SheetTie& t : core::sheet_ties(r.doc))
+            n += t.broken ? 1 : 0;
+        return n;
+    };
+    REQUIRE_EQ(core::sheet_ties(r.doc).size(), std::size_t{2});
+    CHECK_EQ(broken(), std::size_t{0});
+
+    // The sheet's map frame naming a layer this drawing does not have — what a
+    // layout written for another drawing brings (ÇIKTIÖĞE itself refuses to
+    // name a layer that is not there).
+    {
+        std::vector<core::Layout> layouts = r.doc.layouts().all();
+        for (core::LayoutItem& item : layouts.front().items)
+            if (item.kind == core::LayoutItemKind::Map) item.layers = {"YOL"};
+        Transaction tx(r.doc, "başka çizimden");
+        REQUIRE(tx.set_layouts(std::move(layouts)));
+        (void)tx.release();
+    }
+    CHECK_EQ(broken(), std::size_t{1});
+    r.said.clear();
+    auto told = r.bus.execute_line("BAĞIMLILIK", Origin::Test);
+    REQUIRE(told.ok());
+    CHECK(r.said.find("3 pafta bağı: 2 güncel, 1 bağı kopuk.") != std::string::npos);
+    CHECK(r.said.find("  bağı kopuk: 'Pafta' ▸ 'harita' — 'YOL' katmanı çizimde yok") !=
+          std::string::npos);
+    const core::Json* sheets = told.value().report.find("paftalar");
+    REQUIRE(sheets != nullptr);
+    CHECK_EQ(sheets->as_array().size(), std::size_t{3});
+    r.said.clear();
+    r.run("ÇIKTIYERLEŞİMİ islem=denetle ad=Pafta");
+    CHECK(r.said.find("'harita' 'YOL' katmanını okuyor ama çizimde öyle bir katman yok; boş "
+                      "çıkacak.") != std::string::npos);
+
+    // The table's column deleted: said at once, and seen after.
+    r.said.clear();
+    r.run("SÜTUN kimlik=ada sil=evet");
+    CHECK(r.said.find("Silinen 'ada' sütununu 1 pafta öğesi okuyordu ('Pafta' ▸ 'liste'); o öğe "
+                      "artık onu çıkaramaz.") != std::string::npos);
+    CHECK_EQ(broken(), std::size_t{2});
+
+    // Given the layer, the map is whole again.
+    r.run("KATMAN ad=YOL");
+    CHECK_EQ(broken(), std::size_t{1});
 }
 
 // ============================================================ the bytes ===

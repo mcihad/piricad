@@ -579,7 +579,7 @@ Task<void> run_context(Context& ctx)
         if (!one.paper.empty()) sheet.set("kagit", Json::string(one.paper));
         const core::LayoutItem* map = one.first_map();
         sheet.set("hedefli", Json::boolean(map != nullptr && !map->extent.empty()));
-        const std::size_t trouble = core::layout_trouble(one).size();
+        const std::size_t trouble = core::layout_trouble(one, ctx.document()).size();
         if (trouble != 0) sheet.set("sorun", Json::integer(static_cast<std::int64_t>(trouble)));
         sheets.push(std::move(sheet));
     }

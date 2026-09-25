@@ -16,12 +16,32 @@ bağ kopmaz ([nesne kimliği](kimlik-ve-koken.md)).
 | **Bağlı ölçü** — [ÖLÇÜ](../komutlar/dimension.md) | Bir köşe, merkez, yay ucu | **İzler**: yeniden yerleşir ve yeniden ölçülür | Bağ kopar: ölçü yerinde durur, tuvalde **bağ koptu** |
 | **Bağlı tarama** — [TARAMA](../komutlar/hatch.md) | Sınırını veren nesneler | **İzler**: sınırdan yeniden kurulur | Bağ kopar: tarama son hâlinde durur, tuvalde **sınır bağı koptu** |
 | **Sonuç** — [TAMPON](../komutlar/tampon.md), [ALANÜRET](../komutlar/alan_uret.md), [SINIR](../komutlar/boundary.md), [EŞYÜKSELTİ](../komutlar/contour.md) | Hesaplandığı nesneler | **Güncel değil** olur ve bunu söyler; kendi kendine yeniden hesaplanmaz, istenince hesaplanır | **Kaynaksız** olur; son hâlinde kendi başına durur |
+| **Pafta öğesi** — tablo, grafik, harita çerçevesi, atlas ([ÇIKTIÖĞE](../komutlar/layout_item.md)) | Katmanların ve sütunların **adları** | Pafta her çizildiğinde çizimden yeniden okunur: **hiç eskimez** | Adı çizimde yoksa bağ kopar: tablo ve grafik kesikli bir uyarı kutusu çizer, harita o katmanı çizmez; ön denetim ve BAĞIMLILIK söyler |
 
 Bir de bağ olmayan ilişki vardır: **köken**. Bir kopya, bir budamanın parçası, bir
 ifrazın parseli hangi nesneden yapıldığını bilir, ama o nesne hakkında bir şey söylemez;
 kaynağı değişince ona hiçbir şey olmaz. Köken geçmiştir.
 
 Bağlı yazının ayrıntısı [Bağlı nesneler](../islem/bagli-nesneler.md) sayfasındadır.
+
+## Pafta
+
+Bir paftanın alan tablosu, grafiği, haritası ve atlası çizimi **her çizilişinde yeniden
+okur**: bir parselin alanı değişince bir sonraki baskıda yeni alan yazar, bunun için
+hiçbir şeyin yenilenmesi gerekmez. Pafta öğesi katmanı ve sütunu **adıyla** okur; bu
+yüzden eskimez ama bağı **kopabilir**:
+
+| Ne olur | Ne görünür |
+|---|---|
+| Başka bir çizim için hazırlanmış yerleşimin tablosu bu çizimde olmayan bir katmanı okur | Tablo boş basılmaz: kutusunda kesikli çerçeve ve `tablo: 'PARSELLER' adlı katman yok` yazısı |
+| Bir tablonun ya da grafiğin sütunu silinir ([SÜTUN](../komutlar/column.md) `sil=evet`) | Silme anında söylenir; tabloda `tablo: 'ada' adlı öznitelik sütunu yok` |
+| Harita çerçevesi olmayan bir katmanı adlandırır | Harita öbür katmanları çizer; ön denetim söyler |
+| Atlasın kapsama katmanı ya da sıralama sütunu yoktur | Ön denetim hiç sayfa çıkmayacağını ya da sıralamanın düşeceğini söyler |
+
+Kopan pafta bağları `ÇIKTIYERLEŞİMİ islem=denetle`'de ve [BAĞIMLILIK](../komutlar/dependency.md)'te
+(`2 pafta bağı: 1 güncel, 1 bağı kopuk.`) görünür. [ÇIKTIÖĞE](../komutlar/layout_item.md)
+olmayan bir katmanı ya da sütunu öğeye hiç vermez; kopuk bağ yalnız dışarıdan gelen bir
+yerleşimle ya da sonradan silinen bir sütunla doğar.
 
 ## Kilitli katmanda
 
@@ -145,7 +165,6 @@ olmadığını bilemez.
 | Yetenek | Ne zaman |
 |---|---|
 | EŞYÜKSELTİ'den sonra çizime eklenen yeni bir kotlu noktanın eğrileri güncel değil yapması (bugün eğriler yalnız hesaplandıkları noktaları bilir) | Faz 1, kalıcı arazi yüzeyiyle |
-| Pafta tablosunun, grafiğinin ve lejantının kopan bağlarının (silinen ya da adı değişen katman) çizimde görünmesi | Faz 1 |
 
 ## İlgili
 

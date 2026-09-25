@@ -15,6 +15,8 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <string>
@@ -202,6 +204,22 @@ Task<void> run_column(Context& ctx)
         ctx.record("kimlik", id);
         ctx.record("sil", Value::boolean(true));
         ctx.echo("Sütun silindi: " + column);
+        // A SHEET THAT PRINTED IT is told now, not at the next print (TODOS F-04):
+        // its table or chart names a column the drawing no longer has.
+        std::string named;
+        std::size_t count = 0;
+        for (const core::SheetTie& t : core::sheet_ties(ctx.document())) {
+            if (!t.broken || t.kind != core::SheetTieKind::Column ||
+                !core::turkish_key_equals(t.name, column))
+                continue;
+            ++count;
+            named += (named.empty() ? "" : ", ") + std::string("'") + t.layout + "' ▸ " +
+                     (t.item.empty() ? std::string("atlas") : "'" + t.item + "'");
+        }
+        if (count != 0)
+            ctx.echo("Silinen '" + column + "' sütununu " + std::to_string(count) +
+                     " pafta öğesi okuyordu (" + named +
+                     "); o öğe artık onu çıkaramaz. Görmek için: BAĞIMLILIK");
         co_return;
     }
 

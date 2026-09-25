@@ -94,6 +94,11 @@ yalnız bazılarını istiyorsanız `sutunlar=` ile sırasıyla yazın — anaht
 ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL sutunlar=ada sutunlar=parsel sutunlar=alan
 ```
 
+Tablonun katmanı ya da sütunlarından biri çizimde yoksa — başka bir çizim için
+hazırlanmış bir yerleşim, sonradan silinmiş bir sütun — tablo **boş basılmaz**: kutunun
+yerinde kesikli bir çerçeve içinde `tablo: 'X' adlı katman yok` yazar ve
+`ÇIKTIYERLEŞİMİ islem=denetle` bunu söyler.
+
 `satir_siniri` verilmezse kutuya kaç satır sığıyorsa o kadarı yazılır ve
 **sığmayanlar sayılarak bildirilir** — hem kâğıdın üstünde ("… 79 satır daha
 sığmadı") hem de komutun sonucunda. Sessizce ilk on bir parseli gösteren bir

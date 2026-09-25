@@ -207,6 +207,9 @@ bu yüzden söylenmeleri gerekiyor:
 - Sayfanın dışına taşan öğe (kesik basar)
 - Kopmuş harita bağı (ölçek çubuğu hiçbir şey söyleyemez)
 - Katmanı verilmemiş tablo, dosyası verilmemiş resim
+- **Çizimde olmayan bir katmanı ya da sütunu okuyan** tablo, grafik, harita çerçevesi ya
+  da atlas — başka bir çizim için hazırlanmış bir yerleşim, sonradan silinmiş bir sütun
+  ([Bağımlılıklar ve sonuçlar](../veri/bagimliliklar.md#pafta))
 - Eni ya da boyu sıfır olan kutu
 - Hiç harita çerçevesi olmayan yerleşim
 - Tamamen başka bir öğenin altında kalan ve **hiç görünmeyecek** olan öğe
@@ -345,6 +348,10 @@ kurar:
 | `'X' yerleşiminde iki öğe aynı adı taşıyor: 'Y'.` | Öğe adları tekil olmalı | Öğelerden birini yeniden adlandırın |
 | `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | `islem=listele` ile sayfa sayısını görün |
 | `'X' atlası 'Y' katmanında basılacak nesne bulamadı.` | Kapsama katmanı boş ya da nesneleri geometrisiz | Katmanı denetleyin |
+| `'X' 'Y' katmanını okuyor ama çizimde öyle bir katman yok; boş çıkacak.` | Öğe (`islem=denetle`) bu çizimde olmayan bir katmanı adlandırıyor | Öğeye var olan bir katman verin ([ÇIKTIÖĞE](layout_item.md)) ya da katmanı açın |
+| `'X' 'Y' sütununu yazıyor ama çizimde öyle bir sütun yok; o sütun çıkmayacak.` | Tablo ya da grafik bu çizimde olmayan bir sütunu adlandırıyor | Öğenin `sutunlar=` listesini düzeltin ya da sütunu tanımlayın ([SÜTUN](column.md)) |
+| `Atlas 'Y' katmanının nesnelerini dolaşıyor ama çizimde öyle bir katman yok; hiç sayfa çıkmayacak.` | Atlasın kapsama katmanı bu çizimde yok | `ÇIKTIYERLEŞİMİ islem=atlas` ile var olan bir katman verin |
+| `Atlas 'Y' sütununa göre sıralanıyor ama çizimde öyle bir sütun yok; sayfalar çizimdeki sırayla çıkacak.` | Atlasın sıralama sütunu bu çizimde yok | Var olan bir sütun verin |
 | `Son sayfa silinemez; bir yerleşimin en az bir sayfası olur.` | Tek kalan sayfa silinmek istendi | Yerleşimin kendisini silin |
 | `Sayfa taşımak için sayfa=<n> ve yeni_sira=<m> gerekir.` | `sayfatasi` eksik çağrıldı | İkisini de verin |
 

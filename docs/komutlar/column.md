@@ -157,6 +157,13 @@ SÜTUN kimlik=oran sil=evet
 adreslendiği şey şemanın kendisidir), ve sütunla birlikte içindeki bütün değerler
 gider. Arayüzde bu işlem bir onay sorusu sorar.
 
+Silinen sütunu bir paftanın tablosu, grafiği ya da atlası okuyorsa bu **o anda**
+söylenir:
+
+```text
+Silinen 'oran' sütununu 1 pafta öğesi okuyordu ('Pafta 1' ▸ 'liste'); o öğe artık onu çıkaramaz. Görmek için: BAĞIMLILIK
+```
+
 ## Arayüz
 
 Katmanlar panelinde bir katmana **sağ tıklayın → Katman Özellikleri… → Öznitelikler**.

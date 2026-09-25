@@ -181,7 +181,8 @@ Task<void> run_print(Context& ctx)
         // reports it WITH the problems rather than instead of them (L-15, C-03).
         const core::Layout* found = ctx.session().bus().document().layouts().find(named);
         if (found != nullptr) {
-            for (const std::string& one : core::layout_trouble(*found))
+            for (const std::string& one :
+                 core::layout_trouble(*found, ctx.session().bus().document()))
                 ctx.warn(one);
             std::vector<std::int64_t> scales;
             for (const core::LayoutItem& item : found->items)

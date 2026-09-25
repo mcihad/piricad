@@ -110,7 +110,8 @@ QString metres_of(core::Mm value)
 // ---------------------------------------------------------------- the map ---
 
 void paint_map(QPainter& painter, const QRectF& box, const core::Document& document,
-               const core::LayoutItem& item, double px_per_paper_mm)
+               std::vector<std::string>* trouble, const core::LayoutItem& item,
+               double px_per_paper_mm)
 {
     if (box.width() < 1.0 || box.height() < 1.0) return;
 
@@ -154,9 +155,20 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
         std::vector<std::uint8_t> allowed;
         if (!item.layers.empty()) {
             allowed.assign(document.layers().size(), 0);
-            for (const std::string& wanted : item.layers)
+            for (const std::string& wanted : item.layers) {
+                bool found = false;
                 for (std::size_t i = 0; i < document.layers().size(); ++i)
-                    if (core::turkish_key_equals(document.layers()[i].name, wanted)) allowed[i] = 1;
+                    if (core::turkish_key_equals(document.layers()[i].name, wanted)) {
+                        allowed[i] = 1;
+                        found      = true;
+                    }
+                // A LAYER THE FRAME NAMES AND THE DRAWING LACKS is said: the map
+                // still draws the others, and the sheet must not look complete
+                // without it (TODOS F-04).
+                if (!found && trouble != nullptr)
+                    trouble->push_back("'" + item.id + "' '" + wanted +
+                                       "' katmanını çizecek ama çizimde öyle bir katman yok.");
+            }
             options.layer_allowed = allowed;
         }
 
@@ -618,6 +630,35 @@ void paint_table(QPainter& painter, const QRectF& box, const core::Document& doc
     const core::AttrTable& table = document.attributes();
     const std::string layer      = item.text;
 
+    // A NAME THAT POINTS AT NOTHING IS SAID, never drawn as an empty table
+    // (TODOS F-04): a layer the drawing lacks drew its header over no rows — an
+    // area table on a submitted sheet, printed as if there were no parcels.
+    const auto refuse = [&](const QString& why) {
+        if (trouble != nullptr) trouble->push_back("'" + item.id + "' " + why.toStdString());
+        painter.setPen(QPen(colour_of(item.text_colour), 0.8, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(box);
+        painter.setPen(colour_of(item.text_colour));
+        painter.drawText(box, Qt::AlignCenter | Qt::TextWordWrap, why);
+        painter.restore();
+    };
+    if (!layer.empty() && document.find_layer(layer) == core::kNoLayer) {
+        refuse(QObject::tr("tablo: '%1' adlı katman yok").arg(QString::fromStdString(layer)));
+        return;
+    }
+    for (const std::string& named : item.columns) {
+        bool held = false;
+        for (std::size_t c = 0; c < table.columns() && !held; ++c)
+            if (const core::AttrColumn* one = table.column(static_cast<core::AttrId>(c));
+                one != nullptr && core::turkish_key_equals(named, one->spec().id))
+                held = true;
+        if (!held) {
+            refuse(QObject::tr("tablo: '%1' adlı öznitelik sütunu yok")
+                       .arg(QString::fromStdString(named)));
+            return;
+        }
+    }
+
     // WHICH COLUMNS. The item's own list when it names one, otherwise every
     // column the layer offers — which is what `attr_applies_to` answers, and the
     // same question the attribute table asks (`attribute_table.cpp`).
@@ -803,7 +844,7 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
 
         switch (item->kind) {
         case core::LayoutItemKind::Map:
-            paint_map(painter, box, document, *item, px_per_paper_mm);
+            paint_map(painter, box, document, trouble, *item, px_per_paper_mm);
             break;
 
         case core::LayoutItemKind::Label: {

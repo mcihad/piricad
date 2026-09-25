@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — paftanın kopan bağı söyleniyor; alan tablosu boş basılmıyor (F-04, 4. aşama)
+
+- **Çizimde olmayan bir katmanı okuyan pafta tablosu artık boş basılmıyor.** Önceden başka
+  bir çizim için hazırlanmış bir yerleşimin tablosu, katmanı bu çizimde yoksa başlığını
+  satırsız basıyordu — parsel yokmuş gibi bir alan tablosu. Artık tablonun yerinde kesikli
+  bir çerçeve ve `tablo: 'X' adlı katman yok` yazıyor; silinmiş bir sütunu yazan tablo da
+  aynı biçimde söylüyor. Grafik zaten böyle davranıyordu.
+- **Ön denetim çizimi biliyor:** `ÇIKTIYERLEŞİMİ islem=denetle`, YAZDIR'ın uyarıları ve
+  yapay zekânın pafta özeti, çizimde olmayan bir katmanı ya da sütunu okuyan her tabloyu,
+  grafiği, harita çerçevesini ve atlası cümleyle söylüyor. Harita çerçevesi öbür
+  katmanlarını çizmeye devam ediyor.
+- **Sütun silinince o anda söyleniyor:** `SÜTUN … sil=evet`, silinen sütunu hangi pafta
+  öğesinin okuduğunu yazıyor.
+- **BAĞIMLILIK pafta bağlarını da sayıyor** (`2 pafta bağı: 1 güncel, 1 bağı kopuk.`);
+  yapılandırılmış cevapta `paftalar`.
+
 ### Eklendi — güncel olmayan sonuç yeniden hesaplanıyor (F-04, 3. aşama)
 
 - **`BAĞIMLILIK islem=yenile` sonuçları yeniden hesaplıyor** (şeritte Analiz ▸ Denetim ▸

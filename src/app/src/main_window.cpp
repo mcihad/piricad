@@ -7399,6 +7399,57 @@ int MainWindow::probeRealMouse()
             shoot("yeniden-hesaplama-sonra");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 41. A SHEET TABLE WHOSE COLUMN WENT: SAID, NEVER PRINTED EMPTY (TODOS F-04) ----
+        //
+        // An area table on a sheet reads the parcels' `ada`. The column is
+        // dropped: the drop says which sheet item read it, BAĞIMLILIK counts the
+        // broken sheet tie, and the designer draws a dashed refusal where the
+        // table stood — where it used to print a header over no rows.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL", "SÜTUN kimlik=ada tur=tam_sayi",
+                  "ALAN 485300,4310200 485340,4310200 485340,4310230 485300,4310230",
+                  "ÖZNİTELİK ad=ada nesne=1 deger=101", "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta",
+                  "ÇIKTIÖĞE islem=ekle tur=tablo ad=liste",
+                  "ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL sutunlar=ada"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            transcript_->clear();
+            runScriptLine(QStringLiteral("SÜTUN kimlik=ada sil=evet"));
+            endCommand();
+            check(transcript_->toPlainText().contains(QStringLiteral(
+                      "Silinen 'ada' sütununu 1 pafta öğesi okuyordu ('Pafta' ▸ 'liste')")),
+                  QStringLiteral("sütun silinirken onu okuyan pafta tablosu söylendi"));
+            transcript_->clear();
+            actDependency_->trigger();
+            endCommand();
+            check(transcript_->toPlainText().contains(QStringLiteral("1 bağı kopuk.")) &&
+                      transcript_->toPlainText().contains(QStringLiteral(
+                          "bağı kopuk: 'Pafta' ▸ 'liste' — 'ada' sütunu çizimde yok")),
+                  QStringLiteral("BAĞIMLILIK kopuk pafta bağını saydı"));
+            const core::Layout* sheet = controller_->document().layouts().find("Pafta");
+            bool said                 = false;
+            if (sheet != nullptr)
+                for (const std::string& one : core::layout_trouble(*sheet, controller_->document()))
+                    said = said || one.find("'ada' sütununu yazıyor") != std::string::npos;
+            check(said, QStringLiteral("ön denetim kopuk tablo sütununu söylüyor"));
+            if (shooting) {
+                LayoutDesigner designer(*controller_, QStringLiteral("Pafta"), this);
+                designer.applyTheme(theme_);
+                designer.aimAt(controller_->document().extent());
+                designer.resize(1400, 900);
+                designer.show();
+                for (int i = 0; i < 4; ++i)
+                    QCoreApplication::processEvents();
+                (void)designer.grab().save(into + QStringLiteral("/pafta-kopuk-tablo.png"));
+                designer.close();
+            }
+            shoot("pafta-kopuk-bag");
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
