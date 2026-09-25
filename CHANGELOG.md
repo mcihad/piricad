@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — DÖNÜŞTÜR daire, yay ya da blok içeren çizimi dönüştürüyor
+
+- **DÖNÜŞTÜR**, içinde tek bir daire ya da yay olan çizimi reddediyordu ("Dairenin yarıçap
+  tutamağı merkezin tam doğusunda … olmalı"): her köşe tek tek taşınıyor, dairenin tutamağı
+  doğudan kayıyordu. Blok içeren çizim de reddediliyordu: tanımın kendi koordinatındaki
+  üyeleri harita koordinatı gibi taşınmaya çalışılıyordu. Artık çizgi, parsel, nokta ve
+  spline köşe köşe PROJ ile; daire, yay, elips, tarama, ölçü, lider ve blok referansı
+  çapaları PROJ ile tam, biçimleri o noktadaki yerel dönme ve ölçekle taşınır (daire daire
+  kalır, yazı ve blok grid açısı kadar döner); blok tanımlarına dokunulmaz.
+
 ### Eklendi — dış referans paneli ve kaynak değişince bildirim (C-14, 2. aşama)
 
 - Sağ alttaki panelde **Dış Referanslar** sekmesi: bağlı dış referanslar durumlarıyla

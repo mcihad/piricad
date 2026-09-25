@@ -20,6 +20,7 @@
 #include "kentos_cad/domain/geodesy/helmert.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
@@ -633,7 +634,7 @@ TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izl
 
     const kentos::core::Box2 before = r.doc.extent();
 
-    // EPSG:5256 is TUREF / TM36; EPSG:5254 is TUREF / TM33. Same datum, a
+    // EPSG:5256 is TUREF / TM36; EPSG:5254 is TUREF / TM30. Same datum, a
     // different three-degree zone — the everyday case of a municipality whose
     // sheets straddle a zone boundary.
     auto moved = r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5254", Origin::Test);
@@ -1224,4 +1225,106 @@ TEST_CASE("POLİGON ikinci güzergâhı bir sonraki numaradan sürdürür")
     REQUIRE(c2 != kentos::core::kNoAttr);
     auto first = named.bus.resolve_context().named_point(1284);
     CHECK(first.has_value());
+}
+
+TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür kendi biçimini korur")
+{
+    // THE DEFECT: DÖNÜŞTÜR carried every vertex one by one, so a circle's radius
+    // handle left due east and the whole drawing was refused — any municipal
+    // sheet with one manhole circle could not change zones — and a block's
+    // members, which stand in the definition's own frame, were carried as if
+    // they stood on the map (and refused as uneditable).
+    if (!kentos::domain::geodesy::Transform::available()) return;
+    using kentos::command::Origin;
+    using kentos::core::Point2;
+
+    GeoRig r;
+    const auto run = [&r](const std::string& line) {
+        auto done = r.bus.execute_line(line, Origin::Test);
+        if (!done) FAIL_WITH(line, done.error().message);
+    };
+    run("AYAR ad=koordinat_sistemi deger=EPSG:5256");
+    run("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 485300,4310245");
+    run("DAİRE merkez=485400,4310300 cevre=485405,4310300");
+    run("YAY merkez=485450,4310300 baslangic=485460,4310300 bitis=485450,4310310");
+    run("DAİRE merkez=0,0 cevre=1,0");
+    run("ÇİZGİ -1,0 1,0");
+    const std::string circle_key = std::to_string(kentos::core::raw(r.doc.key_of(3)));
+    const std::string line_key   = std::to_string(kentos::core::raw(r.doc.key_of(4)));
+    run("BLOK ad=KAPAK taban=0,0 nesneler=" + circle_key + " nesneler=" + line_key);
+    run("BLOKEKLE ad=KAPAK nokta=485500,4310300");
+
+    const auto vertices = [&r](kentos::core::EntityId e) {
+        std::vector<Point2> out;
+        const auto span = r.doc.geometry().rings_of(r.doc.entities().slot[e]);
+        for (std::uint32_t k = span.first; k < span.first + span.count; ++k)
+            for (std::size_t v = 0; v < r.doc.geometry().ring_xs(k).size(); ++v)
+                out.push_back(
+                    Point2{r.doc.geometry().ring_xs(k)[v], r.doc.geometry().ring_ys(k)[v]});
+        return out;
+    };
+    const kentos::core::BlockId kapak = r.doc.blocks().find("KAPAK");
+    REQUIRE(kapak != kentos::core::kNoBlock);
+    std::vector<std::vector<Point2>> members_before;
+    for (const kentos::core::EntityKey k : r.doc.blocks().at(kapak).members)
+        if (const auto m = r.doc.slot_of(k); m != kentos::core::kNoEntity && r.doc.alive(m))
+            members_before.push_back(vertices(m));
+    kentos::core::EntityId reference = kentos::core::kNoEntity;
+    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+        if (r.doc.entities().standalone(e) &&
+            r.doc.entities().kind[e] == kentos::core::kBlockReferenceKind)
+            reference = e;
+    REQUIRE(reference != kentos::core::kNoEntity);
+
+    std::vector<Point2> parcel = vertices(0);
+    std::vector<Point2> centre{Point2{485'400'000, 4'310'300'000}};
+    std::vector<Point2> insertion{Point2{485'500'000, 4'310'300'000}};
+    auto proj = kentos::domain::geodesy::Transform::between("EPSG:5256", "EPSG:5254");
+    REQUIRE(proj.ok());
+    REQUIRE(proj.value().forward(std::span<Point2>(parcel)).ok());
+    REQUIRE(proj.value().forward(std::span<Point2>(centre)).ok());
+    REQUIRE(proj.value().forward(std::span<Point2>(insertion)).ok());
+    const std::uint64_t before = r.doc.content_hash();
+
+    run("DÖNÜŞTÜR hedef=EPSG:5254");
+    CHECK_EQ(r.doc.crs().id(), std::string("EPSG:5254"));
+
+    // The parcel: every vertex exactly where PROJ puts it.
+    const std::vector<Point2> moved = vertices(0);
+    REQUIRE_EQ(moved.size(), parcel.size());
+    for (std::size_t v = 0; v < parcel.size(); ++v)
+        CHECK_EQ(moved[v], parcel[v]);
+    // The circle: still a circle, its centre exactly carried, its radius the
+    // local scale's, its handle due east.
+    const std::vector<Point2> circle = vertices(1);
+    REQUIRE_EQ(circle.size(), std::size_t{2});
+    CHECK_EQ(circle[0], centre[0]);
+    CHECK_EQ(circle[1].y, circle[0].y);
+    // THE MAP'S OWN SCALE, read from PROJ a kilometre east of the centre: far
+    // from a zone's central meridian a ground metre is more than a map metre
+    // — here three in a thousand — and the circle's map radius follows it.
+    std::vector<Point2> ruler{Point2{485'400'000, 4'310'300'000},
+                              Point2{486'400'000, 4'310'300'000}};
+    REQUIRE(proj.value().forward(std::span<Point2>(ruler)).ok());
+    const double scale = std::hypot(static_cast<double>(ruler[1].x - ruler[0].x),
+                                    static_cast<double>(ruler[1].y - ruler[0].y)) /
+                         1'000'000.0;
+    CHECK(std::abs(static_cast<double>(circle[1].x - circle[0].x) - 5'000.0 * scale) <= 2.0);
+    // The block: its definition untouched, its reference carried and turned.
+    std::vector<std::vector<Point2>> members_after;
+    for (const kentos::core::EntityKey k : r.doc.blocks().at(kapak).members)
+        if (const auto m = r.doc.slot_of(k); m != kentos::core::kNoEntity && r.doc.alive(m))
+            members_after.push_back(vertices(m));
+    CHECK(members_after == members_before);
+    CHECK_EQ(
+        kentos::core::block_reference_insertion(r.doc.geometry(), r.doc.entities().slot[reference]),
+        insertion[0]);
+    auto placed =
+        kentos::core::block_reference_of(r.doc.geometry(), r.doc.entities().slot[reference]);
+    REQUIRE(placed.ok());
+    CHECK(placed.value().rotation_udeg != 0); // the zones' grids meet at an angle
+
+    // One step back, whole.
+    run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
 }

@@ -23,6 +23,19 @@ kayar. Bu yüzden bir ucu coğrafi olan dönüşüm reddedilir:
 WGS84 okuması ya da dışa aktarma için coğrafi sistem gerekiyorsa dereceleri
 belgeden uzak tutun.
 
+## Her nesne kendi biçimiyle taşınır
+
+| Nesne | Nasıl taşınır |
+|---|---|
+| Çizgi, çoklu çizgi, alan (parsel), nokta, yaylı çoklu çizgi, spline | **Her köşesi** PROJ ile, tek tek; parselin yasal geometrisinde hiçbir şey yaklaşık değildir |
+| Daire, yay, elips, tarama, ölçü, lider, blok referansı | Çapası (merkezi, ekleme noktası, ilk noktası) PROJ ile **tam**; biçimi o noktadaki **yerel dönme ve ölçekle**: daire daire, yay yay kalır; yazı ve blok, iki dilimin grid kuzeyleri arasındaki açı kadar döner |
+| Blok tanımının içi | **Dokunulmaz**: tanım kendi koordinatındadır, referansı taşınınca bütün kopyalar taşınır |
+
+Yerel ölçek gerçektir: bir dilimin orta meridyeninden uzakta harita metresi yer
+metresinden kısadır — örneğin TUREF TM36'dan TM30'a geçen, orta meridyenden 5,8°
+uzaktaki bir noktada binde üç kadar. 5 m yarıçaplı bir daire yeni haritada 5,016 m
+çizilir; bu yuvarlama değil, izdüşümün kendisidir.
+
 ## Etiket koordinatları izler
 
 Sayıları taşınmış ama koordinat sistemi hâlâ eski sistemi söyleyen bir çizim,

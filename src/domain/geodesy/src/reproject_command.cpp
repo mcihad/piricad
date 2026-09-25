@@ -20,18 +20,34 @@
 // THE CRS FOLLOWS THE GEOMETRY. A drawing whose coordinates moved but whose CRS
 // still names the old system is worse than one that was never transformed: every
 // reader downstream would trust the label.
+//
+// EACH KIND IN ITS OWN WAY. A run of vertices — a line, a parcel, a point, a
+// spline's control points — has every vertex carried by PROJ: that is the
+// legal geometry, and nothing about it may be approximated. A kind with a
+// shape of its own — a circle's roundness, an arc's sweep, an ellipse's axes,
+// a caption's turn, a block's placement, a dimension's figure — is carried by
+// the SIMILARITY the projection change is at its anchor: the anchor moved
+// exactly by PROJ, the turn and the scale read from PROJ over a kilometre
+// beside it, and the kind's own transform (`transform_entity`, HİZALA's) does
+// the rest. Moving a circle's two vertices one by one put its radius handle off
+// due east, and the drawing was refused whole; so was every drawing with a
+// block, whose definition's members — drawn in the definition's own frame,
+// placed by their references — were carried as if they stood on the map.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/transform_edit.hpp"
 
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
+#include <cmath>
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -57,6 +73,42 @@ std::vector<std::string> offered_systems()
     for (const domain::geodesy::Tm3Zone& zone : catalogue.value().zones())
         out.push_back(prefix + "/" + zone.name);
     return out;
+}
+
+/// Whether `kind` is a run of vertices every one of which PROJ carries — the
+/// kinds whose shape IS their vertices.
+bool vertex_by_vertex(core::KindId kind)
+{
+    return kind == core::kPolylineKind || kind == core::kPointKind ||
+           kind == core::kArcPolylineKind || kind == core::kSplineKind;
+}
+
+/// How far beside an anchor the local turn and scale are read: far enough that
+/// the half millimetre PROJ's output is rounded to is five parts in ten
+/// million, near enough that a zone's convergence barely changes across it.
+constexpr core::Mm kReach = 1'000'000;
+
+/// The similarity the projection change is at `anchor`: the anchor carried
+/// exactly, the turn and the scale read over `kReach` east of it.
+core::Result<core::Xform> similarity_at(const domain::geodesy::Transform& transform,
+                                        core::Point2 anchor)
+{
+    core::Point2 pair[2] = {anchor, core::Point2{anchor.x + kReach, anchor.y}};
+    if (auto st = transform.forward(std::span<core::Point2>(pair, 2)); !st) return st.error();
+    const double dx   = static_cast<double>(pair[1].x - pair[0].x);
+    const double dy   = static_cast<double>(pair[1].y - pair[0].y);
+    const double span = std::hypot(dx, dy);
+    if (span <= 0.0)
+        return core::err(core::ErrorCode::ValidationFailed,
+                         "Dönüşüm bir noktanın çevresini tek noktaya indirdi; bu dönüşüm çizime "
+                         "uygulanamaz.");
+    core::Xform x;
+    x.kind   = core::Xform::Kind::Align;
+    x.base   = anchor;
+    x.axis_b = pair[0];
+    x.turn   = core::SinCos{dy / span, dx / span};
+    x.factor = span / static_cast<double>(kReach);
+    return x;
 }
 
 Task<void> run(Context& ctx)
@@ -122,7 +174,24 @@ Task<void> run(Context& ctx)
 
     std::size_t touched = 0;
     for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
-        if (!doc.alive(e)) continue;
+        // A DEFINITION'S MEMBERS stand in its own frame; their references
+        // stand on the map, and moving those moves every copy.
+        if (!doc.entities().standalone(e)) continue;
+
+        if (!vertex_by_vertex(doc.entities().kind[e])) {
+            const core::RingSpan anchor_span = geom.rings_of(doc.entities().slot[e]);
+            if (anchor_span.count == 0 || geom.ring_xs(anchor_span.first).empty()) continue;
+            const core::Point2 anchor{geom.ring_xs(anchor_span.first)[0],
+                                      geom.ring_ys(anchor_span.first)[0]};
+            auto similar = similarity_at(transform, anchor);
+            if (!similar) {
+                ctx.refuse(similar.error());
+                co_return; // the bus rolls the whole drawing back
+            }
+            if (!transform_entity(ctx, e, similar.value())) co_return; // refused with the reason
+            ++touched;
+            continue;
+        }
 
         const core::RingSpan span = geom.rings_of(doc.entities().slot[e]);
 
