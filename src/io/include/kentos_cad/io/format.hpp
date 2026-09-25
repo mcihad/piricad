@@ -65,7 +65,18 @@ inline constexpr const char* kProjectExtension = ".pcad";
 ///
 /// 2 because `kBlkGuideAxis` gained the value 2 for an angled guide: the block is
 /// old and one of its values is new, which is a change of meaning however small.
-inline constexpr std::uint32_t kFormatVersion = 2;
+///
+/// 3 because the slot-indexed blocks — geometry, captions, attribute cells,
+/// foreign data — are laid out one slot per ROW, file slot r being row r as it
+/// stands (`kFormatVersionRowSlots`). A reader of 1 or 2 already read slot r as
+/// row r, so a format-3 file is exactly what it assumed and opens there as it
+/// always did; `min_reader_version` does not move.
+inline constexpr std::uint32_t kFormatVersion = 3;
+
+/// The first version whose writer lays the slot-indexed blocks out by row. A
+/// file older than this may hold the geometry versions an edit left behind for
+/// undo — slots no row holds — which the reader passes over as history.
+inline constexpr std::uint32_t kFormatVersionRowSlots = 3;
 
 /// The lowest reader version that can still make sense of what this build wrote.
 ///

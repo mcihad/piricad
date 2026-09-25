@@ -2,6 +2,8 @@
 #include "block_view.hpp"
 
 #include <algorithm>
+#include <string>
+#include <string_view>
 
 namespace kentos::io {
 namespace {
@@ -20,6 +22,11 @@ bool add_overflows(std::uint64_t a, std::uint64_t b, std::uint64_t& out) noexcep
     return false;
 }
 
+/// The name of every block THIS BUILD READS, and empty for any other — which is
+/// what the "not preserved" warning counts. A block missing here is read in full
+/// and still reported as dropped: the list once stopped at the texts, and every
+/// drawing with a block definition, a payload, a guide or a sheet opened telling
+/// its user that part of it had not been kept.
 std::string known_block_name(std::uint32_t id)
 {
     switch (id) {
@@ -57,8 +64,49 @@ std::string known_block_name(std::uint32_t id)
     case kBlkAttrSchema: return "öznitelik şeması";
     case kBlkAttrCells: return "öznitelik hücreleri";
     case kBlkTexts: return "metinler";
+    case kBlkLayerStyles: return "katman stilleri";
+    case kBlkSymbolLayerPhase: return "sembol katmani evresi";
+    case kBlkSymbolLayerBindCount:
+    case kBlkSymbolLayerBindField:
+    case kBlkSymbolLayerBindWhat:
+    case kBlkSymbolLayerBindType: return "sembol alan bağları";
+    case kBlkDashes: return "çizgi türleri";
+    case kBlkGuideAxis:
+    case kBlkGuideCoord:
+    case kBlkGuideAngle:
+    case kBlkGuideThroughX:
+    case kBlkGuideThroughY:
+    case kBlkGuideRay: return "kılavuz çizgileri";
+    case kBlkAttrColumnLayer: return "öznitelik sütun kapsamı";
+    case kBlkKindPayload:
+    case kBlkSlotPayloadRef:
+    case kBlkPayloadStart:
+    case kBlkPayloadBytes: return "tür yükü";
+    case kBlkForeignBytes:
+    case kBlkForeignRecords: return "yabancı veri";
+    case kBlkBlocks: return "blok tanımları";
+    case kBlkBlockMembers: return "blok üyeleri";
+    case kBlkBlockUses: return "blok kullanımları";
+    case kBlkAttachments: return "bağlar";
+    case kBlkDimensionLinks: return "ölçü bağları";
+    case kBlkHatchLinks: return "tarama bağları";
+    case kBlkLayouts:
+    case kBlkLayoutPages:
+    case kBlkLayoutItems:
+    case kBlkLayoutNames: return "çıktı yerleşimleri";
     default: return {};
     }
+}
+
+/// "blok 0x0090": the id as the format spells it. It used to print the decimal
+/// value behind a `0x`, naming a block that does not exist.
+std::string hex_block_label(std::uint32_t id)
+{
+    static constexpr std::string_view kDigits = "0123456789ABCDEF";
+    std::string out                           = "blok 0x";
+    for (int shift = id > 0xFFFFU ? 28 : 12; shift >= 0; shift -= 4)
+        out += kDigits[(id >> static_cast<unsigned>(shift)) & 0xFU];
+    return out;
 }
 
 } // namespace
@@ -135,9 +183,8 @@ core::Result<BlockView> BlockView::parse(std::span<const std::byte> bytes, const
         const BlockEntry e = read_record<BlockEntry>(
             bytes, view.header_.directory_offset + std::uint64_t{i} * sizeof(BlockEntry));
 
-        const std::string label = known_block_name(e.id).empty()
-                                      ? ("blok 0x" + std::to_string(e.id))
-                                      : known_block_name(e.id);
+        const std::string label =
+            known_block_name(e.id).empty() ? hex_block_label(e.id) : known_block_name(e.id);
 
         if ((e.offset % kAlignment) != 0)
             return err(ErrorCode::ParseError, std::string(kErrBlock) + ": " + label +

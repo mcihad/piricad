@@ -1191,6 +1191,30 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                        std::to_string(block_of_key.size()) + " anahtar sayıyor, nesnelerde " +
                        std::to_string(members_seen) + " bulundu. Dosya bozuk.");
 
+    // ---- which object each file slot belongs to ----
+    //
+    // A caption, a cell and a foreign record name a FILE SLOT, and the object
+    // holding that slot is found here rather than assumed to be the object of
+    // the same number. Since format 3 they are the same — the writer lays one
+    // slot out per row — but a file written before kept every geometry version
+    // an edit left behind for undo, so slot r was not row r once anything had
+    // been moved: taking it as row r gave a moved parcel's old ada number to
+    // whichever object was drawn next. Such a file's leftover slots are
+    // history, not content, and are passed over without a word; in a format-3
+    // file there are none, and one is a fault.
+    std::vector<core::EntityId> entity_of_slot(static_cast<std::size_t>(dr.slot_count),
+                                               core::kNoEntity);
+    for (std::uint64_t e = 0; e < dr.entity_count; ++e)
+        entity_of_slot[cols.slot[static_cast<std::size_t>(e)]] = static_cast<core::EntityId>(e);
+    // One slot per row, in row order, is exactly "no history": then every slot
+    // has its owner and each owner is its own number.
+    bool history_slots = false;
+    if (view.header().format_version < kFormatVersionRowSlots) {
+        history_slots = dr.slot_count != dr.entity_count;
+        for (std::uint64_t e = 0; !history_slots && e < dr.entity_count; ++e)
+            history_slots = cols.slot[static_cast<std::size_t>(e)] != e;
+    }
+
     // ---- foreign data (model.md R26a): both columns or neither ----
     if (view.has(kBlkForeignBytes) || view.has(kBlkForeignRecords)) {
         if (!(view.has(kBlkForeignBytes) && view.has(kBlkForeignRecords)))
@@ -1205,16 +1229,14 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             kBlkForeignRecords, view.count_of(kBlkForeignRecords), "yabancı veri kayıtları");
         if (!rows) return rows.error();
 
-        // Slot -> entity, for a file whose slots and entities agree (they do
-        // after the loop above, which checked every id).
-        std::vector<core::EntityId> entity_of_slot(static_cast<std::size_t>(dr.slot_count),
-                                                   core::kNoEntity);
-        for (std::uint64_t e = 0; e < dr.entity_count; ++e)
-            entity_of_slot[cols.slot[static_cast<std::size_t>(e)]] = static_cast<core::EntityId>(e);
-
         const std::uint64_t pool_size = pool_bytes.value().size();
         for (std::size_t i = 0; i < rows.value().size(); ++i) {
             const ForeignRecord& r = rows.value()[i];
+            // A record on a leftover slot is a line's XDATA left behind when
+            // the line was moved, by a build before format 3 (see above).
+            if (history_slots && r.slot < dr.slot_count &&
+                entity_of_slot[r.slot] == core::kNoEntity)
+                continue;
             if (r.slot >= dr.slot_count || entity_of_slot[r.slot] == core::kNoEntity)
                 return err(ErrorCode::ParseError,
                            std::string(kErrConsist) + ": " + std::to_string(i + 1) +
@@ -1387,7 +1409,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
 
         for (const AttrCellRecord& c : cells.value()) {
             if (c.column >= columns.size() || columns[c.column] == core::kNoAttr) continue;
-            if (c.row >= doc.entities().size()) {
+            const core::EntityId owner =
+                c.row < entity_of_slot.size() ? entity_of_slot[c.row] : core::kNoEntity;
+            if (owner == core::kNoEntity) {
+                if (history_slots && c.row < entity_of_slot.size()) continue;
                 report.warnings.push_back(Warning{"io.attr_row",
                                                   "Dosyadaki bir öznitelik hücresi var olmayan bir "
                                                   "nesneye işaret ediyor; yok sayıldı."});
@@ -1407,11 +1432,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 v.text = text.value();
             }
 
-            // The row IS the entity slot, and slots are dense and in order here,
-            // so the slot is its own entity id at load time.
-            if (auto st =
-                    tx.set_attribute(columns[c.column], static_cast<core::EntityId>(c.row), v);
-                !st)
+            if (auto st = tx.set_attribute(columns[c.column], owner, v); !st)
                 report.warnings.push_back(Warning{
                     "io.attr_cell", "Bir öznitelik değeri yüklenemedi: " + st.error().message});
         }
@@ -1423,7 +1444,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         if (!rows) return rows.error();
 
         for (const TextRecord& r : rows.value()) {
-            if (r.row >= doc.entities().size()) {
+            const core::EntityId owner =
+                r.row < entity_of_slot.size() ? entity_of_slot[r.row] : core::kNoEntity;
+            if (owner == core::kNoEntity) {
+                if (history_slots && r.row < entity_of_slot.size()) continue;
                 report.warnings.push_back(
                     Warning{"io.text_row", "Dosyadaki bir metin var olmayan bir nesneye işaret "
                                            "ediyor; yok sayıldı."});
@@ -1453,9 +1477,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                     "/1000) aralık dışında; tek aralık okundu."});
             }
 
-            if (auto st = tx.set_text(static_cast<core::EntityId>(r.row), content.value(),
-                                      r.height_mm, anchor, lines);
-                !st)
+            if (auto st = tx.set_text(owner, content.value(), r.height_mm, anchor, lines); !st)
                 report.warnings.push_back(
                     Warning{"io.text", "Bir metin yüklenemedi: " + st.error().message});
         }
@@ -1581,7 +1603,11 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                   "). Belge doğru yüklendi; yeni nesneler farklı anahtar alacak."});
 
     // ---- what the writer said this document was ----
-    if (doc.content_hash() != view.header().content_hash)
+    //
+    // Not asked of a file with leftover slots: the build that wrote it folded
+    // them into the fingerprint it stored, and they are exactly what reading
+    // does not bring back. Its content is checked by everything above.
+    if (!history_slots && doc.content_hash() != view.header().content_hash)
         report.warnings.push_back(Warning{
             "io.hash_mismatch", "Dosyanın içerik parmak izi tutmuyor: kaydedilirken " +
                                     std::to_string(view.header().content_hash) + ", okununca " +

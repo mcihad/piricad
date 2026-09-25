@@ -81,7 +81,7 @@ nesne 14 katman=KOPYALAR stil=0 halka=1 tur=4
     485660000 4310200000
   alan_mm2 0  cevre_mm 0
 kapsam 485300000 4310190000 485660000 4310540000
-icerik-ozeti fe8619bc1b1e00d5
+icerik-ozeti 877a4b845b92c0bb
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"ROPER"},"origin":"test","crs":"TUREF/TM36","katman":"ROPER"}
   {"seq":2,"cmd":"core.point_draw","args":{"noktalar":[[485300000,4310200000],[485360000,4310245000],[485410000,4310190000]]},"origin":"test","crs":"TUREF/TM36","katman":"ROPER"}

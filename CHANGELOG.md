@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — proje dosyası: taşınan nesnenin değerleri başka nesneye geçmez, dosya açılır
+
+- **Veri bozulması düzeltildi.** Bir nesneyi taşıyıp (ya da köşesini değiştirip) sonra
+  başka bir nesne çizdiğinizde, kaydedip açınca yeni nesnenin öznitelik değerleri
+  **taşınan nesnenin eski değerleri** oluyordu; taşınıp düzeltilen bir yazı düzeltilmeden
+  önceki hâliyle açılıyordu. Yazıcı, geri alma için tutulan eski geometriyi de dosyaya
+  yazıyor, okuyucu da dosyadaki sıra numarasını nesne numarası sayıyordu. Dosya artık
+  her nesne için tek, güncel yuva taşır (**biçim 3**); okuyucu da her değeri o yuvayı
+  tutan nesneye verir. Önceki sürümlerin yazdığı dosyalar da doğru açılır.
+- **Düzeltildi:** DXF'ten gelen, yabancı veri (XDATA) taşıyan bir çizgi taşınınca bu veri
+  kayboluyor, kaydedilen dosya da açılışta "Dosya bozuk" diye **reddediliyordu**. Yabancı
+  veri artık nesnesiyle birlikte gider; eskiden reddedilen dosyalar açılır.
+- **Düzeltildi:** blok tanımı, kılavuz çizgisi, çıktı yerleşimi, öznitelik sütunu, bağlı
+  yazı ya da ölçü taşıyan her dosya açılışta "bu sürümün tanımadığı veri bloğu var;
+  içerikleri korunmadı" diyordu — tamamen okunmuş veri için. Taşınmış yazısı olan dosya da
+  "parmak izi tutmuyor", "var olmayan bir nesneye işaret ediyor" uyarıları veriyordu. Bu
+  yanlış uyarıların hiçbiri artık çıkmaz.
+
 ### Eklendi — blok kitaplığı: bir dosyadaki blok çizime getirilir (C-13, 4. aşama: ilk teslim)
 
 - **BLOKEKLE dosya=.** Bir proje (`.pcad`), DXF ya da DWG dosyasındaki blok — `ad=` ile

@@ -2358,6 +2358,218 @@ TEST_CASE("IO: öznitelik ve metin dosyayla gider ve parmak izi tutar")
     CHECK_EQ(back.doc.content_hash(), saved_hash);
 }
 
+TEST_CASE("IO: taşınan nesnenin değeri kaydedip açınca başka nesneye geçmez")
+{
+    // THE DEFECT, and it was a data-corruption one. A geometry edit gives an
+    // object a new slot and leaves the old one for undo; the writer wrote every
+    // slot as it stood and the reader took file slot r for object r. Move one
+    // point, draw another and give it an ada number: after save and open the
+    // new point carried the MOVED point's number, and its own was dropped.
+    TempDir tmp("tasinan-deger");
+    const std::string path = tmp.file("t.pcad");
+
+    std::uint64_t saved_hash = 0;
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("NOKTA 0,0", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("ÖZNİTELİK ada_no 1 101", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("NOKTA 10,0", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("ÖZNİTELİK ada_no 2 102", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=0,5", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("NOKTA 20,0", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("ÖZNİTELİK ada_no 3 103", Origin::Test).ok());
+        REQUIRE(r.doc.geometry().slot_count() > r.doc.entities().size()); // history exists
+        saved_hash = r.doc.content_hash();
+        REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    }
+
+    Rig back;
+    auto opened = back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const core::AttrId ada = back.doc.attributes().find("ada_no");
+    REQUIRE(ada != core::kNoAttr);
+    const std::int64_t want[3]{101, 102, 103};
+    for (std::uint64_t key = 1; key <= 3; ++key) {
+        const core::EntityId e = back.doc.slot_of(static_cast<core::EntityKey>(key));
+        REQUIRE(e != core::kNoEntity);
+        auto v = back.doc.attribute(ada, e);
+        REQUIRE(v.ok());
+        CHECK(v.value().present);
+        CHECK_EQ(v.value().number, want[key - 1]);
+    }
+    // One slot per object in the file: the history stayed behind.
+    CHECK_EQ(back.doc.geometry().slot_count(), back.doc.entities().size());
+    CHECK_EQ(back.doc.content_hash(), saved_hash);
+    CHECK(back.transcript.find("uyarı") == std::string::npos);
+}
+
+TEST_CASE("IO: taşınıp düzeltilen yazı son hâliyle gelir; açılış uyarısız, parmak izi tutar")
+{
+    // The same defect seen from a caption: moved, then corrected, it came back
+    // saying what it said BEFORE the correction — the reader took the slot the
+    // move left behind — and the open reported three faults that were not
+    // there: a cell and a caption "pointing at no object" and a fingerprint
+    // that did not match.
+    TempDir tmp("tasinan-yazi");
+    const std::string path = tmp.file("t.pcad");
+
+    std::uint64_t saved_hash = 0;
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("SÜTUN gosterim metin", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("METİN 0,20 \"ADA 101\" 2000", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("ÖZNİTELİK gosterim 1 \"KONUT\"", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("TAŞI nesneler=1 baslangic=0,20 bitis=0,25", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("YAZIDÜZENLE nesneler=1 yazi=\"ADA 128\"", Origin::Test).ok());
+        // A leader's words are placed again after it is drawn (a settle), the
+        // case the golden `nokta-dizileri` holds.
+        REQUIRE(
+            r.bus.execute_line("LİDER noktalar=10,10 13,13 16,13 metin=Röper", Origin::Test).ok());
+        saved_hash = r.doc.content_hash();
+        REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    }
+
+    Rig back;
+    auto opened = back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const core::EntityId caption = back.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(caption != core::kNoEntity);
+    CHECK_EQ(back.doc.texts().text(back.doc.entities().slot[caption]), std::string_view("ADA 128"));
+    auto cell = back.doc.attribute(back.doc.attributes().find("gosterim"), caption);
+    REQUIRE(cell.ok());
+    CHECK_EQ(cell.value().text, std::string("KONUT"));
+    CHECK_EQ(back.doc.content_hash(), saved_hash);
+    CHECK(back.transcript.find("uyarı") == std::string::npos);
+}
+
+TEST_CASE("IO: taşınan çizginin yabancı verisi onunla gider ve dosya açılır")
+{
+    // A DXF line's XDATA lives on its slot. Every other side table was carried
+    // to the new slot a move appends; this one was not, so the moved line lost
+    // its XDATA on the spot — and the record, left on a slot no object held,
+    // made the reader refuse the whole file as corrupt.
+    TempDir tmp("tasinan-xdata");
+    const std::string path = tmp.file("t.pcad");
+    const std::uint8_t bytes[4]{0xAA, 0xBB, 0xCC, 0xDD};
+
+    std::uint64_t saved_hash = 0;
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("ÇİZGİ 0,30 10,30", Origin::Test).ok());
+        core::Op undo;
+        REQUIRE(r.doc
+                    .attach_foreign(0, core::kForeignDxfXdata,
+                                    std::span<const std::uint8_t>(bytes, 4), undo)
+                    .ok());
+        REQUIRE(r.bus.execute_line("TAŞI nesneler=1 baslangic=0,30 bitis=0,35", Origin::Test).ok());
+        const auto moved = r.doc.foreign().bytes(r.doc.entities().slot[0], core::kForeignDxfXdata);
+        CHECK(std::equal(moved.begin(), moved.end(), bytes, bytes + 4));
+        CHECK_EQ(moved.size(), std::size_t{4});
+
+        // Undo finds the XDATA where it was, on the slot it goes back to.
+        REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+        CHECK_EQ(r.doc.foreign().bytes(r.doc.entities().slot[0], core::kForeignDxfXdata).size(),
+                 std::size_t{4});
+        REQUIRE(r.bus.execute_line("YİNELE", Origin::Test).ok());
+
+        saved_hash = r.doc.content_hash();
+        REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    }
+
+    Rig back;
+    auto opened = back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const auto read = back.doc.foreign().bytes(back.doc.entities().slot[0], core::kForeignDxfXdata);
+    CHECK_EQ(read.size(), std::size_t{4});
+    CHECK(std::equal(read.begin(), read.end(), bytes, bytes + 4));
+    CHECK_EQ(back.doc.content_hash(), saved_hash);
+    CHECK(back.transcript.find("uyarı") == std::string::npos);
+}
+
+TEST_CASE("IO: biçim 3 öncesinde tarih yuvalarıyla yazılmış dosya doğru açılır")
+{
+    // A file the build before format 3 wrote, kept as it came out
+    // (`tests/fuzz/tohum/proje/13-tarih-yuvalari.pcad`): three points with ada
+    // numbers, the first moved before the third was drawn; a caption moved and
+    // then corrected; a line with XDATA moved. The reader must put every value
+    // on the object that holds its slot NOW, pass the leftover slots over as
+    // the history they are, and open the file the old reader refused.
+    const fs::path file = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje" / "13-tarih-yuvalari.pcad";
+    REQUIRE(fs::exists(file));
+
+    Rig r;
+    auto opened = r.bus.execute_line("AÇ \"" + file.string() + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+
+    const core::AttrId ada = r.doc.attributes().find("ada_no");
+    REQUIRE(ada != core::kNoAttr);
+    const std::int64_t want[3]{101, 102, 103};
+    for (std::uint64_t key = 1; key <= 3; ++key) {
+        const core::EntityId e = r.doc.slot_of(static_cast<core::EntityKey>(key));
+        REQUIRE(e != core::kNoEntity);
+        auto v = r.doc.attribute(ada, e);
+        REQUIRE(v.ok());
+        CHECK_EQ(v.value().number, want[key - 1]);
+    }
+    const core::EntityId caption = r.doc.slot_of(static_cast<core::EntityKey>(4));
+    REQUIRE(caption != core::kNoEntity);
+    CHECK_EQ(r.doc.texts().text(r.doc.entities().slot[caption]), std::string_view("ADA 128"));
+    CHECK(r.doc.alive(r.doc.slot_of(static_cast<core::EntityKey>(5))));
+
+    // Nothing to report: the leftovers are history, the fingerprint that folded
+    // them is not asked, and every block in the file is one this build reads.
+    CHECK(r.transcript.find("uyarı") == std::string::npos);
+}
+
+TEST_CASE("IO: bu sürümün okuduğu hiçbir blok 'tanınmayan veri' diye bildirilmez")
+{
+    // The list of blocks this build knows stopped at the captions, so a drawing
+    // with an attribute column, a block, a leader, a guide or a sheet opened
+    // saying "the file holds data this version does not know; it was not kept"
+    // — about data it had just read in full. One drawing touching them all.
+    TempDir tmp("taninan-bloklar");
+    const std::string path = tmp.file("t.pcad");
+    {
+        Rig r;
+        const auto run = [&r](const std::string& line) {
+            auto done = r.bus.execute_line(line, Origin::Test);
+            if (!done) FAIL_WITH(line, done.error().message);
+        };
+        run("KATMAN ad=PARSEL");
+        run("SÜTUN ada_no tam_sayi");
+        run("ALAN noktalar=0,0 100,0 100,80 0,80");
+        run("ÖZNİTELİK ada_no 1 7");
+        run("TARAMA nesneler=1 desen=ANSI31");
+        run("ÇİZGİ 0,-10 12,-10");
+        run("ÖLÇÜ tur=hizali birinci=0,-10 ikinci=12,-10 konum=6,-12");
+        run("DAİRE merkez=200,0 cevre=201,0");
+        run("BLOK ad=KAPAK taban=200,0 nesneler=" +
+            std::to_string(
+                core::raw(r.doc.key_of(static_cast<core::EntityId>(r.doc.entities().size() - 1)))));
+        run("BLOKEKLE ad=KAPAK nokta=220,0");
+        run("LİDER noktalar=10,10 13,13 16,13 metin=Röper");
+        run("KILAVUZ yon=50g nokta=10,20");
+        run("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1\" kagit=A3 yon=yatay kenar=15");
+        core::Op undo;
+        const std::uint8_t xdata[2]{0x01, 0x02};
+        REQUIRE(r.doc
+                    .attach_foreign(0, core::kForeignDxfXdata,
+                                    std::span<const std::uint8_t>(xdata, 2), undo)
+                    .ok());
+        run("FARKLIKAYDET \"" + path + "\"");
+        CHECK_FALSE(r.doc.attachments().attached().empty());
+        CHECK_FALSE(r.doc.dimension_links().linked().empty());
+        CHECK_FALSE(r.doc.hatch_links().linked().empty());
+    }
+
+    Rig back;
+    auto opened = back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK(back.transcript.find("tanımadığı") == std::string::npos);
+    CHECK(back.transcript.find("uyarı") == std::string::npos);
+}
+
 TEST_CASE("IO: yığılmış sembol dosyayla gidip geliyor")
 {
     // The regression this locks down. `.pcad` wrote only the resolved appearance

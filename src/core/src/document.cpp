@@ -134,15 +134,23 @@ std::uint64_t Document::content_hash() const
     // entity keeps the loop below reading only the hot columns, and folds the
     // SCHEMA too — declaring a column changes what the document says it holds
     // even before a single cell is written.
-    h = attributes_.fold(h);
-    h = texts_.fold(h);
-    h = images_.fold(h);
-    h = dashes_.fold(h);
-    h = foreign_.fold(h);
-    h = blocks_.fold(h);
-    h = attachments_.fold(h);
-    h = dim_links_.fold(h);
-    h = hatch_links_.fold(h);
+    // THE SLOT TABLES FOLD BY ROW: each entity's caption, cells and foreign
+    // data at the slot its geometry holds now, in row order. A geometry edit
+    // appends a slot and leaves the old one behind for undo; folded by slot,
+    // that history made a drawing whose caption had been moved fingerprint
+    // differently from the same drawing read back from its file — which holds
+    // no history. A drawing never edited has one slot per row, in row order,
+    // and folds exactly as it did when these folded every slot.
+    const std::vector<std::uint32_t> rows = row_slots();
+    h                                     = attributes_.fold(h, rows);
+    h                                     = texts_.fold(h, rows);
+    h                                     = images_.fold(h);
+    h                                     = dashes_.fold(h);
+    h                                     = foreign_.fold(h, rows);
+    h                                     = blocks_.fold(h);
+    h                                     = attachments_.fold(h);
+    h                                     = dim_links_.fold(h);
+    h                                     = hatch_links_.fold(h);
 
     // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
     // deliverable, even when every parcel in it is identical. Folding an EMPTY
@@ -185,6 +193,11 @@ std::uint64_t Document::content_hash() const
         h = fnv1a_int(-1, h); // entity terminator
     }
     return h;
+}
+
+std::vector<std::uint32_t> Document::row_slots() const
+{
+    return {entities_.slot.begin(), entities_.slot.end()};
 }
 
 // -------------------------------------------------------------- identity ----
@@ -541,8 +554,7 @@ Status Document::set_kind_geometry(EntityId e, std::span<const RingGeometry::Rin
 
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
-    carry_text(was, slot.value());
-    carry_attributes(was, slot.value());
+    carry_side_tables(was, slot.value());
     refresh_box(e);
     ++revision_;
 
@@ -577,8 +589,7 @@ Status Document::set_kind_geometry(EntityId e, KindId kind,
     const KindId was_kind   = entities_.kind[e];
     entities_.slot[e]       = slot.value();
     entities_.kind[e]       = kind;
-    carry_text(was, slot.value());
-    carry_attributes(was, slot.value());
+    carry_side_tables(was, slot.value());
     refresh_box(e);
     ++revision_;
 
@@ -647,8 +658,7 @@ Status Document::move_reference(EntityId e, Point2 insertion, Op& undo_out)
     if (!slot) return slot.error();
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
-    carry_text(was, slot.value());
-    carry_attributes(was, slot.value());
+    carry_side_tables(was, slot.value());
     refresh_box(e);
     ++revision_;
     undo_out.kind          = Op::Kind::SetGeometry;
@@ -692,8 +702,7 @@ Status Document::write_payload(EntityId e, std::span<const std::uint8_t> payload
     if (!slot) return slot.error();
 
     entities_.slot[e] = slot.value();
-    carry_text(was, slot.value());
-    carry_attributes(was, slot.value());
+    carry_side_tables(was, slot.value());
     refresh_box(e);
     ++revision_;
 
@@ -1025,8 +1034,7 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
 
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
-    carry_text(was, slot.value());
-    carry_attributes(was, slot.value());
+    carry_side_tables(was, slot.value());
 
     refresh_box(e);
     ++revision_;
@@ -1053,6 +1061,15 @@ void Document::carry_attributes(std::uint32_t from, std::uint32_t to)
         if (!had || !had.value().present) continue;
         (void)attributes_.set(col, to, had.value());
     }
+}
+
+void Document::carry_side_tables(std::uint32_t from, std::uint32_t to)
+{
+    carry_text(from, to);
+    carry_attributes(from, to);
+    // The tag was accepted once and the target slot is new, so the copy cannot
+    // be refused; a failure here would be an allocation, like the two above.
+    (void)foreign_.copy_slot(from, to);
 }
 
 void Document::carry_text(std::uint32_t from, std::uint32_t to)

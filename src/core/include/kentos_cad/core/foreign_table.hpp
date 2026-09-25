@@ -83,6 +83,19 @@ public:
     /// foreign data existed keeps its fingerprint.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// The same fold over `slots`, in that order — one per row of a document,
+    /// each the slot its geometry holds NOW — with each record's POSITION in
+    /// the list folded where the stored fold folds its slot. A drawing whose
+    /// slots are its rows folds exactly as `fold(seed)`; one a geometry edit
+    /// left history in folds as it will read back.
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> slots) const;
+
+    /// Gives `to` a copy of every record `from` holds — what a geometry edit
+    /// does to an entity's foreign data, since the edit moves it to a new slot
+    /// (`Document::set_geometry`). `from` keeps its records, so undoing the edit
+    /// finds them where they were.
+    Status copy_slot(std::uint32_t from, std::uint32_t to);
+
     void clear();
 
 private:

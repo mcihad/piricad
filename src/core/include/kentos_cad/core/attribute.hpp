@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -355,6 +356,9 @@ public:
     /// different facts about a parcel.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// The same fold over `rows`, in that order (`AttrTable::fold`).
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const;
+
     /// Changes what the column SAYS about itself without touching what it holds:
     /// display name, description, whether it is required, its catalogue, and —
     /// for a `Decimal` — how many digits it carries.
@@ -434,6 +438,11 @@ public:
     Status validate_row(std::size_t row, const CatalogueSet& catalogues) const;
 
     std::uint64_t fold(std::uint64_t seed) const;
+
+    /// The same fold over `rows`, in that order — one per row of a document,
+    /// each the slot its geometry holds NOW (`Document::content_hash`). A slot a
+    /// geometry edit left behind keeps its cells for undo and never folds.
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const;
 
 private:
     std::vector<AttrColumn> columns_;

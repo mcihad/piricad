@@ -273,21 +273,32 @@ TextLines TextTable::lines(std::size_t slot) const noexcept
 
 std::uint64_t TextTable::fold(std::uint64_t seed) const
 {
+    std::vector<std::uint32_t> every(ref_.size());
+    for (std::size_t i = 0; i < every.size(); ++i)
+        every[i] = static_cast<std::uint32_t>(i);
+    // `count_` rather than the list's length: a table not yet materialised has
+    // slots and no storage, and folds to the seed either way.
+    if (every.size() != count_) return seed;
+    return fold(seed, every);
+}
+
+std::uint64_t TextTable::fold(std::uint64_t seed, std::span<const std::uint32_t> slots) const
+{
     // A document with no text folds to the seed UNCHANGED, the same decision the
     // attribute table makes: a drawing that carries no text is the drawing it was
     // before text existed, so every file and fixture written before this keeps its
     // fingerprint.
     bool any = false;
-    for (std::uint32_t r : ref_)
-        if (r != kNoText) {
+    for (const std::uint32_t s : slots)
+        if (s < ref_.size() && ref_[s] != kNoText) {
             any = true;
             break;
         }
     if (!any) return seed;
 
-    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(count_), seed ^ kTextSeed);
-    for (std::size_t i = 0; i < ref_.size(); ++i) {
-        if (ref_[i] == kNoText) {
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(slots.size()), seed ^ kTextSeed);
+    for (const std::uint32_t i : slots) {
+        if (i >= ref_.size() || ref_[i] == kNoText) {
             // Folded distinctly from an empty string: "this entity is not text"
             // and "this text entity says nothing" are different drawings.
             h = fnv1a_int(-1, h);

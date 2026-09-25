@@ -5,6 +5,9 @@
 
 #include <algorithm>
 #include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace kentos::core {
 
@@ -103,6 +106,38 @@ std::uint64_t ForeignTable::fold(std::uint64_t seed) const
                   h);
     }
     return h;
+}
+
+std::uint64_t ForeignTable::fold(std::uint64_t seed, std::span<const std::uint32_t> slots) const
+{
+    if (records_.empty()) return seed;
+    std::uint64_t h = seed;
+    for (std::size_t position = 0; position < slots.size(); ++position) {
+        const std::uint32_t slot = slots[position];
+        auto at                  = std::ranges::lower_bound(records_, slot, {}, &Record::slot);
+        for (; at != records_.end() && at->slot == slot; ++at) {
+            h = fnv1a_int(static_cast<std::int64_t>(position), h);
+            h = fnv1a(tags_[at->tag], h);
+            h = fnv1a(std::string_view(reinterpret_cast<const char*>(pool_.data() + at->start),
+                                       at->bytes),
+                      h);
+        }
+    }
+    return h;
+}
+
+Status ForeignTable::copy_slot(std::uint32_t from, std::uint32_t to)
+{
+    // Copied out first: `attach` grows the pool, and a span into it would dangle.
+    std::vector<std::pair<std::string, std::vector<std::uint8_t>>> held;
+    for (const Record& r : records_)
+        if (r.slot == from)
+            held.emplace_back(tags_[r.tag],
+                              std::vector<std::uint8_t>(pool_.data() + r.start,
+                                                        pool_.data() + r.start + r.bytes));
+    for (const auto& [tag, bytes] : held)
+        if (auto st = attach(to, tag, bytes); !st) return st;
+    return ok();
 }
 
 void ForeignTable::clear()

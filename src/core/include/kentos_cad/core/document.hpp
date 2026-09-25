@@ -327,6 +327,13 @@ public:
     /// from the same input agree (§7.3).
     std::uint64_t content_hash() const;
 
+    /// The geometry slot every row holds NOW, in row order — dead rows too,
+    /// since a dead row keeps its key and its file row (model.md R4). The slots
+    /// the project file writes as its own, one per row, and the ones
+    /// `content_hash` folds the slot tables over: a slot a geometry edit left
+    /// behind for undo is history, and neither travels nor fingerprints.
+    std::vector<std::uint32_t> row_slots() const;
+
     // ---- identity: translation happens at the bus boundary only (R2) ----
     EntityKey key_of(EntityId e) const noexcept;
     EntityId slot_of(EntityKey k) const noexcept;
@@ -651,6 +658,13 @@ private:
     /// reason as `carry_text`: cells are slot-indexed, and without the copy
     /// every geometry edit silently dropped the entity's attributes (P11).
     void carry_attributes(std::uint32_t from, std::uint32_t to);
+
+    /// Everything slot-indexed that belongs to the entity rather than to its
+    /// geometry — caption, cells, foreign data — carried from `from` to `to`.
+    /// The one call every edit that appends a slot makes: foreign data was left
+    /// out of the pair above, so a DXF line moved lost its XDATA, and its record
+    /// stayed on a slot no entity held (a file the reader then refused).
+    void carry_side_tables(std::uint32_t from, std::uint32_t to);
 
     void mirror_layer_visibility(LayerId l, bool visible);
 

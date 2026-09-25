@@ -1,10 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — io: writing the native project file.
 //
-// The writer is deliberately dull. It walks the document's columns in slot order
-// and streams them out; there is no reordering, no compaction and no cleverness,
-// because every one of those would change which key belongs to which parcel and
-// model.md R4 makes that question a legal one.
+// The writer is deliberately dull. It walks the document's columns in row order
+// and streams them out; there is no reordering of rows and no cleverness, because
+// either would change which key belongs to which parcel and model.md R4 makes
+// that question a legal one.
+//
+// ONE THING IS LAID OUT RATHER THAN DUMPED: the slot-indexed half. File slot r
+// is the geometry, caption, attribute cells and foreign data of ROW r, as that
+// row holds them now. The document keeps a slot per geometry VERSION — an edit
+// appends one and leaves the old for undo — and writing those as they stood put
+// history in the file: the reader, which rightly reads slot r as row r, gave a
+// moved parcel's old cells to whichever object was drawn next, and refused a
+// file outright when a moved line's XDATA sat on a slot no object held
+// (format 3). A drawing never edited has one slot per row, in row order, and its
+// columns are still streamed straight from the document.
 //
 // WHAT TRAVELS, and why each thing does:
 //
@@ -102,6 +112,73 @@ template<class T> Pending column(BlockId id, const std::vector<T>& v)
     p.count      = static_cast<std::uint64_t>(v.size());
     p.bytes      = p.count * p.elem_bytes;
     return p;
+}
+
+/// The slot-indexed columns of the file, laid out one slot per written row
+/// (see the header comment). Filled only when the document's own columns are
+/// not already in that shape; `raw` says they are and nothing was copied.
+struct RowSlots
+{
+    bool raw{true};
+    std::vector<std::uint32_t> slot;       ///< per row: its file slot, which is the row
+    std::vector<std::uint32_t> first_ring; ///< per file slot
+    std::vector<std::uint32_t> ring_total;
+    std::vector<std::uint32_t> ring_start; ///< per ring
+    std::vector<std::uint32_t> ring_count;
+    std::vector<std::uint16_t> ring_part;
+    std::vector<core::RingRole> ring_role;
+    std::vector<core::Mm> xs; ///< per vertex
+    std::vector<core::Mm> ys;
+    std::vector<std::uint32_t> payload_ref; ///< per file slot; empty when no row has one
+    std::vector<std::uint64_t> payload_start;
+    std::vector<std::uint32_t> payload_bytes;
+    std::vector<std::uint8_t> payload;
+};
+
+RowSlots lay_out_by_row(const core::RingGeometry& geo, const std::vector<std::uint32_t>& slots)
+{
+    RowSlots out;
+    out.raw = slots.size() == geo.slot_count();
+    for (std::size_t r = 0; out.raw && r < slots.size(); ++r)
+        out.raw = slots[r] == r;
+    if (out.raw) return out;
+
+    bool any_payload = false;
+    for (const std::uint32_t s : slots)
+        any_payload = any_payload || !geo.payload_of(s).empty();
+
+    out.slot.reserve(slots.size());
+    out.first_ring.reserve(slots.size());
+    out.ring_total.reserve(slots.size());
+    if (any_payload) out.payload_ref.reserve(slots.size());
+    for (std::size_t r = 0; r < slots.size(); ++r) {
+        const std::uint32_t s = slots[r];
+        out.slot.push_back(static_cast<std::uint32_t>(r));
+        out.first_ring.push_back(static_cast<std::uint32_t>(out.ring_start.size()));
+        out.ring_total.push_back(geo.ring_total[s]);
+        for (std::uint32_t k = 0; k < geo.ring_total[s]; ++k) {
+            const std::uint32_t ring = geo.first_ring[s] + k;
+            const std::uint32_t from = geo.ring_start[ring];
+            const std::uint32_t n    = geo.ring_count[ring];
+            out.ring_start.push_back(static_cast<std::uint32_t>(out.xs.size()));
+            out.ring_count.push_back(n);
+            out.ring_part.push_back(geo.ring_part[ring]);
+            out.ring_role.push_back(geo.ring_role[ring]);
+            out.xs.insert(out.xs.end(), geo.xs.begin() + from, geo.xs.begin() + from + n);
+            out.ys.insert(out.ys.end(), geo.ys.begin() + from, geo.ys.begin() + from + n);
+        }
+        if (!any_payload) continue;
+        const std::span<const std::uint8_t> bytes = geo.payload_of(s);
+        if (bytes.empty()) {
+            out.payload_ref.push_back(core::kNoPayload);
+            continue;
+        }
+        out.payload_ref.push_back(static_cast<std::uint32_t>(out.payload_start.size()));
+        out.payload_start.push_back(static_cast<std::uint64_t>(out.payload.size()));
+        out.payload_bytes.push_back(static_cast<std::uint32_t>(bytes.size()));
+        out.payload.insert(out.payload.end(), bytes.begin(), bytes.end());
+    }
+    return out;
 }
 
 AppearanceRecord to_record(const core::Appearance& a)
@@ -235,6 +312,10 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     const core::EntityTable& ents = doc.entities();
     const core::RingGeometry& geo = doc.geometry();
+
+    // The slot each written row holds now; file slot r is row r's.
+    const std::vector<std::uint32_t> row_slot = doc.row_slots();
+    const RowSlots laid                       = lay_out_by_row(geo, row_slot);
 
     // ---- strings ----
     StringPool pool;
@@ -397,11 +478,12 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
             // Only cells that carry a value. A cadastral layer is mostly empty
             // columns; a record per empty cell would be the biggest block in the
-            // file and would say nothing.
-            for (std::size_t row = 0; row < col->rows(); ++row) {
-                if (!col->present(row)) continue;
+            // file and would say nothing. By row, each at the slot it holds now.
+            for (std::size_t row = 0; row < row_slot.size(); ++row) {
+                const std::uint32_t slot = row_slot[row];
+                if (!col->present(slot)) continue;
 
-                auto cell = table.get(c, row);
+                auto cell = table.get(c, slot);
                 if (!cell) continue;
 
                 AttrCellRecord cr{};
@@ -420,15 +502,16 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<TextRecord> text_rows;
     {
         const core::TextTable& texts = doc.texts();
-        for (std::size_t row = 0; row < texts.slot_count(); ++row) {
-            if (!texts.has(row)) continue;
+        for (std::size_t row = 0; row < row_slot.size(); ++row) {
+            const std::uint32_t slot = row_slot[row];
+            if (!texts.has(slot)) continue;
 
             TextRecord r{};
             r.row                       = static_cast<std::uint32_t>(row);
-            r.content_string            = pool.intern(texts.text(row));
-            r.height_mm                 = texts.height(row);
-            r.anchor                    = static_cast<std::uint8_t>(texts.anchor(row));
-            const core::TextLines lines = texts.lines(row);
+            r.content_string            = pool.intern(texts.text(slot));
+            r.height_mm                 = texts.height(slot);
+            r.anchor                    = static_cast<std::uint8_t>(texts.anchor(slot));
+            const core::TextLines lines = texts.lines(slot);
             r.flags                     = lines.wrap ? 1 : 0;
             r.spacing                   = lines.spacing;
             text_rows.push_back(r);
@@ -436,16 +519,38 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     }
 
     // ---- foreign data (model.md R26a) ----
+    //
+    // By row, each at the slot it holds now. The pool is written as the table
+    // holds it when every record belongs to a row, and rebuilt from the written
+    // records when one does not — history's bytes stay behind with history.
     std::vector<ForeignRecord> foreign_rows;
+    std::vector<std::uint8_t> foreign_pool;
+    bool foreign_pool_rebuilt = false;
     {
-        const core::ForeignTable& foreign = doc.foreign();
-        for (const core::ForeignTable::Record& rec : foreign.records()) {
-            ForeignRecord r{};
-            r.slot       = rec.slot;
-            r.tag_string = pool.intern(foreign.tags()[rec.tag]);
-            r.offset     = rec.start;
-            r.bytes      = rec.bytes;
-            foreign_rows.push_back(r);
+        const core::ForeignTable& foreign                   = doc.foreign();
+        const std::vector<core::ForeignTable::Record>& recs = foreign.records();
+        if (!recs.empty()) {
+            std::vector<std::pair<std::uint32_t, const core::ForeignTable::Record*>> written;
+            for (std::size_t row = 0; row < row_slot.size(); ++row) {
+                auto at = std::ranges::lower_bound(recs, row_slot[row], {},
+                                                   &core::ForeignTable::Record::slot);
+                for (; at != recs.end() && at->slot == row_slot[row]; ++at)
+                    written.emplace_back(static_cast<std::uint32_t>(row), &*at);
+            }
+            foreign_pool_rebuilt = written.size() != recs.size();
+            for (const auto& [row, rec] : written) {
+                ForeignRecord r{};
+                r.slot       = row;
+                r.tag_string = pool.intern(foreign.tags()[rec->tag]);
+                r.offset     = rec->start;
+                r.bytes      = rec->bytes;
+                if (foreign_pool_rebuilt) {
+                    r.offset = static_cast<std::uint64_t>(foreign_pool.size());
+                    foreign_pool.insert(foreign_pool.end(), foreign.pool().data() + rec->start,
+                                        foreign.pool().data() + rec->start + rec->bytes);
+                }
+                foreign_rows.push_back(r);
+            }
         }
     }
 
@@ -583,9 +688,10 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     dr.style_count        = static_cast<std::uint64_t>(styles.size());
     dr.symbol_layer_count = static_cast<std::uint64_t>(symbol_layers.size());
-    dr.slot_count         = static_cast<std::uint64_t>(geo.slot_count());
-    dr.ring_count         = static_cast<std::uint64_t>(geo.ring_count_total());
-    dr.vertex_count       = static_cast<std::uint64_t>(geo.vertex_count());
+    dr.slot_count = static_cast<std::uint64_t>(laid.raw ? geo.slot_count() : laid.slot.size());
+    dr.ring_count =
+        static_cast<std::uint64_t>(laid.raw ? geo.ring_count_total() : laid.ring_start.size());
+    dr.vertex_count = static_cast<std::uint64_t>(laid.raw ? geo.vertex_count() : laid.xs.size());
 
     // The sheet layouts, on the same bargain as the guides above: written only
     // when the drawing has one, so a file without a pafta is byte for byte what
@@ -773,28 +879,30 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkEntityLayer, ents.layer));
     blocks.push_back(column(kBlkEntityStyle, ents.style));
     blocks.push_back(column(kBlkEntityKind, ents.kind));
-    blocks.push_back(column(kBlkEntitySlot, ents.slot));
+    blocks.push_back(column(kBlkEntitySlot, laid.raw ? ents.slot : laid.slot));
     blocks.push_back(column(kBlkEntityKey, ents.key));
 
-    blocks.push_back(column(kBlkRingStart, geo.ring_start));
-    blocks.push_back(column(kBlkRingCount, geo.ring_count));
-    blocks.push_back(column(kBlkRingPart, geo.ring_part));
-    blocks.push_back(column(kBlkRingRole, geo.ring_role));
-    blocks.push_back(column(kBlkSlotFirstRing, geo.first_ring));
-    blocks.push_back(column(kBlkSlotRingTotal, geo.ring_total));
-    blocks.push_back(column(kBlkVertexX, geo.xs));
-    blocks.push_back(column(kBlkVertexY, geo.ys));
+    blocks.push_back(column(kBlkRingStart, laid.raw ? geo.ring_start : laid.ring_start));
+    blocks.push_back(column(kBlkRingCount, laid.raw ? geo.ring_count : laid.ring_count));
+    blocks.push_back(column(kBlkRingPart, laid.raw ? geo.ring_part : laid.ring_part));
+    blocks.push_back(column(kBlkRingRole, laid.raw ? geo.ring_role : laid.ring_role));
+    blocks.push_back(column(kBlkSlotFirstRing, laid.raw ? geo.first_ring : laid.first_ring));
+    blocks.push_back(column(kBlkSlotRingTotal, laid.raw ? geo.ring_total : laid.ring_total));
+    blocks.push_back(column(kBlkVertexX, laid.raw ? geo.xs : laid.xs));
+    blocks.push_back(column(kBlkVertexY, laid.raw ? geo.ys : laid.ys));
 
     // The kind payload, only when a slot carries one (model.md R9a): a drawing of
     // parcels, circles and captions writes none of these, so its file is byte
     // for byte the one it was before payloads existed — which keeps the golden
     // fixtures honest about what a change actually changed. Once one slot has a
     // payload the reference column covers every slot (RingGeometry::append).
-    if (geo.has_payload()) {
-        blocks.push_back(column(kBlkKindPayload, geo.payload));
-        blocks.push_back(column(kBlkSlotPayloadRef, geo.payload_ref));
-        blocks.push_back(column(kBlkPayloadStart, geo.payload_start));
-        blocks.push_back(column(kBlkPayloadBytes, geo.payload_bytes));
+    if (laid.raw ? geo.has_payload() : !laid.payload_ref.empty()) {
+        blocks.push_back(column(kBlkKindPayload, laid.raw ? geo.payload : laid.payload));
+        blocks.push_back(column(kBlkSlotPayloadRef, laid.raw ? geo.payload_ref : laid.payload_ref));
+        blocks.push_back(
+            column(kBlkPayloadStart, laid.raw ? geo.payload_start : laid.payload_start));
+        blocks.push_back(
+            column(kBlkPayloadBytes, laid.raw ? geo.payload_bytes : laid.payload_bytes));
     }
 
     blocks.push_back(column(kBlkSettings, setting_rows));
@@ -806,7 +914,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // Foreign data and block definitions: both absent from a drawing that has
     // none, so its file is byte for byte what it was before they existed.
     if (!foreign_rows.empty()) {
-        blocks.push_back(column(kBlkForeignBytes, doc.foreign().pool()));
+        blocks.push_back(
+            column(kBlkForeignBytes, foreign_pool_rebuilt ? foreign_pool : doc.foreign().pool()));
         blocks.push_back(column(kBlkForeignRecords, foreign_rows));
     }
     if (!block_rows.empty()) {

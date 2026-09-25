@@ -74,7 +74,27 @@ tehlikelidir. KentOSCad ya tamamını okur ya da hiçbirini.
 
 Yeni bir özellik geldiğinde dosyaya yeni bir blok eklenir; eski KentOSCad o bloğu
 atlayarak dosyayı açmaya devam eder. Gereken okuyucu sürümü ancak var olan bir
-bloğun **anlamı** değişirse yükselir, ve bu bugüne kadar olmadı.
+bloğun **anlamı** değişirse yükselir: bugüne kadar bir kez oldu, açılı kılavuz
+çizgisi taşıyan çizimler için (en az 2. sürüm okuyucu). Kılavuzu olmayan ya da
+yalnız yatay/düşey kılavuzu olan çizim her sürümde açılır.
+
+### Biçim 3: taşınmış nesneler
+
+Bu sürüm dosyayı **3. biçimle** yazar. Fark, bir nesne taşındığında ya da köşesi
+değiştirildiğinde ortaya çıkıyordu: önceki sürümler, geri alma için bellekte tutulan
+eski geometriyi de dosyaya yazıyordu. Bunun iki sonucu vardı ve ikisi de düzeldi:
+
+- Bir nesneyi taşıyıp **sonra başka bir nesne çizdiğinizde**, kaydedip açınca yeni
+  nesnenin öznitelik değerleri (ada, parsel numarası…) **taşınan nesnenin eski
+  değerleriyle** görünebiliyordu; taşınıp düzeltilen bir yazı da düzeltilmeden önceki
+  hâliyle açılabiliyordu.
+- DXF'ten gelen, **yabancı veri** (XDATA) taşıyan bir çizgi taşınınca bu veri
+  kayboluyor, dosya da açılışta "Dosya bozuk" diye reddediliyordu.
+
+Bu sürüm, önceki sürümlerin yazdığı böyle dosyaları da **doğru okur**: her değeri,
+nesnenin kaydedildiği andaki hâline göre yerine koyar, eski geometrinin kalıntılarını
+yok sayar ve uyarı vermez. Reddedilen dosyalar açılır; yalnız taşınırken zaten
+kaybolmuş olan XDATA geri gelmez. 3. biçim dosyalar önceki sürümlerde de açılır.
 
 ## Kaydetme kesintiye dayanıklıdır
 
@@ -109,7 +129,10 @@ bilinen bir dosyadan kötüdür.
 | `'...' yazılırken hata oluştu; disk dolu olabilir.` | Disk doldu ya da izin yok | Yer açın; önceki dosyanız değişmedi |
 
 Uyarılar hata değildir ve dosya yine açılır; transkriptte `uyarı:` ile başlarlar.
-En sık görüleni, dosyanın bu sürümün tanımadığı bir blok taşımasıdır.
+"Dosyada bu sürümün tanımadığı N veri bloğu var" uyarısı, dosyayı **daha yeni** bir
+KentOSCad yazdığında görülür. Önceki sürümler bu uyarıyı blok tanımı, kılavuz, çıktı
+yerleşimi ya da öznitelik sütunu taşıyan her dosyada yanlışlıkla veriyordu; bu sürüm
+okuduğu hiçbir bloğu tanınmayan diye bildirmez.
 
 ## Bu sürümde henüz olmayanlar
 

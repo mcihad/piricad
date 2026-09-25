@@ -25,6 +25,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -172,6 +173,11 @@ public:
     /// slot carrying the empty string: "this entity is not text" and "this text
     /// entity says nothing" are different drawings.
     std::uint64_t fold(std::uint64_t seed) const;
+
+    /// The same fold over `slots`, in that order — one per row of a document,
+    /// each the slot its geometry holds NOW (`Document::content_hash`). A slot a
+    /// geometry edit left behind is history, not content, and never folds.
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> slots) const;
 
 private:
     std::uint32_t intern(std::string_view s);

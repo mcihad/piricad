@@ -504,10 +504,18 @@ std::string_view AttrColumn::text(std::size_t row) const
 
 std::uint64_t AttrColumn::fold(std::uint64_t seed) const
 {
+    std::vector<std::uint32_t> every(rows_);
+    for (std::size_t row = 0; row < rows_; ++row)
+        every[row] = static_cast<std::uint32_t>(row);
+    return fold(seed, every);
+}
+
+std::uint64_t AttrColumn::fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const
+{
     std::uint64_t h = fnv1a(spec_.id, seed);
     h               = fnv1a_int(static_cast<std::int64_t>(spec_.type), h);
 
-    for (std::size_t row = 0; row < rows_; ++row) {
+    for (const std::uint32_t row : rows) {
         if (!present(row)) {
             h = fnv1a_int(kAbsentMarker, h);
             continue;
@@ -717,6 +725,16 @@ std::uint64_t AttrTable::fold(std::uint64_t seed) const
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows_), seed);
     for (const auto& c : columns_)
         h = c.fold(h);
+    return h;
+}
+
+std::uint64_t AttrTable::fold(std::uint64_t seed, std::span<const std::uint32_t> rows) const
+{
+    if (columns_.empty()) return seed;
+
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows.size()), seed);
+    for (const auto& c : columns_)
+        h = c.fold(h, rows);
     return h;
 }
 
