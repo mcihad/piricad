@@ -15,10 +15,14 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/planar.hpp"
+#include "kentos_cad/core/ties.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
 #include "kentos_cad/domain/surface/contour.hpp"
 #include "kentos_cad/io/format.hpp"
@@ -26,6 +30,7 @@
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -71,6 +76,46 @@ struct Rig
     core::ResultState state(std::int64_t key) const
     {
         return core::check_result(doc, entity(key)).state;
+    }
+
+    /// The state of object `key`'s tie of `kind`; `Current` when it has none.
+    core::TieState tie(std::int64_t key, core::TieKind kind) const
+    {
+        for (const core::Tie& t : core::ties_of(doc, entity(key)))
+            if (t.kind == kind) return t.state;
+        return core::TieState::Current;
+    }
+
+    /// How many followers of `kind` in the drawing are in `state`.
+    std::size_t counted(core::TieKind kind, core::TieState state) const
+    {
+        std::size_t n = 0;
+        for (const core::Tie& t : core::every_tie(doc))
+            n += t.kind == kind && t.state == state ? 1 : 0;
+        return n;
+    }
+
+    /// What dimension `key` measures, as it says.
+    std::int64_t measured(std::int64_t key) const
+    {
+        auto def = core::dimension_of(doc.geometry(), doc.entities().slot[entity(key)]);
+        REQUIRE(def.ok());
+        return def.value().measurement;
+    }
+
+    /// The words of every caption on `layer`, sorted: what a sheet reads there.
+    std::vector<std::string> captions_on(const std::string& layer) const
+    {
+        std::vector<std::string> out;
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e)) continue;
+            const core::LayerId l = doc.entities().layer[e];
+            if (l >= doc.layers().size() || doc.layers()[l].name != layer) continue;
+            const std::uint32_t slot = doc.entities().slot[e];
+            if (doc.texts().has(slot)) out.emplace_back(doc.texts().text(slot));
+        }
+        std::ranges::sort(out);
+        return out;
     }
 
     /// The newest live object's key.
@@ -262,8 +307,7 @@ TEST_CASE("SONUÇ: kaynağı silinen tampon kaynaksız kalır; geri alınınca k
     // An object that is not a result is named as such.
     r.said.clear();
     r.run("BAĞIMLILIK nesneler=1");
-    CHECK(r.said.find("Seçilen nesnelerin hiçbiri kaynağına bağlı bir sonuç değil.") !=
-          std::string::npos);
+    CHECK(r.said.find("Seçilen nesnelerin hiçbiri kaynağına bağlı değil.") != std::string::npos);
 }
 
 TEST_CASE("SONUÇ: kaynağıyla birlikte taşınan tampon güncel kalır; kendi başına değiştirilen "
@@ -396,6 +440,255 @@ TEST_CASE("SONUÇ: SINIR'ın bulduğu alan, çizgisi taşınınca güncel değil
     r.run("KÖŞETAŞI nesne=2 kose=1 nokta=25,0");
     CHECK_EQ(r.state(5), core::ResultState::Stale);
     CHECK_EQ(core::check_result(r.doc, r.entity(5)).changed, keys({2}));
+}
+
+// ============================================================== followers ===
+
+TEST_CASE("BAĞLI YAZI: kilitli katmanda izleyemeyen uzunluk yazısı güncel değil görünür; kilit "
+          "açılınca kaynağına yetişir; geri alınınca yine geride kalır")
+{
+    Rig r;
+    r.run("KATMAN ad=PARSEL");
+    r.run("ALAN 0,0 40,0 40,30 0,30");          // 1
+    r.run("UZUNLUKYAZ nesneler=1 katman=OLCU"); // one caption per edge
+    const std::vector<std::string> drawn = r.captions_on("OLCU");
+    REQUIRE_EQ(drawn.size(), std::size_t{4});
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Current), std::size_t{4});
+
+    // Locked, the two edges that meet the moved corner leave their captions behind.
+    r.run("KATMAN ad=OLCU kilitli=evet");
+    r.said.clear();
+    r.run("KÖŞETAŞI nesne=1 kose=3 nokta=48,30");
+    CHECK(r.said.find("Katmanın kilidi açılınca kaynağına yetişir.") != std::string::npos);
+    CHECK_EQ(r.captions_on("OLCU"), drawn);
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Behind), std::size_t{2});
+
+    // BAĞIMLILIK says so; asked to bring them back, it says why it cannot yet.
+    r.said.clear();
+    r.run("BAĞIMLILIK");
+    CHECK(r.said.find("4 bağlı nesne: 2 güncel, 2 güncel değil, 0 bağı kopuk.") !=
+          std::string::npos);
+    CHECK(r.said.find("BAĞIMLILIK islem=yenile") != std::string::npos);
+    const std::uint64_t behind = r.doc.content_hash();
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile");
+    CHECK(r.said.find("2 bağlı nesne kilitli katmanda; katmanın kilidi açılınca kaynağına "
+                      "yetişir.") != std::string::npos);
+    CHECK_EQ(r.doc.content_hash(), behind);
+
+    // Unlocked: they catch up in the same step, and say their new lengths.
+    r.said.clear();
+    r.run("KATMAN ad=OLCU kilitli=hayır");
+    CHECK(r.said.find("Kilidi açılan 2 bağlı nesne kaynağına yetişti.") != std::string::npos);
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Current), std::size_t{4});
+    CHECK_EQ(r.captions_on("OLCU"),
+             (std::vector<std::string>{"30,00 m", "31,05 m", "40,00 m", "48,00 m"}));
+
+    // Undone, the lock and the captions go back together.
+    r.run("GERİAL");
+    CHECK(r.doc.layers()[r.doc.entities().layer[r.entity(2)]].locked);
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Behind), std::size_t{2});
+}
+
+TEST_CASE("BAĞLI YAZI: kilitliyken köşe eklenen parselin yazıları kilit açılınca aynı kenara "
+          "yetişir; komşu kenara sıçramaz")
+{
+    Rig r;
+    r.run("KATMAN ad=PARSEL");
+    r.run("ALAN 0,0 40,0 40,30 0,30"); // 1
+    r.run("UZUNLUKYAZ nesneler=1 katman=OLCU");
+    r.run("KATMAN ad=OLCU kilitli=evet");
+    // A corner on the bottom edge: every edge after it is numbered one further.
+    r.run("KÖŞEEKLE nesne=1 kose=1 nokta=20,-5");
+    r.run("KATMAN ad=OLCU kilitli=hayır");
+    // The bottom edge's caption went to one of its halves; the other three kept
+    // their edges — a tie that had not been renumbered behind the lock would
+    // have moved each onto its neighbour: two 20,62, one 30 and one 40.
+    CHECK_EQ(r.captions_on("OLCU"),
+             (std::vector<std::string>{"20,62 m", "30,00 m", "30,00 m", "40,00 m"}));
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Current), std::size_t{4});
+}
+
+TEST_CASE("BAĞLI ÖLÇÜ ve TARAMA: kilitliyken geride kalan kilit açılınca yetişir")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 12,0"); // 1
+    r.run("KATMAN ad=OLCU");
+    r.run("ÖLÇÜ tur=hizali birinci=0,0 ikinci=12,0 konum=6,-2"); // 2
+    r.run("KATMAN ad=OLCU kilitli=evet");
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=15,0");
+    CHECK_EQ(r.measured(2), 12'000);
+    CHECK_EQ(r.tie(2, core::TieKind::Dimension), core::TieState::Behind);
+    r.run("KATMAN ad=OLCU kilitli=hayır");
+    CHECK_EQ(r.measured(2), 15'000);
+    CHECK_EQ(r.tie(2, core::TieKind::Dimension), core::TieState::Current);
+
+    Rig h;
+    h.run("KATMAN ad=PARSEL");
+    h.run("ALAN 0,0 20,0 20,10 0,10"); // 1
+    h.run("KATMAN ad=TARAMA");
+    h.run("TARAMA nesneler=1 desen=ANSI31"); // 2
+    h.run("KATMAN ad=TARAMA kilitli=evet");
+    h.run("KÖŞETAŞI nesne=1 kose=2 nokta=25,0");
+    CHECK_EQ(h.tie(2, core::TieKind::Hatch), core::TieState::Behind);
+    h.said.clear();
+    h.run("KATMAN ad=TARAMA kilitli=hayır");
+    CHECK(h.said.find("Kilidi açılan 1 bağlı nesne kaynağına yetişti.") != std::string::npos);
+    CHECK_EQ(h.tie(2, core::TieKind::Hatch), core::TieState::Current);
+
+    // A locked hatch whose boundary is erased is broken behind the lock too: it
+    // stays as it was, and says it follows nothing.
+    h.run("KATMAN ad=TARAMA kilitli=evet");
+    h.run("SİL nesneler=1");
+    CHECK_EQ(h.tie(2, core::TieKind::Hatch), core::TieState::Broken);
+    REQUIRE(h.doc.hatch_links().get(h.entity(2)) != nullptr);
+    CHECK(h.doc.hatch_links().get(h.entity(2))->front().broken);
+    h.run("GERİAL");
+    CHECK_EQ(h.tie(2, core::TieKind::Hatch), core::TieState::Current);
+    CHECK_FALSE(h.doc.hatch_links().get(h.entity(2))->front().broken);
+}
+
+TEST_CASE("BAĞIMLILIK yenile: dışarıda değişmiş bir kaynağa bağlı ölçü kaynağına yetişir; tek "
+          "adımda geri alınır; coz bağı çözer")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 12,0");                                     // 1
+    r.run("ÖLÇÜ tur=hizali birinci=0,0 ikinci=12,0 konum=6,-2"); // 2
+    // The line changed with nothing to follow it — what a drawing written by a
+    // program that knows no ties would leave.
+    {
+        Transaction tx(r.doc, "dışarıda");
+        const std::vector<core::Point2> ring{{0, 0}, {15'000, 0}};
+        const core::RingGeometry::RingInput one{ring, core::RingRole::Open, 0};
+        REQUIRE(
+            tx.set_geometry(r.entity(1), std::span<const core::RingGeometry::RingInput>(&one, 1)));
+        (void)tx.release();
+    }
+    CHECK_EQ(r.tie(2, core::TieKind::Dimension), core::TieState::Behind);
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile");
+    CHECK(r.said.find("1 bağlı nesne kaynağına yetiştirildi.") != std::string::npos);
+    CHECK_EQ(r.measured(2), 15'000);
+    CHECK_EQ(r.tie(2, core::TieKind::Dimension), core::TieState::Current);
+    r.run("GERİAL");
+    CHECK_EQ(r.measured(2), 12'000);
+    CHECK_EQ(r.tie(2, core::TieKind::Dimension), core::TieState::Behind);
+
+    // Nothing behind: nothing to do, and no undo step for it.
+    r.run("YİNELE");
+    const std::size_t depth = r.undo.undo_depth();
+    r.said.clear();
+    r.run("BAĞIMLILIK islem=yenile");
+    CHECK(r.said.find("Kaynağının gerisinde kalmış bir bağlı nesne yok.") != std::string::npos);
+    CHECK_EQ(r.undo.undo_depth(), depth);
+
+    // Cut loose: the dimension stays and measures nothing more.
+    r.run("BAĞIMLILIK islem=coz nesneler=2");
+    CHECK(r.doc.dimension_links().get(r.entity(2)) == nullptr);
+    CHECK(core::ties_of(r.doc, r.entity(2)).empty());
+    r.run("GERİAL");
+    CHECK(r.doc.dimension_links().get(r.entity(2)) != nullptr);
+}
+
+TEST_CASE("BAĞ: silme ve geri alma her bağ türünü tutarlı getirir")
+{
+    Rig r;
+    r.run("KATMAN ad=PARSEL");
+    r.run("ALAN 0,0 20,0 20,10 0,10");                            // 1
+    r.run("UZUNLUKYAZ nesneler=1 katman=OLCU");                   // 2..5
+    r.run("ÖLÇÜ tur=hizali birinci=0,0 ikinci=20,0 konum=10,-3"); // 6
+    r.run("TARAMA nesneler=1 desen=ANSI31");                      // 7
+    r.run("TAMPON nesneler=1 mesafe=2 katman=K");                 // 8
+    const std::uint64_t whole = r.doc.content_hash();
+    r.run("SİL nesneler=1");
+    // The captions go with it; the dimension and the hatch stay broken; the
+    // buffer stands alone.
+    CHECK(r.captions_on("OLCU").empty());
+    CHECK_EQ(r.tie(6, core::TieKind::Dimension), core::TieState::Broken);
+    CHECK_EQ(r.tie(7, core::TieKind::Hatch), core::TieState::Broken);
+    CHECK_EQ(r.state(8), core::ResultState::Sourceless);
+    // One undo gives everything back, every tie whole.
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), whole);
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Current), std::size_t{4});
+    CHECK_EQ(r.tie(6, core::TieKind::Dimension), core::TieState::Current);
+    CHECK_EQ(r.tie(7, core::TieKind::Hatch), core::TieState::Current);
+    CHECK_EQ(r.state(8), core::ResultState::Current);
+    // And the next change is followed by all of them again.
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=25,0");
+    CHECK_EQ(r.counted(core::TieKind::Caption, core::TieState::Current), std::size_t{4});
+    CHECK_EQ(r.tie(6, core::TieKind::Dimension), core::TieState::Current);
+    CHECK_EQ(r.measured(6), 25'000);
+    CHECK_EQ(r.tie(7, core::TieKind::Hatch), core::TieState::Current);
+    CHECK_EQ(r.state(8), core::ResultState::Stale);
+}
+
+TEST_CASE("BAĞ: döngü kurulamaz — yazı kendisini izleyene, tarama kendisinden dolduruluna "
+          "bağlanamaz")
+{
+    Rig r;
+    r.run("ÇİZGİ 0,0 10,0");  // 1
+    r.run("METİN 5,2 \"a\""); // 2
+    r.run("METİN 5,4 \"b\""); // 3
+    r.run("BAĞLA nesneler=2 kaynak=1");
+    r.run("BAĞLA nesneler=3 kaynak=2"); // a chain is allowed
+    auto cycle = r.bus.execute_line("BAĞLA nesneler=2 kaynak=3", Origin::Test);
+    REQUIRE_FALSE(cycle.ok());
+    CHECK(cycle.error().message.find("Bağ döngüsü") != std::string::npos);
+
+    // Two hatches, the second filled from the first: the first may not then be
+    // filled from the second.
+    r.run("ALAN 0,20 10,20 10,30 0,30");     // 4
+    r.run("TARAMA nesneler=4 desen=ANSI31"); // 5
+    r.run("ALAN 20,20 30,20 30,30 20,30");   // 6
+    r.run("TARAMA nesneler=6 desen=ANSI31"); // 7
+    Transaction tx(r.doc, "döngü");
+    const std::array<core::HatchSource, 1> from_first{
+        core::HatchSource{r.doc.key_of(r.entity(5)), false}};
+    REQUIRE(tx.set_hatch_links(r.entity(7), from_first));
+    const std::array<core::HatchSource, 1> from_second{
+        core::HatchSource{r.doc.key_of(r.entity(7)), false}};
+    auto refused = tx.set_hatch_links(r.entity(5), from_second);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("Tarama bağ döngüsü") != std::string::npos);
+    tx.rollback();
+}
+
+TEST_CASE("BAĞIMLILIK: kılavuzdaki örnekler kelimesi kelimesine")
+{
+    // docs/komutlar/dependency.md prints what the command line says; the page
+    // and the program must agree to the character.
+    Rig r;
+    r.run("NOKTA 485320,4310220");
+    r.run("TAMPON nesneler=1 mesafe=5 katman=KORUMA");
+    r.said.clear();
+    r.run("TAŞI nesneler=1 baslangic=485320,4310220 bitis=485322,4310220");
+    CHECK(r.said.find("Kaynağı değiştiği için 1 sonuç artık güncel değil (TAMPON). Hangileri "
+                      "olduğunu görmek için: BAĞIMLILIK\n") != std::string::npos);
+    r.said.clear();
+    r.run("BAĞIMLILIK");
+    CHECK_EQ(r.said, std::string("1 sonuç: 0 güncel, 1 güncel değil, 0 kaynaksız.\n"
+                                 "  güncel değil: nesne 2 (TAMPON) — değişen kaynak: nesne 1\n"
+                                 "Kaynakların şimdiki hâlini kabul etmek için: BAĞIMLILIK "
+                                 "islem=kabul — sonucu kaynağından çözmek için: BAĞIMLILIK "
+                                 "islem=coz\n"));
+
+    Rig l;
+    for (const char* line :
+         {"KATMAN ad=PARSEL", "ALAN 485300,4310200 485340,4310200 485340,4310230 485300,4310230",
+          "UZUNLUKYAZ nesneler=1 katman=OLCU", "KATMAN ad=OLCU kilitli=evet",
+          "KÖŞETAŞI nesne=1 kose=3 nokta=485348,4310230"})
+        l.run(line);
+    l.said.clear();
+    l.run("BAĞIMLILIK");
+    CHECK_EQ(l.said, std::string("4 bağlı nesne: 2 güncel, 2 güncel değil, 0 bağı kopuk.\n"
+                                 "  güncel değil: nesne 3 (bağlı yazı) — kaynağı: nesne 1\n"
+                                 "  güncel değil: nesne 4 (bağlı yazı) — kaynağı: nesne 1\n"
+                                 "Bağlı nesneleri kaynağına yetiştirmek için: BAĞIMLILIK "
+                                 "islem=yenile\n"));
+    l.said.clear();
+    l.run("KATMAN ad=OLCU kilitli=hayır");
+    CHECK(l.said.find("Kilidi açılan 2 bağlı nesne kaynağına yetişti.\n") != std::string::npos);
 }
 
 // ============================================================ the bytes ===

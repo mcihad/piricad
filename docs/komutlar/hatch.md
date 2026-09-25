@@ -22,7 +22,7 @@ adımında** yeniden kurulur:
 | Yalnız tarama taşınır | Tarama sınırından **çözülür**; artık bağımsızdır |
 | Sınır silinir | Bağ **kopar**; tarama son hâlinde durur. Birden çok sınırdan biri silinse de tarama bütünüyle izlemeyi bırakır: kalan sınırlardan yeniden kurulsaydı, silinen parselin içindeki havuz taranan alan olurdu |
 | Sınır artık kapanmaz (çizgi açılır) | Bağ **kopar**; tarama son hâlinde durur |
-| Tarama kilitli katmandadır | İzleyemez ve bunu söyler |
+| Tarama kilitli katmandadır | İzleyemez ve bunu söyler; tuvalde **kilitli: kaynağının gerisinde** işareti durur, öznitelik panelinde `sinir` satırı **GÜNCEL DEĞİL** der. Katmanın kilidi açıldığı anda sınırına yetişir. Sınırı kilitliyken silinirse bağ kopar |
 
 **Delikler iç içelikten gelir.** Bir alanın kendi delikleri, seçtiğiniz bir nesnenin
 içindeki başka bir seçili nesne ve onun da içindekiler, DXF'in olağan tarama kuralıyla
@@ -226,7 +226,8 @@ Bağlı taramaların izlemesi şu satırlarla bildirilir:
 | `Sınırı silindiği için N tarama bağı koptu; tarama son hâlinde duruyor.` | Sınır nesnesi silindi |
 | `Sınırı artık kapanmadığı için N tarama bağı koptu; tarama son hâlinde duruyor.` | Sınır açıldı |
 | `N tarama sınırından ayrı taşındığı için bağından çözüldü.` | Yalnız tarama taşındı |
-| `Bağlı N tarama kilitli katmanda olduğu için sınırını izleyemedi.` | Tarama kilitli katmanda |
+| `Bağlı N tarama kilitli katmanda olduğu için sınırını izleyemedi. Katmanın kilidi açılınca sınırına yetişir.` | Tarama kilitli katmanda; kilit açılınca kendiliğinden yeniden kurulur |
+| `Kilidi açılan N bağlı nesne kaynağına yetişti.` | Kilitliyken geride kalan taramalar, ölçüler ya da yazılar katmanın kilidi açılınca yetişti |
 
 > `Tarama sınırı en az üç nokta ister; verilen 2.`
 

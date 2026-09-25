@@ -183,6 +183,10 @@ public:
     /// probes: the list the marks are drawn from, brought up to date first.
     std::size_t staleResultCountForProbe();
 
+    /// How many followers the canvas marks as left behind their source — a
+    /// caption, a dimension or a hatch on a locked layer — for the probes.
+    std::size_t staleFollowerCountForProbe();
+
     void zoomBy(double factor);
 
     /// Moves the view's centre without changing its scale. KAYDIR's landing point.
@@ -847,6 +851,8 @@ private:
     /// document revision: each shared origin compared once, however many
     /// objects one run made — thirty contours are one comparison.
     std::vector<core::EntityId> stale_results_;
+    /// The followers left behind — non-editable ones only, found in the same pass.
+    std::vector<core::EntityId> stale_followers_;
     std::uint64_t stale_revision_{~std::uint64_t{0}};
     /// Finds `stale_results_` again when the document has changed since.
     void refreshStaleResults();

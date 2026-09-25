@@ -30,6 +30,7 @@
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/spline.hpp"
+#include "kentos_cad/core/ties.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/trim_curve.hpp"
 #include "kentos_cad/render/backend.hpp"
@@ -2089,12 +2090,35 @@ void MapCanvas::refreshStaleResults()
                      .first;
         if (it->second) stale_results_.push_back(e);
     }
+    // A FOLLOWER LEFT BEHIND: a caption, a dimension or a hatch that could not
+    // follow its source because it may not be edited. Only those are asked — an
+    // editable one is brought up to date at every commit — so the thousands of
+    // parcel labels on an unlocked layer cost nothing here.
+    stale_followers_.clear();
+    const auto behind = [&doc](core::EntityId e, core::TieKind kind) {
+        if (!doc.alive(e) || doc.editable(e)) return false;
+        for (const core::Tie& t : core::ties_of(doc, e))
+            if (t.kind == kind) return t.state == core::TieState::Behind;
+        return false;
+    };
+    for (const core::EntityId e : doc.attachments().attached())
+        if (behind(e, core::TieKind::Caption)) stale_followers_.push_back(e);
+    for (const core::EntityId e : doc.dimension_links().linked())
+        if (behind(e, core::TieKind::Dimension)) stale_followers_.push_back(e);
+    for (const core::EntityId e : doc.hatch_links().linked())
+        if (behind(e, core::TieKind::Hatch)) stale_followers_.push_back(e);
 }
 
 std::size_t MapCanvas::staleResultCountForProbe()
 {
     refreshStaleResults();
     return stale_results_.size();
+}
+
+std::size_t MapCanvas::staleFollowerCountForProbe()
+{
+    refreshStaleResults();
+    return stale_followers_.size();
 }
 
 void MapCanvas::buildBrokenLinks()
@@ -2271,6 +2295,28 @@ void MapCanvas::buildBrokenLinks()
             overlay_.labels.push_back(render::OverlayLabel{
                 tokens_->warn.rgba(), v.x + 12.0F, v.y + 4.0F, static_cast<float>(look_.hint_px),
                 false, tr("güncel değil").toStdString()});
+    }
+    // And each follower left behind, the same mark just past its right edge —
+    // on a caption's middle it would sit on the very words it warns about —
+    // and the words once, beside the first in view, naming why it stayed.
+    bool follower_worded = false;
+    for (const core::EntityId e : stale_followers_) {
+        if (e >= ents.size() || !doc.alive(e) || !ents.visible(e)) continue;
+        const core::Box2 box = ents.box_of(e);
+        render::ScreenPointF v =
+            render::to_f(view_.to_screen(core::Point2{box.max_x, (box.min_y + box.max_y) / 2}));
+        v.x += 12.0F;
+        if (v.x < -8.0F || v.y < -8.0F || v.x > w + 8.0F || v.y > h + 8.0F) continue;
+        const std::size_t mark = nextBatch(tokens_->warn.rgba(), 1.8f, false);
+        addCircle(mark, v.x, v.y, 7.0f);
+        addRun(mark, {{v.x, v.y - 3.8F}, {v.x, v.y + 1.2F}}, false);
+        addRun(mark, {{v.x, v.y + 3.0F}, {v.x, v.y + 3.8F}}, false);
+        if (!follower_worded) {
+            overlay_.labels.push_back(render::OverlayLabel{
+                tokens_->warn.rgba(), v.x + 12.0F, v.y + 4.0F, static_cast<float>(look_.hint_px),
+                false, tr("kilitli: kaynağının gerisinde").toStdString()});
+            follower_worded = true;
+        }
     }
 
     if (table.empty()) return;

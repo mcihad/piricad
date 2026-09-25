@@ -100,7 +100,7 @@ Bağlı ölçü ölçtüğü şeyi izler:
 | Nesne aynı komutta başka nesneye dönüşür (`UÇUCA`, `PATLAT`, `BİRLEŞTİR`) | Bağ, aynı noktayı taşıyan yeni ya da yeniden biçimlenen nesneye geçer |
 | Ölçü ve ölçtüğü nesne birlikte taşınır | Hiçbir şey değişmez; bağ sürer |
 | Ölçünün kendi noktası elle taşınır, nesne yerinde durur | O nokta bağından **çözülür**; ölçü artık o ucu izlemez |
-| Ölçü kilitli katmandadır | İzleyemez ve bunu söyler; bağ durur, kilit açıldıktan sonraki ilk değişiklikte yetişir |
+| Ölçü kilitli katmandadır | İzleyemez ve bunu söyler; bağı köşeyi izlemeyi sürdürür (köşe eklense, silinse de), tuvalde **kilitli: kaynağının gerisinde** işareti durur. Katmanın kilidi açıldığı anda kaynağına yetişir ve yeniden ölçülür |
 
 İzleme, onu doğuran komutla **aynı geri alma adımındadır**: köşeyi geri alan
 [`GERİAL`](undo.md) ölçüyü de eski hâline getirir.
@@ -322,7 +322,7 @@ Bağlı ölçülerin izlemesi şu satırlarla bildirilir:
 | `Ölçtüğü köşe kaldırıldığı için N ölçü bağı koptu; ölçü yerinde duruyor ve artık bir şey ölçmüyor.` | Ölçülen köşe silindi |
 | `N ölçü bağı, aynı noktada yerini alan nesneye aktarıldı.` | Nesne aynı komutta başka nesneye dönüştü |
 | `N ölçü noktası elle taşındığı için bağından çözüldü.` | Ölçünün kendi noktası taşındı |
-| `Bağlı N ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını izleyemedi.` | Ölçü kilitli katmanda, ya da yeni noktalarla kurulamıyor (iki nokta çakıştı) |
+| `Bağlı N ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını izleyemedi. Kilitliyse, katmanın kilidi açılınca kaynağına yetişir.` | Ölçü kilitli katmanda, ya da yeni noktalarla kurulamıyor (iki nokta çakıştı) |
 | `Bağlı N ölçünün yazısı elle yazılmış; yeniden ölçülen değeri göstermiyor. …` | Ölçü yeniden ölçüldü ama yazısı elle yazılmış; `ÖLÇÜDÜZENLE sifirla=metin` ölçüye döndürür |
 
 ## Hatalar

@@ -795,6 +795,8 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         // alike; its figure is worded in the project's unit.
         say_settled(session.transaction().settle_dimensions(drawing_unit(), node_tolerance()));
         say_settled(session.transaction().settle_hatches());
+        // A FOLLOWER SET FREE catches up with its source (TODOS F-04).
+        say_settled(session.transaction().settle_unlocked(drawing_unit()));
         // LAST: a result is compared with its sources as everything above left
         // them (TODOS F-04, core/lineage.hpp).
         say_settled(session.transaction().settle_results());
@@ -960,7 +962,8 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
     }
     if (settled.left != 0)
         on_echo("Bağlı " + std::to_string(settled.left) +
-                " yazı kilitli katmanda olduğu için kaynağını izleyemedi; yerinde kaldı.");
+                " yazı kilitli katmanda olduğu için kaynağını izleyemedi; yerinde kaldı. "
+                "Katmanın kilidi açılınca kaynağına yetişir.");
     if (settled.dims_followed != 0)
         on_echo("Bağlı " + std::to_string(settled.dims_followed) +
                 " ölçü kaynağını izledi ve yeniden ölçüldü.");
@@ -994,11 +997,15 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
                 " tarama sınırından ayrı taşındığı için bağından çözüldü.");
     if (settled.hatches_left != 0)
         on_echo("Bağlı " + std::to_string(settled.hatches_left) +
-                " tarama kilitli katmanda olduğu için sınırını izleyemedi.");
+                " tarama kilitli katmanda olduğu için sınırını izleyemedi. Katmanın kilidi "
+                "açılınca sınırına yetişir.");
     if (settled.dims_left != 0)
         on_echo("Bağlı " + std::to_string(settled.dims_left) +
                 " ölçü kilitli katmanda olduğu ya da yeniden kurulamadığı için kaynağını "
-                "izleyemedi.");
+                "izleyemedi. Kilitliyse, katmanın kilidi açılınca kaynağına yetişir.");
+    if (settled.caught_up != 0)
+        on_echo("Kilidi açılan " + std::to_string(settled.caught_up) +
+                " bağlı nesne kaynağına yetişti.");
 
     // A RESULT PUT OUT OF DATE IS SAID the moment it happens (TODOS F-04): a
     // buffer, a generated area, a boundary or a contour whose source this
@@ -1036,6 +1043,7 @@ core::Result<DispatchResult> Bus::end_batch()
     say_settled(batch_->settle_attachments());
     say_settled(batch_->settle_dimensions(drawing_unit(), node_tolerance()));
     say_settled(batch_->settle_hatches());
+    say_settled(batch_->settle_unlocked(drawing_unit()));
     say_settled(batch_->settle_results());
 
     DispatchResult result;

@@ -110,7 +110,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.cut`](#cadcut) | `core.cut` | `KES` | Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı. |
 | [`cad.paste`](#cadpaste) | `core.paste` | `YAPIŞTIR` | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
 | [`cad.entity_info`](#cadentity_info) | `core.entity_info` | `NESNEBİLGİ` | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
-| [`cad.dependency`](#caddependency) | `core.dependency` | `BAĞIMLILIK` | Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer. |
+| [`cad.dependency`](#caddependency) | `core.dependency` | `BAĞIMLILIK` | Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer. |
 | [`cad.measure_angle`](#cadmeasure_angle) | `core.measure_angle` | `AÇIÖLÇ` | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`cad.stretch`](#cadstretch) | `core.stretch` | `ESNET` | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`cad.tracking`](#cadtracking) | `core.tracking` | `İZ` | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
@@ -715,7 +715,7 @@ cad.entity_info(
 
 ### `cad.dependency`
 
-Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.
+Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer.
 
 Komut: `core.dependency` — `BAĞIMLILIK`
 
@@ -728,8 +728,8 @@ cad.dependency(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `action` | `str` | `islem` | durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz |
-| `objects` | `list[int]` | `nesneler` | Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar [kalıcı nesne anahtarı] |
+| `action` | `str` | `islem` | durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz |
+| `objects` | `list[int]` | `nesneler` | Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/dependency.md)
 

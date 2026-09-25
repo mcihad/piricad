@@ -362,6 +362,7 @@ public:
         std::size_t results_asked{0};      ///< shared origins compared: the cost, for a test
         std::vector<std::string> stale_by; ///< what made the stale and sourceless ones, once
         std::vector<std::string> released_by; ///< what made the released ones, once
+        std::size_t caught_up{0}; ///< followers unlocked that caught up with their source
     };
 
     /// Keeps every TEXT this transaction touched standing on a baseline exactly
@@ -387,6 +388,19 @@ public:
     /// and what followed from it. Idempotent: a second call finds nothing to do.
     SettleReport settle_attachments();
 
+    /// Brings caption `d` to where its rule puts it now, and its words up to
+    /// date (TODOS F-04): what a caption that could not follow — it was locked —
+    /// needs once it may. Refused for one that follows nothing, may not be
+    /// edited, or whose feature is gone; counted into `rep` like the settle's.
+    Status follow_caption(EntityId d, SettleReport& rep);
+
+    /// Keeps a tie naming the same feature of a changed source, for a dependent
+    /// that may not itself be edited (`Document::retie_attachment` and its two
+    /// siblings): the settle's road only.
+    Status retie_attachment(EntityId e, const core::Attachment& a);
+    Status retie_dimension(EntityId dim, std::span<const core::DimLink> links);
+    Status retie_hatch(EntityId hatch, std::span<const core::HatchSource> sources);
+
     /// Brings every LINKED DIMENSION up to date with what this transaction did
     /// to what it measures (core/dimension_link.hpp): a moved source re-lays
     /// the dimension out around the moved feature and re-words its figure in
@@ -401,6 +415,11 @@ public:
     /// back as a dimension the user moved.
     SettleReport settle_dimensions(core::DrawingUnit unit, core::Mm tolerance);
 
+    /// Brings dimension `dim` back onto the features its links name, re-laid
+    /// out and re-measured in `unit` (TODOS F-04): for one that could not
+    /// follow. Refused for one that has no links or may not be edited.
+    Status follow_dimension(EntityId dim, core::DrawingUnit unit, SettleReport& rep);
+
     /// Brings every LINKED HATCH up to date with what this transaction did to
     /// its boundary (core/hatch_link.hpp): the loops built again from the
     /// sources as they are now, holes by nesting, the pattern's origin carried
@@ -408,6 +427,20 @@ public:
     /// longer closed, is kept as broken and the hatch stays as it was; a hatch
     /// moved on its own is released. Its own cursor, like the dimensions'.
     SettleReport settle_hatches();
+
+    /// Builds hatch `hatch` again from its boundary objects as they are now
+    /// (TODOS F-04): for one that could not follow. Refused for one with no
+    /// sources, a source lost, or a lock.
+    Status follow_hatch(EntityId hatch, SettleReport& rep);
+
+    /// LETS A FOLLOWER CATCH UP (TODOS F-04): a caption, a dimension or a hatch
+    /// that could not follow its source while it was locked, and that this
+    /// transaction set free — its layer unlocked, or it moved to another layer
+    /// — is brought to its source as the settle would have, in the same undo
+    /// step. Only the ones behind: a current follower is left untouched. Runs
+    /// after the three settles above, and advances their cursors past its own
+    /// writes, so none of them reads a caught-up follower as one moved by hand.
+    SettleReport settle_unlocked(core::DrawingUnit unit);
 
     /// Says which RESULTS this transaction put out of date (TODOS F-04,
     /// core/lineage.hpp): of the objects it reshaped, re-worded, re-valued or
@@ -452,10 +485,11 @@ private:
     /// How far `settle_attachments` has read `inverse_`; the ops before it were
     /// already answered.
     std::size_t settled_upto_{0};
-    std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
-    std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
-    std::size_t texts_settled_upto_{0};   ///< how far `settle_texts` has read
-    std::size_t results_settled_upto_{0}; ///< how far `settle_results` has read
+    std::size_t dims_settled_upto_{0};     ///< how far `settle_dimensions` has read
+    std::size_t hatches_settled_upto_{0};  ///< how far `settle_hatches` has read
+    std::size_t texts_settled_upto_{0};    ///< how far `settle_texts` has read
+    std::size_t results_settled_upto_{0};  ///< how far `settle_results` has read
+    std::size_t unlocked_settled_upto_{0}; ///< how far `settle_unlocked` has read
 
     /// The first entity row this transaction can have created: rows are
     /// append-only, so everything at or past it was born inside it.
@@ -463,6 +497,17 @@ private:
 
     /// Whether `hatch`'s rings are exactly what `sources` give it now.
     bool fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const;
+
+    /// Re-lays dimension `dim` out with its points moved as `moves` say, re-worded
+    /// in `unit`, and counts it; false when it could not be rebuilt.
+    bool rebuild_dimension(EntityId dim,
+                           std::span<const std::pair<std::size_t, core::Point2>> moves,
+                           core::DrawingUnit unit, SettleReport& rep);
+
+    /// Writes caption `d` where `a` puts it, and its words, only what changed;
+    /// `stored` is the attachment it has, written over when `a` differs.
+    bool place_caption(EntityId d, const core::Attachment& stored, const core::Attachment& a,
+                       SettleReport& rep);
 };
 
 struct UndoEntry

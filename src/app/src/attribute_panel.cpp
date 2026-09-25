@@ -14,6 +14,7 @@
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/lineage.hpp"
+#include "kentos_cad/core/ties.hpp"
 
 #include <QClipboard>
 #include <QColorDialog>
@@ -439,10 +440,16 @@ void AttributePanel::rebuild()
                     std::size_t broken = 0;
                     for (const core::HatchSource& src : *sources)
                         broken += src.broken ? 1 : 0;
+                    bool behind = false;
+                    for (const core::Tie& t : core::ties_of(doc, slot))
+                        behind = behind || (t.kind == core::TieKind::Hatch &&
+                                            t.state == core::TieState::Behind);
                     filled.rows.push_back({tr("sinir"),
                                            broken == 0 ? tr("%1 nesneye bağlı").arg(sources->size())
                                                        : tr("%1 bağ kopuk").arg(broken),
-                                           broken == 0 ? QString() : tr("KOPUK"),
+                                           behind        ? tr("GÜNCEL DEĞİL")
+                                           : broken == 0 ? QString()
+                                                         : tr("KOPUK"),
                                            true,
                                            {},
                                            {}});
@@ -575,12 +582,20 @@ void AttributePanel::rebuild()
                     std::size_t broken = 0;
                     for (const core::DimLink& l : *links)
                         broken += l.broken ? 1 : 0;
+                    // BEHIND ITS FEATURES — it was locked when they moved (TODOS
+                    // F-04) — is said before broken: it is the one a user can fix.
+                    bool behind = false;
+                    for (const core::Tie& t : core::ties_of(doc, slot))
+                        behind = behind || (t.kind == core::TieKind::Dimension &&
+                                            t.state == core::TieState::Behind);
                     measure.rows.push_back(
                         {tr("baglar"),
                          broken == 0
                              ? tr("%1 nokta bağlı").arg(links->size())
                              : tr("%1 bağlı, %2 kopuk").arg(links->size() - broken).arg(broken),
-                         broken == 0 ? QString() : tr("KOPUK"),
+                         behind        ? tr("GÜNCEL DEĞİL")
+                         : broken == 0 ? QString()
+                                       : tr("KOPUK"),
                          true,
                          {},
                          {}});
@@ -738,6 +753,33 @@ void AttributePanel::rebuild()
                                  false,
                                  QStringLiteral("YAZIDÜZENLE nesneler=%1 genislik=%2").arg(id),
                                  {}});
+            // WHAT IT FOLLOWS, AND WHETHER IT STILL DOES (TODOS F-04): a caption
+            // on a locked layer that its edge left behind says so here.
+            if (const core::Attachment* tie = doc.attachments().get(slot); tie != nullptr) {
+                const auto source = static_cast<qulonglong>(core::raw(tie->source));
+                QString feature;
+                switch (tie->anchor) {
+                case core::AttachAnchor::Vertex:
+                    feature = tr("nesne %1, köşe %2").arg(source).arg(tie->index + 1);
+                    break;
+                case core::AttachAnchor::Edge:
+                    feature = tr("nesne %1, kenar %2").arg(source).arg(tie->index + 1);
+                    break;
+                case core::AttachAnchor::Centre: feature = tr("nesne %1, orta").arg(source); break;
+                case core::AttachAnchor::Landing: feature = tr("nesne %1, uç").arg(source); break;
+                }
+                core::TieState state = core::TieState::Current;
+                for (const core::Tie& t : core::ties_of(doc, slot))
+                    if (t.kind == core::TieKind::Caption) state = t.state;
+                says.rows.push_back({tr("bag"),
+                                     feature,
+                                     state == core::TieState::Behind   ? tr("GÜNCEL DEĞİL")
+                                     : state == core::TieState::Broken ? tr("KOPUK")
+                                                                       : tr("İZLİYOR"),
+                                     true,
+                                     {},
+                                     {}});
+            }
             const QString identity = tr("NESNE");
             const auto nesne       = std::ranges::find_if(
                 groups_, [&identity](const AttributeGroup& g) { return g.title == identity; });

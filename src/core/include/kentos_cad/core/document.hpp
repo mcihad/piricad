@@ -651,6 +651,24 @@ public:
     /// key of the object that is gone. The inverse restores what it had before.
     Status set_hatch_links(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out);
 
+    /// KEEPS A TIE POINTING AT THE SAME FEATURE of a source that changed, for a
+    /// dependent that may not itself be edited (TODOS F-04). A caption on a
+    /// locked layer stays where it is when its parcel changes; but when the
+    /// corner it hangs off is renumbered, the tie must say so, or the day the
+    /// layer is unlocked the caption would follow a different corner. These
+    /// change the TIE only — the anchor's number, a link marked broken — never
+    /// the dependent's geometry, words or style, and never which object it
+    /// follows; so the lock is not asked. The commit-time settle's road, never
+    /// a command's. The inverse restores the tie as it was.
+    Status retie_attachment(EntityId e, const Attachment& a, Op& undo_out);
+
+    /// The same for a dimension's links: the same sources, the same points, a
+    /// corner renumbered or a link broken.
+    Status retie_dimension(EntityId dim, std::span<const DimLink> links, Op& undo_out);
+
+    /// The same for a hatch's sources: the same objects, one marked broken.
+    Status retie_hatch(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out);
+
     /// Records where `e` came from (core/lineage.hpp): the operation and the
     /// objects, by key; an origin with no operation clears it. A source need
     /// not be alive — an ifraz erases the parcel its pieces came from, and the
@@ -746,6 +764,12 @@ private:
     /// The undo half of `set_hatch_links`, for the same reason: nothing about
     /// the sources is checked on the way back.
     Status restore_hatch_links(EntityId hatch, std::vector<HatchSource> sources, Op& undo_out);
+
+    /// The undo half of `set_attachment`: what `e` followed, put back without
+    /// asking the lock — an undo is not an edit, and a layer locked since must
+    /// not trap an earlier tie in the undo stack (`Transaction::erase_entity`
+    /// makes the same point about an erase).
+    Status restore_attachment(EntityId e, const Attachment* a, Op& undo_out);
 
     Crs crs_{};
     EntityTable entities_{};

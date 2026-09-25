@@ -30,7 +30,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.cut`](cut.md) | Kes | `KES`, `CUT`, `KS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı. |
 | [`core.paste`](paste.md) | Yapıştır | `YAPIŞTIR`, `YAPISTIR`, `PASTE`, `YP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
 | [`core.entity_info`](entity_info.md) | Nesne Bilgisi | `NESNEBİLGİ`, `NESNEBILGI`, `OBJINFO`, `NB` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
-| [`core.dependency`](dependency.md) | Bağımlılıklar | `BAĞIMLILIK`, `BAGIMLILIK`, `DEPENDENCY`, `BĞM` | Sorgu | tek işlem | betiklenebilir, AI erişimli | Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer. |
+| [`core.dependency`](dependency.md) | Bağımlılıklar | `BAĞIMLILIK`, `BAGIMLILIK`, `DEPENDENCY`, `BĞM` | Sorgu | tek işlem | betiklenebilir, AI erişimli | Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer. |
 | [`core.measure_angle`](measure_angle.md) | Açı Ölç | `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`core.stretch`](stretch.md) | Esnet | `ESNET`, `STRETCH`, `ES` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`core.tracking`](tracking.md) | Geçici İzleme | `İZ`, `IZ`, `TRACK`, `TRK` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
@@ -414,12 +414,12 @@ Ayrıntılı kullanım: [NESNEBİLGİ](entity_info.md)
 
 ### `core.dependency` — BAĞIMLILIK (Bağımlılıklar)
 
-Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.
+Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `islem` | text | isteğe bağlı | durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz |
-| `nesneler` | selection | en az 0 | Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar |
+| `islem` | text | isteğe bağlı | durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz |
+| `nesneler` | selection | en az 0 | Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar |
 
 Ayrıntılı kullanım: [BAĞIMLILIK](dependency.md)
 
@@ -4713,7 +4713,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_dependency",
     "title": "Bağımlılıklar",
-    "description": "Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.\nKomut: BAĞIMLILIK (BAGIMLILIK, DEPENDENCY, BĞM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer.\nKomut: BAĞIMLILIK (BAGIMLILIK, DEPENDENCY, BĞM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4721,15 +4721,16 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "enum": [
             "durum",
+            "yenile",
             "kabul",
             "coz"
           ],
-          "description": "durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz (metin)"
+          "description": "durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz (metin)"
         },
         "nesneler": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "varsayimlar": {
           "type": "array",

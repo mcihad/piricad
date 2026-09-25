@@ -416,11 +416,11 @@ def dependency(
     action: str = ...,
     objects: list[int] = ...,
 ) -> int:
-    """Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.
+    """Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer.
 
     Komut: core.dependency (BAĞIMLILIK)
-        action — durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz
-        objects — Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar [kalıcı nesne anahtarı]
+        action — durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz
+        objects — Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar [kalıcı nesne anahtarı]
     """
 
 def measure_angle(

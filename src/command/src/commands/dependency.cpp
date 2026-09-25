@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// core.dependency (BAĞIMLILIK) — which results still say what their sources
+// core.dependency (BAĞIMLILIK) — which dependents still say what their sources
 // say (TODOS F-04).
 //
-// A RESULT IS A STATEMENT ABOUT ITS SOURCES. A buffer is about a well, a
-// generated area about the lines that close it, a boundary about the linework
-// it was found in, a contour about the points it was traced through; each
-// records its sources' content when it was computed (core/lineage.hpp). This
-// command reads that record against the drawing as it is now and says, for
-// every result or the ones named, whether it is CURRENT, OUT OF DATE (a source
-// still there has changed) or SOURCELESS (a source is gone, nothing else has
-// changed) — and does the two things a user decides about one that is not
-// current: ACCEPT it as it stands, recording its sources as they are now, or
-// DETACH it, keeping its history and dropping the claim.
+// FOUR TIES, ONE QUESTION (core/ties.hpp). A caption follows an edge, a
+// dimension measures corners, a hatch fills what its boundary closes — each
+// kept up to date at commit, unless it was locked — and a RESULT (a buffer, an
+// area generated from lines, a boundary, a contour) records what its sources
+// were when it was computed. This command reads every tie against the drawing
+// as it is now and says, for all of them or the ones named, whether each is
+// CURRENT, OUT OF DATE, BROKEN (a follower that lost a source) or SOURCELESS (a
+// result whose source is gone); and it does the things a user decides about
+// one that is not current: bring a follower back to its source (`yenile`),
+// accept a result as it stands (`kabul`), or cut either loose (`coz`).
 //
 // NOTHING IS STORED THAT SAYS "OUT OF DATE". The answer is computed from the
-// drawing, so an undo that puts a well back makes its buffer current again,
-// for every client alike and with no flag an undo would have to find.
+// drawing, so an undo is always right, for every client alike.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -25,9 +24,10 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/lineage.hpp"
+#include "kentos_cad/core/ties.hpp"
 
 #include <algorithm>
-#include <map>
+#include <array>
 #include <span>
 #include <string>
 #include <vector>
@@ -35,8 +35,8 @@
 namespace kentos::command {
 namespace {
 
-/// How many out-of-date results the transcript names one by one; the report
-/// carries every one of them.
+/// How many dependents the transcript names one by one; the report carries
+/// every one of them.
 constexpr std::size_t kListed = 20;
 
 /// "12, 13 ve 14": keys as a sentence lists them.
@@ -60,29 +60,57 @@ core::Json keys_json(std::span<const core::EntityKey> keys)
 }
 
 /// A state as the transcript says it.
-const char* state_words(core::ResultState s)
+const char* state_words(core::TieState s)
 {
     switch (s) {
-    case core::ResultState::Current: return "güncel";
-    case core::ResultState::Stale: return "güncel değil";
-    case core::ResultState::Sourceless: return "kaynaksız";
-    case core::ResultState::History: break;
+    case core::TieState::Current: return "güncel";
+    case core::TieState::Behind: return "güncel değil";
+    case core::TieState::Broken: return "bağı kopuk";
+    case core::TieState::Sourceless: return "kaynaksız";
     }
-    return "geçmiş";
+    return "güncel";
 }
+
+/// A follower's kind as the transcript names it.
+const char* follower_words(core::TieKind k)
+{
+    switch (k) {
+    case core::TieKind::Caption: return "bağlı yazı";
+    case core::TieKind::Dimension: return "bağlı ölçü";
+    case core::TieKind::Hatch: return "bağlı tarama";
+    case core::TieKind::Result: break;
+    }
+    return "sonuç";
+}
+
+bool is_result(const core::Tie& t)
+{
+    return t.kind == core::TieKind::Result;
+}
+
+/// How many ties of each state, results and followers apart.
+struct Counts
+{
+    std::array<std::size_t, 4> results{};   ///< by `TieState`
+    std::array<std::size_t, 4> followers{}; ///< by `TieState`
+};
 
 Task<void> run_dependency(Context& ctx)
 {
-    const core::Document& doc       = ctx.document();
-    const core::LineageTable& table = doc.lineage();
-    const Value asked               = ctx.argument("islem");
-    const std::string verb          = asked.empty() ? std::string("durum") : asked.as_text();
+    const core::Document& doc = ctx.document();
+    const Value asked         = ctx.argument("islem");
+    const std::string verb    = asked.empty() ? std::string("durum") : asked.as_text();
+    const auto named_as       = [&ctx](const std::string& id) {
+        const CommandSpec* spec = ctx.session().bus().registry().by_id(id);
+        return spec != nullptr && !spec->names.empty() ? std::string(spec->names.front()) : id;
+    };
 
-    // ---- which objects: the ones named, or every result the drawing holds ----
+    // ---- which ties: the named objects', or every one the drawing holds ----
     const Value named = ctx.argument("nesneler");
-    std::vector<core::EntityId> scope;
-    std::size_t not_results = 0;
+    std::vector<core::Tie> ties;
+    std::size_t untied = 0;
     if (!named.empty()) {
+        std::vector<core::EntityId> chosen;
         for (const std::int64_t id : named.as_ids()) {
             const auto key         = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
             const core::EntityId e = doc.slot_of(key);
@@ -91,79 +119,149 @@ Task<void> run_dependency(Context& ctx)
                            "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
                 co_return;
             }
-            const core::Lineage* origin = table.get(e);
-            if (origin == nullptr || !origin->result()) {
-                ++not_results;
-                continue;
-            }
-            scope.push_back(e);
+            chosen.push_back(e);
+        }
+        std::ranges::sort(chosen);
+        chosen.erase(std::ranges::unique(chosen).begin(), chosen.end());
+        for (const core::EntityId e : chosen) {
+            std::vector<core::Tie> its = core::ties_of(doc, e);
+            if (its.empty()) ++untied;
+            for (core::Tie& t : its)
+                ties.push_back(std::move(t));
         }
     } else {
-        for (const core::EntityId e : table.derived())
-            if (doc.alive(e) && table.get(e)->result()) scope.push_back(e);
+        ties = core::every_tie(doc);
     }
-    std::ranges::sort(scope);
-    scope.erase(std::ranges::unique(scope).begin(), scope.end());
-
-    // ---- each result against its sources, one answer per shared origin ----
-    std::map<std::uint32_t, core::ResultCheck> checked;
-    const auto check = [&](core::EntityId e) -> const core::ResultCheck& {
-        const std::uint32_t at = table.origin_of(e);
-        auto it                = checked.find(at);
-        if (it == checked.end())
-            it = checked.emplace(at, core::check_origin(doc, table.origin(at))).first;
-        return it->second;
+    const auto key_of = [&doc](const core::Tie& t) {
+        return static_cast<std::int64_t>(core::raw(doc.key_of(t.dependent)));
     };
-    const auto named_as = [&ctx](const std::string& id) {
-        const CommandSpec* spec = ctx.session().bus().registry().by_id(id);
-        return spec != nullptr && !spec->names.empty() ? std::string(spec->names.front()) : id;
+    const auto say_untied = [&] {
+        if (untied != 0)
+            ctx.echo(std::to_string(untied) + " nesne kaynağına bağlı değil; atlandı.");
     };
 
-    if (verb == "kabul" || verb == "coz") {
-        // ---- a decision about the ones that are not current ----
-        //
-        // Named: those. Not named: every result that is not current — a
-        // current one has nothing to accept, and detaching one nobody asked
-        // about would drop a claim that still holds.
-        std::vector<core::EntityId> acting;
-        for (const core::EntityId e : scope)
-            if (!named.empty() || check(e).state != core::ResultState::Current) acting.push_back(e);
-        if (acting.empty()) {
-            ctx.echo(scope.empty() ? "Çizimde kaynağına bağlı bir sonuç yok."
-                                   : "Güncel olmayan bir sonuç yok; değişen bir şey olmadı.");
-            co_return;
-        }
+    // ---- a decision about the ones that are not current ----
+    if (verb == "kabul" || verb == "coz" || verb == "yenile") {
+        // Named: those. Not named: every tie that is not current — a current one
+        // has nothing to accept or bring back, and cutting one nobody asked about
+        // would drop a tie that still holds.
+        std::vector<const core::Tie*> acting;
+        for (const core::Tie& t : ties)
+            if (!named.empty() || t.state != core::TieState::Current) acting.push_back(&t);
+
+        std::size_t results   = 0;
+        std::size_t followers = 0;
+        std::size_t locked    = 0;
+        std::size_t refused   = 0; // a result asked to follow, a follower asked to be accepted
         std::vector<std::int64_t> keys;
-        for (const core::EntityId e : acting) {
-            core::Lineage next = *table.get(e);
-            if (verb == "coz") {
-                next.revisions.clear(); // history now: kept, and never asked again
-            } else {
+        Transaction::SettleReport quiet;
+        for (const core::Tie* t : acting) {
+            const core::EntityId e = t->dependent;
+            if (verb == "yenile") {
+                if (is_result(*t)) {
+                    if (t->state != core::TieState::Current) ++refused;
+                    continue;
+                }
+                if (t->state != core::TieState::Behind) continue;
+                if (!doc.editable(e)) {
+                    ++locked;
+                    continue;
+                }
+                core::Status st = core::ok();
+                if (t->kind == core::TieKind::Caption)
+                    st = ctx.transaction().follow_caption(e, quiet);
+                else if (t->kind == core::TieKind::Dimension)
+                    st = ctx.transaction().follow_dimension(e, ctx.session().bus().drawing_unit(),
+                                                            quiet);
+                else
+                    st = ctx.transaction().follow_hatch(e, quiet);
+                if (!st) {
+                    ctx.refuse(st.error());
+                    co_return;
+                }
+                ++followers;
+            } else if (verb == "kabul") {
+                if (!is_result(*t)) {
+                    ++refused;
+                    continue;
+                }
                 // AS THEY ARE NOW: a source still there is recorded afresh; one
                 // that is gone keeps what it was, and the result stays sourceless.
+                core::Lineage next = *doc.lineage().get(e);
                 for (std::size_t i = 0; i < next.sources.size(); ++i) {
                     const core::EntityId src = doc.slot_of(next.sources[i]);
                     if (src != core::kNoEntity && doc.alive(src))
                         next.revisions[i] = doc.content_revision(src);
                 }
+                if (auto st = ctx.transaction().set_lineage(e, std::move(next)); !st) {
+                    ctx.refuse(st.error());
+                    co_return;
+                }
+                ++results;
+            } else { // coz
+                core::Status st = core::ok();
+                if (is_result(*t)) {
+                    core::Lineage next = *doc.lineage().get(e);
+                    next.revisions.clear(); // history now: kept, and never asked again
+                    st = ctx.transaction().set_lineage(e, std::move(next));
+                    ++results;
+                } else {
+                    if (t->kind == core::TieKind::Caption)
+                        st = ctx.transaction().clear_attachment(e);
+                    else if (t->kind == core::TieKind::Dimension)
+                        st = ctx.transaction().set_dimension_links(e, {});
+                    else
+                        st = ctx.transaction().set_hatch_links(e, {});
+                    ++followers;
+                }
+                if (!st) {
+                    ctx.refuse(st.error());
+                    co_return;
+                }
             }
-            if (auto st = ctx.transaction().set_lineage(e, std::move(next)); !st) {
-                ctx.refuse(st.error());
-                co_return;
-            }
-            keys.push_back(static_cast<std::int64_t>(core::raw(doc.key_of(e))));
+            keys.push_back(key_of(*t));
         }
-        ctx.record("islem", Value::text(verb));
-        ctx.record("nesneler", Value::ids(keys));
-        ctx.echo(verb == "coz"
-                     ? std::to_string(acting.size()) +
-                           " sonuç kaynağından çözüldü: kökeni geçmiş olarak duruyor, güncel olup "
-                           "olmadığı artık sorulmuyor."
-                     : std::to_string(acting.size()) +
-                           " sonuç, kaynakları şimdiki hâliyle güncel kabul edildi.");
-        if (not_results != 0)
-            ctx.echo(std::to_string(not_results) +
-                     " nesne kaynağına bağlı bir sonuç değil; atlandı.");
+        std::ranges::sort(keys);
+        keys.erase(std::ranges::unique(keys).begin(), keys.end());
+
+        if (keys.empty() && refused == 0 && locked == 0) {
+            if (ties.empty())
+                ctx.echo(untied != 0 ? "Seçilen nesnelerin hiçbiri kaynağına bağlı değil."
+                                     : "Çizimde kaynağına bağlı bir nesne yok.");
+            else if (verb == "yenile")
+                ctx.echo("Kaynağının gerisinde kalmış bir bağlı nesne yok.");
+            else
+                ctx.echo("Güncel olmayan bir sonuç yok; değişen bir şey olmadı.");
+            co_return;
+        }
+        if (!keys.empty()) {
+            ctx.record("islem", Value::text(verb));
+            ctx.record("nesneler", Value::ids(keys));
+        }
+        if (verb == "kabul" && results != 0)
+            ctx.echo(std::to_string(results) +
+                     " sonuç, kaynakları şimdiki hâliyle güncel kabul edildi.");
+        if (verb == "coz" && results != 0)
+            ctx.echo(std::to_string(results) +
+                     " sonuç kaynağından çözüldü: kökeni geçmiş olarak duruyor, güncel olup "
+                     "olmadığı artık sorulmuyor.");
+        if (verb == "coz" && followers != 0)
+            ctx.echo(std::to_string(followers) +
+                     " bağlı nesne bağından çözüldü: yerinde duruyor, kaynağını artık izlemiyor.");
+        if (verb == "yenile" && followers != 0)
+            ctx.echo(std::to_string(followers) + " bağlı nesne kaynağına yetiştirildi.");
+        if (locked != 0)
+            ctx.echo(std::to_string(locked) +
+                     " bağlı nesne kilitli katmanda; katmanın kilidi açılınca kaynağına yetişir.");
+        if (refused != 0)
+            ctx.echo(verb == "yenile"
+                         ? std::to_string(refused) +
+                               " sonuç yeniden hesaplanmaz; kabul etmek için islem=kabul, "
+                               "kaynağından çözmek için islem=coz."
+                         : std::to_string(refused) +
+                               " bağlı nesne kabul edilmez: kaynağına yetiştirmek için "
+                               "islem=yenile, bağından çözmek için islem=coz.");
+        say_untied();
         core::Json report = core::Json::object({});
         report.set("islem", core::Json::string(verb));
         core::Json done = core::Json::array({});
@@ -174,59 +272,81 @@ Task<void> run_dependency(Context& ctx)
         co_return;
     }
 
-    // ---- durum: what each result is ----
-    std::size_t current    = 0;
-    std::size_t stale      = 0;
-    std::size_t sourceless = 0;
-    core::Json rows        = core::Json::array({});
+    // ---- durum: what each dependent is ----
+    Counts counts;
+    core::Json result_rows   = core::Json::array({});
+    core::Json follower_rows = core::Json::array({});
     std::vector<std::string> lines;
-    for (const core::EntityId e : scope) {
-        const core::ResultCheck& c  = check(e);
-        const core::Lineage& origin = *table.get(e);
-        const auto key              = static_cast<std::int64_t>(core::raw(doc.key_of(e)));
-        core::Json row              = core::Json::object({});
-        row.set("nesne", core::Json::integer(key));
-        row.set("islem", core::Json::string(origin.operation));
-        row.set("ad", core::Json::string(named_as(origin.operation)));
-        row.set("durum", core::Json::string(core::result_state_id(c.state)));
-        row.set("degisen", keys_json(c.changed));
-        row.set("silinen", keys_json(c.gone));
-        rows.push(std::move(row));
-        if (c.state == core::ResultState::Current) {
-            ++current;
-            continue;
+    for (const core::Tie& t : ties) {
+        const bool result = is_result(t);
+        ++(result ? counts.results : counts.followers)[static_cast<std::size_t>(t.state)];
+        core::Json row = core::Json::object({});
+        row.set("nesne", core::Json::integer(key_of(t)));
+        std::string what;
+        if (result) {
+            const core::Lineage& origin = *doc.lineage().get(t.dependent);
+            row.set("islem", core::Json::string(origin.operation));
+            row.set("ad", core::Json::string(named_as(origin.operation)));
+            what = named_as(origin.operation);
+        } else {
+            row.set("tur", core::Json::string(core::tie_kind_id(t.kind)));
+            row.set("kaynaklar", keys_json(t.sources));
+            what = follower_words(t.kind);
         }
-        (c.state == core::ResultState::Stale ? stale : sourceless) += 1;
-        std::string line = "  " + std::string(state_words(c.state)) + ": nesne " +
-                           std::to_string(key) + " (" + named_as(origin.operation) + ")";
-        if (!c.changed.empty()) line += " — değişen kaynak: nesne " + keys_listed(c.changed);
-        if (!c.gone.empty()) line += " — silinen kaynak: nesne " + keys_listed(c.gone);
+        row.set("durum", core::Json::string(core::tie_state_id(t.state)));
+        row.set("degisen", keys_json(t.changed));
+        row.set("silinen", keys_json(t.gone));
+        (result ? result_rows : follower_rows).push(std::move(row));
+        if (t.state == core::TieState::Current) continue;
+        std::string line = "  " + std::string(state_words(t.state)) + ": nesne " +
+                           std::to_string(key_of(t)) + " (" + what + ")";
+        if (!t.changed.empty())
+            line += std::string(result ? " — değişen kaynak: nesne " : " — kaynağı: nesne ") +
+                    keys_listed(t.changed);
+        if (!t.gone.empty()) line += " — silinen kaynak: nesne " + keys_listed(t.gone);
+        if (t.state == core::TieState::Broken && t.gone.empty())
+            line += " — bağlı olduğu köşe ya da sınır artık yok";
         lines.push_back(std::move(line));
     }
 
-    if (scope.empty()) {
-        ctx.echo(not_results != 0 ? "Seçilen nesnelerin hiçbiri kaynağına bağlı bir sonuç değil."
-                                  : "Çizimde kaynağına bağlı bir sonuç yok.");
+    const std::size_t results   = result_rows.as_array().size();
+    const std::size_t followers = follower_rows.as_array().size();
+    const auto& r               = counts.results;
+    const auto& f               = counts.followers;
+    constexpr auto kCurrent     = static_cast<std::size_t>(core::TieState::Current);
+    constexpr auto kBehind      = static_cast<std::size_t>(core::TieState::Behind);
+    constexpr auto kBroken      = static_cast<std::size_t>(core::TieState::Broken);
+    constexpr auto kSourceless  = static_cast<std::size_t>(core::TieState::Sourceless);
+    if (ties.empty()) {
+        ctx.echo(untied != 0 ? "Seçilen nesnelerin hiçbiri kaynağına bağlı değil."
+                             : "Çizimde kaynağına bağlı bir nesne yok.");
     } else {
-        ctx.echo(std::to_string(scope.size()) + " sonuç: " + std::to_string(current) + " güncel, " +
-                 std::to_string(stale) + " güncel değil, " + std::to_string(sourceless) +
-                 " kaynaksız.");
+        if (results != 0)
+            ctx.echo(std::to_string(results) + " sonuç: " + std::to_string(r[kCurrent]) +
+                     " güncel, " + std::to_string(r[kBehind]) + " güncel değil, " +
+                     std::to_string(r[kSourceless]) + " kaynaksız.");
+        if (followers != 0)
+            ctx.echo(std::to_string(followers) + " bağlı nesne: " + std::to_string(f[kCurrent]) +
+                     " güncel, " + std::to_string(f[kBehind]) + " güncel değil, " +
+                     std::to_string(f[kBroken]) + " bağı kopuk.");
         for (std::size_t i = 0; i < lines.size() && i < kListed; ++i)
             ctx.echo(lines[i]);
         if (lines.size() > kListed)
-            ctx.echo("  … ve " + std::to_string(lines.size() - kListed) + " sonuç daha.");
-        if (stale != 0 || sourceless != 0)
+            ctx.echo("  … ve " + std::to_string(lines.size() - kListed) + " nesne daha.");
+        if (r[kBehind] != 0 || r[kSourceless] != 0)
             ctx.echo("Kaynakların şimdiki hâlini kabul etmek için: BAĞIMLILIK islem=kabul — "
                      "sonucu kaynağından çözmek için: BAĞIMLILIK islem=coz");
+        if (f[kBehind] != 0)
+            ctx.echo("Bağlı nesneleri kaynağına yetiştirmek için: BAĞIMLILIK islem=yenile");
+        say_untied();
     }
-    if (not_results != 0 && !scope.empty())
-        ctx.echo(std::to_string(not_results) + " nesne kaynağına bağlı bir sonuç değil; atlandı.");
 
     core::Json report = core::Json::object({});
-    report.set("sonuclar", std::move(rows));
-    report.set("guncel", core::Json::integer(static_cast<std::int64_t>(current)));
-    report.set("guncel_degil", core::Json::integer(static_cast<std::int64_t>(stale)));
-    report.set("kaynaksiz", core::Json::integer(static_cast<std::int64_t>(sourceless)));
+    report.set("sonuclar", std::move(result_rows));
+    report.set("guncel", core::Json::integer(static_cast<std::int64_t>(r[kCurrent])));
+    report.set("guncel_degil", core::Json::integer(static_cast<std::int64_t>(r[kBehind])));
+    report.set("kaynaksiz", core::Json::integer(static_cast<std::int64_t>(r[kSourceless])));
+    report.set("baglilar", std::move(follower_rows));
     ctx.report(std::move(report));
 }
 
@@ -241,18 +361,20 @@ KENTOS_COMMAND(dependency)
         .category = Category::Query,
         .params =
             {
-                Param::choice("islem", Arity::optional(), {"durum", "kabul", "coz"},
-                              "durum: sonuçların güncel olup olmadığı; kabul: kaynakların "
-                              "şimdiki hâlini kabul et; coz: sonucu kaynağından çöz")
+                Param::choice("islem", Arity::optional(), {"durum", "yenile", "kabul", "coz"},
+                              "durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; "
+                              "yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun "
+                              "kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz")
                     .en("action"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                      "Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar"}
+                      "Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar"}
                     .en("objects"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; "
-                   "güncel olmayanı kabul eder ya da kaynağından çözer.",
+        .summary = "Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel "
+                   "olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da "
+                   "bağından çözer.",
         .run    = &run_dependency,
         .effect = Effect::Query | Effect::DocumentEdit,
     };

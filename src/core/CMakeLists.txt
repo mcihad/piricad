@@ -30,6 +30,7 @@ add_library(kentos_core STATIC
     src/entity_kind.cpp
     src/foreign_table.cpp
     src/lineage.cpp
+    src/ties.cpp
     src/outline.cpp
     src/transform.cpp
     src/geometry.cpp

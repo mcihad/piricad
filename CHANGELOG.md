@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kilitli bağlı nesne geride kaldığını söylüyor, kilit açılınca yetişiyor (F-04, 2. aşama)
+
+- **Kilitli katmandaki bağlı yazı, ölçü ve tarama artık sessizce eskimiyor.** Kaynağı
+  değişince yine yerinde kalıyor ama bundan sonra da geride olduğunu söylüyor: tuvalde
+  yanında uyarı renkli **kilitli: kaynağının gerisinde** işareti, öznitelik panelinde
+  yazının yeni `bag` satırında, ölçünün `baglar` ve taramanın `sinir` satırında
+  **GÜNCEL DEĞİL** rozeti, BAĞIMLILIK'te `güncel değil` satırı. Önceden yalnız o komut
+  bittiğinde bir kez söyleniyordu.
+- **Kilit açılınca kendiliğinden yetişiyor.** Katmanın kilidini açan komut geride kalan
+  yazıları, ölçüleri ve taramaları aynı geri alma adımında kaynağına yetiştiriyor
+  (`Kilidi açılan 2 bağlı nesne kaynağına yetişti.`). Önceden kaynak bir kez daha
+  değişene kadar eski yerinde, eski sayısıyla kalıyordu.
+- **Bağ, kilitliyken de doğru köşeyi izliyor.** Kilitliyken parsele köşe eklenirse ya da
+  köşesi silinirse yazının ve ölçünün bağı yeniden numaralanıyor; kilit açılınca yazı
+  kendi kenarına yetişiyor, komşusuna sıçramıyor. Kilitliyken sınırı silinen taramanın
+  bağı kopuyor.
+- **BAĞIMLILIK bütün bağları kapsıyor:** sonuçların yanında bağlı yazıları, ölçüleri ve
+  taramaları da güncel, güncel değil ya da bağı kopuk diye sayıyor; `islem=yenile` geride
+  kalanı kaynağına yetiştiriyor, `islem=coz` bağlı nesnenin bağını da kaldırıyor.
+- Kilitli yazıların "izleyemedi" sayısı artık yalnız gerçekten geride kalanları sayıyor
+  (değişmeyen kenarın yazısı sayılmıyor).
+- **Döngü kuralı tamamlandı:** bir taramanın sınırı, dolaylı olarak kendisinden doldurulan
+  bir tarama olamıyor (`Tarama bağ döngüsü`).
+- Kilitli katmanda kalmış bir bağı geri almak artık kilide takılmıyor.
+
 ### Eklendi — sonuç kaynağıyla uyuşmadığını söylüyor: BAĞIMLILIK (F-04, 1. aşama)
 
 - **Kaynağı değişen sonuç "güncel değil" oluyor.** TAMPON'un koruma alanı, ALANÜRET'in

@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 117 (104 tanesi onay ister)
-- Katalog parmak izi: `10132501069065624446`
+- Katalog parmak izi: `16329906847799331289`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -454,7 +454,7 @@ Onay ister.
 
 ### `core_dependency` — Bağımlılıklar
 
-Türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı kabul eder ya da kaynağından çözer.
+Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer.
 Komut: BAĞIMLILIK (BAGIMLILIK, DEPENDENCY, BĞM)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -462,8 +462,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `islem` | string | hayır | durum: sonuçların güncel olup olmadığı; kabul: kaynakların şimdiki hâlini kabul et; coz: sonucu kaynağından çöz (metin) |
-| `nesneler` | string | hayır | Sorulacak sonuçlar; verilmezse çizimdeki bütün sonuçlar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `islem` | string | hayır | durum: bağlı nesnelerin ve sonuçların güncel olup olmadığı; yenile: bağlı nesneyi kaynağına yetiştir; kabul: sonucun kaynaklarını şimdiki hâliyle kabul et; coz: bağından çöz (metin) |
+| `nesneler` | string | hayır | Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_dimension` — Ölçü

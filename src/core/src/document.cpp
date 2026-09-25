@@ -1470,6 +1470,13 @@ Status Document::set_attachment(EntityId e, const Attachment* a, Op& undo_out)
         }
     }
 
+    return restore_attachment(e, a, undo_out);
+}
+
+Status Document::restore_attachment(EntityId e, const Attachment* a, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
     undo_out        = Op{};
     undo_out.kind   = Op::Kind::SetAttachment;
     undo_out.entity = e;
@@ -1488,6 +1495,56 @@ Status Document::set_attachment(EntityId e, const Attachment* a, Op& undo_out)
     }
     ++revision_;
     return ok();
+}
+
+Status Document::retie_attachment(EntityId e, const Attachment& a, Op& undo_out)
+{
+    const Attachment* was = e < entities_.size() ? attachments_.get(e) : nullptr;
+    if (was == nullptr || !entities_.alive(e))
+        return err(ErrorCode::InvalidArgument,
+                   "Bağı yenilenecek nesne bir şeyi izlemiyor: " + std::to_string(e));
+    // THE SAME TIE, RENUMBERED: which object it follows is not the settle's to
+    // change behind a lock, nor how it reads.
+    Attachment same = a;
+    same.anchor     = was->anchor;
+    same.ring       = was->ring;
+    same.index      = was->index;
+    if (a.source != was->source || same != *was)
+        return err(ErrorCode::InvalidArgument,
+                   "Kilitli bir nesnenin bağında yalnız kaynağın köşe numarası değişebilir: " +
+                       std::to_string(raw(entities_.key[e])));
+    return restore_attachment(e, &a, undo_out);
+}
+
+Status Document::retie_dimension(EntityId dim, std::span<const DimLink> links, Op& undo_out)
+{
+    const std::vector<DimLink>* was = dim < entities_.size() ? dim_links_.get(dim) : nullptr;
+    if (was == nullptr || was->size() != links.size())
+        return err(ErrorCode::InvalidArgument,
+                   "Bağı yenilenecek ölçünün bağları aynı değil: " + std::to_string(dim));
+    for (std::size_t i = 0; i < links.size(); ++i)
+        if (links[i].source != (*was)[i].source || links[i].point != (*was)[i].point)
+            return err(
+                ErrorCode::InvalidArgument,
+                "Kilitli bir ölçünün bağında yalnız köşe numarası ve kopukluk değişebilir: " +
+                    std::to_string(raw(entities_.key[dim])));
+    return restore_dimension_links(dim, std::vector<DimLink>(links.begin(), links.end()), undo_out);
+}
+
+Status Document::retie_hatch(EntityId hatch, std::span<const HatchSource> sources, Op& undo_out)
+{
+    const std::vector<HatchSource>* was =
+        hatch < entities_.size() ? hatch_links_.get(hatch) : nullptr;
+    if (was == nullptr || was->size() != sources.size())
+        return err(ErrorCode::InvalidArgument,
+                   "Bağı yenilenecek taramanın sınırları aynı değil: " + std::to_string(hatch));
+    for (std::size_t i = 0; i < sources.size(); ++i)
+        if (sources[i].source != (*was)[i].source || (!sources[i].broken && (*was)[i].broken))
+            return err(ErrorCode::InvalidArgument,
+                       "Kilitli bir taramanın bağında yalnız kopukluk değişebilir: " +
+                           std::to_string(raw(entities_.key[hatch])));
+    return restore_hatch_links(hatch, std::vector<HatchSource>(sources.begin(), sources.end()),
+                               undo_out);
 }
 
 Status Document::set_dimension_links(EntityId dim, std::span<const DimLink> links, Op& undo_out)
@@ -1530,6 +1587,31 @@ Status Document::set_hatch_links(EntityId hatch, std::span<const HatchSource> so
                        "Taramanın bağlanacağı nesne bulunamadı veya silinmiş: " +
                            std::to_string(raw(s.source)));
         if (src == hatch) return err(ErrorCode::InvalidArgument, "Bir tarama kendi sınırı olamaz.");
+    }
+    // NOR THROUGH ANOTHER HATCH (TODOS F-04): a hatch whose boundary is a hatch
+    // that is filled, one or more hatches along, from this one would make the
+    // commit-time rebuild chase its own tail. Walk every source's own sources;
+    // coming back to `hatch` is the refusal.
+    std::vector<EntityId> frontier;
+    std::vector<EntityId> seen;
+    for (const HatchSource& s : sources)
+        if (!s.broken) frontier.push_back(slot_of(s.source));
+    for (int hops = 0; hops < 4096 && !frontier.empty(); ++hops) {
+        const EntityId at = frontier.back();
+        frontier.pop_back();
+        if (at == kNoEntity || std::ranges::find(seen, at) != seen.end()) continue;
+        seen.push_back(at);
+        const std::vector<HatchSource>* further = hatch_links_.get(at);
+        if (further == nullptr) continue;
+        for (const HatchSource& s : *further) {
+            const EntityId next = slot_of(s.source);
+            if (next == hatch)
+                return err(ErrorCode::InvalidArgument,
+                           "Tarama bağ döngüsü: " + std::to_string(raw(entities_.key[hatch])) +
+                               " zaten dolaylı olarak " + std::to_string(raw(entities_.key[at])) +
+                               " taramasının sınırını veriyor.");
+            frontier.push_back(next);
+        }
     }
     return restore_hatch_links(hatch, std::vector<HatchSource>(sources.begin(), sources.end()),
                                undo_out);
@@ -1839,7 +1921,7 @@ Status Document::apply(const Op& op, Op* undo_out)
         return attach_foreign(op.entity, op.str_arg, op.bytes_arg, inverse);
     case Op::Kind::DetachForeign: return detach_foreign(op.entity, op.str_arg, inverse);
     case Op::Kind::SetAttachment:
-        return set_attachment(op.entity, op.has_attach ? &op.attach_arg : nullptr, inverse);
+        return restore_attachment(op.entity, op.has_attach ? &op.attach_arg : nullptr, inverse);
     case Op::Kind::SetDimensionLinks: {
         auto links = decode_dim_links(op.bytes_arg);
         if (!links) return links.error();

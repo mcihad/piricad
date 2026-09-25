@@ -60,6 +60,7 @@
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/text_metrics.hpp"
 #include "kentos_cad/core/text_store.hpp"
+#include "kentos_cad/core/ties.hpp"
 
 #include <QAction>
 #include <QClipboard>
@@ -7249,6 +7250,83 @@ int MainWindow::probeRealMouse()
                   QStringLiteral("kabul edilen koruma alanı güncel; tuvaldeki işaret kalktı"));
             shoot("sonuc-kabul");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 39. A LOCKED CAPTION LEFT BEHIND, AND CAUGHT UP (TODOS F-04) ----
+        //
+        // A parcel's edge lengths on a layer that is then locked; a corner is
+        // moved. The two captions of the changed edges stay where they were —
+        // the lock says so — and now they SAY they are behind: marked on the
+        // canvas, GÜNCEL DEĞİL in the panel. Unlocking the layer brings them to
+        // their edges in the same step, with their new lengths.
+        {
+            const auto settled = [this] {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 20000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                QCoreApplication::processEvents();
+            };
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL",
+                  "ALAN 485300,4310200 485340,4310200 "
+                  "485340,4310230 485300,4310230",
+                  "UZUNLUKYAZ nesneler=1 katman=OLCU", "KATMAN ad=OLCU kilitli=evet"}) {
+                runScriptLine(QString::fromUtf8(line));
+                settled();
+            }
+            canvas_->zoomToBox(core::Box2{485'290'000, 4'310'190'000, 485'360'000, 4'310'240'000});
+            transcript_->clear();
+            runScriptLine(QStringLiteral("KÖŞETAŞI nesne=1 kose=3 nokta=485348,4310230"));
+            endCommand();
+            canvas_->update();
+            QCoreApplication::processEvents();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("Katmanın kilidi açılınca kaynağına yetişir.")),
+                  QStringLiteral("kilitli yazıların geride kaldığı ve kilit açılınca yetişeceği "
+                                 "söylendi"));
+            check(canvas_->staleFollowerCountForProbe() == 2,
+                  QStringLiteral("tuvalde değişen iki kenarın yazısı işaretli (%1)")
+                      .arg(canvas_->staleFollowerCountForProbe()));
+            // The caption of the moved top edge: the one that no longer says 40,00 m.
+            std::int64_t behind_key = 0;
+            {
+                const core::Document& doc = controller_->document();
+                for (const core::Tie& t : core::every_tie(doc))
+                    if (t.kind == core::TieKind::Caption && t.state == core::TieState::Behind) {
+                        behind_key = static_cast<std::int64_t>(core::raw(doc.key_of(t.dependent)));
+                        break;
+                    }
+            }
+            runScriptLine(QStringLiteral("SEÇ nesneler=%1").arg(behind_key));
+            attributePanel_->refresh();
+            QCoreApplication::processEvents();
+            check(attributePanel_->probeRowBadge(QStringLiteral("bag")) ==
+                      QStringLiteral("GÜNCEL DEĞİL"),
+                  QStringLiteral("panelde yazının bağı GÜNCEL DEĞİL (\"%1\")")
+                      .arg(attributePanel_->probeRowValue(QStringLiteral("bag"))));
+            if (shooting) {
+                attributePanel_->resize(420, 640);
+                (void)attributePanel_->grab().save(into +
+                                                   QStringLiteral("/kilitli-yazi-panel.png"));
+            }
+            shoot("kilitli-yazi-geride");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("KATMAN ad=OLCU kilitli=hayır"));
+            endCommand();
+            canvas_->update();
+            QCoreApplication::processEvents();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("Kilidi açılan 2 bağlı nesne kaynağına yetişti.")) &&
+                      canvas_->staleFollowerCountForProbe() == 0,
+                  QStringLiteral("kilit açılınca iki yazı kaynağına yetişti, işaret kalktı"));
+            shoot("kilitli-yazi-yetisti");
         }
     }
 

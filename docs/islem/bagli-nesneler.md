@@ -40,6 +40,7 @@ bir tutamağı sürüklemek — bittiğinde bağlı yazılar aynı işlem içind
 | Kenara köşe eklendi, köşe silindi | Yazı en yakın kenara/köşeye yeniden bağlanır; komşusuna sıçramaz |
 | Kaynak silindi | Bağlı yazılar da silinir; durum satırı "Silinen nesnelere bağlı N nesne de silindi" der |
 | Bağlı yazı silindi | Yalnız yazı gider; kaynak etkilenmez |
+| Yazının katmanı kilitli | Yazı yerinde kalır ve bu söylenir; tuvalde **kilitli: kaynağının gerisinde** işareti durur, öznitelik panelinde `bag` satırı **GÜNCEL DEĞİL** der. Bağı kenarı izlemeyi sürdürür — kenara köşe eklense de. Katmanın kilidi açıldığı anda yazı kaynağına **yetişir**: yeniden yerleşir, sayısı yeniden yazılır |
 
 Bunların hepsi komutun **kendi geri alma adımı** içindedir: bir [`GERİAL`](../komutlar/undo.md)
 hem çizgiyi hem yazısını geri getirir. Komut günlüğünde yalnız sizin verdiğiniz komut
@@ -60,6 +61,11 @@ değişince yazı yine kenarına paralel yerleşir.
 - Yazdırırken: `UZUNLUKYAZ … bagla=hayır`, `KÖŞENUMARALA … bagla=hayır` serbest yazı
   üretir. Araçlar panelinde **bagla** anahtarını kapatın.
 - Sonradan: yazıları seçip [`BAĞÇÖZ`](../komutlar/bag_coz.md). Yazı yerinde kalır.
+
+Çizimdeki bütün bağlı yazıların, ölçülerin ve taramaların kaynaklarına göre güncel olup
+olmadığını [`BAĞIMLILIK`](../komutlar/dependency.md) söyler; geride kalanı
+`BAĞIMLILIK islem=yenile` kaynağına yetiştirir ([Bağımlılıklar ve
+sonuçlar](../veri/bagimliliklar.md)).
 
 ## Dosyada
 

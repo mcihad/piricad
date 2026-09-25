@@ -13,6 +13,7 @@
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/lineage.hpp"
 #include "kentos_cad/core/text_store.hpp"
+#include "kentos_cad/core/ties.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -708,16 +709,6 @@ Transaction::SettleReport Transaction::settle_attachments()
             const auto was               = before.find(src);
             for (const EntityId d : deps) {
                 if (!doc_.alive(d)) continue;
-                // A DEPENDENT THAT CANNOT BE EDITED stays where it is — a caption
-                // on a locked layer — and is counted, so the command can say it
-                // is now standing apart from what it describes (TODOS C-07).
-                if (!doc_.editable(d)) {
-                    if (!contains(stuck, d)) {
-                        stuck.push_back(d);
-                        ++rep.left;
-                    }
-                    continue;
-                }
                 const core::Attachment* stored = tab.get(d);
                 if (stored == nullptr) continue;
                 core::Attachment a = *stored;
@@ -731,58 +722,116 @@ Transaction::SettleReport Transaction::settle_attachments()
                                                   a);
                 }
 
-                const std::uint32_t dslot = ents.slot[d];
-                if (!texts.has(dslot)) continue; // only captions follow today
-                const core::Mm height = texts.height(dslot);
-                const auto place      = core::attach_place(now.points, now.closed, a, height, true);
-                if (!place) continue;
-
-                std::string text(texts.text(dslot));
-                if (const auto derived = core::attach_text(now.points, now.closed, a); derived)
-                    text = *derived;
-                // A column emptied leaves the caption blank rather than gone: an
-                // empty text detaches the words from the entity, and the label
-                // would not come back when the column is filled again.
-                if (a.derive == core::AttachDerive::Fields)
-                    if (auto filled =
-                            fill_fields(doc_, src, a.format,
-                                        FieldFormat{a.precision, a.separator,
-                                                    static_cast<core::DrawingUnit>(a.unit)});
-                        filled)
-                        text =
-                            filled.value().empty() ? std::string(" ") : std::move(filled.value());
-                const auto base = core::dimension_baseline(place->centre, place->dir_x,
-                                                           place->dir_y, height, text);
-
-                // Nothing is written that is already so: a caption the command
-                // moved together with its source is already where the rule puts
-                // it, and appending an identical slot would be an edit that
-                // changed nothing but the file.
-                const core::RingSpan rs = geom.rings_of(dslot);
-                const bool same_place   = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
-                                        geom.ring_role[rs.first] == core::RingRole::Open &&
-                                        geom.vertex(rs.first, 0) == base[0] &&
-                                        geom.vertex(rs.first, 1) == base[1];
-                const bool same_text = text == texts.text(dslot);
-                // A landing's caption changes its alignment with the side it
-                // stands on; every other caption keeps the one it has.
-                const core::TextAnchor anchor = place->anchor.value_or(texts.anchor(dslot));
-                const bool same_anchor        = anchor == texts.anchor(dslot);
-
-                if (a != *stored && !set_attachment(d, a)) continue;
-                if (!same_text || !same_anchor) {
-                    if (!set_text(d, text, height, anchor)) continue;
-                    if (!same_text) ++rep.relabelled;
+                // A DEPENDENT THAT CANNOT BE EDITED stays where it is — a caption
+                // on a locked layer — and is counted, so the command can say it
+                // is now standing apart from what it describes (TODOS C-07). Its
+                // TIE still names the same corner (TODOS F-04): a corner that came
+                // or went renumbers it, so the day the layer is unlocked the
+                // caption follows the corner it always did.
+                if (!doc_.editable(d)) {
+                    if (a != *stored) (void)retie_attachment(d, a);
+                    // COUNTED ONLY WHEN IT IS NOW WRONG: the caption of an edge
+                    // the move did not change still stands where its rule puts
+                    // it, and saying it "could not follow" would be a false alarm.
+                    const auto should       = core::caption_follow(doc_, d, a);
+                    const core::RingSpan rs = geom.rings_of(ents.slot[d]);
+                    const bool standing     = should && rs.count == 1 &&
+                                          geom.ring_count[rs.first] == 2 &&
+                                          geom.vertex(rs.first, 0) == should->base[0] &&
+                                          geom.vertex(rs.first, 1) == should->base[1] &&
+                                          should->text == texts.text(ents.slot[d]);
+                    if (!standing && !contains(stuck, d)) {
+                        stuck.push_back(d);
+                        ++rep.left;
+                    }
+                    continue;
                 }
-                if (!same_place) {
-                    const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
-                    if (set_geometry(d, std::span<const core::RingGeometry::RingInput>(&ring, 1)))
-                        ++rep.followed;
-                }
+                (void)place_caption(d, *stored, a, rep);
             }
         }
     }
     return rep;
+}
+
+bool Transaction::place_caption(EntityId d, const core::Attachment& stored,
+                                const core::Attachment& a, SettleReport& rep)
+{
+    // THE RULE'S PLACE HAS ONE HOME (core/ties.hpp): what is written here is what
+    // the check compares with, so a caption this put in place is current.
+    const auto should = core::caption_follow(doc_, d, a);
+    if (!should) return false;
+    const core::TextTable& texts = doc_.texts();
+    const RingGeometry& geom     = doc_.geometry();
+    const std::uint32_t dslot    = doc_.entities().slot[d];
+
+    // Nothing is written that is already so: a caption the command moved
+    // together with its source is already where the rule puts it, and appending
+    // an identical slot would be an edit that changed nothing but the file.
+    const core::RingSpan rs = geom.rings_of(dslot);
+    const bool same_place   = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
+                            geom.ring_role[rs.first] == core::RingRole::Open &&
+                            geom.vertex(rs.first, 0) == should->base[0] &&
+                            geom.vertex(rs.first, 1) == should->base[1];
+    const bool same_text   = should->text == texts.text(dslot);
+    const bool same_anchor = should->anchor == texts.anchor(dslot);
+
+    if (a != stored && !set_attachment(d, a)) return false;
+    if (!same_text || !same_anchor) {
+        if (!set_text(d, should->text, should->height, should->anchor)) return false;
+        if (!same_text) ++rep.relabelled;
+    }
+    if (!same_place) {
+        const std::vector<core::Point2> base{should->base[0], should->base[1]};
+        const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
+        if (set_geometry(d, std::span<const core::RingGeometry::RingInput>(&ring, 1)))
+            ++rep.followed;
+    }
+    return true;
+}
+
+Status Transaction::retie_attachment(EntityId e, const core::Attachment& a)
+{
+    core::Op undo;
+    auto st = doc_.retie_attachment(e, a, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::retie_dimension(EntityId dim, std::span<const core::DimLink> links)
+{
+    core::Op undo;
+    auto st = doc_.retie_dimension(dim, links, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::retie_hatch(EntityId hatch, std::span<const core::HatchSource> sources)
+{
+    core::Op undo;
+    auto st = doc_.retie_hatch(hatch, sources, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::follow_caption(EntityId d, SettleReport& rep)
+{
+    const core::Attachment* stored = doc_.attachments().get(d);
+    if (stored == nullptr)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Nesne " + std::to_string(core::raw(doc_.key_of(d))) +
+                             " bir şeyi izleyen bir yazı değil.");
+    if (auto st = doc_.editable(d); !st) return st;
+    const core::Attachment a = *stored; // a copy: the write below may move the table
+    if (!place_caption(d, a, a, rep))
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Yazı " + std::to_string(core::raw(doc_.key_of(d))) +
+                             " kaynağına yerleştirilemedi: bağlı olduğu kenar ya da köşe artık "
+                             "yok. BAĞIMLILIK islem=coz ile bağından çözün ya da BAĞLA ile "
+                             "yeniden bağlayın.");
+    return core::ok();
 }
 
 namespace {
@@ -994,34 +1043,114 @@ Transaction::SettleReport Transaction::settle_dimensions(core::DrawingUnit unit,
         if (!moves.empty()) {
             if (!doc_.editable(dim)) {
                 ++rep.dims_left;
+                // ITS TIE STILL NAMES THE CORNER IT MEASURED (TODOS F-04):
+                // renumbered, or broken, behind the lock — the dimension itself
+                // stays where it is.
+                if (now != was) (void)retie_dimension(dim, now);
                 continue;
             }
-            auto rebuilt = core::dimension_follow(doc_, dim, moves, unit);
-            if (rebuilt) {
-                const core::DimensionRebuild& r = rebuilt.value();
-                const std::array<core::RingGeometry::RingInput, 2> rings{
-                    core::RingGeometry::RingInput{r.baseline, core::RingRole::Open, 0},
-                    core::RingGeometry::RingInput{r.defs, core::RingRole::Open, 0}};
-                const std::int64_t measured_before = decoded.value().measurement;
-                if (set_kind_geometry(dim, rings, r.payload)) {
-                    if (r.text != doc_.texts().text(ents.slot[dim]))
-                        (void)set_text(dim, r.text, r.text_height, core::TextAnchor::MiddleCentre);
-                    ++rep.dims_followed;
-                    // A FIGURE TYPED BY HAND DOES NOT FOLLOW, and that is said:
-                    // the side is 13,60 now and the sheet still says 12,50.
-                    if (core::dimension_text_is_manual(r.def) &&
-                        r.def.measurement != measured_before)
-                        ++rep.dims_manual;
-                }
-            } else {
-                ++rep.dims_left;
-            }
+            (void)rebuild_dimension(dim, moves, unit, rep);
         }
-        if (now != was && doc_.editable(dim)) (void)set_dimension_links(dim, now);
+        if (now != was) {
+            if (doc_.editable(dim))
+                (void)set_dimension_links(dim, now);
+            else
+                (void)retie_dimension(dim, now);
+        }
     }
     // The writes above are this function's own: not a dimension the user moved.
     dims_settled_upto_ = inverse_.size();
     return rep;
+}
+
+bool Transaction::rebuild_dimension(EntityId dim,
+                                    std::span<const std::pair<std::size_t, core::Point2>> moves,
+                                    core::DrawingUnit unit, SettleReport& rep)
+{
+    const std::uint32_t slot = doc_.entities().slot[dim];
+    auto decoded             = core::dimension_of(doc_.geometry(), slot);
+    if (!decoded) {
+        ++rep.dims_left;
+        return false;
+    }
+    auto rebuilt = core::dimension_follow(doc_, dim, moves, unit);
+    if (!rebuilt) {
+        ++rep.dims_left;
+        return false;
+    }
+    const core::DimensionRebuild& r = rebuilt.value();
+    const std::array<core::RingGeometry::RingInput, 2> rings{
+        core::RingGeometry::RingInput{r.baseline, core::RingRole::Open, 0},
+        core::RingGeometry::RingInput{r.defs, core::RingRole::Open, 0}};
+    const std::int64_t measured_before = decoded.value().measurement;
+    if (!set_kind_geometry(dim, rings, r.payload)) return false;
+    if (r.text != doc_.texts().text(doc_.entities().slot[dim]))
+        (void)set_text(dim, r.text, r.text_height, core::TextAnchor::MiddleCentre);
+    ++rep.dims_followed;
+    // A FIGURE TYPED BY HAND DOES NOT FOLLOW, and that is said: the side is
+    // 13,60 now and the sheet still says 12,50.
+    if (core::dimension_text_is_manual(r.def) && r.def.measurement != measured_before)
+        ++rep.dims_manual;
+    return true;
+}
+
+Status Transaction::follow_dimension(EntityId dim, core::DrawingUnit unit, SettleReport& rep)
+{
+    const std::vector<core::DimLink>* links = doc_.dimension_links().get(dim);
+    if (links == nullptr)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Nesne " + std::to_string(core::raw(doc_.key_of(dim))) +
+                             " bir şeye bağlı bir ölçü değil.");
+    if (auto st = doc_.editable(dim); !st) return st;
+    const RingGeometry& geom  = doc_.geometry();
+    const core::RingSpan span = geom.rings_of(doc_.entities().slot[dim]);
+    if (span.count < 2) return core::ok();
+    // EVERY POINT BACK ON ITS FEATURE: what its links name, where it is now.
+    std::vector<std::pair<std::size_t, core::Point2>> moves;
+    for (const core::DimLink& l : *links) {
+        if (l.broken || l.point >= geom.ring_count[span.first + 1]) continue;
+        const auto at = core::dim_anchor_point(doc_, l);
+        if (at && *at != geom.vertex(span.first + 1, l.point)) moves.emplace_back(l.point, *at);
+    }
+    if (moves.empty()) return core::ok();
+    if (!rebuild_dimension(dim, moves, unit, rep))
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Ölçü " + std::to_string(core::raw(doc_.key_of(dim))) +
+                             " ölçtüğü noktalara yeniden kurulamadı.");
+    return core::ok();
+}
+
+Status Transaction::follow_hatch(EntityId hatch, SettleReport& rep)
+{
+    const std::vector<core::HatchSource>* sources = doc_.hatch_links().get(hatch);
+    if (sources == nullptr)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Nesne " + std::to_string(core::raw(doc_.key_of(hatch))) +
+                             " sınırına bağlı bir tarama değil.");
+    if (auto st = doc_.editable(hatch); !st) return st;
+    std::vector<EntityId> live;
+    for (const core::HatchSource& s : *sources) {
+        const EntityId src = doc_.slot_of(s.source);
+        if (s.broken || src == core::kNoEntity || !doc_.alive(src) ||
+            core::closed_loops_of(doc_, src).empty())
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "Tarama " + std::to_string(core::raw(doc_.key_of(hatch))) +
+                                 " sınırının bir parçasını kaybetmiş; kalanlardan kurulmaz. "
+                                 "TARAMADÜZENLE ile yeni sınır verin ya da BAĞIMLILIK islem=coz "
+                                 "ile bağından çözün.");
+        live.push_back(src);
+    }
+    if (core::hatch_fills(doc_, hatch, *sources)) return core::ok();
+    const std::uint32_t slot = doc_.entities().slot[hatch];
+    auto def                 = core::hatch_of(doc_.geometry(), slot);
+    if (!def) return def.error();
+    auto boundary = core::hatch_boundary(doc_, live, def.value().style);
+    if (!boundary) return boundary.error();
+    const auto rings = boundary.value().rings();
+    if (auto st = set_kind_geometry(hatch, rings, core::encode_hatch(def.value())); !st)
+        return st.error();
+    ++rep.hatches_followed;
+    return core::ok();
 }
 
 namespace {
@@ -1054,30 +1183,7 @@ std::optional<core::Point2> shift_of(const Document& doc, EntityId e, std::uint3
 
 bool Transaction::fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const
 {
-    std::vector<EntityId> live;
-    for (const core::HatchSource& s : sources) {
-        const EntityId src = doc_.slot_of(s.source);
-        if (s.broken || src == core::kNoEntity || !doc_.alive(src)) return false;
-        live.push_back(src);
-    }
-    const RingGeometry& g    = doc_.geometry();
-    const std::uint32_t slot = doc_.entities().slot[hatch];
-    auto def                 = core::hatch_of(g, slot);
-    if (!def) return false;
-    auto boundary = core::hatch_boundary(doc_, live, def.value().style);
-    if (!boundary) return false;
-    const core::RingSpan span = g.rings_of(slot);
-    if (span.count != boundary.value().loops.size()) return false;
-    for (std::uint32_t r = 0; r < span.count; ++r) {
-        const auto xs                         = g.ring_xs(span.first + r);
-        const auto ys                         = g.ring_ys(span.first + r);
-        const std::vector<core::Point2>& loop = boundary.value().loops[r];
-        if (xs.size() != loop.size() || g.ring_role[span.first + r] != boundary.value().roles[r])
-            return false;
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            if (xs[v] != loop[v].x || ys[v] != loop[v].y) return false;
-    }
-    return true;
+    return core::hatch_fills(doc_, hatch, sources);
 }
 
 Transaction::SettleReport Transaction::settle_hatches()
@@ -1200,7 +1306,14 @@ Transaction::SettleReport Transaction::settle_hatches()
                 }
             }
         }
-        if (now != was && doc_.editable(hatch)) (void)set_hatch_links(hatch, now);
+        if (now != was) {
+            // A LOCKED HATCH'S TIE is broken behind the lock too (TODOS F-04):
+            // the hatch stays as it was, and says it follows nothing more.
+            if (doc_.editable(hatch))
+                (void)set_hatch_links(hatch, now);
+            else
+                (void)retie_hatch(hatch, now);
+        }
     }
     // The writes above are this function's own: not a hatch the user moved.
     hatches_settled_upto_ = inverse_.size();
@@ -1210,6 +1323,57 @@ Transaction::SettleReport Transaction::settle_hatches()
 void Transaction::rollback()
 {
     rollback_to(0);
+}
+
+Transaction::SettleReport Transaction::settle_unlocked(core::DrawingUnit unit)
+{
+    SettleReport rep;
+    const std::size_t from = std::min(unlocked_settled_upto_, inverse_.size());
+    unlocked_settled_upto_ = inverse_.size();
+
+    // WHAT THIS RANGE SET FREE: a layer unlocked, an object moved to another
+    // layer. A follower that could not follow while it was locked may now.
+    std::vector<core::LayerId> freed_layers;
+    std::vector<EntityId> relayered;
+    for (std::size_t i = from; i < inverse_.size(); ++i) {
+        const Op& op = inverse_[i];
+        if (op.kind == Op::Kind::SetLayerLocked && op.bool_arg) freed_layers.push_back(op.layer);
+        if (op.kind == Op::Kind::SetEntityLayer) relayered.push_back(op.entity);
+    }
+    if (freed_layers.empty() && relayered.empty()) return rep;
+    std::ranges::sort(freed_layers);
+    std::ranges::sort(relayered);
+    const core::EntityTable& ents = doc_.entities();
+    const auto freed              = [&](EntityId e) {
+        if (!doc_.alive(e) || !doc_.editable(e)) return false;
+        return contains(relayered, e) || std::ranges::binary_search(freed_layers, ents.layer[e]);
+    };
+    const auto behind = [this](EntityId e, core::TieKind kind) {
+        for (const core::Tie& t : core::ties_of(doc_, e))
+            if (t.kind == kind) return t.state == core::TieState::Behind;
+        return false;
+    };
+
+    // CAUGHT UP, each the way the settle would have placed it: the rule's place
+    // for a caption, the features for a dimension, the boundary for a hatch.
+    // What they write is counted once here, not again as a follow.
+    SettleReport quiet;
+    for (const EntityId e : doc_.attachments().attached())
+        if (freed(e) && behind(e, core::TieKind::Caption) && follow_caption(e, quiet))
+            ++rep.caught_up;
+    for (const EntityId e : doc_.dimension_links().linked())
+        if (freed(e) && behind(e, core::TieKind::Dimension) && follow_dimension(e, unit, quiet))
+            ++rep.caught_up;
+    for (const EntityId e : doc_.hatch_links().linked())
+        if (freed(e) && behind(e, core::TieKind::Hatch) && follow_hatch(e, quiet)) ++rep.caught_up;
+
+    // These writes are this function's own: no other settle may read a caught-up
+    // caption as one the user moved by hand, or a dimension as one pulled off
+    // its feature.
+    for (std::size_t* cursor : {&settled_upto_, &dims_settled_upto_, &hatches_settled_upto_,
+                                &texts_settled_upto_, &unlocked_settled_upto_})
+        *cursor = inverse_.size();
+    return rep;
 }
 
 Transaction::SettleReport Transaction::settle_results()
@@ -1328,8 +1492,9 @@ void Transaction::rollback_to(std::size_t mark)
         inverse_.pop_back();
     }
     // A cursor past what is left would pass over the next command's first ops.
-    for (std::size_t* cursor : {&settled_upto_, &dims_settled_upto_, &hatches_settled_upto_,
-                                &texts_settled_upto_, &results_settled_upto_})
+    for (std::size_t* cursor :
+         {&settled_upto_, &dims_settled_upto_, &hatches_settled_upto_, &texts_settled_upto_,
+          &results_settled_upto_, &unlocked_settled_upto_})
         *cursor = std::min(*cursor, inverse_.size());
 }
 
