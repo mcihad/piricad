@@ -236,6 +236,15 @@ private:
                                                            std::string* resolved,
                                                            std::vector<std::string>* names);
 
+    /// Attaches, reloads or points elsewhere an external reference
+    /// (`Verb::XrefAttach`, `XrefLoad`, `XrefRepath`; TODOS C-14).
+    command::Task<core::Result<std::string>> xref(command::FileRequest request);
+
+    /// `typed` as an absolute path: relative to the folder of the project file
+    /// the document belongs to, or to the working directory for a drawing
+    /// never saved.
+    std::string from_project(const std::string& typed) const;
+
     command::Bus& bus_;
     std::string current_path_;
     std::uint64_t saved_revision_{0};

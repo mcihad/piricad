@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/service.hpp"
 
+#include "kentos_cad/command/external_ref.hpp"
+
 #include "kentos_cad/core/transform.hpp"
 
 #include "kentos_cad/command/journal.hpp"
@@ -19,6 +21,8 @@
 
 #include "kentos_cad/io/project.hpp"
 #include "kentos_cad/io/vector.hpp"
+
+#include "xref.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -87,24 +91,7 @@ core::DrawingUnit effective_unit(const command::Bus& bus)
 /// whatever the user typed rather than nothing.
 std::string effective_crs(const command::Bus& bus)
 {
-    const core::Crs& crs = bus.document().crs();
-    if (crs.resolved()) return "EPSG:" + std::to_string(crs.epsg());
-    return crs.id();
-}
-
-/// Whether the path names a DWG, whatever case it was typed in.
-/// `.dxf` by extension, case-folded. The libdxfrw road when the build has it.
-bool looks_like_dxf(const std::string& path)
-{
-    if (path.size() < 4) return false;
-    const std::string tail = core::turkish_upper(path.substr(path.size() - 4));
-    return tail == ".DXF";
-}
-
-bool looks_like_dwg(const std::string& path)
-{
-    if (path.size() < 4) return false;
-    return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
+    return crs_for_reading(bus.document().crs());
 }
 
 } // namespace
@@ -320,6 +307,10 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
     case command::FileRequest::Verb::BlockLibrary:
         co_return co_await block_library(request.tx, request.path, request.block,
                                          request.resolved_block, request.library_blocks);
+
+    case command::FileRequest::Verb::XrefAttach:
+    case command::FileRequest::Verb::XrefLoad:
+    case command::FileRequest::Verb::XrefRepath: co_return co_await xref(std::move(request));
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }
@@ -624,36 +615,15 @@ FileService::block_library(command::Transaction* tx, std::string path, std::stri
 
     // THE FILE, READ INTO A SCRATCH DOCUMENT by the reader its kind has — the
     // native project, a DXF or a DWG, what a symbol library is kept in.
-    core::Document library;
-    command::Journal journal;
-    command::UndoStack undo;
-    command::Registry registry;
-    command::Bus side{library, registry, journal, undo};
-    core::Settings ignored{core::builtin_settings(), core::SettingScopeMask::Project};
+    //
     // A SYMBOL IS DRAWN IN ITS DEFINITION'S OWN COORDINATES: the file's system
     // is not a question a library is asked, so a DXF or DWG that declares none
     // is read in the drawing's — the system nothing in it is placed by.
-    ImportOptions reading;
-    reading.project_crs = effective_crs(bus_);
-    if (reading.project_crs.empty()) reading.project_crs = bus_.document().crs().id();
-    {
-        command::Transaction into(library, "kitaplik-oku");
-        if (looks_like_dxf(path)) {
-            if (!dxf_backend_available())
-                co_return err(ErrorCode::Unsupported, "Bu yapıda DXF okuyucu yok.");
-            auto read = co_await import_dxf(into, path, reading, stop_.get_token());
-            if (!read) co_return read.error();
-        } else if (looks_like_dwg(path)) {
-            if (!dwg_backend_available())
-                co_return err(ErrorCode::Unsupported,
-                              "Bu yapıda DWG okuyucu yok; kitaplığı DXF olarak kaydedin.");
-            auto read = co_await import_dwg(into, path, reading, stop_.get_token());
-            if (!read) co_return read.error();
-        } else {
-            auto read = co_await read_project(into, path, ignored, stop_.get_token());
-            if (!read) co_return read.error();
-        }
-    }
+    core::Document library;
+    std::string crs = effective_crs(bus_);
+    if (crs.empty()) crs = bus_.document().crs().id();
+    if (auto read = co_await read_drawing(library, path, crs, stop_.get_token()); !read)
+        co_return read.error();
 
     // WHICH BLOCK: the one named, the file's only one, or — a file with none —
     // the whole drawing, named after the file, the way every CAD inserts one.
@@ -725,6 +695,143 @@ FileService::block_library(command::Transaction* tx, std::string path, std::stri
     for (const std::string& n : summary.notes)
         said += "  not: " + n;
     co_return said;
+}
+
+// ------------------------------------------------------------ DIŞREFERANS ----
+
+std::string FileService::from_project(const std::string& typed) const
+{
+    const std::filesystem::path p(typed);
+    if (p.is_absolute()) return p.lexically_normal().string();
+    std::error_code ec;
+    const std::filesystem::path base =
+        current_path_.empty() ? std::filesystem::current_path(ec)
+                              : std::filesystem::absolute(current_path_, ec).parent_path();
+    return (base / p).lexically_normal().string();
+}
+
+command::Task<core::Result<std::string>> FileService::xref(command::FileRequest request)
+{
+    using Verb               = command::FileRequest::Verb;
+    command::Transaction* tx = request.tx;
+    if (tx == nullptr)
+        co_return err(ErrorCode::Internal, "DIŞREFERANS bir işlem içinde çalışmak zorunda.");
+    const core::Document& doc = tx->document();
+
+    const auto loaded_said = [](const std::string& name, const XrefLoad& l, const char* verb) {
+        std::string said =
+            "'" + name + "' dış referansı " + verb + ": " + std::to_string(l.entities) + " nesne";
+        if (l.layers > 0) said += ", " + std::to_string(l.layers) + " yeni katman";
+        said += '.';
+        if (l.moved)
+            said += " Dosya kayıtlı yerinde yoktu, proje klasöründe bulundu: " + l.found_at + ".";
+        for (const std::string& n : l.notes)
+            said += "  not: " + n;
+        return said;
+    };
+    const auto named = [&doc](const std::string& name) -> core::Result<core::BlockId> {
+        const core::BlockId b = doc.blocks().find(name);
+        if (b != core::kNoBlock && command::is_external_reference(doc, b)) return b;
+        std::string known;
+        for (core::BlockId i = 0; i < doc.blocks().size(); ++i)
+            if (command::is_external_reference(doc, i))
+                known += (known.empty() ? "" : ", ") + doc.blocks().at(i).name;
+        return err(ErrorCode::NotFound,
+                   "'" + name + "' adında bir dış referans yok. " +
+                       (known.empty() ? std::string("Çizimde dış referans yok.")
+                                      : "Dış referanslar: " + known + "."));
+    };
+
+    // ---- read again: one, or every one not unloaded ----
+    if (request.verb == Verb::XrefLoad) {
+        std::vector<core::BlockId> which;
+        if (request.block.empty()) {
+            for (core::BlockId b = 0; b < doc.blocks().size(); ++b)
+                if (command::is_external_reference(doc, b) &&
+                    (doc.blocks().at(b).flags & core::kBlockUnloaded) == 0)
+                    which.push_back(b);
+            if (which.empty()) co_return std::string("Çizimde yüklü dış referans yok.");
+        } else {
+            auto b = named(request.block);
+            if (!b) co_return b.error();
+            which.push_back(b.value());
+        }
+        std::string said;
+        for (const core::BlockId b : which) {
+            const std::string name = doc.blocks().at(b).name;
+            auto loaded = co_await load_external(*tx, b, current_path_, stop_.get_token());
+            if (!loaded) {
+                if (which.size() == 1) co_return loaded.error();
+                said += (said.empty() ? "" : "\n") + std::string("uyarı: '") + name +
+                        "' yenilenemedi: " + loaded.error().message;
+                continue;
+            }
+            said += (said.empty() ? "" : "\n") + loaded_said(name, loaded.value(), "yenilendi");
+        }
+        co_return said;
+    }
+
+    const std::string file = from_project(request.path);
+    std::error_code ec;
+    if (request.path.empty() || !std::filesystem::is_regular_file(file, ec))
+        co_return err(ErrorCode::NotFound,
+                      "Dış referans dosyası bulunamadı: " +
+                          (request.path.empty() ? std::string("dosya=<yol> verin") : file) + ".");
+
+    // ---- point one somewhere else ----
+    if (request.verb == Verb::XrefRepath) {
+        auto b = named(request.block);
+        if (!b) co_return b.error();
+        const std::string name   = doc.blocks().at(b.value()).name;
+        const std::uint8_t flags = doc.blocks().at(b.value()).flags;
+        if (auto st = tx->set_block_external(
+                b.value(), file, static_cast<std::uint8_t>(flags & ~core::kBlockUnloaded));
+            !st)
+            co_return st.error();
+        auto loaded = co_await load_external(*tx, b.value(), current_path_, stop_.get_token());
+        if (!loaded) co_return loaded.error();
+        co_return loaded_said(name, loaded.value(), "yeni dosyasından yüklendi");
+    }
+
+    // ---- attach ----
+    std::string name =
+        request.block.empty() ? std::filesystem::path(file).stem().string() : request.block;
+    if (name.find('|') != std::string::npos)
+        co_return err(ErrorCode::InvalidArgument,
+                      "Dış referans adında '|' olamaz ('" + name +
+                          "'): o işaret, dış referansın içindeki blokları ve katmanları ayırır.");
+    core::BlockId block = doc.blocks().find(name);
+    if (block != core::kNoBlock) {
+        const core::BlockDef& def = doc.blocks().at(block);
+        const bool live_same      = command::is_external_reference(doc, block) &&
+                               std::filesystem::path(def.path).lexically_normal() ==
+                                   std::filesystem::path(file).lexically_normal();
+        if (live_same) {
+            if (request.resolved_block != nullptr) *request.resolved_block = def.name;
+            co_return "'" + def.name +
+                "' dış referansı zaten bağlı; bir referans daha yerleştirildi.";
+        }
+        if ((def.flags & core::kBlockDetached) == 0)
+            co_return err(
+                ErrorCode::ValidationFailed,
+                "'" + def.name +
+                    "' adında bir blok zaten var; dış referansa ad= ile başka bir ad verin.");
+        // A NAME TAKEN OFF THE DRAWING EARLIER is taken up again: the table is
+        // append-only, so the record was kept, empty, for exactly this.
+        if (auto st = tx->set_block_external(block, file, core::kBlockExternal); !st)
+            co_return st.error();
+        name = def.name;
+    } else {
+        auto made = tx->add_block(name, "Dış referans", core::Point2{0, 0});
+        if (!made) co_return made.error();
+        block = made.value();
+        if (auto st = tx->set_block_external(block, file, core::kBlockExternal); !st)
+            co_return st.error();
+    }
+    auto loaded = co_await load_external(*tx, block, current_path_, stop_.get_token());
+    if (!loaded) co_return loaded.error();
+    if (request.resolved_block != nullptr) *request.resolved_block = name;
+    co_return loaded_said(name, loaded.value(), "bağlandı");
 }
 
 // -------------------------------------------- KAYDET / FARKLIKAYDET ---------

@@ -71,7 +71,11 @@ inline constexpr const char* kProjectExtension = ".pcad";
 /// stands (`kFormatVersionRowSlots`). A reader of 1 or 2 already read slot r as
 /// row r, so a format-3 file is exactly what it assumed and opens there as it
 /// always did; `min_reader_version` does not move.
-inline constexpr std::uint32_t kFormatVersion = 3;
+///
+/// 4 because a block record's `flags` and its old padding now say something:
+/// an EXTERNAL REFERENCE, its path, and the rows the file leaves out because
+/// the reference's own file supplies them (`kMinReaderVersionExternal`).
+inline constexpr std::uint32_t kFormatVersion = 4;
 
 /// The first version whose writer lays the slot-indexed blocks out by row. A
 /// file older than this may hold the geometry versions an edit left behind for
@@ -92,6 +96,14 @@ inline constexpr std::uint32_t kMinReaderVersion = 1;
 /// not know it, and refuses the guide column as corrupt — a true refusal with a
 /// misleading reason. Raising the field makes the refusal say what it is.
 inline constexpr std::uint32_t kMinReaderVersionAngledGuide = 2;
+
+/// What a drawing holding an EXTERNAL REFERENCE writes (TODOS C-14, model.md
+/// R45a), and only such a drawing. Its members are not in the file — their
+/// source is — so the entity keys have gaps where they stood, and an older
+/// reader would refuse the gap as a corrupt key column and draw the reference
+/// as an empty block it thinks is complete. Raising the field makes the
+/// refusal say what it is: this file needs a newer KentOSCad.
+inline constexpr std::uint32_t kMinReaderVersionExternal = 4;
 
 /// Stable error tokens. `core::Error` carries an `ErrorCode` enum rather than the
 /// string code io.md R9 writes, so the token is placed at the FRONT of the
@@ -779,8 +791,12 @@ struct BlockRecord
     std::uint32_t member_count; ///< how many member keys follow `first_member`
     std::uint32_t first_use;    ///< into kBlkBlockUses
     std::uint32_t use_count;    ///< how many block ids follow `first_use`
-    std::uint8_t flags;         ///< reserved, zero
-    std::uint8_t reserved[7];   ///< alignment, zero-filled
+    std::uint8_t flags;         ///< `core::kBlockExternal` and its companions; 0 before format 4
+    std::uint8_t reserved[3];   ///< alignment, zero-filled
+    /// An external reference's file, into the string pool: relative to the
+    /// project file's directory when it could be written so. 0 = none — every
+    /// block before format 4, whose padding was zero-filled here.
+    std::uint32_t path_string;
 };
 
 static_assert(sizeof(BlockRecord) == 48, "wire record");

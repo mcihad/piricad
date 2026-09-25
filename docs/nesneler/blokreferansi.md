@@ -53,6 +53,14 @@ oturur — ve referans [patlatıldığında](../komutlar/explode.md) aynı nokta
 
 Dizili bir referansta her kopyanın noktaları ayrı ayrı sunulur.
 
+## Dış referans
+
+Tanımın üyeleri **başka bir dosyadan** da gelebilir: [DIŞREFERANS](../komutlar/xref.md) bir
+proje, DXF ya da DWG dosyasını böyle bir tanım olarak bağlar. Referans her blok referansı
+gibi çizilir, seçilir ve yakalanır; tanımın içi ise dosyanındır — düzenlenmez,
+patlatılmaz, proje dosyasına yazılmaz, her açılışta ve her yenilemede dosyasından okunur.
+Dosyanın katmanları ve blokları `AD|KATMAN`, `AD|BLOK` adıyla gelir.
+
 ## Ölçüler
 
 Referansın kendi alanı ve çevresi sıfırdır; ölçmek istediğiniz üyeyi tanımda
@@ -76,7 +84,8 @@ BLOKEKLE ad=BACA nokta=20,0 olcek=2 aci=90
 ```
 
 [BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md) (bir kitaplık dosyasından da:
-`BLOKEKLE dosya=`), [BLOKDÜZENLE](../komutlar/block_edit.md).
+`BLOKEKLE dosya=`), [BLOKDÜZENLE](../komutlar/block_edit.md),
+[DIŞREFERANS](../komutlar/xref.md).
 
 ## Sınırlar
 

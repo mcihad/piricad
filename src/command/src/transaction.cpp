@@ -104,6 +104,76 @@ Status Transaction::set_block_base(core::BlockId block, Point2 base)
     return core::ok();
 }
 
+Status Transaction::set_block_external(core::BlockId block, std::string path, std::uint8_t flags)
+{
+    core::Op undo;
+    auto st = doc_.set_block_external(block, std::move(path), flags, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+core::Result<std::size_t> Transaction::clear_block_members(core::BlockId block)
+{
+    if (block >= doc_.blocks().size())
+        return core::err(core::ErrorCode::NotFound,
+                         "Bilinmeyen blok kimliği: " + std::to_string(block));
+    // Copied: `erase_member` leaves the list as it is (dead keys stay), but the
+    // loop must not lean on that.
+    const std::vector<core::EntityKey> members = doc_.blocks().at(block).members;
+    std::size_t gone                           = 0;
+    for (const core::EntityKey k : members) {
+        const EntityId m = doc_.slot_of(k);
+        if (m == core::kNoEntity || !doc_.alive(m)) continue;
+        if (auto st = erase_member(m); !st) return st.error();
+        ++gone;
+    }
+    return gone;
+}
+
+core::Result<std::size_t> Transaction::refresh_block_references(core::BlockId block)
+{
+    const core::BlockTable& blocks = doc_.blocks();
+
+    // THE BLOCKS THAT DRAW IT, at any depth: the definition itself, and every
+    // definition that uses one that does. A use list may name a block no member
+    // places any more; refreshing such a reference is a comparison and no write.
+    std::vector<bool> draws(blocks.size(), false);
+    if (block < draws.size()) draws[block] = true;
+    for (bool grew = true; grew;) {
+        grew = false;
+        for (core::BlockId b = 0; b < blocks.size(); ++b) {
+            if (draws[b]) continue;
+            for (const core::BlockId used : blocks.at(b).uses)
+                if (used < draws.size() && draws[used]) {
+                    draws[b] = true;
+                    grew     = true;
+                    break;
+                }
+        }
+    }
+
+    std::size_t changed = 0;
+    for (EntityId e = 0; e < doc_.entities().size(); ++e) {
+        if (!doc_.alive(e) || doc_.entities().kind[e] != core::kBlockReferenceKind) continue;
+        auto ref = core::block_reference_of(doc_.geometry(), doc_.entities().slot[e]);
+        if (!ref || ref.value().block >= draws.size() || !draws[ref.value().block]) continue;
+        const std::uint32_t was = doc_.entities().slot[e];
+        if (auto st = refresh_reference_bounds(e); !st) return st.error();
+        if (doc_.entities().slot[e] != was) ++changed;
+    }
+    return changed;
+}
+
+Status Transaction::skip_entity_keys_to(core::EntityKey next)
+{
+    if (!doc_.skip_entity_keys_to(next))
+        return core::err(core::ErrorCode::ValidationFailed, "Nesne anahtarı " +
+                                                                std::to_string(core::raw(next)) +
+                                                                " anahtar uzayının dışında.");
+    return core::ok();
+}
+
 Status Transaction::move_reference(EntityId e, Point2 insertion)
 {
     core::Op undo;
@@ -1159,6 +1229,27 @@ core::Result<Transaction::AdoptSummary>
 Transaction::adopt_from(const core::Document& scratch, std::span<const core::EntityKey> only,
                         std::span<const core::BlockId> blocks, core::BlockId into)
 {
+    AdoptOptions options;
+    options.only   = only;
+    options.blocks = blocks;
+    options.into   = into;
+    return adopt_from(scratch, options);
+}
+
+core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Document& scratch,
+                                                                const AdoptOptions& options)
+{
+    const std::span<const core::EntityKey> only = options.only;
+    const std::span<const core::BlockId> blocks = options.blocks;
+    const core::BlockId into                    = options.into;
+    const std::string& prefix                   = options.prefix;
+    const bool external                         = !prefix.empty();
+    // "ALTLIK|" names the reference "ALTLIK": the group its layers go under.
+    const std::string reference_group = external ? prefix.substr(0, prefix.size() - 1) : "";
+    const auto named                  = [&prefix, external](const std::string& theirs) {
+        return external && theirs != "0" ? prefix + theirs : theirs;
+    };
+
     // WHICH ENTITIES, resolved once into a slot set rather than searched per
     // entity: a clipboard copy of five hundred parcels would otherwise be a
     // linear scan five hundred times over.
@@ -1226,11 +1317,22 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     for (std::size_t l = 0; l < scratch.layer_table().size(); ++l) {
         const core::Layer* theirs = scratch.layer_table().at(static_cast<LayerId>(l));
         if (theirs == nullptr) continue;
-        const LayerId mine = ensure_layer(theirs->name);
+        const std::string want = named(theirs->name);
+        const bool had         = doc_.find_layer(want) != core::kNoLayer;
+        const LayerId mine     = ensure_layer(want);
         if (mine == core::kNoLayer)
             return core::err(core::ErrorCode::ValidationFailed,
-                             "'" + theirs->name + "' katmanı oluşturulamadı.");
+                             "'" + want + "' katmanı oluşturulamadı.");
         layer_map[l] = mine;
+        // A REFERENCE'S LAYER THE DRAWING ALREADY HAS is the user's to set: a
+        // reload leaves its colour, visibility and lock as they were made here.
+        if (external && had) continue;
+        if (external && theirs->name != "0")
+            if (auto st = set_layer_group(mine, theirs->group.empty()
+                                                    ? reference_group
+                                                    : reference_group + " > " + theirs->group);
+                !st)
+                return st.error();
 
         // Only what differs from a fresh layer is written, so adopting into a
         // layer the drawing already had does not disturb what the user set on it.
@@ -1241,7 +1343,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
             if (auto st = set_layer_style(mine, own_style(theirs->style)); !st) return st.error();
         if (!theirs->visible)
             if (auto st = set_layer_visible(mine, false); !st) return st.error();
-        if (!theirs->group.empty())
+        if (!external && !theirs->group.empty())
             if (auto st = set_layer_group(mine, theirs->group); !st) return st.error();
         if (theirs->locked) lock_later.push_back(mine);
     }
@@ -1259,15 +1361,21 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     // every CAD keeps: the incoming references draw it, and the incoming
     // members are not piled onto it — they used to be, and a symbol pasted into
     // a drawing that had it drew twice over.
-    enum : std::uint8_t { kUntouched, kCreate, kTheirs };
+    //
+    // AN EXTERNAL REFERENCE'S BLOCKS are its own, under its prefix: one the
+    // drawing already holds as a dependent of it is FILLED again (kRefill),
+    // which is what reloading the reference is.
+    enum : std::uint8_t { kUntouched, kCreate, kTheirs, kRefill };
 
     std::vector<std::uint8_t> fate(scratch.blocks().size(), kUntouched);
     std::vector<core::BlockId> pending;
     const auto want_block = [&](core::BlockId b) {
         if (b >= fate.size() || fate[b] != kUntouched) return;
-        const bool drawing_has = doc_.blocks().find(scratch.blocks().at(b).name) != core::kNoBlock;
-        fate[b]                = drawing_has ? kTheirs : kCreate;
-        if (!drawing_has) pending.push_back(b);
+        const core::BlockId have = doc_.blocks().find(named(scratch.blocks().at(b).name));
+        const bool refill        = external && have != core::kNoBlock &&
+                            (doc_.blocks().at(have).flags & core::kBlockDependent) != 0;
+        fate[b] = have == core::kNoBlock ? kCreate : refill ? kRefill : kTheirs;
+        if (fate[b] != kTheirs) pending.push_back(b);
     };
     const auto referenced = [&scratch](core::EntityId e) -> core::BlockId {
         if (scratch.entities().kind[e] != core::kBlockReferenceKind) return core::kNoBlock;
@@ -1298,22 +1406,29 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
         if (fate[b] == kUntouched) continue;
         const core::BlockDef& def = scratch.blocks().at(static_cast<core::BlockId>(b));
         if (fate[b] == kTheirs) {
-            block_map[b] = doc_.blocks().find(def.name);
-            note("'" + def.name +
+            block_map[b] = doc_.blocks().find(named(def.name));
+            note("'" + named(def.name) +
                  "' bloğu çizimde zaten vardı; çizimdeki tanım kullanıldı, "
                  "gelen tanımın üyeleri alınmadı.");
             continue;
         }
-        auto made = add_block(def.name, def.description, def.base);
+        if (fate[b] == kRefill) {
+            block_map[b] = doc_.blocks().find(named(def.name));
+            continue;
+        }
+        auto made = add_block(named(def.name), def.description, def.base);
         if (!made) return made.error();
         block_map[b] = made.value();
+        if (external)
+            if (auto st = set_block_external(made.value(), {}, core::kBlockDependent); !st)
+                return st.error();
     }
     std::map<std::uint64_t, core::BlockId> block_of_key;
     std::vector<bool> kept_out(scratch.entities().size(), false); ///< members of a kept definition
     for (std::size_t b = 0; b < scratch.blocks().size(); ++b)
         for (const core::EntityKey k : scratch.blocks().at(static_cast<core::BlockId>(b)).members) {
             block_of_key[core::raw(k)] = block_map[b];
-            if (fate[b] != kCreate)
+            if (fate[b] != kCreate && fate[b] != kRefill)
                 if (const EntityId m = scratch.slot_of(k);
                     m != core::kNoEntity && m < kept_out.size())
                     kept_out[m] = true;
@@ -1439,7 +1554,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     // read from a DXF, a label pasted with its parcel — its source named by the
     // key it has in THIS drawing. A tie whose source was not brought across is
     // left behind with it: the caption stays, free.
-    for (EntityId e = 0; e < adopted.size(); ++e) {
+    for (EntityId e = 0; !external && e < adopted.size(); ++e) {
         const core::Attachment* tie = scratch.attachments().get(e);
         if (tie == nullptr || adopted[e] == core::kNoEntity) continue;
         const EntityId source = scratch.slot_of(tie->source);
@@ -1461,7 +1576,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
 
     // ---- block uses, once every block exists: the definitions made here ----
     for (std::size_t b = 0; b < scratch.blocks().size(); ++b) {
-        if (fate[b] != kCreate) continue;
+        if (fate[b] != kCreate && fate[b] != kRefill) continue;
         for (const core::BlockId used : scratch.blocks().at(static_cast<core::BlockId>(b)).uses)
             if (used < block_map.size() && block_map[used] != core::kNoBlock)
                 if (auto st = add_block_use(block_map[b], block_map[used]); !st) return st.error();

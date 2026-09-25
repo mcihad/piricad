@@ -45,6 +45,7 @@ add_executable(kentos_tests
     unit/test_transform.cpp
     unit/test_dimlink.cpp
     unit/test_blocks.cpp
+    unit/test_xref.cpp
     unit/test_dimtext.cpp
     unit/test_dimtools.cpp
     unit/test_hatchlink.cpp

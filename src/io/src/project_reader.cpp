@@ -35,10 +35,12 @@
 
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <map>
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace kentos::io {
@@ -51,6 +53,18 @@ using core::ErrorCode;
 /// every 4 MB or 64 K entities and a return within 100 ms; a parcel is tens of
 /// vertices, so the entity count is the binding one.
 constexpr std::size_t kCancelStride = 4096;
+
+/// An external reference's path as this document holds it: absolute. A
+/// relative one, as the writer stores it, is read against the directory the
+/// project file is in — which is what lets the folder move with its references.
+std::string resolve_stored_path(const std::string& stored, const std::string& project_file)
+{
+    const std::filesystem::path p(stored);
+    if (p.is_absolute()) return p.lexically_normal().string();
+    std::error_code ec;
+    const std::filesystem::path base = std::filesystem::absolute(project_file, ec).parent_path();
+    return (base / p).lexically_normal().string();
+}
 
 core::Error cancelled()
 {
@@ -1005,6 +1019,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     // for a file whose blocks have none; only the records column says whether
     // blocks exist at all.
     std::vector<std::pair<std::uint64_t, core::BlockId>> block_of_key; // sorted by key
+    bool any_external = false;
     if (view.has(kBlkBlocks)) {
         auto records = view.column<BlockRecord>(kBlkBlocks, view.count_of(kBlkBlocks), "bloklar");
         if (!records) return records.error();
@@ -1041,6 +1056,24 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 return err(ErrorCode::ParseError,
                            std::string(kErrConsist) + ": " + std::to_string(b + 1) + ". blok " +
                                std::to_string(id.value()) + ". kimliğe düştü. Dosya bozuk.");
+            // AN EXTERNAL REFERENCE (format 4, model.md R45a): its flags and its
+            // path, a relative one read against the directory this file is in.
+            // Its members are not here; loading the reference brings them.
+            const auto kept =
+                static_cast<std::uint8_t>(r.flags & (core::kBlockExternal | core::kBlockUnloaded |
+                                                     core::kBlockDependent | core::kBlockDetached));
+            if (kept != 0) {
+                any_external = true;
+                std::string where;
+                if (r.path_string != 0) {
+                    auto stored = strings.at(r.path_string, "dış referans yolu");
+                    if (!stored) return stored.error();
+                    where = resolve_stored_path(stored.value(), path);
+                }
+                if (auto st = tx.set_block_external(id.value(), std::move(where), kept); !st)
+                    return err(st.error().code,
+                               std::to_string(b + 1) + ". blok okunamadı: " + st.error().message);
+            }
             for (std::uint32_t m = 0; m < r.member_count; ++m)
                 block_of_key.emplace_back(members.value()[r.first_member + m], id.value());
         }
@@ -1149,6 +1182,15 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         }
         const core::BlockId in_block = block_of(cols.key[static_cast<std::size_t>(e)]);
         if (in_block != core::kNoBlock) ++members_seen;
+        // THE GAPS AN EXTERNAL REFERENCE LEFT: its members' keys are not in the
+        // file, so the next row's key may lie beyond the counter. Stepped over
+        // only in a file that declares a reference — anywhere else a gap is the
+        // corruption the key check below reports.
+        if (any_external && cols.key[static_cast<std::size_t>(e)] > doc.keys().peek_entity())
+            if (auto st = tx.skip_entity_keys_to(
+                    static_cast<core::EntityKey>(cols.key[static_cast<std::size_t>(e)]));
+                !st)
+                return st.error();
         core::Result<core::EntityId> added =
             tx.add_kind(layer_slot, kind, rings, payload, in_block);
         if (!added)
@@ -1592,6 +1634,13 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     }
 
     // ---- the allocator must not hand out a key the file already used ----
+    //
+    // A drawing with an external reference stopped the counter past its
+    // members' keys, which the file does not hold; the counter goes where the
+    // file says, so no key a member once had is handed to anything else.
+    if (any_external && dr.next_entity_key > doc.keys().peek_entity())
+        if (auto st = tx.skip_entity_keys_to(static_cast<core::EntityKey>(dr.next_entity_key)); !st)
+            return st.error();
     if (doc.keys().peek_entity() != dr.next_entity_key ||
         doc.keys().peek_layer() != dr.next_layer_key)
         report.warnings.push_back(Warning{

@@ -39,6 +39,7 @@
 #include "kentos_cad/processing/registry.hpp"
 
 #include "kentos_cad/io/dwg.hpp"
+#include "kentos_cad/io/format.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/render/backend.hpp"
 
@@ -996,6 +997,31 @@ void MainWindow::buildActions()
         if (path.isEmpty()) return;
         controller_->runCommand(QStringLiteral("BLOKEKLE dosya=\"%1\"").arg(path));
     });
+    // AN EXTERNAL REFERENCE (TODOS C-14): the file is chosen here and the rest
+    // is DIŞREFERANS's — read, defined, and placed in the file's own
+    // coordinates, which is where a base map or a neighbouring sheet belongs.
+    actXref_ = new QAction(tr("Dış Referans"), this);
+    actXref_->setData(static_cast<int>(Glyph::Xref));
+    // No `kToolCommand`, for the library button's reason: the press opens a
+    // file window before any command runs.
+    actXref_->setObjectName(QStringLiteral("xrefAttach"));
+    actXref_->setToolTip(tr("DIŞREFERANS — bir proje, DXF ya da DWG dosyasını dış referans "
+                            "olarak bağlar: yerinde çizilir, düzenlenmez, dosyası değişince "
+                            "yenilenir  ·  kısaltma: DRF"));
+    actXref_->setStatusTip(actXref_->toolTip());
+    connect(actXref_, &QAction::triggered, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(
+            this, tr("Dış referans"), QFileInfo(controller_->currentFile()).absolutePath(),
+            tr("Çizim dosyası (*.pcad *.dxf *.dwg);;Tüm dosyalar (*)"));
+        if (path.isEmpty()) return;
+        controller_->runLine(QStringLiteral("DIŞREFERANS dosya=\"%1\"").arg(path),
+                             command::Origin::Gui);
+    });
+    actXrefReload_ = commandAction(Glyph::XrefReload, tr("Dış Referansları Yenile"),
+                                   QStringLiteral("DIŞREFERANS islem=yenile"),
+                                   tr("DIŞREFERANS islem=yenile — bağlı dış referansları "
+                                      "dosyalarından yeniden okur"));
+    actXrefReload_->setObjectName(QStringLiteral("xrefReload"));
     // SAVE AND GIVE UP take the objects of the open edit, which only the shell
     // knows (`blockEditLine`), so their lines are made when they are pressed.
     const auto editStep = [this](Glyph glyph, const QString& text, const QString& name,
@@ -5801,6 +5827,192 @@ int MainWindow::probeRealMouse()
             runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.3"));
             QCoreApplication::processEvents();
             shoot("kitaplik-yerlesti");
+        }
+
+        // ---- 26. A DRAWING KEPT IN ITS OWN FILE (TODOS C-14) ----
+        //
+        // A base map is written by a program of its own; the drawing it serves
+        // is saved beside it and attaches it by name. It is drawn where it was
+        // drawn and snapped to; a double click refuses to open it for editing;
+        // the base map changed elsewhere comes in from the ribbon's reload; with
+        // its file gone the drawing still opens and says which file is missing.
+        {
+            const QString folder =
+                (shooting ? into : QDir::tempPath()) + QStringLiteral("/disreferans-probe");
+            QDir(folder).removeRecursively();
+            QDir().mkpath(folder);
+            const QString base_map    = folder + QStringLiteral("/altlik.pcad");
+            const QString project     = folder + QStringLiteral("/proje.pcad");
+            const auto write_base_map = [&base_map](bool second_road) {
+                core::Document side_doc;
+                command::Registry side_reg;
+                command::Journal side_journal;
+                command::UndoStack side_undo;
+                command::Bus side{side_doc, side_reg, side_journal, side_undo};
+                command::register_builtin_commands(side_reg);
+                io::FileService side_files{side};
+                for (const std::string& line :
+                     {std::string("KATMAN ad=PARSEL"), std::string("ALAN 0,0 30,0 30,20 0,20"),
+                      std::string("ALAN 30,0 55,0 55,20 30,20"), std::string("KATMAN ad=YOL"),
+                      std::string("ÇİZGİ -5,-4 60,-4")})
+                    (void)side.execute_line(line, command::Origin::Test);
+                if (second_road)
+                    (void)side.execute_line("ÇİZGİ -5,24 60,24", command::Origin::Test);
+                (void)side.execute_line("FARKLIKAYDET \"" + base_map.toStdString() + "\"",
+                                        command::Origin::Test);
+            };
+            write_base_map(false);
+
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("ÇİZGİ 10,5 20,15"));
+            endCommand();
+            runScriptLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(project));
+            endCommand();
+            check(actXref_ != nullptr && actXrefReload_ != nullptr && actXref_->isEnabled() &&
+                      actXrefReload_->isEnabled(),
+                  QStringLiteral("şeritte Dış Referans ve Dış Referansları Yenile var"));
+
+            // BY NAME, beside the project: the path the file will hold.
+            runScriptLine(QStringLiteral("DIŞREFERANS dosya=altlik.pcad"));
+            endCommand();
+            const core::Document& doc = controller_->document();
+            const auto live_members   = [&doc] {
+                const core::BlockId b = doc.blocks().find("altlik");
+                std::size_t n         = 0;
+                if (b != core::kNoBlock)
+                    for (const core::EntityKey k : doc.blocks().at(b).members)
+                        if (const core::EntityId m = doc.slot_of(k);
+                            m != core::kNoEntity && doc.alive(m))
+                            ++n;
+                return n;
+            };
+            core::EntityId xref_reference = core::kNoEntity;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.entities().standalone(e) &&
+                    doc.entities().kind[e] == core::kBlockReferenceKind)
+                    xref_reference = e;
+            check(live_members() == 3 && xref_reference != core::kNoEntity,
+                  QStringLiteral("altlık bağlandı: iki parsel ve yol, bir referansla (%1 üye)")
+                      .arg(live_members()));
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            shoot("disreferans-baglandi");
+
+            // THE REFERENCE'S LAYERS, grouped under its name: the group row shows
+            // them seen, and its eye — pressed by hand — puts both out in one
+            // step and brings them back on undo.
+            const auto layer_seen = [&doc](const char* name) {
+                const core::LayerId l = doc.find_layer(name);
+                return l != core::kNoLayer && doc.layer(l) != nullptr && doc.layer(l)->visible;
+            };
+            const std::optional<bool> group_seen =
+                layerPanel_ != nullptr ? layerPanel_->probeGroupEye(QStringLiteral("altlik"), false)
+                                       : std::nullopt;
+            const std::optional<bool> after_click =
+                layerPanel_ != nullptr ? layerPanel_->probeGroupEye(QStringLiteral("altlik"), true)
+                                       : std::nullopt;
+            check(group_seen.value_or(false) && after_click.has_value() && !*after_click &&
+                      !layer_seen("altlik|PARSEL") && !layer_seen("altlik|YOL"),
+                  QStringLiteral("katman panelinde 'altlik' grubu görünür; gözüne tıklamak iki "
+                                 "katmanını birden gizledi"));
+            runScriptLine(QStringLiteral("GERİAL"));
+            endCommand();
+            QCoreApplication::processEvents();
+            check(layer_seen("altlik|PARSEL") && layer_seen("altlik|YOL") &&
+                      layerPanel_->probeGroupEye(QStringLiteral("altlik"), false).value_or(false),
+                  QStringLiteral("tek geri alma grubun iki katmanını birden geri getirdi"));
+
+            // THE POINTER ON A PARCEL CORNER, a few pixels off: the marker sits
+            // on the corner the base map drew, through its reference.
+            runScriptLine(QStringLiteral("ÇİZGİ"));
+            QCoreApplication::processEvents();
+            const core::Point2 corner{30'000, 20'000};
+            onCanvas(QEvent::MouseMove, screen(corner) + QPointF(4.0, -3.0), Qt::NoButton);
+            const core::SnapResult* shown = canvas_->snapPreviewForProbe();
+            const core::SnapResult got    = shown != nullptr ? *shown : core::SnapResult{};
+            check(got.mode == core::SnapEndpoint && got.point == corner &&
+                      got.entity == xref_reference,
+                  QStringLiteral("dış referanstaki parsel köşesi UÇ olarak yakalandı (%1, %2)")
+                      .arg(static_cast<double>(got.point.x) / 1000.0, 0, 'f', 3)
+                      .arg(static_cast<double>(got.point.y) / 1000.0, 0, 'f', 3));
+            shoot("disreferans-yakalama");
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+
+            // A DOUBLE CLICK on the road: refused, by name, and nothing opens.
+            const std::uint64_t untouched = doc.content_hash();
+            const QPointF on_road         = screen(core::Point2{20'000, -4'000});
+            onCanvas(QEvent::MouseMove, on_road, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, on_road, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, on_road, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonDblClick, on_road, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, on_road, Qt::LeftButton);
+            endCommand();
+            showTranscript();
+            QCoreApplication::processEvents();
+            check(!blockEdit_.has_value() && doc.content_hash() == untouched &&
+                      transcript_->toPlainText().contains(QStringLiteral("dış referansın parçası")),
+                  QStringLiteral("çift tıklama dış referansı düzenlemeye açmadı ve nedenini "
+                                 "söyledi"));
+            shoot("disreferans-duzenlenmez");
+
+            // THE BASE MAP CHANGES ELSEWHERE, and the ribbon's reload brings it.
+            write_base_map(true);
+            actXrefReload_->trigger();
+            endCommand();
+            QCoreApplication::processEvents();
+            check(live_members() == 4,
+                  QStringLiteral("Dış Referansları Yenile ikinci yolu getirdi (%1 üye)")
+                      .arg(live_members()));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            QCoreApplication::processEvents();
+            shoot("disreferans-yenilendi");
+
+            // SAVED: the name and the path, not the objects.
+            runScriptLine(QStringLiteral("KAYDET"));
+            endCommand();
+            QFile saved(project);
+            io::FileHeader header{};
+            if (saved.open(QIODevice::ReadOnly))
+                (void)saved.read(reinterpret_cast<char*>(&header), sizeof(header));
+            saved.close();
+            check(header.min_reader_version == io::kMinReaderVersionExternal &&
+                      transcript_->toPlainText().contains(QStringLiteral("(2 nesne")),
+                  QStringLiteral("proje dosyası dış referansın nesnelerini tutmuyor: çizgi ve "
+                                 "referans kaydedildi"));
+
+            // GONE: the drawing still opens, and says which file is missing.
+            QFile::rename(base_map, folder + QStringLiteral("/altlik-arsiv.pcad"));
+            runScriptLine(QStringLiteral("AÇ \"%1\"").arg(project));
+            endCommand();
+            QCoreApplication::processEvents();
+            const core::Document& reopened = controller_->document();
+            bool reference_kept            = false;
+            for (core::EntityId e = 0; e < reopened.entities().size(); ++e)
+                reference_kept =
+                    reference_kept || (reopened.entities().standalone(e) &&
+                                       reopened.entities().kind[e] == core::kBlockReferenceKind);
+            check(reference_kept && live_members() == 0 &&
+                      transcript_->toPlainText().contains(QStringLiteral("yüklenemedi")),
+                  QStringLiteral("kaynak dosya yokken çizim açıldı, referans yerinde, eksik "
+                                 "dosya söylendi"));
+            shoot("disreferans-kayip");
+
+            runScriptLine(
+                QStringLiteral("DIŞREFERANS islem=yol ad=altlik dosya=altlik-arsiv.pcad"));
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.8"));
+            QCoreApplication::processEvents();
+            check(live_members() == 4,
+                  QStringLiteral("yeni yeri gösterilen dış referans geri geldi (%1 üye)")
+                      .arg(live_members()));
+            shoot("disreferans-yeni-yol");
         }
     }
 

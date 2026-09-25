@@ -96,6 +96,15 @@ nesnenin kaydedildiği andaki hâline göre yerine koyar, eski geometrinin kalı
 yok sayar ve uyarı vermez. Reddedilen dosyalar açılır; yalnız taşınırken zaten
 kaybolmuş olan XDATA geri gelmez. 3. biçim dosyalar önceki sürümlerde de açılır.
 
+### Biçim 4: dış referanslar
+
+Bu sürüm dosyayı **4. biçimle** yazar. Bir [dış referans](../komutlar/xref.md) taşıyan
+çizimde dosya, dış referansın adını, yolunu (proje dosyasının klasörüne göre) ve
+boşaltılıp boşaltılmadığını tutar; **nesnelerini tutmaz** — onlar her açılışta kendi
+dosyalarından okunur. Böyle bir dosya en az 4. sürüm okuyucu ister: eski bir KentOSCad
+onu açmaz ve bunu söyler. Dış referansı olmayan bir çizimin dosyası önceki sürümlerde de
+açılır.
+
 ## Kaydetme kesintiye dayanıklıdır
 
 `KAYDET` önce yanına geçici bir dosya yazar, ancak son bayt diske indikten sonra

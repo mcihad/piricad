@@ -15,6 +15,7 @@
 #include "kentos_cad/command/block_edit.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/external_ref.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -79,19 +80,6 @@ core::Point2 field_place(const core::Document& doc, core::EntityId e, const std:
         return core::place_block_point(ref.value(), at, def.base, start, 0, 0);
     }
     return at;
-}
-
-/// Places one reference entity with `ref` at `at`, bounds computed here.
-Result<core::EntityId> place(Context& ctx, core::Point2 at, core::BlockReference ref)
-{
-    ref.bounds = core::block_reference_bounds(ctx.document(), at, ref);
-    const core::Point2 pts[1]{at};
-    const core::RingGeometry::RingInput ring{std::span<const core::Point2>(pts, 1),
-                                             core::RingRole::Open, 0};
-    const std::vector<std::uint8_t> payload = core::encode_block_reference(ref);
-    return ctx.transaction().add_kind(ctx.active_layer(), core::kBlockReferenceKind,
-                                      std::span<const core::RingGeometry::RingInput>(&ring, 1),
-                                      payload);
 }
 
 // ------------------------------------------------------------------- BLOK ----
@@ -163,7 +151,7 @@ Task<void> run_block(Context& ctx)
 
     core::BlockReference ref;
     ref.block   = block.value();
-    auto placed = place(ctx, *base, ref);
+    auto placed = place_reference(ctx, *base, ref);
     if (!placed) {
         ctx.refuse(placed.error());
         co_return;
@@ -345,7 +333,7 @@ Task<void> run_insert(Context& ctx)
                                               .rubber_payload = core::encode_block_reference(ref)});
     if (!at) co_return;
 
-    auto placed = place(ctx, *at, ref);
+    auto placed = place_reference(ctx, *at, ref);
     if (!placed) {
         ctx.refuse(placed.error());
         co_return;
@@ -694,6 +682,19 @@ Task<void> run_block_edit(Context& ctx)
 
     EditTarget target;
     if (!co_await edit_target(ctx, opening || basing, target)) co_return;
+    // AN EXTERNAL REFERENCE IS EDITED IN ITS OWN FILE (TODOS C-14): what is
+    // drawn here is read from there on every open, so an edit made here would
+    // be gone on the next one — and would silently disagree with the source
+    // until then.
+    if (is_external_block(ctx.document(), target.block)) {
+        const std::string name = ctx.document().blocks().at(target.block).name;
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "'" + name +
+                       "' bir dış referansın parçası; tanımı kendi dosyasında düzenlenir. "
+                       "Değişikliği görmek için DIŞREFERANS islem=yenile; burada düzenlemek "
+                       "için önce DIŞREFERANS islem=bagla ile çizime bağlayın.");
+        co_return;
+    }
     const core::Document& doc = ctx.document();
     const std::string name    = doc.blocks().at(target.block).name;
     const bool from_reference = target.reference != core::kNoEntity;

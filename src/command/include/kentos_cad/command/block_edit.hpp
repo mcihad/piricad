@@ -15,6 +15,7 @@
 
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/core/block.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/transform.hpp"
 
 #include <cstddef>
@@ -73,6 +74,11 @@ bool same_as_member(const core::Document& doc, core::EntityId e, core::Mm dx, co
 /// to hold its value and the caption does not stand there reading `{no}`.
 /// The names declared, in order — none when every field had its column.
 core::Result<std::vector<std::string>> ensure_field_columns(Context& ctx, core::BlockId block);
+
+/// Places one reference with `ref` at `at` on the active layer, its box
+/// computed from what it draws — BLOKEKLE's placement, and DIŞREFERANS's.
+core::Result<core::EntityId> place_reference(Context& ctx, core::Point2 at,
+                                             core::BlockReference ref);
 
 /// Brings the stored box of every block reference that draws `block` — itself,
 /// or through a block inside a block, on the sheet or inside another

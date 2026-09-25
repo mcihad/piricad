@@ -537,6 +537,24 @@ kaydınız yerinde durur**.
 
 **Çözüm.** Komutu uygulama içinden çalıştırın.
 
+### `uyarı: 'X' dış referansı yüklenemedi: … Çizim açıldı; referans boş çizilir.`
+
+**Sebep.** Çizime bağlı bir [dış referansın](komutlar/xref.md) dosyası kayıtlı yerinde de,
+proje dosyasının klasöründe de bulunamadı ya da okunamadı. Çizim yine açılır; referans
+yerinde, boş durur.
+
+**Çözüm.** Dosyanın yeni yerini gösterin: `DIŞREFERANS islem=yol ad=X dosya=<yol>`. Proje
+başka bir makineye taşındıysa altlık dosyasını proje dosyasının yanına koymanız da yeter;
+bir sonraki açılışta adıyla bulunur.
+
+### `io.format_too_new: … en az 4. sürüm biçim okuyucusu istiyor`
+
+**Sebep.** Dosya bir [dış referans](komutlar/xref.md) taşıyor; dış referansın nesneleri
+dosyada değil kaynağındadır ve bunu ancak 4. sürüm biçimi okuyan bir KentOSCad bilir.
+
+**Çözüm.** KentOSCad'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
+`DIŞREFERANS islem=bagla` ile dış referansı çizime katıp kaydedin.
+
 ## Dış veri biçimleri
 
 ### `io.no_driver: Dış biçim desteği KAPALI.`

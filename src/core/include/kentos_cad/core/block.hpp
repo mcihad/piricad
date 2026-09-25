@@ -31,6 +31,31 @@ using BlockId = std::uint32_t;
 /// "Not in a block", and "no block referenced".
 inline constexpr BlockId kNoBlock = 0xFFFFFFFFu;
 
+/// `BlockDef::flags`. An EXTERNAL REFERENCE (TODOS C-13/C-14) is a definition
+/// whose members come from a file: loaded when the drawing opens and whenever
+/// it is reloaded, drawn and snapped to through its references like any block,
+/// edited by nobody here, and NEVER written to the project file — the file
+/// holds the name and the path, the source holds the drawing.
+///
+/// `unsigned` rather than `std::uint8_t`, the field's type: two byte constants
+/// combined (`kBlockExternal | kBlockDependent`, `~kBlockUnloaded`) are promoted
+/// to a signed `int`, and a mask built of signed bits is what a flag test must
+/// not lean on. Stored, each is narrowed back to the byte it fits.
+inline constexpr unsigned kBlockExternal = 1u << 0;
+/// An external reference the user unloaded: kept, drawn empty, not loaded on
+/// open until loaded again.
+inline constexpr unsigned kBlockUnloaded = 1u << 1;
+/// A block an external reference's FILE defines, named `REF|BLOCK`: filled and
+/// emptied with its external reference, never written.
+inline constexpr unsigned kBlockDependent = 1u << 2;
+/// An external reference taken off the drawing (`DIŞREFERANS islem=kaldir`):
+/// the table is append-only, so the record stays, empty and never loaded.
+inline constexpr unsigned kBlockDetached = 1u << 3;
+
+/// The file name at the end of `path`, under either separator — what an
+/// external reference's fingerprint holds of where it points.
+std::string_view file_name_of(std::string_view path) noexcept;
+
 /// One block definition.
 struct BlockDef
 {
@@ -51,7 +76,14 @@ struct BlockDef
     /// depth, would expand for ever.
     std::vector<BlockId> uses;
 
-    std::uint8_t flags{0}; ///< reserved for the file; zero today
+    std::uint8_t flags{0}; ///< `kBlockExternal` and its companions; zero for a drawn block
+
+    /// An external reference's file, as stored: relative to the project file
+    /// when it could be written so, which is what lets a project folder move.
+    std::string path;
+
+    /// Whether the members come from somewhere else and are never written.
+    bool external() const noexcept { return (flags & (kBlockExternal | kBlockDependent)) != 0; }
 };
 
 /// The block definitions of one document (R45).
@@ -78,6 +110,10 @@ public:
     /// Moves the base point of `id` — BLOKDÜZENLE's `taban` (TODOS C-13). The
     /// references are the caller's to keep in place; this is the one field.
     Status set_base(BlockId id, Point2 base);
+
+    /// Makes `id` an external reference to `path` — or, with `flags` zero and
+    /// no path, a drawn block again (`DIŞREFERANS islem=bagla`).
+    Status set_external(BlockId id, std::string path, std::uint8_t flags);
 
     /// Whether placing a reference to `referenced` inside `container` would let
     /// `container` reach itself: true when `referenced` is `container` or uses

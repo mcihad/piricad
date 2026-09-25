@@ -163,6 +163,8 @@ enum class Glyph {
     BlockInsert,  ///< a square dropped onto an insertion cross: BLOKEKLE
     BlockEdit,    ///< a block's square with the pencil over it: BLOKDÜZENLE
     BlockBase,    ///< a block's square, its base cross moved to a new corner: BLOKDÜZENLE taban
+    Xref,         ///< a page and the dashed square it becomes on the sheet: DIŞREFERANS
+    XrefReload,   ///< a dashed square inside a turning arrow: DIŞREFERANS islem=yenile
     MeasureAngle, ///< two arms and the sweep between them: AÇIÖLÇ, which wore ÖLÇ's own mark
 
     // ---- the corner, end and piece tools the column did not have --------------

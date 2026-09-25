@@ -1241,6 +1241,26 @@ def insert(
         file — Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur
     """
 
+def xref(
+    *,
+    action: str = ...,
+    file: str = ...,
+    name: str = ...,
+    point: Coord = ...,
+    scale: float = ...,
+    angle: float = ...,
+) -> int:
+    """Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+
+    Komut: core.xref (DIŞREFERANS)
+        action — ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar
+        file — ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur
+        name — Dış referansın adı; ekle'de verilmezse dosyanın adı
+        point — ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir [mm, Sağa (Y) önce]
+        scale — ekle için ölçek; varsayılan 1
+        angle — ekle için dönme açısı, derece; varsayılan 0
+    """
+
 def dimension(
     *,
     first: Coord = ...,

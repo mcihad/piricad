@@ -68,7 +68,7 @@ public:
     /// Folds into the document hash; the seed comes back unchanged when the
     /// table is empty, so every drawing without a linked hatch keeps its
     /// fingerprint.
-    std::uint64_t fold(std::uint64_t seed) const;
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> position = {}) const;
 
 private:
     std::map<EntityId, std::vector<HatchSource>> rows_;

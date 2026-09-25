@@ -50,12 +50,12 @@ std::vector<EntityId> DimLinkTable::linked() const
     return out;
 }
 
-std::uint64_t DimLinkTable::fold(std::uint64_t seed) const
+std::uint64_t DimLinkTable::fold(std::uint64_t seed, std::span<const std::uint32_t> position) const
 {
     if (rows_.empty()) return seed;
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows_.size()), seed ^ kDimLinkSeed);
     for (const auto& [dim, links] : rows_) {
-        h = fnv1a_int(static_cast<std::int64_t>(dim), h);
+        h = fnv1a_int(static_cast<std::int64_t>(dim < position.size() ? position[dim] : dim), h);
         h = fnv1a_int(static_cast<std::int64_t>(links.size()), h);
         for (const DimLink& l : links) {
             h = fnv1a_int(static_cast<std::int64_t>(l.point), h);

@@ -67,8 +67,11 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
     // list of results (TODOS C-03).
     case FileRequest::Verb::ClipboardCopy:
     case FileRequest::Verb::ClipboardPaste:
-    // A library is READ, like an import.
-    case FileRequest::Verb::BlockLibrary: break;
+    // A library is READ, like an import; so is an external reference.
+    case FileRequest::Verb::BlockLibrary:
+    case FileRequest::Verb::XrefAttach:
+    case FileRequest::Verb::XrefLoad:
+    case FileRequest::Verb::XrefRepath: break;
     }
     ctx.echo(result.value());
 }

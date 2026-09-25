@@ -35,6 +35,22 @@ BlockId BlockTable::find(std::string_view name) const
     return kNoBlock;
 }
 
+std::string_view file_name_of(std::string_view path) noexcept
+{
+    const std::size_t cut = path.find_last_of("/\\");
+    if (cut != std::string_view::npos) path.remove_prefix(cut + 1);
+    return path;
+}
+
+Status BlockTable::set_external(BlockId id, std::string path, std::uint8_t flags)
+{
+    if (id >= defs_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(id));
+    defs_[id].path  = std::move(path);
+    defs_[id].flags = flags;
+    return ok();
+}
+
 Status BlockTable::set_base(BlockId id, Point2 base)
 {
     if (id >= defs_.size())
@@ -88,9 +104,19 @@ std::uint64_t BlockTable::fold(std::uint64_t seed) const
         h = fnv1a(d.description, h);
         h = fnv1a_int(d.base.x, h);
         h = fnv1a_int(d.base.y, h);
-        for (const EntityKey k : d.members)
-            h = fnv1a_int(static_cast<std::int64_t>(raw(k)), h);
+        // AN EXTERNAL REFERENCE'S MEMBERS ARE ITS FILE'S, minted afresh each
+        // time the file is read: the document holds the name and the path, and
+        // that is what it fingerprints.
+        if (!d.external())
+            for (const EntityKey k : d.members)
+                h = fnv1a_int(static_cast<std::int64_t>(raw(k)), h);
         h = fnv1a_int(static_cast<std::int64_t>(d.flags), h);
+        // The FILE NAME, not the path: where the file lives is location — a
+        // project folder moved, a drive letter, an absolute path written
+        // relative — and the same drawing referencing the same file is the same
+        // document wherever it is opened. Folded only when there is one, so
+        // every drawn block keeps the fingerprint it had before.
+        if (!d.path.empty()) h = fnv1a(file_name_of(d.path), h);
         h = fnv1a_int(-3, h); // block terminator
     }
     return h;

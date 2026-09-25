@@ -5,6 +5,7 @@
 add_library(kentos_command STATIC
     src/aids.cpp
     src/block_edit.cpp
+    src/external_ref.cpp
     src/ghost.cpp
     src/path_edit.cpp
     src/bus.cpp
@@ -24,6 +25,7 @@ add_library(kentos_command STATIC
     src/value.cpp
     src/drawing_catalogs.cpp
     src/commands/block.cpp
+    src/commands/xref.cpp
     src/commands/dimension.cpp
     src/commands/hatch.cpp
     src/commands/spline.cpp

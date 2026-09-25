@@ -176,6 +176,29 @@ public:
                                           std::span<const core::BlockId> blocks = {},
                                           core::BlockId into                    = core::kNoBlock);
 
+    /// How `adopt_from` brings a scratch document across, beyond what to bring.
+    struct AdoptOptions
+    {
+        std::span<const core::EntityKey> only; ///< as `adopt_from`'s `only`
+        std::span<const core::BlockId> blocks; ///< as `adopt_from`'s `blocks`
+        core::BlockId into{core::kNoBlock};    ///< as `adopt_from`'s `into`
+
+        /// AN EXTERNAL REFERENCE'S LOAD (model.md R45a), when not empty — the
+        /// reference's name and a bar, `ALTLIK|`. The scratch's layers and
+        /// blocks arrive under `<prefix><name>`, so nothing of the file lands on
+        /// a name the drawing uses; layer `0` stays `0`, whose members take the
+        /// reference's layer when drawn. A layer made here is grouped under the
+        /// reference, and one already here keeps what the user set on it — its
+        /// colour, its visibility, its lock. The blocks made are dependents of
+        /// the reference (`core::kBlockDependent`), and a dependent already here
+        /// is filled again: its caller took its old members out first. Ties are
+        /// not carried, since nothing a reference holds is ever edited.
+        std::string prefix;
+    };
+
+    core::Result<AdoptSummary> adopt_from(const core::Document& scratch,
+                                          const AdoptOptions& options);
+
     /// Moves an entity to another layer, keeping its identity.
     Status set_entity_layer(EntityId e, LayerId layer);
 
@@ -191,6 +214,26 @@ public:
 
     /// Moves the base point of `block` (`Document::set_block_base`).
     Status set_block_base(core::BlockId block, Point2 base);
+
+    /// Makes `block` an external reference to `path`, or a drawn block again
+    /// (`Document::set_block_external`).
+    Status set_block_external(core::BlockId block, std::string path, std::uint8_t flags);
+
+    /// Takes every live member out of `block` (`erase_member` on each) — what
+    /// reloading or unloading an external reference does before its file's
+    /// members come in again (model.md R45a). How many went.
+    core::Result<std::size_t> clear_block_members(core::BlockId block);
+
+    /// Brings the stored box of every block reference that draws `block` —
+    /// itself, or through a block inside a block, on the sheet or inside
+    /// another definition — up to date with what it draws now. How many boxes
+    /// changed.
+    core::Result<std::size_t> refresh_block_references(core::BlockId block);
+
+    /// Steps the entity key counter up to `next` (`Document::skip_entity_keys_to`):
+    /// the reader's way over keys a file left out. No inverse is recorded — a
+    /// key once passed is never handed out, whether or not the step is undone.
+    Status skip_entity_keys_to(core::EntityKey next);
 
     /// Stands block reference `e` at `insertion`, box refreshed
     /// (`Document::move_reference`): the reference's half of keeping a picture

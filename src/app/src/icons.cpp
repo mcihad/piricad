@@ -806,6 +806,36 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(18.0, 17.0), QPointF(18.0, 23.0));
         break;
 
+    case Glyph::Xref:
+        // A PAGE AND THE DASHED SQUARE IT BECOMES ON THE SHEET: a drawing kept
+        // in its own file, shown here and not owned here — dashed, as nothing
+        // of it is this drawing's to edit.
+        p.setPen(stroke(c, 1.3));
+        p.drawLine(QPointF(3.6, 3.0), QPointF(9.6, 3.0));
+        p.drawLine(QPointF(9.6, 3.0), QPointF(12.6, 6.0));
+        p.drawLine(QPointF(12.6, 6.0), QPointF(12.6, 13.0));
+        p.drawLine(QPointF(3.6, 3.0), QPointF(3.6, 13.0));
+        p.drawLine(QPointF(3.6, 13.0), QPointF(7.0, 13.0));
+        p.setPen(QPen(c, 1.3, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(9.6, 10.4, 11.2, 11.2));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(8.0, 9.0), QPointF(13.8, 14.8));
+        p.drawLine(QPointF(13.8, 14.8), QPointF(13.8, 11.4));
+        p.drawLine(QPointF(13.8, 14.8), QPointF(10.4, 14.8));
+        break;
+
+    case Glyph::XrefReload: {
+        // THE DASHED SQUARE INSIDE A TURNING ARROW: read from its file again.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(8.4, 8.4, 7.2, 7.2));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawArc(QRectF(3.4, 3.4, 17.2, 17.2), 30 * 16, 300 * 16);
+        const QPointF tip(12.0 + 8.6 * 0.866, 12.0 - 8.6 * 0.5);
+        p.drawLine(tip, tip + QPointF(-3.4, -0.4));
+        p.drawLine(tip, tip + QPointF(0.6, 3.4));
+        break;
+    }
+
     case Glyph::MeasureAngle: {
         // TWO ARMS AND THE SWEEP BETWEEN THEM, which is what the tool measures
         // and what its preview now draws on the canvas.

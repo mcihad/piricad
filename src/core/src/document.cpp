@@ -10,6 +10,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace kentos::core {
 namespace {
@@ -129,11 +130,26 @@ std::uint64_t Document::content_hash() const
     h               = layers_.fold(h);
     h               = styles_.fold(h);
 
+    // THE ROWS THAT ARE THE DOCUMENT'S: all of them, less the members an
+    // external reference loaded (R45a) — those are its file's, remade on every
+    // load, and the project file holds none of them. Where a row stands among
+    // the others is what names it below, so a caption drawn after a reference
+    // was loaded fingerprints the same once the file is read back without it.
+    const std::vector<bool> external = external_rows();
+    std::vector<std::uint32_t> position;
+    if (!external.empty()) {
+        position.assign(entities_.size(), std::numeric_limits<std::uint32_t>::max());
+        std::uint32_t next = 0;
+        for (EntityId e = 0; e < entities_.size(); ++e)
+            if (!external[e]) position[e] = next++;
+    }
+
     // Attributes ARE document content: an ada number is not a view preference,
     // it is what the parcel is. Folding the table once here rather than per
     // entity keeps the loop below reading only the hot columns, and folds the
     // SCHEMA too — declaring a column changes what the document says it holds
     // even before a single cell is written.
+    //
     // THE SLOT TABLES FOLD BY ROW: each entity's caption, cells and foreign
     // data at the slot its geometry holds now, in row order. A geometry edit
     // appends a slot and leaves the old one behind for undo; folded by slot,
@@ -148,9 +164,9 @@ std::uint64_t Document::content_hash() const
     h                                     = dashes_.fold(h);
     h                                     = foreign_.fold(h, rows);
     h                                     = blocks_.fold(h);
-    h                                     = attachments_.fold(h);
-    h                                     = dim_links_.fold(h);
-    h                                     = hatch_links_.fold(h);
+    h                                     = attachments_.fold(h, position);
+    h                                     = dim_links_.fold(h, position);
+    h                                     = hatch_links_.fold(h, position);
 
     // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
     // deliverable, even when every parcel in it is identical. Folding an EMPTY
@@ -159,7 +175,7 @@ std::uint64_t Document::content_hash() const
     h = layouts_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
-        if (!entities_.alive(e)) continue;
+        if (!entities_.alive(e) || (!external.empty() && external[e])) continue;
 
         h = fnv1a(layers_.all()[entities_.layer[e]].folded, h);
         h = fnv1a_int(static_cast<std::int64_t>(entities_.style[e]), h);
@@ -197,7 +213,31 @@ std::uint64_t Document::content_hash() const
 
 std::vector<std::uint32_t> Document::row_slots() const
 {
-    return {entities_.slot.begin(), entities_.slot.end()};
+    const std::vector<bool> external = external_rows();
+    if (external.empty()) return {entities_.slot.begin(), entities_.slot.end()};
+    std::vector<std::uint32_t> out;
+    out.reserve(entities_.size());
+    for (EntityId e = 0; e < entities_.size(); ++e)
+        if (!external[e]) out.push_back(entities_.slot[e]);
+    return out;
+}
+
+bool Document::skip_entity_keys_to(EntityKey next) noexcept
+{
+    if (raw(next) == 0) return false;
+    return keys_.adopt_entity(static_cast<EntityKey>(raw(next) - 1));
+}
+
+std::vector<bool> Document::external_rows() const
+{
+    std::vector<bool> out;
+    for (const BlockDef& def : blocks_.all()) {
+        if (!def.external() || def.members.empty()) continue;
+        if (out.empty()) out.assign(entities_.size(), false);
+        for (const EntityKey k : def.members)
+            if (const EntityId e = slot_of(k); e != kNoEntity) out[e] = true;
+    }
+    return out;
 }
 
 // -------------------------------------------------------------- identity ----
@@ -638,6 +678,23 @@ Status Document::set_block_base(BlockId block, Point2 base, Op& undo_out)
     undo_out.kind      = Op::Kind::SetBlockBase;
     undo_out.block_arg = block;
     undo_out.point_arg = was;
+    return ok();
+}
+
+Status Document::set_block_external(BlockId block, std::string path, std::uint8_t flags,
+                                    Op& undo_out)
+{
+    undo_out = Op{};
+    if (block >= blocks_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(block));
+    std::string was_path        = blocks_.at(block).path;
+    const std::uint8_t was_flag = blocks_.at(block).flags;
+    if (auto st = blocks_.set_external(block, std::move(path), flags); !st) return st;
+    ++revision_;
+    undo_out.kind      = Op::Kind::SetBlockExternal;
+    undo_out.block_arg = block;
+    undo_out.str_arg   = std::move(was_path);
+    undo_out.byte_arg  = was_flag;
     return ok();
 }
 
@@ -1673,6 +1730,8 @@ Status Document::apply(const Op& op, Op* undo_out)
         return restore_hatch_links(op.entity, std::move(sources.value()), inverse);
     }
     case Op::Kind::SetBlockBase: return set_block_base(op.block_arg, op.point_arg, inverse);
+    case Op::Kind::SetBlockExternal:
+        return set_block_external(op.block_arg, op.str_arg, op.byte_arg, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "adopt.hpp"
 
+#include "xref.hpp"
+
 #include <utility>
 
 namespace kentos::io {
@@ -20,7 +22,8 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
     // (Article 5.9, io.md R17).
     command::Transaction tx(loaded, "Proje dosyası okuma");
 
-    auto report = co_await read_project(tx, std::move(path), loaded_settings, std::move(stop));
+    const std::string project = path;
+    auto report               = co_await read_project(tx, std::move(path), loaded_settings, stop);
     if (!report) {
         tx.rollback();
         co_return report.error();
@@ -38,6 +41,13 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
             report.value().warnings.push_back(Warning{
                 "io.crs_resolve", "Dosyadaki koordinat sistemi çözülemedi: " + st.error().message});
     }
+
+    // THE EXTERNAL REFERENCES the drawing holds, read from their files into
+    // the same read, before anything is on screen (TODOS C-14, model.md R45a).
+    // One whose file cannot be read is a warning, never a failed open: a
+    // missing base map must not lock a surveyor out of their own drawing.
+    auto missing = co_await load_externals(tx, project, stop);
+    report.value().warnings.insert(report.value().warnings.end(), missing.begin(), missing.end());
 
     bus.document()         = std::move(loaded);
     bus.project_settings() = std::move(loaded_settings);

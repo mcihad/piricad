@@ -33,6 +33,7 @@
 #include "kentos_cad/command/block_edit.hpp"
 #include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/external_ref.hpp"
 #include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
@@ -156,6 +157,15 @@ bool explode_reference(Context& ctx, core::EntityId slot, Pieces& out)
     const core::BlockReference placed = ref.value();
     if (placed.block >= doc.blocks().size()) {
         ctx.refuse(core::ErrorCode::NotFound, "Blok tanımı bulunamadı.");
+        return false;
+    }
+    // AN EXTERNAL REFERENCE IS NOT TAKEN APART (TODOS C-14): its pieces would
+    // be copies of a file's objects that no reload reaches.
+    if (is_external_block(doc, placed.block)) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "'" + doc.blocks().at(placed.block).name +
+                       "' bir dış referans; patlatılamaz. Parçalarını bu çizime almak için önce "
+                       "DIŞREFERANS islem=bagla ile çizime bağlayın.");
         return false;
     }
     // Copied, not referred to: the pieces are added to the document under it.

@@ -71,6 +71,24 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
 
 namespace {
 
+/// A block or layer name as a DXF may carry it. A `|` in a symbol name means
+/// "belongs to an external reference" to AutoCAD, which then looks for the
+/// reference and finds none; the names an external reference's layers and
+/// blocks carry here (`ALTLIK|YOL`, TODOS C-14) are therefore written the way
+/// AutoCAD itself writes a bound reference's, `ALTLIK$0$YOL`.
+std::string dxf_symbol(const std::string& name)
+{
+    std::string out;
+    out.reserve(name.size());
+    for (const char c : name) {
+        if (c == '|')
+            out += "$0$";
+        else
+            out += c;
+    }
+    return out;
+}
+
 using core::Mm;
 using core::Point2;
 
@@ -210,7 +228,7 @@ public:
     void writeBlockRecords() override
     {
         for (const core::BlockDef& def : doc_.blocks().all())
-            out_.writeBlockRecord(def.name);
+            out_.writeBlockRecord(dxf_symbol(def.name));
         name_pictures();
         for (const auto& [e, name] : pictures_)
             out_.writeBlockRecord(name);
@@ -223,7 +241,7 @@ public:
         // circle in a block is a CIRCLE and a caption a TEXT (model.md R45).
         for (const core::BlockDef& def : doc_.blocks().all()) {
             DRW_Block blk;
-            blk.name      = def.name;
+            blk.name      = dxf_symbol(def.name);
             blk.basePoint = DRW_Coord(units(def.base.x), units(def.base.y), 0.0);
             out_.writeBlock(&blk);
             for (const core::EntityKey key : def.members) {
@@ -358,7 +376,7 @@ public:
         // empty one, which is a decision they made and a DXF can carry.
         for (const core::Layer& l : doc_.layers()) {
             DRW_Layer out;
-            out.name                = l.name;
+            out.name                = dxf_symbol(l.name);
             const std::uint32_t rgb = l.appearance.rgba & 0x00FFFFFFu;
             out.color               = dxf::aci_for_ink(rgb);
             out.color24             = static_cast<int>(rgb);
@@ -646,7 +664,7 @@ private:
         const core::BlockReference& r = def.value();
         DRW_Insert ins;
         common(ins, e);
-        ins.name        = doc_.blocks().at(r.block).name;
+        ins.name        = dxf_symbol(doc_.blocks().at(r.block).name);
         const Point2 at = core::block_reference_insertion(geo, slot);
         ins.basePoint   = DRW_Coord(units(at.x), units(at.y), 0.0);
         ins.xscale      = static_cast<double>(r.sx.num) / static_cast<double>(r.sx.den);
@@ -1035,7 +1053,8 @@ private:
     void common(DRW_Entity& out, core::EntityId e)
     {
         const core::EntityTable& ents = doc_.entities();
-        if (const core::Layer* l = doc_.layer(ents.layer[e]); l != nullptr) out.layer = l->name;
+        if (const core::Layer* l = doc_.layer(ents.layer[e]); l != nullptr)
+            out.layer = dxf_symbol(l->name);
 
         const core::StyleId style = ents.style[e];
         if (style != core::kByLayerStyle && style < doc_.styles().size()) {

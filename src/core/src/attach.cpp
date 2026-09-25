@@ -449,26 +449,27 @@ void AttachTable::dependents_of(EntityKey source, std::vector<EntityId>& out) co
     std::sort(out.begin(), out.end());
 }
 
-std::uint64_t AttachTable::fold(std::uint64_t seed) const
+std::uint64_t AttachTable::fold(std::uint64_t seed, std::span<const std::uint32_t> position) const
 {
     if (live_ == 0) return seed;
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(live_), seed ^ kAttachSeed);
     for (const EntityId e : attached()) {
-        const Attachment& a = records_[ref_[e]];
-        h                   = fnv1a_int(static_cast<std::int64_t>(e), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(raw(a.source)), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.anchor), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.side), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.derive), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.ring), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.index), h);
-        h                   = fnv1a_int(a.gap, h);
-        h                   = fnv1a_int(a.along, h);
-        h                   = fnv1a_int(a.across, h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.unit), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.precision), h);
-        h                   = fnv1a_int(static_cast<std::int64_t>(a.separator), h);
-        h                   = fnv1a(a.format, h);
+        const Attachment& a     = records_[ref_[e]];
+        const std::uint32_t row = e < position.size() ? position[e] : e;
+        h                       = fnv1a_int(static_cast<std::int64_t>(row), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(raw(a.source)), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.anchor), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.side), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.derive), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.ring), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.index), h);
+        h                       = fnv1a_int(a.gap, h);
+        h                       = fnv1a_int(a.along, h);
+        h                       = fnv1a_int(a.across, h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.unit), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.precision), h);
+        h                       = fnv1a_int(static_cast<std::int64_t>(a.separator), h);
+        h                       = fnv1a(a.format, h);
     }
     return h;
 }

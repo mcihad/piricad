@@ -204,7 +204,7 @@ public:
     /// Folds into the document hash. A document with no attachment folds to the
     /// seed unchanged, so every fixture written before attachments existed keeps
     /// its fingerprint.
-    std::uint64_t fold(std::uint64_t seed) const;
+    std::uint64_t fold(std::uint64_t seed, std::span<const std::uint32_t> position = {}) const;
 
 private:
     void materialise();

@@ -13,6 +13,7 @@
 add_library(kentos_io STATIC
     src/adopt.cpp
     src/block_view.cpp
+    src/xref.cpp
     src/database.cpp
     src/diagnostics.cpp
     src/dwg.cpp

@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — dış referanslar: başka dosyadaki çizim bağlanır (C-14, 1. aşama)
+
+- **DIŞREFERANS.** Bir proje, DXF ya da DWG dosyası çizime dış referans olarak bağlanır:
+  kendi koordinatlarında, yerinde çizilir; köşelerine, merkezlerine yakalanılır; ama
+  düzenlenmez (BLOKDÜZENLE ve PATLAT nedenini söyleyerek reddeder). `islem=yenile` kaynağı
+  yeniden okur; `bosalt`/`yukle` gizler ve geri getirir; `yol` yeni dosyasını gösterir;
+  `bagla` çizime katar; `kaldir` referanslarıyla siler; `listele` durumlarını sayar. Her
+  işlem tek geri alma adımıdır. Şeritte **Harita ▸ Veri ▸ Dış Referans** (ve **Çizim ▸
+  Blok**) ile **Dış Referansları Yenile**.
+- **Proje dosyası dış referansın adını ve yolunu tutar, nesnelerini tutmaz** (biçim 4):
+  nesneler her açılışta kaynaktan okunur, değişmiş kaynak açılışta görünür. Yol proje
+  klasörüne göre yazılır; klasör taşınınca referanslar bulunur, kayıtlı yerinde olmayan
+  dosya proje dosyasının yanında adıyla aranır. Kaynak bulunamazsa çizim yine açılır ve
+  hangi dosyanın eksik olduğu söylenir.
+- Dosyanın katmanları ve blokları `AD|KATMAN`, `AD|BLOK` adıyla gelir; bu katmanlarda
+  yaptığınız renk, görünürlük ve kilit ayarları yenilemede korunur. DXF'e yazılırken
+  adlardaki `|` AutoCAD'in bağlanmış dış referans adlandırmasıyla `$0$` olur.
+
 ### Düzeltildi — proje dosyası: taşınan nesnenin değerleri başka nesneye geçmez, dosya açılır
 
 - **Veri bozulması düzeltildi.** Bir nesneyi taşıyıp (ya da köşesini değiştirip) sonra

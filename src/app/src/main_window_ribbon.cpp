@@ -686,6 +686,7 @@ void MainWindow::buildRibbon()
     small(blocks, actBlockLibrary_);
     small(blocks, actBlock_);
     small(blocks, actExplode_);
+    small(blocks, actXref_);
 
     // ================================================================ `Değiştir`
     SARibbonCategory* modifyTab = bar->addCategoryPage(tr("Değiştir"));
@@ -877,6 +878,8 @@ void MainWindow::buildRibbon()
     large(sources, actDatabase_);
     small(sources, actImport_);
     small(sources, actExport_);
+    large(sources, actXref_);
+    small(sources, actXrefReload_);
 
     // ================================================================== `Analiz`
     SARibbonCategory* analyseTab = bar->addCategoryPage(tr("Analiz"));
@@ -1560,6 +1563,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     blockEdit->addLargeAction(actInsert_);
     blockEdit->addSmallAction(actBlock_);
     blockEdit->addSmallAction(actEntityInfo_);
+    blockEdit->addSmallAction(actXrefReload_);
     closer(block);
 
     // ------------------------------------------------------- `Blok: <ad>`

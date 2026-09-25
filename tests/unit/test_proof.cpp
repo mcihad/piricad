@@ -2748,3 +2748,89 @@ TEST_CASE("PROOF: ALANÖLÇ köşelerden gui, komut satırı ve betikten aynı c
          .scripted = R"({"ad":"ALANÖLÇ","komutlar":[{"cmd":"core.measure_area","args":{
                     "yontem":"nokta","noktalar":[[0,0],[20000,0],[20000,10000],[0,10000]]}}]})"});
 }
+
+TEST_CASE("PROOF: DIŞREFERANS arayüz, komut satırı, betik ve oynatmadan aynı belgeyi ve günlüğü "
+          "bırakır")
+{
+    // TODOS C-14. The ribbon's external reference button chooses the file in a window
+    // and runs the line a user types; a script says the same in JSON; a journal
+    // replay reads the same file again. Four roads, one drawing, one record —
+    // and the reference's objects, read from its file, are the same objects.
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "kentoscad-kanit-disreferans";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    std::filesystem::create_directories(dir, ec);
+    const std::string source = (dir / "altlik.pcad").string();
+    {
+        FileRig src;
+        REQUIRE(src.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::Test).ok());
+        REQUIRE(src.bus.execute_line("DAİRE merkez=50,20 cevre=51,20", Origin::Test).ok());
+        REQUIRE(src.bus.execute_line("FARKLIKAYDET \"" + source + "\"", Origin::Test).ok());
+    }
+    const std::string typed = "DIŞREFERANS dosya=\"" + source + "\" nokta=10,5";
+    const auto lay_out      = [](FileRig& rig, Origin origin) {
+        REQUIRE(rig.bus.execute_line("KATMAN ad=ALTLIK", origin).ok());
+    };
+
+    FileRig gui;
+    lay_out(gui, Origin::Gui);
+    const std::size_t laid = gui.undo.undo_depth();
+    if (auto r = gui.bus.execute_line(typed, Origin::Gui); !r.ok())
+        FAIL_WITH("arayüz", r.error().message);
+    REQUIRE(gui.bus.execute_line("DIŞREFERANS islem=bosalt ad=altlik", Origin::Gui).ok());
+    REQUIRE(gui.bus.execute_line("DIŞREFERANS islem=yukle ad=altlik", Origin::Gui).ok());
+
+    FileRig cli;
+    lay_out(cli, Origin::CommandLine);
+    if (auto r = cli.bus.execute_line(typed, Origin::CommandLine); !r.ok())
+        FAIL_WITH("komut satırı", r.error().message);
+    REQUIRE(cli.bus.execute_line("DIŞREFERANS islem=bosalt ad=altlik", Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("DIŞREFERANS islem=yukle ad=altlik", Origin::CommandLine).ok());
+
+    FileRig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        std::string escaped;
+        for (const char c : source) {
+            if (c == '\\' || c == '"') escaped += '\\';
+            escaped += c;
+        }
+        auto r = runner.run_text(R"({"ad":"Dış referans kanıtı","komutlar":[)"
+                                 R"({"cmd":"core.layer","args":{"ad":"ALTLIK"}},)"
+                                 R"({"cmd":"core.xref","args":{"dosya":")" +
+                                 escaped +
+                                 R"(","nokta":[10000,5000]}},)"
+                                 R"({"cmd":"core.xref","args":{"islem":"bosalt","ad":"altlik"}},)"
+                                 R"({"cmd":"core.xref","args":{"islem":"yukle","ad":"altlik"}}]})");
+        if (!r.ok()) FAIL_WITH("betik", r.error().message);
+    }
+
+    FileRig replay;
+    for (const auto& e : cli.journal.entries())
+        if (auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}); !r.ok())
+            FAIL_WITH(e.command_id, r.error().message);
+
+    for (const FileRig* rig : {&gui, &cli, &scr, &replay}) {
+        const core::BlockId b = rig->doc.blocks().find("altlik");
+        REQUIRE(b != core::kNoBlock);
+        std::size_t live = 0;
+        for (const core::EntityKey k : rig->doc.blocks().at(b).members)
+            if (const core::EntityId m = rig->doc.slot_of(k);
+                m != core::kNoEntity && rig->doc.alive(m))
+                ++live;
+        CHECK_EQ(live, std::size_t{2});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), replay.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(replay.journal));
+    // One command, one undo step: attach, unload, load — and a script, as
+    // every script, is one batch and one step (script.md R14).
+    CHECK_EQ(gui.undo.undo_depth(), laid + 3);
+    CHECK_EQ(cli.undo.undo_depth(), laid + 3);
+    CHECK_EQ(scr.undo.undo_depth(), std::size_t{1});
+    std::filesystem::remove_all(dir, ec);
+}

@@ -156,6 +156,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`cad.block_edit`](#cadblock_edit) | `core.block_edit` | `BLOKDÜZENLE` | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`cad.xref`](#cadxref) | `core.xref` | `DIŞREFERANS` | Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`cad.dimension_edit`](#caddimension_edit) | `core.dimension_edit` | `ÖLÇÜDÜZENLE` | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`cad.dimension_refresh`](#caddimension_refresh) | `core.dimension_refresh` | `ÖLÇÜYENİLE` | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
@@ -1906,6 +1907,34 @@ cad.insert(
 | `file` | `str` | `dosya` | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
 
 [Komut sayfası](../komutlar/insert.md)
+
+### `cad.xref`
+
+Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+
+Komut: `core.xref` — `DIŞREFERANS`
+
+```python
+cad.xref(
+    action: str,
+    file: str,
+    name: str,
+    point: Coord,
+    scale: float,
+    angle: float,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `action` | `str` | `islem` | ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar |
+| `file` | `str` | `dosya` | ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur |
+| `name` | `str` | `ad` | Dış referansın adı; ekle'de verilmezse dosyanın adı |
+| `point` | `Coord` | `nokta` | ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir [mm, Sağa (Y) önce] |
+| `scale` | `float` | `olcek` | ekle için ölçek; varsayılan 1 |
+| `angle` | `float` | `aci` | ekle için dönme açısı, derece; varsayılan 0 |
+
+[Komut sayfası](../komutlar/xref.md)
 
 ### `cad.dimension`
 

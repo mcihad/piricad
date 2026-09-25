@@ -161,6 +161,9 @@ struct Op
 
         /// A block's base point, put back (`Document::set_block_base`).
         SetBlockBase, ///< block_arg, point_arg — the base it had before
+
+        /// A block's external reference, put back (`Document::set_block_external`).
+        SetBlockExternal, ///< block_arg, str_arg (path), byte_arg (flags) — as it was
     };
 
     Kind kind{Kind::None};
@@ -215,6 +218,9 @@ struct Op
     /// The block and the base to put back; see `Kind::SetBlockBase`.
     BlockId block_arg{kNoBlock};
     Point2 point_arg{};
+
+    /// The flags to put back; see `Kind::SetBlockExternal`.
+    std::uint8_t byte_arg{0};
 };
 
 class Document
@@ -331,8 +337,17 @@ public:
     /// since a dead row keeps its key and its file row (model.md R4). The slots
     /// the project file writes as its own, one per row, and the ones
     /// `content_hash` folds the slot tables over: a slot a geometry edit left
-    /// behind for undo is history, and neither travels nor fingerprints.
+    /// behind for undo is history, and neither travels nor fingerprints. The
+    /// rows `external_rows` marks are left out: they are their file's, not the
+    /// document's.
     std::vector<std::uint32_t> row_slots() const;
+
+    /// Which rows are members of an external reference or of a block its file
+    /// defines (`BlockDef::external`), alive or dead — the rows the project file
+    /// does not write, because loading the reference makes them again (model.md
+    /// R45a). Empty when there are none, which is every drawing without an
+    /// external reference and costs it nothing.
+    std::vector<bool> external_rows() const;
 
     // ---- identity: translation happens at the bus boundary only (R2) ----
     EntityKey key_of(EntityId e) const noexcept;
@@ -342,6 +357,13 @@ public:
 
     /// Highest key handed out so far, for the file writer.
     const KeyAllocator& keys() const noexcept { return keys_; }
+
+    /// Moves the entity key counter up to `next`, so the key minted next is
+    /// `next` — how the project reader steps over the keys a file left out on
+    /// purpose, the members of an external reference (model.md R45a). Never
+    /// moves it back, since a key is never handed out twice (R4); false when
+    /// `next` is out of the key space.
+    bool skip_entity_keys_to(EntityKey next) noexcept;
 
     // ---- spatial index: a cache, rebuilt lazily (R6, §10.5) ----
     const SpatialIndex& spatial_index() const;
@@ -444,6 +466,12 @@ public:
     /// `Op::SetBlockBase` with the base it had. The references are the caller's
     /// to keep in place (`move_reference`).
     Status set_block_base(BlockId block, Point2 base, Op& undo_out);
+
+    /// Makes `block` an external reference to `path` with `flags`, or a drawn
+    /// block again (`BlockTable::set_external`); the inverse puts back what it
+    /// was. Loading the members is the caller's (io's), inside the same
+    /// transaction.
+    Status set_block_external(BlockId block, std::string path, std::uint8_t flags, Op& undo_out);
 
     /// Stands block reference `e` at `insertion`, its stored box refreshed with
     /// it — what keeps a reference's picture where it is when its definition's

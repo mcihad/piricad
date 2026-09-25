@@ -76,6 +76,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`core.xref`](xref.md) | Dış Referans | `DIŞREFERANS`, `DISREFERANS`, `XREF`, `DRF` | Dosya | tek işlem | betiklenebilir, AI erişimli | Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
 | [`core.dimension_refresh`](dimension_refresh.md) | Ölçüleri Yenile | `ÖLÇÜYENİLE`, `OLCUYENILE`, `DIMREFRESH`, `ÖYN`, `OYN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır. |
@@ -1052,6 +1053,21 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 | `dosya` | text | isteğe bağlı | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
 
 Ayrıntılı kullanım: [BLOKEKLE](insert.md)
+
+### `core.xref` — DIŞREFERANS (Dış Referans)
+
+Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | isteğe bağlı | ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar |
+| `dosya` | text | isteğe bağlı | ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur |
+| `ad` | text | isteğe bağlı | Dış referansın adı; ekle'de verilmezse dosyanın adı |
+| `nokta` | point | isteğe bağlı | ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir |
+| `olcek` | number | isteğe bağlı | ekle için ölçek; varsayılan 1 |
+| `aci` | number | isteğe bağlı | ekle için dönme açısı, derece; varsayılan 0 |
+
+Ayrıntılı kullanım: [DIŞREFERANS](xref.md)
 
 ### `core.dimension` — ÖLÇÜ (Ölçü)
 
@@ -12827,6 +12843,106 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KOSETASI",
         "MOVEVERTEX",
         "KT"
+      ]
+    }
+  },
+  {
+    "name": "core_xref",
+    "title": "Dış Referans",
+    "description": "Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.\nKomut: DIŞREFERANS (DISREFERANS, XREF, DRF)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "ekle",
+            "yenile",
+            "yukle",
+            "bosalt",
+            "yol",
+            "bagla",
+            "kaldir",
+            "listele"
+          ],
+          "description": "ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar (metin)"
+        },
+        "dosya": {
+          "type": "string",
+          "description": "ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur (metin)"
+        },
+        "ad": {
+          "type": "string",
+          "description": "Dış referansın adı; ekle'de verilmezse dosyanın adı (metin)"
+        },
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "olcek": {
+          "type": "number",
+          "description": "ekle için ölçek; varsayılan 1 (sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "ekle için dönme açısı, derece; varsayılan 0 (sayı)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.xref",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "DIŞREFERANS",
+        "DISREFERANS",
+        "XREF",
+        "DRF"
       ]
     }
   },

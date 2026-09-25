@@ -103,6 +103,22 @@ struct FileRequest
         /// after the file. The name it is known by here is written to
         /// `resolved_block`, for `BLOKEKLE` to place.
         BlockLibrary,
+
+        /// AN EXTERNAL REFERENCE (TODOS C-14, model.md R45a): attach the file
+        /// at `path` — relative to the project's folder, or to the working
+        /// directory for a drawing never saved — as the external reference
+        /// named `block`, or after the file when `block` is empty, and load it
+        /// inside `tx`. Its name is written to `resolved_block`, for
+        /// `DIŞREFERANS` to place a reference to it. A name already attached
+        /// to the same file loads nothing and is placed again.
+        XrefAttach,
+
+        /// Read the file of external reference `block` again, or of every one
+        /// the drawing holds that is not unloaded when `block` is empty.
+        XrefLoad,
+
+        /// Point external reference `block` at the file at `path` and load it.
+        XrefRepath,
     };
 
     Verb verb{Verb::Open}; ///< which operation to carry out

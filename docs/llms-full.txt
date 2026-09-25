@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 113 (100 tanesi onay ister)
-- Katalog parmak izi: `9112520324923722167`
+- Araç sayısı: 114 (101 tanesi onay ister)
+- Katalog parmak izi: `16375509218676202410`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1771,6 +1771,24 @@ Onay ister.
 | `yer` | konum (tutamak ya da göreli nokta) | hayır | Köşeyi gösteren nokta: kose verilmezse en yakın köşe, nesne de verilmezse altındaki nesne — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `kaynak` | konum (tutamak ya da göreli nokta) | hayır | Ortak köşenin bugünkü yeri: verilen nesnelerin o noktadaki bütün köşe ve tutamakları birlikte taşınır — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `nokta` | konum (tutamak ya da göreli nokta) | evet | Köşenin yeni yeri — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_xref` — Dış Referans
+
+Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+Komut: DIŞREFERANS (DISREFERANS, XREF, DRF)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | hayır | ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar (metin) |
+| `dosya` | string | hayır | ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur (metin) |
+| `ad` | string | hayır | Dış referansın adı; ekle'de verilmezse dosyanın adı (metin) |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `olcek` | number | hayır | ekle için ölçek; varsayılan 1 (sayı) |
+| `aci` | number | hayır | ekle için dönme açısı, derece; varsayılan 0 (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_zoom` — Yakınlaş

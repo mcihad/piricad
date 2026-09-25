@@ -48,12 +48,14 @@ std::vector<EntityId> HatchLinkTable::linked() const
     return out;
 }
 
-std::uint64_t HatchLinkTable::fold(std::uint64_t seed) const
+std::uint64_t HatchLinkTable::fold(std::uint64_t seed,
+                                   std::span<const std::uint32_t> position) const
 {
     if (rows_.empty()) return seed;
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows_.size()), seed ^ kHatchLinkSeed);
     for (const auto& [hatch, sources] : rows_) {
-        h = fnv1a_int(static_cast<std::int64_t>(hatch), h);
+        h = fnv1a_int(static_cast<std::int64_t>(hatch < position.size() ? position[hatch] : hatch),
+                      h);
         h = fnv1a_int(static_cast<std::int64_t>(sources.size()), h);
         for (const HatchSource& s : sources) {
             h = fnv1a_int(static_cast<std::int64_t>(raw(s.source)), h);

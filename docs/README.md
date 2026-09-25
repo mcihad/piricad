@@ -33,6 +33,7 @@ Tek tek komutlar:
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |
 | `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
+| `DIŞREFERANS` | [Dış referans: başka dosyadaki çizimi bağlama](komutlar/xref.md) |
 | `YAZDIR` | [Yazdırma ve PDF](komutlar/print.md) |
 | `YAZDIRMAPROFİLİ` | [Yazdırma profilleri](komutlar/print_profile.md) |
 | `ÇIKTIYERLEŞİMİ` | [Çıktı yerleşimi](komutlar/layout.md) |

@@ -16,6 +16,11 @@
 // (format 3). A drawing never edited has one slot per row, in row order, and its
 // columns are still streamed straight from the document.
 //
+// AND ONE KIND OF ROW IS NOT WRITTEN: the members an external reference loaded
+// (model.md R45a, format 4). Their source is the reference's own file, read
+// again on every open; the file keeps the reference's name and path and leaves
+// a gap in the key sequence where its members stood.
+//
 // WHAT TRAVELS, and why each thing does:
 //
 //   CRS + catalogue package version  model.md R35 — a document whose regulatory
@@ -134,6 +139,35 @@ struct RowSlots
     std::vector<std::uint32_t> payload_bytes;
     std::vector<std::uint8_t> payload;
 };
+
+/// `v` without the rows `external` marks, or nothing when it marks none — the
+/// entity columns of a drawing holding an external reference.
+template<class T>
+std::vector<T> without_external(const std::vector<T>& v, const std::vector<bool>& external)
+{
+    std::vector<T> out;
+    if (external.empty()) return out;
+    out.reserve(v.size());
+    for (std::size_t e = 0; e < v.size(); ++e)
+        if (!external[e]) out.push_back(v[e]);
+    return out;
+}
+
+/// An external reference's path as the file stores it: relative to the
+/// directory the project file is written into when both sit under one root,
+/// with forward slashes on every platform — so a project folder can move, or
+/// travel to another machine, with its references beside it. As it is when no
+/// relative form exists (another drive).
+std::string stored_path(const std::string& path, const fs::path& project_file)
+{
+    std::error_code ec;
+    const fs::path absolute = fs::path(path).lexically_normal();
+    const fs::path base     = fs::absolute(project_file, ec).parent_path().lexically_normal();
+    if (!absolute.is_absolute() || absolute.root_name() != base.root_name())
+        return absolute.generic_string();
+    const fs::path relative = absolute.lexically_relative(base);
+    return relative.empty() ? absolute.generic_string() : relative.generic_string();
+}
 
 RowSlots lay_out_by_row(const core::RingGeometry& geo, const std::vector<std::uint32_t>& slots)
 {
@@ -316,6 +350,22 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // The slot each written row holds now; file slot r is row r's.
     const std::vector<std::uint32_t> row_slot = doc.row_slots();
     const RowSlots laid                       = lay_out_by_row(geo, row_slot);
+
+    // The rows an external reference loaded, which the file does not hold; the
+    // entity columns are written without them when there are any.
+    const std::vector<bool> external = doc.external_rows();
+    const auto is_external           = [&external](core::EntityId e) {
+        return !external.empty() && e < external.size() && external[e];
+    };
+    const auto ext_min_x = without_external(ents.min_x, external);
+    const auto ext_min_y = without_external(ents.min_y, external);
+    const auto ext_max_x = without_external(ents.max_x, external);
+    const auto ext_max_y = without_external(ents.max_y, external);
+    const auto ext_flags = without_external(ents.flags, external);
+    const auto ext_layer = without_external(ents.layer, external);
+    const auto ext_style = without_external(ents.style, external);
+    const auto ext_kind  = without_external(ents.kind, external);
+    const auto ext_key   = without_external(ents.key, external);
 
     // ---- strings ----
     StringPool pool;
@@ -559,10 +609,10 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     {
         const core::AttachTable& attachments = doc.attachments();
         for (const core::EntityId e : attachments.attached()) {
-            if (!doc.alive(e)) continue;
+            if (!doc.alive(e) || is_external(e)) continue;
             const core::Attachment* a = attachments.get(e);
             const core::EntityId src  = doc.slot_of(a->source);
-            if (src == core::kNoEntity || !doc.alive(src)) continue;
+            if (src == core::kNoEntity || !doc.alive(src) || is_external(src)) continue;
             AttachRecord r{};
             r.dependent_key = core::raw(doc.key_of(e));
             r.source_key    = core::raw(a->source);
@@ -587,7 +637,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     {
         const core::DimLinkTable& links = doc.dimension_links();
         for (const core::EntityId dim : links.linked()) {
-            if (!doc.alive(dim)) continue;
+            if (!doc.alive(dim) || is_external(dim)) continue;
             for (const core::DimLink& l : *links.get(dim)) {
                 DimLinkRecord r{};
                 r.dimension_key = core::raw(doc.key_of(dim));
@@ -607,7 +657,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     {
         const core::HatchLinkTable& links = doc.hatch_links();
         for (const core::EntityId hatch : links.linked()) {
-            if (!doc.alive(hatch)) continue;
+            if (!doc.alive(hatch) || is_external(hatch)) continue;
             for (const core::HatchSource& s : *links.get(hatch)) {
                 HatchLinkRecord r{};
                 r.hatch_key  = core::raw(doc.key_of(hatch));
@@ -622,6 +672,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<BlockRecord> block_rows;
     std::vector<std::uint64_t> block_members;
     std::vector<std::uint32_t> block_uses;
+    bool any_external = false;
     for (const core::BlockDef& def : doc.blocks().all()) {
         BlockRecord r{};
         r.name_string  = pool.intern(def.name);
@@ -629,14 +680,23 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         r.base_x       = def.base.x;
         r.base_y       = def.base.y;
         r.first_member = static_cast<std::uint32_t>(block_members.size());
+        r.first_use    = static_cast<std::uint32_t>(block_uses.size());
+        r.flags        = def.flags;
+        // AN EXTERNAL REFERENCE KEEPS ITS NAME AND ITS PATH, and nothing its
+        // file supplies: neither the members nor the uses they imply, which
+        // come back with them when the file is read.
+        if (def.external()) {
+            any_external = true;
+            if (!def.path.empty()) r.path_string = pool.intern(stored_path(def.path, path));
+            block_rows.push_back(r);
+            continue;
+        }
         r.member_count = static_cast<std::uint32_t>(def.members.size());
         for (const core::EntityKey k : def.members)
             block_members.push_back(core::raw(k));
-        r.first_use = static_cast<std::uint32_t>(block_uses.size());
         r.use_count = static_cast<std::uint32_t>(def.uses.size());
         for (const core::BlockId u : def.uses)
             block_uses.push_back(u);
-        r.flags = def.flags;
         block_rows.push_back(r);
     }
 
@@ -646,8 +706,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     dr.catalog_string  = catalog_id;
     dr.next_entity_key = doc.keys().peek_entity();
     dr.next_layer_key  = doc.keys().peek_layer();
-    dr.entity_count    = static_cast<std::uint64_t>(ents.size());
-    dr.layer_count     = static_cast<std::uint64_t>(layers.size());
+    dr.entity_count = static_cast<std::uint64_t>(external.empty() ? ents.size() : ext_key.size());
+    dr.layer_count  = static_cast<std::uint64_t>(layers.size());
     // ---- embedded pictures ----
     //
     // MPYY publishes its symbology as images, so a drawing that uses a gösterim
@@ -871,16 +931,17 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         if (!name_rows.empty()) blocks.push_back(column(kBlkLayoutNames, name_rows));
     }
 
-    blocks.push_back(column(kBlkEntityMinX, ents.min_x));
-    blocks.push_back(column(kBlkEntityMinY, ents.min_y));
-    blocks.push_back(column(kBlkEntityMaxX, ents.max_x));
-    blocks.push_back(column(kBlkEntityMaxY, ents.max_y));
-    blocks.push_back(column(kBlkEntityFlags, ents.flags));
-    blocks.push_back(column(kBlkEntityLayer, ents.layer));
-    blocks.push_back(column(kBlkEntityStyle, ents.style));
-    blocks.push_back(column(kBlkEntityKind, ents.kind));
+    const bool all_rows = external.empty();
+    blocks.push_back(column(kBlkEntityMinX, all_rows ? ents.min_x : ext_min_x));
+    blocks.push_back(column(kBlkEntityMinY, all_rows ? ents.min_y : ext_min_y));
+    blocks.push_back(column(kBlkEntityMaxX, all_rows ? ents.max_x : ext_max_x));
+    blocks.push_back(column(kBlkEntityMaxY, all_rows ? ents.max_y : ext_max_y));
+    blocks.push_back(column(kBlkEntityFlags, all_rows ? ents.flags : ext_flags));
+    blocks.push_back(column(kBlkEntityLayer, all_rows ? ents.layer : ext_layer));
+    blocks.push_back(column(kBlkEntityStyle, all_rows ? ents.style : ext_style));
+    blocks.push_back(column(kBlkEntityKind, all_rows ? ents.kind : ext_kind));
     blocks.push_back(column(kBlkEntitySlot, laid.raw ? ents.slot : laid.slot));
-    blocks.push_back(column(kBlkEntityKey, ents.key));
+    blocks.push_back(column(kBlkEntityKey, all_rows ? ents.key : ext_key));
 
     blocks.push_back(column(kBlkRingStart, laid.raw ? geo.ring_start : laid.ring_start));
     blocks.push_back(column(kBlkRingCount, laid.raw ? geo.ring_count : laid.ring_count));
@@ -956,14 +1017,15 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // THE FILE SAYS WHAT IT NEEDS, per drawing rather than per build. Only an
     // angled guide raises it, because only that uses a new value of an OLD block
     // (format.hpp `kMinReaderVersionAngledGuide`).
-    header.min_reader_version =
-        doc.guides().any_angled() ? kMinReaderVersionAngledGuide : kMinReaderVersion;
-    header.header_bytes     = static_cast<std::uint32_t>(sizeof(FileHeader));
-    header.block_count      = static_cast<std::uint32_t>(directory.size());
-    header.directory_offset = directory_offset;
-    header.file_bytes       = total;
-    header.content_hash     = doc.content_hash();
-    header.settings_hash    = settings.fold(core::fnv1a(std::string_view{}));
+    header.min_reader_version = any_external                ? kMinReaderVersionExternal
+                                : doc.guides().any_angled() ? kMinReaderVersionAngledGuide
+                                                            : kMinReaderVersion;
+    header.header_bytes       = static_cast<std::uint32_t>(sizeof(FileHeader));
+    header.block_count        = static_cast<std::uint32_t>(directory.size());
+    header.directory_offset   = directory_offset;
+    header.file_bytes         = total;
+    header.content_hash       = doc.content_hash();
+    header.settings_hash      = settings.fold(core::fnv1a(std::string_view{}));
 
     // ---- out ----
     AtomicFile file;
@@ -991,7 +1053,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (auto st = file.commit(); !st) return st.error();
 
     ProjectReport report;
-    report.entities             = static_cast<std::uint64_t>(doc.live_entity_count());
+    // The drawing's own objects: an external reference's are its file's.
+    std::uint64_t live = doc.live_entity_count();
+    for (std::size_t e = 0; e < external.size(); ++e)
+        if (external[e] && doc.alive(static_cast<core::EntityId>(e))) --live;
+    report.entities             = live;
     report.layers               = dr.layer_count;
     report.vertices             = dr.vertex_count;
     report.bytes                = total;

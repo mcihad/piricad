@@ -179,39 +179,22 @@ core::Result<std::vector<std::string>> ensure_field_columns(Context& ctx, core::
     return declared;
 }
 
+core::Result<core::EntityId> place_reference(Context& ctx, core::Point2 at,
+                                             core::BlockReference ref)
+{
+    ref.bounds = core::block_reference_bounds(ctx.document(), at, ref);
+    const core::Point2 pts[1]{at};
+    const core::RingGeometry::RingInput ring{std::span<const core::Point2>(pts, 1),
+                                             core::RingRole::Open, 0};
+    const std::vector<std::uint8_t> payload = core::encode_block_reference(ref);
+    return ctx.transaction().add_kind(ctx.active_layer(), core::kBlockReferenceKind,
+                                      std::span<const core::RingGeometry::RingInput>(&ring, 1),
+                                      payload);
+}
+
 core::Result<std::size_t> refresh_references(Context& ctx, core::BlockId block)
 {
-    const core::Document& doc      = ctx.document();
-    const core::BlockTable& blocks = doc.blocks();
-
-    // THE BLOCKS THAT DRAW IT, at any depth: the definition itself, and every
-    // definition that uses one that does. A use list may name a block no member
-    // places any more; refreshing such a reference is a comparison and no write.
-    std::vector<bool> draws(blocks.size(), false);
-    if (block < draws.size()) draws[block] = true;
-    for (bool grew = true; grew;) {
-        grew = false;
-        for (core::BlockId b = 0; b < blocks.size(); ++b) {
-            if (draws[b]) continue;
-            for (const core::BlockId used : blocks.at(b).uses)
-                if (used < draws.size() && draws[used]) {
-                    draws[b] = true;
-                    grew     = true;
-                    break;
-                }
-        }
-    }
-
-    std::size_t changed = 0;
-    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
-        if (!doc.alive(e) || doc.entities().kind[e] != core::kBlockReferenceKind) continue;
-        auto ref = core::block_reference_of(doc.geometry(), doc.entities().slot[e]);
-        if (!ref || ref.value().block >= draws.size() || !draws[ref.value().block]) continue;
-        const std::uint32_t was = doc.entities().slot[e];
-        if (auto st = ctx.transaction().refresh_reference_bounds(e); !st) return st.error();
-        if (doc.entities().slot[e] != was) ++changed;
-    }
-    return changed;
+    return ctx.transaction().refresh_block_references(block);
 }
 
 } // namespace kentos::command

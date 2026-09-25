@@ -17,6 +17,8 @@
 #include <QStyledItemDelegate>
 #include <QWidget>
 
+#include <optional>
+
 /// Qt widgets this header only holds pointers to.
 class QLabel;
 class QLineEdit;
@@ -136,6 +138,12 @@ public:
     /// Highlights exactly the rows named, for `KENTOS_LAYER_PROBE`: a menu that
     /// acts on the selection can only be tested with a selection in place.
     void probeSelect(const QStringList& layerNames);
+
+    /// For `KENTOS_REALMOUSE_PROBE`: whether the group row named `group` shows
+    /// its layers seen — after a REAL click on its eye, with `click`. Empty when
+    /// there is no such group row. A probe that set the layers itself would
+    /// prove nothing about the eye a user presses.
+    std::optional<bool> probeGroupEye(const QString& group, bool click);
 
     /// Highlights `layer` in the list without sending anything to the bus.
     ///

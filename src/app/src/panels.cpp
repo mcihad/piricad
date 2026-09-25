@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <tuple>
 #include <vector>
 
 #include <QCoreApplication>
@@ -116,6 +117,8 @@ void LayerRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     const QString name  = index.data(Qt::DisplayRole).toString();
     const QString tally = index.data(Qt::UserRole + 5).toString();
     const int depth     = index.data(Qt::UserRole + 6).toInt();
+    // A GROUP ROW carries no layer id; its eye shows its layers (`settle_group`).
+    const bool group = !index.data(Qt::UserRole).isValid();
 
     int x = box.left() + kLayerPadX + depth * 14;
     painter->drawPixmap(QRect(x, box.top() + (kLayerRow - kLayerEye) / 2, kLayerEye, kLayerEye),
@@ -152,11 +155,14 @@ void LayerRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     // A locked layer is WARN, an open one is faint. §2 gives warn exactly one
     // meaning — "you cannot edit this yet" — and this is one of its two uses.
-    painter->drawPixmap(QRect(box.right() - kLayerPadX - kLayerLock,
-                              box.top() + (kLayerRow - kLayerLock) / 2, kLayerLock, kLayerLock),
-                        glyph_pixmap(locked ? Glyph::Lock : Glyph::Unlock,
-                                     locked ? t.warn : t.textFaint, kLayerLock,
-                                     option.widget ? option.widget->devicePixelRatioF() : 1.0));
+    // A group row has no lock of its own to press, so it shows one only when
+    // every layer under it is locked.
+    if (!group || locked)
+        painter->drawPixmap(QRect(box.right() - kLayerPadX - kLayerLock,
+                                  box.top() + (kLayerRow - kLayerLock) / 2, kLayerLock, kLayerLock),
+                            glyph_pixmap(locked ? Glyph::Lock : Glyph::Unlock,
+                                         locked ? t.warn : t.textFaint, kLayerLock,
+                                         option.widget ? option.widget->devicePixelRatioF() : 1.0));
 
     painter->restore();
 }
@@ -296,6 +302,10 @@ core::LayerId LayerPanel::selectedLayer() const
     return static_cast<core::LayerId>(id.toUInt());
 }
 
+namespace {
+void layers_under(const QTreeWidgetItem* node, QStringList& out);
+} // namespace
+
 void LayerPanel::toggleRow(QTreeWidgetItem* item, bool visibility)
 {
     if (!item) return;
@@ -306,7 +316,22 @@ void LayerPanel::toggleRow(QTreeWidgetItem* item, bool visibility)
     // this did — returns an invalid QVariant, `toBool()` makes it false, and the
     // command then always says `gorunur=evet`: the eye never turned off.
     const QVariant id = item->data(0, Qt::UserRole);
-    if (!id.isValid()) return; // a group row has no layer to toggle
+    if (!id.isValid()) {
+        // A GROUP'S EYE puts out every layer under it while any is showing and
+        // brings them all up when none is — one batch, one undo step, the road
+        // the panel's own Görünüm menu takes. Its lock is not a control.
+        if (!visibility) return;
+        QStringList names;
+        layers_under(item, names);
+        if (names.isEmpty()) return;
+        const bool seen    = item->data(0, Qt::UserRole + 1).toBool();
+        const QString verb = seen ? QStringLiteral("gizle") : QStringLiteral("goster");
+        QStringList lines;
+        for (const QString& name : names)
+            lines << QStringLiteral("KATMANGÖRÜNÜM islem=%1 katman=\"%2\"").arg(verb, name);
+        controller_.runLines(lines, seen ? tr("Grubu gizle") : tr("Grubu göster"));
+        return;
+    }
 
     const QString name = item->text(0);
 
@@ -361,6 +386,33 @@ bool LayerPanel::eventFilter(QObject* watched, QEvent* event)
     case LayerRowDelegate::Hit::Lock: toggleRow(item, false); return true;
     default: return false; // the rest of the row is a normal selection click
     }
+}
+
+std::optional<bool> LayerPanel::probeGroupEye(const QString& group, bool click)
+{
+    const auto find = [this, &group]() -> QTreeWidgetItem* {
+        for (QTreeWidgetItemIterator it(tree_); *it; ++it)
+            if (!(*it)->data(0, Qt::UserRole).isValid() && (*it)->text(0) == group) return *it;
+        return nullptr;
+    };
+    QTreeWidgetItem* row = find();
+    if (row == nullptr) return std::nullopt;
+    if (click) {
+        const int depth  = row->data(0, Qt::UserRole + 6).toInt();
+        const QRect rect = tree_->visualItemRect(row);
+        const QPointF at(rect.left() + kLayerPadX + depth * 14 + kLayerEye / 2.0,
+                         rect.center().y());
+        QMouseEvent press(QEvent::MouseButtonPress, at, tree_->viewport()->mapToGlobal(at),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, at, tree_->viewport()->mapToGlobal(at),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(tree_->viewport(), &press);
+        QCoreApplication::sendEvent(tree_->viewport(), &release);
+        QCoreApplication::processEvents();
+        row = find(); // the tree was rebuilt under the click
+        if (row == nullptr) return std::nullopt;
+    }
+    return row->data(0, Qt::UserRole + 1).toBool();
 }
 
 void LayerPanel::probeByHand()
@@ -515,6 +567,49 @@ QTreeWidgetItem* group_node(QTreeWidget* tree, QHash<QString, QTreeWidgetItem*>&
     return node;
 }
 
+/// Gives group row `node`, at nesting `depth`, the state of the layers under
+/// it: seen while any of them is, locked when all of them are. Painted from the
+/// same roles as a layer row, a group row otherwise read as hidden — its eye
+/// out and its words faint — over layers that were drawing. Every layer row
+/// below it gets its true depth on the way. Returns {any seen, all locked}.
+std::pair<bool, bool> settle_group(QTreeWidgetItem* node, int depth)
+{
+    bool any_seen   = false;
+    bool all_locked = true;
+    bool any_layer  = false;
+    for (int c = 0; c < node->childCount(); ++c) {
+        QTreeWidgetItem* child = node->child(c);
+        bool seen              = false;
+        bool locked            = false;
+        if (child->data(0, Qt::UserRole).isValid()) {
+            seen   = child->data(0, Qt::UserRole + 1).toBool();
+            locked = child->data(0, Qt::UserRole + 2).toBool();
+            child->setData(0, Qt::UserRole + 6, depth + 1);
+        } else {
+            std::tie(seen, locked) = settle_group(child, depth + 1);
+        }
+        any_layer  = true;
+        any_seen   = any_seen || seen;
+        all_locked = all_locked && locked;
+    }
+    node->setData(0, Qt::UserRole + 1, any_seen);
+    node->setData(0, Qt::UserRole + 2, any_layer && all_locked);
+    node->setData(0, Qt::UserRole + 6, depth);
+    return {any_seen, any_layer && all_locked};
+}
+
+/// The names of every layer under group row `node`, at any depth.
+void layers_under(const QTreeWidgetItem* node, QStringList& out)
+{
+    for (int c = 0; c < node->childCount(); ++c) {
+        const QTreeWidgetItem* child = node->child(c);
+        if (child->data(0, Qt::UserRole).isValid())
+            out << child->text(0);
+        else
+            layers_under(child, out);
+    }
+}
+
 /// The style the entities on each layer actually carry, where they agree.
 ///
 /// A layer holds a DEFAULT appearance and its entities hold a style column, so
@@ -595,6 +690,10 @@ void LayerPanel::refresh()
 
         if (static_cast<core::LayerId>(i) == keep) item->setSelected(true);
     }
+
+    for (int i = 0; i < tree_->topLevelItemCount(); ++i)
+        if (QTreeWidgetItem* top = tree_->topLevelItem(i); !top->data(0, Qt::UserRole).isValid())
+            (void)settle_group(top, 0);
 
     tree_->expandAll();
     tree_->blockSignals(false);
