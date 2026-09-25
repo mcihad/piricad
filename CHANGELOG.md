@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — dönüşümlü ve iç içe dış referanslar (C-14, 3. aşama)
+
+- Başka koordinat sisteminde çizilmiş bir proje dosyası, dış referans olarak okunurken
+  **çizimin sistemine dönüştürülür** (DÖNÜŞTÜR'ün kendisiyle); sistemler çözülebiliyorsa
+  EPSG kodlarıyla karşılaştırılır. Çizim DÖNÜŞTÜR ile sistem değiştirince dış referanslar
+  aynı işlemde dosyalarından yeni sisteme dönüştürülerek yeniden okunur.
+- **İç içe dış referans:** bağlanan dosyanın kendi dış referansları `A|B` bağımlısı olarak
+  gelir; döngü (A→B→A, ya da çizimin kendisi) kesilir ve söylenir; sekiz kat sınırı.
+- DXF içe aktarımı dosyadaki dış referans bloklarını (XREF) adlarıyla söyler; yolları okunmadığı
+  için boş blok olarak gelirler (DXF uyumluluk hücresi; yolun okunup yazılması I-03'te).
+
 ### Düzeltildi — DÖNÜŞTÜR daire, yay ya da blok içeren çizimi dönüştürüyor
 
 - **DÖNÜŞTÜR**, içinde tek bir daire ya da yay olan çizimi reddediyordu ("Dairenin yarıçap

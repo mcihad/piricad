@@ -7,6 +7,7 @@
 // a drawing holds when it opens.
 #pragma once
 
+#include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/crs.hpp"
@@ -49,6 +50,7 @@ struct XrefLoad
     std::uint64_t layers{0};        ///< layers made for it
     std::string found_at;           ///< where the file was read from
     bool moved{false};              ///< found beside the project, not where recorded
+    std::string reprojected_from;   ///< the system it was drawn in, when not the drawing's
     std::vector<std::string> notes; ///< what could not be carried, in Turkish
 };
 
@@ -59,13 +61,25 @@ struct XrefLoad
 /// found beside the project rather than where it was recorded has its new
 /// place written into the definition. A failure leaves the definition as it
 /// was, not half filled.
+///
+/// A file drawn in ANOTHER coordinate system is carried into the drawing's by
+/// `DÖNÜŞTÜR` — the one reprojection this program has — run on the scratch
+/// through `host`'s registry and resolver; without a host that has it, such a
+/// file is refused. The file's OWN external references are loaded into it
+/// first, once it stands in the drawing's system, and arrive as its
+/// dependents; `chain` holds the files being read on the way down, so a file
+/// that references one of them is refused rather than read forever.
 command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, core::BlockId block,
-                                                    std::string project, std::stop_token stop);
+                                                    std::string project, std::stop_token stop,
+                                                    command::Bus* host             = nullptr,
+                                                    std::vector<std::string> chain = {});
 
 /// Loads every external reference the document holds that is neither
 /// unloaded nor taken off. One whose file cannot be read becomes a warning,
 /// and the drawing still opens: a missing reference draws nothing, and says so.
 command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std::string project,
-                                                   std::stop_token stop);
+                                                   std::stop_token stop,
+                                                   command::Bus* host             = nullptr,
+                                                   std::vector<std::string> chain = {});
 
 } // namespace kentos::io

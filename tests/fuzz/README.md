@@ -77,6 +77,7 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `dxf/23-tarama-desen-satirlari.dxf` | three hatches with definition lines after group 78: a catalogue pattern set on its own origin, a pattern no catalogue has with a dashed line, and a record announcing more lines than it carries |
 | `dxf/24-tarama-desen-bozuk.dxf` | five hatches whose definition lines lie: a count past any pattern, a base point before its line, a dash count past the bound, an angle that is not a number, a dash past its count |
 | `dxf/25-cok-satirli-yazi.dxf` | a bottom-right MTEXT of three paragraphs with an underline switched on and off, spaced twice; an ALIGNED TEXT whose two points are both its ends |
+| `dxf/28-dis-referans-blogu.dxf` | a BLOCK flagged as an external reference (group 70 bit 4, path in group 1) with an INSERT of it: the reader names it and brings it as an empty block (TODOS C-14) |
 | `komut/01-mutlak.txt` | two absolute metre coordinates |
 | `komut/02-goreli.txt` | relative coordinates, negative and fractional |
 | `komut/03-kutupsal-soneksiz.txt` | bare polar angles on all four axes, the diagonal, negative and past a full turn |

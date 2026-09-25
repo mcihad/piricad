@@ -20,6 +20,8 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "kentos_cad/domain/geodesy/transform.hpp"
 #include "kentos_cad/io/format.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
@@ -49,9 +51,12 @@ struct Rig
     io::FileService files{bus};
     std::string said;
 
-    Rig()
+    explicit Rig(bool geodesy = false)
     {
         register_builtin_commands(reg);
+        // DÖNÜŞTÜR, for a reference drawn in another system: registered as the
+        // application registers it, beside the built-in commands.
+        if (geodesy) domain::geodesy::register_geodesy_commands(reg);
         bus.on_echo = [this](std::string_view s) { said.append(s).append("\n"); };
     }
 
@@ -561,4 +566,157 @@ TEST_CASE("DIŞREFERANS: liste durumları ve her adımın raporu panelle komutta
         std::vector<std::string>{"altlik"});
     CHECK_EQ(names(step("DIŞREFERANS islem=kaldir ad=altlik")), std::vector<std::string>{"altlik"});
     CHECK(list_external_references(host.doc).empty());
+}
+
+namespace {
+
+/// The first vertex of every live member of `name`, as drawn in the definition.
+std::vector<Point2> first_vertices(const Rig& r, const std::string& name)
+{
+    std::vector<Point2> out;
+    const core::BlockId b = r.block(name);
+    if (b == core::kNoBlock) return out;
+    for (const core::EntityKey k : r.doc.blocks().at(b).members) {
+        const core::EntityId m = r.doc.slot_of(k);
+        if (m == core::kNoEntity || !r.doc.alive(m)) continue;
+        const core::RingSpan span = r.doc.geometry().rings_of(r.doc.entities().slot[m]);
+        out.push_back(Point2{r.doc.geometry().ring_xs(span.first)[0],
+                             r.doc.geometry().ring_ys(span.first)[0]});
+    }
+    return out;
+}
+
+/// A drawing in `crs` holding one parcel at `at` (metres), saved to `path`.
+void write_parcel(const std::string& path, const std::string& crs, const std::string& at)
+{
+    Rig src;
+    src.run("AYAR core.crs.id " + crs);
+    src.run("KATMAN ad=PARSEL");
+    src.run("ALAN noktalar=" + at);
+    src.run("FARKLIKAYDET \"" + path + "\"");
+}
+
+} // namespace
+
+TEST_CASE("DIŞREFERANS: başka sistemdeki proje dosyası çizimin sistemine dönüştürülerek gelir")
+{
+    if (!domain::geodesy::Transform::available()) return; // PROJ off in this build
+    TempDir tmp("sistem");
+    const std::string source = tmp.file("tm33.pcad");
+    write_parcel(source, "EPSG:5255", "500100,4310200 500160,4310200 500160,4310245");
+
+    Rig host(true);
+    host.run("AYAR core.crs.id EPSG:5254");
+    host.run("DIŞREFERANS dosya=\"" + source + "\"");
+    CHECK(host.said.find("EPSG:5255 sisteminden çizimin sistemine dönüştürüldü") !=
+          std::string::npos);
+
+    std::vector<Point2> expected{Point2{500'100'000, 4'310'200'000}};
+    auto proj = domain::geodesy::Transform::between("EPSG:5255", "EPSG:5254");
+    REQUIRE(proj.ok());
+    REQUIRE(proj.value().forward(std::span<Point2>(expected)).ok());
+    const std::vector<Point2> drawn = first_vertices(host, "tm33");
+    REQUIRE_EQ(drawn.size(), std::size_t{1});
+    CHECK_EQ(drawn.front(), expected.front());
+
+    // Without anything that can carry it, the same file is refused by name.
+    Rig bare;
+    bare.run("AYAR core.crs.id EPSG:5254");
+    CHECK(bare.refused("DIŞREFERANS dosya=\"" + source + "\"").find("koordinat dönüştüremiyor") !=
+          std::string::npos);
+}
+
+TEST_CASE("DIŞREFERANS: çizim DÖNÜŞTÜR ile sistem değiştirince dış referansı yeni sistemde okunur")
+{
+    if (!domain::geodesy::Transform::available()) return;
+    TempDir tmp("donustur");
+    const std::string source = tmp.file("altlik.pcad");
+    write_parcel(source, "EPSG:5254", "485300,4310200 485360,4310200 485360,4310245");
+
+    Rig host(true);
+    host.run("AYAR core.crs.id EPSG:5254");
+    host.run("DIŞREFERANS dosya=\"" + source + "\"");
+    const std::uint64_t before = host.doc.content_hash();
+    REQUIRE_EQ(first_vertices(host, "altlik").front(), (Point2{485'300'000, 4'310'200'000}));
+
+    host.run("DÖNÜŞTÜR hedef=EPSG:5255");
+    // The reference stayed where it was — at its file's own origin — and its
+    // file was read again, carried into the drawing's new system.
+    std::vector<Point2> expected{Point2{485'300'000, 4'310'200'000}};
+    auto proj = domain::geodesy::Transform::between("EPSG:5254", "EPSG:5255");
+    REQUIRE(proj.ok());
+    REQUIRE(proj.value().forward(std::span<Point2>(expected)).ok());
+    CHECK_EQ(first_vertices(host, "altlik").front(), expected.front());
+    REQUIRE_EQ(host.references().size(), std::size_t{1});
+    const std::uint32_t gs = host.doc.entities().slot[host.references().front()];
+    CHECK_EQ(core::block_reference_insertion(host.doc.geometry(), gs), (Point2{0, 0}));
+    CHECK_EQ(core::block_reference_of(host.doc.geometry(), gs).value().rotation_udeg, 0);
+
+    // One step back takes the drawing and its reference back together.
+    host.run("GERİAL");
+    CHECK_EQ(host.doc.content_hash(), before);
+    CHECK_EQ(first_vertices(host, "altlik").front(), (Point2{485'300'000, 4'310'200'000}));
+}
+
+TEST_CASE("DIŞREFERANS: dosyanın kendi dış referansları iç içe gelir; döngü okunmaz")
+{
+    TempDir tmp("ic-ice");
+    const std::string inner = tmp.file("B.pcad");
+    const std::string outer = tmp.file("A.pcad");
+    write_parcel(inner, "EPSG:5254", "10,10 20,10 20,20");
+    {
+        Rig a;
+        a.run("AYAR core.crs.id EPSG:5254");
+        a.run("ÇİZGİ 0,0 5,0");
+        a.run("FARKLIKAYDET \"" + outer + "\"");
+        a.run("DIŞREFERANS dosya=\"" + inner + "\"");
+        a.run("KAYDET");
+    }
+
+    Rig host;
+    host.run("AYAR core.crs.id EPSG:5254");
+    host.run("DIŞREFERANS dosya=\"" + outer + "\"");
+    // A's line and its reference to B are A's; B's parcel arrives as A's
+    // dependent `A|B`, drawn through both.
+    CHECK_EQ(host.members("A"), std::size_t{2});
+    const core::BlockId nested = host.block("A|B");
+    REQUIRE(nested != core::kNoBlock);
+    CHECK((host.doc.blocks().at(nested).flags & core::kBlockDependent) != 0);
+    CHECK_EQ(host.members("A|B"), std::size_t{1});
+    CHECK_EQ(host.snap(Point2{20'040, 20'030}, core::SnapEndpoint).point, (Point2{20'000, 20'000}));
+    CHECK(host.doc.find_layer("A|B|PARSEL") != core::kNoLayer);
+
+    // A LOOP: B now references A too. Reading A reaches B, and B's A is the
+    // file already being read — refused as a note, not read forever.
+    {
+        Rig b;
+        b.run("AÇ \"" + inner + "\"");
+        b.run("DIŞREFERANS dosya=\"" + outer + "\"");
+        b.run("KAYDET");
+    }
+    Rig again;
+    again.run("AYAR core.crs.id EPSG:5254");
+    again.run("DIŞREFERANS dosya=\"" + outer + "\"");
+    CHECK_EQ(again.members("A|B"), std::size_t{2}); // its parcel, and its reference to A
+    CHECK_MESSAGE(again.said.find("döngüsü") != std::string::npos, again.said);
+}
+
+TEST_CASE("DIŞREFERANS: DXF'teki dış referans bloğu adıyla söylenir, boş blok olarak gelir")
+{
+    // The compatibility cell for DXF and DWG xrefs (TODOS C-14's dependency):
+    // what happens today, pinned. The library the DXF road reads with gives
+    // the block and its XREF flag but not its path (group 1), so the block
+    // arrives empty — and the import says so, by name, instead of leaving a
+    // block that draws nothing to look like one that should.
+    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / "28-dis-referans-blogu.dxf";
+    REQUIRE(fs::exists(seed));
+    Rig r;
+    r.run("AYAR core.crs.id EPSG:5254");
+    r.run("İÇEAKTAR \"" + seed.string() + "\"");
+    CHECK(r.said.find("dış referans (XREF): ALTLIK") != std::string::npos);
+    const core::BlockId altlik = r.block("ALTLIK");
+    REQUIRE(altlik != core::kNoBlock);
+    CHECK_EQ(r.members("ALTLIK"), std::size_t{0});
+    CHECK_EQ(r.doc.blocks().at(altlik).flags, 0); // not an external reference here: no path
+    CHECK(r.doc.find_layer("CIZGI") != core::kNoLayer);
 }

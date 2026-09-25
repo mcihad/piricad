@@ -31,6 +31,10 @@ belgeden uzak tutun.
 | Daire, yay, elips, tarama, ölçü, lider, blok referansı | Çapası (merkezi, ekleme noktası, ilk noktası) PROJ ile **tam**; biçimi o noktadaki **yerel dönme ve ölçekle**: daire daire, yay yay kalır; yazı ve blok, iki dilimin grid kuzeyleri arasındaki açı kadar döner |
 | Blok tanımının içi | **Dokunulmaz**: tanım kendi koordinatındadır, referansı taşınınca bütün kopyalar taşınır |
 
+[Dış referanslar](xref.md) bu tabloda yoktur: tanımları kendi dosyalarının koordinatındadır.
+Dönüşüm bitince, aynı işlemin içinde, dosyalarından **yeni sisteme dönüştürülerek
+yeniden okunurlar**.
+
 Yerel ölçek gerçektir: bir dilimin orta meridyeninden uzakta harita metresi yer
 metresinden kısadır — örneğin TUREF TM36'dan TM30'a geçen, orta meridyenden 5,8°
 uzaktaki bir noktada binde üç kadar. 5 m yarıçaplı bir daire yeni haritada 5,016 m

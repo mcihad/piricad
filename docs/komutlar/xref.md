@@ -46,9 +46,25 @@ yenilemede ve yeniden açılışta **sizin ayarınız kalır**. Dosyanın içind
 
 ### Koordinat sistemi
 
-Dosya çizimle **aynı koordinat sisteminde** olmalıdır. Başka sistemdeki bir proje
-dosyası bu sürümde dış referans olarak yüklenmez: kilometrelerce ötede, doğruymuş gibi
-çizilirdi. Dönüşümlü dış referans C-14'ün sonraki bir aşamasında gelecek.
+Başka bir koordinat sisteminde çizilmiş bir proje dosyası, okunurken **çizimin
+sistemine dönüştürülür** — [DÖNÜŞTÜR](reproject.md)'ün kendisiyle: parselleri köşe
+köşe PROJ ile, daireleri, yazıları ve blokları o noktadaki yerel dönme ve ölçekle. Yükleme
+mesajı hangi sistemden geldiğini söyler: `EPSG:5255 sisteminden çizimin sistemine
+dönüştürüldü`. İki sistem, ikisi de çözülebiliyorsa EPSG kodlarıyla karşılaştırılır
+(`TUREF/TM30` ile `EPSG:5254` aynıdır). PROJ'suz bir yapıda böyle bir dosya adıyla
+reddedilir. DXF ve DWG dosyaları zaten çizimin sisteminde okunur.
+
+Çizimin kendisini DÖNÜŞTÜR ile başka bir sisteme geçirdiğinizde dış referanslar da
+**dosyalarından, yeni sisteme dönüştürülerek yeniden okunur** — aynı işlemin içinde:
+tek Ctrl+Z çizimi de referanslarını da geri getirir.
+
+### İç içe dış referanslar
+
+Bağladığınız proje dosyasının **kendi** dış referansları da gelir: `A` dosyası `B`'yi
+bağlıyorsa `B`'nin nesneleri `A|B` bağımlı bloğu olarak çizilir, katmanları `A|B|KATMAN`
+adını alır. Kendini içeren bir halka — `A` `B`'yi, `B` de `A`'yı bağlıyorsa, ya da bir
+dosya çizimin kendisini bağlıyorsa — sonsuza dek okunmaz: halka kesilir ve yükleme
+mesajında `Dış referans döngüsü` diye söylenir. Sekiz kattan derin iç içelik okunmaz.
 
 ## Adlar
 
@@ -221,13 +237,14 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 
 ## Sınırlar
 
-- Bağlanan bir proje dosyasının **kendi** dış referansları bu sürümde okunmaz; o
-  referanslar boş gelir.
-- DWG ve DXF dosyalarının içindeki dış referanslar (XREF) okunmaz ve yazılmaz; DXF'e dışa
-  aktarılan bir çizimde dış referans o anki içeriğiyle sıradan bir blok olarak yazılır ve
-  adlardaki `|`, AutoCAD'in bağlanmış dış referansları adlandırdığı gibi `$0$` olur
-  (`altlik$0$YOL`). Bu uyumluluk, kırpma (dış referansın yalnız bir bölgesini göstermek)
-  ve dönüşümlü referans C-14'ün sonraki aşamalarında gelecek.
+- DWG ve DXF dosyalarının içindeki dış referanslar (XREF) okunmaz ve yazılmaz. İçe
+  aktarılan bir DXF'teki dış referans bloğu **boş blok** olarak gelir ve içe aktarma adını
+  söyler (`1 blok dosyada dış referans (XREF): ALTLIK…`); DXF'e dışa aktarılan bir
+  çizimde dış referans o anki içeriğiyle sıradan bir blok olarak yazılır ve adlardaki `|`,
+  AutoCAD'in bağlanmış dış referansları adlandırdığı gibi `$0$` olur (`altlik$0$YOL`).
+  DXF'in dış referans yolunu okuyup yazmak DXF uyumluluk işinde (I-03) gelecek.
+- Kırpma (dış referansın yalnız bir bölgesini göstermek) C-14'ün sonraki aşamasında
+  gelecek.
 
 ## İlgili
 

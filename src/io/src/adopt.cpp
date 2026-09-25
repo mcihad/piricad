@@ -46,7 +46,7 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
     // the same read, before anything is on screen (TODOS C-14, model.md R45a).
     // One whose file cannot be read is a warning, never a failed open: a
     // missing base map must not lock a surveyor out of their own drawing.
-    auto missing = co_await load_externals(tx, project, stop);
+    auto missing = co_await load_externals(tx, project, stop, &bus, {project});
     report.value().warnings.insert(report.value().warnings.end(), missing.begin(), missing.end());
 
     bus.document()         = std::move(loaded);

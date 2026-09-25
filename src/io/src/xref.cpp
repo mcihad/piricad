@@ -31,6 +31,42 @@ bool same_file(const std::string& a, const std::string& b)
     return fs::path(a).lexically_normal() == fs::path(b).lexically_normal();
 }
 
+/// How deep references inside references are followed.
+constexpr std::size_t kMaxNesting = 8;
+
+/// Carries `scratch` from `from` to `to` with `DÖNÜŞTÜR`, run on a bus of its
+/// own over `registry` — the program's one reprojection, not a second copy of
+/// it. A layer the file locked would refuse the move, so the locks are lifted
+/// for it and put back after: the scratch is nobody's work, and what it
+/// brings keeps the locks its file set.
+core::Status reproject_scratch(core::Document& scratch, command::Registry& registry,
+                               const std::string& from, const std::string& to)
+{
+    std::vector<core::LayerId> locked;
+    {
+        command::Transaction lift(scratch, "kilit-ac");
+        for (std::size_t l = 0; l < scratch.layer_table().size(); ++l) {
+            const core::Layer* layer = scratch.layer_table().at(static_cast<core::LayerId>(l));
+            if (layer == nullptr || !layer->locked) continue;
+            if (auto st = lift.set_layer_locked(static_cast<core::LayerId>(l), false); !st)
+                return st;
+            locked.push_back(static_cast<core::LayerId>(l));
+        }
+    }
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus side{scratch, registry, journal, undo};
+    auto moved = side.execute_line("DÖNÜŞTÜR kaynak=\"" + from + "\" hedef=\"" + to + "\"",
+                                   command::Origin::Batch);
+    {
+        command::Transaction put_back(scratch, "kilit-kapat");
+        for (const core::LayerId l : locked)
+            (void)put_back.set_layer_locked(l, true);
+    }
+    if (!moved) return moved.error();
+    return core::ok();
+}
+
 } // namespace
 
 bool looks_like_dxf(const std::string& path)
@@ -89,7 +125,9 @@ std::string locate_external(const std::string& path, const std::string& project)
 }
 
 command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, core::BlockId block,
-                                                    std::string project, std::stop_token stop)
+                                                    std::string project, std::stop_token stop,
+                                                    command::Bus* host,
+                                                    std::vector<std::string> chain)
 {
     core::Document& doc = tx.document();
     if (block >= doc.blocks().size())
@@ -111,23 +149,70 @@ command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, co
     if (!project.empty() && same_file(out.found_at, project))
         co_return err(ErrorCode::InvalidArgument,
                       "Çizim kendi dosyasına dış referans olamaz: '" + out.found_at + "'.");
+    // A FILE ALREADY BEING READ on the way down is a loop — A references B,
+    // B references A — and reading it again would never end.
+    for (const std::string& above : chain)
+        if (same_file(out.found_at, above))
+            co_return err(ErrorCode::ValidationFailed,
+                          "Dış referans döngüsü: '" + out.found_at +
+                              "' kendisini içeren bir dosyanın içinden yeniden isteniyor; bu "
+                              "halka okunmadı.");
+    if (chain.size() >= kMaxNesting)
+        co_return err(ErrorCode::ValidationFailed,
+                      "Dış referanslar " + std::to_string(kMaxNesting) + " kattan derin iç içe; '" +
+                          out.found_at + "' okunmadı.");
 
     // THE FILE, READ WHERE NOTHING SEES IT, then brought across in one step.
     core::Document scratch;
     if (auto read = co_await read_drawing(scratch, out.found_at, crs_for_reading(doc.crs()), stop);
         !read)
         co_return read.error();
-    // THE SAME SYSTEM OR NOT AT ALL: a reference drawn in another system lands
-    // kilometres away and looks right (model.md R36), so it is refused until
-    // references are reprojected rather than drawn where it would mislead.
-    const std::string theirs = scratch.crs().id();
-    const std::string ours   = doc.crs().id();
-    if (!looks_like_dxf(out.found_at) && !looks_like_dwg(out.found_at) && !theirs.empty() &&
-        !ours.empty() && !core::turkish_iequals(theirs, ours))
-        co_return err(ErrorCode::ValidationFailed,
-                      "'" + out.found_at + "' " + theirs + " koordinat sisteminde, çizim " + ours +
-                          " sisteminde. Farklı sistemdeki bir dosya bu sürümde dış referans olarak "
-                          "yüklenmez; dosyayı çizimin sistemine dönüştürün.");
+    // THE DRAWING'S SYSTEM, ALWAYS: a reference drawn in another one lands
+    // kilometres away and looks right (model.md R36). The two are compared by
+    // their EPSG codes where both resolve — `TUREF/TM30` is `EPSG:5254` — and
+    // by name where not; a file in another system is carried into the
+    // drawing's, and refused where nothing here can carry it.
+    // A DXF or a DWG is read IN the drawing's system (`read_drawing`'s `crs`,
+    // io.md R20), so only a project file, which carries its own, is compared.
+    const std::string theirs_id = scratch.crs().id();
+    const core::Crs& ours       = doc.crs();
+    const bool carries_its_own  = !looks_like_dxf(out.found_at) && !looks_like_dwg(out.found_at);
+    if (carries_its_own && !theirs_id.empty() && !ours.id().empty()) {
+        const core::Crs theirs = host != nullptr && host->on_crs_resolve
+                                     ? host->on_crs_resolve(theirs_id)
+                                     : core::Crs(theirs_id);
+        const bool same        = theirs.resolved() && ours.resolved()
+                                     ? theirs.epsg() == ours.epsg()
+                                     : core::turkish_iequals(theirs_id, ours.id());
+        if (!same) {
+            if (host == nullptr || host->registry().by_id("core.reproject") == nullptr)
+                co_return err(ErrorCode::ValidationFailed,
+                              "'" + out.found_at + "' " + theirs_id +
+                                  " koordinat sisteminde, çizim " + ours.id() +
+                                  " sisteminde, ve bu yapı koordinat dönüştüremiyor; dosyayı "
+                                  "çizimin sistemine dönüştürün.");
+            if (auto st = reproject_scratch(scratch, host->registry(), crs_for_reading(theirs),
+                                            crs_for_reading(ours));
+                !st)
+                co_return err(
+                    st.error().code,
+                    "'" + out.found_at + "' " + theirs_id +
+                        " sisteminden çizimin sistemine dönüştürülemedi: " + st.error().message);
+            out.reprojected_from = theirs_id;
+        }
+    }
+
+    // ITS OWN REFERENCES, read into it now that it stands in the drawing's
+    // system, so each is carried from wherever it was drawn straight to where
+    // the drawing needs it. They come across below as its dependents.
+    chain.push_back(out.found_at);
+    {
+        command::Transaction inner(scratch, "ic-ice-dis-referans");
+        const std::vector<Warning> nested =
+            co_await load_externals(inner, out.found_at, stop, host, chain);
+        for (const Warning& w : nested)
+            out.notes.push_back(w.message);
+    }
 
     const std::size_t mark = tx.size();
     auto emptied           = command::empty_external(tx, block);
@@ -154,12 +239,15 @@ command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, co
     }
     out.entities = adopted.value().entities;
     out.layers   = adopted.value().layers;
-    out.notes    = adopted.value().notes;
+    // Appended, not assigned: the notes of the references read into it on
+    // the way down are already here.
+    out.notes.insert(out.notes.end(), adopted.value().notes.begin(), adopted.value().notes.end());
     co_return out;
 }
 
 command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std::string project,
-                                                   std::stop_token stop)
+                                                   std::stop_token stop, command::Bus* host,
+                                                   std::vector<std::string> chain)
 {
     std::vector<Warning> warnings;
     const core::Document& doc = tx.document();
@@ -172,7 +260,7 @@ command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std
             (flags & (core::kBlockUnloaded | core::kBlockDetached)) != 0)
             continue;
         const std::string name = doc.blocks().at(b).name;
-        auto loaded            = co_await load_external(tx, b, project, stop);
+        auto loaded            = co_await load_external(tx, b, project, stop, host, chain);
         if (!loaded) {
             warnings.push_back(Warning{
                 "io.xref", "'" + name + "' dış referansı yüklenemedi: " + loaded.error().message +
@@ -181,6 +269,11 @@ command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std
                                name + " dosya=<yol> ile gösterin."});
             continue;
         }
+        // WHAT A REFERENCE SAID ON THE WAY DOWN is said here too — a loop two
+        // files below, a nested file missing — or it would stop at the file
+        // that met it and nobody would hear it.
+        for (const std::string& note : loaded.value().notes)
+            warnings.push_back(Warning{"io.xref_note", "'" + name + "': " + note});
         if (loaded.value().moved)
             warnings.push_back(Warning{"io.xref_moved", "'" + name +
                                                             "' dış referansı kayıtlı yerinde "

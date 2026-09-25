@@ -725,10 +725,17 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
         said += '.';
         if (l.moved)
             said += " Dosya kayıtlı yerinde yoktu, proje klasöründe bulundu: " + l.found_at + ".";
+        if (!l.reprojected_from.empty())
+            said += " " + l.reprojected_from + " sisteminden çizimin sistemine dönüştürüldü.";
         for (const std::string& n : l.notes)
             said += "  not: " + n;
         return said;
     };
+    // THE DRAWING'S OWN FILE heads the chain: a reference whose file reaches
+    // back to this drawing is a loop, whichever way round it was made.
+    const std::vector<std::string> own_chain = current_path_.empty()
+                                                   ? std::vector<std::string>{}
+                                                   : std::vector<std::string>{current_path_};
     const auto named = [&doc](const std::string& name) -> core::Result<core::BlockId> {
         const core::BlockId b = doc.blocks().find(name);
         if (b != core::kNoBlock && command::is_external_reference(doc, b)) return b;
@@ -759,7 +766,8 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
         std::string said;
         for (const core::BlockId b : which) {
             const std::string name = doc.blocks().at(b).name;
-            auto loaded = co_await load_external(*tx, b, current_path_, stop_.get_token());
+            auto loaded =
+                co_await load_external(*tx, b, current_path_, stop_.get_token(), &bus_, own_chain);
             if (!loaded) {
                 if (which.size() == 1) co_return loaded.error();
                 said += (said.empty() ? "" : "\n") + std::string("uyarı: '") + name +
@@ -788,7 +796,8 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
                 b.value(), file, static_cast<std::uint8_t>(flags & ~core::kBlockUnloaded));
             !st)
             co_return st.error();
-        auto loaded = co_await load_external(*tx, b.value(), current_path_, stop_.get_token());
+        auto loaded = co_await load_external(*tx, b.value(), current_path_, stop_.get_token(),
+                                             &bus_, own_chain);
         if (!loaded) co_return loaded.error();
         co_return loaded_said(name, loaded.value(), "yeni dosyasından yüklendi");
     }
@@ -828,7 +837,8 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
         if (auto st = tx->set_block_external(block, file, core::kBlockExternal); !st)
             co_return st.error();
     }
-    auto loaded = co_await load_external(*tx, block, current_path_, stop_.get_token());
+    auto loaded =
+        co_await load_external(*tx, block, current_path_, stop_.get_token(), &bus_, own_chain);
     if (!loaded) co_return loaded.error();
     if (request.resolved_block != nullptr) *request.resolved_block = name;
     co_return loaded_said(name, loaded.value(), "bağlandı");

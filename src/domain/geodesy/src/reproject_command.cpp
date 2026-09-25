@@ -39,8 +39,10 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/external_ref.hpp"
 #include "kentos_cad/command/transform_edit.hpp"
 
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
@@ -178,11 +180,29 @@ Task<void> run(Context& ctx)
         // stand on the map, and moving those moves every copy.
         if (!doc.entities().standalone(e)) continue;
 
-        if (!vertex_by_vertex(doc.entities().kind[e])) {
+        const core::KindId kind = doc.entities().kind[e];
+        // AN EXTERNAL REFERENCE is read again from its file below, in the
+        // new system; its definition is its file's, in the file's frame.
+        if (kind == core::kBlockReferenceKind) {
+            auto ref = core::block_reference_of(geom, doc.entities().slot[e]);
+            if (ref && command::is_external_block(doc, ref.value().block)) continue;
+        }
+
+        if (!vertex_by_vertex(kind)) {
             const core::RingSpan anchor_span = geom.rings_of(doc.entities().slot[e]);
             if (anchor_span.count == 0 || geom.ring_xs(anchor_span.first).empty()) continue;
-            const core::Point2 anchor{geom.ring_xs(anchor_span.first)[0],
-                                      geom.ring_ys(anchor_span.first)[0]};
+            core::Point2 anchor{geom.ring_xs(anchor_span.first)[0],
+                                geom.ring_ys(anchor_span.first)[0]};
+            // A BLOCK is carried by the similarity where it DRAWS, not where
+            // its insertion point is: a definition drawn in map coordinates
+            // — a whole drawing inserted as a block — stands at 0,0 and is
+            // drawn kilometres away from it.
+            if (kind == core::kBlockReferenceKind) {
+                const core::Box2 drawn = doc.entities().box_of(e);
+                if (!drawn.empty())
+                    anchor = core::Point2{drawn.min_x + (drawn.max_x - drawn.min_x) / 2,
+                                          drawn.min_y + (drawn.max_y - drawn.min_y) / 2};
+            }
             auto similar = similarity_at(transform, anchor);
             if (!similar) {
                 ctx.refuse(similar.error());
@@ -240,8 +260,35 @@ Task<void> run(Context& ctx)
     ctx.record("kaynak", Value::text(source));
     ctx.record("hedef", Value::text(target));
 
+    // THE EXTERNAL REFERENCES, read again from their files in the new system
+    // — inside this command's transaction, so the drawing and its references
+    // move together and one undo takes both back.
+    std::string references;
+    bool reread = false;
+    for (const command::ExternalListing& row : command::list_external_references(ctx.document()))
+        reread = reread || row.state != command::ExternalListing::State::Unloaded;
+    if (reread) {
+        Bus& bus = ctx.session().bus();
+        if (bus.on_file_request) {
+            FileRequest request;
+            request.verb    = FileRequest::Verb::XrefLoad;
+            request.tx      = &ctx.transaction();
+            request.session = &ctx.session();
+            auto said       = co_await bus.on_file_request(request);
+            if (!said) {
+                ctx.refuse(said.error());
+                co_return;
+            }
+            references = "\n" + said.value();
+        } else {
+            references =
+                "\nDış referanslar bu ortamda yeniden okunamadı; yeni sistemde görmek için "
+                "DIŞREFERANS islem=yenile.";
+        }
+    }
+
     ctx.echo(std::to_string(touched) + " nesne dönüştürüldü: " + source + " -> " + target +
-             "   (PROJ " + domain::geodesy::Transform::backend_version() + ")");
+             "   (PROJ " + domain::geodesy::Transform::backend_version() + ")" + references);
 }
 
 } // namespace

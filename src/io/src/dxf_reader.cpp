@@ -485,6 +485,11 @@ public:
         in_block_                                  = made.value();
         blocks_[core::turkish_fold_key(data.name)] = in_block_;
         ++blocks_read_;
+        // AN XREF (group 70 bit 4, overlay bit 8): its objects live in another
+        // file, and this reader does not get its path (group 1) from the
+        // library — so it arrives an empty block, and that is SAID, by name,
+        // rather than left to look like a block that draws nothing.
+        if ((static_cast<unsigned>(data.flags) & 0x0CU) != 0U) xrefs_.push_back(data.name);
     }
 
     void setBlock(const int) override {}
@@ -940,6 +945,15 @@ public:
                                      std::to_string(refs_read_) +
                                      " blok referansı (INSERT) yapısıyla okundu; üyeler blok "
                                      "içinde durur, referans yerleştirir.");
+        if (!xrefs_.empty()) {
+            std::string names;
+            for (const std::string& n : xrefs_)
+                names += (names.empty() ? "" : ", ") + n;
+            note(Severity::Degraded,
+                 std::to_string(xrefs_.size()) + " blok dosyada dış referans (XREF): " + names +
+                     ". Dosyaları bu sürümde DXF'ten okunmuyor, boş blok olarak geldi; "
+                     "çizime DIŞREFERANS ile bağlayın.");
+        }
         if (spline_fit_only_ != 0)
             note(Severity::Degraded, std::to_string(spline_fit_only_) +
                                          " spline yalnız uydurma noktası taşıyordu; uydurma "
@@ -2401,6 +2415,7 @@ private:
     std::size_t hatches_seen_{0};
 
     std::uint64_t seen_{0}, skipped_{0}, paper_space_{0}, ltypes_{0};
+    std::vector<std::string> xrefs_; ///< blocks the file marks as external references
     std::uint64_t blocks_read_{0}, refs_read_{0}, spline_fit_only_{0}, hatch_unknown_{0},
         dim_style_missing_{0}, widths_dropped_{0}, z_varies_{0}, kot_written_{0},
         text_align_approx_{0}, byblock_seen_{0}, tilted_{0}, xdata_kept_{0}, linetypes_dropped_{0};
