@@ -2888,10 +2888,13 @@ int main(int argc, char** argv)
                             const double gx = c_x + a_px * (cx_px - 0.5);
                             const double gy = f_y + d_px * (cy_px - 0.5);
                             // The sheet is aimed at 0,0 .. 60,45 m, so the centre
-                            // is 30 m, 22.5 m — in millimetres.
-                            check(std::abs(gx - 30000.0) < 2.0 && std::abs(gy - 22500.0) < 2.0,
+                            // is 30 m, 22.5 m — IN METRES, the unit every GIS
+                            // reads a world file in. It used to be written in
+                            // the store's millimetres, and QGIS put the sheet a
+                            // thousand times further out (TODOS F-03).
+                            check(std::abs(gx - 30.0) < 0.002 && std::abs(gy - 22.5) < 0.002,
                                   "WORLD FILE YANLIŞ: çerçevenin ortası hedeflenen pencerenin "
-                                  "ortasına düşmüyor");
+                                  "ortasına (metre) düşmüyor");
                         }
                     }
                 }

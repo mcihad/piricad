@@ -40,6 +40,20 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
         if (auto st = loaded.set_crs(resolved, discard); !st)
             report.value().warnings.push_back(Warning{
                 "io.crs_resolve", "Dosyadaki koordinat sistemi çözülemedi: " + st.error().message});
+
+        // A DRAWING SAVED IN A SYSTEM THAT DOES NOT COUNT METRES — possible
+        // before `AYAR koordinat_sistemi` refused one (TODOS F-03) — still
+        // opens: refusing it would lock the surveyor out of their own work. But
+        // every number in it is a millidegree printed as metres, and that is
+        // said on the way in rather than discovered on the first measurement.
+        if (const std::string problem = core::crs_unit_problem(resolved); !problem.empty())
+            report.value().warnings.push_back(Warning{
+                "io.crs_unit",
+                "Çizimin koordinat sistemi metre saymıyor. " + problem +
+                    " Bu çizimin sayıları metre diye saklanmış, uzunlukları ve alanları bu "
+                    "yüzden gerçek değil — sistemin adını değiştirmek bunu düzeltmez. "
+                    "Nesneleri kaynak dosyasından, metre sayan bir sisteme dönüştürüp yeniden "
+                    "aktarın."});
     }
 
     // THE EXTERNAL REFERENCES the drawing holds, read from their files into

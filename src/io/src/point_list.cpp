@@ -211,7 +211,7 @@ core::Result<std::vector<SurveyPoint>> read_point_list(const std::string& path, 
 }
 
 core::Status write_point_list(const std::string& path, const std::vector<SurveyPoint>& points,
-                              PointOrder order)
+                              PointOrder order, int decimals)
 {
     std::ofstream out(path, std::ios::binary);
     if (!out) return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılamadı: " + path);
@@ -222,15 +222,10 @@ core::Status write_point_list(const std::string& path, const std::vector<SurveyP
                 ? "# nokta_no; Y(saga); X(yukari); Z; kod\n"
                 : "# nokta_no; X(yukari); Y(saga); Z; kod\n");
 
-    const auto metres = [](core::Mm v) {
-        const bool negative = v < 0;
-        const auto abs_mm   = static_cast<std::uint64_t>(negative ? -v : v);
-        char buffer[48];
-        (void)std::snprintf(buffer, sizeof buffer, "%s%llu.%03llu", negative ? "-" : "",
-                            static_cast<unsigned long long>(abs_mm / 1000),
-                            static_cast<unsigned long long>(abs_mm % 1000));
-        return std::string(buffer);
-    };
+    // To the project's decimals (`core.crs.hassasiyet`), rounded in integers:
+    // the list is a coordinate table somebody signs, and the one formatter is
+    // what makes 485320,155 at two decimals the same figure everywhere.
+    const auto metres = [decimals](core::Mm v) { return core::metres_fixed(v, decimals, '.'); };
 
     for (const SurveyPoint& p : points) {
         const std::string a = metres(order == PointOrder::NumberEastingNorthing ? p.at.x : p.at.y);

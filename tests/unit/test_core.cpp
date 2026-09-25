@@ -139,6 +139,31 @@ TEST_CASE("mm fixed point is exact and symmetric")
     CHECK_EQ(mm_to_metres(485320150), 485320.150);
 }
 
+TEST_CASE("HASSASİYET: koordinat metreye tam sayılarla ve yarımdan uzağa yuvarlanarak yazılır")
+{
+    // The ONE formatter a coordinate table goes through (`core.crs.hassasiyet`).
+    // In integers, so 485320,155 at two decimals is ,16 on every machine — a
+    // double 485320.155 is 485320.15499999999…, and printf would say ,15.
+    CHECK_EQ(metres_fixed(485320155, 3, ','), std::string("485320,155"));
+    CHECK_EQ(metres_fixed(485320155, 2, ','), std::string("485320,16"));
+    CHECK_EQ(metres_fixed(485320154, 2, ','), std::string("485320,15"));
+    CHECK_EQ(metres_fixed(485320150, 1, '.'), std::string("485320.2"));
+    CHECK_EQ(metres_fixed(485320499, 0, '.'), std::string("485320"));
+    CHECK_EQ(metres_fixed(485320500, 0, '.'), std::string("485321"));
+
+    // Half AWAY from zero on the negative side too, and no "-0" for a value that
+    // rounds to nothing.
+    CHECK_EQ(metres_fixed(-1005, 2, ','), std::string("-1,01"));
+    CHECK_EQ(metres_fixed(-4, 2, ','), std::string("0,00"));
+    CHECK_EQ(metres_fixed(-5, 2, ','), std::string("-0,01"));
+
+    // Leading zeros of the fraction kept; more than three decimals is clamped,
+    // because the fourth would be a digit the millimetre store never held.
+    CHECK_EQ(metres_fixed(4310220007, 3, '.'), std::string("4310220.007"));
+    CHECK_EQ(metres_fixed(4310220007, 6, '.'), std::string("4310220.007"));
+    CHECK_EQ(metres_fixed(4310220007, -2, '.'), std::string("4310220"));
+}
+
 TEST_CASE("mm rounding never rounds twice")
 {
     // The regression this locks. mm_from_metres used to compute (scaled + 0.5) and

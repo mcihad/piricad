@@ -25,6 +25,7 @@
 
 #include "dxf_multileader.hpp"
 #include "dxf_units.hpp"
+#include "prj_sidecar.hpp"
 
 #include <algorithm>
 #include <array>
@@ -183,6 +184,13 @@ core::Result<std::string> crs_of(const OGRSpatialReference* srs, const std::stri
     }
     return err(ErrorCode::ValidationFailed,
                "'" + layer + "' katmanının koordinat sistemi çözülemedi: " + gdal_reason());
+}
+
+/// Whether the drawing itself is on a local site grid (`YEREL`, `LOCAL`), where
+/// small numbers are the ordinary case rather than a sign of degrees.
+bool local_project(const std::string& crs)
+{
+    return core::turkish_iequals(crs, "YEREL") || core::turkish_iequals(crs, "LOCAL");
 }
 
 /// A dataset handle that closes itself. GDAL predates RAII and every early return
@@ -821,7 +829,9 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::vector<core::Point2>> ring_store;
     std::set<std::string> seen_layers; // so report.layers counts names, not features
-    bool unlabelled = false;           // the "no CRS in the file" note, said once
+    bool unlabelled       = false;     // the "no CRS in the file" note, said once
+    bool unit_clash_said  = false;     // the DXF-unit-against-.prj note, said once
+    bool degree_like_said = false;     // the "these look like degrees" note, said once
 
     // The wizard's tick boxes, and nothing else in this file knows they exist:
     // an empty list is "everything", which is what a bare İÇEAKTAR sends. Folded
@@ -886,11 +896,35 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 // cannot carry a CRS, so the assumption is sanctioned, but
                 // filing it at the mildest level is what made it silent.
                 diag.note(Severity::Warning,
-                          "Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi "
-                          "sistemi varsayıldı: " +
-                              project_crs +
+                          std::string("Dosya koordinat sistemi bildirmiyor (") +
+                              (format->driver == "DXF" ? "DXF taşıyamaz"
+                                                       : "yanında .prj dosyası da yok") +
+                              "). Çizimin kendi sistemi varsayıldı: " + project_crs +
                               ". Yanlışsa GERİAL ile geri alın, AYAR koordinat_sistemi ile "
                               "doğrusunu kurun ve yeniden aktarın.");
+            }
+
+            // AND WHEN THE NUMBERS LOOK LIKE DEGREES (TODOS F-03). A GIS file
+            // that says nothing about its system and whose every coordinate
+            // sits inside ±180 × ±90 is, far more often than not, longitude and
+            // latitude — and read as metres it lands beside the origin, crushed
+            // onto a hundred-metre grid. Only a guess, so a warning and not a
+            // refusal; and never for a DXF, whose small numbers are the local
+            // site grid of every architect's drawing, nor in a drawing that is
+            // itself on a local grid.
+            OGREnvelope box;
+            if (!degree_like_said && format->driver != "DXF" && !local_project(project_crs) &&
+                layer->GetExtent(&box, TRUE) == OGRERR_NONE && std::abs(box.MinX) <= 180.0 &&
+                std::abs(box.MaxX) <= 180.0 && std::abs(box.MinY) <= 90.0 &&
+                std::abs(box.MaxY) <= 90.0) {
+                degree_like_said = true;
+                diag.note(Severity::Warning,
+                          "'" + layer_name +
+                              "' katmanının bütün koordinatları −180…180 ve −90…90 aralığında: "
+                              "boylam ve enlem (derece) olabilir. Öyleyse nesneler metre diye "
+                              "okunduğu için yanlış yerde ve yüz metrelik bir ızgaraya ezilmiş "
+                              "durumda. GERİAL ile geri alın, dosyanın koordinat sistemini bulup "
+                              "metre sayan bir sisteme dönüştürün ve yeniden aktarın.");
             }
         }
 
@@ -899,6 +933,40 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 crs.error().code,
                 crs.error().message +
                     " (Aynı adlı bir .prj dosyasını yanına koyarak da bildirebilirsiniz.)");
+
+        // WHAT THE NUMBERS COUNT (TODOS F-03). Every GIS format is read in its
+        // system's metre (`unit` above), so a layer in degrees would be
+        // multiplied into millidegrees: 0,001° is a hundred metres, every parcel
+        // in it would collapse onto a hundred-metre grid, and the file would
+        // still "open". GDAL knows what the system counts; it is asked, and a
+        // layer that does not count metres is refused with the way in. A layer
+        // that declared nothing took the drawing's own system above, and a
+        // document's system holds metres by construction (`AYAR` refuses any
+        // other).
+        const OGRSpatialReference* layer_srs = layer->GetSpatialRef();
+        if (layer_srs == nullptr && !sidecar.empty()) layer_srs = &sidecar_srs;
+        if (layer_srs != nullptr) {
+            const std::string where =
+                format->driver == "DXF" ? "'" + path + "'"
+                                        : "'" + path + "' dosyasının '" + layer_name + "' katmanı";
+            if (auto st = file_crs_holds_metres(crs_with_unit(*layer_srs, crs.value()), where); !st)
+                co_return st.error();
+
+            // A DXF's numbers are read in the PROJECT'S unit (above); a `.prj`
+            // beside one names a system in metres. When the two disagree the
+            // file is read as the user's setting says — and a GIS program that
+            // trusts the `.prj` would read the same numbers a thousand times
+            // larger, so the disagreement is said once, out loud.
+            if (format->driver == "DXF" && unit != core::DrawingUnit::Metre && !unit_clash_said) {
+                unit_clash_said = true;
+                diag.note(Severity::Warning,
+                          "Yanındaki .prj metre sayan bir sistem bildiriyor (" + crs.value() +
+                              ") ama çizim " + core::drawing_unit_name(unit) +
+                              " olarak okundu (AYAR çizim_birimi). Bir CBS programı bu "
+                              "dosyanın sayılarını metre okur; dosya metre ise AYAR "
+                              "çizim_birimi metre ile yeniden aktarın.");
+            }
+        }
         if (report.crs.empty())
             report.crs = crs.value();
         else if (report.crs != crs.value())
@@ -1549,11 +1617,23 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         }
     }
 
+    // NOTHING SURVIVED. When the numbers looked like degrees that is almost
+    // certainly why: a 60 m parcel in longitude and latitude is 0,0006°, read as
+    // metres it rounds to a millimetre and every face comes out with no area.
+    // The refusal says so, because "contains nothing readable" about a file full
+    // of parcels sends the user looking in the wrong place.
     if (report.entities == 0)
-        co_return err(ErrorCode::ValidationFailed,
-                      "'" + path +
-                          "' okunabilir çizgi ya da alan içermiyor; çizime hiçbir şey "
-                          "eklenmedi.");
+        co_return err(
+            ErrorCode::ValidationFailed,
+            "'" + path + "' okunabilir çizgi ya da alan içermiyor; çizime hiçbir şey eklenmedi." +
+                std::string(degree_like_said
+                                ? " Dosya koordinat sistemi bildirmiyor ve bütün koordinatları "
+                                  "−180…180, −90…90 aralığında: büyük olasılıkla boylam ve enlem "
+                                  "(derece). Metre diye okununca her nesne milimetrelik bir "
+                                  "noktaya ezildi. Dosyanın koordinat sistemini bulup metre sayan "
+                                  "bir sisteme dönüştürün (ör. ogr2ogr -s_srs EPSG:4326 -t_srs "
+                                  "EPSG:5256 yeni.gpkg eski.shp) ve yeniden aktarın."
+                                : ""));
 
     // The drawing's own CRS is never changed by an import and the coordinates are
     // never reprojected: doing either silently is how a TM30 parcel ends up
@@ -2066,7 +2146,11 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     // The check is a read-back rather than a list of driver names, so a driver
     // that gains CRS support stops getting a sidecar without anyone editing a
     // table here.
-    if (auto reopened = reopen_crs(path); !reopened) {
+    if (dxf_out && options.unit != core::DrawingUnit::Metre) {
+        // A `.prj` beside millimetres would be read as metres (see
+        // `dxf_prj_withheld`), so this DXF goes out without one.
+        report.notes.push_back(dxf_prj_withheld(options.unit));
+    } else if (auto reopened = reopen_crs(path); !reopened) {
         auto sidecar = write_prj_sidecar(path, srs);
         if (!sidecar) co_return sidecar.error();
         report.notes.push_back(format->driver + " biçimi koordinat sistemi taşımaz; sistem '" +

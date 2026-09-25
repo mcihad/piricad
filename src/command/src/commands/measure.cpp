@@ -325,13 +325,20 @@ Task<void> run_coordinate(Context& ctx)
         local ? "   (YEREL — haritaya oturtulmadı)" : (crs.empty() ? "" : "   (" + crs + ")");
 
     // SAĞA / YUKARI, which is what a Turkish surveyor calls easting and northing,
-    // and the order a TUCBS record writes them in.
-    ctx.echo("Sağa: " + metres(at->x) + "   Yukarı: " + metres(at->y) + where);
+    // and the order a TUCBS record writes them in — to the decimals the project
+    // writes its coordinate tables with (`core.crs.hassasiyet`), which is what
+    // the number copied off this line will be compared against.
+    const int decimals =
+        static_cast<int>(ctx.session().bus().setting("core.crs.hassasiyet").as_int());
+    const auto reading = [decimals](core::Mm v) {
+        return core::metres_fixed(v, decimals, ',') + " m";
+    };
+    ctx.echo("Sağa: " + reading(at->x) + "   Yukarı: " + reading(at->y) + where);
 
     // AND THE READING STAYS WHERE IT WAS TAKEN, in the Y/X a surveyor writes.
     ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Point,
                          .points = {*at},
-                         .labels = {"Y " + metres(at->x) + "  X " + metres(at->y)}});
+                         .labels = {"Y " + reading(at->x) + "  X " + reading(at->y)}});
 
     ctx.record("nokta", Value::point(*at));
 }

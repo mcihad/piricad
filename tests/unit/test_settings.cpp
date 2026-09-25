@@ -613,7 +613,7 @@ TEST_CASE("Her tür metne çevrilip geri okunur")
 
     round_trip("core.yakalama.dik_mod", "evet", "evet");
     round_trip("core.yakalama.dik_mod", "HAYIR", "hayır");
-    round_trip("core.crs.hassasiyet", "4", "4");
+    round_trip("core.crs.hassasiyet", "2", "2");
     round_trip("core.cizim.metin_yuksekligi", "3000", "3000");
     round_trip("core.crs.id", "TUREF/TM33", "TUREF/TM33");
     round_trip("core.cizim.birim", "metre", "metre");
@@ -652,12 +652,12 @@ TEST_CASE("AYAR: proje ayarını yazar, okur ve nereden geldiğini söyler")
     CHECK(mentions(rig.echoed, "varsayılan"));
     CHECK(mentions(rig.echoed, "core.crs.hassasiyet")); // the id, for a support call
 
-    CHECK(rig.line("AYAR koordinat_hassasiyeti 5").ok());
-    CHECK(mentions(rig.echoed, "koordinat_hassasiyeti = 5"));
+    CHECK(rig.line("AYAR koordinat_hassasiyeti 2").ok());
+    CHECK(mentions(rig.echoed, "koordinat_hassasiyeti = 2"));
 
     CHECK(rig.line("AYAR koordinat_hassasiyeti").ok());
     CHECK(mentions(rig.echoed, "açıkça ayarlandı"));
-    CHECK(mentions(rig.echoed, "= 5"));
+    CHECK(mentions(rig.echoed, "= 2"));
 
     // Back to the declared default, in a script, without Ctrl+Z.
     CHECK(rig.line("AYAR koordinat_hassasiyeti varsayilan").ok());
@@ -688,9 +688,9 @@ TEST_CASE("R41: AYAR tercihe, TERCİH proje ayarına dokunamaz")
     CHECK(mentions(rig.echoed, "proje"));
 
     // and the refusal actually refused: the value is still whatever AYAR set.
-    CHECK(rig.line("AYAR koordinat_hassasiyeti 5").ok());
+    CHECK(rig.line("AYAR koordinat_hassasiyeti 1").ok());
     CHECK(rig.line("AYAR koordinat_hassasiyeti").ok());
-    CHECK(mentions(rig.echoed, "= 5"));
+    CHECK(mentions(rig.echoed, "= 1"));
 }
 
 TEST_CASE("TERCİH: uygulama tercihini yazar ve okur")
@@ -715,7 +715,7 @@ TEST_CASE("R43: TERCİH günlüğe yazılmaz, AYAR yazılır")
     CHECK(rig.line("TERCIH otomatik_kayit 600").ok());
     CHECK_EQ(rig.journal.size(), before); // an application preference is not document state
 
-    CHECK(rig.line("AYAR koordinat_hassasiyeti 4").ok());
+    CHECK(rig.line("AYAR koordinat_hassasiyeti 2").ok());
     CHECK_EQ(rig.journal.size(), before + 1);
 
     // The journal records the canonical id, not the alias that was typed, so a
@@ -723,16 +723,18 @@ TEST_CASE("R43: TERCİH günlüğe yazılmaz, AYAR yazılır")
     const auto& entry = rig.journal.entries().back();
     CHECK_EQ(entry.command_id, std::string("core.setting"));
     CHECK_EQ(entry.args.get("ad").as_text(), std::string("core.crs.hassasiyet"));
-    CHECK_EQ(entry.args.get("deger").as_text(), std::string("4"));
+    CHECK_EQ(entry.args.get("deger").as_text(), std::string("2"));
 }
 
 TEST_CASE("AYAR: aralık dışı değer kırpılır ve kullanıcıya söylenir")
 {
     Rig rig;
 
+    // Three at most: a fourth decimal of a metre is a digit the millimetre
+    // store never held (TODOS F-03).
     CHECK(rig.line("AYAR koordinat_hassasiyeti 9").ok());
     CHECK(mentions(rig.echoed, "kırpıldı"));
-    CHECK(mentions(rig.echoed, "= 6"));
+    CHECK(mentions(rig.echoed, "= 3"));
 }
 
 TEST_CASE("AYAR: bilinmeyen ayar adı hata olarak döner ve yol gösterir")

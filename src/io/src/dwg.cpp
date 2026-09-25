@@ -333,8 +333,11 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
         case DWG_TYPE_CIRCLE: {
             const Dwg_Entity_CIRCLE* e = obj->tio.entity->tio.CIRCLE;
             if (e == nullptr || e->radius <= 0.0) break;
+            // The radius in the SAME unit as the centre. It was read as metres
+            // whatever the drawing said, so a millimetre DWG's circles came in a
+            // thousand times too wide around the right centres (TODOS F-03).
             (void)keep(tx.add_circle(target, mm(e->center.x, e->center.y),
-                                     core::mm_from_metres(e->radius)));
+                                     core::mm_from_drawing_units(e->radius, unit)));
             break;
         }
 
@@ -348,10 +351,11 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             // line segments before this program ever sees them.
             const core::Point2 centre = mm(e->center.x, e->center.y);
             const auto around         = [&](double angle) {
-                return core::Point2{centre.x + core::mm_from_metres(e->radius * std::cos(angle)),
-                                    centre.y + core::mm_from_metres(e->radius * std::sin(angle))};
+                return core::Point2{
+                    centre.x + core::mm_from_drawing_units(e->radius * std::cos(angle), unit),
+                    centre.y + core::mm_from_drawing_units(e->radius * std::sin(angle), unit)};
             };
-            (void)keep(tx.add_arc(target, centre, core::mm_from_metres(e->radius),
+            (void)keep(tx.add_arc(target, centre, core::mm_from_drawing_units(e->radius, unit),
                                   around(e->start_angle), around(e->end_angle)));
             break;
         }

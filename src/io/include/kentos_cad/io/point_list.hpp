@@ -59,8 +59,10 @@ core::Result<std::vector<SurveyPoint>> read_point_list(const std::string& path, 
 ///
 /// Semicolons rather than commas so a Turkish-locale spreadsheet opens it without
 /// splitting `485320.543` in two, and dots rather than commas so the file is
-/// unambiguous whoever reads it next.
+/// unambiguous whoever reads it next. `decimals` (0…3) is the project's
+/// `core.crs.hassasiyet`: three writes the stored millimetre exactly, fewer
+/// round half away from zero in integers.
 core::Status write_point_list(const std::string& path, const std::vector<SurveyPoint>& points,
-                              PointOrder order);
+                              PointOrder order, int decimals = 3);
 
 } // namespace kentos::io

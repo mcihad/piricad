@@ -2451,6 +2451,19 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
         auto prj = prj_sidecar_crs(path);
         if (prj) {
             sink.set_crs(prj.value());
+            // The `.prj` names a system in metres (`prj_sidecar_crs` refuses any
+            // other) and the numbers are read in the PROJECT'S unit. When the
+            // two disagree, a GIS program trusting the `.prj` reads these same
+            // numbers a thousand times larger — said once, out loud, as the
+            // GDAL path says it (vector.cpp).
+            if (options.drawing_unit != core::DrawingUnit::Metre)
+                sink.report().diagnostics.note(
+                    Severity::Warning,
+                    "Yanındaki .prj metre sayan bir sistem bildiriyor (" + prj.value() +
+                        ") ama çizim " + core::drawing_unit_name(options.drawing_unit) +
+                        " olarak okundu (AYAR çizim_birimi). Bir CBS programı bu dosyanın "
+                        "sayılarını metre okur; dosya metre ise AYAR çizim_birimi metre ile "
+                        "yeniden aktarın.");
         } else if (prj.error().code == ErrorCode::NotFound ||
                    prj.error().code == ErrorCode::Unsupported) {
             if (options.project_crs.empty())

@@ -148,12 +148,18 @@ aktarın. Koordinatlardan sistem **tahmin edilmez**: 583 000 gibi bir sağa değ
 Türkiye'de birden çok TM dilimine uyar, ve ikisi arasında tahmin yürütmek bu
 kuralın var olma sebebi olan hatanın ta kendisidir.
 
-**Etiketsiz koordinat kabul edilmez.** İçe aktarılan bir veri kümesi koordinat
-sistemini bildirmiyorsa KentOSCad dosyayı reddeder; "herhâlde TUREF/TM30'dur"
-varsayımı yapmaz.
+**Etiketsiz koordinat sessizce okunmaz.** Koordinat sistemini bildirmeyen bir veri
+kümesi (yanında `.prj` olmayan bir Shapefile, koordinat sistemi taşımayan bir DXF)
+çizimin kendi sistemiyle okunur ve bu varsayım her seferinde **uyarı** olarak söylenir.
+Program koordinatlardan dilim tahmin etmez.
 
 Sebebi saha kökenlidir: TM30 ile TM33 karışması sessizdir. Koordinatlar makul
 görünür, çizim makul görünür, ve hata ancak tapuya gittiğinde ortaya çıkar.
+
+**Birim de denetlenir.** Çizim metre sayan bir sistemde saklanır. Koordinatlarını derece
+(WGS 84 gibi coğrafi sistemler) ya da başka bir birimle sayan bir katman **reddedilir**
+ve ret mesajı dosyayı metre sayan bir sisteme dönüştürmenin yolunu söyler. Ayrıntı:
+[Koordinat sisteminin birimi](koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre).
 
 | Biçim | Koordinat sistemini nasıl taşır |
 |---|---|
@@ -165,9 +171,15 @@ değil. Bu yüzden:
 
 - **Dışa aktarırken** KentOSCad `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
   söyler. Çizimi taşırken **iki dosyayı da götürün**.
+- **Yalnız DXF metre yazıldıysa.** `.prj` metre sayan bir sistem bildirir ve bir CBS
+  programı DXF'in sayılarını bu yüzden metre okur. `çizim_birimi` milimetre ya da
+  santimetre iken yazılan DXF'in yanına `.prj` **konmaz**: konsaydı bir CBS programı
+  çizimi bin kat uzağa koyardı. Sonuç bunu söyler. Koordinat sistemini taşıyan bir DXF
+  için `AYAR çizim_birimi metre` ile yeniden dışa aktarın.
 - **İçe aktarırken** KentOSCad aynı adlı `.prj` dosyasını arar. Yoksa çizimin
   kendi sistemini varsayar ve bunu transkriptte açıkça söyler; koordinatlardan
-  bölge tahmin etmez.
+  bölge tahmin etmez. `.prj` varsa ama çizim birimi metre değilse, DXF sizin
+  ayarınızla okunur ve bu çelişki bir uyarıyla söylenir.
 
 `.prj`, ülkedeki her CBS yazılımının anladığı ESRI biçiminde yazılır.
 
@@ -324,6 +336,11 @@ make doctor
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
 | `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
 | `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada desteklenen geometri yok | Dosyayı denetleyin; nokta ve eğriler bu sürümde okunmuyor |
+| `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup milimetrelik noktalara ezildi | Dosyanın sistemini bulun, metre sayan bir sisteme dönüştürüp yeniden aktarın |
+| `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman derece sayıyor | `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg` ile dönüştürüp yeniden alın |
+| `'...' içe alınmadı. … derece …` (DXF) | DXF'in yanındaki `.prj` derece sayan bir sistem bildiriyor | `.prj` yanlışsa düzeltin, doğruysa DXF'i dönüştürün |
+| `Yanındaki .prj metre sayan bir sistem bildiriyor … ama çizim milimetre olarak okundu` (uyarı) | `.prj` ile `çizim_birimi` uyuşmuyor | Dosya metre ise `AYAR çizim_birimi metre` ile yeniden aktarın |
+| `DXF'in yanına .prj yazılmadı: …` (dışa aktarma notu) | `çizim_birimi` metre değil | Koordinat sistemini taşıyan bir DXF için `AYAR çizim_birimi metre` |
 | `Çizimin koordinat sistemi belirsiz.` | Proje ayarı boş | `AYAR koordinat_sistemi EPSG:5254` |
 | `Çizimin koordinat sistemi '...' dışa aktarım için çözülemedi.` | Ayar bir EPSG kodu değil | EPSG kodu verin, örnek `EPSG:5254` |
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |

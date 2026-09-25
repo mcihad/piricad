@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <string>
 
 namespace kentos::core {
 
@@ -186,6 +187,13 @@ constexpr double mm_to_metres(Mm v) noexcept
 {
     return static_cast<double>(v) / static_cast<double>(kMmPerMetre);
 }
+
+/// `v` millimetres written as metres with `decimals` digits after `point` —
+/// clamped to 0…3, because the fourth would always be a zero the store never
+/// held — rounded half away from zero IN INTEGERS. The one way a coordinate is
+/// written into a table a surveyor signs (`core.crs.hassasiyet`): no `double`
+/// on the way, so 485320,155 at two decimals is 485320,16 on every machine.
+std::string metres_fixed(Mm v, int decimals, char point);
 
 /// Planar point in the document CRS, fixed-point millimetres.
 struct Point2

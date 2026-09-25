@@ -18,6 +18,7 @@
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include <optional>
 #include <string>
 
 namespace kentos::command {
@@ -196,6 +197,29 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
 
     store.clear_warnings();
 
+    // Resolution goes through the bus hook because the zone catalogue lives in
+    // /src/domain/geodesy and /src/command may not reach it (Article 3.2). With no
+    // geodesy module the CRS keeps its id and stays unresolved, which is the
+    // truthful state rather than a guess.
+    //
+    // It happens BEFORE the setting moves, because a system whose coordinates are
+    // not metres is refused here and a refusal must leave nothing changed: the
+    // store holds millimetres, so a drawing "in" EPSG:4326 would be one whose
+    // every number is a millidegree printed as metres (TODOS F-03).
+    std::optional<core::Crs> crs_after;
+    if (spec.id == "core.crs.id") {
+        Bus& bus           = ctx.session().bus();
+        core::Crs resolved = bus.on_crs_resolve ? bus.on_crs_resolve(parsed.value().as_text())
+                                                : core::Crs(std::string(parsed.value().as_text()));
+        if (const std::string problem = core::crs_unit_problem(resolved); !problem.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument, "Çizimin koordinat sistemi değişmedi. " +
+                                                             problem + " " +
+                                                             core::crs_metric_hint());
+            co_return;
+        }
+        crs_after = std::move(resolved);
+    }
+
     // Through the BUS, not straight into the store. The bus resolves the scope
     // from the declaration and fires `on_settings_changed`, which is what
     // persists an App-scope value. Writing the store directly is what made
@@ -210,16 +234,8 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
     // called it — so a drawing reported one CRS to the exporter and another to its
     // own file. Two stores that disagree about what a coordinate means is exactly
     // the field blunder R36 is written against.
-    //
-    // Resolution goes through the bus hook because the zone catalogue lives in
-    // /src/domain/geodesy and /src/command may not reach it (Article 3.2). With no
-    // geodesy module the CRS keeps its id and stays unresolved, which is the
-    // truthful state rather than a guess.
-    if (change && spec.id == "core.crs.id") {
-        Bus& bus           = ctx.session().bus();
-        core::Crs resolved = bus.on_crs_resolve ? bus.on_crs_resolve(parsed.value().as_text())
-                                                : core::Crs(std::string(parsed.value().as_text()));
-        if (auto st = ctx.transaction().set_crs(resolved); !st) {
+    if (change && crs_after) {
+        if (auto st = ctx.transaction().set_crs(*crs_after); !st) {
             ctx.refuse(st.error());
             co_return;
         }

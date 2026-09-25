@@ -115,15 +115,15 @@ struct VectorReport
 /// Reads `path` into `tx.document()`, merging into whatever is already there.
 ///
 /// One transaction, one undo entry; any failure rolls the document back to
-/// exactly its pre-import state (io.md R17, P11). The dataset MUST declare a CRS
-/// — a missing one is an error, never a silent assumption of TUREF/TM30 (R20).
+/// exactly its pre-import state (io.md P11). The coordinate system is the
+/// layer's own, or its `.prj` companion's; failing both, the drawing's system is
+/// ASSUMED and the assumption is reported as a warning, never made silently
+/// (io.md R20). A layer whose system does not count metres — longitude and
+/// latitude, feet — is refused: the store holds millimetres (TODOS F-03).
 ///
-/// `project_crs` is the drawing's own coordinate system, passed in rather than
-/// read off the `Document`. Today the CRS a user can actually set is the
-/// project-scope setting `core.crs.id` (model.md R39/R40), while
-/// `core::Document::crs()` has no command that writes it — see the note in
-/// `service.cpp`. Taking it as an argument keeps this module out of that
-/// argument: it compares what it is given and never guesses.
+/// `project_crs` is the drawing's own coordinate system (`Document::crs()`, as
+/// `crs_for_reading` names it), passed in so this function compares what it is
+/// given and never reaches for the bus.
 ///
 /// `path` and `options` are taken by value for the coroutine-lifetime reason
 /// spelled out in `project.hpp`.

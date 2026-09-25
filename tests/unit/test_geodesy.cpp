@@ -18,6 +18,7 @@
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/geodesy/crs_service.hpp"
 #include "kentos_cad/domain/geodesy/helmert.hpp"
+#include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include "kentos_cad/core/block_reference.hpp"
@@ -25,6 +26,8 @@
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
 #include <cmath>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 using namespace kentos;
@@ -272,6 +275,138 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
     REQUIRE(bus.execute_line("GERİAL", command::Origin::Test).ok());
     CHECK_EQ(doc.crs().id(), std::string("TUREF/TM33"));
     CHECK_EQ(doc.crs().epsg(), 5255); // the resolved metadata came back too
+}
+
+TEST_CASE("CRS: sistemin neyi saydığı sorulur; metre saymayan sistem çizime giremez (F-03)")
+{
+    // THE CONFLATION THIS CLOSES. The store holds millimetres, and nothing asked
+    // what a system's coordinates COUNT: `AYAR koordinat_sistemi EPSG:4326` was
+    // accepted, typed coordinates went on being read as metres, and a drawing
+    // "in" WGS 84 held millidegrees printed as metres — 0,001° is a hundred
+    // metres on the ground. OTURT would have fitted a survey onto one.
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    REQUIRE(catalogue.ok());
+
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+    domain::geodesy::register_geodesy_commands(reg);
+    domain::geodesy::CrsService service(bus, std::move(catalogue.value()));
+    using command::Origin;
+
+    // The catalogue's zones and a local site grid count metres by definition.
+    CHECK(service.resolve("TUREF/TM30").unit() == core::CrsUnit::Metre);
+    CHECK(service.resolve("EPSG:5256").unit() == core::CrsUnit::Metre);
+    CHECK(service.resolve("YEREL").unit() == core::CrsUnit::Metre);
+
+    // An id nobody can place is the user's to name: unknown, and let through,
+    // because refusing it would refuse a site grid along with a globe.
+    const core::Crs nonsense = service.resolve("BÖYLE-BİR-SİSTEM-YOK");
+    CHECK(nonsense.unit() == core::CrsUnit::Unknown);
+    CHECK(nonsense.holds_metres());
+    CHECK(core::crs_unit_problem(nonsense).empty());
+
+    if (!Transform::available()) PENDING("PROJ kapalı: bir sistemin neyi saydığı sorulamıyor.");
+
+    // ASKED OF PROJ, not guessed from the digits.
+    const core::Crs wgs84 = service.resolve("EPSG:4326");
+    CHECK(wgs84.unit() == core::CrsUnit::Degree);
+    CHECK(!wgs84.holds_metres());
+    CHECK(!wgs84.resolved()); // no zone of ours — and still plainly degrees
+    CHECK(service.resolve("EPSG:32636").unit() == core::CrsUnit::Metre); // UTM 36N
+    const core::Crs feet = service.resolve("EPSG:2263"); // NY Long Island, US survey foot
+    CHECK(feet.unit() == core::CrsUnit::Other);
+    CHECK(feet.unit_name().find("foot") != std::string::npos);
+    CHECK(service.resolve("EPSG:4978").unit() == core::CrsUnit::Other); // geocentric X/Y/Z
+
+    // AYAR REFUSES, AND NOTHING MOVES: not the document, not the setting, and
+    // no undo step for a change that did not happen.
+    REQUIRE(bus.execute_line("AYAR koordinat_sistemi TUREF/TM36", Origin::Test).ok());
+    const std::size_t depth = undo.undo_depth();
+    const auto degrees      = bus.execute_line("AYAR koordinat_sistemi EPSG:4326", Origin::Test);
+    REQUIRE(!degrees.ok());
+    if (!degrees.ok()) {
+        CHECK(degrees.error().message.find("derece") != std::string::npos);
+        CHECK(degrees.error().message.find("yüz metre") != std::string::npos);
+        CHECK(degrees.error().message.find("EPSG:5253") != std::string::npos); // the way out
+    }
+    CHECK_EQ(doc.crs().id(), std::string("TUREF/TM36"));
+    CHECK_EQ(bus.setting("core.crs.id").as_text(), std::string("TUREF/TM36"));
+    CHECK_EQ(undo.undo_depth(), depth);
+
+    const auto in_feet = bus.execute_line("AYAR koordinat_sistemi EPSG:2263", Origin::Test);
+    REQUIRE(!in_feet.ok());
+    if (!in_feet.ok()) CHECK(in_feet.error().message.find("foot") != std::string::npos);
+    CHECK_EQ(doc.crs().id(), std::string("TUREF/TM36"));
+
+    // OTURT asks before a single pair moves anything.
+    REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    const core::Box2 before = doc.extent();
+    const auto fitted =
+        bus.execute_line("OTURT noktalar=0,0 29,41 10,0 29.0001,41 sistem=EPSG:4326", Origin::Test);
+    REQUIRE(!fitted.ok());
+    if (!fitted.ok()) CHECK(fitted.error().message.find("oturtulamaz") != std::string::npos);
+    CHECK(doc.extent() == before);
+    CHECK_EQ(doc.crs().id(), std::string("TUREF/TM36"));
+
+    // Metre-counting systems still go in: a site grid, and a zone that is not ours.
+    CHECK(bus.execute_line("AYAR koordinat_sistemi YEREL", Origin::Test).ok());
+    CHECK(bus.execute_line("AYAR koordinat_sistemi EPSG:32636", Origin::Test).ok());
+    CHECK_EQ(doc.crs().id(), std::string("EPSG:32636"));
+}
+
+TEST_CASE("CRS: metre saymayan sistemle kaydedilmiş çizim açılır ama uyarıyla (F-03)")
+{
+    // Before AYAR refused them, a drawing COULD be saved "in" EPSG:4326. It must
+    // still open — locking a surveyor out of their own file is not a fix — and
+    // it must say, on the way in, that its numbers are not metres.
+    if (!Transform::available()) PENDING("PROJ kapalı: bir sistemin neyi saydığı sorulamıyor.");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    REQUIRE(catalogue.ok());
+
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "kentoscad-geodesy-crs-unit";
+    std::filesystem::create_directories(dir);
+    const std::string path = (dir / "derece.pcad").string();
+
+    {
+        core::Document doc;
+        command::Registry reg;
+        command::Journal journal;
+        command::UndoStack undo;
+        command::Bus bus{doc, reg, journal, undo};
+        command::register_builtin_commands(reg);
+        io::FileService files{bus};
+        REQUIRE(bus.execute_line("ÇİZGİ 29,41 29.001,41.001", command::Origin::Test).ok());
+        core::Op op; // what the refused AYAR used to do, done the only way left
+        REQUIRE(doc.set_crs(core::Crs("EPSG:4326"), op).ok());
+        auto saved = bus.execute_line("KAYDET \"" + path + "\"", command::Origin::Test);
+        if (!saved) FAIL_WITH("KAYDET", saved.error().message);
+    }
+
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+    io::FileService files{bus};
+    domain::geodesy::CrsService service(bus, std::move(catalogue.value()));
+    std::string said;
+    bus.on_echo = [&said](std::string_view s) { said.append(s).append("\n"); };
+
+    auto opened = bus.execute_line("AÇ \"" + path + "\"", command::Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(doc.live_entity_count(), std::size_t{1});
+    CHECK(doc.crs().unit() == core::CrsUnit::Degree);
+    CHECK(said.find("metre saymıyor") != std::string::npos);
+    CHECK(said.find("adını değiştirmek bunu düzeltmez") != std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
 }
 
 // =============================================================================

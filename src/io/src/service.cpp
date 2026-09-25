@@ -64,20 +64,14 @@ core::DrawingUnit effective_unit(const command::Bus& bus)
     return core::drawing_unit_from_setting(bus.setting("core.cizim.birim").as_enum());
 }
 
-/// The coordinate system a user can actually set.
-///
-/// A NOTE ON A DUPLICATION THIS MODULE DID NOT CREATE. model.md R36/R37 put the
-/// CRS on the document, and `core::Document::crs()` is where `content_hash()`
-/// folds it from. But the only CRS a client can write today is the project-scope
-/// setting `core.crs.id`: `Transaction::set_crs` exists and no command calls it,
-/// so `Document::crs()` is stuck at its "TUREF/TM30" default in every drawing the
-/// application can produce.
-///
-/// The project file carries BOTH faithfully, so nothing is lost either way. For
-/// an EXPORT there has to be one answer, and it is the setting — that is the
-/// value the user set, the value model.md R40 calls part of the exported legal
-/// document, and the value AYAR journals. When the two are unified this function
-/// becomes `bus.document().crs().id()` and nothing else changes.
+/// How many decimals of a metre a coordinate table is written with: the
+/// project's `core.crs.hassasiyet`, which is part of the signed document
+/// (model.md R40) and so read here rather than chosen by the writer.
+int table_decimals(const command::Bus& bus)
+{
+    return static_cast<int>(bus.setting("core.crs.hassasiyet").as_int());
+}
+
 /// What a driver should be told the coordinates are in.
 ///
 /// ONE source: the document. The project setting used to be consulted first and
@@ -1093,7 +1087,8 @@ core::Result<std::string> FileService::export_points(std::string path, bool swap
 
         const PointOrder order =
             swapped_axes ? PointOrder::NumberNorthingEasting : PointOrder::NumberEastingNorthing;
-        if (auto st = write_point_list(path, points, order); !st) return st.error();
+        if (auto st = write_point_list(path, points, order, table_decimals(bus_)); !st)
+            return st.error();
         return std::to_string(points.size()) + " köşe yazıldı: " + path;
     }
 
@@ -1137,7 +1132,8 @@ core::Result<std::string> FileService::export_points(std::string path, bool swap
 
     const PointOrder order =
         swapped_axes ? PointOrder::NumberNorthingEasting : PointOrder::NumberEastingNorthing;
-    if (auto st = write_point_list(path, points, order); !st) return st.error();
+    if (auto st = write_point_list(path, points, order, table_decimals(bus_)); !st)
+        return st.error();
 
     return std::to_string(points.size()) + " nokta yazıldı: " + path;
 }

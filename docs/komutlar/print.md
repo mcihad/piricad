@@ -178,6 +178,10 @@ Raster çıktının yanına, sayfada **hedeflenmiş bir harita çerçevesi varsa
 bir world file yazılır. Her CBS okur, kütüphane gerektirmez ve bir görüntü kodlayıcısı
 tarafından sessizce düşürülemez.
 
+Sayılar çizimin koordinat sisteminin birimiyle, yani **metre** olarak yazılır: bir CBS
+programı world file'ı böyle okur. Görüntüyü QGIS'e aldığınızda KRS olarak çizimin
+sistemini (ör. EPSG:5256) seçin.
+
 World file **sayfanın tamamını** tanımlar ama anlamı harita çerçevesindedir: bir sayfa
 çoğunlukla kâğıttır — başlık, lejant ve ölçek çubuğu zeminde hiçbir yerde değildir.
 Bu yüzden çerçevenin sayfadaki yeri hesaba katılır; katılmasaydı dosya, lejantı

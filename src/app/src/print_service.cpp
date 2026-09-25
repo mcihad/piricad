@@ -418,7 +418,10 @@ std::string unsupported_message(const QString& path)
 /// WHY A SIDECAR AND NOT A TAG IN THE FILE. A world file is six numbers in a text
 /// file that every GIS reads, needs no library, and cannot be silently dropped by
 /// an image encoder. The numbers are the affine from PIXEL CENTRES to ground, in
-/// the drawing's own units (millimetres), which is what `Mm` storage makes exact.
+/// the COORDINATE SYSTEM'S unit — metres — because that is what every GIS reads
+/// a world file in. It used to be written in the store's millimetres, which no
+/// program but this one knows about: a TM30 sheet opened in QGIS landed a
+/// thousand times further out than its ground (TODOS F-03).
 ///
 /// IT DESCRIBES THE MAP FRAME, NOT THE PAGE. A sheet is mostly paper: a title, a
 /// legend and a scale bar are not on the ground anywhere. So the world file is
@@ -464,7 +467,11 @@ std::string world_file_for(const core::Layout& sheet, const core::LayoutItem& ma
     const double c = left + (0.5 - fx) * s;
     const double f = top - (0.5 - fy) * s;
 
-    const auto num = [](double v) { return QString::number(v, 'f', 10).toStdString(); };
+    // Millimetres out to metres, at the last moment and once: everything above
+    // is the view's own arithmetic in the store's unit.
+    const auto num = [](double mm) {
+        return QString::number(mm / static_cast<double>(core::kMmPerMetre), 'f', 10).toStdString();
+    };
     return num(s) + "\n0.0000000000\n0.0000000000\n" + num(-s) + "\n" + num(c) + "\n" + num(f) +
            "\n";
 }

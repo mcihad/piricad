@@ -559,6 +559,33 @@ TEST_CASE("NOKTALAR: okunan liste yazılıp aynen geri okunur")
     CHECK(no.value().text == "1");
 }
 
+TEST_CASE("NOKTALAR: yazılan liste projenin koordinat hassasiyetini izler (F-03)")
+{
+    // A point list is a coordinate table somebody signs, so it is written to the
+    // project's decimals (`core.crs.hassasiyet`) — three by default, which is the
+    // stored millimetre exactly.
+    TempDir tmp("nokta-hassasiyet");
+    const std::string in_path = tmp.file("giris.txt");
+    {
+        std::ofstream out(in_path);
+        out << "1;485320.155;4310220.254\n";
+    }
+    Rig a;
+    REQUIRE(a.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("NOKTALAR dosya=\"" + in_path + "\"", Origin::Test).ok());
+
+    const auto written_with = [&](const char* name) {
+        const std::string path = tmp.file(name);
+        auto st = a.bus.execute_line("NOKTALAR dosya=\"" + path + "\" yon=yaz", Origin::Test);
+        if (!st) FAIL_WITH("NOKTALAR yaz", st.error().message);
+        std::ifstream in(path);
+        return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    };
+    CHECK(written_with("uc.txt").find("1;485320.155;4310220.254;") != std::string::npos);
+    REQUIRE(a.bus.execute_line("AYAR koordinat_hassasiyeti 2", Origin::Test).ok());
+    CHECK(written_with("iki.txt").find("1;485320.16;4310220.25;") != std::string::npos);
+}
+
 TEST_CASE("NOKTALAR tek geri alma adımıdır")
 {
     TempDir tmp("nokta-geri");
@@ -1750,6 +1777,200 @@ TEST_CASE("IO: Shapefile içe aktarımı — parseller alan olarak gelir")
     CHECK_EQ(target.undo.undo_depth() - before, std::size_t{1});
     REQUIRE(target.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+}
+
+namespace {
+
+/// A two-parcel TM30 GeoPackage written through DIŞAAKTAR, for the unit cases
+/// below to convert with GDAL's own tool. Empty when the export failed.
+std::string tm30_parcels(const TempDir& tmp, const char* name)
+{
+    Rig source;
+    if (!source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test)) return {};
+    if (!source.bus.execute_line("KATMAN ad=PARSEL", Origin::Test)) return {};
+    // Metres, as a command line reads them: a real TM30 parcel, inside the
+    // projection's domain, so GDAL can carry it to degrees and back.
+    if (!source.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245",
+                                 Origin::Test))
+        return {};
+    const std::string gpkg = tmp.file(name);
+    if (!source.bus.execute_line("DIŞAAKTAR \"" + gpkg + "\"", Origin::Test)) return {};
+    return fs::exists(gpkg) ? gpkg : std::string{};
+}
+
+/// Runs GDAL's command-line converter quietly; false when it is not installed.
+bool ogr2ogr(const std::string& arguments)
+{
+    return std::system(("ogr2ogr " + arguments + " >/dev/null 2>&1").c_str()) == 0;
+}
+
+/// The WKT of WGS 84 as a `.prj` carries it: a globe in degrees.
+constexpr const char* kWgs84Prj =
+    R"(GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],)"
+    R"(PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]])";
+
+} // namespace
+
+TEST_CASE("İÇEAKTAR: derece sayan bir CBS katmanı reddedilir ve yolu söylenir (F-03)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // THE DEFECT. A layer in WGS 84 was read as metres like every GIS layer and
+    // multiplied into millidegrees: 29,83° became 29 830 mm, every parcel in it
+    // collapsed onto a hundred-metre grid beside the origin, and the file
+    // "opened" with nothing but a CRS-mismatch note. Now GDAL is asked what the
+    // system counts, and a globe is refused with the way in.
+    TempDir tmp("derece");
+    const std::string tm30 = tm30_parcels(tmp, "tm30.gpkg");
+    REQUIRE(!tm30.empty());
+    const std::string wgs = tmp.file("wgs84.gpkg");
+    if (!ogr2ogr("-t_srs EPSG:4326 \"" + wgs + "\" \"" + tm30 + "\"") || !fs::exists(wgs))
+        PENDING("ogr2ogr yok; WGS 84 örneği üretilemedi.");
+
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    const std::size_t depth = target.undo.undo_depth();
+
+    const auto imported = target.bus.execute_line("İÇEAKTAR \"" + wgs + "\"", Origin::Test);
+    REQUIRE(!imported.ok());
+    if (!imported.ok()) {
+        const std::string& said = imported.error().message;
+        CHECK(said.find("coğrafi") != std::string::npos);
+        CHECK(said.find("içe alınmadı") != std::string::npos);
+        CHECK(said.find("ogr2ogr -t_srs") != std::string::npos); // the way in
+    }
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+    CHECK_EQ(target.undo.undo_depth(), depth);
+
+    // And back in metres the same file reads: the refusal is about the unit,
+    // not about GDAL's conversion.
+    const std::string back = tmp.file("geri.gpkg");
+    REQUIRE(ogr2ogr("-t_srs EPSG:5254 \"" + back + "\" \"" + wgs + "\""));
+    auto again = target.bus.execute_line("İÇEAKTAR \"" + back + "\"", Origin::Test);
+    if (!again) FAIL_WITH("İÇEAKTAR", again.error().message);
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{1});
+}
+
+TEST_CASE("İÇEAKTAR: sistem bildirmeyen katmanın sayıları derece gibiyse uyarılır (F-03)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // A shapefile whose `.prj` got lost on the way, holding longitude and
+    // latitude. Nothing can be sure it is degrees — a small site grid looks the
+    // same — so it is read as the drawing's system, and the warning says what
+    // the numbers most likely are.
+    TempDir tmp("derece-etiketsiz");
+    const std::string tm30 = tm30_parcels(tmp, "tm30.gpkg");
+    REQUIRE(!tm30.empty());
+    const std::string shp = tmp.file("etiketsiz.shp");
+    if (!ogr2ogr("-f \"ESRI Shapefile\" -t_srs EPSG:4326 \"" + shp + "\" \"" + tm30 + "\"") ||
+        !fs::exists(shp))
+        PENDING("ogr2ogr yok; Shapefile örneği üretilemedi.");
+    fs::remove(tmp.file("etiketsiz.prj"));
+
+    // A 60 × 45 m parcel is 0,0006° × 0,0004°: read as metres it rounds to a
+    // millimetre, keeps no area, and NOTHING survives. The refusal says why,
+    // rather than "contains nothing readable" about a file full of parcels.
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    const auto imported = target.bus.execute_line("İÇEAKTAR \"" + shp + "\"", Origin::Test);
+    REQUIRE(!imported.ok());
+    if (!imported.ok()) {
+        CHECK(imported.error().message.find("boylam ve enlem") != std::string::npos);
+        CHECK(imported.error().message.find("milimetrelik bir noktaya ezildi") !=
+              std::string::npos);
+    }
+
+    // A layer big enough to survive the rounding comes in — as the drawing's
+    // system, which is all a file without one allows — with the warning. Two
+    // kilometres of road in degrees is 0,02°, twenty "millimetres" of line.
+    const std::string road = tmp.file("yol.shp");
+    {
+        std::ofstream csv(tmp.file("yol.csv"), std::ios::binary | std::ios::trunc);
+        csv << "WKT,ad\n\"LINESTRING (29.00 41.00,29.02 41.00)\",yol\n";
+    }
+    if (!ogr2ogr("-f \"ESRI Shapefile\" \"" + road + "\" \"" + tmp.file("yol.csv") + "\""))
+        PENDING("ogr2ogr CSV okuyamadı; yol örneği üretilemedi.");
+    auto line = target.bus.execute_line("İÇEAKTAR \"" + road + "\"", Origin::Test);
+    if (!line) FAIL_WITH("İÇEAKTAR", line.error().message);
+    CHECK(target.transcript.find("yanında .prj dosyası da yok") != std::string::npos);
+    CHECK(target.transcript.find("boylam ve enlem") != std::string::npos);
+
+    // On a local site grid small numbers are the ordinary case, and nobody is
+    // told they might be degrees.
+    Rig local;
+    REQUIRE(local.bus.execute_line("AYAR core.crs.id YEREL", Origin::Test).ok());
+    auto site = local.bus.execute_line("İÇEAKTAR \"" + road + "\"", Origin::Test);
+    if (!site) FAIL_WITH("İÇEAKTAR", site.error().message);
+    CHECK(local.transcript.find("boylam ve enlem") == std::string::npos);
+}
+
+TEST_CASE("DXF: yanındaki .prj derece bildiriyorsa DXF reddedilir (F-03)")
+{
+    if (!io::dxf_backend_available() || !io::vector_backend_available())
+        PENDING("DXF ya da GDAL kapalı.");
+
+    TempDir tmp("dxf-prj-derece");
+    Rig source;
+    REQUIRE(source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ÇİZGİ 485320,4310220 485330,4310230", Origin::Test).ok());
+    const std::string dxf = tmp.file("cizim.dxf");
+    auto exported         = source.bus.execute_line("DIŞAAKTAR \"" + dxf + "\"", Origin::Test);
+    if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
+    REQUIRE(fs::exists(tmp.file("cizim.prj")));
+
+    // The same DXF, now claiming a globe.
+    {
+        std::ofstream prj(tmp.file("cizim.prj"), std::ios::binary | std::ios::trunc);
+        prj << kWgs84Prj;
+    }
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    const auto imported = target.bus.execute_line("İÇEAKTAR \"" + dxf + "\"", Origin::Test);
+    REQUIRE(!imported.ok());
+    if (!imported.ok()) {
+        CHECK(imported.error().message.find("derece") != std::string::npos);
+        CHECK(imported.error().message.find("cizim.dxf") != std::string::npos);
+    }
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("DXF: milimetre yazılan DXF'in yanına .prj konmaz; okurken çelişki söylenir (F-03)")
+{
+    if (!io::dxf_backend_available() || !io::vector_backend_available())
+        PENDING("DXF ya da GDAL kapalı.");
+
+    // A `.prj` names a system in METRES. Beside a DXF written in millimetres a
+    // GIS program reads every number as metres and puts the drawing a thousand
+    // times too far out — so such a file goes out without one, and says why.
+    TempDir tmp("dxf-prj-birim");
+    Rig source;
+    REQUIRE(source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ÇİZGİ 485320,4310220 485330,4310230", Origin::Test).ok());
+
+    REQUIRE(source.bus.execute_line("AYAR çizim_birimi milimetre", Origin::Test).ok());
+    const std::string mm_dxf = tmp.file("milimetre.dxf");
+    auto in_mm = source.bus.execute_line("DIŞAAKTAR \"" + mm_dxf + "\"", Origin::Test);
+    if (!in_mm) FAIL_WITH("DIŞAAKTAR", in_mm.error().message);
+    CHECK(fs::exists(mm_dxf));
+    CHECK(!fs::exists(tmp.file("milimetre.prj")));
+    CHECK(source.transcript.find(".prj yazılmadı") != std::string::npos);
+
+    // In metres the sidecar goes with it, as before.
+    REQUIRE(source.bus.execute_line("AYAR çizim_birimi metre", Origin::Test).ok());
+    const std::string m_dxf = tmp.file("metre.dxf");
+    auto in_m               = source.bus.execute_line("DIŞAAKTAR \"" + m_dxf + "\"", Origin::Test);
+    if (!in_m) FAIL_WITH("DIŞAAKTAR", in_m.error().message);
+    CHECK(fs::exists(tmp.file("metre.prj")));
+
+    // And a metre DXF with its `.prj`, read into a drawing set to millimetres,
+    // is read as the setting says — and the disagreement is said out loud.
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(target.bus.execute_line("AYAR çizim_birimi milimetre", Origin::Test).ok());
+    auto read = target.bus.execute_line("İÇEAKTAR \"" + m_dxf + "\"", Origin::Test);
+    if (!read) FAIL_WITH("İÇEAKTAR", read.error().message);
+    CHECK(target.transcript.find("metre sayan bir sistem bildiriyor") != std::string::npos);
 }
 
 TEST_CASE("IO: eksik .shx Türkçe açıklanır, GDAL'ın config önerisiyle değil")

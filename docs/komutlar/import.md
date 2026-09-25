@@ -329,6 +329,8 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
 | `'...' açılamadı: ...` | Dosya yok, okunamıyor ya da bozuk | Yolu ve izinleri denetleyin |
 | `İçe aktarma iptal edildi; çizim değişmedi.` | Sihirbazda **Okumayı durdur**'a basıldı | Yeniden **İleri**'ye basın |
+| `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
+| `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulup dönüştürün ve yeniden aktarın |
 
 ## Bozuk öğeler atlanır, sayılır ve söylenir
 

@@ -93,6 +93,12 @@ Yazılan dosya noktalı virgülle ayrılır ve ondalık olarak `.` kullanır: T�
 yerel ayarlı bir hesap tablosu `485320.543`'ü ikiye bölmeden açar ve dosyayı
 sonradan kim okursa okusun belirsizlik kalmaz.
 
+Koordinatlar projenin **koordinat hassasiyetiyle** yazılır (`AYAR
+koordinat_hassasiyeti`). Varsayılan 3 ondalık saklanan milimetrenin kendisidir; daha az
+ondalıkta değer tam sayılarla ve yarımdan uzağa yuvarlanır. Bir nokta listesi imzalanan
+bir koordinat cetvelidir; bu yüzden hassasiyet bir proje ayarıdır. Ayrıntı:
+[Koordinat hassasiyeti](../veri/koordinat-sistemleri.md#koordinat-hassasiyeti).
+
 ### Bir nesnenin köşelerini yazmak
 
 Aplikasyona çıkacak ekip parselin köşelerini ister, noktalarını değil. `nesneler`

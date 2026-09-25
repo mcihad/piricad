@@ -9,11 +9,37 @@
 
 #include <fstream>
 #include <iterator>
+#include <utility>
 
 namespace kentos::io {
 
 using core::err;
 using core::ErrorCode;
+
+std::string dxf_prj_withheld(core::DrawingUnit unit)
+{
+    return std::string("DXF'in yanına .prj yazılmadı: sayıları ") + core::drawing_unit_name(unit) +
+           " (AYAR çizim_birimi), .prj'nin bildirdiği sistem ise metre sayar — bir CBS programı "
+           "bu dosyayı metre okuyup yanlış yere ve yanlış ölçekte koyardı. Koordinat sistemini "
+           "taşıyan bir DXF için AYAR çizim_birimi metre ile yeniden dışa aktarın.";
+}
+
+core::Status file_crs_holds_metres(const core::Crs& crs, const std::string& where)
+{
+    const std::string problem = core::crs_unit_problem(crs);
+    if (problem.empty()) return {};
+    // THE WAY IN, for the tools a Turkish GIS office already has open: the
+    // conversion is PROJ's in both, and a later import reads metres. Not a
+    // conversion of our own on the way in — that is a datum question (which
+    // transformation, how accurate) and it gets its own answer rather than a
+    // silent ballpark one.
+    return err(ErrorCode::ValidationFailed,
+               where + " içe alınmadı. " + problem +
+                   " Dosyayı önce metre birimli bir sisteme dönüştürüp öyle alın: QGIS'te "
+                   "Farklı Kaydet ▸ KRS olarak ör. EPSG:5256 (TUREF/TM36), ya da komutla "
+                   "ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg. İçe alırken dönüştürme "
+                   "Faz 1'de gelecek.");
+}
 
 std::string prj_sidecar_path(const std::string& path)
 {
@@ -37,6 +63,30 @@ std::string gdal_reason()
 
 } // namespace
 
+core::Crs crs_with_unit(const OGRSpatialReference& srs, std::string id)
+{
+    core::Crs crs(std::move(id));
+    // GDAL's own classification, which reads a compound system by its
+    // horizontal half and a bound one (a WKT with TOWGS84) by the system it
+    // binds — the same reading the geodesy module asks PROJ for.
+    if (srs.IsGeographic() != 0) {
+        const char* name = nullptr;
+        (void)srs.GetAngularUnits(&name);
+        crs.set_unit(core::CrsUnit::Degree, name != nullptr ? name : "degree");
+    } else if (srs.IsGeocentric() != 0) {
+        crs.set_unit(core::CrsUnit::Other, "yer merkezli metre (X/Y/Z)");
+    } else if (srs.IsProjected() != 0 || srs.IsLocal() != 0) {
+        const char* name    = nullptr;
+        const double factor = srs.GetLinearUnits(&name);
+        // EXACTLY one, as in the geodesy module: a US survey foot is
+        // 0,304800609601… and a system in it must not pass for metres.
+        if (factor > 0.0)
+            crs.set_unit(factor == 1.0 ? core::CrsUnit::Metre : core::CrsUnit::Other,
+                         name != nullptr ? name : "");
+    }
+    return crs;
+}
+
 core::Result<std::string> prj_sidecar_crs(const std::string& path)
 {
     const std::string sidecar = prj_sidecar_path(path);
@@ -58,9 +108,15 @@ core::Result<std::string> prj_sidecar_crs(const std::string& path)
 
     const char* authority = srs.GetAuthorityName(nullptr);
     const char* code      = srs.GetAuthorityCode(nullptr);
-    if (authority && code) return std::string(authority) + ":" + code;
-    const char* name = srs.GetName();
-    return name ? std::string(name) : std::string("WKT");
+    const char* name      = srs.GetName();
+    std::string id        = authority && code ? std::string(authority) + ":" + code
+                                              : (name ? std::string(name) : std::string("WKT"));
+
+    // A `.prj` beside a DXF says what its numbers ARE, and a DXF of degrees is
+    // refused here for the reason every other file is (TODOS F-03).
+    if (auto st = file_crs_holds_metres(crs_with_unit(srs, id), "'" + path + "'"); !st)
+        return st.error();
+    return id;
 }
 
 core::Result<std::string> write_prj_sidecar(const std::string& path, const std::string& crs_id)

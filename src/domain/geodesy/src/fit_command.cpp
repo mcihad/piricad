@@ -15,17 +15,21 @@
 // drawing IS — a reviewer has to be able to see the points, the residuals and the
 // scale that was accepted — so the fit is reported in full and the parameters go
 // into the journal with the command.
+#include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 
+#include "kentos_cad/core/crs.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/units.hpp"
 #include "kentos_cad/domain/geodesy/helmert.hpp"
 
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace kentos::command {
@@ -49,6 +53,24 @@ std::string fixed3(double v)
 Task<void> run(Context& ctx)
 {
     using domain::geodesy::ControlPoint;
+
+    // THE SYSTEM THE DRAWING LANDS IN is checked before a single pair is asked
+    // for: the published coordinates it names are metres or the fit is
+    // meaningless, and a Helmert fit onto a globe in degrees would scale every
+    // parcel by a hundred thousand (TODOS F-03). Resolved through the bus, like
+    // `AYAR koordinat_sistemi`, so the label written below is the looked-up one.
+    std::optional<core::Crs> lands_in;
+    if (const Value target = ctx.argument("sistem"); !target.empty()) {
+        command::Bus& bus = ctx.session().bus();
+        core::Crs named   = bus.on_crs_resolve ? bus.on_crs_resolve(target.as_text())
+                                               : core::Crs(std::string(target.as_text()));
+        if (const std::string problem = core::crs_unit_problem(named); !problem.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Çizim bu sisteme oturtulamaz. " + problem + " " + core::crs_metric_hint());
+            co_return;
+        }
+        lands_in = std::move(named);
+    }
 
     // The pairs arrive as a flat run of points: local, map, local, map... One
     // parameter rather than two, because two lists could disagree in length and
@@ -159,8 +181,8 @@ Task<void> run(Context& ctx)
     }
 
     // ---- and say where it now is ----
-    if (const Value target = ctx.argument("sistem"); !target.empty()) {
-        if (auto st = ctx.transaction().set_crs(core::Crs(target.as_text())); !st) {
+    if (lands_in) {
+        if (auto st = ctx.transaction().set_crs(*lands_in); !st) {
             ctx.refuse(st.error());
             co_return;
         }

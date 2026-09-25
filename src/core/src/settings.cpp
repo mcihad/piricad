@@ -1175,11 +1175,14 @@ KENTOS_SETTING(koordinat_hassasiyeti)
         .type     = SettingType::Int,
         .scope    = SettingScope::Project,
         .fallback = SettingValue::integer(3),
-        .range    = SettingRange::between(0, 6),
+        .range    = SettingRange::between(0, 3),
         .values   = {},
         .unit     = "hane",
-        .summary  = "Koordinat cetvellerinde yazılan ondalık hane sayısı. Görüntüleme gibi "
-                    "durur ama imzalanan cetvelin baytını değiştirir, bu yüzden projededir.",
+        .summary  = "Koordinat okumalarında ve cetvellerinde (KOORDİNAT, NOKTALAR ile yazılan "
+                    "nokta listesi) metrenin kaç ondalığının yazılacağı. En çok 3: çizim "
+                    "milimetre çözünürlükte saklanır ve dördüncü hane her zaman sıfır olurdu. "
+                    "Görüntüleme gibi durur ama imzalanan cetvelin baytını değiştirir, bu "
+                    "yüzden projededir.",
         .section  = "Koordinat Sistemleri", // ui-label
     };
 }
@@ -1195,9 +1198,12 @@ KENTOS_SETTING(cizim_birimi)
         .range    = SettingRange::between(0, 2),
         .values   = {"milimetre", "santimetre", "metre"},
         .unit     = "",
-        .summary  = "Uzunlukların yazıldığı birim. Dışa aktarılan dosyadaki sayıların "
-                    "anlamını belirlediği için proje kapsamındadır.",
-        .section  = "Genel", // ui-label
+        .summary = "CAD dosyalarının (DXF, DWG) sayılarının ve ölçü yazılarının birimi: bir "
+                   "DXF bu birimle okunur ve yazılır. Koordinat sisteminin birimi değildir — "
+                   "çizim metre sayan bir sistemde, milimetre çözünürlükte saklanır; "
+                   "GeoPackage ve Shapefile sistemlerinin metresiyle okunur ve yazılır. "
+                   "Dışa aktarılan bir DXF'in sayılarını değiştirdiği için proje kapsamındadır.",
+        .section = "Genel", // ui-label
     };
 }
 
@@ -1300,8 +1306,9 @@ KENTOS_SETTING(en_kucuk_alan)
         .values   = {},
         .unit     = "mm²",
         .summary  = "Kırpıntı poligon eşiği, milimetrekare (500000 = 0,5 m²). Bu alandan "
-                    "küçük artık yüzeyler topoloji denetiminde kırpıntı olarak raporlanır. "
-                    "Denetim çıktısını değiştirdiği için proje kapsamındadır.",
+                    "küçük artık yüzeyler topoloji denetiminde kırpıntı olarak raporlanacak; "
+                    "bugün hiçbir denetim okumuyor, parseller arası boşluk denetimiyle Faz 1'de "
+                    "gelecek. Denetim çıktısını değiştireceği için proje kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

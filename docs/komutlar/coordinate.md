@@ -12,6 +12,11 @@ Okunan değer **belgenin** koordinat sistemindedir, ekranın değil. Görünüm�
 kadar yakınlaştırdığınızın okunan sayıya etkisi yoktur; yazdığınız defterdeki
 değerle paftadaki değer aynıdır.
 
+Değer projenin **koordinat hassasiyetiyle** yazılır (`AYAR koordinat_hassasiyeti`,
+varsayılan 3 ondalık = milimetre). İki ondalıkta `485320,155` okuması `485320,16` olarak
+yazılır: yuvarlama tam sayılarla, yarımdan uzağa yapılır. Ayrıntı:
+[Koordinat hassasiyeti](../veri/koordinat-sistemleri.md#koordinat-hassasiyeti).
+
 ## Adlar
 
 | Türkçe | ASCII | İngilizce | Kısaltma |

@@ -1403,9 +1403,15 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
     if (const auto st = splice_xdata(path, source.pending_xdata(), source.pending_inserts()); !st)
         co_return st.error();
 
-    // The coordinate system beside the file, the only place DXF lets it go.
-    auto prj = write_prj_sidecar(path, options.crs);
-    if (!prj) {
+    // The coordinate system beside the file, the only place DXF lets it go —
+    // WHEN THE NUMBERS ARE IN IT. A `.prj` names a system that counts metres, and
+    // a GIS program that finds one reads the DXF's numbers as metres: beside a
+    // drawing written in millimetres it would place every parcel a thousand
+    // times too far out (TODOS F-03). Such a file gets no `.prj`, and the report
+    // says why and how to get one.
+    if (options.unit != core::DrawingUnit::Metre) {
+        source.report().diagnostics.note(Severity::Warning, dxf_prj_withheld(options.unit));
+    } else if (auto prj = write_prj_sidecar(path, options.crs); !prj) {
         if (prj.error().code == ErrorCode::Unsupported)
             source.report().diagnostics.note(Severity::Warning,
                                              ".prj yan dosyası bu yapıda yazılamadı (GDAL kapalı); "

@@ -186,6 +186,7 @@ oluşturmamalıdır.
 | `'...' sanal dosya sistemi yolu. KentOSCad ağa ya da arşivin içine yazmaz.` | `/vsi...` ile başlayan yol | Yerel bir yol verin |
 | `'...' bir KentOSCad proje dosyası uzantısı taşıyor.` | `.pcad` dışa aktarılmaya çalışıldı | [FARKLIKAYDET](saveas.md) kullanın |
 | `'...' yazılamadı. Koordinat sistemi olmayan bir dışa aktarım eksik veridir` | `.prj` yazılamadı | Dizin izinlerini denetleyin |
+| `DXF'in yanına .prj yazılmadı: sayıları milimetre …` (not) | `çizim_birimi` metre değil; `.prj` bir CBS programına sayıları metre okuturdu | Koordinat sistemini taşıyan bir DXF için `AYAR çizim_birimi metre` ile yeniden aktarın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

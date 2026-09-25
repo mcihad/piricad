@@ -49,7 +49,7 @@ AYAR ad=<ad> deger=<deger>
 AYAR <ad> varsayilan
 ```
 
-Ayar adı yerine ayar kimliği de yazılabilir: `AYAR core.crs.hassasiyet 4`.
+Ayar adı yerine ayar kimliği de yazılabilir: `AYAR core.crs.hassasiyet 2`.
 
 Adlar Türkçe katlanır: `çizgi_tipi_ölçeği`, `cizgi_tipi_olcegi` ve `ltscale` aynı ayarı
 açar. Komut satırında Türkçe harf yazmak zorunda kalmamak için ASCII karşılıkları da
@@ -105,7 +105,7 @@ koordinat_hassasiyeti = 3 hane
     kapsam      : proje
     tür         : tam sayı
     varsayılan  : 3 hane
-    aralık      : 0 .. 6
+    aralık      : 0 .. 3
 ```
 
 Projenin koordinat sistemini değiştirin:
@@ -114,11 +114,15 @@ Projenin koordinat sistemini değiştirin:
 AYAR koordinat_sistemi "TUREF/TM33"
 ```
 
-Koordinat cetvelindeki ondalık hane sayısını dörde çıkarın:
+Koordinat okumalarını ve cetvellerini ([`KOORDİNAT`](coordinate.md), [`NOKTALAR`](points.md)
+ile yazılan liste) santimetreye, iki ondalığa indirin:
 
 ```
-AYAR koordinat_hassasiyeti 4
+AYAR koordinat_hassasiyeti 2
 ```
+
+En çok 3 ondalık yazılır: çizim milimetre çözünürlükte saklanır ve dördüncü ondalık her
+zaman sıfır olurdu. Daha fazlası istenirse değer 3'e kırpılır ve söylenir.
 
 Çizim birimini seçin:
 
@@ -131,6 +135,16 @@ AYAR cizim_birimi metre
 farklıysa uyarı yazılır, ama başlık ayarın yerine geçmez; [`DIŞAAKTAR`](export.md)
 bir DXF'i bu birimde yazar ve `$INSUNITS` başlığa işler.
 Belgedeki koordinatlar her zaman milimetredir; ayar yalnız dosya sınırında iş görür.
+
+`cizim_birimi` **koordinat sisteminin birimi değildir.** Çizim her zaman metre sayan bir
+sistemde saklanır; GeoPackage ve Shapefile bu ayardan bağımsız olarak sistemlerinin
+metresiyle okunur ve yazılır. Metre dışında bir birimle yazılan DXF'in yanına `.prj`
+konmaz, çünkü `.prj`'yi okuyan bir CBS programı sayıları metre sayardı. Ayrıntı:
+[Dış veri biçimleri](../veri/dis-formatlar.md#koordinat-sistemi).
+
+Koordinat sistemi olarak yalnız metre sayan bir sistem kabul edilir. Coğrafi bir sistem
+(`AYAR koordinat_sistemi EPSG:4326`) reddedilir ve çizim değişmez: bkz.
+[Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre).
 
 Çizgi tipi ölçeğini yarıya indirin — binde cinsinden, yani `500`:
 
@@ -207,7 +221,7 @@ pencereden yapılanla komut satırına yazılan arasında hiçbir fark yoktur.
   "ad": "Proje kurulumu",
   "komutlar": [
     { "cmd": "core.setting", "args": { "ad": "core.crs.id",           "deger": "TUREF/TM33" } },
-    { "cmd": "core.setting", "args": { "ad": "core.crs.hassasiyet",   "deger": "4" } },
+    { "cmd": "core.setting", "args": { "ad": "core.crs.hassasiyet",   "deger": "2" } },
     { "cmd": "core.setting", "args": { "ad": "core.cizim.birim",      "deger": "metre" } },
     { "cmd": "core.setting", "args": { "ad": "core.katalog.paket_surumu", "deger": "0.1.0" } }
   ]
@@ -265,7 +279,8 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `'core.yakalama.dik_mod' ayarı oturum kapsamındadır; bu komut proje ayarlarını yönetir.` | Oturum ayarı `AYAR` ile değiştirilmeye çalışılmış | Dik mod ve yakalama çizimin verisi değildir, kaydedilmezler; oturum ayarlarının kendi komutu **Faz 1'de** gelecek |
 | `'core.crs.hassasiyet' ayarı tam sayı bekliyor. Girilen: '0.500000'` | Tam sayı isteyen bir ayara ondalık verilmiş | Bildirilen birimde tam sayı yazın; oran isteyen ayarlarda binde kullanın |
 | `'core.cizim.birim' ayarı şu seçeneklerden birini bekliyor: milimetre, santimetre, metre. Girilen: 'fersah'` | Listede olmayan bir seçenek yazılmış | Mesajın saydığı seçeneklerden birini yazın |
-| `'core.crs.hassasiyet' için 9 değeri [0, 6] aralığının dışında; 6 değerine kırpıldı.` | Değer bildirilen aralığın dışında | Hata değildir: değer aralığa kırpılır ve size söylenir. Başka bir sürümde yazılmış dosya bu yüzden açılmaz olmaz |
+| `'core.crs.hassasiyet' için 9 değeri [0, 3] aralığının dışında; 3 değerine kırpıldı.` | Değer bildirilen aralığın dışında | Hata değildir: değer aralığa kırpılır ve size söylenir. Başka bir sürümde yazılmış dosya bu yüzden açılmaz olmaz |
+| `Çizimin koordinat sistemi değişmedi. 'EPSG:4326' coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. …` | Derece ya da başka bir birim sayan bir sistem istenmiş | Metre sayan bir izdüşüm sistemi seçin: `AYAR koordinat_sistemi TUREF/TM36` |
 | `Metin ayarı en çok 47 bayt alır. Girilen: 60 bayt.` | Metin ayarı kapasiteyi aşmış | Kısaltın. Metin kırpılmaz, reddedilir: yarısı kesilmiş bir koordinat sistemi kimliği yanlış bir koordinat sistemidir |
 | `'core.setting' daha fazla argüman almıyor. Fazlalık: 'metre'` | İkiden fazla argüman verilmiş | Boşluk içeren değerleri tırnak içine alın: `AYAR koordinat_sistemi "TUREF/TM33"` |
 

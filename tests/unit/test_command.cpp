@@ -5306,6 +5306,24 @@ TEST_CASE("KOORDİNAT tıklanan noktayı belgenin koordinat sisteminde yazar")
     CHECK(said.find("TUREF/TM36") != std::string::npos);
 }
 
+TEST_CASE("KOORDİNAT: okuma projenin koordinat hassasiyetiyle yazılır (F-03)")
+{
+    // `core.crs.hassasiyet` was declared, shown in the settings window and read
+    // by nothing. The reading a surveyor copies off the line is written to the
+    // decimals the project's coordinate tables use.
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("AYAR koordinat_hassasiyeti 2", Origin::Test).ok());
+    said.clear();
+    auto read = f.bus.execute_line("KOORDİNAT nokta=485320.155,4310220.254", Origin::Test);
+    if (!read) FAIL_WITH("KOORDİNAT", read.error().message);
+    CHECK(said.find("485320,16 m") != std::string::npos); // half away from zero, in integers
+    CHECK(said.find("4310220,25 m") != std::string::npos);
+    CHECK(said.find("485320,155") == std::string::npos);
+}
+
 TEST_CASE("KOORDİNAT çizimi değiştirmez ve geri alma adımı bırakmaz")
 {
     Fixture f;

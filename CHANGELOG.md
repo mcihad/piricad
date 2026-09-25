@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — koordinat sisteminin birimi ile çizimin birimi ayrıldı (F-03, 1. aşama)
+
+- **Derece metre sayılmıyor.** WGS 84 (EPSG:4326) gibi coğrafi bir sistemdeki katman
+  içe alınırken dereceler bin ile çarpılıp milimetre diye saklanıyordu: 0,001° zeminde yüz
+  metredir, her parsel yüz metrelik bir ızgaraya eziliyordu. Artık GDAL'a sistemin neyi
+  saydığı soruluyor; derece ya da başka bir birim (fit, yer merkezli X/Y/Z) sayan katman
+  reddediliyor ve ret dosyayı metre sayan bir sisteme dönüştürmenin yolunu söylüyor.
+  Yanındaki `.prj` derece bildiren DXF de reddediliyor.
+- **Çizimin sistemi coğrafi olamıyor.** `AYAR koordinat_sistemi EPSG:4326` ve
+  `OTURT sistem=EPSG:4326` hiçbir şey değişmeden reddediliyor; birim PROJ'a soruluyor.
+  Bu kuraldan önce coğrafi bir sistemle kaydedilmiş çizim açılıyor ama açılırken
+  sayılarının metre olmadığı söyleniyor.
+- Koordinat sistemi bildirmeyen bir CBS katmanının bütün sayıları −180…180, −90…90
+  aralığındaysa "boylam ve enlem olabilir" uyarısı veriliyor; her nesne ezildiği için hiçbir
+  şey okunamadıysa ret mesajı nedeni söylüyor.
+- **Milimetre birimli DXF'in yanına `.prj` konmuyor**: `.prj` metre sayan bir sistem
+  bildirir ve bir CBS programı çizimi bin kat uzağa koyardı. Okurken `.prj` ile
+  `çizim_birimi` uyuşmazsa uyarı veriliyor.
+- **Raster world file metre yazılıyor** (önceden milimetre: QGIS'te pafta bin kat uzağa
+  düşüyordu).
+- DWG'de daire ve yay yarıçapı, merkezleri gibi çizim biriminde okunuyor (önceden hep metre
+  sayılıyordu; milimetre DWG'nin daireleri bin kat büyük geliyordu).
+- `koordinat_hassasiyeti` ayarı artık iş görüyor: KOORDİNAT okuması ve NOKTALAR ile yazılan
+  liste bu ondalıkla, tam sayılarla ve yarımdan uzağa yuvarlanarak yazılıyor. Aralık 0–3:
+  dördüncü ondalık milimetre deposunda hiç yoktur.
+- Belgede varsayılan sistem TUREF/TM36 olarak düzeltildi (programın varsayılanı buydu).
+
 ### Eklendi — CBS dosyasını canlı bağlama ve yerel kopya (F-02, 3. aşama)
 
 - **DIŞREFERANS** artık bir **CBS dosyasını** (GeoPackage, Shapefile) da bağlar: katmanları

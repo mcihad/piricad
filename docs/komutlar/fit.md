@@ -128,6 +128,13 @@ Yerel noktalar birbirinden ayrışmıyor.
 
 Tek sayıda nokta verildi.
 
+> `Çizim bu sisteme oturtulamaz. 'EPSG:4326' coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. …`
+
+`sistem=` koordinatlarını derece ya da metre dışında bir birimle sayan bir sistemi
+gösteriyor. Çizim metre sayan bir sistemde saklanır; hiçbir nesne taşınmadan reddedilir.
+`sistem=` için bir izdüşüm sistemi verin, ör. `sistem=TUREF/TM36`. Ayrıntı:
+[Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre).
+
 ## Doğrulama durumu
 
 Bu komutun golden değerleri **jeodezi uzmanı imzası bekliyor** (CLAUDE.md 6.11).

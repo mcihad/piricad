@@ -34,9 +34,82 @@ Saklama aralığı yaklaşık ±9,2 × 10¹² metredir; herhangi bir yersel koor
 
 ## Varsayılan koordinat sistemi
 
-Yeni çizim **TUREF/TM30** ile açılır: TUREF datumu, 30° orta meridyenli 3 derecelik dilim.
+Yeni çizim **TUREF/TM36** ile açılır: TUREF datumu, 36° orta meridyenli 3 derecelik dilim.
+Bu dilim Ankara'yı ve Orta Anadolu'yu kapsar. Başka bir dilimde çalışıyorsanız
+çizime başlamadan önce kurun:
+
+```text
+AYAR koordinat_sistemi TUREF/TM30
+```
+
 Dokümanın koordinat sistemi durum çubuğunun sağ ucunda ve **Öznitelikler** panelinde
 yazar.
+
+## Koordinat sisteminin birimi: yalnız metre
+
+Çizim koordinatlarını **metre** olarak, milimetre çözünürlükte saklar. Bu yüzden çizimin
+koordinat sistemi de koordinatlarını metre sayan bir sistem olmak zorundadır: bir
+izdüşüm sistemi (TUREF/TM27 … TUREF/TM45, UTM dilimleri) ya da haritaya henüz
+oturtulmamış bir iş için `YEREL`.
+
+**Coğrafi bir sistem (WGS 84, EPSG:4326 gibi) çizimin sistemi olamaz.** Bu sistemler
+koordinatlarını derece olarak sayar. Dereceyi metre saymak her köşeyi yüz metrelik bir
+ızgaraya oturturdu: 0,001° zeminde yaklaşık yüz metredir. KentOSCad bunu dört yerde
+reddeder ve her seferinde nedenini söyler:
+
+| Nerede | Ne olur |
+|---|---|
+| `AYAR koordinat_sistemi EPSG:4326` | Reddedilir. Çizimin sistemi ve ayar değişmez |
+| `OTURT … sistem=EPSG:4326` | Hiçbir nesne taşınmadan reddedilir |
+| Derece sayan bir CBS katmanını içe almak (GeoPackage, Shapefile) | Katman reddedilir, dönüştürme yolu söylenir |
+| Yanındaki `.prj` derece bildiren bir DXF | DXF reddedilir |
+
+Aynı kural fit (US survey foot) gibi başka birimler sayan sistemler ve yer merkezli
+(X/Y/Z) sistemler için de geçerlidir.
+
+Derece sayan bir dosyayı içe almak için önce metre sayan bir sisteme dönüştürün:
+QGIS'te **Farklı Kaydet** ile KRS olarak örneğin EPSG:5256 (TUREF/TM36) seçerek ya da
+GDAL'ın komutuyla:
+
+```text
+ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg
+```
+
+İçe alırken dönüştürme Faz 1'de gelecek.
+
+### Koordinat sistemi bildirmeyen dosya
+
+Yanında `.prj` dosyası olmayan bir Shapefile ya da koordinat sistemi taşımayan bir DXF,
+çizimin kendi sistemiyle okunur ve bu bir **uyarıyla** söylenir. Bir CBS katmanının
+bütün koordinatları −180…180 ve −90…90 aralığındaysa bunlar büyük olasılıkla boylam ve
+enlemdir. Program bu durumda ayrıca uyarır. Her nesne milimetrelik bir noktaya ezildiği
+için hiçbir şey okunamadıysa ret mesajı nedeni söyler. Çizim `YEREL` sistemdeyse küçük
+sayılar olağandır ve bu uyarı verilmez.
+
+### Bu kuraldan önce kaydedilmiş çizim
+
+Kural gelmeden önce coğrafi bir sistemle kaydedilmiş bir çizim yine açılır, ama açılırken
+sayılarının metre olmadığı söylenir. Sistemin adını değiştirmek bu sayıları düzeltmez:
+nesneleri kaynak dosyasından, metre sayan bir sisteme dönüştürüp yeniden aktarın.
+
+## Koordinat hassasiyeti
+
+`koordinat_hassasiyeti` ayarı bir koordinatın kaç ondalıkla **yazılacağını** belirler:
+[`KOORDİNAT`](../komutlar/coordinate.md) okumasında ve
+[`NOKTALAR`](../komutlar/points.md) ile yazılan nokta listesinde. Varsayılan 3'tür, yani
+saklanan milimetrenin kendisi. En çok 3 olabilir: dördüncü ondalık her zaman sıfır
+olurdu. Daha az ondalıkta değer, tam sayılarla ve yarımdan uzağa yuvarlanır:
+
+```text
+AYAR koordinat_hassasiyeti 2
+KOORDİNAT nokta=485320.155,4310220.254
+```
+
+```text
+Sağa: 485320,16 m   Yukarı: 4310220,25 m   (TUREF/TM36)
+```
+
+Bu ayar yalnız yazılanı değiştirir. Saklanan koordinat milimetre olarak kalır.
 
 ## TM 3 derece dilimleri
 
@@ -135,10 +208,23 @@ Dereceyi milimetre olarak saklamak noktayı yüz metre kaydırır, o yüzden Ken
 durumda çizim geometrisini dönüştürmeyi **reddeder** ve açık bir hata verir.
 Coğrafi okuma ekranda ve dışa aktarımda kullanılır, çizimin içinde değil.
 
+### Hata mesajları
+
+| Mesaj | Neden | Çözüm |
+|---|---|---|
+| `Çizimin koordinat sistemi değişmedi. 'EPSG:4326' coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. …` | `AYAR koordinat_sistemi` ile derece sayan bir sistem istendi | Metre sayan bir izdüşüm sistemi seçin, ör. `AYAR koordinat_sistemi TUREF/TM36` |
+| `Çizimin koordinat sistemi değişmedi. 'EPSG:2263' koordinatlarını 'US survey foot' birimiyle sayar. …` | Metre dışında bir birim sayan bir sistem istendi | Metre sayan bir izdüşüm sistemi seçin |
+| `Çizim bu sisteme oturtulamaz. …` | `OTURT sistem=` derece ya da başka bir birim sayan bir sistem gösteriyor | `sistem=` için metre sayan bir sistem verin |
+| `'yollar.gpkg' dosyasının 'yollar' katmanı içe alınmadı. 'EPSG:4326' coğrafi bir koordinat sistemi …` | İçe alınan katman derece sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın (yukarıdaki `ogr2ogr` satırı) |
+| `'cizim.dxf' içe alınmadı. …` | DXF'in yanındaki `.prj` derece sayan bir sistem bildiriyor | `.prj` yanlışsa düzeltin; doğruysa DXF'i metre sayan bir sisteme dönüştürün |
+| `… okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulun, metre sayan bir sisteme dönüştürüp yeniden aktarın |
+| `Çizimin koordinat sistemi metre saymıyor. …` (açılışta uyarı) | Çizim, bu kuraldan önce coğrafi bir sistemle kaydedilmiş | Nesneleri kaynak dosyasından doğru sistemde yeniden aktarın |
+
 ### Henüz gelmemiş olanlar
 
 | Yetenek | Ne zaman |
 |---|---|
+| Derece ya da başka bir sistemdeki dosyayı içe alırken dönüştürme | Faz 1 |
 | Türkiye Jeoit Modeli ile ortometrik yükseklik | Faz 1 |
 | ED50 / UTM 6° ve ITRF ↔ ED50 bölgesel dönüşüm | Faz 1 |
 | TKGM referans koordinatlarıyla doğrulama | referans veri geldiğinde |

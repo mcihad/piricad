@@ -11,6 +11,7 @@ add_library(kentos_core STATIC
     src/arc_polyline.cpp
     src/circle.cpp
     src/corner.cpp
+    src/crs.cpp
     src/fillet.cpp
     src/break_run.cpp
     src/curve_path.cpp
@@ -58,6 +59,7 @@ add_library(kentos_core STATIC
     # advances as constant data, see core/text_metrics.hpp.
     src/text_metrics_table.cpp
     src/text_store.cpp
+    src/units.cpp
 )
 
 target_include_directories(kentos_core PUBLIC include)
