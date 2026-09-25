@@ -57,7 +57,13 @@ namespace kentos::io {
 /// cut in two by a road — and it becomes a MULTIPOLYGON. Folding its second face
 /// in as a hole would hand a municipality a table whose areas are wrong and whose
 /// geometry still passes every check that does not know what it should have been.
-std::string entity_ewkb(const core::Document& doc, core::EntityId entity, std::int64_t srid);
+///
+/// A CURVE — circle, arc, ellipse, arc polyline, spline — is written as the
+/// shape it describes, every chord within `curve_tolerance` millimetres of it
+/// (`core::stroke_curve`, the project's `core.aktarim.egri_sapmasi`), never as
+/// the definition points it is stored by (TODOS F-03).
+std::string entity_ewkb(const core::Document& doc, core::EntityId entity, std::int64_t srid,
+                        core::Mm curve_tolerance = 1);
 
 /// One table the store found, as a person needs to see it.
 struct PostgisTable
@@ -115,8 +121,11 @@ public:
     ///
     /// One transaction for the whole layer (Article 1.6): a write that failed
     /// half way would leave a municipality's table holding part of a drawing.
+    ///
+    /// Curves go in flattened within `curve_tolerance` millimetres
+    /// (`entity_ewkb`).
     core::Result<std::size_t> write_layer(const core::Document& doc, core::LayerId layer,
-                                          const std::string& table);
+                                          const std::string& table, core::Mm curve_tolerance = 1);
 
     /// Stores a project's bytes under a name, replacing an earlier one.
     ///

@@ -59,9 +59,12 @@ Mm radius_through(Point2 centre, Point2 p) noexcept;
 /// vertex, counter-clockwise from due east.
 ///
 /// A 128-gon's greatest departure from the true circle is r·(1 − cos(pi/128)),
-/// about 0.03 % of the radius: under a tenth of a millimetre on a 300 m curve.
-/// This is the picture only; the area and the radius come from the definition.
-/// Precomputed LOD replaces the fixed count when `render.md` R4 lands.
+/// about 0,03 % of the radius: 1,5 mm at 5 m, 9 cm on a 300 m curve. That is
+/// fine for a picture — sub-pixel at any zoom that shows the whole circle —
+/// and it is the PICTURE only: the area and the radius come from the
+/// definition, and a file that cannot hold a circle receives it within the
+/// project's chord tolerance instead (`stroke_curve`, TODOS F-03). Precomputed
+/// LOD replaces the fixed count when `render.md` R4 lands.
 void circle_outline(Point2 centre, Mm radius, std::vector<Mm>& xs, std::vector<Mm>& ys);
 
 /// The `(cos t, sin t)` table `circle_outline` walks: `kCircleSegments` unit

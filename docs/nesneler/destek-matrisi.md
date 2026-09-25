@@ -197,10 +197,10 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki, alan dört katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✓ destekli | kesildi: 230.131 m → 115.054 m; sonuç: ELİPS |
+| Kes (BUDA) | ✓ destekli | kesildi: 230.131 m → 115.066 m; sonuç: ELİPS |
 | Uzat | — uygulanamaz | kapalı eğrinin ucu yok |
 | Böl | ✗ yok | Kapalı bir şekil tek noktada bölünmez; en az iki bölme noktası verin. |
-| Kır | ✓ destekli | aradaki parça çıktı: 230.131 m → 154.497 m; sonuç: ELİPS |
+| Kır | ✓ destekli | aradaki parça çıktı: 230.131 m → 154.510 m; sonuç: ELİPS |
 | Paralel (OFSET) | ◐ kısmi | ELİPS paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
@@ -219,15 +219,15 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✓ destekli | kesildi: 44.334 m → 22.180 m; sonuç: SPLINE |
+| Kes (BUDA) | ✓ destekli | kesildi: 44.368 m → 22.184 m; sonuç: SPLINE |
 | Uzat | ✗ yok | Spline'ın ucu uzatılamaz: eğri son düğümünde biter, ötesi tanımsızdır. |
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: SPLINE, SPLINE |
-| Kır | ✓ destekli | aradaki parça çıktı: 44.334 m → 29.712 m; sonuç: SPLINE, SPLINE |
+| Kır | ✓ destekli | aradaki parça çıktı: 44.368 m → 29.712 m; sonuç: SPLINE, SPLINE |
 | Paralel (OFSET) | ◐ kısmi | SPLINE paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | ✗ yok | Nesne 1 uç uca eklenemiyor; UÇUCA çizgi, yay ve yaylı çoklu çizgide çalışır. |
-| Ölç | ✓ destekli | çevre 44.334 m (analitik değer tanımlı değil) |
+| Ölç | ✓ destekli | çevre 44.368 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
 ### <a id="tarama"></a>Tarama

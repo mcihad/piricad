@@ -17,8 +17,10 @@
 // data.md Enforcement: a gated capability reports itself, it never quietly
 // succeeds and it never quietly reports nothing.
 #include "kentos_cad/io/vector.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/stroke.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/io/format.hpp"
@@ -618,13 +620,14 @@ struct FittedCircle
     core::Mm radius{0};
 };
 
-/// How far a vertex may sit off the fitted circle. The storage unit is a
-/// millimetre, so every vertex OGR strokes carries up to √2/2 mm of rounding
-/// noise against the true circle; the fitted centre carries a fraction of that
-/// again, worst on a short arc where the points span a small angle. One and a
-/// half millimetres admits that noise and nothing else: a stroked ellipse or a
-/// polyline that merely resembles a circle misses by centimetres.
-constexpr double kFitTolerance = 1.5;
+/// How far a vertex may sit off the fitted circle: `core::kRoundedFitMm`
+/// (precision.hpp). The storage unit is a millimetre, so every vertex OGR
+/// strokes carries up to √2/2 mm of rounding noise against the true circle; the
+/// fitted centre carries a fraction of that again, worst on a short arc where
+/// the points span a small angle. One and a half millimetres admits that noise
+/// and nothing else: a stroked ellipse or a polyline that merely resembles a
+/// circle misses by centimetres.
+constexpr double kFitTolerance = core::kRoundedFitMm;
 
 std::optional<FittedCircle> fit_circle(const std::vector<core::Point2>& pts)
 {
@@ -702,9 +705,9 @@ std::optional<FittedCircle> fit_circle(const std::vector<core::Point2>& pts)
     }
 
     FittedCircle out;
-    out.centre = core::Point2{origin.x + static_cast<core::Mm>(std::llround(ux)),
-                              origin.y + static_cast<core::Mm>(std::llround(uy))};
-    out.radius = static_cast<core::Mm>(std::llround(r));
+    // THE rounding helper (core.md R20), as for every coordinate read.
+    out.centre = core::Point2{origin.x + core::mm_round(ux), origin.y + core::mm_round(uy)};
+    out.radius = core::mm_round(r);
     return out.radius > 0 ? std::optional<FittedCircle>{out} : std::nullopt;
 }
 
@@ -1855,33 +1858,40 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
         return polygon;
     };
 
-    // A CURVE IS ITS OUTLINE, NOT ITS DEFINITION. A circle is stored as two
+    // A CURVE IS ITS SHAPE, NOT ITS DEFINITION. A circle is stored as two
     // vertices — its centre and a radius handle — and writing those as a line
-    // exported every circle in the drawing as a short stroke pointing east. The
-    // one tessellator the renderer and the pick test use answers here too
-    // (core/entity_kind.hpp); a GIS gets the polygon the screen shows, a DXF a
-    // closed polyline, and the importer's own fit recovers the circle exactly.
-    core::EmitBuffer curve;
-    const auto curve_geometry = [&](core::KindId kind,
-                                    std::uint32_t slot) -> std::unique_ptr<OGRGeometry> {
-        curve.clear();
-        if (!core::curve_outline(kind, geo, slot, curve) || curve.run_total() == 0) return nullptr;
-        const std::uint32_t first = curve.run_start[0];
-        const std::uint32_t count = curve.run_count[0];
-        const bool closed         = curve.run_closed[0] != 0;
+    // exported every circle as a short stroke pointing east. It is written as
+    // the shape it describes, and NOT at the picture's fixed density either —
+    // 128 chords to a circle is nine centimetres off a 300 m road curve — but
+    // within the project's chord tolerance (`core::stroke_curve`, TODOS F-03).
+    // An arc polyline keeps its arcs and a spline its curve, where the stored
+    // rings wrote straight edges and a control polygon, or nothing at all.
+    std::uint64_t curves_stroked = 0;
+    double worst_chord           = 0.0;
+    core::Stroked stroked;
+    const auto stroked_geometry = [&](core::KindId kind,
+                                      std::uint32_t slot) -> std::unique_ptr<OGRGeometry> {
+        if (!core::stroke_curve(kind, geo, slot, options.curve_tolerance, stroked) ||
+            stroked.runs.empty())
+            return nullptr;
+        const core::StrokedRun& run = stroked.runs.front();
+        const bool closed           = run.role != core::RingRole::Open;
+        if (run.points.size() < (closed ? 3u : 2u)) return nullptr;
+        ++curves_stroked;
+        worst_chord = std::max(worst_chord, stroked.deviation);
         if (closed && !dxf_out) {
             auto polygon = std::make_unique<OGRPolygon>();
             OGRLinearRing ring;
-            for (std::uint32_t v = first; v < first + count; ++v)
-                ring.addPoint(to_out(curve.xs[v]), to_out(curve.ys[v]));
+            for (const core::Point2& p : run.points)
+                ring.addPoint(to_out(p.x), to_out(p.y));
             ring.closeRings();
             polygon->addRing(&ring);
             return polygon;
         }
         auto line = std::make_unique<OGRLineString>();
-        for (std::uint32_t v = first; v < first + count; ++v)
-            line->addPoint(to_out(curve.xs[v]), to_out(curve.ys[v]));
-        if (closed) line->addPoint(to_out(curve.xs[first]), to_out(curve.ys[first]));
+        for (const core::Point2& p : run.points)
+            line->addPoint(to_out(p.x), to_out(p.y));
+        if (closed) line->addPoint(to_out(run.points.front().x), to_out(run.points.front().y));
         return line;
     };
 
@@ -2021,9 +2031,8 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
             } else if (kind == core::kPointKind) {
                 const core::Point2 at = core::point_position_of(geo, slot);
                 geometry              = std::make_unique<OGRPoint>(to_out(at.x), to_out(at.y));
-            } else if (kind == core::kCircleKind || kind == core::kArcKind ||
-                       kind == core::kEllipseKind) {
-                geometry = curve_geometry(kind, slot);
+            } else if (core::strokes_as_curve(kind)) {
+                geometry = stroked_geometry(kind, slot);
                 if (!geometry) geometry = rings_geometry(span);
             } else {
                 geometry = rings_geometry(span);
@@ -2168,13 +2177,30 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
         report.notes.push_back(std::to_string(unknown_kinds) +
                                " nesne bu yapının tanımadığı türde; dışa aktarılmadı.");
 
+    // HOW FAR THE CURVES MOVED, said rather than implied (io.md P11): the file
+    // holds straight chords where the drawing holds curves, and the reader of
+    // the file is owed the bound.
+    if (curves_stroked != 0) {
+        char worst[32];
+        (void)std::snprintf(worst, sizeof worst, "%.2f", worst_chord);
+        std::string said(worst);
+        std::replace(said.begin(), said.end(), '.', ',');
+        report.notes.push_back(std::to_string(curves_stroked) +
+                               " eğri (daire, yay, elips, yaylı çizgi, spline) " + format->driver +
+                               " eğri taşımadığı için kirişlere kırılarak yazıldı; kirişler "
+                               "eğriden en çok " +
+                               said + " mm uzakta (AYAR eğri_sapması " +
+                               std::to_string(options.curve_tolerance) +
+                               " mm; noktalar ayrıca milimetreye yuvarlanır).");
+    }
+
     // WHAT THE FILE CARRIES AND WHAT IT DOES NOT, said either way (io.md P11): a
     // silent lossy export is how a wrong pafta gets delivered.
     if (dxf_out)
         report.notes.push_back("Öznitelik sütunları DXF'e yazılmadı (biçim taşımaz); "
-                               "GeoPackage kullanın. Daire, yay ve elips kapalı çokgen olarak "
-                               "yazıldı; gerçek eğri yazımı libdxfrw ile gelecek (Faz B). Stil "
-                               "bilgisi yazılmadı.");
+                               "GeoPackage kullanın. Bu yapıda libdxfrw yok, eğriler kirişlere "
+                               "kırıldı; gerçek eğri yazımı libdxfrw ile gelir. Stil bilgisi "
+                               "yazılmadı.");
     else if (report.columns != 0)
         report.notes.push_back(std::to_string(report.columns) +
                                " öznitelik sütunu alan olarak yazıldı; stil bilgisi yazılmadı.");

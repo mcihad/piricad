@@ -2243,6 +2243,71 @@ TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordina
     CHECK_EQ(in.max_y, out.max_y);
 }
 
+TEST_CASE("IO: GeoPackage'e eğriler söylenen bir kiriş hatasıyla gider, yay yay kalır (F-03)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // WHAT A GEOPACKAGE RECEIVED. A circle went out at the picture's density —
+    // 128 chords, nine centimetres off a 300 m curve; an arc polyline as its bare
+    // vertices, so its arcs became straight edges; a spline with fit points not
+    // at all. Now every curve kind goes out within the project's chord
+    // tolerance, and the report says how far the chords are off.
+    TempDir tmp("gpkg-egri");
+    const std::string path = tmp.file("egriler.gpkg");
+
+    Rig source;
+    REQUIRE(source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(
+        source.bus.execute_line("DAİRE merkez=485300,4310200 cevre=485600,4310200", Origin::Test)
+            .ok()); // 300 m
+    // A kerb: along, a half turn of 5 m, and back — one arc polyline.
+    {
+        const core::LayerId layer = source.doc.find_layer("YOL");
+        const std::vector<core::Point2> v{{485'000'000, 4'310'000'000},
+                                          {485'010'000, 4'310'000'000},
+                                          {485'010'000, 4'310'010'000},
+                                          {485'000'000, 4'310'010'000}};
+        core::ArcPolyline def;
+        def.arcs.push_back(
+            core::ArcPolyline::Arc{1, core::Point2{485'010'000, 4'310'005'000}, 5'000, true});
+        const core::RingGeometry::RingInput input{v, core::RingRole::Open, 0};
+        core::Op op;
+        REQUIRE(source.doc
+                    .add_kind(layer, core::kArcPolylineKind, {&input, 1},
+                              core::encode_arc_polyline(def), op)
+                    .ok());
+    }
+
+    auto exported = source.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test);
+    if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
+    CHECK(source.transcript.find("kirişlere kırılarak yazıldı") != std::string::npos);
+    CHECK(source.transcript.find("AYAR eğri_sapması 1 mm") != std::string::npos);
+
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto imported = target.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+
+    // The circle's chords are within a millimetre of it, so the importer's own
+    // fit recovers it: a circle of 300 m, not a 128-gon.
+    bool circle_back = false;
+    for (core::EntityId e = 0; e < target.doc.entities().size(); ++e) {
+        if (!target.doc.alive(e)) continue;
+        const std::uint32_t slot = target.doc.entities().slot[e];
+        if (target.doc.entities().kind[e] == core::kCircleKind) {
+            circle_back = true;
+            CHECK(std::llabs(core::circle_radius_of(target.doc.geometry(), slot) - 300'000) <= 1);
+        } else {
+            // The kerb, as the line it was drawn with: its far side reaches 15 m
+            // east of the start, where a straight edge would have stopped at 10.
+            const core::Box2 box = target.doc.entity_extent(e);
+            CHECK(box.max_x >= 485'014'990);
+        }
+    }
+    CHECK(circle_back);
+}
+
 TEST_CASE("IO: sanal dosya sistemi yolları reddedilir")
 {
     if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");

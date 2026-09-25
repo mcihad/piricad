@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <optional>
 #include <string>
 
 namespace kentos::core {
@@ -60,9 +61,10 @@ const char* role_name(RingRole r) noexcept
 
 // ---------------------------------------------------------- exact 128-bit ----
 //
-// Every quantity below is exact for any coordinate append() accepts. `Int128` is
-// not used: MSVC does not have it and CLAUDE.md 6.1 requires the same numbers on
-// all three platforms, so the two limbs are carried by hand.
+// Every quantity below is exact for any coordinate append() accepts. The side
+// length carries its two limbs by hand: it predates `core::Int128` (units.hpp),
+// which every supported compiler has and the build now requires, and it is
+// measured and exact as it stands. The area's range check below uses `Int128`.
 
 struct U128
 {
@@ -212,10 +214,37 @@ std::uint64_t twice_area_u(std::span<const Mm> xs, std::span<const Mm> ys) noexc
     return twice_area_acc([&](std::size_t i) { return Point2{xs[i], ys[i]}; }, xs.size());
 }
 
-std::uint64_t twice_area_u(std::span<const Point2> pts, std::size_t n) noexcept
+/// Twice the signed area of the first `n` points, EXACTLY, in 128 bits — or
+/// nothing when even that would overflow.
+///
+/// The store keeps areas in `Mm2`, 64 bits, and the running sum above wraps on
+/// purpose: exact for every ring whose doubled area fits. What it could not say
+/// is WHETHER a ring's does. A ring twice the size of Turkey's bounding box
+/// squared came back as a wrapped figure, silently, on a legal document — so
+/// `append` asks this first and refuses the ring rather than store an area it
+/// cannot state (TODOS F-03). Translated to the first vertex like the sum it
+/// guards; each term is at most 2^125 in magnitude, and an overflow of the total
+/// is detected, never undefined.
+std::optional<Int128> twice_area_exact(std::span<const Point2> pts, std::size_t n) noexcept
 {
-    return twice_area_acc([&](std::size_t i) { return pts[i]; }, n);
+    if (n < 3) return Int128{0};
+    const Point2 origin = pts[0];
+    Int128 acc          = 0;
+    for (std::size_t i = 0; i < n; ++i) {
+        const Point2 p   = pts[i];
+        const Point2 q   = pts[(i + 1 == n) ? 0 : i + 1];
+        const Int128 ax  = static_cast<Int128>(p.x) - origin.x;
+        const Int128 ay  = static_cast<Int128>(p.y) - origin.y;
+        const Int128 bx  = static_cast<Int128>(q.x) - origin.x;
+        const Int128 by  = static_cast<Int128>(q.y) - origin.y;
+        const Int128 cut = ax * by - bx * ay;
+        if (__builtin_add_overflow(acc, cut, &acc)) return std::nullopt;
+    }
+    return acc;
 }
+
+/// The largest doubled area `Mm2` holds exactly: every stored ring's is below it.
+constexpr Int128 kTwiceAreaLimit = static_cast<Int128>(std::numeric_limits<std::int64_t>::max());
 
 /// |v| for a two's-complement doubled area, without the INT64_MIN negation UB.
 constexpr std::uint64_t magnitude_u(std::uint64_t v) noexcept
@@ -296,6 +325,9 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings,
     std::uint16_t part       = rings[0].part;
     bool exterior_seen       = false;
     Box2 exterior_box{};
+    // The sum of every closed ring's doubled area, holes included: what
+    // `area_of` adds and subtracts, bounded so its 64-bit sum never wraps.
+    Int128 closed_twice = 0;
 
     for (std::size_t i = 0; i < rings.size(); ++i) {
         const RingInput& r = rings[i];
@@ -368,11 +400,31 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings,
         // the Shewchuk predicate wrapper core.md R8 mandates; until it exists this
         // catches the degenerate cases, and it catches them at the boundary rather
         // than on a tapu.
-        if (r.role != RingRole::Open && twice_area_u(r.points, stored) == 0)
-            return err(ErrorCode::ValidationFailed,
-                       ordinal(i) + " " + role_name(r.role) +
-                           " halka sıfır alanlı: noktalar doğrusal, çakışık ya da halka "
-                           "kendi üzerine katlanmış. Sıfır alanlı bir parsel imzalanamaz.");
+        if (r.role != RingRole::Open) {
+            const std::optional<Int128> twice = twice_area_exact(r.points, stored);
+            if (twice && *twice == 0)
+                return err(ErrorCode::ValidationFailed,
+                           ordinal(i) + " " + role_name(r.role) +
+                               " halka sıfır alanlı: noktalar doğrusal, çakışık ya da halka "
+                               "kendi üzerine katlanmış. Sıfır alanlı bir parsel imzalanamaz.");
+
+            // AN AREA THIS STORE CAN STATE, or no ring (TODOS F-03). Every
+            // ring below the limit is exact in the 64-bit sums `area_of` keeps;
+            // one above it would come back wrapped — a figure, and a wrong one.
+            // The limit is 4,6 million km², six times Turkey.
+            if (!twice || *twice > kTwiceAreaLimit || *twice < -kTwiceAreaLimit)
+                return err(ErrorCode::ValidationFailed,
+                           ordinal(i) + " " + role_name(r.role) +
+                               " halka saklanamayacak kadar büyük: alanı 4,6 milyon km²'yi "
+                               "aşıyor, milimetrekare çözünürlükte tam yazılamaz. Koordinatların "
+                               "birimini denetleyin — milimetre diye okunmuş metreler bin kat, "
+                               "alan bir milyon kat büyür.");
+            closed_twice += *twice < 0 ? -*twice : *twice;
+            if (closed_twice > kTwiceAreaLimit)
+                return err(ErrorCode::ValidationFailed,
+                           "Nesnenin halkalarının toplam alanı 4,6 milyon km²'yi aşıyor; "
+                           "milimetrekare çözünürlükte tam yazılamaz.");
+        }
 
         // R11: Exterior before its Interior rings, one face per part.
         switch (r.role) {
@@ -485,6 +537,19 @@ Box2 RingGeometry::bounds_of(std::uint32_t slot) const
     return box;
 }
 
+Mm2 signed_ring_area(std::span<const Point2> ring) noexcept
+{
+    // THE STORE'S OWN ARITHMETIC for a ring that is not stored: exact in 128
+    // bits, then halved half away from zero like `ring_area`. There used to be
+    // a second area function (`offset.hpp`) that summed untranslated products
+    // and truncated towards zero, so ALAN, İFRAZ and TOPOLOJİ could report a
+    // parcel one square millimetre off the figure its own object carried.
+    const std::optional<Int128> twice = twice_area_exact(ring, ring.size());
+    if (!twice || *twice > kTwiceAreaLimit) return std::numeric_limits<Mm2>::max();
+    if (*twice < -kTwiceAreaLimit) return -std::numeric_limits<Mm2>::max();
+    return halve(static_cast<std::uint64_t>(static_cast<std::int64_t>(*twice)));
+}
+
 Mm2 RingGeometry::ring_area(std::uint32_t ring) const
 {
     // R10: an Open ring is a polyline; its first and last vertex are NOT joined,
@@ -532,7 +597,11 @@ Mm2 RingGeometry::area_of(std::uint32_t slot) const
 Mm RingGeometry::perimeter_of(std::uint32_t slot) const
 {
     const RingSpan span = rings_of(slot);
-    Mm total            = 0;
+    // Summed in 128 bits and clamped once: each side fits `Mm`, their sum need
+    // not, and a wrapped perimeter is a figure on a document (TODOS F-03). The
+    // clamp is `kMmSaturated`, which no real perimeter comes within twelve
+    // orders of magnitude of.
+    Int128 total = 0;
 
     for (std::uint32_t k = 0; k < span.count; ++k) {
         const std::uint32_t r = span.first + k;
@@ -551,7 +620,7 @@ Mm RingGeometry::perimeter_of(std::uint32_t slot) const
         if (ring_role[r] != RingRole::Open && n >= 3)
             total += segment_length(rx[n - 1], ry[n - 1], rx[0], ry[0]);
     }
-    return total;
+    return total > kMmSaturated ? kMmSaturated : static_cast<Mm>(total);
 }
 
 void RingGeometry::clear()

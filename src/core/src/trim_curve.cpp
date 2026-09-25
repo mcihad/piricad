@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — core: BUDA and UZAT on lines, arcs and circles. See trim_curve.hpp.
 #include "kentos_cad/core/trim_curve.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -105,10 +106,11 @@ std::vector<PathCrossing> cuts_of(const CurvePath& target, std::span<const Curve
         all, [](const PathCrossing& a, const PathCrossing& b) { return comes_before(a.at, b.at); });
     std::vector<PathCrossing> unique;
     for (const PathCrossing& c : all)
-        if (unique.empty() || distance_squared(unique.back().point, c.point) > 1.0)
+        if (unique.empty() ||
+            distance_squared(unique.back().point, c.point) > kSamePointMm * kSamePointMm)
             unique.push_back(c);
     if (target.closed && unique.size() >= 2 &&
-        distance_squared(unique.front().point, unique.back().point) <= 1.0)
+        distance_squared(unique.front().point, unique.back().point) <= kSamePointMm * kSamePointMm)
         unique.pop_back();
     return unique;
 }
@@ -223,7 +225,7 @@ Result<CurveTrim> trim_curve(const CurvePath& target, std::span<const CurvePath>
     // and taking one of them would be a guess.
     const Point2 clicked = point_at(target, at);
     for (const PathCrossing& c : cuts)
-        if (distance_squared(c.point, clicked) <= 1.0)
+        if (distance_squared(c.point, clicked) <= kSamePointMm * kSamePointMm)
             return err(ErrorCode::InvalidArgument,
                        "Tıklanan nokta bir kesişimin tam üstünde; hangi parçanın atılacağını "
                        "söylemek için parçanın içine tıklayın.");

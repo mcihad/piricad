@@ -164,6 +164,27 @@ TEST_CASE("HASSASİYET: koordinat metreye tam sayılarla ve yarımdan uzağa yuv
     CHECK_EQ(metres_fixed(4310220007, -2, '.'), std::string("4310220"));
 }
 
+TEST_CASE("YUVARLAMA: 128 bitlik sonuç 64 bite sarılmaz, doyar; JSON sayısı tek kuralla yuvarlanır "
+          "(F-03)")
+{
+    // A TUREF coordinate scaled by a ratio large enough to leave 64 bits used to
+    // come back as its low bits — a coordinate somewhere else entirely. Now it
+    // saturates, and the store refuses it as out of range.
+    const std::int64_t huge = mul_div_round(4'310'220'000, 1'000'000'000'000, 1);
+    CHECK_EQ(huge, std::numeric_limits<std::int64_t>::max());
+    CHECK_EQ(mul_div_round(-4'310'220'000, 1'000'000'000'000, 1),
+             -std::numeric_limits<std::int64_t>::max()); // never kMmInvalid
+    CHECK_EQ(mul_div_round(1001, 1, 2), 501);            // unchanged in range
+    CHECK_EQ(mul_div_round(-1001, 1, 2), -501);
+
+    // A number in a script is rounded by THE helper: half away from zero, and
+    // saturated rather than undefined past the range.
+    CHECK_EQ(Json::number(2.5).as_int(), 3);
+    CHECK_EQ(Json::number(-2.5).as_int(), -3);
+    CHECK_EQ(Json::number(0.49999999999999994).as_int(), 0); // the double-rounding case
+    CHECK_EQ(Json::number(1e300).as_int(), kMmSaturated);
+}
+
 TEST_CASE("mm rounding never rounds twice")
 {
     // The regression this locks. mm_from_metres used to compute (scaled + 0.5) and

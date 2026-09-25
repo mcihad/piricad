@@ -191,18 +191,11 @@ void push_polygons(const std::vector<Polygon>& in, Clipper2Lib::Paths64& out)
 
 Mm2 ring_area(const std::vector<Point2>& ring) noexcept
 {
-    if (ring.size() < 3) return 0;
-
-    // The shoelace sum, in 128-bit intermediates so a TUREF-scale ring cannot
-    // overflow: two eastings multiplied are already 6·10^17 and a hundred of them
-    // would leave int64 (core.md R3).
-    Int128 twice = 0;
-    for (std::size_t i = 0; i < ring.size(); ++i) {
-        const Point2& a = ring[i];
-        const Point2& b = ring[(i + 1) % ring.size()];
-        twice += static_cast<Int128>(a.x) * b.y - static_cast<Int128>(b.x) * a.y;
-    }
-    return static_cast<Mm2>(twice / 2);
+    // ONE AREA RULE (TODOS F-03). This summed untranslated products and halved
+    // towards zero, while the store translates and halves away from zero: an odd
+    // doubled area came out a square millimetre apart, so ALAN, İFRAZ and
+    // TOPOLOJİ could disagree with the figure the parcel itself carried.
+    return signed_ring_area(ring);
 }
 
 std::vector<std::vector<Point2>> clip_path_to(const std::vector<Point2>& path,
@@ -247,11 +240,13 @@ std::vector<Point2> simplify_ring(const std::vector<Point2>& ring, Mm tolerance,
     if (tolerance <= 0) return ring;
     if (ring.size() < (closed ? 4u : 3u)) return ring;
 
-    // CLIPPER2 TAKES THE EPSILON AS A SQUARED DISTANCE, in the same units the
-    // path is in — millimetres here, so the square of the tolerance. Written out
-    // as a double because the square of a metre-scale tolerance overflows nothing
-    // but reads badly as an integer expression.
-    const auto epsilon = static_cast<double>(tolerance) * static_cast<double>(tolerance);
+    // CLIPPER2 TAKES THE EPSILON AS A DISTANCE, in the units the path is in —
+    // millimetres here — and squares it itself (`SimplifyPath`: `epsSqr =
+    // Sqr(epsilon)`). This used to hand it the square already, so the tolerance
+    // was squared twice: 10 mm thinned like 100 mm, and 50 mm like 2,5 m — a
+    // parcel corner half a metre off the line vanished under a "5 cm"
+    // simplification (TODOS F-03).
+    const auto epsilon                = static_cast<double>(tolerance);
     const Clipper2Lib::Path64 thinned = Clipper2Lib::SimplifyPath(to_path(ring), epsilon, closed);
 
     // A SIMPLIFICATION THAT LEFT NOTHING USABLE IS NOT AN ANSWER. Clipper2 can

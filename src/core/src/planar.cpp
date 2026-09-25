@@ -695,28 +695,6 @@ void start_lowest(FaceRing& ring)
 
 } // namespace
 
-// ---------------------------------------------------------------- areas ----
-
-Mm2 path_area(const CurvePath& path)
-
-{
-    if (path.pieces.empty()) return 0;
-    // THE POLYGON OF THE ENDS, IN 128 BITS, then each arc's segment added or
-    // taken away by the sign of its sweep. A counter-clockwise arc on a
-    // counter-clockwise ring bulges outward and adds.
-    __int128 twice = 0;
-    for (const PathPiece& p : path.pieces)
-        twice +=
-            static_cast<__int128>(p.from.x) * p.to.y - static_cast<__int128>(p.to.x) * p.from.y;
-    auto area = static_cast<Mm2>(twice / 2);
-    for (const PathPiece& p : path.pieces) {
-        if (p.kind != PathPiece::Kind::Arc) continue;
-        area += p.sweep_udeg >= 0 ? circular_segment_area(p.radius, p.sweep_udeg)
-                                  : -circular_segment_area(p.radius, -p.sweep_udeg);
-    }
-    return area;
-}
-
 // ---------------------------------------------------------------- shape ----
 
 namespace {

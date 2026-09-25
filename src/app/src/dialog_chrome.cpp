@@ -189,6 +189,13 @@ void SectionList::setFilter(const QString& needle)
     update();
 }
 
+void SectionList::setShown(const std::vector<bool>& shown)
+{
+    for (std::size_t i = 0; i < static_cast<std::size_t>(sections_.size()); ++i)
+        sections_[static_cast<int>(i)].shown = i < shown.size() && shown[i];
+    update();
+}
+
 QSize SectionList::sizeHint() const
 {
     int shown = 0;

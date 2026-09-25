@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/postgis.hpp"
 
+#include "kentos_cad/core/stroke.hpp"
+
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -103,17 +105,57 @@ std::string to_hex(const std::string& wkb)
 /// parsel with two faces, and writing its second face as a HOLE in its first
 /// would hand a municipality a table whose areas are wrong and whose geometry is
 /// still valid enough that nothing complains.
-std::string encode_ewkb(const core::Document& doc, core::EntityId e, std::int64_t srid)
+/// The SRID rides in the type word's high bits; see the note above.
+constexpr std::uint32_t kHasSrid = 0x20000000u;
+constexpr char kLittleEndian     = '\x01'; // every platform this ships on
+
+/// A curve as the shape it describes, flattened within the project's chord
+/// tolerance (`core::stroke_curve`): a closed run is a Polygon, an open one a
+/// LineString. Empty when nothing drawable is left.
+std::string encode_stroked(const core::Stroked& stroked, std::int64_t srid)
+{
+    if (stroked.runs.empty()) return {};
+    const core::StrokedRun& run = stroked.runs.front(); // one run per curve kind today
+    const bool face             = run.role != core::RingRole::Open && run.points.size() >= 3;
+    if (!face && run.points.size() < 2) return {};
+
+    std::string wkb;
+    wkb += kLittleEndian;
+    put<std::uint32_t>(wkb, (face ? 3u : 2u) | kHasSrid);
+    put<std::uint32_t>(wkb, static_cast<std::uint32_t>(srid));
+    if (face) put<std::uint32_t>(wkb, 1u); // one ring
+    put<std::uint32_t>(wkb, static_cast<std::uint32_t>(run.points.size() + (face ? 1 : 0)));
+    for (const core::Point2& p : run.points) {
+        put<double>(wkb, to_crs_units(p.x));
+        put<double>(wkb, to_crs_units(p.y));
+    }
+    if (face) {
+        put<double>(wkb, to_crs_units(run.points.front().x));
+        put<double>(wkb, to_crs_units(run.points.front().y));
+    }
+    return wkb;
+}
+
+std::string encode_ewkb(const core::Document& doc, core::EntityId e, std::int64_t srid,
+                        core::Mm chord)
 {
     const core::RingGeometry& geometry = doc.geometry();
-    const core::RingSpan span          = geometry.rings_of(doc.entities().slot[e]);
+    const std::uint32_t slot           = doc.entities().slot[e];
+    const core::RingSpan span          = geometry.rings_of(slot);
     if (span.count == 0) return {};
 
-    const bool closed = geometry.ring_role[span.first] != core::RingRole::Open;
+    // A CURVE IS ITS SHAPE, NOT ITS DEFINITION. A circle is stored as its
+    // centre and a radius handle, and writing those rings went out as a
+    // two-point line pointing east; an arc as four points, a spline as its
+    // control polygon. Every curve kind is written as the curve, flattened
+    // within the project's chord tolerance (TODOS F-03).
+    if (const core::KindId kind = doc.entities().kind[e]; core::strokes_as_curve(kind)) {
+        core::Stroked stroked;
+        if (core::stroke_curve(kind, geometry, slot, chord, stroked))
+            return encode_stroked(stroked, srid);
+    }
 
-    // The SRID rides in the type word's high bits; see the note above.
-    constexpr std::uint32_t kHasSrid = 0x20000000u;
-    constexpr char kLittleEndian     = '\x01'; // every platform this ships on
+    const bool closed = geometry.ring_role[span.first] != core::RingRole::Open;
 
     /// Writes one ring's vertices. A ring is stored WITHOUT its closing vertex
     /// and a WKB polygon ring requires one, so a closed ring's count is one more
@@ -303,9 +345,10 @@ std::int64_t srid_of(const core::Document& doc)
 
 } // namespace
 
-std::string entity_ewkb(const core::Document& doc, core::EntityId entity, std::int64_t srid)
+std::string entity_ewkb(const core::Document& doc, core::EntityId entity, std::int64_t srid,
+                        core::Mm curve_tolerance)
 {
-    return encode_ewkb(doc, entity, srid);
+    return encode_ewkb(doc, entity, srid, curve_tolerance);
 }
 
 #if !KENTOS_HAVE_POSTGIS
@@ -346,7 +389,7 @@ core::Result<std::vector<PostgisTable>> PostgisStore::tables()
 }
 
 core::Result<std::size_t> PostgisStore::write_layer(const core::Document&, core::LayerId,
-                                                    const std::string&)
+                                                    const std::string&, core::Mm)
 {
     return postgis_off();
 }
@@ -448,7 +491,8 @@ core::Result<std::vector<PostgisTable>> PostgisStore::tables()
 }
 
 core::Result<std::size_t> PostgisStore::write_layer(const core::Document& doc, core::LayerId layer,
-                                                    const std::string& table)
+                                                    const std::string& table,
+                                                    core::Mm curve_tolerance)
 {
     const core::Layer* record = doc.layer(layer);
     if (record == nullptr)
@@ -520,7 +564,7 @@ core::Result<std::size_t> PostgisStore::write_layer(const core::Document& doc, c
             for (core::EntityId e = 0; e < entities.size(); ++e) {
                 if (!entities.alive(e) || entities.layer[e] != layer) continue;
 
-                const std::string wkb = entity_ewkb(doc, e, srid);
+                const std::string wkb = entity_ewkb(doc, e, srid, curve_tolerance);
                 if (wkb.empty()) continue;
 
                 // The PERSISTENT key, not the slot. A slot is an allocation detail

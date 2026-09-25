@@ -112,6 +112,11 @@ public:
     /// An empty needle shows them all.
     void setFilter(const QString& needle);
 
+    /// Shows exactly the rows `shown` marks — for a window whose search reaches
+    /// INTO its pages, where a row stays listed because its page holds a match,
+    /// whatever its own label says. Rows past the end of `shown` are hidden.
+    void setShown(const std::vector<bool>& shown);
+
     void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;

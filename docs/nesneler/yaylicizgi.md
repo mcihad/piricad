@@ -44,7 +44,9 @@ büküllen 10 m'lik karenin alanı 100 + 12,5π m² olarak milimetrekaresine kad
 Proje dosyasında tür sütunu `6` (`core.arc_polyline`), köşeler halka olarak, yaylar
 yük olarak. DXF okurken şişkinliği olan `LWPOLYLINE` ve `POLYLINE` bu tür olur;
 yazarken her yay kenar şişkinliğe geri çevrilip `LWPOLYLINE` olarak gider. GeoPackage'a
-çizilen biçimiyle çizgi ya da çokgen olarak yazılır.
+ve PostGIS'e çizgi ya da çokgen olarak yazılır; her yay kenar, kirişleri yaydan en çok
+projenin `eğri_sapması` (varsayılan 1 mm) kadar uzak duracak biçimde kırılır. Ayrıntı:
+[Sayısal doğruluk](../veri/hassasiyet.md).
 
 ## Komutlar
 

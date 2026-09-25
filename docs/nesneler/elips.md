@@ -25,7 +25,7 @@ belirlenimci rutin. Kısmi elips başlangıçtan bitişe açık bir yay olarak, 
 |---|---|
 | Merkez | Merkeze |
 | Uç nokta | Dört eksen ucuna: komuta verilen iki uç ve merkeze göre aynaları; kısmi elipste yayın iki ucuna |
-| En yakın, dik ayak, kesişim | Çizilen 128-genin üzerine — gerçek eğriye bir iki milimetre içinde |
+| En yakın, dik ayak, kesişim | Çizilen 128-genin üzerine — büyük yarı ekseni 5 m olan bir elipste gerçek eğriye bir iki milimetre içinde, 50 m olanda 1,5 cm içinde |
 
 Orta nokta, uzantı ve paralel verilmez: bir yaklaşığın kirişinin ortası eğrinin
 geçmediği bir yerdir. Merkezden eksen ucuna giden tanım çizgilerine **hiçbir modda**

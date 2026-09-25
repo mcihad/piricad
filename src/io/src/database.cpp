@@ -262,7 +262,9 @@ command::Task<core::Result<std::string>> DatabaseService::handle(command::Databa
                           "Çizimin koordinat sistemi çözülmemiş, tabloya SRID yazılamaz. "
                           "Önce: AYAR koordinat_sistemi deger=TUREF/TM30");
 
-        auto written = impl_->store->write_layer(bus_.document(), layer, request.target);
+        auto written =
+            impl_->store->write_layer(bus_.document(), layer, request.target,
+                                      bus_.setting("core.aktarim.egri_sapmasi").as_length());
         if (!written) co_return written.error();
 
         co_return "'" + request.layer + "' katmanı yazıldı: " + std::to_string(written.value()) +

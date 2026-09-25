@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — core: a curve walked piece by piece. See curve_path.hpp.
 #include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
@@ -25,8 +26,9 @@ constexpr std::int64_t kTurn = kUDegFullCircle;
 /// Parameters this close are one place: a millionth of a piece.
 constexpr double kSame = 1e-9;
 
-/// Half a millimetre, in metres: nearer than this a line touches a circle.
-constexpr double kTouch = 0.0005;
+/// Half a millimetre, in metres: nearer than this a line touches a circle
+/// (`kOnCurveMm`, precision.hpp).
+constexpr double kTouch = kOnCurveMm / 1000.0;
 
 std::int64_t wrap(std::int64_t a) noexcept
 {
@@ -390,13 +392,57 @@ std::optional<CurvePath> path_of(const Document& doc, EntityId e, PathScope scop
 {
     const EntityTable& ents = doc.entities();
     if (e >= ents.size() || !ents.alive(e)) return std::nullopt;
-    const RingGeometry& geom = doc.geometry();
     const std::uint32_t slot = ents.slot[e];
+    // A caption is a polyline slot with words on it, and it is not a curve.
+    if (ents.kind[e] == kPolylineKind && doc.texts().has(slot)) return std::nullopt;
+    return path_of_slot(ents.kind[e], doc.geometry(), slot, scope);
+}
 
+Mm2 path_area(const CurvePath& path)
+{
+    if (path.pieces.empty()) return 0;
+
+    // THE POLYGON OF THE ENDS, EXACTLY: in 128 bits about the first end, then
+    // halved half away from zero — the store's own rule (`signed_ring_area`),
+    // where this used to multiply absolute coordinates and halve towards zero.
+    const Point2 o = path.pieces.front().from;
+    Int128 twice   = 0;
+    for (const PathPiece& p : path.pieces)
+        twice += (static_cast<Int128>(p.from.x - o.x) * (p.to.y - o.y)) -
+                 (static_cast<Int128>(p.to.x - o.x) * (p.from.y - o.y));
+    const Int128 half = twice >= 0 ? (twice + 1) / 2 : -((-twice + 1) / 2);
+    Mm2 area          = saturate_int64(half);
+
+    // AND WHAT EACH CURVED PIECE ADDS TO ITS CHORD. An arc's circular segment
+    // is exact (`circular_segment_area`), added by the sign of its sweep: a
+    // counter-clockwise arc on a counter-clockwise ring bulges outward. An
+    // ellipse's or a spline's is the curve's own share of ½∮(x dy − y dx) less
+    // its chord's, by the fixed Gauss rule — from the curve, never from the
+    // picture's chords (TODOS F-03).
+    for (const PathPiece& p : path.pieces) {
+        if (p.kind == PathPiece::Kind::Arc) {
+            area += p.sweep_udeg >= 0 ? circular_segment_area(p.radius, p.sweep_udeg)
+                                      : -circular_segment_area(p.radius, -p.sweep_udeg);
+        } else if (p.kind != PathPiece::Kind::Segment) {
+            const double ax    = mm_to_metres(p.from.x - o.x);
+            const double ay    = mm_to_metres(p.from.y - o.y);
+            const double bx    = mm_to_metres(p.to.x - o.x);
+            const double by    = mm_to_metres(p.to.y - o.y);
+            const double chord = (ax * by) - (bx * ay);
+            const double bulge = (curve::twice_area(p, o) - chord) / 2.0 *
+                                 static_cast<double>(kMmPerMetre * kMmPerMetre);
+            if (std::isfinite(bulge)) area += mm_round(bulge);
+        }
+    }
+    return area;
+}
+
+std::optional<CurvePath> path_of_slot(KindId kind, const RingGeometry& geom, std::uint32_t slot,
+                                      PathScope scope)
+{
     CurvePath path;
-    switch (ents.kind[e]) {
+    switch (kind) {
     case kPolylineKind: {
-        if (doc.texts().has(slot)) return std::nullopt;
         const RingSpan span = geom.rings_of(slot);
         if (span.count != 1) return std::nullopt;
         const auto xs = geom.ring_xs(span.first);

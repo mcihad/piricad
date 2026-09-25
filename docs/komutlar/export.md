@@ -11,7 +11,9 @@ biçiminde yazar. Her KentOSCad katmanı hedef dosyada bir katman olur.
 
 Dışa aktarma **biçime göre kayıplıdır**. GeoPackage'a öznitelik sütunları alan
 olarak, her nesnenin türü ve kalıcı anahtarı, yazının metni, yüksekliği, açısı ve
-hizası da yazılır; daire, yay ve elips ekranda göründükleri çokgen olarak gider.
+hizası da yazılır; daire, yay, elips, yaylı çoklu çizgi ve spline, kirişleri eğriden
+en çok projenin `eğri_sapması` (varsayılan 1 mm) kadar uzak duracak biçimde kırılarak
+gider ve sonuç bu sapmayı söyler.
 DXF'e (libdxfrw ile) her tür kendi varlığı olarak gider: daire `CIRCLE`, yay `ARC`,
 elips ve kısmi elips `ELLIPSE`, nokta `POINT`, yazı `TEXT`, çizgi ve alan
 `LWPOLYLINE`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline `SPLINE`, tarama
@@ -114,9 +116,18 @@ türüne göre** yazar. GeoPackage'da her katmanın tablosu şu alanları taşı
 | `yazi`, `yukseklik_mm`, `aci`, `hizalama` | yazının metni, zemin milimetresi yüksekliği, saat yönünün tersine açısı, hizası |
 | çizimdeki her öznitelik sütunu | kendi adıyla, şemadaki türüyle (tam sayı, ondalık, tarih…) |
 
-Daire ve elips çokgen, yay çizgi olarak gider; yazı taban çizgisinin başındaki
-nokta olarak. Bu dosyayı KentOSCad geri okurken `tur` alanını tanır: daire daire,
-yay yay, yazı yazı olarak geri gelir (elips bugün alan olarak gelir ve bunu söyler).
+Daire ve elips çokgen, yay, yaylı çoklu çizgi ve spline çizgi olarak gider; yazı taban
+çizgisinin başındaki nokta olarak. Eğriler ekranın sabit çizim sıklığıyla değil,
+projenin **eğri sapmasıyla** kırılır: her kiriş eğriden en çok `eğri_sapması`
+(varsayılan 1 mm) uzaktadır. Daha az köşe isterseniz sapmayı büyütün:
+
+```text
+AYAR eğri_sapması 5
+```
+
+Bu dosyayı KentOSCad geri okurken `tur` alanını tanır: daire daire, yay yay, yazı yazı
+olarak geri gelir (elips bugün alan olarak gelir ve bunu söyler). Ayrıntı:
+[Sayısal doğruluk](../veri/hassasiyet.md#dışa-aktarma-eğri-sapması).
 
 DXF'te alan yoktur: yazı `TEXT` olarak yüksekliği, açısı ve hizasıyla, parsel kapalı
 `LWPOLYLINE` olarak (boşluğu kendi kapalı `LWPOLYLINE`'ı), daire `CIRCLE`, yay `ARC`,

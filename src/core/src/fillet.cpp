@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — core: the corner between two objects. See fillet.hpp.
 #include "kentos_cad/core/fillet.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/pick.hpp"
@@ -21,7 +22,7 @@ constexpr std::int64_t kTurn = kUDegFullCircle;
 constexpr double kEnd = 1e-9;
 
 /// Half a millimetre: closer than this a point is on a line or a circle.
-constexpr double kOn = 0.5;
+constexpr double kOn = kOnCurveMm;
 
 std::int64_t wrap(std::int64_t a) noexcept
 {

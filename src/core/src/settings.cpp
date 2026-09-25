@@ -399,6 +399,7 @@ KENTOS_SETTING(vektor_kutuphanesi)
 KENTOS_SETTING(koordinat_sistemi);
 KENTOS_SETTING(koordinat_hassasiyeti);
 KENTOS_SETTING(cizim_birimi);
+KENTOS_SETTING(egri_sapmasi);
 KENTOS_SETTING(cizgi_tipi_olcegi);
 KENTOS_SETTING(metin_yuksekligi);
 KENTOS_SETTING(veri_paketi_surumu);
@@ -532,6 +533,7 @@ KENTOS_SETTING(alan_birimi);
     X(secim_vurgu_rengi)                                                                           \
     X(plan_olcegi)                                                                                 \
     X(olcu_stili)                                                                                  \
+    X(egri_sapmasi)                                                                                \
     X(aci_birimi)                                                                                  \
     X(aci_kurali)                                                                                  \
     X(alan_birimi)
@@ -1204,6 +1206,27 @@ KENTOS_SETTING(cizim_birimi)
                    "GeoPackage ve Shapefile sistemlerinin metresiyle okunur ve yazılır. "
                    "Dışa aktarılan bir DXF'in sayılarını değiştirdiği için proje kapsamındadır.",
         .section = "Genel", // ui-label
+    };
+}
+
+KENTOS_SETTING(egri_sapmasi)
+{
+    return SettingSpec{
+        .id       = "core.aktarim.egri_sapmasi",
+        .names    = {"eğri_sapması", "egri_sapmasi", "curve_tolerance"},
+        .type     = SettingType::Length,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::length(1),
+        .range    = SettingRange::between(1, 1000),
+        .values   = {},
+        .unit     = "mm",
+        .summary = "Eğri taşımayan bir dosyaya (GeoPackage, PostGIS) yazılan daire, yay, elips, "
+                   "yaylı çizgi ve spline kirişlerinin eğriden en çok ne kadar uzak "
+                   "durabileceği, zeminde milimetre. Varsayılan 1 mm, saklama çözünürlüğüdür. "
+                   "Ekrandaki çizim sabit sıklıktadır ve bundan etkilenmez; DXF eğriyi eğri "
+                   "olarak yazar. Dışa aktarılan dosyanın koordinatlarını değiştirdiği için "
+                   "proje kapsamındadır.",
+        .section = "Plot ve Çıktı", // ui-label
     };
 }
 

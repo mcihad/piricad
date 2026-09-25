@@ -54,6 +54,11 @@ struct ExportOptions
     /// The unit a drawing-format file's coordinates are written in, and what
     /// its header declares. Ignored by geodetic formats, which write metres.
     core::DrawingUnit unit{core::DrawingUnit::Metre};
+
+    /// How far a written chord may stand off the curve it replaces, in
+    /// millimetres, for a format that cannot hold a curve — the project's
+    /// `core.aktarim.egri_sapmasi` (TODOS F-03, `core/stroke.hpp`).
+    core::Mm curve_tolerance{1};
 };
 
 } // namespace kentos::io

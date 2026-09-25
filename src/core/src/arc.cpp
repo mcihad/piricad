@@ -121,9 +121,11 @@ void arc_outline(Point2 centre, Mm radius, Point2 start, Point2 end, std::vector
     }
     corners.push_back(to);
 
-    // Four bisections per piece: 17 points across a quarter turn, which matches
-    // the 128-gon a full circle is drawn with. The picture only — the radius and
-    // the ends are what the record holds.
+    // Four bisections per piece: 17 points across a quarter turn, 64 chords to
+    // a full turn — half the 128-gon a whole circle is drawn with, so an arc of
+    // radius r stands up to r·(1 − cos(π/64)) ≈ 0,12 % of r off its chords. The
+    // picture only: the radius and the ends are what the record holds, and an
+    // export strokes to the project's tolerance (`stroke_curve`, TODOS F-03).
     constexpr int kDepth = 4;
 
     std::vector<Unit> run;

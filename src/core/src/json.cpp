@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/json.hpp"
 
+#include "kentos_cad/core/units.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -146,7 +148,11 @@ bool Json::as_bool(bool d) const
 std::int64_t Json::as_int(std::int64_t d) const
 {
     if (type_ == Type::Int) return i_;
-    if (type_ == Type::Double) return static_cast<std::int64_t>(d_ >= 0 ? d_ + 0.5 : d_ - 0.5);
+    // THE ONE ROUNDING RULE (core.md R20), saturating: `d ± 0.5` then a cast is
+    // the double-rounding the helper was written to avoid, and a cast of a
+    // double past the int64 range is undefined — a script's point
+    // [1e300, 0] used to be exactly that (TODOS F-03).
+    if (type_ == Type::Double) return mm_round(d_);
     return d;
 }
 

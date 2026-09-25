@@ -201,9 +201,8 @@ struct FaceShape
 /// The shape `face` is stored as.
 FaceShape face_shape(const NetworkFace& face);
 
-/// The signed area of a closed path: counter-clockwise positive, arcs counted
-/// with the segment they add to or take from the polygon of their ends.
-Mm2 path_area(const CurvePath& path);
+// The signed area of a face's path is `path_area` (curve_path.hpp): the ONE area
+// rule for a curve, arcs and all (TODOS F-03).
 
 /// What a click inside a region asks.
 struct RegionQuery

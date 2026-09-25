@@ -10,11 +10,16 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/spline.hpp"
+#include "kentos_cad/core/stroke.hpp"
+#include "kentos_cad/core/trig.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <string>
@@ -389,4 +394,205 @@ TEST_CASE("C-01: kapalı eğrinin dikişi tek yerdir — başlangıçtaki kesiş
     REQUIRE_EQ(seam.size(), std::size_t{1});
     CHECK(near(seam[0].point, Point2{10'000, 0}));
     CHECK(seam[0].touching);
+}
+
+// =============================================================================
+// Stroking to a stated error — what a file that cannot hold a curve receives
+// (TODOS F-03, core/stroke.hpp)
+// =============================================================================
+
+namespace {
+
+double distance(Point2 a, Point2 b)
+{
+    const auto dx = static_cast<double>(a.x - b.x);
+    const auto dy = static_cast<double>(a.y - b.y);
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+/// How far the worst chord of a closed or open run stands INSIDE a circle about
+/// `c` of radius `r`: the midpoint of each chord — in doubles, so the check adds
+/// no rounding of its own — measured to the circle.
+double worst_sagitta(const std::vector<Point2>& pts, bool closed, Point2 c, core::Mm r)
+{
+    double worst        = 0.0;
+    const std::size_t n = pts.size();
+    for (std::size_t i = 0; i + (closed ? 0 : 1) < n; ++i) {
+        const Point2 a = pts[i];
+        const Point2 b = pts[(i + 1) % n];
+        const double mx =
+            (static_cast<double>(a.x) + static_cast<double>(b.x)) / 2.0 - static_cast<double>(c.x);
+        const double my =
+            (static_cast<double>(a.y) + static_cast<double>(b.y)) / 2.0 - static_cast<double>(c.y);
+        worst = std::max(worst, static_cast<double>(r) - std::sqrt(mx * mx + my * my));
+    }
+    return worst;
+}
+
+} // namespace
+
+TEST_CASE("KIRMA: dışa aktarılan dairenin kirişleri eğriden en çok tolerans kadar uzak (F-03)")
+{
+    // A 300 m road curve. The picture draws every circle as a 128-gon, which on
+    // this radius stands nine centimetres inside its own arc — and that picture
+    // is what a GeoPackage used to receive.
+    core::Document doc;
+    core::Op op;
+    const core::LayerId layer = doc.ensure_layer("0");
+    const Point2 c{485'300'000, 4'310'200'000};
+    const core::Mm r = 300'000;
+    auto made        = doc.add_circle(layer, c, r, op);
+    REQUIRE(made.ok());
+    const std::uint32_t slot = doc.entities().slot[made.value()];
+
+    std::vector<core::Mm> xs;
+    std::vector<core::Mm> ys;
+    core::circle_outline(c, r, xs, ys);
+    std::vector<Point2> picture;
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        picture.emplace_back(xs[i], ys[i]);
+    CHECK(worst_sagitta(picture, true, c, r) > 80.0); // the display density, for contrast
+
+    core::Stroked s;
+    REQUIRE(core::stroke_curve(core::kCircleKind, doc.geometry(), slot, 1, s));
+    REQUIRE_EQ(s.runs.size(), std::size_t{1});
+    const auto& pts = s.runs.front().points;
+    CHECK(s.runs.front().role == core::RingRole::Exterior);
+    CHECK(s.deviation <= 1.0);
+    // Measured, not only claimed: the chord bound plus the millimetre rounding
+    // of the two ends each chord runs between.
+    CHECK(worst_sagitta(pts, true, c, r) <= 1.0 + 0.71);
+    for (const Point2 p : pts)
+        CHECK(std::abs(distance(p, c) - static_cast<double>(r)) <= 0.71);
+    CHECK(pts.front() == (Point2{c.x + r, c.y})); // from the stored radius handle, due east
+    CHECK(pts.size() > 1'000);
+    CHECK(pts.size() < 1'400); // ~1 217 — enough, and not a million
+
+    // A coarser tolerance takes fewer vertices, and below the storage unit
+    // nothing more is asked for: a chord of 0 is a chord of 1 mm.
+    core::Stroked coarse;
+    REQUIRE(core::stroke_curve(core::kCircleKind, doc.geometry(), slot, 10, coarse));
+    CHECK(coarse.runs.front().points.size() < pts.size() / 2);
+    core::Stroked zero;
+    REQUIRE(core::stroke_curve(core::kCircleKind, doc.geometry(), slot, 0, zero));
+    CHECK(zero.runs.front().points == pts);
+
+    // DETERMINISTIC: the same curve strokes to the same vertices, call after call.
+    core::Stroked again;
+    REQUIRE(core::stroke_curve(core::kCircleKind, doc.geometry(), slot, 1, again));
+    CHECK(again.runs.front().points == pts);
+}
+
+TEST_CASE("KIRMA: yay saklanan uçlarından, yaylı çizgi yayıyla, elips ve spline eğrisiyle (F-03)")
+{
+    core::Document doc;
+    core::Op op;
+    const core::LayerId layer = doc.ensure_layer("0");
+
+    // An ARC keeps its stored ends exactly, so an arc that meets a line meets it
+    // in the file too.
+    const Point2 c{0, 0};
+    const Point2 start{50'000, 0};
+    const Point2 end{0, 50'000};
+    auto arc = doc.add_arc(layer, c, 50'000, start, end, op);
+    REQUIRE(arc.ok());
+    core::Stroked a;
+    REQUIRE(
+        core::stroke_curve(core::kArcKind, doc.geometry(), doc.entities().slot[arc.value()], 1, a));
+    const auto& ap = a.runs.front().points;
+    CHECK(a.runs.front().role == core::RingRole::Open);
+    CHECK(ap.front() == start);
+    CHECK(ap.back() == end);
+    CHECK(worst_sagitta(ap, false, c, 50'000) <= 1.0 + 0.71);
+
+    // An ARC POLYLINE keeps its arcs: (0,0)→(10,0), a half turn of 5 m through
+    // (15,5) to (10,10), then back to (0,10). The stored rings wrote the bent
+    // edge as a straight line from (10,0) to (10,10).
+    const std::vector<Point2> v{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
+    core::ArcPolyline def;
+    def.arcs.push_back(core::ArcPolyline::Arc{1, Point2{10'000, 5'000}, 5'000, true});
+    const core::RingGeometry::RingInput input{v, core::RingRole::Open, 0};
+    auto kerb = doc.add_kind(layer, core::kArcPolylineKind, {&input, 1},
+                             core::encode_arc_polyline(def), op);
+    REQUIRE(kerb.ok());
+    core::Stroked k;
+    REQUIRE(core::stroke_curve(core::kArcPolylineKind, doc.geometry(),
+                               doc.entities().slot[kerb.value()], 1, k));
+    const auto& kp = k.runs.front().points;
+    CHECK(kp.front() == v[0]);
+    CHECK(kp.back() == v[3]);
+    CHECK(kp.size() > v.size() + 10);
+    bool reached = false; // the far side of the bend, 15 m east
+    for (const Point2 p : kp)
+        if (p.x >= 14'990) reached = true;
+    CHECK(reached);
+
+    // An ELLIPSE, 40 × 10 m: every chord within the tolerance of the curve,
+    // measured against a dense parametric sampling of it.
+    const Point2 ec{0, 100'000};
+    auto ellipse = doc.add_ellipse(layer, ec, Point2{40'000, 100'000}, Point2{0, 110'000}, op);
+    REQUIRE(ellipse.ok());
+    core::Stroked e;
+    REQUIRE(core::stroke_curve(core::kEllipseKind, doc.geometry(),
+                               doc.entities().slot[ellipse.value()], 1, e));
+    CHECK(e.runs.front().role == core::RingRole::Exterior);
+    CHECK(e.deviation <= 1.0);
+    // Each chord against the curve's own point at the MIDDLE PARAMETER of the two
+    // it joins: vertex i sits at parameter i/n of the turn.
+    const auto& ep = e.runs.front().points;
+    const auto n   = static_cast<std::int64_t>(ep.size());
+    double far_off = 0.0;
+    for (std::int64_t i = 0; i < n; ++i) {
+        const Point2 p        = ep[static_cast<std::size_t>(i)];
+        const Point2 q        = ep[static_cast<std::size_t>((i + 1) % n)];
+        const core::SinCos sc = core::sin_cos_udeg((kTurn * (2 * i + 1)) / (2 * n));
+        const double cx       = 40'000.0 * sc.cos;
+        const double cy       = 100'000.0 + 10'000.0 * sc.sin;
+        const double mx       = (static_cast<double>(p.x) + static_cast<double>(q.x)) / 2.0;
+        const double my       = (static_cast<double>(p.y) + static_cast<double>(q.y)) / 2.0;
+        far_off               = std::max(far_off, std::hypot(cx - mx, cy - my));
+    }
+    CHECK(far_off <= 1.0 + 0.71); // the chord bound and the vertices' rounding
+
+    // A SPLINE: refined until its chords stop moving, against a far denser run.
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    core::Document sdoc;
+    command::Bus bus{sdoc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+    REQUIRE(
+        bus.execute_line("SPLINE noktalar=0,0 40,60 80,-60 120,0 derece=3", command::Origin::Test)
+            .ok());
+    const std::uint32_t sslot = sdoc.entities().slot[0];
+    core::Stroked sp;
+    REQUIRE(core::stroke_curve(core::kSplineKind, sdoc.geometry(), sslot, 1, sp));
+    CHECK(sp.deviation <= 1.0);
+    const auto def_s = core::spline_of(sdoc.geometry(), sslot);
+    REQUIRE(def_s.ok());
+    std::vector<Point2> controls;
+    const core::RingSpan rs = sdoc.geometry().rings_of(sslot);
+    for (std::size_t i = 0; i < sdoc.geometry().ring_xs(rs.first).size(); ++i)
+        controls.emplace_back(sdoc.geometry().ring_xs(rs.first)[i],
+                              sdoc.geometry().ring_ys(rs.first)[i]);
+    std::vector<core::Mm> fx;
+    std::vector<core::Mm> fy;
+    core::spline_points(controls, def_s.value(), 4096, fx, fy);
+    const auto& sq    = sp.runs.front().points;
+    double spline_off = 0.0;
+    for (std::size_t i = 0; i < fx.size(); i += 7) {
+        const Point2 p{fx[i], fy[i]};
+        double nearest = 1e18;
+        for (std::size_t j = 0; j + 1 < sq.size(); ++j) {
+            const auto dx   = static_cast<double>(sq[j + 1].x - sq[j].x);
+            const auto dy   = static_cast<double>(sq[j + 1].y - sq[j].y);
+            const auto px   = static_cast<double>(p.x - sq[j].x);
+            const auto py   = static_cast<double>(p.y - sq[j].y);
+            const double l2 = dx * dx + dy * dy;
+            const double t  = l2 > 0 ? std::clamp((px * dx + py * dy) / l2, 0.0, 1.0) : 0.0;
+            nearest         = std::min(nearest, std::hypot(px - t * dx, py - t * dy));
+        }
+        spline_off = std::max(spline_off, nearest);
+    }
+    CHECK(spline_off <= 1.0 + 1.5);
 }

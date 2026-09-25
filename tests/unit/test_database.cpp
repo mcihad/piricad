@@ -367,6 +367,33 @@ TEST_CASE("katman başka bir programın okuyabileceği tablo olur")
     CHECK(rig.transcript.substr(before.size()).find("1 satır") != std::string::npos);
 }
 
+TEST_CASE("eğriler PostGIS'e şekilleriyle yazılır ve sunucu kabul eder (F-03)")
+{
+    if (!io::DatabaseService::available()) {
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
+        return;
+    }
+    const std::string conninfo = test_conninfo();
+    if (conninfo.empty()) {
+        PENDING("KENTOS_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
+        return;
+    }
+
+    // What `EWKB: daire ŞEKLİYLE gider` builds, handed to a real server: a
+    // circle, an arc and an ellipse in one COPY stream. A malformed geometry
+    // aborts the stream, so "3 satır" is the server accepting all three.
+    Rig rig;
+    rig.run("VERİTABANI baglan hedef=\"" + conninfo + "\"");
+    rig.run("AYAR koordinat_sistemi EPSG:5254");
+    rig.run("KATMAN ad=EGRI");
+    rig.run("DAİRE merkez=485300,4310200 cevre=485400,4310200");
+    rig.run("YAY merkez=485300,4310200 baslangic=485330,4310200 bitis=485300,4310230");
+    rig.run("ELİPS merkez=485500,4310200 birinci=485540,4310200 ikinci=485500,4310210");
+    rig.run("AYAR eğri_sapması 2");
+    rig.run("VERİTABANI katmanyaz katman=EGRI hedef=kentos_test_egri");
+    CHECK(rig.transcript.find("'EGRI' katmanı yazıldı: 3 satır") != std::string::npos);
+}
+
 TEST_CASE("sütun adı çakışması açıkça reddedilir")
 {
     if (!io::DatabaseService::available()) {
@@ -500,6 +527,38 @@ TEST_CASE("EWKB: açık halka LINESTRING, kapalı halka POLYGON olur")
     CHECK_EQ(type_of(polygon), 3u);     // Polygon
     CHECK_EQ(word_at(polygon, 9), 1u);  // one ring
     CHECK_EQ(word_at(polygon, 13), 5u); // FOUR corners, written with the fifth closing it
+}
+
+TEST_CASE("EWKB: daire ŞEKLİYLE gider — merkez ve yarıçap tutamağı olarak değil (F-03)")
+{
+    // A circle is STORED as its centre and a radius handle, and those two rings
+    // went out as a two-point LINESTRING pointing east: every circle in a
+    // municipality's table was a stub. It is written as the face it bounds,
+    // flattened within the chord tolerance.
+    Rig rig;
+    rig.run("KATMAN ad=YAPI");
+    rig.run("DAİRE merkez=485300,4310200 cevre=485400,4310200"); // 100 m
+
+    const std::string wkb = io::entity_ewkb(rig.doc, only_entity(rig.doc), 5254, 1);
+    REQUIRE_FALSE(wkb.empty());
+    CHECK_EQ(type_of(wkb), 3u);    // Polygon
+    CHECK_EQ(word_at(wkb, 9), 1u); // one ring
+    const std::uint32_t points = word_at(wkb, 13);
+    CHECK(points > 600); // ~700 chords within 1 mm of a 100 m circle, plus the closing vertex
+    CHECK(points < 900);
+    CHECK_EQ(wkb.size(), std::size_t{1 + 4 + 4 + 4 + 4} + points * 2 * sizeof(double));
+
+    // A looser tolerance, fewer vertices: the project's setting decides.
+    const std::string coarse = io::entity_ewkb(rig.doc, only_entity(rig.doc), 5254, 50);
+    CHECK(word_at(coarse, 13) < points / 5);
+
+    // An ARC is an open line from its stored start to its stored end.
+    Rig arc;
+    arc.run("KATMAN ad=YOL");
+    arc.run("YAY merkez=485300,4310200 baslangic=485330,4310200 bitis=485300,4310230");
+    const std::string line = io::entity_ewkb(arc.doc, only_entity(arc.doc), 5254, 1);
+    CHECK_EQ(type_of(line), 2u); // LineString
+    CHECK(word_at(line, 9) > 20);
 }
 
 TEST_CASE("EWKB: delikli yüzey tek POLYGON, iki halka")

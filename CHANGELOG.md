@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — toleranslar ayrıldı; eğriler dosyaya söylenen bir hatayla gider (F-03, 3. aşama)
+
+- **GeoPackage ve PostGIS'e eğriler şekliyle, bir kiriş toleransıyla gidiyor.** Yeni proje
+  ayarı `eğri_sapması` (varsayılan 1 mm): her kiriş eğriden en çok bu kadar uzakta; sonuç
+  kaç eğrinin kırıldığını ve en büyük sapmayı söylüyor. Önceden daire ekranın 128 kirişiyle
+  gidiyordu (300 m'lik kurpta 9 cm sapma), yaylı çoklu çizginin yayları düz kenar, uydurma
+  noktalı spline hiç yazılmıyor, PostGIS'e daire merkez ve yarıçap tutamağından oluşan iki
+  noktalı bir çizgi olarak gidiyordu. DXF eğriyi eğri olarak yazmaya devam ediyor.
+- **Elips ve spline boyu, kapalı spline alanı eğrinin kendisinden ölçülüyor** (Gauss
+  integrali), ekranın kirişlerinden değil. Tam elipsin Ramanujan yaklaşımı 100 × 10 m'lik
+  bir elipste 5 mm yanılıyordu; 44 m'lik bir spline 34 mm kısa ölçülüyordu.
+- **Tek alan kuralı.** ALAN ölçümü, İFRAZ, TOPOLOJİ ve SINIR artık saklanan alanla aynı
+  aritmetiği kullanıyor (128 bit, yarımdan uzağa yuvarlama); tek sayılı iki kat alanda
+  1 mm² ayrışıyordu.
+- **Taşma korumaları:** alanı 4,6 milyon km²'yi aşan (milimetrekarede tam yazılamayan)
+  halka sarmalanmış bir sayıyla saklanmak yerine reddediliyor; çevre, ölçekleme, hacim ve
+  Helmert kareler toplamı 64 biti aşınca sarmıyor, sınırda duruyor.
+- **ÇİZGİDÜZENLE sadelestir** toleransın karesini iki kez alıyordu: 10 mm 100 mm gibi,
+  50 mm 2,5 m gibi davranıyordu.
+- Bir betik sayısı, tam sayı parametreleri ve görünüm dönüşümü tek yuvarlama kuralından
+  geçiyor (aralık dışı değerde tanımsız davranış yerine sınırda durma).
+- Ekrandaki eğri çizimi ve belgelerdeki yanlış kiriş hatası rakamları düzeltildi
+  ("300 m'de milimetrenin onda biri" → 9 cm).
+- Ayar penceresinde arama: eşleşmesi olmayan bölüm başlıkları gizleniyor, eşleşen satırı
+  olan sayfa soldaki listede kalıyor; proje ayarları sayfasında her konu tek başlık altında.
+- Yeni belge: [Sayısal doğruluk ve toleranslar](docs/veri/hassasiyet.md).
+
 ### Düzeltildi — yazılan koordinat yazıldığı yere düşer (F-03, 2. aşama)
 
 - **Yakalama yalnız fareyle nişan alınan noktaya uygulanıyor.** Nesne yakalama, ızgara,

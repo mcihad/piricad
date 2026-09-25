@@ -7056,6 +7056,64 @@ int MainWindow::probeRealMouse()
             shoot("yazilan-tam-tiklanan-yakalanir");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
+
+        // ---- 36. A CURVE LEAVES FOR A GEOPACKAGE WITHIN A STATED ERROR (TODOS F-03) ----
+        //
+        // A 300 m road curve exported: the picture's 128 chords would stand nine
+        // centimetres off it, and the file receives chords within the project's
+        // curve tolerance instead — and the result says how far. The setting sits
+        // in the project's own window, under the output topic.
+        {
+            const QTemporaryDir scratch;
+            const QString folder = shooting ? into : scratch.path();
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {"AYAR koordinat_sistemi EPSG:5256", "KATMAN ad=YOL",
+                                     "DAİRE merkez=485300,4310200 cevre=485600,4310200"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            const QString gpkg = folder + QStringLiteral("/egri.gpkg");
+            QFile::remove(gpkg);
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(gpkg));
+            {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 20000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                QCoreApplication::processEvents();
+            }
+            const QString said = transcript_->toPlainText();
+            check(QFileInfo::exists(gpkg) &&
+                      said.contains(QStringLiteral("kirişlere kırılarak yazıldı")) &&
+                      said.contains(QStringLiteral("AYAR eğri_sapması 1 mm")),
+                  QStringLiteral("daire GeoPackage'a eğri sapmasıyla kırıldı ve sonuç sapmayı "
+                                 "söyledi"));
+            shoot("egri-sapmasi-disa-aktarma");
+
+            SettingsDialog project(*controller_, SettingsDialog::Mode::Project, this);
+            project.applyTheme(theme_);
+            check(project.probeProjectSettings().contains(
+                      QStringLiteral("core.aktarim.egri_sapmasi")),
+                  QStringLiteral("eğri sapması proje ayarları penceresinde"));
+            if (shooting) {
+                project.resize(1100, 760);
+                project.show();
+                // Found the way a user finds it: by typing into the window's own
+                // search box.
+                const auto boxes = project.findChildren<QLineEdit*>();
+                for (QLineEdit* box : boxes)
+                    if (box->placeholderText().startsWith(QStringLiteral("Ayarlarda ara")))
+                        box->setText(QStringLiteral("sapma"));
+                QCoreApplication::processEvents();
+                (void)project.grab().save(into + QStringLiteral("/egri-sapmasi-ayari.png"));
+                project.hide();
+            }
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

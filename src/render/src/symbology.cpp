@@ -13,8 +13,9 @@ constexpr double kPi = 3.14159265358979323846;
 /// How many segments a circular arc is cut into.
 ///
 /// 24 for a full turn, which is 15 degrees a segment. A marker is a handful of
-/// pixels across on a plan sheet and the error at 24 sides is under a thousandth
-/// of the radius — below what a printer resolves, let alone a screen.
+/// pixels across on a plan sheet and the error at 24 sides is 0,86 % of the
+/// radius — a tenth of a pixel on a twelve-pixel marker, below what a printer
+/// resolves, let alone a screen.
 constexpr int kArcSteps = 24;
 
 void push(MarkerOutline& out, double x, double y)

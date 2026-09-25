@@ -276,7 +276,9 @@ core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
 core::Mm3 prism(core::Mm2 area, core::Mm h1, core::Mm h2, core::Mm h3)
 {
     const core::Int128 total = static_cast<core::Int128>(h1) + h2 + h3;
-    return static_cast<core::Mm3>((static_cast<core::Int128>(area) * total) / 3);
+    // Saturated rather than narrowed (TODOS F-03): a wrapped volume is a small,
+    // plausible figure on a cut-and-fill report.
+    return core::saturate_int64((static_cast<core::Int128>(area) * total) / 3);
 }
 
 /// Where the reference plane crosses the edge from `a` to `b`, in plan.

@@ -94,6 +94,12 @@ double length(const PathPiece& piece, double t0, double t1);
 /// The parameter `metres` along `piece` from its start, clamped to it.
 double t_at_length(const PathPiece& piece, double metres);
 
+/// The piece's share of twice the area a closed path encloses — ∫(x·y′ − y·x′)
+/// dt over it — in square metres about `origin`, by the fixed rule `length`
+/// uses. Summed over a closed path's pieces it is twice the signed area,
+/// counter-clockwise positive (`path_area`).
+double twice_area(const PathPiece& piece, Point2 origin);
+
 /// A spline's control points and definition.
 struct SplineParts
 {

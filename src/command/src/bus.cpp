@@ -248,9 +248,9 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             if (auto n = numeric(); n) return Value::number(n.value());
             break;
         case ParamKind::Integer:
-            if (auto n = numeric(); n)
-                return Value::integer(
-                    static_cast<std::int64_t>(n.value() >= 0 ? n.value() + 0.5 : n.value() - 0.5));
+            // Rounded by THE helper (core.md R20), which saturates rather than
+            // leaving a huge typed number undefined.
+            if (auto n = numeric(); n) return Value::integer(core::mm_round(n.value()));
             break;
         case ParamKind::Bool: {
             if (t.kind == Token::Kind::Number) return Value::boolean(t.a != 0.0);

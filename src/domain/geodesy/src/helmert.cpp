@@ -98,14 +98,17 @@ core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, boo
     // The residuals are measured with the transformation that will ACTUALLY be
     // applied, rounding included, so the report cannot promise a fit the drawing
     // does not get.
-    std::int64_t sum_squares = 0;
+    // In 128 bits: a residual is a length in millimetres and its square leaves
+    // 64 bits at three thousand kilometres — a wildly wrong control pair, which
+    // is exactly the case the report exists to show rather than wrap (F-03).
+    core::Int128 sum_squares = 0;
     fit.residuals.reserve(points.size());
     for (const ControlPoint& p : points) {
         const core::Point2 landed = fit.apply(p.local);
         const core::Mm d          = core::segment_length(landed, p.map);
         fit.residuals.push_back(d);
         if (d > fit.worst) fit.worst = d;
-        sum_squares += d * d;
+        sum_squares += static_cast<core::Int128>(d) * d;
     }
     fit.rms = core::mm_round(
         std::sqrt(static_cast<double>(sum_squares) / static_cast<double>(points.size())));

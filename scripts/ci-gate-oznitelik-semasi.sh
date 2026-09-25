@@ -105,10 +105,11 @@ bekle "[sema] seçenekler son bölüm: Ağ ve Kimlik"
 # EVERY PROJECT-SCOPED SETTING, and the page is generated from the catalogue —
 # so this count moves when a setting is declared, never because somebody
 # remembered to add a row (CLAUDE.md 5.10). Fourteen since the angle and area
-# units travel with the drawing and the dimension style joined them; the count
+# units travel with the drawing and the dimension style joined them — the count
 # said twelve for two weeks after that, unseen, because this gate waits when
-# there is no display and nothing ran it with one.
-bekle "[sema] proje ayarı: 14"
+# there is no display and nothing ran it with one — and fifteen since the
+# export curve tolerance joined them (TODOS F-03).
+bekle "[sema] proje ayarı: 15"
 
 # The two nobody would think to look for outside their own topic page, which is
 # the reason the gathered page exists at all.

@@ -44,8 +44,8 @@ void ViewTransform::fit(const Box2& box, double margin)
 
 void ViewTransform::pan_pixels(double dx_px, double dy_px)
 {
-    centre_.x -= static_cast<Mm>(std::llround(dx_px * mm_per_pixel_));
-    centre_.y += static_cast<Mm>(std::llround(dy_px * mm_per_pixel_));
+    centre_.x -= core::mm_round(dx_px * mm_per_pixel_);
+    centre_.y += core::mm_round(dy_px * mm_per_pixel_);
 }
 
 void ViewTransform::zoom_at(ScreenPoint anchor, double factor)
@@ -72,8 +72,9 @@ Point2 ViewTransform::to_world(ScreenPoint screen) const
 {
     const double dx = (screen.x - static_cast<double>(width_) * 0.5) * mm_per_pixel_;
     const double dy = (static_cast<double>(height_) * 0.5 - screen.y) * mm_per_pixel_;
-    return Point2{centre_.x + static_cast<Mm>(std::llround(dx)),
-                  centre_.y + static_cast<Mm>(std::llround(dy))};
+    // Through THE rounding helper (core.md R20): the same rule as every other
+    // double that becomes a coordinate, and saturating where llround is not.
+    return Point2{centre_.x + core::mm_round(dx), centre_.y + core::mm_round(dy)};
 }
 
 float ViewTransform::offset_x_f(Mm world_x) const

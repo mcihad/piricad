@@ -489,6 +489,63 @@ TEST_CASE("TM30 koordinatlarında 10 km x 10 km parselin alanı tam 1e14 mm²")
     CHECK_EQ(g.perimeter_of(slot), Mm{40000000});
 }
 
+TEST_CASE("ALAN: ölçülen halka ile saklanan halka aynı alanı verir, tek sayılı iki katta da (F-03)")
+{
+    // ONE AREA RULE. The measuring function (`ring_area` over a point list, used
+    // by ALAN, İFRAZ and TOPOLOJİ) summed untranslated products and halved
+    // TOWARDS zero; the store translates and halves AWAY from zero. A ring whose
+    // doubled area is odd came out a square millimetre apart — a parcel's
+    // measured alan disagreeing with the figure it carried.
+    for (const Point2 at : {Point2{0, 0}, Point2{kTmX, kTmY}, Point2{-kTmX, -kTmY}}) {
+        const std::vector<Point2> tri{at, {at.x + 1, at.y}, {at.x, at.y + 1}}; // 2A = 1 mm²
+        RingGeometry g;
+        const std::uint32_t slot = must_add(g, {ring(tri, RingRole::Exterior)});
+        CHECK_EQ(g.area_of(slot), Mm2{1}); // half away from zero
+        CHECK_EQ(ring_area(tri), g.area_of(slot));
+        CHECK_EQ(signed_ring_area(tri), Mm2{1});
+
+        const std::vector<Point2> cw{tri[0], tri[2], tri[1]}; // wound the other way
+        CHECK_EQ(ring_area(cw), Mm2{-1});
+    }
+}
+
+TEST_CASE("ALAN: tam yazılamayacak kadar büyük halka saklanmaz; sınırın altında kesin (F-03)")
+{
+    // The 64-bit sums `area_of` keeps are exact below a doubled area of 2^63 mm²
+    // — a true area of 4,6 million km² — and a ring above it used to come back
+    // WRAPPED: a figure, and a wrong one, with nothing to say so. Now the store
+    // refuses it and says to check the unit, because a ring that big is almost
+    // always metres read as millimetres.
+    RingGeometry g;
+    const Mm big = 3'000'000'000; // 3 000 km a side: 9e18 mm², past the limit
+    reject(g, {ring(rect(0, 0, big, big), RingRole::Exterior)}, "saklanamayacak kadar büyük");
+
+    // 2 000 km a side is under it, and exact to the square millimetre.
+    const Mm fits = 2'000'000'000;
+    const std::uint32_t slot =
+        must_add(g, {ring(rect(kTmX, kTmY, fits, fits), RingRole::Exterior)});
+    CHECK_EQ(g.area_of(slot), Mm2{4'000'000'000'000'000'000});
+
+    // Two faces each under the limit whose SUM is over it are refused as well:
+    // `area_of` adds them in the same 64 bits.
+    const Mm half = 2'100'000'000; // 4,41e18 mm² each, 8,82e18 together
+    reject(g,
+           {ring(rect(0, 0, half, half), RingRole::Exterior, 0),
+            ring(rect(0, 3 * half, half, half), RingRole::Exterior, 1)},
+           "toplam alanı");
+}
+
+TEST_CASE("ÇEVRE: toplam 64 biti aşarsa sarmaz, sınırda durur (F-03)")
+{
+    // Every side fits `Mm`; their sum need not. Five sides of 2^61 mm each sum to
+    // 1,15e19, past int64: it used to wrap to a negative perimeter.
+    constexpr Mm far = static_cast<Mm>(std::uint64_t{1} << 60U);
+    const std::vector<Point2> zigzag{{-far, 0}, {far, 0}, {-far, 1}, {far, 1}, {-far, 2}, {far, 2}};
+    RingGeometry g;
+    const std::uint32_t slot = must_add(g, {ring(zigzag, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(slot), kMmSaturated);
+}
+
 TEST_CASE("TM30 koordinatlarında boşluklu parselin net alanı tam")
 {
     RingGeometry g;
@@ -997,6 +1054,22 @@ TEST_CASE("simplify_ring: şekil taşımayan köşeyi atar, uçları bırakmaz")
     REQUIRE_EQ(thinned.size(), std::size_t{3});
     CHECK_EQ(thinned.front(), (Point2{0, 0})); ///< an end is never dropped
     CHECK_EQ(thinned.back(), (Point2{100'000, 50'000}));
+}
+
+TEST_CASE("simplify_ring: tolerans bir UZUNLUKTUR — 10 mm, 20 mm'lik köşeyi bırakır (F-03)")
+{
+    // THE REGRESSION. The tolerance went to Clipper2 already squared and the
+    // library squared it again, so 10 mm thinned like 100 mm: a corner 20 mm off
+    // the line — twice the tolerance — was dropped, and ÇİZGİDÜZENLE
+    // sadelestir=0,05 took corners half a metre out.
+    // (Four vertices: Clipper2 leaves a shorter path alone.)
+    const std::vector<Point2> run{{0, 0}, {50'000, 20}, {100'000, 0}, {100'000, 50'000}};
+    CHECK_EQ(simplify_ring(run, 10, false).size(), std::size_t{4}); // 20 mm > 10 mm: kept
+    CHECK_EQ(simplify_ring(run, 25, false).size(), std::size_t{3}); // 20 mm < 25 mm: dropped
+
+    // And a parcel corner 30 cm off a 100 m side survives a 5 cm tolerance.
+    const std::vector<Point2> side{{0, 0}, {50'000, 300}, {100'000, 0}, {100'000, 50'000}};
+    CHECK_EQ(simplify_ring(side, 50, false).size(), std::size_t{4});
 }
 
 TEST_CASE("simplify_ring: sırayla değişmez — aynı şekil hangi uçtan bakılırsa aynı iner")

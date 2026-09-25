@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/entity_kind.hpp"
+
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/pick.hpp"
 
 #include "kentos_cad/core/arc.hpp"
@@ -948,35 +950,15 @@ void ellipse_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
 
 void ellipse_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
 {
-    std::vector<Mm> xs;
-    std::vector<Mm> ys;
     for (std::size_t i = 0; i < slots.size(); ++i) {
-        if (ellipse_arc_of(geom, slots[i]).has_value()) {
-            // A partial ellipse's length has no closed form either; the drawn
-            // sweep's is what is reported, and the page says so.
-            ellipse_run(geom, slots[i], xs, ys);
-            out[i] = kind::run_length(xs, ys, false);
-            continue;
-        }
-        const Point2 c = ellipse_centre_of(geom, slots[i]);
-        const Point2 a = ellipse_major_of(geom, slots[i]);
-        const Point2 b = ellipse_minor_of(geom, slots[i]);
-
-        const double ra =
-            std::hypot(static_cast<double>(a.x - c.x), static_cast<double>(a.y - c.y));
-        const double rb =
-            std::hypot(static_cast<double>(b.x - c.x), static_cast<double>(b.y - c.y));
-
-        // RAMANUJAN'S SECOND APPROXIMATION. An ellipse's circumference has no
-        // closed form — it is an elliptic integral — and this one is within a few
-        // parts per billion for every eccentricity a drawing produces, which is
-        // far below the millimetre this is rounded to. Stated rather than hidden:
-        // the number is an approximation, and it is a better one than the
-        // tessellation it replaces.
-        const double h = (ra - rb) * (ra - rb) / ((ra + rb) * (ra + rb));
-        const double p = kPi * (ra + rb) * (1.0 + (3.0 * h) / (10.0 + std::sqrt(4.0 - 3.0 * h)));
-
-        out[i] = std::isfinite(p) ? static_cast<Mm>(std::llround(p)) : Mm{0};
+        // FROM THE CURVE, whole or partial: the elliptic integral summed by the
+        // fixed Gauss rule every curve length in this program uses
+        // (`path_length`). A partial ellipse used to report the length of its
+        // DRAWN chords and a whole one Ramanujan's approximation — off by
+        // 1,2·10⁻⁵ on a ten-to-one ellipse, five millimetres on a 100 m one,
+        // and not the "parts per billion" it was said to be (TODOS F-03).
+        const std::optional<CurvePath> path = path_of_slot(kEllipseKind, geom, slots[i]);
+        out[i]                              = path ? path_length(*path) : Mm{0};
     }
 }
 

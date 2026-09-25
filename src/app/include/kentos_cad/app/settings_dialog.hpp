@@ -103,9 +103,11 @@ private:
     /// and whether anything in it has been changed since the window opened.
     struct Section
     {
-        std::string group;      ///< the id's second component: `yakalama`, `izgara`
-        QString title;          ///< what the section list and the page heading say
-        QWidget* page{nullptr}; ///< the scroll area shown when it is chosen
+        std::string group;        ///< the id's second component: `yakalama`, `izgara`
+        QString title;            ///< what the section list and the page heading say
+        QWidget* page{nullptr};   ///< the scroll area shown when it is chosen
+        std::size_t first_row{0}; ///< `rows_` from here …
+        std::size_t end_row{0};   ///< … to here are on this page
     };
 
     /// Builds the page for one group and returns it. Never null: a group only
@@ -299,6 +301,17 @@ private:
     bool loading_{false};
 
     std::vector<Row> rows_;
+
+    /// A topic's caption on the project page and the rows under it: the search
+    /// hides a caption whose rows it hid, so a filtered page shows the answers
+    /// and not a column of empty headings.
+    struct Caption
+    {
+        QWidget* caption{nullptr};   ///< the heading
+        std::vector<QWidget*> lines; ///< the rows it heads
+    };
+
+    std::vector<Caption> captions_;
 };
 
 } // namespace kentos::app

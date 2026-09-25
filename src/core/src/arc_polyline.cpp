@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -228,8 +229,8 @@ Status ap_validate(std::span<const RingGeometry::RingInput> rings,
         const Point2 a = rings[0].points[arc.segment];
         const Point2 b = rings[0].points[(arc.segment + 1) % n];
         const auto r   = static_cast<double>(arc.radius);
-        if (std::abs(distance(arc.centre, a) - r) > 2.0 ||
-            std::abs(distance(arc.centre, b) - r) > 2.0)
+        if (std::abs(distance(arc.centre, a) - r) > kStoredArcMm ||
+            std::abs(distance(arc.centre, b) - r) > kStoredArcMm)
             return err(ErrorCode::ValidationFailed,
                        "Yay kenar " + std::to_string(arc.segment) +
                            " için verilen merkez iki ucundan yarıçap kadar uzakta değil.");

@@ -13,10 +13,15 @@ yok. Çizilen 128 köşe dosyaya yazılmaz. Yük taşımaz.
 
 ## Nasıl çizilir
 
-Merkez etrafında 128 kenarlı düzgün çokgen, doğudan başlayıp saat yönünün tersine.
-En büyük sapma yarıçapın binde 0,3'üdür: 300 m'lik bir dairede bir milimetrenin
-onda birinden az. Köşeler kütüphane trigonometrisiyle değil, her platformda aynı
-sonucu veren kendi rutinle üretilir.
+Ekranda merkez etrafında 128 kenarlı düzgün çokgen, doğudan başlayıp saat yönünün
+tersine. Bir kirişin daireden en büyük uzaklığı yarıçapın on binde 3'üdür: 5 m'lik bir
+dairede 1,5 mm, 300 m'lik bir yol kurbunda 9 cm. Bu yalnız resimdir; alan ve yarıçap
+tanımdan gelir. Köşeler kütüphane trigonometrisiyle değil, her platformda aynı sonucu
+veren kendi rutinle üretilir.
+
+Eğri taşımayan bir dosyaya (GeoPackage, PostGIS) daire bu sabit sıklıkla değil,
+projenin **eğri sapmasıyla** yazılır: her kiriş daireden en çok `eğri_sapması`
+(varsayılan 1 mm) uzaktadır. Ayrıntı: [Sayısal doğruluk](../veri/hassasiyet.md).
 
 ## Yakalama noktaları
 

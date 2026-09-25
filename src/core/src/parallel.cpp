@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/parallel.hpp"
+#include "kentos_cad/core/precision.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
@@ -126,7 +127,7 @@ Mm arc_polyline_deviation(const ArcPolyline& def, const std::vector<Point2>& dra
                 const double dy = static_cast<double>(p.y - arc.centre.y);
                 return std::fabs(std::sqrt(dx * dx + dy * dy) - static_cast<double>(arc.radius));
             };
-            if (off(a) > 1.5 || off(b) > 1.5) continue;
+            if (off(a) > kRoundedFitMm || off(b) > kRoundedFitMm) continue;
             const double dx = static_cast<double>(b.x - a.x);
             const double dy = static_cast<double>(b.y - a.y);
             const double r  = static_cast<double>(arc.radius);

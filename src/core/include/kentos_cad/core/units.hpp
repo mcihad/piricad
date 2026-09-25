@@ -227,7 +227,10 @@ constexpr Point2 operator-(Point2 a, Point2 b) noexcept
     return {a.x - b.x, a.y - b.y};
 }
 
-/// Squared distance in mm². Exact for coordinates below ~3e9 mm apart.
+/// The distance between two points in METRES, a transient `double` for a
+/// display or a PROJ call — never a stored length (that is `segment_length`,
+/// exact in integers). The difference is taken first, so a TUREF-sized
+/// coordinate loses nothing on the way.
 constexpr double distance_metres(Point2 a, Point2 b) noexcept
 {
     const double dx = mm_to_metres(a.x - b.x);
@@ -400,6 +403,20 @@ struct Ratio
     friend constexpr bool operator==(const Ratio&, const Ratio&) noexcept = default;
 };
 
+/// An exact 128-bit result brought back to 64 bits SATURATED rather than wrapped.
+///
+/// `static_cast<std::int64_t>` of an out-of-range `Int128` keeps the low 64
+/// bits: a plausible, wrong number — a coordinate scaled off the end of the
+/// world that lands back inside it, a volume that comes out small. Saturated,
+/// it is an absurd number instead, which a reader notices and the store's range
+/// checks refuse (TODOS F-03). The negative bound is `-max()`, never `min()`,
+/// which is `kMmInvalid`'s "no value".
+constexpr std::int64_t saturate_int64(Int128 v) noexcept
+{
+    constexpr Int128 kHigh = static_cast<Int128>(std::numeric_limits<std::int64_t>::max());
+    return static_cast<std::int64_t>(v > kHigh ? kHigh : (v < -kHigh ? -kHigh : v));
+}
+
 /// `v * num / den`, rounded half away from zero, with the product carried in 128
 /// bits so a TUREF coordinate times a scale cannot wrap (§7.3). `den` must be
 /// positive; the sign lives in `num` and `v`. This is the one multiply a stored
@@ -413,8 +430,11 @@ constexpr std::int64_t mul_div_round(std::int64_t v, std::int64_t num, std::int6
     const Int128 q   = product / d;
     const Int128 r   = product - q * d;
     const Int128 two = 2;
-    if (r >= 0) return static_cast<std::int64_t>(two * r >= d ? q + 1 : q);
-    return static_cast<std::int64_t>(two * (-r) >= d ? q - 1 : q);
+    // Saturated, not narrowed: a TUREF coordinate scaled by a large enough
+    // ratio leaves the 64-bit range, and the low bits of the answer would be a
+    // coordinate somewhere else entirely (`saturate_int64`).
+    if (r >= 0) return saturate_int64(two * r >= d ? q + 1 : q);
+    return saturate_int64(two * (-r) >= d ? q - 1 : q);
 }
 
 } // namespace kentos::core

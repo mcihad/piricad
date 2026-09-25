@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/settings_dialog.hpp"
 
+#include "kentos_cad/core/text.hpp"
+
 #include "kentos_cad/app/datagrid.hpp"
 #include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/icons.hpp"
@@ -303,11 +305,13 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
     for (const core::SettingSection& declared : core::builtin_settings().sections()) {
         if (project) break; // the project window has its own two pages, below
         Section section;
-        section.group = declared.title;
-        section.title = QString::fromStdString(declared.title);
-        section.page  = declared.phase.empty() ? buildGroup(declared.title, section.title)
-                                               : buildPending(QString::fromStdString(declared.phase),
-                                                              QString::fromStdString(declared.note));
+        section.group     = declared.title;
+        section.title     = QString::fromStdString(declared.title);
+        section.first_row = rows_.size();
+        section.page      = declared.phase.empty() ? buildGroup(declared.title, section.title)
+                                                   : buildPending(QString::fromStdString(declared.phase),
+                                                                  QString::fromStdString(declared.note));
+        section.end_row   = rows_.size();
         pages_->addWidget(section.page);
         sections_->addSection(group_glyph(section_group(declared.title)), section.title);
         order_.push_back(section);
@@ -324,9 +328,11 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
     // columns every object carries.
     if (project) {
         Section settings;
-        settings.group = "Proje Ayarları";
-        settings.title = tr("Ayarlar");
-        settings.page  = buildProjectPage();
+        settings.group     = "Proje Ayarları";
+        settings.title     = tr("Ayarlar");
+        settings.first_row = rows_.size();
+        settings.page      = buildProjectPage();
+        settings.end_row   = rows_.size();
         pages_->addWidget(settings.page);
         sections_->addSection(Glyph::Settings, settings.title);
         order_.push_back(settings);
@@ -372,8 +378,22 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
     });
 
     connect(search_, &QLineEdit::textChanged, this, [this](const QString& text) {
-        sections_->setFilter(text);
         applyFilter();
+        // A PAGE STAYS LISTED WHEN SOMETHING ON IT MATCHES, not only when its
+        // title does: "sapma" is in no page's name, and filtering the list by
+        // names alone emptied it while the setting sat on the page it hid.
+        const std::string folded = core::turkish_fold_key(text.trimmed().toStdString());
+        std::vector<bool> shown;
+        shown.reserve(order_.size());
+        for (const Section& section : order_) {
+            bool any = folded.empty() ||
+                       core::turkish_fold_key(section.title.toStdString()).find(folded) !=
+                           std::string::npos;
+            for (std::size_t r = section.first_row; r < section.end_row && !any; ++r)
+                any = !rows_[r].line->isHidden();
+            shown.push_back(any);
+        }
+        sections_->setShown(shown);
     });
 
     // ---- the footer ----
@@ -1360,20 +1380,29 @@ QWidget* SettingsDialog::buildProjectPage()
     layout->setSpacing(0);
 
     // GROUPED BY THE TOPIC THEY WERE DECLARED UNDER, so a reader who knows a
-    // setting from its own page finds it in the same company here.
-    std::string open_section;
-    for (const SettingSpec& spec : core::builtin_settings().all()) {
-        if (spec.scope != SettingScope::Project) continue;
-
-        if (spec.section != open_section) {
-            auto* caption = new FormSection(
-                QLocale(QLocale::Turkish).toUpper(QString::fromStdString(spec.section)), QString(),
-                page);
-            caption->setContentsMargins(0, open_section.empty() ? 0 : 14, 0, 2);
-            layout->addWidget(caption);
-            open_section = spec.section;
+    // setting from its own page finds it in the same company here — ONE caption
+    // per topic, in the order the topics are declared. Walking the catalogue and
+    // opening a caption whenever the topic changed printed GENEL three times,
+    // once for each run of it the declaration order happened to leave.
+    const core::SettingCatalog& catalogue = core::builtin_settings();
+    bool first                            = true;
+    for (const core::SettingSection& topic : catalogue.sections()) {
+        Caption group;
+        for (const SettingSpec& spec : catalogue.all()) {
+            if (spec.scope != SettingScope::Project || spec.section != topic.title) continue;
+            if (group.caption == nullptr) {
+                auto* caption = new FormSection(
+                    QLocale(QLocale::Turkish).toUpper(QString::fromStdString(topic.title)),
+                    QString(), page);
+                caption->setContentsMargins(0, first ? 0 : 14, 0, 2);
+                layout->addWidget(caption);
+                group.caption = caption;
+                first         = false;
+            }
+            addRow(layout, spec);
+            group.lines.push_back(rows_.back().line);
         }
-        addRow(layout, spec);
+        if (group.caption != nullptr) captions_.push_back(std::move(group));
     }
 
     layout->addStretch(1);
@@ -1687,6 +1716,14 @@ void SettingsDialog::applyFilter()
             hay += QLatin1Char(' ') + QString::fromStdString(alias);
         hay += QLatin1Char(' ') + row_label(*row.spec);
         row.line->setVisible(hay.contains(needle, Qt::CaseInsensitive));
+    }
+
+    // A heading with nothing left under it goes too.
+    for (const Caption& group : captions_) {
+        bool any = needle.isEmpty();
+        for (const QWidget* line : group.lines)
+            any = any || !line->isHidden();
+        group.caption->setVisible(any);
     }
 }
 

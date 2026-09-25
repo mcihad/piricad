@@ -8,7 +8,7 @@ nesne 0 katman=EGRI stil=0 halka=1 tur=5 yuk=0100000000000000f6fd8708000000000a9
     0 0
     10000 0
     0 5000
-  alan_mm2 0  cevre_mm 31728
+  alan_mm2 0  cevre_mm 31732
 nesne 1 katman=EGRI stil=0 halka=1
   halka rol=0 parca=0 tepe=2
     -20000 3000
@@ -37,7 +37,7 @@ nesne 5 katman=EGRI stil=0 halka=1 tur=5 yuk=01000000000000000000000000000000d81
     60000 0
     70000 0
     60000 5000
-  alan_mm2 0  cevre_mm 17170
+  alan_mm2 0  cevre_mm 17172
 nesne 6 katman=EGRI stil=0 halka=1
   halka rol=0 parca=0 tepe=2
     55000 -10000
@@ -48,7 +48,7 @@ nesne 7 katman=EGRI stil=0 halka=1 tur=5 yuk=0100000000000000804a5d0500000000000
     0 30000
     10000 30000
     0 35000
-  alan_mm2 0  cevre_mm 36328
+  alan_mm2 0  cevre_mm 36332
 nesne 8 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000002bac2c36000000002bac2c36000000002bac2c360000000000ca9a3b0000000000ca9a3b0000000000ca9a3b0000000000000000
   halka rol=0 parca=0 tepe=3
     39089 1656

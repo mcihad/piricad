@@ -132,6 +132,13 @@ enum class PathScope : std::uint8_t {
 /// one only when its curve returns to its start. Nothing for every other kind,
 /// for a polyline of several rings (a face with holes), and for a caption's
 /// baseline.
+/// The curve a slot of `kind` describes, for a caller that holds the rings but
+/// not the document — a kind's own measurement (`KindSpec::perimeter`,
+/// `KindSpec::area`). Everything `path_of` answers except a caption, which only
+/// the document knows about.
+std::optional<CurvePath> path_of_slot(KindId kind, const RingGeometry& geom, std::uint32_t slot,
+                                      PathScope scope = PathScope::Curves);
+
 std::optional<CurvePath> path_of(const Document& doc, EntityId e,
                                  PathScope scope = PathScope::Circular);
 
@@ -158,6 +165,12 @@ PathPlace path_end(const CurvePath& path) noexcept;
 /// curve itself (Gauss–Legendre quadrature over the exact derivative), not
 /// along the chords it is drawn with.
 Mm path_length(const CurvePath& path);
+
+/// The area a CLOSED path encloses, counter-clockwise positive, from the curve
+/// itself — ½∮(x dy − y dx) by the fixed Gauss rule `path_length` uses, in a
+/// frame about its first point — never from the picture's chords (TODOS F-03).
+/// Zero for an open path; saturated at the `Mm2` range.
+Mm2 path_area(const CurvePath& path);
 
 /// The box `path` occupies — the curve's own, not its control points'.
 Box2 path_bounds(const CurvePath& path);

@@ -52,7 +52,7 @@ nesne 8 katman=CIZGILER stil=0 halka=1 tur=7 yuk=0100100000000000030800000000000
     485410000 4310520000
     485420000 4310520000
     485430000 4310500000
-  alan_mm2 0  cevre_mm 44334
+  alan_mm2 0  cevre_mm 44368
 nesne 9 katman=CIZGILER stil=0 halka=1 tur=11 yuk=0100010000000000c409000000000000
   halka rol=0 parca=0 tepe=3
     485500000 4310500000

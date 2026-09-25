@@ -41,7 +41,9 @@ hesabında spline kullanmayın.
 Proje dosyasında tür sütunu `7` (`core.spline`). DXF `SPLINE` derecesi, düğümleri,
 ağırlıkları ve uydurma noktalarıyla gelir ve aynı şekilde gider. Yalnız uydurma noktası
 taşıyan bir spline'ın uydurma noktaları kontrol noktası sayılır ve bu `düşürme:` ile
-söylenir. GeoPackage'a çizilen biçimiyle çizgi olarak yazılır.
+söylenir. GeoPackage'a ve PostGIS'e çizgi olarak yazılır: eğri, kirişleri eğriden en çok
+projenin `eğri_sapması` (varsayılan 1 mm) kadar uzak duracak sıklıkta örneklenir.
+Ayrıntı: [Sayısal doğruluk](../veri/hassasiyet.md).
 
 ## Komutlar
 

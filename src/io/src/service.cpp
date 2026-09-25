@@ -959,6 +959,9 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
     options.driver = std::move(format);
     options.crs    = effective_crs(bus_);
     options.unit   = effective_unit(bus_);
+    // A project setting (model.md R40): the chord bound changes every coordinate
+    // a GeoPackage receives for a curve (TODOS F-03).
+    options.curve_tolerance = bus_.setting("core.aktarim.egri_sapmasi").as_length();
 
     // DXF GOES TO LIBDXFRW when the build has it: a circle is written as a
     // CIRCLE, not as the polygon the GDAL driver would make of it (io.md R13).

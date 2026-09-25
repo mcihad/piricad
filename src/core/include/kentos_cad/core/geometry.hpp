@@ -31,7 +31,7 @@ using Mm2 = std::int64_t;
 
 /// A volume in cubic millimetres.
 ///
-/// int64 reaches 9,2·10^18 mm³, which is 9,2 million cubic metres — more than any
+/// int64 reaches 9,2·10^18 mm³, which is 9,2 billion cubic metres — more than any
 /// earthwork this program will be asked about, and the intermediate products are
 /// carried in 128 bits so the multiply that gets there cannot wrap.
 using Mm3 = std::int64_t;
@@ -206,6 +206,13 @@ public:
 private:
     void reserve_vertices(std::size_t extra);
 };
+
+/// The signed area of a closed ring given as points, counter-clockwise positive,
+/// by THE STORE'S OWN ARITHMETIC — translated to the first vertex, exact in 128
+/// bits, halved half away from zero — so a measurement of a ring and the stored
+/// figure of the same ring agree to the square millimetre. A ring the store
+/// would refuse as too large to state saturates at the `Mm2` range.
+Mm2 signed_ring_area(std::span<const Point2> ring) noexcept;
 
 /// Square millimetres to square metres, for display only. Never a stored value.
 constexpr double mm2_to_m2(Mm2 v) noexcept

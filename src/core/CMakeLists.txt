@@ -26,6 +26,7 @@ add_library(kentos_core STATIC
     src/grips.cpp
     src/hatch.cpp
     src/spline.cpp
+    src/stroke.cpp
     src/entity_kind.cpp
     src/foreign_table.cpp
     src/lineage.cpp

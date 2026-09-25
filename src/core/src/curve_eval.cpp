@@ -4,6 +4,7 @@
 #include "curve_eval.hpp"
 
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/precision.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -19,8 +20,8 @@ namespace {
 constexpr double kUdegToRad = kPi / (180.0 * 1000000.0);
 
 /// Half a millimetre, in metres: nearer than this two curves touch (the
-/// tolerance curve_path.cpp's closed forms use).
-constexpr double kTouch = 0.0005;
+/// tolerance curve_path.cpp's closed forms use, `kOnCurveMm`).
+constexpr double kTouch = kOnCurveMm / 1000.0;
 
 /// A meet is settled when the two points agree to ten nanometres.
 constexpr double kSettled2 = 1e-16;
@@ -748,6 +749,39 @@ double length(const PathPiece& piece, double t0, double t1)
     return sum;
 }
 
+double twice_area(const PathPiece& piece, Point2 origin)
+{
+    // ∫ (x·y′ − y·x′) dt over the piece, in square metres about `origin`: the
+    // piece's share of ½∮(x dy − y dx). The same fixed rule and the same breaks
+    // `length` sums over, so an area is summed alike on every platform — and
+    // for a spline the integrand is a polynomial on each knot span, which ten
+    // Gauss nodes integrate exactly up to degree 19.
+    const Eval e(piece, origin);
+    if (piece.kind == PathPiece::Kind::Segment) {
+        const Vec a = e.point(0.0);
+        const Vec b = e.point(1.0);
+        return (a.x * b.y) - (b.x * a.y);
+    }
+    const std::vector<double> at = breaks(piece, 0.0, 1.0);
+    double sum                   = 0.0;
+    for (std::size_t i = 0; i + 1 < at.size(); ++i) {
+        if (!(at[i + 1] > at[i])) continue;
+        const double half = (at[i + 1] - at[i]) / 2.0;
+        const double mid  = (at[i] + at[i + 1]) / 2.0;
+        double part       = 0.0;
+        for (std::size_t k = 0; k < kGaussNode.size(); ++k) {
+            const double d = half * kGaussNode[k];
+            for (const double t : {mid - d, mid + d}) {
+                const Vec p = e.point(t);
+                const Vec v = e.tangent(t);
+                part += kGaussWeight[k] * ((p.x * v.y) - (p.y * v.x));
+            }
+        }
+        sum += part * half;
+    }
+    return sum;
+}
+
 double t_at_length(const PathPiece& piece, double metres)
 {
     const double total = length(piece, 0.0, 1.0);
@@ -981,7 +1015,7 @@ Meets meets(const PathPiece& p, const PathPiece& q)
         if (!unique.empty()) {
             Hit& last          = unique.back();
             const double apart = distance_squared(last.point, h.point);
-            if (apart <= 1.0) {
+            if (apart <= kSamePointMm * kSamePointMm) {
                 if (std::abs(h.s - last.s) > 1e-7 && std::abs(h.t - last.t) > 1e-7) {
                     last.touching = true;
                     last.s        = (last.s + h.s) / 2.0;

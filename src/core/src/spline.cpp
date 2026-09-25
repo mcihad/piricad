@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/spline.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
+
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/wire.hpp"
 
@@ -79,8 +81,16 @@ void sp_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
     std::vector<Mm> ys;
     for (std::size_t i = 0; i < slots.size(); ++i) {
         out[i] = 0;
-        // A closed spline encloses what its DRAWN form encloses — an
-        // approximation, and the page says so; an open one encloses nothing.
+        // A closed spline encloses what the CURVE encloses, from the curve
+        // (`path_area`) — it used to be its drawn chords', an approximation the
+        // picture's density decided (TODOS F-03). One the drawing closes with a
+        // chord is no closed curve; it keeps the chords it is drawn by. An open
+        // one encloses nothing.
+        if (const auto path = path_of_slot(kSplineKind, geom, slots[i]); path && path->closed) {
+            const Mm2 area = path_area(*path);
+            out[i]         = area < 0 ? -area : area;
+            continue;
+        }
         if (!spline_outline(geom, slots[i], xs, ys)) continue;
         const double area     = std::abs(kind::run_area2(xs, ys)) / 2.0;
         constexpr double kMax = 9.0e18;
@@ -93,6 +103,13 @@ void sp_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
     std::vector<Mm> xs;
     std::vector<Mm> ys;
     for (std::size_t i = 0; i < slots.size(); ++i) {
+        // THE CURVE'S LENGTH, by the fixed Gauss rule (`path_length`), not the
+        // sum of the picture's chords (TODOS F-03). A spline closed by a chord
+        // keeps its drawn length, chord included.
+        if (const auto path = path_of_slot(kSplineKind, geom, slots[i])) {
+            out[i] = path_length(*path);
+            continue;
+        }
         const bool closed = spline_outline(geom, slots[i], xs, ys);
         out[i]            = kind::run_length(xs, ys, closed);
     }
