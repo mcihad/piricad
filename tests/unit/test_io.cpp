@@ -4047,7 +4047,7 @@ TEST_CASE("İÇEAKTAR: arayüz (iş sahibi), komut satırı ve betik aynı belge
         // Nothing has reached the drawing while the worker reads.
         CHECK_EQ(gui.doc.live_entity_count(), 0u);
 
-        session.job()->work(command::JobControl{session.job()->stop.get_token()});
+        session.job()->work(session.job()->control());
         session.resume_job();
         REQUIRE(session.finished());
         auto done = gui.bus.finish(session);
@@ -4107,12 +4107,16 @@ TEST_CASE("İÇEAKTAR: Durdur okumayı keser ve çizim değişmez")
     // Finishing a working session is refused: the worker still owns the read.
     CHECK_FALSE(rig.bus.finish(session).ok());
 
-    session.job()->work(command::JobControl{session.job()->stop.get_token()});
+    session.job()->work(session.job()->control());
     session.resume_job();
     REQUIRE(session.finished());
     auto done = rig.bus.finish(session);
-    CHECK_FALSE(done.ok());
-    if (!done) CHECK(done.error().message.find("durduruldu") != std::string::npos);
+    // STOPPED, NOT FAILED (TODOS F-05): the command ends cancelled, says so and
+    // is not journalled — the way a stopped processing tool ends.
+    REQUIRE(done.ok());
+    CHECK_FALSE(done.value().mutated);
+    CHECK(rig.transcript.find("İçe aktarma durduruldu; çizim değişmedi.") != std::string::npos);
+    CHECK(rig.transcript.find("Hata") == std::string::npos);
 
     CHECK_EQ(rig.doc.content_hash(), before);
     CHECK_EQ(rig.undo.undo_depth(), depth);
@@ -6526,7 +6530,8 @@ TEST_CASE("DXF: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-
     stop.request_stop();
     io::ExportOptions options;
     options.crs = "EPSG:5254";
-    auto task   = io::export_dxf(r.doc, path, options, io::DxfVersion::R2007, stop.get_token());
+    auto task   = io::export_dxf(r.doc, path, options, io::DxfVersion::R2007,
+                                 command::JobControl{stop.get_token()});
     task.resume();
     REQUIRE(task.done());
     auto& result = task.result();
@@ -6558,7 +6563,7 @@ TEST_CASE("GPKG: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F
     stop.request_stop();
     io::ExportOptions options;
     options.crs = "EPSG:5254";
-    auto task   = io::export_vector(r.doc, path, options, stop.get_token());
+    auto task   = io::export_vector(r.doc, path, options, command::JobControl{stop.get_token()});
     task.resume();
     REQUIRE(task.done());
     auto& result = task.result();

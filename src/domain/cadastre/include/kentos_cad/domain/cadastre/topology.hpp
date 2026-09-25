@@ -11,7 +11,9 @@
 // they can sign the result (6.11).
 #pragma once
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <string>
@@ -41,13 +43,16 @@ struct Defect
     core::Point2 at{};                             ///< where to look, when there is a place
     core::Point2 to{};                             ///< Gap: the nearest linework
     core::Mm distance{0};                          ///< Gap: how wide
+    std::vector<core::Point2> region{};            ///< Overlap: the largest shared piece
 };
 
 /// Checks every entity in `keys`, or the whole drawing when it is empty.
 ///
-/// Pairwise for overlaps, bounded by the bounding boxes: two parcels whose boxes
-/// do not touch cannot overlap, and skipping those is what keeps a sheet-sized
-/// check from being quadratic in practice.
+/// Pairwise for overlaps, and only between parcels whose boxes touch: an STR
+/// R-tree over the parcels' boxes (`core::SpatialIndex`) names each one's
+/// neighbours, so the check grows with the parcels and not with their square.
+/// The every-pair loop this replaced took 0,7 s for 16 000 parcels and would
+/// have taken half a minute for the §10.1 budget's 100 000 (TODOS F-05).
 ///
 /// THE SAME CORE AS THE REPAIRS (TODOS C-09): duplicates, lines of no length and
 /// repeated corners come from `core::find_redundant` — what TEMİZLE repairs — and
@@ -55,11 +60,22 @@ struct Defect
 /// refuse to close across. `tolerance` is the project's node tolerance. Faces
 /// are not noded here: a sheet of parcels is checked pairwise, within the
 /// §10.1 budget, and a coverage check over parcels is its own work (G-05).
-std::vector<Defect> check_topology(const core::Document& doc,
-                                   const std::vector<core::EntityKey>& keys,
-                                   core::Mm tolerance = 10);
+///
+/// LONG WORK (command/job.hpp): it counts on `control` across its four passes
+/// and, asked to stop, returns `ErrorCode::Cancelled` and no findings — half a
+/// check is not a smaller check, and "no defects" from one would be a lie. It
+/// only reads `doc`, so it may run on a worker while nothing writes the
+/// drawing (`command::Bus::writable`).
+core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
+                                                 const std::vector<core::EntityKey>& keys,
+                                                 core::Mm tolerance                 = 10,
+                                                 const command::JobControl& control = {});
 
 /// The Turkish sentence a user reads for one defect.
 std::string describe(const core::Document& doc, const Defect& d);
+
+/// An area as the report writes one: square metres to two decimals, with a
+/// decimal comma (`25,00 m²`).
+std::string square_metres(core::Mm2 area);
 
 } // namespace kentos::domain::cadastre

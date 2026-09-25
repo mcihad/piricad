@@ -95,6 +95,8 @@ private:
     /// Replaces the buttons with the outcome, so a settled card cannot be
     /// answered twice.
     void showOutcome(bool applied, const QString& trouble);
+    /// Puts what applying the plan would do on the card, once its preview is in.
+    void showPreview();
 
     AiService& service_;
     QString plan_;

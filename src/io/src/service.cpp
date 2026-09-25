@@ -27,6 +27,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -261,8 +262,8 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
                                        std::move(request.fields));
 
     case command::FileRequest::Verb::Export:
-        co_return co_await export_out(std::move(request.path), std::move(request.format),
-                                      request.version);
+        co_return co_await export_out(request.session, std::move(request.path),
+                                      std::move(request.format), request.version);
 
     case command::FileRequest::Verb::ExportStyle:
         co_return export_style(std::move(request.path), std::move(request.layer));
@@ -923,7 +924,7 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     if (session != nullptr)
         co_await command::run_job(*session, job);
     else
-        job.work(command::JobControl{job.stop.get_token()});
+        job.work(job.control());
     current_job_ = nullptr;
 
     if (!outcome) {
@@ -952,7 +953,8 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
 
 // ------------------------------------------------------------- DIŞAAKTAR ----
 
-command::Task<core::Result<std::string>> FileService::export_out(std::string path,
+command::Task<core::Result<std::string>> FileService::export_out(command::Session* session,
+                                                                 std::string path,
                                                                  std::string format, int version)
 {
     if (is_project_path(path))
@@ -970,35 +972,64 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
     // a GeoPackage receives for a curve (TODOS F-03).
     options.curve_tolerance = bus_.setting("core.aktarim.egri_sapmasi").as_length();
 
+    // THE WRITE IS A JOB (command/job.hpp, TODOS F-05). A GeoPackage of a whole
+    // cadastral layer is seconds, and it used to be written on the UI thread,
+    // where its Durdur could not be pressed and nothing counted. Everything the
+    // writer needs from the bus is read above, on this thread; the writer then
+    // reads only the document, which nothing writes while the job runs
+    // (`Bus::writable`). DRIVEN, NOT AWAITED inside the job, for the reason
+    // `probe_import` gives: the writers suspend on nothing.
+    const auto drive = [](auto task) {
+        while (!task.done())
+            task.resume();
+        return std::move(task.result());
+    };
     // DXF GOES TO LIBDXFRW when the build has it: a circle is written as a
     // CIRCLE, not as the polygon the GDAL driver would make of it (io.md R13).
-    if (dxf_backend_available() &&
-        (looks_like_dxf(target) || core::turkish_iequals(options.driver, "DXF"))) {
-        const auto ver = dxf_version_from_year(version == 0 ? 2007 : version);
+    const bool dxf = dxf_backend_available() &&
+                     (looks_like_dxf(target) || core::turkish_iequals(options.driver, "DXF"));
+    std::optional<DxfVersion> ver;
+    if (dxf) {
+        ver = dxf_version_from_year(version == 0 ? 2007 : version);
         if (!ver)
             co_return err(ErrorCode::InvalidArgument,
                           "'" + std::to_string(version) +
                               "' bir DXF sürümü değil. Seçenekler: 2000, 2004, 2007, 2010, 2013, "
                               "2018.");
-        auto written = co_await export_dxf(bus_.document(), target, std::move(options), *ver,
-                                           stop_.get_token());
-        if (!written) co_return written.error();
-        const DxfReport& d = written.value();
-        co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(d.entities) + " nesne, " +
-            std::to_string(d.layers) + " katman, DXF " + d.version + ", " + d.crs + ")" +
-            d.diagnostics.transcript();
-    }
-    if (version != 0)
+    } else if (version != 0) {
         co_return err(
             ErrorCode::InvalidArgument,
             "surum= yalnız DXF için anlamlıdır" +
                 std::string(dxf_backend_available() ? "." : " ve bu yapıda libdxfrw kapalı."));
+    }
 
-    auto report = co_await export_vector(bus_.document(), std::move(path), std::move(options),
-                                         stop_.get_token());
-    if (!report) co_return report.error();
+    const core::Document& doc           = bus_.document();
+    core::Result<DxfReport> dxf_written = err(ErrorCode::Internal, "Dışa aktarma başlamadı.");
+    core::Result<VectorReport> vector_written = err(ErrorCode::Internal, "Dışa aktarma başlamadı.");
+    command::Job job;
+    job.label = "Dışa aktarılıyor: " + std::filesystem::path(target).filename().string();
+    job.work  = [&](const command::JobControl& control) {
+        if (dxf)
+            dxf_written = drive(export_dxf(doc, target, options, *ver, control));
+        else
+            vector_written = drive(export_vector(doc, target, options, control));
+    };
+    current_job_ = &job;
+    if (session != nullptr)
+        co_await command::run_job(*session, job);
+    else
+        job.work(job.control());
+    current_job_ = nullptr;
 
-    const VectorReport& r = report.value();
+    if (dxf) {
+        if (!dxf_written) co_return dxf_written.error();
+        const DxfReport& d = dxf_written.value();
+        co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(d.entities) + " nesne, " +
+            std::to_string(d.layers) + " katman, DXF " + d.version + ", " + d.crs + ")" +
+            d.diagnostics.transcript();
+    }
+    if (!vector_written) co_return vector_written.error();
+    const VectorReport& r = vector_written.value();
     co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(r.features) + " öğe, " +
         std::to_string(r.layers) + " katman, " + r.driver + ")" + join_notes(r.notes);
 }

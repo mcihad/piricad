@@ -210,22 +210,11 @@ command::CommandSpec ToolSpec::to_command_spec() const
     spec.undo  = output == OutputShape::Report ? command::UndoPolicy::None
                                                : command::UndoPolicy::SingleTransaction;
     spec.flags = command::Flags::Interactive | command::Flags::Scriptable |
-                 command::Flags::AiAccessible |
+                 command::Flags::AiAccessible | command::Flags::LongRunning |
                  (output == OutputShape::Report ? command::Flags::ReadOnly : command::Flags::None);
     spec.summary = summary;
     spec.run     = nullptr; // filled by the registry with the one generic body
     return spec;
-}
-
-void Progress::at(std::size_t done, std::size_t total) const noexcept
-{
-    if (permille == nullptr) return;
-    if (total == 0) {
-        permille->store(1000);
-        return;
-    }
-    if (done > total) done = total;
-    permille->store(static_cast<std::uint32_t>((done * 1000) / total));
 }
 
 Applies classify(const core::Document& doc, core::EntityId e)

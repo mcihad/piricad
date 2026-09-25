@@ -55,12 +55,12 @@ using core::ErrorCode;
 
 command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std::string path,
                                                   ExportOptions options, DxfVersion version,
-                                                  std::stop_token stop)
+                                                  command::JobControl control)
 {
     (void)doc;
     (void)options;
     (void)version;
-    (void)stop;
+    (void)control;
     co_return err(ErrorCode::Unsupported,
                   "'" + path +
                       "' libdxfrw ile yazılamaz: bu yapı KENTOS_WITH_DXFRW=OFF ile "
@@ -116,8 +116,8 @@ class DxfSource final : public DRW_Interface
 {
 public:
     DxfSource(const core::Document& doc, dxfRW& out, core::DrawingUnit unit, DRW::Version version,
-              std::stop_token stop)
-        : doc_(doc), out_(out), unit_(unit), version_(version), stop_(std::move(stop))
+              command::JobControl control)
+        : doc_(doc), out_(out), unit_(unit), version_(version), control_(std::move(control))
     {}
 
     DxfReport& report() noexcept { return report_; }
@@ -402,9 +402,12 @@ public:
     {
         const core::EntityTable& ents = doc_.entities();
         for (core::EntityId e = 0; e < ents.size(); ++e) {
-            if ((e % kStopStride) == 0 && stop_.stop_requested()) {
-                cancelled_ = true;
-                return;
+            if ((e % kStopStride) == 0) {
+                if (control_.cancelled()) {
+                    cancelled_ = true;
+                    return;
+                }
+                control_.at(e, ents.size());
             }
             // Hidden entities and block members are not on the drawing (members
             // are written inside their BLOCK); unknown kinds have no DXF shape
@@ -416,6 +419,7 @@ public:
             }
             write_entity(e);
         }
+        control_.at(1, 1); // every object written; what follows is the close
         if (unknown_ != 0)
             report_.diagnostics.note(
                 Severity::Skipped, std::to_string(unknown_) +
@@ -1220,7 +1224,7 @@ private:
     dxfRW& out_;
     core::DrawingUnit unit_;
     DRW::Version version_;
-    std::stop_token stop_;
+    command::JobControl control_;
     DxfReport report_;
     std::uint64_t unknown_{0};
     /// Block references whose clip the DXF does not carry (`write_insert`).
@@ -1377,7 +1381,7 @@ core::Status splice_xdata(
 
 command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std::string path,
                                                   ExportOptions options, DxfVersion version,
-                                                  std::stop_token stop)
+                                                  command::JobControl control)
 {
     if (options.crs.empty())
         co_return err(ErrorCode::ValidationFailed,
@@ -1392,7 +1396,7 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
     Staging staged(path);
     const std::string written_to = staged.path().string();
     dxfRW writer(written_to.c_str());
-    DxfSource source(doc, writer, options.unit, ver, stop);
+    DxfSource source(doc, writer, options.unit, ver, control);
     const bool ok = writer.write(&source, ver, /*binary=*/false);
     if (source.cancelled())
         co_return err(ErrorCode::Cancelled,

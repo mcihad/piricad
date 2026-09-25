@@ -214,6 +214,28 @@ olun: `485320.150,4310220.400`.
 
 **Çözüm.** Bir komut yazın.
 
+## Uzun işler
+
+### `Bir iş sürüyor (Topoloji denetimi); o bitene dek çizim değiştirilmez. Bitmesini bekleyin ya da durum çubuğundaki Durdur'a basın (Esc).`
+
+**Sebep.** Uzun süren bir iş — bir içe ya da dışa aktarım, bir topoloji denetimi, bir
+eş yükselti hesabı, bir işlem aracı — ayrı bir iş parçacığında çizimi okuyor. İş
+bitene dek çizimi değiştiren her komut (yazılan, düğmeden, betikten ya da bir yapay
+zekâ istemcisinden) bu cevabı alır; parantezde hangi işin sürdüğü yazar. Çizimi okuyan
+komutlar ve görünüm çalışır.
+
+**Çözüm.** İşin bitmesini bekleyin — ilerlemesi durum çubuğunda yazar — ya da
+**Durdur** çipine veya **Esc**'e basın; sonra aynı komutu yeniden verin. Bkz. [Uzun
+işler](baslangic/arayuz.md#uzun-işler).
+
+### `Bir iş sürüyor (Topoloji denetimi): başka bir komut o bitince başlar. Bitmesini bekleyin ya da durum çubuğundaki Durdur'a basın (Esc).`
+
+**Sebep.** Bir iş sürerken şeritten ya da komut satırından **etkileşimli** bir komut
+(nokta, nesne ya da değer soran bir araç) başlatıldı. Pencere aynı anda tek bir komut
+yürütür.
+
+**Çözüm.** Yukarıdakiyle aynı: bekleyin ya da işi durdurun.
+
 ## Çizim ve katman
 
 ### `'PARSEL' katmanı kilitli.`
@@ -661,8 +683,8 @@ kesin; ya da AutoCAD'de XCLIP ile yeniden kırpın.
 
 ### `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.`
 
-**Sebep.** Dışa aktarım yazılırken durduruldu. (Arayüzden durdurma Faz 1'de, uzun
-işlerin Durdur düğmesiyle gelecek.)
+**Sebep.** Dışa aktarım yazılırken durum çubuğundaki **Durdur**'a ya da **Esc**'e
+basıldı.
 
 **Çözüm.** Bir şey kaybolmadı: dosya hedefin yanında hazırlanıyordu ve yerine konmadı,
 eski dosya bayt bayt yerinde. Hazır olduğunuzda komutu yeniden çalıştırın. Bkz.

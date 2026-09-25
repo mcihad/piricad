@@ -38,6 +38,13 @@ enum class ErrorCode : std::uint16_t {
     /// ADDED AT THE END on purpose: the values before it keep the numbers they
     /// had, and this enum's numbers reach a client's answer.
     Conflict,
+    /// THE DRAWING IS IN USE BY WORK THAT IS STILL RUNNING (TODOS F-05).
+    ///
+    /// Distinct from `Conflict` because nothing moved: the call is right and
+    /// will succeed unchanged once the job in front of it is over. A client
+    /// told this waits, or asks the person to stop the job, and sends the same
+    /// call again. Added at the end for the reason `Conflict` was.
+    Busy,
 };
 
 /// One failure: a machine-readable code and a sentence for the user.

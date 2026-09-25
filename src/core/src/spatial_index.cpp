@@ -14,6 +14,34 @@ inline bool overlaps(Mm amin_x, Mm amin_y, Mm amax_x, Mm amax_y, const Box2& b)
     return !(amax_x < b.min_x || amin_x > b.max_x || amax_y < b.min_y || amin_y > b.max_y);
 }
 
+/// The document's entities, by their cull block (model.md R6).
+struct TableBoxes
+{
+    const EntityTable& table;
+
+    Mm min_x(EntityId e) const { return table.min_x[e]; }
+
+    Mm min_y(EntityId e) const { return table.min_y[e]; }
+
+    Mm max_x(EntityId e) const { return table.max_x[e]; }
+
+    Mm max_y(EntityId e) const { return table.max_y[e]; }
+};
+
+/// Boxes a caller holds, by their position.
+struct SpanBoxes
+{
+    std::span<const Box2> boxes;
+
+    Mm min_x(EntityId e) const { return boxes[e].min_x; }
+
+    Mm min_y(EntityId e) const { return boxes[e].min_y; }
+
+    Mm max_x(EntityId e) const { return boxes[e].max_x; }
+
+    Mm max_y(EntityId e) const { return boxes[e].max_y; }
+};
+
 } // namespace
 
 void SpatialIndex::clear()
@@ -40,6 +68,22 @@ void SpatialIndex::build(const EntityTable& store)
     for (EntityId e = 0; e < store.size(); ++e)
         if (store.standalone(e)) order_.push_back(e);
 
+    pack(TableBoxes{store});
+}
+
+void SpatialIndex::build(std::span<const Box2> boxes)
+{
+    clear();
+
+    order_.reserve(boxes.size());
+    for (std::size_t i = 0; i < boxes.size(); ++i)
+        if (!boxes[i].empty()) order_.push_back(static_cast<EntityId>(i));
+
+    pack(SpanBoxes{boxes});
+}
+
+template<class Boxes> void SpatialIndex::pack(const Boxes& store)
+{
     if (order_.empty()) return;
 
     const std::size_t n      = order_.size();
@@ -48,8 +92,8 @@ void SpatialIndex::build(const EntityTable& store)
         static_cast<std::size_t>(std::ceil(std::sqrt(static_cast<double>(leaves))));
     const std::size_t per_strip = (n + strips - 1) / strips;
 
-    const auto centre_x = [&store](EntityId e) { return store.min_x[e] / 2 + store.max_x[e] / 2; };
-    const auto centre_y = [&store](EntityId e) { return store.min_y[e] / 2 + store.max_y[e] / 2; };
+    const auto centre_x = [&store](EntityId e) { return store.min_x(e) / 2 + store.max_x(e) / 2; };
+    const auto centre_y = [&store](EntityId e) { return store.min_y(e) / 2 + store.max_y(e) / 2; };
 
     // Ties break on the entity id so the packing is identical on every platform.
     std::sort(order_.begin(), order_.end(), [&](EntityId a, EntityId b) {
@@ -81,17 +125,17 @@ void SpatialIndex::build(const EntityTable& store)
     for (std::size_t s = 0; s < n; s += kFanout) {
         const std::size_t upto = std::min(s + std::size_t{kFanout}, n);
 
-        Mm bx0 = store.min_x[order_[s]];
-        Mm by0 = store.min_y[order_[s]];
-        Mm bx1 = store.max_x[order_[s]];
-        Mm by1 = store.max_y[order_[s]];
+        Mm bx0 = store.min_x(order_[s]);
+        Mm by0 = store.min_y(order_[s]);
+        Mm bx1 = store.max_x(order_[s]);
+        Mm by1 = store.max_y(order_[s]);
 
         for (std::size_t i = s + 1; i < upto; ++i) {
             const EntityId e = order_[i];
-            bx0              = std::min(bx0, store.min_x[e]);
-            by0              = std::min(by0, store.min_y[e]);
-            bx1              = std::max(bx1, store.max_x[e]);
-            by1              = std::max(by1, store.max_y[e]);
+            bx0              = std::min(bx0, store.min_x(e));
+            by0              = std::min(by0, store.min_y(e));
+            bx1              = std::max(bx1, store.max_x(e));
+            by1              = std::max(by1, store.max_y(e));
         }
 
         min_x_.push_back(bx0);

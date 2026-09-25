@@ -348,8 +348,7 @@ Task<void> run_tool(Context& ctx)
     command::Job job;
     job.label = spec.title;
     job.work  = [&](const command::JobControl& control) {
-        const Progress progress{control.stop, &job.permille};
-        status = tool->run(input, output, progress);
+        status = tool->run(input, output, control);
     };
     co_await command::run_job(ctx.session(), job);
 

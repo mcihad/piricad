@@ -47,7 +47,7 @@ otherwise a sub-microsecond case reports scheduler jitter as a regression.
 | `bellek.5m_parsel` | — | bilgilendirme |
 | `io.dwg_200mb_acilis` | ≤ 3 s | BEKLEMEDE — `/src/io` boş |
 | `io.laz_50m_ilk_goruntu` | ≤ 5 s | BEKLEMEDE — `/src/io` boş |
-| `domain.topoloji_100k_parsel` | ≤ 2 s | BEKLEMEDE — `/src/domain` boş |
+| `domain.topoloji_100k_parsel` | ≤ 2 s | ölçülüyor |
 | `uygulama.soguk_acilis` | ≤ 2 s | BEKLEMEDE — Qt içinde ölçülmeli |
 | `uygulama.bos_proje_ram` | ≤ 300 MB | BEKLEMEDE — Qt içinde ölçülmeli |
 | `arayuz.tus_ekran_gecikmesi` | ≤ 30 ms | BEKLEMEDE — Qt olay döngüsü gerekiyor |

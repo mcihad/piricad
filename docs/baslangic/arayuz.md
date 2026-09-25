@@ -358,11 +358,6 @@ ve oklarıyla ölçü, `BLOKEKLE`'de bloğun kendisi, `TAŞI` ve `KOPYALA`'da ta
 nesnelerin kendileri. Hayalet, tıklamanın üreteceği geometriyi çizen aynı kodla
 çizilir; ne görüyorsanız onu alırsınız.
 
-Bir komut uzun bir işi ayrı iş parçacığına verdiğinde (bugün: [`İÇEAKTAR`](../komutlar/import.md)
-dosyayı okurken) durum çubuğunun mesaj hücresi işin adını, altında kayan bir şeridi ve
-yanında **Durdur** çipini gösterir. Pencere donmaz; **Durdur** ya da **Esc** işi keser ve
-çizim değişmeden kalır.
-
 ### Harita üzerindeki yardımcılar
 
 Çizimin üzerinde, çizime ait olmayan dört şey durur. Dördü de **Seçenekler ▸ Görünüm ve
@@ -895,6 +890,36 @@ kullanıcı için tek başına renk yeterli değildir.
 
 Sağ tıklamak anahtarın ayarını açar: OSNAP ve POLAR'da yakalama modları listesi,
 ötekilerde Seçenekler penceresinin ilgili sayfası.
+
+### Uzun işler
+
+Bazı komutların işi saniyeler sürer ve pencereyi dondurmadan ayrı bir iş parçacığında
+koşar: [`İÇEAKTAR`](../komutlar/import.md) dosyayı okurken,
+[`DIŞAAKTAR`](../komutlar/export.md) dosyayı yazarken, [`TOPOLOJİ`](../komutlar/topology.md)
+paftayı denetlerken, [`EŞYÜKSELTİ`](../komutlar/contour.md) ve
+[`HACİM`](../komutlar/earthwork.md) yüzeyi üçgenlerken ve **Araçlar** panelindeki
+[işlem araçları](../islem/README.md) çalışırken. Üretilmiş [komut
+referansında](../komutlar/referans.md) bu komutların bayraklarında **uzun iş** yazar.
+
+İş sürerken durum çubuğunun mesaj hücresi işin adını ve ilerlemesini gösterir —
+`Topoloji denetimi · %40`, `Dışa aktarılıyor: ada.gpkg · %75` —, altında kayan bir şerit
+programın çalıştığını söyler ve yanında **Durdur** çipi durur. Pencere dar olduğu için
+yer kalmazsa iş hücresi, iş bitene dek yardımcı çiplerin (IZGARA, YAKALAMA…) yerini
+alır; Durdur her zaman görünür.
+
+| Ne | Sonuç |
+|---|---|
+| **Durdur** çipi ya da **Esc** | İşi keser. Çizim, dosya ve komut günlüğü işten önceki hâlinde kalır; komut neyin durduğunu söyler, örneğin `Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.` |
+| **Enter** ya da sağ tık | İşi **durdurmaz**; iş kendi bitince biter |
+| İş sürerken çizimi değiştiren bir komut (yazılan, düğmeden, betikten ya da bir yapay zekâ istemcisinden) | Çalışmaz: `Bir iş sürüyor (Topoloji denetimi); o bitene dek çizim değiştirilmez. Bitmesini bekleyin ya da durum çubuğundaki Durdur'a basın (Esc).` İş bitince aynı komutu yeniden verin |
+| İş sürerken çizimi okuyan bir komut (ölçme, sorgulama) ve görünüm (yakınlaştırma, kaydırma) | Çalışır |
+| İş sürerken gelen bir yapay zekâ önerisi | Kartı açılır ama önizlenmez ve **Uygula** iş bitene dek beklemesini söyler; öneri bozulmaz, iş bitince önizlenir (bkz. [Onay](../yapay-zeka/onay.md)) |
+
+**Neden çizim kilitli?** İş, çizimi başladığı anki hâliyle okur. Altında çizim
+değişseydi bir dışa aktarım yarısı eski yarısı yeni bir dosya yazabilir, bir denetim
+yarısı başka bir paftayı denetleyebilir, durdurulan bir iş de sonradan eklenenleri
+geri alırdı. Kilit yalnız iş sürerken vardır ve kimse için ayrıcalık tanımaz: arayüz,
+komut satırı, betik ve yapay zekâ aynı cevabı alır.
 
 ## Tema
 

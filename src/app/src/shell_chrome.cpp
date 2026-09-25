@@ -212,7 +212,8 @@ void StatusStrip::mouseMoveEvent(QMouseEvent* event)
     const int at  = event->position().toPoint().x();
     const int was = hot_;
     hot_          = -1;
-    for (int i = 0; i < chips_.size(); ++i)
+    // A chip under the busy cell is not there to point at (`chipsCovered_`).
+    for (int i = 0; i < chips_.size() && !(busy_ && chipsCovered_); ++i)
         if (at >= chips_[i].left && at < chips_[i].left + chips_[i].width) hot_ = i;
     const bool stopWas = stopHot_;
     stopHot_ = busy_ && !stopRect_.isEmpty() && stopRect_.contains(event->position().toPoint());
@@ -240,7 +241,7 @@ void StatusStrip::mousePressEvent(QMouseEvent* event)
         if (event->button() == Qt::LeftButton) emit agentClicked();
         return;
     }
-    if (hot_ < 0) return;
+    if (hot_ < 0 || (busy_ && chipsCovered_)) return;
     if (event->button() == Qt::RightButton) {
         emit configureRequested(chips_[hot_].id);
         return;
@@ -310,13 +311,26 @@ void StatusStrip::paintEvent(QPaintEvent*)
     // Takes the message gap while it runs. The moving segment is what says the
     // program is alive when a 48 MB DXF is being read on another thread, and the
     // chip is the only way to stop that read short of closing the window.
+    chipsCovered_ = false;
     if (busy_ && !chips_.isEmpty()) {
-        const int from = chips_.back().left + chips_.back().width + kStatusPadX;
-        const int to   = rightEdge - kStatusPadX;
+        int from     = chips_.back().left + chips_.back().width + kStatusPadX;
+        const int to = rightEdge - kStatusPadX;
         const QFontMetrics chipMetrics(sans(kStatusPx, QFont::DemiBold, 0.4));
         const int stopWidth = kStatusPadX +
                               static_cast<int>(chipMetrics.horizontalAdvance(tr("Durdur"))) +
                               kStatusPadX;
+        // NO ROOM BESIDE THE CHIPS, so the job takes theirs (TODOS F-05). A
+        // narrow window left the gap too small and drew no Durdur at all, and a
+        // job that can be stopped only by a key the user may not know is a job
+        // they wait out. The aids are not what matters while it runs; they come
+        // back when it ends, and a click there meanwhile toggles nothing.
+        if (to - from <= stopWidth + (kStatusPadX * 4)) {
+            from          = chips_.front().left + kStatusPadX;
+            chipsCovered_ = true;
+            p.fillRect(
+                QRect(chips_.front().left, 1, rightEdge - chips_.front().left, kStatusHeight - 1),
+                t.bgStrip);
+        }
         if (to - from > stopWidth + kStatusPadX * 4) {
             stopRect_ = QRect(to - stopWidth, 1, stopWidth, kStatusHeight - 1);
             const QRect label(from, 1, stopRect_.left() - kStatusPadX - from, kStatusHeight - 1);

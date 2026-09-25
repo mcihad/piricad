@@ -16,8 +16,37 @@ ve **rapor eder**:
 | **Boşluk** | Bir **çizgi ağında** bir ucun başka bir çizgiye değmeden durduğu yer; genişliği yazılır |
 
 Dört bin parselli bir paftada bunların hiçbiri bakışta görünmez — komut bunun
-için vardır. Yeri belli olan kusurlar (yinelenen, uzunluğu yok, tekrarlanan köşe,
-boşluk) tuvalde de işaretlenir.
+için vardır. Her kusur tuvalde de işaretlenir: bir örtüşme iki parselin birlikte
+talep ettiği zemin olarak (alanıyla), bir boşluk açık uçtan en yakın çizgiye bir çizgi
+olarak, ötekiler bir nokta olarak.
+
+### Önce sayı, sonra ilk yirmi
+
+Rapor önce **ne kadar** ve **ne tür** kusur bulunduğunu söyler, sonra ilk yirmisini tek
+tek yazar; gerisi sayılır ("… ve 480 kusur daha; hepsi tuvalde işaretli."). Dört bin
+örtüşmeli bir paftada dört bin satırlık bir döküm, hiç yazılmamış bir döküm kadar
+okunmaz. Kusurların **tamamı** yapılandırılmış cevaptadır (bkz. [Betikten
+kullanım](#betikten-kullanım)).
+
+### Uzun bir iş: ilerleme ve Durdur
+
+Yüz bin parsellik bir pafta saniyeler sürer ve bu sürede pencere donmaz: denetim ayrı
+bir iş parçacığında koşar, durum çubuğu `Topoloji denetimi · %40` gibi ilerlemesini
+gösterir ve yanında **Durdur** çipi durur. **Durdur** ya da **Esc** denetimi keser:
+
+```text
+Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.
+```
+
+Yarım bir denetim daha küçük bir denetim değildir — "kusur bulunamadı" demesi yalan
+olurdu — bu yüzden durdurulan denetim hiçbir kusur söylemez ve komut günlüğüne
+yazılmaz. **Enter** ya da sağ tık işi durdurmaz; iş kendi bitince biter. Denetim
+sürerken çizim değiştirilemez; yazılan bir komut `Bir iş sürüyor (Topoloji
+denetimi)…` cevabını alır (bkz. [Uzun işler](../baslangic/arayuz.md#uzun-işler)).
+
+Denetim, parsellerin sınır kutuları üzerine kurulan bir mekânsal dizinle (R-ağacı)
+yalnız **komşu** parselleri karşılaştırır; yüz bin parsel bir saniyenin altında
+denetlenir.
 
 ### Aynı çekirdek
 
@@ -56,8 +85,8 @@ yüzden bir santimetrekarelik pay vardır.
 TOPOLOJİ [nesneler=<kimlikler>]
 ```
 
-Nesne verilmezse etkin seçim, o da boşsa **bütün çizim** denetlenir. Rapor neyin
-denetlendiğini her zaman yazar.
+Nesne verilmezse etkin seçim, o da boşsa **bütün çizim** denetlenir. Rapor neyin ve
+kaç nesnenin denetlendiğini her zaman yazar.
 
 ## Parametreler
 
@@ -77,10 +106,13 @@ TOPOLOJİ
 ```
 
 ```text
-Topoloji denetimi (bütün çizim): 1 kusur.
+Topoloji denetimi (bütün çizim, 2 nesne): 1 kusur — 1 örtüşme.
   Nesne 1 ile 2 örtüşüyor: 25,00 m².
   Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.
 ```
+
+Tuvalde iki parselin birlikte talep ettiği 5 m × 5 m'lik kare, `örtüşme 25,00 m²`
+yazısıyla işaretlenir.
 
 Bir çizgi ağında köşesine 50 cm varmayan bir kenar ve iki kez çizilmiş bir çizgi:
 
@@ -94,7 +126,7 @@ TOPOLOJİ
 ```
 
 ```text
-Topoloji denetimi (bütün çizim): 2 kusur.
+Topoloji denetimi (bütün çizim, 5 nesne): 2 kusur — 1 yinelenen nesne, 1 boşluk.
   Nesne 5, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar siler).
   Nesne 1: açık uç, en yakın çizgiye 50 cm (boşluk).
   Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.
@@ -103,7 +135,8 @@ Topoloji denetimi (bütün çizim): 2 kusur.
 ### Arayüz
 
 Şeritte **Kadastro ▸ Denetim ▸ Topoloji Denetimi** (kapalı bir alan seçiliyken beliren
-**Alan** sekmesinde de vardır). Seçim boşken bütün çizimi denetler.
+**Alan** sekmesinde de vardır). Seçim boşken bütün çizimi denetler. Denetim sürerken
+durum çubuğu ilerlemeyi yüzde olarak gösterir; **Durdur** çipi ya da **Esc** keser.
 
 ### Betik
 
@@ -125,12 +158,26 @@ bir adım eklemez.
 ## Betikten kullanım
 
 Salt okunur olduğu için bir betiğin herhangi bir yerinde çağrılabilir. Teslim
-öncesi denetimi betiğe koymak, paftanın her kaydedilişinde denetlenmesini sağlar.
+öncesi denetimi betiğe koymak, paftanın her kaydedilişinde denetlenmesini sağlar. Bir
+betiğin içinde denetim yerinde, betiğin sırasında koşar; cevabı arayüzdekiyle
+kelimesi kelimesine aynıdır.
+
+**Yapılandırılmış cevap** — bir betiğin ya da yapay zekâ istemcisinin okuduğu —
+bütün kusurları taşır: `kapsam` (`cizim` ya da `secim`), `bakilan` (kaç nesne
+denetlendi), `kusur` (kaç kusur), `turler` (türe göre sayılar: `ortusme`,
+`kendini_kesen`, `sifir_alan`, `yinelenen`, `bos`, `tekrarlanan_kose`, `bosluk`) ve
+`kusurlar`: her biri için `tur`, `nesne`, varsa `diger` (öteki nesne), örtüşmede
+`alan_mm2`, tekrarlanan köşede `kose`, boşlukta `uc` ve `genislik_mm`, `nokta`
+(tuvalde işaretlendiği yer, milimetre) ve `aciklama` (transkriptteki cümle).
 
 ## Hatalar
 
 Bu komutun hata iletisi yoktur: bulduğunu rapor eder, bulamazsa bulamadığını
-yazar.
+yazar. Durdurulursa bunu söyler:
+
+| Mesaj | Sebep | Çözüm |
+|---|---|---|
+| `Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.` | Denetim sürerken **Durdur** ya da **Esc**'e basıldı | Hata değildir; denetimi yeniden çalıştırın |
 
 ## İlgili
 

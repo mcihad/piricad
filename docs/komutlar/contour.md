@@ -83,6 +83,11 @@ Kotlu bir nokta listesi okuyun, sonra şeritte **Harita ▸ Arazi ▸ Eşyüksel
 kendi katmanına düşer; **Katmanlar** panelinden biçimlendirebilir ya da
 kapatabilirsiniz.
 
+Büyük bir alımın üçgenlenmesi ve eğrilerin izlenmesi saniyeler sürebilir; iş ayrı bir
+iş parçacığında koşar, durum çubuğu `Eş yükselti eğrileri · %70` gibi ilerlemesini
+gösterir, **Durdur** ya da **Esc** keser — o zaman hiçbir eğri çizilmez, katman da
+açılmaz ([Uzun işler](../baslangic/arayuz.md#uzun-işler)).
+
 ### Betik
 
 ```json
@@ -134,6 +139,11 @@ Aralık çok küçük.
 > `Üçgenleme bu yapıda yok…`
 
 Program CDT'siz derlenmiş.
+
+> `Eş yükselti çizimi durduruldu; çizim değişmedi.`
+
+İş sürerken **Durdur**'a ya da **Esc**'e basıldı. Hata değildir; yeniden
+çalıştırın.
 
 ## İlgili
 

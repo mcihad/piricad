@@ -159,6 +159,16 @@ public:
         return shown_preview_ ? &*shown_preview_ : nullptr;
     }
 
+    /// Whether the drawing may be changed now (`command::Bus::writable`): what
+    /// a card asks before it applies, so a plan is not burnt against a job.
+    core::Status writable() const { return bus_.writable(); }
+
+    /// What a job held back, once it is over (`command::Bus::writable`): the
+    /// plans filed meanwhile are offered to the standing approval policy, and
+    /// every waiting plan that has no preview yet is previewed. The controller
+    /// calls it when a job returns.
+    void afterJob();
+
 signals:
     /// A client has proposed something and a person has to look at it. The shell
     /// raises the suggestion card; nothing is applied until it is answered.
@@ -179,6 +189,11 @@ private:
     /// Previews the waiting plan `id` (`Bus::preview`): its counts go on the
     /// plan, its outlines to the canvas (`shownPreview`, `previewChanged`).
     void previewPlan(const std::string& id);
+
+    /// Offers filed plan `id` to the standing policy and settles what it
+    /// decided: the words the transcript says for the outcome, or an error when
+    /// the policy refuses it outright (out of the client's scope).
+    core::Result<std::string> decideByPolicy(const std::string& id);
 
     /// Offers the plan to the user's standing approval policy, and says what it
     /// decided and why.
@@ -206,6 +221,9 @@ private:
     void refreshCatalog() const;
 
     command::Bus& bus_;
+    /// Plans filed while a job held the drawing, to be offered to the policy
+    /// when it returns (`afterJob`).
+    std::vector<std::string> policy_after_job_;
 
     ai::PlanStore plans_;
 

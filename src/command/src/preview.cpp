@@ -130,6 +130,8 @@ core::Result<Preview> Bus::preview(std::span<const Invocation> steps)
     if (previewing_)
         return core::err(ErrorCode::InvalidArgument,
                          "Önizleme başka bir önizlemenin içinde yapılmaz.");
+    // A PREVIEW RUNS ITS STEPS FOR REAL, so it waits for a job like any writer.
+    if (const auto st = writable(); !st) return st.error();
 
     Preview out;
     out.steps = steps.size();

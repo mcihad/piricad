@@ -155,6 +155,13 @@ silinecekler kırmızı. Önizleme çizime, sürümüne ve nesne kimliklerine do
 verdiğinizde taslaklar kalkar. Öneriyi açan model ve MCP istemcisi de aynı sayıları okur
 (`onizleme`).
 
+**Bir iş sürerken gelen öneri** — bir dışa aktarım, bir topoloji denetimi yazılırken
+([Uzun işler](../baslangic/arayuz.md#uzun-işler)) — kartını açar ama o an önizlenmez:
+önizleme adımları gerçekten çalıştırır ve iş sürerken çizim değiştirilemez. **Uygula**
+o sırada öneriyi uygulamaz, kartta `Bir iş sürüyor (…)` der; öneri **bozulmaz**, beklemeye
+devam eder. İş bittiği anda öneri önizlenir, `Uygulanırsa: …` satırı karta gelir ve
+**Uygula** çalışır. **Reddet** her zaman çalışır.
+
 Uyarı şeridi göründüğünde adımlar, hazırlandıkları çizimden **başka** bir çizime
 uygulanacak demektir: içlerindeki nesne anahtarları hâlâ geçerli olabilir ama artık
 başka bir şeyi gösteriyor olabilir. Uygulamadan önce satırları gözden geçirin.

@@ -101,7 +101,12 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
     if (const Args* preset = input_->preset()) resolved_ = *preset;
 }
 
-Session::~Session() = default;
+Session::~Session()
+{
+    // A session that goes while its job is still out takes its claim on the
+    // drawing with it (`Bus::writable`).
+    if (bus_.job_session_ == this) bus_.job_session_ = nullptr;
+}
 
 bool Session::finished() const noexcept
 {
@@ -236,6 +241,9 @@ bool Session::park_job(std::coroutine_handle<> h, Job& job)
     parked_ = h;
     job_    = &job;
     state_  = SessionState::Working;
+    // THE DRAWING IS THE JOB'S until it is back (`Bus::writable`): set before
+    // the host starts the worker, so nothing can land in between.
+    bus_.job_session_ = this;
     bus_.on_job_host(*this);
     return true;
 }
@@ -243,6 +251,7 @@ bool Session::park_job(std::coroutine_handle<> h, Job& job)
 void Session::resume_job()
 {
     if (state_ != SessionState::Working) return;
+    if (bus_.job_session_ == this) bus_.job_session_ = nullptr;
     job_   = nullptr;
     state_ = SessionState::Running;
 

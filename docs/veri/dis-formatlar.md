@@ -318,9 +318,9 @@ tutmaz.
 
 - **Yazım yarıda kalırsa** — disk doldu, izin yok, bir sayfa çizilemedi — hedefteki
   dosya **bayt bayt olduğu gibi** kalır; ilk kez yazılacak bir dosya hiç oluşmaz.
-  Hazırlık klasörü de kalmaz. Süren bir dışa aktarımı arayüzden **durdurmak** Faz 1'de,
-  uzun işlerin ilerleme ve Durdur düğmesiyle gelecek; durdurulan dışa aktarım da aynı
-  biçimde hiçbir şey yazmamış sayılacak.
+  Hazırlık klasörü de kalmaz. Süren bir dışa aktarımı durum çubuğundaki **Durdur**'la
+  ya da **Esc**'le [durdurmak](../baslangic/arayuz.md#uzun-işler) da aynı sonucu verir:
+  durdurulan dışa aktarım hiçbir şey yazmamış sayılır.
 - **Birlikte yazılan dosyalar birlikte taşınır:** DXF ve `.prj`'si, PNG ve `.pgw`'si,
   çok sayfalı bir yerleşimin bütün sayfaları. Üçüncü sayfası çizilemeyen bir yerleşim
   ilk iki sayfayı da değiştirmez; eskiden ilk ikisi yeni, gerisi eski kalıyordu.
@@ -384,7 +384,7 @@ make doctor
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
 | `Çizimde dışa aktarılacak nesne yok` | Çizim boş ya da her şey silinmiş | Önce çizin |
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
-| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sırasında durduruldu (arayüzdeki Durdur düğmesi Faz 1'de gelecek) | Hazır olduğunuzda yeniden çalıştırın; eski dosya yerinde |
+| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sürerken **Durdur**'a ya da **Esc**'e basıldı | Hata değildir; eski dosya yerinde. Hazır olduğunuzda yeniden çalıştırın |
 | `'...' yerine tam konamadı. Yerine konan: … Konamayan: …` | Takımdan bir dosya başka bir programda açık ya da yerinde bir klasör var | Dosyaları kullanan programı kapatıp yineleyin ([Yazma yarıda kalırsa](#yazma-yarıda-kalırsa)) |
 | `'....prj' kaldırıldı: önceki bir metre dışa aktarımından kalmıştı …` (not) | Metre DXF'in yerine milimetre DXF yazıldı | Bir şey gerekmez; `.prj` isteniyorsa `AYAR çizim_birimi metre` ile yeniden aktarın |
 

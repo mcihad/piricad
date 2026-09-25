@@ -267,7 +267,7 @@ TEST_CASE("TEK İŞLEM: 500 nesne üzerinde yarıda durdurulan işlem aracı hi�
         at_stop = job.permille.load();
         job.stop.request_stop();
     });
-    job.work(JobControl{job.stop.get_token()});
+    job.work(job.control());
     done.store(true);
     watcher.join();
     session.resume_job();
@@ -394,7 +394,7 @@ TEST_CASE("TEK İŞLEM: durdurulan işlem aracı günlüğe yazılmaz; Durdur'la
     Session& session = *started.value();
     REQUIRE(session.working());
     session.cancel(); // Durdur, while the worker has it
-    session.job()->work(JobControl{session.job()->stop.get_token()});
+    session.job()->work(session.job()->control());
     session.resume_job();
     CHECK_EQ(std::string(session_state_name(session.state())), "cancelled");
     auto finished = r.bus.finish(session);

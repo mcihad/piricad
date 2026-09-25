@@ -42,6 +42,14 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
 {
     auto result = co_await bus.on_file_request(request);
     if (!result) {
+        // STOPPED IS NOT FAILED (TODOS F-05): the user pressed Durdur, the file
+        // service left everything as it was, and the command ends the way a
+        // stopped processing tool ends — cancelled, said, not journalled.
+        if (result.error().code == core::ErrorCode::Cancelled) {
+            ctx.session().end_stopped();
+            ctx.echo(result.error().message);
+            co_return;
+        }
         ctx.session().fail(result.error());
         co_return;
     }
@@ -259,8 +267,9 @@ Task<void> run_export(Context& ctx)
     if (engine_missing(ctx, bus)) co_return;
 
     FileRequest request;
-    request.verb = FileRequest::Verb::Export;
-    request.path = *path;
+    request.verb    = FileRequest::Verb::Export;
+    request.path    = *path;
+    request.session = &ctx.session(); // the write is a job (TODOS F-05)
 
     if (const Value format = ctx.argument("bicim"); !format.empty()) {
         request.format = format.as_text();
@@ -464,7 +473,7 @@ KENTOS_COMMAND(import)
         // io.md R17: one transaction, one undo entry, and a failure leaves the
         // document byte for byte as it was.
         .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::LongRunning,
         .summary = "Dış bir veri dosyasını çizime ekler.",
         .run     = &run_import,
         .effect  = Effect::Query | Effect::FileRead | Effect::DocumentEdit,
@@ -489,7 +498,7 @@ KENTOS_COMMAND(exportfile)
                     .en("version"),
             },
         .undo    = UndoPolicy::None,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::LongRunning,
         .summary = "Çizimi dış bir veri biçimine yazar.",
         .run     = &run_export,
         .effect  = Effect::Query | Effect::FileWrite,

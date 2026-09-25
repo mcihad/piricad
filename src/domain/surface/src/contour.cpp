@@ -24,14 +24,15 @@ bool available() noexcept
 
 #if !KENTOS_HAVE_CDT
 
-core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>&, core::Mm)
+core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>&, core::Mm,
+                                                  const command::JobControl&)
 {
     return core::err(core::ErrorCode::Unsupported,
                      "Üçgenleme bu yapıda yok; eş yükselti eğrisi çizilemez. "
                      "KENTOS_WITH_CDT=ON ile derleyin.");
 }
 
-core::Result<Earthwork> earthwork(const std::vector<Level>&, core::Mm)
+core::Result<Earthwork> earthwork(const std::vector<Level>&, core::Mm, const command::JobControl&)
 {
     return core::err(core::ErrorCode::Unsupported, "Üçgenleme bu yapıda yok; hacim hesaplanamaz. "
                                                    "KENTOS_WITH_CDT=ON ile derleyin.");
@@ -69,6 +70,24 @@ core::Point2 crossing(const Level& a, const Level& b, core::Mm level)
                         a.at.y + core::mm_round(static_cast<double>(b.at.y - a.at.y) * t)};
 }
 
+/// The smallest whole multiple of `interval` at or above `v`: the first contour
+/// a range starting at `v` carries. Integer, and right for a negative `v`,
+/// where C++ division rounds towards zero.
+core::Mm ceil_to(core::Mm v, core::Mm interval)
+{
+    return ((v / interval) + (v % interval > 0 ? 1 : 0)) * interval;
+}
+
+/// What a stopped surface computation answers (TODOS F-05).
+core::Error stopped()
+{
+    return core::err(core::ErrorCode::Cancelled,
+                     "Yüzey hesabı durduruldu; sonuç verilmedi, çizim değişmedi.");
+}
+
+/// How many triangles pass between two looks at the stop.
+constexpr std::size_t kStride = 4096;
+
 /// One contour segment, keyed by its two ends so the chainer can join them.
 struct Segment
 {
@@ -79,7 +98,8 @@ struct Segment
 } // namespace
 
 core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& points,
-                                                  core::Mm interval)
+                                                  core::Mm interval,
+                                                  const command::JobControl& control)
 {
     if (interval <= 0)
         return core::err(core::ErrorCode::InvalidArgument,
@@ -112,7 +132,12 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
                          "Yüzey en az üç FARKLI kotlu nokta ister; verilen noktaların " +
                              std::to_string(unique.size()) + " tanesi ayrı yerde.");
 
-    // ---- triangulate ----
+    // ---- triangulate, 0..40 % ----
+    //
+    // One call into the library, which cannot be stopped half-way: the stop is
+    // looked at on either side of it.
+    if (control.cancelled()) return stopped();
+    control.at(0, 1, 0, 50);
     CDT::Triangulation<double> cdt;
     std::vector<CDT::V2d<double>> vertices;
     vertices.reserve(unique.size());
@@ -122,6 +147,8 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
 
     cdt.insertVertices(vertices);
     cdt.eraseSuperTriangle();
+    if (control.cancelled()) return stopped();
+    control.at(1, 1, 0, 400);
 
     if (cdt.triangles.empty())
         return core::err(core::ErrorCode::ValidationFailed,
@@ -147,13 +174,18 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
                          "Bu aralık " + std::to_string(levels) +
                              " kot verir; çok küçük bir aralık verilmiş olabilir.");
 
-    // ---- cut every triangle at every level that crosses it ----
+    // ---- cut every triangle at every level that crosses it, 40..80 % ----
     std::map<core::Mm, std::vector<Segment>> by_level;
 
-    for (const CDT::Triangle& tri : cdt.triangles) {
-        const std::size_t ia = tri.vertices[0];
-        const std::size_t ib = tri.vertices[1];
-        const std::size_t ic = tri.vertices[2];
+    for (std::size_t t = 0; t < cdt.triangles.size(); ++t) {
+        if (t % kStride == 0) {
+            if (control.cancelled()) return stopped();
+            control.at(t, cdt.triangles.size(), 400, 800);
+        }
+        const CDT::Triangle& tri = cdt.triangles[t];
+        const std::size_t ia     = tri.vertices[0];
+        const std::size_t ib     = tri.vertices[1];
+        const std::size_t ic     = tri.vertices[2];
         if (ia >= unique.size() || ib >= unique.size() || ic >= unique.size()) continue;
 
         const Level* v[3]{&unique[ia], &unique[ib], &unique[ic]};
@@ -162,8 +194,11 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
         core::Mm lo = std::min({v[0]->height, v[1]->height, v[2]->height});
         core::Mm hi = std::max({v[0]->height, v[1]->height, v[2]->height});
 
-        for (core::Mm level = first; level <= highest; level += interval) {
-            if (level < lo || level > hi) continue;
+        // FROM THE FIRST LEVEL THE TRIANGLE REACHES, not from the site's: a
+        // triangle spans a level or two, and walking all two hundred of a
+        // hilly site's levels for each of its triangles was the loop's cost.
+        for (core::Mm level = std::max(first, ceil_to(lo, interval));
+             level <= std::min(highest, hi); level += interval) {
 
             // Where the level crosses each of the three edges. An edge whose two
             // ends straddle the level contributes one point.
@@ -188,9 +223,12 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
         }
     }
 
-    // ---- chain the segments into runs ----
+    // ---- chain the segments into runs, 80..100 % ----
     std::vector<Contour> out;
+    std::size_t chained = 0;
     for (auto& [level, segments] : by_level) {
+        if (control.cancelled()) return stopped();
+        control.at(chained++, by_level.size(), 800, 1000);
         // An index from each endpoint to the segments that touch it. Exact,
         // because the interpolation above is.
         std::multimap<Key, std::size_t> ends;
@@ -356,7 +394,8 @@ void accumulate(Earthwork& out, core::Point2 pa, core::Mm ha, core::Point2 pb, c
 
 } // namespace
 
-core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level)
+core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level,
+                                  const command::JobControl& control)
 {
     if (points.size() < 3)
         return core::err(core::ErrorCode::InvalidArgument,
@@ -381,18 +420,27 @@ core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm lev
         vertices.push_back(
             CDT::V2d<double>{static_cast<double>(p.at.x), static_cast<double>(p.at.y)});
 
+    if (control.cancelled()) return stopped();
+    control.at(0, 1, 0, 50);
     cdt.insertVertices(vertices);
     cdt.eraseSuperTriangle();
+    if (control.cancelled()) return stopped();
+    control.at(1, 1, 0, 600);
 
     if (cdt.triangles.empty())
         return core::err(core::ErrorCode::ValidationFailed,
                          "Bu noktalardan yüzey kurulamadı: hepsi aynı doğru üzerinde olabilir.");
 
     Earthwork out;
-    for (const CDT::Triangle& tri : cdt.triangles) {
-        const std::size_t ia = tri.vertices[0];
-        const std::size_t ib = tri.vertices[1];
-        const std::size_t ic = tri.vertices[2];
+    for (std::size_t t = 0; t < cdt.triangles.size(); ++t) {
+        if (t % kStride == 0) {
+            if (control.cancelled()) return stopped();
+            control.at(t, cdt.triangles.size(), 600, 1000);
+        }
+        const CDT::Triangle& tri = cdt.triangles[t];
+        const std::size_t ia     = tri.vertices[0];
+        const std::size_t ib     = tri.vertices[1];
+        const std::size_t ic     = tri.vertices[2];
         if (ia >= unique.size() || ib >= unique.size() || ic >= unique.size()) continue;
 
         accumulate(out, unique[ia].at, unique[ia].height - level, unique[ib].at,

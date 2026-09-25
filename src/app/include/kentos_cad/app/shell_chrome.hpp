@@ -77,6 +77,13 @@ public:
     /// Replaces the busy label without restarting the live segment: what a job
     /// that counts calls as its figure moves (`Controller::jobPermille`).
     void setBusyLabel(const QString& label);
+
+    /// What the busy cell says now, empty when nothing runs; and where its
+    /// Durdur chip was painted, for the probe to press it as a person would.
+    QString busyLabelForProbe() const { return busy_ ? busyLabel_ : QString(); }
+
+    QRect stopRectForProbe() const { return busy_ ? stopRect_ : QRect(); }
+
     void setConnection(const QString& text, bool connected);
 
     /// The PLOT scale, already formatted (`1 : 1 000`), and the coordinate
@@ -174,9 +181,11 @@ private:
     bool busy_ = false;
     QString busyLabel_;
     QRect stopRect_; ///< where the Durdur chip was last painted; empty when not busy
-    bool stopHot_  = false;
-    int phase_     = 0; ///< the busy segment's position, in pixels
-    QTimer* pulse_ = nullptr;
+    /// Whether the busy cell was last painted over the chips, for want of room.
+    bool chipsCovered_ = false;
+    bool stopHot_      = false;
+    int phase_         = 0; ///< the busy segment's position, in pixels
+    QTimer* pulse_     = nullptr;
 };
 
 /// The 29 px header every dock panel wears (`design.md` §6).

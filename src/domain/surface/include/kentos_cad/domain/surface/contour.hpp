@@ -19,6 +19,7 @@
 // predicates, which 5.4 already requires.
 #pragma once
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
 
@@ -54,8 +55,12 @@ struct Contour
 /// Refuses fewer than three points (no surface), a non-positive interval, and —
 /// because a bad interval on a large site is how a program is asked for a million
 /// lines — more than `kMaxContours` runs.
+///
+/// LONG WORK (command/job.hpp): counts on `control` and, asked to stop, returns
+/// `ErrorCode::Cancelled`. Reads only its arguments, so it runs on a worker.
 core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& points,
-                                                  core::Mm interval);
+                                                  core::Mm interval,
+                                                  const command::JobControl& control = {});
 
 /// How many runs may come back before the request is refused as a mistake.
 inline constexpr std::size_t kMaxContours = 200000;
@@ -81,7 +86,9 @@ struct Earthwork
 ///
 /// Each triangle is split where the reference plane crosses it, so a triangle
 /// that is partly above and partly below contributes to both figures and neither
-/// is rounded up to swallow the other. Refuses fewer than three points.
-core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level);
+/// is rounded up to swallow the other. Refuses fewer than three points. Long
+/// work, as `trace_contours` is.
+core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level,
+                                  const command::JobControl& control = {});
 
 } // namespace kentos::domain::surface

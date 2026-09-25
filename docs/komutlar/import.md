@@ -267,8 +267,10 @@ betikte yazacağınız satırın tıpatıp aynısıdır.
 **Okuma pencereyi dondurmaz.** Dosya ayrı bir iş parçacığında okunur; bu sürede
 durum çubuğunda `İçe aktarılıyor: <dosya>` yazısı, altında kayan bir şerit ve
 yanında **Durdur** çipi görünür. **Durdur** (ya da **Esc**) okumayı keser: çizime
-hiçbir şey eklenmez ve transkript `Hata: İçe aktarma durduruldu; çizim değişmedi.`
-der. Okuma bitince nesneler çizime tek seferde, tek geri alma adımı olarak girer.
+hiçbir şey eklenmez ve transkript `İçe aktarma durduruldu; çizim değişmedi.` der.
+**Enter** ya da sağ tık okumayı durdurmaz. Okuma sürerken çizim değiştirilemez (bkz.
+[Uzun işler](../baslangic/arayuz.md#uzun-işler)). Okuma bitince nesneler çizime tek
+seferde, tek geri alma adımı olarak girer.
 Komut satırından yazılan `İÇEAKTAR` da aynı yolu izler; bir betiğin içindeki
 `core.import` ise betiğin kendi sırasında, bekleyerek okur — iki yol da aynı çizimi
 ve aynı günlük satırını üretir.

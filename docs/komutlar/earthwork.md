@@ -73,6 +73,10 @@ basın: komut karşılaştırma kotunu **metre** olarak sorar (`845`). Komut sat
 `HACİM kot=845000` yazmak da aynıdır — orada `kot` milimetredir. Sonuç sağ
 paneldeki **Geçmiş** sekmesinde durur.
 
+Yüz binlerce kotlu noktanın üçgenlenmesi saniyeler sürebilir; hesap ayrı bir iş
+parçacığında koşar, durum çubuğu `Hacim hesabı · %60` gibi ilerlemesini gösterir,
+**Durdur** ya da **Esc** keser ([Uzun işler](../baslangic/arayuz.md#uzun-işler)).
+
 ### Betik
 
 ```json
@@ -112,6 +116,11 @@ Noktalar var ama çoğu aynı yerde.
 > `Bu noktalardan yüzey kurulamadı: hepsi aynı doğru üzerinde olabilir.`
 
 Noktalar doğrusal; üçgenlenecek alan yok.
+
+> `Hacim hesabı durduruldu; sonuç verilmedi.`
+
+Hesap sürerken **Durdur**'a ya da **Esc**'e basıldı. Hata değildir; yeniden
+çalıştırın.
 
 ## İlgili
 

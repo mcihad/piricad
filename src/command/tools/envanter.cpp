@@ -104,6 +104,7 @@ Json command_json(const CommandSpec& spec)
     flags.set("seffaf", Json::boolean(has(spec.flags, Flags::Transparent)));
     flags.set("salt_okunur", Json::boolean(has(spec.flags, Flags::ReadOnly)));
     flags.set("etkisiz", Json::boolean(has(spec.flags, Flags::NoEffect)));
+    flags.set("uzun_is", Json::boolean(has(spec.flags, Flags::LongRunning)));
     out.set("bayraklar", std::move(flags));
 
     // WHAT IT LEAVES CHANGED, which is a different question from which client

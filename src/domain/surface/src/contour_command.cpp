@@ -19,6 +19,7 @@
 // can bend any of its lines.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -122,7 +123,24 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    auto traced = domain::surface::trace_contours(levels, interval);
+    // LONG WORK, OFF THE UI THREAD when the session can be resumed
+    // (command/job.hpp, TODOS F-05): the triangulation and the tracing read
+    // only the levels gathered above, and the lines are drawn below, here, in
+    // the command's one transaction.
+    core::Result<std::vector<domain::surface::Contour>> traced =
+        core::err(core::ErrorCode::Internal, "Eş yükselti hesabı başlamadı.");
+    Job job;
+    job.label = "Eş yükselti eğrileri";
+    job.work  = [&](const JobControl& control) {
+        traced = domain::surface::trace_contours(levels, interval, control);
+    };
+    co_await run_job(ctx.session(), job);
+    if (job.stop.stop_requested() ||
+        (!traced && traced.error().code == core::ErrorCode::Cancelled)) {
+        ctx.session().end_stopped();
+        ctx.echo("Eş yükselti çizimi durduruldu; çizim değişmedi.");
+        co_return;
+    }
     if (!traced) {
         ctx.refuse(traced.error());
         co_return;
@@ -231,7 +249,7 @@ KENTOS_COMMAND(contour)
                     .en("objects"),
             },
         .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Scriptable | Flags::AiAccessible,
+        .flags   = Flags::Scriptable | Flags::AiAccessible | Flags::LongRunning,
         .summary = "Kotlu noktalardan eş yükselti eğrileri çizer.",
         .run     = &run,
     };

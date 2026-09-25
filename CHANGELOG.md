@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — uzun işler: ilerleme, Durdur, tek yazar ve özet (F-05, 4. aşama)
+
+- **TOPOLOJİ, EŞYÜKSELTİ, HACİM ve DIŞAAKTAR pencereyi dondurmuyor:** iş ayrı bir iş
+  parçacığında koşuyor, durum çubuğu `Topoloji denetimi · %40` gibi ilerlemeyi
+  gösteriyor, **Durdur** ya da **Esc** kesiyor. Durdurulan iş sonuç iddia etmiyor ve
+  günlüğe yazılmıyor ("Topoloji denetimi durduruldu; sonuç verilmedi, çizim
+  değişmedi."); durdurulan dışa aktarım hedefteki dosyayı bayt bayt bırakıyor. Durdurma
+  bir hata gibi söylenmiyor (önünde "Hata:" yok). Komut referansında bu komutların
+  bayraklarında **uzun iş** yazıyor.
+- **TOPOLOJİ yüz bin parseli 0,4 saniyede denetliyor** (bütçe 2 s): parseller artık
+  her çiftle değil, bir R-ağacının verdiği komşularıyla karşılaştırılıyor. Eski yol
+  16 bin parselde 0,7 s sürüyor, yüz binde yarım dakikayı bulacaktı. `kentos_bench`'te
+  `domain.topoloji_100k_parsel` artık ölçülüyor.
+- **TOPOLOJİ önce sayıyor, sonra ilk yirmiyi yazıyor:** "Topoloji denetimi (bütün
+  çizim, 150015 nesne): 30 kusur — 30 örtüşme." ardından yirmi kusur ve "… ve 10 kusur
+  daha; hepsi tuvalde işaretli.". Örtüşmeler tuvalde iki parselin birlikte talep ettiği
+  zemin olarak, alanıyla işaretleniyor. Yapılandırılmış cevap bütün kusurları taşıyor
+  (`kusurlar`, `turler`, `bakilan`).
+- **İş sürerken çizim değiştirilemiyor:** o sırada verilen, çizimi değiştiren her komut
+  — yazılan, düğmeden, betikten ya da bir yapay zekâ istemcisinden — "Bir iş sürüyor
+  (Topoloji denetimi); o bitene dek çizim değiştirilmez." cevabını alıyor; okuma ve
+  görünüm açık kalıyor. İş sırasında gelen bir yapay zekâ önerisi bekliyor, **Uygula**
+  onu bozmuyor; iş bitince önerinin önizlemesi ve onay politikası devreye giriyor.
+- **Enter ve sağ tık artık bir işi durdurmuyor**; yalnız Esc ve Durdur durduruyor (sağ
+  tık bir dışa aktarımı kesiyordu). Dar bir pencerede Durdur çipinin yer bulamaması
+  giderildi: iş sürerken yer yoksa iş hücresi yardımcı çiplerin yerini alıyor.
+
 ### Eklendi — ortak önizleme: çizime dokunmadan ne yapacağını görmek (F-05, 3. aşama)
 
 - **`ÖNİZLE komut="…" [komut="…" …]`** komut satırlarının çizimde ne değiştireceğini söyler:

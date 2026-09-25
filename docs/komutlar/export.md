@@ -148,6 +148,15 @@ Dosya**) ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti 
 biçimler, sağda dosya, altta pencerenin çalıştıracağı `DIŞAAKTAR` satırı. Pencere
 yalnızca argümanları toplar; dosyayı komut yazar.
 
+**Yazım pencereyi dondurmaz.** Dosya ayrı bir iş parçacığında yazılır; bu sürede
+durum çubuğunda `Dışa aktarılıyor: <dosya> · %40` gibi yazılan nesnelerin payı, altında
+kayan bir şerit ve yanında **Durdur** çipi görünür. **Durdur** (ya da **Esc**) yazımı
+keser: hedefte eski dosya varsa bayt bayt yerinde kalır, hazırlanan yarım dosya silinir
+ve transkript `Dışa aktarma durduruldu; dosya yazılmadı, '<dosya>' olduğu gibi.` der.
+**Enter** ya da sağ tık yazımı durdurmaz. Yazım sürerken çizim değiştirilemez (bkz.
+[Uzun işler](../baslangic/arayuz.md#uzun-işler)). Bir betiğin içindeki `core.export`
+betiğin kendi sırasında yazar; iki yol da aynı dosyayı yazar.
+
 ### Betik
 
 Betikte bir satır olarak:
@@ -206,7 +215,7 @@ oluşturmamalıdır.
 | `'...' yazılamadı. Koordinat sistemi olmayan bir dışa aktarım eksik veridir` | `.prj` yazılamadı | Dizin izinlerini denetleyin |
 | `DXF'in yanına .prj yazılmadı: sayıları milimetre …` (not) | `çizim_birimi` metre değil; `.prj` bir CBS programına sayıları metre okuturdu | Koordinat sistemini taşıyan bir DXF için `AYAR çizim_birimi metre` ile yeniden aktarın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
-| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sırasında durduruldu (arayüzdeki Durdur düğmesi Faz 1'de gelecek) | Yeniden çalıştırın; eski dosya yerinde |
+| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sürerken durum çubuğundaki **Durdur**'a ya da **Esc**'e basıldı | Hata değildir; eski dosya yerinde. Hazır olduğunuzda yeniden çalıştırın |
 | `'...' yazılamadı (libdxfrw hata kodu N). Dizin izinlerini ve diski denetleyin; varsa eski dosya olduğu gibi.` | DXF yazılırken hata | İzinleri ve boş yeri denetleyin |
 | `'...' yerine tam konamadı. Yerine konan: … Konamayan: … Hedefteki dosya takımı eski ve yeni dosyaların karışımı olabilir; …` | Takımdan bir dosya (ör. `.prj`) başka bir programda açık | O programı kapatıp yineleyin |
 | `'...' için hiçbir dosya hazırlanmadı.` | Yazıcı hata vermeden hiçbir dosya üretmedi | Hata bildirimi açın; dizin izinlerini denetleyin |

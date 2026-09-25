@@ -22,14 +22,6 @@ KENTOS_BENCH(first_paint_laz){bench::Case{
     .pending = "LAS/LAZ okuyucusu yok; laz-perf ve nokta bulutu boru hattı gerekiyor (§9.10)",
 }};
 
-KENTOS_BENCH(topology_validation){bench::Case{
-    .id      = "domain.topoloji_100k_parsel",
-    .title   = "100k parselde topolojik doğrulama",
-    .budget  = 2000.0,
-    .unit    = "ms",
-    .pending = "/src/domain boş; topoloji kural motoru gerekiyor (§2.6, §12)",
-}};
-
 KENTOS_BENCH(cold_start){bench::Case{
     .id      = "uygulama.soguk_acilis",
     .title   = "Uygulama soğuk açılışı",

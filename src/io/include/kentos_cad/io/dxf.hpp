@@ -13,6 +13,7 @@
 // in src/dxf_reader.cpp, src/dxf_writer.cpp and src/dxf_common.cpp.
 #pragma once
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/result.hpp"
@@ -75,8 +76,9 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
 /// Writes `doc` to `path` as a DXF of `version`, every kind as its own DXF
 /// entity, layers with their colours and weights, attributes as `KENTOSCAD`
 /// extended data, foreign data as the XDATA it came from, and a `.prj` beside it.
+/// Long work, as `export_vector` is: counts and stops on `control`.
 command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std::string path,
                                                   ExportOptions options, DxfVersion version,
-                                                  std::stop_token stop);
+                                                  command::JobControl control);
 
 } // namespace kentos::io

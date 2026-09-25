@@ -40,12 +40,14 @@ günlük yeniden oynatıldığında o günkü seçim ya da görünüm değil, ay
 Bir araç üç adımda çalışır. Önce kapsamdaki nesnelerin **kopyası** alınır; sonra iş
 bu kopya üzerinde ayrı iş parçacığında koşar ve durum çubuğu `Kenar uzunluklarını yaz ·
 %42` gibi ilerler; en sonda sonuç, komutun **tek işlemi** içinde çizime yazılır. İş
-sürerken çizime dokunulmaz. **Durdur** çipi ya da **Esc** işi keser: araç "İşlem
-durduruldu; çizim değişmedi" der ve hiçbir şey yazılmaz. Bitmiş bir araç tek geri alma
-adımıdır; [`GERİAL`](../komutlar/undo.md) ürettiği her şeyi birlikte kaldırır.
+sürerken çizim değiştirilemez; o sırada verilen bir komut `Bir iş sürüyor (…)` cevabını
+alır ([Uzun işler](../baslangic/arayuz.md#uzun-işler)). **Durdur** çipi ya da **Esc** işi
+keser: araç "İşlem durduruldu; çizim değişmedi" der ve hiçbir şey yazılmaz; **Enter** ya
+da sağ tık işi durdurmaz. Bitmiş bir araç tek geri alma adımıdır;
+[`GERİAL`](../komutlar/undo.md) ürettiği her şeyi birlikte kaldırır.
 
-Komut satırından ve betikten çağrıldığında iş yerinde koşar; belge ve günlük her iki
-yolda da birebir aynıdır.
+Bir betiğin içinden çağrıldığında iş yerinde, betiğin sırasında koşar; belge ve günlük
+her iki yolda da birebir aynıdır.
 
 ## Araçlar paneli
 

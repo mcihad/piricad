@@ -1714,13 +1714,14 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 // ---------------------------------------------------------------- export ----
 
 command::Task<core::Result<VectorReport>> export_vector(const core::Document& doc, std::string path,
-                                                        ExportOptions options, std::stop_token stop)
+                                                        ExportOptions options,
+                                                        command::JobControl control)
 {
 #ifndef KENTOS_HAVE_GDAL
     (void)doc;
     (void)path;
     (void)options;
-    (void)stop;
+    (void)control;
     co_return err(ErrorCode::Unsupported,
                   std::string(kErrNoDriver) + ": " + vector_backend_status());
 #else
@@ -2009,9 +2010,15 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
         ++report.layers;
 
         for (core::EntityId e = 0; e < ents.size(); ++e) {
-            if ((e % 4096) == 0 && stop.stop_requested())
-                co_return err(ErrorCode::Cancelled, "Dışa aktarma durduruldu; dosya yazılmadı, '" +
-                                                        path + "' olduğu gibi.");
+            if ((e % 4096) == 0) {
+                if (control.cancelled())
+                    co_return err(ErrorCode::Cancelled,
+                                  "Dışa aktarma durduruldu; dosya yazılmadı, '" + path +
+                                      "' olduğu gibi.");
+                // Every layer walks every entity, so the count is over both.
+                control.at((static_cast<std::size_t>(l) * ents.size()) + e,
+                           doc.layers().size() * ents.size());
+            }
             if (ents.layer[e] != l || !ents.alive(e)) continue;
 
             const std::uint32_t slot  = ents.slot[e];
@@ -2152,6 +2159,7 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
             if (caption) ++report.texts;
         }
     }
+    control.at(1, 1); // every object walked; what follows is the close
     report.columns = static_cast<std::uint64_t>(columns_written.size());
 
     if (report.features == 0)

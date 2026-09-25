@@ -18,6 +18,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -39,6 +40,13 @@ public:
     /// Reads the cull block and nothing else — the four bbox arrays and the flags
     /// byte (model.md R6).
     void build(const EntityTable& table);
+
+    /// Bulk-builds over `boxes`, each known by its position in the span: an
+    /// index over something that is not the document's entity table — the
+    /// parcels one topology check compares, pairwise — built, owned and
+    /// queried by one caller. An empty box is left out. Deterministic as the
+    /// other build is.
+    void build(std::span<const Box2> boxes);
 
     void clear();
 
@@ -67,6 +75,11 @@ private:
     static constexpr std::uint32_t kNoNode = 0xFFFFFFFFu;
 
     std::uint32_t pack_level(std::uint32_t level_first, std::uint32_t level_count);
+
+    /// Packs `order_` — filled by the caller — into leaves and levels, reading
+    /// each entry's box through `boxes` (`min_x(e)`, `min_y(e)`, `max_x(e)`,
+    /// `max_y(e)`).
+    template<class Boxes> void pack(const Boxes& boxes);
 
     // ---- node records, structure-of-arrays ----
     std::vector<Mm> min_x_;

@@ -54,6 +54,7 @@ std::string flags_text(Flags f)
     if (has_flag(f, Flags::AiAccessible)) add("AI erişimli");
     if (has_flag(f, Flags::Transparent)) add("şeffaf");
     if (has_flag(f, Flags::ReadOnly)) add("salt okunur");
+    if (has_flag(f, Flags::LongRunning)) add("uzun iş");
     return out.empty() ? "—" : out;
 }
 

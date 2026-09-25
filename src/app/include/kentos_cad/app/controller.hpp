@@ -388,6 +388,11 @@ private:
     /// the session on this thread when it returns (io.md P3).
     void hostJob(command::Session& session);
     void onJobFinished();
+    /// Says, once, that a job holds the drawing and how to end it.
+    void sayBusy();
+    /// Whether a line naming `spec` is started as a session this controller
+    /// keeps (`beginInteractive`) rather than run straight through.
+    static bool startsAsSession(const command::CommandSpec& spec);
 
     void wireBus();
     void settle();

@@ -368,6 +368,19 @@ Sunucunun cevapları iki gruba ayrılır ve ayrım bir istemci için önemlidir:
 "Katman yok: 'YOKBÖYLE'. KATMANLAR ile listeyi alın." der ve istemci listeyi alıp
 yeniden sorabilir.
 
+Bir alan hatası **"bekle"** de demek olabilir. Bilgisayar başındaki kişi uzun bir iş
+başlattıysa — bir dışa aktarım, bir topoloji denetimi ([Uzun
+işler](../baslangic/arayuz.md#uzun-işler)) — iş bitene dek çizim değiştirilmez:
+
+- Okuma araçları iş sürerken de çalışır.
+- Önerilerin önizlemesi ([ÖNİZLE](../komutlar/preview.md)) adımları gerçekten
+  çalıştırdığı için `Bir iş sürüyor (…); o bitene dek çizim değiştirilmez.` cevabını
+  alır. Çağrı yanlış değildir: **aynı argümanlarla**, biraz sonra yeniden gönderin.
+- Yazan bir çağrının açtığı öneri beklemede kalır; onay politikası onu kendiliğinden
+  uygulayacak olsa bile iş bitince uygulanır. O zamana dek önerinin durumunda
+  (`oneri_durumu`) bekleme nedeni `Bir iş sürüyor (…) Öneri iş bitince onay
+  politikasına sunulacak.` yazar.
+
 ## Koordinat reddi
 
 Bir ajan, nokta ya da nesne isteyen bir parametreye sayı yazarsa çağrı **şema

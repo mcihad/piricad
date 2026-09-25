@@ -591,6 +591,25 @@ public:
     /// document asks before it acts.
     bool previewing() const noexcept { return previewing_; }
 
+    // ---- long work (TODOS F-05, command/job.hpp) ----
+
+    /// The job a session is parked on while a host runs it, or null.
+    const Job* running_job() const noexcept;
+
+    /// Whether the drawing may be changed now: `ok()`, or `ErrorCode::Busy`
+    /// naming the job that is running.
+    ///
+    /// ONE WRITER WHILE A JOB RUNS. A worker reads the drawing as it stood when
+    /// its command began — an import's source, a topology check's parcels, an
+    /// export's every object — and a second command editing it underneath
+    /// would be read half-way, or would land between a command's start and its
+    /// end, where a stop cuts the document back to the start. So while a job
+    /// runs, every command that edits the document, a batch and a preview are
+    /// refused with this, whoever sends them; reading, the view, the selection
+    /// and the settings stay open (Article 1.2: the rule is the bus's, for
+    /// every client).
+    core::Status writable() const;
+
     // ---- batch mode (§10.4): one validation pass, one undo step ----
     core::Status begin_batch(std::string label);
     core::Result<DispatchResult> end_batch();
@@ -1128,6 +1147,11 @@ private:
     /// How many dispatches for an agent are running now (`dispatch_into`): a
     /// preview asked inside one runs every step by the agent's rules.
     std::uint32_t for_agent_{0};
+
+    /// The session parked on a job a host is running (`writable`), set and
+    /// cleared by the session itself.
+    Session* job_session_{nullptr};
+    friend class Session;
 
     /// The project settings when the batch began, put back when it is aborted.
     core::Settings batch_settings_{core::builtin_settings(), core::SettingScopeMask::Project};

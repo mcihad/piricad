@@ -41,6 +41,7 @@
 
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/format.hpp"
+#include "kentos_cad/io/staging.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/render/backend.hpp"
 
@@ -7731,6 +7732,191 @@ int MainWindow::probeRealMouse()
             check(made_after == 0 && gone_after == 0,
                   QStringLiteral("reddedilen önerinin taslakları kalktı"));
         }
+
+        // ---- 45. LONG WORK COUNTS, HOLDS THE DRAWING, STOPS AND SUMMARISES (TODOS F-05)
+        // ----
+        //
+        // A hundred and fifty thousand parcels, fifteen more drawn across two
+        // neighbours each. TOPOLOJİ runs on a worker: the strip counts it with a
+        // Durdur beside it, a line typed meanwhile is told a job holds the
+        // drawing, and a suggestion filed meanwhile waits — unpreviewed, and its
+        // Uygula refused without burning it. Durdur, pressed on the strip, stops
+        // the check with nothing claimed, and the suggestion is previewed the
+        // moment the drawing is free. Run to the end the check answers with the
+        // count by kind and the first twenty, and the canvas outlines every
+        // overlap. Then the drawing goes out as a GeoPackage the same way:
+        // counted to the end, and stopped half way with the file that was there
+        // left as it was.
+        {
+            const auto wait_for_job = [this](int ms) {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < ms)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+                QCoreApplication::processEvents();
+            };
+            const auto wait_for_figure = [this](int ms) {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       !statusStrip_->busyLabelForProbe().contains(QLatin1Char('%')) &&
+                       waited.elapsed() < ms)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+                return statusStrip_->busyLabelForProbe();
+            };
+            const auto press_stop = [this]() {
+                // PAINTED FIRST: the chip's place is where the strip last drew
+                // it, and a window that is not exposed has drawn nothing yet.
+                (void)statusStrip_->grab();
+                const QRect stop = statusStrip_->stopRectForProbe();
+                if (stop.isEmpty()) return false;
+                const QPointF at(stop.center());
+                QMouseEvent press(QEvent::MouseButtonPress, at, statusStrip_->mapToGlobal(at),
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QCoreApplication::sendEvent(statusStrip_, &press);
+                QMouseEvent release(QEvent::MouseButtonRelease, at, statusStrip_->mapToGlobal(at),
+                                    Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QCoreApplication::sendEvent(statusStrip_, &release);
+                return true;
+            };
+
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL", "AYAR koordinat_sistemi EPSG:5254",
+                  "ALAN 485000,4310000 485020,4310000 485020,4310020 485000,4310020",
+                  "DİZİ nesneler=1 satir=400 sutun=375 satir_aralik=20 sutun_aralik=20",
+                  "ALAN 485005,4310005 485025,4310005 485025,4310015 485005,4310015",
+                  "DİZİ nesneler=150001 satir=1 sutun=15 satir_aralik=20 sutun_aralik=400"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            check(controller_->document().live_entity_count() == 150015,
+                  QStringLiteral("150 015 parsel çizildi (%1)")
+                      .arg(controller_->document().live_entity_count()));
+            canvas_->zoomToBox(core::Box2{484'990'000, 4'309'985'000, 485'060'000, 4'310'035'000});
+            const std::uint64_t hash_before = controller_->document().content_hash();
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("TOPOLOJİ"));
+            check(controller_->session() != nullptr && controller_->session()->working(),
+                  QStringLiteral("TOPOLOJİ bir işe verildi, pencere donmadı"));
+
+            // A LINE TYPED MEANWHILE WAITS, told why.
+            runScriptLine(QStringLiteral("ÇİZGİ 485000,4310030 485010,4310030"));
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("Bir iş sürüyor (Topoloji denetimi)")),
+                  QStringLiteral("iş sürerken yazılan komut beklediğini söyledi"));
+
+            // A SUGGESTION FILED MEANWHILE WAITS, and its Uygula does not burn it.
+            ai::Plan plan;
+            plan.requester = "Sınama istemcisi";
+            plan.revision  = controller_->document().revision();
+            if (auto inv = controller_->bus().parse_invocation("SİL nesneler=150001",
+                                                               command::Origin::Ai)) {
+                ai::PlanStep step;
+                step.command_id = inv.value().name;
+                step.args       = inv.value().args;
+                step.line       = "SİL nesneler=150001";
+                plan.steps.push_back(std::move(step));
+            }
+            auto filed = controller_->aiService().propose(std::move(plan));
+            check(filed.ok(), QStringLiteral("iş sürerken öneri açıldı"));
+            for (int i = 0; i < 4; ++i)
+                QCoreApplication::processEvents();
+            SuggestionCard* card = nullptr;
+            for (SuggestionCard* one : chatPanel_->findChildren<SuggestionCard*>())
+                if (filed && one->planId() == QString::fromStdString(filed.value())) card = one;
+            check(card != nullptr && card->previewTextForProbe().isEmpty(),
+                  QStringLiteral("iş sürerken öneri önizlenmedi"));
+            if (card != nullptr) {
+                const core::Status applied = card->probeApply();
+                const ai::Plan* held =
+                    filed ? controller_->aiService().plans().find(filed.value()) : nullptr;
+                check(!applied.ok() && applied.error().code == core::ErrorCode::Busy &&
+                          held != nullptr && held->state == ai::PlanState::Pending,
+                      QStringLiteral("iş sürerken Uygula reddedildi, öneri bekliyor"));
+            }
+
+            // THE STRIP COUNTS, with a Durdur beside it.
+            const QString counting = wait_for_figure(8000);
+            check(counting.startsWith(QStringLiteral("Topoloji denetimi · %")),
+                  QStringLiteral("durum çubuğu işi sayıyor: %1").arg(counting));
+            shoot("uzun-is-suruyor");
+            if (shooting)
+                (void)statusStrip_->grab().save(into + QStringLiteral("/uzun-is-serit.png"));
+            check(press_stop(), QStringLiteral("Durdur çipi basıldı"));
+            wait_for_job(10000);
+            const QString stopped = transcript_->toPlainText();
+            check(stopped.contains(QStringLiteral(
+                      "Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.")) &&
+                      !stopped.contains(QStringLiteral("kusur")),
+                  QStringLiteral("Durdur denetimi sonuç iddia etmeden kesti"));
+            check(statusStrip_->busyLabelForProbe().isEmpty() &&
+                      controller_->document().content_hash() == hash_before,
+                  QStringLiteral("durdurulan iş çizime dokunmadı, şerit boşaldı"));
+            for (int i = 0; i < 4; ++i)
+                QCoreApplication::processEvents();
+            const QString would = card != nullptr ? card->previewTextForProbe() : QString();
+            check(would.contains(QStringLiteral("Uygulanırsa: 1 nesne silinecek")),
+                  QStringLiteral("çizim boşalınca öneri önizlendi: %1").arg(would));
+            shoot("uzun-is-durduruldu");
+            if (card != nullptr) (void)card->probeReject();
+
+            // TO THE END: the count by kind first, then twenty, then the rest counted.
+            transcript_->clear();
+            runScriptLine(QStringLiteral("TOPOLOJİ"));
+            wait_for_job(30000);
+            const QString summary = transcript_->toPlainText();
+            check(summary.contains(QStringLiteral("Topoloji denetimi (bütün çizim, 150015 nesne): "
+                                                  "30 kusur — 30 örtüşme.")) &&
+                      summary.contains(
+                          QStringLiteral("  … ve 10 kusur daha; hepsi tuvalde işaretli.")),
+                  QStringLiteral("özet önce sayıyı, sonra ilk yirmiyi verdi"));
+            shoot("uzun-is-ozet");
+
+            // AND OUT, as a GeoPackage: counted, then stopped half way.
+            const QString folder = QDir::tempPath() + QStringLiteral("/kentos-uzun-is");
+            QDir(folder).removeRecursively();
+            (void)QDir().mkpath(folder);
+            const QString gpkg = folder + QStringLiteral("/ada.gpkg");
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(gpkg));
+            const QString writing = wait_for_figure(8000);
+            check(writing.startsWith(QStringLiteral("Dışa aktarılıyor: ada.gpkg · %")),
+                  QStringLiteral("dışa aktarım sayılıyor: %1").arg(writing));
+            shoot("uzun-is-disaaktar");
+            wait_for_job(60000);
+            check(QFileInfo::exists(gpkg) &&
+                      transcript_->toPlainText().contains(QStringLiteral("Dışa aktarıldı: ")),
+                  QStringLiteral("GeoPackage işte yazıldı"));
+            QFile written_file(gpkg);
+            const QByteArray bytes =
+                written_file.open(QIODevice::ReadOnly) ? written_file.readAll() : QByteArray();
+            written_file.close();
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(gpkg));
+            (void)wait_for_figure(8000);
+            check(press_stop(), QStringLiteral("dışa aktarımın Durdur'una basıldı"));
+            wait_for_job(20000);
+            QFile again(gpkg);
+            const QByteArray kept =
+                again.open(QIODevice::ReadOnly) ? again.readAll() : QByteArray();
+            again.close();
+            const QString halted = transcript_->toPlainText();
+            check(halted.contains(QStringLiteral("Dışa aktarma durduruldu")) &&
+                      !halted.contains(QStringLiteral("Hata")) && !bytes.isEmpty() && kept == bytes,
+                  QStringLiteral("durdurulan dışa aktarım eski dosyayı bayt bayt bıraktı"));
+            QStringList staged;
+            for (const QString& name :
+                 QDir(folder).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot))
+                if (io::is_staging_name(name.toStdString())) staged << name;
+            check(staged.isEmpty(), QStringLiteral("hazırlık klasörü kalmadı"));
+            shoot("uzun-is-disaaktar-durdu");
+            QDir(folder).removeRecursively();
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -9734,6 +9920,16 @@ void MainWindow::runScriptLine(const QString& line)
 
 void MainWindow::endCommand()
 {
+    // A COMMAND WHOSE WORK IS A JOB finishes by itself, and "that is all" does
+    // not stop it (`Controller::finishInteractive`). A scripted run — a probe,
+    // the screenshot run — waits for it to come back before its next line, the
+    // way a person watching the strip does; the next line would otherwise be
+    // told a job holds the drawing.
+    QElapsedTimer waited;
+    waited.start();
+    while (controller_->session() != nullptr && controller_->session()->working() &&
+           waited.elapsed() < 120000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
     controller_->finishInteractive();
 }
 

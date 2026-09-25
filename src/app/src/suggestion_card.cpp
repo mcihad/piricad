@@ -89,37 +89,20 @@ SuggestionCard::SuggestionCard(AiService& service, const QString& planId, QWidge
     // WHAT IT WOULD DO, found out by running it and taking it back (TODOS F-05):
     // counted here and outlined, dashed, on the canvas — so the engineer
     // approves a result they have seen rather than a list of commands. A plan
-    // that would stop half way says where, in the danger ink.
-    if (pending_ && !plan->preview.is_null()) {
-        const core::Json& seen   = plan->preview;
-        const core::Json* stops  = seen.find("duracagi_adim");
-        const core::Json* why    = seen.find("hata");
-        const core::Json* counts = seen.find("degisiklik_ozeti");
-        QString text;
-        if (stops != nullptr)
-            text = tr("Uygulanırsa %1. adımda duracak: %2 Bütünüyle geri alınacak.")
-                       .arg(stops->as_int())
-                       .arg(why != nullptr ? QString::fromStdString(why->as_string()) : QString());
-        else if (counts != nullptr)
-            text = tr("Uygulanırsa: %1.").arg(QString::fromStdString(counts->as_string()));
-        else
-            text = tr("Uygulanırsa çizimde bir şey değişmeyecek.");
-        if (const core::Json* skipped = seen.find("calistirilmayan"); skipped != nullptr)
-            for (const core::Json& one : skipped->as_array())
-                text += QStringLiteral("\n") +
-                        tr("%1. adım önizlenmedi: %2.")
-                            .arg(one.find("adim")->as_int())
-                            .arg(QString::fromStdString(one.find("neden")->as_string()));
-        // IN THE ACCENT INK THE CANVAS DRAWS THE RESULT IN, so the sentence and
-        // the dashed outlines read as one answer; the danger ink when it stops.
-        auto* would = new QLabel(text, this);
-        would->setObjectName(QStringLiteral("formHelp"));
-        would->setProperty("tone",
-                           stops != nullptr ? QStringLiteral("danger") : QStringLiteral("accent"));
-        would->setWordWrap(true);
-        would->setAccessibleName(tr("Önizleme"));
-        column->addWidget(would);
-        preview_ = would;
+    // that would stop half way says where, in the danger ink. The line has its
+    // place whether or not the preview is in yet: a plan filed while a job held
+    // the drawing is previewed when the job returns (`AiService::previewWaiting`).
+    if (pending_) {
+        preview_ = new QLabel(this);
+        preview_->setObjectName(QStringLiteral("formHelp"));
+        preview_->setWordWrap(true);
+        preview_->setAccessibleName(tr("Önizleme"));
+        preview_->setVisible(false);
+        column->addWidget(preview_);
+        showPreview();
+        connect(&service_, &AiService::previewChanged, this, [this] {
+            if (pending_) showPreview();
+        });
     }
 
     // WHERE THE NUMBERS CAME FROM. A coordinate in an applied plan traces to a
@@ -238,6 +221,24 @@ core::Status SuggestionCard::decide(bool apply)
     if (!pending_)
         return core::err(core::ErrorCode::InvalidArgument, "Bu öneri zaten karara bağlandı.");
 
+    // NOT WHILE A JOB HOLDS THE DRAWING (`command::Bus::writable`). Applied now,
+    // the plan would be refused and a refused plan cannot be applied again, so
+    // it stays waiting — the card says why, and the same button works once the
+    // job is over. Rejecting touches nothing and is always open.
+    if (apply) {
+        if (const auto open = service_.writable(); !open) {
+            if (outcome_ != nullptr) {
+                outcome_->setText(QString::fromStdString(open.error().message));
+                outcome_->setProperty("tone", QVariant());
+                outcome_->style()->unpolish(outcome_);
+                outcome_->style()->polish(outcome_);
+                outcome_->setVisible(true);
+            }
+            return open;
+        }
+        if (outcome_ != nullptr) outcome_->setVisible(false);
+    }
+
     // ==== ONE OF THE TWO CALLS TO `ai::Gate::approve` IN THE PROGRAM =========
     // Everything above this line is words on a screen; this is the line that
     // turns a person's CLICK into a value nothing else can make. The other call
@@ -277,6 +278,39 @@ core::Status SuggestionCard::probeReject()
 QString SuggestionCard::previewTextForProbe() const
 {
     return preview_ != nullptr && preview_->isVisible() ? preview_->text() : QString();
+}
+
+void SuggestionCard::showPreview()
+{
+    const ai::Plan* plan = service_.plans().find(plan_.toStdString());
+    if (preview_ == nullptr || plan == nullptr || plan->preview.is_null()) return;
+    const core::Json& seen   = plan->preview;
+    const core::Json* stops  = seen.find("duracagi_adim");
+    const core::Json* why    = seen.find("hata");
+    const core::Json* counts = seen.find("degisiklik_ozeti");
+    QString text;
+    if (stops != nullptr)
+        text = tr("Uygulanırsa %1. adımda duracak: %2 Bütünüyle geri alınacak.")
+                   .arg(stops->as_int())
+                   .arg(why != nullptr ? QString::fromStdString(why->as_string()) : QString());
+    else if (counts != nullptr)
+        text = tr("Uygulanırsa: %1.").arg(QString::fromStdString(counts->as_string()));
+    else
+        text = tr("Uygulanırsa çizimde bir şey değişmeyecek.");
+    if (const core::Json* skipped = seen.find("calistirilmayan"); skipped != nullptr)
+        for (const core::Json& one : skipped->as_array())
+            text += QStringLiteral("\n") +
+                    tr("%1. adım önizlenmedi: %2.")
+                        .arg(one.find("adim")->as_int())
+                        .arg(QString::fromStdString(one.find("neden")->as_string()));
+    // IN THE ACCENT INK THE CANVAS DRAWS THE RESULT IN, so the sentence and the
+    // dashed outlines read as one answer; the danger ink when it stops.
+    preview_->setText(text);
+    preview_->setProperty("tone",
+                          stops != nullptr ? QStringLiteral("danger") : QStringLiteral("accent"));
+    preview_->style()->unpolish(preview_);
+    preview_->style()->polish(preview_);
+    preview_->setVisible(true);
 }
 
 void SuggestionCard::showOutcome(bool applied, const QString& trouble)

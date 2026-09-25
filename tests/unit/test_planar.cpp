@@ -724,11 +724,13 @@ TEST_CASE("TOPOLOJİ: kılavuzdaki çizgi ağı örneği kelimesi kelimesine")
     r.said.clear();
     r.run("TOPOLOJİ");
     // Word for word what docs/komutlar/topology.md prints.
-    CHECK_EQ(r.said, std::string("Topoloji denetimi (bütün çizim): 2 kusur.\n"
-                                 "  Nesne 5, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar "
-                                 "siler).\n"
-                                 "  Nesne 1: açık uç, en yakın çizgiye 50 cm (boşluk).\n"
-                                 "  Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.\n"));
+    CHECK_EQ(r.said,
+             std::string("Topoloji denetimi (bütün çizim, 5 nesne): 2 kusur — 1 yinelenen nesne, "
+                         "1 boşluk.\n"
+                         "  Nesne 5, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar "
+                         "siler).\n"
+                         "  Nesne 1: açık uç, en yakın çizgiye 50 cm (boşluk).\n"
+                         "  Bu komut hiçbir şeyi düzeltmez: sınır ölçülmüş veridir.\n"));
 }
 
 TEST_CASE("TEMİZLE: kılavuzdaki örnek kelimesi kelimesine; bul'un seçtiğini onar onarır")

@@ -49,8 +49,7 @@ public:
 protected:
     void run() override
     {
-        if (command::Job* job = session_.job(); job != nullptr)
-            job->work(command::JobControl{job->stop.get_token()});
+        if (command::Job* job = session_.job(); job != nullptr) job->work(job->control());
     }
 
 private:
@@ -273,6 +272,17 @@ void Controller::settle()
     emit undoStateChanged(undo_.can_undo(), undo_.can_redo());
 }
 
+bool Controller::startsAsSession(const command::CommandSpec& spec)
+{
+    // A COMMAND THAT ASKS, OR ONE WHOSE WORK IS A JOB. Either needs a session
+    // this controller keeps and resumes: one to answer its prompts, the other so
+    // its job can leave the UI thread with a Durdur beside it (TODOS F-05). A
+    // long command run straight through would do the same work in place, with
+    // the window frozen for the length of it.
+    return (has_flag(spec.flags, command::Flags::Interactive) && !spec.params.empty()) ||
+           has_flag(spec.flags, command::Flags::LongRunning);
+}
+
 void Controller::runLine(const QString& line, command::Origin origin)
 {
     (void)runLineResult(line, origin);
@@ -295,14 +305,13 @@ void Controller::runLines(const QStringList& lines, const QString& label, comman
     // writers on one document.
     if (session_) cancelInteractive();
 
-    // AND IF IT IS STILL THERE, it is a command whose WORKER was asked to stop
-    // and has not returned yet (`cancelInteractive` leaves it alive on purpose).
-    // The lines then go the ordinary way, one by one, which is the road a typed
-    // line takes and is therefore always safe; the only thing lost is the single
-    // undo step, and this is the one case where that is the lesser cost.
+    // AND IF IT IS STILL THERE, it is a command whose WORKER is still out — asked
+    // to stop and not back yet (`cancelInteractive` leaves it alive on purpose),
+    // or simply running. The drawing is the job's until it returns
+    // (`Bus::writable`), so the lines are refused once, whole, rather than one
+    // refusal per line.
     if (session_) {
-        for (const QString& line : lines)
-            runLine(line, origin);
+        sayBusy();
         return;
     }
 
@@ -438,8 +447,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
     if (!bus_.in_batch() && !session_) {
         if (auto parsed = command::parse_line(trimmed.toStdString()); parsed) {
             const command::CommandSpec* spec = registry_.resolve(parsed.value().command);
-            if (spec != nullptr && has_flag(spec->flags, command::Flags::Interactive) &&
-                !spec->params.empty()) {
+            if (spec != nullptr && startsAsSession(*spec)) {
                 auto started = bus_.begin_interactive(trimmed.toStdString(), origin);
                 if (!started) {
                     refused(started.error());
@@ -582,7 +590,7 @@ void Controller::runCommand(const QString& line)
     }
 
     // Interactive commands started from a button behave exactly as if typed.
-    if (has_flag(spec->flags, command::Flags::Interactive) && !spec->params.empty()) {
+    if (startsAsSession(*spec)) {
         beginInteractive(line);
         return;
     }
@@ -635,8 +643,7 @@ void Controller::startInteractive(const QString& line, command::Origin origin, b
     // A command whose job is still running cannot be replaced: its worker owns
     // the read. The user stops it first (Durdur), or waits.
     if (session_ && session_->working()) {
-        emit echoed(tr("Bir komut hâlâ çalışıyor: %1. Bitmesini bekleyin ya da Durdur.")
-                        .arg(QString::fromStdString(session_->spec().id)));
+        sayBusy();
         return;
     }
     cancelInteractive();
@@ -725,6 +732,9 @@ void Controller::onJobFinished()
     if (!session_ || !session_->working()) return;
     session_->resume_job();
     settleSession();
+    // A SUGGESTION THAT ARRIVED WHILE THE JOB HELD THE DRAWING could not be
+    // decided by policy or previewed then (`Bus::writable`); it is now.
+    ai_.afterJob();
 }
 
 bool Controller::awaitingInput() const
@@ -759,8 +769,26 @@ void Controller::supplyText(const QString& text)
     supplyValue(command::Value::text(text.toStdString()));
 }
 
+void Controller::sayBusy()
+{
+    const command::Job* job = bus_.running_job();
+    const QString what      = job != nullptr && !job->label.empty()
+                                  ? QString::fromStdString(job->label)
+                                  : QString::fromStdString(session_ ? session_->spec().id : "");
+    emit echoed(tr("Bir iş sürüyor (%1): başka bir komut o bitince başlar. Bitmesini bekleyin ya "
+                   "da durum çubuğundaki Durdur'a basın (Esc).")
+                    .arg(what));
+}
+
 void Controller::refused(const core::Error& error)
 {
+    // WAITING IS NOT A MISTAKE. A command refused because a job holds the
+    // drawing, or one the user stopped, is said as it is — "Hata:" in front of
+    // "Bir iş sürüyor" reads as though the user had done something wrong.
+    if (error.code == core::ErrorCode::Busy || error.code == core::ErrorCode::Cancelled) {
+        emit echoed(QString::fromStdString(error.message));
+        return;
+    }
     emit echoed(tr("Hata: %1").arg(QString::fromStdString(error.message)));
     // THE WAY OUT, when the refusal names one (`core::Error::remedy`): said on
     // the transcript as the line to type, and offered to the shell as a button.
@@ -863,6 +891,12 @@ void Controller::finishInteractive()
     // A prompt for ONE point is still finished the old way: an empty answer
     // there is a missing argument, and "İptal edildi" is the truth about a
     // circle whose rim was never given.
+    //
+    // AND A JOB IS NOT FINISHED BY "THAT IS ALL" (TODOS F-05): Enter and the
+    // right button used to reach `cancelInteractive` here, which stops a running
+    // job — a right click on the canvas halted an export. Work that runs ends
+    // by itself; Esc and Durdur are how it is stopped.
+    if (session_ && session_->working()) return;
     if (session_ && session_->waiting()) {
         const command::Prompt& asking = session_->prompt();
         if (asking.kind == command::ParamKind::Point) {

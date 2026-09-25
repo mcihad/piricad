@@ -1980,6 +1980,28 @@ void MapCanvas::buildMeasureMarks()
     QColor wash       = tokens_->accent;
     wash.setAlpha(34);
 
+    // WHERE EACH LABEL LANDS, so two marks side by side — the two halves of an
+    // overlap TOPOLOJİ outlines, a row of repeated corners — do not write over
+    // each other: a label that would cover one already placed moves down a line
+    // until it does not. Measured in the face it is drawn in (`addReadout`).
+    QFont face = font();
+    face.setPixelSize(std::max(1, look_.hint_px));
+    const QFontMetricsF metrics(face);
+    std::vector<QRectF> placed;
+    const auto place = [&](double left, double top, const std::string& text) {
+        QRectF box(left, top, metrics.horizontalAdvance(QString::fromStdString(text)),
+                   metrics.height());
+        for (int tries = 0; tries < 8 && std::ranges::any_of(placed,
+                                                             [&box](const QRectF& other) {
+                                                                 return other.intersects(box);
+                                                             });
+             ++tries)
+            box.translate(0.0, metrics.height() + 2.0);
+        placed.push_back(box);
+        addReadout(static_cast<float>(box.left()), static_cast<float>(box.top() + metrics.ascent()),
+                   text);
+    };
+
     for (const StoredMark& stored : marks_) {
         const command::MeasureMark& m = stored.mark;
         switch (m.shape) {
@@ -2002,7 +2024,7 @@ void MapCanvas::buildMeasureMarks()
         }
         case command::MeasureMark::Shape::Ring: {
             if (m.points.size() < 3) break;
-            const std::size_t face = nextBatch(tokens_->accent.rgba(), 1.6f, false, wash.rgba());
+            const std::size_t fill = nextBatch(tokens_->accent.rgba(), 1.6f, false, wash.rgba());
             curve_scratch_x_.clear();
             curve_scratch_y_.clear();
             double cx = 0.0;
@@ -2014,11 +2036,13 @@ void MapCanvas::buildMeasureMarks()
                 cx += static_cast<double>(v.x);
                 cy += static_cast<double>(v.y);
             }
-            addWorldRun(face, curve_scratch_x_, curve_scratch_y_, true);
+            addWorldRun(fill, curve_scratch_x_, curve_scratch_y_, true);
             if (!m.labels.empty()) {
-                const auto n = static_cast<double>(m.points.size());
-                addReadout(static_cast<float>(cx / n) - 40.0F, static_cast<float>(cy / n),
-                           m.labels.front());
+                // CENTRED on the face, by the label's own width.
+                const auto n           = static_cast<double>(m.points.size());
+                const std::string& say = m.labels.front();
+                place((cx / n) - (metrics.horizontalAdvance(QString::fromStdString(say)) / 2.0),
+                      (cy / n) - (metrics.height() / 2.0), say);
             }
             break;
         }
@@ -2041,7 +2065,9 @@ void MapCanvas::buildMeasureMarks()
             addRun(line, {{v.x - 6.0F, v.y}, {v.x + 6.0F, v.y}}, false);
             addRun(line, {{v.x, v.y - 6.0F}, {v.x, v.y + 6.0F}}, false);
             addCircle(line, v.x, v.y, 3.0f);
-            if (!m.labels.empty()) addReadout(v.x + 10.0F, v.y - 10.0F, m.labels.front());
+            if (!m.labels.empty())
+                place(static_cast<double>(v.x) + 10.0,
+                      static_cast<double>(v.y) - 10.0 - metrics.ascent(), m.labels.front());
             break;
         }
         case command::MeasureMark::Shape::Gap: {

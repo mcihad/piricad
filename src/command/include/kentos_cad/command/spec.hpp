@@ -209,7 +209,17 @@ enum class Flags : std::uint32_t {
     Transparent  = 1u << 3, ///< may interrupt another running command (ZOOM, PAN)
     ReadOnly     = 1u << 4, ///< mutates nothing; skips the transaction path
     NoEffect     = 1u << 5, ///< changes no document and no file: safe without approval
+    LongRunning  = 1u << 6, ///< hands its work to a job: progress, Durdur (command/job.hpp)
 };
+
+/// WHY `LongRunning` IS A FLAG AND NOT A GUESS (TODOS F-05). A command's body
+/// hands its long part to a job (`run_job`), and a job leaves the UI thread
+/// only in a session the client can resume later — the one an interactive
+/// command gets. A command that asks for nothing, TOPOLOJİ among them, used to
+/// be run straight through, so its job ran in place and a hundred thousand
+/// parcels froze the window with no Durdur to press. The flag says which
+/// commands a client must start the way it starts an interactive one; the body
+/// is the same either way (Article 1.2), and a script still runs it in place.
 
 /// WHY `NoEffect` EXISTS BESIDE `ReadOnly`, and the difference is load-bearing.
 /// `ReadOnly` says "skips the transaction path" — and `core.undo`, `core.redo`,

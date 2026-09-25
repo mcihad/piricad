@@ -16,6 +16,7 @@
 // definition. Adding a driver is an edit to that file, in the same change.
 #pragma once
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/attribute.hpp"
@@ -144,8 +145,13 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 /// usable CRS produces a file whose coordinates mean nothing to whoever receives
 /// it, so it is refused rather than written (io.md R20). `options.unit` is the
 /// unit a DXF's coordinates are written in; a geodetic format writes metres.
+///
+/// LONG WORK (command/job.hpp, TODOS F-05): it counts on `control` object by
+/// object and, asked to stop, returns `ErrorCode::Cancelled` with the target as
+/// it was. It only reads `doc`, so it runs on a worker while nothing writes the
+/// drawing (`command::Bus::writable`).
 command::Task<core::Result<VectorReport>> export_vector(const core::Document& doc, std::string path,
                                                         ExportOptions options,
-                                                        std::stop_token stop);
+                                                        command::JobControl control);
 
 } // namespace kentos::io

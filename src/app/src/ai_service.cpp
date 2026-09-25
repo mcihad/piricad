@@ -559,34 +559,20 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
     // agent one layer below (`ai::escalates`, CLAUDE.md 5.23), which is what
     // makes this road safe rather than a trust mode.
     std::string said_how = "öneri — uygulanmadı";
-    if (ai::Plan* held = plans_.find(filed); held != nullptr) {
-        auto decided = applyByPolicy(*held);
-        if (!decided) {
-            // THE GATE OR THE RUNNER REFUSED: the plan is `Failed` with the
-            // reason, and the client reads both from its state.
-            command::log_error(decided.error().message);
-            said_how = "otomatik uygulanamadı: " + decided.error().message;
-            emit suggestionSettled(QString::fromStdString(filed));
-        } else if (decided.value().applied) {
-            said_how =
-                "onay politikasıyla uygulandı — " + ai::policy_decider(preferences().approval);
-            emit suggestionSettled(QString::fromStdString(filed));
-        } else if (decided.value().verdict == ai::Verdict::Deny) {
-            // OUT OF SCOPE IS REFUSED HERE, NOT FILED. A card would put work the
-            // client may not ask for in front of a person as though it could be
-            // approved — and approving it would widen the client's scope, which
-            // nothing may do (CLAUDE.md 5.23).
-            const std::string why = decided.value().reason;
-            (void)plans_.settle(filed, ai::PlanState::Rejected, why);
-            emit suggestionSettled(QString::fromStdString(filed));
-            return core::err(core::ErrorCode::Unsupported,
-                             why + " Bu öneri açılmadı; bu işi bilgisayar başındaki kişi "
-                                   "kendisi yapabilir.");
-        } else {
-            held->waiting_reason = decided.value().reason;
-            said_how             = "öneri — onay bekliyor: " + decided.value().reason;
-            previewPlan(filed);
-        }
+    if (const auto open = bus_.writable(); !open) {
+        // A JOB HOLDS THE DRAWING (`command::Bus::writable`, TODOS F-05). The
+        // policy is asked when the job is over, not now: asked now, a plan the
+        // user's standing approval would apply would be refused against the job
+        // and fail for good. It waits, says why, and `afterJob` offers it then.
+        if (ai::Plan* held = plans_.find(filed); held != nullptr)
+            held->waiting_reason =
+                open.error().message + " Öneri iş bitince onay politikasına sunulacak.";
+        policy_after_job_.push_back(filed);
+        said_how = "öneri — iş bitince onay politikasına sunulacak";
+    } else {
+        auto decided = decideByPolicy(filed);
+        if (!decided) return decided.error();
+        said_how = decided.value();
     }
 
     // ANNOUNCED ONCE IT IS DECIDED: the shell puts a card up for a plan that
@@ -616,6 +602,62 @@ std::string AiService::existing_plan(const std::string& key, const std::string& 
     return held != nullptr ? held->id : std::string();
 }
 
+core::Result<std::string> AiService::decideByPolicy(const std::string& filed)
+{
+    ai::Plan* held = plans_.find(filed);
+    if (held == nullptr) return std::string("öneri — uygulanmadı");
+    auto decided = applyByPolicy(*held);
+    if (!decided) {
+        // THE GATE OR THE RUNNER REFUSED: the plan is `Failed` with the
+        // reason, and the client reads both from its state.
+        command::log_error(decided.error().message);
+        emit suggestionSettled(QString::fromStdString(filed));
+        return "otomatik uygulanamadı: " + decided.error().message;
+    }
+    if (decided.value().applied) {
+        emit suggestionSettled(QString::fromStdString(filed));
+        return "onay politikasıyla uygulandı — " + ai::policy_decider(preferences().approval);
+    }
+    if (decided.value().verdict == ai::Verdict::Deny) {
+        // OUT OF SCOPE IS REFUSED HERE, NOT FILED. A card would put work the
+        // client may not ask for in front of a person as though it could be
+        // approved — and approving it would widen the client's scope, which
+        // nothing may do (CLAUDE.md 5.23).
+        const std::string why = decided.value().reason;
+        (void)plans_.settle(filed, ai::PlanState::Rejected, why);
+        emit suggestionSettled(QString::fromStdString(filed));
+        return core::err(core::ErrorCode::Unsupported,
+                         why + " Bu öneri açılmadı; bu işi bilgisayar başındaki kişi "
+                               "kendisi yapabilir.");
+    }
+    held->waiting_reason = decided.value().reason;
+    previewPlan(filed);
+    return "öneri — onay bekliyor: " + decided.value().reason;
+}
+
+void AiService::afterJob()
+{
+    // THE POLICY FIRST, for what was filed while the job held the drawing: the
+    // plans its standing approval applies are applied now, the rest wait for a
+    // person as they would have. Said on the transcript, as a filing is.
+    std::vector<std::string> deferred;
+    deferred.swap(policy_after_job_);
+    for (const std::string& id : deferred) {
+        const ai::Plan* plan = plans_.find(id);
+        if (plan == nullptr || plan->state != ai::PlanState::Pending) continue;
+        auto decided = decideByPolicy(id);
+        bus_.echo("Yapay zeka önerisi " + id + " (iş bitti; " +
+                  (decided ? decided.value() : decided.error().message) + ").");
+    }
+
+    // THEN THE PREVIEW of every plan still waiting without one.
+    std::vector<std::string> waiting;
+    for (const ai::Plan* plan : plans_.pending())
+        if (plan->preview.is_null()) waiting.push_back(plan->id);
+    for (const std::string& id : waiting)
+        previewPlan(id);
+}
+
 void AiService::previewPlan(const std::string& id)
 {
     ai::Plan* plan = plans_.find(id);
@@ -628,8 +670,10 @@ void AiService::previewPlan(const std::string& id)
     for (const ai::PlanStep& step : plan->steps)
         steps.push_back(command::Invocation{step.command_id, step.args, command::Origin::Ai});
 
-    // A RUNNING BATCH OR PREVIEW IS NOT CUT ACROSS: the card then says nothing
-    // about what it would leave rather than something wrong.
+    // A RUNNING BATCH OR PREVIEW IS NOT CUT ACROSS, nor a running job: the card
+    // then says nothing about what it would leave rather than something wrong,
+    // and a plan filed under a job is previewed when the job returns
+    // (`previewWaiting`).
     auto seen = bus_.preview(steps);
     if (!seen) return;
     plan->preview       = command::preview_json(seen.value(), /*with_shapes=*/false);

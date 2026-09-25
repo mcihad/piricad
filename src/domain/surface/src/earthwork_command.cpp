@@ -11,6 +11,7 @@
 // with perfect arithmetic.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -122,7 +123,21 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    auto computed = domain::surface::earthwork(levels, level);
+    // LONG WORK, as the contour command's is (command/job.hpp, TODOS F-05).
+    core::Result<domain::surface::Earthwork> computed =
+        core::err(core::ErrorCode::Internal, "Hacim hesabı başlamadı.");
+    Job job;
+    job.label = "Hacim hesabı";
+    job.work  = [&](const JobControl& control) {
+        computed = domain::surface::earthwork(levels, level, control);
+    };
+    co_await run_job(ctx.session(), job);
+    if (job.stop.stop_requested() ||
+        (!computed && computed.error().code == core::ErrorCode::Cancelled)) {
+        ctx.session().end_stopped();
+        ctx.echo("Hacim hesabı durduruldu; sonuç verilmedi.");
+        co_return;
+    }
     if (!computed) {
         ctx.refuse(computed.error());
         co_return;
@@ -155,9 +170,10 @@ KENTOS_COMMAND(earthwork)
                                     "Karşılaştırma kotu, milimetre (845 m = 845000)")
                          .en("elevation")},
         .undo     = UndoPolicy::None,
-        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary  = "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.",
-        .run      = &run,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |
+                 Flags::LongRunning,
+        .summary = "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.",
+        .run     = &run,
     };
 }
 

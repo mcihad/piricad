@@ -197,9 +197,11 @@ private:
     import_into(command::Transaction* tx, command::Session* session, std::string path,
                 std::string format, std::vector<std::string> only, std::vector<std::string> fields);
     /// `version` is the DXF year (`surum=2013`), 0 for the default; refused for
-    /// any other format.
-    command::Task<core::Result<std::string>> export_out(std::string path, std::string format,
-                                                        int version);
+    /// any other format. The write is a job of `session` when there is one
+    /// (command/job.hpp): off the UI thread, counted, and stopped with the
+    /// target as it was.
+    command::Task<core::Result<std::string>> export_out(command::Session* session, std::string path,
+                                                        std::string format, int version);
 
     /// Reads a surveyed point list and puts one point entity per row in the
     /// drawing, with `nokta_no`, `kot` and `kod` as attributes.
@@ -248,7 +250,8 @@ private:
     command::Bus& bus_;
     std::string current_path_;
     std::uint64_t saved_revision_{0};
-    /// The job an import is parked on, so `request_stop` reaches it too.
+    /// The job an import or an export is parked on, so `request_stop` reaches
+    /// it too.
     command::Job* current_job_{nullptr};
     std::stop_source stop_;
 };

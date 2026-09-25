@@ -20,6 +20,7 @@
 // makes a tool testable without a bus at all.
 #pragma once
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/task.hpp"
@@ -30,11 +31,9 @@
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <stop_token>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -309,24 +308,18 @@ struct ToolOutput
 
 /// The worker's view of the run: the stop it must honour and the figure it
 /// reports. `at(done, total)` is cheap enough to call per object.
-struct Progress
-{
-    std::stop_token stop;                          ///< requested by Durdur or Esc
-    std::atomic<std::uint32_t>* permille{nullptr}; ///< 0..1000, read by the status strip
-
-    /// Whether the user asked for the run to stop. A tool checks this between
-    /// objects and returns `Cancelled` when it is set.
-    bool cancelled() const noexcept { return stop.stop_requested(); }
-
-    /// Reports `done` of `total` objects handled.
-    void at(std::size_t done, std::size_t total) const noexcept;
-};
+///
+/// THE JOB'S OWN CONTROL, by the name the tools were written against: a tool is
+/// one kind of long work among several, and every kind is handed the same
+/// thing (command/job.hpp, TODOS F-05).
+using Progress = command::JobControl;
 
 /// The interface every tool implements. Stateless: one instance serves every
 /// run, on any thread.
 class ProcessingTool
 {
 public:
+    /// Made once, never copied: the one instance serves every run.
     ProcessingTool()          = default;
     virtual ~ProcessingTool() = default;
 

@@ -3,6 +3,7 @@
 
 #include <cmath>
 
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -500,6 +501,14 @@ core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transacti
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + inv.name +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
+    // NOT WHILE A JOB READS THE DRAWING (`writable`). A run nested inside a
+    // command is that command's own, and a parked command runs none. The job is
+    // asked about first: with none running — nearly always — the effect is not
+    // worked out at all, and the §10.1 dispatch budget pays one comparison.
+    if (job_session_ != nullptr && nested == nullptr &&
+        has_effect(effect_of(*spec, inv.args), Effect::DocumentEdit))
+        if (const auto st = writable(); !st) return st.error();
+
     // A two-element JSON array is genuinely ambiguous: `[485320, 4310220]` is a
     // point and `[1, 2]` is a pair of object ids. `Value::from_json` has no spec
     // and reads both as a point, so a script that wrote `{"nesneler": [1, 2]}`
@@ -691,6 +700,9 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
 
     auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
+
+    if (job_session_ != nullptr && has_effect(effect_of(*spec, args.value()), Effect::DocumentEdit))
+        if (const auto st = writable(); !st) return st.error();
 
     auto tx = std::make_unique<Transaction>(doc_, spec->summary.empty() ? spec->id : spec->summary);
     auto session = std::make_unique<Session>(
@@ -990,10 +1002,28 @@ bool Bus::batch_has_edits() const noexcept
     return batch_ != nullptr && !batch_->empty();
 }
 
+const Job* Bus::running_job() const noexcept
+{
+    return job_session_ != nullptr ? job_session_->job() : nullptr;
+}
+
+core::Status Bus::writable() const
+{
+    const Job* job = running_job();
+    if (job == nullptr) return core::ok();
+    const std::string what = job->label.empty() ? job_session_->spec().id : job->label;
+    return core::err(ErrorCode::Busy,
+                     "Bir iş sürüyor (" + what +
+                         "); o bitene dek çizim değiştirilmez. Bitmesini bekleyin ya da durum "
+                         "çubuğundaki Durdur'a basın (Esc).");
+}
+
 core::Status Bus::begin_batch(std::string label)
 {
     if (batch_)
         return core::err(ErrorCode::InvalidArgument, "Toplu iş zaten açık: '" + batch_label_ + "'");
+    // A BATCH IS A WRITER, whatever its first command turns out to be.
+    if (const auto st = writable(); !st) return st;
 
     batch_label_             = std::move(label);
     batch_commands_          = 0;

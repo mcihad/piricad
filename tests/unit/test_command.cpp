@@ -6915,7 +6915,7 @@ TEST_CASE("İŞ: ev sahibi yoksa iş yerinde koşar, varsa oturum parkeder ve s�
     CHECK(said.empty());
 
     // The host runs the job and resumes; the command finishes where it left off.
-    session.job()->work(JobControl{session.job()->stop.get_token()});
+    session.job()->work(session.job()->control());
     session.resume_job();
     CHECK(session.finished());
     CHECK(said == "iş koştu");
