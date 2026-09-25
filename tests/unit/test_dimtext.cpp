@@ -16,9 +16,12 @@
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <array>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -394,6 +397,51 @@ TEST_CASE("ÖLÇÜDÜZENLE KANIT: arayüz, komut satırı, betik ve oynatma ayn�
     for (const auto& e : gui.journal.entries())
         CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
+// --------------------------------------------------- the fit (TODOS C-18) ----
+
+TEST_CASE("ÖLÇÜ YAZISI SIĞDIRMA: <> (tapu) yazılmış 20 m'lik ölçünün yazısı çizildiği genişlikle "
+          "ölçülür; sığmaz, dışarı çıkar ve uzatma çizgisine değmez")
+{
+    // THE ACCEPTANCE. "20,00 (tapu)" at a 2,5 m capital is 5611 units of the
+    // face over a 698-unit capital: 20,097 m, wider than the 20 m it stands
+    // between. The core used to guess six tenths of a height a letter — 18 m —
+    // judged it to fit, and the sheet drew 20,1 m of words across both
+    // extension lines. It is measured now as it is drawn (the atlas's own case
+    // holds the drawing to this measure letter by letter), so it goes out.
+    Rig r;
+    r.run("ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3");
+    r.run("ÖLÇÜDÜZENLE nesneler=1 metin=\"<> (tapu)\"");
+    const std::string caption = r.caption(1);
+    REQUIRE_EQ(caption, std::string("20,00 (tapu)"));
+    const core::Mm wide = core::text_width(caption, r.height(1));
+    CHECK_EQ(wide, core::Mm{20'097});
+
+    const auto box_of = [&r](std::int64_t key) {
+        std::array<Point2, 4> quad{};
+        REQUIRE(core::text_quad(r.doc, r.slot(key), quad));
+        core::Box2 box;
+        for (const Point2 p : quad)
+            box.extend(p);
+        return box;
+    };
+
+    // Its box is the drawn width, and it stands past the extension line at
+    // 20 m, a gap clear of it — the heads fit inside, so nothing else between.
+    const core::Box2 out = box_of(1);
+    CHECK_LE(std::llabs((out.max_x - out.min_x) - wide), 1);
+    CHECK_EQ(out.min_x, 20'000 + 625);
+
+    // On 30 m the same words fit between the lines, a gap clear of each, and
+    // stay centred over the line.
+    r.run("ÖLÇÜ birinci=0,10 ikinci=30,10 konum=15,7");
+    r.run("ÖLÇÜDÜZENLE nesneler=2 metin=\"<> (tapu)\"");
+    const core::Box2 in = box_of(2);
+    CHECK_EQ(r.caption(2), std::string("30,00 (tapu)"));
+    CHECK_GE(in.min_x, 625);
+    CHECK_LE(in.max_x, 30'000 - 625);
+    CHECK_LE(std::llabs((in.min_x + in.max_x) - 30'000), 1);
 }
 
 // ------------------------------------------------------------ the manual ----

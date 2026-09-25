@@ -159,6 +159,11 @@ struct PolygonBatch
 /// safe to hold for one frame and unsafe to hold for two is a crash waiting for
 /// a slow repaint. A sheet's captions are thousands of short strings, not
 /// millions, so the copy is measured in microseconds.
+///
+/// ALREADY BROKEN INTO ITS LINES. A text that wraps arrives with a newline at
+/// every break `core::text_lines` chose, in document millimetres, so the lines
+/// on the screen and on paper are the lines its box counts (TODOS C-18) — and
+/// a line does not jump to the next as the zoom changes the pixel sizes.
 struct TextItem
 {
     std::uint32_t rgba{0xFFFFFFFFu}; ///< ink colour
@@ -167,7 +172,6 @@ struct TextItem
     float height_px{0.0f};           ///< derived per frame from the ground height
     std::uint8_t anchor{0};          ///< core::TextAnchor, as a byte
     std::uint16_t spacing{1000};     ///< core::TextLines::spacing
-    bool wrap{false};                ///< the lines break to fit the baseline's length
     std::string text;                ///< copied, not borrowed — see the note above
 };
 

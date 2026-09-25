@@ -24,6 +24,7 @@
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -97,17 +98,35 @@ inline constexpr std::uint16_t kTextSpacingMax = 4000;
 /// bytes, and a width counted in bytes made every Turkish caption's box too long.
 std::size_t text_characters(std::string_view utf8) noexcept;
 
-/// A text's width estimated without a font: its longest line, each character at
-/// the bundled face's average for its kind — capital, lower case, digit, space,
-/// punctuation — and a little over. What decides a new text's baseline length —
-/// its box, for the cull and the pick — never where a glyph lands: the backends
-/// measure the face.
-Mm text_width_estimate(std::string_view utf8, Mm height) noexcept;
+/// A text's width at `height`: its longest line, every character at the drawing
+/// face's own advance (core/text_metrics.hpp), rounded to the millimetre — the
+/// width both backends draw it at (TODOS C-18). What a new text's baseline
+/// length is, and so its box for the cull and the pick, and what a dimension's
+/// figure is fitted between its extension lines by.
+Mm text_width(std::string_view utf8, Mm height) noexcept;
 
-/// How many lines `utf8` takes: its explicit breaks, and — for a text that wraps
-/// to `width` — as many more as that estimate says its paragraphs need.
-std::size_t text_line_estimate(std::string_view utf8, Mm height, TextLines lines,
-                               Mm width) noexcept;
+/// The length of a text's baseline from `a` to `b`, to the millimetre: the width
+/// a wrapping text breaks to. One function, so the box and the drawing break a
+/// text at the same word.
+Mm text_baseline_length(Point2 a, Point2 b) noexcept;
+
+/// A baseline from `from`, `length` long, pointing at `toward` — along the page
+/// when `toward` is `from`, because a baseline with no length has no direction.
+std::array<Point2, 2> text_baseline(Point2 from, Point2 toward, Mm length) noexcept;
+
+/// The lines `utf8` is set in, as views into it: split at every newline — a
+/// blank line is kept, it is how one paragraph is set apart from the next — and,
+/// for a text that wraps to `width`, at the last space that keeps a line within
+/// `width` at `height`, that space belonging to neither line. A word wider than
+/// `width` stands on a line of its own. THE ONE PLACE A LINE BREAKS: the box
+/// counts these lines and the scene hands these lines to both backends, so the
+/// box and the sheet cannot disagree about where a plan note's second line
+/// begins. `out` is cleared first.
+void text_lines(std::string_view utf8, Mm height, TextLines lines, Mm width,
+                std::vector<std::string_view>& out);
+
+/// How many lines `text_lines` sets `utf8` in, allocating nothing.
+std::size_t text_line_count(std::string_view utf8, Mm height, TextLines lines, Mm width) noexcept;
 
 /// "This slot carries no text", the value every slot starts at.
 inline constexpr std::uint32_t kNoText = 0xFFFFFFFFu;

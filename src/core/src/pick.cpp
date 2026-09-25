@@ -765,14 +765,15 @@ bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out)
 
     // THE BOX THE LAYOUT FILLS (render/text_layout.hpp), in the caption's own
     // frame: along the baseline from the anchor, and DOWN across it. The width
-    // is the baseline's length — the text's own estimate, or the width a
-    // wrapping text breaks to; the lines are the text's, stacked at its pitch,
-    // with half a height below the last baseline for the descenders.
+    // is the baseline's length — the text's own width, or the width a wrapping
+    // text breaks to; the lines are the ones the scene hands both backends
+    // (`text_lines`), stacked at the text's pitch, with half a height below the
+    // last baseline for the descenders.
     const TextAnchor anchor = doc.texts().anchor(slot);
     const TextLines lines   = doc.texts().lines(slot);
     const auto tall         = static_cast<double>(height);
     const auto n            = static_cast<double>(
-        text_line_estimate(doc.texts().text(slot), height, lines, static_cast<Mm>(len)));
+        text_line_count(doc.texts().text(slot), height, lines, text_baseline_length(a, b)));
     const double pitch = kTextLinePitch * static_cast<double>(lines.spacing) / 1000.0 * tall;
     const double block = tall + (n - 1.0) * pitch; // first capital top to last baseline
 

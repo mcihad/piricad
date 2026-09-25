@@ -16,7 +16,7 @@ CTEST   ?= ctest
 
 .DEFAULT_GOAL := help
 .PHONY: help setup build rebuild run run-script test bench check gates \
-        format format-check tidy tidy-if-present iwyu-if-present doctor reference kapsam \
+        format format-check tidy tidy-if-present iwyu-if-present doctor reference kapsam yazi-olcusu \
         clean distclean install package asan headless app docs bench-baseline
 
 ## ---------------------------------------------------------------- help ----
@@ -118,6 +118,10 @@ reference: $(BUILD)/CMakeCache.txt ## Regenerate the six generated docs (referen
 	@$(CMAKE) --build $(BUILD) --target kentos_docgen --parallel $(JOBS) >/dev/null
 	@mkdir -p docs/python
 	@$(BIN)/kentos_docgen docs/komutlar/referans.md docs/nesneler/referans.md docs/llms.txt docs/llms-full.txt docs/python/referans.md docs/python/kentos_cad.pyi
+
+yazi-olcusu: $(BUILD)/CMakeCache.txt ## Regenerate the core's text measure from the drawing face (data/fonts)
+	@$(CMAKE) --build $(BUILD) --target kentos_yazi_olcusu --parallel $(JOBS) >/dev/null
+	@$(BIN)/kentos_yazi_olcusu data/fonts src/core/src/text_metrics_table.cpp
 
 kapsam: $(BUILD)/CMakeCache.txt ## Measure the support matrix: every editing command run on every kind
 	@$(CMAKE) --build $(BUILD) --target kentos_kapsam --parallel $(JOBS) >/dev/null

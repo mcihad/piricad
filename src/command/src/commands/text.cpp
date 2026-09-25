@@ -100,12 +100,7 @@ std::string with_breaks(std::string words)
 /// page's right when `toward` is `from` itself.
 std::array<core::Point2, 2> baseline_of(core::Point2 from, core::Point2 toward, core::Mm length)
 {
-    const auto dx    = static_cast<double>(toward.x - from.x);
-    const auto dy    = static_cast<double>(toward.y - from.y);
-    const double len = std::sqrt(dx * dx + dy * dy);
-    if (!(len > 0.0)) return {from, core::Point2{from.x + length, from.y}};
-    const double k = static_cast<double>(length) / len;
-    return {from, core::Point2{from.x + core::mm_round(dx * k), from.y + core::mm_round(dy * k)}};
+    return core::text_baseline(from, toward, length);
 }
 
 Task<void> run(Context& ctx)
@@ -134,23 +129,18 @@ Task<void> run(Context& ctx)
     std::optional<core::Mm> width;
     if (!read_lines(ctx, lines, width)) co_return;
 
-    // The baseline runs to the second point when one is given, and along the
-    // page for the text's own width when it is not. Either way the entity has
+    // The baseline points at the second point when one is given, and along the
+    // page when it is not; it is as long as the text is wide — the width both
+    // backends draw it at (`core::text_width`, TODOS C-18) — or, for a text
+    // that wraps, as long as the width it breaks to. Either way the entity has
     // two real vertices, so nothing downstream needs to know it is text to cull
-    // it. A text that wraps runs for its width, in the given direction.
-    //
-    // The width, when estimated, decides the entity's BOUNDING BOX, not where a
-    // glyph lands — the backend measures the real font — so the estimate costs
-    // a slightly loose cull box and nothing that reaches paper. It counts
-    // LETTERS: a count of bytes made every `ş` two letters wide.
+    // it, and its box is exactly the words.
     const Value second  = ctx.argument("bitis");
     core::Point2 toward = *anchor_point;
     if (!second.empty() && !second.as_points().empty()) toward = second.as_points().front();
-    std::array<core::Point2, 2> baseline{*anchor_point, toward};
-    if (lines.wrap)
-        baseline = baseline_of(*anchor_point, toward, width.value_or(0));
-    else if (toward == *anchor_point)
-        baseline = baseline_of(*anchor_point, toward, core::text_width_estimate(*content, height));
+    const std::array<core::Point2, 2> baseline = baseline_of(
+        *anchor_point, toward,
+        lines.wrap ? width.value_or(0) : std::max<core::Mm>(1, core::text_width(*content, height)));
     auto created = ctx.transaction().add_polyline(ctx.active_layer(), baseline);
     if (!created) {
         ctx.refuse(created.error());
@@ -308,9 +298,9 @@ Task<void> run_edit(Context& ctx)
         if (!read_lines(ctx, lines, width)) co_return;
 
         // THE BASELINE FOLLOWS THE WORDS. Its length is the box the cull and the
-        // pick use — the width a wrapping text breaks to, or the estimate of the
-        // text's own — and a rewrite that kept the old length left a longer
-        // caption unpickable past its old end. The anchor and the direction stay.
+        // pick use — the width a wrapping text breaks to, or the text's own —
+        // and a rewrite that kept the old length left a longer caption
+        // unpickable past its old end. The anchor and the direction stay.
         const core::RingSpan span = doc.geometry().rings_of(slot);
         if (doc.entities().kind[e] == core::kPolylineKind && span.count == 1 &&
             doc.geometry().ring_count[span.first] == 2) {
@@ -320,7 +310,7 @@ Task<void> run_edit(Context& ctx)
             if (width.has_value() && lines.wrap)
                 length = *width;
             else if (!lines.wrap && (!content.empty() || !tall.empty() || width.has_value()))
-                length = core::text_width_estimate(words, height);
+                length = std::max<core::Mm>(1, core::text_width(words, height));
             if (length > 0) {
                 const std::array<core::Point2, 2> base = baseline_of(from, to, length);
                 if (base[1] != to) {
@@ -656,7 +646,7 @@ Task<void> run_find_replace(Context& ctx)
             doc.geometry().ring_count[span.first] == 2) {
             const std::array<core::Point2, 2> base = baseline_of(
                 doc.geometry().vertex(span.first, 0), doc.geometry().vertex(span.first, 1),
-                core::text_width_estimate(h.now, height));
+                std::max<core::Mm>(1, core::text_width(h.now, height)));
             const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
             if (auto st = ctx.transaction().set_geometry(
                     h.e, std::span<const core::RingGeometry::RingInput>(&ring, 1));
@@ -692,8 +682,12 @@ KENTOS_COMMAND(text)
                     .en("height"),
                 // A point list with optional arity, because Param::point takes no
                 // Arity and is therefore always required — and a mandatory end
-                // point would make every horizontal caption two clicks.
-                Param::points("bitis", Arity::optional(), "Taban çizgisinin bitişi; yoksa yatay")
+                // point would make every horizontal caption two clicks. It gives
+                // the DIRECTION only: the baseline is as long as the words are
+                // wide (TODOS C-18), so a far point does not stretch the box.
+                Param::points("bitis", Arity::optional(),
+                              "Yazının döneceği yöndeki bir nokta; taban çizgisi yazının "
+                              "genişliği kadardır. Yoksa yatay")
                     .en("end"),
                 Param::choice("hizalama", Arity::optional(), anchor_words(),
                               "Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın "

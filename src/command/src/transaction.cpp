@@ -11,8 +11,10 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/text_store.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iterator>
 #include <map>
 #include <optional>
@@ -551,6 +553,43 @@ bool contains(const std::vector<EntityId>& sorted, EntityId e)
 }
 
 } // namespace
+
+void Transaction::settle_texts()
+{
+    const core::EntityTable& ents = doc_.entities();
+    const RingGeometry& geom      = doc_.geometry();
+    const core::TextTable& texts  = doc_.texts();
+
+    std::vector<EntityId> touched;
+    for (std::size_t i = texts_settled_upto_; i < inverse_.size(); ++i) {
+        const Op& op = inverse_[i];
+        if (op.kind == Op::Kind::SetText || op.kind == Op::Kind::SetGeometry ||
+            op.kind == Op::Kind::SetKindGeometry)
+            touched.push_back(op.entity);
+    }
+    std::ranges::sort(touched);
+    touched.erase(std::ranges::unique(touched).begin(), touched.end());
+
+    for (const EntityId e : touched) {
+        if (e >= ents.size() || !doc_.alive(e) || ents.kind[e] != core::kPolylineKind) continue;
+        const std::uint32_t slot = ents.slot[e];
+        if (!texts.has(slot) || texts.lines(slot).wrap) continue;
+        if (doc_.attachments().get(e) != nullptr) continue; // `settle_attachments` places it
+        const core::RingSpan rs = geom.rings_of(slot);
+        if (rs.count != 1 || geom.ring_count[rs.first] != 2 ||
+            geom.ring_role[rs.first] != core::RingRole::Open)
+            continue;
+        const core::Point2 a = geom.vertex(rs.first, 0);
+        const core::Point2 b = geom.vertex(rs.first, 1);
+        const core::Mm width =
+            std::max<core::Mm>(1, core::text_width(texts.text(slot), texts.height(slot)));
+        if (std::llabs(core::text_baseline_length(a, b) - width) <= 1) continue;
+        const auto base = core::text_baseline(a, b, width);
+        const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
+        (void)set_geometry(e, std::span<const core::RingGeometry::RingInput>(&ring, 1));
+    }
+    texts_settled_upto_ = inverse_.size();
+}
 
 Transaction::SettleReport Transaction::settle_attachments()
 {

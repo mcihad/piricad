@@ -48,6 +48,34 @@ enum class Face : std::uint8_t {
     MonoMedium,   ///< a number that carries emphasis
 };
 
+/// How the letters of a run are spaced (TODOS C-18).
+enum class Spacing : std::uint8_t {
+    /// With the face's kerning and ligatures: the program's own labels — a
+    /// ruler's figures, the note beside the canvas — which only the eye measures.
+    Typeset,
+    /// Every letter at its own advance, no pair moved closer and none joined:
+    /// how a DRAWING's text is set. Its width is then a sum over its
+    /// characters, which the core computes from the same face without a font
+    /// engine (`core/text_metrics.hpp`) — and each cluster of the run is SET
+    /// where that sum puts it, so the box a text is picked by, whether a
+    /// dimension's figure fits between its extension lines and the width both
+    /// backends draw are one number for every string. It is also how technical
+    /// lettering has always been set, and what a DXF reader drawing the file
+    /// with the same face gets: a pair adjustment lives in the shaper, not in
+    /// the file.
+    Technical,
+};
+
+/// One glyph of the face, by its index in the font file, and where the run
+/// puts it: what a backend that draws the font itself — the QPainter path the
+/// PDF is printed through — needs to set exactly the glyphs the canvas sets.
+struct FontGlyph
+{
+    std::uint32_t glyph{0}; ///< its index in the font file
+    float x{0.0f};          ///< pen position in EM from the run's origin
+    float y{0.0f};          ///< likewise, up
+};
+
 /// Where one glyph sits in the atlas, and where its quad sits around the pen.
 ///
 /// EM UNITS for the quad, texture coordinates for the atlas. The caller scales by
@@ -115,14 +143,36 @@ public:
     /// Appends rather than returns, so a frame's worth of captions goes into one
     /// buffer the draw loop already owns — the draw loop must not allocate
     /// (`render.md` R20).
-    RunMetrics shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out);
+    RunMetrics shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out,
+                     Spacing spacing = Spacing::Typeset);
+
+    /// Shapes `utf8` and APPENDS its glyphs, by their index in the font file,
+    /// to `out` — the glyphs `shape` would set, blanks included, rasterising
+    /// nothing. Returns the run's metrics in EM.
+    RunMetrics glyphs(Face face, std::string_view utf8, Spacing spacing,
+                      std::vector<FontGlyph>& out);
+
+    /// How far the SHAPER's pen moves over `utf8`, in the face's own units,
+    /// exactly — an integer sum of its advances, never anchored to the core's
+    /// measure the way `shape` anchors a drawing's text. What
+    /// `kentos_yazi_olcusu` writes into the core's table, character by
+    /// character, and what the suite holds the table to.
+    std::int64_t advance_units(Face face, std::string_view utf8, Spacing spacing);
+
+    /// The face's design grid: how many of its units make an EM.
+    int units_per_em(Face face) const noexcept;
+
+    /// The face's cap height in its own units, as its OS/2 table declares it,
+    /// or 0.7 EM when it does not.
+    int cap_height_units(Face face) const noexcept;
 
     /// The metrics of `utf8` in EM, rasterising nothing: what a layout needs to
     /// break and align lines without filling the atlas with them. `missing`,
     /// when given, receives how many of its characters the face has no glyph
     /// for — which the face draws as an empty box, and which is a font problem
     /// a user has to be told about rather than one to guess from the picture.
-    RunMetrics measure(Face face, std::string_view utf8, std::size_t* missing = nullptr);
+    RunMetrics measure(Face face, std::string_view utf8, std::size_t* missing = nullptr,
+                       Spacing spacing = Spacing::Typeset);
 
     /// WHICH characters of `utf8` the face has no glyph for, each once, in the
     /// order they first appear (TODOS C-12): what a caption that shows a box

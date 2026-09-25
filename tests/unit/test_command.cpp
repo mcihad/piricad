@@ -3325,11 +3325,23 @@ TEST_CASE("METİN dönüklüğü saklanan açı değil, taban çizgisinin yönü
     const auto xs             = f.doc.geometry().ring_xs(span.first);
     const auto ys             = f.doc.geometry().ring_ys(span.first);
 
-    // The end point is exactly what was typed, to the millimetre.
-    CHECK_EQ(xs.front(), core::Mm{485300000});
-    CHECK_EQ(ys.front(), core::Mm{4310255000});
-    CHECK_EQ(xs.back(), core::Mm{485420000});
-    CHECK_EQ(ys.back(), core::Mm{4310265000});
+    // The start is exactly what was typed. The baseline POINTS at the second
+    // point and is as long as the words are wide (TODOS C-18): its direction
+    // is the rotation and its length the text's box — 37,7 m of words, not the
+    // 120 m to the point, which made a box three times the caption.
+    const core::Point2 from{485300000, 4310255000};
+    const core::Point2 toward{485420000, 4310265000};
+    CHECK_EQ(xs.front(), from.x);
+    CHECK_EQ(ys.front(), from.y);
+    const core::Mm wide = core::text_width("ATATÜRK CADDESİ", 3000);
+    CHECK_EQ(wide, core::Mm{37745}); // 8782 units of a 698-unit capital, at 3 m
+    const auto base = core::text_baseline(from, toward, wide);
+    CHECK_EQ(xs.back(), base[1].x);
+    CHECK_EQ(ys.back(), base[1].y);
+    // Along the typed direction to the millimetre: 120 east for every 10 north.
+    const double cross = (static_cast<double>(xs.back() - from.x) * 10'000.0) -
+                         (static_cast<double>(ys.back() - from.y) * 120'000.0);
+    CHECK_LT(std::abs(cross) / 120'415.9, 1.0);
 }
 
 TEST_CASE("METİN belge içeriğidir ve tek adımda geri alınır")

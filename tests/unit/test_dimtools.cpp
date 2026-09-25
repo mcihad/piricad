@@ -667,10 +667,11 @@ TEST_CASE("AÇI ÖLÇÜSÜNDE SIĞDIRMA: yazı kola çarpmaz; yay yetiyorsa kaya
 
     // 2: the same angle taken through a point 3° off its first arm. The
     // figure there would cross the arm; it slides round the arc until it
-    // clears it by a gap — (10,5 m / 2 + 0,625 m) / 20 m = 16,83°.
+    // clears it by a gap. "100,00g" is 3800 units of the face at a 2,5 m
+    // capital, 13,61 m (TODOS C-18): (13,61 m / 2 + 0,625 m) / 20 m = 21,29°.
     r.run("ÖLÇÜ tur=acisal tepe=40,0 birinci=60,0 ikinci=40,20 konum=59.973,1.047");
     CHECK_EQ(r.caption(2), std::string("100,00g"));
-    CHECK(std::abs(bearing(Point2{40'000, 0}, caption_centre(r, 2)) - 16.83) < 0.05);
+    CHECK(std::abs(bearing(Point2{40'000, 0}, caption_centre(r, 2)) - 21.29) < 0.05);
 
     // 3: the probe sheet's angle: 36,87° on a 7,6 m arc. Neither the words
     // (9 m) nor the heads (2,5 m each) fit: the words go past the second arm
@@ -838,24 +839,28 @@ TEST_CASE("DOĞRUSAL ÖLÇÜNÜN UCU sürüklenince doğrultusu kalır; kısalan
     // Shortened to 3 m by the same grip, its figure no longer fits between
     // the extension lines and goes past the one it reads toward, as ÖLÇÜ
     // would have put it: past the heads' tails (5 m), a gap and half of
-    // "3,00" (3 m).
+    // "3,00" — 2072 units at a 2,5 m capital, 7,421 m (TODOS C-18) — the
+    // 12 335,5 m rounded half away from zero.
     r.run("ÖLÇÜ tur=dogrusal birinci=0,20 ikinci=20,20 konum=10,24"); // 2
     r.run("KÖŞETAŞI nesne=2 kose=2 nokta=3,20");
     CHECK_EQ(r.caption(2), std::string("3,00"));
-    CHECK_EQ(caption_centre(r, 2), (Point2{3'000 + 5'000 + 625 + 3'000, 24'000 + 1'875}));
+    CHECK_EQ(caption_centre(r, 2), (Point2{3'000 + 5'000 + 625 + 3'711, 24'000 + 1'875}));
 }
 
 TEST_CASE("DÖNDÜR: yarım tur dönen ölçünün yazısı yine çizginin üstünde; elle konmuş yazı taşınır")
 {
+    // 20 m, so the figure fits between the extension lines: "20,00" is 9,57 m
+    // of words at a 2,5 m capital, and with a gap either side it would not on
+    // 10 m (TODOS C-18).
     Rig r;
-    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=10,0 konum=5,-4"); // 1: line below, at y = -4
-    CHECK_EQ(caption_centre(r, 1), (Point2{5'000, -4'000 + 1'875}));
+    r.run("ÖLÇÜ tur=dogrusal birinci=0,0 ikinci=20,0 konum=10,-4"); // 1: line below, at y = -4
+    CHECK_EQ(caption_centre(r, 1), (Point2{10'000, -4'000 + 1'875}));
 
     // Turned half a circle the line is above the points, at y = +4; carried
     // as it was, the figure would hang under it upside down.
     r.run("DÖNDÜR nesneler=1 merkez=0,0 aci=180");
-    CHECK_EQ(r.def(1).measurement, 10'000);
-    CHECK_EQ(caption_centre(r, 1), (Point2{-5'000, 4'000 + 1'875}));
+    CHECK_EQ(r.def(1).measurement, 20'000);
+    CHECK_EQ(caption_centre(r, 1), (Point2{-10'000, 4'000 + 1'875}));
     const std::uint32_t slot = r.doc.entities().slot[r.entity(1)];
     const core::RingSpan rs  = r.doc.geometry().rings_of(slot);
     CHECK_GT(r.doc.geometry().ring_xs(rs.first)[1], r.doc.geometry().ring_xs(rs.first)[0]);

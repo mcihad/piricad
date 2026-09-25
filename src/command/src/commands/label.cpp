@@ -296,10 +296,10 @@ Task<void> run(Context& ctx)
         }
 
         // The baseline is an ordinary open ring, so the label is culled, snapped
-        // and hit-tested by the same code every other entity uses. Its advance is
-        // an estimate on purpose: it sets the cull box, and the backend measures
-        // the real font when it draws.
-        const core::Point2 end{p.at.x + core::text_width_estimate(p.text, p.height), p.at.y};
+        // and hit-tested by the same code every other entity uses — and as long
+        // as the label is wide, by the measure both backends draw it with.
+        const core::Point2 end{p.at.x + std::max<core::Mm>(1, core::text_width(p.text, p.height)),
+                               p.at.y};
         const std::array<core::Point2, 2> baseline{p.at, end};
         auto created = ctx.transaction().add_polyline(target, baseline);
         if (!created) {

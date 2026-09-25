@@ -44,9 +44,13 @@ TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
 
 #if KENTOS_HAVE_TEXT
 
+#include "kentos_cad/core/text_metrics.hpp"
 #include "kentos_cad/render/text_atlas.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace kentos;
@@ -245,8 +249,6 @@ TEST_CASE("TEXT: shaping the same word twice reuses the same cells")
         CHECK(first[i].box == again[i].box);
 }
 
-#endif // KENTOS_HAVE_TEXT
-
 TEST_CASE("TEXT: a character the face does not have is named, once, and draws as the box")
 {
     // TODOS C-12: a caption with a letter the bundled face lacks shows the
@@ -272,3 +274,178 @@ TEST_CASE("TEXT: a character the face does not have is named, once, and draws as
     (void)atlas.measure(render::Face::Sans, "A漢B", &missing);
     CHECK_EQ(missing, std::size_t{1});
 }
+
+// --------------------------------------------- one measure (TODOS C-18) ----
+
+namespace {
+
+/// `c` as UTF-8.
+std::string utf8_of(char32_t c)
+{
+    std::string s;
+    if (c < 0x80) {
+        s += static_cast<char>(c);
+    } else if (c < 0x800) {
+        s += static_cast<char>(0xC0 | (c >> 6));
+        s += static_cast<char>(0x80 | (c & 0x3F));
+    } else if (c < 0x10000) {
+        s += static_cast<char>(0xE0 | (c >> 12));
+        s += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+        s += static_cast<char>(0x80 | (c & 0x3F));
+    } else {
+        s += static_cast<char>(0xF0 | (c >> 18));
+        s += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
+        s += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+        s += static_cast<char>(0x80 | (c & 0x3F));
+    }
+    return s;
+}
+
+/// How wide the atlas SETS `utf8` as a drawing's text, in font units: the width
+/// both backends draw it at. `glyphs`, when given, receives how many glyphs.
+std::int64_t drawn(std::string_view utf8, std::size_t* glyphs = nullptr)
+{
+    std::vector<render::FontGlyph> set;
+    const float em =
+        shared().glyphs(render::Face::Sans, utf8, render::Spacing::Technical, set).advance;
+    if (glyphs != nullptr) *glyphs = set.size();
+    return std::llround(static_cast<double>(em) * core::text_face().units_per_em);
+}
+
+/// The shaper's own advance over `utf8`, in technical spacing, before anything
+/// anchors it to the core's measure.
+std::int64_t natural(std::string_view utf8)
+{
+    return shared().advance_units(render::Face::Sans, utf8, render::Spacing::Technical);
+}
+
+/// Whether `utf8` carries a combining accent (U+0300–U+036F, lead bytes CC
+/// and CD): a letter it follows is the shaper's to compose with it or to swap
+/// for a variant that makes room for it — `g` does both.
+bool accented(std::string_view utf8)
+{
+    return std::ranges::any_of(utf8, [](char c) {
+        const auto b = static_cast<unsigned char>(c);
+        return b == 0xCCU || b == 0xCDU;
+    });
+}
+
+} // namespace
+
+TEST_CASE("TEXT: the core's table is the face — its grid, its cap and every letter alone")
+{
+    // `kentos_yazi_olcusu` wrote the table from this very atlas, and the gate
+    // regenerates it; this holds the two together inside the suite too, over
+    // everything a Turkish sheet writes and then some.
+    CHECK_EQ(shared().units_per_em(render::Face::Sans), core::text_face().units_per_em);
+    CHECK_EQ(shared().cap_height_units(render::Face::Sans), core::text_face().cap_height);
+    for (char32_t c = 0; c < 0x2200; ++c) {
+        if (c >= 0xD800 && c <= 0xDFFF) continue;
+        const std::string one = utf8_of(c);
+        if (natural(one) != core::text_advance(c))
+            FAIL_CHECK("U+" << std::hex << static_cast<unsigned>(c) << ": the face " << std::dec
+                            << natural(one) << ", the table " << core::text_advance(c));
+    }
+    // The hidden ones measure nothing, the missing one is the box's width, and
+    // a broken byte is U+FFFD — as the shaper reads it.
+    CHECK_EQ(core::text_advance(0x00AD), 0); // soft hyphen
+    CHECK_EQ(core::text_advance(0x200D), 0); // zero-width joiner
+    CHECK_EQ(core::text_advance(0x6F22), natural("漢"));
+    CHECK_EQ(core::text_run_advance("\xC3"), natural("\xC3"));
+    CHECK_EQ(core::text_run_advance("A\xE2\x82"
+                                    "B"),
+             natural("A\xE2\x82"
+                     "B"));
+    CHECK_EQ(core::text_run_advance("\xF0\x9F\x98"), natural("\xF0\x9F\x98"));
+}
+
+TEST_CASE("TEXT: a drawing's text is exactly as wide as the core measures it, letter by letter "
+          "and in context")
+{
+    // THE ACCEPTANCE (TODOS C-18): the box a text is picked by, whether a
+    // dimension's figure fits and the baseline it stands on come from the
+    // measure the letters are DRAWN with. Technical spacing makes the drawn
+    // width a sum over the characters; this checks that it really is one —
+    // every pair of an alphabet of Turkish text, accents that compose with the
+    // letter before them, joiners and hidden characters, a missing letter and
+    // broken bytes — against the core's sum, to the font unit.
+    //
+    // Two claims, checked separately. What both backends DRAW is the core's
+    // width, for every string, because the atlas sets each cluster where the
+    // core's sum puts it. And that sum is the face's own spacing, not a
+    // correction of it: its unanchored advance is the table's to the unit for
+    // every pair but the ones with a combining accent in them — decomposed
+    // text, where the shaper composes the accent onto its letter or swaps the
+    // letter for a variant with room for it. Those are counted, so a font whose
+    // spacing drifted from the table would show here as pairs failing rather
+    // than as a few accented.
+    std::vector<std::string> alphabet;
+    for (char32_t c = 0x20; c < 0x7F; ++c)
+        alphabet.push_back(utf8_of(c));
+    for (const char* extra :
+         {"ç",      "ğ",      "ı",      "ö",      "ş",      "ü",      "Ç",      "Ğ",      "İ",
+          "Ö",      "Ş",      "Ü",      "â",      "î",      "û",      "é",      "Ø",      "±",
+          "°",      "²",      "€",      "—",      "…",      "\u00A0", "\u00AD", "\u200D", "\u0301",
+          "\u0302", "\u0306", "\u0307", "\u0308", "\u0327", "漢",     "\xC3",   "\n"})
+        alphabet.emplace_back(extra);
+
+    std::size_t pairs   = 0;
+    std::size_t accents = 0; // pairs with a combining accent
+    std::size_t shifted = 0; // of those, the ones the shaper spaces otherwise
+    for (const std::string& a : alphabet)
+        for (const std::string& b : alphabet) {
+            const std::string run      = a + b;
+            const std::int64_t measure = core::text_run_advance(run);
+            if (drawn(run) != measure)
+                FAIL_CHECK("\"" << run << "\": drawn " << drawn(run) << ", measured " << measure);
+            if (accented(run)) {
+                ++accents;
+                shifted += natural(run) != measure ? 1 : 0;
+            } else if (natural(run) != measure) {
+                FAIL_CHECK("\"" << run << "\": the face " << natural(run) << ", the table "
+                                << measure);
+            }
+            ++pairs;
+        }
+    CHECK_EQ(pairs, alphabet.size() * alphabet.size());
+    // `ğ` spelled g and a breve, `ǵ`, a g with two dots: a handful, and every
+    // one of them drawn at the core's width all the same.
+    CHECK_GT(shifted, std::size_t{0});
+    CHECK_LT(shifted * 20, accents);
+
+    // Decomposed Turkish — as a file name on macOS spells it — draws at the
+    // width the core measures: `ğ` as g and a combining breve.
+    CHECK_EQ(drawn("g\u0306"), core::text_run_advance("g\u0306"));
+    CHECK_EQ(core::text_run_advance("g\u0306"), 528);
+
+    for (const char* sentence :
+         {"20,00 (tapu)", "Ada 1284, Parsel 21 — İmar Kanunu 18. madde", "TAKS=0,30 KAKS=1,50",
+          "fi fl ffi AV To Ta Yo", "ŞİŞLİ ÇAĞLAYAN ığdır Iğdır", "ATATÜRK CADDESİ",
+          "Yapı yaklaşma sınırı 5,00 m"}) {
+        CHECK_MESSAGE(drawn(sentence) == core::text_run_advance(sentence), sentence);
+        CHECK_MESSAGE(natural(sentence) == core::text_run_advance(sentence), sentence);
+    }
+    CHECK_EQ(drawn("s\u0327 i\u0307 A\u0301"), core::text_run_advance("s\u0327 i\u0307 A\u0301"));
+
+    // And it is technical spacing that makes it so: the face kerns `TAKS`
+    // tighter when it is typeset, and a drawing's text is not typeset.
+    CHECK_GT(natural("TAKS"),
+             shared().advance_units(render::Face::Sans, "TAKS", render::Spacing::Typeset));
+    CHECK_EQ(drawn("TAKS"), std::int64_t{572 + 641 + 634 + 581});
+
+    // The glyphs the QPainter path sets are the ones the canvas sets, where it
+    // sets them: the same count, the same run width.
+    std::vector<render::FontGlyph> ids;
+    std::vector<render::PlacedGlyph> boxes;
+    const render::RunMetrics a =
+        shared().glyphs(render::Face::Sans, "Ada 1284", render::Spacing::Technical, ids);
+    const render::RunMetrics b =
+        shared().shape(render::Face::Sans, "Ada 1284", boxes, render::Spacing::Technical);
+    CHECK_EQ(ids.size(), std::size_t{8});   // the space too: it is a glyph of the run
+    CHECK_EQ(boxes.size(), std::size_t{7}); // the space draws nothing
+    CHECK(a.advance == b.advance);
+    CHECK(a.advance * static_cast<float>(core::text_face().units_per_em) ==
+          doctest::Approx(static_cast<double>(core::text_run_advance("Ada 1284"))));
+}
+
+#endif // KENTOS_HAVE_TEXT

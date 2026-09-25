@@ -11,8 +11,14 @@ da. DXF `TEXT` ve `MTEXT` budur.
 **Geometrisi taban çizgisidir:** iki köşeli bir açık çizgi. İlk köşe yazının
 **noktasıdır** (hizalama bu noktanın yazının neresinde durduğunu söyler), ikinci köşe
 yönünü verir — dönüklük saklanan bir açı değil, bu doğru parçasının yönüdür.
-Uzunluğu yazının kutusudur: seçme ve ekrana girme onunla yapılır; satırları kırılan
-bir yazıda satırların kırıldığı genişliktir.
+Uzunluğu yazının kutusudur: seçme ve ekrana girme onunla yapılır. Kırılmayan bir
+yazıda bu uzunluk **yazının çizildiği genişliktir** (aşağıda "Genişlik"); satırları
+kırılan bir yazıda satırların kırıldığı genişliktir.
+
+Taban çizgisini yazı değil siz belirlerseniz de — ikinci köşeyi tutamağından çekerek,
+`METİN bitis=` ile, ölçekleyerek — kırılmayan yazının taban çizgisi işlemin sonunda
+yine yazının genişliğine oturur; çektiğiniz nokta yalnız **yönü** verir. Kutu hiçbir
+zaman yazıdan uzun ya da kısa kalmaz.
 
 Yanında, yazı tablosunda dört şey durur:
 
@@ -38,8 +44,41 @@ tipinden alınmaz ([METİN](../komutlar/text.md)):
   taban hizalarıdır.
 - Kırılan bir yazıda bir sonraki kelime satırı taban çizgisinin uzunluğundan öteye
   taşıyacaksa satır ondan önceki boşlukta kırılır; tek başına daha uzun bir kelime
-  kendi satırında kalır.
+  kendi satırında kalır. Kırılma zemin milimetresiyle, "Genişlik"teki ölçüyle bir kez
+  hesaplanır: yakınlaştırınca bir kelime alt satıra atlamaz, seçme kutusu çizilen
+  satırları sayar.
 - Ekranda 3 pikselden kısa kalan yazı çizilmez: okunmayan bir yazı paftayı lekeler.
+
+## Genişlik
+
+Bir yazının genişliği, harflerinin **yazı tipindeki kendi genişliklerinin toplamıdır**:
+her harf kendi yerini kaplar, iki harf arasında sıkıştırma (karakter aralığı ayarı,
+*kerning*) ve iki harfi tek işarette birleştirme (bitişik harf, *ligatür*) yapılmaz —
+teknik yazı her zaman böyle yazılır. Yazı yüksekliği büyük harfin boyu olduğu için
+genişlik, harf genişliklerinin toplamının büyük harf boyuna oranıyla yükseklikten
+hesaplanır; milimetreye yuvarlanır.
+
+Bu ölçü **tektir** ve dört şey ondan gelir:
+
+- yazının **seçme kutusu** ve ekrana girip girmediği,
+- bir ölçü yazısının uzatma çizgilerinin arasına **sığıp sığmadığı**
+  ([ÖLÇÜ](../komutlar/dimension.md)) ve durduğu taban çizgisinin uzunluğu,
+- satırları kırılan bir yazının **hangi kelimede** kırıldığı,
+- ekranda, PDF'te ve yazıcıda **çizilen harflerin** kapladığı genişlik.
+
+Harf genişlikleri programla gelen yazı tipi dosyasından (`data/fonts/IBMPlexSans-Regular.ttf`)
+çıkarılmış bir tablodur; yazı tipi değişirse tablo da aynı değişiklikte yeniden üretilir.
+Örnek: 2,5 m yüksekliğinde `20,00 (tapu)` 20,10 m'dir — 20 m'lik bir ölçünün arasına
+sığmaz, ölçü onu dışarıya yazar.
+
+Harfine ayrılmış yazılan bir harf — `ğ` yerine `g` ile ardından birleşen kısa işareti
+(U+0306), bazı dosya adlarında olduğu gibi — ekranda birleşik harf olarak çizilir ve
+yine bu ölçüyle yer tutar.
+
+Bu sürümden önce kaydedilmiş bir dosyadaki yazıların taban çizgisi eski kestirimle
+(harf başına yüksekliğin 0,6'sı) durur; kutu, yazıya dokunan ilk düzenlemede —
+taşıma, döndürme, yazısını değiştirme — yazının genişliğine oturur. Görünüşü hiç
+değişmez: harfler her zaman yazı tipinin genişliğiyle çizilir.
 
 ## Yakalama noktaları
 

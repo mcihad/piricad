@@ -38,11 +38,13 @@
 #include <QColor>
 #include <QFont>
 #include <QFontMetricsF>
+#include <QGlyphRun>
 #include <QImage>
 #include <QPaintDevice>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <QRawFont>
 #include <QRectF>
 #include <QString>
 #include <QStringList>
@@ -55,6 +57,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace kentos::app {
 namespace {
@@ -1028,11 +1031,15 @@ private:
     /// boundary is a parcel number nobody can read.
     ///
     /// LAID OUT BY THE SAME FUNCTION AND THE SAME MEASURE AS THE GPU CANVAS
-    /// (render/text_layout.hpp): this is the path the PDF and the printer take,
-    /// so where a plan note breaks and how far its second line sits below the
-    /// first is decided once for the screen and the paper. The measure is the
-    /// shaper the canvas uses, over the bundled faces; only a build without the
-    /// text engine falls back to Qt's own metrics of the same face.
+    /// (render/text_layout.hpp), and SET GLYPH BY GLYPH where the canvas sets
+    /// them (TODOS C-18): the atlas shapes each line in technical spacing and
+    /// this path draws those very glyphs of the bundled face, from the font
+    /// file, at the positions the shaper gave — so a line on paper is exactly as
+    /// long as its box and as the same line on the screen. Qt's own shaper,
+    /// which kerns and joins letters, never sees a drawing's text. This is the
+    /// path the PDF and the printer take. Only a build without the text engine,
+    /// or one whose faces are missing, falls back to Qt's layout of the face,
+    /// kerning switched off.
     static void drawTexts(QPainter& painter, const render::DrawList& list, double cx, double cy)
     {
         /// Big enough that the face's cap ratio comes back with three digits.
@@ -1041,8 +1048,12 @@ private:
         QFont probe(QStringLiteral("IBM Plex Sans"));
         probe.setPixelSize(kCapProbePx);
         const QFontMetricsF probe_metrics(probe);
-        const double qt_cap              = probe_metrics.capHeight();
-        const render::MeasureRun measure = shared_measure(probe_metrics, qt_cap);
+        const double qt_cap = probe_metrics.capHeight();
+
+#if KENTOS_HAVE_TEXT
+        render::TextAtlas* atlas = text_engine();
+        const QRawFont* face     = atlas != nullptr ? drawing_face() : nullptr;
+#endif
 
         std::vector<render::TextLine> laid;
         for (const auto& item : list.texts) {
@@ -1059,11 +1070,30 @@ private:
             const double degrees =
                 (dx == 0.0 && dy == 0.0) ? 0.0 : std::atan2(dy, dx) * 180.0 / M_PI;
 
+            render::lay_out_text(item.text, item.height_px,
+                                 static_cast<core::TextAnchor>(item.anchor), item.spacing,
+                                 &render::drawing_measure, laid);
+            if (laid.empty()) continue;
+
             // CAP HEIGHT IN, EM SIZE OUT — see the note in the QRhi backend.
-            // `height_px` is the height of a CAPITAL LETTER, `setPixelSize` wants
-            // the EM, and the two differ by about a third.
+            // `height_px` is the height of a CAPITAL LETTER, a face is sized by
+            // its EM, and the two differ by about a third.
             const double tall = static_cast<double>(item.height_px);
-            const double em   = qt_cap > 0.0 ? tall * kCapProbePx / qt_cap : tall;
+            painter.save();
+            painter.translate(start);
+            painter.rotate(degrees);
+            painter.setPen(from_rgba(item.rgba));
+#if KENTOS_HAVE_TEXT
+            if (face != nullptr) {
+                const float cap = atlas->cap_height(render::Face::Sans);
+                const double em = cap > 0.0f ? tall / static_cast<double>(cap) : tall;
+                for (const render::TextLine& line : laid)
+                    if (!line.text.empty()) setLine(painter, *atlas, *face, line, em);
+                painter.restore();
+                continue;
+            }
+#endif
+            const double em = qt_cap > 0.0 ? tall * kCapProbePx / qt_cap : tall;
             QFont font(QStringLiteral("IBM Plex Sans"));
             font.setPixelSize(std::max(3, static_cast<int>(std::lround(em))));
             // NO BORROWED LETTERS (TODOS C-12): a character the face lacks is
@@ -1072,18 +1102,8 @@ private:
             // have, which would make the sheet differ from the screen and
             // from the same sheet printed on another computer.
             font.setStyleStrategy(QFont::NoFontMerging);
+            font.setKerning(false); // technical spacing, as the canvas sets it
             painter.setFont(font);
-            painter.setPen(from_rgba(item.rgba));
-
-            const core::TextLines lines{item.spacing, item.wrap};
-            render::lay_out_text(item.text, item.height_px,
-                                 static_cast<core::TextAnchor>(item.anchor), lines,
-                                 static_cast<float>(std::hypot(dx, dy)), measure, laid);
-            if (laid.empty()) continue;
-
-            painter.save();
-            painter.translate(start);
-            painter.rotate(degrees);
             for (const render::TextLine& line : laid)
                 if (!line.text.empty())
                     painter.drawText(
@@ -1094,27 +1114,57 @@ private:
         }
     }
 
-    /// How wide a run is at a capital height of one pixel, by the shaper the GPU
-    /// canvas measures with — one per thread, opened on first use over the
-    /// bundled faces — or, where the text engine is not built or the faces are
-    /// missing, by Qt's metrics of the same face at `probe`'s size.
-    static render::MeasureRun shared_measure(const QFontMetricsF& probe, double qt_cap)
-    {
 #if KENTOS_HAVE_TEXT
-        if (render::TextAtlas* atlas = text_engine(); atlas != nullptr) {
-            const float cap = atlas->cap_height(render::Face::Sans);
-            return [atlas, cap](std::string_view run) {
-                const float advance = atlas->measure(render::Face::Sans, run).advance;
-                return cap > 0.0f ? advance / cap : advance;
-            };
-        }
-#endif
-        return [&probe, qt_cap](std::string_view run) {
-            const double advance = probe.horizontalAdvance(
-                QString::fromUtf8(run.data(), static_cast<qsizetype>(run.size())));
-            return qt_cap > 0.0 ? static_cast<float>(advance / qt_cap) : 0.0f;
-        };
+    /// The pixel size the drawing face is opened at. Any size draws the same
+    /// outlines — the painter scales each line to its own EM — and one size
+    /// means one font engine for every caption on the sheet.
+    static constexpr double kFacePx = 256.0;
+
+    /// The drawing face, opened from the font file the atlas shapes with — not
+    /// looked up by family name, which on a machine with another IBM Plex
+    /// installed could find a font whose glyphs are numbered differently. One
+    /// per thread, like the atlas: a font engine is not shared between threads.
+    /// Null when the file cannot be read.
+    static const QRawFont* drawing_face()
+    {
+        thread_local QRawFont face(QString::fromStdString(data_path("fonts")) +
+                                       QStringLiteral("/IBMPlexSans-Regular.ttf"),
+                                   kFacePx, QFont::PreferNoHinting);
+        return face.isValid() ? &face : nullptr;
     }
+
+    /// Sets `line` at an EM of `em` pixels: the glyphs the atlas's technical
+    /// shaping chooses, by their index in the font file, where it puts them.
+    static void setLine(QPainter& painter, render::TextAtlas& atlas, const QRawFont& face,
+                        const render::TextLine& line, double em)
+    {
+        thread_local std::vector<render::FontGlyph> glyphs;
+        glyphs.clear();
+        atlas.glyphs(render::Face::Sans, line.text, render::Spacing::Technical, glyphs);
+        if (glyphs.empty()) return;
+
+        QList<quint32> ids;
+        QList<QPointF> at;
+        ids.reserve(static_cast<qsizetype>(glyphs.size()));
+        at.reserve(static_cast<qsizetype>(glyphs.size()));
+        for (const render::FontGlyph& g : glyphs) {
+            ids.push_back(g.glyph);
+            // EM, y up -> the face's pixels, y down.
+            at.push_back(
+                QPointF(static_cast<double>(g.x) * kFacePx, -static_cast<double>(g.y) * kFacePx));
+        }
+        QGlyphRun run;
+        run.setRawFont(face);
+        run.setGlyphIndexes(ids);
+        run.setPositions(at);
+
+        painter.save();
+        painter.translate(static_cast<double>(line.u), static_cast<double>(line.v));
+        painter.scale(em / kFacePx, em / kFacePx);
+        painter.drawGlyphRun(QPointF(0.0, 0.0), run);
+        painter.restore();
+    }
+#endif
 
     /// The grid, the selection, the snap glyph, the crosshair, the rubber band.
     ///

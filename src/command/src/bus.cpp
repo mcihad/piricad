@@ -786,6 +786,9 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // it, and that is said, because a deletion the user did not name is the one
     // thing here they should hear about.
     if (!read_only) {
+        // A TEXT'S BOX IS ITS WORDS, whatever edit touched it (TODOS C-18) —
+        // first, so a caption that follows it reads the baseline it will keep.
+        session.transaction().settle_texts();
         say_settled(session.transaction().settle_attachments());
         // A LINKED DIMENSION follows what it measures in the same breath and
         // the same transaction (core/dimension_link.hpp), for every client
@@ -1000,6 +1003,7 @@ core::Result<DispatchResult> Bus::end_batch()
     if (!batch_) return core::err(ErrorCode::InvalidArgument, "Açık toplu iş yok");
 
     // The last word on what the batch moved (see `finish`).
+    batch_->settle_texts();
     say_settled(batch_->settle_attachments());
     say_settled(batch_->settle_dimensions(drawing_unit(), node_tolerance()));
     say_settled(batch_->settle_hatches());

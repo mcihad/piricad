@@ -6,6 +6,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yazı genişliğinin tek ölçüsü (C-18)
+
+- Bir yazının **seçme kutusu**, bir ölçü yazısının uzatma çizgileri arasına **sığıp
+  sığmadığı**, durduğu **taban çizgisinin uzunluğu** ve satırları kırılan bir yazının
+  **nerede kırıldığı** artık harflerin yazı tipindeki gerçek genişliklerinden gelir —
+  ekranda, PDF'te ve yazıcıda çizilen genişlikle birebir. Eskiden harf başına yüksekliğin
+  0,6'sı sayılıyordu: 2,5 m yüksekliğinde `20,00 (tapu)` 18 m sanılıp 20 m'lik ölçünün
+  arasına sığdırılıyor, çizilen 20,1 m'lik yazı iki uzatma çizgisine de biniyordu. Artık
+  dışarı çıkar.
+- Çizim yazıları **teknik aralıkla** dizilir: her harf kendi genişliğinde, karakter
+  aralığı ayarı (*kerning*) ve bitişik harf (*ligatür*) yok. Böylece aynı yazı tipiyle
+  açan bir DXF okuyucu da aynı genişliği çizer.
+- `METİN bitis=` ve tutamakla çekilen taban çizgisi ucu artık yalnız yazının **yönünü**
+  verir; taban çizgisi yazının genişliği kadardır (120 m ötedeki bir nokta 31 m'lik bir yol
+  adının kutusunu 120 m yapmıyordu artık). Kırılmayan her yazının taban çizgisi, ona dokunan
+  her düzenlemenin sonunda yazının genişliğine oturur.
+- Satır kırılması zemin milimetresiyle bir kez hesaplanır; yakınlaştırınca kelime alt
+  satıra atlamaz, seçme kutusu çizilen satırları sayar.
+- DXF, DWG ve vektör içe aktarımı yazıların kutusunu aynı ölçüyle kurar.
+
 ### Eklendi — elips ve spline'da BUDA, UZAT, BÖL ve KIR (C-01)
 
 - **BUDA**, **BÖL** ve **KIR** artık elipste ve spline'da çalışır: budanan elips aynı

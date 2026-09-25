@@ -20,6 +20,7 @@
 
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/io/format.hpp"
 
 #include "dxf_multileader.hpp"
@@ -1293,12 +1294,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                             ? anchor_from_name(feature->GetFieldAsString(own_anchor))
                             : core::TextAnchor::BaselineLeft;
 
-                    std::size_t glyphs = 0;
-                    for (const char c : words)
-                        if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
-                    const core::Mm advance =
-                        std::max<core::Mm>(1, (height * 6 * static_cast<core::Mm>(glyphs)) / 10);
-                    const double turn = angle * kPi / 180.0;
+                    const core::Mm advance = std::max<core::Mm>(1, core::text_width(words, height));
+                    const double turn      = angle * kPi / 180.0;
                     const core::Point2 end{
                         where.x + core::mm_round(static_cast<double>(advance) * std::cos(turn)),
                         where.y + core::mm_round(static_cast<double>(advance) * std::sin(turn))};
@@ -1329,13 +1326,11 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                         diag.note(Severity::Info, "Yazı yüksekliği dosyada yok; 1 m varsayıldı.");
                     }
 
-                    // A rough advance of 0.6 em per character, which decides the
-                    // BOUNDING BOX and not where a glyph lands. Same approximation
-                    // `METİN` makes, and for the same reason. At least one
-                    // millimetre of it, because the baseline is also the
+                    // As long as the label is wide, by the measure both
+                    // backends draw it with — the rule `METİN` follows. At least
+                    // one millimetre of it, because the baseline is also the
                     // DIRECTION and a zero-length one has none.
-                    const core::Mm advance = std::max<core::Mm>(
-                        1, (height * 6 * static_cast<core::Mm>(std::strlen(label))) / 10);
+                    const core::Mm advance = std::max<core::Mm>(1, core::text_width(label, height));
 
                     // THE BASELINE IS THE ROTATION. `render/src/scene.cpp` reads a
                     // caption's facing from its first vertex to its last and

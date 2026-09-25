@@ -55,8 +55,11 @@
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/outline.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/settings.hpp"
+#include "kentos_cad/core/text_metrics.hpp"
+#include "kentos_cad/core/text_store.hpp"
 
 #include <QAction>
 #include <QClipboard>
@@ -100,6 +103,7 @@
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRawFont>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -6473,6 +6477,217 @@ int MainWindow::probeRealMouse()
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
             QCoreApplication::processEvents();
             shoot("egri-buda-sonrasi");
+        }
+
+        // ---- 30. ONE MEASURE FOR A TEXT'S WIDTH (TODOS C-18) ----
+        //
+        // "<> (tapu)" on a 20 m dimension is 20,10 m of words at a 2,5 m
+        // capital: it goes out past the extension line, and what the canvas
+        // DRAWS is as wide as the box the core measured — the caption's ink,
+        // found in the real frame, starts past the extension line and fills
+        // its box to within the letters' own side bearings. A road name turned
+        // toward a point 120 m away has a box as long as its words. The same
+        // sheet printed to PDF and written to DXF puts the caption in the same
+        // place.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {"ÖLÇÜ birinci=0,0 ikinci=20,0 konum=10,-3",
+                                     "ÖLÇÜDÜZENLE nesneler=1 metin=\"<> (tapu)\"",
+                                     "METİN 0,-14 \"ATATÜRK CADDESİ\" 2500 bitis=120,-4"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            canvas_->zoomToBox(core::Box2{-4'000, -18'000, 46'000, 6'000});
+            canvas_->repaint();
+            QCoreApplication::processEvents();
+
+            const core::Document& doc = controller_->document();
+            const auto entity         = [&doc](std::int64_t key) {
+                return doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+            };
+            const auto box_of = [&doc](core::EntityId e) {
+                std::array<core::Point2, 4> quad{};
+                core::Box2 box;
+                if (e != core::kNoEntity && core::text_quad(doc, e, quad))
+                    for (const core::Point2 p : quad)
+                        box.extend(p);
+                return box;
+            };
+            const core::EntityId dim    = entity(1);
+            const core::EntityId street = entity(2);
+            const std::string caption =
+                dim == core::kNoEntity ? std::string()
+                                       : std::string(doc.texts().text(doc.entities().slot[dim]));
+            const core::Mm wide     = core::text_width(caption, 2'500);
+            const core::Box2 figure = box_of(dim);
+            check(caption == "20,00 (tapu)" && wide == 20'097 && figure.min_x == 20'625 &&
+                      std::llabs((figure.max_x - figure.min_x) - wide) <= 1,
+                  QStringLiteral("20 m'lik ölçünün \"%1\" yazısı (%2 m) uzatma çizgisinin "
+                                 "dışında, bir boşluk ötede (%3 m'de başlıyor)")
+                      .arg(QString::fromStdString(caption))
+                      .arg(static_cast<double>(wide) / 1000.0, 0, 'f', 3)
+                      .arg(static_cast<double>(figure.min_x) / 1000.0, 0, 'f', 3));
+            const core::Box2 named = box_of(street);
+            const core::Mm words   = core::text_width("ATATÜRK CADDESİ", 2'500);
+            {
+                const core::RingSpan rs    = doc.geometry().rings_of(doc.entities().slot[street]);
+                const core::Point2 from_pt = doc.geometry().vertex(rs.first, 0);
+                const core::Point2 to_pt   = doc.geometry().vertex(rs.first, 1);
+                check(std::llabs(core::text_baseline_length(from_pt, to_pt) - words) <= 1 &&
+                          named.max_x < 40'000,
+                      QStringLiteral("120 m ötedeki yön noktası kutuyu uzatmadı: %1 m yazı, %2 "
+                                     "m taban çizgisi")
+                          .arg(static_cast<double>(words) / 1000.0, 0, 'f', 3)
+                          .arg(static_cast<double>(core::text_baseline_length(from_pt, to_pt)) /
+                                   1000.0,
+                               0, 'f', 3));
+            }
+
+            // THE INK, in the frame the GPU drew: the caption's rows between
+            // its baseline and its capital tops, right of the extension line.
+            // The pointer is parked in a corner first, so its crosshair does
+            // not cross the rows.
+            {
+                const auto parked = canvas_->view().to_screen(core::Point2{45'000, -17'000});
+                onCanvas(QEvent::MouseMove, QPointF(parked.x, parked.y), Qt::NoButton);
+                canvas_->repaint();
+                QCoreApplication::processEvents();
+            }
+            const QImage frame = canvas_->grabCanvas();
+            if (!frame.isNull() && canvas_->width() > 0) {
+                const double k = static_cast<double>(frame.width()) / canvas_->width();
+                const auto px  = [&](core::Point2 world) {
+                    const auto at = canvas_->view().to_screen(world);
+                    return QPointF(at.x * k, at.y * k);
+                };
+                const core::Mm base =
+                    figure.max_y - 2'500; // the caption's baseline (middle-centred)
+                const QPointF cap_left  = px(core::Point2{figure.min_x, base});
+                const QPointF cap_right = px(core::Point2{figure.max_x, base});
+                const QPointF cap_top   = px(core::Point2{figure.min_x, figure.max_y});
+                const QPointF line      = px(core::Point2{20'000, base});
+                const int y0            = std::max(0, qRound(cap_top.y()) + 2);
+                const int y1            = std::min(frame.height() - 1, qRound(cap_left.y()) - 2);
+                const int x0 = qRound(line.x()) + qRound(3 * k); // clear of the extension line
+                const int x1 = std::min(frame.width() - 1, qRound(cap_right.x()) + 40);
+                // THE GROUND is the rows' commonest colour: letters and the odd
+                // grid line are thin, the sheet between them is not.
+                std::map<QRgb, int> tally;
+                for (int x = x0; x <= x1; ++x)
+                    for (int y = y0; y <= y1; ++y)
+                        ++tally[frame.pixel(x, y)];
+                QRgb ground = 0;
+                int most    = 0;
+                for (const auto& [colour, n] : tally)
+                    if (n > most) {
+                        most   = n;
+                        ground = colour;
+                    }
+                const auto apart = [ground](QRgb c) {
+                    return std::abs(qRed(c) - qRed(ground)) + std::abs(qGreen(c) - qGreen(ground)) +
+                           std::abs(qBlue(c) - qBlue(ground));
+                };
+                // THE INK IS THE LETTERS' COLOUR, whatever the theme: a letter's
+                // stem is the rows' pixel farthest from the ground, and a pixel
+                // counts when it is more than halfway there — a grid line
+                // crossing the rows is not, and neither is anti-aliasing.
+                int deepest = 0;
+                for (int x = x0; x <= x1; ++x)
+                    for (int y = y0; y <= y1; ++y)
+                        deepest = std::max(deepest, apart(frame.pixel(x, y)));
+                int first_ink = -1;
+                int last_ink  = -1;
+                for (int x = x0; x <= x1; ++x)
+                    for (int y = y0; y <= y1; ++y)
+                        if (2 * apart(frame.pixel(x, y)) > deepest) {
+                            if (first_ink < 0) first_ink = x;
+                            last_ink = x;
+                            break;
+                        }
+                // WHERE THE INK MUST BE: the box shrunk by the first letter's
+                // left side bearing and the last one's right, read off the face
+                // itself (at 1000 px an EM, a pixel is a font unit).
+                const core::TextFace face = core::text_face();
+                const double em =
+                    (cap_left.y() - cap_top.y()) * face.units_per_em / face.cap_height;
+                const QRawFont raw(QString::fromStdString(data_path("fonts")) +
+                                       QStringLiteral("/IBMPlexSans-Regular.ttf"),
+                                   face.units_per_em, QFont::PreferNoHinting);
+                const QList<quint32> ends = raw.glyphIndexesForString(QStringLiteral("2)"));
+                double lead               = 0.0; // the `2`'s left side bearing, in EM
+                double trail              = 0.0; // the `)`'s right one
+                if (raw.isValid() && ends.size() == 2) {
+                    const QList<QPointF> step = raw.advancesForGlyphIndexes(ends);
+                    lead  = raw.boundingRect(ends[0]).left() / face.units_per_em;
+                    trail = (step[1].x() - raw.boundingRect(ends[1]).right()) / face.units_per_em;
+                }
+                const double want_first = cap_left.x() + (lead * em);
+                const double want_last  = cap_right.x() - (trail * em);
+                check(raw.isValid() && first_ink > qRound(line.x()) &&
+                          std::abs(first_ink - want_first) <= 3.0 &&
+                          std::abs(last_ink - want_last) <= 4.0,
+                      QStringLiteral("tuvalde yazının mürekkebi kutusunun bittiği yerde bitiyor: "
+                                     "mürekkep %1–%2 px, beklenen %3–%4 px (kutu %5–%6 px, EM "
+                                     "%7 px); uzatma çizgisi %8 px'te")
+                          .arg(first_ink)
+                          .arg(last_ink)
+                          .arg(want_first, 0, 'f', 1)
+                          .arg(want_last, 0, 'f', 1)
+                          .arg(cap_left.x(), 0, 'f', 1)
+                          .arg(cap_right.x(), 0, 'f', 1)
+                          .arg(em, 0, 'f', 1)
+                          .arg(line.x(), 0, 'f', 1));
+            } else {
+                (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); yazının "
+                                           "mürekkebi gerçek pencerede ölçülür\n");
+            }
+            shoot("yazi-olcusu");
+
+            const QTemporaryDir scratch;
+            const QString folder = shooting ? into : scratch.path();
+            runScriptLine(QStringLiteral("YAZDIR merkez=20,-6 olcek=500 dosya=\"%1\"")
+                              .arg(folder + QStringLiteral("/yazi-olcusu.pdf")));
+            endCommand();
+            check(QFileInfo::exists(folder + QStringLiteral("/yazi-olcusu.pdf")),
+                  QStringLiteral("aynı pafta PDF'e yazıldı"));
+
+            // THE DXF: the caption's TEXT in the dimension's picture block, centred
+            // on its point — a reader with the same face draws it from x - w/2.
+            const QString dxf = folder + QStringLiteral("/yazi-olcusu.dxf");
+            runScriptLine(QStringLiteral("DIŞAAKTAR dosya=\"%1\"").arg(dxf));
+            endCommand();
+            QFile file(dxf);
+            double centre_x = 0.0;
+            bool found      = false;
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                const QStringList lines =
+                    QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+                for (qsizetype i = 0; i + 1 < lines.size() && !found; ++i) {
+                    if (lines[i].trimmed() != QLatin1String("TEXT")) continue;
+                    double x11 = 0.0;
+                    bool ours  = false;
+                    for (qsizetype j = i + 1; j + 1 < lines.size(); j += 2) {
+                        const QString code = lines[j].trimmed();
+                        if (code == QLatin1String("0")) break;
+                        if (code == QLatin1String("11")) x11 = lines[j + 1].trimmed().toDouble();
+                        if (code == QLatin1String("1") &&
+                            lines[j + 1].trimmed() == QLatin1String("20,00 (tapu)"))
+                            ours = true;
+                    }
+                    if (ours) {
+                        centre_x = x11;
+                        found    = true;
+                    }
+                }
+            }
+            const double from = centre_x - (static_cast<double>(wide) / 2000.0);
+            check(found && std::abs(from - 20.625) < 0.002,
+                  QStringLiteral("DXF'te yazı aynı yerde: %1 m merkezli, %2 m'de başlıyor")
+                      .arg(centre_x, 0, 'f', 4)
+                      .arg(from, 0, 'f', 4));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
         }
     }
 

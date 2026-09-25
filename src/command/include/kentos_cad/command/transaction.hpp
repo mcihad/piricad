@@ -341,6 +341,19 @@ public:
         std::size_t hatches_left{0};     ///< linked hatches that could not follow: locked
     };
 
+    /// Keeps every TEXT this transaction touched standing on a baseline exactly
+    /// as long as its words are wide (TODOS C-18): a text that does not wrap
+    /// gets the length `core::text_width` gives its words at its height, in the
+    /// direction its baseline already points — whatever put it there: a new
+    /// text, a rewrite, a grip dragged along it, a height scaled, a file read.
+    /// Its box is then the words, never longer or shorter, for the cull and the
+    /// pick alike. Within a millimetre is already so — a turned baseline's end
+    /// is rounded to one — and nothing is written for it. A caption that
+    /// follows a source is placed by `settle_attachments`, by the same measure,
+    /// and left to it. Runs first at commit, on its own cursor; silent, because
+    /// it moves nothing a user can see.
+    void settle_texts();
+
     /// Brings every dependent up to date with what this transaction did to its
     /// source — THE ONE PLACE it happens, at commit, never per frame (model.md
     /// R14's pattern applied to geometry). Reads the inverse record since the
@@ -407,6 +420,7 @@ private:
     std::size_t settled_upto_{0};
     std::size_t dims_settled_upto_{0};    ///< how far `settle_dimensions` has read
     std::size_t hatches_settled_upto_{0}; ///< how far `settle_hatches` has read
+    std::size_t texts_settled_upto_{0};   ///< how far `settle_texts` has read
 
     /// Whether `hatch`'s rings are exactly what `sources` give it now.
     bool fills_boundary(EntityId hatch, std::span<const core::HatchSource> sources) const;

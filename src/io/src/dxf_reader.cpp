@@ -1717,11 +1717,8 @@ private:
         Mm height           = to_mm_len(fig.text_height);
         if (height <= 0) height = core::mm_from_metres(2.5);
         const std::string text = core::dimension_text(def, unit_);
-        std::size_t glyphs     = 0;
-        for (const char c : text)
-            if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
-        const Mm advance = std::max<Mm>(1, (height * 6 * static_cast<Mm>(glyphs)) / 10);
-        std::int64_t dir = 0;
+        const Mm advance       = std::max<Mm>(1, core::text_width(text, height));
+        std::int64_t dir       = 0;
         if (defs.size() >= 2 &&
             (type == core::DimensionType::Aligned || type == core::DimensionType::Radial ||
              type == core::DimensionType::Diametric))
@@ -1935,8 +1932,8 @@ private:
         // The baseline: from the anchor along the text direction, as long as the
         // caption is wide — the same rule `METİN` uses — or, for a text that
         // wraps, as long as the width its lines break to.
-        const Mm advance = std::max<Mm>(
-            1, lines.wrap && width > 0 ? width : core::text_width_estimate(words, height));
+        const Mm advance =
+            std::max<Mm>(1, lines.wrap && width > 0 ? width : core::text_width(words, height));
         const Point2 end = dxf::point_on_circle(where, advance, angle);
         const Point2 baseline[2]{where, end};
         auto made = place_polyline(layer_for(e, in), std::span<const Point2>(baseline, 2));
@@ -2268,7 +2265,7 @@ public:
                 }
             }
             const std::int64_t turn = dxf::udeg_from_degrees(ml.text_angle);
-            const Mm advance        = std::max<Mm>(1, core::text_width_estimate(ml.text, height));
+            const Mm advance        = std::max<Mm>(1, core::text_width(ml.text, height));
             const Point2 baseline[2]{at, dxf::point_on_circle(at, advance, turn)};
             auto caption = place_polyline(layer, baseline);
             if (!caption) return caption.error();

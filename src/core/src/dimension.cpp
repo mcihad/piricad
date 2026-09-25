@@ -97,14 +97,12 @@ bool arrows_fit(const DimensionDef& def, double inner)
     return inner >= 2.5 * static_cast<double>(def.arrow_size);
 }
 
-/// How wide a caption of `text` at `height` is, the way METİN and the caption
-/// baseline measure one.
+/// How wide a caption of `text` at `height` is: the width the canvas and the
+/// paper draw it at (`text_width`, TODOS C-18), and never less than a
+/// millimetre, because the caption's baseline is also its direction.
 double caption_width(std::string_view text, Mm height)
 {
-    std::size_t glyphs = 0;
-    for (const char c : text)
-        if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
-    return static_cast<double>(std::max<Mm>(1, (height * 6 * static_cast<Mm>(glyphs)) / 10));
+    return static_cast<double>(std::max<Mm>(1, text_width(text, height)));
 }
 
 std::vector<Point2> ring_points(const RingGeometry& geom, std::uint32_t slot, std::uint32_t index)
@@ -1136,12 +1134,7 @@ std::array<Point2, 2> dimension_baseline(Point2 centre, double dx, double dy, Mm
 {
     Dir u{dx, dy};
     if (u.x < 0.0 || (u.x == 0.0 && u.y < 0.0)) u = Dir{-u.x, -u.y};
-    std::size_t glyphs = 0;
-    for (const char c : text)
-        if ((static_cast<unsigned char>(c) & 0xC0u) != 0x80u) ++glyphs;
-    const auto advance =
-        static_cast<double>(std::max<Mm>(1, (height * 6 * static_cast<Mm>(glyphs)) / 10));
-    return {centre, along(centre, u, advance)};
+    return {centre, along(centre, u, caption_width(text, height))};
 }
 
 namespace {

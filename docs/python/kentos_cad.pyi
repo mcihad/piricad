@@ -453,7 +453,7 @@ def text(
         points — Yazının başlangıç noktası [mm, Sağa (Y) önce]
         text — Yazılacak metin
         height — Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı
-        end — Taban çizgisinin bitişi; yoksa yatay [mm, Sağa (Y) önce]
+        end — Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay [mm, Sağa (Y) önce]
         alignment — Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde)
         line_spacing — Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü
         width — Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m]

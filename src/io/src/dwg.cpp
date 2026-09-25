@@ -2,6 +2,7 @@
 #include "kentos_cad/io/dwg.hpp"
 
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include "dxf_units.hpp"
@@ -73,17 +74,6 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
 #else
 
 namespace {
-
-/// How many characters a UTF-8 string holds — code points, not bytes. A Turkish
-/// caption is two bytes per `Ş`, `ğ` or `İ`, and a byte count made every one of
-/// them a letter and a half wide when the baseline's advance was estimated.
-std::size_t code_points(const char* text)
-{
-    std::size_t n = 0;
-    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(text); *p != 0; ++p)
-        if ((*p & 0xC0u) != 0x80u) ++n;
-    return n;
-}
 
 /// The layer an entity sits on, defaulting to `0` exactly as DWG does.
 std::string layer_of(const Dwg_Object* obj)
@@ -374,10 +364,10 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                                                     : core::mm_from_metres(1.0);
             const core::Point2 at = mm(e->ins_pt.x, e->ins_pt.y);
 
-            // The same 0.6 em advance the METİN command uses: it decides the
-            // BOUNDING BOX and not where a glyph lands.
+            // As long as the text is wide, by the measure both backends draw
+            // it with (`core::text_width`) — the rule the METİN command follows.
             core::Point2 end = at;
-            end.x += (height * 6 * static_cast<core::Mm>(code_points(e->text_value))) / 10;
+            end.x += std::max<core::Mm>(1, core::text_width(e->text_value, height));
 
             const std::array<core::Point2, 2> baseline{at, end};
             auto made = tx.add_polyline(target, baseline);

@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 115 (102 tanesi onay ister)
-- Katalog parmak izi: `10385266272081990172`
+- Katalog parmak izi: `3441478472014667903`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1662,7 +1662,7 @@ Onay ister.
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Yazının başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yazi` | string | evet | Yazılacak metin (metin) |
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı) |
-| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `hizalama` | string | hayır | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) (metin) |
 | `satir_araligi` | number | hayır | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü (sayı) |
 | `genislik` | number | hayır | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] (sayı) |

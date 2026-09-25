@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -37,11 +38,19 @@ float ruler(std::string_view run)
 }
 
 std::vector<render::TextLine> lay(std::string_view text, TextAnchor anchor,
-                                  core::TextLines lines = {}, float wrap_px = 0.0f)
+                                  core::TextLines lines = {})
 {
     std::vector<render::TextLine> out;
-    render::lay_out_text(text, 10.0f, anchor, lines, wrap_px, &ruler, out);
+    render::lay_out_text(text, 10.0f, anchor, lines.spacing, &ruler, out);
     return out;
+}
+
+/// The lines `core::text_lines` sets `text` in at a height of one metre.
+std::vector<std::string> broken(std::string_view text, core::Mm width, bool wrap = true)
+{
+    std::vector<std::string_view> views;
+    core::text_lines(text, 1000, core::TextLines{1000, wrap}, width, views);
+    return {views.begin(), views.end()};
 }
 
 struct Rig
@@ -139,24 +148,32 @@ TEST_CASE("YAZI DÜZENİ: dokuz hizalama — sütun satır başına, sıra bloğ
 
 TEST_CASE("YAZI DÜZENİ: genişliğe göre kelime sınırından kırılır; tek uzun kelime kendi satırında")
 {
-    // Six-tenths letters at 10 px: 6 px a letter. "bu plan notu" is 12 letters,
-    // 72 px; a 50 px width takes "bu plan" (7 letters, 42 px) and puts "notu"
-    // under it.
-    const auto l = lay("bu plan notu", TextAnchor::TopLeft, core::TextLines{1000, true}, 50.0f);
+    // THE ONE PLACE A LINE BREAKS is the core (`core::text_lines`), by the face's
+    // own advances (TODOS C-18). At a height of one metre "bu plan" is
+    // 580+568+236+580+272+534+568 = 3338 units of a 698-unit capital, 4782 mm;
+    // "bu plan notu" is 5621 units, 8053 mm. A 5 m width takes the first two
+    // words and puts "notu" under them.
+    const auto l = broken("bu plan notu", 5000);
     REQUIRE_EQ(l.size(), std::size_t{2});
-    CHECK_EQ(std::string(l[0].text), std::string("bu plan"));
-    CHECK_EQ(std::string(l[1].text), std::string("notu"));
+    CHECK_EQ(l[0], std::string("bu plan"));
+    CHECK_EQ(l[1], std::string("notu"));
+
+    // EXACT, in integers: 3338 units at 1000 mm need 3338000 / 698 = 4782,2 mm,
+    // so 4782 is a hair too narrow for "bu plan" and 4783 holds it.
+    CHECK_EQ(broken("bu plan notu", 4782).size(), std::size_t{3});
+    CHECK_EQ(broken("bu plan notu", 4783).size(), std::size_t{2});
 
     // A word wider than the width is not broken inside itself.
-    const auto long_word =
-        lay("imar yapılaşmakoşulları", TextAnchor::TopLeft, core::TextLines{1000, true}, 50.0f);
+    const auto long_word = broken("imar yapılaşmakoşulları", 5000);
     REQUIRE_EQ(long_word.size(), std::size_t{2});
-    CHECK_EQ(std::string(long_word[1].text), std::string("yapılaşmakoşulları"));
+    CHECK_EQ(long_word[1], std::string("yapılaşmakoşulları"));
 
-    // Without wrap the width breaks nothing.
-    CHECK_EQ(lay("bu plan notu", TextAnchor::TopLeft, {}, 50.0f).size(), std::size_t{1});
-    // An explicit break still breaks inside a wrapping text.
-    CHECK_EQ(lay("bir\niki", TextAnchor::TopLeft, core::TextLines{1000, true}, 500.0f).size(),
+    // Without wrap the width breaks nothing; an explicit break still breaks, and
+    // a blank line between two paragraphs is kept.
+    CHECK_EQ(broken("bu plan notu", 5000, false).size(), std::size_t{1});
+    CHECK_EQ(broken("bir\niki", 50'000).size(), std::size_t{2});
+    CHECK_EQ(broken("bir\n\niki", 50'000).size(), std::size_t{3});
+    CHECK_EQ(core::text_line_count("bu plan notu", 1000, core::TextLines{1000, true}, 5000),
              std::size_t{2});
 }
 
@@ -185,9 +202,11 @@ TEST_CASE("YAZI MODELİ: varsayılan satır düzeni izi değiştirmez; aralık v
 
     // Letters, not bytes: "ŞİŞLİ" is five letters and ten bytes.
     CHECK_EQ(core::text_characters("ŞİŞLİ"), std::size_t{5});
-    // Five capitals at 0,9 of the height; the longer of two lines is the width.
-    CHECK_EQ(core::text_width_estimate("ŞİŞLİ\nADA", 1000), core::Mm{4500});
-    CHECK_EQ(core::text_width_estimate("şişli", 1000), core::Mm{3600});
+    // Each letter at the face's own advance over its 698-unit capital: Ş 581,
+    // İ 400, L 501 — 2463 units, 3528,7 mm at a metre. The longer of two lines
+    // is the width; ADA is 1953 units.
+    CHECK_EQ(core::text_width("ŞİŞLİ\nADA", 1000), core::Mm{3529});
+    CHECK_EQ(core::text_width("şişli", 1000), core::Mm{2501}); // ş 487, i 250, l 272
 }
 
 TEST_CASE("YAZI MODELİ: seçim kutusu hizalamayı ve satırları izler")
@@ -215,6 +234,43 @@ TEST_CASE("YAZI MODELİ: seçim kutusu hizalamayı ve satırları izler")
     CHECK(-note.min_y == doctest::Approx(1000 + 5000.0 / 3.0 + 500).epsilon(0.002));
 }
 
+TEST_CASE("YAZI KUTUSU: taban çizgisi her düzenlemeden sonra kelimeler kadar; tutamakla çekilen "
+          "uç yalnız yönü verir")
+{
+    // TODOS C-18: a text's box is its words. The baseline of a text that does
+    // not wrap is as long as `core::text_width` says, whatever edit touched it
+    // — the bus settles it at commit (`Transaction::settle_texts`), for every
+    // client alike.
+    Rig r;
+    r.run("METİN noktalar=0,0 yazi=ADA yukseklik=1000");
+    const core::EntityId e = r.text();
+    CHECK_EQ(r.baseline(e)[1], (Point2{2'798, 0})); // 1953 units over a 698-unit capital
+
+    // The end grip dragged far up and to the right: the words turn toward it,
+    // and the box stays the words — 2798 mm along the diagonal, not 42 m.
+    r.run("KÖŞETAŞI nesne=1 kose=2 nokta=30,30");
+    const auto turned = r.baseline(e);
+    CHECK_EQ(turned[0], (Point2{0, 0}));
+    CHECK_EQ(turned[1], (Point2{1'978, 1'978})); // 2798 / √2, rounded
+    CHECK_LE(std::llabs(core::text_baseline_length(turned[0], turned[1]) - 2'798), 1);
+
+    // Scaled, the height and the words' width grow together.
+    r.run("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2");
+    CHECK_EQ(r.doc.texts().height(r.slot(e)), 2'000);
+    const auto grown = r.baseline(e);
+    CHECK_LE(
+        std::llabs(core::text_baseline_length(grown[0], grown[1]) - core::text_width("ADA", 2'000)),
+        1);
+
+    // A second commit that touches it writes nothing: within a millimetre is so.
+    const std::size_t depth = r.undo.undo_depth();
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=1,0");
+    CHECK_EQ(r.undo.undo_depth(), depth + 1);
+    const auto moved = r.baseline(e);
+    CHECK_EQ(moved[1].x - moved[0].x, grown[1].x - grown[0].x);
+    CHECK_EQ(moved[1].y - moved[0].y, grown[1].y - grown[0].y);
+}
+
 // ---------------------------------------------------------------- commands ----
 
 TEST_CASE("METİN: dokuz hizalama sözcüğü, satır aralığı ve genişlik; bilinmeyen sözcük reddedilir")
@@ -239,9 +295,11 @@ TEST_CASE("METİN: dokuz hizalama sözcüğü, satır aralığı ve genişlik; b
     CHECK_EQ(base[1].x - base[0].x, 12'000);
     CHECK(r.refused("METİN noktalar=0,0 yazi=A satir_araligi=5"));
 
-    // The width of a text that does not wrap is its letters, not its bytes.
+    // The width of a text that does not wrap is its letters at the face's own
+    // advances (TODOS C-18): Ş 581, İ 400, Ş 581, L 501, İ 400 — 2463 units of
+    // a 698-unit capital, 3528,7 mm at a metre.
     r.run("METİN noktalar=0,0 yazi=ŞİŞLİ yukseklik=1000");
-    CHECK_EQ(r.baseline(r.text())[1].x, 4'500);
+    CHECK_EQ(r.baseline(r.text())[1].x, 3'529);
 }
 
 TEST_CASE("YAZIDÜZENLE: satır aralığı ve genişlik değişir; taban çizgisi yeni yazıya uzar; geri "
@@ -250,10 +308,10 @@ TEST_CASE("YAZIDÜZENLE: satır aralığı ve genişlik değişir; taban çizgis
     Rig r;
     r.run("METİN noktalar=0,0 yazi=ADA yukseklik=1000");
     const core::EntityId e = r.text();
-    CHECK_EQ(r.baseline(e)[1].x, 2'700); // three capitals
+    CHECK_EQ(r.baseline(e)[1].x, 2'798); // A 641, D 671, A 641: 1953 units over 698
 
     r.run("YAZIDÜZENLE nesneler=1 yazi=\"ADA 128 PARSEL 4\"");
-    CHECK_EQ(r.baseline(e)[1].x, 12'560); // nine capitals, four digits, three spaces
+    CHECK_EQ(r.baseline(e)[1].x, 12'340); // 8613 units: nine capitals, four digits, three spaces
     const std::size_t depth = r.undo.undo_depth();
     r.run("YAZIDÜZENLE nesneler=1 satir_araligi=2 genislik=5");
     CHECK_EQ(r.undo.undo_depth(), depth + 1);

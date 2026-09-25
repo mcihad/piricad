@@ -293,7 +293,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Yuvarla | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Pah | — uygulanamaz | tek nesnede köşe yok; iki nesne arası köşe C-06'da |
 | Uç uca | — uygulanamaz | uç uca eklenecek ucu yok |
-| Ölç | ✓ destekli | çevre 11.250 m (analitik değer tanımlı değil) |
+| Ölç | ✓ destekli | çevre 13.463 m (analitik değer tanımlı değil) |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
 ### <a id="blok"></a>Blok referansı

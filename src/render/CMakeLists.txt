@@ -35,6 +35,16 @@ if(KENTOS_WITH_TEXT)
         msdfgen::msdfgen-core
         kentos_stb)
     target_compile_definitions(kentos_render PUBLIC KENTOS_HAVE_TEXT=1)
+
+    # The drawing face's advances, written into the core as constant data
+    # (TODOS C-18, core/text_metrics.hpp): every scalar shaped by the atlas in
+    # technical spacing. A generator sits at the top of the graph — it links the
+    # atlas and nothing links it (Article 3.2a) — and `make yazi-olcusu` runs it.
+    add_executable(kentos_yazi_olcusu tools/yazi_olcusu.cpp)
+    target_link_libraries(kentos_yazi_olcusu PRIVATE kentos_render kentos_flags)
+    set_target_properties(kentos_yazi_olcusu PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
 endif()
 
 if(KENTOS_WITH_RHI)

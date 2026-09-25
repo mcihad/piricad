@@ -13,16 +13,20 @@
 // drawn: the pitch between baselines is `core::kTextLinePitch` times the line
 // spacing; each line is aligned on its own; the row of the anchor puts it on
 // the first line's capital tops, halfway down the block, or on the last line's
-// baseline (`core::TextAnchor`). A break is a newline, and — for a text that
-// wraps — a space where the next word would pass the baseline's length.
+// baseline (`core::TextAnchor`). A break is a newline. A text that WRAPS
+// arrives already broken: the scene hands over the lines `core::text_lines`
+// set it in, which are the lines the text's box counts (TODOS C-18) — one
+// place decides where a line breaks, and it is not here.
 //
 // Qt-free and font-free: the caller hands in how wide a run is, which is what
-// lets the suite check the rules with a ruler of its own.
+// lets the suite check the rules with a ruler of its own. Both backends hand
+// in `drawing_measure`, the core's measure of the drawing face.
 #pragma once
 
 #include "kentos_cad/core/text_store.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string_view>
 #include <vector>
@@ -43,13 +47,18 @@ struct TextLine
 /// How wide `run` is when its capital letters are one pixel tall.
 using MeasureRun = std::function<float(std::string_view run)>;
 
-/// Lays `text` out at a capital height of `height_px`: breaks it, stacks the
-/// lines `lines.spacing` apart and aligns them to `anchor`. A text that wraps
-/// breaks at the last space that keeps a line within `wrap_px`; a word longer
-/// than that stands on a line of its own. `out` is cleared first. An empty text
-/// lays out as nothing.
+/// How wide `run` of a drawing's text is when its capital letters are one pixel
+/// tall: its advance in the drawing face's units over the face's cap height,
+/// by the core's own measure (`core::text_run_advance`) — the same width the
+/// text's box has, and the width the technical spacing of either backend
+/// draws it at.
+float drawing_measure(std::string_view run) noexcept;
+
+/// Lays `text` out at a capital height of `height_px`: breaks it at its
+/// newlines, stacks the lines `spacing` apart (thousandths of
+/// `core::kTextLinePitch`, as `core::TextLines::spacing`) and aligns them to
+/// `anchor`. `out` is cleared first. An empty text lays out as nothing.
 void lay_out_text(std::string_view text, float height_px, core::TextAnchor anchor,
-                  core::TextLines lines, float wrap_px, const MeasureRun& measure,
-                  std::vector<TextLine>& out);
+                  std::uint16_t spacing, const MeasureRun& measure, std::vector<TextLine>& out);
 
 } // namespace kentos::render

@@ -104,14 +104,17 @@ METİN noktalar=<nokta> yazi=<yazı> yukseklik=<mm> hizalama=<hiza> bitis=<nokta
 | `noktalar` | Taban çizgisinin başlangıç noktası |
 | `yazi` | Yazılacak metin. Zorunlu |
 | `yukseklik` | Zeminde milimetre. Verilmezse proje ayarı `metin_yüksekliği` kullanılır |
-| `bitis` | Taban çizgisinin bitişi. Verilmezse yatay yazılır |
+| `bitis` | Yazının döneceği yön için bir nokta. Verilmezse yatay yazılır |
 | `hizalama` | Noktanın yazının neresinde durduğu: yukarıdaki dokuz sözcükten biri; verilmezse `sol` |
 | `satir_araligi` | Satırlar arası, tek aralığın katı: 0,25–4. Tek aralık yüksekliğin 5/3'üdür |
 | `genislik` | Satırların kırılacağı genişlik, metre. Verilmezse satır yalnız `\n`'de kırılır |
 
 `bitis` verildiğinde yazı o yöne döner. Bir yol adını yolun kendi doğrultusunda
-yazmak, ya da bir cephe ölçüsünü cepheye paralel koymak böyle yapılır. `genislik` ile
-birlikte verilirse yön `bitis`'ten, uzunluk genişlikten gelir.
+yazmak, ya da bir cephe ölçüsünü cepheye paralel koymak böyle yapılır. Taban
+çizgisinin uzunluğu `bitis`'e kadar değil, **yazının kendi genişliği** kadardır —
+yazının kutusu harflerin kapladığı yerdir, uzağa verilmiş bir nokta kutuyu
+uzatmaz ([Yazı ▸ Genişlik](../nesneler/yazi.md#genişlik)). `genislik` ile birlikte
+verilirse yön `bitis`'ten, uzunluk genişlikten gelir.
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -137,7 +140,7 @@ Parselin merkezine hizalanmış numara:
 METIN 485330,4310225 "1234/7" 2000 hizalama=merkez
 ```
 
-Yol doğrultusunda dönmüş bir yol adı — taban çizgisi iki nokta arasında:
+Yol doğrultusunda dönmüş bir yol adı — yazı ikinci noktaya doğru döner:
 
 ```
 METIN 485300,4310255 "ATATÜRK CADDESİ" 3000 bitis=485420,4310265

@@ -3,9 +3,11 @@
 
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_metrics.hpp"
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace kentos::core {
 namespace {
@@ -87,74 +89,105 @@ std::size_t text_characters(std::string_view utf8) noexcept
 
 namespace {
 
-/// A line's width in thousandths of its height, by what KIND of letter each is:
-/// the bundled face's own averages, measured and rounded up a little — a
-/// capital 0,89, a lower-case letter 0,70, a digit 0,86, a space 0,34. A count
-/// of letters at one width made every box of capitals too short to click at
-/// its end, and every box of lower case too long.
-std::int64_t line_width_permille(std::string_view line) noexcept
+/// `units` of the drawing face at a capital height of `height`, to the
+/// millimetre, half away from zero: font units scale by the height over the
+/// face's cap height, in integers, so every platform rounds alike (§7.3).
+Mm at_height(std::int64_t units, Mm height) noexcept
 {
-    std::int64_t w = 0;
-    for (std::size_t i = 0; i < line.size(); ++i) {
-        const auto c = static_cast<unsigned char>(line[i]);
-        if ((c & 0xC0U) == 0x80U) continue; // a continuation byte: counted with its lead
-        if (c < 0x80U) {
-            if (c >= 'A' && c <= 'Z')
-                w += 900;
-            else if (c >= '0' && c <= '9')
-                w += 860;
-            else if (c == ' ')
-                w += 340;
-            else if (c >= 'a' && c <= 'z')
-                w += 720;
-            else
-                w += 500; // punctuation
-            continue;
+    const std::int64_t cap = text_face().cap_height;
+    const std::int64_t num = units * height;
+    return num >= 0 ? (num + cap / 2) / cap : -((-num + cap / 2) / cap);
+}
+
+/// Every line of `utf8`, as `text_lines` sets them, handed to `emit` in order.
+template<class Emit>
+void each_line(std::string_view utf8, Mm height, TextLines lines, Mm width, Emit&& emit)
+{
+    const bool wraps       = lines.wrap && width > 0;
+    const std::int64_t cap = text_face().cap_height;
+    // A run fits when its width at `height` is within `width`: compared in
+    // integers, font units times height against width times cap height, so
+    // the decision is exact and the same wherever it is taken.
+    const auto too_wide = [&](std::string_view run) {
+        return text_run_advance(run) * height > static_cast<std::int64_t>(width) * cap;
+    };
+
+    std::size_t at = 0;
+    while (true) {
+        const std::size_t nl        = utf8.find('\n', at);
+        const std::size_t to        = nl == std::string_view::npos ? utf8.size() : nl;
+        const std::string_view para = utf8.substr(at, to - at);
+        if (!wraps || para.empty()) {
+            emit(para);
+        } else {
+            // Greedy, word by word: the line so far with the next word on it,
+            // spaces between included — one view, one measurement, no copy.
+            std::size_t start = 0; // where the line being filled begins
+            std::size_t end   = 0; // where it ends so far: after its last whole word
+            std::size_t word  = 0;
+            while (word <= para.size()) {
+                std::size_t word_end = para.find(' ', word);
+                if (word_end == std::string_view::npos) word_end = para.size();
+                const bool first_word = end == start;
+                if (!first_word && too_wide(para.substr(start, word_end - start))) {
+                    emit(para.substr(start, end - start));
+                    start = word; // the space that broke the line belongs to neither
+                }
+                end = word_end;
+                if (word_end == para.size()) break;
+                word = word_end + 1;
+            }
+            emit(para.substr(start, end - start));
         }
-        // Two bytes: the Turkish capitals Ç Ö Ü (C3 87/96/9C) and Ğ İ Ş (C4 9E/B0,
-        // C5 9E) are capitals; every other letter reads as a lower-case one.
-        const auto next    = i + 1 < line.size() ? static_cast<unsigned char>(line[i + 1]) : 0U;
-        const bool capital = (c == 0xC3U && (next == 0x87U || next == 0x96U || next == 0x9CU)) ||
-                             (c == 0xC4U && (next == 0x9EU || next == 0xB0U)) ||
-                             (c == 0xC5U && next == 0x9EU);
-        w += capital ? 900 : 720;
+        if (nl == std::string_view::npos) break;
+        at = nl + 1;
     }
-    return w;
 }
 
 } // namespace
 
-Mm text_width_estimate(std::string_view utf8, Mm height) noexcept
+Mm text_width(std::string_view utf8, Mm height) noexcept
 {
     std::int64_t widest = 0;
     std::size_t at      = 0;
     while (true) {
         const std::size_t nl = utf8.find('\n', at);
         const std::size_t to = nl == std::string_view::npos ? utf8.size() : nl;
-        widest = std::max(widest, line_width_permille(std::string_view(utf8.data() + at, to - at)));
+        widest               = std::max(widest, text_run_advance(utf8.substr(at, to - at)));
         if (nl == std::string_view::npos) break;
         at = nl + 1;
     }
-    return static_cast<Mm>(widest) * height / 1000;
+    return at_height(widest, height);
 }
 
-std::size_t text_line_estimate(std::string_view utf8, Mm height, TextLines lines, Mm width) noexcept
+Mm text_baseline_length(Point2 a, Point2 b) noexcept
+{
+    const auto dx = static_cast<double>(b.x - a.x);
+    const auto dy = static_cast<double>(b.y - a.y);
+    return mm_round(std::sqrt((dx * dx) + (dy * dy)));
+}
+
+std::array<Point2, 2> text_baseline(Point2 from, Point2 toward, Mm length) noexcept
+{
+    const auto dx    = static_cast<double>(toward.x - from.x);
+    const auto dy    = static_cast<double>(toward.y - from.y);
+    const double len = std::sqrt((dx * dx) + (dy * dy));
+    if (!(len > 0.0)) return {from, Point2{from.x + length, from.y}};
+    const double k = static_cast<double>(length) / len;
+    return {from, Point2{from.x + mm_round(dx * k), from.y + mm_round(dy * k)}};
+}
+
+void text_lines(std::string_view utf8, Mm height, TextLines lines, Mm width,
+                std::vector<std::string_view>& out)
+{
+    out.clear();
+    each_line(utf8, height, lines, width, [&out](std::string_view line) { out.push_back(line); });
+}
+
+std::size_t text_line_count(std::string_view utf8, Mm height, TextLines lines, Mm width) noexcept
 {
     std::size_t count = 0;
-    std::size_t at    = 0;
-    while (true) {
-        const std::size_t nl = utf8.find('\n', at);
-        const std::size_t to = nl == std::string_view::npos ? utf8.size() : nl;
-        std::size_t here     = 1;
-        if (lines.wrap && width > 0) {
-            const Mm wide =
-                text_width_estimate(std::string_view(utf8.data() + at, to - at), height);
-            here = std::max<std::size_t>(1, static_cast<std::size_t>((wide + width - 1) / width));
-        }
-        count += here;
-        if (nl == std::string_view::npos) break;
-        at = nl + 1;
-    }
+    each_line(utf8, height, lines, width, [&count](std::string_view) { ++count; });
     return count;
 }
 

@@ -7,10 +7,13 @@
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
 #include "kentos_cad/core/text_fields.hpp"
+#include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <string_view>
+#include <vector>
 
 namespace kentos::render {
 namespace {
@@ -121,6 +124,10 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     const auto& layers = doc.layers();
     const auto& styles = doc.styles();
     const auto& texts  = doc.texts();
+
+    // The lines of the wrapping text being emitted: views into the document's
+    // text, joined into the item's own copy at once.
+    std::vector<std::string_view> wrapped;
 
     // Batching is by STYLE, not by layer. Before this the scene builder read
     // `layers[i].appearance` and ignored `entities.style[e]` entirely, so the
@@ -500,8 +507,21 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             item.anchor    = static_cast<std::uint8_t>(texts.anchor(tslot));
             const core::TextLines lines = texts.lines(tslot);
             item.spacing                = lines.spacing;
-            item.wrap                   = lines.wrap;
-            item.text.assign(words);
+            if (lines.wrap) {
+                // BROKEN HERE, in millimetres, where the box is counted: the
+                // lines `core::text_lines` sets the text in, joined by the
+                // newlines both backends split at (TODOS C-18).
+                core::text_lines(
+                    words, height, lines,
+                    core::text_baseline_length(core::Point2{x0, y0}, core::Point2{x1, y1}),
+                    wrapped);
+                for (std::size_t i = 0; i < wrapped.size(); ++i) {
+                    if (i > 0) item.text.push_back('\n');
+                    item.text.append(wrapped[i]);
+                }
+            } else {
+                item.text.assign(words);
+            }
 
             out.texts.push_back(std::move(item));
             ++out.text_count;

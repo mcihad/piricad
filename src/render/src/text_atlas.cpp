@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/render/text_atlas.hpp"
 
+#include "kentos_cad/core/text_metrics.hpp"
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
@@ -118,6 +120,53 @@ int cubic_to(const FT_Vector* c1, const FT_Vector* c2, const FT_Vector* to, void
     return 0;
 }
 
+/// Walks a shaped run's pen, in font units.
+///
+/// TYPESET: the shaper's own advances. TECHNICAL: every CLUSTER — a character,
+/// or a letter with the accents the shaper composed onto it — starts where the
+/// core's measure of the text before it ends (`core::text_run_advance`), and
+/// the glyphs inside it keep the shaper's places relative to that start. So a
+/// drawing's text is exactly as wide as the core says for EVERY input (TODOS
+/// C-18), including the few the shaper turns into a glyph of another width: a
+/// `g` followed by a combining breve becomes `ğ`, 531 units, where the two
+/// characters measure 528 — the difference is three thousandths of an EM, and
+/// the measure is the one the box and the fit were decided by.
+class Pen
+{
+public:
+    Pen(std::string_view utf8, Spacing spacing)
+        : utf8_(utf8), technical_(spacing == Spacing::Technical)
+    {}
+
+    /// Where the glyph goes along the run; once per glyph, in the shaper's order.
+    std::int64_t place(const hb_glyph_info_t& info, const hb_glyph_position_t& pos)
+    {
+        if (technical_ && info.cluster > cluster_) {
+            core_ += core::text_run_advance(utf8_.substr(cluster_, info.cluster - cluster_));
+            cluster_    = info.cluster;
+            at_cluster_ = shaper_;
+        }
+        const std::int64_t x =
+            (technical_ ? core_ + (shaper_ - at_cluster_) : shaper_) + pos.x_offset;
+        shaper_ += pos.x_advance;
+        return x;
+    }
+
+    /// The run's advance, once every glyph is placed.
+    std::int64_t advance() const
+    {
+        return technical_ ? core_ + core::text_run_advance(utf8_.substr(cluster_)) : shaper_;
+    }
+
+private:
+    std::string_view utf8_;
+    bool technical_{false};
+    std::uint32_t cluster_{0};   ///< the byte the current cluster starts at
+    std::int64_t core_{0};       ///< the core's pen where it starts
+    std::int64_t shaper_{0};     ///< the shaper's pen
+    std::int64_t at_cluster_{0}; ///< the shaper's pen where the cluster started
+};
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -132,6 +181,7 @@ struct TextAtlas::Impl
         float ascent{0.0f};
         float descent{0.0f};
         float cap{0.0f};
+        int cap_units{700}; ///< `cap` in the face's own units
     };
 
     FT_Library library{nullptr};
@@ -172,6 +222,12 @@ struct TextAtlas::Impl
         pixels.assign(static_cast<std::size_t>(side) * static_cast<std::size_t>(side) * 4u, 0);
     }
 
+    /// Shapes `utf8` in `slot` into `buffer`: Turkish, left to right, and —
+    /// for a drawing's text — with nothing that moves a letter off its own
+    /// advance or joins two (`Spacing::Technical`). Every shaping this file
+    /// does goes through here, so a run is measured the way it is drawn.
+    void run(const FaceSlot& slot, std::string_view utf8, Spacing spacing);
+
     /// Rasterises one glyph into the atlas and returns its table index.
     std::uint32_t intern(std::uint8_t face_index, std::uint32_t gid);
 
@@ -180,6 +236,40 @@ struct TextAtlas::Impl
 };
 
 // -----------------------------------------------------------------------------
+
+void TextAtlas::Impl::run(const FaceSlot& slot, std::string_view utf8, Spacing spacing)
+{
+    // THE FEATURES THAT MOVE OR JOIN LETTERS, off: pair kerning, and the three
+    // ligature sets. IBM Plex Sans carries `kern` and `liga`; the other two are
+    // off as well so that a face that gained them would not quietly make a
+    // drawing's text wider on the screen than in the core's table — which the
+    // generator and its gate would then catch as a changed table rather than
+    // as a drift. `ccmp`, `locl` and `mark` stay: they choose a letter's glyph
+    // and seat an accent, and move no pen.
+    static constexpr std::array<hb_feature_t, 4> kTechnical{{
+        {HB_TAG('k', 'e', 'r', 'n'), 0, HB_FEATURE_GLOBAL_START, HB_FEATURE_GLOBAL_END},
+        {HB_TAG('l', 'i', 'g', 'a'), 0, HB_FEATURE_GLOBAL_START, HB_FEATURE_GLOBAL_END},
+        {HB_TAG('c', 'l', 'i', 'g'), 0, HB_FEATURE_GLOBAL_START, HB_FEATURE_GLOBAL_END},
+        {HB_TAG('c', 'a', 'l', 't'), 0, HB_FEATURE_GLOBAL_START, HB_FEATURE_GLOBAL_END},
+    }};
+
+    hb_buffer_clear_contents(buffer);
+    hb_buffer_add_utf8(buffer, utf8.data(), static_cast<int>(utf8.size()), 0,
+                       static_cast<int>(utf8.size()));
+    hb_buffer_set_direction(buffer, HB_DIRECTION_LTR);
+    hb_buffer_set_script(buffer, HB_SCRIPT_LATIN);
+
+    // TURKISH, declared rather than guessed. The language selects the font's own
+    // locale-specific features, and the one this alphabet needs is the dotted and
+    // dotless i: a font that ships `locl` rules for `tr` maps them here and
+    // nowhere else (CLAUDE.md 5.6 is the same rule one layer down).
+    hb_buffer_set_language(buffer, turkish);
+
+    if (spacing == Spacing::Technical)
+        hb_shape(slot.hb, buffer, kTechnical.data(), static_cast<unsigned int>(kTechnical.size()));
+    else
+        hb_shape(slot.hb, buffer, nullptr, 0);
+}
 
 std::uint32_t TextAtlas::Impl::intern(std::uint8_t face_index, std::uint32_t gid)
 {
@@ -358,9 +448,10 @@ core::Result<std::unique_ptr<TextAtlas>> TextAtlas::open(const std::string& font
         // is worth on a face that does not, and it is better than centring a
         // parcel number on its ascender.
         const auto* os2 = static_cast<TT_OS2*>(FT_Get_Sfnt_Table(slot.ft, FT_SFNT_OS2));
-        slot.cap        = (os2 != nullptr && os2->version >= 2 && os2->sCapHeight > 0)
-                              ? static_cast<float>(static_cast<double>(os2->sCapHeight) / slot.upem)
-                              : 0.7f;
+        slot.cap_units  = (os2 != nullptr && os2->version >= 2 && os2->sCapHeight > 0)
+                              ? static_cast<int>(os2->sCapHeight)
+                              : static_cast<int>(std::lround(0.7 * slot.upem));
+        slot.cap        = static_cast<float>(static_cast<double>(slot.cap_units) / slot.upem);
 
         slot.hb = hb_ft_font_create_referenced(slot.ft);
         if (slot.hb == nullptr)
@@ -385,7 +476,8 @@ float TextAtlas::cap_height(Face face) const noexcept
     return impl_->faces[static_cast<std::uint8_t>(face)].cap;
 }
 
-RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out)
+RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out,
+                            Spacing spacing)
 {
     Impl& impl                 = *impl_;
     const auto face_index      = static_cast<std::uint8_t>(face);
@@ -397,19 +489,7 @@ RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<Placed
     metrics.cap     = slot.cap;
     if (utf8.empty() || slot.hb == nullptr) return metrics;
 
-    hb_buffer_clear_contents(impl.buffer);
-    hb_buffer_add_utf8(impl.buffer, utf8.data(), static_cast<int>(utf8.size()), 0,
-                       static_cast<int>(utf8.size()));
-    hb_buffer_set_direction(impl.buffer, HB_DIRECTION_LTR);
-    hb_buffer_set_script(impl.buffer, HB_SCRIPT_LATIN);
-
-    // TURKISH, declared rather than guessed. The language selects the font's own
-    // locale-specific features, and the one this alphabet needs is the dotted and
-    // dotless i: a font that ships `locl` rules for `tr` maps them here and
-    // nowhere else (CLAUDE.md 5.6 is the same rule one layer down).
-    hb_buffer_set_language(impl.buffer, impl.turkish);
-
-    hb_shape(slot.hb, impl.buffer, nullptr, 0);
+    impl.run(slot, utf8, spacing);
 
     unsigned int count             = 0;
     const hb_glyph_info_t* infos   = hb_buffer_get_glyph_infos(impl.buffer, &count);
@@ -417,28 +497,31 @@ RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<Placed
 
     const auto to_em = static_cast<float>(1.0 / slot.upem);
 
-    float pen_x = 0.0f;
-    float pen_y = 0.0f;
+    // THE PEN IN FONT UNITS, summed exactly and scaled once per glyph: a float
+    // sum drifts along a long caption, and a drawing's text must end where the
+    // core's integer measure says it does.
+    Pen pen(utf8, spacing);
+    std::int64_t pen_y = 0;
     for (unsigned int i = 0; i < count; ++i) {
         const std::uint32_t index = impl.intern(face_index, infos[i].codepoint);
+        const std::int64_t x      = pen.place(infos[i], pos[i]);
 
         if (!impl.boxes[index].blank) {
             PlacedGlyph glyph;
             glyph.box = index;
-            glyph.x   = pen_x + static_cast<float>(pos[i].x_offset) * to_em;
-            glyph.y   = pen_y + static_cast<float>(pos[i].y_offset) * to_em;
+            glyph.x   = static_cast<float>(x) * to_em;
+            glyph.y   = static_cast<float>(pen_y + pos[i].y_offset) * to_em;
             out.push_back(glyph);
         }
-
-        pen_x += static_cast<float>(pos[i].x_advance) * to_em;
-        pen_y += static_cast<float>(pos[i].y_advance) * to_em;
+        pen_y += pos[i].y_advance;
     }
 
-    metrics.advance = pen_x;
+    metrics.advance = static_cast<float>(pen.advance()) * to_em;
     return metrics;
 }
 
-RunMetrics TextAtlas::measure(Face face, std::string_view utf8, std::size_t* missing)
+RunMetrics TextAtlas::measure(Face face, std::string_view utf8, std::size_t* missing,
+                              Spacing spacing)
 {
     Impl& impl                 = *impl_;
     const Impl::FaceSlot& slot = impl.faces[static_cast<std::uint8_t>(face)];
@@ -450,26 +533,76 @@ RunMetrics TextAtlas::measure(Face face, std::string_view utf8, std::size_t* mis
     if (missing != nullptr) *missing = 0;
     if (utf8.empty() || slot.hb == nullptr) return metrics;
 
-    hb_buffer_clear_contents(impl.buffer);
-    hb_buffer_add_utf8(impl.buffer, utf8.data(), static_cast<int>(utf8.size()), 0,
-                       static_cast<int>(utf8.size()));
-    hb_buffer_set_direction(impl.buffer, HB_DIRECTION_LTR);
-    hb_buffer_set_script(impl.buffer, HB_SCRIPT_LATIN);
-    hb_buffer_set_language(impl.buffer, impl.turkish); // the same shaping `shape` does
-    hb_shape(slot.hb, impl.buffer, nullptr, 0);
+    impl.run(slot, utf8, spacing); // the same shaping `shape` does
 
     unsigned int count             = 0;
     const hb_glyph_info_t* infos   = hb_buffer_get_glyph_infos(impl.buffer, &count);
     const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(impl.buffer, &count);
     const auto to_em               = static_cast<float>(1.0 / slot.upem);
-    float pen_x                    = 0.0f;
+    Pen pen(utf8, spacing);
     for (unsigned int i = 0; i < count; ++i) {
         // Glyph 0 is the font's `.notdef`: the character is not in the face.
         if (missing != nullptr && infos[i].codepoint == 0) ++*missing;
-        pen_x += static_cast<float>(pos[i].x_advance) * to_em;
+        (void)pen.place(infos[i], pos[i]);
     }
-    metrics.advance = pen_x;
+    metrics.advance = static_cast<float>(pen.advance()) * to_em;
     return metrics;
+}
+
+RunMetrics TextAtlas::glyphs(Face face, std::string_view utf8, Spacing spacing,
+                             std::vector<FontGlyph>& out)
+{
+    Impl& impl                 = *impl_;
+    const Impl::FaceSlot& slot = impl.faces[static_cast<std::uint8_t>(face)];
+
+    RunMetrics metrics;
+    metrics.ascent  = slot.ascent;
+    metrics.descent = slot.descent;
+    metrics.cap     = slot.cap;
+    if (utf8.empty() || slot.hb == nullptr) return metrics;
+
+    impl.run(slot, utf8, spacing);
+
+    unsigned int count             = 0;
+    const hb_glyph_info_t* infos   = hb_buffer_get_glyph_infos(impl.buffer, &count);
+    const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(impl.buffer, &count);
+    const auto to_em               = static_cast<float>(1.0 / slot.upem);
+    Pen pen(utf8, spacing); // font units, summed exactly
+    std::int64_t pen_y = 0;
+    for (unsigned int i = 0; i < count; ++i) {
+        const std::int64_t x = pen.place(infos[i], pos[i]);
+        out.push_back(FontGlyph{infos[i].codepoint, static_cast<float>(x) * to_em,
+                                static_cast<float>(pen_y + pos[i].y_offset) * to_em});
+        pen_y += pos[i].y_advance;
+    }
+    metrics.advance = static_cast<float>(pen.advance()) * to_em;
+    return metrics;
+}
+
+std::int64_t TextAtlas::advance_units(Face face, std::string_view utf8, Spacing spacing)
+{
+    Impl& impl                 = *impl_;
+    const Impl::FaceSlot& slot = impl.faces[static_cast<std::uint8_t>(face)];
+    if (utf8.empty() || slot.hb == nullptr) return 0;
+
+    impl.run(slot, utf8, spacing);
+
+    unsigned int count             = 0;
+    const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(impl.buffer, &count);
+    std::int64_t pen               = 0;
+    for (unsigned int i = 0; i < count; ++i)
+        pen += pos[i].x_advance;
+    return pen;
+}
+
+int TextAtlas::units_per_em(Face face) const noexcept
+{
+    return static_cast<int>(impl_->faces[static_cast<std::uint8_t>(face)].upem);
+}
+
+int TextAtlas::cap_height_units(Face face) const noexcept
+{
+    return impl_->faces[static_cast<std::uint8_t>(face)].cap_units;
 }
 
 std::vector<UncoveredCharacter> TextAtlas::uncovered(Face face, std::string_view utf8)

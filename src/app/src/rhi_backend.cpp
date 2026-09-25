@@ -355,7 +355,8 @@ private:
     /// stores as an angle, because the two ends of the baseline already say it.
     std::uint32_t emit_line(render::Face face, std::string_view text, float origin_x,
                             float origin_y, float px, float cos_a, float sin_a, std::uint32_t rgba,
-                            std::uint8_t anchor);
+                            std::uint8_t anchor,
+                            render::Spacing spacing = render::Spacing::Typeset);
 #endif
 
     /// Appends one ring as a triangle fan and grows `box`. Returns the vertex count.
@@ -1429,10 +1430,11 @@ void RhiBackend::emit_overlay(const render::Overlay& overlay, std::size_t from, 
 
 std::uint32_t RhiBackend::emit_line(render::Face face, std::string_view text, float origin_x,
                                     float origin_y, float px, float cos_a, float sin_a,
-                                    std::uint32_t rgba, std::uint8_t anchor)
+                                    std::uint32_t rgba, std::uint8_t anchor,
+                                    render::Spacing spacing)
 {
     shaped_.clear();
-    const render::RunMetrics metrics = atlas_->shape(face, text, shaped_);
+    const render::RunMetrics metrics = atlas_->shape(face, text, shaped_, spacing);
     if (shaped_.empty()) return 0;
 
     // The anchor decides where the baseline sits under the glyphs, and it is
@@ -1513,13 +1515,11 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
     const std::uint32_t first = static_cast<std::uint32_t>(glyph_data_.size() * sizeof(float));
     std::uint32_t count       = 0;
 
-    // How wide a run is at a capital height of one pixel: its advance in EM over
-    // the face's capital height.
-    const float sans_cap             = atlas_->cap_height(render::Face::Sans);
-    const render::MeasureRun measure = [this, sans_cap](std::string_view run) {
-        const float advance = atlas_->measure(render::Face::Sans, run).advance;
-        return sans_cap > 0.0f ? advance / sans_cap : advance;
-    };
+    // How wide a run is at a capital height of one pixel: the core's measure of
+    // the drawing face, which the technical spacing below draws exactly — so a
+    // centred line is centred on what is drawn, and ends where its box does
+    // (TODOS C-18).
+    const render::MeasureRun measure = &render::drawing_measure;
 
     for (const render::TextItem& item : list.texts) {
         // Under three pixels a caption is a smudge rather than a word, and drawing
@@ -1551,12 +1551,11 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
         const float cos_a = len > 0.0 ? static_cast<float>(dx / len) : 1.0f;
         const float sin_a = len > 0.0 ? static_cast<float>(dy / len) : 0.0f;
 
-        // THE LAYOUT THE PAPER GETS TOO (render/text_layout.hpp): the breaks, the
-        // stack and each line's alignment, measured by the same shaper. A text
-        // that wraps wraps to its baseline's length.
-        const core::TextLines lines_of{item.spacing, item.wrap};
+        // THE LAYOUT THE PAPER GETS TOO (render/text_layout.hpp): the stack and
+        // each line's alignment, by the same measure. A text that wraps arrives
+        // already broken, in the lines its box counts.
         render::lay_out_text(item.text, item.height_px, static_cast<core::TextAnchor>(item.anchor),
-                             lines_of, static_cast<float>(len), measure, lines_);
+                             item.spacing, measure, lines_);
 
         for (const render::TextLine& line : lines_) {
             if (line.text.empty()) continue;
@@ -1566,7 +1565,7 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
             const float ox = static_cast<float>(sx) + cos_a * line.u - sin_a * line.v;
             const float oy = static_cast<float>(sy) + sin_a * line.u + cos_a * line.v;
             count += emit_line(render::Face::Sans, line.text, ox, oy, em, cos_a, sin_a, item.rgba,
-                               /*anchor=*/0);
+                               /*anchor=*/0, render::Spacing::Technical);
         }
     }
 

@@ -442,7 +442,7 @@ Ayrıntılı kullanım: [İZ](tracking.md)
 | `noktalar` | point | 1 | Yazının başlangıç noktası |
 | `yazi` | text | 1 | Yazılacak metin |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
-| `bitis` | point_list | isteğe bağlı | Taban çizgisinin bitişi; yoksa yatay |
+| `bitis` | point_list | isteğe bağlı | Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay |
 | `hizalama` | text | isteğe bağlı | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
 | `satir_araligi` | number | isteğe bağlı | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
 | `genislik` | number | isteğe bağlı | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer |
@@ -12163,7 +12163,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "maxItems": 1
             }
           ],
-          "description": "Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "hizalama": {
           "type": "string",

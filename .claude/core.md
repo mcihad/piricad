@@ -24,6 +24,7 @@ R17. Every public header under `/src/core/include/kentos_cad/core` MUST compile 
 R18. Core translation units MUST compile with `-fno-fast-math -ffp-contract=off` (MSVC `/fp:precise`); the flags are set on the target, not per-file (§7.3).
 R19. `Crs` in `kentos_cad/core/crs.hpp` MUST remain a value type (identifier plus parameters, e.g. `TUREF/TM30`); executing a transformation requires PROJ and belongs outside core — see `.claude/io.md` and `.claude/domain.md`.
 R20. Rounding of a transient `double` to `Mm` MUST use the one shared half-away-from-zero rounding helper declared in `kentos_cad/core/units.hpp`; `static_cast<int64_t>`/`static_cast<Mm>` on a coordinate `double` is banned everywhere under `/src` outside that helper's own definition (§7.3).
+R21. A text's width MUST come from `core::text_width` (`kentos_cad/core/text_store.hpp`) and nothing else: the box a text is picked and culled by, whether a dimension's figure fits between its extension lines, the baseline a caption stands on and where a wrapping text breaks (`core::text_lines`) are all that one measure, and both backends draw exactly it (`.claude/render.md` R8a). It is the drawing face's advances as CONSTANT DATA of this library — `src/core/src/text_metrics_table.cpp`, generated from `data/fonts/IBMPlexSans-Regular.ttf` by `kentos_yazi_olcusu` (`make yazi-olcusu`) and never edited by hand. Compiled in, not loaded: the core reads no file (P9), a table installed at start-up is the mutable global P8 forbids, and a document's geometry must not depend on whether a caller remembered to install one. It is not a catalogue or a grid (`.claude/data.md` P10): it is a derived property of a file the program ships and cannot draw without, and it changes only when that file does. No per-letter guess of a width — the former `0,6 × height × letters` — may exist anywhere under `/src` (TODOS C-18).
 
 ## Absolute Prohibitions
 
@@ -55,6 +56,7 @@ P14. NEVER mutate `Document` outside a command path at higher layers; core expos
 ## Enforcement
 
 - **`scripts/ci-gate-core-purity.sh`** — greps `/src/core` for `<Q`/`Q_OBJECT`, upward `#include` paths, `export module`/`import `, `-ffast-math`/`/fp:fast`/`-ffp-contract=fast`, `std::toupper`/`std::tolower`, `<fstream>`/`std::cout`/`getenv`, `rand()`, AoS point containers, and `static_cast<int64_t>`/`static_cast<Mm>` outside the R20 rounding helper. Non-zero exit breaks the build (§8, R20).
+- **`scripts/ci-gate-yazi-olcusu.sh`** — regenerates the text measure table from the face with `kentos_yazi_olcusu` and fails on any difference; fails as well on a width guess (`text_width_estimate`, `height * 6 *`) anywhere under `/src` (R21).
 - **`/tests/golden`** — bit-identical hash comparison of the same fixtures across the three-platform CI matrix (§7.3, §10.5).
 - **`/tests/unit`** — built into the `kentos_tests` executable; covers `Result<T>` error paths, `operator<=>` totality, arena reuse, index bulk-load.
 - **`/tests/bench`** — benchmark gate; >10% regression breaks the build (§10.1).
