@@ -117,9 +117,9 @@ SINIR nokta=5,5 bosluk=2000
 Sınır çıkarıldı: 200,00 m² alan; 4 nesnenin çizgisinden. 1 boşluk köprülendi: 1,50 m.
 ```
 
-Arayüzde yazılan bir nokta, tıklanan bir nokta gibi yakalamadan geçer: yakınlaşma
-uzaksa, bir köşeye birkaç santimetre kala yazılan uç o köşeye oturur. Küçük bir
-boşluğu denemek için önce yakınlaşın.
+Yazılan bir nokta yazıldığı yere düşer; yakalama yalnız fareyle nişan alınan noktaya
+uygulanır. Küçük bir boşluğu fareyle çizerek denemek istiyorsanız önce yakınlaşın:
+yakınlaşma uzaksa, bir köşeye birkaç santimetre kala tıklanan uç o köşeye oturur.
 
 ### Arayüz
 

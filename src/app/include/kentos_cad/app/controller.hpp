@@ -141,9 +141,16 @@ private:
     void startInteractive(const QString& line, command::Origin origin, bool one_shot);
 
 public:
-    /// Answers the running command's point prompt with a place on the drawing,
-    /// the raw world point a click names — snapping happens in the command layer.
+    /// Answers the running command's point prompt with a coordinate AS STATED —
+    /// typed on the command line, or computed exactly by the shell (the point
+    /// that lands an area on its target) — and kept exactly as given.
     void supplyPoint(core::Point2 world);
+
+    /// Answers it with a place a HAND pointed at: the raw world point under a
+    /// click, which the input aids in the command layer turn into the point meant
+    /// (`command::Value::aimed_point`). Only a pointer makes one: the aperture is
+    /// pixels, and a coordinate somebody wrote down is not a guess (TODOS F-03).
+    void supplyAimedPoint(core::Point2 world);
 
     /// Answers the running command's prompt with a piece of TEXT.
     ///

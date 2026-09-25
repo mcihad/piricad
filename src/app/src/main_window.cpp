@@ -6996,6 +6996,66 @@ int MainWindow::probeRealMouse()
             runScriptLine(QStringLiteral("AYAR koordinat_hassasiyeti varsayilan"));
             endCommand();
         }
+
+        // ---- 35. A TYPED COORDINATE IS KEPT; A CLICK IS SNAPPED (TODOS F-03) ----
+        //
+        // Zoomed out far enough for the aperture to reach a metre, a line is
+        // TYPED to start fifteen centimetres off a corner: it starts there, not on
+        // the corner, because a written coordinate is not a guess. A click as far
+        // off the corner on its OTHER side — nearer the corner than the typed
+        // line's own end, which is an end point too — with the ribbon's Çizgi is
+        // taken to the corner, because that is what the hand meant.
+        {
+            fresh({QStringLiteral("ÇİZGİ 0,0 20,0")});
+            canvas_->zoomToBox(core::Box2{-40'000, -30'000, 60'000, 40'000});
+            QCoreApplication::processEvents();
+            const auto first_vertex_of_last = [this] {
+                const core::Document& doc = controller_->document();
+                core::EntityId last       = core::kNoEntity;
+                for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                    if (doc.alive(e) && doc.entities().kind[e] == core::kPolylineKind) last = e;
+                if (last == core::kNoEntity) return core::Point2{};
+                const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[last]);
+                return core::Point2{doc.geometry().ring_xs(span.first)[0],
+                                    doc.geometry().ring_ys(span.first)[0]};
+            };
+
+            runScriptLine(QStringLiteral("ÇİZGİ 20.15,0.1 30,10"));
+            endCommand();
+            const core::Point2 typed = first_vertex_of_last();
+            check(typed == core::Point2{20'150, 100},
+                  QStringLiteral("yazılan nokta köşeye çekilmedi, yazıldığı yere düştü (%1, %2)")
+                      .arg(typed.x)
+                      .arg(typed.y));
+
+            const auto click = [&onCanvas](QPointF at) {
+                onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+            };
+            actLine_->trigger();
+            QCoreApplication::processEvents();
+            click(screen({19'850, -100}));
+            click(screen({30'000, -10'000}));
+            {
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(commandLine_, &enter);
+                QCoreApplication::processEvents();
+            }
+            endCommand();
+            const core::Point2 aimed = first_vertex_of_last();
+            check(aimed == core::Point2{20'000, 0},
+                  QStringLiteral("köşenin yanına fareyle tıklanan nokta köşeye yakalandı (%1, %2)")
+                      .arg(aimed.x)
+                      .arg(aimed.y));
+
+            // Close in on the corner so both starts are on the picture: the typed
+            // line fifteen centimetres off, the clicked one on it.
+            canvas_->zoomToBox(core::Box2{19'700, -300, 20'500, 400});
+            QCoreApplication::processEvents();
+            shoot("yazilan-tam-tiklanan-yakalanir");
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

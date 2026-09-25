@@ -80,6 +80,13 @@ Value Value::point(Point2 v)
     return x;
 }
 
+Value Value::aimed_point(Point2 v)
+{
+    Value x  = point(v);
+    x.aimed_ = true;
+    return x;
+}
+
 Value Value::points(Points v)
 {
     Value x;

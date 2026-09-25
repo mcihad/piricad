@@ -16,6 +16,7 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/session.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/snap.hpp"
@@ -24,6 +25,7 @@
 
 #include <array>
 #include <cstdlib>
+#include <initializer_list>
 
 using namespace kentos;
 using namespace kentos::command;
@@ -55,6 +57,25 @@ struct Rig
     core::Result<DispatchResult> line(const std::string& text)
     {
         return bus.execute_line(text, Origin::Test);
+    }
+
+    /// Runs `command` AS A HAND WOULD: every point aimed on the canvas
+    /// (`Value::aimed_point`), then Enter. The input aids act on an aimed point
+    /// only — a typed coordinate is exact (TODOS F-03) — so a case about what the
+    /// aids do goes in this way, and `line` is how it proves a statement is kept.
+    core::Status by_hand(const std::string& command, std::initializer_list<Point2> points)
+    {
+        auto started = bus.begin_interactive(command, Origin::Gui);
+        if (!started) return started.error();
+        Session& s = *started.value();
+        for (const Point2 p : points) {
+            if (!s.waiting()) break;
+            if (auto st = s.supply(Value::aimed_point(p)); !st) return st.error();
+        }
+        if (s.waiting()) (void)s.supply(Value{});
+        auto done = bus.finish(s);
+        if (!done) return done.error();
+        return core::ok();
     }
 };
 
@@ -952,7 +973,7 @@ TEST_CASE("YAKALAMA: bir NESNE yakalaması yüzey normalini yener")
     REQUIRE(rig.line("MOD yüzey_normali evet").ok());
 
     rig.echoed.clear();
-    REQUIRE(rig.line("ÖLÇ baslangic=5,0 bitis=15.2,3.1").ok());
+    REQUIRE(rig.by_hand("ÖLÇ", {Point2{5000, 0}, Point2{15200, 3100}}).ok());
 
     // The corner at (15, 3), not the foot of a perpendicular at (5, 3.1):
     // hypot(10, 3) = 10.440 m, and the locked answer would have been 3.100.
@@ -977,7 +998,7 @@ TEST_CASE("YAKALAMA: YAKIN varsayılan olarak açık — çizginin herhangi bir 
     // it is 10 m as well — which is why the ANGLE is checked too: off the line the
     // run would still be east-west, but it would not START on the boundary.
     rig.echoed.clear();
-    REQUIRE(rig.line("ÖLÇ baslangic=5,0.2 bitis=15,-0.2").ok());
+    REQUIRE(rig.by_hand("ÖLÇ", {Point2{5000, 200}, Point2{15000, -200}}).ok());
     CHECK(rig.echoed.find("10,000") != std::string::npos);
     // Due east, written as ÖLÇ writes an angle: the `semt açısı` in grad, the
     // session's default convention (TODOS-CAD P0-4).
@@ -1016,7 +1037,7 @@ TEST_CASE("YAKALAMA: ÖLÇ'ün ikinci noktası da yakalanıyor")
     // (0.2,0.2) and (20.2,10.2), are 22,361 m apart whether or not anything
     // snapped, so the assertion below could not fail. These are 22,048 m apart
     // as typed, and only snapping both ends makes it 22,361.
-    auto measured = rig.line("ÖLÇ baslangic=0.2,0.2 bitis=19.9,10.1");
+    auto measured = rig.by_hand("ÖLÇ", {Point2{200, 200}, Point2{19900, 10100}});
     if (!measured) FAIL_WITH("ÖLÇ", measured.error().message);
 
     // The transcript reports the distance between the points the command actually
@@ -1093,12 +1114,12 @@ TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
     REQUIRE(rig.line("KATMAN ad=SINIR").ok());
     REQUIRE(rig.line("ÇİZGİ 0,0 10,10").ok()); // an edge at 45 degrees, in metres
 
-    // Two points, both typed: the base sits on the edge and the aim is a loose
+    // Two points, both AIMED: the base sits on the edge and the aim is a loose
     // wave INSIDE the aid's cone — a couple of degrees off the perpendicular,
-    // which is how a hand aims. Source-blindness is the point: a typed run and a
-    // drawn run take the same road through `apply_input_aids`.
+    // which is how a hand aims. They go in through the command the hand starts
+    // and the path every aimed value takes through `apply_input_aids`.
     REQUIRE(rig.line("MOD yüzey_normali evet").ok());
-    REQUIRE(rig.line("ÇİZGİ 5,5 9,1.2").ok());
+    REQUIRE(rig.by_hand("ÇİZGİ", {Point2{5000, 5000}, Point2{9000, 1200}}).ok());
 
     const auto drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
     const core::RingSpan rings =
@@ -1119,7 +1140,7 @@ TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
     // was aimed — a check that would pass by accident if the engine were simply
     // ignoring the aim.
     REQUIRE(rig.line("MOD yüzey_normali hayır").ok());
-    REQUIRE(rig.line("ÇİZGİ 5,5 9,1.2").ok());
+    REQUIRE(rig.by_hand("ÇİZGİ", {Point2{5000, 5000}, Point2{9000, 1200}}).ok());
 
     const auto free_drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
     const core::RingSpan free_rings =
@@ -1471,36 +1492,41 @@ TEST_CASE("SİL: argüman verilmezse etkin seçimi siler")
 
 // --------------------------------------------- the aids on the input path ---
 
-TEST_CASE("YAKALAMA: aynı nişan arayüzden, komut satırından ve betikten aynı yere düşer")
+TEST_CASE("YAKALAMA: yazılan koordinat tam yerine düşer; yakalama yalnız elin nişanına (F-03)")
 {
-    // The Article 6.4 proof, for snapping. Each client aims 200 mm off the corner
-    // of an existing line; all three must draw to the corner itself, and all three
-    // must journal the same resolved coordinate.
+    // THE CONTRACT, both halves. A coordinate somebody STATED — typed on the
+    // command line, written in a script, typed into the GUI's own command line —
+    // lands exactly where it says, on every client alike: the aperture is pixels
+    // and a stated figure is not a guess. It used to be snapped whenever a view
+    // existed, so 10.008,0.006 typed in the window became the corner 10 mm away
+    // while the same line in a script did not (TODOS F-03). A point a HAND aimed
+    // on the canvas is still taken to the corner it was aimed at.
     const auto seed = [](Rig& r) {
-        r.with_view(1.0); // 1 mm per pixel, so the 12-pixel aperture is 12 mm
+        r.with_view(1.0); // 1 mm per pixel, so the default aperture is 16 mm
         CHECK(r.line("ÇİZGİ 0,0 10,0").ok());
         CHECK(r.line("MOD yakalama_modları 1").ok()); // uç nokta only
     };
+    const auto second_vertex = [](const Rig& r) {
+        const core::RingGeometry& g = r.doc.geometry();
+        const core::RingSpan span   = g.rings_of(r.doc.entities().slot[1]);
+        return g.vertex(span.first, 1);
+    };
 
-    // ---- client 1: a GUI session fed by mouse clicks ----
-    Rig gui;
-    seed(gui);
+    // ---- stated, three ways: the window's own command line, a CLI, a script ----
+    Rig typed;
+    seed(typed);
     {
-        auto started = gui.bus.begin_interactive("ÇİZGİ");
+        auto started = typed.bus.begin_interactive("ÇİZGİ", Origin::Gui);
         REQUIRE(started.ok());
         auto& session = *started.value();
         CHECK(session.supply(Value::point(Point2{20000, 20000})).ok());
-        CHECK(session.supply(Value::point(Point2{10008, 6})).ok()); // 10 mm off (10000,0)
+        CHECK(session.supply(Value::point(Point2{10008, 6})).ok()); // typed at the prompt
         session.cancel();
-        CHECK(gui.bus.finish(session).ok());
+        CHECK(typed.bus.finish(session).ok());
     }
-
-    // ---- client 2: the command line ----
     Rig cli;
     seed(cli);
     CHECK(cli.line("ÇİZGİ 20,20 10.008,0.006").ok());
-
-    // ---- client 3: a JSON script ----
     Rig scr;
     seed(scr);
     {
@@ -1509,22 +1535,30 @@ TEST_CASE("YAKALAMA: aynı nişan arayüzden, komut satırından ve betikten ayn
             R"([{"cmd":"core.line","args":{"noktalar":[[20000,20000],[10008,6]]}}])");
         CHECK(ran.ok());
     }
-
-    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK(second_vertex(typed) == (Point2{10008, 6}));
+    CHECK(second_vertex(cli) == (Point2{10008, 6}));
+    CHECK(second_vertex(scr) == (Point2{10008, 6}));
+    CHECK_EQ(typed.doc.content_hash(), cli.doc.content_hash());
     CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK(typed.journal.entries().back().args.to_json().dump() ==
+          scr.journal.entries().back().args.to_json().dump());
 
-    // And the point actually moved onto the corner.
-    const core::RingGeometry& g = gui.doc.geometry();
-    const core::RingSpan span   = g.rings_of(gui.doc.entities().slot[1]);
-    CHECK(g.vertex(span.first, 1) == (Point2{10000, 0}));
+    // ---- aimed: a hand 10 mm off the corner takes the corner ----
+    Rig hand;
+    seed(hand);
+    REQUIRE(hand.by_hand("ÇİZGİ", {Point2{20000, 20000}, Point2{10008, 6}}).ok());
+    CHECK(second_vertex(hand) == (Point2{10000, 0}));
 
-    // The JOURNAL carries the resolved point, not the aim, for all three.
-    const auto& gui_args = gui.journal.entries().back().args;
-    const auto& cli_args = cli.journal.entries().back().args;
-    const auto& scr_args = scr.journal.entries().back().args;
-    CHECK(gui_args.to_json().dump() == cli_args.to_json().dump());
-    CHECK(cli_args.to_json().dump() == scr_args.to_json().dump());
-    CHECK(gui_args.to_json().dump().find("10000") != std::string::npos);
+    // The JOURNAL keeps what was DRAWN, a statement: replayed with the same view
+    // and the same aids, it lands exactly there and is never re-snapped.
+    const auto& drawn = hand.journal.entries().back().args;
+    CHECK(drawn.to_json().dump().find("10000") != std::string::npos);
+    Rig replay;
+    seed(replay);
+    auto again = replay.bus.dispatch(
+        Invocation{hand.journal.entries().back().command_id, drawn, Origin::Batch});
+    CHECK(again.ok());
+    CHECK_EQ(replay.doc.content_hash(), hand.doc.content_hash());
 }
 
 TEST_CASE("YAKALAMA: görünüm yokken çizim nişan aldığı yere düşer")
@@ -1540,28 +1574,38 @@ TEST_CASE("YAKALAMA: görünüm yokken çizim nişan aldığı yere düşer")
     CHECK(g.vertex(span.first, 1) == (Point2{10008, 6}));
 }
 
-TEST_CASE("YAKALAMA: dik mod ve ızgara komut satırından çizilen noktayı da yönlendirir")
+TEST_CASE(
+    "YAKALAMA: dik mod ve ızgara yazılanı değiştirmez, elin nişan aldığını yönlendirir (F-03)")
 {
+    // Dik mod squares a HAND's segment to the page and the grid lattices its
+    // click. Neither has any business moving a coordinate somebody typed: a
+    // surveyor who writes 10,3 means 10,3, whatever the window's locks are set
+    // to. This case used to assert the opposite for the command line.
     Rig r;
     CHECK(r.line("MOD dik_mod evet").ok());
     CHECK(r.line("ÇİZGİ 0,0 10,3").ok());
+    REQUIRE(r.by_hand("ÇİZGİ", {Point2{0, 20000}, Point2{10000, 23000}}).ok());
 
-    // The second point had no rubber-band origin only for the FIRST vertex; the
-    // segment end is locked onto the horizontal axis through the start.
     const core::RingGeometry& g = r.doc.geometry();
-    const core::RingSpan span   = g.rings_of(r.doc.entities().slot[0]);
-    CHECK(g.vertex(span.first, 0) == (Point2{0, 0}));
-    CHECK(g.vertex(span.first, 1) == (Point2{10000, 0}));
+    const core::RingSpan typed  = g.rings_of(r.doc.entities().slot[0]);
+    CHECK(g.vertex(typed.first, 1) == (Point2{10000, 3000})); // as written
+    const core::RingSpan aimed = g.rings_of(r.doc.entities().slot[1]);
+    CHECK(g.vertex(aimed.first, 0) == (Point2{0, 20000}));
+    CHECK(g.vertex(aimed.first, 1) == (Point2{10000, 20000})); // squared to the page
 
     Rig grid;
     CHECK(grid.line("MOD ızgaraya_yakala evet").ok());
     CHECK(grid.line("TERCİH ızgara_adımı 1000").ok());
     CHECK(grid.line("ÇİZGİ 0.4,0.4 10.4,0.4").ok());
+    REQUIRE(grid.by_hand("ÇİZGİ", {Point2{400, 5400}, Point2{10400, 5400}}).ok());
 
     const core::RingGeometry& gg = grid.doc.geometry();
-    const core::RingSpan gspan   = gg.rings_of(grid.doc.entities().slot[0]);
-    CHECK(gg.vertex(gspan.first, 0) == (Point2{0, 0}));
-    CHECK(gg.vertex(gspan.first, 1) == (Point2{10000, 0}));
+    const core::RingSpan gtyped  = gg.rings_of(grid.doc.entities().slot[0]);
+    CHECK(gg.vertex(gtyped.first, 0) == (Point2{400, 400})); // as written
+    CHECK(gg.vertex(gtyped.first, 1) == (Point2{10400, 400}));
+    const core::RingSpan gaimed = gg.rings_of(grid.doc.entities().slot[1]);
+    CHECK(gg.vertex(gaimed.first, 0) == (Point2{0, 5000})); // on the lattice
+    CHECK(gg.vertex(gaimed.first, 1) == (Point2{10000, 5000}));
 }
 
 TEST_CASE("YAKALAMA: günlük tekrar oynatıldığında belge değişmez")

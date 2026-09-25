@@ -7750,11 +7750,21 @@ TEST_CASE("İZ ile işaretlenen noktalar yakalamaya geçiyor")
     REQUIRE(f.bus.execute_line("İZ 10,0", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("İZ 0,20", Origin::Test).ok());
 
-    // A line whose second point is aimed WITHIN THE APERTURE of the crossing
+    // A line whose second point a HAND aims WITHIN THE APERTURE of the crossing
     // lands on it. 10 mm per pixel and the default tolerance make that aperture
     // a few centimetres, so the aim is a few centimetres off — aiming half a
-    // metre away would be out of reach, which is the contract and not a bug.
-    REQUIRE(f.bus.execute_line("ÇİZGİ 50,50 10.05,19.95", Origin::Test).ok());
+    // metre away would be out of reach, which is the contract and not a bug. A
+    // TYPED second point would be kept as typed: the aids act on aimed points
+    // only (TODOS F-03), so the marks themselves are typed and the aim is not.
+    {
+        auto started = f.bus.begin_interactive("ÇİZGİ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.supply(Value::aimed_point(core::Point2{50'000, 50'000})).ok());
+        REQUIRE(session.supply(Value::aimed_point(core::Point2{10'050, 19'950})).ok());
+        REQUIRE(session.supply(Value{}).ok());
+        REQUIRE(f.bus.finish(session).ok());
+    }
 
     core::EntityId last = core::kNoEntity;
     for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)

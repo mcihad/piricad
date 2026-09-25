@@ -345,9 +345,14 @@ G                              ← Enter — 99,99 geri alındı, çizgi 10,0'da
                                ← Enter, iki çizgi yazılır
 ```
 
-Komutla birlikte yazdığınız noktalar (`ÇİZGİ 0,0 10,0 10,10`) yakalama yardımcılarından
-geçer ama çalışmanın kendi noktalarına çekilmez; onlar çalışma başlamadan yazılmış kesin
-değerlerdir.
+**Yazdığınız koordinat yazdığınız yere düşer.** Nesne yakalama, ızgara, dik mod, kutupsal
+izleme ve iz yalnız **fareyle nişan aldığınız** noktaya uygulanır. Komut satırına yazılan,
+komutla birlikte verilen (`ÇİZGİ 0,0 10,0 10,10`), betikte yazılan ya da bir yapay zekâ
+önerisinde gelen koordinat kesin bir değerdir ve hiçbir yardımcı onu değiştirmez. Yakalama
+açıklığı ekran pikselidir; bir köşeye on beş santimetre kala yazılan `485320.150` o köşeye
+çekilseydi, yakınlaştırma düzeyi bir tapu koordinatına karar vermiş olurdu.
+
+Bir köşeyi yazarak almak istiyorsanız köşenin kendisini yazın ya da tıklayın.
 
 ## Geçmiş
 

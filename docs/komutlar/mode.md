@@ -300,14 +300,17 @@ Yakalama arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_tolerans
 tercihidir ve ikisi de **ekran pikselidir** (bkz. [`TERCİH`](preference.md)). Nişan
 alan göz ekrana bakar; tolerans yakınlaştırmayla birlikte değişmelidir.
 
-Bunun bir sonucu vardır: **ekranı olmayan bir istemcide nesne yakalama etkisizdir.**
-Başsız çalışan bir betik, bir toplu iş ve bir günlük tekrar oynatması yazdıkları
-koordinatı aynen çizerler. Bu bir ayrıcalık değil, aynı kuralın (yarıçap = piksel ×
-ölçek) ekransız bağlamdaki sonucudur — ve günlüğü dürüst tutan şeydir: kaydedilmiş
-bir nokta, o sırada var olmayan bir komşuya sonradan yapışamaz.
+**Yardımcılar yalnız fareyle nişan alınan noktaya uygulanır.** Nesne yakalama, ızgara,
+dik mod, kutupsal izleme, yüzey normali ve iz, bir elin tuvalde işaret ettiği noktayı
+kastedilen noktaya çevirir. **Yazılan** bir koordinat — komut satırında, komutla
+birlikte, betikte, bir yapay zekâ önerisinde — kesin bir değerdir ve olduğu gibi kalır:
+tolerans pikseldir ve bir pikselin zemindeki karşılığı yakınlaştırmayla değişir, yazılmış
+bir sayı ise değişmez. Bu yüzden aynı satır komut satırından, betikten ve arayüzden aynı
+yere düşer.
 
-Uygulama açıkken çalışan bir betiğin ekranı vardır ve elle çizim ile aynı yakalamayı
-alır.
+Günlük, çizilen noktayı yazar (yakalama uygulandıktan sonraki noktayı). Tekrar oynatma
+bu noktayı yazılmış bir değer olarak alır ve yeniden yakalamaz: kaydedilmiş bir nokta, o
+sırada var olmayan bir komşuya sonradan yapışamaz.
 
 ## Örnekler
 

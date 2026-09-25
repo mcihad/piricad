@@ -370,7 +370,7 @@ Tema** sayfasından kapatılabilir; hiçbiri dosyaya girmez.
 
 | Yardımcı | Ne söyler | Ayarı |
 |---|---|---|
-| **Cetvel** | Tuvalin üstünde ve solunda, zemin ölçüsünü rakamla | `cetvel_görünür`, `cetvel_kalınlığı`, `cetvel_birimi` |
+| **Cetvel** | Tuvalin üstünde ve solunda, zemin ölçüsünü rakamla; yakınlaştıkça bölmeleri ayırt edecek kadar ondalıkla (`20,1  20,2`) | `cetvel_görünür`, `cetvel_kalınlığı`, `cetvel_birimi` |
 | **Ölçek çubuğu** | Sol altta, o anki yakınlaştırmanın yuvarlak bir zemin uzunluğu karşılığını | `ölçek_çubuğu` |
 | **Kuzey oku** | Sağ üstte, kuzeyin yönünü | `kuzey_oku` |
 | **Koordinat göstergesi** | Sol altta, imlecin sağa (Y) ve yukarı (X) değerini, durum çubuğuyla aynı harflerle: `Y 485320,15   X 4310220,40` | `koordinat_göstergesi` |
@@ -538,6 +538,10 @@ Arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı` terci
 ikisi de **ekran pikselidir**: nişan alan göz ekrana bakar, bu yüzden tolerans
 yakınlaştırmayla birlikte değişir. İkisini de **Seçenekler ▸ Çizim ve Yakalama**
 sayfasından değiştirirsiniz.
+
+Yakalama **fareyle nişan aldığınız** noktaya uygulanır. Komut satırına yazdığınız bir
+koordinat yazdığınız yere düşer; yakınlaştırma ne kadar uzak olursa olsun yakındaki bir
+köşeye çekilmez. Ayrıntı: [Komut satırı](../komutlar/komut-satiri.md).
 
 Modların tamamı ve bit maskesi: [Oturum modları](../komutlar/mode.md).
 

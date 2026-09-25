@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yazılan koordinat yazıldığı yere düşer (F-03, 2. aşama)
+
+- **Yakalama yalnız fareyle nişan alınan noktaya uygulanıyor.** Nesne yakalama, ızgara,
+  dik mod, kutupsal izleme, yüzey normali ve iz, tuvalde tıklanan ya da sürüklenen noktayı
+  kastedilen noktaya çeviriyor. Komut satırına yazılan, komutla verilen, betikte ya da bir
+  yapay zekâ önerisinde gelen koordinat ise kesin bir değer ve olduğu gibi kalıyor. Önceden
+  arayüzde yazılan nokta da yakalanıyordu: uzak yakınlaşmada bir köşeye 15 cm kala yazılan
+  `485320.150` o köşeye çekiliyor, aynı satır betikte başka yere düşüyordu. Günlük çizilen
+  noktayı yazıyor; tekrar oynatma yeniden yakalamıyor.
+- Cetvel yakınlaştıkça bölmeleri ayırt edecek kadar ondalık yazıyor (bir metrelik görünümde
+  her bölme "20" okunuyordu).
+
 ### Düzeltildi — koordinat sisteminin birimi ile çizimin birimi ayrıldı (F-03, 1. aşama)
 
 - **Derece metre sayılmıyor.** WGS 84 (EPSG:4326) gibi coğrafi bir sistemdeki katman

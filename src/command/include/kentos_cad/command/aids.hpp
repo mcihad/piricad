@@ -8,13 +8,18 @@
 // seam that gives it a tolerance and a document.
 //
 // WHY IT IS HERE AND NOT IN THE CANVAS. Constitution Article 1.2 makes the GUI
-// one client among equals. If snapping lived in the mouse handler, drawing from
-// the command line, from a script or from an AI suggestion would silently land
-// somewhere else than drawing with the hand — and "somewhere else" in a cadastral
-// drawing is a gap in a parcel boundary. The aids are therefore applied inside
+// one client among equals. The aids are applied inside
 // `InputAwaiter<Point2>::await_resume` (context.hpp), on the one path every
 // `co_await ctx.point(...)` takes, whatever supplied the value. No client is
 // asked where it came from; `InputSource` is never consulted (command.md P10).
+//
+// WHAT THEY ACT ON is the VALUE's own statement of what it is: a point AIMED by a
+// hand (`Value::aimed_point`, made only by the canvas) is turned into the point
+// meant; a point STATED — typed, scripted, proposed, replayed — is exact and
+// passes untouched (TODOS F-03). The aperture is pixels, and a pixel's worth of
+// ground changes with the zoom; a written coordinate does not. So one line lands
+// in one place from every client, and the journal, which records the resolved
+// point as a statement, replays without re-snapping.
 //
 // THE TOLERANCE IS PIXELS. `core.yakalama.tolerans` and `core.secim.tolerans` are
 // declared in screen pixels because a user aims at what they can see: twelve

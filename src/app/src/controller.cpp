@@ -749,6 +749,11 @@ void Controller::supplyPoint(core::Point2 world)
     supplyValue(command::Value::point(world));
 }
 
+void Controller::supplyAimedPoint(core::Point2 world)
+{
+    supplyValue(command::Value::aimed_point(world));
+}
+
 void Controller::supplyText(const QString& text)
 {
     supplyValue(command::Value::text(text.toStdString()));

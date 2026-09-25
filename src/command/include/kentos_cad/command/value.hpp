@@ -85,6 +85,19 @@ public:
     static Value number(double v);
     static Value text(std::string v);
     static Value point(Point2 v);
+
+    /// A point AIMED by a hand on the canvas, as opposed to one STATED — typed,
+    /// scripted, proposed by an agent or replayed from a journal.
+    ///
+    /// The difference is what the input aids act on (`apply_input_aids`): object
+    /// snap, the grid, dik mod, polar and tracking turn the point a user pointed
+    /// NEAR into the one they meant, and a stated coordinate needs no such help.
+    /// It used to get it anyway: a surveyor typing 485320,150 beside a corner
+    /// fifteen centimetres away, zoomed out far enough for the aperture to reach
+    /// it, stored the corner — the screen's pixel tolerance deciding a legal
+    /// coordinate (TODOS F-03). Only the canvas makes these.
+    static Value aimed_point(Point2 v);
+
     static Value points(Points v);
     static Value ids(Ints v);
     static Value texts(Texts v);
@@ -95,6 +108,12 @@ public:
 
     /// Whether the argument was supplied at all.
     bool empty() const noexcept { return kind_ == Kind::Empty; }
+
+    /// Whether this point was aimed by a hand rather than stated
+    /// (`aimed_point`). NOT part of equality and NOT serialised: what reaches a
+    /// journal is the RESOLVED point, which is a statement — so a replay is exact
+    /// and never re-snapped against a document that has since changed.
+    bool aimed() const noexcept { return aimed_; }
 
     /// Readers, each returning `d` when this value is of another kind.
     ///
@@ -137,6 +156,7 @@ public:
 
 private:
     Kind kind_{Kind::Empty};
+    bool aimed_{false};
     bool b_{false};
     std::int64_t i_{0};
     double d_{0.0};

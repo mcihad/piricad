@@ -932,16 +932,16 @@ void MapCanvas::commitGripDrag()
             command::Args args;
             args.set("nesne", command::Value::ids(keys));
             args.set("kaynak", command::Value::point(drag_grip_.at));
-            args.set("nokta", command::Value::point(world));
+            args.set("nokta", command::Value::aimed_point(world));
             controller_.runInvocation(
                 command::Invocation{"core.vertex_move", std::move(args), command::Origin::Gui});
             return;
         }
     }
 
-    // The RAW world point, exactly as a click supplies one. Snapping happens once,
-    // inside the command layer, on the road every client takes — the marker the
-    // canvas drew was a preview of that, never a substitute for it.
+    // The RAW world point, AIMED, exactly as a click supplies one. Snapping
+    // happens once, inside the command layer, on the road every client takes —
+    // the marker the canvas drew was a preview of that, never a substitute for it.
     const core::EntityKey key = controller_.document().entities().key[drag_grip_.entity];
 
     // An ID LIST, because `nesne` is declared `ParamKind::Selection` and the bus
@@ -952,7 +952,7 @@ void MapCanvas::commitGripDrag()
     command::Args args;
     args.set("nesne", command::Value::ids({static_cast<std::int64_t>(core::raw(key))}));
     args.set("kose", command::Value::integer(drag_grip_.corner));
-    args.set("nokta", command::Value::point(world));
+    args.set("nokta", command::Value::aimed_point(world));
 
     controller_.runInvocation(
         command::Invocation{drag_grip_.insert ? "core.vertex_insert" : "core.vertex_move",
@@ -1056,20 +1056,41 @@ double nice_step(double target) noexcept
     return decade;
 }
 
-/// `value` with at most `places` decimals and no trailing zeroes, because a ruler
-/// reading "120.000" is three characters of noise on every tick.
 /// `458 000` — thousands separated by a space, the way a Turkish map sheet
-/// prints a coordinate. Not `QLocale`: tr_TR puts a full stop there, and a full
-/// stop in a coordinate is a decimal point to every reader of that sheet.
-std::string spaced(double value)
+/// prints a coordinate, and `decimals` digits after a decimal COMMA. Not
+/// `QLocale`: tr_TR puts a full stop between thousands, and a full stop in a
+/// coordinate is a decimal point to every reader of that sheet.
+std::string spaced(double value, int decimals)
 {
-    const auto whole   = static_cast<long long>(std::llround(value));
-    std::string digits = std::to_string(whole < 0 ? -whole : whole);
+    long long scale = 1;
+    for (int d = 0; d < decimals; ++d)
+        scale *= 10;
+    const auto scaled = static_cast<long long>(std::llround(value * static_cast<double>(scale)));
+    const unsigned long long mag = scaled < 0 ? 0ULL - static_cast<unsigned long long>(scaled)
+                                              : static_cast<unsigned long long>(scaled);
+    const auto unit              = static_cast<unsigned long long>(scale);
+    std::string digits           = std::to_string(mag / unit);
     for (std::size_t at = digits.size(); at > 3;) {
         at -= 3;
         digits.insert(at, 1, ' ');
     }
-    return whole < 0 ? "-" + digits : digits;
+    if (decimals > 0) {
+        const std::string frac = std::to_string(mag % unit);
+        digits += ',' + std::string(static_cast<std::size_t>(decimals) - frac.size(), '0') + frac;
+    }
+    return scaled < 0 ? "-" + digits : digits;
+}
+
+/// How many decimals a ruler reading needs for neighbouring ticks `step` apart
+/// (in the reading's own unit) to read differently: none at a metre or more,
+/// one at a decimetre, two at a centimetre. Without them every tick of a view
+/// a metre wide printed the same whole number — "20 20 20 20" (TODOS F-03).
+int ruler_decimals(double step) noexcept
+{
+    int decimals = 0;
+    for (double s = step; s < 1.0 - 1e-9 && decimals < 6; s *= 10.0)
+        ++decimals;
+    return decimals;
 }
 
 /// The direction from `a` to `b`, written under the session's angle convention.
@@ -1083,6 +1104,8 @@ std::string spaced(double value)
 /// what `@mesafe<açı` means must be one convention (TODOS-CAD P0-4).
 std::string bearing_text(core::Point2 a, core::Point2 b, core::AngleConvention convention);
 
+/// `value` with at most `places` decimals and no trailing zeroes, because a ruler
+/// reading "120.000" is three characters of noise on every tick.
 std::string trimmed(double value, int places)
 {
     // THE TURKISH DECIMAL COMMA, as every other figure this program prints: the
@@ -1266,6 +1289,7 @@ void MapCanvas::buildRuler()
     // The loop counts ticks rather than accumulating a position, exactly as
     // `buildGrid` does: adding a step a thousand times drifts, and a ruler that
     // drifts is a ruler that lies about the distance it is measuring.
+    const int decimals = ruler_decimals(step_mm / unit.per_unit);
     const auto first_x =
         static_cast<long long>(std::floor(static_cast<double>(seen.min_x) / step_mm));
     const auto last_x =
@@ -1278,7 +1302,7 @@ void MapCanvas::buildRuler()
         addRun(ticks, {{x, band - kTick}, {x, band}}, false);
         overlay_.labels.push_back(render::OverlayLabel{tokens_->textFaint.rgba(), x + 4.0f,
                                                        band - kTick - 1.0f, kLabel, true,
-                                                       spaced(mm / unit.per_unit)});
+                                                       spaced(mm / unit.per_unit, decimals)});
     }
 
     const auto first_y =
@@ -3656,14 +3680,16 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             }
 
             // A click is one input value for the running command, and it is the RAW
-            // world point. Snapping is not applied here: it happens once, inside
-            // the command layer, on the path every client takes (kentoscad.md §2.4,
-            // kentos_cad/command/aids.hpp). A canvas that snapped first would be a
-            // client with a private route.
+            // world point, marked AIMED. Snapping is not applied here: it happens
+            // once, inside the command layer (kentos_cad/command/aids.hpp), on the
+            // road every client's value takes — and it acts on an aimed point
+            // only, because a coordinate somebody typed is not a guess (TODOS
+            // F-03). A canvas that snapped first would be a client with a private
+            // route.
             const core::Point2 world =
                 view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
             const QPointF at = event->position();
-            controller_.supplyPoint(world);
+            controller_.supplyAimedPoint(world);
 
             // THE BOX OPENS ON THE CLICK THAT EARNED IT. METİN asks for its anchor
             // first and its string second, so the prompt turns into a text prompt

@@ -264,14 +264,14 @@ TEST_CASE("C-02: yakalama çalışmanın kendi köşelerini ve kenarlarını bul
     REQUIRE(started.ok());
     Session& s = *started.value();
     for (const core::Point2 p : {kA, kB, kC})
-        REQUIRE(s.supply(Value::point(p)).ok());
+        REQUIRE(s.supply(Value::aimed_point(p)).ok());
 
     // 9 mm from the run's first corner: UÇ takes it.
-    REQUIRE(s.supply(Value::point(core::Point2{5, 8})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{5, 8})).ok());
     CHECK(s.prompt().rubber_origin == kA);
 
     // 7 mm off the middle of the run's first edge: ORTA takes it.
-    REQUIRE(s.supply(Value::point(core::Point2{5'003, 7})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{5'003, 7})).ok());
     CHECK(s.prompt().rubber_origin == (core::Point2{5'000, 0}));
 
     REQUIRE(s.supply(Value{}).ok());
@@ -289,8 +289,8 @@ TEST_CASE("C-02: yakalama bir eğri çalışmasının köşelerini alır, kiriş
     REQUIRE(started.ok());
     Session& s = *started.value();
     for (const core::Point2 p : {kA, kB, kC})
-        REQUIRE(s.supply(Value::point(p)).ok());
-    REQUIRE(s.supply(Value::point(core::Point2{5'003, 7})).ok());
+        REQUIRE(s.supply(Value::aimed_point(p)).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{5'003, 7})).ok());
     CHECK(s.prompt().rubber_origin == (core::Point2{5'003, 7}));
     s.cancel();
     (void)r.bus.finish(s);

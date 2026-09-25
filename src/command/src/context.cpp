@@ -52,12 +52,18 @@ Value::Ints to_ids(const Value& v)
 
 namespace {
 
-/// The aids proper: object snap, grid, direction locks and tracking, on a point
-/// or a run of them. Anything else passes through untouched.
+/// The aids proper: object snap, grid, direction locks and tracking, on a point a
+/// hand aimed. Anything else — a stated point included — passes through untouched.
 Value snap_value(Session& session, const Prompt& prompt, Value v, bool up_front)
 {
-    // Only a point is aimed; a number, a name or a flag is typed exactly.
-    if (v.kind() != Value::Kind::Point && v.kind() != Value::Kind::PointList) return v;
+    // ONLY A POINT A HAND AIMED is helped. A number, a name or a flag is typed
+    // exactly, and so is a STATED coordinate — typed on the command line,
+    // written in a script, proposed by an agent, replayed from a journal. The
+    // aperture is pixels; letting it move a stated coordinate onto whatever
+    // corner happened to be on screen would make the zoom level decide a legal
+    // figure (TODOS F-03, `Value::aimed_point`). A list is always stated: no
+    // hand hands over a whole run at once.
+    if (v.kind() != Value::Kind::Point || !v.aimed()) return v;
 
     Bus& bus = session.bus();
     // The aids THIS prompt takes (`aids_for`): dik mod has no say over a
@@ -78,34 +84,17 @@ Value snap_value(Session& session, const Prompt& prompt, Value v, bool up_front)
 
     const core::Document& doc = bus.document();
 
-    // THE RUN'S OWN CORNERS for a single point ANSWERED at a run's prompt; a
-    // whole list handed over at once, and a point that came with the invocation,
-    // are resolved against the aids alone (`apply_input_aids`).
-    const PendingRun run =
-        v.kind() == Value::Kind::Point && !up_front ? pending_run(prompt) : PendingRun{};
-    const auto resolve = [&](core::Point2 aim, bool has_base, core::Point2 base) {
+    // THE RUN'S OWN CORNERS for a point ANSWERED at a run's prompt; a point that
+    // came with the invocation (a grip drag's) is resolved against the aids alone.
+    const PendingRun run = !up_front ? pending_run(prompt) : PendingRun{};
+    const auto resolve   = [&](core::Point2 aim, bool has_base, core::Point2 base) {
         const core::SnapResult r =
             bus.aids().resolve(doc, set, aim, has_base, base, bus.tracking_marks(), run);
         bus.aids().remember(r);
         return r.point;
     };
 
-    if (v.kind() == Value::Kind::Point)
-        return Value::point(resolve(v.as_point(), based, prompt.rubber_origin));
-
-    // A whole point list arrives when a script hands one over at once. Each point
-    // is resolved against the one before it, exactly as an interactive run would,
-    // so a scripted polyline and a drawn polyline agree vertex for vertex.
-    Value::Points points = v.as_points();
-    bool has_base        = based;
-    core::Point2 base    = prompt.rubber_origin;
-
-    for (auto& p : points) {
-        p        = resolve(p, has_base, base);
-        base     = p;
-        has_base = true;
-    }
-    return Value::points(std::move(points));
+    return Value::point(resolve(v.as_point(), based, prompt.rubber_origin));
 }
 
 } // namespace

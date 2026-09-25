@@ -434,15 +434,16 @@ TEST_CASE("Tabanı olmayan bir önizleme DİK kilidini saptırmaz")
     auto started = r.bus.begin_interactive("ESNET", Origin::Gui);
     REQUIRE(started.ok());
     Session& s = *started.value();
-    REQUIRE(s.supply(Value::point(core::Point2{8'000, -2'000})).ok());
-    REQUIRE(s.supply(Value::point(core::Point2{12'000, 12'000})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{8'000, -2'000})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{12'000, 12'000})).ok());
     if (!s.waiting()) FAIL_WITH("ESNET durdu", s.error().message);
     CHECK_FALSE(s.prompt().rubber_base);
-    REQUIRE(s.supply(Value::point(core::Point2{10'000, 3'000})).ok()); // not level with a corner
+    REQUIRE(
+        s.supply(Value::aimed_point(core::Point2{10'000, 3'000})).ok()); // not level with a corner
     REQUIRE(s.waiting());
     // The end IS aimed from the base, so dik mod applies there as it always did.
     CHECK(s.prompt().rubber_base);
-    REQUIRE(s.supply(Value::point(core::Point2{13'000, 3'400})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{13'000, 3'400})).ok());
     REQUIRE(r.bus.finish(s).ok());
 
     const JournalEntry& last = r.journal.entries().back();
@@ -460,18 +461,27 @@ TEST_CASE("DİK mod bir dikdörtgenin karşı köşesini eksene kilitlemez")
     auto started = r.bus.begin_interactive("DİKDÖRTGEN", Origin::Gui);
     REQUIRE(started.ok());
     Session& s = *started.value();
-    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{0, 0})).ok());
     REQUIRE(s.waiting());
     CHECK(s.prompt().rubber_shape == RubberShape::Rectangle);
-    REQUIRE(s.supply(Value::point(core::Point2{20'000, 12'000})).ok());
+    REQUIRE(s.supply(Value::aimed_point(core::Point2{20'000, 12'000})).ok());
     REQUIRE(r.bus.finish(s).ok());
     const core::EntityId e = r.doc.slot_of(static_cast<core::EntityKey>(1));
     REQUIRE(e != core::kNoEntity);
     CHECK(r.doc.entities().box_of(e) == core::Box2{0, 0, 20'000, 12'000});
 
-    // And a line's next point is still levelled, as it always was.
-    REQUIRE(r.bus.execute_line("ÇİZGİ 0,30 20,31", Origin::Test).ok());
+    // And a line's next point AIMED by the hand is still levelled, as it always
+    // was; a typed one is kept as typed (TODOS F-03).
+    auto line = r.bus.begin_interactive("ÇİZGİ", Origin::Gui);
+    REQUIRE(line.ok());
+    Session& l = *line.value();
+    REQUIRE(l.supply(Value::aimed_point(core::Point2{0, 30'000})).ok());
+    REQUIRE(l.supply(Value::aimed_point(core::Point2{20'000, 31'000})).ok());
+    REQUIRE(l.supply(Value{}).ok());
+    REQUIRE(r.bus.finish(l).ok());
     CHECK_EQ(vertex_of(r.doc, 2, 1), (core::Point2{20'000, 30'000}));
+    REQUIRE(r.bus.execute_line("ÇİZGİ 0,40 20,41", Origin::Test).ok());
+    CHECK_EQ(vertex_of(r.doc, 3, 1), (core::Point2{20'000, 41'000}));
 }
 
 TEST_CASE("HİZALA: her adımda nesneler imleçle gider; ikinci çift arayüzden de sorulur")
