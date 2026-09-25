@@ -32,6 +32,11 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   liste bu ondalıkla, tam sayılarla ve yarımdan uzağa yuvarlanarak yazılıyor. Aralık 0–3:
   dördüncü ondalık milimetre deposunda hiç yoktur.
 - Belgede varsayılan sistem TUREF/TM36 olarak düzeltildi (programın varsayılanı buydu).
+- `YENİ` ile açılan çizimin sistemi de çözülüyor (önceden "çözümlenmedi" kalıyor ve
+  `DIŞAAKTAR` reddediyordu); CRS kataloğu çalışma dizininden değil veri kökünden okunuyor
+  (program başka bir dizinden açıldığında hiçbir sistem çözülmüyordu).
+- Tuvalin köşesindeki imleç okuması durum çubuğuyla aynı harfleri kullanıyor: `Y` sağa,
+  `X` yukarı (önceden `S … Y …` yazıyor, aynı ekranda Y iki ayrı ekseni gösteriyordu).
 
 ### Eklendi — CBS dosyasını canlı bağlama ve yerel kopya (F-02, 3. aşama)
 

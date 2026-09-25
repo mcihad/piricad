@@ -358,6 +358,29 @@ TEST_CASE("CRS: sistemin neyi saydığı sorulur; metre saymayan sistem çizime 
     CHECK_EQ(doc.crs().id(), std::string("EPSG:32636"));
 }
 
+TEST_CASE("CRS: YENİ çizimin varsayılan sistemini de çözer (F-03)")
+{
+    // The program's first drawing had its system looked up at start; a drawing
+    // made with YENİ did not. It named TUREF/TM36 and knew nothing about it:
+    // "çözümlenmedi" in the status bar, an export refused for a drawing that had
+    // done nothing wrong, and no answer to whether its numbers count metres.
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    REQUIRE(catalogue.ok());
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+    io::FileService files{bus};
+    domain::geodesy::CrsService service(bus, std::move(catalogue.value()));
+
+    REQUIRE(bus.execute_line("YENİ", command::Origin::Test).ok());
+    CHECK(bus.document().crs().resolved());
+    CHECK_EQ(bus.document().crs().epsg(), 5256); // TUREF/TM36, the declared default
+    CHECK(bus.document().crs().unit() == core::CrsUnit::Metre);
+}
+
 TEST_CASE("CRS: metre saymayan sistemle kaydedilmiş çizim açılır ama uyarıyla (F-03)")
 {
     // Before AYAR refused them, a drawing COULD be saved "in" EPSG:4326. It must

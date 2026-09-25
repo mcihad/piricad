@@ -378,7 +378,20 @@ core::Result<std::string> FileService::create_new()
     // their start (core/document.hpp). Writing that list out here instead would
     // be a second answer to "what does an empty drawing look like", and the two
     // would drift.
-    bus_.document() = core::Document{};
+    //
+    // AND ITS SYSTEM LOOKED UP before it is put in place, as the one the program
+    // starts with is (`Controller`) and as `AÇ` does for a file it has read.
+    // Left as constructed it named TUREF/TM36 and knew nothing about it —
+    // "çözümlenmedi" in the status bar, `DIŞAAKTAR` refusing a drawing that had
+    // done nothing wrong, and no answer to whether its numbers count metres
+    // (TODOS F-03). A document nobody holds yet is not the live one, so this is
+    // setting it up, not editing it outside a transaction.
+    core::Document fresh;
+    if (bus_.on_crs_resolve) {
+        core::Op discard;
+        (void)fresh.set_crs(bus_.on_crs_resolve(fresh.crs().id()), discard);
+    }
+    bus_.document() = std::move(fresh);
 
     // The project's own settings go with the project. They are the drawing's
     // scale, its unit, its coordinate system — model.md R40 puts them at project

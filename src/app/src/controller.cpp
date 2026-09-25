@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/controller.hpp"
 
+#include "kentos_cad/app/data_root.hpp"
+
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/script/python_doc.hpp"
 
@@ -113,7 +115,11 @@ Controller::Controller(QObject* parent)
     // hook uninstalled: an unresolved CRS keeps its id and says so, which is the
     // truthful state, and guessing a zone would move every coordinate by
     // kilometres while still looking like Turkish coordinates.
-    if (auto catalogue = domain::geodesy::CrsCatalog::load("data/crs"); catalogue) {
+    // FROM THE DATA ROOT, not the working directory: a program opened from the
+    // Finder or a desktop shortcut starts in `/` or the user's home, where a
+    // relative `data/crs` is nothing — and then no system is ever resolved, and
+    // nothing can tell a globe in degrees from a map in metres (TODOS F-03).
+    if (auto catalogue = domain::geodesy::CrsCatalog::load(data_path("data/crs")); catalogue) {
         crs_.emplace(bus_, std::move(catalogue.value()));
 
         // Resolve the CRS the document was CONSTRUCTED with. The document exists

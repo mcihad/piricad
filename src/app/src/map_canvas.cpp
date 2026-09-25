@@ -1465,7 +1465,11 @@ void MapCanvas::buildReadout()
                                 ? snap_preview_.point
                                 : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
-    const std::string text = "S " + trimmed(static_cast<double>(at.x) / 1000.0, 3) + "   Y " +
+    // Y FOR THE EASTING AND X FOR THE NORTHING, the letters the status bar, the
+    // coordinate mark and every pafta use (model.md R37a). This used the
+    // initials of the two Turkish words instead, so the same screen called the
+    // easting Y in one corner and the northing Y in the other.
+    const std::string text = "Y " + trimmed(static_cast<double>(at.x) / 1000.0, 3) + "   X " +
                              trimmed(static_cast<double>(at.y) / 1000.0, 3);
 
     // ABOVE THE SCALE BAR, and clear of the canvas floor.

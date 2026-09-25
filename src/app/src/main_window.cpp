@@ -102,6 +102,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
+#include <QProcess>
 #include <QPushButton>
 #include <QRawFont>
 #include <QScrollBar>
@@ -6892,6 +6893,108 @@ int MainWindow::probeRealMouse()
                       .arg(own));
             shoot("yerel-kopya-sonra");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 34. A SYSTEM THAT COUNTS DEGREES IS REFUSED AT EVERY DOOR (TODOS F-03) ----
+        //
+        // The store holds millimetres, so a drawing cannot be "in" WGS 84. Asked
+        // for as the drawing's system it is refused and the drawing keeps the
+        // one it had; a GeoPackage in degrees is refused with the way to convert
+        // it; and a reading is written to the project's coordinate precision,
+        // rounded in integers.
+        {
+            const QTemporaryDir scratch;
+            const QString folder = shooting ? into : scratch.path();
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("AYAR koordinat_sistemi EPSG:5256"));
+            endCommand();
+            const core::Document& drawing = controller_->document();
+            const std::string kept_crs    = drawing.crs().id();
+            // A read or a write of a file runs on a worker; its answer lands when
+            // the worker is done, and not a line before.
+            const auto settled = [this] {
+                QElapsedTimer waited;
+                waited.start();
+                while (controller_->session() != nullptr && controller_->session()->working() &&
+                       waited.elapsed() < 20000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                endCommand();
+                QCoreApplication::processEvents();
+            };
+
+            if (!controller_->bus().on_crs_resolve) {
+                (void)std::fprintf(stdout, "[fare] not: CRS çözücüsü yok (KENTOS_DATA?); "
+                                           "sistem reddi sınanmadı\n");
+            } else {
+                transcript_->clear();
+                runScriptLine(QStringLiteral("AYAR koordinat_sistemi EPSG:4326"));
+                endCommand();
+                check(drawing.crs().id() == kept_crs &&
+                          transcript_->toPlainText().contains(
+                              QStringLiteral("Çizimin koordinat sistemi değişmedi")) &&
+                          transcript_->toPlainText().contains(QStringLiteral("derece")),
+                      QStringLiteral("çizimin sistemi coğrafi yapılamadı ve nedeni söylendi (%1 "
+                                     "kaldı)")
+                          .arg(QString::fromStdString(drawing.crs().id())));
+                shoot("sistem-derece-reddi");
+            }
+
+            // A parcel exported in TM36, carried to degrees by GDAL's own tool,
+            // and offered back.
+            for (const char* line :
+                 {"KATMAN ad=PARSEL", "ALAN 485300,4310200 485360,4310200 485360,4310245 "
+                                      "485300,4310245"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            const QString tm36 = folder + QStringLiteral("/tm36.gpkg");
+            const QString wgs  = folder + QStringLiteral("/wgs84.gpkg");
+            QFile::remove(tm36);
+            QFile::remove(wgs);
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(tm36));
+            settled();
+            QProcess convert;
+            convert.start(QStringLiteral("ogr2ogr"),
+                          {QStringLiteral("-t_srs"), QStringLiteral("EPSG:4326"), wgs, tm36});
+            const bool converted = convert.waitForFinished(30'000) &&
+                                   convert.exitStatus() == QProcess::NormalExit &&
+                                   convert.exitCode() == 0 && QFileInfo::exists(wgs);
+            if (!converted) {
+                (void)std::fprintf(stdout, "[fare] not: ogr2ogr yok; WGS 84 dosyası sınanmadı\n");
+            } else {
+                runScriptLine(QStringLiteral("YENİ"));
+                endCommand();
+                runScriptLine(QStringLiteral("AYAR koordinat_sistemi EPSG:5256"));
+                endCommand();
+                transcript_->clear();
+                runScriptLine(QStringLiteral("İÇEAKTAR \"%1\"").arg(wgs));
+                settled();
+                const QString said = transcript_->toPlainText();
+                check(controller_->document().live_entity_count() == 0 &&
+                          said.contains(QStringLiteral("içe alınmadı")) &&
+                          said.contains(QStringLiteral("ogr2ogr -t_srs")),
+                      QStringLiteral("derece sayan GeoPackage reddedildi, dönüştürme yolu "
+                                     "söylendi"));
+                shoot("derece-geopackage-reddi");
+            }
+
+            // THE READING, to the project's decimals.
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("AYAR koordinat_hassasiyeti 2"));
+            endCommand();
+            canvas_->zoomToBox(core::Box2{485'310'000, 4'310'215'000, 485'330'000, 4'310'225'000});
+            transcript_->clear();
+            runScriptLine(QStringLiteral("KOORDİNAT nokta=485320.155,4310220.254"));
+            endCommand();
+            QCoreApplication::processEvents();
+            check(transcript_->toPlainText().contains(QStringLiteral("485320,16 m")) &&
+                      transcript_->toPlainText().contains(QStringLiteral("4310220,25 m")),
+                  QStringLiteral("KOORDİNAT okuması iki ondalıkla, yarımdan uzağa yazıldı"));
+            shoot("koordinat-hassasiyeti");
+            runScriptLine(QStringLiteral("AYAR koordinat_hassasiyeti varsayilan"));
+            endCommand();
         }
     }
 

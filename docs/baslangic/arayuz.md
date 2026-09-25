@@ -373,7 +373,7 @@ Tema** sayfasından kapatılabilir; hiçbiri dosyaya girmez.
 | **Cetvel** | Tuvalin üstünde ve solunda, zemin ölçüsünü rakamla | `cetvel_görünür`, `cetvel_kalınlığı`, `cetvel_birimi` |
 | **Ölçek çubuğu** | Sol altta, o anki yakınlaştırmanın yuvarlak bir zemin uzunluğu karşılığını | `ölçek_çubuğu` |
 | **Kuzey oku** | Sağ üstte, kuzeyin yönünü | `kuzey_oku` |
-| **Koordinat göstergesi** | Sol altta, imlecin sağa/yukarı değerini | `koordinat_göstergesi` |
+| **Koordinat göstergesi** | Sol altta, imlecin sağa (Y) ve yukarı (X) değerini, durum çubuğuyla aynı harflerle: `Y 485320,15   X 4310220,40` | `koordinat_göstergesi` |
 
 Koordinat göstergesi, bir yakalama tuttuğunda **yakalanmış** noktayı yazar; tıklamanın
 üreteceği koordinat odur, imlecin durduğu ham nokta değil.
