@@ -1206,4 +1206,18 @@ TEST_CASE("Plan: uygulandı ile dosya üretildi ayrı şeyler")
     // printed with something the program could not honour.
     REQUIRE(made.find("uyarilar") != nullptr);
     CHECK_EQ(made.find("uyarilar")->as_array().size(), std::size_t{1});
+
+    // AND WHAT IT CHANGED, counted (TODOS F-05): the client checks the drawing
+    // against numbers, not against the word "applied". Pending says none.
+    CHECK(waiting.find("degisiklik") == nullptr);
+    plan.changes.created     = 3;
+    plan.changes.reshaped    = 2;
+    const core::Json counted = plan.to_json();
+    REQUIRE(counted.find("degisiklik") != nullptr);
+    CHECK_EQ(counted.find("degisiklik")->find("eklenen")->as_int(), 3);
+    CHECK_EQ(counted.find("degisiklik")->find("yeri_bicimi_degisen")->as_int(), 2);
+    CHECK_EQ(counted.find("degisiklik")->find("silinen")->as_int(), 0);
+    REQUIRE(counted.find("degisiklik_ozeti") != nullptr);
+    CHECK_EQ(counted.find("degisiklik_ozeti")->as_string(),
+             "3 nesne eklendi; 2 nesnenin yeri ya da biçimi değişti");
 }

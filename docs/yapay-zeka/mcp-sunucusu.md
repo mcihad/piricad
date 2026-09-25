@@ -202,6 +202,43 @@ on bir tane aynı öneri birikir.
 Geri dönen komut satırları **sizin de yazabileceğiniz satırlardır**. Bu tesadüf değil:
 okuyamadığınız bir öneriden sorumlu olamazsınız.
 
+### Uygulandıktan sonra: ne değişti
+
+Uygulanan bir önerinin durumu ne olduğunu **sayılarla** söyler; istemci "uygulandı"
+sözcüğüne değil bu sayılara bakarak çizimi doğrular. Durum cevabındaki `degisiklik`
+nesnesi, önerinin tek işleminin çizimde ne yaptığını sayar; bağlı yazılar gibi kaynağını
+izleyen nesneler de kendi değişiklikleriyle sayılır. Aynı işlemin içinde oluşturulup
+silinen bir nesne hiçbir yerde sayılmaz:
+
+```json
+{ "degisiklik": { "eklenen": 3, "silinen": 0, "yeri_bicimi_degisen": 2,
+                  "metni_degisen": 2, "degeri_degisen": 0, "katmani_degisen": 0,
+                  "gorunusu_degisen": 0, "bagi_degisen": 0, "ayari_degisen_katman": 0,
+                  "bloklar": false, "yerlesimler": false, "kilavuzlar": false,
+                  "koordinat_sistemi": false },
+  "degisiklik_ozeti": "3 nesne eklendi; 2 nesnenin yeri ya da biçimi ve 2 yazının metni değişti" }
+```
+
+| Alan | Ne sayar |
+|---|---|
+| `eklenen` | Önce olmayıp şimdi olan nesneler |
+| `silinen` | Önce olup şimdi olmayan nesneler (kaynağıyla birlikte silinen bağlı yazılar dahil) |
+| `yeri_bicimi_degisen` | Taşınan, döndürülen, köşesi değişen nesneler |
+| `metni_degisen` | Metni, yüksekliği ya da hizası değişen yazılar |
+| `degeri_degisen` | Öznitelik değeri (ya da dış veri eki) değişen nesneler |
+| `katmani_degisen` | Başka katmana geçen nesneler |
+| `gorunusu_degisen` | Kendi stili ya da gizliliği değişen nesneler |
+| `bagi_degisen` | Başka bir nesneye bağı ya da kökeni değişen nesneler |
+| `ayari_degisen_katman` | Görünürlüğü, kilidi, görünüşü ya da grubu değişen katmanlar |
+| `bloklar` | Bir blok tanımı (üyeleri, taban noktası, dış referansı) değişti mi |
+| `yerlesimler` | Çıktı yerleşimleri değişti mi |
+| `kilavuzlar` | Kılavuz çizgiler değişti mi |
+| `koordinat_sistemi` | Çizimin koordinat sistemi değişti mi |
+
+Alanların hepsi her zaman yazılır; `degisiklik_ozeti` aynı sayıların Türkçe cümlesidir ve
+hiçbir şey değişmediyse yazılmaz. İkisi de öneri **uygulandıktan** sonra gelir; bekleyen,
+reddedilen ya da uygulanamayan bir önerinin durumunda yoktur.
+
 ### Bir diziyi tek onayda toplamak
 
 Bir istemci birkaç adımı **tek bir öneride** toplayabilir: ikinci ve sonraki çağrılarda

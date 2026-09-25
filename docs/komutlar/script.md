@@ -53,11 +53,16 @@ Yolunda boşluk varsa:
 BETİK "Belgelerim/parsel çizimi.json"
 ```
 
-Başarılı çalışmada transkript şunu yazar:
+Başarılı çalışmada transkript betiğin adını ve tek adımının ne yaptığını yazar:
 
 ```text
 Betik tamamlandı: tests/journal/ornek-parsel.json
+Örnek parsel çizimi: 9 komut, tek geri alma adımı — 14 nesne eklendi; 4 katmanın ayarları değişti.
 ```
+
+Başarısız bir betik **komutun başarısızlığıdır**: `BETİK` hata döner, çizim betikten
+önceki hâlindedir ve yarım kalan kısım `YİNELE` ile geri getirilemez. Ayrıntı:
+[Bir betik = bir geri alma adımı](../betik/README.md#bir-betik--bir-geri-alma-adımı).
 
 ### Arayüz
 
@@ -155,13 +160,14 @@ dolayısıyla bu sayfadaki her kural orada da geçerlidir. Ayrıntı:
 | `Betik dosyası açılamadı: yol` | Dosya yok veya okunamıyor | Yolu ve izinleri denetleyin |
 | `Betik dosya erişimi 'güvenli' kum havuzunda kapalıdır. Gerekli seviye: 'proje' veya 'tam'.` | Kum havuzu seviyesi yetersiz | Uygulama içinden çalıştırın |
 | `Betik ya bir komut dizisi ya da "komutlar" alanı olan bir nesne olmalı` | Kök yapı yanlış | Dosyayı dizi ya da `komutlar` alanlı nesne yapın |
-| `Betik satırı bir nesne olmalı: 42` | Dizide nesne olmayan bir öğe var | Her satırı `{ "cmd": ... }` nesnesi yapın |
-| `Betik satırında "cmd" alanı yok: {...}` | Satırda komut adı yok | `"cmd"` veya `"komut"` alanı ekleyin |
-| `Betik satırı 3 (core.line): 'core.line': 'noktalar' parametresi en az 2 değer istiyor, 1 değer geldi.` | Üçüncü satırdaki komut doğrulamayı geçemedi | Satır numarasına gidip düzeltin; çizim değişmedi |
+| `Betik satırı N bir nesne olmalı: 42. Betik çalıştırılmadı.` | N. öğe nesne değil | Her satırı `{ "cmd": ... }` nesnesi yapın; betik hiç çalışmadı, çizim değişmedi |
+| `Betik satırı N: "cmd" alanı yok: {...}. Betik çalıştırılmadı.` | N. satırda komut adı yok | `"cmd"` veya `"komut"` alanı ekleyin; betik hiç çalışmadı |
+| `Betik satırı N (komut): … Betik çalıştırılmadı.` | N. satırın `args` alanı okunamadı | Mesajdaki alanı düzeltin; betik hiç çalışmadı |
+| `Betik satırı 3 (core.line): 'core.line': 'noktalar' parametresi en az 2 değer istiyor, 1 değer geldi. Betik bütünüyle geri alındı; çizim betikten önceki hâlinde.` | Üçüncü satırdaki komut doğrulamayı geçemedi | Satır numarasına gidip düzeltin; önceki satırların transkriptteki yanıtları da geri alındı |
 | `Komut argümanları bir JSON nesnesi olmalı.` | `args` nesne değil | `args` alanını `{ }` yapın |
 | `Nokta [x_mm, y_mm] biçiminde olmalı. Girilen: [1,2,3]` | Nokta iki bileşenli değil | Noktayı `[x, y]` yapın |
 | `Betik motoru bağlı değil.` | Betik motoru olmayan bir ortamda çalışılıyor | Uygulama içinden çalıştırın |
-| `Betik hatası: ...` | Betik çalışırken bir hata oluştu | Mesajın devamı satır numarasını verir |
+| `Betik hatası: ...` | Betik çalışırken bir hata oluştu; `BETİK` başarısız olur | Mesajın devamı satır numarasını verir; betiğin tamamı geri alındı |
 
 Hata mesajı her zaman **kaçıncı satırda** ve **hangi komutta** olduğunu söyler. Hata
 durumunda çiziminiz betikten önceki hâlindedir.

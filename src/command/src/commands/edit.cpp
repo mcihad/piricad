@@ -101,13 +101,19 @@ Task<void> run_undo(Context& ctx)
     std::string label;
     if (refuse_inside_batch(ctx, "geri alınamaz")) co_return;
 
-    auto st = bus.undo_stack().undo(bus.document(), &label);
+    ChangeSummary changed;
+    auto st = bus.undo_stack().undo(bus.document(), &label, &changed);
     if (!st) {
         ctx.refuse(st.error());
         co_return;
     }
 
     ctx.echo("Geri alındı: " + label);
+    // WHAT TAKING IT BACK DID, when it did anything (TODOS F-05): after a
+    // thousand-line script, "Geri alındı: Kaydırma" alone does not say that 500
+    // parcels went back to where they were.
+    if (const std::string did = describe_changes(changed); !did.empty())
+        ctx.echo("Geri almayla " + did + ".");
     if (bus.on_document_changed) bus.on_document_changed();
 }
 
@@ -117,13 +123,16 @@ Task<void> run_redo(Context& ctx)
     std::string label;
     if (refuse_inside_batch(ctx, "yinelenemez")) co_return;
 
-    auto st = bus.undo_stack().redo(bus.document(), &label);
+    ChangeSummary changed;
+    auto st = bus.undo_stack().redo(bus.document(), &label, &changed);
     if (!st) {
         ctx.refuse(st.error());
         co_return;
     }
 
     ctx.echo("Yinelendi: " + label);
+    if (const std::string did = describe_changes(changed); !did.empty())
+        ctx.echo("Yinelemeyle " + did + ".");
     if (bus.on_document_changed) bus.on_document_changed();
 }
 

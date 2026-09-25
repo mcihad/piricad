@@ -98,14 +98,30 @@ gelir. Ayrıntı: [Katman yönetimi](../komutlar/layer.md).
 GERİAL
 ```
 
-veya **Ctrl+Z**. Transkript ne geri alındığını söyler:
+veya **Ctrl+Z**. Geri alınan **son adımdır**: 4. adımdaki `KATMAN`. Transkript ne geri
+alındığını ve geri almanın ne yaptığını söyler:
+
+```text
+Geri alındı: Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
+Geri almayla 1 katmanın ayarları değişti.
+```
+
+`PARSEL` katmanı listede kalır ve etkin katman olmayı sürdürür; geri alınan, ona
+verdiğiniz **renktir** — katman öntanımlı siyahına döner. Bir kez daha geri alın:
+
+```
+GERİAL
+```
+
+Bu kez 3. adımda son çizdiğiniz çizgi kalkar:
 
 ```text
 Geri alındı: İki veya daha fazla nokta arasında doğru parçaları çizer.
+Geri almayla 1 nesne silindi.
 ```
 
-`YİNELE` (veya **Ctrl+Shift+Z**) geri aldığınızı iade eder. Bir komut = bir adım
-kuralı gereği, dört noktalı bir çizgi tek `GERİAL` ile tamamen kalkar.
+`YİNELE` (veya **Ctrl+Shift+Z**) geri aldıklarınızı sırasıyla iade eder. Bir komut = bir
+adım kuralı gereği, dört noktalı bir çizgi tek `GERİAL` ile tamamen kalkar.
 
 ## 6. Görünümü ayarlayın
 
@@ -133,6 +149,7 @@ Aktif katman: YOL
 Aktif katman: BINA
 Aktif katman: SINIR
 Betik tamamlandı: tests/journal/ornek-parsel.json
+Örnek parsel çizimi: 9 komut, tek geri alma adımı — 14 nesne eklendi; 4 katmanın ayarları değişti.
 ```
 
 Şimdi **Ctrl+Z**'ye basın. Dokuz komutluk betiğin tamamı tek adımda kalkar: bir betik

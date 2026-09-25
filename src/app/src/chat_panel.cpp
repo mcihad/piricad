@@ -583,6 +583,8 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
         if (result.value().applied_revision != 0)
             told +=
                 " Çizimin yeni sürümü: " + std::to_string(result.value().applied_revision) + ".";
+        if (const std::string did = command::describe_changes(result.value().changes); !did.empty())
+            told += "\nDeğişen: " + did + ".";
         for (const std::string& one : result.value().outputs)
             told += "\nYazılan dosya: " + one;
         for (const std::string& one : result.value().warnings)
@@ -795,6 +797,8 @@ void ChatPanel::resumeAfterDecision(const QString& planId, bool applied)
         told = "Öneri " + planId.toStdString() + ": " + ai::plan_state_name(plan.state) + ".";
         if (plan.applied_revision != 0)
             told += " Çizimin yeni sürümü: " + std::to_string(plan.applied_revision) + ".";
+        if (const std::string did = command::describe_changes(plan.changes); !did.empty())
+            told += "\nDeğişen: " + did + ".";
         for (const std::string& one : plan.outputs)
             told += "\nYazılan dosya: " + one;
         for (const std::string& one : plan.warnings)

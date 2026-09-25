@@ -294,6 +294,10 @@ eşleştirilir.
 Reddedilen bir öneri günlüğe hiç girmez — hiçbir komut çalışmadı — ama denetim kaydına
 girer. İkisinin ayrı dosyalar olmasının bir sebebi de budur.
 
+Uygulanan bir önerinin durumu, tek işlemin çizimde ne yaptığını sayar — eklenen,
+silinen, yeri ya da biçimi, metni, değeri değişen nesneler — ve bunu sohbetteki modele de
+söyler; ayrıntı [MCP sunucusu](mcp-sunucusu.md#uygulandıktan-sonra-ne-değişti).
+
 Geri almak **kararı silmez**: kayıt ve önerinin durumu olduğu gibi kalır. "Uygulandı,
 sonra geri alındı" ile "hiç uygulanmadı" aynı şey değildir.
 

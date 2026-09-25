@@ -9,6 +9,7 @@ add_library(kentos_command STATIC
     src/ghost.cpp
     src/path_edit.cpp
     src/bus.cpp
+    src/changes.cpp
     src/context.cpp
     src/input.cpp
     src/job.cpp

@@ -10,6 +10,7 @@
 // objection about report shapes).
 #pragma once
 
+#include "kentos_cad/command/changes.hpp"
 #include "kentos_cad/script/sandbox.hpp"
 
 #include <cstddef>
@@ -20,9 +21,11 @@ namespace kentos::script {
 /// What a finished run has to say for itself.
 struct RunReport
 {
-    std::size_t commands{0}; ///< how many commands ran
-    std::size_t ops{0};      ///< primitive edits across all of them
-    std::string label;       ///< the script's own name, for the undo entry
+    std::size_t commands{0};        ///< how many commands ran
+    std::size_t ops{0};             ///< primitive edits across all of them
+    std::string label;              ///< the script's own name, for the undo entry
+    command::ChangeSummary changes; ///< what the one step changed (TODOS F-05)
+    std::string said;               ///< the batch's own sentence: commands, step, changes
 };
 
 } // namespace kentos::script

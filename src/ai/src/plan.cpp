@@ -61,6 +61,13 @@ core::Json Plan::to_json() const
     if (applied_revision != 0)
         out.set("yeni_surum", core::Json::integer(static_cast<std::int64_t>(applied_revision)));
     if (!undo_label.empty()) out.set("geri_alma", core::Json::string(undo_label));
+    // WHAT IT CHANGED, counted (TODOS F-05): the client checks the drawing
+    // against these numbers rather than against the word "applied".
+    if (applied_revision != 0) {
+        out.set("degisiklik", command::changes_json(changes));
+        if (const std::string said = command::describe_changes(changes); !said.empty())
+            out.set("degisiklik_ozeti", core::Json::string(said));
+    }
     if (!decided_by.empty()) out.set("karar_veren", core::Json::string(decided_by));
     if (state == PlanState::Pending && !waiting_reason.empty())
         out.set("bekleme_gerekcesi", core::Json::string(waiting_reason));

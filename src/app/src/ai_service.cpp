@@ -324,6 +324,7 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
     if (ai::Plan* filed = plans_.find(plan.id); filed != nullptr) {
         filed->applied_revision = bus_.document().revision();
         filed->outputs          = std::move(wrote);
+        filed->changes          = done.value().changes;
         // APPENDED, not replaced: a fresh name given before the decision
         // (`resolveOverwrites`) is a warning the client must still read.
         filed->warnings.insert(filed->warnings.end(), notes.begin(), notes.end());

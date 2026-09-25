@@ -30,7 +30,7 @@ Betik bir JSON dosyasıdır. İki biçim kabul edilir.
 ```
 
 `ad` alanı geri alma adımının adı olur; **Geri Al**'dan (**Ctrl+Z**) sonra durum çubuğunda
-`Geri alındı: <ad>` yazar.
+`Geri alındı: <ad>` yazar ve ardından geri almanın ne yaptığı gelir.
 Alan isteğe bağlıdır, verilmezse `Betik` kullanılır.
 
 `komutlar` yerine `commands` de yazılabilir.
@@ -112,12 +112,45 @@ olarak aynı çizimi verir.
 
 Betiğin tamamı tek bir işlemdir:
 
-- Kaç komut içerirse içersin **tek `GERİAL`** ile geri alınır
+- Kaç komut içerirse içersin **tek `GERİAL`** ile geri alınır; `YİNELE` onu yine tek
+  adımda, bıraktığı hâliyle geri getirir
 - **Tek doğrulama geçişinden** geçer, bu yüzden büyük betikler hızlı çalışır
-- Bir satır başarısız olursa **tamamı geri alınır** — yarım uygulanmış betik bırakılmaz
+- Bir satır başarısız olursa **tamamı geri alınır** — yarım uygulanmış betik bırakılmaz.
+  Geri alınan kısım `YİNELE` ile geri getirilemez ve [komut günlüğünde](../mimari/gunluk.md)
+  de iz bırakmaz: günlük yeniden oynatıldığında yarım betik geri gelmez
+- Satırlardan biri **bozuksa** — nesne değilse, `cmd` alanı yoksa, `args` okunamıyorsa —
+  betik **hiç çalıştırılmaz**; hata satırın numarasını söyler
 
-Son madde önemlidir. Yarım uygulanmış bir ifraz veya tevhit kabul edilemez; betik ya
+Son iki madde önemlidir. Yarım uygulanmış bir ifraz veya tevhit kabul edilemez; betik ya
 tümüyle uygulanır ya hiç uygulanmaz.
+
+### Betik ne değiştirdiğini söyler
+
+Tamamlanan bir betik, tek adımının çizimde ne yaptığını tek cümlede söyler:
+
+```text
+Betik tamamlandı: tests/journal/ornek-parsel.json
+Örnek parsel çizimi: 9 komut, tek geri alma adımı — 14 nesne eklendi; 4 katmanın ayarları değişti.
+```
+
+Cümle önce eklenen ve silinen nesneleri, sonra değişenleri sayar: yeri ya da biçimi değişen
+nesneler, metni değişen yazılar, öznitelik değeri değişen nesneler, katmanı ya da görünüşü
+değişen nesneler, ayarı değişen katmanlar, çıktı yerleşimleri, kılavuzlar, blok tanımları
+ve koordinat sistemi. **Bağlı nesneler de sayılır:** 500 parseli taşıyıp değerlerini
+değiştiren bir betik, parsellerin etiketleri de izlediği için şunu söyler:
+
+```text
+Kaydırma: 1000 komut, tek geri alma adımı — 1000 nesnenin yeri ya da biçimi, 500 yazının metni ve 500 nesnenin öznitelik değeri değişti.
+```
+
+Aynı betiğin içinde çizilip silinen bir nesne hiçbir yerde sayılmaz. `GERİAL` ve `YİNELE`
+de aynı biçimde, **kendilerinin** ne yaptığını ikinci satırda söyler — bir çizgiyi geri
+almak bir nesneyi siler:
+
+```text
+Geri alındı: İki veya daha fazla nokta arasında doğru parçaları çizer.
+Geri almayla 1 nesne silindi.
+```
 
 ## Çalıştırma
 

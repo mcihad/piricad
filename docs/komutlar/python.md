@@ -121,8 +121,8 @@ hiçbir şey bırakmaz.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Bu yapıda Python yok. KENTOS_WITH_PYTHON=ON ile derleyin.` | Yorumlayıcı derlenmemiş | Seçeneği açıp yeniden derleyin ([Kurulum](../baslangic/kurulum.md)) |
-| `Python hatası: Python betiği: …` | Kaynağın kendi hatası | İletideki satır numarasına bakın; çizim değişmedi |
-| `Python hatası: Betik komutu (…): …` | Çalıştırılan bir komut doğrulamadan geçemedi | Komutun kendi sayfasına bakın |
+| `Python hatası: Python betiği: …` | Kaynağın kendi hatası; `PYTHON` başarısız olur | İletideki satır numarasına bakın; çizim değişmedi, `YİNELE` yarım kalanı geri getirmez |
+| `Python hatası: Betik komutu (…): …` | Çalıştırılan bir komut doğrulamadan geçemedi ve yakalanmadı | Komutun kendi sayfasına bakın; parçacığın tamamı geri alındı |
 | `'tam' kum havuzu bu betik için onaylanmamış.` | `tam` seviyede onaysız kaynak | Onayı verin; onay kaynağın kendisine verilir |
 
 ## İlgili

@@ -355,6 +355,10 @@ Task<void> run_tool(Context& ctx)
 
     if (job.stop.stop_requested() ||
         (!status && status.error().code == core::ErrorCode::Cancelled)) {
+        // STOPPED, NOT RUN: the session ends cancelled, so the run is neither
+        // journalled nor undoable — a replay must not run to the end what the
+        // user stopped half way (TODOS F-05).
+        ctx.session().end_stopped();
         ctx.echo("İşlem durduruldu; çizim değişmedi.");
         co_return;
     }

@@ -1524,7 +1524,7 @@ void UndoStack::push(UndoEntry e)
     redo_.clear(); // a new edit invalidates the redo branch
 }
 
-Status UndoStack::undo(Document& doc, std::string* label_out)
+Status UndoStack::undo(Document& doc, std::string* label_out, ChangeSummary* changed_out)
 {
     if (undo_.empty()) return core::err(core::ErrorCode::NotFound, "Geri alınacak işlem yok");
 
@@ -1541,6 +1541,11 @@ Status UndoStack::undo(Document& doc, std::string* label_out)
         if (!st) return st;
         redo_entry.inverse.push_back(std::move(back));
     }
+    // WHAT THE UNDO DID, read off what it produced IN THE ORDER IT PRODUCED IT:
+    // the first record of each object is the one the newest edit gave back, and
+    // it holds the object as it stood before the undo began — the reading
+    // `summarize_changes` makes of any undo record.
+    if (changed_out) *changed_out = summarize_changes(doc, redo_entry.inverse);
     std::reverse(redo_entry.inverse.begin(), redo_entry.inverse.end());
 
     if (label_out) *label_out = entry.label;
@@ -1548,7 +1553,7 @@ Status UndoStack::undo(Document& doc, std::string* label_out)
     return core::ok();
 }
 
-Status UndoStack::redo(Document& doc, std::string* label_out)
+Status UndoStack::redo(Document& doc, std::string* label_out, ChangeSummary* changed_out)
 {
     if (redo_.empty()) return core::err(core::ErrorCode::NotFound, "Yinelenecek işlem yok");
 
@@ -1559,15 +1564,25 @@ Status UndoStack::redo(Document& doc, std::string* label_out)
     undo_entry.label = entry.label;
     undo_entry.inverse.reserve(entry.inverse.size());
 
-    for (auto it = entry.inverse.rbegin(); it != entry.inverse.rend(); ++it) {
+    // IN THE ORDER THE EDITS WERE MADE, oldest first. `undo` stores the redo
+    // record that way (it walks the step newest first and reverses what it
+    // produced), so walking it forward re-makes each edit on the state the one
+    // before it left. This walked it newest first, which is only right when no
+    // object is touched twice: a batch that moved a parcel twice, or moved it and
+    // re-valued it so its caption was written twice, came back from YİNELE with
+    // the FIRST edit's result — a redo that did not redo (TODOS F-05). The
+    // inverses are produced in the same forward order, which is the order
+    // `undo` reads newest first.
+    for (const core::Op& op : entry.inverse) {
         core::Op back;
-        auto st = doc.apply(*it, &back);
+        auto st = doc.apply(op, &back);
         if (!st) return st;
         undo_entry.inverse.push_back(std::move(back));
     }
-    std::reverse(undo_entry.inverse.begin(), undo_entry.inverse.end());
 
     if (label_out) *label_out = entry.label;
+    // The record the redo produced, oldest first, is its own undo record.
+    if (changed_out) *changed_out = summarize_changes(doc, undo_entry.inverse);
     undo_.push_back(std::move(undo_entry));
     return core::ok();
 }

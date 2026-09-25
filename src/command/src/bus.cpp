@@ -824,6 +824,10 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         say_settled(session.transaction().settle_results());
     }
 
+    // WHAT THIS COMMAND CHANGED, from its own edits — the followers the settles
+    // above moved included — read before the record is handed to the undo stack.
+    result.changes = summarize_changes(doc_, session.transaction().ops_since(mark));
+
     result.ops = session.owns_transaction() ? session.transaction().size() : 0;
     // A borrowed transaction belongs to a batch. Its single visible mutation is
     // reported by end_batch(), not once per nested command, so the canvas and
@@ -894,6 +898,17 @@ void Bus::journal_entry(const Session& session)
     e.timestamp_ms = now_ms();
 
     if (const core::Layer* l = doc_.layer(active_layer_)) e.layer = l->name;
+
+    // INSIDE A BATCH THE LINE WAITS FOR THE BATCH (TODOS F-05). A batch is one
+    // step that exists only once it closes; a script that fails at its 251st
+    // command is rolled back whole, and the 250 lines before it, written as they
+    // succeeded, described edits no longer in the drawing — a replay rebuilt
+    // half a script. The lines are appended in order when the batch closes and
+    // dropped when it is aborted, so the journal holds what the drawing holds.
+    if (batch_ && !session.owns_transaction()) {
+        batch_journal_.push_back(std::move(e));
+        return;
+    }
     journal_.append(std::move(e));
 }
 
@@ -909,6 +924,11 @@ void Bus::document_replaced()
         // replay those inverses against the document that has just arrived.
         (void)batch_->release();
         batch_revision_at_start_ = doc_.revision();
+        // What the batch did to the drawing that has gone is past, and the
+        // journal says it happened.
+        for (JournalEntry& e : batch_journal_)
+            journal_.append(std::move(e));
+        batch_journal_.clear();
     }
 }
 
@@ -954,8 +974,11 @@ void Bus::say_settled(const Transaction::SettleReport& settled) const
         std::string said = "Bağlı " +
                            std::to_string(std::max(settled.followed, settled.relabelled)) +
                            " yazı kaynağını izledi";
+        // "YAZININ METNİ", not "ölçü": a length caption is one kind of follower
+        // whose words come from its source, an ETİKET reading `{ada}` is another,
+        // and calling the second a measurement named something it is not.
         if (settled.relabelled != 0)
-            said += "; " + std::to_string(settled.relabelled) + " ölçü yeniden yazıldı";
+            said += "; " + std::to_string(settled.relabelled) + " yazının metni yenilendi";
         on_echo(said + ".");
     }
     if (settled.left != 0)
@@ -1049,13 +1072,23 @@ core::Result<DispatchResult> Bus::end_batch()
     result.label      = batch_label_;
     result.ops        = batch_->size();
     result.mutated    = doc_.revision() != batch_revision_at_start_;
+    result.changes    = summarize_changes(doc_, batch_->ops_since(0));
 
     if (result.mutated) undo_.push(UndoEntry{batch_label_, batch_->release()});
+
+    // THE BATCH'S LINES, now that it exists (see `journal_entry`).
+    for (JournalEntry& e : batch_journal_)
+        journal_.append(std::move(e));
+    batch_journal_.clear();
 
     batch_.reset();
     batch_revision_at_start_ = 0;
     result.message =
         batch_label_ + ": " + std::to_string(batch_commands_) + " komut, tek geri alma adımı";
+    // AND WHAT THE ONE STEP DID, as a whole (TODOS F-05): a thousand lines of
+    // script said only that they were a thousand lines.
+    if (const std::string did = describe_changes(result.changes); !did.empty())
+        result.message += " — " + did + ".";
 
     if (result.mutated && on_document_changed) on_document_changed();
     return result;
@@ -1065,10 +1098,17 @@ void Bus::abort_batch()
 {
     if (!batch_) return;
 
+    // WHOLE, OR NOT AT ALL, AND NOTHING LEFT BEHIND (TODOS F-05): the edits go
+    // back, the lines of the commands that succeeded inside it go with them,
+    // and no undo entry is pushed — so YİNELE has no half of it to bring back,
+    // the way closing the batch and undoing it left one.
     batch_->rollback();
+    batch_journal_.clear();
+    const bool moved = doc_.revision() != batch_revision_at_start_;
     batch_.reset();
     batch_commands_          = 0;
     batch_revision_at_start_ = 0;
+    if (moved && on_document_changed) on_document_changed();
 }
 
 } // namespace kentos::command

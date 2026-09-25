@@ -141,6 +141,15 @@ public:
     /// requested and the command is unwinding on its result.
     bool cancel_requested() const noexcept { return cancel_requested_; }
 
+    /// THE RUN WAS STOPPED, NOT FINISHED (TODOS F-05): the command honoured a
+    /// stop its job was given and returns with nothing written. When its body
+    /// returns, the session ends CANCELLED — like ESC: not validated, not
+    /// journalled, not undoable — rather than completed. A stopped processing
+    /// tool that ended "completed" was journalled as if it had run, and a
+    /// replay would have run it to the end. `cancel()` during a job says this
+    /// for the host; a command whose job was stopped another way says it here.
+    void end_stopped() noexcept { cancel_requested_ = true; }
+
     const Prompt& prompt() const noexcept { return prompt_; }
 
     const CommandSpec& spec() const noexcept { return *spec_; }
@@ -235,6 +244,13 @@ public:
     void resume_job();
 
 private:
+    /// How a body that returned ends: CANCELLED when its run was stopped
+    /// (`end_stopped`, `cancel()` during a job), COMPLETED otherwise.
+    SessionState ended() const noexcept
+    {
+        return cancel_requested_ ? SessionState::Cancelled : SessionState::Completed;
+    }
+
     void resume_once();
 
     bool retracted_{false}; ///< the last empty answer was `retract`

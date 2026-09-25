@@ -129,8 +129,7 @@ void Session::resume_once()
     }
 
     if (task_.done()) {
-        if (state_ == SessionState::Running || state_ == SessionState::Waiting)
-            state_ = SessionState::Completed;
+        if (state_ == SessionState::Running || state_ == SessionState::Waiting) state_ = ended();
         parked_ = {};
     }
 }
@@ -202,7 +201,7 @@ core::Status Session::supply(Value v)
                           std::string("'") + spec_->id + "' komutu istisna fırlattı: " + e.what()));
             return error_;
         }
-        if (task_.done() && state_ == SessionState::Running) state_ = SessionState::Completed;
+        if (task_.done() && state_ == SessionState::Running) state_ = ended();
     }
     return core::ok();
 }
@@ -257,7 +256,7 @@ void Session::resume_job()
                        std::string("'") + spec_->id + "' komutu bilinmeyen bir istisna fırlattı."));
         return;
     }
-    if (task_.done() && state_ == SessionState::Running) state_ = SessionState::Completed;
+    if (task_.done() && state_ == SessionState::Running) state_ = ended();
 }
 
 void Session::cancel()

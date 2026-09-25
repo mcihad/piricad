@@ -387,24 +387,26 @@ kullanır.
 **Çözüm.** Ya doğrudan bir dizi yazın, ya da `komutlar` alanı olan bir nesne. Bkz.
 [Betik yazma](betik/README.md).
 
-### `Betik satırı bir nesne olmalı: 42`
+### `Betik satırı 2 bir nesne olmalı: 42. Betik çalıştırılmadı.`
 
-**Sebep.** Komut dizisinde nesne olmayan bir öğe var.
+**Sebep.** Komut dizisinin ikinci öğesi nesne değil. Bütün satırlar çalıştırılmadan önce
+okunur; bozuk bir satır varsa betik **hiç çalışmaz**, öncesindeki satırlar da.
 
 **Çözüm.** Her satırı `{ "cmd": ..., "args": ... }` biçiminde yazın.
 
-### `Betik satırında "cmd" alanı yok: {"args":{}}`
+### `Betik satırı 2: "cmd" alanı yok: {"args":{}}. Betik çalıştırılmadı.`
 
-**Sebep.** Satırda komut adı belirtilmemiş.
+**Sebep.** İkinci satırda komut adı belirtilmemiş; betik hiç çalışmadı.
 
 **Çözüm.** `"cmd"` (veya `"komut"`) alanını ekleyin.
 
-### `Betik satırı 3 (core.line): 'core.line': 'noktalar' parametresi en az 2 değer istiyor, 1 değer geldi.`
+### `Betik satırı 3 (core.line): 'core.line': 'noktalar' parametresi en az 2 değer istiyor, 1 değer geldi. Betik bütünüyle geri alındı; çizim betikten önceki hâlinde.`
 
 **Sebep.** Betiğin üçüncü komutu doğrulamayı geçemedi.
 
 **Çözüm.** Mesaj satır numarasını ve komutu verir. Çizim betikten önceki hâlindedir;
-**betiğin tamamı geri alınmıştır**.
+**betiğin tamamı geri alınmıştır** — `YİNELE` onu geri getirmez, komut günlüğünde de
+çalışan satırlarından iz kalmaz.
 
 ### `Komut argümanları bir JSON nesnesi olmalı.`
 

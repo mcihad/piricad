@@ -13,6 +13,7 @@
 #pragma once
 
 #include "kentos_cad/command/aids.hpp"
+#include "kentos_cad/command/changes.hpp"
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/parser.hpp"
@@ -484,6 +485,13 @@ struct DispatchResult
     /// on the machine the program is running on.
     std::vector<std::string> outputs;
 
+    /// WHAT THIS CALL CHANGED, counted and net of itself (TODOS F-05,
+    /// command/changes.hpp): objects added and erased, moved or reshaped,
+    /// re-worded, re-valued — the followers that moved with them included. For
+    /// a command inside a batch, that command's own edits; for the batch, all of
+    /// them. Empty when nothing changed.
+    ChangeSummary changes;
+
     /// WHAT THE CALL COULD NOT HONOUR WITHOUT FAILING.
     ///
     /// A layout that printed with one broken map link, a table that did not fit
@@ -562,8 +570,10 @@ public:
     // ---- batch mode (§10.4): one validation pass, one undo step ----
     core::Status begin_batch(std::string label);
     core::Result<DispatchResult> end_batch();
-    /// Discards every edit made since begin_batch(). Used when a GUI composite
-    /// edit cannot finish, so Apply is all-or-nothing rather than half a symbol.
+    /// Discards every edit made since begin_batch(), and the journal lines of
+    /// the commands that succeeded inside it, and pushes no undo entry: a script,
+    /// a plan or a GUI composite edit that cannot finish is all-or-nothing, and
+    /// nothing of it is left for YİNELE or a replay to bring back (TODOS F-05).
     void abort_batch();
 
     bool in_batch() const noexcept { return batch_ != nullptr; }
@@ -944,7 +954,9 @@ public:
 
     /// Installed by the script layer. Keeps the dependency direction intact:
     /// script depends on command, never the reverse (Constitution Article 3).
-    std::function<core::Status(const std::string& path)> on_run_script;
+    /// Answers with the run's own sentence — how many commands, one undo step,
+    /// what the step changed (TODOS F-05) — or with the error that rolled it back.
+    std::function<core::Result<std::string>(const std::string& path)> on_run_script;
 
     /// The same seam for a Python SNIPPET rather than a file.
     ///
@@ -957,7 +969,7 @@ public:
     /// Unset means this build has no Python, and `PYTHON` says so rather than
     /// failing silently. Never reachable by an agent: `core.python` carries no
     /// `AiAccessible` bit and CLAUDE.md 5.24 forbids giving it one.
-    std::function<core::Status(const std::string& source)> on_run_python;
+    std::function<core::Result<std::string>(const std::string& source)> on_run_python;
 
     /// Installed by `io::DatabaseService`. Unset means this build has no database
     /// engine attached — either it was compiled without PostGIS or nothing wired
@@ -1068,6 +1080,9 @@ private:
     std::string batch_label_;
     std::size_t batch_commands_{0};
     std::uint64_t batch_revision_at_start_{0};
+    /// The journal lines of the batch's commands, appended when it closes and
+    /// dropped when it is aborted (`journal_entry`, TODOS F-05).
+    std::vector<JournalEntry> batch_journal_;
 };
 
 } // namespace kentos::command

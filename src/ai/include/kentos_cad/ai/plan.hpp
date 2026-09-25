@@ -24,6 +24,7 @@
 
 #include "kentos_cad/ai/handles.hpp"
 
+#include "kentos_cad/command/changes.hpp"
 #include "kentos_cad/command/value.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/result.hpp"
@@ -113,6 +114,11 @@ struct Plan
     /// Files the plan wrote, in the order they were written. Empty for a plan
     /// that only drew.
     std::vector<std::string> outputs;
+
+    /// What the one step changed in the drawing, counted (TODOS F-05,
+    /// command/changes.hpp): what a client verifies against rather than infers
+    /// from "applied". Empty until it was applied.
+    command::ChangeSummary changes;
 
     /// What the plan could not honour without failing. Not errors: a sheet that
     /// printed with one broken map link did print.

@@ -159,14 +159,17 @@ tek `GERİAL` ile üçü birden kalkar.
 **Çizerken** Ctrl+Z komutu değil yalnız son noktayı geri alır (bkz. yukarıda **Arayüz**);
 komut bittikten sonra Ctrl+Z bütün çizgiyi kaldırır.
 
+<!-- örnek: yeni çizim -->
 ```
+ÇİZGİ 0,0 100,0 100,50 0,50
 GERİAL
 ```
 
-Transkript ne geri alındığını söyler:
+Transkript ne geri alındığını ve geri almanın ne yaptığını söyler:
 
-```
+```text
 Geri alındı: İki veya daha fazla nokta arasında doğru parçaları çizer.
+Geri almayla 3 nesne silindi.
 ```
 
 Bkz. [Geri alma](undo.md) ve [Yineleme](redo.md).

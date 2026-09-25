@@ -6,6 +6,39 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yarıda kalan iş iz bırakmıyor; her adım ne değiştirdiğini söylüyor (F-05, 2. aşama)
+
+- **Yinele aynı nesneye iki kez dokunan adımı yanlış kuruyordu.** Bir parseli iki kez
+  taşıyan ya da taşıyıp değerini değiştiren (etiketi iki kez yazılan) bir betik, geri alınıp
+  yinelenince ilk düzenlemenin sonucunda kalıyordu. Yineleme artık adımı yapıldığı sırayla
+  kuruyor.
+- **Yarıda kalan betik Yinele ile geri gelebiliyordu.** JSON ve Python betiği hata verince
+  toplu iş kapatılıp geri alınıyordu; yarım betik Yinele yığınında kalıyor, Yinele'ye basınca
+  geri geliyordu. Artık bütünüyle bırakılıyor: çizimde, geri alma ve Yinele yığınında iz yok.
+- **Geri alınan komutların satırları günlükte kalıyordu.** Toplu işin içindeki komutların
+  günlük satırları artık toplu iş kapanınca yazılıyor, iptalde düşüyor; günlük yeniden
+  oynatıldığında yarım betik geri gelmiyor. Yapay zekâ önerisi ve arayüzdeki birleşik
+  düzenlemeler için de geçerli.
+- **Bozuk bir satır betiğin öncesini işliyordu.** 251. öğesi nesne olmayan ya da `cmd` alanı
+  eksik bir JSON betiği ilk 250 komutu işleyip hata veriyordu. Artık bütün satırlar önce
+  okunuyor; bozuk satır varsa betik hiç çalışmıyor ve hata satır numarasını söylüyor.
+- **Durdurulan işlem aracı günlüğe çalışmış gibi yazılıyordu** (TAMPON, ALANÜRET …);
+  oynatmada sonuna kadar koşardı. Artık iptal sayılıyor: günlüğe ve geri alma yığınına
+  girmiyor.
+- **Başarısız betik başarılı sayılıyordu.** `BETİK` ve `PYTHON` hatayı yalnız bir transkript
+  satırı olarak yazıp başarıyla bitiyordu; programla çağıran hatayı göremiyordu. Artık komut
+  başarısız oluyor ve ileti betiğin bütünüyle geri alındığını söylüyor.
+- **Her adım ne değiştirdiğini söylüyor:** toplu iş ve betik sonunda "1000 komut, tek geri
+  alma adımı — 1000 nesnenin yeri ya da biçimi, 500 yazının metni ve 500 nesnenin öznitelik
+  değeri değişti."; `GERİAL` ve `YİNELE` ikinci satırda kendi yaptıklarını ("Geri almayla 1
+  nesne silindi."); uygulanan yapay zekâ önerisinin durumu `degisiklik` ve
+  `degisiklik_ozeti` ile. Bağlı yazılar gibi izleyenler de sayılıyor; aynı adımda çizilip
+  silinen nesne sayılmıyor. Kılavuz: [Betik ne değiştirdiğini söyler](docs/betik/README.md#betik-ne-değiştirdiğini-söyler).
+- Bağlı yazının metni kaynağından yeniden yazılınca ileti artık "N yazının metni yenilendi"
+  diyor; "ölçü yeniden yazıldı" bir etiket için yanlış addı.
+- Kılavuzdaki `İlk adımlar` 5. adım düzeltildi: `KATMAN`'dan sonraki ilk `GERİAL` çizgiyi
+  değil katmanın rengini geri alır; sayfa artık bunu ve ikinci `GERİAL`'i gösteriyor.
+
 ### Düzeltildi — yarıda kalan dışa aktarım eski dosyayı silmiyor; dosya takımı birlikte taşınıyor (F-05, 1. aşama)
 
 - **Durdurulan DXF dışa aktarımı hedef dosyayı siliyordu.** Durdurulan yazım, yarım

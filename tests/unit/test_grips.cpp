@@ -354,7 +354,7 @@ TEST_CASE(
     // The corner moves 4 m east: the two edges that meet it change length,
     // and their captions follow and re-say their number.
     r.run("KÖŞETAŞI nesne=1 kose=3 nokta=44,30");
-    CHECK_MESSAGE(r.said.find("Bağlı 2 yazı kaynağını izledi; 2 ölçü yeniden yazıldı.") !=
+    CHECK_MESSAGE(r.said.find("Bağlı 2 yazı kaynağını izledi; 2 yazının metni yenilendi.") !=
                       std::string::npos,
                   r.said);
 

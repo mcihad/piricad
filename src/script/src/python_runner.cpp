@@ -530,20 +530,28 @@ core::Result<RunReport> PythonRunner::run_text(std::string_view source, std::str
     }
 
     if (!ok) {
-        // A failing script leaves NOTHING behind. Half-applied cadastral or zoning
-        // edits are never acceptable (CLAUDE.md 1.6, §2.5).
-        auto closed = impl_->bus.end_batch();
-        if (closed && closed.value().mutated) {
-            std::string discarded;
-            (void)impl_->bus.undo_stack().undo(impl_->bus.document(), &discarded);
-        }
+        // A failing script leaves NOTHING behind — not in the drawing, not on the
+        // redo stack, not in the journal. Half-applied cadastral or zoning edits
+        // are never acceptable (CLAUDE.md 1.6, §2.5, TODOS F-05).
+        impl_->bus.abort_batch();
 
         // The bus's own code and sentence when a command failed; Python's when the
         // body itself did. Reporting every script failure as `ParseError` would
-        // tell a user their syntax was wrong when their ada number was.
-        if (impl_->has_pending) return impl_->pending;
+        // tell a user their syntax was wrong when their ada number was. Either way
+        // it SAYS the run was taken back: the transcript still shows what the
+        // commands before the failure answered as they ran.
+        constexpr const char* kTakenBack =
+            " Betik bütünüyle geri alındı; çizim betikten önceki hâlinde.";
+        if (impl_->has_pending) {
+            core::Error failed = impl_->pending;
+            if (!failed.message.empty() && failed.message.back() != '.') failed.message += '.';
+            failed.message += kTakenBack;
+            return failed;
+        }
 
-        return core::err(ErrorCode::ParseError, "Python betiği: " + python_error);
+        std::string said = "Python betiği: " + python_error;
+        if (!said.empty() && said.back() != '.') said += '.';
+        return core::err(ErrorCode::ParseError, said + kTakenBack);
     }
 
     auto closed = impl_->bus.end_batch();
@@ -553,6 +561,8 @@ core::Result<RunReport> PythonRunner::run_text(std::string_view source, std::str
     report.label    = std::move(label);
     report.commands = impl_->commands;
     report.ops      = closed.value().ops;
+    report.changes  = closed.value().changes;
+    report.said     = closed.value().message;
     return report;
 }
 
@@ -580,26 +590,26 @@ core::Result<RunReport> PythonRunner::run_file(const std::string& path, std::sto
 /// with Python has `PYTHON` whichever way the file hosts were installed.
 void install_snippet(command::Bus& bus, PythonRunner& runner)
 {
-    bus.on_run_python = [&runner](const std::string& source) -> core::Status {
+    bus.on_run_python = [&runner](const std::string& source) -> core::Result<std::string> {
         auto r = runner.run_text(source, "Python");
         if (!r) return r.error();
-        return core::ok();
+        return r.value().said;
     };
 }
 
 void install(command::Bus& bus, PythonRunner& runner)
 {
-    bus.on_run_script = [&runner](const std::string& path) -> core::Status {
+    bus.on_run_script = [&runner](const std::string& path) -> core::Result<std::string> {
         auto r = runner.run_file(path);
         if (!r) return r.error();
-        return core::ok();
+        return r.value().said;
     };
     install_snippet(bus, runner);
 }
 
 void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
 {
-    bus.on_run_script = [&json, &python](const std::string& path) -> core::Status {
+    bus.on_run_script = [&json, &python](const std::string& path) -> core::Result<std::string> {
         // Folded, not lowercased: `.PY` and `.py` are the same extension and
         // `std::tolower` is banned on this alphabet (CLAUDE.md 5.6). The extension
         // is ASCII, but the rule has no exceptions for the cases that happen to be
@@ -610,12 +620,12 @@ void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
         if (ext == core::turkish_fold_key(".py")) {
             auto r = python.run_file(path);
             if (!r) return r.error();
-            return core::ok();
+            return r.value().said;
         }
 
         auto r = json.run_file(path);
         if (!r) return r.error();
-        return core::ok();
+        return r.value().said;
     };
     install_snippet(bus, python);
 }

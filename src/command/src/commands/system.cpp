@@ -117,11 +117,18 @@ Task<void> run_script(Context& ctx)
         co_return;
     }
 
-    auto st = bus.on_run_script(*path);
-    if (!st)
-        ctx.echo("Betik hatası: " + st.error().message);
-    else
-        ctx.echo("Betik tamamlandı: " + *path);
+    // A SCRIPT THAT FAILED IS A COMMAND THAT FAILED (TODOS F-05). It used to be
+    // echoed and the command to end in success, so a client that is not reading
+    // the transcript — a Python host running BETİK, a batch — was told it had
+    // worked. The script is rolled back whole; the refusal says why.
+    auto ran = bus.on_run_script(*path);
+    if (!ran) {
+        ctx.refuse(ran.error().code, "Betik hatası: " + ran.error().message);
+        co_return;
+    }
+    ctx.echo("Betik tamamlandı: " + *path);
+    // AND WHAT THE ONE STEP DID, in the batch's own sentence (TODOS F-05).
+    if (!ran.value().empty()) ctx.echo(ran.value());
 }
 
 Task<void> run_python(Context& ctx)
@@ -139,8 +146,9 @@ Task<void> run_python(Context& ctx)
         co_return;
     }
 
-    auto st = bus.on_run_python(*code);
-    if (!st) ctx.echo("Python hatası: " + st.error().message);
+    // A FAILED SNIPPET IS A FAILED COMMAND, as a failed script is (`run_script`).
+    auto ran = bus.on_run_python(*code);
+    if (!ran) ctx.refuse(ran.error().code, "Python hatası: " + ran.error().message);
 }
 
 } // namespace

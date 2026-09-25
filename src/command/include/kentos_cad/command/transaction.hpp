@@ -8,8 +8,10 @@
 //   * a half-applied edit on cadastral or zoning data is never acceptable
 #pragma once
 
+#include "kentos_cad/command/changes.hpp"
 #include "kentos_cad/core/document.hpp"
 
+#include <algorithm>
 #include <span>
 #include <string>
 #include <string_view>
@@ -471,14 +473,28 @@ public:
     /// Hands the inverse record over to the undo stack and clears it.
     std::vector<Op> release();
 
+    /// The inverse record made after `mark` — a `size()` read earlier — oldest
+    /// first: what one command of a batch did, or all of it from zero. Valid
+    /// until the next edit.
+    std::span<const Op> ops_since(std::size_t mark) const noexcept
+    {
+        return std::span<const Op>(inverse_).subspan(std::min(mark, inverse_.size()));
+    }
+
+    /// Whether nothing has been edited through this transaction yet.
     bool empty() const noexcept { return inverse_.empty(); }
 
+    /// How many primitive edits it holds: the mark `ops_since` and
+    /// `rollback_to` take.
     std::size_t size() const noexcept { return inverse_.size(); }
 
+    /// What the undo entry it becomes will be called.
     const std::string& label() const noexcept { return label_; }
 
+    /// Renames the undo entry it becomes.
     void set_label(std::string l) { label_ = std::move(l); }
 
+    /// The document it edits.
     Document& document() noexcept { return doc_; }
 
 private:
@@ -533,9 +549,16 @@ public:
 
     bool can_redo() const noexcept { return !redo_.empty(); }
 
-    /// Applies the top inverse record and moves it to the redo stack.
-    Status undo(Document& doc, std::string* label_out = nullptr);
-    Status redo(Document& doc, std::string* label_out = nullptr);
+    /// Applies the top inverse record and moves it to the redo stack. When
+    /// `changed_out` is given it receives what the UNDO itself did, counted like
+    /// any step (command/changes.hpp): taking back a drawn line is one object
+    /// erased — read off the record the undo just produced.
+    Status undo(Document& doc, std::string* label_out = nullptr,
+                ChangeSummary* changed_out = nullptr);
+
+    /// Re-applies the top redo record, oldest edit first; `changed_out` as for `undo`.
+    Status redo(Document& doc, std::string* label_out = nullptr,
+                ChangeSummary* changed_out = nullptr);
 
     void clear();
 

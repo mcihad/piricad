@@ -41,11 +41,15 @@ GERİAL
 YİNELE
 ```
 
-Transkript ne yinelendiğini söyler:
+Transkript ne yinelendiğini ve yinelemenin ne yaptığını söyler:
 
 ```text
 Yinelendi: İki veya daha fazla nokta arasında doğru parçaları çizer.
+Yinelemeyle 1 nesne eklendi.
 ```
+
+Yineleme adımı **yapıldığı sırayla** yeniden kurar: aynı parseli iki kez taşıyan ya da
+taşıyıp değerini değiştiren bir betik, yinelenince betiğin bıraktığı hâle döner.
 
 ### Arayüz
 

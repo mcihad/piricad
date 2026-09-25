@@ -41,11 +41,16 @@ Bir çizgi çizin, sonra geri alın:
 GERİAL
 ```
 
-Transkript ne geri alındığını söyler:
+Transkript ne geri alındığını ve geri almanın ne yaptığını söyler:
 
 ```text
 Geri alındı: İki veya daha fazla nokta arasında doğru parçaları çizer.
+Geri almayla 1 nesne silindi.
 ```
+
+İkinci satır adımın **tamamını** sayar: bin satırlık bir betiği geri almak, hangi
+nesnelerin yerine döndüğünü ve hangi yazıların eski metnine kavuştuğunu tek cümlede söyler
+([Betik ne değiştirdiğini söyler](../betik/README.md#betik-ne-değiştirdiğini-söyler)).
 
 Arka arkaya birkaç kez yazarak birkaç işlem geri gidebilirsiniz.
 

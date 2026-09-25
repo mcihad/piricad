@@ -7521,6 +7521,112 @@ int MainWindow::probeRealMouse()
             shoot("disa-aktarim-tamam");
             QDir(dir).removeRecursively();
         }
+
+        // ---- 43. ONE LOGICAL OPERATION: 500 PARCELS, THEIR VALUES AND CAPTIONS (TODOS F-05) ----
+        //
+        // A script moves 500 parcels and re-values them; their captions follow.
+        // It is one step, and the answer says what the one step changed. One
+        // GERİAL takes all of it back and says what it did. A script that fails
+        // at its 251st command leaves nothing: the drawing, the undo stack and
+        // what YİNELE would bring back are exactly as they were.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            const QString dir = QDir::temp().filePath(QStringLiteral("kentos-f05-tek-islem"));
+            QDir(dir).removeRecursively();
+            QDir().mkpath(dir);
+            const auto write = [&dir](const QString& name, const std::string& text) {
+                QFile f(dir + QLatin1Char('/') + name);
+                if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+                    f.write(text.data(), static_cast<qint64>(text.size()));
+                return dir + QLatin1Char('/') + name;
+            };
+            std::string setup  = R"({"ad": "Kurulum", "komutlar": [)";
+            std::string moves  = R"({"ad": "Kaydırma", "komutlar": [)";
+            std::string broken = R"({"ad": "Yarım", "komutlar": [)";
+            for (int i = 0; i < 500; ++i) {
+                const std::int64_t x = 485'300'000 + (std::int64_t{i % 25} * 12'000);
+                const std::int64_t y = 4'310'200'000 + (std::int64_t{i / 25} * 12'000);
+                setup += (i == 0 ? "" : ",");
+                setup += R"({"cmd": "core.area", "args": {"noktalar": [[)" + std::to_string(x) +
+                         "," + std::to_string(y) + "],[" + std::to_string(x + 10000) + "," +
+                         std::to_string(y) + "],[" + std::to_string(x + 10000) + "," +
+                         std::to_string(y + 10000) + "],[" + std::to_string(x) + "," +
+                         std::to_string(y + 10000) + "]]}}";
+                setup += R"(,{"cmd": "core.attribute", "args": {"ad": "ada", "nesne": )" +
+                         std::to_string(i + 1) + R"(, "deger": ")" + std::to_string(100 + i) +
+                         R"("}})";
+                const std::string move =
+                    R"({"cmd": "core.move", "args": {"nesneler": [)" + std::to_string(i + 1) +
+                    R"(], "baslangic": [0, 0], "bitis": [4000, 2000]}},)" +
+                    R"({"cmd": "core.attribute", "args": {"ad": "ada", "nesne": )" +
+                    std::to_string(i + 1) + R"(, "deger": ")" + std::to_string(1000 + i) + R"("}})";
+                moves += (i == 0 ? "" : ",") + move;
+                broken += (i == 0 ? "" : ",") + move;
+                if (i == 249) broken += R"(,{"cmd": "core.erase", "args": {"nesneler": [999999]}})";
+            }
+            setup += "]}";
+            moves += "]}";
+            broken += "]}";
+            runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            endCommand();
+            runScriptLine(QStringLiteral("SÜTUN kimlik=ada tur=tam_sayi"));
+            endCommand();
+            runScriptLine(
+                QStringLiteral("BETİK \"%1\"").arg(write(QStringLiteral("kurulum.json"), setup)));
+            endCommand();
+            runScriptLine(QStringLiteral("ETİKET katman=PARSEL bicim=\"{ada}\" yukseklik=2500"));
+            endCommand();
+            canvas_->zoomToBox(core::Box2{485'295'000, 4'310'195'000, 485'610'000, 4'310'450'000});
+            const std::uint64_t before    = controller_->document().content_hash();
+            const std::size_t undo_before = controller_->bus().undo_stack().undo_depth();
+
+            transcript_->clear();
+            runScriptLine(
+                QStringLiteral("BETİK \"%1\"").arg(write(QStringLiteral("kaydirma.json"), moves)));
+            endCommand();
+            const QString said = transcript_->toPlainText();
+            check(said.contains(QStringLiteral(
+                      "Kaydırma: 1000 komut, tek geri alma adımı — 1000 nesnenin yeri ya da "
+                      "biçimi, 500 yazının metni ve 500 nesnenin öznitelik değeri değişti.")),
+                  QStringLiteral("betik tek adımının ne değiştirdiğini söyledi"));
+            check(controller_->bus().undo_stack().undo_depth() == undo_before + 1,
+                  QStringLiteral("500 parsellik betik tek geri alma adımı"));
+            const std::uint64_t moved = controller_->document().content_hash();
+            shoot("tek-islem-betik");
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("GERİAL"));
+            endCommand();
+            check(transcript_->toPlainText().contains(QStringLiteral(
+                      "Geri almayla 1000 nesnenin yeri ya da biçimi, 500 yazının metni ve 500 "
+                      "nesnenin öznitelik değeri değişti.")) &&
+                      controller_->document().content_hash() == before,
+                  QStringLiteral("tek GERİAL hepsini geri aldı ve ne yaptığını söyledi"));
+            shoot("tek-islem-geri");
+            runScriptLine(QStringLiteral("YİNELE"));
+            endCommand();
+            check(controller_->document().content_hash() == moved,
+                  QStringLiteral("YİNELE betiğin bıraktığı hâle döndü"));
+            runScriptLine(QStringLiteral("GERİAL"));
+            endCommand();
+
+            const std::size_t redo_before = controller_->bus().undo_stack().redo_depth();
+            transcript_->clear();
+            runScriptLine(
+                QStringLiteral("BETİK \"%1\"").arg(write(QStringLiteral("yarim.json"), broken)));
+            endCommand();
+            check(transcript_->toPlainText().contains(
+                      QStringLiteral("Betik hatası: Betik satırı 501 (core.erase)")),
+                  QStringLiteral("yarıda kalan betik hata olarak söylendi"));
+            check(
+                controller_->document().content_hash() == before &&
+                    controller_->bus().undo_stack().undo_depth() == undo_before &&
+                    controller_->bus().undo_stack().redo_depth() == redo_before,
+                QStringLiteral("yarıda kalan betik çizimde, geri alma ve yinelemede iz bırakmadı"));
+            shoot("tek-islem-yarim");
+            QDir(dir).removeRecursively();
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
