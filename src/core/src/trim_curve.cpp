@@ -49,9 +49,17 @@ Point2 beyond(Point2 a, Point2 b) noexcept
     return Point2{b.x + mm_round(dx / len * kCarryMm), b.y + mm_round(dy / len * kCarryMm)};
 }
 
-/// An arc piece as its whole circle, seamed at its east point.
+/// An arc piece as its whole circle, seamed at its east point; an ellipse
+/// piece as its whole ellipse, seamed where it starts. A spline has no curve
+/// past its ends and is left as it is.
 void whole_circle(PathPiece& p) noexcept
 {
+    if (p.kind == PathPiece::Kind::Spline) return;
+    if (p.kind == PathPiece::Kind::Ellipse) {
+        p.sweep_udeg = kTurn;
+        p.to         = p.from;
+        return;
+    }
     p.from       = Point2{p.centre.x + p.radius, p.centre.y};
     p.to         = p.from;
     p.sweep_udeg = kTurn;
@@ -84,12 +92,14 @@ CurvePath carried(CurvePath edge)
 
 } // namespace
 
-std::vector<PathCrossing> cuts_of(const CurvePath& target, std::span<const CurvePath> edges)
+std::vector<PathCrossing> cuts_of(const CurvePath& target, std::span<const CurvePath> edges,
+                                  bool* unresolved)
 {
     std::vector<PathCrossing> all;
     for (const CurvePath& edge : edges) {
-        std::vector<PathCrossing> some = path_crossings(target, edge);
-        all.insert(all.end(), some.begin(), some.end());
+        const PathMeets some = path_meets(target, edge);
+        all.insert(all.end(), some.crossings.begin(), some.crossings.end());
+        if (unresolved != nullptr && some.unresolved) *unresolved = true;
     }
     std::ranges::sort(
         all, [](const PathCrossing& a, const PathCrossing& b) { return comes_before(a.at, b.at); });
@@ -199,8 +209,15 @@ Result<CurveTrim> trim_curve(const CurvePath& target, std::span<const CurvePath>
     if (target.pieces.empty())
         return err(ErrorCode::InvalidArgument, "Budanacak nesnenin çizilecek bir parçası yok.");
 
-    std::vector<PathCrossing> cuts = cuts_of(target, edges);
-    const PathPlace at             = place_of(target, pick);
+    bool unsettled                 = false;
+    std::vector<PathCrossing> cuts = cuts_of(target, edges, &unsettled);
+    // A CUT THE SOLVE COULD NOT SETTLE is a cut that may be missing: trimming
+    // without it could take a piece the user did not point at. Said, not guessed.
+    if (unsettled)
+        return err(ErrorCode::ValidationFailed,
+                   "Sınırların bu nesneyi nerede kestiği sayısal olarak kesinleştirilemedi; "
+                   "budama yapılmadı. Sınırı ya da eğriyi sadeleştirip yeniden deneyin.");
+    const PathPlace at = place_of(target, pick);
 
     // A CLICK ON A CUT NAMES NO PIECE: the two either side of it both touch it,
     // and taking one of them would be a guess.
@@ -253,6 +270,61 @@ Result<CurveExtension> extend_curve(const CurvePath& target, std::span<const Cur
         return out;
     }
 
+    // A SPLINE HAS NO CURVE PAST ITS ENDS: its last knot span ends there, and
+    // a continuation is a guess this program does not make.
+    if (tip.kind == PathPiece::Kind::Spline)
+        return err(ErrorCode::Unsupported,
+                   "Spline'ın ucu uzatılamaz: eğri son düğümünde biter, ötesi tanımsızdır. "
+                   "Ucundan sınıra bir çizgi çizin.");
+
+    // AN ELLIPTIC ARC'S END ROUND ITS ELLIPSE, as an arc's round its circle:
+    // measured in the ellipse's own parameter, the way the arc is walked.
+    if (tip.kind == PathPiece::Kind::Ellipse) {
+        const bool ccw          = tip.sweep_udeg >= 0;
+        const std::int64_t room = kTurn - (ccw ? tip.sweep_udeg : -tip.sweep_udeg);
+        const std::int64_t from = tip.start_udeg;
+        const std::int64_t to   = tip.start_udeg + tip.sweep_udeg;
+        std::optional<std::int64_t> best;
+        Point2 reached{};
+        for (const CurvePath& edge : edges)
+            for (const PathPiece& piece : edge.pieces)
+                for (const Point2 q : ellipse_meets(tip, piece)) {
+                    const std::int64_t at   = ellipse_parameter_of(tip, q);
+                    const std::int64_t back = from - at;
+                    const std::int64_t on   = at - to;
+                    const std::int64_t d =
+                        at_start ? wrap(ccw ? back : -back) : wrap(ccw ? on : -on);
+                    if (d <= 0 || d >= room) continue;
+                    if (!best || d < *best) {
+                        best    = d;
+                        reached = q;
+                    }
+                }
+        if (!best)
+            return err(ErrorCode::InvalidArgument,
+                       "Bu elips yayının ucu, sınırlara elipsi boyunca uzatılarak ulaşamıyor: "
+                       "kesişme yok.");
+        const std::int64_t step = ccw ? *best : -*best;
+        PathPiece reach         = tip;
+        if (at_start) {
+            reach.start_udeg  = wrap(from - step);
+            reach.sweep_udeg  = step;
+            reach.from        = reached;
+            reach.to          = tip.from;
+            edited.start_udeg = wrap(from - step);
+            edited.from       = reached;
+        } else {
+            reach.start_udeg = wrap(to);
+            reach.sweep_udeg = step;
+            reach.from       = tip.to;
+            reach.to         = reached;
+            edited.to        = reached;
+        }
+        edited.sweep_udeg += step;
+        out.added.pieces.push_back(reach);
+        return out;
+    }
+
     // AN ARC'S END ROUND ITS CIRCLE, to the nearest edge past it — never so far
     // that the arc would come round onto itself — and ON the way it is walked:
     // an arc-polyline edge that bends clockwise carries its end clockwise.
@@ -297,7 +369,7 @@ std::vector<CurvePath> cutting_edges(const Document& doc, EntityId target, const
     std::vector<CurvePath> out;
     const auto add = [&out, &doc, target, &run](EntityId e) {
         if (e == target || e == kNoEntity) return;
-        if (auto path = path_of(doc, e))
+        if (auto path = path_of(doc, e, PathScope::Curves))
             out.push_back(run.carry ? carried(std::move(*path)) : *path);
     };
 
@@ -335,7 +407,7 @@ FencePlan plan_fence(const Document& doc, std::span<const Point2> fence, const T
     std::vector<EntityId> crossed;
     pick_along_fence(doc, fence, crossed);
     for (const EntityId e : crossed) {
-        const std::optional<CurvePath> path = path_of(doc, e);
+        const std::optional<CurvePath> path = path_of(doc, e, PathScope::Curves);
         const bool area = path && path->closed && doc.entities().kind[e] == kPolylineKind;
         if (!path || area || !doc.editable(e)) {
             ++plan.passed_over;
@@ -353,7 +425,12 @@ FencePlan plan_fence(const Document& doc, std::span<const Point2> fence, const T
             marks.reserve(meets.size());
             for (const PathCrossing& m : meets)
                 marks.push_back(m.at);
-            auto cut = cut_pieces(*path, cuts_of(*path, edges), marks, run.keep);
+            bool unsettled = false;
+            auto cut       = cut_pieces(*path, cuts_of(*path, edges, &unsettled), marks, run.keep);
+            if (unsettled) {
+                ++plan.passed_over;
+                continue;
+            }
             if (!cut) {
                 ++plan.passed_over;
                 continue;

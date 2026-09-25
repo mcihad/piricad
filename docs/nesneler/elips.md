@@ -54,6 +54,11 @@ ELİPS merkez=485400,4310200 birinci=485460,4310200 ikinci=485400,4310230 baslan
 
 [ELİPS](../komutlar/ellipse_draw.md).
 
+[BUDA](../komutlar/trim.md), [BÖL](../komutlar/split.md) ve [KIR](../komutlar/break.md)
+elipsi aynı elipsin yaylarına ayırır; [UZAT](../komutlar/extend.md) bir elips yayının
+ucunu elipsi boyunca sınıra kadar taşır. Elips bu komutların hepsinde **kesme sınırı**
+da olur; kesişimler eğrinin kendisi üzerinde hesaplanır.
+
 ## Sınırlar
 
 Kısmi elipsin alanı sıfırdır (açık eğri) ve çevresi çizilen yayın uzunluğudur; tam

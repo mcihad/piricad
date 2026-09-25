@@ -1,0 +1,72 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 9
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman EGRI gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=9
+nesne 0 katman=EGRI stil=0 halka=1 tur=5 yuk=0100000000000000f6fd8708000000000a97320200000000
+  halka rol=0 parca=0 tepe=3
+    0 0
+    10000 0
+    0 5000
+  alan_mm2 0  cevre_mm 31728
+nesne 1 katman=EGRI stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    -20000 3000
+    20000 3000
+  alan_mm2 0  cevre_mm 40000
+nesne 2 katman=EGRI stil=0 halka=1 tur=7 yuk=0100100000000000020600000000000000000000000000000000000000000000000000000000c2eb0b0000000000c2eb0b0000000000c2eb0b0000000000000000
+  halka rol=0 parca=0 tepe=3
+    30000 0
+    31000 2000
+    32000 3200
+  alan_mm2 0  cevre_mm 3782
+nesne 3 katman=EGRI stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    25000 3200
+    45000 3200
+  alan_mm2 0  cevre_mm 20000
+nesne 4 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000000008af2f000000000008af2f000000000008af2f000000002bac2c36000000002bac2c36000000002bac2c360000000000000000
+  halka rol=0 parca=0 tepe=3
+    38000 3200
+    38544 2547
+    39089 1656
+  alan_mm2 0  cevre_mm 1891
+nesne 5 katman=EGRI stil=0 halka=1 tur=5 yuk=01000000000000000000000000000000d810270700000000
+  halka rol=0 parca=0 tepe=3
+    60000 0
+    70000 0
+    60000 5000
+  alan_mm2 0  cevre_mm 17170
+nesne 6 katman=EGRI stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    55000 -10000
+    55000 10000
+  alan_mm2 0  cevre_mm 20000
+nesne 7 katman=EGRI stil=0 halka=1 tur=5 yuk=0100000000000000804a5d05000000000000000000000000
+  halka rol=0 parca=0 tepe=3
+    0 30000
+    10000 30000
+    0 35000
+  alan_mm2 0  cevre_mm 36328
+nesne 8 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000002bac2c36000000002bac2c36000000002bac2c360000000000ca9a3b0000000000ca9a3b0000000000ca9a3b0000000000000000
+  halka rol=0 parca=0 tepe=3
+    39089 1656
+    39544 911
+    40000 0
+  alan_mm2 0  cevre_mm 1891
+kapsam -20000 -10000 70000 35000
+icerik-ozeti cc81b1e6f20147c6
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"EGRI"},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":2,"cmd":"core.ellipse_draw","args":{"merkez":[0,0],"birinci":[10000,0],"ikinci":[0,5000]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":3,"cmd":"core.line","args":{"noktalar":[[-20000,3000],[20000,3000]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":4,"cmd":"core.trim","args":{"nesne":[1],"sinir":[2],"nokta":[[0,5000]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":5,"cmd":"core.spline","args":{"noktalar":[[30000,0],[35000,10000],[40000,0]],"derece":2},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":6,"cmd":"core.line","args":{"noktalar":[[25000,3200],[45000,3200]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":7,"cmd":"core.trim","args":{"nesne":[3],"sinir":[4],"nokta":[[35000,5000]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":8,"cmd":"core.ellipse_draw","args":{"merkez":[60000,0],"birinci":[70000,0],"ikinci":[60000,5000],"baslangic":0.0,"bitis":90.0},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":9,"cmd":"core.line","args":{"noktalar":[[55000,-10000],[55000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":10,"cmd":"core.extend","args":{"nesne":[6],"sinir":[7],"nokta":[[60000,5000]]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":11,"cmd":"core.ellipse_draw","args":{"merkez":[0,30000],"birinci":[10000,30000],"ikinci":[0,35000]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":12,"cmd":"core.break","args":{"nesne":[8],"birinci":[10000,30000],"ikinci":[0,35000]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
+  {"seq":13,"cmd":"core.split","args":{"nesne":[5],"yontem":"esit","sayi":2},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}

@@ -8,14 +8,16 @@ sembolün oturacağı çentik açacak herkes için.
 Bir nesneden **iki nokta arasındaki parçayı çıkarır**. Geriye iki parça kalır ve
 aralarında bir boşluk olur.
 
-`KIR` çizgide, açık çoklu çizgide, **yayda**, **dairede** ve **yaylı çoklu çizgide**
-çalışır ve her parça kendi türünde kalır: bir yaydan çıkan parça yaydır, kalanlar
-da yaydır; yaylı bir sınırın yayları düzleşmez. Kalan parçalar kaynağın katmanını,
-stilini ve bütün özniteliklerini taşır.
+`KIR` çizgide, açık çoklu çizgide, **yayda**, **dairede**, **elipste**, **spline**'da
+ve **yaylı çoklu çizgide** çalışır ve her parça kendi türünde kalır: bir yaydan çıkan
+parça yaydır, kalanlar da yaydır; yaylı bir sınırın yayları düzleşmez; bir elipsten
+aynı elipsin yayları, bir spline'dan kendi eğrisini çizen daha kısa spline'lar kalır.
+Kalan parçalar kaynağın katmanını, stilini ve bütün özniteliklerini taşır.
 
-- **Daire ve kapalı yaylı çoklu çizgi**: birinci noktadan ikinciye, şeklin kendi
-  yönünde — dairede saat yönünün tersine — giden parça çıkar; geriye tek bir açık
-  parça (dairede bir yay) kalır. Kapalı bir şekil tek noktadan kırılmaz.
+- **Daire, tam elips ve kapalı yaylı çoklu çizgi**: birinci noktadan ikinciye,
+  şeklin kendi yönünde — dairede ve elipste saat yönünün tersine — giden parça
+  çıkar; geriye tek bir açık parça (dairede bir yay, elipste bir elips yayı) kalır.
+  Kapalı bir şekil tek noktadan kırılmaz.
 - **Alan kırılmaz**: bir parseli kenarı boyunca açmak onu iki çizgiye çevirirdi.
   Bilerek açmak için önce [`ÇİZGİDÜZENLE`](pedit.md) `islem=ac` kullanın.
 
@@ -83,6 +85,18 @@ KIR nesne=1 birinci=10,0 ikinci=0,10
 Kapalı şekil kırıldı; açık bir parça kaldı.
 ```
 
+### Elips
+
+Boş bir çizimde, bir elipsten birinci eksen ucu (10; 0) ile ikinci eksen ucu (0; 5)
+arasındaki çeyreği çıkarmak — geriye 270°'lik bir elips yayı kalır:
+
+<!-- örnek: yeni çizim -->
+
+```
+ELİPS merkez=0,0 birinci=10,0 ikinci=0,5
+KIR nesne=1 birinci=10,0 ikinci=0,5
+```
+
 ### Arayüz
 
 **Değiştir ▸ Kes ve Uzat ▸ Kır**. Nesneyi seçip Enter'a basın, sonra iki noktayı tıklayın.
@@ -124,7 +138,7 @@ kalan yay yeni bir nesnedir, çünkü yay daireden başka bir türdür.
 | `Kırılma noktası çizginin ucunda; bölünecek bir şey kalmıyor.` | Tek nokta açık nesnenin ucunda | Nesnenin içinde bir nokta verin |
 | `Kapalı bir şekil tek noktadan kırılmaz; iki ayrı nokta verin.` | Daireye ya da kapalı şekle tek nokta | İkinci bir nokta verin |
 | `Nesne N bir alan; alan kırılmaz. Önce ÇİZGİDÜZENLE islem=ac ile açık çizgiye çevirin.` | Alan seçildi | `ÇİZGİDÜZENLE islem=ac` ile açın |
-| `Nesne N kırılamıyor; KIR çizgi, yay, daire ve yaylı çoklu çizgide çalışır.` | Elips, spline, nokta, yazı ya da blok | Kırılabilir bir nesne seçin |
+| `Nesne N kırılamıyor; KIR çizgi, yay, daire, elips, spline ve yaylı çoklu çizgide çalışır.` | Nokta, yazı ya da blok | Kırılabilir bir nesne seçin |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

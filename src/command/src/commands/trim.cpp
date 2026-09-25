@@ -170,12 +170,12 @@ std::optional<core::CurvePath> split_target(const Context& ctx, std::int64_t key
                        "çizgisiyle kullanın (yontem=cizgi).");
         return std::nullopt;
     }
-    auto path = core::path_of(doc, slot);
+    auto path = core::path_of(doc, slot, core::PathScope::Curves);
     if (!path) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(key) +
-                       " bu yöntemle bölünemiyor; BÖL çizgi, yay, daire ve yaylı çoklu çizgide "
-                       "çalışır.");
+                       " bu yöntemle bölünemiyor; BÖL çizgi, yay, daire, elips, spline ve yaylı "
+                       "çoklu çizgide çalışır.");
         return std::nullopt;
     }
     return path;
@@ -471,12 +471,12 @@ Task<void> run_split(Context& ctx)
         // A LINE, AN ARC, A CIRCLE OR A BENT POLYLINE: cut wherever the stroke
         // crosses it — every crossing, not the first — and each piece keeps its
         // kind.
-        const auto path = core::path_of(doc, slot);
+        const auto path = core::path_of(doc, slot, core::PathScope::Curves);
         if (!path) {
             ctx.refuse(core::ErrorCode::Unsupported,
                        "Nesne " + std::to_string(raw) +
-                           " bir eğri ya da nokta; BÖL çizgi, yay, daire, yaylı çoklu çizgi ve "
-                           "alanlarla çalışır.");
+                           " bölünemiyor; BÖL çizgi, yay, daire, elips, spline, yaylı çoklu "
+                           "çizgi ve alanlarla çalışır.");
             co_return;
         }
         std::vector<core::PathPlace> places;
@@ -677,11 +677,11 @@ Task<void> run_cut(Context& ctx, bool extend)
             if (named > 0)
                 why = "Nesne bulunamadı veya silinmiş: " + std::to_string(named);
             else if (extend)
-                why = "Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin ya da yayın ucuna "
-                        "tıklayın.";
+                why = "Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin, yayın ya da elips "
+                        "yayının ucuna tıklayın.";
             else
-                why = "Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın ya da "
-                        "dairenin atılacak parçasına tıklayın.";
+                why = "Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın, dairenin, "
+                        "elipsin ya da spline'ın atılacak parçasına tıklayın.";
             ctx.refuse(core::ErrorCode::NotFound, std::move(why));
             return false;
         }
@@ -690,13 +690,14 @@ Task<void> run_cut(Context& ctx, bool extend)
             ctx.refuse(st.error());
             return false;
         }
-        const core::KindId kind                   = doc.entities().kind[slot];
-        const std::optional<core::CurvePath> path = core::path_of(doc, slot);
+        const core::KindId kind = doc.entities().kind[slot];
+        const std::optional<core::CurvePath> path =
+            core::path_of(doc, slot, core::PathScope::Curves);
         if (!path) {
             ctx.refuse(core::ErrorCode::Unsupported,
                          "Nesne " + std::to_string(key) +
                              " bu komutun işleyebileceği bir tür değil; " + verb +
-                             " çizgi, yay ve dairelerde çalışır.");
+                             " çizgi, yay, daire, elips ve spline'da çalışır.");
             return false;
         }
         if (path->closed && kind == core::kPolylineKind) {
@@ -712,10 +713,10 @@ Task<void> run_cut(Context& ctx, bool extend)
             ctx.refuse(core::ErrorCode::InvalidArgument,
                          std::string(verb) +
                              (extend ? " için ulaşılacak sınır yok: " : " için kesecek sınır yok: ") +
-                             (guide.every ? "tıklanan nesnenin yakınında başka bir çizgi, yay ya da "
-                                            "daire yok."
+                             (guide.every ? "tıklanan nesnenin yakınında başka bir çizgi, yay, "
+                                            "daire, elips ya da spline yok."
                                           : "sınır olarak verilen nesneler tıklanan nesnenin kendisi "
-                                            "ya da çizgi, yay veya daire değil."));
+                                            "ya da çizgi, yay, daire, elips veya spline değil."));
             return false;
         }
 

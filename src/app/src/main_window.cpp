@@ -51,6 +51,7 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
 #include "kentos_cad/core/outline.hpp"
@@ -1197,8 +1198,8 @@ void MainWindow::buildActions()
     // through the `kToolCommand` property set above, so the group is all it needed.
     drawingTools_->addAction(actSelectArea_);
     actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
-                          tr("BUDA — tıkladığınız parçayı sınırlar arasından atar: çizgide, yayda "
-                             "ve dairede  ·  kısaltma: BD"));
+                          tr("BUDA — tıkladığınız parçayı sınırlar arasından atar: çizgide, yayda, "
+                             "dairede, elipste ve spline'da  ·  kısaltma: BD"));
     // THE GENERIC PAIR AND THE CADASTRAL PAIR ARE DIFFERENT TOOLS, and the tool
     // column carries the generic one. `BİRLEŞTİR`/`BÖL` are geometry: they work on
     // any area or line and say what came out. `TEVHİT`/`İFRAZ` are cadastral acts
@@ -6396,6 +6397,82 @@ int MainWindow::probeRealMouse()
             check(header.min_reader_version == io::kMinReaderVersionClip,
                   QStringLiteral("kırpılmış referanslı proje biçim %1 istiyor")
                       .arg(header.min_reader_version));
+        }
+
+        // ---- 29. AN ELLIPSE AND A SPLINE CUT LIKE LINES (TODOS C-01) ----
+        //
+        // An ellipse and a parabola-shaped spline, each crossed by a road. BUDA
+        // armed with nothing selected cuts with everything near: the pointer on
+        // the ellipse's top shows the arc that will go — cut where the road
+        // really meets the curve, x = ±8 — and the click takes it, leaving an
+        // elliptic arc; the spline's top goes the same way and two splines stay.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", "ÇİZGİ -20,3 20,3",
+                  "SPLINE noktalar=30,0 35,10 40,0 derece=2", "ÇİZGİ 25,3.2 45,3.2"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            canvas_->zoomToBox(core::Box2{-22'000, -8'000, 48'000, 14'000});
+            QCoreApplication::processEvents();
+            shoot("egri-oncesi");
+
+            const core::Document& doc = controller_->document();
+            actTrim_->trigger();
+            QCoreApplication::processEvents();
+            const core::Point2 ellipse_top{0, 5'000};
+            onCanvas(QEvent::MouseMove, screen(ellipse_top), Qt::NoButton);
+            canvas_->repaint();
+            QCoreApplication::processEvents();
+            const QString said = QString::fromStdString(canvas_->guideLabelForProbe());
+            if (!canvas_->grabCanvas().isNull())
+                check(said.contains(QStringLiteral("2 kesişim")) &&
+                          said.contains(QStringLiteral("16,71")),
+                      QStringLiteral("elipsin tepesinde budanacak yay önizleniyor (%1)").arg(said));
+            shoot("egri-buda-onizleme");
+            onCanvas(QEvent::MouseButtonPress, screen(ellipse_top), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(ellipse_top), Qt::LeftButton);
+            QCoreApplication::processEvents();
+            const auto arc_of = [&doc](std::int64_t key) {
+                const core::EntityId e =
+                    doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                return e == core::kNoEntity
+                           ? std::optional<core::EllipseArc>{}
+                           : core::ellipse_arc_of(doc.geometry(), doc.entities().slot[e]);
+            };
+            const std::optional<core::EllipseArc> arc = arc_of(1);
+            check(arc.has_value() && std::llabs(arc->start_udeg - 143'130'102) <= 2 &&
+                      std::llabs(arc->end_udeg - 36'869'898) <= 2,
+                  QStringLiteral("tık elipsin üst yayını attı; x = ±8'de kesilen elips yayı "
+                                 "kaldı"));
+
+            const core::Point2 spline_top{35'000, 5'000};
+            onCanvas(QEvent::MouseMove, screen(spline_top), Qt::NoButton);
+            QCoreApplication::processEvents();
+            shoot("egri-buda-spline-onizleme");
+            onCanvas(QEvent::MouseButtonPress, screen(spline_top), Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, screen(spline_top), Qt::LeftButton);
+            QCoreApplication::processEvents();
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+            std::size_t splines = 0;
+            bool ends_on_road   = true;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+                if (!doc.alive(e) || doc.entities().kind[e] != core::kSplineKind) continue;
+                ++splines;
+                const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+                const auto ys             = doc.geometry().ring_ys(span.first);
+                ends_on_road = ends_on_road && (ys.front() == 3'200 || ys.back() == 3'200);
+            }
+            check(splines == 2 && ends_on_road,
+                  QStringLiteral("spline'ın tepesi gitti; yola değen iki spline kaldı (%1)")
+                      .arg(splines));
+            runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
+            shoot("egri-buda-sonrasi");
         }
     }
 

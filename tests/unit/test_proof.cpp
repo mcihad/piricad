@@ -2893,3 +2893,62 @@ TEST_CASE("PROOF: BLOKKIRP arayüz, komut satırı, betik ve oynatmadan aynı be
     CHECK_EQ(cli.doc.content_hash(), replay.doc.content_hash());
     CHECK_EQ(what_happened(cli.journal), what_happened(replay.journal));
 }
+
+TEST_CASE("PROOF: BUDA, UZAT, KIR ve BÖL elips ile spline'da arayüz, komut satırı ve betikten aynı "
+          "sonucu bırakır")
+{
+    // TODOS C-01. The curves a DXF brings in — an ellipse cut at a road, a
+    // spline cut at a line — on every road alike. The GUI clicks lie exactly
+    // on the curve (the ellipse's top, the parabola's vertex): without a view
+    // there is no pick aperture.
+    prove_verb({.name  = "BUDA",
+                .id    = "core.trim",
+                .setup = {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", "ÇOKLUÇİZGİ -20,3 20,3",
+                          "SEÇ NESNE nesneler=2"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{0, 5'000}), Value{}},
+                .typed    = "BUDA sinir=2 nesne=1 nokta=0,5",
+                .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "sinir":[2],"nesne":[1],"nokta":[[0,5000]]}}]})"});
+    prove_verb({.name  = "BUDA",
+                .id    = "core.trim",
+                .setup = {"SPLINE noktalar=0,0 5,10 10,0 derece=2", "ÇOKLUÇİZGİ -5,3.2 15,3.2",
+                          "SEÇ NESNE nesneler=2"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{5'000, 5'000}), Value{}},
+                .typed    = "BUDA sinir=2 nesne=1 nokta=5,5",
+                .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
+                    "sinir":[2],"nesne":[1],"nokta":[[5000,5000]]}}]})"});
+
+    // AN ELLIPTIC ARC'S END carried round its ellipse to a line.
+    prove_verb({.name     = "UZAT",
+                .id       = "core.extend",
+                .setup    = {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5 baslangic=0 bitis=90",
+                             "ÇOKLUÇİZGİ -5,-10 -5,10"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{0, 5'000}), Value{}},
+                .typed    = "UZAT hepsi=evet nesne=1 nokta=0,5",
+                .scripted = R"({"ad":"UZAT","komutlar":[{"cmd":"core.extend","args":{
+                    "hepsi":true,"nesne":[1],"nokta":[[0,5000]]}}]})"});
+
+    // A WHOLE ELLIPSE BROKEN between two of its points: an elliptic arc stays.
+    prove_verb(
+        {.name     = "KIR",
+         .id       = "core.break",
+         .setup    = {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5"},
+         .objects  = {1},
+         .answers  = {Value::point(core::Point2{10'000, 0}), Value::point(core::Point2{0, 5'000})},
+         .typed    = "KIR nesne=1 birinci=10,0 ikinci=0,5",
+         .scripted = R"({"ad":"KIR","komutlar":[{"cmd":"core.break","args":{
+                    "nesne":[1],"birinci":[10000,0],"ikinci":[0,5000]}}]})"});
+
+    // A SPLINE IN EQUAL LENGTHS, each piece a spline.
+    prove_verb({.name     = "BÖL yontem=esit",
+                .id       = "core.split",
+                .setup    = {"SPLINE noktalar=0,0 5,10 10,0 derece=2"},
+                .objects  = {1},
+                .answers  = {Value::integer(3)},
+                .typed    = "BÖL yontem=esit nesne=1 sayi=3",
+                .scripted = R"({"ad":"BÖL","komutlar":[{"cmd":"core.split","args":{
+                    "yontem":"esit","nesne":[1],"sayi":3}}]})"});
+}

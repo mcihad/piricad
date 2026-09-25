@@ -294,6 +294,10 @@ std::vector<Point2> circle_meets(const PathPiece& arc, const PathPiece& piece);
 /// `piece`: what an elliptic arc's end is carried round to.
 std::vector<Point2> ellipse_meets(const PathPiece& arc, const PathPiece& piece);
 
+/// The parameter of the ellipse of piece `e` at the point `q` on it, whole
+/// micro-degrees in [0, 360°): `q − centre` taken apart along the two axes.
+std::int64_t ellipse_parameter_of(const PathPiece& e, Point2 q) noexcept;
+
 /// The part of `path` from `a` to `b`, along it. On a closed path, `b` before `a`
 /// wraps past the seam; on an open one it is empty. Pieces that shrink to nothing
 /// are dropped, and two arcs of one circle meeting at the seam become one.

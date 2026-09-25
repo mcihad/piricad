@@ -51,6 +51,11 @@ SPLINE noktalar=0,0 10,20 20,20 30,0 derece=3
 
 [SPLINE](../komutlar/spline.md).
 
+[BUDA](../komutlar/trim.md), [BÖL](../komutlar/split.md) ve [KIR](../komutlar/break.md)
+spline'ı, kalan her parçayı tam olarak çizen daha kısa spline'lara ayırır (düğüm
+eklenerek; biçim değişmez). Spline bu komutlarda **kesme sınırı** da olur. Spline'ın
+ucu [UZAT](../komutlar/extend.md) ile uzatılmaz: eğri son düğümünde biter.
+
 ## Sınırlar
 
 Ağırlıklı (rasyonel) spline dosyadan okunur ve çizilir; komut ağırlık vermez.

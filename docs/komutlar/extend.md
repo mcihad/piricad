@@ -1,6 +1,7 @@
 # UZAT — Ucu Sınıra Kadar Uzatma
 
-Sınıra yetişmeyen bir çizgiyi ya da yayı oraya kadar uzatması gereken herkes için;
+Sınıra yetişmeyen bir çizgiyi, yayı ya da elips yayını oraya kadar uzatması gereken
+herkes için;
 bu sayfayı bitirdiğinizde uzatmayı arayüzden, komut satırından ve betikten yapmayı
 bileceksiniz.
 
@@ -12,20 +13,24 @@ ilk sınıra kadar taşır:
 - Bir **çizginin** ucu kendi doğrultusunda ilerler; çizginin yönü değişmez.
 - Bir **yayın** ucu kendi çemberi boyunca ilerler; merkez ve yarıçap aynı kalır.
   Yay, kendi üstüne dolanacak kadar uzatılmaz.
+- Bir **elips yayının** ucu kendi elipsi boyunca, elipsin kendi parametresinde
+  ilerler; merkez ve eksenler aynı kalır. O da kendi üstüne dolanacak kadar
+  uzatılmaz.
 
-Ulaşılan nokta sınırın **üzerindedir**: bir yaya ya da daireye uzatılan çizgi,
-eğrinin gerçek kesişiminde durur, çizildiği kirişlerde değil.
+Ulaşılan nokta sınırın **üzerindedir**: bir yaya, daireye, elipse ya da spline'a
+uzatılan çizgi, eğrinin gerçek kesişiminde durur, çizildiği kirişlerde değil.
 
-`UZAT` açık çizgilerde ve yaylarda çalışır. Daire ve kapalı alanın ucu yoktur, bu
-yüzden uzatılmazlar. Elips ve spline bugün uzatılmaz; [`BUDA`](trim.md)
-sayfasındaki sebeple, yinelemeli çözümü getirecek kütüphaneyle (TODOS C-01)
-uzatılabilecekler.
+`UZAT` açık çizgilerde, yaylarda ve elips yaylarında çalışır; elips ve spline sınır
+da olur. Daire, tam elips ve kapalı alanın ucu yoktur, bu yüzden uzatılmazlar.
+**Spline uzatılmaz**: eğri son düğümünde biter ve ötesi tanımsızdır; bir uzantı bu
+programın yapmadığı bir tahmin olurdu. Spline'ı bir sınıra ulaştırmak için ucundan
+bir çizgi çizin.
 
 ### Sınırlar
 
 Sınırlar [`BUDA`](trim.md)'daki sırayla belirlenir: `sinir=` ile verilenler, yoksa
-seçtikleriniz, o da yoksa tıkladığınız nesnenin yakınındaki her görünür çizgi, yay
-ve daire (`hepsi=evet`).
+seçtikleriniz, o da yoksa tıkladığınız nesnenin yakınındaki her görünür çizgi, yay,
+daire, elips ve spline (`hepsi=evet`).
 
 ### Uçları göstermenin iki yolu daha
 
@@ -111,6 +116,19 @@ UZAT uzanti=evet sinir=4 nesne=3 nokta=10,-10
 1 uç sınıra uzatıldı.
 ```
 
+### Elips yayı
+
+Boş bir çizimde, elipsin dörtte biri olan bir yay ile x = 55 doğrusu: yayın (60; 5)'teki
+ucu elipsi boyunca doğruya kadar ilerler ve elipsin 120°'sinde, (55; 4,330)'da durur.
+
+<!-- örnek: yeni çizim -->
+
+```
+ELİPS merkez=60,0 birinci=70,0 ikinci=60,5 baslangic=0 bitis=90
+ÇİZGİ 55,-10 55,10
+UZAT sinir=2 nesne=1 nokta=60,5
+```
+
 ### Arayüz
 
 Şeritte **Değiştir ▸ Kes ve Uzat ▸ Uzat**'a basın ya da `UZAT` yazın. Komut satırı
@@ -167,12 +185,14 @@ yapılan uzatmada çit (`yontem=çit`, `cit`). Python'dan
 |---|---|---|
 | `Bu uç, sınırlara uzatılarak ulaşamıyor: kesişme yok.` | Çizginin doğrultusu hiçbir sınırı kesmiyor | Doğrultunun kestiği bir sınır verin |
 | `Bu yayın ucu, sınırlara çemberi boyunca uzatılarak ulaşamıyor: kesişme yok.` | Yayın çemberi, uzatılabileceği bölümde hiçbir sınırı kesmiyor | Çemberin kestiği bir sınır verin |
-| `Kapalı bir şeklin ucu yok; uzatılacak bir şey yok.` | Daire tıklandı | Açık bir çizgi ya da yay seçin |
+| `Bu elips yayının ucu, sınırlara elipsi boyunca uzatılarak ulaşamıyor: kesişme yok.` | Elips, yayın uzatılabileceği bölümde hiçbir sınırı kesmiyor | Elipsin kestiği bir sınır verin |
+| `Spline'ın ucu uzatılamaz: eğri son düğümünde biter, ötesi tanımsızdır. Ucundan sınıra bir çizgi çizin.` | Bir spline'ın ucu tıklandı | Spline'ın ucundan sınıra bir çizgi çizin |
+| `Kapalı bir şeklin ucu yok; uzatılacak bir şey yok.` | Daire ya da tam elips tıklandı | Açık bir çizgi, yay ya da elips yayı seçin |
 | `Nesne N kapalı bir alan; ucu olmayan bir şekil uzatılmaz.` | Kapalı alan tıklandı | Açık bir çizgi seçin |
-| `Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin ya da yayın ucuna tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
-| `Nesne N bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay ve dairelerde çalışır.` | Elips, spline, nokta, metin ya da delikli alan | Çizgi ya da yay seçin |
-| `UZAT için ulaşılacak sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Yakında ulaşılacak nesne yok | Bir sınır çizin ya da `sinir=` verin |
-| `UZAT için ulaşılacak sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Verilen tek sınır, uzatılan nesnenin kendisi | Başka bir nesneyi sınır seçin |
+| `Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin, yayın ya da elips yayının ucuna tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
+| `Nesne N bu komutun işleyebileceği bir tür değil; UZAT çizgi, yay, daire, elips ve spline'da çalışır.` | Nokta, metin, blok ya da delikli alan | Çizgi, yay ya da elips yayı seçin |
+| `UZAT için ulaşılacak sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay, daire, elips ya da spline yok.` | Yakında ulaşılacak nesne yok | Bir sınır çizin ya da `sinir=` verin |
+| `UZAT için ulaşılacak sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay, daire, elips veya spline değil.` | Verilen tek sınır, uzatılan nesnenin kendisi | Başka bir nesneyi sınır seçin |
 | `UZAT: hiçbir uç gösterilmedi. Uzatılacak uca tıklayın ya da UZAT nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir uca tıklayın ya da `nokta` verin |
 | `UZAT: çit en az iki noktadan oluşur. Çitin köşelerini tıklayın ya da UZAT cit=<nokta> <nokta> yazın.` | Çitin tek köşesi var | Çite en az bir köşe daha verin |
 | `Çit, sınırlara uzatılabilecek bir uçtan geçmiyor.` | Çit hiçbir nesneden geçmiyor ya da geçtiği nesnelerin hiçbir ucu bir sınıra ulaşmıyor | Çiti uzatılacak uçların yakınından çizin |

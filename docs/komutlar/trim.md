@@ -1,7 +1,7 @@
 # BUDA — Parçayı Kesme Sınırlarına Kadar Budama
 
-Bir çizginin, yayın ya da dairenin sınırları aşan parçasını atması gereken herkes
-için; bu sayfayı bitirdiğinizde budamayı arayüzden, komut satırından ve betikten
+Bir çizginin, yayın, dairenin, elipsin ya da spline'ın sınırları aşan parçasını
+atması gereken herkes için; bu sayfayı bitirdiğinizde budamayı arayüzden, komut satırından ve betikten
 yapmayı bileceksiniz.
 
 ## Ne yapar
@@ -19,16 +19,18 @@ kesme sınırlarının arasında kalan bölümdür:
   **yay** olur.
 
 Kalan her şey kendi türünde kalır. Budanan yay, aynı merkezli ve aynı yarıçaplı bir
-yaydır; bir yaya ya da daireye budanan çizgi **eğrinin üzerinde** biter, eğrinin
-ekranda çizildiği kirişlerin üzerinde değil. Kesişimler kapalı biçimde hesaplanır ve
-milimetreye bir kez yuvarlanır, bu yüzden aynı işlem her bilgisayarda aynı noktayı
-verir.
+yaydır; budanan elips aynı elipsin bir **yayıdır**; budanan spline, kalan bölümü
+tam olarak çizen daha kısa bir **spline**'dır (düğüm eklenerek yeniden kurulur,
+biçimi değişmez). Bir yaya, daireye, elipse ya da spline'a budanan çizgi **eğrinin
+üzerinde** biter, eğrinin ekranda çizildiği kirişlerin üzerinde değil. Çizgi, yay ve
+daire kesişimleri kapalı biçimde; elips ve spline kesişimleri kirişlerden bulunup
+eğrinin kendisi üzerinde Newton yöntemiyle inceltilerek hesaplanır; hepsi milimetreye
+bir kez yuvarlanır, bu yüzden aynı işlem her bilgisayarda aynı noktayı verir.
 
-`BUDA` açık çizgilerde (`ÇİZGİ`, `ÇOKLUÇİZGİ`), yaylarda ve dairelerde çalışır.
-Kapalı bir alanın (`ALAN`) bir parçası budanmaz; alanı ikiye ayırmak
-[`BÖL`](split.md)'ün işidir. Elips ve spline bugün budanmaz: kesişimleri yinelemeli
-bir çözüm ister, ve o çözümü getirecek kütüphaneyle birlikte (TODOS C-01)
-budanabilecekler.
+`BUDA` açık çizgilerde (`ÇİZGİ`, `ÇOKLUÇİZGİ`), yaylarda, dairelerde, elipslerde ve
+spline'larda çalışır; bunların hepsi **kesme sınırı** da olur. Kapalı bir alanın
+(`ALAN`) bir parçası budanmaz; alanı ikiye ayırmak [`BÖL`](split.md)'ün işidir. Tam
+bir elips, daire gibi, ancak iki yerinden kesilince budanır.
 
 ### Kesme sınırları
 
@@ -37,7 +39,7 @@ Hangi nesnelerin keseceği şu sırayla belirlenir:
 1. `sinir=` ile verilen nesneler;
 2. bunlar yoksa komuttan önce **seçtiğiniz** nesneler;
 3. o da yoksa **hızlı budama**: tıkladığınız nesnenin yakınındaki her görünür çizgi,
-   yay ve daire. `hepsi=evet` bunu açıkça ister.
+   yay, daire, elips ve spline. `hepsi=evet` bunu açıkça ister.
 
 Bir nesne kendi kendini kesmez. Her şeyi seçip `BUDA`'ya bastığınızda her nesne,
 ötekiler tarafından kesilir.
@@ -52,8 +54,8 @@ Bir nesne kendi kendini kesmez. Her şeyi seçip `BUDA`'ya bastığınızda her 
   kesimlerin dışında kalan her şey gider — iki yolun arasındaki bölümü bırakıp iki
   ucu birden atmak tek tıklamadır.
 - **Sınırları uzatarak** (`uzanti=evet`): nesneye yetişmeyen bir sınır, kendi
-  yolunda — çizgi doğrultusunda, yay çemberi boyunca — uzatılmış sayılır ve nesneyi
-  orada keser. Sınırın kendisi değişmez; önizleme uzatılan bölümü noktalı çizer.
+  yolunda — çizgi doğrultusunda, yay çemberi boyunca, elips yayı elipsi boyunca —
+  uzatılmış sayılır ve nesneyi orada keser; spline uzatılmaz. Sınırın kendisi değişmez; önizleme uzatılan bölümü noktalı çizer.
 
 Önizlemede sınırların nesneyi kestiği **her yer** işaretlenir: kesen bir sınır `×`
 ile, yalnız değen (teğet) bir sınır küçük bir halkayla. Teğet de keser; beklemediyseniz
@@ -144,6 +146,27 @@ BUDA uzanti=evet sinir=2 nesne=1 nokta=80,0
 1 parça budandı.
 ```
 
+### Elips ve spline
+
+Boş bir çizimde: x²/100 + y²/25 = 1 elipsini y = 3 doğrusu x = ±8'de keser; üstteki
+yayı atmak için tepesine tıklamak yeter. Aynı doğrunun kestiği parabol biçimli bir
+spline'ın tepesi de aynı biçimde gider ve iki spline kalır:
+
+<!-- örnek: yeni çizim -->
+
+```
+ELİPS merkez=0,0 birinci=10,0 ikinci=0,5
+ÇİZGİ -20,3 20,3
+BUDA sinir=2 nesne=1 nokta=0,5
+SPLINE noktalar=30,0 35,10 40,0 derece=2
+ÇİZGİ 25,3.2 45,3.2
+BUDA sinir=4 nesne=3 nokta=35,5
+```
+
+Elips, (−8; 3)'ten başlayıp alttan dolaşarak (8; 3)'e varan bir elips yayı olur;
+spline (32; 3,2) ve (38; 3,2)'de kesilen iki spline'a ayrılır, her biri parabolün
+kendi parçası.
+
 ### Arayüz
 
 Şeritte **Giriş ▸ Değiştir ▸ Buda**'ya (ya da **Değiştir ▸ Kes ve Uzat ▸ Buda**'ya) basın ya
@@ -226,14 +249,15 @@ uzatarak `carry_edges=True`.
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
 | `Bu nesneyi sınırlardan hiçbiri kesmiyor; atılacak bir parça yok.` | Sınırlar nesneyi kesmiyor | Kesen bir sınır verin ya da [`UZAT`](extend.md) ile sınıra ulaştırın |
+| `Sınırların bu nesneyi nerede kestiği sayısal olarak kesinleştirilemedi; budama yapılmadı. Sınırı ya da eğriyi sadeleştirip yeniden deneyin.` | Bir elips ya da spline ile sınır arasındaki bir aday kesişim inceltilirken karara bağlanamadı; eksik bir kesimle budamak tıklanmayan bir parçayı atabilirdi | Sınırı ya da eğriyi sadeleştirin (daha az kontrol noktası), ya da kesişimin yanından bir sınır çizin |
 | `Kapalı bir şekil ancak iki yerinden kesilince budanır; sınırlar onu N yerinden kesiyor.` | Daire tek yerden kesiliyor ya da hiç kesilmiyor | Daireyi iki yerden kesen sınırlar verin |
 | `Tıklanan parça bütün nesne; budanınca geriye bir şey kalmıyor. Silmek için SİL kullanın.` | Kesişim nesnenin tam ucunda, tıklanan parça nesnenin tamamı | Silmek istiyorsanız [`SİL`](erase.md) |
 | `Tıklanan nokta bir kesişimin tam üstünde; hangi parçanın atılacağını söylemek için parçanın içine tıklayın.` | Verilen nokta kesişimin kendisi | Parçanın içinden bir nokta verin |
-| `Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın ya da dairenin atılacak parçasına tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
+| `Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın, dairenin, elipsin ya da spline'ın atılacak parçasına tıklayın.` | Tıklamanın altında nesne yok; betikte nokta nesnenin tam üstünde değil | Nesnenin üstüne tıklayın ya da `nesne=` verin |
 | `Nesne N kapalı bir alan; alanın bir parçası budanmaz. Alanı ikiye ayırmak için BÖL kullanın.` | Kapalı bir alan tıklandı | [`BÖL`](split.md) kullanın |
-| `Nesne N bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay ve dairelerde çalışır.` | Elips, spline, nokta, metin ya da delikli alan | Çizgi, yay ya da daire seçin |
-| `BUDA için kesecek sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay ya da daire yok.` | Hızlı budamada yakında kesecek nesne yok | Bir sınır çizin ya da `sinir=` verin |
-| `BUDA için kesecek sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay veya daire değil.` | Seçili ya da verilen tek sınır, budanan nesnenin kendisi | Başka bir nesneyi sınır seçin |
+| `Nesne N bu komutun işleyebileceği bir tür değil; BUDA çizgi, yay, daire, elips ve spline'da çalışır.` | Nokta, metin, blok ya da delikli alan | Çizgi, yay, daire, elips ya da spline seçin |
+| `BUDA için kesecek sınır yok: tıklanan nesnenin yakınında başka bir çizgi, yay, daire, elips ya da spline yok.` | Hızlı budamada yakında kesecek nesne yok | Bir sınır çizin ya da `sinir=` verin |
+| `BUDA için kesecek sınır yok: sınır olarak verilen nesneler tıklanan nesnenin kendisi ya da çizgi, yay, daire, elips veya spline değil.` | Seçili ya da verilen tek sınır, budanan nesnenin kendisi | Başka bir nesneyi sınır seçin |
 | `BUDA: hiçbir parça gösterilmedi. Atılacak parçaya tıklayın ya da BUDA nokta=<nokta> yazın.` | Hiç tıklamadan Enter; betikte `nokta` yok | Bir parçaya tıklayın ya da `nokta` verin |
 | `Tıklanan parçanın dışında atılacak bir şey yok.` | `tut=evet` ile tıklanan parça nesnenin tamamı | Tutmak yerine budayın ya da nesneyi kesen bir sınır ekleyin |
 | `BUDA: çit en az iki noktadan oluşur. Çitin köşelerini tıklayın ya da BUDA cit=<nokta> <nokta> yazın.` | Çitin tek köşesi var | Çite en az bir köşe daha verin |

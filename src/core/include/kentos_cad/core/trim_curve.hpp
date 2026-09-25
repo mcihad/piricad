@@ -47,8 +47,11 @@ struct TrimGuide
 
 /// Every place `target` is cut by `edges`, in order along it, one per point:
 /// two edges meeting it where they meet each other are one cut, and on a closed
-/// target a cut at the seam is counted once.
-std::vector<PathCrossing> cuts_of(const CurvePath& target, std::span<const CurvePath> edges);
+/// target a cut at the seam is counted once. `unresolved`, when given, is set
+/// when the solve could not settle where an ellipse or a spline meets an edge
+/// (`PathMeets::unresolved`) — the cuts are then not known to be all of them.
+std::vector<PathCrossing> cuts_of(const CurvePath& target, std::span<const CurvePath> edges,
+                                  bool* unresolved = nullptr);
 
 /// What a trim does to one object.
 struct CurveTrim

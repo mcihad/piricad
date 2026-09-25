@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — elips ve spline'da BUDA, UZAT, BÖL ve KIR (C-01)
+
+- **BUDA**, **BÖL** ve **KIR** artık elipste ve spline'da çalışır: budanan elips aynı
+  elipsin yayı, budanan ya da bölünen spline kalan bölümü tam olarak çizen daha kısa
+  bir spline olur (düğüm eklenerek; biçim değişmez). Elips ve spline bu komutların
+  hepsinde **kesme sınırı** da olur.
+- **UZAT** bir elips yayının ucunu elipsi boyunca sınıra taşır; spline'ın ucu adıyla
+  reddedilir (eğri son düğümünde biter).
+- Kesişimler eğrinin kendisi üzerinde: kirişlerin aday noktaları Newton yöntemiyle
+  inceltilir; teğet dokunuş, ortak bölüm, kapalı eğrinin dikişi ve çoklu çözüm ayrı
+  sonuçlanır. Çözücünün karara bağlayamadığı bir kesişim varsa BUDA eksik kesimle
+  budamaz, bunu söyler.
+- **DİZİ** `mod=YOL` elips ve spline boyunca da dizer; aralık eğrinin kendisi
+  boyunca ölçülür.
+- Önizleme (gidecek parça, kesişim işaretleri, atılacak uzunluk) elips ve spline'da
+  da çizilir. Destek matrisi: elips BUDA ve KIR, spline BUDA, BÖL ve KIR ✓.
+
 ### Eklendi — blok ve dış referans kırpma: BLOKKIRP (C-14, 4. aşama)
 
 - **BLOKKIRP** (`XCLIP`, `BKR`): bir blok referansı ya da dış referans bir **sınırla**

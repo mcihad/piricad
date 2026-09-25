@@ -1,0 +1,17 @@
+# Elips ve spline kesilir, uzatılır, kırılır, bölünür (TODOS C-01). Noktalar
+# eğrilerin kendi denkleminden: x²/100 + y²/25 = 1 elipsi y = 3'te x = ±8'de,
+# y = 2x − 0,2x² parabolü (30 m doğuya kaydırılmış) y = 3,2'de x = 2 ve 8'de
+# kesilir; elips yayının ucu x = 55'te elipsin 120°'sine (y = 4,330) uzar.
+KATMAN ad=EGRI
+ELİPS merkez=0,0 birinci=10,0 ikinci=0,5
+ÇİZGİ -20,3 20,3
+BUDA sinir=2 nesne=1 nokta=0,5
+SPLINE noktalar=30,0 35,10 40,0 derece=2
+ÇİZGİ 25,3.2 45,3.2
+BUDA sinir=4 nesne=3 nokta=35,5
+ELİPS merkez=60,0 birinci=70,0 ikinci=60,5 baslangic=0 bitis=90
+ÇİZGİ 55,-10 55,10
+UZAT sinir=7 nesne=6 nokta=60,5
+ELİPS merkez=0,30 birinci=10,30 ikinci=0,35
+KIR nesne=8 birinci=10,30 ikinci=0,35
+BÖL nesne=5 yontem=esit sayi=2

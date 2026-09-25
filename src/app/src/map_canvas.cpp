@@ -2848,8 +2848,9 @@ void MapCanvas::buildOverlay()
                 const core::Document& doc = controller_.document();
                 const core::EntityId e    = doc.slot_of(
                     static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
-                const auto path =
-                    e != core::kNoEntity && doc.alive(e) ? core::path_of(doc, e) : std::nullopt;
+                const auto path = e != core::kNoEntity && doc.alive(e)
+                                      ? core::path_of(doc, e, core::PathScope::Curves)
+                                      : std::nullopt;
                 if (path) {
                     if (auto cut = core::break_path(*path, session->prompt().rubber_origin,
                                                     cursorWorld())) {
@@ -2943,8 +2944,9 @@ void MapCanvas::buildOverlay()
                 const core::Document& doc = controller_.document();
                 const core::EntityId e    = doc.slot_of(
                     static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
-                const auto path =
-                    e != core::kNoEntity && doc.alive(e) ? core::path_of(doc, e) : std::nullopt;
+                const auto path = e != core::kNoEntity && doc.alive(e)
+                                      ? core::path_of(doc, e, core::PathScope::Curves)
+                                      : std::nullopt;
                 if (path) {
                     std::vector<core::Point2> at = session->prompt().rubber_chain;
                     at.push_back(cursorWorld());
@@ -2991,7 +2993,8 @@ void MapCanvas::buildOverlay()
                 const core::EntityId e =
                     core::pick_nearest(doc, at, controller_.bus().aid_settings().pick_radius);
                 const std::optional<core::CurvePath> path =
-                    e == core::kNoEntity ? std::nullopt : core::path_of(doc, e);
+                    e == core::kNoEntity ? std::nullopt
+                                         : core::path_of(doc, e, core::PathScope::Curves);
                 // A closed polyline is an area: BUDA refuses it, so nothing is shown.
                 const bool area =
                     path && path->closed && doc.entities().kind[e] == core::kPolylineKind;
@@ -3060,7 +3063,8 @@ void MapCanvas::buildOverlay()
                 std::size_t pieces = 0;
                 for (const core::FenceEdit& edit : plan.edits) {
                     if (guide.extend) {
-                        if (auto now = core::path_of(doc, edit.target)) addCurve(kept, *now);
+                        if (auto now = core::path_of(doc, edit.target, core::PathScope::Curves))
+                            addCurve(kept, *now);
                         addCurve(gone, edit.reach.added);
                         pieces += edit.reach.added.pieces.size();
                         continue;

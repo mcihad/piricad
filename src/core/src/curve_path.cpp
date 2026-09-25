@@ -763,6 +763,25 @@ std::vector<Point2> circle_meets(const PathPiece& arc, const PathPiece& piece)
     return out;
 }
 
+std::int64_t ellipse_parameter_of(const PathPiece& e, Point2 q) noexcept
+{
+    // q − c = cos t · U + sin t · V: the 2×2 system solved for (cos t, sin t),
+    // and the angle read back without libm.
+    const auto ux  = static_cast<double>(e.major.x - e.centre.x);
+    const auto uy  = static_cast<double>(e.major.y - e.centre.y);
+    const auto vx  = static_cast<double>(e.minor.x - e.centre.x);
+    const auto vy  = static_cast<double>(e.minor.y - e.centre.y);
+    const auto dx  = static_cast<double>(q.x - e.centre.x);
+    const auto dy  = static_cast<double>(q.y - e.centre.y);
+    const double d = (ux * vy) - (vx * uy);
+    if (d == 0.0) return 0;
+    const double c = ((dx * vy) - (vx * dy)) / d;
+    const double s = ((ux * dy) - (dx * uy)) / d;
+    const double n = std::sqrt((c * c) + (s * s));
+    if (n <= 0.0) return 0;
+    return wrap(atan2_udeg(std::llround(s / n * 1e12), std::llround(c / n * 1e12)));
+}
+
 std::vector<Point2> ellipse_meets(const PathPiece& arc, const PathPiece& piece)
 {
     PathPiece whole  = arc;

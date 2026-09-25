@@ -16,8 +16,9 @@ tipteki yapı adaları, otopark cepleri ya da bir ölçü ağının kazıkları 
 çoğaltır. Bir rögar halkası, bir kavşağın radyal bordürleri ya da dairesel bir
 yapının kolonları böyle üretilir.
 
-**Yol boyunca dizi** (`mod=YOL`): nesneleri bir çizgi, yay, daire ya da yaylı
-çoklu çizgi boyunca eşit aralıkla dizer. Bordür boyunca direkler, bir cadde boyunca
+**Yol boyunca dizi** (`mod=YOL`): nesneleri bir çizgi, yay, daire, elips, spline ya
+da yaylı çoklu çizgi boyunca eşit aralıkla dizer — elipste ve spline'da aralık
+eğrinin kendisi boyunca ölçülür. Bordür boyunca direkler, bir cadde boyunca
 ağaçlar, bir kilometraj boyunca taşlar böyle üretilir. Nesnelerin **taban noktası**
 (verilmezse yolun başı) her durağa taşınır ve kopya, yolun o noktadaki
 doğrultusuna **döndürülür** — `hizala=hayir` ile döndürülmez. Duraklar ya `sayi` ile
@@ -69,7 +70,7 @@ DİZİ nesneler=<k> mod=YOL yol=<k> aralik=<metre>
 | `merkez` | Dizinin merkezi (kutupsal dizi) |
 | `sayi` | Toplam nesne sayısı, özgün dahil (kutupsal ve yol boyunca dizi) |
 | `aci` | Süpürülecek toplam açı, derece. Verilmezse tam tur |
-| `yol` | Yol boyunca dizinin izleyeceği nesne: çizgi, yay, daire ya da yaylı çoklu çizgi |
+| `yol` | Yol boyunca dizinin izleyeceği nesne: çizgi, yay, daire, elips, spline ya da yaylı çoklu çizgi |
 | `yol_nokta` | Yolu gösteren nokta; `yol` verilmişse sorulmaz |
 | `aralik` | Yol boyunca duraklar arası uzaklık, metre; verilmezse `sayi` |
 | `hizala` | Kopyalar yolun doğrultusuna döndürülsün mü; varsayılan `evet` |
@@ -154,7 +155,7 @@ Betikten çağrıldığında `nesneler` ve kipin gerektirdiği parametreler veri
 | `Tek satır ve tek sütun bir dizi değildir; kopya üretilmedi.` | `satir=1 sutun=1` | En az birini artırın |
 | `Satır ve sütun sayısı en az bir olmalı.` | Sıfır ya da negatif sayı | Artı sayı verin |
 | `Kutupsal dizi en az iki nesne ister; N istendi.` | `sayi` birden küçük | En az 2 verin |
-| `Yol bulunamadı: dizi bir çizgi, yay, daire ya da yaylı çoklu çizgi boyunca kurulur.` | Tıklanan yerde yol yok ya da yol olmayan bir nesne | Bir çizgiye ya da yaya tıklayın |
+| `Yol bulunamadı: dizi bir çizgi, yay, daire, elips, spline ya da yaylı çoklu çizgi boyunca kurulur.` | Tıklanan yerde yol yok ya da yol olmayan bir nesne | Bir çizgiye, yaya, elipse ya da spline'a tıklayın |
 | `Yol boyunca dizi en az iki nesne ister; N istendi.` | `sayi` birden küçük | En az 2 verin |
 | `Aralık sıfırdan büyük olmalı.` | `aralik` sıfır ya da eksi | Artı bir aralık verin |
 

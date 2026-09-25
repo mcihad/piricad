@@ -111,11 +111,12 @@ Task<void> run_break(Context& ctx)
                    "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         co_return;
     }
-    const auto path = core::path_of(doc, slot);
+    const auto path = core::path_of(doc, slot, core::PathScope::Curves);
     if (!path) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(id) +
-                       " kırılamıyor; KIR çizgi, yay, daire ve yaylı çoklu çizgide çalışır.");
+                       " kırılamıyor; KIR çizgi, yay, daire, elips, spline ve yaylı çoklu "
+                       "çizgide çalışır.");
         co_return;
     }
     if (path->closed && doc.entities().kind[slot] == core::kPolylineKind) {

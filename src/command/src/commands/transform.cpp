@@ -950,13 +950,15 @@ Task<void> run_array(Context& ctx)
                 path_key = static_cast<std::int64_t>(core::raw(doc.key_of(path_slot)));
             ctx.record("yol_nokta", Value{});
         }
+        // ANY CURVE A COPY CAN WALK: an ellipse and a spline as well — the
+        // copies stand at equal lengths along the curve itself (TODOS C-01).
         const auto path = path_slot != core::kNoEntity && doc.alive(path_slot)
-                              ? core::path_of(doc, path_slot)
+                              ? core::path_of(doc, path_slot, core::PathScope::Curves)
                               : std::nullopt;
         if (!path || path->pieces.empty()) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
-                       "Yol bulunamadı: dizi bir çizgi, yay, daire ya da yaylı çoklu çizgi "
-                       "boyunca kurulur.");
+                       "Yol bulunamadı: dizi bir çizgi, yay, daire, elips, spline ya da yaylı "
+                       "çoklu çizgi boyunca kurulur.");
             co_return;
         }
         const core::Mm length = core::path_length(*path);

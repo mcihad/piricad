@@ -18,11 +18,14 @@ söylersiniz:
 | `mesafe` | Nesnenin başından verdiğiniz **uzaklıktan** |
 | `esit` | Verdiğiniz sayıda **eşit parçaya** |
 
-`BÖL` çizgide, açık çoklu çizgide, **yayda**, **dairede** ve **yaylı çoklu
-çizgide** çalışır. Her parça kendi türünde kalır: bir yaydan kesilen parçalar
-yaydır, bir daire iki yaya ayrılır, yaylı bir sınırın yayları düzleşmez — parçalar
-aynı çemberin yaylarıdır. Parçaların uzunlukları toplamı, kesim başına en çok bir
-milimetrelik yuvarlamayla, kaynağın uzunluğudur.
+`BÖL` çizgide, açık çoklu çizgide, **yayda**, **dairede**, **elipste**, **spline**'da
+ve **yaylı çoklu çizgide** çalışır. Her parça kendi türünde kalır: bir yaydan kesilen
+parçalar yaydır, bir daire iki yaya ayrılır, yaylı bir sınırın yayları düzleşmez —
+parçalar aynı çemberin yaylarıdır. Bir elips aynı elipsin yaylarına, bir spline
+kendi eğrisini tam olarak çizen daha kısa spline'lara ayrılır. Uzunluklar ve eşit
+parçalar eğrinin kendisi boyunca ölçülür, çizildiği kirişler boyunca değil.
+Parçaların uzunlukları toplamı, kesim başına en çok bir milimetrelik yuvarlamayla,
+kaynağın uzunluğudur.
 
 **Her parça kaynağının katmanını, stilini ve bütün özniteliklerini taşır**: ikiye
 bölünen bir yol iki yanında da o yoldur. İlk parça nesnenin kendisi olarak kalır —
@@ -142,6 +145,18 @@ BÖL nesne=1 nokta=485330,4310200
 Çizgi ikiye bölündü.
 ```
 
+### Spline
+
+Boş bir çizimde bir spline'ı üç eşit uzunlukta parçaya bölmek — uzunluk eğrinin
+kendisi boyunca ölçülür, her parça bir spline'dır:
+
+<!-- örnek: yeni çizim -->
+
+```
+SPLINE noktalar=0,0 5,10 10,0 derece=2
+BÖL nesne=1 yontem=esit sayi=3
+```
+
 ### Arayüz
 
 Şeritte **Değiştir ▸ Kes ve Uzat ▸ Böl**'e basın, kesilecek nesneleri tıklayarak
@@ -201,8 +216,8 @@ bulur.
 | `Kapalı bir şekil tek noktada bölünmez; en az iki bölme noktası verin.` | Daireye ya da kapalı şekle tek nokta verildi | İkinci bir nokta verin |
 | `BÖL: bölme noktası verilmedi. Nesnenin üstünde bir noktaya tıklayın ya da BÖL yontem=nokta noktalar=<nokta> yazın.` | `nokta` yönteminde hiç nokta verilmeden Enter | Nesnenin üstüne tıklayın |
 | `Nesne N bir alan; alan kenarı boyunca açılmaz. İkiye ayırmak için BÖL'ü kesme çizgisiyle kullanın (yontem=cizgi).` | `nokta`, `kesisim`, `mesafe` ya da `esit` bir alana verildi | Alanı kesme çizgisiyle bölün |
-| `Nesne N bu yöntemle bölünemiyor; BÖL çizgi, yay, daire ve yaylı çoklu çizgide çalışır.` | Elips, spline, nokta, yazı ya da blok | Bölünebilir bir nesne seçin |
-| `Nesne N bir eğri ya da nokta; BÖL çizgi, yay, daire, yaylı çoklu çizgi ve alanlarla çalışır.` | Kesme çizgisine elips, spline ya da nokta verildi | Bölünebilir bir nesne seçin |
+| `Nesne N bu yöntemle bölünemiyor; BÖL çizgi, yay, daire, elips, spline ve yaylı çoklu çizgide çalışır.` | Nokta, yazı ya da blok | Bölünebilir bir nesne seçin |
+| `Nesne N bölünemiyor; BÖL çizgi, yay, daire, elips, spline, yaylı çoklu çizgi ve alanlarla çalışır.` | Kesme çizgisine nokta, yazı ya da blok verildi | Bölünebilir bir nesne seçin |
 | `Nesne N kapalı; başı olmayan bir şekil baştan uzaklıkla bölünmez. yontem=esit ya da yontem=nokta kullanın.` | `mesafe` kapalı bir şekle verildi | `esit` ya da `nokta` kullanın |
 | `Nesne N X m uzunluğunda; bölme uzaklığı 0 ile X m arasında olmalı.` | Uzaklık nesnenin dışında | Nesnenin içinde bir uzaklık verin |
 | `Parça sayısı 2 ile 10000 arasında olmalı; N verildi.` | `sayi` aralık dışında | 2–10000 arasında bir sayı verin |
