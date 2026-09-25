@@ -2121,6 +2121,36 @@ std::size_t MapCanvas::staleFollowerCountForProbe()
     return stale_followers_.size();
 }
 
+void MapCanvas::setPreviewGhosts(const command::Preview* seen)
+{
+    preview_shapes_.clear();
+    preview_erased_.clear();
+    if (seen != nullptr) {
+        preview_shapes_ = seen->shapes;
+        preview_erased_.reserve(seen->erased.size());
+        for (const core::EntityKey key : seen->erased)
+            preview_erased_.push_back(static_cast<std::int64_t>(core::raw(key)));
+    }
+    update();
+}
+
+void MapCanvas::buildPreviewGhosts()
+{
+    // WHAT A SUGGESTION WOULD LEAVE, before anybody applies it (TODOS F-05):
+    // the preview ran it and took it back, and these are the outlines it left
+    // on the way — the new and changed objects in the accent ink, the erased
+    // ones in the warning ink, both dashed, because neither is in the drawing.
+    if (!preview_shapes_.empty()) {
+        const std::size_t made = nextBatch(tokens_->accent.rgba(), 1.8F, true);
+        for (const command::PreviewShape& shape : preview_shapes_)
+            addGhost(made, shape.runs);
+    }
+    if (!preview_erased_.empty()) {
+        const std::size_t gone = nextBatch(tokens_->danger.rgba(), 1.8F, true);
+        addGhost(gone, core::Xform{}, preview_erased_);
+    }
+}
+
 void MapCanvas::buildBrokenLinks()
 {
     // A DIMENSION THAT NO LONGER MEASURES ANYTHING SAYS SO WHERE IT STANDS
@@ -2513,6 +2543,7 @@ void MapCanvas::buildOverlay()
     buildGrips();
     buildMeasureMarks();
     buildBrokenLinks();
+    buildPreviewGhosts();
 
     guide_vertices_ = 0;
     guide_label_.clear();

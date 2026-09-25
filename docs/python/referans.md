@@ -111,6 +111,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.paste`](#cadpaste) | `core.paste` | `YAPIŞTIR` | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
 | [`cad.entity_info`](#cadentity_info) | `core.entity_info` | `NESNEBİLGİ` | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
 | [`cad.dependency`](#caddependency) | `core.dependency` | `BAĞIMLILIK` | Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer. |
+| [`cad.preview`](#cadpreview) | `core.preview` | `ÖNİZLE` | Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır. |
 | [`cad.measure_angle`](#cadmeasure_angle) | `core.measure_angle` | `AÇIÖLÇ` | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`cad.stretch`](#cadstretch) | `core.stretch` | `ESNET` | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`cad.tracking`](#cadtracking) | `core.tracking` | `İZ` | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
@@ -732,6 +733,26 @@ cad.dependency(
 | `objects` | `list[int]` | `nesneler` | Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/dependency.md)
+
+### `cad.preview`
+
+Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır.
+
+Komut: `core.preview` — `ÖNİZLE`
+
+```python
+cad.preview(
+    commands: list[str],
+    outlines: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `commands` | `list[str]` | `komut` | Önizlenecek komut satırları, sırayla; çizimi değiştirmeden ne yapacakları söylenir |
+| `outlines` | `bool` | `taslaklar` | Yapılandırılmış cevaba oluşacak ve değişecek nesnelerin taslakları (noktaları) da girsin mi; varsayılan hayır |
+
+[Komut sayfası](../komutlar/preview.md)
 
 ### `cad.measure_angle`
 
@@ -2854,12 +2875,14 @@ Komut: `core.script` — `BETİK`
 ```python
 cad.script(
     file: str,
+    preview: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `file` | `str` | `dosya` | Çalıştırılacak betik dosyasının yolu |
+| `preview` | `bool` | `onizle` | Çalıştırmadan önizle: JSON betiğinin çizimde ne değiştireceğini söyler, çizime dokunmaz; varsayılan hayır |
 
 [Komut sayfası](../komutlar/script.md)
 

@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ortak önizleme: çizime dokunmadan ne yapacağını görmek (F-05, 3. aşama)
+
+- **`ÖNİZLE komut="…" [komut="…" …]`** komut satırlarının çizimde ne değiştireceğini söyler:
+  gerçekten çalıştırır, sayar ve bütünüyle geri alır — çizim, sürümü, nesne kimlikleri,
+  geri alma ve yineleme yığınları, günlük, seçim ve etkin katman aynı kalır. Bir satır
+  duracaksa hangisi ve neden; dosya yazan, yazdıran, uygulama ayarını değiştiren, görünümü
+  kaydıran, başka bir çizim açan ve geri alma yığınında yürüyen satırlar çalıştırılmaz,
+  sebebiyle listelenir. Betiğin içinde de çalışır (bir kayıt noktası olarak); yapay zekâya
+  açık bir okuma aracıdır ve bir ajan için yalnız ajana açık komutları önizler.
+- **`BETİK dosya=… onizle=evet`** ve **KentOS CAD ▸ Betiği Önizle…** bir JSON betiğinin ne
+  değiştireceğini çalıştırmadan söyler ("Önizleme: 9 adım — uygulanırsa 14 nesne
+  eklenecek; 4 katmanın ayarları değişecek. Çizim değişmedi."). Python betiği önizlenmez:
+  ne yapacağı ancak çalışınca bellidir.
+- **Yapay zekâ önerisi, onaydan önce ne yapacağını gösteriyor:** kartta vurgu renginde
+  "Uygulanırsa: 1 nesne eklenecek; 1 nesne silinecek." (duracaksa kırmızı, hangi adımda ve
+  neden), tuvalde sonuç kesikli — oluşacak ve değişecek nesneler mavi, silinecekler
+  kırmızı; karar verilince taslaklar kalkar. MCP istemcisi aynı sayıları bekleyen önerinin
+  durumundaki `onizleme` alanından, sohbetteki model "Önizleme: …" satırından okur.
+  Önizleme sürümü değiştirmediği için öneri önizlendikten sonra da uygulanabilir.
+- Çizimin sürümü artık iki sayaç: geri sarılan adım sürümü başladığı yere döndürür, ama
+  kullandığı numaralar bir daha verilmez (ara durumlara göre tutulmuş hiçbir önbellek
+  sonradan eşleşmez).
+
 ### Düzeltildi — yarıda kalan adım katman, sütun, blok ya da ölü satır bırakmıyor (F-05, 2. aşama devamı)
 
 - **Hata veren betiğin açtığı katman kalıyordu** — üstelik etkin katman o katmana geçmiş

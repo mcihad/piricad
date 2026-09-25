@@ -86,6 +86,42 @@ SuggestionCard::SuggestionCard(AiService& service, const QString& planId, QWidge
         column->addWidget(line);
     }
 
+    // WHAT IT WOULD DO, found out by running it and taking it back (TODOS F-05):
+    // counted here and outlined, dashed, on the canvas — so the engineer
+    // approves a result they have seen rather than a list of commands. A plan
+    // that would stop half way says where, in the danger ink.
+    if (pending_ && !plan->preview.is_null()) {
+        const core::Json& seen   = plan->preview;
+        const core::Json* stops  = seen.find("duracagi_adim");
+        const core::Json* why    = seen.find("hata");
+        const core::Json* counts = seen.find("degisiklik_ozeti");
+        QString text;
+        if (stops != nullptr)
+            text = tr("Uygulanırsa %1. adımda duracak: %2 Bütünüyle geri alınacak.")
+                       .arg(stops->as_int())
+                       .arg(why != nullptr ? QString::fromStdString(why->as_string()) : QString());
+        else if (counts != nullptr)
+            text = tr("Uygulanırsa: %1.").arg(QString::fromStdString(counts->as_string()));
+        else
+            text = tr("Uygulanırsa çizimde bir şey değişmeyecek.");
+        if (const core::Json* skipped = seen.find("calistirilmayan"); skipped != nullptr)
+            for (const core::Json& one : skipped->as_array())
+                text += QStringLiteral("\n") +
+                        tr("%1. adım önizlenmedi: %2.")
+                            .arg(one.find("adim")->as_int())
+                            .arg(QString::fromStdString(one.find("neden")->as_string()));
+        // IN THE ACCENT INK THE CANVAS DRAWS THE RESULT IN, so the sentence and
+        // the dashed outlines read as one answer; the danger ink when it stops.
+        auto* would = new QLabel(text, this);
+        would->setObjectName(QStringLiteral("formHelp"));
+        would->setProperty("tone",
+                           stops != nullptr ? QStringLiteral("danger") : QStringLiteral("accent"));
+        would->setWordWrap(true);
+        would->setAccessibleName(tr("Önizleme"));
+        column->addWidget(would);
+        preview_ = would;
+    }
+
     // WHERE THE NUMBERS CAME FROM. A coordinate in an applied plan traces to a
     // recorded tool-call result and to nothing the model wrote (CLAUDE.md 5.8),
     // and the person signing is the person who should be shown that.
@@ -233,9 +269,21 @@ core::Status SuggestionCard::probeApply()
     return decide(true);
 }
 
+core::Status SuggestionCard::probeReject()
+{
+    return decide(false);
+}
+
+QString SuggestionCard::previewTextForProbe() const
+{
+    return preview_ != nullptr && preview_->isVisible() ? preview_->text() : QString();
+}
+
 void SuggestionCard::showOutcome(bool applied, const QString& trouble)
 {
     if (actions_ != nullptr) actions_->setVisible(false);
+    // WHAT IT WOULD HAVE DONE is no longer the question once it is decided.
+    if (preview_ != nullptr) preview_->setVisible(false);
     if (outcome_ == nullptr) return;
 
     const ai::Plan* plan = service_.plans().find(plan_.toStdString());

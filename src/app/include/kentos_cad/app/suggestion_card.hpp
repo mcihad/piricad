@@ -64,6 +64,14 @@ public:
     /// click would do (`KENTOS_MCP_PROBE`, `tests/unit/test_ai_tools.cpp`).
     core::Status probeApply();
 
+    /// Presses `Reddet` as a person would — the same `decide()` the button
+    /// calls. FOR THE PROBE ONLY, like `probeApply`.
+    core::Status probeReject();
+
+    /// What the card says applying it would do (TODOS F-05), or empty when it
+    /// says nothing — for the probe.
+    QString previewTextForProbe() const;
+
     void applyTheme(ThemeMode mode) override;
 
 protected:
@@ -94,6 +102,7 @@ private:
     Button* apply_{nullptr};
     Button* reject_{nullptr};
     QLabel* outcome_{nullptr};
+    QLabel* preview_{nullptr}; ///< what applying it would do (TODOS F-05), while it waits
     Badge* mark_{nullptr};
     bool pending_{true};
 

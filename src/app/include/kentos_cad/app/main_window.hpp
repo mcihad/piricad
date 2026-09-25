@@ -628,6 +628,10 @@ private slots:
     void openSnapModes();
 
     void openScript();
+
+    /// Asks for a JSON script and says what it would change — `BETİK … onizle=evet`
+    /// — without running it (TODOS F-05).
+    void openScriptPreview();
     void openDatabase();
 
     // The six file actions. Each one collects a path and dispatches the SAME
@@ -997,6 +1001,7 @@ private:
     bool canUndo_{false}; ///< the stack's answer; Ctrl+Z also retracts a point mid-run
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
+    QAction* actScriptPreview_{nullptr}; ///< Betiği Önizle… (TODOS F-05)
     QAction* actDatabase_{nullptr};
     QAction* actProjectSettings_{nullptr};
     QAction* actSettings_{nullptr};

@@ -17,6 +17,7 @@
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/parser.hpp"
+#include "kentos_cad/command/preview.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/selection.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -32,6 +33,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -546,6 +548,10 @@ public:
     /// must take everything it needs from `inv`: one that would ask is refused.
     core::Result<DispatchResult> run_nested(const Invocation& inv, Transaction& tx);
 
+    /// A command line as the invocation `execute_line` would dispatch — the one
+    /// parser, the same binding — without running it: what a preview is handed.
+    core::Result<Invocation> parse_invocation(std::string_view line, Origin origin) const;
+
     /// Parses and dispatches one command line. Used by the CLI widget, by macro
     /// playback and by the script engine — one grammar, one path (§3).
     core::Result<DispatchResult> execute_line(std::string_view line, Origin origin);
@@ -566,6 +572,24 @@ public:
     /// Called by Session when a command finishes. Validates, commits or rolls
     /// back, and journals.
     core::Result<DispatchResult> finish(Session& session);
+
+    // ---- preview (TODOS F-05, command/preview.hpp) ----
+
+    /// Runs `steps` as a batch and takes the batch back whole: what they WOULD
+    /// change, the outlines of the objects they would leave, the existing ones
+    /// they would erase, where they would fail and which were not run and why —
+    /// with the drawing, the undo and redo stacks, the journal, the selection,
+    /// the active layer and the revision exactly as they were. A step that would
+    /// reach past the document (a file, a printer, a database, a setting other
+    /// than the project's, the view, another drawing, the undo stack) is not run.
+    /// A step an agent may not call is not run for one either (`origin`
+    /// `Ai`). Inside an open batch — a script — it is a savepoint in the batch,
+    /// which comes out as it went in. Refused inside another preview.
+    core::Result<Preview> preview(std::span<const Invocation> steps);
+
+    /// Whether a preview is running now: what a hook that reaches outside the
+    /// document asks before it acts.
+    bool previewing() const noexcept { return previewing_; }
 
     // ---- batch mode (§10.4): one validation pass, one undo step ----
     core::Status begin_batch(std::string label);
@@ -958,6 +982,12 @@ public:
     /// what the step changed (TODOS F-05) — or with the error that rolled it back.
     std::function<core::Result<std::string>(const std::string& path)> on_run_script;
 
+    /// Installed by the script layer beside `on_run_script`: what the script at
+    /// `path` WOULD do (`Bus::preview`) — `BETİK … onizle=evet`. Unset means this
+    /// build previews no script; a Python script is refused by the host that
+    /// has one, since what a program does is known only once it has run.
+    std::function<core::Result<Preview>(const std::string& path)> on_preview_script;
+
     /// The same seam for a Python SNIPPET rather than a file.
     ///
     /// A SECOND HOOK AND NOT A SECOND MEANING FOR THE FIRST: `on_run_script`
@@ -1092,6 +1122,13 @@ private:
     /// began: what `abort_batch` cuts back to (`cut_back`).
     core::Document::Tail batch_tail_{};
     LayerId batch_active_layer_{0};
+    /// Whether `preview` is running (`previewing`).
+    bool previewing_{false};
+
+    /// How many dispatches for an agent are running now (`dispatch_into`): a
+    /// preview asked inside one runs every step by the agent's rules.
+    std::uint32_t for_agent_{0};
+
     /// The project settings when the batch began, put back when it is aborted.
     core::Settings batch_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
 };

@@ -112,6 +112,7 @@ Tek tek komutlar:
 | `AÇIÖLÇ` | [Bir köşedeki açıyı ölçme](komutlar/measure_angle.md) |
 | `NESNEBİLGİ` | [Nesnenin türü, katmanı, çevresi, alanı ve öznitelikleri](komutlar/entity_info.md) |
 | `BAĞIMLILIK` | [Sonuçlar kaynaklarına göre güncel mi: tampon, üretilen alan, sınır, eş yükselti](komutlar/dependency.md) |
+| `ÖNİZLE` | [Çizime dokunmadan ne yapacağını görmek: komut satırı, betik, öneri](komutlar/preview.md) |
 | `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
 | `KAYDIR` | [Görünümü kaydırma](komutlar/pan.md) |
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |

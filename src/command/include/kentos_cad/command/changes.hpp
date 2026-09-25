@@ -21,6 +21,7 @@
 #include "kentos_cad/core/json.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <string>
 
@@ -53,11 +54,19 @@ struct ChangeSummary
 [[nodiscard]] ChangeSummary summarize_changes(const core::Document& doc,
                                               std::span<const core::Op> step);
 
+/// Whether a sentence tells what a step DID or what it WOULD do: the verbs
+/// change with it ("eklendi" / "eklenecek").
+enum class ChangeTense : std::uint8_t {
+    Done,  ///< a step that ran
+    Would, ///< a step a preview ran and took back
+};
+
 /// The summary as a person reads it: one sentence in the user's language,
 /// without a full stop — the additions and erasures first, then every kind of
 /// change listed and joined, one verb for all (the wording
 /// `docs/betik/README.md` shows). Empty when nothing changed.
-[[nodiscard]] std::string describe_changes(const ChangeSummary& s);
+[[nodiscard]] std::string describe_changes(const ChangeSummary& s,
+                                           ChangeTense tense = ChangeTense::Done);
 
 /// The summary as a client reads it: one key per count and per flag, every
 /// key always present — the keys `docs/betik/README.md` documents, stable

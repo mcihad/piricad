@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 117 (104 tanesi onay ister)
-- Katalog parmak izi: `8245715644350097466`
+- Araç sayısı: 118 (104 tanesi onay ister)
+- Katalog parmak izi: `340273405075568756`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1363,6 +1363,19 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_preview` — Önizle
+
+Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır.
+Komut: ÖNİZLE (ONIZLE, PREVIEW, ÖNZ)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `komut` | array | hayır | Önizlenecek komut satırları, sırayla; çizimi değiştirmeden ne yapacakları söylenir (metin) |
+| `taslaklar` | boolean | hayır | Yapılandırılmış cevaba oluşacak ve değişecek nesnelerin taslakları (noktaları) da girsin mi; varsayılan hayır (evet/hayır) |
 
 ### `core_print` — Yazdır
 

@@ -112,6 +112,23 @@ Task<void> run_script(Context& ctx)
     if (!path || path->empty()) co_return;
 
     Bus& bus = ctx.session().bus();
+
+    // A DRY RUN (TODOS F-05): what the script would do, with the drawing
+    // untouched — the same preview a suggestion card and ÖNİZLE use.
+    if (ctx.argument("onizle").as_bool()) {
+        if (!bus.on_preview_script) {
+            ctx.refuse(core::ErrorCode::Unsupported, "Bu yapıda betik önizlenmez.");
+            co_return;
+        }
+        auto seen = bus.on_preview_script(*path);
+        if (!seen) {
+            ctx.refuse(seen.error().code, "Betik önizlenemedi: " + seen.error().message);
+            co_return;
+        }
+        answer_preview(ctx, seen.value(), /*with_shapes=*/false);
+        co_return;
+    }
+
     if (!bus.on_run_script) {
         ctx.refuse(core::ErrorCode::Unsupported, "Betik motoru bağlı değil.");
         co_return;
@@ -205,8 +222,15 @@ KENTOS_COMMAND(script)
         .names    = {"BETİK", "BETIK", "SCRIPT"},
         .title    = "Betik Çalıştır",
         .category = Category::Script,
-        .params = {Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")
-                       .en("file")},
+        .params =
+            {
+                Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")
+                    .en("file"),
+                Param::boolean("onizle", Arity::optional(),
+                               "Çalıştırmadan önizle: JSON betiğinin çizimde ne "
+                               "değiştireceğini söyler, çizime dokunmaz; varsayılan hayır")
+                    .en("preview"),
+            },
         .undo    = UndoPolicy::Custom,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Bir betik dosyasını komut veri yolu üzerinden çalıştırır.",

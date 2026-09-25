@@ -423,6 +423,18 @@ def dependency(
         objects — Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar [kalıcı nesne anahtarı]
     """
 
+def preview(
+    *,
+    commands: list[str] = ...,
+    outlines: bool = ...,
+) -> int:
+    """Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır.
+
+    Komut: core.preview (ÖNİZLE)
+        commands — Önizlenecek komut satırları, sırayla; çizimi değiştirmeden ne yapacakları söylenir
+        outlines — Yapılandırılmış cevaba oluşacak ve değişecek nesnelerin taslakları (noktaları) da girsin mi; varsayılan hayır
+    """
+
 def measure_angle(
     *,
     apex: Coord = ...,
@@ -1918,11 +1930,13 @@ def export(
 def script(
     *,
     file: str = ...,
+    preview: bool = ...,
 ) -> int:
     """Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 
     Komut: core.script (BETİK)
         file — Çalıştırılacak betik dosyasının yolu
+        preview — Çalıştırmadan önizle: JSON betiğinin çizimde ne değiştireceğini söyler, çizime dokunmaz; varsayılan hayır
     """
 
 def python(

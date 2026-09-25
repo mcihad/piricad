@@ -33,6 +33,7 @@
 #include "kentos_cad/ai/policy_path.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/preview.hpp"
 
 #include <QObject>
 #include <QString>
@@ -151,10 +152,21 @@ public:
     /// Installs the answer; the shell's controller does, once.
     void setWriteTargets(WriteTargets targets) { write_targets_ = std::move(targets); }
 
+    /// The preview of the suggestion a card now waits on — what applying it
+    /// would leave, outlined (TODOS F-05) — or null when none waits.
+    const command::Preview* shownPreview() const noexcept
+    {
+        return shown_preview_ ? &*shown_preview_ : nullptr;
+    }
+
 signals:
     /// A client has proposed something and a person has to look at it. The shell
     /// raises the suggestion card; nothing is applied until it is answered.
     void suggestionFiled(const QString& planId);
+
+    /// The preview a waiting suggestion is shown with changed, or went with it:
+    /// the canvas follows this to draw, or stop drawing, what it would leave.
+    void previewChanged();
 
     /// A plan has been applied, rejected, withdrawn or refused — the card and
     /// the status strip both follow this.
@@ -163,6 +175,10 @@ signals:
 private:
     /// Runs an approved plan: one batch, one undo entry, all or nothing.
     core::Status applyPlan(const ai::Plan& plan);
+
+    /// Previews the waiting plan `id` (`Bus::preview`): its counts go on the
+    /// plan, its outlines to the canvas (`shownPreview`, `previewChanged`).
+    void previewPlan(const std::string& id);
 
     /// Offers the plan to the user's standing approval policy, and says what it
     /// decided and why.
@@ -211,6 +227,10 @@ private:
     ServerHandler server_;
     QString audit_path_;
     QString trouble_;
+
+    /// The preview `shownPreview` hands out, and the plan it is of.
+    std::optional<command::Preview> shown_preview_{};
+    std::string shown_preview_plan_{};
 };
 
 } // namespace kentos::app

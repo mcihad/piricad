@@ -31,6 +31,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.paste`](paste.md) | Yapıştır | `YAPIŞTIR`, `YAPISTIR`, `PASTE`, `YP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
 | [`core.entity_info`](entity_info.md) | Nesne Bilgisi | `NESNEBİLGİ`, `NESNEBILGI`, `OBJINFO`, `NB` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
 | [`core.dependency`](dependency.md) | Bağımlılıklar | `BAĞIMLILIK`, `BAGIMLILIK`, `DEPENDENCY`, `BĞM` | Sorgu | tek işlem | betiklenebilir, AI erişimli | Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da bağından çözer. |
+| [`core.preview`](preview.md) | Önizle | `ÖNİZLE`, `ONIZLE`, `PREVIEW`, `ÖNZ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır. |
 | [`core.measure_angle`](measure_angle.md) | Açı Ölç | `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`core.stretch`](stretch.md) | Esnet | `ESNET`, `STRETCH`, `ES` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Pencere içindeki köşeleri taşır, dışındakileri yerinde bırakır. |
 | [`core.tracking`](tracking.md) | Geçici İzleme | `İZ`, `IZ`, `TRACK`, `TRK` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Geçici izleme için nokta işaretler; iki işaretin izleri kesişir. |
@@ -422,6 +423,17 @@ Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre 
 | `nesneler` | selection | en az 0 | Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar |
 
 Ayrıntılı kullanım: [BAĞIMLILIK](dependency.md)
+
+### `core.preview` — ÖNİZLE (Önizle)
+
+Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `komut` | text | 0–256 | Önizlenecek komut satırları, sırayla; çizimi değiştirmeden ne yapacakları söylenir |
+| `taslaklar` | bool | isteğe bağlı | Yapılandırılmış cevaba oluşacak ve değişecek nesnelerin taslakları (noktaları) da girsin mi; varsayılan hayır |
+
+Ayrıntılı kullanım: [ÖNİZLE](preview.md)
 
 ### `core.measure_angle` — AÇIÖLÇ (Açı Ölç)
 
@@ -1568,6 +1580,7 @@ Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `dosya` | text | 1 | Çalıştırılacak betik dosyasının yolu |
+| `onizle` | bool | isteğe bağlı | Çalıştırmadan önizle: JSON betiğinin çizimde ne değiştireceğini söyler, çizime dokunmaz; varsayılan hayır |
 
 Ayrıntılı kullanım: [BETİK](script.md)
 
@@ -10230,6 +10243,47 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "POLYLINE",
         "ÇÇ",
         "PL"
+      ]
+    }
+  },
+  {
+    "name": "core_preview",
+    "title": "Önizle",
+    "description": "Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: çalıştırır, sayar ve bütünüyle geri alır.\nKomut: ÖNİZLE (ONIZLE, PREVIEW, ÖNZ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "komut": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "description": "Önizlenecek komut satırları, sırayla; çizimi değiştirmeden ne yapacakları söylenir (metin)"
+        },
+        "taslaklar": {
+          "type": "boolean",
+          "description": "Yapılandırılmış cevaba oluşacak ve değişecek nesnelerin taslakları (noktaları) da girsin mi; varsayılan hayır (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.preview",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "ÖNİZLE",
+        "ONIZLE",
+        "PREVIEW",
+        "ÖNZ"
       ]
     }
   },

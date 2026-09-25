@@ -71,6 +71,9 @@ core::Json Plan::to_json() const
     if (!decided_by.empty()) out.set("karar_veren", core::Json::string(decided_by));
     if (state == PlanState::Pending && !waiting_reason.empty())
         out.set("bekleme_gerekcesi", core::Json::string(waiting_reason));
+    // WHAT IT WOULD DO, while it waits (TODOS F-05): the client reads the counts
+    // before the person decides, the person reads the same on the card.
+    if (state == PlanState::Pending && !preview.is_null()) out.set("onizleme", preview);
     if (const std::vector<std::string> noted = assumptions(); !noted.empty()) {
         core::Json list = core::Json::array({});
         for (const std::string& one : noted)

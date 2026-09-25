@@ -120,6 +120,12 @@ struct Plan
     /// from "applied". Empty until it was applied.
     command::ChangeSummary changes;
 
+    /// What applying it WOULD do, found out while it waits (`Bus::preview`,
+    /// TODOS F-05): `command::preview_json` without the outlines — the counts,
+    /// the step that would fail and the steps a preview does not run. Null until
+    /// it was previewed; shown only while it waits.
+    core::Json preview;
+
     /// What the plan could not honour without failing. Not errors: a sheet that
     /// printed with one broken map link did print.
     std::vector<std::string> warnings;

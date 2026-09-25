@@ -313,6 +313,10 @@ public:
 
     CatalogueSet& catalogues() noexcept { return catalogues_; }
 
+    /// Which state of the drawing this is: moved on by every edit, and put back
+    /// by `truncate_to`, since a rolled-back step never was — while the numbers
+    /// the step used are never handed out again (`revision_issued_`), so
+    /// nothing cached against a state inside the step matches a later one.
     std::uint64_t revision() const noexcept { return revision_; }
 
     const std::vector<Layer>& layers() const noexcept { return layers_.all(); }
@@ -394,6 +398,7 @@ public:
     struct Tail
     {
         std::uint64_t generation{0}; ///< which content it was taken of (`generation`)
+        std::uint64_t revision{0};   ///< the revision it was taken at
         std::size_t rows{0};
         bool keys_sorted{true};
         std::uint64_t next_entity_key{1};
@@ -758,6 +763,9 @@ public:
     Status apply(const Op& op, Op* undo_out = nullptr);
 
 private:
+    /// Moves the revision on to one past the highest ever issued.
+    void bump_revision() noexcept { revision_ = ++revision_issued_; }
+
     Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot, KindId kind);
 
     /// `set_kind_payload` without the editability question: the same rings, the
@@ -856,6 +864,7 @@ private:
     std::vector<std::size_t> layer_live_{};
 
     std::uint64_t revision_{0};
+    std::uint64_t revision_issued_{0}; ///< the highest revision ever handed out
     std::size_t live_count_{0};
 
     /// A number a move ASSIGNMENT moves past both sides', and a move

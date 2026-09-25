@@ -163,6 +163,7 @@ Geri almayla 1 nesne silindi.
 |---|---|
 | Komut satırından | `BETİK tests/journal/ornek-parsel.json` |
 | Arayüzden | **KentOS CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
+| Çalıştırmadan önizleyerek | `BETİK tests/journal/ornek-parsel.json onizle=evet` ya da **KentOS CAD ▸ Betiği Önizle…** ([ÖNİZLE](../komutlar/preview.md)) |
 | Açılışta | `kentos_cad --betik <dosya>` |
 | Make ile | `make run-script SCRIPT=<dosya>` |
 

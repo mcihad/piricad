@@ -142,12 +142,18 @@ vardır; şunları gösterir:
 |---|---|
 | Başlık | `Öneri p0f3a1c7b9e4d2856 · 2 adım` ve önerinin durumu |
 | Komut satırları | Uygulanacak satırların **tamamı**, sizin de yazabileceğiniz hâlleriyle |
+| `Uygulanırsa: …` | Önerinin çizimde ne yapacağı, çalıştırılıp geri alınarak bulunmuş: kaç nesne eklenecek, silinecek, yeri ya da biçimi değişecek … Öneri duracaksa kırmızı, hangi adımda ve neden ([ÖNİZLE](../komutlar/preview.md)) |
 | `Koordinat kaynağı` | Adımlardaki konumların hangi tutamaklardan geldiği; göreli noktalarda tutamak ve ölçü (kayıtta `konum_kaynagi`) |
 | `Varsayımlar` | İstemcinin öneriyi hazırlarken yaptığını bildirdiği varsayımlar, kendi sözleriyle (kayıtta `varsayimlar`) |
 | `Onay bekliyor` | Onay politikanızın bu öneriyi neden size bıraktığı, ör. `Her değişiklikte onay isteniyor.` |
 | `İsteyen` | İstemcinin adı, varsa modelin kimliği |
 | Uyarı şeridi | Çizim öneriden sonra değiştiyse: `Öneri 12 numaralı sürüme göre hazırlandı, çizim şimdi 14.` |
 | **Reddet** / **Uygula** | Kararın kendisi. `Uygula` karttaki tek birincil düğmedir |
+
+Kart beklerken **tuvalde de sonuç çizilir**, kesikli: oluşacak ve değişecek nesneler mavi,
+silinecekler kırmızı. Önizleme çizime, sürümüne ve nesne kimliklerine dokunmaz; kararı
+verdiğinizde taslaklar kalkar. Öneriyi açan model ve MCP istemcisi de aynı sayıları okur
+(`onizleme`).
 
 Uyarı şeridi göründüğünde adımlar, hazırlandıkları çizimden **başka** bir çizime
 uygulanacak demektir: içlerindeki nesne anahtarları hâlâ geçerli olabilir ama artık

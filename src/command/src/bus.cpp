@@ -481,6 +481,20 @@ core::Result<DispatchResult> Bus::run_nested(const Invocation& inv, Transaction&
 
 core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transaction* nested)
 {
+    // FOR WHOM THIS RUNS, held while it runs: a preview asked from inside it runs
+    // by the agent's rules when an agent asked (`preview`), and the command body
+    // never has to look at its client to make that so (command.md P10).
+    const std::uint32_t agent_before = for_agent_;
+    if (inv.origin == Origin::Ai) ++for_agent_;
+
+    struct Restore
+    {
+        std::uint32_t& depth;
+        std::uint32_t was;
+
+        ~Restore() { depth = was; }
+    } const restore{for_agent_, agent_before};
+
     const CommandSpec* spec = reg_.resolve(inv.name);
     if (!spec)
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + inv.name +
@@ -636,7 +650,7 @@ core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transacti
     return result;
 }
 
-core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin origin)
+core::Result<Invocation> Bus::parse_invocation(std::string_view line, Origin origin) const
 {
     auto parsed = parse_line(line);
     if (!parsed) return parsed.error();
@@ -648,8 +662,14 @@ core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin ori
 
     auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
+    return Invocation{spec->id, std::move(args.value()), origin};
+}
 
-    return dispatch(Invocation{spec->id, std::move(args.value()), origin});
+core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin origin)
+{
+    auto inv = parse_invocation(line, origin);
+    if (!inv) return inv.error();
+    return dispatch(inv.value());
 }
 
 core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view line, Origin origin)
@@ -768,7 +788,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         cut_back(session.tail_at_start(), session.active_layer_at_start());
         result.mutated = false;
         result.message = "İptal edildi";
-        if (on_command_finished) on_command_finished(result);
+        if (on_command_finished && !previewing_) on_command_finished(result);
         return result;
     }
 
@@ -873,7 +893,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     if (!read_only) journal_entry(session);
 
     if (result.mutated && on_document_changed) on_document_changed();
-    if (on_command_finished) on_command_finished(result);
+    if (on_command_finished && !previewing_) on_command_finished(result);
     return result;
 }
 

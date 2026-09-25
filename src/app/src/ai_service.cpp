@@ -58,6 +58,15 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
     gate_ = std::make_unique<ai::Gate>(plans_, *audit_,
                                        [this](const ai::Plan& plan) { return applyPlan(plan); });
 
+    // A SETTLED SUGGESTION TAKES ITS PREVIEW WITH IT: applied, rejected or
+    // withdrawn, what it would have left is no longer a question (TODOS F-05).
+    connect(this, &AiService::suggestionSettled, this, [this](const QString& id) {
+        if (id.toStdString() != shown_preview_plan_) return;
+        shown_preview_.reset();
+        shown_preview_plan_.clear();
+        emit previewChanged();
+    });
+
     bus_.on_ai_request =
         [this](const command::Bus::AiRequest& request) -> command::Task<core::Result<std::string>> {
         using Verb = command::Bus::AiRequest::Verb;
@@ -532,6 +541,7 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
                 !added)
                 return added.error();
 
+        previewPlan(target);
         emit suggestionFiled(QString::fromStdString(target));
         return target;
     }
@@ -575,6 +585,7 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
         } else {
             held->waiting_reason = decided.value().reason;
             said_how             = "öneri — onay bekliyor: " + decided.value().reason;
+            previewPlan(filed);
         }
     }
 
@@ -603,6 +614,28 @@ std::string AiService::existing_plan(const std::string& key, const std::string& 
 {
     const ai::Plan* held = plans_.find_by_key(key, requester);
     return held != nullptr ? held->id : std::string();
+}
+
+void AiService::previewPlan(const std::string& id)
+{
+    ai::Plan* plan = plans_.find(id);
+    if (plan == nullptr || plan->state != ai::PlanState::Pending) return;
+
+    // THE STEPS AS THEY WOULD RUN: the resolved arguments the card will apply,
+    // for the agent that asked — a preview runs only what it may call.
+    std::vector<command::Invocation> steps;
+    steps.reserve(plan->steps.size());
+    for (const ai::PlanStep& step : plan->steps)
+        steps.push_back(command::Invocation{step.command_id, step.args, command::Origin::Ai});
+
+    // A RUNNING BATCH OR PREVIEW IS NOT CUT ACROSS: the card then says nothing
+    // about what it would leave rather than something wrong.
+    auto seen = bus_.preview(steps);
+    if (!seen) return;
+    plan->preview       = command::preview_json(seen.value(), /*with_shapes=*/false);
+    shown_preview_      = std::move(seen.value());
+    shown_preview_plan_ = id;
+    emit previewChanged();
 }
 
 core::Result<ai::Plan> AiService::plan_state(const std::string& id,

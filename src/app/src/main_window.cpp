@@ -810,6 +810,16 @@ void MainWindow::buildActions()
     actScript_->setProperty(kToolCommand, QStringLiteral("BETİK"));
     connect(actScript_, &QAction::triggered, this, &MainWindow::openScript);
 
+    // THE DRY RUN BESIDE THE RUN (TODOS F-05): what a script would change, said
+    // before anything is — the same preview the suggestion card shows.
+    actScriptPreview_ = new QAction(tr("Betiği Önizle…"), this);
+    actScriptPreview_->setToolTip(
+        tr("BETİK onizle=evet — bir JSON betiğinin çizimde ne değiştireceğini, çizime "
+           "dokunmadan söyler"));
+    actScriptPreview_->setData(static_cast<int>(Glyph::Script));
+    actScriptPreview_->setProperty(kToolCommand, QStringLiteral("BETİK"));
+    connect(actScriptPreview_, &QAction::triggered, this, &MainWindow::openScriptPreview);
+
     actDatabase_ = new QAction(tr("Veritabanı…"), this);
     actDatabase_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
     actDatabase_->setToolTip(tr("VERİTABANI — PostGIS sunucusuna bağlanır, katmanları tablo, "
@@ -1930,6 +1940,12 @@ void MainWindow::buildPanels()
     // could apply it: the client was told to wait for an engineer who was never
     // shown anything. It goes in the chat dock — opened if closed — with the
     // same card the chat's own suggestions use (TODOS A-03).
+    // WHAT A WAITING SUGGESTION WOULD LEAVE, on the canvas (TODOS F-05): drawn
+    // dashed while the card waits, gone when it is decided.
+    connect(&controller_->aiService(), &AiService::previewChanged, this, [this] {
+        if (canvas_ != nullptr) canvas_->setPreviewGhosts(controller_->aiService().shownPreview());
+    });
+
     connect(&controller_->aiService(), &AiService::suggestionFiled, this,
             [this](const QString& id) {
                 if (chatPanel_ == nullptr) return;
@@ -7627,6 +7643,94 @@ int MainWindow::probeRealMouse()
             shoot("tek-islem-yarim");
             QDir(dir).removeRecursively();
         }
+
+        // ---- 44. A SUGGESTION SHOWS WHAT IT WOULD LEAVE BEFORE ANYBODY APPLIES IT (TODOS F-05)
+        // ----
+        //
+        // An outside client proposes buffering a parcel and erasing a line. The
+        // card says what applying it would do — counted by running it and taking
+        // it back — and the canvas draws the result dashed: the buffer in the
+        // accent ink, the line to be erased in the danger ink. The drawing, its
+        // revision and its keys are exactly as they were, so the suggestion is
+        // still composed against it; rejecting it takes the ghosts away.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {"KATMAN ad=PARSEL",
+                                     "ALAN 485300,4310200 485340,4310200 485340,4310230 "
+                                     "485300,4310230",
+                                     "ÇİZGİ 485300,4310250 485340,4310250"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{485'280'000, 4'310'180'000, 485'360'000, 4'310'265'000});
+            const std::uint64_t hash_before     = controller_->document().content_hash();
+            const std::uint64_t revision_before = controller_->document().revision();
+
+            ai::Plan plan;
+            plan.requester = "Sınama istemcisi";
+            plan.revision  = revision_before;
+            for (const char* line : {"TAMPON nesneler=1 mesafe=6 katman=BANT", "SİL nesneler=2"}) {
+                auto inv = controller_->bus().parse_invocation(line, command::Origin::Ai);
+                if (!inv) {
+                    check(
+                        false,
+                        QStringLiteral("öneri satırı okunamadı: %1").arg(QString::fromUtf8(line)));
+                    continue;
+                }
+                ai::PlanStep step;
+                step.command_id = inv.value().name;
+                step.args       = inv.value().args;
+                step.line       = line;
+                plan.steps.push_back(std::move(step));
+            }
+            auto filed = controller_->aiService().propose(std::move(plan));
+            check(filed.ok(), QStringLiteral("öneri açıldı"));
+            for (int i = 0; i < 6; ++i)
+                QCoreApplication::processEvents();
+            SuggestionCard* card = nullptr;
+            for (SuggestionCard* one : chatPanel_->findChildren<SuggestionCard*>())
+                if (filed && one->planId() == QString::fromStdString(filed.value())) card = one;
+            check(card != nullptr, QStringLiteral("önerinin kartı açıldı"));
+            const QString would = card != nullptr ? card->previewTextForProbe() : QString();
+            check(
+                would.contains(QStringLiteral("Uygulanırsa: 1 nesne eklenecek; 1 nesne silinecek")),
+                QStringLiteral("kart uygulanırsa ne olacağını söyledi: %1").arg(would));
+            const auto [made, gone] = canvas_->previewGhostCountsForProbe();
+            check(made == 1 && gone == 1,
+                  QStringLiteral("tuval sonucu kesikli çizdi (%1 oluşacak, %2 silinecek)")
+                      .arg(made)
+                      .arg(gone));
+            check(controller_->document().content_hash() == hash_before &&
+                      controller_->document().revision() == revision_before &&
+                      controller_->document().find_layer("BANT") == core::kNoLayer,
+                  QStringLiteral("önizleme çizime, sürüme ve katmanlara dokunmadı"));
+            shoot("onizleme-oneri");
+            // THE CARD WHOLE, as the dock shows it scrolled to its lines.
+            if (shooting && card != nullptr)
+                (void)card->grab().save(into + QStringLiteral("/onizleme-kart.png"));
+
+            // The same answer on the command line, for any line.
+            transcript_->clear();
+            runScriptLine(QStringLiteral("ÖNİZLE komut=\"TAMPON nesneler=1 mesafe=6 katman=BANT\" "
+                                         "komut=\"SİL nesneler=2\""));
+            endCommand();
+            check(transcript_->toPlainText().contains(QStringLiteral(
+                      "Önizleme: 2 adım — uygulanırsa 1 nesne eklenecek; 1 nesne silinecek. "
+                      "Çizim değişmedi.")),
+                  QStringLiteral("ÖNİZLE aynı cevabı verdi"));
+            shoot("onizleme-komut");
+
+            // Rejected at the card — the one place a decision is made — the
+            // ghosts go with it.
+            if (card != nullptr)
+                check(card->probeReject().ok(), QStringLiteral("öneri reddedildi"));
+            for (int i = 0; i < 4; ++i)
+                QCoreApplication::processEvents();
+            const auto [made_after, gone_after] = canvas_->previewGhostCountsForProbe();
+            check(made_after == 0 && gone_after == 0,
+                  QStringLiteral("reddedilen önerinin taslakları kalktı"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -10409,6 +10513,16 @@ void MainWindow::openScript()
     runScriptFile(QFileDialog::getOpenFileName(this, tr("Betik seç"),
                                                QStringLiteral("tests/journal"),
                                                tr("KentOSCad betiği (*.json);;Tüm dosyalar (*)")));
+}
+
+void MainWindow::openScriptPreview()
+{
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Önizlenecek betiği seç"), QStringLiteral("tests/journal"),
+        tr("KentOSCad betiği (*.json);;Tüm dosyalar (*)"));
+    if (path.isEmpty()) return;
+    controller_->runLine(QStringLiteral("BETİK \"%1\" onizle=evet").arg(path),
+                         command::Origin::Gui);
 }
 
 void MainWindow::showAbout()

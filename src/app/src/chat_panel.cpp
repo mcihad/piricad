@@ -601,6 +601,18 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
                "çizim değişmez.";
         if (result && !result.value().waiting_reason.empty())
             told += " Onay bekleme sebebi: " + result.value().waiting_reason;
+        // WHAT IT WOULD DO, from the preview the card shows (TODOS F-05): the
+        // model hears the same counts the engineer reads, and a plan that
+        // would stop half way is said to before anybody presses Uygula.
+        if (result && !result.value().preview.is_null()) {
+            const core::Json& seen = result.value().preview;
+            if (const core::Json* stops = seen.find("duracagi_adim"); stops != nullptr)
+                told += "\nÖnizleme: uygulanırsa " + std::to_string(stops->as_int()) +
+                        ". adımda duracak — " + seen.find("hata")->as_string() +
+                        " Öneriyi düzeltmek gerekebilir.";
+            else if (const core::Json* counts = seen.find("degisiklik_ozeti"); counts != nullptr)
+                told += "\nÖnizleme: uygulanırsa " + counts->as_string() + ".";
+        }
         told += " Durumu 'oneri_durumu' ile sorabilirsiniz.";
     }
     if (result && !result.value().assumptions().empty()) {

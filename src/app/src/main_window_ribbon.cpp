@@ -1121,6 +1121,7 @@ void MainWindow::buildRibbon()
     verb(actProjectSettings_, tr("Çizimle birlikte giden ayarlar"), true);
     verb(actDatabase_, tr("PostGIS sunucusuna bağlanır"));
     verb(actScript_, tr("Bir betiği komut yolundan çalıştırır"));
+    verb(actScriptPreview_, tr("Bir betiğin ne değiştireceğini çalıştırmadan söyler"));
     if (!appRest->isEmpty()) {
         appRest->menuAction()->setToolTip(tr("Şeritte yeri olmayan komutlar"));
         verb(appRest->menuAction(), tr("Şeritte yeri olmayan komutlar"), true,

@@ -10,6 +10,7 @@ add_library(kentos_command STATIC
     src/path_edit.cpp
     src/bus.cpp
     src/changes.cpp
+    src/preview.cpp
     src/context.cpp
     src/input.cpp
     src/job.cpp
@@ -68,6 +69,7 @@ add_library(kentos_command STATIC
     src/commands/edit_verbs2.cpp
     src/commands/local_copy.cpp
     src/commands/dependency.cpp
+    src/commands/preview.cpp
     src/commands/clipboard.cpp
     src/commands/query_info.cpp
     src/commands/stretch.cpp

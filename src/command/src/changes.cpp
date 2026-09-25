@@ -164,11 +164,14 @@ ChangeSummary summarize_changes(const core::Document& doc, std::span<const core:
     return out;
 }
 
-std::string describe_changes(const ChangeSummary& s)
+std::string describe_changes(const ChangeSummary& s, ChangeTense tense)
 {
+    const bool would = tense == ChangeTense::Would;
     std::vector<std::string> came;
-    if (s.created != 0) came.push_back(counted(s.created, "nesne eklendi"));
-    if (s.erased != 0) came.push_back(counted(s.erased, "nesne silindi"));
+    if (s.created != 0)
+        came.push_back(counted(s.created, would ? "nesne eklenecek" : "nesne eklendi"));
+    if (s.erased != 0)
+        came.push_back(counted(s.erased, would ? "nesne silinecek" : "nesne silindi"));
 
     std::vector<std::string> changed;
     if (s.reshaped != 0) changed.push_back(counted(s.reshaped, "nesnenin yeri ya da biçimi"));
@@ -186,7 +189,8 @@ std::string describe_changes(const ChangeSummary& s)
     std::string out;
     for (std::size_t i = 0; i < came.size(); ++i)
         out += (i == 0 ? "" : "; ") + came[i];
-    if (!changed.empty()) out += (out.empty() ? "" : "; ") + listed(changed) + " değişti";
+    if (!changed.empty())
+        out += (out.empty() ? "" : "; ") + listed(changed) + (would ? " değişecek" : " değişti");
     return out;
 }
 

@@ -588,6 +588,20 @@ core::Result<RunReport> PythonRunner::run_file(const std::string& path, std::sto
 
 /// Wires the snippet hook. Called by both `install` overloads, because a build
 /// with Python has `PYTHON` whichever way the file hosts were installed.
+namespace {
+
+/// Why a Python script has no preview: a program's steps are known only once it
+/// has run, and running it IS doing it. A JSON script is a list of commands
+/// and is previewed; so is any command line (`ÖNİZLE`).
+core::Error python_not_previewed()
+{
+    return core::err(ErrorCode::Unsupported,
+                     "Python betiği önizlenmez: ne yapacağı ancak çalışınca bellidir. JSON "
+                     "betiğini ya da komut satırlarını önizleyin (ÖNİZLE komut=\"…\").");
+}
+
+} // namespace
+
 void install_snippet(command::Bus& bus, PythonRunner& runner)
 {
     bus.on_run_python = [&runner](const std::string& source) -> core::Result<std::string> {
@@ -603,6 +617,9 @@ void install(command::Bus& bus, PythonRunner& runner)
         auto r = runner.run_file(path);
         if (!r) return r.error();
         return r.value().said;
+    };
+    bus.on_preview_script = [](const std::string&) -> core::Result<command::Preview> {
+        return python_not_previewed();
     };
     install_snippet(bus, runner);
 }
@@ -626,6 +643,12 @@ void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
         auto r = json.run_file(path);
         if (!r) return r.error();
         return r.value().said;
+    };
+    bus.on_preview_script = [&json](const std::string& path) -> core::Result<command::Preview> {
+        const std::string ext =
+            core::turkish_fold_key(std::filesystem::path(path).extension().string());
+        if (ext == core::turkish_fold_key(".py")) return python_not_previewed();
+        return json.preview_file(path);
     };
     install_snippet(bus, python);
 }

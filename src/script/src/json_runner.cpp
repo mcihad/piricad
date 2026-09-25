@@ -27,7 +27,21 @@ using core::ErrorCode;
 
 JsonRunner::JsonRunner(command::Bus& bus, Sandbox sandbox) : bus_(bus), sandbox_(sandbox) {}
 
-core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string label)
+namespace {
+
+/// A script read and checked, not yet run: its name and its steps.
+struct ReadScript
+{
+    std::string label;
+    std::vector<command::Invocation> steps;
+};
+
+/// Reads `json` into its steps. EVERY LINE IS READ BEFORE ANY RUNS (TODOS F-05):
+/// a malformed 251st item used to close the batch over the 250 before it —
+/// committed, one undo step, and an error saying the script had failed. A
+/// script whose text is broken is refused as a whole, by line number, with the
+/// drawing untouched. The same reading serves a run and a preview.
+core::Result<ReadScript> read_script(std::string_view json, std::string label)
 {
     auto parsed = core::Json::parse(json);
     if (!parsed) return parsed.error();
@@ -49,19 +63,11 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
             ErrorCode::ParseError,
             "Betik ya bir komut dizisi ya da \"komutlar\" alanı olan bir nesne olmalı");
 
-    // The run's own record, BEFORE the first command, so a journal read top to
-    // bottom says what a script was permitted before it says what it did
-    // (`.claude/script.md` R11). Written for every level and every outcome.
-    journal_run(bus_, "json", label, sandbox_, script_identity(json), /*consented=*/false);
-
-    // EVERY LINE IS READ BEFORE ANY RUNS (TODOS F-05). A malformed 251st item
-    // used to close the batch over the 250 before it — committed, one undo step,
-    // and an error saying the script had failed. A script whose text is broken
-    // is refused as a whole, by line number, with the drawing untouched.
-    std::vector<command::Invocation> steps;
-    steps.reserve(list->as_array().size());
+    ReadScript out;
+    out.label = std::move(label);
+    out.steps.reserve(list->as_array().size());
     for (const core::Json& item : list->as_array()) {
-        const std::string at = "Betik satırı " + std::to_string(steps.size() + 1);
+        const std::string at = "Betik satırı " + std::to_string(out.steps.size() + 1);
         if (!item.is_object())
             return core::err(ErrorCode::ParseError,
                              at + " bir nesne olmalı: " + item.dump() + ". Betik çalıştırılmadı.");
@@ -84,8 +90,38 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
                                                         " Betik çalıştırılmadı.");
             inv.args = std::move(args.value());
         }
-        steps.push_back(std::move(inv));
+        out.steps.push_back(std::move(inv));
     }
+    return out;
+}
+
+/// The file's text, or why it could not be read — under the sandbox's rule.
+core::Result<std::string> read_file_text(const std::string& path, Sandbox sandbox)
+{
+    if (sandbox == Sandbox::Safe)
+        return core::err(ErrorCode::Unsupported,
+                         "Betik dosya erişimi 'güvenli' kum havuzunda kapalıdır. "
+                         "Gerekli seviye: 'proje' veya 'tam'.");
+    const std::ifstream in(path, std::ios::in | std::ios::binary);
+    if (!in) return core::err(ErrorCode::IoFailure, "Betik dosyası açılamadı: " + path);
+    std::ostringstream buf;
+    buf << in.rdbuf();
+    return buf.str();
+}
+
+} // namespace
+
+core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string label)
+{
+    auto read = read_script(json, std::move(label));
+    if (!read) return read.error();
+    label                                         = std::move(read.value().label);
+    const std::vector<command::Invocation>& steps = read.value().steps;
+
+    // The run's own record, BEFORE the first command, so a journal read top to
+    // bottom says what a script was permitted before it says what it did
+    // (`.claude/script.md` R11). Written for every level and every outcome.
+    journal_run(bus_, "json", label, sandbox_, script_identity(json), /*consented=*/false);
 
     // One script block is ONE undo step (§2.5) and ONE validation pass (§10.4).
     if (auto st = bus_.begin_batch(label); !st) return st.error();
@@ -122,17 +158,23 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
 
 core::Result<RunReport> JsonRunner::run_file(const std::string& path)
 {
-    if (sandbox_ == Sandbox::Safe)
-        return core::err(ErrorCode::Unsupported,
-                         "Betik dosya erişimi 'güvenli' kum havuzunda kapalıdır. "
-                         "Gerekli seviye: 'proje' veya 'tam'.");
+    auto text = read_file_text(path, sandbox_);
+    if (!text) return text.error();
+    return run_text(text.value(), path);
+}
 
-    const std::ifstream in(path, std::ios::in | std::ios::binary);
-    if (!in) return core::err(ErrorCode::IoFailure, "Betik dosyası açılamadı: " + path);
+core::Result<command::Preview> JsonRunner::preview_text(std::string_view json)
+{
+    auto read = read_script(json, "Betik");
+    if (!read) return read.error();
+    return bus_.preview(read.value().steps);
+}
 
-    std::ostringstream buf;
-    buf << in.rdbuf();
-    return run_text(buf.str(), path);
+core::Result<command::Preview> JsonRunner::preview_file(const std::string& path)
+{
+    auto text = read_file_text(path, sandbox_);
+    if (!text) return text.error();
+    return preview_text(text.value());
 }
 
 void install(command::Bus& bus, JsonRunner& runner)
@@ -141,6 +183,9 @@ void install(command::Bus& bus, JsonRunner& runner)
         auto r = runner.run_file(path);
         if (!r) return r.error();
         return r.value().said;
+    };
+    bus.on_preview_script = [&runner](const std::string& path) {
+        return runner.preview_file(path);
     };
 }
 

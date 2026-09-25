@@ -38,6 +38,13 @@ public:
     /// Reads and runs a script file. Rejected unless the sandbox permits file access.
     core::Result<RunReport> run_file(const std::string& path);
 
+    /// What the script WOULD do, with the drawing untouched (`Bus::preview`,
+    /// TODOS F-05): read and checked exactly as a run reads it, then previewed.
+    core::Result<command::Preview> preview_text(std::string_view json);
+
+    /// The same for a script file, under the same sandbox rule as `run_file`.
+    core::Result<command::Preview> preview_file(const std::string& path);
+
     Sandbox sandbox() const noexcept { return sandbox_; }
 
 private:

@@ -20,6 +20,7 @@
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
+#include "kentos_cad/command/preview.hpp"
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/planar.hpp"
@@ -187,6 +188,20 @@ public:
     /// caption, a dimension or a hatch on a locked layer — for the probes.
     std::size_t staleFollowerCountForProbe();
 
+    /// Draws what a waiting suggestion would leave (`command::Preview`,
+    /// TODOS F-05), or nothing with a null `seen`: the outlines are copied, so
+    /// the preview may go away while the canvas still shows them.
+    void setPreviewGhosts(const command::Preview* seen);
+
+    /// How many objects the canvas outlines as a suggestion's result, and how
+    /// many it marks as the suggestion's erasures, for the probes.
+    std::pair<std::size_t, std::size_t> previewGhostCountsForProbe() const noexcept
+    {
+        return {preview_shapes_.size(), preview_erased_.size()};
+    }
+
+    /// Scales the view by `factor` about its centre: above one closer, below one
+    /// further.
     void zoomBy(double factor);
 
     /// Moves the view's centre without changing its scale. KAYDIR's landing point.
@@ -491,6 +506,11 @@ private:
     /// and the figure beside it is what that object used to measure. And every
     /// dimension whose caption was typed by hand, with the measured figure
     /// beside it (`core::dimension_text_is_manual`).
+    /// What a waiting suggestion would leave (TODOS F-05): the objects it would
+    /// make or change dashed in the accent ink, the ones it would erase dashed
+    /// in the warning ink — until the suggestion is decided.
+    void buildPreviewGhosts();
+
     void buildBrokenLinks();
 
     /// Draws SINIR's preview: the region the cursor is inside, found by the call
@@ -665,6 +685,10 @@ private:
     render::ViewTransform view_;
     render::DrawList draw_;
     render::Overlay overlay_;
+
+    /// What a waiting suggestion would leave, drawn by `buildPreviewGhosts`.
+    std::vector<command::PreviewShape> preview_shapes_;
+    std::vector<std::int64_t> preview_erased_; ///< keys, as `addGhost` takes them
 
     /// How many overlay batches this frame has claimed. See `nextBatch`.
     std::size_t overlay_used_{0};

@@ -34,8 +34,10 @@ Dosya yolu verilmezse komut yolu sorar. İçinde boşluk olan yol tırnak içine
 
 ## Parametreler
 
-Tek parametresi vardır: **`dosya`** — çalıştırılacak betik dosyasının yolu. Göreli yol
-programın çalışma dizinine göre çözülür.
+| Parametre | Ne yapar |
+|---|---|
+| `dosya` | Çalıştırılacak betik dosyasının yolu. Göreli yol programın çalışma dizinine göre çözülür |
+| `onizle` | `evet` ise betik **çalıştırılmaz**: ne değiştireceği söylenir, çizime dokunulmaz ([ÖNİZLE](preview.md)). Yalnız JSON betikleri önizlenir. Varsayılan `hayır` |
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -64,10 +66,21 @@ Başarısız bir betik **komutun başarısızlığıdır**: `BETİK` hata döner
 önceki hâlindedir ve yarım kalan kısım `YİNELE` ile geri getirilemez. Ayrıntı:
 [Bir betik = bir geri alma adımı](../betik/README.md#bir-betik--bir-geri-alma-adımı).
 
+Çalıştırmadan önce ne yapacağını görmek için:
+
+```text
+BETİK tests/journal/ornek-parsel.json onizle=evet
+```
+
+```text
+Önizleme: 9 adım — uygulanırsa 14 nesne eklenecek; 4 katmanın ayarları değişecek. Çizim değişmedi.
+```
+
 ### Arayüz
 
 **KentOS CAD ▸ Betik Çalıştır…** ya da **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
-kendiliğinden görünüme sığdırılır.
+kendiliğinden görünüme sığdırılır. **KentOS CAD ▸ Betiği Önizle…** aynı pencereyi açar ama
+betiği çalıştırmaz; ne değiştireceğini komut satırına yazar.
 
 ### Betik
 
@@ -168,6 +181,9 @@ dolayısıyla bu sayfadaki her kural orada da geçerlidir. Ayrıntı:
 | `Nokta [x_mm, y_mm] biçiminde olmalı. Girilen: [1,2,3]` | Nokta iki bileşenli değil | Noktayı `[x, y]` yapın |
 | `Betik motoru bağlı değil.` | Betik motoru olmayan bir ortamda çalışılıyor | Uygulama içinden çalıştırın |
 | `Betik hatası: ...` | Betik çalışırken bir hata oluştu; `BETİK` başarısız olur | Mesajın devamı satır numarasını verir; betiğin tamamı geri alındı |
+| `Betik önizlenemedi: Python betiği önizlenmez: ne yapacağı ancak çalışınca bellidir. …` | `onizle=evet` bir `.py` betiğine verildi | JSON betiğini ya da komut satırlarını önizleyin ([ÖNİZLE](preview.md)) |
+| `Betik önizlenemedi: …` | Betik okunamadı ya da bir satırı bozuk | Mesajın devamı satır numarasını verir |
+| `Bu yapıda betik önizlenmez.` | Betik motoru bağlı olmayan bir ortam | Uygulama içinden çalıştırın |
 
 Hata mesajı her zaman **kaçıncı satırda** ve **hangi komutta** olduğunu söyler. Hata
 durumunda çiziminiz betikten önceki hâlindedir.

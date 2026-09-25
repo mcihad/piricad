@@ -202,6 +202,17 @@ on bir tane aynı öneri birikir.
 Geri dönen komut satırları **sizin de yazabileceğiniz satırlardır**. Bu tesadüf değil:
 okuyamadığınız bir öneriden sorumlu olamazsınız.
 
+### Beklerken: ne yapacak
+
+Bekleyen bir önerinin durumu, **uygulanırsa ne yapacağını** da söyler: öneri açıldığında
+program adımları çalıştırıp bütünüyle geri alarak önizler ([ÖNİZLE](../komutlar/preview.md))
+ve sonucu `onizleme` nesnesine yazar — `degisiklik` sayıları, `degisiklik_ozeti`,
+duracaksa `duracagi_adim` ve `hata`, önizlemede çalıştırılmayan adımlar
+(`calistirilmayan`) ve silinecek nesnelerin kimlikleri (`silinecek`). Önizleme çizimin
+sürümünü değiştirmez; öneri önizlendikten sonra da uygulanabilir. Bir istemci aynı soruyu
+herhangi bir komut dizisi için `ÖNİZLE` aracıyla da sorabilir: çizime dokunmadığı için bir
+okuma aracı gibi hemen çalışır.
+
 ### Uygulandıktan sonra: ne değişti
 
 Uygulanan bir önerinin durumu ne olduğunu **sayılarla** söyler; istemci "uygulandı"

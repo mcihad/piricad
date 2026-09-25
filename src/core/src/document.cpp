@@ -48,6 +48,7 @@ Document::Tail Document::tail() const
 {
     Tail t;
     t.generation      = generation_.value;
+    t.revision        = revision_;
     t.rows            = entities_.size();
     t.keys_sorted     = keys_sorted_;
     t.next_entity_key = keys_.peek_entity();
@@ -120,7 +121,14 @@ Status Document::truncate_to(const Tail& t)
         indexed_upto_ = rows;
         index_stale_  = true;
     }
-    ++revision_;
+
+    // THE REVISION THE STEP FOUND, since the step never was: a suggestion
+    // composed against the drawing is still composed against it after a
+    // preview, and a client that read the revision before a failed command
+    // reads the same one after. The numbers the step used are NOT handed out
+    // again — the next edit takes one past the highest ever issued — so nothing
+    // cached against the step's intermediate drawing can match a later one.
+    revision_ = t.revision;
     return core::ok();
 }
 
@@ -434,7 +442,7 @@ LayerId Document::ensure_layer(std::string_view name)
     // Resized from the table, never appended blind: LayerTable owns how many
     // layers exist and the counters follow it.
     layer_live_.resize(layers_.size(), 0);
-    ++revision_;
+    bump_revision();
     return added.value();
 }
 
@@ -493,7 +501,7 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot,
 
     ++live_count_;
     ++layer_live_[lyr];
-    ++revision_;
+    bump_revision();
     return id;
 }
 
@@ -648,7 +656,7 @@ Status Document::attach_foreign(EntityId e, std::string_view tag,
     if (e >= entities_.size())
         return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
     if (auto st = foreign_.attach(entities_.slot[e], tag, bytes); !st) return st;
-    ++revision_;
+    bump_revision();
 
     undo_out         = Op{};
     undo_out.kind    = Op::Kind::DetachForeign;
@@ -674,7 +682,7 @@ Status Document::detach_foreign(EntityId e, std::string_view tag, Op& undo_out)
     undo_out.bytes_arg.assign(was.begin(), was.end());
 
     (void)foreign_.detach(entities_.slot[e], tag);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -682,7 +690,7 @@ Result<BlockId> Document::add_block(std::string_view name, std::string_view desc
                                     Point2 base)
 {
     auto id = blocks_.add(name, description, base);
-    if (id) ++revision_;
+    if (id) bump_revision();
     return id;
 }
 
@@ -700,7 +708,7 @@ Status Document::add_block_use(BlockId block, BlockId uses)
     BlockDef& def = const_cast<BlockDef&>(blocks_.at(block));
     if (std::find(def.uses.begin(), def.uses.end(), uses) == def.uses.end())
         def.uses.push_back(uses);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -725,7 +733,7 @@ Status Document::set_kind_geometry(EntityId e, std::span<const RingGeometry::Rin
     entities_.slot[e]       = slot.value();
     carry_side_tables(was, slot.value());
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetGeometry;
@@ -760,7 +768,7 @@ Status Document::set_kind_geometry(EntityId e, KindId kind,
     entities_.kind[e]       = kind;
     carry_side_tables(was, slot.value());
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetKindGeometry;
@@ -803,7 +811,7 @@ Status Document::set_block_base(BlockId block, Point2 base, Op& undo_out)
         return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(block));
     const Point2 was = blocks_.at(block).base;
     if (auto st = blocks_.set_base(block, base); !st) return st;
-    ++revision_;
+    bump_revision();
     undo_out.kind      = Op::Kind::SetBlockBase;
     undo_out.block_arg = block;
     undo_out.point_arg = was;
@@ -819,7 +827,7 @@ Status Document::set_block_external(BlockId block, std::string path, std::uint8_
     std::string was_path        = blocks_.at(block).path;
     const std::uint8_t was_flag = blocks_.at(block).flags;
     if (auto st = blocks_.set_external(block, std::move(path), flags); !st) return st;
-    ++revision_;
+    bump_revision();
     undo_out.kind      = Op::Kind::SetBlockExternal;
     undo_out.block_arg = block;
     undo_out.str_arg   = std::move(was_path);
@@ -846,7 +854,7 @@ Status Document::move_reference(EntityId e, Point2 insertion, Op& undo_out)
     entities_.slot[e]       = slot.value();
     carry_side_tables(was, slot.value());
     refresh_box(e);
-    ++revision_;
+    bump_revision();
     undo_out.kind          = Op::Kind::SetGeometry;
     undo_out.entity        = e;
     undo_out.geometry_slot = was;
@@ -890,7 +898,7 @@ Status Document::write_payload(EntityId e, std::span<const std::uint8_t> payload
     entities_.slot[e] = slot.value();
     carry_side_tables(was, slot.value());
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetGeometry;
@@ -1125,7 +1133,7 @@ Status Document::set_entity_layer(EntityId e, LayerId layer, Op& undo_out)
     else
         entities_.flags[e] &= static_cast<std::uint8_t>(~FlagLayerHidden);
 
-    ++revision_;
+    bump_revision();
 
     undo_out        = Op{};
     undo_out.kind   = Op::Kind::SetEntityLayer;
@@ -1149,7 +1157,7 @@ Status Document::set_entity_alive(EntityId e, bool alive, Op& undo_out)
         entities_.flags[e] |= FlagAlive;
     else
         entities_.flags[e] &= static_cast<std::uint8_t>(~FlagAlive);
-    ++revision_;
+    bump_revision();
 
     undo_out          = Op{};
     undo_out.kind     = Op::Kind::SetEntityAlive;
@@ -1168,7 +1176,7 @@ Status Document::set_entity_hidden(EntityId e, bool hidden, Op& undo_out)
         entities_.flags[e] |= FlagHidden;
     else
         entities_.flags[e] &= static_cast<std::uint8_t>(~FlagHidden);
-    ++revision_;
+    bump_revision();
 
     undo_out          = Op{};
     undo_out.kind     = Op::Kind::SetEntityHidden;
@@ -1186,7 +1194,7 @@ Status Document::set_entity_style(EntityId e, StyleId style, Op& undo_out)
 
     const StyleId was  = entities_.style[e];
     entities_.style[e] = style;
-    ++revision_;
+    bump_revision();
 
     undo_out           = Op{};
     undo_out.kind      = Op::Kind::SetEntityStyle;
@@ -1223,7 +1231,7 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     carry_side_tables(was, slot.value());
 
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetGeometry;
@@ -1278,7 +1286,7 @@ Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
     entities_.slot[e]       = slot;
 
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetGeometry;
@@ -1301,7 +1309,7 @@ Status Document::restore_kind_geometry(EntityId e, std::uint32_t slot, KindId ki
     entities_.kind[e]       = kind;
 
     refresh_box(e);
-    ++revision_;
+    bump_revision();
 
     undo_out               = Op{};
     undo_out.kind          = Op::Kind::SetKindGeometry;
@@ -1329,7 +1337,7 @@ Result<AttrId> Document::declare_attribute(AttrSpec spec)
     // Rows follow slots, always. A column declared after the drawing was made
     // still has a cell for every entity in it, all of them absent.
     attributes_.resize(geometry_.slot_count());
-    ++revision_;
+    bump_revision();
     return col;
 }
 
@@ -1341,7 +1349,7 @@ Status Document::drop_attribute(std::string_view id)
 
     if (!attributes_.remove(col))
         return err(ErrorCode::Internal, "Öznitelik silinemedi: '" + std::string(id) + "'");
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1360,7 +1368,7 @@ Status Document::amend_attribute(std::string_view id, const AttrSpec& next)
 
     auto amended = attributes_.amend(col, next);
     if (!amended) return amended;
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1389,7 +1397,7 @@ Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& u
     auto was = attributes_.set(col, entities_.slot[e], v);
     if (!was) return was.error();
 
-    ++revision_;
+    bump_revision();
 
     undo_out          = Op{};
     undo_out.kind     = Op::Kind::SetAttribute;
@@ -1407,7 +1415,7 @@ Status Document::add_guide(GuideAxis axis, Mm coordinate, Op& undo_out)
     undo_out.guides = guides_.rows();
 
     guides_.add(axis, coordinate);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1418,7 +1426,7 @@ Status Document::add_angled_guide(Point2 through, std::int64_t angle, bool ray, 
     undo_out.guides = guides_.rows();
 
     guides_.add_angled(through, angle, ray);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1433,7 +1441,7 @@ Status Document::remove_guide(std::size_t index, Op& undo_out)
     undo_out.guides = guides_.rows();
 
     guides_.remove(index);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1452,20 +1460,20 @@ Status Document::set_layouts(std::vector<Layout> layouts, Op& undo_out)
     undo_out.layouts_arg = layouts_.all();
 
     layouts_ = std::move(next);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
 void Document::load_layouts(std::vector<Layout> layouts)
 {
     layouts_.load(std::move(layouts));
-    ++revision_;
+    bump_revision();
 }
 
 void Document::set_guides(std::vector<GuideRow> rows)
 {
     guides_.load(std::move(rows));
-    ++revision_;
+    bump_revision();
 }
 
 Result<AttrValue> Document::attribute(AttrId col, EntityId e) const
@@ -1507,7 +1515,7 @@ Status Document::set_text(EntityId e, std::string_view content, Mm height, TextA
     if (content.empty() || height <= 0) {
         texts_.clear(slot);
         refresh_box(e);
-        ++revision_;
+        bump_revision();
         return ok();
     }
 
@@ -1518,7 +1526,7 @@ Status Document::set_text(EntityId e, std::string_view content, Mm height, TextA
     // left behind either way is an entity the cull and the pick disagree with the
     // drawing about.
     refresh_box(e);
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1573,7 +1581,7 @@ Status Document::restore_attachment(EntityId e, const Attachment* a, Op& undo_ou
     } else {
         attachments_.set(e, *a);
     }
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1711,7 +1719,7 @@ Status Document::restore_hatch_links(EntityId hatch, std::vector<HatchSource> so
         return ok();
     }
     hatch_links_.set(hatch, std::move(sources));
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1765,7 +1773,7 @@ Status Document::set_lineage(EntityId e, Lineage origin, Op& undo_out)
     }
     undo_out.bytes_arg = encode_lineage(was);
     lineage_.set(e, std::move(origin));
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1783,7 +1791,7 @@ Status Document::restore_dimension_links(EntityId dim, std::vector<DimLink> link
         return ok();
     }
     dim_links_.set(dim, std::move(links));
-    ++revision_;
+    bump_revision();
     return ok();
 }
 
@@ -1826,7 +1834,7 @@ Status Document::set_layer_visible(LayerId l, bool visible, Op& undo_out)
     const bool was = layer->visible;
     layer->visible = visible;
     mirror_layer_visibility(l, visible);
-    ++revision_;
+    bump_revision();
 
     undo_out          = Op{};
     undo_out.kind     = Op::Kind::SetLayerVisible;
@@ -1842,7 +1850,7 @@ Status Document::set_layer_locked(LayerId l, bool locked, Op& undo_out)
 
     const bool was = layer->locked;
     layer->locked  = locked;
-    ++revision_;
+    bump_revision();
 
     undo_out          = Op{};
     undo_out.kind     = Op::Kind::SetLayerLocked;
@@ -1858,7 +1866,7 @@ Status Document::set_layer_appearance(LayerId l, const Appearance& a, Op& undo_o
 
     const Appearance was = layer->appearance;
     layer->appearance    = a;
-    ++revision_;
+    bump_revision();
 
     undo_out                = Op{};
     undo_out.kind           = Op::Kind::SetLayerAppearance;
@@ -1876,7 +1884,7 @@ Status Document::set_layer_style(LayerId l, StyleId style, Op& undo_out)
 
     const StyleId was = layer->style;
     layer->style      = style;
-    ++revision_;
+    bump_revision();
 
     undo_out           = Op{};
     undo_out.kind      = Op::Kind::SetLayerStyle;
@@ -1893,7 +1901,7 @@ Status Document::set_layer_group(LayerId l, std::string group, Op& undo_out)
 
     std::string was = record->group;
     record->group   = std::move(group);
-    ++revision_;
+    bump_revision();
 
     undo_out         = Op{};
     undo_out.kind    = Op::Kind::SetLayerGroup;
@@ -1909,7 +1917,7 @@ Status Document::set_crs(Crs crs, Op& undo_out)
 
     Crs was = crs_;
     crs_    = std::move(crs);
-    ++revision_;
+    bump_revision();
 
     undo_out         = Op{};
     undo_out.kind    = Op::Kind::SetCrs;
