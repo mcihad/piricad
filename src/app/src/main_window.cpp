@@ -35,6 +35,7 @@
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/app/tools_panel.hpp"
 #include "kentos_cad/app/widgets.hpp"
+#include "kentos_cad/app/xref_panel.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/processing/registry.hpp"
 
@@ -108,6 +109,7 @@
 #include <QTableView>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QThread>
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -1796,18 +1798,44 @@ void MainWindow::buildPanels()
     // ---- the layers panel ----
     layerPanel_ = new LayerPanel(*controller_, this);
 
+    // ---- and the external references, a tab beside them (TODOS C-14) ----
+    //
+    // BESIDE THE LAYERS because that is where a reference's own layers are,
+    // and a panel of its own would be one more dock on a right edge that has
+    // two already. The `+` attaches a file on this tab as it adds a layer on
+    // the other.
+    xrefPanel_ = new XrefPanel(*controller_, this);
+    connect(xrefPanel_, &XrefPanel::attachRequested, this, [this] { actXref_->trigger(); });
+    connect(xrefPanel_, &XrefPanel::notice, this, [this](const QString& text) {
+        statusBar()->showMessage(text, 12000);
+        if (statusStrip_ != nullptr) statusStrip_->setMessage(text);
+    });
+    connect(controller_, &Controller::commandFinished, xrefPanel_, &XrefPanel::onCommandFinished);
+    layerStack_ = new QStackedWidget(this);
+    layerStack_->addWidget(layerPanel_);
+    layerStack_->addWidget(xrefPanel_);
+
     layerHeader_ = new PanelHeader(this);
     layerHeader_->addTab(tr("Katmanlar"), static_cast<int>(Glyph::Layer));
-    layerHeader_->setButtons(PanelHeader::Add | PanelHeader::Filter | PanelHeader::Grip |
-                             PanelHeader::Collapse | PanelHeader::Float);
+    layerHeader_->addTab(tr("Dış Referanslar"), static_cast<int>(Glyph::Xref));
+    constexpr unsigned kDockMarks = PanelHeader::Grip | PanelHeader::Collapse | PanelHeader::Float;
+    layerHeader_->setButtons(PanelHeader::Add | PanelHeader::Filter | kDockMarks);
+    connect(layerHeader_, &PanelHeader::tabChanged, this, [this](int index) {
+        layerStack_->setCurrentIndex(index);
+        // The filter narrows a list of layers; the references need only the `+`.
+        layerHeader_->setButtons(index == 0 ? PanelHeader::Add | PanelHeader::Filter | kDockMarks
+                                            : PanelHeader::Add | kDockMarks);
+    });
     connect(layerHeader_, &PanelHeader::buttonPressed, this, [this](int button) {
         // The panel's own two marks; the dock marks are answered where every
         // header's are.
-        if (button == PanelHeader::Add) layerPanel_->addLayerInteractively();
+        const bool references = layerStack_->currentWidget() == xrefPanel_;
+        if (button == PanelHeader::Add && references) actXref_->trigger();
+        if (button == PanelHeader::Add && !references) layerPanel_->addLayerInteractively();
         if (button == PanelHeader::Filter) layerPanel_->toggleFilter();
     });
 
-    layerDock_ = makeDock(QStringLiteral("layerDock"), layerHeader_, layerPanel_);
+    layerDock_ = makeDock(QStringLiteral("layerDock"), layerHeader_, layerStack_);
     layerDock_->toggleViewAction()->setText(tr("Katmanlar"));
 
     // ---- the conversation, hidden until asked for ----
@@ -6014,6 +6042,118 @@ int MainWindow::probeRealMouse()
                       .arg(live_members()));
             shoot("disreferans-yeni-yol");
         }
+
+        // ---- 27. THE REFERENCES PANEL AND THE WATCH OVER THEIR FILES (TODOS C-14) ----
+        //
+        // The external references tab lists the reference with its state; the base
+        // map saved elsewhere is noticed — the row reads DEĞİŞTİ and a banner
+        // offers the reload — and the banner's button reads it again; the
+        // panel's own steps put it aside and bring it back; its eye puts the
+        // reference's layers out and back.
+        {
+            const QString folder =
+                (shooting ? into : QDir::tempPath()) + QStringLiteral("/disreferans-panel-probe");
+            QDir(folder).removeRecursively();
+            QDir().mkpath(folder);
+            const QString base_map = folder + QStringLiteral("/halihazir.pcad");
+            const QString project  = folder + QStringLiteral("/proje.pcad");
+            const auto write_map   = [&base_map](int roads) {
+                core::Document side_doc;
+                command::Registry side_reg;
+                command::Journal side_journal;
+                command::UndoStack side_undo;
+                command::Bus side{side_doc, side_reg, side_journal, side_undo};
+                command::register_builtin_commands(side_reg);
+                io::FileService side_files{side};
+                (void)side.execute_line("KATMAN ad=BINA", command::Origin::Test);
+                (void)side.execute_line("ALAN 0,0 12,0 12,9 0,9", command::Origin::Test);
+                (void)side.execute_line("KATMAN ad=YOL", command::Origin::Test);
+                for (int r = 0; r < roads; ++r)
+                    (void)side.execute_line("ÇİZGİ -4," + std::to_string(-3 - 4 * r) + " 30," +
+                                                  std::to_string(-3 - 4 * r),
+                                              command::Origin::Test);
+                (void)side.execute_line("FARKLIKAYDET \"" + base_map.toStdString() + "\"",
+                                          command::Origin::Test);
+            };
+            write_map(1);
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("ÇİZGİ 2,2 10,7"));
+            endCommand();
+            runScriptLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(project));
+            endCommand();
+            runScriptLine(QStringLiteral("DIŞREFERANS dosya=halihazir.pcad"));
+            endCommand();
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            QCoreApplication::processEvents();
+            const QStringList rows =
+                xrefPanel_ != nullptr ? xrefPanel_->probeRows() : QStringList();
+            check(layerHeader_ != nullptr && layerHeader_->current() == 1 && rows.size() == 1 &&
+                      rows.front().startsWith(QStringLiteral("halihazir|YÜKLÜ|2 nesne")),
+                  QStringLiteral("bağlayınca Dış Referanslar sekmesi açıldı, satır YÜKLÜ (%1)")
+                      .arg(rows.join(QStringLiteral("; "))));
+            shoot("disreferans-panel");
+
+            // SAVED ELSEWHERE while the drawing is open: the watch notices.
+            write_map(3);
+            bool noticed = false;
+            for (int wait = 0; wait < 60 && !noticed; ++wait) {
+                QThread::msleep(50);
+                QCoreApplication::processEvents();
+                noticed = xrefPanel_->probeBanner(false);
+            }
+            const QStringList changed = xrefPanel_->probeRows();
+            check(noticed && changed.size() == 1 &&
+                      changed.front().startsWith(QStringLiteral("halihazir|DEĞİŞTİ")),
+                  QStringLiteral("kaynak başka yerde kaydedilince bant çıktı, satır DEĞİŞTİ (%1)")
+                      .arg(changed.join(QStringLiteral("; "))));
+            shoot("disreferans-panel-degisti");
+
+            // THE BANNER'S BUTTON reads it again, and the news goes away.
+            xrefPanel_->probeBanner(true);
+            endCommand();
+            QCoreApplication::processEvents();
+            const QStringList reread = xrefPanel_->probeRows();
+            check(!xrefPanel_->probeBanner(false) && reread.size() == 1 &&
+                      reread.front().startsWith(QStringLiteral("halihazir|YÜKLÜ|4 nesne")),
+                  QStringLiteral("bandın Yenile düğmesi üç yolu getirdi, bant kalktı (%1)")
+                      .arg(reread.join(QStringLiteral("; "))));
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.7"));
+            QCoreApplication::processEvents();
+            shoot("disreferans-panel-yenilendi");
+
+            // THE PANEL'S OWN STEPS: put aside, brought back.
+            const bool unloaded = xrefPanel_->probePress(QStringLiteral("halihazir"), tr("Boşalt"));
+            endCommand();
+            const QStringList aside = xrefPanel_->probeRows();
+            const bool loaded = xrefPanel_->probePress(QStringLiteral("halihazir"), tr("Yükle"));
+            endCommand();
+            const QStringList back = xrefPanel_->probeRows();
+            check(unloaded && loaded && aside.size() == 1 &&
+                      aside.front().startsWith(QStringLiteral("halihazir|BOŞALTILDI|0 nesne")) &&
+                      back.size() == 1 &&
+                      back.front().startsWith(QStringLiteral("halihazir|YÜKLÜ|4 nesne")),
+                  QStringLiteral("panelden Boşalt ve Yükle (%1 → %2)")
+                      .arg(aside.join(QStringLiteral("; ")), back.join(QStringLiteral("; "))));
+
+            // ITS EYE: the reference's layers out, and back.
+            const core::Document& doc = controller_->document();
+            const auto shown          = [&doc](const char* layer) {
+                const core::LayerId l = doc.find_layer(layer);
+                return l != core::kNoLayer && doc.layer(l)->visible;
+            };
+            xrefPanel_->probeEye(QStringLiteral("halihazir"));
+            endCommand();
+            const bool out = !shown("halihazir|BINA") && !shown("halihazir|YOL");
+            shoot("disreferans-panel-goz");
+            xrefPanel_->probeEye(QStringLiteral("halihazir"));
+            endCommand();
+            check(
+                out && shown("halihazir|BINA") && shown("halihazir|YOL"),
+                QStringLiteral("satırın gözü dış referansın katmanlarını gizledi ve geri getirdi"));
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
@@ -6022,6 +6162,17 @@ int MainWindow::probeRealMouse()
 
 void MainWindow::onCommandFinished(const QString& id, const QString& report)
 {
+    // A FILE JUST ATTACHED is shown where it can be managed: the references
+    // tab comes up beside the layers its file brought.
+    if (id == QLatin1String("core.xref")) {
+        auto said              = core::Json::parse(report.toStdString());
+        const core::Json* step = said ? said.value().find("islem") : nullptr;
+        if (step != nullptr && step->as_string() == "ekle" && layerHeader_ != nullptr) {
+            layerHeader_->setCurrent(1);
+            if (layerDock_ != nullptr) layerDock_->show();
+        }
+        return;
+    }
     if (id != QLatin1String("core.block_edit")) return;
     auto parsed = core::Json::parse(report.toStdString());
     if (!parsed) return;
@@ -7481,6 +7632,7 @@ void MainWindow::onDocumentChanged()
     canvas_->noteDocumentChange();
     refreshBlockEdit();
     layerPanel_->refresh();
+    xrefPanel_->refresh();
     attributePanel_->refresh();
     refreshStatus();
     refreshRibbon();

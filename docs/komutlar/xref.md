@@ -154,9 +154,13 @@ dış referansları dosyalarından yeniden okur. Dış referansın içindeki bir
 referansı seçer; taşıyabilir, silebilirsiniz. Çift tıklamak onu düzenlemeye açmaz,
 neden açmadığını söyler.
 
-Dış referansları durumlarıyla gösteren ve yeniden bağlamayı, boşaltmayı pencereden
-yaptıran referans yöneticisi paneli, kaynak değişince uyaran bildirimle birlikte
-C-14'ün 2. aşamasında gelecek; o gelene kadar bu işler bu sayfadaki komutlarladır.
+Sağ alttaki panelin **Dış Referanslar** sekmesi bağlı olanları durumlarıyla listeler
+(`YÜKLÜ`, `DEĞİŞTİ`, `BOŞALTILDI`, `BULUNAMADI`, `BOŞ`) ve seçili olana **Yenile**,
+**Boşalt**/**Yükle**, **Yol…**, **Bağla**, **Kaldır** uygular; başlığındaki **＋** yeni bir
+dosya bağlar, satırın gözü dış referansın katmanlarını gizler. Çizim açıkken kaynak
+dosyası başka yerde kaydedilirse program bunu fark eder: satır `DEĞİŞTİ` olur, sekmenin
+üstünde **Kaynak dosya değişti** bandı ve durum çubuğunda bir satır çıkar; banttaki
+**Yenile** değişeni yeniden okur. Ayrıntısı: [Arayüz](../baslangic/arayuz.md#dış-referanslar-sekmesi).
 
 ### Betik
 
@@ -184,10 +188,12 @@ değildir.
 
 ## Betikten kullanım
 
-Betiklenebilir ve yapay zekâya açıktır. `listele` yapılandırılmış rapor da verir:
-`dis_referanslar` altında her biri için `ad`, `dosya`, `durum` (`yüklü`, `boş`,
-`boşaltıldı`, `bulunamadı`), `nesne` ve `referans` sayısı. Günlüğe `islem`, `ad`,
-`dosya` ve `ekle` için `nokta` (varsa `olcek`, `aci`) yazılır.
+Betiklenebilir ve yapay zekâya açıktır. Her işlem yapılandırılmış bir rapor verir: `islem`
+ve işlemin uygulandığı dış referansların `adlar` listesi (`islem=yenile` adsız çağrıldıysa
+okunan hepsi). `listele`'nin raporu ise `dis_referanslar` altında her biri için `ad`,
+`dosya`, `durum` (`yüklü`, `boş`, `boşaltıldı`, `bulunamadı`), `nesne` ve `referans`
+sayısıdır. Günlüğe `islem`, `ad`, `dosya` ve `ekle` için `nokta` (varsa `olcek`, `aci`)
+yazılır.
 
 ## Hatalar
 

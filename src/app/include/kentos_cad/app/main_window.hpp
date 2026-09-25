@@ -72,6 +72,7 @@ class SettingsDialog;
 class CommandLine;
 class Controller;
 class LayerPanel;
+class XrefPanel;
 class MapCanvas;
 class CommandPalette;
 class AttributePanel;
@@ -915,6 +916,8 @@ private:
     /// The split buttons, one per family.
     QList<RibbonFamily*> families_;
     LayerPanel* layerPanel_{nullptr};
+    XrefPanel* xrefPanel_{nullptr};       ///< the Dış Referanslar tab beside the layers (C-14)
+    QStackedWidget* layerStack_{nullptr}; ///< the layer dock's two tabs
     AttributePanel* attributePanel_{nullptr};
     QStackedWidget* propertyStack_{nullptr};
     ToolsPanel* toolsPanel_{nullptr};

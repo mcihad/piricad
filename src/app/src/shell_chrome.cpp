@@ -5,9 +5,12 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include <QFontMetrics>
+#include <QHelpEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QResizeEvent>
 #include <QTimer>
+#include <QToolTip>
 
 #include <algorithm>
 
@@ -482,6 +485,7 @@ void PanelHeader::addTab(const QString& label, int glyph)
 void PanelHeader::setButtons(unsigned mask)
 {
     buttons_ = mask;
+    relayout();
     update();
 }
 
@@ -489,6 +493,7 @@ void PanelHeader::setCurrent(int index)
 {
     if (index < 0 || index >= tabs_.size() || index == current_) return;
     current_ = index;
+    relayout();
     update();
     emit tabChanged(index);
 }
@@ -500,13 +505,61 @@ void PanelHeader::relayout()
     // label a few pixels wider than the box laid out for it, and the last letter
     // is clipped — which is what "Öznitelikler" became.
     const QFontMetrics label(sans(kHeaderLabel, QFont::Medium));
+    const auto natural = [&label](const Tab& tab) {
+        return kHeaderPadX + kHeaderIcon + kHeaderGap +
+               static_cast<int>(label.horizontalAdvance(tab.label)) + kHeaderPadX;
+    };
+    constexpr int kIconOnly = kHeaderPadX + kHeaderIcon + kHeaderPadX;
+
+    // WHAT FITS BESIDE THE MARKS. The tabs run from the left and the marks from
+    // the right, and a dock with two long labels and five marks — the layers
+    // and the external references — laid one over the other: the `+` was
+    // painted under a tab. When the labels do not fit, the tabs not in use
+    // show their icon alone (named on hover), and the one in use gives up
+    // letters last.
+    const int marks = static_cast<int>(buttonList().size());
+    const int room  = width() - kHeaderRight - marks * (kHeaderBtn + kHeaderBtnGap) - kHeaderGap;
+    int total       = 0;
+    for (const Tab& tab : tabs_)
+        total += natural(tab);
+    const bool squeeze = width() > 0 && total > room && tabs_.size() > 1;
+
     int x = 0;
-    for (Tab& tab : tabs_) {
-        tab.left  = x;
-        tab.width = kHeaderPadX + kHeaderIcon + kHeaderGap +
-                    static_cast<int>(label.horizontalAdvance(tab.label)) + kHeaderPadX;
+    for (int i = 0; i < tabs_.size(); ++i) {
+        Tab& tab    = tabs_[i];
+        tab.compact = squeeze && i != current_;
+        tab.left    = x;
+        tab.width   = tab.compact ? kIconOnly : natural(tab);
         x += tab.width;
     }
+    if (squeeze && x > room && current_ >= 0 && current_ < tabs_.size()) {
+        Tab& active  = tabs_[current_];
+        active.width = std::max(kIconOnly, active.width - (x - room));
+        x            = 0;
+        for (Tab& tab : tabs_) {
+            tab.left = x;
+            x += tab.width;
+        }
+    }
+}
+
+void PanelHeader::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    relayout();
+}
+
+bool PanelHeader::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTip) {
+        const auto* help = static_cast<QHelpEvent*>(event);
+        const Hit hit    = hitAt(help->pos());
+        if (hit.tab >= 0 && tabs_[hit.tab].compact) {
+            QToolTip::showText(help->globalPos(), tabs_[hit.tab].label, this);
+            return true;
+        }
+    }
+    return QWidget::event(event);
 }
 
 QVector<int> PanelHeader::buttonList() const
@@ -683,11 +736,13 @@ void PanelHeader::paintEvent(QPaintEvent*)
                   kHeaderIcon),
             glyph_pixmap(static_cast<Glyph>(tab.glyph), ink, kHeaderIcon, devicePixelRatioF()));
 
+        if (tab.compact) continue;
         p.setFont(sans(kHeaderLabel, isActive ? QFont::Medium : QFont::Normal));
         p.setPen(ink);
-        p.drawText(box.adjusted(kHeaderPadX + kHeaderIcon + kHeaderGap, isActive ? kActiveEdge : 0,
-                                -kHeaderPadX, 0),
-                   Qt::AlignVCenter | Qt::AlignLeft, tab.label);
+        const QRect words = box.adjusted(kHeaderPadX + kHeaderIcon + kHeaderGap,
+                                         isActive ? kActiveEdge : 0, -kHeaderPadX, 0);
+        p.drawText(words, Qt::AlignVCenter | Qt::AlignLeft,
+                   p.fontMetrics().elidedText(tab.label, Qt::ElideRight, words.width()));
     }
 
     const auto glyphOf = [](int bit) {

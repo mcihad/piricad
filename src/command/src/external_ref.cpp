@@ -4,7 +4,10 @@
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include <filesystem>
 #include <string>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 namespace kentos::command {
@@ -51,6 +54,46 @@ std::vector<core::EntityId> sheet_references(const core::Document& doc, core::Bl
         if (ref && ref.value().block == block) out.push_back(e);
     }
     return out;
+}
+
+std::vector<ExternalListing> list_external_references(const core::Document& doc)
+{
+    std::vector<ExternalListing> out;
+    for (core::BlockId b = 0; b < doc.blocks().size(); ++b) {
+        if (!is_external_reference(doc, b)) continue;
+        const core::BlockDef& def = doc.blocks().at(b);
+        ExternalListing row;
+        row.block = b;
+        row.name  = def.name;
+        row.path  = def.path;
+        for (const core::EntityKey k : def.members)
+            if (const core::EntityId m = doc.slot_of(k); m != core::kNoEntity && doc.alive(m))
+                ++row.members;
+        row.references = sheet_references(doc, b).size();
+        std::error_code ec;
+        const bool found = !def.path.empty() && std::filesystem::is_regular_file(def.path, ec);
+        if ((def.flags & core::kBlockUnloaded) != 0)
+            row.state = ExternalListing::State::Unloaded;
+        else if (!found)
+            row.state = ExternalListing::State::Missing;
+        else if (row.members == 0)
+            row.state = ExternalListing::State::Empty;
+        else
+            row.state = ExternalListing::State::Loaded;
+        out.push_back(std::move(row));
+    }
+    return out;
+}
+
+const char* external_state_word(ExternalListing::State state)
+{
+    switch (state) {
+    case ExternalListing::State::Loaded: return "yüklü";
+    case ExternalListing::State::Unloaded: return "boşaltıldı";
+    case ExternalListing::State::Missing: return "bulunamadı";
+    case ExternalListing::State::Empty: return "boş";
+    }
+    return "boş";
 }
 
 core::Result<std::size_t> empty_external(Transaction& tx, core::BlockId block)

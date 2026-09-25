@@ -790,7 +790,9 @@ Oturumda ne olduğunun metin dökümü. Komut günlüğünün kendisi için
 
 ## Katmanlar paneli
 
-Sağ panelin altında, kendi 29 piksellik başlığıyla. Başlığın sağ ucunda panelin iki
+Sağ panelin altında, kendi 29 piksellik başlığıyla ve iki sekmesiyle: **Katmanlar** ve
+**Dış Referanslar** (aşağıda). Panel dar olduğunda, açık olmayan sekme yalnız simgesiyle
+görünür; üstüne gelince adı yazar. Başlığın sağ ucunda panelin iki
 işareti vardır: **＋** yeni katman adı sorar ve `KATMAN ad=…` çalıştırır; **süzgeç**
 listenin üstünde bir arama kutusu açar — yazdıkça adı uymayan katmanlar gizlenir, Türkçe
 büyük-küçük harf gözetilmez; aynı işaret kutuyu kapatır ve hepsini geri getirir. Onların
@@ -805,6 +807,12 @@ Her satır tek bir satırdır ve sütun başlığı yoktur:
 | **ad** | Aktif katman kalın yazılır |
 | **sayı** | Katmandaki nesne sayısı |
 | 🔒 **kilit** | Kilitli katman turuncu; açık olan soluk |
+
+Gruplanmış katmanlar (bir DXF'ten gelen `PLAN > SINIRLAR`, bir dış referansın `altlik`
+grubu) bir **grup satırının** altında durur. Grup satırının gözü, altındaki katmanlardan
+biri görünürken açıktır; ona tıklamak altındaki **bütün** katmanları gizler — hepsi
+gizliyse gösterir — ve tek Ctrl+Z geri getirir. Grubun kendi kilidi yoktur; kilit simgesi
+yalnız altındaki katmanların hepsi kilitliyse görünür.
 
 Seçili satır vurgu yıkaması ve sol kenarında 2 piksellik vurgu çizgisi taşır. Bu
 kalıp programdaki **her** listede aynıdır; üzerine gelme ise düz bir gridir ve
@@ -828,6 +836,32 @@ yazar. Onbir katman tek bir Ctrl+Z ile geri gelir.
 Her giriş bir komutla gider: görünürlük [`KATMANGÖRÜNÜM`](../komutlar/layer_visibility.md),
 geri kalanı [`KATMAN`](../komutlar/layer.md), `SEÇ` ve `ETİKET`. Panelin yapıp komut
 satırının yapamadığı bir şey yoktur.
+
+### Dış Referanslar sekmesi
+
+Çizime bağlı [dış referansların](../komutlar/xref.md) listesi. Bir dosya bağladığınızda
+sekme kendiliğinden öne gelir; başlıktaki **＋** burada yeni bir dosya bağlar. Her satır
+iki satırdır: üstte göz, ad ve durumu; altta dosyanın yeri (proje klasörünün içindeyse
+ona göre) ve kaç nesne, kaç referans olduğu.
+
+| Durum | Anlamı |
+|---|---|
+| `YÜKLÜ` | Dosyasından okundu, çiziliyor |
+| `DEĞİŞTİ` | Dosya, çizim açıkken başka yerde kaydedildi; çizim önceki hâlini gösteriyor |
+| `BOŞALTILDI` | Bir kenara kondu; referansı yerinde, boş |
+| `BULUNAMADI` | Dosyası kayıtlı yerinde de proje klasöründe de yok |
+| `BOŞ` | Dosyası var ama ondan çizime bir şey gelmedi |
+
+Bir dosya başka bir programda ya da başka bir KentOSCad penceresinde kaydedildiğinde
+program bunu fark eder: satır `DEĞİŞTİ` olur, sekmenin üstünde **Kaynak dosya değişti**
+bandı ve durum çubuğunda bir satır belirir. Banttaki **Yenile** değişen dosyaları yeniden
+okur.
+
+Satırın altındaki düğmeler seçili dış referansa uygulanır: **Yenile**, **Boşalt** (boşaltılmış
+olanda **Yükle**), **Yol…** (dosyanın yeni yerini seçtirir), **Bağla** ve **Kaldır**; sağ
+tuş menüsü aynı adımları sunar. Satırın gözü dış referansın katmanlarını gizler ve
+gösterir. Her adım bir `DIŞREFERANS` ya da `KATMANGÖRÜNÜM` satırıdır ve tek Ctrl+Z ile
+geri alınır.
 
 ## Durum çubuğu
 

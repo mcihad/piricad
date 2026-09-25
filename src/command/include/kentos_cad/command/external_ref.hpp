@@ -19,6 +19,7 @@
 #include "kentos_cad/core/document.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,33 @@ std::vector<core::BlockId> external_dependents(const core::Document& doc, core::
 
 /// The live references ON THE SHEET that draw `block` directly.
 std::vector<core::EntityId> sheet_references(const core::Document& doc, core::BlockId block);
+
+/// One external reference as a listing shows it — `DIŞREFERANS islem=listele`
+/// and the external references panel read the same facts from here, so the
+/// two cannot disagree about what state a reference is in.
+struct ExternalListing
+{
+    /// What the drawing holds of it now.
+    enum class State : std::uint8_t {
+        Loaded,   ///< read from its file; its objects are drawn
+        Unloaded, ///< put aside by `islem=bosalt`; not read at open
+        Missing,  ///< its file is not where the definition says
+        Empty,    ///< its file is there and nothing came from it
+    };
+
+    core::BlockId block{core::kNoBlock}; ///< its definition
+    std::string name;                    ///< the definition's name
+    std::string path;                    ///< its file, as the document holds it
+    State state{State::Empty};           ///< what the drawing holds of it now
+    std::size_t members{0};              ///< live objects of its own, not its dependents'
+    std::size_t references{0};           ///< live references on the sheet
+};
+
+/// Every external reference still on the drawing, in table order.
+std::vector<ExternalListing> list_external_references(const core::Document& doc);
+
+/// The state as a listing words it: `yüklü`, `boşaltıldı`, `bulunamadı`, `boş`.
+const char* external_state_word(ExternalListing::State state);
 
 /// Takes every member out of external reference `block` and its dependents,
 /// and brings the box of every reference that draws it up to date: what

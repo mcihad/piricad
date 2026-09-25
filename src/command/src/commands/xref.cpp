@@ -102,6 +102,20 @@ Task<std::optional<std::string>> ask_files(Context& ctx, FileRequest::Verb verb,
     co_return said.value();
 }
 
+/// The structured half of every step's answer: which operation, on which
+/// references by name — what the panel reads to know whose file was read
+/// again, and what a script or an agent reads instead of the sentence.
+void report_names(Context& ctx, const char* op, const std::vector<std::string>& names)
+{
+    core::Json list = core::Json::array({});
+    for (const std::string& n : names)
+        list.push(core::Json::string(n));
+    core::Json report = core::Json::object({});
+    report.set("islem", core::Json::string(op));
+    report.set("adlar", std::move(list));
+    ctx.report(std::move(report));
+}
+
 /// Sets the flags of `block` and keeps its path.
 Status set_flags(Context& ctx, core::BlockId block, std::uint8_t flags)
 {
@@ -162,6 +176,7 @@ Task<void> attach(Context& ctx)
     ctx.record("nokta", Value::point(at));
     if (scale != 1.0) ctx.record("olcek", Value::number(scale));
     if (angle != 0.0) ctx.record("aci", Value::number(angle));
+    report_names(ctx, "ekle", {name});
     if (at == core::Point2{0, 0} && scale == 1.0 && angle == 0.0)
         ctx.echo(*said + " Dosyanın kendi koordinatlarında, yerinde çizildi.");
     else
@@ -186,8 +201,15 @@ Task<void> reload(Context& ctx)
         }
         block = ctx.document().blocks().at(b).name;
     }
+    std::vector<std::string> names;
+    if (!block.empty())
+        names.push_back(block);
+    else
+        for (const ExternalListing& row : list_external_references(ctx.document()))
+            if (row.state != ExternalListing::State::Unloaded) names.push_back(row.name);
     auto said = co_await ask_files(ctx, FileRequest::Verb::XrefLoad, block, {});
     if (!said) co_return;
+    report_names(ctx, "yenile", names);
     ctx.echo(*said);
 }
 
@@ -210,6 +232,7 @@ Task<void> load(Context& ctx)
     }
     auto said = co_await ask_files(ctx, FileRequest::Verb::XrefLoad, def.name, {});
     if (!said) co_return;
+    report_names(ctx, "yukle", {def.name});
     ctx.echo(*said);
 }
 
@@ -234,6 +257,7 @@ Task<void> unload(Context& ctx)
         ctx.refuse(st.error());
         co_return;
     }
+    report_names(ctx, "bosalt", {def.name});
     ctx.echo("'" + def.name + "' boşaltıldı: " + std::to_string(gone.value()) +
              " nesne çizimden çıktı; referansları yerinde, boş. Dosya açılışta da okunmaz; "
              "yeniden görmek için DIŞREFERANS islem=yukle ad=" +
@@ -256,6 +280,7 @@ Task<void> repath(Context& ctx)
                                    ctx.document().blocks().at(b).name, file.as_text());
     if (!said) co_return;
     ctx.record("dosya", Value::text(file.as_text()));
+    report_names(ctx, "yol", {ctx.document().blocks().at(b).name});
     ctx.echo(*said);
 }
 
@@ -290,6 +315,7 @@ Task<void> bind(Context& ctx)
             co_return;
         }
     }
+    report_names(ctx, "bagla", {def.name});
     ctx.echo("'" + def.name + "' çizime bağlandı: artık sıradan bir blok; " +
              std::to_string(members) +
              " nesnesi bu çizimle birlikte kaydedilir, dosyası değişse de değişmez.");
@@ -346,6 +372,7 @@ Task<void> detach(Context& ctx)
         ctx.refuse(st.error());
         co_return;
     }
+    report_names(ctx, "kaldir", {def.name});
     ctx.echo("'" + def.name + "' dış referansı kaldırıldı: " + std::to_string(references.size()) +
              " referans silindi. Dosyasına dokunulmadı.");
 }
@@ -354,35 +381,19 @@ Task<void> detach(Context& ctx)
 
 Task<void> list(Context& ctx)
 {
-    const core::Document& doc = ctx.document();
-    core::Json rows           = core::Json::array({});
+    core::Json rows = core::Json::array({});
     std::string said;
-    for (core::BlockId b = 0; b < doc.blocks().size(); ++b) {
-        if (!is_external_reference(doc, b)) continue;
-        const core::BlockDef& def = doc.blocks().at(b);
-        std::size_t members       = 0;
-        for (const core::EntityKey k : def.members)
-            if (const core::EntityId m = doc.slot_of(k); m != core::kNoEntity && doc.alive(m))
-                ++members;
-        std::error_code ec;
-        const bool exists = !def.path.empty() && std::filesystem::is_regular_file(def.path, ec);
-        const char* state = "yüklü";
-        if ((def.flags & core::kBlockUnloaded) != 0)
-            state = "boşaltıldı";
-        else if (!exists)
-            state = "bulunamadı";
-        else if (members == 0)
-            state = "boş";
-        const std::size_t placed = sheet_references(doc, b).size();
-        said += "\n  " + def.name + "  —  " + state + ", " + std::to_string(members) + " nesne, " +
-                std::to_string(placed) + " referans  —  " + def.path;
-        core::Json row = core::Json::object({});
-        row.set("ad", core::Json::string(def.name));
-        row.set("dosya", core::Json::string(def.path));
-        row.set("durum", core::Json::string(state));
-        row.set("nesne", core::Json::integer(static_cast<std::int64_t>(members)));
-        row.set("referans", core::Json::integer(static_cast<std::int64_t>(placed)));
-        rows.push(std::move(row));
+    for (const ExternalListing& row : list_external_references(ctx.document())) {
+        const char* state = external_state_word(row.state);
+        said += "\n  " + row.name + "  —  " + state + ", " + std::to_string(row.members) +
+                " nesne, " + std::to_string(row.references) + " referans  —  " + row.path;
+        core::Json item = core::Json::object({});
+        item.set("ad", core::Json::string(row.name));
+        item.set("dosya", core::Json::string(row.path));
+        item.set("durum", core::Json::string(state));
+        item.set("nesne", core::Json::integer(static_cast<std::int64_t>(row.members)));
+        item.set("referans", core::Json::integer(static_cast<std::int64_t>(row.references)));
+        rows.push(std::move(item));
     }
     core::Json report = core::Json::object({});
     report.set("dis_referanslar", std::move(rows));

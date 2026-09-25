@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — dış referans paneli ve kaynak değişince bildirim (C-14, 2. aşama)
+
+- Sağ alttaki panelde **Dış Referanslar** sekmesi: bağlı dış referanslar durumlarıyla
+  (`YÜKLÜ`, `DEĞİŞTİ`, `BOŞALTILDI`, `BULUNAMADI`, `BOŞ`), dosyanın yeri ve nesne/referans
+  sayısıyla listelenir; seçili olana **Yenile**, **Boşalt**/**Yükle**, **Yol…**, **Bağla**,
+  **Kaldır**; başlıktaki **＋** dosya bağlar, satırın gözü katmanlarını gizler. Bir dosya
+  bağlanınca sekme öne gelir.
+- **Kaynak değişince görünür:** çizim açıkken dış referansın dosyası başka yerde kaydedilirse
+  satır `DEĞİŞTİ` olur, sekmede **Kaynak dosya değişti** bandı ve durum çubuğunda bir satır
+  çıkar; banttaki **Yenile** değişeni yeniden okur (atomik kaydetmelerde de izleme sürer).
+- `DIŞREFERANS`'ın her işlemi `islem` ve `adlar` taşıyan yapılandırılmış rapor verir.
+- **Düzeltildi:** panel başlığında sekmeler sığmadığında düğmelerin üstüne biniyordu (Katmanlar
+  panelinin **＋** düğmesi bir sekmenin altında kalıyordu); dar panelde açık olmayan sekme
+  artık yalnız simgesiyle görünür, adı üstüne gelince yazar.
+- **Düzeltildi:** katman panelindeki grup satırları, katmanları görünürken gizliymiş gibi
+  (üstü çizili göz, soluk yazı) çiziliyordu. Grup satırı artık katmanlarının durumunu
+  gösterir; gözü altındaki bütün katmanları tek adımda gizler ya da gösterir.
+
 ### Eklendi — dış referanslar: başka dosyadaki çizim bağlanır (C-14, 1. aşama)
 
 - **DIŞREFERANS.** Bir proje, DXF ya da DWG dosyası çizime dış referans olarak bağlanır:

@@ -13,6 +13,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/external_ref.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/block_reference.hpp"
@@ -500,4 +501,64 @@ TEST_CASE("DIŞREFERANS: kılavuz sayfasının örnekleri yazıldığı gibi ça
     auto ran = runner.run_text(text.substr(from + 8, to - from - 8));
     if (!ran) FAIL_WITH("betik", ran.error().message);
     CHECK_EQ(scripted.members("altlik"), std::size_t{3});
+}
+
+TEST_CASE("DIŞREFERANS: liste durumları ve her adımın raporu panelle komutta aynı")
+{
+    // The panel and `islem=listele` read one listing
+    // (`command::list_external_references`); every step reports which
+    // references it acted on, which is how the panel knows whose file was read
+    // again after a change on disk.
+    TempDir tmp("liste");
+    const std::string source = tmp.file("altlik.pcad");
+    write_source(source);
+
+    Rig host;
+    const auto step = [&host](const std::string& line) {
+        auto r = host.bus.execute_line(line, Origin::Test);
+        REQUIRE_MESSAGE(r.ok(), line << ": " << (r.ok() ? std::string() : r.error().message));
+        return r.value().report;
+    };
+    const auto names = [](const core::Json& report) {
+        std::vector<std::string> out;
+        if (const core::Json* list = report.find("adlar"); list != nullptr)
+            for (const core::Json& n : list->as_array())
+                out.push_back(n.as_string());
+        return out;
+    };
+    const auto state_of = [&host](const std::string& name) {
+        for (const ExternalListing& row : list_external_references(host.doc))
+            if (row.name == name) return row.state;
+        return ExternalListing::State::Empty;
+    };
+
+    const core::Json attached = step("DIŞREFERANS dosya=\"" + source + "\"");
+    CHECK_EQ(attached.find("islem")->as_string(), std::string("ekle"));
+    CHECK_EQ(names(attached), std::vector<std::string>{"altlik"});
+    REQUIRE_EQ(list_external_references(host.doc).size(), std::size_t{1});
+    const ExternalListing row = list_external_references(host.doc).front();
+    CHECK_EQ(row.state, ExternalListing::State::Loaded);
+    CHECK_EQ(row.members, std::size_t{3});
+    CHECK_EQ(row.references, std::size_t{1});
+    CHECK_EQ(std::string(external_state_word(row.state)), std::string("yüklü"));
+
+    CHECK_EQ(names(step("DIŞREFERANS islem=yenile")), std::vector<std::string>{"altlik"});
+    CHECK_EQ(names(step("DIŞREFERANS islem=bosalt ad=altlik")), std::vector<std::string>{"altlik"});
+    CHECK_EQ(state_of("altlik"), ExternalListing::State::Unloaded);
+    // Unloaded references are not read by a reload of all.
+    CHECK(names(step("DIŞREFERANS islem=yenile")).empty());
+    CHECK_EQ(names(step("DIŞREFERANS islem=yukle ad=altlik")), std::vector<std::string>{"altlik"});
+    CHECK_EQ(state_of("altlik"), ExternalListing::State::Loaded);
+
+    fs::rename(source, tmp.file("uzakta.pcad"));
+    CHECK_EQ(state_of("altlik"), ExternalListing::State::Missing);
+    const core::Json listed = step("DIŞREFERANS islem=listele");
+    REQUIRE(listed.find("dis_referanslar") != nullptr);
+    CHECK_EQ(listed.find("dis_referanslar")->as_array().front().find("durum")->as_string(),
+             std::string("bulunamadı"));
+    CHECK_EQ(
+        names(step("DIŞREFERANS islem=yol ad=altlik dosya=\"" + tmp.file("uzakta.pcad") + "\"")),
+        std::vector<std::string>{"altlik"});
+    CHECK_EQ(names(step("DIŞREFERANS islem=kaldir ad=altlik")), std::vector<std::string>{"altlik"});
+    CHECK(list_external_references(host.doc).empty());
 }

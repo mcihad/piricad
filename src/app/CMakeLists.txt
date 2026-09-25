@@ -88,6 +88,7 @@ qt_add_executable(kentos_cad
     src/symbol_image.cpp
     src/symbol_preview.cpp
     src/panels.cpp
+    src/xref_panel.cpp
     src/settings_dialog.cpp
     src/shell_chrome.cpp
     src/text_engine.cpp
@@ -132,6 +133,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/layout_manager.hpp
     include/kentos_cad/app/layout_templates.hpp
     include/kentos_cad/app/panels.hpp
+    include/kentos_cad/app/xref_panel.hpp
     include/kentos_cad/app/tools_panel.hpp
     include/kentos_cad/app/pick_list.hpp
     include/kentos_cad/app/find_replace_dialog.hpp

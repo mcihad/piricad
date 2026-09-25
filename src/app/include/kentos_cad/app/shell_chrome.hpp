@@ -253,6 +253,12 @@ protected:
 
     void leaveEvent(QEvent* event) override;
 
+    /// Lays the tabs out again for the width the dock gives.
+    void resizeEvent(QResizeEvent* event) override;
+
+    /// Names a tab drawn as its icon alone, when the pointer rests on it.
+    bool event(QEvent* event) override;
+
 private:
     struct Tab
     {
@@ -260,6 +266,8 @@ private:
         int glyph = 0;
         int left  = 0;
         int width = 0;
+        /// Drawn as its icon alone: the header was too narrow for every label.
+        bool compact = false;
     };
 
     void relayout();
