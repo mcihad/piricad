@@ -871,11 +871,14 @@ int main(int argc, char** argv)
                 });
             check(!still_complaining, "kaynağı olan grafik hâlâ şikâyet ediyor");
 
-            // AND NOTHING WAS LEFT BESIDE IT. The sheet is written to a sibling
-            // and moved into place; a `.yeni` still sitting there would mean a
-            // publish that did not finish and nobody noticed (TODOS C-05).
-            check(!QFileInfo::exists(pdf + QStringLiteral(".yeni")),
-                  "yayımlanmamış geçici PDF kaldı");
+            // AND NOTHING WAS LEFT BESIDE IT. The sheet is written into a
+            // staging directory and moved into place; one still sitting there
+            // would mean a publish that did not finish and nobody noticed
+            // (TODOS C-05, F-05).
+            const QStringList left = QDir(QFileInfo(pdf).absolutePath())
+                                         .entryList(QStringList{QStringLiteral(".kentos-*")},
+                                                    QDir::AllEntries | QDir::Hidden);
+            check(left.isEmpty(), "yayımlanmamış hazırlık klasörü kaldı");
 
             // A TABLE THAT RAN OUT OF BOX SAYS SO IN THE ANSWER, not only on the
             // paper. A client that exported the sheet and read "tamam" would file
@@ -2854,6 +2857,13 @@ int main(int argc, char** argv)
                 // scale for both directions.
                 const QString pgw = dir + QStringLiteral("/sayfa.pgw");
                 check(QFileInfo::exists(pgw), "world file yazılmadı");
+                // THE PICTURE AND ITS WORLD FILE MOVED TOGETHER out of one
+                // staging directory, and none is left (TODOS F-05).
+                check(QDir(dir)
+                          .entryList(QStringList{QStringLiteral(".kentos-*")},
+                                     QDir::AllEntries | QDir::Hidden)
+                          .isEmpty(),
+                      "görüntünün hazırlık klasörü kaldı");
                 QFile wf(pgw);
                 if (wf.open(QIODevice::ReadOnly)) {
                     const QList<QByteArray> lines = wf.readAll().split('\n');

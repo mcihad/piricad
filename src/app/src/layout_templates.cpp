@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/layout_templates.hpp"
 
+#include "kentos_cad/io/staging.hpp"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -105,15 +107,24 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
         if (!path) co_return path.error();
         QDir().mkpath(folder_);
 
-        QFile file(path.value());
+        // STAGED, then moved over the template of the same name (io.md R27): a
+        // save that failed half way leaves the template that was there.
+        io::Staging staged(path.value().toStdString());
+        QFile file(QString::fromStdString(staged.path().string()));
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
             co_return core::err(core::ErrorCode::IoFailure,
                                 "Şablon yazılamadı: " + path.value().toStdString());
         // THE BYTES THE COMMAND HANDED OVER, unchanged. This service does not
         // know what a layout is and must not learn: `core::layout_to_json` is
         // the one serialiser (CLAUDE.md 5.10).
-        file.write(request.json.data(), static_cast<qint64>(request.json.size()));
+        const auto size  = static_cast<qint64>(request.json.size());
+        const bool whole = file.write(request.json.data(), size) == size;
         file.close();
+        if (!whole)
+            co_return core::err(core::ErrorCode::IoFailure,
+                                "Şablon yazılamadı: " + path.value().toStdString() +
+                                    "; varsa eski şablon olduğu gibi.");
+        if (auto st = io::place_staged(staged); !st) co_return st.error();
 
         emit changed();
         co_return "Çıktı yerleşimi şablonu kaydedildi: " + request.name + " — '" + request.layout +

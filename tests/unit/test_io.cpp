@@ -45,6 +45,7 @@
 #include "kentos_cad/io/pdf_encrypt.hpp"
 #include "kentos_cad/io/print_profiles.hpp"
 #include "kentos_cad/io/service.hpp"
+#include "kentos_cad/io/staging.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
@@ -57,6 +58,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -6383,6 +6385,249 @@ TEST_CASE("Yerel biçim: yarıda kalan bir yazma eski dosyayı bozmaz")
     Rig back;
     REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
     CHECK_EQ(back.doc.live_entity_count(), std::size_t{2});
+}
+
+// ===========================================================================
+// External effects (TODOS F-05): a file written for a user is staged beside its
+// target and moved into place whole; a failure leaves what was there.
+// ===========================================================================
+
+namespace {
+
+/// Whether `dir` still holds a staging directory — what an export that finished,
+/// failed or was cancelled must never leave behind.
+bool staging_left(const fs::path& dir)
+{
+    for (const auto& one : fs::directory_iterator(dir))
+        if (io::is_staging_name(one.path().filename().string())) return true;
+    return false;
+}
+
+/// Writes `text` to `path`, replacing it.
+void put(const fs::path& path, const std::string& text)
+{
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    out << text;
+}
+
+/// A drawing with a few hundred objects on one layer, in a system that counts
+/// metres: enough that an export is a loop, not a line.
+void draw_many(Rig& r, int lines)
+{
+    REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    for (int i = 0; i < lines; ++i) {
+        const std::string x = std::to_string(485000 + (i * 3));
+        REQUIRE(r.bus.execute_line("ÇİZGİ " + x + ",4310000 " + x + ",4310010", Origin::Test).ok());
+    }
+}
+
+} // namespace
+
+TEST_CASE("Hazırlama: dosya takımı birlikte yerine konur; bitene dek hedef eskisini taşır (F-05)")
+{
+    TempDir tmp("hazirlama");
+    const fs::path target = tmp.path() / "pafta.dxf";
+    put(target, "eski");
+    put(tmp.path() / "pafta.prj", "eski prj");
+
+    {
+        io::Staging staged(target.string());
+        // UNDER THE TARGET'S OWN NAME, in a directory of its own: a file that
+        // names its companion (a GML its schema, a picture its world file) names
+        // it right from the start.
+        CHECK_EQ(staged.path().filename(), target.filename());
+        CHECK(io::is_staging_name(staged.directory().filename().string()));
+        put(staged.path(), "yeni");
+        put(staged.directory() / "pafta.prj", "yeni prj");
+
+        // Until the move, the user's path holds exactly what it held.
+        CHECK_EQ(slurp(target.string()), "eski");
+        CHECK_EQ(slurp((tmp.path() / "pafta.prj").string()), "eski prj");
+
+        auto placed = staged.commit();
+        REQUIRE(placed.ok());
+        CHECK(placed.value().failed.empty());
+        REQUIRE_EQ(placed.value().written.size(), std::size_t{2});
+        // The companion first, the file the user named last.
+        CHECK(placed.value().written.back() == target.string());
+    }
+    CHECK_EQ(slurp(target.string()), "yeni");
+    CHECK_EQ(slurp((tmp.path() / "pafta.prj").string()), "yeni prj");
+    CHECK_FALSE(staging_left(tmp.path()));
+}
+
+TEST_CASE("Hazırlama: yerine konmayan hazırlık silinir, hedef olduğu gibi kalır (F-05)")
+{
+    TempDir tmp("hazirlama-birak");
+    const fs::path target = tmp.path() / "liste.txt";
+    put(target, "eski liste");
+    {
+        io::Staging staged(target.string());
+        put(staged.path(), "yarım kal");
+        // No commit: a cancel, a refusal, an exception.
+    }
+    CHECK_EQ(slurp(target.string()), "eski liste");
+    CHECK_FALSE(staging_left(tmp.path()));
+
+    // And a target that did not exist yet stays not existing.
+    const fs::path fresh = tmp.path() / "yeni.txt";
+    {
+        io::Staging staged(fresh.string());
+        put(staged.path(), "yarım");
+    }
+    CHECK_FALSE(fs::exists(fresh));
+    CHECK_FALSE(staging_left(tmp.path()));
+}
+
+TEST_CASE("Hazırlama: yerine konamayan dosya adıyla söylenir, konan da söylenir (F-05)")
+{
+    // THE REPORT AN EXTERNAL EFFECT OWES when it could not be atomic: which
+    // files are new, which are not. A directory standing where the `.prj` goes
+    // refuses the rename, the way a file held open by another program does on
+    // Windows.
+    TempDir tmp("hazirlama-yarim");
+    const fs::path target = tmp.path() / "pafta.dxf";
+    put(target, "eski");
+    fs::create_directories(tmp.path() / "pafta.prj" / "dolu");
+
+    io::Staging staged(target.string());
+    put(staged.path(), "yeni");
+    put(staged.directory() / "pafta.prj", "yeni prj");
+    auto st = io::place_staged(staged);
+    REQUIRE_FALSE(st.ok());
+    const std::string& said = st.error().message;
+    CHECK(said.find("yerine tam konamadı") != std::string::npos);
+    CHECK(said.find("Yerine konan: " + target.string()) != std::string::npos);
+    CHECK(said.find("Konamayan: " + (tmp.path() / "pafta.prj").string() +
+                    " (yerinde aynı adlı bir klasör var)") != std::string::npos);
+    CHECK(said.find("karışımı olabilir") != std::string::npos);
+    // What could be moved was: the drawing is new, the directory untouched.
+    CHECK_EQ(slurp(target.string()), "yeni");
+    CHECK(fs::is_directory(tmp.path() / "pafta.prj" / "dolu"));
+}
+
+TEST_CASE("DXF: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-05)")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+
+    // THE REGRESSION: a cancel used to REMOVE the target — the half-written
+    // file, and with it the good one it had replaced — so the user had neither.
+    TempDir tmp("dxf-durdur");
+    Rig r;
+    draw_many(r, 500);
+    const std::string path = tmp.file("pafta.dxf");
+    REQUIRE(r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test).ok());
+    const std::vector<char> before = read_bytes(path);
+    const std::string prj_before   = slurp(tmp.file("pafta.prj"));
+    REQUIRE_FALSE(before.empty());
+
+    REQUIRE(r.bus.execute_line("ÇİZGİ 485000,4309000 486000,4309000", Origin::Test).ok());
+    std::stop_source stop;
+    stop.request_stop();
+    io::ExportOptions options;
+    options.crs = "EPSG:5254";
+    auto task   = io::export_dxf(r.doc, path, options, io::DxfVersion::R2007, stop.get_token());
+    task.resume();
+    REQUIRE(task.done());
+    auto& result = task.result();
+    REQUIRE_FALSE(result.ok());
+    CHECK(result.error().code == core::ErrorCode::Cancelled);
+    CHECK(result.error().message.find("olduğu gibi") != std::string::npos);
+
+    CHECK(read_bytes(path) == before);
+    CHECK_EQ(slurp(tmp.file("pafta.prj")), prj_before);
+    CHECK_FALSE(staging_left(tmp.path()));
+}
+
+TEST_CASE("GPKG: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-05)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // THE REGRESSION: the GDAL path DELETED the target before creating the new
+    // one, so a cancel — or a refusal half way — left no file at all.
+    TempDir tmp("gpkg-durdur");
+    Rig r;
+    draw_many(r, 500);
+    const std::string path = tmp.file("pafta.gpkg");
+    REQUIRE(r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test).ok());
+    const std::vector<char> before = read_bytes(path);
+    REQUIRE_FALSE(before.empty());
+
+    REQUIRE(r.bus.execute_line("ÇİZGİ 485000,4309000 486000,4309000", Origin::Test).ok());
+    std::stop_source stop;
+    stop.request_stop();
+    io::ExportOptions options;
+    options.crs = "EPSG:5254";
+    auto task   = io::export_vector(r.doc, path, options, stop.get_token());
+    task.resume();
+    REQUIRE(task.done());
+    auto& result = task.result();
+    REQUIRE_FALSE(result.ok());
+    CHECK(result.error().code == core::ErrorCode::Cancelled);
+
+    CHECK(read_bytes(path) == before);
+    CHECK_FALSE(staging_left(tmp.path()));
+}
+
+TEST_CASE("Dışa aktarım: tekrar çağrı çoğaltmaz, eskisinin yerine yazar (F-05)")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // "TEKRAR ÇAĞRI ÇOĞALTMA YAPMAZ": the same export run twice leaves one file
+    // with the drawing in it once — not appended, not beside a second copy.
+    TempDir tmp("tekrar");
+    Rig r;
+    draw_many(r, 500);
+    const std::size_t drawn = r.doc.live_entity_count();
+
+    for (const char* name : {"pafta.gpkg", "pafta.dxf"}) {
+        CAPTURE(name);
+        if (std::string(name).ends_with(".dxf") && !io::dxf_backend_available()) continue;
+        const std::string path = tmp.file(name);
+        REQUIRE(r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test).ok());
+
+        Rig back;
+        REQUIRE(back.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+        auto read = back.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+        if (!read) FAIL_WITH("İÇEAKTAR", read.error().message);
+        CHECK_EQ(back.doc.live_entity_count(), drawn);
+    }
+
+    // The point list the same way: written over, not added to.
+    const std::string list = tmp.file("noktalar.txt");
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + list + "\" yon=yaz nesneler=1 2", Origin::Test)
+                .ok());
+    const std::string once = slurp(list);
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + list + "\" yon=yaz nesneler=1 2", Origin::Test)
+                .ok());
+    CHECK_EQ(slurp(list), once);
+    CHECK_FALSE(staging_left(tmp.path()));
+}
+
+TEST_CASE("DXF: metre dışa aktarımından kalan .prj, milimetre dışa aktarımında kaldırılır (F-05)")
+{
+    if (!io::dxf_backend_available() || !io::vector_backend_available())
+        PENDING("DXF ya da GDAL kapalı.");
+
+    // A `.prj` left from an earlier metre export would label the millimetres now
+    // in the file as metres — the very mistake the new file goes without a
+    // `.prj` to avoid (F-03). It goes with the file it described, and is said.
+    TempDir tmp("dxf-eski-prj");
+    Rig r;
+    REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇİZGİ 485320,4310220 485330,4310230", Origin::Test).ok());
+    const std::string path = tmp.file("pafta.dxf");
+    REQUIRE(r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test).ok());
+    REQUIRE(fs::exists(tmp.file("pafta.prj")));
+
+    REQUIRE(r.bus.execute_line("AYAR çizim_birimi milimetre", Origin::Test).ok());
+    r.transcript.clear();
+    auto again = r.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test);
+    if (!again) FAIL_WITH("DIŞAAKTAR", again.error().message);
+    CHECK_FALSE(fs::exists(tmp.file("pafta.prj")));
+    CHECK(r.transcript.find("pafta.prj' kaldırıldı") != std::string::npos);
+    CHECK_FALSE(staging_left(tmp.path()));
 }
 
 TEST_CASE("Tablo: sığmayan satırlar sayılarak bildirilir")

@@ -168,6 +168,13 @@ Sürücüyü açıkça vererek:
 alma yığınına girmez. Yazılmış bir dosyayı geri almanın yolu yoktur; yanlış
 yazdıysanız doğrusunu yazın.
 
+Yarıda kalan bir dışa aktarım ise **hiçbir şey yazmamış sayılır**: dosya önce hedefin
+yanında hazırlanır, bütün olunca yerine taşınır. Yazım başarısız olursa hedefteki dosya
+bayt bayt olduğu gibi kalır; DXF ile `.prj`'si birlikte taşınır; aynı komutu yeniden
+çalıştırmak dosyayı yeniden yazar, çoğaltmaz. Süren bir dışa aktarımı durdurmak Faz 1'de
+gelecek ve aynı biçimde eski dosyayı bırakacak. Ayrıntı:
+[Yazma yarıda kalırsa](../veri/dis-formatlar.md#yazma-yarıda-kalırsa).
+
 ## Betikten kullanım
 
 `DIŞAAKTAR` betiklenebilirdir ve salt okunur işaretlidir. Günlüğe yazılmaz: bir
@@ -199,5 +206,10 @@ oluşturmamalıdır.
 | `'...' yazılamadı. Koordinat sistemi olmayan bir dışa aktarım eksik veridir` | `.prj` yazılamadı | Dizin izinlerini denetleyin |
 | `DXF'in yanına .prj yazılmadı: sayıları milimetre …` (not) | `çizim_birimi` metre değil; `.prj` bir CBS programına sayıları metre okuturdu | Koordinat sistemini taşıyan bir DXF için `AYAR çizim_birimi metre` ile yeniden aktarın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
+| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sırasında durduruldu (arayüzdeki Durdur düğmesi Faz 1'de gelecek) | Yeniden çalıştırın; eski dosya yerinde |
+| `'...' yazılamadı (libdxfrw hata kodu N). Dizin izinlerini ve diski denetleyin; varsa eski dosya olduğu gibi.` | DXF yazılırken hata | İzinleri ve boş yeri denetleyin |
+| `'...' yerine tam konamadı. Yerine konan: … Konamayan: … Hedefteki dosya takımı eski ve yeni dosyaların karışımı olabilir; …` | Takımdan bir dosya (ör. `.prj`) başka bir programda açık | O programı kapatıp yineleyin |
+| `'...' için hiçbir dosya hazırlanmadı.` | Yazıcı hata vermeden hiçbir dosya üretmedi | Hata bildirimi açın; dizin izinlerini denetleyin |
+| `'....prj' kaldırıldı: önceki bir metre dışa aktarımından kalmıştı …` (not) | Metre DXF'in yerine milimetre DXF yazıldı | Bir şey gerekmez; `.prj` isteniyorsa metreyle yeniden aktarın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

@@ -20,6 +20,7 @@
 #include "qgis_style.hpp"
 
 #include "kentos_cad/io/project.hpp"
+#include "kentos_cad/io/staging.hpp"
 #include "kentos_cad/io/vector.hpp"
 
 #include "xref.hpp"
@@ -354,12 +355,18 @@ core::Result<std::string> FileService::export_style(std::string path, std::strin
 
     const std::string body = build_qml(layer, effective, area);
 
-    std::ofstream out(path, std::ios::out | std::ios::binary | std::ios::trunc);
+    // Written whole beside the target, then moved onto it (io/staging.hpp).
+    Staging staged(path);
+    std::ofstream out(staged.path(), std::ios::out | std::ios::binary | std::ios::trunc);
     if (!out)
         return err(ErrorCode::IoFailure,
                    "'" + path + "' yazılamadı. Dizin izinlerini ve boş alanı denetleyin.");
     out << body;
-    if (!out) return err(ErrorCode::IoFailure, "'" + path + "' yazılırken hata oluştu.");
+    out.close();
+    if (!out)
+        return err(ErrorCode::IoFailure,
+                   "'" + path + "' yazılırken hata oluştu; varsa eski dosya olduğu gibi.");
+    if (auto st = place_staged(staged); !st) return st.error();
 
     std::string note = "'" + layer.name + "' stili QML olarak yazıldı: " + path;
     if (!agreed)

@@ -159,6 +159,8 @@ Bir çizimi açıp kurumun sayfasını uygulayan ve PDF üreten bir betik:
 | `Çıktı şablonu bu sürümden yeni (dosya N, bu sürüm M).` | Şablon ileri bir sürümle yazılmış | Programı güncelleyin |
 | `'X' öğesinin türü bu sürümde yok: 'Y'.` | Şablon tanınmayan bir öğe türü taşıyor | Şablonu yazan sürümü kullanın |
 | `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
+| `Şablon yazılamadı: …` / `Şablon yazılamadı: …; varsa eski şablon olduğu gibi.` | Şablon klasörüne yazılamadı ya da yazım yarıda kaldı | Klasör izinlerini ve boş yeri denetleyin; aynı adlı eski şablon yerinde ([Yazma yarıda kalırsa](../veri/dis-formatlar.md#yazma-yarıda-kalırsa)) |
+| `'…' yerine tam konamadı. Yerine konan: hiçbiri. Konamayan: …` | Aynı adlı şablon dosyası başka bir programda açık | O programı kapatıp yineleyin |
 
 Şablon adındaki `/`, `:`, `*` gibi dosya adı olamayacak karakterler **`_` ile
 değiştirilir**, reddedilmez: kurum sayfasına `18. madde / askı` demek isteyen kimse

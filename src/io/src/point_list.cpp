@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/point_list.hpp"
+#include "kentos_cad/io/staging.hpp"
 
 #include "kentos_cad/core/units.hpp"
 
@@ -213,7 +214,10 @@ core::Result<std::vector<SurveyPoint>> read_point_list(const std::string& path, 
 core::Status write_point_list(const std::string& path, const std::vector<SurveyPoint>& points,
                               PointOrder order, int decimals)
 {
-    std::ofstream out(path, std::ios::binary);
+    // Written whole beside the target, then moved onto it (io/staging.hpp): a
+    // list that stopped half way leaves the one that was there.
+    Staging staged(path);
+    std::ofstream out(staged.path(), std::ios::binary);
     if (!out) return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılamadı: " + path);
 
     // The header names the columns in the order they are written, so the file
@@ -236,9 +240,11 @@ core::Status write_point_list(const std::string& path, const std::vector<SurveyP
         out << ';' << p.code << '\n';
     }
 
+    out.close();
     if (!out)
-        return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılırken hata: " + path);
-    return core::ok();
+        return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılırken hata: " + path +
+                                                         "; varsa eski liste olduğu gibi.");
+    return place_staged(staged);
 }
 
 } // namespace kentos::io

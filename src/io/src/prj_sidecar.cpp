@@ -7,8 +7,10 @@
 #include <ogr_spatialref.h>
 #endif
 
+#include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <system_error>
 #include <utility>
 
 namespace kentos::io {
@@ -49,6 +51,16 @@ std::string prj_sidecar_path(const std::string& path)
     if (dot != std::string::npos && (slash == std::string::npos || dot > slash)) sidecar.erase(dot);
     sidecar += ".prj";
     return sidecar;
+}
+
+std::string remove_stale_prj(const std::string& path)
+{
+    const std::string stale = prj_sidecar_path(path);
+    std::error_code ec;
+    if (!std::filesystem::exists(stale, ec) || !std::filesystem::remove(stale, ec)) return {};
+    return "'" + stale +
+           "' kaldırıldı: önceki bir metre dışa aktarımından kalmıştı ve bu çizimin sayılarını "
+           "metre diye etiketlerdi.";
 }
 
 #ifdef KENTOS_HAVE_GDAL

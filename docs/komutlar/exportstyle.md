@@ -139,6 +139,8 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 |---|---|---|
 | `Katman bulunamadı: 'PARSELL'. Önce KATMAN komutuyla oluşturun.` | Katman adı yanlış yazılmış | Adı denetleyin; katman listesi sağdaki panelde |
 | `'/yok/olan/dizin/a.qml' yazılamadı. Dizin izinlerini ve boş alanı denetleyin.` | Dizin yok ya da yazma izni yok | Yolu ve izinleri denetleyin |
+| `'...' yazılırken hata oluştu; varsa eski dosya olduğu gibi.` | Yazım yarıda kaldı (disk doldu) | Yer açıp yineleyin; eski stil dosyası yerinde ([Yazma yarıda kalırsa](../veri/dis-formatlar.md#yazma-yarıda-kalırsa)) |
+| `'...' yerine tam konamadı. Yerine konan: hiçbiri. Konamayan: …` | `.qml` başka bir programda (ör. QGIS'te) açık | O programı kapatıp yineleyin |
 | `'core.exportstyle' parametresi 'dosya' 1 değer bekliyor.` | Dosya yolu verilmemiş | Katman adından sonra yolu da yazın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

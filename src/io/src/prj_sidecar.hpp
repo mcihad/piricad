@@ -34,6 +34,12 @@ core::Result<std::string> write_prj_sidecar(const std::string& path, const std::
 /// `path` with its extension replaced by `.prj`.
 std::string prj_sidecar_path(const std::string& path);
 
+/// Removes a `.prj` left beside `path` by an earlier metre export, once a DXF
+/// in another unit has replaced the file it described, and says so; empty when
+/// there was none. Left in place it would label millimetres as metres — the
+/// very mistake `dxf_prj_withheld` withholds a new one to avoid.
+std::string remove_stale_prj(const std::string& path);
+
 #ifdef KENTOS_HAVE_GDAL
 /// `srs` as a `core::Crs` named `id` and carrying what its coordinates COUNT —
 /// metres, degrees or something else — so the one message

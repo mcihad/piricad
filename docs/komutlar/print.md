@@ -199,6 +199,12 @@ görüntünün zeminde bir yeri yoktur.
 [`GERİAL`](undo.md) listesine girmez. Yazdığı PDF dosyası diskte kalır; istemezseniz
 dosyayı silin.
 
+Yarıda kalan bir çıktı ise **hiçbir dosyayı değiştirmez**: PDF, sayfalar ve world
+file'lar önce hedefin yanında hazırlanır, hepsi yazılınca birlikte taşınır. Üçüncü
+sayfası çizilemeyen bir yerleşim ilk iki sayfayı da yenilemez; şifreli PDF'te qpdf'in
+yazdığı dosya da ancak bittiğinde yerine konur. Ayrıntı:
+[Yazma yarıda kalırsa](../veri/dis-formatlar.md#yazma-yarıda-kalırsa).
+
 ## Betikten kullanım
 
 Betikte `merkez` (ve istenirse `olcek`) ya da `pencere` verilmelidir; arayüzdeki
@@ -232,6 +238,10 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 | `Yazıcı bulunamadı: 'X'. Yazıcılar: …` | Böyle bir yazıcı yok | Listeden seçin ya da `yazici=""` |
 | `Sistemde varsayılan yazıcı yok. Yazıcılar: …` | `yazici=""` verildi, varsayılan yok | Yazıcıyı adıyla verin |
 | `PDF yazılamadı: dizin yok — …` | Hedef dizin yok | Dizini oluşturun |
+| `PDF yazılamadı: …; varsa eski dosya olduğu gibi.` | Qt PDF'i yazamadı (izin, disk) | İzinleri ve boş yeri denetleyin |
+| `Görüntü yazılamadı: …; hiçbir sayfa değişmedi.` / `Sayfa yazılamadı: …; hiçbir sayfa değişmedi.` | Bir sayfa görüntüsü yazılamadı | İzinleri ve boş yeri denetleyin; önceki sayfalar da eski hâlinde |
+| `Dünya dosyası yazılamadı: …; hiçbir sayfa değişmedi.` | `.pgw`/`.tfw` yazılamadı | İzinleri denetleyin; konumsuz bir görüntü "konumlu" diye teslim edilmez |
+| `'...' yerine tam konamadı. Yerine konan: … Konamayan: …` | Sayfalardan biri başka bir programda açık | O programı kapatıp yineleyin |
 | `Bu yapı PDF şifreleme ve yazar alanını içermiyor (KENTOS_WITH_QPDF). …` | qpdf'siz derlenmiş yapı | Şifresiz yazın ya da qpdf ile derleyin |
 | `Yazdırma motoru bağlı değil; bu ortamda yazdırılamaz ve PDF alınamaz. …` | Arayüz olmadan çalıştırıldı | Uygulama içinden çalıştırın |
 | `N ölçü 1/1000 paftası için boyutlandırılmış; 1/5000 çıktıda yazıları 0,5 mm olur. …` (uyarı; pafta yine basılır) | Ölçüler başka bir pafta ölçeği için boyutlu | [`ÖLÇÜYENİLE olcek=N`](dimension_refresh.md) ile uyarlayıp yeniden basın |

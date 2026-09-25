@@ -27,6 +27,7 @@ add_library(kentos_io STATIC
     src/pdf_encrypt.cpp
     src/print_profiles.cpp
     src/prj_sidecar.cpp
+    src/staging.cpp
     src/qgis_style.cpp
     src/service.cpp
     src/point_list.cpp

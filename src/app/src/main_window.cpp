@@ -7450,6 +7450,77 @@ int MainWindow::probeRealMouse()
             }
             shoot("pafta-kopuk-bag");
         }
+
+        // ---- 42. AN EXPORT THAT COULD NOT MOVE WHOLE SAYS WHICH FILES DID (TODOS F-05) ----
+        //
+        // A DXF and its `.prj` are written into a staging directory beside the
+        // target and moved together. A directory standing where the `.prj` goes
+        // refuses its move, the way a file held open by another program does on
+        // Windows: the drawing is replaced, the `.prj` is not, and the answer
+        // names both instead of saying "Dışa aktarıldı". Nothing is left behind.
+        {
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            runScriptLine(QStringLiteral("AYAR core.crs.id EPSG:5254"));
+            endCommand();
+            runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+            endCommand();
+            for (int i = 0; i < 40; ++i) {
+                const int x = 485300 + (i * 2);
+                runScriptLine(QStringLiteral("ÇİZGİ %1,4310200 %2,4310230").arg(x).arg(x + 1));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{485'290'000, 4'310'170'000, 485'390'000, 4'310'240'000});
+            const QString dir = QDir::temp().filePath(QStringLiteral("kentos-f05-probe"));
+            QDir(dir).removeRecursively();
+            QDir().mkpath(dir);
+            const QString dxf       = dir + QStringLiteral("/pafta.dxf");
+            const QString prj       = dir + QStringLiteral("/pafta.prj");
+            const auto staging_left = [&dir] {
+                return !QDir(dir)
+                            .entryList(QStringList{QStringLiteral(".kentos-*")},
+                                       QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot)
+                            .isEmpty();
+            };
+
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(dxf));
+            endCommand();
+            check(QFileInfo(dxf).isFile() && QFileInfo(prj).isFile() && !staging_left(),
+                  QStringLiteral("DXF ve .prj birlikte yerine kondu, hazırlık kalmadı"));
+            const qint64 first = QFileInfo(dxf).size();
+
+            // The `.prj`'s place taken by a directory.
+            QFile::remove(prj);
+            QDir().mkpath(prj + QStringLiteral("/dolu"));
+            runScriptLine(QStringLiteral("ÇİZGİ 485300,4310180 485380,4310180"));
+            endCommand();
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(dxf));
+            endCommand();
+            const QString said = transcript_->toPlainText();
+            check(said.contains(QStringLiteral("yerine tam konamadı")) &&
+                      said.contains(QStringLiteral("Yerine konan: ") + dxf) &&
+                      said.contains(QStringLiteral("Konamayan: ") + prj +
+                                    QStringLiteral(" (yerinde aynı adlı bir klasör var)")),
+                  QStringLiteral("yarım taşıma dosya dosya söylendi"));
+            check(!said.contains(QStringLiteral("Dışa aktarıldı")),
+                  QStringLiteral("yarım taşıma başarı sayılmadı"));
+            check(QFileInfo(dxf).size() > first && QFileInfo(prj).isDir() && !staging_left(),
+                  QStringLiteral("çizim yenilendi, klasöre dokunulmadı, hazırlık kalmadı"));
+            shoot("disa-aktarim-yarim");
+
+            // The directory gone, the same export again: the whole set, once.
+            QDir(prj).removeRecursively();
+            transcript_->clear();
+            runScriptLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(dxf));
+            endCommand();
+            check(transcript_->toPlainText().contains(QStringLiteral("Dışa aktarıldı")) &&
+                      QFileInfo(prj).isFile() && !staging_left(),
+                  QStringLiteral("yineleyince takım bütün olarak yerine kondu"));
+            shoot("disa-aktarim-tamam");
+            QDir(dir).removeRecursively();
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

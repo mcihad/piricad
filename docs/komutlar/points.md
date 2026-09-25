@@ -195,6 +195,17 @@ tablosunun `fid` sütunundan okuyun.
 
 Verilen nesnelerin hiçbirinin geometrisi köşe taşımıyor.
 
+> `Nokta listesi yazılırken hata: <dosya>; varsa eski liste olduğu gibi.`
+
+`yon=yaz` sırasında disk doldu ya da yazma kesildi. Liste önce dosyanın yanında
+hazırlanır; yarım kalan liste yerine konmaz, eskisi yerinde kalır
+([Yazma yarıda kalırsa](../veri/dis-formatlar.md#yazma-yarıda-kalırsa)).
+
+> `'<dosya>' yerine tam konamadı. Yerine konan: hiçbiri. Konamayan: <dosya> (…)`
+
+Liste yazıldı ama eskisinin yerine konamadı; dosya başka bir programda açık olabilir.
+O programı kapatıp yineleyin.
+
 ## İlgili
 
 - [NOKTA](point_draw.md) — tek nokta çizme

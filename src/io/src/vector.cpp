@@ -24,6 +24,7 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/io/format.hpp"
+#include "kentos_cad/io/staging.hpp"
 
 #include "dxf_multileader.hpp"
 #include "dxf_units.hpp"
@@ -1786,8 +1787,13 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     } restore_hatch{dxf_out, hatch_saved};
 
     ::CPLErrorReset();
-    ::VSIUnlink(path.c_str()); // a stale target makes GPKG refuse to create
-    DatasetHandle data(gdal_driver->Create(path.c_str(), 0, 0, 0, GDT_Unknown, create_options));
+    // WRITTEN BESIDE THE TARGET, MOVED ONTO IT WHEN WHOLE (io/staging.hpp): a
+    // cancel, a refusal below or a full disk leaves the file that was there —
+    // this used to delete it first and write the target itself.
+    Staging staged(path);
+    const std::string written_to = staged.path().string();
+    DatasetHandle data(
+        gdal_driver->Create(written_to.c_str(), 0, 0, 0, GDT_Unknown, create_options));
     if (!data.ptr)
         co_return err(ErrorCode::IoFailure, "'" + path + "' oluşturulamadı: " + gdal_reason() +
                                                 ". Dizin izinlerini ve boş alanı denetleyin.");
@@ -2004,7 +2010,8 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
 
         for (core::EntityId e = 0; e < ents.size(); ++e) {
             if ((e % 4096) == 0 && stop.stop_requested())
-                co_return err(ErrorCode::Cancelled, "Dışa aktarma iptal edildi.");
+                co_return err(ErrorCode::Cancelled, "Dışa aktarma durduruldu; dosya yazılmadı, '" +
+                                                        path + "' olduğu gibi.");
             if (ents.layer[e] != l || !ents.alive(e)) continue;
 
             const std::uint32_t slot  = ents.slot[e];
@@ -2170,11 +2177,13 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
         // A `.prj` beside millimetres would be read as metres (see
         // `dxf_prj_withheld`), so this DXF goes out without one.
         report.notes.push_back(dxf_prj_withheld(options.unit));
-    } else if (auto reopened = reopen_crs(path); !reopened) {
-        auto sidecar = write_prj_sidecar(path, srs);
+    } else if (auto reopened = reopen_crs(written_to); !reopened) {
+        // Into the staging directory under the target's stem: it moves into
+        // place with the file it describes.
+        auto sidecar = write_prj_sidecar(written_to, srs);
         if (!sidecar) co_return sidecar.error();
         report.notes.push_back(format->driver + " biçimi koordinat sistemi taşımaz; sistem '" +
-                               sidecar.value() +
+                               prj_sidecar_path(path) +
                                "' dosyasına yazıldı. Çizimi taşırken bu dosyayı da götürün, "
                                "yoksa koordinatlar etiketsiz kalır.");
     }
@@ -2218,6 +2227,14 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     else
         report.notes.push_back("Stil bilgisi bu sürümde yazılmadı; geometri, katman adı ve nesne "
                                "türü aktarıldı.");
+
+    // INTO PLACE, the whole set at once. A file of it that could not be moved
+    // is named, and the export is not called a success (TODOS F-05).
+    auto placed = place_staged(staged);
+    if (!placed) co_return placed.error();
+    if (dxf_out && options.unit != core::DrawingUnit::Metre)
+        if (std::string removed = remove_stale_prj(path); !removed.empty())
+            report.notes.push_back(std::move(removed));
     co_return report;
 #endif
 }

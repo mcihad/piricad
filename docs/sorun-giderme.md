@@ -649,6 +649,26 @@ onu yazamaz; referanslar DXF'te bütün görünür.
 [PATLAT](komutlar/explode.md) ile açıp sınırın dışında kalanı [BUDA](komutlar/trim.md) ile
 kesin; ya da AutoCAD'de XCLIP ile yeniden kırpın.
 
+### `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.`
+
+**Sebep.** Dışa aktarım yazılırken durduruldu. (Arayüzden durdurma Faz 1'de, uzun
+işlerin Durdur düğmesiyle gelecek.)
+
+**Çözüm.** Bir şey kaybolmadı: dosya hedefin yanında hazırlanıyordu ve yerine konmadı,
+eski dosya bayt bayt yerinde. Hazır olduğunuzda komutu yeniden çalıştırın. Bkz.
+[Yazma yarıda kalırsa](veri/dis-formatlar.md#yazma-yarıda-kalırsa).
+
+### `'...' yerine tam konamadı. Yerine konan: … Konamayan: …`
+
+**Sebep.** Dosya takımı (DXF ve `.prj`'si, bir görüntü ve world file'ı, bir yerleşimin
+sayfaları) hazırlandı, ama içinden biri yerine konamadı: başka bir programda açık
+(Windows'ta) ya da yerinde aynı adlı bir klasör var. Mesaj hangi dosyaların yenilendiğini
+ve hangilerinin yenilenmediğini tek tek sayar; takım şu an eski ve yeni dosyaların
+karışımı olabilir.
+
+**Çözüm.** Dosyaları kullanan programı kapatın (ya da yoldaki klasörü kaldırın) ve
+komutu yineleyin; bütün takım yeniden, birlikte yazılır.
+
 ## Program çöktüğünde
 
 Program bir çökme anında **yığın izini** standart hata akışına yazar:

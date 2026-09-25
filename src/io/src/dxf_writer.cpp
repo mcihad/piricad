@@ -7,6 +7,7 @@
 // TEXT — never a polygon standing in for a curve (the GDAL path's lasting
 // limitation, io.md R13). The DRW_* types stay inside this .cpp (io.md R2).
 #include "kentos_cad/io/dxf.hpp"
+#include "kentos_cad/io/staging.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
@@ -1384,23 +1385,28 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
                       "eksik veridir. AYAR koordinat_sistemi ile kurun.");
 
     const DRW::Version ver = dxf::drw_version_for_year(dxf_version_year(version));
-    dxfRW writer(path.c_str());
+    // WRITTEN BESIDE THE TARGET, MOVED ONTO IT WHEN WHOLE (io/staging.hpp): a
+    // cancel or a failure leaves the file that was there. A cancel used to
+    // remove the target itself — the half-written file, and with it the good
+    // one it had replaced.
+    Staging staged(path);
+    const std::string written_to = staged.path().string();
+    dxfRW writer(written_to.c_str());
     DxfSource source(doc, writer, options.unit, ver, stop);
     const bool ok = writer.write(&source, ver, /*binary=*/false);
-    if (source.cancelled()) {
-        std::error_code ignored;
-        std::filesystem::remove(path, ignored);
-        co_return err(ErrorCode::Cancelled, "Dışa aktarma durduruldu; dosya yazılmadı.");
-    }
+    if (source.cancelled())
+        co_return err(ErrorCode::Cancelled,
+                      "Dışa aktarma durduruldu; dosya yazılmadı, '" + path + "' olduğu gibi.");
     if (!ok)
         co_return err(ErrorCode::IoFailure,
                       "'" + path + "' yazılamadı (libdxfrw hata kodu " +
                           std::to_string(static_cast<int>(writer.getError())) +
-                          "). Dizin izinlerini ve diski denetleyin.");
+                          "). Dizin izinlerini ve diski denetleyin; varsa eski dosya olduğu gibi.");
 
     // The XDATA and the pattern lines the library cannot write, spliced in
-    // after the fact.
-    if (const auto st = splice_xdata(path, source.pending_xdata(), source.pending_inserts()); !st)
+    // after the fact — into the staged file, which moves once it is whole.
+    if (const auto st = splice_xdata(written_to, source.pending_xdata(), source.pending_inserts());
+        !st)
         co_return st.error();
 
     // The coordinate system beside the file, the only place DXF lets it go —
@@ -1411,7 +1417,7 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
     // says why and how to get one.
     if (options.unit != core::DrawingUnit::Metre) {
         source.report().diagnostics.note(Severity::Warning, dxf_prj_withheld(options.unit));
-    } else if (auto prj = write_prj_sidecar(path, options.crs); !prj) {
+    } else if (auto prj = write_prj_sidecar(written_to, options.crs); !prj) {
         if (prj.error().code == ErrorCode::Unsupported)
             source.report().diagnostics.note(Severity::Warning,
                                              ".prj yan dosyası bu yapıda yazılamadı (GDAL kapalı); "
@@ -1419,6 +1425,14 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
         else
             co_return prj.error();
     }
+
+    if (auto st = place_staged(staged); !st) co_return st.error();
+
+    // A `.prj` LEFT FROM AN EARLIER METRE EXPORT goes with the file it
+    // described, and that is said.
+    if (options.unit != core::DrawingUnit::Metre)
+        if (const std::string removed = remove_stale_prj(path); !removed.empty())
+            source.report().diagnostics.note(Severity::Info, removed);
 
     DxfReport report = std::move(source.report());
     report.version   = dxf::acad_name(ver);

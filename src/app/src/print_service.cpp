@@ -6,6 +6,7 @@
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/io/pdf_encrypt.hpp"
+#include "kentos_cad/io/staging.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/scene.hpp"
@@ -31,7 +32,6 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
-#include <system_error>
 #include <utility>
 
 namespace kentos::app {
@@ -177,38 +177,32 @@ void PrintService::announce()
 
 namespace {
 
-/// WRITTEN BESIDE THE TARGET AND MOVED INTO PLACE.
+/// Where a staged file is, as Qt names paths.
+QString staged_at(const std::filesystem::path& path)
+{
+    return QString::fromStdString(path.string());
+}
+
+/// WRITTEN BESIDE THE TARGET AND MOVED INTO PLACE (io/staging.hpp).
 ///
 /// A plot that was interrupted — the machine slept, the disk filled, somebody
 /// closed the program — used to leave a truncated PDF at the path the user
 /// named. It has the right name and a plausible size, and the way it is found
 /// out is on the plotter. `io/project_writer.cpp` has done this since the native
 /// format existed; this is the same answer for the other things this program
-/// writes (TODOS C-05: write to a temporary, verify, then publish atomically).
+/// writes (TODOS C-05, F-05: write to a staging directory, verify, then move).
 ///
-/// `std::filesystem::rename` replaces the destination in one step on every
-/// filesystem this product supports, so there is no moment at which neither the
-/// old file nor the new one is there.
-QString beside(const QString& target)
+/// VERIFIED FIRST: Qt's writers say nothing when they could not open their file,
+/// so a file that is not there, or is empty, is the only sign — and it moves
+/// nothing.
+core::Status publish(io::Staging& staged, const char* what)
 {
-    return target + QStringLiteral(".yeni");
-}
-
-core::Status publish(const QString& temp, const QString& target)
-{
-    if (!QFileInfo::exists(temp) || QFileInfo(temp).size() == 0) {
-        QFile::remove(temp);
-        return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + target.toStdString());
-    }
-    std::error_code ec;
-    std::filesystem::rename(std::filesystem::path(temp.toStdString()),
-                            std::filesystem::path(target.toStdString()), ec);
-    if (ec) {
-        QFile::remove(temp);
+    const QFileInfo written(staged_at(staged.path()));
+    if (!written.exists() || written.size() == 0)
         return core::err(core::ErrorCode::IoFailure,
-                         "PDF yerine konamadı: " + target.toStdString() + " — " + ec.message());
-    }
-    return core::ok();
+                         std::string(what) + " yazılamadı: " + staged.target().string() +
+                             "; varsa eski dosya olduğu gibi.");
+    return io::place_staged(staged);
 }
 
 } // namespace
@@ -506,6 +500,12 @@ write_sheet_image(const QString& path, const core::Layout& sheet, SheetFormat fo
     const std::size_t pages = sheet.pages.size();
     std::vector<std::string> written;
 
+    // EVERY PAGE AND ITS WORLD FILE INTO ONE STAGING DIRECTORY, moved together
+    // once the last is written: a sheet that failed on page three used to leave
+    // pages one and two new and the rest old, under names that say they belong
+    // together (io/staging.hpp).
+    io::Staging staged(path.toStdString());
+
     for (std::size_t i = 0; i < pages; ++i) {
         const core::LayoutPage& one = sheet.pages[i];
         const int w_px = std::max(1, static_cast<int>(std::lround(one.w / 1000.0 * px_per_mm)));
@@ -516,8 +516,8 @@ write_sheet_image(const QString& path, const core::Layout& sheet, SheetFormat fo
             out = target.absolutePath() + QLatin1Char('/') + target.completeBaseName() +
                   QStringLiteral("-%1.").arg(i + 1) + target.suffix();
 
-        const QString temp = beside(out);
-        QFile::remove(temp);
+        const QString temp =
+            staged_at(staged.directory() / QFileInfo(out).fileName().toStdString());
 
         if (format == SheetFormat::Svg) {
             QSvgGenerator svg;
@@ -543,10 +543,12 @@ write_sheet_image(const QString& path, const core::Layout& sheet, SheetFormat fo
             }
             if (!canvas.save(temp, format == SheetFormat::Png ? "PNG" : "TIFF"))
                 return core::err(core::ErrorCode::IoFailure,
-                                 "Görüntü yazılamadı: " + out.toStdString());
+                                 "Görüntü yazılamadı: " + out.toStdString() +
+                                     "; hiçbir sayfa değişmedi.");
         }
-
-        if (auto st = publish(temp, out); !st) return st.error();
+        if (!QFileInfo::exists(temp) || QFileInfo(temp).size() == 0)
+            return core::err(core::ErrorCode::IoFailure, "Sayfa yazılamadı: " + out.toStdString() +
+                                                             "; hiçbir sayfa değişmedi.");
         written.push_back(out.toStdString());
 
         // ---- AND THE WORLD FILE, for a raster with an aimed map frame -------
@@ -555,17 +557,27 @@ write_sheet_image(const QString& path, const core::Layout& sheet, SheetFormat fo
             if (map != nullptr) {
                 const std::string six = world_file_for(sheet, *map, one, px_per_mm);
                 if (!six.empty()) {
+                    // Beside its page in the staging directory, under the name
+                    // it will have: it moves with the picture it places. A world
+                    // file that cannot be written fails the sheet — a picture
+                    // said to be placed and not placed is the lie F-05 forbids.
                     const QString wf = world_file_path(out, format);
-                    QFile file(wf);
-                    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                        file.write(six.c_str(), static_cast<qint64>(six.size()));
-                        file.close();
-                        written.push_back(wf.toStdString());
-                    }
+                    QFile file(world_file_path(temp, format));
+                    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                        file.write(six.c_str(), static_cast<qint64>(six.size())) !=
+                            static_cast<qint64>(six.size()))
+                        return core::err(core::ErrorCode::IoFailure,
+                                         "Dünya dosyası yazılamadı: " + wf.toStdString() +
+                                             "; hiçbir sayfa değişmedi.");
+                    file.close();
+                    written.push_back(wf.toStdString());
                 }
             }
         }
     }
+
+    // THE WHOLE SET INTO PLACE, the pages after their world files.
+    if (auto st = io::place_staged(staged); !st) return st.error();
 
     std::string said = "Çıktı yerleşimi yazıldı: " + sheet.name + ", " + std::to_string(pages) +
                        " sayfa, " + std::to_string(resolution) + " dpi";
@@ -730,8 +742,8 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             return core::err(core::ErrorCode::IoFailure,
                              "PDF yazılamadı: dizin yok — " + target.absolutePath().toStdString());
 
-        const QString temp = beside(path);
-        QFile::remove(temp);
+        io::Staging staged(path.toStdString());
+        const QString temp = staged_at(staged.path());
         {
             QPdfWriter writer(temp);
             writer.setPageLayout(page);
@@ -745,7 +757,7 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
         // VERIFIED, THEN PUBLISHED. Until this line the user's path still holds
         // whatever it held before — an interrupted plot leaves the old sheet
         // rather than a truncated new one (TODOS C-05).
-        if (auto st = publish(temp, path); !st) return st.error();
+        if (auto st = publish(staged, "PDF"); !st) return st.error();
 
         const core::LayoutItem* map = sheet->first_map();
         // THE FIRST PAGE'S SIZE, AND "karma" WHEN THEY DIFFER. Printing one size
@@ -814,12 +826,14 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
                          "Bu yapı PDF şifreleme ve yazar alanını içermiyor (KENTOS_WITH_QPDF). "
                          "sifre, sahip_sifresi ve yazar olmadan yazın.");
 
-    // Qt writes the plain file; when a password or an author was asked for,
-    // it goes to a sibling first and qpdf writes the final one.
-    // ALWAYS A SIBLING, whether or not qpdf runs afterwards: the encrypted path
-    // needed one anyway, and the plain one wrote straight onto the user's file.
-    const QString plain = post ? path + QStringLiteral(".kentos-tmp") : beside(path);
-    QFile::remove(plain);
+    // Qt writes the plain file into a staging directory; when a password or an
+    // author was asked for, qpdf reads it and writes the final one into a second
+    // staging directory. ALWAYS STAGED, whether or not qpdf runs afterwards: the
+    // encrypted path needed a sibling anyway, the plain one wrote straight onto
+    // the user's file, and qpdf writing the target itself would leave a
+    // truncated one behind a failure half way (io/staging.hpp).
+    io::Staging plain_staged(path.toStdString());
+    const QString plain = staged_at(plain_staged.path());
     {
         QPdfWriter writer(plain);
         writer.setPageLayout(layout_of(profile));
@@ -828,26 +842,25 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
         if (!request.title.empty()) writer.setTitle(utf8(request.title));
         writer.setDocumentXmpMetadata(sheet_xmp(utf8(request.title)));
         const QRect paint = writer.pageLayout().paintRectPixels(writer.resolution());
-        if (paint.isEmpty()) {
-            QFile::remove(plain);
+        if (paint.isEmpty())
             return core::err(core::ErrorCode::InvalidArgument,
                              "Kâğıtta yazdırılacak alan kalmadı; kenar boşluğunu küçültün.");
-        }
         paint_window(writer, paint.width(), paint.height(),
                      static_cast<double>(writer.resolution()), document_,
                      fitWindow(profile, request.window));
     }
-    if (!QFileInfo::exists(plain) || QFileInfo(plain).size() == 0) {
-        QFile::remove(plain);
-        return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + plain.toStdString());
-    }
     if (post) {
-        // qpdf READS the plain sibling and WRITES the target, which is already a
-        // publish: the user's path is untouched until qpdf succeeds.
-        auto st = io::pdf_encrypt(plain.toStdString(), path.toStdString(), finish);
-        QFile::remove(plain);
-        if (!st) return st.error();
-    } else if (auto st = publish(plain, path); !st) {
+        if (!QFileInfo::exists(plain) || QFileInfo(plain).size() == 0)
+            return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + path.toStdString() +
+                                                             "; varsa eski dosya olduğu gibi.");
+        // qpdf READS the plain staged file and WRITES another, which moves onto
+        // the target only when qpdf is done: the user's path is untouched until
+        // then.
+        io::Staging sealed(path.toStdString());
+        if (auto st = io::pdf_encrypt(plain.toStdString(), sealed.path().string(), finish); !st)
+            return st.error();
+        if (auto st = publish(sealed, "PDF"); !st) return st.error();
+    } else if (auto st = publish(plain_staged, "PDF"); !st) {
         return st.error();
     }
 

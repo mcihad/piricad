@@ -308,6 +308,44 @@ kenarlı çokgen çokgen kalır, daireye dönüşmez.
 Desteklenmeyen bir geometri türüyle karşılaşılırsa o öğe atlanır ve kaç tanesinin
 atlandığı transkriptte söylenir. Sessizce düşürülmez.
 
+## Yazma yarıda kalırsa
+
+Bir dışa aktarım, yazdırma ya da liste yazımı **dosyanızın üstüne doğrudan yazmaz.**
+Dosya önce hedefin yanında gizli bir hazırlık klasörüne (`.kentos-` ile başlayan) kendi
+adıyla yazılır; yazım hatasız biterse yerine taşınır, klasör silinir. Taşıma aynı
+diskte bir yeniden adlandırmadır, kopyalama değildir; hedef hiçbir an yarım bir dosya
+tutmaz.
+
+- **Yazım yarıda kalırsa** — disk doldu, izin yok, bir sayfa çizilemedi — hedefteki
+  dosya **bayt bayt olduğu gibi** kalır; ilk kez yazılacak bir dosya hiç oluşmaz.
+  Hazırlık klasörü de kalmaz. Süren bir dışa aktarımı arayüzden **durdurmak** Faz 1'de,
+  uzun işlerin ilerleme ve Durdur düğmesiyle gelecek; durdurulan dışa aktarım da aynı
+  biçimde hiçbir şey yazmamış sayılacak.
+- **Birlikte yazılan dosyalar birlikte taşınır:** DXF ve `.prj`'si, PNG ve `.pgw`'si,
+  çok sayfalı bir yerleşimin bütün sayfaları. Üçüncü sayfası çizilemeyen bir yerleşim
+  ilk iki sayfayı da değiştirmez; eskiden ilk ikisi yeni, gerisi eski kalıyordu.
+- **Taşıma bile yarıda kalabilir:** takımdan bir dosya başka bir programda açıksa
+  (Windows'ta) ya da onun yerinde bir klasör duruyorsa yerine konamaz. Program bunu
+  başarı saymaz; hangi dosyaların yenilendiğini ve hangilerinin yenilenemediğini **tek
+  tek** söyler:
+
+  ```text
+  'teslim/ada12.dxf' yerine tam konamadı. Yerine konan: teslim/ada12.dxf. Konamayan: teslim/ada12.prj (dosya başka bir programda açık). Hedefteki dosya takımı eski ve yeni dosyaların karışımı olabilir; dosyaları kullanan programı kapatıp dışa aktarmayı yineleyin.
+  ```
+
+  Parantezdeki neden şunlardan biridir: *yerinde aynı adlı bir klasör var*, *dosya başka
+  bir programda açık*, *izin yok ya da dosya başka bir programda açık*, *disk dolu*, *disk
+  salt okunur*; bunların dışındaki bir nedeni işletim sistemi nasıl söylediyse öyle
+  yazılır. Takımdan önce yardımcı dosyalar, en son sizin adını verdiğiniz dosya taşınır.
+- **Aynı komutu yeniden çalıştırmak çoğaltmaz:** dosya yeniden, eskisinin yerine yazılır;
+  ekleme yapılmaz, yanına ikinci bir kopya konmaz.
+- **Metre dışa aktarımından kalan `.prj`**, aynı dosya milimetre olarak yeniden
+  yazılınca kaldırılır ve not bunu söyler: yerinde kalsaydı yeni dosyanın sayılarını
+  metre diye etiketlerdi.
+
+Proje dosyası (`.pcad`) da aynı güvencededir; o, kendi yanına yazıp yerine koyar
+([KAYDET](../komutlar/save.md)).
+
 ## Ağdan veri okunmaz
 
 `/vsicurl/`, `/vsis3/`, `/vsizip/` gibi sanal dosya sistemi yolları reddedilir.
@@ -346,5 +384,8 @@ make doctor
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
 | `Çizimde dışa aktarılacak nesne yok` | Çizim boş ya da her şey silinmiş | Önce çizin |
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
+| `Dışa aktarma durduruldu; dosya yazılmadı, '...' olduğu gibi.` | Yazım sırasında durduruldu (arayüzdeki Durdur düğmesi Faz 1'de gelecek) | Hazır olduğunuzda yeniden çalıştırın; eski dosya yerinde |
+| `'...' yerine tam konamadı. Yerine konan: … Konamayan: …` | Takımdan bir dosya başka bir programda açık ya da yerinde bir klasör var | Dosyaları kullanan programı kapatıp yineleyin ([Yazma yarıda kalırsa](#yazma-yarıda-kalırsa)) |
+| `'....prj' kaldırıldı: önceki bir metre dışa aktarımından kalmıştı …` (not) | Metre DXF'in yerine milimetre DXF yazıldı | Bir şey gerekmez; `.prj` isteniyorsa `AYAR çizim_birimi metre` ile yeniden aktarın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yarıda kalan dışa aktarım eski dosyayı silmiyor; dosya takımı birlikte taşınıyor (F-05, 1. aşama)
+
+- **Durdurulan DXF dışa aktarımı hedef dosyayı siliyordu.** Durdurulan yazım, yarım
+  yazılmış dosyayı — ve onunla birlikte yerini aldığı sağlam dosyayı — kaldırıyordu; elde
+  ikisi de kalmıyordu. GeoPackage yolu ise yazmaya başlamadan önce hedefi siliyordu: iptal, ret ya da
+  dolu disk dosyasız bırakıyordu. Artık her dışa aktarım, yazdırma, nokta listesi, QML stil
+  dosyası ve çıktı şablonu önce hedefin yanındaki gizli bir hazırlık klasörüne (`.kentos-…`)
+  kendi adıyla yazılıyor ve ancak hatasız bitince yerine taşınıyor; durdurma ya da hata
+  hedefi **bayt bayt** olduğu gibi bırakıyor, klasör kalmıyor.
+- **Birlikte yazılan dosyalar birlikte taşınıyor:** DXF ve `.prj`'si, PNG/TIFF ve world
+  file'ı, çok sayfalı yerleşimin bütün sayfaları. Üçüncü sayfası çizilemeyen bir yerleşim
+  artık ilk iki sayfayı yenileyip gerisini eski bırakmıyor; yazılamayan world file sessizce
+  atlanmıyor, çıktıyı durduruyor. Şifreli PDF'te qpdf'in yazdığı dosya da ancak bitince
+  yerine konuyor.
+- **Taşıma yarıda kalırsa dosya dosya söyleniyor:** takımdan biri başka bir programda açıksa
+  `'…' yerine tam konamadı. Yerine konan: … Konamayan: …` — başarı denmiyor.
+- **Metre dışa aktarımından kalan `.prj`**, aynı DXF milimetre olarak yeniden yazılınca
+  kaldırılıyor ve not bunu söylüyor; yerinde kalsaydı milimetreleri metre diye etiketlerdi.
+- Aynı dışa aktarımı yeniden çalıştırmak dosyayı yeniden yazıyor, çoğaltmıyor (sınandı:
+  GeoPackage, DXF, nokta listesi). Kılavuz: [Yazma yarıda kalırsa](docs/veri/dis-formatlar.md#yazma-yarıda-kalırsa).
+
 ### Düzeltildi — paftanın kopan bağı söyleniyor; alan tablosu boş basılmıyor (F-04, 4. aşama)
 
 - **Çizimde olmayan bir katmanı okuyan pafta tablosu artık boş basılmıyor.** Önceden başka
