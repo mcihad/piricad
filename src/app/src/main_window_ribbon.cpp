@@ -683,6 +683,7 @@ void MainWindow::buildRibbon()
 
     SARibbonPanel* blocks = drawTab->addPanel(tr("Blok"));
     large(blocks, actInsert_);
+    small(blocks, actBlockLibrary_);
     small(blocks, actBlock_);
     small(blocks, actExplode_);
 

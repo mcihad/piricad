@@ -316,6 +316,10 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
         co_return co_await clipboard_paste(request.tx, std::move(where), request.at,
                                            request.in_place);
     }
+
+    case command::FileRequest::Verb::BlockLibrary:
+        co_return co_await block_library(request.tx, request.path, request.block,
+                                         request.resolved_block, request.library_blocks);
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }
@@ -489,7 +493,7 @@ core::Result<std::string> FileService::clipboard_copy(std::string path,
         command::Transaction tx(scratch, "pano");
         auto summary = tx.adopt_from(bus_.document(), keys);
         if (!summary) return summary.error();
-        copied = summary.value().entities;
+        copied = summary.value().standalone;
         // THE BASE POINT, WHEN THE USER GAVE ONE, TRAVELS AS A GUIDE CROSS: one
         // vertical and one horizontal guide through it — the drafting
         // furniture a reference point is — in the payload's own guide store,
@@ -603,6 +607,123 @@ command::Task<core::Result<std::string>> FileService::clipboard_paste(command::T
         said += ".";
     for (const std::string& note : s.notes)
         said += "  not: " + note;
+    co_return said;
+}
+
+// ------------------------------------------------------- BLOK KİTAPLIĞI ----
+
+command::Task<core::Result<std::string>>
+FileService::block_library(command::Transaction* tx, std::string path, std::string block,
+                           std::string* resolved, std::vector<std::string>* names)
+{
+    if (tx == nullptr && names == nullptr)
+        co_return err(ErrorCode::Internal, "BLOKEKLE dosya= bir işlem içinde çalışmak zorunda.");
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec))
+        co_return err(ErrorCode::NotFound, "Blok kitaplığı bulunamadı: " + path);
+
+    // THE FILE, READ INTO A SCRATCH DOCUMENT by the reader its kind has — the
+    // native project, a DXF or a DWG, what a symbol library is kept in.
+    core::Document library;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Registry registry;
+    command::Bus side{library, registry, journal, undo};
+    core::Settings ignored{core::builtin_settings(), core::SettingScopeMask::Project};
+    // A SYMBOL IS DRAWN IN ITS DEFINITION'S OWN COORDINATES: the file's system
+    // is not a question a library is asked, so a DXF or DWG that declares none
+    // is read in the drawing's — the system nothing in it is placed by.
+    ImportOptions reading;
+    reading.project_crs = effective_crs(bus_);
+    if (reading.project_crs.empty()) reading.project_crs = bus_.document().crs().id();
+    {
+        command::Transaction into(library, "kitaplik-oku");
+        if (looks_like_dxf(path)) {
+            if (!dxf_backend_available())
+                co_return err(ErrorCode::Unsupported, "Bu yapıda DXF okuyucu yok.");
+            auto read = co_await import_dxf(into, path, reading, stop_.get_token());
+            if (!read) co_return read.error();
+        } else if (looks_like_dwg(path)) {
+            if (!dwg_backend_available())
+                co_return err(ErrorCode::Unsupported,
+                              "Bu yapıda DWG okuyucu yok; kitaplığı DXF olarak kaydedin.");
+            auto read = co_await import_dwg(into, path, reading, stop_.get_token());
+            if (!read) co_return read.error();
+        } else {
+            auto read = co_await read_project(into, path, ignored, stop_.get_token());
+            if (!read) co_return read.error();
+        }
+    }
+
+    // WHICH BLOCK: the one named, the file's only one, or — a file with none —
+    // the whole drawing, named after the file, the way every CAD inserts one.
+    const core::BlockTable& blocks = library.blocks();
+    std::string known;
+    for (const core::BlockDef& d : blocks.all())
+        known += (known.empty() ? "" : ", ") + d.name;
+    if (names != nullptr) {
+        names->clear();
+        for (const core::BlockDef& d : blocks.all())
+            names->push_back(d.name);
+        co_return "'" + path + "': " + std::to_string(names->size()) + " blok.";
+    }
+    core::BlockId chosen   = core::kNoBlock;
+    const std::string stem = std::filesystem::path(path).stem().string();
+    // THE FILE'S OWN NAME, for a file with no blocks, names its whole drawing —
+    // which is what the journal records, so a replay reads the same thing.
+    const bool whole_by_name = !block.empty() && blocks.size() == 0 && block == stem;
+    if (!block.empty() && !whole_by_name) {
+        chosen = blocks.find(block);
+        if (chosen == core::kNoBlock)
+            co_return err(ErrorCode::NotFound,
+                          "'" + path + "' içinde '" + block + "' bloğu yok." +
+                              (known.empty() ? " Dosyada blok yok; ad= vermeden bütün çizim "
+                                               "blok olarak eklenir."
+                                             : " Bloklar: " + known + "."));
+    } else if (blocks.size() == 1 && !whole_by_name) {
+        chosen = 0;
+    } else if (blocks.size() > 1) {
+        co_return err(ErrorCode::InvalidArgument,
+                      "'" + path + "' içinde birden çok blok var; hangisi: ad=<blok>. Bloklar: " +
+                          known + ".");
+    }
+
+    std::string name;
+    command::Transaction::AdoptSummary summary;
+    if (chosen != core::kNoBlock) {
+        name = blocks.at(chosen).name;
+        if (bus_.document().blocks().find(name) != core::kNoBlock) {
+            if (resolved != nullptr) *resolved = name;
+            co_return "'" + name + "' bloğu çizimde zaten var; çizimdeki tanım kullanıldı.";
+        }
+        const core::BlockId wanted[1]{chosen};
+        auto adopted = tx->adopt_from(library, {}, wanted);
+        if (!adopted) co_return adopted.error();
+        summary = adopted.value();
+    } else {
+        name = stem;
+        if (bus_.document().blocks().find(name) != core::kNoBlock) {
+            if (resolved != nullptr) *resolved = name;
+            co_return "'" + name + "' bloğu çizimde zaten var; çizimdeki tanım kullanıldı.";
+        }
+        std::vector<core::EntityKey> sheet;
+        for (core::EntityId e = 0; e < library.entities().size(); ++e)
+            if (library.entities().standalone(e)) sheet.push_back(library.key_of(e));
+        if (sheet.empty())
+            co_return err(ErrorCode::NotFound, "'" + path + "' boş: blok olacak bir şey yok.");
+        auto made = tx->add_block(name, "Kitaplıktan: " + path, core::Point2{0, 0});
+        if (!made) co_return made.error();
+        auto adopted = tx->adopt_from(library, sheet, {}, made.value());
+        if (!adopted) co_return adopted.error();
+        summary = adopted.value();
+    }
+    if (resolved != nullptr) *resolved = name;
+    std::string said =
+        "'" + name + "' bloğu kitaplıktan alındı: " + std::to_string(summary.entities) + " nesne";
+    if (summary.layers > 0) said += ", " + std::to_string(summary.layers) + " yeni katman";
+    said += ".";
+    for (const std::string& n : summary.notes)
+        said += "  not: " + n;
     co_return said;
 }
 

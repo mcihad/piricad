@@ -1887,12 +1887,13 @@ cad.insert(
     column_spacing: int,
     row_spacing: int,
     values: list[str],
+    file: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `name` | `str` | `ad` | Yerleştirilecek bloğun adı |
+| `name` | `str` | `ad` | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı |
 | `point` | `Coord` | `nokta` | Ekleme noktası [mm, Sağa (Y) önce] |
 | `scale` | `float` | `olcek` | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `scale_y` | `float` | `olcek_y` | Y ölçeği, farklıysa; varsayılan olcek |
@@ -1902,6 +1903,7 @@ cad.insert(
 | `column_spacing` | `int` | `sutun_aralik` | Sütunlar arası, milimetre, döndürülmüş eksende |
 | `row_spacing` | `int` | `satir_aralik` | Satırlar arası, milimetre, döndürülmüş eksende |
 | `values` | `list[str]` | `deger` | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
+| `file` | `str` | `dosya` | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
 
 [Komut sayfası](../komutlar/insert.md)
 

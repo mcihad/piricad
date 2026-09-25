@@ -978,6 +978,24 @@ void MainWindow::buildActions()
         methodTool(Glyph::BlockBase, tr("Taban Noktası"), QStringLiteral("BLOKDÜZENLE islem=taban"),
                    tr("BLOKDÜZENLE islem=taban — seçili bloğun taban noktasını "
                       "taşır; referanslar çizildikleri yerde kalır  ·  kısaltma: BDZ"));
+    // A BLOCK FROM A LIBRARY FILE: the file is chosen here, and the rest is
+    // BLOKEKLE's — which block when the file holds several, where, and each
+    // field's value — asked as it asks for a block of the drawing's own.
+    actBlockLibrary_ = new QAction(tr("Kitaplıktan Ekle"), this);
+    actBlockLibrary_->setData(static_cast<int>(Glyph::BlockInsert));
+    // No `kToolCommand`: the press opens a file window before any command runs,
+    // like Proje Aç, and a probe that presses every tool must not be held by it.
+    actBlockLibrary_->setObjectName(QStringLiteral("blockLibrary"));
+    actBlockLibrary_->setToolTip(tr("BLOKEKLE dosya= — bir proje, DXF ya da DWG dosyasındaki "
+                                    "bloğu bu çizime getirir ve yerleştirir"));
+    actBlockLibrary_->setStatusTip(actBlockLibrary_->toolTip());
+    connect(actBlockLibrary_, &QAction::triggered, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(
+            this, tr("Blok kitaplığı"), QFileInfo(controller_->currentFile()).absolutePath(),
+            tr("Blok kitaplığı (*.pcad *.dxf *.dwg);;Tüm dosyalar (*)"));
+        if (path.isEmpty()) return;
+        controller_->runCommand(QStringLiteral("BLOKEKLE dosya=\"%1\"").arg(path));
+    });
     // SAVE AND GIVE UP take the objects of the open edit, which only the shell
     // knows (`blockEditLine`), so their lines are made when they are pressed.
     const auto editStep = [this](Glyph glyph, const QString& text, const QString& name,
@@ -5707,6 +5725,82 @@ int MainWindow::probeRealMouse()
                       .arg(static_cast<double>(base.y) / 1000.0, 0, 'f', 3));
             shoot("blok-taban-tasindi");
             runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
+        }
+
+        // ---- 25. A SYMBOL FROM A LIBRARY FILE (TODOS C-13) ----
+        //
+        // A file holding two symbols is written through the clipboard's own
+        // payload; in a fresh drawing BLOKEKLE dosya= asks which of the two,
+        // offering both, and the one picked is placed where the canvas is clicked.
+        {
+            fresh({QStringLiteral("DAİRE merkez=0,0 cevre=1,0"), QStringLiteral("ÇİZGİ -1,0 1,0"),
+                   QStringLiteral("ÇİZGİ 5,0 5,3")});
+            const std::int64_t opening = first_key();
+            runScriptLine(QStringLiteral("BLOK ad=KUYU taban=0,0 nesneler=%1 nesneler=%2")
+                              .arg(opening)
+                              .arg(opening + 1));
+            endCommand();
+            runScriptLine(QStringLiteral("BLOK ad=AGAC taban=5,0 nesneler=%1").arg(opening + 2));
+            endCommand();
+            const core::Document& doc = controller_->document();
+            QString references;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+                if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind &&
+                    (doc.entities().flags[e] & core::FlagInBlock) == 0)
+                    references += QStringLiteral(" nesneler=%1").arg(core::raw(doc.key_of(e)));
+            const QString library =
+                (shooting ? into : QDir::tempPath()) + QStringLiteral("/kitaplik-probe.pcad");
+            runScriptLine(QStringLiteral("PANOYAKOPYALA") + references +
+                          QStringLiteral(" dosya=\"%1\"").arg(library));
+            endCommand();
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            QCoreApplication::processEvents();
+
+            runScriptLine(QStringLiteral("BLOKEKLE dosya=\"%1\"").arg(library));
+            QCoreApplication::processEvents();
+            const command::Session* asked = controller_->session();
+            QStringList offered;
+            if (asked != nullptr && asked->waiting())
+                for (const std::string& c : asked->prompt().choices)
+                    offered << QString::fromStdString(c);
+            check(offered.contains(QStringLiteral("KUYU")) &&
+                      offered.contains(QStringLiteral("AGAC")),
+                  QStringLiteral("kitaplıktaki iki blok soruda seçenek olarak sunuldu (%1)")
+                      .arg(offered.join(QStringLiteral(", "))));
+            shoot("kitaplik-hangi-blok");
+            controller_->supplyText(QStringLiteral("KUYU"));
+            QCoreApplication::processEvents();
+            const QPointF there(canvas_->width() * 0.5, canvas_->height() * 0.5);
+            onCanvas(QEvent::MouseMove, there, Qt::NoButton);
+            onCanvas(QEvent::MouseButtonPress, there, Qt::LeftButton);
+            onCanvas(QEvent::MouseButtonRelease, there, Qt::LeftButton);
+            endCommand();
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+            const core::BlockId kuyu = doc.blocks().find("KUYU");
+            std::size_t members      = 0;
+            if (kuyu != core::kNoBlock)
+                for (const core::EntityKey k : doc.blocks().at(kuyu).members)
+                    if (const core::EntityId m = doc.slot_of(k);
+                        m != core::kNoEntity && doc.alive(m))
+                        ++members;
+            std::size_t runs_drawn = 0;
+            for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+                if (!doc.alive(e) || doc.entities().kind[e] != core::kBlockReferenceKind) continue;
+                core::EmitBuffer runs;
+                if (core::entity_outline(doc, e, runs)) runs_drawn += runs.run_total();
+            }
+            check(kuyu != core::kNoBlock && doc.blocks().find("AGAC") == core::kNoBlock &&
+                      members == 2 && runs_drawn == 2,
+                  QStringLiteral("seçilen KUYU kitaplıktan bütün geldi ve tıklanan yere kondu "
+                                 "(üye %1, çizilen %2); AGAC gelmedi")
+                      .arg(members)
+                      .arg(runs_drawn));
+            runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.3"));
+            QCoreApplication::processEvents();
+            shoot("kitaplik-yerlesti");
         }
     }
 

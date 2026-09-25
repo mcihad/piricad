@@ -95,6 +95,14 @@ struct FileRequest
 
         /// Read such a file and place what is in it at `at`, as ONE undo step.
         ClipboardPaste,
+
+        /// A BLOCK TAKEN FROM A LIBRARY FILE (TODOS C-13): read a project, DXF or
+        /// DWG file and bring one of its block definitions into this drawing,
+        /// whole, inside the calling command's transaction — `block` names it,
+        /// or the file's only block, or the whole drawing as a block named
+        /// after the file. The name it is known by here is written to
+        /// `resolved_block`, for `BLOKEKLE` to place.
+        BlockLibrary,
     };
 
     Verb verb{Verb::Open}; ///< which operation to carry out
@@ -151,6 +159,20 @@ struct FileRequest
     /// the user's own base point (`PANOYAKOPYALA tabanli=evet`), or nothing for
     /// the payload's lower-left corner (TODOS C-08).
     std::optional<core::Point2> base;
+
+    /// BlockLibrary: the block wanted from the file; empty takes the file's
+    /// only block, or the whole drawing when it has none.
+    std::string block;
+
+    /// BlockLibrary: where the name of the block brought in is written — the
+    /// block's own name, or the file's name for a whole drawing. Null asks for
+    /// nothing back.
+    std::string* resolved_block{nullptr};
+
+    /// BlockLibrary: when set, the file's block names are written here and
+    /// NOTHING is brought in — what `BLOKEKLE` asks first, to offer the names
+    /// when the file holds more than one. Empty for a file with none.
+    std::vector<std::string>* library_blocks{nullptr};
 };
 
 /// One database operation, asked for by `VERİTABANI` and carried out by /src/io.

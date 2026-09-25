@@ -6335,3 +6335,223 @@ TEST_CASE("IO: tanımında silinmiş üye olan blokla kaydedilen dosya yine aç�
     CHECK_EQ(reloaded.doc.content_hash(), hash);
     CHECK_EQ(reloaded.doc.live_entity_count(), written.doc.live_entity_count());
 }
+
+TEST_CASE("IO: blok referansını aynı çizime kopyalayıp yapıştırmak tanımı büyütmez")
+{
+    // A payload that carries a reference carries its definition too. Pasted
+    // where a block of that name already is, the drawing's own definition is
+    // the one used — the rule every CAD keeps — and the payload's members are
+    // not piled onto it: the symbol would have drawn twice over, and grown
+    // with every paste.
+    TempDir dir("blok-yapistir");
+    const std::string path = dir.file("pano.pcad");
+    Rig r;
+    REQUIRE(r.bus.execute_line("DAİRE merkez=0,0 cevre=1,0", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇİZGİ -1,0 1,0", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("BLOK ad=KAPAK taban=0,0 nesneler=1 nesneler=2", Origin::Test).ok());
+    const core::BlockId kapak = r.doc.blocks().find("KAPAK");
+    const auto live_members   = [&r, kapak] {
+        std::size_t n = 0;
+        for (const core::EntityKey k : r.doc.blocks().at(kapak).members)
+            if (const core::EntityId m = r.doc.slot_of(k); m != core::kNoEntity && r.doc.alive(m))
+                ++n;
+        return n;
+    };
+    REQUIRE_EQ(live_members(), std::size_t{2});
+    std::int64_t ref = 0;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+        if (r.doc.alive(e) && r.doc.entities().kind[e] == core::kBlockReferenceKind)
+            ref = static_cast<std::int64_t>(core::raw(r.doc.key_of(e)));
+    REQUIRE(r.bus
+                .execute_line("PANOYAKOPYALA nesneler=" + std::to_string(ref) + " dosya=\"" + path +
+                                  "\"",
+                              Origin::Test)
+                .ok());
+    auto pasted = r.bus.execute_line("YAPIŞTIR nokta=10,0 dosya=\"" + path + "\"", Origin::Test);
+    if (!pasted) FAIL_WITH("YAPIŞTIR", pasted.error().message);
+    CHECK_EQ(live_members(), std::size_t{2});
+    CHECK_MESSAGE(r.transcript.find("çizimdeki tanım kullanıldı") != std::string::npos,
+                  r.transcript);
+    CHECK(r.transcript.find("Panoya alındı: 1 nesne") != std::string::npos);
+
+    // INTO ANOTHER DRAWING the definition comes whole, and the symbol draws —
+    // it used to arrive as a name with no members, drawing nothing.
+    Rig other;
+    auto across = other.bus.execute_line("YAPIŞTIR nokta=0,0 dosya=\"" + path + "\"", Origin::Test);
+    if (!across) FAIL_WITH("YAPIŞTIR", across.error().message);
+    const core::BlockId theirs = other.doc.blocks().find("KAPAK");
+    REQUIRE(theirs != core::kNoBlock);
+    CHECK_EQ(other.doc.blocks().size(), std::size_t{1}); ///< no stray empty definitions
+    std::size_t drawn_members = 0;
+    for (const core::EntityKey k : other.doc.blocks().at(theirs).members)
+        if (const core::EntityId m = other.doc.slot_of(k);
+            m != core::kNoEntity && other.doc.alive(m))
+            ++drawn_members;
+    CHECK_EQ(drawn_members, std::size_t{2});
+    for (core::EntityId e = 0; e < other.doc.entities().size(); ++e) {
+        if (!other.doc.alive(e) || other.doc.entities().kind[e] != core::kBlockReferenceKind)
+            continue;
+        core::EmitBuffer runs;
+        REQUIRE(core::entity_outline(other.doc, e, runs));
+        CHECK_EQ(runs.run_total(), std::size_t{2});
+    }
+}
+
+namespace {
+
+/// The live members of block `name` in `doc`.
+std::size_t live_members_of(const core::Document& doc, const std::string& name)
+{
+    const core::BlockId b = doc.blocks().find(name);
+    if (b == core::kNoBlock) return 0;
+    std::size_t n = 0;
+    for (const core::EntityKey k : doc.blocks().at(b).members)
+        if (const core::EntityId m = doc.slot_of(k); m != core::kNoEntity && doc.alive(m)) ++n;
+    return n;
+}
+
+} // namespace
+
+TEST_CASE("C-13 KİTAPLIK: BLOKEKLE dosya= bir kitaplığın bloğunu bütün getirir ve yerleştirir")
+{
+    TempDir dir("blok-kitaplik");
+    const std::string library = dir.file("semboller.pcad");
+    const std::string as_dxf  = dir.file("semboller.dxf");
+    {
+        // THE LIBRARY: two symbols, kept in a file of their own.
+        Rig lib;
+        // A DXF is written with its system in a `.prj` beside it.
+        REQUIRE(lib.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("DAİRE merkez=0,0 cevre=1,0", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("ÇİZGİ -1,0 1,0", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("BLOK ad=ROGAR taban=0,0 nesneler=1 nesneler=2", Origin::Test)
+                    .ok());
+        REQUIRE(lib.bus.execute_line("ÇİZGİ 10,0 10,5", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("BLOK ad=DIREK taban=10,0 nesneler=6", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("FARKLIKAYDET \"" + library + "\"", Origin::Test).ok());
+        auto exported = lib.bus.execute_line("DIŞAAKTAR \"" + as_dxf + "\"", Origin::Test);
+        if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
+    }
+
+    Rig r;
+    auto placed = r.bus.execute_line(
+        "BLOKEKLE dosya=\"" + library + "\" ad=ROGAR nokta=100,100 olcek=2", Origin::Test);
+    if (!placed) FAIL_WITH("BLOKEKLE dosya=", placed.error().message);
+    CHECK_EQ(live_members_of(r.doc, "ROGAR"), std::size_t{2});
+    CHECK_EQ(r.doc.blocks().size(), std::size_t{1}); ///< DIREK stays in its library
+    CHECK(r.transcript.find("'ROGAR' bloğu kitaplıktan alındı") != std::string::npos);
+    std::size_t references = 0;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e) || r.doc.entities().kind[e] != core::kBlockReferenceKind) continue;
+        ++references;
+        core::EmitBuffer runs;
+        REQUIRE(core::entity_outline(r.doc, e, runs));
+        CHECK_EQ(runs.run_total(), std::size_t{2});
+    }
+    CHECK_EQ(references, std::size_t{1});
+
+    // Again: the drawing has ROGAR now, and its own definition is the one used.
+    REQUIRE(
+        r.bus
+            .execute_line("BLOKEKLE dosya=\"" + library + "\" ad=ROGAR nokta=110,100", Origin::Test)
+            .ok());
+    CHECK_EQ(live_members_of(r.doc, "ROGAR"), std::size_t{2});
+    CHECK(r.transcript.find("çizimde zaten var; çizimdeki tanım kullanıldı") != std::string::npos);
+
+    // Two blocks and no name: which one is asked, by name.
+    auto which = r.bus.execute_line("BLOKEKLE dosya=\"" + library + "\" nokta=0,0", Origin::Test);
+    REQUIRE_FALSE(which.ok());
+    CHECK(which.error().message.find("birden çok blok var") != std::string::npos);
+    CHECK(which.error().message.find("DIREK") != std::string::npos);
+    auto missing =
+        r.bus.execute_line("BLOKEKLE dosya=\"" + library + "\" ad=AGAC nokta=0,0", Origin::Test);
+    REQUIRE_FALSE(missing.ok());
+    CHECK(missing.error().message.find("'AGAC' bloğu yok") != std::string::npos);
+
+    // The same library written as a DXF serves just as well.
+    Rig from_dxf;
+    auto dxf = from_dxf.bus.execute_line("BLOKEKLE dosya=\"" + as_dxf + "\" ad=DIREK nokta=5,5",
+                                         Origin::Test);
+    if (!dxf) FAIL_WITH("BLOKEKLE dosya=<dxf>", dxf.error().message);
+    CHECK_EQ(live_members_of(from_dxf.doc, "DIREK"), std::size_t{1});
+}
+
+TEST_CASE("C-13 KİTAPLIK: bloksuz bir dosya bütün çizimiyle, dosyanın adıyla blok olur")
+{
+    TempDir dir("blok-kitaplik-cizim");
+    const std::string drawing = dir.file("kuzey_oku.pcad");
+    {
+        Rig lib;
+        REQUIRE(lib.bus.execute_line("ÇOKLUÇİZGİ 0,0 1,3 2,0", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("ÇİZGİ 1,0 1,3", Origin::Test).ok());
+        REQUIRE(lib.bus.execute_line("FARKLIKAYDET \"" + drawing + "\"", Origin::Test).ok());
+    }
+    Rig r;
+    auto placed =
+        r.bus.execute_line("BLOKEKLE dosya=\"" + drawing + "\" nokta=50,50", Origin::Test);
+    if (!placed) FAIL_WITH("BLOKEKLE dosya=", placed.error().message);
+    CHECK_EQ(live_members_of(r.doc, "kuzey_oku"), std::size_t{2});
+
+    // WHAT THE JOURNAL WROTE REPLAYS: the file's name as `ad=` names the whole
+    // drawing of a file that has no blocks.
+    REQUIRE_FALSE(r.journal.entries().empty());
+    const std::string line = r.journal.entries().back().to_json(false).dump();
+    CHECK(line.find("\"ad\":\"kuzey_oku\"") != std::string::npos);
+    Rig again;
+    auto replay = again.bus.execute_line(
+        "BLOKEKLE dosya=\"" + drawing + "\" ad=kuzey_oku nokta=50,50", Origin::Test);
+    if (!replay) FAIL_WITH("tekrar", replay.error().message);
+    CHECK_EQ(again.doc.content_hash(), r.doc.content_hash());
+}
+
+TEST_CASE("IO: blokları olan bir çizime yapıştırılan referans kendi bloğunu çizer")
+{
+    // A reference names its definition by the block's NUMBER in the drawing
+    // it lives in. Carried into a drawing whose table already holds other
+    // blocks, that number named one of THEM: the pasted symbol drew another
+    // symbol — or nothing, refused as pointing at no block.
+    TempDir dir("blok-kimlik");
+    const std::string path = dir.file("pano.pcad");
+    {
+        Rig source;
+        REQUIRE(source.bus.execute_line("DAİRE merkez=0,0 cevre=1,0", Origin::Test).ok());
+        REQUIRE(source.bus.execute_line("BLOK ad=KUYU taban=0,0 nesneler=1", Origin::Test).ok());
+        std::int64_t ref = 0;
+        for (core::EntityId e = 0; e < source.doc.entities().size(); ++e)
+            if (source.doc.alive(e) && source.doc.entities().kind[e] == core::kBlockReferenceKind)
+                ref = static_cast<std::int64_t>(core::raw(source.doc.key_of(e)));
+        REQUIRE(source.bus
+                    .execute_line("PANOYAKOPYALA nesneler=" + std::to_string(ref) + " dosya=\"" +
+                                      path + "\"",
+                                  Origin::Test)
+                    .ok());
+    }
+    Rig target; // its own block comes first: number 0 is not KUYU here
+    REQUIRE(target.bus.execute_line("ÇİZGİ 0,0 3,0", Origin::Test).ok());
+    REQUIRE(target.bus.execute_line("ÇİZGİ 0,1 3,1", Origin::Test).ok());
+    REQUIRE(
+        target.bus.execute_line("BLOK ad=CIFT taban=0,0 nesneler=1 nesneler=2", Origin::Test).ok());
+    auto pasted =
+        target.bus.execute_line("YAPIŞTIR nokta=20,0 dosya=\"" + path + "\"", Origin::Test);
+    if (!pasted) FAIL_WITH("YAPIŞTIR", pasted.error().message);
+    const core::BlockId kuyu = target.doc.blocks().find("KUYU");
+    REQUIRE(kuyu != core::kNoBlock);
+    std::size_t found = 0;
+    for (core::EntityId e = 0; e < target.doc.entities().size(); ++e) {
+        if (!target.doc.alive(e) || target.doc.entities().kind[e] != core::kBlockReferenceKind ||
+            (target.doc.entities().flags[e] & core::FlagInBlock) != 0)
+            continue;
+        const auto ref =
+            core::block_reference_of(target.doc.geometry(), target.doc.entities().slot[e]).value();
+        if (ref.block != kuyu) continue;
+        ++found;
+        core::EmitBuffer runs;
+        REQUIRE(core::entity_outline(target.doc, e, runs));
+        REQUIRE_EQ(runs.run_total(), std::size_t{1}); ///< the circle, not CIFT's two lines
+        CHECK(runs.run_closed[0] != 0);
+        // Its stored box is the circle's, placed at the paste point.
+        const core::Box2 box = target.doc.entities().box_of(e);
+        CHECK_EQ(box.max_x - box.min_x, 2'000);
+    }
+    CHECK_EQ(found, std::size_t{1});
+}

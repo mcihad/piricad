@@ -133,7 +133,8 @@ public:
     /// What `adopt_from` brought over.
     struct AdoptSummary
     {
-        std::uint64_t entities{0};      ///< live entities copied
+        std::uint64_t entities{0};      ///< live entities copied, members of definitions included
+        std::uint64_t standalone{0};    ///< of those, the ones on the sheet rather than in a block
         std::uint64_t layers{0};        ///< layers this document did not have before
         std::uint64_t columns{0};       ///< attribute columns declared here for the first time
         std::vector<std::string> notes; ///< what could not be carried, in Turkish, at most a few
@@ -154,15 +155,26 @@ public:
     /// the real one on the bus thread, inside the command's one transaction
     /// (io.md P3, R17). Any failure is returned; the transaction rolls back whole.
     /// `only` names the entities to bring over, by persistent key; empty brings
-    /// every live one, which is what an import wants.
+    /// every live one, which is what an import wants. A block reference named
+    /// in `only` brings the definition it draws, whole. A block whose name this
+    /// document already has keeps this document's definition: the incoming
+    /// references draw it and the incoming members stay behind (TODOS C-13).
     ///
     /// A FILTER RATHER THAN A SECOND COPIER. `PANOYAKOPYALA` needs exactly this
     /// function over a SELECTION, and the alternative was a second walk over the
     /// entity table that would have to learn dash patterns, pictures, interned
     /// styles, layers, blocks and attribute columns all over again — and would
     /// fall behind the day a kind gains one of them (CLAUDE.md 5.10).
+    ///
+    /// `blocks` names definitions of `scratch` to bring WHOLE besides — a block
+    /// taken from a library file (`BLOKEKLE dosya=`); with `only` empty and
+    /// `blocks` given, nothing on the scratch sheet comes. `into` puts what does
+    /// come from the scratch SHEET into that definition of this document instead
+    /// of onto the sheet — a whole drawing inserted as a block.
     core::Result<AdoptSummary> adopt_from(const core::Document& scratch,
-                                          std::span<const core::EntityKey> only = {});
+                                          std::span<const core::EntityKey> only = {},
+                                          std::span<const core::BlockId> blocks = {},
+                                          core::BlockId into                    = core::kNoBlock);
 
     /// Moves an entity to another layer, keeping its identity.
     Status set_entity_layer(EntityId e, LayerId layer);

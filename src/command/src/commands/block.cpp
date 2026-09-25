@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -191,6 +192,65 @@ Task<void> run_block(Context& ctx)
 
 Task<void> run_insert(Context& ctx)
 {
+    // A BLOCK FROM A LIBRARY FILE (TODOS C-13): a project, DXF or DWG file
+    // kept as a symbol library. Its block — the one `ad=` names, its only one,
+    // or the whole drawing named after the file — is brought into this drawing
+    // inside this command's transaction, and placed like any other; a name
+    // the drawing already has keeps the drawing's definition.
+    std::string from_library;
+    std::string library_note;
+    if (const Value file = ctx.argument("dosya"); !file.empty()) {
+        Bus& bus = ctx.session().bus();
+        if (!bus.on_file_request) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Dosya motoru bağlı değil; kitaplıktan blok bu yapıda eklenemiyor.");
+            co_return;
+        }
+        FileRequest request;
+        request.verb    = FileRequest::Verb::BlockLibrary;
+        request.tx      = &ctx.transaction();
+        request.session = &ctx.session();
+        request.path    = file.as_text();
+        if (const Value named = ctx.argument("ad"); !named.empty()) {
+            request.block = named.as_text();
+        } else {
+            // WHICH ONE, ASKED: the file's blocks are read first and, when it
+            // holds more than one, offered as the name to place — as BLOKEKLE
+            // offers the drawing's own. A script that named none is told the
+            // names instead.
+            std::vector<std::string> offered;
+            FileRequest listing    = request;
+            listing.tx             = nullptr;
+            listing.library_blocks = &offered;
+            if (auto listed = co_await bus.on_file_request(listing); !listed) {
+                ctx.refuse(listed.error());
+                co_return;
+            }
+            if (offered.size() > 1) {
+                auto picked = co_await ctx.text("ad", "Kitaplıktan hangi blok", offered);
+                if (!picked || picked->empty()) {
+                    std::string known;
+                    for (const std::string& n : offered)
+                        known += (known.empty() ? "" : ", ") + n;
+                    ctx.refuse(core::ErrorCode::InvalidArgument,
+                               "'" + request.path +
+                                   "' içinde birden çok blok var; hangisi: ad=<blok>. Bloklar: " +
+                                   known + ".");
+                    co_return;
+                }
+                request.block = *picked;
+            }
+        }
+        request.resolved_block = &from_library;
+        auto said              = co_await bus.on_file_request(request);
+        if (!said) {
+            ctx.refuse(said.error());
+            co_return;
+        }
+        library_note = said.value();
+        ctx.record("dosya", Value::text(request.path));
+    }
+
     // THE BLOCKS THIS DRAWING HAS, offered rather than remembered. Pressing the
     // Blok Ekle button used to ask for a name and wait: a question only somebody
     // who already knew the answer could give, with the list one refused attempt
@@ -205,7 +265,7 @@ Task<void> run_insert(Context& ctx)
     // explained what a block IS came only after the user guessed a name. A user
     // who has never defined one reads that prompt as a tool that does nothing,
     // and said so — they could not tell what it was for.
-    if (defined.empty()) {
+    if (defined.empty() && from_library.empty()) {
         ctx.refuse(
             core::ErrorCode::NotFound,
             "Bu çizimde tanımlı blok yok, yerleştirilecek bir şey de yok. Blok, bir kez "
@@ -215,8 +275,19 @@ Task<void> run_insert(Context& ctx)
         co_return;
     }
 
-    auto name = co_await ctx.text("ad", "Yerleştirilecek bloğun adı", defined);
-    if (!name || name->empty()) co_return;
+    std::optional<std::string> name;
+    if (from_library.empty())
+        name = co_await ctx.text("ad", "Yerleştirilecek bloğun adı", defined);
+    else
+        name = from_library;
+    // SAID, NOT SILENT: a script that named no block is told so, as a hand
+    // that gave an empty name is; Esc is answered "İptal edildi" by the bus.
+    if (!name || name->empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Yerleştirilecek blok verilmedi: ad=<blok> ya da dosya=<kitaplık>. " +
+                       blocks_known(ctx.document()));
+        co_return;
+    }
     const core::BlockId block = ctx.document().blocks().find(*name);
     if (block == core::kNoBlock) {
         ctx.refuse(core::ErrorCode::NotFound,
@@ -360,7 +431,8 @@ Task<void> run_insert(Context& ctx)
         ctx.record("satir_aralik", Value::integer(row_spacing));
     }
     if (!recorded.empty()) ctx.record("deger", Value::texts(recorded));
-    std::string said = "'" + *name + "' bloğu yerleştirildi";
+    std::string said = library_note.empty() ? std::string() : library_note + " ";
+    said += "'" + *name + "' bloğu yerleştirildi";
     if (columns > 1 || rows > 1)
         said += " (" + std::to_string(columns) + "×" + std::to_string(rows) + " dizi)";
     if (!recorded.empty()) {
@@ -880,7 +952,9 @@ KENTOS_COMMAND(insert)
         .category = Category::Draw,
         .params =
             {
-                Param::text("ad", Arity::exactly(1), "Yerleştirilecek bloğun adı").en("name"),
+                Param::text("ad", Arity::optional(),
+                            "Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı")
+                    .en("name"),
                 Param::point("nokta", "Ekleme noktası").en("point"),
                 Param::number("olcek", Arity::optional(),
                               "Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da "
@@ -904,6 +978,11 @@ KENTOS_COMMAND(insert)
                             "Bloğun alanlarının değerleri, sutun:değer; verilmezse elle "
                             "yerleştirmede her alan sorulur")
                     .en("values"),
+                Param::text("dosya", Arity::optional(),
+                            "Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= "
+                            "dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok "
+                            "olur")
+                    .en("file"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

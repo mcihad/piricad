@@ -229,6 +229,13 @@ private:
     command::Task<core::Result<std::string>>
     clipboard_paste(command::Transaction* tx, std::string path, core::Point2 at, bool in_place);
 
+    /// Brings one block of a library file into the drawing (`Verb::BlockLibrary`),
+    /// its name written to `resolved`.
+    command::Task<core::Result<std::string>> block_library(command::Transaction* tx,
+                                                           std::string path, std::string block,
+                                                           std::string* resolved,
+                                                           std::vector<std::string>* names);
+
     command::Bus& bus_;
     std::string current_path_;
     std::uint64_t saved_revision_{0};

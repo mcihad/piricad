@@ -7,6 +7,7 @@
 #include "kentos_cad/core/dimension_link.hpp"
 
 #include "kentos_cad/core/attach.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
@@ -1155,13 +1156,14 @@ void UndoStack::clear()
 }
 
 core::Result<Transaction::AdoptSummary>
-Transaction::adopt_from(const core::Document& scratch, std::span<const core::EntityKey> only)
+Transaction::adopt_from(const core::Document& scratch, std::span<const core::EntityKey> only,
+                        std::span<const core::BlockId> blocks, core::BlockId into)
 {
     // WHICH ENTITIES, resolved once into a slot set rather than searched per
     // entity: a clipboard copy of five hundred parcels would otherwise be a
     // linear scan five hundred times over.
     std::vector<bool> wanted;
-    if (!only.empty()) {
+    if (!only.empty() || !blocks.empty()) {
         wanted.assign(scratch.entities().size(), false);
         for (const core::EntityKey k : only) {
             const core::EntityId e = scratch.slot_of(k);
@@ -1245,24 +1247,77 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     }
     summary.layers = doc_.layer_table().size() - had_layers;
 
-    // ---- block definitions, before their members ----
+    // ---- block definitions, before their members (TODOS C-13) ----
+    //
+    // WHICH COME ACROSS. Everything, for an import. For a SELECTION, the
+    // definitions its references draw — whole, members and blocks inside them —
+    // and no other: a payload that carried a reference and not what it draws
+    // pasted a symbol that drew nothing, and one that carried every name the
+    // source drawing had filled the other drawing with empty definitions.
+    //
+    // A NAME THE DRAWING ALREADY HAS KEEPS THE DRAWING'S DEFINITION, the rule
+    // every CAD keeps: the incoming references draw it, and the incoming
+    // members are not piled onto it — they used to be, and a symbol pasted into
+    // a drawing that had it drew twice over.
+    enum : std::uint8_t { kUntouched, kCreate, kTheirs };
+
+    std::vector<std::uint8_t> fate(scratch.blocks().size(), kUntouched);
+    std::vector<core::BlockId> pending;
+    const auto want_block = [&](core::BlockId b) {
+        if (b >= fate.size() || fate[b] != kUntouched) return;
+        const bool drawing_has = doc_.blocks().find(scratch.blocks().at(b).name) != core::kNoBlock;
+        fate[b]                = drawing_has ? kTheirs : kCreate;
+        if (!drawing_has) pending.push_back(b);
+    };
+    const auto referenced = [&scratch](core::EntityId e) -> core::BlockId {
+        if (scratch.entities().kind[e] != core::kBlockReferenceKind) return core::kNoBlock;
+        auto ref = core::block_reference_of(scratch.geometry(), scratch.entities().slot[e]);
+        return ref ? ref.value().block : core::kNoBlock;
+    };
+    if (wanted.empty()) {
+        for (core::BlockId b = 0; b < scratch.blocks().size(); ++b)
+            want_block(b);
+    } else {
+        for (EntityId e = 0; e < wanted.size(); ++e)
+            if (wanted[e] && scratch.entities().alive(e)) want_block(referenced(e));
+        for (const core::BlockId b : blocks)
+            want_block(b);
+    }
+    while (!pending.empty()) {
+        const core::BlockId b = pending.back();
+        pending.pop_back();
+        for (const core::EntityKey k : scratch.blocks().at(b).members) {
+            const EntityId m = scratch.slot_of(k);
+            if (m == core::kNoEntity || !scratch.entities().alive(m)) continue;
+            want_block(referenced(m));
+            if (!wanted.empty() && m < wanted.size()) wanted[m] = true;
+        }
+    }
     std::vector<core::BlockId> block_map(scratch.blocks().size(), core::kNoBlock);
     for (std::size_t b = 0; b < scratch.blocks().size(); ++b) {
+        if (fate[b] == kUntouched) continue;
         const core::BlockDef& def = scratch.blocks().at(static_cast<core::BlockId>(b));
-        core::BlockId mine        = doc_.blocks().find(def.name);
-        if (mine == core::kNoBlock) {
-            auto made = add_block(def.name, def.description, def.base);
-            if (!made) return made.error();
-            mine = made.value();
-        } else {
-            note("'" + def.name + "' bloğu çizimde zaten vardı; dosyadaki tanım onun üyesi oldu.");
+        if (fate[b] == kTheirs) {
+            block_map[b] = doc_.blocks().find(def.name);
+            note("'" + def.name +
+                 "' bloğu çizimde zaten vardı; çizimdeki tanım kullanıldı, "
+                 "gelen tanımın üyeleri alınmadı.");
+            continue;
         }
-        block_map[b] = mine;
+        auto made = add_block(def.name, def.description, def.base);
+        if (!made) return made.error();
+        block_map[b] = made.value();
     }
     std::map<std::uint64_t, core::BlockId> block_of_key;
+    std::vector<bool> kept_out(scratch.entities().size(), false); ///< members of a kept definition
     for (std::size_t b = 0; b < scratch.blocks().size(); ++b)
-        for (const core::EntityKey k : scratch.blocks().at(static_cast<core::BlockId>(b)).members)
+        for (const core::EntityKey k : scratch.blocks().at(static_cast<core::BlockId>(b)).members) {
             block_of_key[core::raw(k)] = block_map[b];
+            if (fate[b] != kCreate)
+                if (const EntityId m = scratch.slot_of(k);
+                    m != core::kNoEntity && m < kept_out.size())
+                    kept_out[m] = true;
+        }
 
     // ---- attribute columns, by id ----
     const core::AttrTable& theirs_attrs = scratch.attributes();
@@ -1292,9 +1347,11 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<EntityId> adopted(ents.size(), core::kNoEntity); ///< theirs → mine
+    std::vector<EntityId> references;                            ///< the block references made
     for (EntityId e = 0; e < ents.size(); ++e) {
         if (!ents.alive(e)) continue;
         if (!wanted.empty() && !wanted[e]) continue;
+        if (kept_out[e]) continue;
         const std::uint32_t slot  = ents.slot[e];
         const core::RingSpan span = geo.rings_of(slot);
         std::size_t total         = 0;
@@ -1318,17 +1375,35 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
         }
 
         const auto found             = block_of_key.find(core::raw(ents.key[e]));
-        const core::BlockId in_block = found == block_of_key.end() ? core::kNoBlock : found->second;
+        const core::BlockId in_block = found == block_of_key.end() ? into : found->second;
         const LayerId layer =
             ents.layer[e] < layer_map.size() ? layer_map[ents.layer[e]] : core::kNoLayer;
         if (layer == core::kNoLayer)
             return core::err(core::ErrorCode::Internal,
                              std::to_string(e) + ". nesnenin katmanı eşlenemedi.");
 
-        auto made = add_kind(layer, ents.kind[e], rings, geo.payload_of(slot), in_block);
+        // A REFERENCE NAMES ITS BLOCK BY NUMBER, and the number is this
+        // document's now: carried as it was, a reference pasted into a drawing
+        // whose table already held blocks drew one of THEM. Its box is brought
+        // up to date once every definition is in (below).
+        std::span<const std::uint8_t> payload = geo.payload_of(slot);
+        std::vector<std::uint8_t> renumbered;
+        if (ents.kind[e] == core::kBlockReferenceKind) {
+            auto ref = core::decode_block_reference(payload);
+            if (!ref) return ref.error();
+            if (ref.value().block >= block_map.size() ||
+                block_map[ref.value().block] == core::kNoBlock)
+                return core::err(core::ErrorCode::Internal,
+                                 std::to_string(e) + ". nesnenin bloğu eşlenemedi.");
+            ref.value().block = block_map[ref.value().block];
+            renumbered        = core::encode_block_reference(ref.value());
+            payload           = renumbered;
+        }
+        auto made = add_kind(layer, ents.kind[e], rings, payload, in_block);
         if (!made) return made.error();
         const EntityId mine = made.value();
         adopted[e]          = mine;
+        if (ents.kind[e] == core::kBlockReferenceKind) references.push_back(mine);
 
         if ((ents.flags[e] & core::FlagHidden) != 0)
             if (auto st = set_entity_hidden(mine, true); !st) return st.error();
@@ -1355,6 +1430,7 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
                 return st.error();
         }
         ++summary.entities;
+        if (in_block == core::kNoBlock) ++summary.standalone;
     }
 
     // ---- ties, once every object they join exists (TODOS C-12) ----
@@ -1375,11 +1451,21 @@ Transaction::adopt_from(const core::Document& scratch, std::span<const core::Ent
         if (auto st = set_attachment(adopted[e], mine); !st) return st.error();
     }
 
-    // ---- block uses, once every block exists ----
-    for (std::size_t b = 0; b < scratch.blocks().size(); ++b)
+    // ---- the references' boxes, once every definition they draw is in ----
+    //
+    // The box came with the payload, drawn from the SOURCE's definition; the
+    // definition drawn here may be this document's own (a name it had), and
+    // members arrive in table order, not definition order.
+    for (const EntityId r : references)
+        if (auto st = refresh_reference_bounds(r); !st) return st.error();
+
+    // ---- block uses, once every block exists: the definitions made here ----
+    for (std::size_t b = 0; b < scratch.blocks().size(); ++b) {
+        if (fate[b] != kCreate) continue;
         for (const core::BlockId used : scratch.blocks().at(static_cast<core::BlockId>(b)).uses)
-            if (used < block_map.size())
+            if (used < block_map.size() && block_map[used] != core::kNoBlock)
                 if (auto st = add_block_use(block_map[b], block_map[used]); !st) return st.error();
+    }
 
     for (const LayerId l : lock_later)
         if (auto st = set_layer_locked(l, true); !st) return st.error();

@@ -75,8 +75,8 @@ BLOK ad=BACA taban=0,0
 BLOKEKLE ad=BACA nokta=20,0 olcek=2 aci=90
 ```
 
-[BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md),
-[BLOKDÜZENLE](../komutlar/block_edit.md).
+[BLOK](../komutlar/block.md), [BLOKEKLE](../komutlar/insert.md) (bir kitaplık dosyasından da:
+`BLOKEKLE dosya=`), [BLOKDÜZENLE](../komutlar/block_edit.md).
 
 ## Sınırlar
 

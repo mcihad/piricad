@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 113 (100 tanesi onay ister)
-- Katalog parmak izi: `10409035983491911130`
+- Katalog parmak izi: `9112520324923722167`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -816,7 +816,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `ad` | string | evet | Yerleştirilecek bloğun adı (metin) |
+| `ad` | string | hayır | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | evet | Ekleme noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `olcek` | number | hayır | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür (sayı) |
 | `olcek_y` | number | hayır | Y ölçeği, farklıysa; varsayılan olcek (sayı) |
@@ -826,6 +826,7 @@ Onay ister.
 | `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `deger` | array | hayır | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin) |
+| `dosya` | string | hayır | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_intersect_point` — Kesişim Noktası

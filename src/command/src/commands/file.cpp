@@ -66,7 +66,9 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
     // asked for; naming it as an output would put a temporary file in a client's
     // list of results (TODOS C-03).
     case FileRequest::Verb::ClipboardCopy:
-    case FileRequest::Verb::ClipboardPaste: break;
+    case FileRequest::Verb::ClipboardPaste:
+    // A library is READ, like an import.
+    case FileRequest::Verb::BlockLibrary: break;
     }
     ctx.echo(result.value());
 }

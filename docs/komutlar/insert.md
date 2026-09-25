@@ -20,6 +20,7 @@ saklanır; 90° döndürülmüş bir sembol tam olarak 90° döner.
 BLOKEKLE ad=<ad> nokta=<sağa>,<yukarı> [olcek=<çarpan>] [olcek_y=<çarpan>] [aci=<derece>]
          [sutun=<n> satir=<n> sutun_aralik=<mm> satir_aralik=<mm>]
          [deger=<sütun>:<değer> …]
+BLOKEKLE dosya=<kitaplık> [ad=<blok>] nokta=<sağa>,<yukarı> [...]
 ```
 
 ## Parametreler
@@ -34,6 +35,26 @@ BLOKEKLE ad=<ad> nokta=<sağa>,<yukarı> [olcek=<çarpan>] [olcek_y=<çarpan>] [
 | `sutun`, `satir` | Dizi sütun ve satır sayısı; varsayılan 1 |
 | `sutun_aralik`, `satir_aralik` | Dizide kopyalar arası, **milimetre**, döndürülmüş eksende, ölçeklenmez |
 | `deger` | Bloğun alanlarının bu referanstaki değerleri, `sütun:değer` biçiminde; birden çok alan için anahtarı yineleyin. Verilmezse elle yerleştirmede her alan sorulur |
+| `dosya` | Blok kitaplığı: bloğun alınacağı proje (`.pcad`), DXF ya da DWG dosyası. `ad=` o dosyadaki bloğu seçer |
+
+### Kitaplıktan blok
+
+Semboller ayrı bir dosyada — bir proje, DXF ya da DWG — tutulabilir. `dosya=` o dosyadaki
+bloğu **bütün** olarak (üyeleri ve içindeki bloklarla) bu çizime getirir ve her zamanki
+gibi yerleştirir:
+
+| Dosyada | Ne alınır |
+|---|---|
+| `ad=` ile adı verilen blok | O blok |
+| Tek blok | O blok, adı sorulmadan |
+| Birden çok blok, `ad=` yok | Arayüzde hangisi olduğu sorulur; betikte bloklar adlarıyla söylenir |
+| Hiç blok yok | **Bütün çizim**, dosyanın adıyla bir blok olur (taban noktası 0,0) |
+
+Çizimde aynı adlı bir blok zaten varsa **çizimdeki tanım** kullanılır, kitaplıktaki
+alınmaz — her CAD programının kuralı budur; kitaplıktaki yeni hâli istiyorsanız çizimdeki
+bloğu [`BLOKDÜZENLE`](block_edit.md) ile güncelleyin. Kitaplıktaki DXF ya da DWG koordinat
+sistemi bildirmiyorsa çizimin sistemi varsayılır: bir sembol tanımının kendi
+koordinatında durur, sistemin burada bir anlamı yoktur.
 
 ### Alanlar ve değerleri
 
@@ -66,6 +87,12 @@ BLOKEKLE ad=BACA nokta=80,0 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000
 Sırayla: olduğu gibi, iki kat büyütülüp çeyrek tur dönmüş, x'te aynalanmış, ve 5 m'ye
 4 m aralıklı 3×2 dizi.
 
+Kitaplıktaki bir rögar sembolü, iki kat büyük:
+
+```text
+BLOKEKLE dosya="semboller.pcad" ad=ROGAR nokta=100,100 olcek=2
+```
+
 Numaralı bir nokta sembolü, iki kez, kendi numaralarıyla:
 
 ```text
@@ -79,7 +106,9 @@ BLOKEKLE ad=NOKTA nokta=20,10 deger=no:K-2
 ### Arayüz
 
 **Çizim ▸ Blok ▸ Blok Ekle** (bir blok seçiliyken beliren **Blok** sekmesinde de vardır).
-Bloğun adını yazın, ekleme noktasını tıklayın.
+Bloğun adını yazın, ekleme noktasını tıklayın. Bir kitaplık dosyasından eklemek için
+**Çizim ▸ Blok ▸ Kitaplıktan Ekle**: dosyayı seçin, dosyada birden çok blok varsa hangisi
+olduğu sorulur.
 
 ### Betik
 
@@ -116,6 +145,30 @@ olarak yazılır ve altı basamağa yuvarlanmış bir orana çevrilir.
 > `Birden çok sütun ya da satır için aralık (milimetre) verin: sutun_aralik= ve satir_aralik=.`
 
 Dizi istendi, aralık verilmedi.
+
+> `Yerleştirilecek blok verilmedi: ad=<blok> ya da dosya=<kitaplık>.`
+
+Betik bloğun adını vermedi.
+
+> `Blok 'X' 'Y' alanını taşımıyor. Alanları: …`
+
+`deger=` bloğun taşımadığı bir alan adı verdi; alanları mesajda yazılıdır.
+
+> `deger 'sutun:değer' biçiminde yazılır; verilen: '…'.`
+
+`deger=` içinde `:` yok.
+
+> `'…' içinde birden çok blok var; hangisi: ad=<blok>. Bloklar: …`
+
+Kitaplık dosyasında birden çok blok var ve betik hangisi olduğunu söylemedi.
+
+> `'…' içinde 'X' bloğu yok.`
+
+`ad=` kitaplıkta olmayan bir blok; dosyadaki bloklar mesajda yazılıdır.
+
+> `Blok kitaplığı bulunamadı: …`
+
+`dosya=` yolu yanlış.
 
 ## İlgili
 

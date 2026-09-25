@@ -1078,10 +1078,11 @@ private:
     QAction* actHatchEdit_{nullptr}; ///< TARAMADÜZENLE
     QAction* actBlock_{nullptr};
     QAction* actInsert_{nullptr};
-    QAction* actBlockEdit_{nullptr};   ///< BLOKDÜZENLE — opens the selected block's definition
-    QAction* actBlockBase_{nullptr};   ///< BLOKDÜZENLE islem=taban — moves its base point
-    QAction* actBlockSave_{nullptr};   ///< the open block edit, saved into the definition
-    QAction* actBlockCancel_{nullptr}; ///< the open block edit, given up
+    QAction* actBlockEdit_{nullptr};    ///< BLOKDÜZENLE — opens the selected block's definition
+    QAction* actBlockBase_{nullptr};    ///< BLOKDÜZENLE islem=taban — moves its base point
+    QAction* actBlockLibrary_{nullptr}; ///< BLOKEKLE dosya= — a block from a library file
+    QAction* actBlockSave_{nullptr};    ///< the open block edit, saved into the definition
+    QAction* actBlockCancel_{nullptr};  ///< the open block edit, given up
 
     /// The tab that is up while a block is out for editing: its save and its
     /// way back, and the block's name in its title.

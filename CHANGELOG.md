@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — blok kitaplığı: bir dosyadaki blok çizime getirilir (C-13, 4. aşama: ilk teslim)
+
+- **BLOKEKLE dosya=.** Bir proje (`.pcad`), DXF ya da DWG dosyasındaki blok — `ad=` ile
+  adı verilen, dosyanın tek bloğu, ya da blok yoksa **bütün çizim** dosyanın adıyla — üyeleri
+  ve içindeki bloklarla **bütün** olarak çizime getirilir ve her zamanki gibi yerleştirilir.
+  Dosyada birden çok blok varsa arayüzde hangisi olduğu sorulur, betikte adlarıyla söylenir.
+  Çizimde aynı adlı blok varsa çizimdeki tanım kullanılır. Şeritte **Çizim ▸ Blok ▸
+  Kitaplıktan Ekle** dosyayı seçtirir. Koordinat sistemi bildirmeyen bir kitaplık DXF'i
+  çizimin sisteminde okunur (sembol kendi koordinatındadır). Günlük dosyayı ve bloğun adını
+  yazar; bütün çizimi blok olan bir dosya da tekrar oynatılır.
+- **Düzeltildi:** bir blok referansını panoya kopyalayıp **başka** bir çizime yapıştırmak
+  sembolü çizmiyordu: pano yükü tanımın yalnız adını taşıyordu, üyelerini taşımıyordu (ve
+  kaynak çizimin bütün blok adlarını boş tanımlar olarak). Şimdi referansın çizdiği tanım —
+  içindeki bloklarla — bütün gider, başkası gitmez.
+- **Değişti:** içe aktarma ve yapıştırmada gelen bir blok çizimde zaten varsa çizimdeki
+  tanım kullanılır ve gelen tanımın üyeleri alınmaz; önceden gelen üyeler var olan tanımın
+  üstüne ekleniyordu ve sembol iki kat çiziliyordu.
+- **Düzeltildi:** blokları olan bir çizime içe aktarılan ya da yapıştırılan blok referansı
+  **başka bir bloğu** çiziyordu (ya da tanımsız bloğu gösterdiği için reddediliyordu):
+  referans bloğunu numarasıyla adlandırır ve numara gelen dosyanınkiydi. Numara artık bu
+  çizimdeki bloğa çevrilir ve referansın kutusu, çizdiği tanıma göre yenilenir.
+
 ### Eklendi — öznitelikli blok ve taban noktası (C-13, 3. aşama)
 
 - **Blok alanları.** Bir bloğun içindeki `{no}` gibi süslü ayraçlı yazı bloğun **alanıdır**

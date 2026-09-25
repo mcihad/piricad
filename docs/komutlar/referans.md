@@ -1039,7 +1039,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `ad` | text | 1 | Yerleştirilecek bloğun adı |
+| `ad` | text | isteğe bağlı | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı |
 | `nokta` | point | 1 | Ekleme noktası |
 | `olcek` | number | isteğe bağlı | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `olcek_y` | number | isteğe bağlı | Y ölçeği, farklıysa; varsayılan olcek |
@@ -1049,6 +1049,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 | `sutun_aralik` | integer | isteğe bağlı | Sütunlar arası, milimetre, döndürülmüş eksende |
 | `satir_aralik` | integer | isteğe bağlı | Satırlar arası, milimetre, döndürülmüş eksende |
 | `deger` | text | en az 0 | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
+| `dosya` | text | isteğe bağlı | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
 
 Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
@@ -6826,7 +6827,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "properties": {
         "ad": {
           "type": "string",
-          "description": "Yerleştirilecek bloğun adı (metin)"
+          "description": "Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı (metin)"
         },
         "nokta": {
           "anyOf": [
@@ -6896,6 +6897,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           },
           "description": "Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin)"
         },
+        "dosya": {
+          "type": "string",
+          "description": "Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -6906,7 +6911,6 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         }
       },
       "required": [
-        "ad",
         "nokta"
       ],
       "additionalProperties": false

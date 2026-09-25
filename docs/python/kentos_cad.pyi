@@ -1223,11 +1223,12 @@ def insert(
     column_spacing: int = ...,
     row_spacing: int = ...,
     values: list[str] = ...,
+    file: str = ...,
 ) -> int:
     """Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
     Komut: core.insert (BLOKEKLE)
-        name — Yerleştirilecek bloğun adı
+        name — Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı
         point — Ekleme noktası [mm, Sağa (Y) önce]
         scale — Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür
         scale_y — Y ölçeği, farklıysa; varsayılan olcek
@@ -1237,6 +1238,7 @@ def insert(
         column_spacing — Sütunlar arası, milimetre, döndürülmüş eksende
         row_spacing — Satırlar arası, milimetre, döndürülmüş eksende
         values — Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur
+        file — Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur
     """
 
 def dimension(
