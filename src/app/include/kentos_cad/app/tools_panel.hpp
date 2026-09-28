@@ -82,6 +82,12 @@ public:
     /// Re-reads what the scope hint depends on: how many objects are selected.
     void refresh();
 
+    /// Puts the keyboard in the tool's first parameter, its value selected so
+    /// typing replaces it — what opening a tool that needs a figure should do
+    /// (a tool opened from the ribbon with `…`). The field, or null when it
+    /// has none.
+    QWidget* focusFirstField();
+
     /// The line the run button would send right now, or empty with no tool shown.
     QString commandLine() const;
 
@@ -169,6 +175,9 @@ public:
     /// Shows the card of the tool whose command id or name is `id` — under the
     /// tree or in its window, as the preference says. False when no such tool.
     bool selectTool(const QString& id);
+
+    /// The shown card's first parameter takes the keyboard (`ToolCard::focusFirstField`).
+    bool focusFirstField();
 
     /// The line the run button would send right now, or empty with no tool shown.
     QString commandLine() const;

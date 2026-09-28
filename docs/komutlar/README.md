@@ -106,8 +106,10 @@ alma adımı. Bu yüzden büyük betikler hızlı çalışır ve tek hamlede ger
 ## Komutu iptal etmek
 
 Girdi bekleyen bir komut **Esc**, sağ tık veya şeritteki **Seç** düğmesiyle (her sekmenin
-ilk öğesi)
-iptal edilir. Hiçbir komut çalışmıyorken **Esc** seçimi temizler. Hiçbir şey çizilmeden iptal edilen komut sanki hiç çalışmamış gibidir:
+ilk öğesi) iptal edilir; Esc ve sağ tık üzerinde çalıştığı seçimi de bırakır. Hiçbir komut
+çalışmıyorken **Esc** ya da sağ tık seçimi temizler. Sağ tıkın bitirdiği iki şey vardır:
+seçilen nesneleri onları soran komuta verir ve süren bir nokta dizisini (çizgi, alan)
+olduğu yerde bitirir. Hiçbir şey çizilmeden iptal edilen komut sanki hiç çalışmamış gibidir:
 geri alma adımı bırakmaz, günlüğe de yazılmaz. Transkriptte görürsünüz:
 
 ```text

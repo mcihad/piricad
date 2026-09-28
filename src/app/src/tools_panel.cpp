@@ -306,6 +306,16 @@ void ToolCard::setTool(const processing::ProcessingTool* tool)
     applyThemeToChildren(this, theme_);
 }
 
+QWidget* ToolCard::focusFirstField()
+{
+    for (const Bound& b : bound_)
+        if (b.field != nullptr && b.field->isEnabled()) {
+            b.field->beginEditing();
+            return b.field;
+        }
+    return nullptr;
+}
+
 QString ToolCard::commandLine() const
 {
     if (shown_ == nullptr) return QString();
@@ -571,6 +581,16 @@ void ToolsPanel::showTool(const processing::ProcessingTool* tool)
     dialog_->show();
     dialog_->raise();
     dialog_->activateWindow();
+}
+
+bool ToolsPanel::focusFirstField()
+{
+    if (dialog_ && dialog_->isVisible()) return dialog_->card()->focusFirstField() != nullptr;
+    QWidget* field = card_->focusFirstField();
+    // AND IN SIGHT: a card under the tree in a short dock has its fields below
+    // the fold, and a focused box nobody can see is a keyboard typing blind.
+    if (field != nullptr) scroll_->ensureWidgetVisible(field);
+    return field != nullptr;
 }
 
 QString ToolsPanel::commandLine() const

@@ -242,8 +242,10 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Up: historyStep(-1); return;
     case Qt::Key_Down: historyStep(+1); return;
     case Qt::Key_Escape:
+        // Words half typed go first; then Esc lets go of the command AND the
+        // selection, as it does on the canvas (`Controller::cancelAll`).
         if (text().isEmpty())
-            controller_.cancelInteractive();
+            controller_.cancelAll();
         else
             clear();
         return;

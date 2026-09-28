@@ -904,6 +904,14 @@ private:
     /// Sends the drag as a command. Called on release; a drag that never left the
     /// grip sends nothing.
     void commitGripDrag();
+    /// Forgets a grip drag under way; nothing was written yet.
+    void abandonGripDrag();
+    /// The right button's answer (`mousePressEvent`): finish what is the answer,
+    /// let go of everything else.
+    void rightClick();
+    /// With nothing running: the measurements, the selection and the tracking
+    /// marks go — what Esc and the right button both do then.
+    void letGo();
 
     /// The aid that would fire if the user clicked now. A preview, never an input:
     /// the value a click supplies is the raw world point, and the aids are applied

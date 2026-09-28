@@ -87,11 +87,15 @@ Simgeler renklidir ve renk her simgede aynı şeyi söyler: mavi komutun çizdi�
 değiştirdiği şekil, kırmızı kestiği ya da sildiği, turuncu yazdığı, sarı veri ve katman,
 yeşil eklediği ya da birleştirdiği.
 
-**Bir araç elinizde kalır.** Çizgi'ye bastıysanız çizgi çizersiniz; bir çizgiyi **sağ
-tıkla** bitirdiğinizde araç bırakılmaz, sıradaki çizgi için hazır bekler. Aynısı Taşı,
-Alan Ölç, Ölçü ve diğer her araç için geçerlidir: **sol tuş başlatır, sağ tuş bitirir,
-araç seçili kalır**. Aracı bırakmanın iki yolu vardır: **Esc** ya da **Seç**'e (veya
-başka bir araca) basmak. Çalışan aracın düğmesi basılı görünür.
+**Bir çizim aracı elinizde kalır.** Çizgi'ye bastıysanız çizgi çizersiniz; bir çizgiyi
+**sağ tıkla** bitirdiğinizde araç bırakılmaz, sıradaki çizgi için hazır bekler. Alan,
+Alan Ölç ve Ölçü de böyledir: **sol tuş başlatır, sağ tuş şekli bitirir, araç seçili
+kalır**. Henüz hiç nokta vermediğiniz bir araçta sağ tık aracı bırakır.
+
+**Sağ tık ve Esc bırakır.** Bir düzenleme sürerken (Yuvarla köşeyi, Taşı taban noktasını
+sorarken) ya da hiçbir komut çalışmazken **sağ tık** veya **Esc**, süren düzenlemeyi **ve
+seçimi** bırakır; el yeniden **Seç** aracındadır (Netcad'deki gibi). Aracı bırakmanın bir
+yolu da **Seç**'e (veya başka bir araca) basmaktır. Çalışan aracın düğmesi basılı görünür.
 
 ### Aileler: bölünmüş düğmeler
 
@@ -293,8 +297,8 @@ klavyenin nerede olacağı değişir:
 | Komut ne istiyor | Nasıl verilir |
 |---|---|
 | **Nokta** | Tuvale tıklayın; ya da koordinatı komut satırına yazın (`485320,4310220`, `@50,30`, `@100<45`) |
-| **Nesne** | Tuvalde seçin, sonra **Enter** |
-| **Ad** (blok, katman, desen) ya da **sayı** | Odak kendiliğinden komut satırına geçer ve yazılacak yer hazır olur |
+| **Nesne** | Tuvalde seçin, sonra **Enter** ya da **sağ tık** (hiçbir şey seçmeden sağ tık komutu bırakır) |
+| **Ad** (blok, katman, desen) ya da **sayı** | Odak kendiliğinden komut satırına geçer ve yazılacak yer hazır olur; yazmaya hemen başlayabilirsiniz |
 | **Mesafe** (pah mesafesi, yuvarlatma yarıçapı) | İstem "yazın ya da gösterin" der: sayıyı yazın **ya da** tuvale tıklayın — istemin başladığı noktadan tıklanan yere olan uzaklık cevaptır. İmleç hareket ettikçe sonuç tuvalde çizilir |
 
 Bir **sayı** isteyen öteki istemlerde tuvale tıklamak bir cevap değildir: komut
@@ -314,6 +318,10 @@ yazmak da olur.
 Sözle cevap veren komutlar (Katmanları Listele, Görünüm Bilgisi, Seçim Bilgisi,
 Sorgula) cevabı sağ panelin **Geçmiş** sekmesine yazar ve o sekmeyi kendiliğinden
 öne getirir.
+
+Değerini bir formda isteyen araçlar — şeritte adı `…` ile biten **Tampon…**, **Alanı
+Düzenle…** gibi — **Araçlar** panelinde açılır ve klavye formun **ilk alanına** geçer,
+içindeki değer seçili olur: yazdığınız onun yerine geçer.
 
 ## Tek belge, sekmesiz
 
@@ -336,11 +344,13 @@ kaydedilmemiş değişikliğiniz varsa önce **Kaydet / Atla / Vazgeç** sorusu 
 | Sol tuş basılı sürükle, komut yokken | Seçim kutusu çizer |
 | **Shift** + tık/sürükle | Seçime ekler |
 | **Ctrl** + tık/sürükle | Seçimden çıkarır |
-| Sağ tık, komut nesne beklerken | Seçilenleri komuta verir (Enter ile aynı) |
-| Sağ tık, komut nokta beklerken | Şekli olduğu yerde **bitirir**; araç elde kalır |
+| Sağ tık, komut yokken | **Seçimi bırakır** (tuvaldeki ölçü ve izleme işaretleriyle birlikte); el **Seç** aracındadır |
+| Sağ tık, komut nesne beklerken | Seçilenleri komuta verir (Enter ile aynı); hiçbir şey seçilmediyse komutu bırakır |
+| Sağ tık, nokta dizisi sürerken (Çizgi, Alan, Ölç… en az bir nokta verilmişken) | Şekli olduğu yerde **bitirir**; araç elde kalır. Henüz nokta yoksa aracı bırakır |
+| Sağ tık, bir düzenleme sürerken (köşe, taban noktası, yarıçap istenirken) | **Düzenlemeyi ve seçimi bırakır**; el **Seç** aracındadır |
 | Orta tuş basılı sürükle | Görünümü kaydırır |
 | Fare tekerleği | İmlecin bulunduğu noktaya yakınlaştırır/uzaklaştırır |
-| **Esc** | Çalışan komutu iptal eder ve aracı bırakır; komut yoksa seçimi temizler |
+| **Esc** | Çalışan komutu **ve seçimi** bırakır (süren bir dizi o ana kadar çizdiğini tutar); komut yoksa seçimi ve tuvaldeki işaretleri temizler. El **Seç** aracındadır. Bir köşe tutamağını sürüklerken sürüklemeyi bırakır |
 
 İmleç bir **CAD nişanıdır**: ortası boş bırakılmış yatay ve dikey iki çizgi, ortasında
 da **seçim kutusu** — bir tıklamanın neyi tutacağını gösteren kare. Karenin kenarı

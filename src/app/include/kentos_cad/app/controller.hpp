@@ -215,6 +215,23 @@ public:
     /// is what tells the shell to arm the tool again rather than put it away.
     void finishInteractive();
 
+    /// PUT IT ALL DOWN — Esc, and the right button outside a run of points: the
+    /// running command ends the way Esc ends it (a run keeps what it made,
+    /// nothing re-arms) and the selection goes with it, so the hand is back on
+    /// the select tool with nothing picked. Netcad's rule, and the user's: the
+    /// right button and Esc always let go of what is selected and of the edit
+    /// under way.
+    void cancelAll();
+
+    /// Empties the selection through `SEÇ mod=TEMİZLE`, when there is one — the
+    /// command, not a reach into the bus (Article 1.2).
+    void clearSelection();
+
+    /// Whether the waiting command is in the middle of a RUN of points with at
+    /// least one of them fixed — the next corner of ALAN, the next point of ÖLÇ:
+    /// what the right button FINISHES rather than cancels.
+    bool inRun() const;
+
     /// The selection, resolved to dense slots for one frame. Recomputed only when
     /// the selection or the document changes, never per frame: model.md R2 keeps
     /// keys out of the frame path, and R44 keeps slots out of the selection.

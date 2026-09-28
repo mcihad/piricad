@@ -877,6 +877,40 @@ int Controller::jobPermille() const noexcept
     return p == 0 ? -1 : static_cast<int>(p);
 }
 
+void Controller::cancelAll()
+{
+    // The job's own stop comes first and is all there is while it runs: the
+    // selection stays for when it is back (`Bus::writable` holds the drawing).
+    if (session_ && session_->working()) {
+        cancelInteractive();
+        return;
+    }
+    if (session_) cancelInteractive();
+    clearSelection();
+}
+
+void Controller::clearSelection()
+{
+    if (bus_.selection().empty()) return;
+    command::Args args;
+    args.set("mod", command::Value::text("TEMİZLE"));
+    runInvocation(command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+}
+
+bool Controller::inRun() const
+{
+    if (!session_ || !session_->waiting()) return false;
+    const command::Prompt& asking = session_->prompt();
+    if (asking.kind != command::ParamKind::Point) return false;
+    bool run_param = false;
+    for (const command::Param& p : session_->spec().params)
+        if (p.name == asking.param && p.kind == command::ParamKind::PointList) run_param = true;
+    // A POINT ALREADY FIXED in it: a run asked for its first point has nothing
+    // to finish, and the right button there puts the tool down.
+    return run_param &&
+           (asking.can_retract || asking.has_rubber_band || !asking.rubber_chain.empty());
+}
+
 void Controller::finishInteractive()
 {
     // A RUN IS FINISHED BY SAYING "THAT IS ALL", not by cancelling it. When the

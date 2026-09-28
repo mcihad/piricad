@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — sağ tık ve Esc bırakır, sorulan değer klavyeyi alır
+
+- **Sağ tık seçimi bırakır** (Netcad'deki gibi): hiçbir komut çalışmazken sağ tık seçimi
+  ve tuvaldeki işaretleri temizler; önceden hiçbir şey yapmıyordu.
+- **Sağ tık ve Esc düzenlemeyi ve seçimi birlikte bırakır**: Yuvarla köşeyi, Taşı taban
+  noktasını sorarken sağ tık ya da Esc komutu iptal eder, üzerinde çalıştığı seçimi de
+  bırakır ve el **Seç** aracına döner. Sağ tık iki şeyi bitirir: seçilen nesneleri onları
+  soran komuta verir ve süren bir nokta dizisini (Çizgi, Alan, Ölç) olduğu yerde bitirir —
+  araç elde kalır; hiç nokta verilmemiş araçta ikinci sağ tık aracı bırakır. Sürüklenen
+  bir köşe tutamağını Esc ya da sağ tık bırakır.
+- **Değerini formda isteyen araç açılınca klavye ilk alana geçer**: şeritte `…` ile biten
+  **Tampon…**, **Alanı Düzenle…** Araçlar panelinde açıldığında ilk parametre kutusu
+  odaklanır ve değeri seçili olur.
+
 ### Eklendi — uzun işler: ilerleme, Durdur, tek yazar ve özet (F-05, 4. aşama)
 
 - **TOPOLOJİ, EŞYÜKSELTİ, HACİM ve DIŞAAKTAR pencereyi dondurmuyor:** iş ayrı bir iş

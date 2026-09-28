@@ -7917,6 +7917,138 @@ int MainWindow::probeRealMouse()
             shoot("uzun-is-disaaktar-durdu");
             QDir(folder).removeRecursively();
         }
+
+        // ---- 46. THE RIGHT BUTTON AND ESC LET GO; A FIGURE ASKED FOR TAKES THE
+        //      KEYBOARD (the user's rule, from Netcad) ----
+        //
+        // The right button — and Esc — always let go of what is selected and of
+        // the edit under way, and the hand is on the select tool again. Two
+        // things the button FINISHES instead, because there the work is the
+        // answer: the objects picked for a command that asked which, and a run
+        // of points with a point in it. And a question answered by typing puts
+        // the keyboard where it is typed: the command line for a number, a
+        // tool's first field for a tool opened for its figure.
+        {
+            const auto on_screen = [this](core::Point2 world) {
+                const auto at = canvas_->view().to_screen(world);
+                return QPointF(at.x, at.y);
+            };
+            const auto click = [&onCanvas](QPointF at, Qt::MouseButton button) {
+                onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, at, button);
+                onCanvas(QEvent::MouseButtonRelease, at, button);
+            };
+            const auto picked    = [this] { return controller_->bus().selection().size(); };
+            const auto selecting = [this] {
+                return controller_->session() == nullptr && actSelect_->isChecked();
+            };
+            const auto escape = [this] {
+                canvas_->setFocus(Qt::OtherFocusReason);
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas_, &press);
+                QCoreApplication::processEvents();
+            };
+
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {"KATMAN ad=PARSEL",
+                                     "ALAN 485300,4310200 485340,4310200 485340,4310230 "
+                                     "485300,4310230",
+                                     "ÇİZGİ 485300,4310250 485340,4310250"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{485'280'000, 4'310'140'000, 485'370'000, 4'310'265'000});
+            const QPointF empty = on_screen(core::Point2{485'360'000, 4'310'190'000});
+
+            // A SELECTION AND NOTHING RUNNING: the right button empties it.
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            endCommand();
+            check(picked() == 1, QStringLiteral("parsel seçildi"));
+            click(empty, Qt::RightButton);
+            check(picked() == 0 && selecting(),
+                  QStringLiteral("sağ tık seçimi bıraktı, seç aracı elde"));
+
+            // AN EDIT UNDER WAY: YUVARLA asking for its corner. The right button
+            // lets go of the edit and of the parcel it was on.
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            endCommand();
+            actFillet_->trigger();
+            QCoreApplication::processEvents();
+            check(controller_->awaitingInput(), QStringLiteral("YUVARLA köşeyi soruyor"));
+            shoot("sag-tik-oncesi");
+            click(empty, Qt::RightButton);
+            check(controller_->session() == nullptr && picked() == 0 && selecting(),
+                  QStringLiteral("sağ tık düzenlemeyi ve seçimi bıraktı, seç aracı elde"));
+            shoot("sag-tik-birakir");
+
+            // ESC, THE SAME: TAŞI asking for its base point.
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            endCommand();
+            actMove_->trigger();
+            QCoreApplication::processEvents();
+            check(controller_->awaitingInput(), QStringLiteral("TAŞI taban noktasını soruyor"));
+            escape();
+            check(controller_->session() == nullptr && picked() == 0 && selecting(),
+                  QStringLiteral("Esc taşımayı ve seçimi bıraktı, seç aracı elde"));
+
+            // A RUN OF POINTS: the right button finishes the shape and the tool
+            // stays in the hand; with nothing in the run it puts the tool down.
+            const std::size_t parcels = controller_->document().live_entity_count();
+            actPolygon_->trigger();
+            QCoreApplication::processEvents();
+            for (const core::Point2 corner : {core::Point2{485'300'000, 4'310'150'000},
+                                              core::Point2{485'325'000, 4'310'150'000},
+                                              core::Point2{485'325'000, 4'310'170'000}})
+                click(on_screen(corner), Qt::LeftButton);
+            click(empty, Qt::RightButton);
+            check(controller_->document().live_entity_count() == parcels + 1 &&
+                      controller_->session() != nullptr && actPolygon_->isChecked(),
+                  QStringLiteral("sağ tık alanı bitirdi, ALAN elde kaldı"));
+            click(empty, Qt::RightButton);
+            check(selecting(), QStringLiteral("boş dizide sağ tık aracı bıraktı"));
+
+            // PICKING FOR A COMMAND: the right button hands the picks over.
+            const std::size_t lines = controller_->document().live_entity_count();
+            actErase_->trigger();
+            QCoreApplication::processEvents();
+            check(controller_->awaitingInput() &&
+                      controller_->promptKind() == command::ParamKind::Selection,
+                  QStringLiteral("SİL nesneleri soruyor"));
+            click(on_screen(core::Point2{485'320'000, 4'310'250'000}), Qt::LeftButton);
+            click(empty, Qt::RightButton);
+            check(controller_->document().live_entity_count() == lines - 1 && selecting(),
+                  QStringLiteral("sağ tık seçilen çizgiyi SİL'e verdi"));
+            runScriptLine(QStringLiteral("GERİAL"));
+            endCommand();
+
+            // A NUMBER ASKED FOR: YUVARLA's radius, after its corner is clicked.
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            endCommand();
+            actFillet_->trigger();
+            QCoreApplication::processEvents();
+            click(on_screen(core::Point2{485'340'000, 4'310'230'000}), Qt::LeftButton);
+            QCoreApplication::processEvents();
+            check(controller_->awaitingInput() &&
+                      controller_->promptKind() == command::ParamKind::Number &&
+                      commandLine_->hasFocus(),
+                  QStringLiteral("yarıçap sorulunca klavye komut satırında"));
+            shoot("yaricap-odak");
+            escape();
+
+            // A TOOL OPENED FOR ITS FIGURE: the first field takes the keyboard.
+            runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            endCommand();
+            showToolsPanel(QStringLiteral("islem.tampon"));
+            for (int i = 0; i < 4; ++i)
+                QCoreApplication::processEvents();
+            const QWidget* focused = QApplication::focusWidget();
+            check(focused != nullptr && toolsPanel_ != nullptr &&
+                      toolsPanel_->isAncestorOf(focused),
+                  QStringLiteral("Tampon açılınca ilk alan klavyede"));
+            shoot("tampon-odak");
+            controller_->clearSelection();
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

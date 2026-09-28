@@ -3930,16 +3930,74 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::RightButton) {
-        // THE RIGHT BUTTON FINISHES. While a command is asking WHICH objects it
-        // means "those ones, go"; while it is asking for points it means "that is
-        // the shape, done" — the run closes on what it has and the tool stays in
-        // the hand for the next one. Only Esc puts a tool away
-        // (`Controller::finishInteractive` versus `cancelInteractive`). With no
-        // command running the button does nothing yet.
-        if (!controller_.supplyPickedObjects() && controller_.session())
-            controller_.finishInteractive();
+        rightClick();
         snap_preview_valid_ = false;
         update();
+    }
+}
+
+void MapCanvas::rightClick()
+{
+    // THE RIGHT BUTTON LETS GO — Netcad's rule, and the user's: whatever is
+    // selected and whatever edit is under way are put down and the hand is on
+    // the select tool again (`Controller::cancelAll`). Two things it FINISHES
+    // instead, because there the work is the answer: the objects picked for a
+    // command that asked which ("those ones, go"), and a run of points with a
+    // point in it ("that is the shape, done" — the run closes on what it has and
+    // the tool stays in the hand for the next one). A run asked for its first
+    // point has nothing to finish, and the button puts that tool down too.
+    if (dragging_grip_) {
+        abandonGripDrag();
+        controller_.clearSelection();
+        return;
+    }
+    if (selecting_) {
+        selecting_ = false;
+        controller_.clearSelection();
+        return;
+    }
+    if (controller_.session()) {
+        const bool picking = controller_.awaitingInput() &&
+                             controller_.promptKind() == command::ParamKind::Selection;
+        if (picking && !controller_.bus().selection().empty()) {
+            (void)controller_.supplyPickedObjects();
+            return;
+        }
+        if (controller_.inRun()) {
+            controller_.finishInteractive();
+            return;
+        }
+        closeTextEditor();
+        controller_.cancelAll();
+        return;
+    }
+    letGo();
+}
+
+void MapCanvas::abandonGripDrag()
+{
+    // NOTHING WAS WRITTEN YET: the drag commits on release (`commitGripDrag`),
+    // so letting go of it is forgetting where it had got to.
+    dragging_grip_      = false;
+    drag_grip_          = Grip{};
+    hover_grip_         = Grip{};
+    snap_preview_valid_ = false;
+    applyPointer();
+}
+
+void MapCanvas::letGo()
+{
+    // Nothing running: the measurements left on the canvas, the selection and
+    // the tracking marks go — the second and the third by sending the command,
+    // not by reaching into the bus (Article 1.2); the first is view state and
+    // never was the document's.
+    clearMeasureMarks();
+    controller_.clearSelection();
+    if (!controller_.bus().tracking_marks().empty()) {
+        command::Args args;
+        args.set("sil", command::Value::boolean(true));
+        controller_.runInvocation(
+            command::Invocation{"core.tracking", std::move(args), command::Origin::Gui});
     }
 }
 
@@ -4277,37 +4335,28 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             update();
             return;
         }
+        if (dragging_grip_) {
+            abandonGripDrag();
+            controller_.clearSelection();
+            update();
+            return;
+        }
         if (selecting_) {
             selecting_ = false;
             update();
             return;
         }
+        // A COMMAND AND WHAT IT WAS WORKING ON go together: Esc lets go of the
+        // edit and of the selection, and the hand is on the select tool
+        // (`Controller::cancelAll`) — the right button's rule, on the key.
         if (controller_.session()) {
-            controller_.cancelInteractive();
+            controller_.cancelAll();
             closeTextEditor();
             snap_preview_valid_ = false;
             update();
             return;
         }
-        // Nothing running: ESC clears the measurements left on the canvas and
-        // the selection — the second by sending the command, not by reaching
-        // into the bus (Article 1.2); the first is view state and never was
-        // the document's.
-        clearMeasureMarks();
-        if (!controller_.bus().selection().empty()) {
-            command::Args args;
-            args.set("mod", command::Value::text("TEMİZLE"));
-            controller_.runInvocation(
-                command::Invocation{"core.select", std::move(args), command::Origin::Gui});
-        }
-        // And the tracking marks made while nothing was running, the same way:
-        // through `İZ sil=evet`, which says how many it forgot.
-        if (!controller_.bus().tracking_marks().empty()) {
-            command::Args args;
-            args.set("sil", command::Value::boolean(true));
-            controller_.runInvocation(
-                command::Invocation{"core.tracking", std::move(args), command::Origin::Gui});
-        }
+        letGo();
         update();
         return;
     }

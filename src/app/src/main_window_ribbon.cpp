@@ -54,6 +54,7 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QToolButton>
 #include <QWidgetAction>
 
@@ -1678,7 +1679,14 @@ void MainWindow::showToolsPanel(const QString& id)
     propertyDock_->raise();
     propertyHeader_->setCurrent(2);
     propertyStack_->setCurrentIndex(2);
-    if (!id.isEmpty() && toolsPanel_ != nullptr) toolsPanel_->selectTool(id);
+    if (!id.isEmpty() && toolsPanel_ != nullptr && toolsPanel_->selectTool(id)) {
+        // A TOOL OPENED FOR ITS FIGURE (`Tampon…`, `Alanı Düzenle…`) is waiting
+        // for that figure, so the keyboard goes where it is typed — after the
+        // button's own click has let go of the focus it took.
+        QTimer::singleShot(0, this, [this] {
+            if (toolsPanel_ != nullptr) (void)toolsPanel_->focusFirstField();
+        });
+    }
 }
 
 void MainWindow::showLayerPanel()
