@@ -6,6 +6,15 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — Alan sekmesi sığar; formu açan araç "…" ile görünür
+
+- Bir parsel seçince beliren **Alan** sekmesi 1440 piksele sığmıyordu (1561 px, en sağdaki
+  Seçimi Bırak kesiliyordu). Ölçme ve yazma araçları tek **Ölç ve Yaz** panelinde iki sütun
+  satır oldu; sekme 1413 px. Şerit probu artık her sekmenin — düzenleyici sekmeleri dahil —
+  genişliğini ölçüyor ve 1440 pikseli aşanı bulgu sayıyor.
+- **Tampon…** ve **Alanı Düzenle…** düğmelerinde "…" görünmüyordu (Qt, düğme yazısındaki
+  üç noktayı kendiliğinden atıyordu); formu açan araçlar artık şeritte de "…" ile yazılı.
+
 ### Düzeltildi — yay kenarına bağlı yazı, çekirdekte tek düz kenar, dairesel alan
 
 - **Yaylı bir kenara bağlanan yazı** (BAĞLA) nesne ilk kez taşındığında metrelerce

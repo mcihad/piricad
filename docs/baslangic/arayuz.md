@@ -62,8 +62,8 @@ AutoCAD kullanıcısı `Çizgi`'yi, `Buda`'yı ve katman listesini aradığı ye
 **Giriş** sekmesi öteki sekmelerin kısa biçimidir: çizimin tamamı **Çizim**'de,
 düzenlemenin tamamı **Değiştir**'dedir; Giriş en çok kullanılanları bir arada tutar.
 Spline ve tarama bu yüzden **Çizim** sekmesindedir; **Stil Kopyala** Giriş'te öteki
-düzenleme fiillerinin yanında, **Değiştir** panelindedir. Her sekme 1440 piksel genişliğinde
-bir pencereye kaydırmadan sığar.
+düzenleme fiillerinin yanında, **Değiştir** panelindedir. Her sekme — nesne seçince beliren
+düzenleyici sekmeleri de — 1440 piksel genişliğinde bir pencereye kaydırmadan sığar.
 
 **Her sekmenin ilk öğesi Seç aracıdır.** Hangi sekmede olursanız olun elinizdeki aracı
 oradan bırakırsınız; okundaki listede **Alan Seç**, **Tümünü Seç** (**Ctrl+A**) ve
@@ -181,7 +181,7 @@ gösterdiği şeyin tam penceresini açar.
 | Görünüm ▸ Yardımcılar | Yakalama modları |
 | Görünüm ▸ Tema | Seçenekler ▸ Görünüm ve Tema |
 | Çıktı ▸ Yazdır | Seçenekler ▸ Plot ve Çıktı (yazdırma profilleri) |
-| Alan ▸ Yaz | Araçlar panelinde numaralama ve uzunluk yazma ayarları |
+| Alan ▸ Ölç ve Yaz | Araçlar panelinde numaralama ve uzunluk yazma ayarları |
 
 ### Düzenleyici sekmeleri
 
@@ -194,7 +194,7 @@ sekme de kaybolur.
 | **Yazı** | yazı | Yazıyı Düzenle, Bul ve Değiştir, Stil Kopyala · **Yükseklik** ve **Aralık** kutuları · dokuz hizalama (3 × 3) · Bağla, Bağı Çöz |
 | **Ölçü** | ölçü | Ölçüyü Düzenle, Stile Döndür, Pafta Ölçeğine Uyarla · **Stil**, **Ondalık**, **Birim** kutuları · Zincir Ölçü, Baz Ölçü |
 | **Tarama** | tarama | desen galerisi · **Açı**, **Ölçek**, Çapraz · adalar: Normal, Yalnız dış, Adasız · Sınır Bul, Taramayı Düzenle |
-| **Alan** | kapalı alan (parsel), kenarı yaylı olsa da | Alan Ölç, Nesne Bilgisi, Koordinat Oku · Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · **Kes ve Köşe**: Böl, Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü · Tarama, Ofset, Tampon…, Alanı Düzenle…, Patlat · **Nesne** |
+| **Alan** | kapalı alan (parsel), kenarı yaylı olsa da | **Ölç ve Yaz**: Alan Ölç, Nesne Bilgisi, Koordinat Oku, Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · **Kes ve Köşe**: Böl, Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü · **Düzenle**: Tarama, Ofset, Tampon…, Alanı Düzenle…, Patlat · **Nesne** |
 | **Çizgi** | açık çizgi ya da çoklu çizgi | **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · **Köşe**: Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil · **Dönüştür**: Alana Çevir, Uç Uca Ekle, Çizgi Düzenle, Kenar Türü, Patlat, Bölümle · Ofset, Uzunluk Yaz, Tampon…, Nesne Bilgisi · **Nesne** |
 | **Eğri** | daire, yay, elips ya da spline | Alan Ölç, Nesne Bilgisi, Koordinat Oku · **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · Ofset, Tarama, Bölümle, Tampon… · **Nesne** |
 | **Blok** | blok | Bloğu Düzenle, Taban Noktası, Patlat, Blok Ekle, Blok, Nesne Bilgisi, Dış Referansları Yenile · **Kırpma**: Kırp, Çokgenle Kırp, Nesneyle Kırp, Kırpma Sınırını Çiz, Kırpmayı Kaldır ([BLOKKIRP](../komutlar/block_clip.md)) |

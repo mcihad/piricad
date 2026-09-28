@@ -1618,14 +1618,17 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     const auto direct = [this](const char* id, const QString& word) {
         return processingAction(QString::fromLatin1(id), word);
     };
-    SARibbonPanel* areaRead = area->addPanel(tr("Ölç"));
-    areaRead->addLargeAction(actMeasureArea_);
+    // READ AND WRITE IN ONE PANEL of rows: the large buttons of this tab are
+    // what is done TO a parcel — cut, merge, round — and the tab fits a 1440 px
+    // window only with the measuring and the writing beside them in two
+    // columns (the ribbon sheet's width finding).
+    SARibbonPanel* areaRead = area->addPanel(tr("Ölç ve Yaz"));
+    areaRead->addSmallAction(actMeasureArea_);
     areaRead->addSmallAction(actEntityInfo_);
     areaRead->addSmallAction(actCoordinate_);
-    SARibbonPanel* areaWrite = area->addPanel(tr("Yaz"));
-    areaWrite->addLargeAction(direct("islem.kose_numarala", tr("Köşe Numarala")));
-    areaWrite->addLargeAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
-    launcher(areaWrite, tr("Numaralama ve uzunluk yazma ayarları — Araçlar paneli"),
+    areaRead->addSmallAction(direct("islem.kose_numarala", tr("Köşe Numarala")));
+    areaRead->addSmallAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
+    launcher(areaRead, tr("Numaralama ve uzunluk yazma ayarları — Araçlar paneli"),
              [this] { showToolsPanel(QStringLiteral("islem.kose_numarala")); });
     SARibbonPanel* areaCadastre = area->addPanel(tr("Kadastro"));
     areaCadastre->addLargeAction(actParcelSplit_);
@@ -1645,7 +1648,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     areaCut->addSmallAction(actVertexDelete_);
     areaCut->addSmallAction(actEdgeKind_);
     SARibbonPanel* areaShape = area->addPanel(tr("Düzenle"));
-    areaShape->addLargeAction(actHatch_);
+    areaShape->addSmallAction(actHatch_);
     areaShape->addSmallAction(actOffset_);
     areaShape->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
     areaShape->addSmallAction(
@@ -1827,6 +1830,11 @@ QAction* MainWindow::processingAction(const QString& id, const QString& word)
     QString label = word.isEmpty() ? turkish_title(QString::fromStdString(spec.title)) : word;
     if (needs_figure && !label.endsWith(QStringLiteral("…"))) label += QStringLiteral("…");
     action->setText(label);
+    // THE BUTTON SAYS IT TOO: Qt drops a trailing ellipsis from the words a
+    // tool button shows (`QAction::iconText`) unless they are set outright, and
+    // then the ribbon could not tell a tool that opens its form from one that
+    // runs.
+    if (needs_figure) action->setIconText(label);
     action->setToolTip(QString::fromStdString(spec.summary));
     action->setStatusTip(QString::fromStdString(spec.summary));
     const QString line = QString::fromStdString(spec.names.front());
@@ -2553,13 +2561,12 @@ int MainWindow::probeRibbonSheet()
     }
     settle();
 
-    // ---- every tab, in the order the bar has them ----
-    int n = 0;
-    for (SARibbonCategory* tab : bar->categoryPages(false)) {
-        if (tab == nullptr || tab->isContextCategory()) continue;
-        bar->raiseCategory(tab);
-        settle();
-        // THE WIDTH IT ASKS FOR, panel by panel: what decides whether it fits.
+    // THE WIDTH A TAB ASKS FOR, panel by panel: what decides whether it fits a
+    // 1440 px window without scrolling — the laptop the ribbon is laid out for
+    // (docs/baslangic/arayuz.md). A wider one is a finding, editor tabs too.
+    constexpr int kFits = 1440;
+    QStringList too_wide;
+    const auto measure = [&too_wide](const SARibbonCategory* tab) {
         int wanted = 0;
         QStringList widths;
         for (const SARibbonPanel* panel : tab->panelList()) {
@@ -2570,6 +2577,17 @@ int MainWindow::probeRibbonSheet()
         (void)std::fprintf(stdout, "[şerit] genişlik %s: %d (%s)\n",
                            qPrintable(tab->categoryName()), wanted,
                            qPrintable(widths.join(QStringLiteral(", "))));
+        if (wanted > kFits)
+            too_wide << QStringLiteral("%1 (%2)").arg(tab->categoryName()).arg(wanted);
+    };
+
+    // ---- every tab, in the order the bar has them ----
+    int n = 0;
+    for (SARibbonCategory* tab : bar->categoryPages(false)) {
+        if (tab == nullptr || tab->isContextCategory()) continue;
+        bar->raiseCategory(tab);
+        settle();
+        measure(tab);
         save(bar->grab().toImage(), QStringLiteral("%1-%2")
                                         .arg(++n, 2, 10, QLatin1Char('0'))
                                         .arg(file_word(tab->categoryName())));
@@ -2588,6 +2606,9 @@ int MainWindow::probeRibbonSheet()
         runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=") + QString::fromLatin1(key));
         endCommand();
         settle();
+        if (const SARibbonCategory* raised = bar->categoryByIndex(bar->currentIndex());
+            raised != nullptr && raised->isContextCategory())
+            measure(raised);
         save(bar->grab().toImage(), QStringLiteral("baglam-") + QString::fromLatin1(word));
     }
     controller_->clearSelection();
@@ -2683,6 +2704,10 @@ int MainWindow::probeRibbonSheet()
         if (it.value().size() > 1)
             (void)std::fprintf(stdout, "[şerit] bir resim birçok komut: %s\n",
                                qPrintable(it.value().join(QStringLiteral(", "))));
+    for (const QString& tab : std::as_const(too_wide)) {
+        ++findings;
+        (void)std::fprintf(stdout, "[şerit] %d pikselden geniş: %s\n", kFits, qPrintable(tab));
+    }
     (void)std::fprintf(stdout, "[şerit] %zu düğme, %d bulgu\n", entries.size(), findings);
     return 0;
 }
