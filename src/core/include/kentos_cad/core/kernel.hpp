@@ -66,6 +66,15 @@ struct KernelFace
 Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
                                                std::span<const KernelFace> b, BooleanOp op);
 
+/// FACES FROM RINGS: closed paths that do not cross, each told apart by what
+/// holds it — a ring inside none, or inside an even number, is a boundary; one
+/// inside an odd number is a hole of the ring just round it. What an offset
+/// hands back as loose rings (`kernel_offset`) — a band round a line that
+/// closes on itself has a hole, and a face grown round a courtyard keeps one —
+/// becomes the faces a boolean and a writer take, boundaries counter-clockwise
+/// and holes clockwise. Open paths are left out.
+std::vector<KernelFace> kernel_faces_of(std::vector<CurvePath> rings);
+
 /// How an offset turns a corner it moves away from.
 enum class OffsetCorner : std::uint8_t {
     Round, ///< a true arc about the corner — a buffer, a road's outer edge

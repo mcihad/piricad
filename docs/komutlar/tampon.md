@@ -12,7 +12,7 @@ bölgeyi Araçlar panelinden, komut satırından ve betikten çizmeyi bileceksin
 | Kaynak | Tamponu |
 |---|---|
 | Çizgi, çoklu çizgi | Çizginin **iki yanını** saran alan; uçlar yuvarlak, düz ya da kare |
-| Nokta | Noktanın çevresinde bir **disk** |
+| Nokta | Noktanın çevresinde **yuvarlak bir alan**, sınırı gerçek yay |
 | Alan | Dışa doğru büyümüş alan; **delikleri korunur** (delik de o kadar daralır) |
 | Daire, elips, kapalı spline | Çizildiği şeklin kendisi ve çevresi — göletin 2 m çevresine gölet de dahildir |
 | Yay, açık spline | Çizildiği eğrinin iki yanı |
@@ -33,9 +33,29 @@ sorulardır.
 Bu bir [işlem aracıdır](../islem/README.md): kapsam, asenkron çalışma, Durdur ve tek
 geri alma adımı orada anlatılır. Kaynak nesnelere dokunmaz; tamponlar yeni nesnelerdir.
 
-Hesap Clipper2 ile yapılır (CLAUDE.md 5.16: çözülmüş bir problem yeniden yazılmaz);
-bir çizginin kendine dönmesi, iki bandın buluşması ve bir halka yolun ortasında kalan
-avlu doğru çıkar.
+### Yuvarlak köşe ve uç gerçek yaydır
+
+Öntanımlı `kose=yuvarlak` ve `uc=yuvarlak` ile tamponun her yuvarlak kenarı **gerçek bir
+yaydır** ve tampon **yaylı kenarlı alan** olarak çizilir: noktanın çevresi bir daire
+alan, çizginin bandının iki ucu yarım daire, alanın büyüyen köşeleri çeyrek daire.
+20 m'lik bir çizginin 5 m tamponu 278,539816 m² tutar — 20 × 10 m'lik şerit ve iki
+yarım daire, π · 5², milimetre karesine kadar.
+
+Hesap bu durumda [geometri çekirdeğiyle](../veri/geometri-cekirdegi.md) (OpenCASCADE)
+yapılır: çizginin her parçasının bandı ayrı alınır ve hepsi birleştirilir; bir çizginin
+kendine dönmesi, iki bandın buluşması ve kolları yakın bir U'nun ortasında kalan avlu
+doğru çıkar. Üç durum hızlı yoldan (**Clipper2**) çizilir, yuvarlak kenarlar kısa
+kenarlarla:
+
+- `kose=koseli`, `kose=pah`, `uc=duz` ya da `uc=kare` verildiğinde;
+- kaynak elips ya da spline olduğunda (çizildiği hâliyle alınır);
+- kapsamda **256 köşeden uzun** bir çizgi olduğunda — köşe köşe sayısallaştırılmış bir dere
+  gibi. Çekirdek her parça için birkaç milisaniye harcar; araç bu durumda hızlı yoldan
+  gittiğini söyler.
+
+Yaylı kenarlı bir tampon **içinde boşluk** kalırsa (kolları yakın bir U'nun bandı gibi)
+kısa kenarlarla yazılır ve araç bunu söyler: yaylı kenarlı bir nesne tek halka taşır,
+boşluğu tutamaz.
 
 ## Adlar
 

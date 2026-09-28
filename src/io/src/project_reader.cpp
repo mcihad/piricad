@@ -1563,6 +1563,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             a.unit      = r.unit;
             a.precision = r.precision;
             a.separator = static_cast<char>(r.separator);
+            a.along_arc = (r.flags & 1U) != 0;
             if (r.format_string != 0) {
                 auto format = strings.at(r.format_string, "bağ biçimi");
                 if (!format) return format.error();

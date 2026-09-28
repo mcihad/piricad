@@ -1,0 +1,214 @@
+crs TUREF/TM36
+katman-sayisi 6
+nesne-sayisi 11
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=6
+katman KUYU gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+katman DERE gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+katman CEVRE gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+katman BIR gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+katman HALKA gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+nesne 0 katman=0 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    0 0
+  alan_mm2 0  cevre_mm 0
+nesne 1 katman=KUYU stil=0 halka=1 tur=6 yuk=01000000000000000000000000000000030000000000000000000000000000000000000000000000b80b000000000000010100000000000000000000000000000000000000b80b000000000000010200000000000000000000000000000000000000b80b00000000000001
+  halka rol=1 parca=0 tepe=3
+    3000 0
+    0 3000
+    -3000 0
+  alan_mm2 28274333  cevre_mm 18850
+  koken islem.tampon 1
+nesne 2 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    10000 0
+    30000 0
+  alan_mm2 0  cevre_mm 20000
+nesne 3 katman=DERE stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000200000001000000307500000000000000000000000000008813000000000000010300000010270000000000000000000000000000881300000000000001
+  halka rol=1 parca=0 tepe=4
+    10000 -5000
+    30000 -5000
+    30000 5000
+    10000 5000
+  alan_mm2 278539816  cevre_mm 71416
+  koken islem.tampon 3
+nesne 4 katman=0 stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    40000 0
+    60000 0
+    60000 10000
+    40000 10000
+  alan_mm2 200000000  cevre_mm 60000
+nesne 5 katman=CEVRE stil=0 halka=1 tur=6 yuk=01000000000000000000000000000000040000000100000060ea0000000000000000000000000000e803000000000000010300000060ea0000000000001027000000000000e8030000000000000105000000409c0000000000001027000000000000e8030000000000000107000000409c0000000000000000000000000000e80300000000000001
+  halka rol=1 parca=0 tepe=8
+    40000 -1000
+    60000 -1000
+    61000 0
+    61000 10000
+    60000 11000
+    40000 11000
+    39000 10000
+    39000 0
+  alan_mm2 263141592  cevre_mm 66283
+  koken islem.tampon 5
+nesne 6 katman=0 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    70000 0
+  alan_mm2 0  cevre_mm 0
+nesne 7 katman=0 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    74000 0
+  alan_mm2 0  cevre_mm 0
+nesne 8 katman=BIR stil=0 halka=1 tur=6 yuk=01000000000000000000000000000000030000000000000010210100000000000000000000000000b80b000000000000010100000010210100000000000000000000000000b80b000000000000010200000070110100000000000000000000000000b80b00000000000001
+  halka rol=1 parca=0 tepe=3
+    72000 -2236
+    77000 0
+    72000 2236
+  alan_mm2 50353741  cevre_mm 27606
+  koken islem.tampon 7 8
+nesne 9 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=5
+    0 40000
+    30000 40000
+    30000 70000
+    0 70000
+    0 44000
+  alan_mm2 0  cevre_mm 116000
+nesne 10 katman=HALKA stil=0 halka=2
+  halka rol=1 parca=0 tepe=100
+    0 37000
+    30000 37000
+    30294 37014
+    30585 37058
+    30871 37129
+    31148 37228
+    31414 37354
+    31667 37506
+    31903 37681
+    32121 37879
+    32319 38097
+    32494 38333
+    32646 38586
+    32772 38852
+    32871 39129
+    32942 39415
+    32986 39706
+    33000 40000
+    33000 70000
+    32986 70294
+    32942 70585
+    32871 70871
+    32772 71148
+    32646 71414
+    32494 71667
+    32319 71903
+    32121 72121
+    31903 72319
+    31667 72494
+    31414 72646
+    31148 72772
+    30871 72871
+    30585 72942
+    30294 72986
+    30000 73000
+    0 73000
+    -294 72986
+    -585 72942
+    -871 72871
+    -1148 72772
+    -1414 72646
+    -1667 72494
+    -1903 72319
+    -2121 72121
+    -2319 71903
+    -2494 71667
+    -2646 71414
+    -2772 71148
+    -2871 70871
+    -2942 70585
+    -2986 70294
+    -3000 70000
+    -3000 44000
+    -2997 43863
+    -2988 43727
+    -2972 43591
+    -2950 43456
+    -2922 43322
+    -2888 43189
+    -2848 43058
+    -2803 42930
+    -2751 42803
+    -2693 42679
+    -2630 42557
+    -2562 42439
+    -2488 42324
+    -2409 42212
+    -2325 42104
+    -2236 42000
+    -2421 41771
+    -2583 41525
+    -2720 41265
+    -2831 40992
+    -2915 40710
+    -2970 40421
+    -2997 40128
+    -2995 39833
+    -2965 39540
+    -2905 39252
+    -2818 38971
+    -2703 38700
+    -2563 38441
+    -2398 38197
+    -2210 37971
+    -2000 37764
+    -1896 37675
+    -1788 37591
+    -1676 37512
+    -1561 37438
+    -1443 37370
+    -1321 37307
+    -1197 37249
+    -1070 37197
+    -942 37152
+    -811 37112
+    -678 37078
+    -544 37050
+    -409 37028
+    -273 37012
+    -137 37003
+  halka rol=2 parca=0 tepe=20
+    2828 43000
+    2849 43060
+    2868 43121
+    2886 43182
+    2903 43244
+    2918 43305
+    2933 43367
+    2945 43430
+    2957 43493
+    2967 43556
+    2976 43619
+    2983 43682
+    2989 43745
+    2994 43809
+    2997 43873
+    2999 43936
+    3000 44000
+    3000 67000
+    27000 67000
+    27000 43000
+  alan_mm2 711209027  cevre_mm 235404
+  koken islem.tampon 10
+kapsam -3000 -5000 77000 73000
+icerik-ozeti 9302ea3f418ee069
+gunluk
+  {"seq":1,"cmd":"core.point_draw","args":{"noktalar":[[0,0]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":2,"cmd":"islem.tampon","args":{"nesneler":[1],"katman":"KUYU","mesafe":3.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":3,"cmd":"core.polyline","args":{"noktalar":[[10000,0],[30000,0]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":4,"cmd":"islem.tampon","args":{"nesneler":[3],"katman":"DERE","mesafe":5.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":5,"cmd":"core.area","args":{"noktalar":[[40000,0],[60000,0],[60000,10000],[40000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":6,"cmd":"islem.tampon","args":{"nesneler":[5],"katman":"CEVRE","mesafe":1.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":7,"cmd":"core.point_draw","args":{"noktalar":[[70000,0]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":8,"cmd":"core.point_draw","args":{"noktalar":[[74000,0]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":9,"cmd":"islem.tampon","args":{"nesneler":[7,8],"katman":"BIR","mesafe":3.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":10,"cmd":"core.polyline","args":{"noktalar":[[0,40000],[30000,40000],[30000,70000],[0,70000],[0,44000]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":11,"cmd":"islem.tampon","args":{"nesneler":[10],"katman":"HALKA","mesafe":3.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}

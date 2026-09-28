@@ -90,10 +90,18 @@ struct Attachment
     Mm gap{0};                               ///< between the feature and the text's near edge
     Mm along{0};                             ///< the hand's offset ALONG the reading direction
     Mm across{0};                            ///< and ACROSS it, positive to the reading left
-    std::uint8_t unit{0};                    ///< `DrawingUnit`, for a derived length
-    std::uint8_t precision{2};               ///< decimals of a derived length
-    char separator{','};                     ///< its decimal separator
-    std::string format;                      ///< `{}` takes the figure: `"{} m"`, `"L={}"`
+    /// ON A BENT EDGE, `along` IS ARC LENGTH from the arc's middle, positive
+    /// the way the edge is walked, and `across` is off the middle along the
+    /// arc's OUTWARD radius; the caption stands there and reads along the
+    /// arc's tangent at its place (model.md R46g). Both are the edge's own, so
+    /// a caption keeps its place round the arc whatever turns the source. False
+    /// — every attachment made before R46g, and every one on a straight edge —
+    /// keeps both straight offsets in the middle's reading frame.
+    bool along_arc{false};
+    std::uint8_t unit{0};      ///< `DrawingUnit`, for a derived length
+    std::uint8_t precision{2}; ///< decimals of a derived length
+    char separator{','};       ///< its decimal separator
+    std::string format;        ///< `{}` takes the figure: `"{} m"`, `"L={}"`
 
     friend bool operator==(const Attachment&, const Attachment&) = default;
 };
@@ -109,6 +117,14 @@ struct AttachPlacement
     /// alignment when the line turns round. Empty for every other rule, whose
     /// caption keeps the anchor it has.
     std::optional<TextAnchor> anchor{};
+    /// A BENT EDGE'S CIRCLE, which a caption attached `along_arc` turns about:
+    /// its centre, the arc's middle, the arc's radius, and which way the edge
+    /// is walked — +1 counter-clockwise, −1 clockwise. Empty for every other
+    /// rule.
+    std::optional<Point2> turn_centre{};
+    Point2 turn_middle{}; ///< the arc's middle, when `turn_centre`
+    Mm turn_radius{0};    ///< the arc's radius, when `turn_centre`
+    int turn_sense{0};    ///< +1 or −1, when `turn_centre`
 };
 
 /// THE BENT EDGES of the ring an attachment reads: an arc polyline's
@@ -137,7 +153,10 @@ std::optional<std::string> attach_text(std::span<const Point2> ring, bool closed
 
 /// Writes into `a.along`/`a.across` the offset that carries the bare rule's
 /// caption (`rule`, computed WITHOUT offset) to `actual`, in the rule's reading
-/// frame — so the offset survives the source turning or moving.
+/// frame — so the offset survives the source turning or moving. On a bent
+/// edge (`rule.turn_centre`) `along` is the ARC LENGTH from the arc's middle
+/// to where `actual` stands round the arc's centre, `across` what is left
+/// turned back to the middle, and `a.along_arc` is set (model.md R46g).
 void attach_measure_offset(const AttachPlacement& rule, Point2 actual, Attachment& a);
 
 /// `a` re-anchored on `now` after the source's ring changed from `was`. With the

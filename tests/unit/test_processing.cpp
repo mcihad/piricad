@@ -11,8 +11,11 @@
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/processing/registry.hpp"
@@ -811,7 +814,9 @@ std::vector<std::pair<core::Mm2, std::uint32_t>> faces_on(const core::Document& 
         const core::LayerId l = doc.entities().layer[e];
         if (l >= doc.layers().size() || doc.layers()[l].name != layer) continue;
         const std::uint32_t slot = doc.entities().slot[e];
-        out.emplace_back(doc.geometry().area_of(slot), doc.geometry().rings_of(slot).count);
+        // THE AREA ITS KIND MEASURES: a buffer bounded by arcs is an arc
+        // polyline, whose ring alone is its corners (TODOS O-3).
+        out.emplace_back(doc.entity_area(e), doc.geometry().rings_of(slot).count);
     }
     return out;
 }
@@ -880,6 +885,112 @@ TEST_CASE("TAMPON: üst üste binen tamponlar tek alan olur; birlestir=hayir her
     r.run("TAMPON nesneler=5 mesafe=-3 katman=YOK");
     CHECK(faces_on(r.doc, "YOK").empty());
     CHECK(r.said.find("tampon kalmıyor") != std::string::npos);
+}
+
+TEST_CASE("TAMPON: yuvarlak köşe ve uç gerçek yay — disk yuvarlak alan, bandın uçları yarım daire")
+{
+    // THE KERNEL'S ROAD (TODOS O-3): with round corners and ends — the
+    // defaults — every rounded edge of a buffer is a true arc, where the
+    // polygon road left a fan of short edges.
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    const auto arcs_of = [](const core::Document& doc, core::EntityId e) {
+        std::vector<core::PathPiece> out;
+        if (const auto p = core::path_of(doc, e))
+            for (const core::PathPiece& piece : p->pieces)
+                if (piece.kind == core::PathPiece::Kind::Arc) out.push_back(piece);
+        return out;
+    };
+    const auto only_on = [](const core::Document& doc, const std::string& layer) {
+        core::EntityId found = core::kNoEntity;
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+            if (doc.alive(e) && doc.layers()[doc.entities().layer[e]].name == layer) found = e;
+        return found;
+    };
+    {
+        // A POINT: a round AREA — an arc polyline, not a circle, which is a
+        // curve — its area π·3² to the square millimetre.
+        Rig r;
+        r.run("NOKTA 0,0");
+        r.run("TAMPON nesneler=1 mesafe=3 katman=KUYU");
+        const core::EntityId disc = only_on(r.doc, "KUYU");
+        REQUIRE(disc != core::kNoEntity);
+        CHECK(r.doc.entities().kind[disc] == core::kArcPolylineKind);
+        CHECK(std::abs(static_cast<double>(r.doc.entity_area(disc)) - (9.0e6 * M_PI)) < 20.0);
+        for (const core::PathPiece& arc : arcs_of(r.doc, disc)) {
+            CHECK_EQ(arc.centre, (core::Point2{0, 0}));
+            CHECK_EQ(arc.radius, core::Mm{3'000});
+        }
+    }
+    {
+        // A LINE: its band closed by two half circles round its ends.
+        Rig r;
+        r.run("ÇOKLUÇİZGİ 0,0 20,0");
+        r.run("TAMPON nesneler=1 mesafe=5 katman=DERE");
+        const core::EntityId band = only_on(r.doc, "DERE");
+        REQUIRE(band != core::kNoEntity);
+        const std::vector<core::PathPiece> ends = arcs_of(r.doc, band);
+        REQUIRE_EQ(ends.size(), 2u);
+        std::vector<core::Point2> centres{ends[0].centre, ends[1].centre};
+        std::ranges::sort(centres, [](core::Point2 a, core::Point2 b) { return a.x < b.x; });
+        CHECK_EQ(centres[0], (core::Point2{0, 0}));
+        CHECK_EQ(centres[1], (core::Point2{20'000, 0}));
+        // 20·10 + π·5², to the square millimetre.
+        CHECK_EQ(r.doc.entity_area(band), core::Mm2{278'539'816});
+    }
+    {
+        // TWO DISCS THAT OVERLAP are one area, still bounded by arcs.
+        Rig r;
+        r.run("NOKTA 0,0");
+        r.run("NOKTA 4,0");
+        r.run("TAMPON nesneler=1 nesneler=2 mesafe=3 katman=BIR");
+        const core::EntityId one = only_on(r.doc, "BIR");
+        REQUIRE(one != core::kNoEntity);
+        CHECK(r.doc.entities().kind[one] == core::kArcPolylineKind);
+        for (const core::PathPiece& arc : arcs_of(r.doc, one))
+            CHECK_EQ(arc.radius, core::Mm{3'000});
+    }
+    {
+        // A FACE: a quarter circle at each corner, round the corner.
+        Rig r;
+        r.run("ALAN 0,0 20,0 20,10 0,10");
+        r.run("TAMPON nesneler=1 mesafe=1 katman=CEVRE");
+        const core::EntityId grown = only_on(r.doc, "CEVRE");
+        REQUIRE(grown != core::kNoEntity);
+        const std::vector<core::PathPiece> corners = arcs_of(r.doc, grown);
+        CHECK_EQ(corners.size(), 4u);
+        for (const core::PathPiece& arc : corners)
+            CHECK_EQ(arc.radius, core::Mm{1'000});
+        CHECK(std::abs(static_cast<double>(r.doc.entity_area(grown)) - ((260.0 + M_PI) * 1e6)) <
+              20.0);
+    }
+    {
+        // A BAND THAT CLOSES ROUND A HOLE — a U whose arms come close — has a
+        // hole, and an arc-bounded object holds one ring: short edges, said.
+        Rig r;
+        r.run("ÇOKLUÇİZGİ 0,0 30,0 30,30 0,30 0,4");
+        r.said.clear();
+        r.run("TAMPON nesneler=1 mesafe=3 katman=HALKA");
+        const core::EntityId ring = only_on(r.doc, "HALKA");
+        REQUIRE(ring != core::kNoEntity);
+        CHECK(r.doc.entities().kind[ring] == core::kPolylineKind);
+        CHECK_EQ(r.doc.geometry().rings_of(r.doc.entities().slot[ring]).count, 2u);
+        CHECK(r.said.find("kısa kenarlarla") != std::string::npos);
+    }
+    {
+        // A LINE OF MORE PIECES THAN THE KERNEL TAKES IN TIME runs the polygon
+        // road, and says so.
+        Rig r;
+        std::string line = "ÇOKLUÇİZGİ";
+        for (int i = 0; i <= 300; ++i)
+            line += " " + std::to_string(i * 3) + "," + std::to_string((i % 2) * 4);
+        r.run(line.c_str());
+        r.said.clear();
+        r.run("TAMPON nesneler=1 mesafe=2 katman=UZUN");
+        const core::EntityId band = only_on(r.doc, "UZUN");
+        REQUIRE(band != core::kNoEntity);
+        CHECK(r.doc.entities().kind[band] == core::kPolylineKind);
+        CHECK(r.said.find("hızlı yoldan") != std::string::npos);
+    }
 }
 
 TEST_CASE("TAMPON: durdurulan araç hiçbir şey üretmez; tek geri alma adımıdır")

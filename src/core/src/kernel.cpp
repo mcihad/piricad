@@ -2,6 +2,7 @@
 #include "kentos_cad/core/kernel.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/pick.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -51,6 +52,58 @@
 #endif
 
 namespace kentos::core {
+
+std::vector<KernelFace> kernel_faces_of(std::vector<CurvePath> rings)
+{
+    // Each ring with its drawn outline, for the containment test, and its size,
+    // for the order: a ring can only be held by a larger one.
+    struct Ring
+    {
+        CurvePath path;
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        Mm2 size{0};
+        std::size_t depth{0};
+        std::size_t holder{0};
+    };
+
+    std::vector<Ring> all;
+    all.reserve(rings.size());
+    for (CurvePath& path : rings) {
+        if (!path.closed || path.pieces.empty()) continue;
+        Ring r;
+        path_outline(path, r.xs, r.ys);
+        const Mm2 a = path_area(path);
+        r.size      = a < 0 ? -a : a;
+        r.path      = std::move(path);
+        all.push_back(std::move(r));
+    }
+    std::ranges::stable_sort(all, [](const Ring& x, const Ring& y) { return x.size > y.size; });
+
+    constexpr auto kNone = static_cast<std::size_t>(-1);
+    std::vector<KernelFace> out;
+    std::vector<std::size_t> face_of(all.size(), kNone);
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        // The smallest ring round this one: the last of the larger that holds
+        // one of its vertices, since rings that do not cross nest.
+        const Point2 probe = all[i].path.pieces.front().from;
+        for (std::size_t j = 0; j < i; ++j)
+            if (ring_contains(all[j].xs, all[j].ys, probe)) {
+                all[i].depth  = all[j].depth + 1;
+                all[i].holder = j;
+            }
+        CurvePath& path = all[i].path;
+        if (all[i].depth % 2 == 0) {
+            if (path_area(path) < 0) path = reversed(path);
+            face_of[i] = out.size();
+            out.push_back(KernelFace{.outer = std::move(path), .holes = {}});
+        } else {
+            if (path_area(path) > 0) path = reversed(path);
+            out[face_of[all[i].holder]].holes.push_back(std::move(path));
+        }
+    }
+    return out;
+}
 
 #if !KENTOS_HAVE_OCCT
 

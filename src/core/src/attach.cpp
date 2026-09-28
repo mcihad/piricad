@@ -7,9 +7,12 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <numbers>
 
 namespace kentos::core {
 namespace {
@@ -195,7 +198,8 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
         // one's arc's, read along the arc's tangent there — the radius turned
         // a quarter the way the edge is walked, so no angle is computed.
         Point2 middle{(p.x + q.x) / 2, (p.y + q.y) / 2};
-        if (const ArcPolyline::Arc* bend = bend_of(arcs, a.index)) {
+        const ArcPolyline::Arc* bend = bend_of(arcs, a.index);
+        if (bend != nullptr) {
             middle         = point_at(arc_path(*bend, p, q), PathPlace{0, 0.5});
             const Dir away = unit_between(bend->centre, middle);
             if (away.x != 0.0 || away.y != 0.0)
@@ -227,6 +231,12 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
         out.dir_x  = u.x;
         out.dir_y  = u.y;
         frame_u    = reading(u);
+        if (bend != nullptr && bend->radius > 0) {
+            out.turn_centre = bend->centre;
+            out.turn_middle = middle;
+            out.turn_radius = bend->radius;
+            out.turn_sense  = bend->ccw ? 1 : -1;
+        }
     } else {
         if (a.index >= n) return std::nullopt;
         const std::size_t i = a.index;
@@ -270,7 +280,31 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
         out.dir_y = 0.0;
     }
 
-    if (with_offset && (a.along != 0 || a.across != 0)) {
+    if (with_offset && a.along_arc && out.turn_centre && (a.along != 0 || a.across != 0)) {
+        // ALONG THE ARC (R46g): `across` out along the middle's radius, then
+        // all of it turned about the arc's centre by the angle `along` spans on
+        // the arc, the way the edge is walked — the caption slides round the
+        // arc and turns with it. The turn is whole micro-degrees through
+        // `sin_cos_udeg`, never libm (§7.3).
+        const Point2 c  = *out.turn_centre;
+        const Dir out_r = unit_between(c, out.turn_middle);
+        const double rx =
+            static_cast<double>(out.centre.x - c.x) + (out_r.x * static_cast<double>(a.across));
+        const double ry =
+            static_cast<double>(out.centre.y - c.y) + (out_r.y * static_cast<double>(a.across));
+        const double rad = static_cast<double>(out.turn_sense) * static_cast<double>(a.along) /
+                           static_cast<double>(out.turn_radius);
+        const SinCos t = sin_cos_udeg(
+            mm_round(rad * (180.0 / std::numbers::pi) * static_cast<double>(kUDegPerDegree)));
+        out.centre = Point2{
+            c.x + mm_round((rx * t.cos) - (ry * t.sin)),
+            c.y + mm_round((rx * t.sin) + (ry * t.cos)),
+        };
+        const double dx = (out.dir_x * t.cos) - (out.dir_y * t.sin);
+        const double dy = (out.dir_x * t.sin) + (out.dir_y * t.cos);
+        out.dir_x       = dx;
+        out.dir_y       = dy;
+    } else if (with_offset && (a.along != 0 || a.across != 0)) {
         const Dir frame_n{-frame_u.y, frame_u.x};
         out.centre.x += mm_round(frame_u.x * static_cast<double>(a.along) +
                                  frame_n.x * static_cast<double>(a.across));
@@ -297,7 +331,45 @@ std::optional<std::string> attach_text(std::span<const Point2> ring, bool closed
 
 void attach_measure_offset(const AttachPlacement& rule, Point2 actual, Attachment& a)
 {
-    Dir u = reading(Dir{rule.dir_x, rule.dir_y});
+    if (rule.turn_centre && a.anchor == AttachAnchor::Edge && rule.turn_radius > 0) {
+        // ROUND THE ARC (R46g): the angle about the arc's centre from the
+        // rule's place to `actual`, the way the edge is walked, is `along` on
+        // the arc; `actual` turned back by it stands on the middle's radius,
+        // and its distance out along it from the rule's place is `across`.
+        // Integer angles both ways (§7.3).
+        const Point2 c  = *rule.turn_centre;
+        const Int128 bx = rule.centre.x - c.x;
+        const Int128 by = rule.centre.y - c.y;
+        const Int128 ax = actual.x - c.x;
+        const Int128 ay = actual.y - c.y;
+        Int128 cross    = (bx * ay) - (by * ax);
+        Int128 dot      = (bx * ax) + (by * ay);
+        // Both scaled into int64 together, which keeps their ratio.
+        const Int128 limit = std::numeric_limits<std::int64_t>::max() / 2;
+        while (cross > limit || cross < -limit || dot > limit || dot < -limit) {
+            cross /= 2;
+            dot /= 2;
+        }
+        std::int64_t turn =
+            atan2_udeg(static_cast<std::int64_t>(cross), static_cast<std::int64_t>(dot));
+        if (turn > kUDegFullCircle / 2) turn -= kUDegFullCircle;
+        const double rad = static_cast<double>(turn) * (std::numbers::pi / 180.0) /
+                           static_cast<double>(kUDegPerDegree);
+        a.along           = mm_round(rad * static_cast<double>(rule.turn_radius) *
+                                     static_cast<double>(rule.turn_sense));
+        const SinCos back = sin_cos_udeg(-turn);
+        const auto px     = static_cast<double>(ax);
+        const auto py     = static_cast<double>(ay);
+        const double rx   = (px * back.cos) - (py * back.sin);
+        const double ry   = (px * back.sin) + (py * back.cos);
+        const Dir out_r   = unit_between(c, rule.turn_middle);
+        a.across          = mm_round(((rx - static_cast<double>(bx)) * out_r.x) +
+                                     ((ry - static_cast<double>(by)) * out_r.y));
+        a.along_arc       = true;
+        return;
+    }
+    a.along_arc = false;
+    Dir u       = reading(Dir{rule.dir_x, rule.dir_y});
     if (a.anchor == AttachAnchor::Vertex || (u.x == 0.0 && u.y == 0.0)) u = Dir{1.0, 0.0};
     const Dir n{-u.y, u.x};
     const auto dx = static_cast<double>(actual.x - rule.centre.x);
@@ -519,10 +591,13 @@ std::uint64_t AttachTable::fold(std::uint64_t seed, std::span<const std::uint32_
         h                       = fnv1a_int(a.gap, h);
         h                       = fnv1a_int(a.along, h);
         h                       = fnv1a_int(a.across, h);
-        h                       = fnv1a_int(static_cast<std::int64_t>(a.unit), h);
-        h                       = fnv1a_int(static_cast<std::int64_t>(a.precision), h);
-        h                       = fnv1a_int(static_cast<std::int64_t>(a.separator), h);
-        h                       = fnv1a(a.format, h);
+        // Folded only when set, so every drawing made before R46g keeps its
+        // fingerprint.
+        if (a.along_arc) h = fnv1a_int(1, h);
+        h = fnv1a_int(static_cast<std::int64_t>(a.unit), h);
+        h = fnv1a_int(static_cast<std::int64_t>(a.precision), h);
+        h = fnv1a_int(static_cast<std::int64_t>(a.separator), h);
+        h = fnv1a(a.format, h);
     }
     return h;
 }

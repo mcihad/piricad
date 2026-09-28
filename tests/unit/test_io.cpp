@@ -746,6 +746,57 @@ TEST_CASE("IO: açılı kılavuz dosyanın okuyucu sürümünü yükseltir, cetv
     CHECK(io::kMinReaderVersionAngledGuide > io::kMinReaderVersion);
 }
 
+TEST_CASE("IO: yay boyunca ölçülen bağ dosyayla gider ve okuyucu sürümünü yükseltir (R46g)")
+{
+    // A caption tied round an arc keeps `along` as arc length; an older reader
+    // would take it for a straight offset and stand the caption metres off,
+    // so such a drawing raises `min_reader_version` — and only such a drawing.
+    TempDir tmp("yay-bagi");
+    const std::string round      = tmp.file("yay.pcad");
+    const std::string plain      = tmp.file("duz.pcad");
+    const auto reader_version_of = [](const std::string& file) {
+        std::ifstream in(file, std::ios::binary);
+        REQUIRE(in.good());
+        char head[32]{};
+        in.read(head, sizeof(head));
+        std::uint32_t v = 0;
+        std::memcpy(&v, head + 12, sizeof(v)); ///< io.md R8: offset 12, inside the first 32
+        return v;
+    };
+
+    Rig written;
+    processing::register_processing_commands(written.reg);
+    for (const char* line : {"ALAN 0,0 20,0 20,20 0,20", "YUVARLA nesne=1 hepsi=evet yaricap=10",
+                             "METİN 6,21 \"A bölgesi\"", "BAĞLA nesneler=2 kaynak=1"}) {
+        auto ran = written.bus.execute_line(line, Origin::Test);
+        if (!ran) FAIL_WITH(line, ran.error().message);
+    }
+    const core::Attachment* kept =
+        written.doc.attachments().get(written.doc.slot_of(core::EntityKey{2}));
+    REQUIRE(kept != nullptr);
+    REQUIRE(kept->along_arc);
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + round + "\"", Origin::Test).ok());
+    CHECK_EQ(reader_version_of(round), io::kMinReaderVersionArcAlong);
+
+    Rig reloaded;
+    processing::register_processing_commands(reloaded.reg);
+    auto opened = reloaded.bus.execute_line("AÇ \"" + round + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const core::Attachment* back =
+        reloaded.doc.attachments().get(reloaded.doc.slot_of(core::EntityKey{2}));
+    REQUIRE(back != nullptr);
+    CHECK(*back == *kept);
+    CHECK_EQ(reloaded.doc.content_hash(), written.doc.content_hash());
+
+    // A caption tied to a straight edge asks nothing new.
+    Rig straight;
+    processing::register_processing_commands(straight.reg);
+    for (const char* line : {"ÇİZGİ 0,0 20,0", "METİN 5,2 \"kenar\"", "BAĞLA nesneler=2 kaynak=1"})
+        REQUIRE(straight.bus.execute_line(line, Origin::Test).ok());
+    REQUIRE(straight.bus.execute_line("FARKLIKAYDET \"" + plain + "\"", Origin::Test).ok());
+    CHECK(reader_version_of(plain) < io::kMinReaderVersionArcAlong);
+}
+
 TEST_CASE("IO: kılavuzu olmayan bir çizim kılavuz bloğu yazmaz")
 {
     TempDir tmp("kilavuzsuz");

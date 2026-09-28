@@ -1,0 +1,17 @@
+# TAMPON yuvarlak köşe ve uçta gerçek yay (TODOS O-3). Beklenen değerler el hesabı:
+# 3 m'lik noktanın tamponu π·9 m² (28,274334 m²), yaylı alan, daire değil; 20 m
+# çizginin 5 m bandı 200 + 25π (278,539816 m²), iki ucu yarım daire; 20 × 10 m
+# alanın 1 m tamponu 260 + π (263,141593 m²), dört köşesi çeyrek daire; iki disk
+# üst üste binince tek yaylı alan; U çizginin bandı kolları arasında delik bırakır
+# ve delikli olduğu için kısa kenarlarla yazılır.
+NOKTA 0,0
+TAMPON nesneler=1 mesafe=3 katman=KUYU
+ÇOKLUÇİZGİ 10,0 30,0
+TAMPON nesneler=3 mesafe=5 katman=DERE
+ALAN 40,0 60,0 60,10 40,10
+TAMPON nesneler=5 mesafe=1 katman=CEVRE
+NOKTA 70,0
+NOKTA 74,0
+TAMPON nesneler=7 nesneler=8 mesafe=3 katman=BIR
+ÇOKLUÇİZGİ 0,40 30,40 30,70 0,70 0,44
+TAMPON nesneler=10 mesafe=3 katman=HALKA

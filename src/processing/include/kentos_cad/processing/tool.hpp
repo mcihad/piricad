@@ -27,6 +27,7 @@
 #include "kentos_cad/command/value.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/attach.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/result.hpp"
@@ -206,6 +207,11 @@ struct InputEntity
     /// exactly rather than as drawn: an arc-polyline's bends live here, not in
     /// its rings. Empty for a kind that carries none.
     std::vector<std::uint8_t> payload;
+    /// ITS CURVE AS A PATH, arcs as arcs — a line, an arc, a circle, an arc
+    /// polyline, a face without holes — for a tool that hands it to the
+    /// geometry kernel whole (TAMPON's true arcs, TODOS O-3). Nothing for a
+    /// face with holes, an ellipse, a spline, a point and a caption.
+    std::optional<core::CurvePath> path;
     std::string text;        ///< its caption, or empty
     core::Mm text_height{0}; ///< the caption's height
     /// What it FOLLOWS, when it is attached to another object (core/attach.hpp).

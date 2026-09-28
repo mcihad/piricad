@@ -618,6 +618,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     // ---- attachments (core/attach.hpp): live dependents of live sources ----
     std::vector<AttachRecord> attach_rows;
+    bool any_arc_along = false; // raises min_reader_version (format.hpp)
     {
         const core::AttachTable& attachments = doc.attachments();
         for (const core::EntityId e : attachments.attached()) {
@@ -640,6 +641,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             r.unit          = a->unit;
             r.precision     = a->precision;
             r.separator     = static_cast<std::uint8_t>(a->separator);
+            r.flags         = a->along_arc ? 1U : 0U;
+            any_arc_along   = any_arc_along || a->along_arc;
             attach_rows.push_back(r);
         }
     }
@@ -1087,17 +1090,20 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     header.format_version = kFormatVersion;
     // THE FILE SAYS WHAT IT NEEDS, per drawing rather than per build: the
     // highest of what it holds asks — a clipped reference, an external
-    // reference, an angled guide (format.hpp `kMinReaderVersion…`).
-    header.min_reader_version = any_clip                    ? kMinReaderVersionClip
-                                : any_external              ? kMinReaderVersionExternal
-                                : doc.guides().any_angled() ? kMinReaderVersionAngledGuide
-                                                            : kMinReaderVersion;
-    header.header_bytes       = static_cast<std::uint32_t>(sizeof(FileHeader));
-    header.block_count        = static_cast<std::uint32_t>(directory.size());
-    header.directory_offset   = directory_offset;
-    header.file_bytes         = total;
-    header.content_hash       = doc.content_hash();
-    header.settings_hash      = settings.fold(core::fnv1a(std::string_view{}));
+    // reference, an angled guide, an attachment round an arc (format.hpp
+    // `kMinReaderVersion…`).
+    // Lowest first, so what is written is the highest that applies.
+    header.min_reader_version = kMinReaderVersion;
+    if (doc.guides().any_angled()) header.min_reader_version = kMinReaderVersionAngledGuide;
+    if (any_external) header.min_reader_version = kMinReaderVersionExternal;
+    if (any_clip) header.min_reader_version = kMinReaderVersionClip;
+    if (any_arc_along) header.min_reader_version = kMinReaderVersionArcAlong;
+    header.header_bytes     = static_cast<std::uint32_t>(sizeof(FileHeader));
+    header.block_count      = static_cast<std::uint32_t>(directory.size());
+    header.directory_offset = directory_offset;
+    header.file_bytes       = total;
+    header.content_hash     = doc.content_hash();
+    header.settings_hash    = settings.fold(core::fnv1a(std::string_view{}));
 
     // ---- out ----
     AtomicFile file;

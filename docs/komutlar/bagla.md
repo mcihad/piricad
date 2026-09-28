@@ -18,12 +18,14 @@ ortası — bir parsel numarasının durduğu yer) bağlanır.
 Bağlamak yazıyı **yerinden oynatmaz**: yazının o anki yeri ile kuralın yeri arasındaki
 fark "el payı" olarak saklanır ve izleme oradan başlar. Yazının sözü `tur` ile seçilir:
 
-**Yaylı bir kenar** — köşesi yuvarlanmış bir parselin yayı gibi — yayın kendisiyle
-ölçülür: kural yazıyı yayın ortasına koyar, el payı da oraya göre saklanır. Nesne
-taşındığında yazının bağlandığı nokta nesneyle birlikte, milimetresi milimetresine
-gider. Kenara bağlı her yazı gibi kenarın yönünde okunur; yayda bu, yayın ortasındaki
-teğettir. Yatay yazılmış bir yazı ilk izlemede bu yöne döner. Yazının yönünü korumasını
-istiyorsanız `bag=merkez` ile nesnenin ortasına bağlayın.
+**Yaylı bir kenar** — köşesi yuvarlanmış bir parselin yayı, yuvarlak bir tampon bölgenin
+sınırı — **yay boyunca** ölçülür: yazının yayın ortasından ne kadar yay uzunluğu ötede ve
+yaydan ne kadar dışarıda durduğu saklanır. Nesne taşındığında, döndürüldüğünde ya da
+yeniden hesaplandığında yazı **yay üzerindeki yerini** korur ve oradaki teğet boyunca okunur.
+Kenara bağlı her yazı gibi kenarın yönünde okuduğu için yatay yazılmış bir yazı ilk
+izlemede durduğu yerdeki teğete döner; yayın ortasındaki teğete değil, en küçük dönüşle.
+Yazının yönünü hiç değiştirmemesini istiyorsanız `bag=merkez` ile nesnenin ortasına
+bağlayın.
 
 | `tur` | Yazı ne söyler |
 |---|---|

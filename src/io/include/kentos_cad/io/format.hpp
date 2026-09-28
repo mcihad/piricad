@@ -79,7 +79,11 @@ inline constexpr const char* kProjectExtension = ".pcad";
 /// 5 because a block reference's payload has a second layout: a CLIPPED
 /// reference carries its boundary after layout 1's fields
 /// (`core::kBlockReferenceClipLayout`, `kMinReaderVersionClip`).
-inline constexpr std::uint32_t kFormatVersion = 5;
+///
+/// 6 because an attachment record's first padding byte now says something:
+/// bit 0 is `core::Attachment::along_arc`, `along` measured round a bent edge
+/// (model.md R46g, `kMinReaderVersionArcAlong`).
+inline constexpr std::uint32_t kFormatVersion = 6;
 
 /// The first version whose writer lays the slot-indexed blocks out by row. A
 /// file older than this may hold the geometry versions an edit left behind for
@@ -115,6 +119,13 @@ inline constexpr std::uint32_t kMinReaderVersionExternal = 4;
 /// true refusal with a misleading reason, for one object, which here would be
 /// the whole file. Raising the field makes the refusal say what it is.
 inline constexpr std::uint32_t kMinReaderVersionClip = 5;
+
+/// What a drawing holding an attachment measured ROUND A BENT EDGE writes
+/// (`core::Attachment::along_arc`, model.md R46g), and only such a drawing.
+/// An older reader passes the flag byte over as padding and reads `along` as a
+/// straight offset: the caption would stand metres off where it was put, and
+/// say nothing. Raising the field makes the refusal say what it is.
+inline constexpr std::uint32_t kMinReaderVersionArcAlong = 6;
 
 /// Stable error tokens. `core::Error` carries an `ErrorCode` enum rather than the
 /// string code io.md R9 writes, so the token is placed at the FRONT of the
@@ -683,7 +694,10 @@ struct AttachRecord
     std::uint8_t unit;           ///< 53  core::DrawingUnit, for a derived length
     std::uint8_t precision;      ///< 54  its decimals
     std::uint8_t separator;      ///< 55  its decimal separator, as a byte
-    std::uint8_t reserved[8];    ///< 56  zero-filled
+    /// 56  bit 0: `along` is arc length round a bent edge (`along_arc`, format
+    /// 6); zero in every file written before.
+    std::uint8_t flags;
+    std::uint8_t reserved[7]; ///< 57  zero-filled
 };
 
 static_assert(sizeof(AttachRecord) == 64, "wire record");

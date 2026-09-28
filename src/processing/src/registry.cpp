@@ -24,6 +24,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/text_fields.hpp"
 #include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -203,6 +204,8 @@ InputEntity snapshot(const core::Document& doc, core::EntityId e, Applies cls)
     }
     const std::span<const std::uint8_t> payload = geom.payload_of(ents.slot[e]);
     out.payload.assign(payload.begin(), payload.end());
+    if (cls == Applies::Lines || cls == Applies::Faces || cls == Applies::Curves)
+        out.path = core::path_of(doc, e, core::PathScope::Circular);
     if (const core::Attachment* a = doc.attachments().get(e); a != nullptr) out.attach = *a;
     return out;
 }

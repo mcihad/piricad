@@ -13,15 +13,18 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/processing/tool.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -318,4 +321,103 @@ TEST_CASE("YUVARLANAN: yay kenarına bağlanan yazının yeri kaynağı taşın�
     const core::Point2 after = anchor_of();
     CHECK(std::llabs(after.x - before.x - 30'000) <= 1);
     CHECK(std::llabs(after.y - before.y - 5'000) <= 1);
+}
+
+namespace {
+
+/// A disc as an arc polyline: a 20 m square whose four corners are rounded to
+/// 10 m, which uses every straight edge up — four quarter arcs round (10, 10).
+void round_zone(Rig& r)
+{
+    r.run("ALAN 0,0 20,0 20,20 0,20");
+    r.run("YUVARLA nesne=1 hepsi=evet yaricap=10");
+    REQUIRE(r.doc.entities().kind[r.doc.slot_of(core::EntityKey{1})] == core::kArcPolylineKind);
+}
+
+/// A caption's baseline: its two points.
+std::array<core::Point2, 2> baseline_of(const core::Document& doc, std::uint64_t key)
+{
+    const core::EntityId e  = doc.slot_of(core::EntityKey{key});
+    const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
+    return {doc.geometry().vertex(rs.first, 0), doc.geometry().vertex(rs.first, 1)};
+}
+
+} // namespace
+
+TEST_CASE(
+    "YUVARLANAN: yay kenarına bağlı yazı durduğu yerde kalır, oradaki teğet boyunca okunur (R46g)")
+{
+    // A caption tied to an arc used to jump, the first time its source moved,
+    // to the tangent at the arc's MIDDLE — here 25° round from where it stood.
+    // Measured round the arc (model.md R46g), its anchor stays where it was and
+    // it reads along the tangent at its OWN place, the least turn an edge's
+    // caption can make; it keeps that place as the zone moves and turns.
+    Rig r;
+    round_zone(r);
+    r.run("METİN 6,21 \"A bölgesi\""); // 2, above the zone's top-left arc
+    r.run("BAĞLA nesneler=2 kaynak=1");
+    const core::EntityId caption = r.doc.slot_of(core::EntityKey{2});
+    const core::Attachment* a    = r.doc.attachments().get(caption);
+    REQUIRE(a != nullptr);
+    CHECK(a->along_arc);
+    const std::array<core::Point2, 2> before = baseline_of(r.doc, 2);
+
+    // Reading along the circle round `centre` at the caption's anchor: its
+    // direction square to the radius there.
+    const auto reads_round = [](const std::array<core::Point2, 2>& base, core::Point2 centre) {
+        const auto dx = static_cast<double>(base[1].x - base[0].x);
+        const auto dy = static_cast<double>(base[1].y - base[0].y);
+        const auto rx = static_cast<double>(base[0].x - centre.x);
+        const auto ry = static_cast<double>(base[0].y - centre.y);
+        return std::fabs((dx * rx) + (dy * ry)) <
+               1e-3 * std::sqrt((dx * dx) + (dy * dy)) * std::sqrt((rx * rx) + (ry * ry));
+    };
+
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=30,5");
+    const std::array<core::Point2, 2> moved = baseline_of(r.doc, 2);
+    CHECK(std::llabs(moved[0].x - before[0].x - 30'000) <= 1);
+    CHECK(std::llabs(moved[0].y - before[0].y - 5'000) <= 1);
+    CHECK(reads_round(moved, core::Point2{40'000, 15'000}));
+
+    // Turned with its zone, it stays at its place round it: a quarter turn
+    // about the zone's centre carries the anchor a quarter of the way round.
+    r.run("DÖNDÜR nesneler=1 merkez=40,15 aci=90"); // degrees, counter-clockwise
+    const std::array<core::Point2, 2> turned = baseline_of(r.doc, 2);
+    CHECK(std::llabs((turned[0].x - 40'000) + (moved[0].y - 15'000)) <= 2);
+    CHECK(std::llabs((turned[0].y - 15'000) - (moved[0].x - 40'000)) <= 2);
+    CHECK(reads_round(turned, core::Point2{40'000, 15'000}));
+}
+
+TEST_CASE("YUVARLANAN: yay boyunca ölçülen pay, kurala verilince aynı noktayı verir")
+{
+    // attach_measure_offset and attach_place are one rule read both ways: a
+    // point measured round the arc is where the placement puts it back, all
+    // round the arc and off both sides (R46g).
+    Rig r;
+    round_zone(r);
+    const core::EntityId zone = r.doc.slot_of(core::EntityKey{1});
+    const core::RingSpan rs   = r.doc.geometry().rings_of(r.doc.entities().slot[zone]);
+    std::vector<core::Point2> ring;
+    for (std::uint32_t v = 0; v < r.doc.geometry().ring_count[rs.first]; ++v)
+        ring.push_back(r.doc.geometry().vertex(rs.first, v));
+    const auto def = core::arc_polyline_of(r.doc.geometry(), r.doc.entities().slot[zone]);
+    REQUIRE(def.ok());
+    core::Attachment a;
+    a.source        = core::EntityKey{1};
+    a.anchor        = core::AttachAnchor::Edge;
+    a.index         = 1;
+    a.gap           = 1'000;
+    const auto rule = core::attach_place(ring, true, a, 2'500, false, def.value().arcs);
+    REQUIRE(rule.has_value());
+    REQUIRE(rule->turn_centre.has_value());
+    for (const core::Point2 at : {core::Point2{9'000, 22'500}, core::Point2{-2'000, 14'000},
+                                  core::Point2{4'000, 18'000}, core::Point2{19'000, 21'000}}) {
+        core::Attachment measured = a;
+        core::attach_measure_offset(*rule, at, measured);
+        CHECK(measured.along_arc);
+        const auto placed = core::attach_place(ring, true, measured, 2'500, true, def.value().arcs);
+        REQUIRE(placed.has_value());
+        CHECK(std::llabs(placed->centre.x - at.x) <= 1);
+        CHECK(std::llabs(placed->centre.y - at.y) <= 1);
+    }
 }

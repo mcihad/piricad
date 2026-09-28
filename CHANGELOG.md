@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — TAMPON gerçek yaylı; yaya bağlı yazı yay üstündeki yerini korur (O-3)
+
+- **TAMPON'un yuvarlak köşe ve uçları gerçek yaydır** (öntanımlı `kose=yuvarlak`,
+  `uc=yuvarlak`): noktanın tamponu yuvarlak bir alan (π·r², milimetre karesine kadar),
+  çizginin bandının iki ucu yarım daire, büyüyen alanın köşeleri çeyrek daire. Önceden
+  hepsi kısa kenarlardan bir yelpazeydi. Çizginin her parçasının bandı ayrı alınıp
+  birleştirilir; kolları yakın bir U'nun ortasındaki avlu doğru çıkar. Köşeli/pahlı köşe,
+  düz/kare uç, elips/spline kaynak ve 256 köşeden uzun çizgi hızlı yoldan (Clipper2);
+  araç bunu söyler.
+- **Yaylı bir kenara bağlı yazı yay üstündeki yerini korur** (model.md R46g): el payı yay
+  boyunca ölçülür; nesne taşınınca, döndürülünce ya da tampon yeniden hesaplanınca yazı
+  yayın aynı yerinde kalır ve oradaki teğet boyunca okunur. Önceden ilk izlemede yayın
+  ortasındaki teğete, çeyrek yay ötesine sıçrıyordu.
+- **Dosya biçimi 6:** bağ kaydının bir baytı bu işareti taşır; yay boyunca bağı olan bir
+  çizim `min_reader_version` 6 yazar ve daha eski bir KentOSCad onu yanlış okumak yerine
+  "daha yeni bir sürüm gerekiyor" diye reddeder. Böyle bağı olmayan çizimler eskisi gibi
+  açılır.
+
 ### Düzeltildi — Alan sekmesi sığar; formu açan araç "…" ile görünür
 
 - Bir parsel seçince beliren **Alan** sekmesi 1440 piksele sığmıyordu (1561 px, en sağdaki
