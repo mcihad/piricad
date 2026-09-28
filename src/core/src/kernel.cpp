@@ -100,6 +100,47 @@ struct Frame
     }
 };
 
+/// Two straight pieces in a row that lie on one line, made one — EXACTLY: the
+/// cross product of their directions zero in integers, the turn between them
+/// none. What a lone segment split at its middle for the kernel comes back with.
+void join_collinear(CurvePath& path)
+{
+    std::vector<PathPiece> out;
+    out.reserve(path.pieces.size());
+    for (const PathPiece& p : path.pieces) {
+        if (!out.empty()) {
+            PathPiece& last = out.back();
+            if (last.kind == PathPiece::Kind::Segment && p.kind == PathPiece::Kind::Segment) {
+                const Int128 ax = last.to.x - last.from.x;
+                const Int128 ay = last.to.y - last.from.y;
+                const Int128 bx = p.to.x - p.from.x;
+                const Int128 by = p.to.y - p.from.y;
+                if ((ax * by) - (ay * bx) == 0 && (ax * bx) + (ay * by) > 0) {
+                    last.to = p.to;
+                    continue;
+                }
+            }
+        }
+        out.push_back(p);
+    }
+    // ACROSS THE SEAM of a closed path, where the kernel may have started it.
+    if (path.closed && out.size() > 2) {
+        const PathPiece& last = out.back();
+        PathPiece& first      = out.front();
+        if (last.kind == PathPiece::Kind::Segment && first.kind == PathPiece::Kind::Segment) {
+            const Int128 ax = last.to.x - last.from.x;
+            const Int128 ay = last.to.y - last.from.y;
+            const Int128 bx = first.to.x - first.from.x;
+            const Int128 by = first.to.y - first.from.y;
+            if ((ax * by) - (ay * bx) == 0 && (ax * bx) + (ay * by) > 0) {
+                first.from = last.from;
+                out.pop_back();
+            }
+        }
+    }
+    path.pieces = std::move(out);
+}
+
 /// Why `path` cannot go into the kernel, or nothing when it can.
 std::optional<std::string> unfit(const CurvePath& path, bool must_close)
 {
@@ -395,6 +436,8 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath& path, Mm distance,
     const Frame f{path.pieces.front().from};
     const GeomAbs_JoinType join =
         corner == OffsetCorner::Round ? GeomAbs_Arc : GeomAbs_Intersection;
+    const bool lone = !path.closed && path.pieces.size() == 1 &&
+                      path.pieces.front().kind == PathPiece::Kind::Segment;
     try {
         BRepOffsetAPI_MakeOffset make;
         if (path.closed) {
@@ -402,6 +445,23 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath& path, Mm distance,
             // outward whichever way the path was walked.
             const TopoDS_Face face = face_of(KernelFace{path, {}}, f);
             make.Init(face, join, Standard_False);
+        } else if (lone) {
+            // ONE STRAIGHT EDGE DEFINES NO PLANE, and the planar offset finds
+            // its plane from the wire: a lone segment was refused ("command
+            // not done"), and with it a 2-point line's buffer and its round-
+            // cornered parallel. Given as two edges meeting at its exact middle
+            // — on the line, in the kernel's own doubles — it is the same line.
+            const gp_Pnt a         = f.pnt(path.pieces.front().from);
+            const gp_Pnt b         = f.pnt(path.pieces.front().to);
+            const TopoDS_Vertex va = BRepBuilderAPI_MakeVertex(a).Vertex();
+            const TopoDS_Vertex vm =
+                BRepBuilderAPI_MakeVertex(gp_Pnt((a.XYZ() + b.XYZ()) / 2.0)).Vertex();
+            const TopoDS_Vertex vb = BRepBuilderAPI_MakeVertex(b).Vertex();
+            BRepBuilderAPI_MakeWire halves;
+            halves.Add(BRepBuilderAPI_MakeEdge(va, vm).Edge());
+            halves.Add(BRepBuilderAPI_MakeEdge(vm, vb).Edge());
+            make.Init(join, both_sides ? Standard_False : Standard_True);
+            make.AddWire(halves.Wire());
         } else {
             make.Init(join, both_sides ? Standard_False : Standard_True);
             make.AddWire(wire_of(path, f));
@@ -417,6 +477,7 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath& path, Mm distance,
         for (TopExp_Explorer w(make.Shape(), TopAbs_WIRE); w.More(); w.Next()) {
             CurvePath one = path_of_wire(TopoDS::Wire(w.Current()), nullptr, f, unknown);
             if (one.pieces.empty()) continue;
+            if (lone) join_collinear(one);
             out.push_back(one.closed ? normalised(std::move(one), true) : std::move(one));
         }
         if (unknown)

@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yay kenarına bağlı yazı, çekirdekte tek düz kenar, dairesel alan
+
+- **Yaylı bir kenara bağlanan yazı** (BAĞLA) nesne ilk kez taşındığında metrelerce
+  kayıyordu: el payı kenarın kirişine göre ölçülüyor, izleme ise yayın kendisine göre
+  yapılıyordu. Artık ikisi de aynı kuraldan okuyor; yazının bağlandığı nokta nesneyle
+  birlikte milimetresi milimetresine gidiyor. Elle kaydırılan bağlı yazının payı da aynı
+  kuralla ölçülüyor.
+- İki noktalı düz bir çizgiye `OFSET kose=YUVARLAK` "ofset çizilemiyor" diyordu (bu sürümdeki
+  O-4 değişikliğinden): geometri çekirdeği tek düz kenardan düzlem bulamıyordu. Tek kenar
+  çekirdeğe ortasından iki kenar olarak veriliyor, sonuçta fazladan köşe kalmıyor.
+- Sonucu tam bir çember ya da iki yaydan bir mercek olan alan işlemleri (iki yuvarlak
+  parselin birleşimi gibi) "dış halka en az 3 tepe noktası ister" diyerek düşüyor ya da
+  sonucu alan yerine daire olarak yazıyordu; böyle bir sınır artık üç köşeli yaylı alan
+  olarak yazılıyor (`core::area_record`).
+
 ### Değişti — BİRLEŞTİR yaylı kenarı korur; çekirdek genel konumlu yayı kabul eder (O-3)
 
 - **BİRLEŞTİR yaylı kenarlı alanları birleştirir**, yay aynı merkez ve yarıçapla kalır;

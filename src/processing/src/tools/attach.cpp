@@ -163,8 +163,14 @@ public:
             }
 
             // THE HAND'S OFFSET is whatever carries the rule's place to where the
-            // caption already is, so attaching moves nothing.
-            const auto rule = core::attach_place(ring.points, closed, a, e.text_height, false);
+            // caption already is, so attaching moves nothing — measured against
+            // the rule the caption will later be placed by, an arc edge's arc
+            // included (`core::attach_bends`), or it jumps the first time the
+            // source moves.
+            const std::vector<core::ArcPolyline::Arc> bends =
+                best_ring == 0 ? edge_arcs(source) : std::vector<core::ArcPolyline::Arc>{};
+            const auto rule =
+                core::attach_place(ring.points, closed, a, e.text_height, false, bends);
             if (!rule) {
                 progress.at(++done, input.entities.size());
                 continue;
@@ -175,7 +181,7 @@ public:
             r.key    = e.key;
             r.attach = a;
             if (a.derive == core::AttachDerive::Length)
-                r.text = core::attach_text(ring.points, closed, a);
+                r.text = core::attach_text(ring.points, closed, a, bends);
             output.replacements.push_back(std::move(r));
             ++output.touched;
             progress.at(++done, input.entities.size());

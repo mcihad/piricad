@@ -295,3 +295,27 @@ TEST_CASE("YUVARLANAN: TEVHİT yuvarlanmış parseli komşusuyla yayını koruya
     CHECK_EQ(merged.front().pieces.size(), 5u);
     CHECK(std::abs(total_area(r.doc) - before) <= 5.0);
 }
+
+TEST_CASE("YUVARLANAN: yay kenarına bağlanan yazının yeri kaynağı taşınınca kaymıyor")
+{
+    // An attachment's offset used to be measured against the arc edge's CHORD
+    // and applied along its ARC (core::attach_bends): the first time the
+    // parcel moved, the caption stood metres from where it had been. Its
+    // anchor now moves by exactly what the parcel moved.
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("YUVARLA nesne=1 nokta=20,10 yaricap=4"); // the arc (16,10) → (20,6), centre (16,6)
+    r.run("METİN 20,11 \"köşe\"");                  // 2, beyond the arc
+    r.run("BAĞLA nesneler=2 kaynak=1");
+    const core::EntityId caption = r.doc.slot_of(core::EntityKey{2});
+    REQUIRE(r.doc.attachments().has(caption));
+    const auto anchor_of = [&r, caption] {
+        const core::RingSpan rs = r.doc.geometry().rings_of(r.doc.entities().slot[caption]);
+        return r.doc.geometry().vertex(rs.first, 0);
+    };
+    const core::Point2 before = anchor_of();
+    r.run("TAŞI nesneler=1 baslangic=0,0 bitis=30,5");
+    const core::Point2 after = anchor_of();
+    CHECK(std::llabs(after.x - before.x - 30'000) <= 1);
+    CHECK(std::llabs(after.y - before.y - 5'000) <= 1);
+}

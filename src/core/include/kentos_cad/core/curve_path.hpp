@@ -252,6 +252,13 @@ struct PathRecord
 /// The record `path` is written as. False-free: every path has one.
 PathRecord path_record(const CurvePath& path);
 
+/// The record a closed `path` is written as when it BOUNDS AN AREA: a polyline,
+/// or an arc polyline when it bends — never a circle, which is a curve and not
+/// an area — with the three vertices at least that an exterior ring needs. A
+/// disc, or the lens two discs make, is one or two arcs; its longest arc is
+/// halved at its middle until there are three (model.md R9b).
+PathRecord area_record(const CurvePath& path);
+
 /// One place where a path meets another.
 struct PathCrossing
 {

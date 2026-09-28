@@ -11,6 +11,7 @@
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/trim_curve.hpp"
 
 #include <algorithm>
@@ -379,4 +380,37 @@ TEST_CASE("CURVE: kayıt biçimi geri okunduğunda aynı yoldur")
     CHECK(path_record(halves[0]).kind == kArcKind);
     CHECK(path_record(halves[1]).kind == kArcKind);
     CHECK(path_record(round).kind == kCircleKind);
+}
+
+TEST_CASE("CURVE: bir alanın sınırı hiçbir zaman daire değil, en az üç köşeli yaylı alan")
+{
+    // A disc and the lens two discs make are one and two arcs; written as an
+    // AREA they must be an arc polyline with the three vertices an exterior
+    // ring needs — as a circle they were a curve, not an area, and as a
+    // two-vertex ring the document refused them outright ("en az 3 tepe").
+    CurvePath disc;
+    disc.closed = true;
+    disc.pieces.push_back(arc_piece({0, 0}, 3'000, {3'000, 0}, {3'000, 0}, true));
+    const PathRecord whole = area_record(disc);
+    CHECK(whole.kind == kArcPolylineKind);
+    CHECK(whole.role == RingRole::Exterior);
+    CHECK_EQ(whole.ring.size(), 3u);
+    CHECK(path_record(disc).kind == kCircleKind); // as a CURVE it is a circle
+
+    CurvePath lens;
+    lens.closed = true;
+    lens.pieces.push_back(arc_piece({0, 0}, 5'000, {3'000, 4'000}, {3'000, -4'000}, true));
+    lens.pieces.push_back(arc_piece({6'000, 0}, 5'000, {3'000, -4'000}, {3'000, 4'000}, true));
+    const PathRecord two = area_record(lens);
+    CHECK(two.kind == kArcPolylineKind);
+    CHECK_EQ(two.ring.size(), 3u);
+    // Halving an arc keeps it on its circle: every edge is still one of the
+    // lens's two arcs, by centre and radius.
+    const auto decoded = decode_arc_polyline(two.payload);
+    REQUIRE(decoded.ok());
+    REQUIRE_EQ(decoded.value().arcs.size(), 3u);
+    for (const ArcPolyline::Arc& arc : decoded.value().arcs) {
+        CHECK_EQ(arc.radius, Mm{5'000});
+        CHECK(((arc.centre == Point2{0, 0}) || (arc.centre == Point2{6'000, 0})));
+    }
 }

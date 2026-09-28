@@ -18,6 +18,13 @@ ortası — bir parsel numarasının durduğu yer) bağlanır.
 Bağlamak yazıyı **yerinden oynatmaz**: yazının o anki yeri ile kuralın yeri arasındaki
 fark "el payı" olarak saklanır ve izleme oradan başlar. Yazının sözü `tur` ile seçilir:
 
+**Yaylı bir kenar** — köşesi yuvarlanmış bir parselin yayı gibi — yayın kendisiyle
+ölçülür: kural yazıyı yayın ortasına koyar, el payı da oraya göre saklanır. Nesne
+taşındığında yazının bağlandığı nokta nesneyle birlikte, milimetresi milimetresine
+gider. Kenara bağlı her yazı gibi kenarın yönünde okunur; yayda bu, yayın ortasındaki
+teğettir. Yatay yazılmış bir yazı ilk izlemede bu yöne döner. Yazının yönünü korumasını
+istiyorsanız `bag=merkez` ile nesnenin ortasına bağlayın.
+
 | `tur` | Yazı ne söyler |
 |---|---|
 | `sabit` (varsayılan) | Kendi sözünü korur |
@@ -108,9 +115,14 @@ KÖŞETAŞI nesne=1 kose=3 nokta=20,20
 
 ### Arayüz
 
-Sağ panelde **Araçlar ▸ Etiketleme ▸ Yazıyı nesneye bağla** (şeritteki **Açıklama ▸ Etiket
-▸ Bağla** ve yazı seçiliyken beliren **Yazı** sekmesindeki **Bağla** aynı kartı açar). Bağlanacak yazıları seçin
-ya da kapsamı **Seçili** bırakıp aracın seçtirmesini bekleyin. **kaynak** alanının
+**Şeritten:** yazıları seçin, **Açıklama ▸ Etiket ▸ Bağla**'ya ya da yazı seçiliyken beliren
+**Yazı** sekmesindeki **Bağla**'ya basın; komut satırı yazıların bağlanacağı nesneyi sorar,
+nesneye **bir kez** tıklayın — Enter gerekmez. Hiçbir şey seçmeden basarsanız önce
+bağlanacak yazıları sorar. Varsayılan değerlerle (`bag=kenar`, `tur=sabit`) çalışır.
+
+**Araçlar panelinden**, değerleri seçerek: sağ panelde **Araçlar ▸ Etiketleme ▸ Yazıyı
+nesneye bağla**. Bağlanacak yazıları seçin ya da kapsamı **Seçili** bırakıp aracın
+seçtirmesini bekleyin. **kaynak** alanının
 yanındaki nişan düğmesine basın: işaretçi seçim işaretçisine döner, durum satırı
 "Sahneden bir nesne tıklayın" der; çizgiye tıklayın, kimliği alana yazılır. (Klavyeyle:
 alana Tab ile gidin, **F4** ya da **Alt+↓** nişanı basar; kimliği doğrudan da

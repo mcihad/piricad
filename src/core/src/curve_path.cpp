@@ -1166,6 +1166,34 @@ PathRecord path_record(const CurvePath& input)
     return out;
 }
 
+PathRecord area_record(const CurvePath& input)
+{
+    CurvePath path = input;
+    path.closed    = true;
+    while (path.pieces.size() < 3) {
+        std::size_t longest = path.pieces.size();
+        std::int64_t widest = 0;
+        for (std::size_t i = 0; i < path.pieces.size(); ++i) {
+            const PathPiece& p      = path.pieces[i];
+            const std::int64_t turn = p.sweep_udeg < 0 ? -p.sweep_udeg : p.sweep_udeg;
+            if (p.kind == PathPiece::Kind::Arc && turn > widest) {
+                longest = i;
+                widest  = turn;
+            }
+        }
+        // Straight pieces only: a ring too short to bound anything, which the
+        // document refuses in its own words.
+        if (longest == path.pieces.size()) break;
+        const PathPiece arc  = path.pieces[longest];
+        const Point2 middle  = point_at(path, PathPlace{.piece = longest, .t = 0.5});
+        const bool ccw       = arc.sweep_udeg >= 0;
+        path.pieces[longest] = arc_piece(arc.centre, arc.radius, arc.from, middle, ccw);
+        path.pieces.insert(path.pieces.begin() + static_cast<std::ptrdiff_t>(longest) + 1,
+                           arc_piece(arc.centre, arc.radius, middle, arc.to, ccw));
+    }
+    return path_record(path);
+}
+
 namespace {
 
 /// The one piece two neighbours make when the vertex between them goes: an

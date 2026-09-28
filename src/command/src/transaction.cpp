@@ -690,8 +690,8 @@ Transaction::SettleReport Transaction::settle_attachments()
             if (!texts.has(dslot)) continue;
             const RingCopy ring = ring_copy(geom, ents.slot[src], a->ring);
             if (!ring.ok) continue;
-            const auto rule =
-                core::attach_place(ring.points, ring.closed, *a, texts.height(dslot), false);
+            const auto rule = core::attach_place(ring.points, ring.closed, *a, texts.height(dslot),
+                                                 false, core::attach_bends(doc_, src, a->ring));
             if (!rule) continue;
             const core::RingSpan rs = geom.rings_of(dslot);
             if (rs.count == 0 || geom.ring_count[rs.first] == 0) continue;

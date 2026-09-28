@@ -156,7 +156,7 @@ core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
         return core::err(core::ErrorCode::Unsupported,
                          "Sonuçtaki alanın hem yay kenarı hem içinde boşluğu var; yaylı kenarlı "
                          "bir alan bu sürümde boşluk taşıyamaz.");
-    const core::PathRecord rec = core::path_record(face.outer);
+    const core::PathRecord rec = core::area_record(face.outer);
     const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
     return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);
 }

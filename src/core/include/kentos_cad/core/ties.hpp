@@ -76,6 +76,14 @@ struct CaptionFollow
     Mm height{0};                                ///< its letters' height, as it has it
 };
 
+/// THE BENT EDGES an attachment to ring `ring` of `src` reads (`EdgeArcs`): an
+/// arc polyline's arcs for its one ring, nothing for every other ring and kind.
+/// Every call that measures an attachment's offset or places its caption reads
+/// them HERE, so what a caption was measured against is what it is later placed
+/// by — an offset measured to an arc edge's chord and applied along its arc put
+/// the caption metres from where it stood the first time its source moved.
+std::vector<ArcPolyline::Arc> attach_bends(const Document& doc, EntityId src, std::uint16_t ring);
+
 /// Where caption `e`'s rule puts it — its baseline, its words, its anchor —
 /// reading its source as it is now, with attachment `a` in place of the stored
 /// one (the settle passes one re-anchored after a corner came or went). The

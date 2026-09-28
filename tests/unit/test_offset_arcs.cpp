@@ -327,3 +327,21 @@ TEST_CASE("OFSET YAY: delikli alanın yuvarlak köşeli paraleli kısa kenarlarl
     CHECK(r.doc.entities().kind[r.slot(2)] == core::kPolylineKind);
     CHECK(r.doc.geometry().rings_of(r.doc.entities().slot[r.slot(2)]).count == 2);
 }
+
+TEST_CASE("OFSET YAY: iki noktalı düz çizginin yuvarlak köşeli paraleli düz çizgi")
+{
+    // ONE STRAIGHT EDGE DEFINES NO PLANE, and the kernel's planar offset was
+    // refused on it: OFSET kose=YUVARLAK on a two-point line said "ofset
+    // çizilemiyor" where the polygon road had always drawn it (TODOS O-4).
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 20,0");
+    r.run("OFSET nesneler=1 mesafe=2000 taraf=sol kose=YUVARLAK");
+    REQUIRE(r.slot(2) != core::kNoEntity);
+    CHECK(r.doc.entities().kind[r.slot(2)] == core::kPolylineKind);
+    const CurvePath left = r.path(2);
+    // One straight edge, the split the kernel was given not left in it.
+    REQUIRE_EQ(left.pieces.size(), 1u);
+    CHECK_EQ(left.pieces.front().from, Point2{0, 2'000});
+    CHECK_EQ(left.pieces.front().to, Point2{20'000, 2'000});
+}
