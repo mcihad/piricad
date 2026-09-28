@@ -757,7 +757,8 @@ KENTOS_COMMAND(edittext)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya "
                    "da kırılma genişliğini değiştirir.",
-        .run = &run_edit,
+        .run     = &run_edit,
+        .targets = Targets::Texts | Targets::Dimensions | Targets::Leaders,
     };
 }
 

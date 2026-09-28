@@ -354,6 +354,7 @@ KENTOS_COMMAND(split_area)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Parselden verilen yöne paralel, istenen alanda bir parça ayırır.",
         .run     = &run,
+        .targets = Targets::Faces,
     };
 }
 

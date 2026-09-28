@@ -950,6 +950,7 @@ KENTOS_COMMAND(block_edit)
         .summary = "Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; "
                    "bütün referanslar yeni biçimi çizer.",
         .run     = &run_block_edit,
+        .targets = Targets::Blocks,
     };
 }
 

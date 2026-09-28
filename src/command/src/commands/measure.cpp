@@ -390,7 +390,8 @@ KENTOS_COMMAND(measure_area)
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "
                    "yazar.",
-        .run = &run_measure_area,
+        .run     = &run_measure_area,
+        .targets = Targets::Faces | Targets::Curves | Targets::Hatches,
     };
 }
 

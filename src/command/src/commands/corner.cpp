@@ -683,7 +683,8 @@ KENTOS_COMMAND(chamfer)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).",
-        .run = &run_chamfer,
+        .run     = &run_chamfer,
+        .targets = Targets::Lines | Targets::Faces | Targets::Curves,
     };
 }
 
@@ -723,7 +724,8 @@ KENTOS_COMMAND(fillet)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta "
                    "yayla yuvarlatır; 0 yarıçap keskin köşe kurar.",
-        .run = &run_fillet,
+        .run     = &run_fillet,
+        .targets = Targets::Lines | Targets::Faces | Targets::Curves,
     };
 }
 

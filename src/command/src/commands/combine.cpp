@@ -78,6 +78,18 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
     // boundary. Unioning them would union numbers that never described an outline.
     // Said rather than skipped, because silently dropping one of the objects the
     // user selected is how a merge loses a parcel.
+    // AN AREA WITH ARC EDGES is an area to the eye and to the ribbon, and this
+    // body does not take one yet: the union here is Clipper2's, over vertex
+    // rings, and would hand the arcs back as chords. Said as what it is, until
+    // the union goes through the kernel (TODOS O-3).
+    if (doc.entities().kind[slot] == core::kArcPolylineKind) {
+        ctx.refuse(core::ErrorCode::Unsupported,
+                   "Nesne " + std::to_string(raw) +
+                       " yaylı kenarlı; BİRLEŞTİR yaylı kenarlı alanları bu sürümde "
+                       "birleştirmez, yayları kirişe çevirmeden birleştirmenin yolu "
+                       "geometri çekirdeğiyle gelecek.");
+        return false;
+    }
     if (doc.entities().kind[slot] != core::kPolylineKind) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(raw) +
@@ -460,6 +472,7 @@ KENTOS_COMMAND(combine)
         .summary  = "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek "
                     "çizgi yapar.",
         .run      = &run,
+        .targets  = Targets::Lines | Targets::Faces,
     };
 }
 

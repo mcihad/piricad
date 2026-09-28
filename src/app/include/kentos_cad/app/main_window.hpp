@@ -23,6 +23,7 @@
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -837,6 +838,17 @@ private:
     /// only its kind, and reads the first object's values into its boxes.
     void refreshContextTabs();
 
+    /// Finds, once the ribbon is built, every action whose command acts on some
+    /// classes of object only (`CommandSpec::targets`), wherever it is shown.
+    void gatherTargetTools();
+
+    /// GREYS A TOOL THE SELECTION HOLDS NOTHING FOR (`.claude/ui.md` R54):
+    /// YUVARLA with a caption picked, İFRAZ with a line. Only while no command
+    /// is asking — the selection then is an answer being built — and only the
+    /// actions this greyed are given back, so the rules that own the others (a
+    /// block being edited, the undo stack) are never overruled.
+    void refreshToolAvailability();
+
     /// Draws again the pictures that are data rather than glyphs — hatch
     /// patterns, text anchors — and the editor tabs' colours, in the theme.
     void refreshRibbonPictures();
@@ -922,6 +934,20 @@ private:
     QList<QAction*> ribbonTools_;
     /// The split buttons, one per family.
     QList<RibbonFamily*> families_;
+
+    /// A tool the selection can grey, with what its command acts on.
+    struct TargetTool
+    {
+        QPointer<QAction> action;
+        command::Targets targets{command::Targets::Any};
+        /// `processing::Applies` of an Araçlar tool, which SKIPS what it cannot
+        /// take and says how many (processing.md) — so it is offered when any
+        /// selected object is its own. Zero for a command, which refuses.
+        std::uint8_t applies{0};
+        bool greyed{false}; ///< greyed by the selection, and so given back by it
+    };
+
+    std::vector<TargetTool> targetTools_;
     LayerPanel* layerPanel_{nullptr};
     XrefPanel* xrefPanel_{nullptr};       ///< the Dış Referanslar tab beside the layers (C-14)
     QStackedWidget* layerStack_{nullptr}; ///< the layer dock's two tabs

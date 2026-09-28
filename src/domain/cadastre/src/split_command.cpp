@@ -218,6 +218,7 @@ KENTOS_COMMAND(split_parcel)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).",
         .run     = &run,
+        .targets = Targets::Faces,
     };
 }
 

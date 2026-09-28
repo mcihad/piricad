@@ -215,6 +215,7 @@ KENTOS_COMMAND(merge)
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Komşu parselleri tek parselde birleştirir (tevhit).",
         .run      = &run,
+        .targets  = Targets::Faces,
     };
 }
 

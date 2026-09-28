@@ -28,6 +28,7 @@
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/targets.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
@@ -36,6 +37,7 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
 #include "kentos_cad/processing/registry.hpp"
+#include "kentos_cad/processing/tool.hpp"
 
 #include <QAction>
 #include <QActionGroup>
@@ -458,6 +460,8 @@ void MainWindow::buildRibbon()
                                      QStringLiteral("ALANÖLÇ yontem=nokta"),
                                      tr("Köşelere tıklayın; alan ve çevre imleçle birlikte "
                                         "yazılır, Enter bitirir"));
+    // Corners clicked, not objects picked: a selected line does not grey it.
+    areaByCorners->setProperty(kIgnoresSelectionProperty, true);
     auto* guide = commandAction(Glyph::Guide, tr("Cetvel Kılavuzu"), QStringLiteral("KILAVUZ"),
                                 tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
                                    "kısaltma: KLV"));
@@ -521,9 +525,12 @@ void MainWindow::buildRibbon()
     large(sketch, actPolyline_);
     family(sketch, {actCircle_, circleTwo, circleThree, circleTangent}, Size::Large, tr("Daire"));
     family(sketch, {actArc_, arcThree, arcAngle, arcRadius, arcOn}, Size::Large, tr("Yay"));
+    // THE SHAPES A HAND DRAWS ALL DAY ARE LARGE, the area among them: a parcel
+    // is drawn as often as a line, and a picture the size of the ellipse's
+    // said otherwise.
+    family(sketch, {actPolygon_, actAnnulus_, actSector_}, Size::Large, tr("Alan"));
     family(sketch, {actRectangle_, rectangleRotated, actRegular_, regularOutside, regularSide},
-           Size::Icon);
-    family(sketch, {actPolygon_, actAnnulus_, actSector_}, Size::Icon);
+           Size::Large, tr("Dikdörtgen"));
     family(sketch, {actEllipse_, ellipseAxis}, Size::Icon);
     family(sketch, {actPoint_, actPerpOffset_, actSurvey_, actIntersect_, actAlong_}, Size::Icon);
     icon(sketch, actSpline_);
@@ -1137,6 +1144,7 @@ void MainWindow::buildRibbon()
     for (QAction* action : findChildren<QAction*>())
         if (!action->shortcut().isEmpty()) addAction(action);
 
+    gatherTargetTools();
     bar->setCurrentIndex(0);
 }
 
@@ -1222,7 +1230,15 @@ std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::
     if (kind == core::kHatchKind) return RibbonContext::Hatch;
     if (kind == core::kBlockReferenceKind) return RibbonContext::Block;
     if (doc.texts().has(gslot)) return RibbonContext::Text;
-    if (doc.entity_area(e) != 0) return RibbonContext::Area;
+    // THE CLASS THE COMMANDS ARE DECLARED FOR (`command::target_of`), so the tab
+    // a parcel brings up holds exactly the tools that are offered for it — a
+    // circle is a curve, not an area, and İFRAZ does not take one.
+    switch (command::target_of(doc, e)) {
+    case command::Targets::Faces: return RibbonContext::Area;
+    case command::Targets::Lines: return RibbonContext::Line;
+    case command::Targets::Curves: return RibbonContext::Curve;
+    default: break;
+    }
     return std::nullopt;
 }
 
@@ -1250,6 +1266,30 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         close->setProperty(kToolCommandProperty, QStringLiteral("SEÇ"));
         connect(close, &QAction::triggered, actSelectNone_, &QAction::trigger);
         panel->addLargeAction(close);
+    };
+    // A FAMILY ON AN EDITOR TAB is the split button it is everywhere else, with
+    // its own face: the tab remembers what the hand did last on it.
+    const auto family = [this](SARibbonPanel* panel, const QList<QAction*>& members, bool large,
+                               const QString& word) {
+        auto* f = new RibbonFamily(members, this);
+        if (!word.isEmpty()) f->setFixedLabel(word);
+        families_ << f;
+        if (large)
+            panel->addLargeAction(f->head(), QToolButton::MenuButtonPopup);
+        else
+            panel->addSmallAction(f->head(), QToolButton::MenuButtonPopup);
+    };
+    // WHAT IS DONE TO ANY OBJECT, on every tab an object brings up: the tab
+    // comes forward when a line or a parcel is picked, and the hand must not
+    // have to go back to `Giriş` to move what it picked.
+    const auto objectVerbs = [this, &family](SARibbonCategory* page) {
+        SARibbonPanel* panel = page->addPanel(tr("Nesne"));
+        panel->addSmallAction(actMove_);
+        panel->addSmallAction(actCopy_);
+        family(panel, {actRotate_, actRotateRef_}, false, tr("Döndür"));
+        family(panel, {actScale_, actScaleRef_}, false, tr("Ölçekle"));
+        family(panel, {actMirror_, actMirrorCopy_}, false, tr("Aynala"));
+        panel->addSmallAction(actErase_);
     };
     const auto context = [&](RibbonContext which, const QString& group, const QString& title,
                              const QColor& colour) {
@@ -1558,13 +1598,88 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     areaCadastre->addLargeAction(actAreaSplit_);
     areaCadastre->addLargeAction(actUnion_);
     areaCadastre->addSmallAction(actTopology_);
+    // CUT AND ROUND, on the parcel that is picked: BÖL's cut line across it, a
+    // corner rounded with a true arc, a corner moved, added or taken away.
+    SARibbonPanel* areaCut = area->addPanel(tr("Kes ve Köşe"));
+    areaCut->setObjectName(QStringLiteral("ribbonAreaCorners"));
+    family(areaCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
+           true, tr("Böl"));
+    family(areaCut, {actFillet_, actFilletAll_}, true, tr("Yuvarla"));
+    family(areaCut, {actChamfer_, actChamferAll_}, true, tr("Pah"));
+    areaCut->addSmallAction(actVertexMove_);
+    areaCut->addSmallAction(actVertexAdd_);
+    areaCut->addSmallAction(actVertexDelete_);
+    areaCut->addSmallAction(actEdgeKind_);
     SARibbonPanel* areaShape = area->addPanel(tr("Düzenle"));
     areaShape->addLargeAction(actHatch_);
     areaShape->addSmallAction(actOffset_);
     areaShape->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
     areaShape->addSmallAction(
         processingAction(QStringLiteral("islem.alan_duzenle"), tr("Alanı Düzenle…")));
+    areaShape->addSmallAction(actExplode_);
+    objectVerbs(area);
     closer(area);
+
+    // --------------------------------------------------------------- `Çizgi`
+    //
+    // AN OPEN LINE, and what is done to one once it is picked: cut back, carried
+    // on, broken, joined, rounded at a corner, closed into an area.
+    SARibbonCategory* line =
+        context(RibbonContext::Line, tr("Çizgi Araçları"), tr("Çizgi"), t.accent);
+    SARibbonPanel* lineCut = line->addPanel(tr("Kes ve Uzat"));
+    lineCut->setObjectName(QStringLiteral("ribbonLineCut"));
+    family(lineCut, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, true, tr("Buda"));
+    family(lineCut, {actExtend_, actExtendFence_, actExtendCarry_}, true, tr("Uzat"));
+    lineCut->addSmallAction(actBreak_);
+    lineCut->addSmallAction(actLengthen_);
+    family(lineCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
+           false, tr("Böl"));
+    SARibbonPanel* lineCorner = line->addPanel(tr("Köşe"));
+    family(lineCorner, {actFillet_, actFilletAll_}, true, tr("Yuvarla"));
+    family(lineCorner, {actChamfer_, actChamferAll_}, true, tr("Pah"));
+    lineCorner->addSmallAction(actVertexMove_);
+    lineCorner->addSmallAction(actVertexAdd_);
+    lineCorner->addSmallAction(actVertexDelete_);
+    SARibbonPanel* lineMake = line->addPanel(tr("Dönüştür"));
+    lineMake->addLargeAction(actToArea_);
+    lineMake->addSmallAction(actJoin_);
+    lineMake->addSmallAction(actPolylineEdit_);
+    lineMake->addSmallAction(actEdgeKind_);
+    lineMake->addSmallAction(actExplode_);
+    lineMake->addSmallAction(actDivide_);
+    SARibbonPanel* lineMore = line->addPanel(tr("Ofset ve Yaz"));
+    lineMore->addLargeAction(actOffset_);
+    lineMore->addSmallAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
+    lineMore->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
+    lineMore->addSmallAction(actEntityInfo_);
+    objectVerbs(line);
+    closer(line);
+
+    // ---------------------------------------------------------------- `Eğri`
+    //
+    // A CIRCLE, AN ARC, AN ELLIPSE OR A SPLINE: measured, cut, carried on and
+    // offset — never numbered at the corners it does not have.
+    SARibbonCategory* curve =
+        context(RibbonContext::Curve, tr("Eğri Araçları"), tr("Eğri"), t.accent);
+    SARibbonPanel* curveRead = curve->addPanel(tr("Ölç"));
+    curveRead->addLargeAction(actMeasureArea_);
+    curveRead->addSmallAction(actEntityInfo_);
+    curveRead->addSmallAction(actCoordinate_);
+    SARibbonPanel* curveCut = curve->addPanel(tr("Kes ve Uzat"));
+    curveCut->setObjectName(QStringLiteral("ribbonCurveCut"));
+    family(curveCut, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, true, tr("Buda"));
+    family(curveCut, {actExtend_, actExtendFence_, actExtendCarry_}, true, tr("Uzat"));
+    curveCut->addSmallAction(actBreak_);
+    curveCut->addSmallAction(actLengthen_);
+    family(curveCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
+           false, tr("Böl"));
+    SARibbonPanel* curveMake = curve->addPanel(tr("Dönüştür"));
+    curveMake->addLargeAction(actOffset_);
+    curveMake->addLargeAction(actHatch_);
+    curveMake->addSmallAction(actDivide_);
+    curveMake->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
+    objectVerbs(curve);
+    closer(curve);
 
     // ---------------------------------------------------------------- `Blok`
     SARibbonCategory* block =
@@ -1819,6 +1934,7 @@ void MainWindow::refreshRibbon()
     refreshColourBoxes();
     refreshRibbonDefaults();
     refreshContextTabs();
+    refreshToolAvailability();
 }
 
 void MainWindow::refreshLayerBox()
@@ -1975,13 +2091,12 @@ void MainWindow::refreshContextTabs()
         ribbonLive_->showing[i] = want;
         bar->setContextCategoryVisible(ctx, want);
         // A NEW EDITOR COMES FORWARD when the selection is only its kind — a
-        // hatch picked to change its pattern, a caption picked to change its
-        // height — the way AutoCAD's Hatch and Text Editor tabs do. Areas and
-        // blocks only appear: a parcel is selected for a hundred other reasons.
-        const bool editor = i == static_cast<std::size_t>(RibbonContext::Text) ||
-                            i == static_cast<std::size_t>(RibbonContext::Dimension) ||
-                            i == static_cast<std::size_t>(RibbonContext::Hatch);
-        if (want && editor && count[i] == total) raise = i;
+        // hatch picked to change its pattern, a parcel picked to cut it, a line
+        // picked to round its corner — the way AutoCAD's Hatch and Text Editor
+        // tabs do. Every such tab carries the move, copy and erase a selection
+        // is also made for (`objectVerbs`), so coming forward takes nothing
+        // away from the hand; and it goes back when the selection goes.
+        if (want && count[i] == total) raise = i;
     }
     if (raise) {
         if (!onContext) ribbonLive_->before = current;
@@ -2069,6 +2184,78 @@ void MainWindow::refreshContextTabs()
         }
 }
 
+// =============================================================================
+// The tools the selection holds nothing for
+// =============================================================================
+
+namespace {
+
+/// Why a greyed tool is greyed, as the tip under it says it.
+constexpr const char* kUnavailable = "kentos.unavailable";
+
+} // namespace
+
+void MainWindow::gatherTargetTools()
+{
+    // EVERY ACTION THAT STARTS SUCH A COMMAND, wherever it is shown — a ribbon
+    // button, a family's arrow, an editor tab, the Araçlar tree's buttons — so
+    // one declaration greys all of them at once (`CommandSpec::targets`).
+    targetTools_.clear();
+    for (QAction* action : findChildren<QAction*>()) {
+        const QString word =
+            action->property(kToolCommand).toString().section(QLatin1Char(' '), 0, 0);
+        if (word.isEmpty() || action->property(kIgnoresSelectionProperty).toBool()) continue;
+        const command::CommandSpec* spec = controller_->registry().resolve(word.toStdString());
+        if (spec == nullptr) continue;
+        TargetTool one{.action = action, .targets = spec->targets};
+        if (const processing::ProcessingTool* tool = processing::find_tool(spec->id);
+            tool != nullptr)
+            one.applies = static_cast<std::uint8_t>(tool->spec().applies);
+        if (one.applies == 0 && spec->targets == command::Targets::Any) continue;
+        targetTools_.push_back(one);
+    }
+}
+
+void MainWindow::refreshToolAvailability()
+{
+    if (controller_->awaitingInput()) return;
+    const core::Document& doc                = controller_->document();
+    const std::vector<core::EntityKey>& keys = controller_->bus().selection().keys();
+    const command::Held held                 = command::held_by(doc, keys);
+    // The classes the Araçlar runner sorts the same objects into, which is
+    // what it skips by (`processing::classify`).
+    std::uint8_t sorted = 0;
+    for (const core::EntityKey k : keys)
+        if (const core::EntityId e = doc.slot_of(k); e != core::kNoEntity && doc.alive(e))
+            sorted |= static_cast<std::uint8_t>(processing::classify(doc, e));
+
+    for (TargetTool& one : targetTools_) {
+        QAction* action = one.action.data();
+        if (action == nullptr) continue;
+        const bool offered = one.applies != 0 ? held.count == 0 || (sorted & one.applies) != 0
+                                              : command::acts_on_all(one.targets, held);
+        if (!offered) {
+            if (!action->isEnabled() && !one.greyed) continue; // another rule's, left alone
+            const QString word =
+                action->property(kToolCommand).toString().section(QLatin1Char(' '), 0, 0);
+            action->setProperty(
+                kUnavailable,
+                one.applies != 0
+                    ? tr("Seçimde bu aracın işlediği nesne yok: %1 yalnız %2 üzerinde çalışır.")
+                          .arg(word, QString::fromStdString(command::target_names(one.targets)))
+                    : tr("Seçimde bu komutun işlemediği nesne var: %1 yalnız %2 üzerinde "
+                         "çalışır.")
+                          .arg(word, QString::fromStdString(command::target_names(one.targets))));
+            action->setEnabled(false);
+            one.greyed = true;
+        } else if (one.greyed) {
+            action->setProperty(kUnavailable, QVariant());
+            action->setEnabled(true);
+            one.greyed = false;
+        }
+    }
+}
+
 void MainWindow::refreshRibbonPictures()
 {
     // THE PICTURES THAT ARE DATA — a pattern from the catalogue, an anchor — are
@@ -2153,10 +2340,16 @@ QString MainWindow::ribbonTip(const QAction* action) const
     const QString faint = t.textFaint.name();
     QString html =
         QStringLiteral("<p style='margin:0; white-space:pre'><b>%1</b>").arg(title.toHtmlEscaped());
+    // WHY IT IS GREY, first, where the eye lands: a tool the selection holds
+    // nothing for says what it does take (`refreshToolAvailability`).
+    const QString unavailable = face->property(kUnavailable).toString();
     if (!keys.isEmpty())
         html += QStringLiteral("&nbsp;&nbsp;<span style='color:%1'>%2</span>")
                     .arg(faint, keys.toHtmlEscaped());
     html += QStringLiteral("</p>");
+    if (!unavailable.isEmpty() && !face->isEnabled())
+        html += QStringLiteral("<p style='margin:4px 0 0 0; color:%1'>%2</p>")
+                    .arg(t.warn.name(), unavailable.toHtmlEscaped());
     if (!body.isEmpty())
         html += QStringLiteral("<p style='margin:4px 0 0 0'>%1</p>").arg(body.toHtmlEscaped());
     if (!typed.isEmpty())

@@ -255,6 +255,7 @@ KENTOS_COMMAND(to_area)
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Uç uca değen çizgileri tek bir kapalı alana çevirir.",
         .run      = &run,
+        .targets  = Targets::Lines,
     };
 }
 

@@ -490,7 +490,8 @@ KENTOS_COMMAND(hatch_edit)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya "
                    "da ada kuralını değiştirir; bağı ve sınırı korunur.",
-        .run = &run_edit,
+        .run     = &run_edit,
+        .targets = Targets::Hatches,
     };
 }
 

@@ -423,7 +423,8 @@ KENTOS_COMMAND(block_clip)
         .summary = "Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, "
                    "dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi "
                    "görünür.",
-        .run = &run_block_clip,
+        .run     = &run_block_clip,
+        .targets = Targets::Blocks,
     };
 }
 

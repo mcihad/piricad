@@ -167,6 +167,14 @@ da düğüm toleransını büyütün: `AYAR düğüm_toleransı=50`.
 Daire, yay ve nokta birleştirilmez; önce [`DÖNÜŞTÜR`](reproject.md) ile çizgiye
 çevirin.
 
+> `Nesne <kimlik> yaylı kenarlı; BİRLEŞTİR yaylı kenarlı alanları bu sürümde birleştirmez, yayları kirişe çevirmeden birleştirmenin yolu geometri çekirdeğiyle gelecek.`
+
+Alanın bir kenarı yaydır (örneğin köşesi [`YUVARLA`](fillet.md) ile yuvarlatılmış ya da
+kenarı [`KENARTÜRÜ`](edge_kind.md) ile yaya çevrilmiş). `BİRLEŞTİR` bugün yayı
+kısa doğrulara çevirerek birleştirirdi; bunu yapmak yerine reddeder. Yaylı kenarlı
+alanların birleşimi [geometri çekirdeği](../veri/geometri-cekirdegi.md) sayfasındaki
+O-3 aşamasıyla gelecek.
+
 ## İlgili
 
 - [UÇUCA](join.md) — uçları **aralıklı** çizgi zincirini toparlar, bu ise alanları birleştirir

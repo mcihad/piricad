@@ -107,6 +107,10 @@ std::string build(const Registry& reg)
         out += "### `" + spec.id + "` — " + spec.names.front() +
                (spec.title.empty() ? "" : " (" + spec.title + ")") + "\n\n";
         out += spec.summary + "\n\n";
+        // WHAT IT ACTS ON, when it acts on some objects and not others — the
+        // declaration the ribbon greys a tool by (`CommandSpec::targets`).
+        if (spec.targets != Targets::Any)
+            out += "Uygulandığı nesneler: " + target_names(spec.targets) + ".\n\n";
 
         if (spec.params.empty()) {
             out += "Parametre almaz.\n\n";

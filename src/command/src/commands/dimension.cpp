@@ -1354,7 +1354,8 @@ KENTOS_COMMAND(dimension_edit)
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, "
                    "ondalıklarını, stilini ya da yazı yerini değiştirir.",
-        .run = &run_dimension_edit,
+        .run     = &run_dimension_edit,
+        .targets = Targets::Dimensions,
     };
 }
 

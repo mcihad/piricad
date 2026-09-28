@@ -9,6 +9,7 @@
 #include <QAccessibleWidget>
 #include <QAction>
 #include <QActionEvent>
+#include <QCursor>
 #include <QHBoxLayout>
 #include <QHelpEvent>
 #include <QKeyEvent>
@@ -393,13 +394,24 @@ RibbonFamily::RibbonFamily(const QList<QAction*>& members, QObject* parent)
         // re-arm, from anywhere — so the button offers what the hand did last.
         connect(member, &QAction::triggered, this, [this, member] { adopt(member); });
         connect(member, &QAction::toggled, this, [this] { syncChecked(); });
+        // A MEMBER GREYED OR GIVEN BACK (`MainWindow::refreshToolAvailability`)
+        // changes whether the button can be pressed at all, face or not.
         connect(member, &QAction::changed, this, [this, member] {
-            if (member == face_) adopt(member);
+            if (member == face_)
+                adopt(member);
+            else
+                syncChecked();
         });
     }
     head_->setMenu(menu_);
     connect(head_, &QAction::triggered, this, [this] {
-        if (face_ != nullptr) face_->trigger();
+        // THE FACE GREYED, ANOTHER MEMBER NOT: the button is still pressable,
+        // for the ones under its arrow, and a press opens them rather than
+        // running the one the selection has no use for.
+        if (face_ != nullptr && face_->isEnabled())
+            face_->trigger();
+        else if (menu_ != nullptr)
+            menu_->popup(QCursor::pos());
         syncChecked();
     });
     adopt(members_.value(0));

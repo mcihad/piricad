@@ -480,8 +480,9 @@ KENTOS_COMMAND(break_line)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki "
                    "parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.",
-        .run    = &run_break,
-        .effect = Effect::DocumentEdit,
+        .run     = &run_break,
+        .effect  = Effect::DocumentEdit,
+        .targets = Targets::Lines | Targets::Curves,
     };
 }
 
@@ -511,8 +512,9 @@ KENTOS_COMMAND(join_lines)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir "
                    "nesneye ekler; yaylar yay kalır, boşluklar söylenir.",
-        .run    = &run_join,
-        .effect = Effect::DocumentEdit,
+        .run     = &run_join,
+        .effect  = Effect::DocumentEdit,
+        .targets = Targets::Lines | Targets::Curves,
     };
 }
 
@@ -546,6 +548,7 @@ KENTOS_COMMAND(lengthen)
                    "değiştirir.",
         .run     = &run_lengthen,
         .effect  = Effect::DocumentEdit,
+        .targets = Targets::Lines | Targets::Curves,
     };
 }
 

@@ -842,6 +842,7 @@ KENTOS_COMMAND(split)
         .summary = "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, "
                    "baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.",
         .run     = &run_split,
+        .targets = Targets::Lines | Targets::Faces | Targets::Curves,
     };
 }
 
@@ -889,6 +890,10 @@ KENTOS_COMMAND(trim)
         .summary = "Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve "
                    "dairede çalışır.",
         .run     = &run_trim,
+        // NO TARGETS: what is selected when BUDA is pressed is its BOUNDARIES,
+        // and a parcel, a circle or a caption's baseline cuts as well as a line
+        // does — a tool greyed for a selected parcel would forbid the ordinary
+        // "pick the boundary, then cut back to it" (the ribbon, ui.md R54).
     };
 }
 
@@ -932,6 +937,7 @@ KENTOS_COMMAND(extend)
         .summary = "Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, "
                    "yayınkini çemberi boyunca.",
         .run     = &run_extend,
+        // No targets, as BUDA: the selection is what the ends are carried to.
     };
 }
 

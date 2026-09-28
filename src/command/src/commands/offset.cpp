@@ -364,6 +364,7 @@ KENTOS_COMMAND(offset)
         .summary = "Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: "
                    "açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.",
         .run     = &run,
+        .targets = Targets::Lines | Targets::Faces | Targets::Curves,
     };
 }
 

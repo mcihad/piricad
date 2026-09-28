@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 118 (104 tanesi onay ister)
-- Katalog parmak izi: `12490428754381249908`
+- Katalog parmak izi: `12944666746667809638`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -224,6 +224,7 @@ Onay ister.
 
 Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
 Komut: BLOKKIRP (BLOKKIRP, XCLIP, BKR)
+Uygulandığı nesneler: blok.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -241,6 +242,7 @@ Onay ister.
 
 Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
 Komut: BLOKDÜZENLE (BLOKDUZENLE, BEDIT, BDZ)
+Uygulandığı nesneler: blok.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -274,6 +276,7 @@ Onay ister.
 
 Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 Komut: KIR (BREAK, KR)
+Uygulandığı nesneler: çizgi, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -289,6 +292,7 @@ Onay ister.
 
 Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 Komut: PAH (CHAMFER, PH)
+Uygulandığı nesneler: çizgi, alan, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -358,6 +362,7 @@ Onay ister.
 
 Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
 Komut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -534,6 +539,7 @@ Onay ister.
 
 Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.
 Komut: ÖLÇÜDÜZENLE (OLCUDUZENLE, DIMEDIT, ÖDZ, ODZ)
+Uygulandığı nesneler: ölçü.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -589,6 +595,7 @@ Doğrudan çalışır.
 
 Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.
 Komut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)
+Uygulandığı nesneler: çizgi, alan, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -619,6 +626,7 @@ Onay ister.
 
 Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
 Komut: KENARTÜRÜ (KENARTURU, EDGEKIND, KNT)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -636,6 +644,7 @@ Onay ister.
 
 Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 Komut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)
+Uygulandığı nesneler: yazı, ölçü, kılavuz çizgi.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -698,6 +707,7 @@ Onay ister.
 
 Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
 Komut: PATLAT (EXPLODE, PTL)
+Uygulandığı nesneler: çizgi, alan, blok.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -730,6 +740,7 @@ Onay ister.
 
 Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
 Komut: YUVARLA (FILLET, YV)
+Uygulandığı nesneler: çizgi, alan, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -821,6 +832,7 @@ Onay ister.
 
 Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
 Komut: TARAMADÜZENLE (TARAMADUZENLE, HATCHEDIT, TDZ)
+Uygulandığı nesneler: tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -902,6 +914,7 @@ Doğrudan çalışır.
 
 Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.
 Komut: UÇUCA (UCUCA, JOIN, UÇE)
+Uygulandığı nesneler: çizgi, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1060,6 +1073,7 @@ Onay ister.
 
 Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.
 Komut: UZUNLUK (LENGTHEN, UZN)
+Uygulandığı nesneler: çizgi, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1150,6 +1164,7 @@ Doğrudan çalışır.
 
 Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 Komut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)
+Uygulandığı nesneler: alan, eğri, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1165,6 +1180,7 @@ Onay ister.
 
 Komşu parselleri tek parselde birleştirir (tevhit).
 Komut: TEVHİT (TEVHIT, MERGE, TVH)
+Uygulandığı nesneler: alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1209,6 +1225,7 @@ Onay ister.
 
 Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.
 Komut: OFSET (OFFSET, OF)
+Uygulandığı nesneler: çizgi, alan, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1258,6 +1275,7 @@ Onay ister.
 
 Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.
 Komut: ÇİZGİDÜZENLE (CIZGIDUZENLE, PEDIT, ÇZD, CZD)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1527,6 +1545,7 @@ Onay ister.
 
 Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
 Komut: BÖL (BOL, SPLIT, BL)
+Uygulandığı nesneler: çizgi, alan, eğri.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1545,6 +1564,7 @@ Onay ister.
 
 Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
 Komut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)
+Uygulandığı nesneler: alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1561,6 +1581,7 @@ Onay ister.
 
 Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
 Komut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)
+Uygulandığı nesneler: alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1716,6 +1737,7 @@ Onay ister.
 
 Uç uca değen çizgileri tek bir kapalı alana çevirir.
 Komut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)
+Uygulandığı nesneler: çizgi.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1789,6 +1811,7 @@ Onay ister.
 
 Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
 Komut: KÖŞESİL (KOSESIL, DELVERTEX, KSL)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1805,6 +1828,7 @@ Onay ister.
 
 Bir kenarın ortasına yeni köşe ekler.
 Komut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1821,6 +1845,7 @@ Onay ister.
 
 Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 Komut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)
+Uygulandığı nesneler: çizgi, alan.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1903,6 +1928,7 @@ Doğrudan çalışır.
 
 Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.
 Komut: ALANDÜZENLE (ALANDUZENLE, ADJUSTAREA, ADZ)
+Uygulandığı nesneler: alan, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1924,6 +1950,7 @@ Onay ister.
 
 Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
 Komut: ALANÜRET (ALANURET, POLYGONIZE, ALÜ)
+Uygulandığı nesneler: çizgi, alan, eğri, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1942,6 +1969,7 @@ Onay ister.
 
 Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.
 Komut: BAĞÇÖZ (BAGCOZ, DETACH, BÇ, BC)
+Uygulandığı nesneler: yazı.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1958,6 +1986,7 @@ Onay ister.
 
 Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
 Komut: BAĞLA (BAGLA, ATTACH, BĞ, BG)
+Uygulandığı nesneler: yazı.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1981,6 +2010,7 @@ Onay ister.
 
 Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.
 Komut: KÖŞENUMARALA (KOSENUMARALA, NUMBERVERTICES, KNM)
+Uygulandığı nesneler: çizgi, alan, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -2007,6 +2037,7 @@ Onay ister.
 
 Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.
 Komut: TAMPON (BUFFER, TMP)
+Uygulandığı nesneler: nokta, çizgi, alan, eğri, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -2027,6 +2058,7 @@ Onay ister.
 
 Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.
 Komut: UZUNLUKYAZ (UZUNLUKYAZ, LABELLENGTH, UZY)
+Uygulandığı nesneler: çizgi, alan, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.

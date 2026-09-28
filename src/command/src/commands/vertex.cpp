@@ -1128,6 +1128,7 @@ KENTOS_COMMAND(vertex_move)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.",
         .run     = &run_move,
+        .targets = Targets::Lines | Targets::Faces,
     };
 }
 
@@ -1161,7 +1162,8 @@ KENTOS_COMMAND(vertex_delete)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; "
                    "iki kenar tek kenar olur.",
-        .run = &run_delete,
+        .run     = &run_delete,
+        .targets = Targets::Lines | Targets::Faces,
     };
 }
 
@@ -1196,7 +1198,8 @@ KENTOS_COMMAND(edge_kind)
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz "
                    "kenara çevirir; nesnenin kimliği korunur.",
-        .run = &run_edge_kind,
+        .run     = &run_edge_kind,
+        .targets = Targets::Lines | Targets::Faces,
     };
 }
 
@@ -1225,6 +1228,7 @@ KENTOS_COMMAND(vertex_insert)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir kenarın ortasına yeni köşe ekler.",
         .run     = &run_insert,
+        .targets = Targets::Lines | Targets::Faces,
     };
 }
 

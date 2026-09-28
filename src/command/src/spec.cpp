@@ -23,6 +23,42 @@ const char* category_name(Category c)
     return "?";
 }
 
+const char* target_name(Targets one)
+{
+    switch (one) {
+    case Targets::Points: return "nokta";
+    case Targets::Lines: return "çizgi";
+    case Targets::Faces: return "alan";
+    case Targets::Curves: return "eğri";
+    case Targets::Texts: return "yazı";
+    case Targets::Hatches: return "tarama";
+    case Targets::Dimensions: return "ölçü";
+    case Targets::Blocks: return "blok";
+    case Targets::Leaders: return "kılavuz çizgi";
+    case Targets::None:
+    case Targets::Any: break;
+    }
+    return "?";
+}
+
+std::string target_names(Targets set)
+{
+    std::string out;
+    for (const Targets one : {
+             Targets::Points,
+             Targets::Lines,
+             Targets::Faces,
+             Targets::Curves,
+             Targets::Texts,
+             Targets::Hatches,
+             Targets::Dimensions,
+             Targets::Blocks,
+             Targets::Leaders,
+         })
+        if (has_target(set, one)) out += (out.empty() ? "" : ", ") + std::string(target_name(one));
+    return out;
+}
+
 /// Stable machine name, used by the generated AI tool schema and the JSON
 /// documents. Never shown to a user — see param_kind_label for that.
 const char* param_kind_name(ParamKind k)

@@ -60,6 +60,12 @@ namespace kentos::app {
 /// disagree about which command it is (CLAUDE.md 5.10).
 inline constexpr const char* kToolCommandProperty = "piricad.command";
 
+/// Set on an action whose press does NOT read the selection, although its
+/// command acts on some objects only: a method that asks for corners (`ALANÖLÇ
+/// yontem=nokta`), the save of an open block edit, which names its own objects.
+/// The selection never greys such an action (`MainWindow::refreshToolAvailability`).
+inline constexpr const char* kIgnoresSelectionProperty = "kentos.ignoresSelection";
+
 /// THE RIBBON'S BUTTONS ARE MADE HERE, so each one knows the keyboard — Down or
 /// F4 on a button with a list opens it (`.claude/ui.md` R21) — and shows the
 /// ribbon's rich tip. The factory makes every button SARibbon builds, so nothing
@@ -273,9 +279,11 @@ enum class RibbonContext : std::uint8_t {
     Hatch,     ///< a hatch: its pattern, angle, scale and islands
     Area,      ///< a closed face: the survey and parcel work done on one
     Block,     ///< a placed block
+    Line,      ///< an open line: cut, extend, round its corners, close it
+    Curve,     ///< a circle, an arc, an ellipse, a spline
 };
 /// How many editor tabs there are.
-inline constexpr std::size_t kRibbonContextCount = 5;
+inline constexpr std::size_t kRibbonContextCount = 7;
 
 /// The id of the tab that is up while a block is out for editing — not a
 /// selection's editor tab, so past `RibbonContext`'s range (TODOS C-13).

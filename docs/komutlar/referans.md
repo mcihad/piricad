@@ -265,6 +265,8 @@ Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
 
 Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.
 
+Uygulandığı nesneler: çizgi, eğri.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 0 | Kırılacak nesne: çizgi, yay, daire ya da yaylı çoklu çizgi |
@@ -277,6 +279,8 @@ Ayrıntılı kullanım: [KIR](break.md)
 
 Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.
 
+Uygulandığı nesneler: çizgi, eğri.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 0 | Uç uca eklenecek çizgiler, yaylar ve yaylı çoklu çizgiler |
@@ -288,6 +292,8 @@ Ayrıntılı kullanım: [UÇUCA](join.md)
 ### `core.lengthen` — UZUNLUK (Uzunluk)
 
 Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.
+
+Uygulandığı nesneler: çizgi, eğri.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -302,6 +308,8 @@ Ayrıntılı kullanım: [UZUNLUK](lengthen.md)
 ### `core.explode` — PATLAT (Patlat)
 
 Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.
+
+Uygulandığı nesneler: çizgi, alan, blok.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -343,6 +351,8 @@ Ayrıntılı kullanım: [HİZALA](align.md)
 
 Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.
 
+Uygulandığı nesneler: çizgi, alan, eğri.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 0 | Bölünecek nesne |
@@ -356,6 +366,8 @@ Ayrıntılı kullanım: [BÖLÜMLE](divide.md)
 ### `core.pedit` — ÇİZGİDÜZENLE (Çizgi Düzenle)
 
 Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.
+
+Uygulandığı nesneler: çizgi, alan.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -491,6 +503,8 @@ Ayrıntılı kullanım: [METİN](text.md)
 
 Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.
 
+Uygulandığı nesneler: yazı, ölçü, kılavuz çizgi.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Düzenlenecek yazılar; verilmezse seçim |
@@ -591,6 +605,8 @@ Ayrıntılı kullanım: [YAY](arc_draw.md)
 
 Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
+Uygulandığı nesneler: çizgi, alan.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 1 | Köşesi taşınacak nesne; birden çok nesne verilirse ortak köşeleri birlikte taşınır |
@@ -605,6 +621,8 @@ Ayrıntılı kullanım: [KÖŞETAŞI](vertex_move.md)
 
 Bir kenarın ortasına yeni köşe ekler.
 
+Uygulandığı nesneler: çizgi, alan.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | 1 | Köşe eklenecek nesnenin kimliği |
@@ -617,6 +635,8 @@ Ayrıntılı kullanım: [KÖŞEEKLE](vertex_insert.md)
 ### `core.vertex_delete` — KÖŞESİL (Köşe Sil)
 
 Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.
+
+Uygulandığı nesneler: çizgi, alan.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -631,6 +651,8 @@ Ayrıntılı kullanım: [KÖŞESİL](vertex_delete.md)
 
 Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.
 
+Uygulandığı nesneler: çizgi, alan.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | 1 | Kenarı değişecek nesnenin kimliği |
@@ -644,6 +666,8 @@ Ayrıntılı kullanım: [KENARTÜRÜ](edge_kind.md)
 ### `core.to_area` — ALANAÇEVİR (Alana Çevir)
 
 Uç uca değen çizgileri tek bir kapalı alana çevirir.
+
+Uygulandığı nesneler: çizgi.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -726,6 +750,8 @@ Ayrıntılı kullanım: [DİZİ](array.md)
 
 Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
 
+Uygulandığı nesneler: çizgi, alan.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim |
@@ -735,6 +761,8 @@ Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
 ### `core.split` — BÖL (Böl)
 
 Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
+
+Uygulandığı nesneler: çizgi, alan, eğri.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -784,6 +812,8 @@ Ayrıntılı kullanım: [UZAT](extend.md)
 
 Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).
 
+Uygulandığı nesneler: çizgi, alan, eğri.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 1 | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne |
@@ -799,6 +829,8 @@ Ayrıntılı kullanım: [PAH](chamfer.md)
 ### `core.fillet` — YUVARLA (Yuvarla)
 
 Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.
+
+Uygulandığı nesneler: çizgi, alan, eğri.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -911,6 +943,8 @@ Ayrıntılı kullanım: [ÖLÇ](measure.md)
 
 Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 
+Uygulandığı nesneler: alan, eğri, tarama.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim |
@@ -943,6 +977,8 @@ Ayrıntılı kullanım: [KAYDIR](pan.md)
 ### `core.offset` — OFSET (Ofset)
 
 Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.
+
+Uygulandığı nesneler: çizgi, alan, eğri.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1032,6 +1068,8 @@ Ayrıntılı kullanım: [TARAMA](hatch.md)
 
 Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.
 
+Uygulandığı nesneler: tarama.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Düzenlenecek taramalar; verilmezse seçim, o da boşsa sorulur |
@@ -1062,6 +1100,8 @@ Ayrıntılı kullanım: [BLOK](block.md)
 ### `core.block_edit` — BLOKDÜZENLE (Bloğu Düzenle)
 
 Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.
+
+Uygulandığı nesneler: blok.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1112,6 +1152,8 @@ Ayrıntılı kullanım: [DIŞREFERANS](xref.md)
 
 Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.
 
+Uygulandığı nesneler: blok.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `islem` | text | isteğe bağlı | yeni: sınırı koyar, varsa eskisinin yerine (varsayılan); kaldir: sınırı kaldırır, referans bütün çizilir; sinir: sınırı etkin katmana kapalı çizgi olarak çizer |
@@ -1153,6 +1195,8 @@ Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
 ### `core.dimension_edit` — ÖLÇÜDÜZENLE (Ölçü Düzenle)
 
 Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.
+
+Uygulandığı nesneler: ölçü.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1699,6 +1743,8 @@ Ayrıntılı kullanım: [YARDIM](help.md)
 
 Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.
 
+Uygulandığı nesneler: nokta, çizgi, alan, eğri, tarama.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
@@ -1715,6 +1761,8 @@ Ayrıntılı kullanım: [TAMPON](tampon.md)
 ### `islem.alan_duzenle` — ALANDÜZENLE
 
 Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.
+
+Uygulandığı nesneler: alan, tarama.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1733,6 +1781,8 @@ Ayrıntılı kullanım: [ALANDÜZENLE](alan_duzenle.md)
 ### `islem.uzunluk_yaz` — UZUNLUKYAZ
 
 Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.
+
+Uygulandığı nesneler: çizgi, alan, tarama.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1755,6 +1805,8 @@ Ayrıntılı kullanım: [UZUNLUKYAZ](uzunluk_yaz.md)
 ### `islem.kose_numarala` — KÖŞENUMARALA
 
 Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.
+
+Uygulandığı nesneler: çizgi, alan, tarama.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1779,6 +1831,8 @@ Ayrıntılı kullanım: [KÖŞENUMARALA](kose_numarala.md)
 
 Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.
 
+Uygulandığı nesneler: yazı.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
@@ -1791,6 +1845,8 @@ Ayrıntılı kullanım: [BAĞÇÖZ](bag_coz.md)
 ### `islem.bagla` — BAĞLA
 
 Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.
+
+Uygulandığı nesneler: yazı.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1811,6 +1867,8 @@ Ayrıntılı kullanım: [BAĞLA](bagla.md)
 ### `islem.alan_uret` — ALANÜRET
 
 Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.
+
+Uygulandığı nesneler: çizgi, alan, eğri, tarama.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1881,6 +1939,8 @@ Ayrıntılı kullanım: [POLİGON](traverse.md)
 
 Komşu parselleri tek parselde birleştirir (tevhit).
 
+Uygulandığı nesneler: alan.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Birleştirilecek parseller; yoksa etkin seçim |
@@ -1890,6 +1950,8 @@ Ayrıntılı kullanım: [TEVHİT](merge.md)
 ### `core.split_parcel` — İFRAZ (İfraz)
 
 Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
+
+Uygulandığı nesneler: alan.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1901,6 +1963,8 @@ Ayrıntılı kullanım: [İFRAZ](split_parcel.md)
 ### `core.split_area` — ALANİFRAZ (Alana Göre İfraz)
 
 Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
+
+Uygulandığı nesneler: alan.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -3235,7 +3299,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_block_clip",
     "title": "Blok Kırp",
-    "description": "Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.\nKomut: BLOKKIRP (BLOKKIRP, XCLIP, BKR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür.\nKomut: BLOKKIRP (BLOKKIRP, XCLIP, BKR)\nUygulandığı nesneler: blok.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -3346,7 +3410,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_block_edit",
     "title": "Bloğu Düzenle",
-    "description": "Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.\nKomut: BLOKDÜZENLE (BLOKDUZENLE, BEDIT, BDZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer.\nKomut: BLOKDÜZENLE (BLOKDUZENLE, BEDIT, BDZ)\nUygulandığı nesneler: blok.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -3522,7 +3586,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_break",
     "title": "Kır",
-    "description": "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.\nKomut: KIR (BREAK, KR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.\nKomut: KIR (BREAK, KR)\nUygulandığı nesneler: çizgi, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -3645,7 +3709,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_chamfer",
     "title": "Pah",
-    "description": "Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir köşeyi ya da iki çizgi arasındaki köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4251,7 +4315,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_combine",
     "title": "Birleştir",
-    "description": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.\nKomut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.\nKomut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5312,7 +5376,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_dimension_edit",
     "title": "Ölçü Düzenle",
-    "description": "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.\nKomut: ÖLÇÜDÜZENLE (OLCUDUZENLE, DIMEDIT, ÖDZ, ODZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir.\nKomut: ÖLÇÜDÜZENLE (OLCUDUZENLE, DIMEDIT, ÖDZ, ODZ)\nUygulandığı nesneler: ölçü.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5578,7 +5642,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_divide",
     "title": "Bölümle",
-    "description": "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.\nKomut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.\nKomut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5681,7 +5745,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_edge_kind",
     "title": "Kenar Türü",
-    "description": "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.\nKomut: KENARTÜRÜ (KENARTURU, EDGEKIND, KNT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz kenara çevirir; nesnenin kimliği korunur.\nKomut: KENARTÜRÜ (KENARTURU, EDGEKIND, KNT)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5803,7 +5867,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_edittext",
     "title": "Yazıyı Düzenle",
-    "description": "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya da kırılma genişliğini değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nUygulandığı nesneler: yazı, ölçü, kılavuz çizgi.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -6193,7 +6257,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_explode",
     "title": "Patlat",
-    "description": "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.\nKomut: PATLAT (EXPLODE, PTL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.\nKomut: PATLAT (EXPLODE, PTL)\nUygulandığı nesneler: çizgi, alan, blok.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -6388,7 +6452,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_fillet",
     "title": "Yuvarla",
-    "description": "Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.\nKomut: YUVARLA (FILLET, YV)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta yayla yuvarlatır; 0 yarıçap keskin köşe kurar.\nKomut: YUVARLA (FILLET, YV)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -6938,7 +7002,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_hatch_edit",
     "title": "Tarama Düzenle",
-    "description": "Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.\nKomut: TARAMADÜZENLE (TARAMADUZENLE, HATCHEDIT, TDZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur.\nKomut: TARAMADÜZENLE (TARAMADUZENLE, HATCHEDIT, TDZ)\nUygulandığı nesneler: tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7558,7 +7622,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_join",
     "title": "Uç Uca Ekle",
-    "description": "Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.\nKomut: UÇUCA (UCUCA, JOIN, UÇE)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir nesneye ekler; yaylar yay kalır, boşluklar söylenir.\nKomut: UÇUCA (UCUCA, JOIN, UÇE)\nUygulandığı nesneler: çizgi, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8291,7 +8355,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_lengthen",
     "title": "Uzunluk",
-    "description": "Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.\nKomut: UZUNLUK (LENGTHEN, UZN)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.\nKomut: UZUNLUK (LENGTHEN, UZN)\nUygulandığı nesneler: çizgi, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8899,7 +8963,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_measure_area",
     "title": "Alan Ölç",
-    "description": "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.\nKomut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.\nKomut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)\nUygulandığı nesneler: alan, eğri, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8995,7 +9059,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_merge",
     "title": "Tevhit",
-    "description": "Komşu parselleri tek parselde birleştirir (tevhit).\nKomut: TEVHİT (TEVHIT, MERGE, TVH)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Komşu parselleri tek parselde birleştirir (tevhit).\nKomut: TEVHİT (TEVHIT, MERGE, TVH)\nUygulandığı nesneler: alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -9262,7 +9326,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_offset",
     "title": "Ofset",
-    "description": "Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.\nKomut: OFSET (OFFSET, OF)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire.\nKomut: OFSET (OFFSET, OF)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -9576,7 +9640,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_pedit",
     "title": "Çizgi Düzenle",
-    "description": "Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.\nKomut: ÇİZGİDÜZENLE (CIZGIDUZENLE, PEDIT, ÇZD, CZD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.\nKomut: ÇİZGİDÜZENLE (CIZGIDUZENLE, PEDIT, ÇZD, CZD)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -11293,7 +11357,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_split",
     "title": "Böl",
-    "description": "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.\nKomut: BÖL (BOL, SPLIT, BL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.\nKomut: BÖL (BOL, SPLIT, BL)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -11435,7 +11499,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_split_area",
     "title": "Alana Göre İfraz",
-    "description": "Parselden verilen yöne paralel, istenen alanda bir parça ayırır.\nKomut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Parselden verilen yöne paralel, istenen alanda bir parça ayırır.\nKomut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)\nUygulandığı nesneler: alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -11532,7 +11596,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_split_parcel",
     "title": "İfraz",
-    "description": "Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).\nKomut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).\nKomut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)\nUygulandığı nesneler: alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -12459,7 +12523,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_to_area",
     "title": "Alana Çevir",
-    "description": "Uç uca değen çizgileri tek bir kapalı alana çevirir.\nKomut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Uç uca değen çizgileri tek bir kapalı alana çevirir.\nKomut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)\nUygulandığı nesneler: çizgi.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -12831,7 +12895,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_vertex_delete",
     "title": "Köşe Sil",
-    "description": "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.\nKomut: KÖŞESİL (KOSESIL, DELVERTEX, KSL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; iki kenar tek kenar olur.\nKomut: KÖŞESİL (KOSESIL, DELVERTEX, KSL)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -12945,7 +13009,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_vertex_insert",
     "title": "Köşe Ekle",
-    "description": "Bir kenarın ortasına yeni köşe ekler.\nKomut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir kenarın ortasına yeni köşe ekler.\nKomut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13061,7 +13125,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_vertex_move",
     "title": "Köşe Taşı",
-    "description": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.\nKomut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.\nKomut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)\nUygulandığı nesneler: çizgi, alan.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13615,7 +13679,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_alan_duzenle",
     "title": "ALANDÜZENLE",
-    "description": "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.\nKomut: ALANDÜZENLE (ALANDUZENLE, ADJUSTAREA, ADZ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.\nKomut: ALANDÜZENLE (ALANDUZENLE, ADJUSTAREA, ADZ)\nUygulandığı nesneler: alan, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13770,7 +13834,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_alan_uret",
     "title": "ALANÜRET",
-    "description": "Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.\nKomut: ALANÜRET (ALANURET, POLYGONIZE, ALÜ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden kapanmaz.\nKomut: ALANÜRET (ALANURET, POLYGONIZE, ALÜ)\nUygulandığı nesneler: çizgi, alan, eğri, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13875,7 +13939,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_bag_coz",
     "title": "BAĞÇÖZ",
-    "description": "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.\nKomut: BAĞÇÖZ (BAGCOZ, DETACH, BÇ, BC)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.\nKomut: BAĞÇÖZ (BAGCOZ, DETACH, BÇ, BC)\nUygulandığı nesneler: yazı.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13973,7 +14037,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_bagla",
     "title": "BAĞLA",
-    "description": "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.\nKomut: BAĞLA (BAGLA, ATTACH, BĞ, BG)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına, köşesine ya da ortasına bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu, nesnenin alanı ya da sütunlarıyla doldurulan bir kalıp olur ve nesne değişince yeniden yazılır.\nKomut: BAĞLA (BAGLA, ATTACH, BĞ, BG)\nUygulandığı nesneler: yazı.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -14123,7 +14187,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_kose_numarala",
     "title": "KÖŞENUMARALA",
-    "description": "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.\nKomut: KÖŞENUMARALA (KOSENUMARALA, NUMBERVERTICES, KNM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.\nKomut: KÖŞENUMARALA (KOSENUMARALA, NUMBERVERTICES, KNM)\nUygulandığı nesneler: çizgi, alan, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -14301,7 +14365,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_tampon",
     "title": "TAMPON",
-    "description": "Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.\nKomut: TAMPON (BUFFER, TMP)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki nesnelerin verilen mesafe içindeki bütün zeminini alan olarak çizer: çizginin iki yanı, noktanın çevresi, alanın dışı; üst üste binen tamponlar tek alan olur.\nKomut: TAMPON (BUFFER, TMP)\nUygulandığı nesneler: nokta, çizgi, alan, eğri, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -14423,7 +14487,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "islem_uzunluk_yaz",
     "title": "UZUNLUKYAZ",
-    "description": "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.\nKomut: UZUNLUKYAZ (UZUNLUKYAZ, LABELLENGTH, UZY)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.\nKomut: UZUNLUKYAZ (UZUNLUKYAZ, LABELLENGTH, UZY)\nUygulandığı nesneler: çizgi, alan, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {

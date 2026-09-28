@@ -34,6 +34,8 @@ using kentos::command::Effect;
 using kentos::command::Flags;
 using kentos::command::Param;
 using kentos::command::Registry;
+using kentos::command::target_names;
+using kentos::command::Targets;
 using kentos::command::UndoPolicy;
 using kentos::core::Json;
 
@@ -105,6 +107,9 @@ Json command_json(const CommandSpec& spec)
     flags.set("salt_okunur", Json::boolean(has(spec.flags, Flags::ReadOnly)));
     flags.set("etkisiz", Json::boolean(has(spec.flags, Flags::NoEffect)));
     flags.set("uzun_is", Json::boolean(has(spec.flags, Flags::LongRunning)));
+    // WHAT IT ACTS ON: every class, or the ones it declared (`CommandSpec::targets`).
+    out.set("hedefler", Json::string(spec.targets == Targets::Any ? std::string("hepsi")
+                                                                  : target_names(spec.targets)));
     out.set("bayraklar", std::move(flags));
 
     // WHAT IT LEAVES CHANGED, which is a different question from which client

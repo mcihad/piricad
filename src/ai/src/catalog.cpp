@@ -337,6 +337,10 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style)
             text += ")";
         }
     }
+    // WHAT IT TAKES, when it takes some objects and not others: an agent that
+    // hands İFRAZ a line is refused, and it can know that before it asks.
+    if (spec.targets != command::Targets::Any)
+        text += "\nUygulandığı nesneler: " + command::target_names(spec.targets) + ".";
     // WHETHER A CALL APPLIES IS THE USER'S CHOICE, not the tool's, so the text
     // says what decides it rather than a fixed answer that one of the policies
     // makes false: under `otomatik` the same call is applied at once.

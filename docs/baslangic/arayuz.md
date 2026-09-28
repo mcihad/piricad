@@ -79,9 +79,9 @@ belirir; hiçbir düğme gizlenmez.
 
 | Boy | Ne için |
 |---|---|
-| **Büyük** — resim üstte, ad altta | En sık yapılan iş: Çizgi, Daire, Metin, Katmanlar, Yapıştır |
+| **Büyük** — resim üstte, ad altta | En sık yapılan iş: Çizgi, Çoklu Çizgi, Daire, Yay, Alan, Dikdörtgen, Metin, Katmanlar, Yapıştır |
 | **Satır** — küçük resim ve ad | İkinci sıradakiler: Taşı, Kopyala, Döndür, Kılavuz Çizgi |
-| **Simge** — yalnız resim | Herkesin resminden tanıdığı araçlar: Dikdörtgen, Elips, Sil, Patlat, Ofset |
+| **Simge** — yalnız resim | Herkesin resminden tanıdığı araçlar: Elips, Nokta, Spline, Sil, Patlat, Ofset |
 
 Simgeler renklidir ve renk her simgede aynı şeyi söyler: mavi komutun çizdiği ya da
 değiştirdiği şekil, kırmızı kestiği ya da sildiği, turuncu yazdığı, sarı veri ve katman,
@@ -189,16 +189,54 @@ sekme de kaybolur.
 | **Yazı** | yazı | Yazıyı Düzenle, Bul ve Değiştir, Stil Kopyala · **Yükseklik** ve **Aralık** kutuları · dokuz hizalama (3 × 3) · Bağla, Bağı Çöz |
 | **Ölçü** | ölçü | Ölçüyü Düzenle, Stile Döndür, Pafta Ölçeğine Uyarla · **Stil**, **Ondalık**, **Birim** kutuları · Zincir Ölçü, Baz Ölçü |
 | **Tarama** | tarama | desen galerisi · **Açı**, **Ölçek**, Çapraz · adalar: Normal, Yalnız dış, Adasız · Sınır Bul, Taramayı Düzenle |
-| **Alan** | kapalı alan (parsel) | Alan Ölç, Nesne Bilgisi, Koordinat Oku · Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · Tarama, Ofset, Tampon…, Alanı Düzenle… |
+| **Alan** | kapalı alan (parsel), kenarı yaylı olsa da | Alan Ölç, Nesne Bilgisi, Koordinat Oku · Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · **Kes ve Köşe**: Böl, Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü · Tarama, Ofset, Tampon…, Alanı Düzenle…, Patlat · **Nesne** |
+| **Çizgi** | açık çizgi ya da çoklu çizgi | **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · **Köşe**: Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil · **Dönüştür**: Alana Çevir, Uç Uca Ekle, Çizgi Düzenle, Kenar Türü, Patlat, Bölümle · Ofset, Uzunluk Yaz, Tampon…, Nesne Bilgisi · **Nesne** |
+| **Eğri** | daire, yay, elips ya da spline | Alan Ölç, Nesne Bilgisi, Koordinat Oku · **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · Ofset, Tarama, Bölümle, Tampon… · **Nesne** |
 | **Blok** | blok | Bloğu Düzenle, Taban Noktası, Patlat, Blok Ekle, Blok, Nesne Bilgisi, Dış Referansları Yenile · **Kırpma**: Kırp, Çokgenle Kırp, Nesneyle Kırp, Kırpma Sınırını Çiz, Kırpmayı Kaldır ([BLOKKIRP](../komutlar/block_clip.md)) |
+
+**Nesne** paneli her nesne sekmesinde aynıdır: Taşı, Kopyala, Döndür, Ölçekle, Aynala ve
+Sil. Sekme öne geldiğinde seçtiğiniz nesneyi taşımak için Giriş'e dönmeniz gerekmez.
 
 Bu sekmedeki her şey **seçili nesnelerde** çalışır: Yazı sekmesinde yüksekliği 3,50 m
 seçmek seçili yazılarda `YAZIDÜZENLE yukseklik=3500` çalıştırır. Kutular seçilen ilk
-nesnenin değerini gösterir. **Yazı**, **Ölçü** ve **Tarama** sekmeleri seçim yalnız o
-türdense kendiliğinden öne gelir; seçim boşalınca önceki sekmeye dönülür. **Alan** ve
-**Blok** yalnız belirir, çünkü bir parsel yüz başka iş için seçilir. Bir komut sizden bir
-şey isterken (TAŞI'nın nesneleri gibi) düzenleyici sekmeleri görünmez; her birinin en
+nesnenin değerini gösterir. Seçim **yalnız bir türdense** o türün sekmesi kendiliğinden
+**öne gelir**: bir parsel seçince **Alan**, bir çizgi seçince **Çizgi**, bir daire seçince
+**Eğri** açılır. Seçim birden çok türü karıştırıyorsa her türün sekmesi belirir ama
+hiçbiri öne gelmez. Seçim boşalınca önceki sekmeye dönülür. Bir komut sizden bir şey
+isterken (TAŞI'nın nesneleri gibi) düzenleyici sekmeleri görünmez; her birinin en
 sağındaki **Seçimi Bırak** seçimi boşaltır.
+
+### Soluk araçlar
+
+Bir araç seçtiğiniz nesnelerde işe yaramıyorsa **soluk** görünür ve basılmaz. Bir yazı
+seçiliyken **Yuvarla**, **Pah**, **Ofset** ve **Patlat** soluktur, çünkü bir yazının
+yuvarlanacak köşesi ya da paraleli yoktur; **Taşı**, **Kopyala** ve **Sil** açıktır. Bir
+çizgi seçiliyken **İfraz** soluktur, çünkü ifraz bir alanı böler. Soluk bir düğmenin
+üstünde beklerseniz ipucu aracın nerede çalıştığını yazar:
+
+```text
+Seçimde bu komutun işlemediği nesne var: YUVARLA yalnız çizgi, alan, eğri üzerinde çalışır.
+```
+
+Kural komut kaydından gelir: her komut hangi nesnelerde çalıştığını bildirir ve
+[komut başvurusu](../komutlar/referans.md) bunu her komutun altında **Uygulandığı
+nesneler** satırında yazar. Komut satırından yazılan bir komut da aynı nesneleri kabul
+eder; başka bir nesne verilirse nedenini söyleyerek reddeder.
+
+- **Komutlar** seçimin **tamamına** uygulanır. Seçimde işlemedikleri tek bir nesne varsa
+  soluktur: bir parsel ve bir yazı birlikte seçiliyken Yuvarla basılmaz.
+- **Araçlar paneli işlemleri** (Köşe Numarala, Uzunluk Yaz, Tampon…) uygun olmayan
+  nesneleri atlar ve kaçını atladığını söyler; bu yüzden seçimde uygun **bir** nesne
+  varsa açıktır.
+- **Seçim yoksa** her araç açıktır: araç nesnesini size sorar.
+- **Buda** ve **Uzat** hiçbir seçimde soluklaşmaz: onlar için seçim **kesme sınırıdır**.
+  Bir parseli seçip Buda'ya basarsanız parsel sınır olur ve tıkladığınız çizgi parçaları
+  parselin kenarına kadar budanır.
+- Seçimi kullanmayan yöntemler de soluklaşmaz: **Alan Ölç — köşelerden** köşelere
+  tıklatır, **Bloğu Kaydet** açık düzenlemenin nesnelerini kaydeder.
+
+Bir aile düğmesinin yüzündeki araç soluk, okundaki bir üyesi açıksa düğme basılabilir
+kalır; basınca üyelerin listesi açılır.
 
 ### İpuçları
 

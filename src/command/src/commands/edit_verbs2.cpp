@@ -940,6 +940,9 @@ KENTOS_COMMAND(explode)
                    "yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.",
         .run    = &run_explode,
         .effect = Effect::DocumentEdit,
+        // What the body takes apart; a hatch, a dimension and a leader it
+        // refuses, a circle and a caption are one piece already.
+        .targets = Targets::Lines | Targets::Faces | Targets::Blocks,
     };
 }
 
@@ -1011,6 +1014,7 @@ KENTOS_COMMAND(divide)
                    "blok yerleştirir.",
         .run     = &run_divide,
         .effect  = Effect::DocumentEdit,
+        .targets = Targets::Lines | Targets::Faces | Targets::Curves,
     };
 }
 
@@ -1040,6 +1044,7 @@ KENTOS_COMMAND(pedit)
                    "sadeleştirir.",
         .run     = &run_pedit,
         .effect  = Effect::DocumentEdit,
+        .targets = Targets::Lines | Targets::Faces,
     };
 }
 

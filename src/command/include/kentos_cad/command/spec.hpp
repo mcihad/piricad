@@ -38,6 +38,43 @@ enum class Category : std::uint8_t {
 /// Turkish label for a category, for a menu title and the reference table.
 const char* category_name(Category c);
 
+/// WHAT KIND OF OBJECT A COMMAND ACTS ON, as the user sees it — a line, an
+/// area, a curve, a caption — not a kind id: an open polyline and one whose
+/// edges bend are both a line, a parcel and a parcel with a rounded corner are
+/// both an area. A bit set; `Any` is every object.
+enum class Targets : std::uint16_t {
+    None       = 0,
+    Points     = 1u << 0, ///< a point
+    Lines      = 1u << 1, ///< an open polyline, straight or with arc edges
+    Faces      = 1u << 2, ///< a closed polyline or arc polyline: an area, a parcel
+    Curves     = 1u << 3, ///< a circle, an arc, an ellipse, a spline
+    Texts      = 1u << 4, ///< a caption
+    Hatches    = 1u << 5, ///< a hatch
+    Dimensions = 1u << 6, ///< a dimension
+    Blocks     = 1u << 7, ///< a block reference
+    Leaders    = 1u << 8, ///< a leader (a kılavuz çizgi)
+    Any        = 0x01FFu,
+};
+
+/// Combines target classes.
+constexpr Targets operator|(Targets a, Targets b)
+{
+    return static_cast<Targets>(static_cast<std::uint16_t>(a) | static_cast<std::uint16_t>(b));
+}
+
+/// Whether `set` holds any of `some`.
+constexpr bool has_target(Targets set, Targets some)
+{
+    return (static_cast<std::uint16_t>(set) & static_cast<std::uint16_t>(some)) != 0U;
+}
+
+/// The Turkish word for one class, for the reference and a tool tip: `çizgi`,
+/// `alan`, `eğri`.
+const char* target_name(Targets one);
+
+/// The words for every class in `set`, comma separated, in declaration order.
+std::string target_names(Targets set);
+
 /// What one parameter holds. A closed set, because every kind here must survive a
 /// round trip through `Value` and through JSON (Article 1.4).
 enum class ParamKind : std::uint8_t {
@@ -379,6 +416,18 @@ struct CommandSpec
     /// `effect_of` fills it in from the flags rather than treating it as a claim
     /// that the command is harmless.
     Effect effect{Effect::None};
+
+    /// WHAT IT TAKES FROM THE SELECTION, when it takes some objects and not
+    /// others: YUVARLA the corner of a line, an area or a curve, never a
+    /// caption's; İFRAZ an area. `Any` — the default — is every object, a
+    /// command that does not act on objects, and one whose selection is not
+    /// what it changes: BUDA's selection is its BOUNDARY, and a parcel is as
+    /// good a boundary as a line. It is a DECLARATION, read where a client has
+    /// to know before it runs — the ribbon greys a tool the selection holds
+    /// nothing for (ui.md R54), the reference and the agent's tool description
+    /// say it — and it states what the body accepts: the body still judges
+    /// each object and refuses, in words, one it does not take.
+    Targets targets{Targets::Any};
 
     /// The parameter that holds the verb, when one word decides the effect.
     /// Empty when the command does one thing.

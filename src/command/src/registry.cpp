@@ -98,6 +98,7 @@ std::uint64_t Registry::fingerprint() const
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->flags), h);
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->undo), h);
         h = core::fnv1a(spec->summary, h);
+        h = core::fnv1a_int(static_cast<std::int64_t>(spec->targets), h);
         for (const Param& p : spec->params) {
             h = core::fnv1a(p.name, h);
             h = core::fnv1a_int(static_cast<std::int64_t>(p.kind), h);

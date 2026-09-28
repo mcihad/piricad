@@ -1100,6 +1100,8 @@ void MainWindow::buildActions()
         a->setToolTip(tip);
         a->setStatusTip(tip);
         a->setProperty(kToolCommand, QStringLiteral("BLOKDÜZENLE"));
+        // It names the edit's own objects, whatever is selected inside it.
+        a->setProperty(kIgnoresSelectionProperty, true);
         // ALWAYS PRESSABLE, like every button on the ribbon (the accessibility
         // tree offers a press a switch user can reach): with no edit open it
         // says how to open one rather than lying dead.
@@ -8057,6 +8059,135 @@ int MainWindow::probeRealMouse()
                       QStringLiteral("Tampon açılınca ilk alan klavyede"));
             shoot("tampon-odak");
             controller_->clearSelection();
+        }
+
+        // ---- 47. WHAT IS PICKED BRINGS ITS TOOLS; A TOOL THE PICK HAS NO USE
+        //      FOR IS GREY (the user's rule, TODOS U-…, ui.md R54) ----
+        //
+        // A parcel picked brings `Alan` forward with its cut and corner tools; a
+        // line brings `Çizgi`, a circle `Eğri`, a caption `Yazı`. A tool the
+        // selection holds nothing for is greyed wherever it is shown, and its
+        // tip says what it does take; the selection gone, the hand is back on
+        // the tab it was on and every tool is given back. And the everyday
+        // shapes are large on `Giriş ▸ Çizim`, the area among them.
+        {
+            SARibbonBar* bar         = ribbonBar();
+            const auto context_is_up = [this, bar](RibbonContext which) {
+                SARibbonCategory* current = bar->categoryByIndex(bar->currentIndex());
+                return ribbonLive_->showing[static_cast<std::size_t>(which)] &&
+                       current != nullptr &&
+                       ribbonLive_->contexts[static_cast<std::size_t>(which)]->isHaveCategory(
+                           current);
+            };
+            auto* home = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonHome"));
+            // `nesneler=` once per object: SEÇ's first free place is `noktalar`, so
+            // a bare second id would be read as a point.
+            const auto pick = [this](std::initializer_list<int> keys) {
+                QString line = QStringLiteral("SEÇ mod=NESNE");
+                for (const int k : keys)
+                    line += QStringLiteral(" nesneler=%1").arg(k);
+                runScriptLine(line);
+                endCommand();
+                QCoreApplication::processEvents();
+            };
+
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line : {
+                     "KATMAN ad=PARSEL",
+                     "ALAN 485300,4310200 485340,4310200 485340,4310230 485300,4310230",
+                     "ÇİZGİ 485300,4310250 485340,4310250",
+                     "DAİRE 485370,4310215 485378,4310215",
+                     "METİN 485305,4310215 \"1234/7\" 3000",
+                 }) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{.min_x = 485'280'000,
+                                          .min_y = 4'310'180'000,
+                                          .max_x = 485'395'000,
+                                          .max_y = 4'310'262'000});
+            if (home != nullptr) bar->raiseCategory(home);
+            QCoreApplication::processEvents();
+
+            // THE EVERYDAY SHAPES ARE LARGE: the area and the rectangle beside
+            // the line, the polyline, the circle and the arc.
+            for (const QAction* shape : {actPolygon_, actRectangle_, actLine_, actCircle_}) {
+                const auto* shown =
+                    qobject_cast<const SARibbonToolButton*>(ribbonButton(shape, false, false));
+                check(shown != nullptr && shown->buttonType() == SARibbonToolButton::LargeButton,
+                      tr("Giriş ▸ Çizim'de %1 büyük düğme").arg(shape->text()));
+            }
+            shoot("serit-cizim-buyuk");
+
+            // A PARCEL: `Alan` comes forward, and cuts and rounds it.
+            pick({1});
+            check(context_is_up(RibbonContext::Area), QStringLiteral("parsel Alan sekmesini açtı"));
+            check(actFillet_->isEnabled() && actSplit_->isEnabled() && actParcelSplit_->isEnabled(),
+                  QStringLiteral("parselde Yuvarla, Böl ve İfraz açık"));
+            // BUDA stays: the parcel picked is the boundary it cuts back to.
+            check(actTrim_->isEnabled() && !actToArea_->isEnabled(),
+                  QStringLiteral("parselde Buda açık (sınır), Alana Çevir soluk"));
+            shoot("serit-alan-sekmesi");
+
+            // A LINE: `Çizgi`, where İFRAZ has no place.
+            pick({2});
+            check(context_is_up(RibbonContext::Line), QStringLiteral("çizgi Çizgi sekmesini açtı"));
+            check(actTrim_->isEnabled() && actToArea_->isEnabled() && !actParcelSplit_->isEnabled(),
+                  QStringLiteral("çizgide Buda ve Alana Çevir açık, İfraz soluk"));
+            // WHAT DOES NOT READ THE SELECTION IS NOT GREYED BY IT: the area
+            // measured by its corners, the save of a block edit.
+            const QAction* byCorners =
+                findChild<QAction*>(QStringLiteral("toolAction.ALANÖLÇ yontem=nokta"));
+            check(!actMeasureArea_->isEnabled() && byCorners != nullptr && byCorners->isEnabled() &&
+                      actBlockSave_->isEnabled(),
+                  QStringLiteral("çizgide Alan Ölç soluk; köşelerden ölçüm ve Blok Kaydet açık"));
+            shoot("serit-cizgi-sekmesi");
+
+            // A CIRCLE: `Eğri`.
+            pick({3});
+            check(context_is_up(RibbonContext::Curve), QStringLiteral("daire Eğri sekmesini açtı"));
+            check(actOffset_->isEnabled() && !actParcelSplit_->isEnabled() &&
+                      !actToArea_->isEnabled(),
+                  QStringLiteral("dairede Ofset açık, İfraz ve Alana Çevir soluk"));
+            shoot("serit-egri-sekmesi");
+
+            // A CAPTION: `Yazı`, and on `Giriş` the tools a caption has no use
+            // for are grey, each saying what it does take.
+            pick({4});
+            check(context_is_up(RibbonContext::Text), QStringLiteral("yazı Yazı sekmesini açtı"));
+            check(!actFillet_->isEnabled() && !actOffset_->isEnabled() && !actExplode_->isEnabled(),
+                  QStringLiteral("yazıda Yuvarla, Ofset ve Patlat soluk"));
+            check(actMove_->isEnabled() && actErase_->isEnabled(),
+                  QStringLiteral("yazıda Taşı ve Sil açık"));
+            check(ribbonTip(actFillet_).contains(QStringLiteral("yalnız çizgi, alan, eğri")),
+                  QStringLiteral("soluk Yuvarla'nın ipucu neyi aldığını söylüyor"));
+            if (home != nullptr) bar->raiseCategory(home);
+            QCoreApplication::processEvents();
+            shoot("serit-yazi-soluk");
+
+            // A PARCEL AND A CAPTION: both tabs up, neither forward; YUVARLA
+            // grey for the caption, the corner numbering — which skips what it
+            // cannot take — open for the parcel.
+            pick({1, 4});
+            const QAction* numbering = nullptr;
+            for (const QAction* each : findChildren<QAction*>())
+                if (each->property(kToolCommand).toString() == QStringLiteral("KÖŞENUMARALA"))
+                    numbering = each;
+            check(ribbonLive_->showing[static_cast<std::size_t>(RibbonContext::Area)] &&
+                      ribbonLive_->showing[static_cast<std::size_t>(RibbonContext::Text)],
+                  QStringLiteral("karışık seçimde iki sekme de görünüyor"));
+            check(!actFillet_->isEnabled() && numbering != nullptr && numbering->isEnabled(),
+                  QStringLiteral("karışık seçimde Yuvarla soluk, Köşe Numarala açık"));
+
+            // LET GO: every tool is back, and so is the tab the hand was on.
+            controller_->clearSelection();
+            QCoreApplication::processEvents();
+            check(actFillet_->isEnabled() && actToArea_->isEnabled() &&
+                      actParcelSplit_->isEnabled() && actMeasureArea_->isEnabled(),
+                  QStringLiteral("seçim bırakılınca araçlar geri geldi"));
+            check(home == nullptr || bar->categoryByIndex(bar->currentIndex()) == home,
+                  QStringLiteral("seçim bırakılınca Giriş sekmesine dönüldü"));
         }
     }
 

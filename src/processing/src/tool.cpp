@@ -214,6 +214,19 @@ command::CommandSpec ToolSpec::to_command_spec() const
                  (output == OutputShape::Report ? command::Flags::ReadOnly : command::Flags::None);
     spec.summary = summary;
     spec.run     = nullptr; // filled by the registry with the one generic body
+    // WHAT IT ACTS ON, in the command's classes (`command::Targets`): a face here
+    // is a closed polyline or a hatch, a curve also an arc polyline — both
+    // classes a line or an area can be to the eye, so the wider set is said.
+    auto targets = command::Targets::None;
+    if (applies_to(applies, Applies::Points)) targets = targets | command::Targets::Points;
+    if (applies_to(applies, Applies::Lines)) targets = targets | command::Targets::Lines;
+    if (applies_to(applies, Applies::Faces))
+        targets = targets | command::Targets::Faces | command::Targets::Hatches;
+    if (applies_to(applies, Applies::Curves))
+        targets =
+            targets | command::Targets::Curves | command::Targets::Lines | command::Targets::Faces;
+    if (applies_to(applies, Applies::Texts)) targets = targets | command::Targets::Texts;
+    spec.targets = targets == command::Targets::None ? command::Targets::Any : targets;
     return spec;
 }
 

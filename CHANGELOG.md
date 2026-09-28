@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — seçilen nesnenin araçları öne gelir, işe yaramayan araç soluk
+
+- **Seçilen nesnenin sekmesi öne gelir**: bir parsel seçince **Alan**, bir çizgi seçince
+  yeni **Çizgi**, bir daire, yay, elips ya da spline seçince yeni **Eğri** sekmesi açılır.
+  Alan sekmesine **Kes ve Köşe** paneli geldi (Böl, Yuvarla, Pah, Köşe Taşı/Ekle/Sil,
+  Kenar Türü); her nesne sekmesinde Taşı, Kopyala, Döndür, Ölçekle, Aynala ve Sil'i
+  taşıyan **Nesne** paneli var. Önceden Alan ve Blok sekmeleri yalnız belirir, öne
+  gelmezdi. Seçim karışıksa sekmeler belirir ama hiçbiri öne gelmez.
+- **Seçime uymayan araç soluk görünür**: bir yazı seçiliyken Yuvarla, Pah, Ofset ve Patlat,
+  bir çizgi seçiliyken İfraz basılmaz; ipucu aracın hangi nesnelerde çalıştığını yazar.
+  Her komut hangi nesneleri aldığını bildirir; komut başvurusu bunu **Uygulandığı
+  nesneler** satırında, yapay zekâ aracının tanımı da aynı cümleyle söyler. Buda ve Uzat
+  soluklaşmaz, çünkü onlar için seçim kesme sınırıdır.
+- **Alan ve Dikdörtgen büyük düğme** oldu (Giriş ▸ Çizim), Çizgi, Çoklu Çizgi, Daire ve
+  Yay'ın yanında.
+- `BİRLEŞTİR` yaylı kenarlı bir alanı artık reddediyor ve nedenini söylüyor; önceden yanlış
+  olarak "bir eğri ya da nokta" diyordu.
+
 ### Eklendi — geometri çekirdeği: OpenCASCADE (O-1)
 
 - **KentOS CAD'in geometri çekirdeği artık OpenCASCADE Technology** (OCCT 7.6 ve
