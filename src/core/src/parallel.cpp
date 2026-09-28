@@ -7,6 +7,7 @@
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -36,7 +37,39 @@ struct Shape
     bool approximate{false};               ///< drawn, not defined: the curve kinds
     Mm deviation{0};                       ///< approximate: drawn vs defined
     std::size_t drawn_vertices{0};         ///< approximate: how many vertices were drawn
+    std::optional<CurvePath> path;         ///< an arc polyline's own path, arcs as arcs
 };
+
+/// A BEVEL IS THE ROUND CORNER CUT STRAIGHT ACROSS. The kernel rounds a corner
+/// it moves away from about the source vertex it turns at, with the offset
+/// distance for its radius; that arc's chord joins the two offset edges' ends,
+/// which is the bevel the polygon road cuts (Clipper2's `Bevel`). An arc of
+/// the source itself stays an arc: its centre is not a vertex of the source.
+void bevel_corners(CurvePath& path, const CurvePath& source, Mm distance)
+{
+    std::vector<Point2> turns;
+    turns.reserve(source.pieces.size() + 1);
+    for (const PathPiece& piece : source.pieces)
+        turns.push_back(piece.from);
+    if (!source.closed && !source.pieces.empty()) turns.push_back(source.pieces.back().to);
+    for (PathPiece& piece : path.pieces)
+        if (piece.kind == PathPiece::Kind::Arc && piece.radius == distance &&
+            std::ranges::find(turns, piece.centre) != turns.end())
+            piece = PathPiece{.from = piece.from, .to = piece.to};
+}
+
+/// The path through `points`, segment by segment; closed back to the first.
+CurvePath path_through(const std::vector<Point2>& points, bool closed)
+{
+    CurvePath out;
+    out.closed = closed;
+    for (std::size_t i = 0; i + 1 < points.size(); ++i)
+        if (points[i] != points[i + 1])
+            out.pieces.push_back(PathPiece{.from = points[i], .to = points[i + 1]});
+    if (closed && points.size() > 2 && points.back() != points.front())
+        out.pieces.push_back(PathPiece{.from = points.back(), .to = points.front()});
+    return out;
+}
 
 std::vector<Point2> ring_points(const RingGeometry& geom, std::uint32_t r)
 {
@@ -257,6 +290,9 @@ Result<Shape> shape_of(const Document& doc, EntityId e)
         for (const std::vector<Point2>& run : shape.runs)
             shape.deviation = std::max(shape.deviation, ellipse_deviation(c, a, b, run, false));
     } else if (kind == kArcPolylineKind) {
+        // ITS PATH, for the kernel's road; the drawing above stays for the side
+        // a point is on and for the corner the kernel does not cut.
+        shape.path = path_of_slot(kind, geom, slot, PathScope::Circular);
         if (auto def = arc_polyline_of(geom, slot)) {
             for (const Polygon& f : shape.faces) {
                 std::vector<Point2> loop = f.exterior;
@@ -448,6 +484,58 @@ Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, P
             return err(ErrorCode::InvalidArgument,
                        "Açık bir çizginin içi ya da dışı yoktur; `taraf=sol` ya da `taraf=sag` "
                        "verin.");
+    }
+
+    // ---- THE KERNEL'S ROAD (TODOS O-4, CLAUDE.md 2.11) ----
+    //
+    // An arc polyline's parallel as what it is — its arcs concentric arcs, its
+    // segments offset segments — and a ROUND corner asked of any line or face as
+    // a true arc about the corner, not the fan of short edges the polygon road
+    // leaves. The polygon road stays for the sharp and bevelled corners of a
+    // straight shape — exact, fast, and what the golden fixtures hold — and for
+    // a face with holes: an object whose edges bend keeps one ring (R9b).
+    const bool holes =
+        std::ranges::any_of(s.faces, [](const Polygon& f) { return !f.holes.empty(); });
+    const bool bends = s.path.has_value();
+    const bool round_straight =
+        !s.approximate && join == JoinStyle::Round &&
+        (s.cls == Shape::Class::Runs || (s.cls == Shape::Class::Faces && !holes));
+    if (!bends && !s.approximate && join == JoinStyle::Round && holes) out.round_as_chords = true;
+    if (kernel_available() && (bends || round_straight)) {
+        std::vector<CurvePath> sources;
+        if (bends) {
+            sources.push_back(*s.path);
+        } else if (s.cls == Shape::Class::Runs) {
+            for (const std::vector<Point2>& run : s.runs)
+                sources.push_back(path_through(run, false));
+        } else {
+            for (const Polygon& f : s.faces)
+                sources.push_back(path_through(f.exterior, true));
+        }
+        // A bevel is asked of the kernel round and cut straight afterwards.
+        const OffsetCorner corner =
+            join == JoinStyle::Miter ? OffsetCorner::Sharp : OffsetCorner::Round;
+        for (const ParallelSide one : sides_of(side, closed)) {
+            // The kernel's sign: a closed path grows outward, an open one goes
+            // to the right of travel, for a positive distance.
+            const bool plus = one == ParallelSide::Outside || one == ParallelSide::Right;
+            for (const CurvePath& source : sources) {
+                auto moved = kernel_offset(source, plus ? distance : -distance, corner, false);
+                if (!moved) return moved.error();
+                for (CurvePath& path : moved.value()) {
+                    if (join == JoinStyle::Bevel) bevel_corners(path, source, distance);
+                    ParallelPiece piece;
+                    piece.shape = ParallelPiece::Shape::Path;
+                    piece.side  = one;
+                    piece.path  = std::move(path);
+                    out.pieces.push_back(std::move(piece));
+                }
+            }
+        }
+        out.approximate    = false;
+        out.deviation      = 0;
+        out.drawn_vertices = 0;
+        return out;
     }
 
     for (ParallelSide one : sides_of(side, closed)) {

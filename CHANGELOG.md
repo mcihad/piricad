@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — OFSET yayı yay olarak kaydırır (O-4)
+
+- **Yaylı çoklu çizginin ve köşesi yuvarlanmış parselin paraleli yaylı çoklu çizgidir:** her
+  yay aynı merkezli bir yay, yarıçapı mesafe kadar büyümüş ya da küçülmüş; düz kenarlar
+  kaydırılmış düz kenarlar. Önceden paralel yayın kirişlerinden çiziliyor ve "gerçek
+  eğriden N mm sapar" deniyordu. 20 × 10 m'lik parselin 2 m yuvarlanmış köşesiyle 1 m dış
+  paraleli 262,068583 m² (22 × 12 m eksi 3 m'lik çeyrek dairenin köşe kesimi).
+- **`kose=YUVARLAK` dış köşeyi gerçek yayla döner**; merkezi kaynağın köşesi, yarıçapı
+  mesafe. Önceden kısa kenarlardan bir yelpazeydi. Köşenin iç tarafı kesilir.
+- `kose=PAH` yaylı çizgide köşeyi düz kirişle keser, kendi yayı yay kalır.
+- Düz kenarlı şeklin keskin ve pahlı köşeli paraleli eskisi gibi Clipper2 ile, aynı
+  sonuçla. Delikli bir alanın yuvarlak köşeleri bu sürümde kısa kenarlarla çizilir ve
+  komut bunu söyler (yaylı kenarlı bir nesne tek halka taşır).
+- Önizleme sonucun kendisidir: tuval, komutun çağırdığı aynı paraleli çizer.
+
 ### Düzeltildi — şeritteki her araç sürüldü; çalışmayan, yanlış çalışan ve simgesi kötü olanlar
 
 Şeridin her düğmesi bir elin yapacağı gibi basılıp cevaplandı (iki tur: seçmeden ve önce

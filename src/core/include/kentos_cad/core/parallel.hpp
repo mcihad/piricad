@@ -4,10 +4,14 @@
 // `offset.hpp` knows rings; this knows what a ring MEANS. An open line's
 // parallel is an open line beside it, on the side asked for. A face's is a face,
 // with its holes still holes. A circle's is a circle with another radius, an
-// arc's a concentric arc. An ellipse, a spline and a polyline with arc edges have
-// no parallel of their own kind — the parallel of an ellipse is not an ellipse —
-// so theirs is the exact parallel of the curve AS DRAWN, and it says so, with a
-// measured figure for how far the drawing is from the curve.
+// arc's a concentric arc. A polyline with arc edges has the parallel it really
+// has — its arcs concentric arcs, its segments offset segments — from the
+// geometry kernel, and so has a ROUND corner asked of any line or face: a true
+// arc about the corner, not a fan of short edges (TODOS O-4, CLAUDE.md 2.11). An
+// ellipse and a spline have no parallel of their own kind — the parallel of an
+// ellipse is not an ellipse — so theirs is the exact parallel of the curve AS
+// DRAWN, and it says so, with a measured figure for how far the drawing is from
+// the curve.
 //
 // ONE ANSWER FOR THE COMMAND AND THE PREVIEW. OFSET computes its result here, and
 // the canvas draws the parallel under the cursor by calling the same function
@@ -18,6 +22,7 @@
 // face (`core::buffer`, the TAMPON tool); a parallel of a line is a line.
 #pragma once
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
@@ -57,6 +62,7 @@ struct ParallelPiece
         Face,   ///< a face: `faces`, holes and parts included
         Circle, ///< a circle: `centre`, `radius`
         Arc,    ///< an arc: `centre`, `radius`, counter-clockwise from `start` to `end`
+        Path,   ///< segments and true arcs: `path`, open or closed — the kernel's answer
     };
 
     Shape shape{Shape::Run};               ///< which of the four
@@ -68,6 +74,7 @@ struct ParallelPiece
     Mm radius{0};                          ///< Circle, Arc: the radius
     Point2 start{};                        ///< Arc: where it starts
     Point2 end{};                          ///< Arc: where it ends
+    CurvePath path;                        ///< Path: the pieces, arcs as arcs
 };
 
 /// The parallel of one object.
@@ -78,10 +85,16 @@ struct Parallel
     /// which is an answer the caller must say out loud, not a failure here.
     std::vector<ParallelPiece> pieces;
 
-    /// The kind has no parallel of its own kind — an ellipse, a spline, a
-    /// polyline with arc edges — so the pieces are the exact parallel of the
-    /// curve as drawn, and the drawn curve is not the curve.
+    /// The kind has no parallel of its own kind — an ellipse, a spline; an
+    /// arc polyline too in a build without the kernel — so the pieces are the
+    /// exact parallel of the curve as drawn, and the drawn curve is not the
+    /// curve.
     bool approximate{false};
+
+    /// A ROUND corner was drawn as short edges rather than as an arc: a face
+    /// with holes, whose bent edges one object could not hold (an arc polyline
+    /// has one ring, model.md R9b). Said, like `approximate`, by the caller.
+    bool round_as_chords{false};
 
     /// When `approximate`: how far the drawn curve is from the true one, at
     /// most, measured chord by chord against the curve's own definition. The

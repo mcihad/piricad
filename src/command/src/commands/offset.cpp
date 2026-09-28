@@ -35,6 +35,7 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/parallel.hpp"
@@ -91,6 +92,16 @@ core::Result<core::EntityId> add_piece(Context& ctx, core::LayerId layer,
             return ctx.transaction().add_area(layer, {&ring, 1});
         }
         return ctx.transaction().add_polyline(layer, piece.run);
+    case core::ParallelPiece::Shape::Path: {
+        // THE KERNEL'S ANSWER, written as the kind that holds it: a polyline or
+        // an area when no edge bends, an arc polyline when one does (R9b).
+        const core::PathRecord rec = core::path_record(piece.path);
+        const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
+        if (rec.kind == core::kPolylineKind && rec.role == core::RingRole::Open)
+            return ctx.transaction().add_polyline(layer, rec.ring);
+        if (rec.kind == core::kPolylineKind) return ctx.transaction().add_area(layer, {&ring, 1});
+        return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);
+    }
     }
     return core::err(core::ErrorCode::Internal, "Tanınmayan paralel parçası.");
 }
@@ -235,6 +246,9 @@ Task<void> run(Context& ctx)
                      " içeri alınınca kendi içinde kapanıyor.");
             continue;
         }
+        if (parallel.value().round_as_chords)
+            ctx.echo(who + " delikli bir alan; yuvarlak köşeleri bu sürümde kısa kenarlarla "
+                           "çizildi (yaylı kenarlı bir nesne deliğini taşıyamıyor).");
         if (parallel.value().approximate)
             ctx.echo(who +
                      " kendi türünde paraleli olmayan bir eğri; paraleli çizildiği hâliyle (" +

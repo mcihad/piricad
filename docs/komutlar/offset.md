@@ -15,7 +15,8 @@ Paralel, kaynağıyla **aynı türde** bir nesnedir:
 | Alan (delikli de olsa) | Alan; delikler delik olarak kalır |
 | Daire | Daire; yalnız yarıçapı değişir |
 | Yay | Aynı merkezli yay |
-| Elips, spline, yaylı çoklu çizgi | Kendi türünde paraleli yoktur: çizildiği hâlinin tam paraleli alınır ve **çoklu çizgi** olur; komut çizimin gerçek eğriden en çok ne kadar saptığını yazar |
+| Yaylı çoklu çizgi, köşesi yuvarlanmış parsel | **Yaylı çoklu çizgi**: her yay aynı merkezli bir yay, yarıçapı mesafe kadar büyümüş ya da küçülmüş; düz kenarlar kaydırılmış düz kenarlar. İçeri alırken yarıçaptan derine inilirse yay kalkar, köşe sivri olur |
+| Elips, spline | Kendi türünde paraleli yoktur: çizildiği hâlinin tam paraleli alınır ve **çoklu çizgi** olur; komut çizimin gerçek eğriden en çok ne kadar saptığını yazar |
 
 Nokta, yazı, ölçü, kılavuz çizgi, tarama ve blok referansının paraleli olmaz; komut
 sebebini söyler (taramada sınırın, ölçüde ölçtüğü çizginin paralelini alın).
@@ -47,12 +48,31 @@ söyler; hiçbir nesnenin paraleli kalmıyorsa hiçbir şey çizmez ve hata veri
 Bel veren bir şekli içeri almak onu **ikiye bölebilir**; o zaman iki paralel birden
 çizilir. İkisi de doğru cevaptır.
 
-### Neden Clipper2
+### Yuvarlak köşe gerçek yaydır
+
+`kose=YUVARLAK` ile dış köşeler **gerçek bir yay** olur: merkezi kaynağın köşesi,
+yarıçapı paralel mesafesi. Paralel bu yüzden **yaylı çoklu çizgi** (ya da yaylı
+kenarlı alan) olarak çizilir. 20 × 10 m'lik bir parselin 1 m dış paraleli
+yuvarlak köşeyle 263,14 m² tutar: 200 m², her kenar boyunca 1 m'lik şerit (60 m²)
+ve dört köşede birleşince tam bir 1 m'lik daire (π m²). Köşenin **iç** tarafı
+yuvarlanmaz, kesilir; açık bir L'nin iç yanı keskin köşeli kalır.
+
+`kose=KÖŞE` (öntanımlı) ve `kose=PAH` düz kenarlı şekillerde eskisi gibi çalışır.
+
+İki durum bu sürümde yay yerine kısa kenarlarla çizilir ve komut bunu söyler:
+**delikli bir alanın** yuvarlak köşeli paraleli (yaylı kenarlı bir nesne tek halka
+taşır, deliği tutamaz) ve **yaylı çoklu çizginin pahlı** (`kose=PAH`) paraleli.
+
+### Hangi kütüphane
 
 Ofset çözülmüş bir problemdir ve CLAUDE.md 5.16 çözülmüş bir problemi yeniden
-yazmayı yasaklar. Kenarlar Clipper2 ile kaydırılır, hangi parçanın istenen tarafta
-kaldığı kaynak kenara göre tam aritmetikle belirlenir. Clipper2'nin BSL-1.0 lisansı
-GPLv3 ile uyumludur.
+yazmayı yasaklar. **Yay taşıyan** her paralel — yaylı çoklu çizginin ve yuvarlak
+köşelinin — geometri çekirdeği **OpenCASCADE** ile hesaplanır
+([Geometri çekirdeği](../veri/geometri-cekirdegi.md)); sonuç bir kez milimetreye
+yuvarlanır ve üç platformda aynı milimetreyi verir. Düz kenarlı şeklin keskin ve pahlı
+köşeli paraleli **Clipper2** ile kaydırılır; hangi parçanın istenen tarafta kaldığı
+kaynak kenara göre tam aritmetikle belirlenir. Clipper2'nin BSL-1.0 lisansı ve
+OpenCASCADE'in LGPL-2.1 (istisnalı) lisansı GPLv3 ile uyumludur.
 
 ## Adlar
 

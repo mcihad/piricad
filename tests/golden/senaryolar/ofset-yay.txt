@@ -1,0 +1,21 @@
+# OFSET yayı yay olarak kaydırır (TODOS O-4). Beklenen değerler el hesabı:
+# yaylı alanın dış paralelinde yay aynı merkezde (18, 8) ve 3 m, iç paralelinde
+# 1 m; düz dikdörtgenin yuvarlak köşeli paralelinde dört köşede 1 m'lik yay,
+# merkezleri eski köşeler; açık L'nin dış yanında köşede yay, iç yanında keskin
+# köşe; açık yaylı çizginin iki yanında aynı merkezli 1 m ve 3 m'lik yaylar;
+# yaylı alanın pahlı dış paralelinde yay yine 3 m, üç köşe 1 m'lik kirişle kesik.
+KATMAN ad=PARSEL
+ALAN 0,0 20,0 20,10 0,10
+YUVARLA nesne=1 nokta=20,10 yaricap=2
+OFSET nesneler=1 mesafe=1000 taraf=dis kose=KÖŞE
+OFSET nesneler=1 mesafe=1000 taraf=ic kose=KÖŞE
+ALAN 40,0 60,0 60,10 40,10
+OFSET nesneler=4 mesafe=1000 taraf=dis kose=YUVARLAK
+ÇOKLUÇİZGİ 0,30 10,30 10,40
+OFSET nesneler=6 mesafe=1000 taraf=sag kose=YUVARLAK
+OFSET nesneler=6 mesafe=1000 taraf=sol kose=YUVARLAK
+ÇOKLUÇİZGİ 30,30 50,30 50,40
+YUVARLA nesne=9 nokta=50,30 yaricap=2
+OFSET nesneler=9 mesafe=1000 taraf=sol
+OFSET nesneler=9 mesafe=1000 taraf=sag
+OFSET nesneler=1 mesafe=1000 taraf=dis kose=PAH

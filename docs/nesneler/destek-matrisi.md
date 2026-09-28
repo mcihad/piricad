@@ -27,7 +27,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [Çizgi](#cizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | ✓ |
 | [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✗ | ✓ | ✓ | ✓ |
+| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ |
 | [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
 | [Çok parçalı alan](#cokparca) | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ |
 | [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✗ | ✓ | ✓ | — | — | — | ✓ | ✓ |
@@ -41,7 +41,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Kılavuz çizgi](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
-238 hücre: 161 destekli, 3 kısmi, 22 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
+238 hücre: 162 destekli, 2 kısmi, 22 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
@@ -109,7 +109,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Uzat | ✓ destekli | uzadı: 87.956 m → 97.956 m; sonuç: YAYLIÇİZGİ |
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: YAY, YAYLIÇİZGİ |
 | Kır | ✓ destekli | aradaki parça çıktı: 87.956 m → 58.929 m; sonuç: YAY, ÇOKLUÇİZGİ |
-| Paralel (OFSET) | ◐ kısmi | YAYLIÇİZGİ paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
+| Paralel (OFSET) | ✓ destekli | 2 paralel (YAYLIÇİZGİ), kaynak korundu |
 | Yuvarla | ✓ destekli | 5 m yarıçapla yuvarlandı; sonuç: YAYLIÇİZGİ |
 | Pah | ✗ yok | PAH iki düz kenarın buluştuğu köşeyi keser; bu köşenin bir kenarı yay. |
 | Uç uca | ✓ destekli | iki parça tek YAYLIÇİZGİ oldu, uzunluk korundu |

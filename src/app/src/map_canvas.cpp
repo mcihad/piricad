@@ -3468,6 +3468,10 @@ void MapCanvas::buildOverlay()
                             core::arc_outline(piece.centre, piece.radius, piece.start, piece.end,
                                               curve_scratch_x_, curve_scratch_y_);
                             break;
+                        case core::ParallelPiece::Shape::Path:
+                            core::path_outline(piece.path, curve_scratch_x_, curve_scratch_y_);
+                            shut = piece.path.closed;
+                            break;
                         }
                         if (curve_scratch_x_.size() >= 2)
                             addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut);
