@@ -8029,10 +8029,18 @@ int MainWindow::probeRealMouse()
             QCoreApplication::processEvents();
             click(on_screen(core::Point2{485'340'000, 4'310'230'000}), Qt::LeftButton);
             QCoreApplication::processEvents();
+            // FOCUS IS A REAL WINDOW'S: the offscreen platform never activates
+            // one, and Qt gives no widget of an inactive window the keyboard.
+            const bool real_window = QGuiApplication::platformName() != QLatin1String("offscreen");
             check(controller_->awaitingInput() &&
-                      controller_->promptKind() == command::ParamKind::Number &&
-                      commandLine_->hasFocus(),
-                  QStringLiteral("yarıçap sorulunca klavye komut satırında"));
+                      controller_->promptKind() == command::ParamKind::Number,
+                  QStringLiteral("YUVARLA yarıçapı soruyor"));
+            if (real_window)
+                check(commandLine_->hasFocus(),
+                      QStringLiteral("yarıçap sorulunca klavye komut satırında"));
+            else
+                (void)std::fprintf(stdout, "[fare] BEKLEMEDE: odak ekransız platformda "
+                                           "sınanamıyor; gerçek pencerede sınanır\n");
             shoot("yaricap-odak");
             escape();
 
@@ -8043,9 +8051,10 @@ int MainWindow::probeRealMouse()
             for (int i = 0; i < 4; ++i)
                 QCoreApplication::processEvents();
             const QWidget* focused = QApplication::focusWidget();
-            check(focused != nullptr && toolsPanel_ != nullptr &&
-                      toolsPanel_->isAncestorOf(focused),
-                  QStringLiteral("Tampon açılınca ilk alan klavyede"));
+            if (real_window)
+                check(focused != nullptr && toolsPanel_ != nullptr &&
+                          toolsPanel_->isAncestorOf(focused),
+                      QStringLiteral("Tampon açılınca ilk alan klavyede"));
             shoot("tampon-odak");
             controller_->clearSelection();
         }
