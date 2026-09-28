@@ -25,25 +25,30 @@ Ubuntu/Debian'da:
 
 ```bash
 sudo apt install build-essential cmake ninja-build qt6-base-dev \
-                 qt6-shadertools-dev libfreetype-dev libharfbuzz-dev
+                 qt6-shadertools-dev libfreetype-dev libharfbuzz-dev \
+                 libocct-foundation-dev libocct-modeling-data-dev \
+                 libocct-modeling-algorithms-dev
 ```
 
 Fedora'da:
 
 ```bash
 sudo dnf install gcc-c++ cmake ninja-build qt6-qtbase-devel \
-                 qt6-qtshadertools-devel freetype-devel harfbuzz-devel
+                 qt6-qtshadertools-devel freetype-devel harfbuzz-devel \
+                 opencascade-devel
 ```
 
 macOS'ta:
 
 ```bash
-brew install cmake ninja qt freetype harfbuzz
+brew install cmake ninja qt freetype harfbuzz opencascade
 ```
 
-Son üç paket **isteğe bağlı değildir**: GPU tuvali ve tuvaldeki yazılar onlarla
-gelir, ve `dev`, `debug`, `release`, `asan` ön ayarları bunları **açıkça talep
-eder**. Kurulu değillerse yapılandırma, hangi paketin eksik olduğunu söyleyerek
+**OpenCASCADE** ([geometri çekirdeği](../veri/geometri-cekirdegi.md)) bütün ön
+ayarlarda zorunludur; eksikse yapılandırma paket adlarını söyleyerek durur. Qt'nin
+gölgelendirici araçları, FreeType ve HarfBuzz da **isteğe bağlı değildir**: GPU
+tuvali ve tuvaldeki yazılar onlarla gelir, ve `dev`, `debug`, `release`, `asan` ön
+ayarları bunları **açıkça talep eder**. Kurulu değillerse yapılandırma, hangi paketin eksik olduğunu söyleyerek
 **durur** — sessizce kapanmaz.
 
 Bu bilerek böyledir. Sonda başarısız olduğunda sessizdir: eskiden eksik paketle

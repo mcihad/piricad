@@ -59,6 +59,31 @@ if(CGAL_FOUND)
 else()
     option(KENTOS_WITH_CGAL "Enable CGAL exact arithmetic (planar arrangements)" OFF)
 endif()
+# ---- the geometry kernel (CLAUDE.md 2.11) ------------------------------------
+#
+# OPENCASCADE IS THE KERNEL, by the maintainer's decision of 28 September 2026:
+# every geometric operation OCCT does better than the code this program had —
+# a boolean that keeps an arc, an offset with true arcs, fillets between
+# curves, the crossings of ellipses and splines — goes through it. The document
+# keeps its millimetres (Article 2.4) and every result is rounded to the
+# millimetre on the way back, so the three platforms must still agree (§7.3).
+#
+# ON WHEREVER IT IS FOUND, and the sanctioned presets ask for it outright
+# (`CMakePresets.json`), so a preset build on a machine without it STOPS with
+# the package names (`cmake/KentOSCadDependencies.cmake`) rather than producing
+# a program whose kernel-backed operations only say the build has none. An
+# ad-hoc configure without it still configures, OFF, the way the canvas does.
+#
+# NO VERSION IN THE CALL: OCCT's package config accepts only its own patch
+# version (`SamePatchVersion`), so asking for 7.6 turns 7.9.3 away. The floor is
+# checked against `OpenCASCADE_VERSION` instead (CLAUDE.md 5.12 asks for the
+# minimum, not for the syntax).
+find_package(OpenCASCADE CONFIG QUIET)
+if(OpenCASCADE_FOUND AND NOT OpenCASCADE_VERSION VERSION_LESS 7.6)
+    option(KENTOS_WITH_OCCT "Enable the OpenCASCADE geometry kernel" ON)
+else()
+    option(KENTOS_WITH_OCCT "Enable the OpenCASCADE geometry kernel" OFF)
+endif()
 option(KENTOS_WITH_PYTHON   "Enable the embedded Python script host" OFF)
 # ---- the two halves of the GPU canvas: ON once their toolchain is found ------
 #

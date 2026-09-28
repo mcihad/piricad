@@ -20,6 +20,15 @@ probe "Ninja"        "ninja --version"
 probe "C++ compiler" "\${CXX:-c++} --version | head -1"
 probe "git"          "git --version | cut -d' ' -f3"
 probe "Qt 6"         "qmake6 -query QT_VERSION"
+# The geometry kernel is REQUIRED (CLAUDE.md 2.11): a preset build stops without
+# it. It ships no pkg-config file, so its CMake package's version is read.
+probe "OpenCASCADE"      "for d in \"\$(brew --prefix opencascade 2>/dev/null)/lib/cmake/opencascade\" \
+                                /usr/lib/cmake/opencascade /usr/lib/*/cmake/opencascade \
+                                /usr/local/lib/cmake/opencascade; do
+                             f=\"\$d/OpenCASCADEConfigVersion.cmake\"
+                             [ -f \"\$f\" ] && sed -n 's/^set(PACKAGE_VERSION \"\\(.*\\)\")/\\1/p' \"\$f\" && exit 0
+                         done; exit 1" \
+                         "THE GEOMETRY KERNEL IS REQUIRED — brew install opencascade / apt install libocct-*-dev"
 echo
 echo "Optional dependencies (all gated OFF by default — CLAUDE.md Article 8)"
 # qsb is a Qt TOOL, and Qt does not put its tools on PATH on any of the three

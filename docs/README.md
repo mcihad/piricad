@@ -220,6 +220,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
 | [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
+| [Geometri çekirdeği](veri/geometri-cekirdegi.md) | OpenCASCADE: yayları koruyan hesap, her bilgisayarda aynı milimetre, hangi işlemin hangi aşamada çekirdeğe geçtiği |
 | [Sayısal doğruluk ve toleranslar](veri/hassasiyet.md) | Milimetre depolama, hesap eşikleri, ekrandaki yakalama pikseli, topoloji düğüm toleransı ve dışa aktarmadaki eğri sapması: hangi sayı neye karar verir |
 | [Nesne kimliği ve kökeni](veri/kimlik-ve-koken.md) | Kimliği neyin değiştirmediği, neyin yeni nesne doğurduğu; türetilen nesnenin hangi işle ve nereden geldiği |
 | [Bağımlılıklar ve sonuçlar](veri/bagimliliklar.md) | Hangi nesne kaynağını izler, hangisi "güncel değil" der; kaynak silinince, geri alınınca, sonucun kendisi değişince ne olur |

@@ -6,6 +6,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — geometri çekirdeği: OpenCASCADE (O-1)
+
+- **KentOS CAD'in geometri çekirdeği artık OpenCASCADE Technology** (OCCT 7.6 ve
+  üstü; burada 7.9.3). Kaynaktan derlerken zorunludur: ön ayarlar onsuz, eksik
+  paketin adını söyleyerek durur. Kurulum sayfası macOS, Debian/Ubuntu ve Fedora
+  paketlerini yazar.
+- Çekirdek yayları **yay olarak** hesaplar: yuvarlak köşeli bir parsel kesilince
+  yay aynı merkez ve yarıçapla kalır, ofsetin köşeleri gerçek yaydır. Sonuçlar bir
+  kez milimetreye yuvarlanır, her bilgisayarda aynı çıkar.
+- Bu sürümde çekirdek programa bağlı ve sınanmış; kullanıcıya görünen işlemler ona
+  aşama aşama geçecek (yuvarlama/pah, İFRAZ/TEVHİT/TAMPON, OFSET, elips/spline
+  kesişimleri). Ayrıntı: `docs/veri/geometri-cekirdegi.md`.
+
 ### Değişti — sağ tık ve Esc bırakır, sorulan değer klavyeyi alır
 
 - **Sağ tık seçimi bırakır** (Netcad'deki gibi): hiçbir komut çalışmazken sağ tık seçimi

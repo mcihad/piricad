@@ -56,6 +56,7 @@ add_executable(kentos_tests
     unit/test_dependency.cpp
     unit/test_one_operation.cpp
     unit/test_long_work.cpp
+    unit/test_kernel.cpp
     unit/test_common_preview.cpp
     unit/test_textfields.cpp
     unit/test_planar.cpp

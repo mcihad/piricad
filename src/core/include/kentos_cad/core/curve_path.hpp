@@ -27,14 +27,14 @@
 // trust, so they are found the way every CAD kernel finds them: candidates
 // where the drawn chords of the two curves cross or pass within the chords'
 // own deviation, each refined by Newton's method on the exact curves
-// (`core/src/curve_eval.hpp`). A library was weighed here too and the
-// hand-rolled solve is the stated exception (CLAUDE.md Article 9): OpenCASCADE
-// answers it and brings a CAD kernel of its own into every build; SISL is
-// AGPL; CGAL's Bézier arrangement is exact but takes no rational curve and
-// needs CORE; and none of them pins its operation order, which is what makes
-// an answer the same on three platforms (§7.3) — the reason `spline.hpp` draws
-// with its own de Boor. The solve SAYS when it could not decide: a candidate
-// the refinement cannot settle is reported, never silently dropped
+// (`core/src/curve_eval.hpp`). OPENCASCADE IS THE GEOMETRY KERNEL NOW
+// (CLAUDE.md 2.11, core/kernel.hpp), which supersedes the reading this comment
+// used to record — that OCCT was weighed for this solve and turned down because
+// a prebuilt kernel's operation order is not pinned; its arithmetic is held to
+// §7.3 by the millimetre rounding and the golden fixtures instead. These
+// crossings move to it in TODOS O-5, and until then the hand-rolled solve
+// stays, with its one virtue kept: it SAYS when it could not decide — a
+// candidate the refinement cannot settle is reported, never silently dropped
 // (`PathMeets::unresolved`).
 //
 // TANGENCY AND OVERLAP ARE SAID, NOT GUESSED. A line that touches a circle meets

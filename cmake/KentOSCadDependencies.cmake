@@ -354,6 +354,45 @@ if(KENTOS_WITH_CGAL)
     message(STATUS "  cgal: ${CGAL_VERSION} (düzlemsel ağ, core/planar.cpp)")
 endif()
 
+if(KENTOS_WITH_OCCT)
+    # THE GEOMETRY KERNEL (CLAUDE.md 2.11): OpenCASCADE Technology, the mature,
+    # cross-platform B-rep kernel Article 2.7 asks for wherever geometry is
+    # harder than straight edges — a boolean that keeps a parcel's arc, an
+    # offset whose corners are true arcs, fillets between curves, crossings of
+    # ellipses and splines. It lives in core/src/kernel.cpp alone, behind
+    # core/kernel.hpp.
+    #
+    # 7.6 IS THE FLOOR: Ubuntu 24.04 ships 7.6.3, Homebrew 7.9.x, and every
+    # class the kernel adapter uses — BRepAlgoAPI, BRepOffsetAPI_MakeOffset,
+    # ShapeUpgrade_UnifySameDomain, ChFi2d — is there in both.
+    #
+    # PREBUILT, NOT COMPILED WITH OUR FLAGS: unlike CGAL's templates, OCCT's
+    # arithmetic is outside Article 2.5's -ffp-contract=off. What holds §7.3 for
+    # kernel-backed work is the millimetre rounding of every result and the
+    # golden fixtures the three platforms replay (CLAUDE.md 2.11).
+    #
+    # LICENCE: LGPL-2.1 with the Open CASCADE exception 1.0. LGPL-2.1 §3 lets
+    # the terms of the GPL, version 2 "or any later version", be applied instead,
+    # which is GPL-3.0-or-later here (Article 2.1); the exception asks for a
+    # prominent notice that the program uses OCCT, which /NOTICE and
+    # docs/veri/geometri-cekirdegi.md give. Not GPLv2-only (5.5).
+    # The floor by hand: OCCT's config takes no minimum (`KentOSCadOptions.cmake`).
+    find_package(OpenCASCADE CONFIG QUIET
+                 COMPONENTS FoundationClasses ModelingData ModelingAlgorithms)
+    if(NOT OpenCASCADE_FOUND OR OpenCASCADE_VERSION VERSION_LESS 7.6)
+        message(FATAL_ERROR
+            "KENTOS_WITH_OCCT=ON but OpenCASCADE 7.6 or newer was not found.\n"
+            "  macOS:          brew install opencascade\n"
+            "  Debian/Ubuntu:  sudo apt install libocct-foundation-dev "
+            "libocct-modeling-data-dev libocct-modeling-algorithms-dev\n"
+            "  Fedora:         sudo dnf install opencascade-devel\n"
+            "  Windows/vcpkg:  vcpkg install opencascade  (feature \"occt\" of /vcpkg.json)\n"
+            "  The geometry kernel is required (CLAUDE.md 2.11); -DKENTOS_WITH_OCCT=OFF "
+            "builds a program whose kernel-backed operations refuse and say why.")
+    endif()
+    message(STATUS "  opencascade: ${OpenCASCADE_VERSION} (geometri çekirdeği, core/kernel.cpp)")
+endif()
+
 if(KENTOS_WITH_DWG)
     # DWG, READ ONLY, and the read-only part is enforced by the build rather than
     # by discipline: `LIBREDWG_DISABLE_WRITE=ON` leaves the encoder out of the

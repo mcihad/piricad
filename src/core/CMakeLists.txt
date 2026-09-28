@@ -15,6 +15,7 @@ add_library(kentos_core STATIC
     src/fillet.cpp
     src/break_run.cpp
     src/curve_path.cpp
+    src/kernel.cpp
     src/curve_eval.cpp
     src/trim_curve.cpp
     src/block.cpp
@@ -89,6 +90,23 @@ endif()
 if(KENTOS_WITH_CGAL)
     target_link_libraries(kentos_core PRIVATE CGAL::CGAL)
     target_compile_definitions(kentos_core PRIVATE KENTOS_HAVE_CGAL=1)
+endif()
+
+# THE GEOMETRY KERNEL (CLAUDE.md 2.11), PRIVATE for the reason CGAL is: it lives
+# in core/src/kernel.cpp alone, behind core/kernel.hpp, and no OpenCASCADE type
+# crosses that header. The toolkits are the three groups the operations need —
+# the foundation, the modelling data and the modelling algorithms (booleans,
+# offsets, fillets, shape healing) — and nothing that draws or exchanges files.
+# The headers come in as SYSTEM, as every imported library's do: a warning in
+# somebody else's header is not a warning in this code (Article 5.14 forbids
+# silencing ours, and nothing here does).
+if(KENTOS_WITH_OCCT)
+    target_include_directories(kentos_core SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+    target_link_libraries(kentos_core PRIVATE
+        TKernel TKMath
+        TKG2d TKG3d TKGeomBase TKBRep
+        TKGeomAlgo TKTopAlgo TKPrim TKBO TKBool TKShHealing TKFillet TKOffset)
+    target_compile_definitions(kentos_core PRIVATE KENTOS_HAVE_OCCT=1)
 endif()
 
 set_target_properties(kentos_core PROPERTIES

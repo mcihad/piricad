@@ -74,6 +74,22 @@ jobs:
           if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y libcgal-dev; fi
           if [ "$RUNNER_OS" = "macOS" ]; then brew install cgal; fi
 
+      # THE GEOMETRY KERNEL, required by every preset (CLAUDE.md 2.11). Linux
+      # and macOS from the platform's package; Windows from vcpkg, which builds
+      # it — the first run is long, and CI runs when asked (see `on:` above).
+      - name: Install OpenCASCADE
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get install -y libocct-foundation-dev libocct-modeling-data-dev \
+                                    libocct-modeling-algorithms-dev
+          fi
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install opencascade; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            "$VCPKG_INSTALLATION_ROOT/vcpkg" install opencascade:x64-windows
+            echo "CMAKE_PREFIX_PATH=$VCPKG_INSTALLATION_ROOT/installed/x64-windows" >> "$GITHUB_ENV"
+          fi
+
       - name: Configure
         run: cmake --preset ${{ matrix.config }}
 
@@ -101,7 +117,7 @@ jobs:
         with:
           version: '6.7.*'
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev
+      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev libocct-foundation-dev libocct-modeling-data-dev libocct-modeling-algorithms-dev
       - run: cmake --preset asan
       - run: cmake --build --preset asan
       - run: ctest --test-dir build/asan --output-on-failure
@@ -115,7 +131,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev
+      - run: sudo apt-get update && sudo apt-get install -y libcgal-dev libocct-foundation-dev libocct-modeling-data-dev libocct-modeling-algorithms-dev
       - run: cmake --preset headless
       - run: cmake --build --preset headless
       - run: ctest --test-dir build/headless --output-on-failure
