@@ -13,9 +13,11 @@
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/targets.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/processing/registry.hpp"
 
@@ -154,19 +156,80 @@ TEST_CASE("HEDEF: sınıf bildiren her komut bir nesne parametresi taşıyor")
     }
 }
 
-TEST_CASE("HEDEF: BİRLEŞTİR yaylı kenarlı alanı kirişe çevirmek yerine reddediyor")
+TEST_CASE("HEDEF: BİRLEŞTİR yaylı kenarlı alanı yayını koruyarak birleştiriyor")
 {
-    // The one gap R28 names (TODOS O-3): an area with an arc edge is an area,
-    // and the combine command's union over vertex rings would hand the arc back
-    // as a chord. It refuses, in words, rather than doing that silently.
+    // The gap R28 named (TODOS O-3), closed: an area with an arc edge is
+    // unioned by the geometry kernel, and the arc comes back with the centre
+    // and radius it had — where the union over vertex rings would have handed
+    // it back as its chord, which is why this used to refuse.
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 20,0 20,10 0,10");
     r.run("ALAN 20,0 40,0 40,10 20,10");
     r.run("KENARTÜRÜ nesne=1 kenar=1 tur=yay nokta=10,-3");
-    auto refused = r.bus.execute_line("BİRLEŞTİR nesneler=1 nesneler=2", Origin::Test);
-    REQUIRE_FALSE(refused.ok());
-    CHECK(refused.error().message.find("yaylı kenarlı") != std::string::npos);
-    CHECK_EQ(r.doc.live_entity_count(), 2u);
+    const auto path_of_key = [&r](std::uint64_t key) {
+        const auto p = core::path_of(r.doc, r.doc.slot_of(core::EntityKey{key}));
+        REQUIRE(p.has_value());
+        return *p;
+    };
+    const core::CurvePath bent = path_of_key(1);
+    const auto arc_of          = [](const core::CurvePath& path) {
+        for (const core::PathPiece& piece : path.pieces)
+            if (piece.kind == core::PathPiece::Kind::Arc) return piece;
+        return core::PathPiece{};
+    };
+    const core::PathPiece arc = arc_of(bent);
+    REQUIRE(arc.kind == core::PathPiece::Kind::Arc);
+    const auto area = [](const core::CurvePath& p) {
+        const core::Mm2 a = core::path_area(p);
+        return a < 0 ? -a : a;
+    };
+    const core::Mm2 both = area(bent) + area(path_of_key(2));
+
+    r.run("BİRLEŞTİR nesneler=1 nesneler=2");
+    CHECK_EQ(r.doc.live_entity_count(), 1u);
+    const core::EntityId made = r.doc.slot_of(core::EntityKey{3});
+    REQUIRE(made != core::kNoEntity);
+    CHECK(r.doc.entities().kind[made] == core::kArcPolylineKind);
+    const core::CurvePath merged = path_of_key(3);
+    const core::PathPiece kept   = arc_of(merged);
+    REQUIRE(kept.kind == core::PathPiece::Kind::Arc);
+    CHECK_EQ(kept.centre, arc.centre);
+    CHECK_EQ(kept.radius, arc.radius);
+    // Two areas sharing an edge: the union is the two, to a square millimetre
+    // per metre of rounded arc end.
+    const core::Mm2 gap = area(merged) - both;
+    CHECK(gap * gap < 100 * 100);
+}
+
+TEST_CASE("HEDEF: BİRLEŞTİR yaylı çizgiyi uç uca ekliyor, yayı yay kalıyor")
+{
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    Rig r;
+    r.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
+    r.run("YUVARLA nesne=1 nokta=20,0 yaricap=2");
+    r.run("ÇOKLUÇİZGİ 20,10 20,20");
+    r.run("BİRLEŞTİR nesneler=2 nesneler=1");
+    CHECK_EQ(r.doc.live_entity_count(), 1u);
+    // The first object keeps its key, in the kind the chain needs.
+    const core::EntityId kept = r.doc.slot_of(core::EntityKey{2});
+    REQUIRE(r.doc.alive(kept));
+    CHECK(r.doc.entities().kind[kept] == core::kArcPolylineKind);
+    const auto path = core::path_of(r.doc, kept);
+    REQUIRE(path.has_value());
+    std::size_t arcs = 0;
+    for (const core::PathPiece& piece : path->pieces)
+        if (piece.kind == core::PathPiece::Kind::Arc) {
+            ++arcs;
+            CHECK_EQ(piece.centre, core::Point2{18'000, 2'000});
+            CHECK_EQ(piece.radius, core::Mm{2'000});
+        }
+    CHECK_EQ(arcs, 1u);
+    const core::Point2 a = path->pieces.front().from;
+    const core::Point2 b = path->pieces.back().to;
+    const bool ends      = (a == core::Point2{20'000, 20'000} && b == core::Point2{0, 0}) ||
+                      (a == core::Point2{0, 0} && b == core::Point2{20'000, 20'000});
+    CHECK(ends);
 }
 
 TEST_CASE("HEDEF: yöntemin daralttığı sınıflar — BÖL alanı yalnız kesme çizgisiyle alıyor")

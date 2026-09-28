@@ -228,3 +228,35 @@ TEST_CASE("ÇEKİRDEK: spline kenarlı yol bu aşamada reddediliyor, sebebi söy
     REQUIRE_FALSE(not_closed.ok());
     CHECK(not_closed.error().message.find("kapalı") != std::string::npos);
 }
+
+TEST_CASE("ÇEKİRDEK: uçları kendi çemberinden milimetre kesri sapan yay da kenar oluyor")
+{
+    // An arc through three points in general position — what KENARTÜRÜ and a
+    // DXF bulge make — keeps its centre and radius to the millimetre, so its
+    // ends sit a fraction of a millimetre off its own circle. The kernel's
+    // edge from centre and radius refused them, and with them the face and the
+    // whole boolean ("command not done"): TEVHİT and BİRLEŞTİR both failed on
+    // such a parcel. The edge is the circle through its ends and midpoint now.
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    CurvePath bent;
+    bent.closed = true;
+    // (0,0) → (20,0) bowed to (10,−3): centre (10, 15.1667), radius 18.1667 —
+    // stored as (10000, 15167) and 18167.
+    bent.pieces = {core::arc_piece(at(10'000, 15'167), 18'167, at(0, 0), at(20'000, 0), true),
+                   segment(at(20'000, 0), at(20'000, 10'000)),
+                   segment(at(20'000, 10'000), at(0, 10'000)), segment(at(0, 10'000), at(0, 0))};
+    const std::vector<KernelFace> a{KernelFace{bent, {}}};
+    const std::vector<KernelFace> b{KernelFace{box(20'000, 0, 40'000, 10'000), {}}};
+    auto fused = core::kernel_boolean(a, b, core::BooleanOp::Union);
+    if (!fused) MESSAGE(fused.error().message);
+    REQUIRE(fused.ok());
+    REQUIRE_EQ(fused.value().size(), 1u);
+    std::size_t arcs = 0;
+    for (const PathPiece& piece : fused.value().front().outer.pieces)
+        if (piece.kind == PathPiece::Kind::Arc) {
+            ++arcs;
+            CHECK_EQ(piece.centre, at(10'000, 15'167));
+            CHECK_EQ(piece.radius, core::Mm{18'167});
+        }
+    CHECK_EQ(arcs, 1u);
+}

@@ -11,6 +11,13 @@ Seçili nesneleri **tek nesnede** toplar. Seçimin türüne göre iki iş yapar:
 
 Girdi nesneler silinir, yerine sonuç gelir.
 
+**Yay yay kalır.** Kenarı yay olan bir alan — köşesi [`YUVARLA`](fillet.md) ile
+yuvarlatılmış, kenarı [`KENARTÜRÜ`](edge_kind.md) ile yaya çevrilmiş ya da DXF'ten
+şişkinlikle gelmiş — [geometri çekirdeğiyle](../veri/geometri-cekirdegi.md)
+birleştirilir: sonuçtaki yay aynı merkez ve yarıçapla yaydır, alan yayın kendisinden
+hesaplanır. Yaylı bir çizgi de uç uca eklenirken yayını korur; sonuç yaylı çoklu
+çizgidir. Yalnız düz kenarlı girdiler eskisi gibi hızlı yoldan (Clipper2) birleşir.
+
 ## Bu komut tevhit değildir
 
 `BİRLEŞTİR` **genel bir geometri işlemidir**; kadastro işlemi değildir.
@@ -36,7 +43,7 @@ Parsel birleştirecekseniz [`TEVHİT`](merge.md) kullanın.
 | | `BİRLEŞTİR` | [`UÇUCA`](join.md) |
 |---|---|---|
 | Ne üzerinde | Alan **ya da** çizgi | Yalnız çizgi |
-| Alanlarda | Poligon **boolean** birleşimi (Clipper2): dikiş kalkar | Çalışmaz |
+| Alanlarda | **Boolean** birleşimi — düz kenarlıda Clipper2, yaylı kenarlıda geometri çekirdeği: dikiş kalkar, yay yay kalır | Çalışmaz |
 | Uç aralığı toleransı | **Projenin** düğüm toleransı (`AYAR düğüm_toleransı`, varsayılan 10 mm) | **Çağrının** kendi `tolerans=`'ı (varsayılan 1 mm) |
 | Kararı kim verir | Çizim için bir kez, ayarla | Her çağrıda, komutun içinde |
 
@@ -167,13 +174,17 @@ da düğüm toleransını büyütün: `AYAR düğüm_toleransı=50`.
 Daire, yay ve nokta birleştirilmez; önce [`DÖNÜŞTÜR`](reproject.md) ile çizgiye
 çevirin.
 
-> `Nesne <kimlik> yaylı kenarlı; BİRLEŞTİR yaylı kenarlı alanları bu sürümde birleştirmez, yayları kirişe çevirmeden birleştirmenin yolu geometri çekirdeğiyle gelecek.`
+> `Sonuçtaki alanın hem yay kenarı hem içinde boşluğu var; yaylı kenarlı bir alan bu sürümde boşluk taşıyamaz.`
 
-Alanın bir kenarı yaydır (örneğin köşesi [`YUVARLA`](fillet.md) ile yuvarlatılmış ya da
-kenarı [`KENARTÜRÜ`](edge_kind.md) ile yaya çevrilmiş). `BİRLEŞTİR` bugün yayı
-kısa doğrulara çevirerek birleştirirdi; bunu yapmak yerine reddeder. Yaylı kenarlı
-alanların birleşimi [geometri çekirdeği](../veri/geometri-cekirdegi.md) sayfasındaki
-O-3 aşamasıyla gelecek.
+Yaylı kenarlı alanların birleşimi içinde bir boşluk bıraktı (örneğin alanlar bir
+avluyu çevreliyor). Yaylı kenarlı bir nesne tek halka taşır; boşluğu tutamaz.
+Birleştirmeden önce boşluğu kendi alanıyla doldurun ya da alanları iki parçada
+birleştirin.
+
+> `Geometri çekirdeği işlemi tamamlayamadı: …`
+
+Çekirdek bu şekilleri birleştiremedi. Sebebi mesajda yazar; çoğunlukla girdi
+alanlardan biri kendini kesiyordur — [`TOPOLOJİ`](topology.md) ile denetleyin.
 
 ## İlgili
 

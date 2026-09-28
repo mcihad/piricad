@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — BİRLEŞTİR yaylı kenarı korur; çekirdek genel konumlu yayı kabul eder (O-3)
+
+- **BİRLEŞTİR yaylı kenarlı alanları birleştirir**, yay aynı merkez ve yarıçapla kalır;
+  önceden "yaylı kenarlı alanları bu sürümde birleştirmez" diyerek reddediyordu. Yaylı
+  bir çizgi de uç uca eklenirken yayını korur (UÇUCA'nın yolu). Düz kenarlı girdiler
+  eskisi gibi Clipper2 ile.
+- **Düzeltildi:** kenarı KENARTÜRÜ ile yaya çevrilmiş ya da DXF'ten şişkinlikle gelmiş bir
+  alan geometri çekirdeğinde "işlemi tamamlayamadı" hatasıyla düşüyordu: yayın merkezi ve
+  yarıçapı milimetreye yuvarlı saklandığı için uçları kendi çemberinden milimetrenin bir
+  kesri sapıyordu. Böyle bir yay artık iki ucundan ve ortasından geçen çemberle kuruluyor;
+  TEVHİT, İFRAZ ve ALANİFRAZ da bu parsellerde artık düşmüyor (kurallarına dokunulmadı).
+- Alanı yüz olarak okuyan ve çekirdekle ya da Clipper2 ile kesip birleştiren yardımcılar
+  tek yerde (`command/area_face.hpp`); BİRLEŞTİR ve kadastro komutları aynı cevabı okur.
+
 ### Değişti — OFSET yayı yay olarak kaydırır (O-4)
 
 - **Yaylı çoklu çizginin ve köşesi yuvarlanmış parselin paraleli yaylı çoklu çizgidir:** her

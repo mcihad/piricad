@@ -8,6 +8,7 @@ add_library(kentos_command STATIC
     src/external_ref.cpp
     src/ghost.cpp
     src/path_edit.cpp
+    src/area_face.cpp
     src/bus.cpp
     src/changes.cpp
     src/preview.cpp

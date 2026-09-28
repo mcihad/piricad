@@ -20,16 +20,27 @@
 // which is Clipper2 under `kentos_core`, so nothing here needs the cadastre
 // target. A generic tool that had to reach into a domain library to work would be
 // a sign the split above was drawn in the wrong place.
+//
+// AN ARC EDGE IS KEPT (TODOS O-3). An area whose edge bends goes through the
+// geometry kernel (`command/area_face.hpp`, the answer TEVHİT reads too), and
+// comes back with its arcs; a line that bends is chained as a path, its arcs
+// arcs (`core::join_paths`, UÇUCA's walk). Straight inputs keep the roads they
+// always had.
+#include "kentos_cad/command/area_face.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 
 #include <algorithm>
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -44,7 +55,10 @@ struct Piece
     core::Polygon face;            ///< filled when `is_face`
     std::vector<core::Point2> run; ///< filled when not
     bool is_face{false};
-    bool used{false}; ///< the chain walk's mark
+    bool used{false};                    ///< the chain walk's mark
+    bool bends{false};                   ///< an arc polyline: its arcs are kept
+    std::optional<AreaFace> area;        ///< `is_face`: the face, arcs as arcs
+    std::optional<core::CurvePath> path; ///< not `is_face` and bending: the run, arcs as arcs
 };
 
 bool within(core::Point2 a, core::Point2 b, core::Mm tol)
@@ -74,22 +88,30 @@ bool read_piece(Context& ctx, std::int64_t raw, Piece& out)
         return false;
     }
 
+    // AN AREA OR A LINE WITH ARC EDGES is read as its path, the arcs arcs: an
+    // area to be unioned by the kernel, a line to be chained by its ends.
+    if (doc.entities().kind[slot] == core::kArcPolylineKind) {
+        out.entity = slot;
+        out.id     = raw;
+        out.bends  = true;
+        if (auto area = area_face(doc, slot)) {
+            out.is_face = true;
+            out.area    = std::move(area);
+            return true;
+        }
+        auto path = core::path_of(doc, slot);
+        if (!path || path->closed) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(raw) + " okunamadı; yaylı çizginin yolu yok.");
+            return false;
+        }
+        out.path = std::move(path);
+        return true;
+    }
     // A curve's vertices are its DEFINITION — a centre and a radius handle — not a
     // boundary. Unioning them would union numbers that never described an outline.
     // Said rather than skipped, because silently dropping one of the objects the
     // user selected is how a merge loses a parcel.
-    // AN AREA WITH ARC EDGES is an area to the eye and to the ribbon, and this
-    // body does not take one yet: the union here is Clipper2's, over vertex
-    // rings, and would hand the arcs back as chords. Said as what it is, until
-    // the union goes through the kernel (TODOS O-3).
-    if (doc.entities().kind[slot] == core::kArcPolylineKind) {
-        ctx.refuse(core::ErrorCode::Unsupported,
-                   "Nesne " + std::to_string(raw) +
-                       " yaylı kenarlı; BİRLEŞTİR yaylı kenarlı alanları bu sürümde "
-                       "birleştirmez, yayları kirişe çevirmeden birleştirmenin yolu "
-                       "geometri çekirdeğiyle gelecek.");
-        return false;
-    }
     if (doc.entities().kind[slot] != core::kPolylineKind) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(raw) +
@@ -218,21 +240,55 @@ bool carry_attributes(Context& ctx, const std::vector<Piece>& pieces, core::Enti
     return true;
 }
 
+/// The union by the kernel, for inputs of which one bends: every face as its
+/// path, the result written in the kind that holds it (`add_face`).
+core::Result<std::vector<core::KernelFace>> union_bending(const Context& ctx,
+                                                          const std::vector<Piece>& pieces)
+{
+    std::vector<core::KernelFace> faces;
+    faces.reserve(pieces.size());
+    for (const Piece& p : pieces) {
+        if (p.area) {
+            faces.push_back(p.area->face);
+        } else if (auto read = area_face(ctx.document(), p.entity)) {
+            faces.push_back(read->face);
+        } else {
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "Nesne " + std::to_string(p.id) + " kapalı bir alan kapatmıyor.");
+        }
+    }
+    return area_boolean(std::span(faces).first(1), std::span(faces).subspan(1),
+                        core::BooleanOp::Union, true);
+}
+
 /// The union half: every input is a face.
 Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& said)
 {
-    std::vector<core::Polygon> subject{pieces.front().face};
-    std::vector<core::Polygon> clip;
-    clip.reserve(pieces.size() - 1);
-    for (std::size_t i = 1; i < pieces.size(); ++i)
-        clip.push_back(pieces[i].face);
-
-    auto merged = core::polygon_boolean(subject, clip, core::BooleanOp::Union);
-    if (!merged) {
-        ctx.refuse(merged.error());
-        co_return false;
+    const bool bends = std::ranges::any_of(pieces, [](const Piece& p) { return p.bends; });
+    std::vector<core::KernelFace> bent;
+    std::vector<core::Polygon> straight;
+    if (bends) {
+        auto merged = union_bending(ctx, pieces);
+        if (!merged) {
+            ctx.refuse(merged.error());
+            co_return false;
+        }
+        bent = std::move(merged.value());
+    } else {
+        const std::vector<core::Polygon> subject{pieces.front().face};
+        std::vector<core::Polygon> clip;
+        clip.reserve(pieces.size() - 1);
+        for (std::size_t i = 1; i < pieces.size(); ++i)
+            clip.push_back(pieces[i].face);
+        auto merged = core::polygon_boolean(subject, clip, core::BooleanOp::Union);
+        if (!merged) {
+            ctx.refuse(merged.error());
+            co_return false;
+        }
+        straight = std::move(merged.value());
     }
-    if (merged.value().empty()) {
+    const std::size_t pieces_out = bends ? bent.size() : straight.size();
+    if (pieces_out == 0) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Birleşme sonucu boş çıktı; seçilen nesneler bir alan kapatmıyor.");
         co_return false;
@@ -246,14 +302,20 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
     // piece and the count is reported, because the user asked to merge two things
     // and is owed the news that they did not touch.
     std::vector<core::EntityId> made;
-    made.reserve(merged.value().size());
-    for (const core::Polygon& poly : merged.value()) {
-        std::vector<core::RingGeometry::RingInput> rings;
-        rings.push_back(core::RingGeometry::RingInput{poly.exterior, core::RingRole::Exterior, 0});
-        for (const std::vector<core::Point2>& hole : poly.holes)
-            rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
-
-        auto created = ctx.transaction().add_area(layer, rings);
+    made.reserve(pieces_out);
+    for (std::size_t k = 0; k < pieces_out; ++k) {
+        core::Result<core::EntityId> created = core::err(core::ErrorCode::Internal, "");
+        if (bends) {
+            created = add_face(ctx, layer, bent[k]);
+        } else {
+            const core::Polygon& poly = straight[k];
+            std::vector<core::RingGeometry::RingInput> rings;
+            rings.push_back(
+                core::RingGeometry::RingInput{poly.exterior, core::RingRole::Exterior, 0});
+            for (const std::vector<core::Point2>& hole : poly.holes)
+                rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
+            created = ctx.transaction().add_area(layer, rings);
+        }
         if (!created) {
             ctx.refuse(created.error());
             co_return false;
@@ -311,11 +373,62 @@ Task<bool> combine_faces(Context& ctx, std::vector<Piece>& pieces, std::string& 
     co_return true;
 }
 
+/// The chain of runs of which one bends: every run as its path, joined end to
+/// end by UÇUCA's walk, written into the first object in the kind it needs.
+bool chain_bending(Context& ctx, std::vector<Piece>& pieces, core::Mm tol, std::string& said)
+{
+    std::vector<core::CurvePath> paths;
+    paths.reserve(pieces.size());
+    for (const Piece& p : pieces) {
+        if (p.path) {
+            paths.push_back(*p.path);
+            continue;
+        }
+        auto read = core::path_of(ctx.document(), p.entity);
+        if (!read || read->closed) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Nesne " + std::to_string(p.id) + " açık bir çizgi değil.");
+            return false;
+        }
+        paths.push_back(std::move(*read));
+    }
+    const core::PathJoin join = core::join_paths(paths, tol);
+    if (join.joined.size() < pieces.size()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Çizgiler tek bir zincir oluşturmuyor: " + std::to_string(join.joined.size()) +
+                       " / " + std::to_string(pieces.size()) +
+                       " çizgi birleşti, kalanların ucu zincire değmiyor. Uçları yakalama "
+                       "açıkken yeniden çizin ya da düğüm toleransını büyütün "
+                       "(AYAR düğüm_toleransı).");
+        return false;
+    }
+    // THE FIRST OBJECT KEEPS ITS IDENTITY, in whatever kind the chain needs.
+    const core::EntityId first = pieces[join.joined.front()].entity;
+    if (!rewrite_path(ctx, first, join.chain)) return false;
+    for (const Piece& p : pieces) {
+        if (p.entity == first) continue;
+        if (auto st = ctx.transaction().erase_entity(p.entity); !st) {
+            ctx.refuse(st.error());
+            return false;
+        }
+    }
+    said = std::to_string(pieces.size()) + " çizgi tek çizgide birleştirildi: " +
+           std::to_string(core::path_record(join.chain).ring.size()) + " köşe, yaylar yay.";
+    if (join.bridged != 0)
+        said += "\n  " + std::to_string(join.bridged) +
+                " boşluk doğru parçasıyla kapatıldı; en büyüğü " + std::to_string(join.widest) +
+                " mm.";
+    if (join.ends_meet) said += "\n  Zincir kapanıyor; alana çevirmek için ALANAÇEVİR kullanın.";
+    return true;
+}
+
 /// The chain half: every input is an open run.
 Task<bool> combine_runs(Context& ctx, std::vector<Piece>& pieces, std::string& said)
 {
     const core::Mm tol =
         ctx.session().bus().project_settings().get("core.topoloji.dugum_toleransi").as_length();
+    if (std::ranges::any_of(pieces, [](const Piece& p) { return p.bends; }))
+        co_return chain_bending(ctx, pieces, tol, said);
 
     // Walk from the first run's tail, taking whichever unused run starts — or,
     // reversed, ends — where the chain currently stops. The same walk `ALANAÇEVİR`

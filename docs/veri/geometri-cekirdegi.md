@@ -50,7 +50,8 @@ ona geçiyor:
 |---|---|---|
 | O-2 | [`YUVARLA`](../komutlar/fillet.md), [`PAH`](../komutlar/chamfer.md) | **Bu sürümde.** Açık çizginin de alanın da köşesi **gerçek yayla**, aynı nesnenin yay kenarı olarak yuvarlanır; yuvarlanmış bir parselin öteki köşeleri de yuvarlanır, bir kenarı yay olan köşede yeni yay iki kenara da teğettir |
 | O-3 | [`İFRAZ`](../komutlar/split_parcel.md), [`ALANİFRAZ`](../komutlar/split_area.md), [`TEVHİT`](../komutlar/merge.md) | **Bu sürümde:** yaylı kenarlı bir parsel bölünürken ve birleşirken yay, merkezi ve yarıçapıyla yay olarak kalır. Düz kenarlı parseller eskisi gibi hızlı yoldan (Clipper2) işlenir |
-| O-3 | [`BİRLEŞTİR`](../komutlar/combine.md), `TAMPON` | Gelecek: `BİRLEŞTİR` yaylı kenarlı alanı bugün reddeder; `TAMPON` yaylı kenarı çizildiği hâliyle, kısa kenarlarla alır |
+| O-3 | [`BİRLEŞTİR`](../komutlar/combine.md) | **Bu sürümde:** yaylı kenarlı alanların birleşimi yayı aynı merkez ve yarıçapla korur; yaylı çizgiler uç uca eklenirken yay yay kalır |
+| O-3 | `TAMPON` | Gelecek: yaylı kenarı bugün çizildiği hâliyle, kısa kenarlarla alır |
 | O-4 | [`OFSET`](../komutlar/offset.md) | **Bu sürümde:** yaylı çoklu çizginin ve köşesi yuvarlanmış parselin paraleli yaylı çoklu çizgidir — her yay aynı merkezli, yarıçapı mesafe kadar değişmiş; `kose=YUVARLAK` dış köşeyi gerçek yayla, `kose=PAH` yaylı çizgide köşeyi düz kirişle döner. Düz kenarlı şeklin keskin ve pahlı köşeli paraleli eskisi gibi Clipper2 ile; delikli alanın yuvarlak köşeleri kısa kenarlarla (komut söyler) |
 | O-5 | `BUDA`, `UZAT`, `BÖL`, `KIR`, `YUVARLA` | Gelecek: elips ve spline kesişimleri ve elips ya da spline içeren eğri çiftlerinin yuvarlanması çekirdekten gelecek |
 

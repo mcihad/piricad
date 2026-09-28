@@ -27,8 +27,10 @@
 #include <BRepTools.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <BRep_Tool.hxx>
+#include <GC_MakeArcOfCircle.hxx>
 #include <GeomAbs_CurveType.hxx>
 #include <GeomAbs_JoinType.hxx>
+#include <Geom_TrimmedCurve.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Version.hxx>
@@ -147,13 +149,31 @@ TopoDS_Wire wire_of(const CurvePath& path, const Frame& f)
         // THE CIRCLE'S OWN DIRECTION IS COUNTER-CLOCKWISE about +Z; an arc
         // walked clockwise is the counter-clockwise edge from its end, reversed.
         const gp_Circ circ(gp_Ax2(f.pnt(p.centre), gp::DZ()), static_cast<double>(p.radius));
-        if (p.sweep_udeg >= 0) {
-            wire.Add(BRepBuilderAPI_MakeEdge(circ, a, b).Edge());
-        } else {
-            TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(circ, b, a).Edge();
-            edge.Reverse();
+        const bool ccw = p.sweep_udeg >= 0;
+        BRepBuilderAPI_MakeEdge on_circle(circ, ccw ? a : b, ccw ? b : a);
+        if (on_circle.IsDone()) {
+            TopoDS_Edge edge = on_circle.Edge();
+            if (!ccw) edge.Reverse();
             wire.Add(edge);
+            continue;
         }
+        // THE ENDS ARE THE NEIGHBOURS' VERTICES. A stored arc keeps its centre
+        // and radius to the millimetre, so an arc through three points in
+        // general position — KENARTÜRÜ's, a DXF bulge's — has its ends a
+        // fraction of a millimetre off its own circle: more than the kernel's
+        // confusion, which refused the edge, the face and the whole operation
+        // ("command not done"). Such an arc is the circle through its two ends
+        // and its midpoint instead: the arc the document holds, to the
+        // millimetre it holds it, and one whose ends ARE the vertices beside it.
+        const GC_MakeArcOfCircle through(
+            f.pnt(p.from), f.pnt(point_at(path, PathPlace{.piece = i, .t = 0.5})), f.pnt(p.to));
+        if (!through.IsDone()) {
+            // Neither road holds it: the kernel's own "not done", which the
+            // caller catches and words, like every other failure here.
+            wire.Add(on_circle.Edge());
+            continue;
+        }
+        wire.Add(BRepBuilderAPI_MakeEdge(Handle(Geom_Curve)(through.Value()), a, b).Edge());
     }
     return wire.Wire();
 }

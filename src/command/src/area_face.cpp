@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — cadastre: a parcel as İFRAZ, ALANİFRAZ and TEVHİT cut and join it.
-// See parcel_face.hpp.
-#include "parcel_face.hpp"
+// KentOSCad — command: an area as a face for cutting and joining. See
+// area_face.hpp.
+#include "kentos_cad/command/area_face.hpp"
 
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/curve_path.hpp"
@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace kentos::command::cadastre {
+namespace kentos::command {
 namespace {
 
 /// A closed path of segments through `ring`.
@@ -39,7 +39,7 @@ core::Mm2 magnitude(core::Mm2 v)
 
 } // namespace
 
-std::optional<ParcelFace> parcel_face(const core::Document& doc, core::EntityId slot)
+std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot)
 {
     const core::KindId kind = doc.entities().kind[slot];
     if (kind == core::kArcPolylineKind) {
@@ -47,7 +47,7 @@ std::optional<ParcelFace> parcel_face(const core::Document& doc, core::EntityId 
         // an area.
         auto path = core::path_of(doc, slot);
         if (!path || !path->closed) return std::nullopt;
-        ParcelFace out;
+        AreaFace out;
         out.curved     = bends(*path);
         out.face.outer = std::move(*path);
         return out;
@@ -59,7 +59,7 @@ std::optional<ParcelFace> parcel_face(const core::Document& doc, core::EntityId 
     // stores them (model.md R11).
     const core::RingGeometry& geom = doc.geometry();
     const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
-    ParcelFace out;
+    AreaFace out;
     bool have_outer = false;
     for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
         if (geom.ring_role[r] == core::RingRole::Open) continue;
@@ -81,7 +81,7 @@ std::optional<ParcelFace> parcel_face(const core::Document& doc, core::EntityId 
     return out;
 }
 
-core::Polygon polygon_of(const core::KernelFace& face)
+core::Polygon face_polygon(const core::KernelFace& face)
 {
     core::Polygon out;
     out.exterior = core::path_vertices(face.outer);
@@ -95,7 +95,7 @@ core::Polygon polygon_of(const core::KernelFace& face)
     return out;
 }
 
-core::KernelFace face_of(const core::Polygon& polygon)
+core::KernelFace polygon_face(const core::Polygon& polygon)
 {
     core::KernelFace out;
     out.outer = ring_path(polygon.exterior);
@@ -114,27 +114,27 @@ core::Mm2 face_area(const core::KernelFace& face)
 
 core::Mm2 outer_area(const core::KernelFace& face)
 {
-    if (!bends(face.outer)) return magnitude(core::ring_area(polygon_of(face).exterior));
+    if (!bends(face.outer)) return magnitude(core::ring_area(face_polygon(face).exterior));
     return magnitude(core::path_area(face.outer));
 }
 
-core::Result<std::vector<core::KernelFace>> parcel_boolean(std::span<const core::KernelFace> a,
-                                                           std::span<const core::KernelFace> b,
-                                                           core::BooleanOp op, bool curved)
+core::Result<std::vector<core::KernelFace>> area_boolean(std::span<const core::KernelFace> a,
+                                                         std::span<const core::KernelFace> b,
+                                                         core::BooleanOp op, bool curved)
 {
     if (curved) return core::kernel_boolean(a, b, op);
     std::vector<core::Polygon> pa;
     std::vector<core::Polygon> pb;
     for (const core::KernelFace& f : a)
-        pa.push_back(polygon_of(f));
+        pa.push_back(face_polygon(f));
     for (const core::KernelFace& f : b)
-        pb.push_back(polygon_of(f));
+        pb.push_back(face_polygon(f));
     auto done = core::polygon_boolean(pa, pb, op);
     if (!done) return done.error();
     std::vector<core::KernelFace> out;
     out.reserve(done.value().size());
     for (const core::Polygon& p : done.value())
-        out.push_back(face_of(p));
+        out.push_back(polygon_face(p));
     return out;
 }
 
@@ -144,7 +144,7 @@ core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
     if (!bends(face.outer)) {
         // A STRAIGHT-EDGED PIECE is the polyline it always was, written the way
         // it always was.
-        const core::Polygon polygon = polygon_of(face);
+        const core::Polygon polygon = face_polygon(face);
         std::vector<core::RingGeometry::RingInput> rings;
         rings.push_back(
             core::RingGeometry::RingInput{polygon.exterior, core::RingRole::Exterior, 0});
@@ -161,4 +161,4 @@ core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
     return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);
 }
 
-} // namespace kentos::command::cadastre
+} // namespace kentos::command
