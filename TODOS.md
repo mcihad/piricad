@@ -1,6 +1,8 @@
 # PiriCAD — CAD + GIS + AI geliştirme görevleri
 
 > Araştırma ve kod incelemesi: **22 Eylül 2026**. Bu dosya önceki TODOS.md okunmadan silinerek sıfırdan yazılmıştır. Hedef; hassas CAD üretimi, GIS verisi ve analizi, haritacılık, arazi ve pafta işlerini aynı uygulamada, elle veya AI/MCP/Python üzerinden uçtan uca tamamlamaktır.
+>
+> **Netcad planı** (28 Eylül 2026): [netcad_plan.md](netcad_plan.md) — Netcad'in ~380 aracının bizdeki karşılığı (✓/◐/✗, resmî yardım sayfasıyla), yeni **N-01…N-29** paketleri ve bu dosyadaki 37 maddeye Netcad'in eklediği somut işler. Mevzuata bağlı her satır [M]: kullanıcı tarif edecek.
 
 ## 1. Ürün hedefi ve başarı tanımı
 

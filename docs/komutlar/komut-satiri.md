@@ -196,8 +196,11 @@ bir çift verilseydi P sessizce boşa giderdi.
 ### Dik ayak ve dik boy — işaret kuralı
 
 `dik(A,B,ayak,boy)`, A'dan B'ye **yürürken** düşünülür: `ayak` bu yönde kaç metre
-gidildiği, `boy` oradan kaç metre yana çıkıldığıdır. **Sol pozitif, sağ negatiftir**
-(Netcad'deki kuralın aynısı).
+gidildiği, `boy` oradan kaç metre yana çıkıldığıdır. **Sol pozitif, sağ negatiftir.**
+
+> **Netcad'den gelenler için:** Netcad'in Yan Nokta Hesabı'nda dik boy **sağda pozitif**,
+> solda negatiftir — bu programın tersi. Netcad'de ölçülmüş bir dik boy değerini burada
+> kullanırken **işaretini çevirin**: Netcad'deki `+5` (sağda) burada `-5` yazılır.
 
 ```
 ÇİZGİ dik(0,0,100,0,30,5) dik(0,0,100,0,30,-5)
@@ -214,7 +217,8 @@ ayak/boy çiftleri sırayla gelir:
 ```
 
 Gerçek bir krokide taban iki ölçü noktasıdır; `0,0` ve `40,0` yerine `n(1)` ve `n(2)`
-yazarsınız. Aynı işin fareyle yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek.
+yazarsınız. Aynı işi fareyle ve tek tek sorarak [`DİKAYAK`](perp_offset.md) yapar; işaret
+kuralı aynıdır.
 
 ### İki mesafe kesişimi — iki çözüm vardır
 

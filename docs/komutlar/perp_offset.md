@@ -18,7 +18,8 @@ Bir Türk ölçü karnesinde bir duvar, bir bordür, bir direk ya da bir bina k�
 tam bu iki sayıyla yazılır. Alet yalnız şerit metre ve prizma çubuğu olduğunda
 detay çizime böyle girer.
 
-**Boy'un işareti: A→B yönünde SOL pozitiftir.** Netcad'in işaretiyle aynıdır.
+**Boy'un işareti: A→B yönünde SOL pozitiftir.** Netcad'in Yan Nokta Hesabı'nda ise sağ
+pozitiftir; Netcad'de ölçülmüş bir boy değerini burada kullanırken işaretini çevirin.
 `boy=5` çizginin solunda, `boy=-5` sağında bir nokta koyar. Hangi taraf olduğu
 taban çizgisini hangi sırayla verdiğinize bağlıdır: `0,0 100,0` ile `100,0 0,0`
 aynı çizgi ama ters yöndür, dolayısıyla aynı `boy` karşı tarafa düşer.
