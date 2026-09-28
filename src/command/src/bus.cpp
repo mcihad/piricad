@@ -799,7 +799,9 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         // cancelled run created on the way goes with it (TODOS F-05).
         cut_back(session.tail_at_start(), session.active_layer_at_start());
         result.mutated = false;
-        result.message = "İptal edildi";
+        // A STOPPED JOB'S COMMAND HAS SAID WHAT STOPPED ("Topoloji denetimi
+        // durduruldu; …"); a bare "İptal edildi" under it says it twice.
+        result.message = session.stop_said() ? std::string() : std::string("İptal edildi");
         if (on_command_finished && !previewing_) on_command_finished(result);
         return result;
     }

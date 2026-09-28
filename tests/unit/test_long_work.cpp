@@ -331,6 +331,8 @@ TEST_CASE("UZUN İŞ: yarıda durdurulan TOPOLOJİ sonuç vermez ve günlüğe y
     MESSAGE("durdurulduğunda ilerleme: ", at_stop, "‰");
     REQUIRE(done.ok());
     CHECK_FALSE(done.value().mutated);
+    // SAID ONCE: the command's own sentence, and no bare "İptal edildi" under it.
+    CHECK(done.value().message.empty());
     CHECK(r.said.find("Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.") !=
           std::string::npos);
     // HALF A CHECK IS NOT A SMALLER CHECK: nothing about findings is said.

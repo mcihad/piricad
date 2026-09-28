@@ -148,7 +148,16 @@ public:
     /// tool that ended "completed" was journalled as if it had run, and a
     /// replay would have run it to the end. `cancel()` during a job says this
     /// for the host; a command whose job was stopped another way says it here.
-    void end_stopped() noexcept { cancel_requested_ = true; }
+    void end_stopped() noexcept
+    {
+        cancel_requested_ = true;
+        stop_said_        = true;
+    }
+
+    /// Whether the body ended the run as stopped (`end_stopped`) — and, by the
+    /// rule that goes with it (command.md R8b), said so in its own words, so
+    /// the bus adds no "İptal edildi" of its own under that sentence.
+    bool stop_said() const noexcept { return stop_said_; }
 
     const Prompt& prompt() const noexcept { return prompt_; }
 
@@ -295,6 +304,7 @@ private:
     bool nested_{false};
     Job* job_{nullptr};
     bool cancel_requested_{false};
+    bool stop_said_{false};
 };
 
 // ---- InputAwaiter, defined here because it needs the full Session ----
