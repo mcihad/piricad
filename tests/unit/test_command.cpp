@@ -20,6 +20,7 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
@@ -6635,48 +6636,44 @@ TEST_CASE("PAH köşeyi düz kenarla keser")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
 }
 
-TEST_CASE("YUVARLA köşeyi yayla yuvarlatır ve yayı ayrı nesne olarak koyar")
+TEST_CASE("YUVARLA açık çizginin köşesini gerçek yayla yuvarlatır; çizgi tek nesne kalır (O-2)")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 20,0 0,0 0,20", Origin::Test).ok());
 
-    auto rounded = f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test);
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view s) { said.append(s); };
+    auto rounded  = f.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test);
     if (!rounded) FAIL_WITH("YUVARLA", rounded.error().message);
     REQUIRE(rounded.ok());
 
-    // THE LINE IS BROKEN IN TWO and the arc goes between the pieces. Keeping both
-    // tangent points in one run would draw a straight chord between them AND the
-    // arc over it — a lens where a rounded corner should be.
-    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
-    CHECK(f.doc.entities().kind[0] == core::kPolylineKind);
-    CHECK(f.doc.entities().kind[1] == core::kPolylineKind);
-    CHECK(f.doc.entities().kind[2] == core::kArcKind);
+    // ONE OBJECT, BY THE SAME KEY: the line became an arc polyline in place —
+    // no second leg, no separate arc (the user: "a rounded corner is an arc").
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(e != core::kNoEntity);
+    CHECK(f.doc.entities().kind[e] == core::kArcPolylineKind);
+    CHECK(said.find("çizgi yaylı çoklu çizgi oldu") != std::string::npos);
 
     // A right angle rounded at r = 5 has its tangent points 5 m out along each
-    // edge (r / tan(45°) = r), and its centre on the bisector at (5, 5). The first
-    // leg ends at one tangent point and the second begins at the other.
-    const core::RingSpan leg1 = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
-    const core::RingSpan leg2 = f.doc.geometry().rings_of(f.doc.entities().slot[1]);
-    REQUIRE_EQ(f.doc.geometry().ring_xs(leg1.first).size(), std::size_t{2});
-    REQUIRE_EQ(f.doc.geometry().ring_xs(leg2.first).size(), std::size_t{2});
-    CHECK_EQ(f.doc.geometry().vertex(leg1.first, 1).x, core::Mm{5000});
-    CHECK_EQ(f.doc.geometry().vertex(leg1.first, 1).y, core::Mm{0});
-    CHECK_EQ(f.doc.geometry().vertex(leg2.first, 0).x, core::Mm{0});
-    CHECK_EQ(f.doc.geometry().vertex(leg2.first, 0).y, core::Mm{5000});
-
-    const std::uint32_t arc = f.doc.entities().slot[2];
-    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), arc), core::Mm{5000});
-    CHECK_EQ(core::arc_centre_of(f.doc.geometry(), arc).x, core::Mm{5000});
-    CHECK_EQ(core::arc_centre_of(f.doc.geometry(), arc).y, core::Mm{5000});
+    // edge (r / tan(45°) = r) and its centre on the bisector at (5, 5).
+    const auto path = core::path_of(f.doc, e);
+    REQUIRE(path);
+    REQUIRE_EQ(path->pieces.size(), 3u);
+    CHECK(path->pieces[0].to == core::Point2{5'000, 0});
+    const core::PathPiece& arc = path->pieces[1];
+    CHECK(arc.kind == core::PathPiece::Kind::Arc);
+    CHECK_EQ(arc.radius, core::Mm{5'000});
+    CHECK(arc.centre == core::Point2{5'000, 5'000});
+    CHECK(path->pieces[2].from == core::Point2{0, 5'000});
+    // Its length is the arc's: 15 + 15 + 2π·5/4 m.
+    const double expected = 30'000.0 + std::acos(-1.0) * 2'500.0;
+    CHECK(std::abs(static_cast<double>(core::path_length(*path)) - expected) <= 1.0);
 }
 
-TEST_CASE("YUVARLA kapalı alanın köşesini yerinde yuvarlatır; nesne aynı nesne kalır")
+TEST_CASE("YUVARLA kapalı alanın köşesini gerçek yayla yuvarlatır; nesne aynı nesne kalır")
 {
-    // IT USED TO REFUSE, and a parcel's or a rectangle's corner is the one most
-    // often rounded — so the tool looked broken to anyone who tried it with the
-    // mouse. A closed ring cannot be broken in two without enclosing nothing, so
-    // the arc is drawn into it: the same object, the same key, still a face.
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
@@ -6691,40 +6688,46 @@ TEST_CASE("YUVARLA kapalı alanın köşesini yerinde yuvarlatır; nesne aynı n
     const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[e]);
     REQUIRE_EQ(span.count, 1u);
     CHECK(f.doc.geometry().ring_role[span.first] != core::RingRole::Open);
+    CHECK(f.doc.entities().kind[e] == core::kArcPolylineKind);
+    CHECK(said.find("alan yaylı kenarlı bir alan oldu") != std::string::npos);
+    CHECK(said.find("sapar") == std::string::npos); // no chords to stray
 
-    // The corner is gone: every vertex keeps at least the radius's worth of
-    // distance from where it was, and the tangent points are on the edges.
+    // THE RING IS THE CORNERS: the corner gone, its two tangent points in its
+    // place, and the arc between them the payload's — not sixteen chords.
     const auto xs = f.doc.geometry().ring_xs(span.first);
     const auto ys = f.doc.geometry().ring_ys(span.first);
-    bool has_a    = false;
-    bool has_b    = false;
+    REQUIRE_EQ(xs.size(), 5u);
+    bool has_a = false;
+    bool has_b = false;
     for (std::size_t v = 0; v < xs.size(); ++v) {
         CHECK_FALSE((xs[v] == 0 && ys[v] == 0));
         has_a = has_a || (xs[v] == 5'000 && ys[v] == 0);
         has_b = has_b || (xs[v] == 0 && ys[v] == 5'000);
-        // Every drawn point lies on the arc, to within a millimetre of rounding,
-        // or is one of the other three corners.
-        const double dx = static_cast<double>(xs[v] - 5'000);
-        const double dy = static_cast<double>(ys[v] - 5'000);
-        if (xs[v] < 5'000 && ys[v] < 5'000)
-            CHECK(std::abs(std::sqrt(dx * dx + dy * dy) - 5'000.0) <= 1.5);
     }
     CHECK(has_a);
     CHECK(has_b);
-    CHECK(said.find("yay 16 kenarla çizildi") != std::string::npos);
+    const auto path = core::path_of(f.doc, e);
+    REQUIRE(path);
+    std::size_t arcs = 0;
+    for (const core::PathPiece& p : path->pieces)
+        if (p.kind == core::PathPiece::Kind::Arc) {
+            ++arcs;
+            CHECK(p.centre == core::Point2{5'000, 5'000});
+            CHECK_EQ(p.radius, core::Mm{5'000});
+        }
+    CHECK_EQ(arcs, 1u);
 
-    // THE AREA IS THE ROUNDED ONE: the square's 40 x 30 less the corner's
-    // r² - πr²/4, to within what sixteen chords leave.
-    const double expected = 1200.0 - (25.0 - 3.14159265358979 * 25.0 / 4.0);
-    const double got =
-        std::abs(static_cast<double>(f.doc.geometry().area_of(f.doc.entities().slot[e]))) / 1.0e6;
-    CHECK(std::abs(got - expected) < 0.05);
+    // THE AREA IS THE ARC'S: the rectangle's 40 × 30 less the corner's
+    // r² − πr²/4, to the square millimetre.
+    const double expected = 1200.0 - (25.0 - std::acos(-1.0) * 25.0 / 4.0);
+    const double got      = std::abs(static_cast<double>(f.doc.entity_area(e))) / 1.0e6;
+    CHECK(std::abs(got - expected) < 1e-5);
 
     // And the figure the manual prints (docs/komutlar/fillet.md) is the one
     // ALANÖLÇ reads.
     said.clear();
     REQUIRE(f.bus.execute_line("ALANÖLÇ nesneler=1", Origin::Test).ok());
-    CHECK_MESSAGE(said.find("alan: 1194,60 m²") != std::string::npos, said);
+    CHECK_MESSAGE(said.find("alan: 1194,63 m²") != std::string::npos, said);
 }
 
 TEST_CASE("PAH komşu kenardan uzun kesimi reddeder")

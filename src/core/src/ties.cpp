@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/ties.hpp"
 
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
 #include "kentos_cad/core/hatch.hpp"
@@ -9,6 +10,7 @@
 
 #include <algorithm>
 #include <map>
+#include <vector>
 
 namespace kentos::core {
 namespace {
@@ -200,12 +202,19 @@ std::optional<CaptionFollow> caption_follow(const Document& doc, EntityId e, con
     if (!texts.has(slot)) return std::nullopt;
     const RingOf now = ring_of(doc.geometry(), doc.entities().slot[src], a.ring);
     if (!now.ok) return std::nullopt;
+    // AN EDGE THAT BENDS is followed along its arc: an arc polyline's one ring
+    // carries its bends in the kind's payload (TODOS O-2).
+    std::vector<ArcPolyline::Arc> bends;
+    if (doc.entities().kind[src] == kArcPolylineKind && a.ring == 0)
+        if (auto def = arc_polyline_of(doc.geometry(), doc.entities().slot[src]); def)
+            bends = std::move(def.value().arcs);
     CaptionFollow out;
     out.height       = texts.height(slot);
-    const auto place = attach_place(now.points, now.closed, a, out.height, true);
+    const auto place = attach_place(now.points, now.closed, a, out.height, true, bends);
     if (!place) return std::nullopt;
     out.text = std::string(texts.text(slot));
-    if (const auto derived = attach_text(now.points, now.closed, a); derived) out.text = *derived;
+    if (const auto derived = attach_text(now.points, now.closed, a, bends); derived)
+        out.text = *derived;
     // A column emptied leaves the caption blank rather than gone: an empty text
     // detaches the words from the entity, and the label would not come back
     // when the column is filled again.

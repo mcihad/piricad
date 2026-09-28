@@ -18,7 +18,7 @@ Bir aracı sıradan bir komuttan ayıran dört şey vardır:
 
 | Özellik | Ne demek |
 |---|---|
-| **Uygulandığı türler** | Her araç hangi geometri sınıflarına uygulandığını söyler: nokta, çizgi, alan, eğri, yazı. Kapsamdaki uymayan nesneler **atlanır ve sayılır**; sessizce kaybolmaz |
+| **Uygulandığı türler** | Her araç hangi geometri sınıflarına uygulandığını söyler: nokta, çizgi, alan, eğri, yazı. Kapsamdaki uymayan nesneler **atlanır ve sayılır**; sessizce kaybolmaz. Yaylı kenarlı bir alan (köşesi yuvarlanmış parsel) **alan**, yaylı açık çizgi **çizgi** sayılır; eğri daire, yay, elips ve spline'dır |
 | **Kapsam** | Nesneler seçimden, görünümden ya da bütün projeden alınır |
 | **Asenkron** | İş, arayüz donmasın diye ayrı iş parçacığında koşar; durum çubuğunda adı, yüzdesi ve **Durdur** vardır |
 | **Çıktı katmanı** | Sonuç yeni nesneler olarak istediğiniz katmana yazılır; katman yoksa oluşturulur |

@@ -23,42 +23,19 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 
+#include "parcel_face.hpp"
+
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
-
-bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& out)
-{
-    const core::RingGeometry& geom = doc.geometry();
-    const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
-
-    out.exterior.clear();
-    out.holes.clear();
-
-    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-        if (geom.ring_role[r] == core::RingRole::Open) continue;
-
-        const auto xs = geom.ring_xs(r);
-        const auto ys = geom.ring_ys(r);
-
-        std::vector<core::Point2> ring;
-        ring.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            ring.push_back(core::Point2{xs[v], ys[v]});
-
-        if (geom.ring_role[r] == core::RingRole::Exterior && out.exterior.empty())
-            out.exterior = std::move(ring);
-        else if (ring.size() >= 3)
-            out.holes.push_back(std::move(ring));
-    }
-    return out.exterior.size() >= 3;
-}
 
 core::Mm2 abs_area(core::Mm2 v)
 {
@@ -105,29 +82,30 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    core::Polygon parcel;
-    if (!polygon_of(doc, slot, parcel)) {
+    // THE PARCEL AS A FACE, its arcs as arcs: a rounded corner stays on the
+    // piece it falls in, the same arc (parcel_face.hpp, TODOS O-3).
+    const std::optional<cadastre::ParcelFace> parcel = cadastre::parcel_face(doc, slot);
+    if (!parcel) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(requested.front()) +
                        " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
         co_return;
     }
 
-    core::Box2 box;
-    for (const core::Point2& p : parcel.exterior)
-        box.extend(p);
+    const core::Box2 box   = core::path_bounds(parcel->face.outer);
+    const core::Mm2 before = cadastre::outer_area(parcel->face);
 
-    const core::Mm2 before = abs_area(core::ring_area(parcel.exterior));
-
-    std::vector<core::Polygon> pieces;
+    std::vector<core::KernelFace> pieces;
     for (bool left : {true, false}) {
-        const core::Polygon side = core::half_plane(*first, *second, box, left);
-        auto part = core::polygon_boolean({parcel}, {side}, core::BooleanOp::Intersection);
+        const core::KernelFace side =
+            cadastre::face_of(core::half_plane(*first, *second, box, left));
+        auto part = cadastre::parcel_boolean(std::span(&parcel->face, 1), std::span(&side, 1),
+                                             core::BooleanOp::Intersection, parcel->curved);
         if (!part) {
             ctx.refuse(part.error());
             co_return;
         }
-        for (core::Polygon& piece : part.value())
+        for (core::KernelFace& piece : part.value())
             pieces.push_back(std::move(piece));
     }
 
@@ -142,13 +120,8 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = doc.attributes();
     std::string said             = "İfraz: " + std::to_string(pieces.size()) + " parça.";
 
-    for (const core::Polygon& piece : pieces) {
-        std::vector<core::RingGeometry::RingInput> rings;
-        rings.push_back(core::RingGeometry::RingInput{piece.exterior, core::RingRole::Exterior, 0});
-        for (const std::vector<core::Point2>& hole : piece.holes)
-            rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
-
-        auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
+    for (const core::KernelFace& piece : pieces) {
+        auto created = cadastre::add_face(ctx, ctx.active_layer(), piece);
         if (!created) {
             ctx.refuse(created.error());
             co_return;
@@ -171,7 +144,7 @@ Task<void> run(Context& ctx)
             }
         }
 
-        said += "\n  " + square_metres(core::ring_area(piece.exterior));
+        said += "\n  " + square_metres(cadastre::outer_area(piece));
     }
 
     if (auto st = ctx.transaction().erase_entity(slot); !st) {
@@ -183,8 +156,8 @@ Task<void> run(Context& ctx)
     // loses area has cut something it should not have, and a difference of a few
     // square centimetres is a few square centimetres somebody owns.
     core::Mm2 after = 0;
-    for (const core::Polygon& piece : pieces)
-        after += abs_area(core::ring_area(piece.exterior));
+    for (const core::KernelFace& piece : pieces)
+        after += cadastre::outer_area(piece);
     said += "\n  toplam " + square_metres(after) + "  ·  ifrazdan önce " + square_metres(before);
 
     ctx.record("nesneler", Value::ids(requested));

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/attach.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
+
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
@@ -127,8 +129,29 @@ std::string attach_fill(std::string_view format, std::string_view figure)
            std::string(format.substr(at + 2));
 }
 
+namespace {
+
+/// The arc edge `edge` bends along, if it does.
+const ArcPolyline::Arc* bend_of(EdgeArcs arcs, std::uint32_t edge)
+{
+    for (const ArcPolyline::Arc& arc : arcs)
+        if (arc.segment == edge) return &arc;
+    return nullptr;
+}
+
+/// The arc from `p` to `q` a bent edge is, as a path of one piece.
+CurvePath arc_path(const ArcPolyline::Arc& bend, Point2 p, Point2 q)
+{
+    CurvePath one;
+    one.pieces.push_back(arc_piece(bend.centre, bend.radius, p, q, bend.ccw));
+    return one;
+}
+
+} // namespace
+
 std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool closed,
-                                            const Attachment& a, Mm height, bool with_offset)
+                                            const Attachment& a, Mm height, bool with_offset,
+                                            EdgeArcs arcs)
 {
     const std::size_t n = ring.size();
     if (n < 2) return std::nullopt;
@@ -166,8 +189,18 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
         if (a.index >= segment_count(n, closed)) return std::nullopt;
         const Point2 p = ring[a.index];
         const Point2 q = ring[(a.index + 1) % n];
-        const Dir u    = unit_between(p, q);
+        Dir u          = unit_between(p, q);
         if (u.x == 0.0 && u.y == 0.0) return std::nullopt;
+        // THE MIDDLE OF WHAT IS DRAWN: a straight edge's midpoint, or a bent
+        // one's arc's, read along the arc's tangent there — the radius turned
+        // a quarter the way the edge is walked, so no angle is computed.
+        Point2 middle{(p.x + q.x) / 2, (p.y + q.y) / 2};
+        if (const ArcPolyline::Arc* bend = bend_of(arcs, a.index)) {
+            middle         = point_at(arc_path(*bend, p, q), PathPlace{0, 0.5});
+            const Dir away = unit_between(bend->centre, middle);
+            if (away.x != 0.0 || away.y != 0.0)
+                u = bend->ccw ? Dir{-away.y, away.x} : Dir{away.y, -away.x};
+        }
 
         // Which way is off the edge. Outside/inside ask the ring's turn; left
         // and right ask the reading direction, which is the walk turned to read
@@ -190,8 +223,7 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
                 ny = -ny;
             }
         }
-        out.centre = Point2{(p.x + q.x) / 2 + mm_round(nx * offset),
-                            (p.y + q.y) / 2 + mm_round(ny * offset)};
+        out.centre = Point2{middle.x + mm_round(nx * offset), middle.y + mm_round(ny * offset)};
         out.dir_x  = u.x;
         out.dir_y  = u.y;
         frame_u    = reading(u);
@@ -249,14 +281,15 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
 }
 
 std::optional<std::string> attach_text(std::span<const Point2> ring, bool closed,
-                                       const Attachment& a)
+                                       const Attachment& a, EdgeArcs arcs)
 {
     if (a.derive != AttachDerive::Length) return std::nullopt;
     if (a.anchor != AttachAnchor::Edge) return std::nullopt;
     if (a.index >= segment_count(ring.size(), closed)) return std::nullopt;
-    const Point2 p = ring[a.index];
-    const Point2 q = ring[(a.index + 1) % ring.size()];
-    const Mm len   = segment_length(p, q);
+    const Point2 p               = ring[a.index];
+    const Point2 q               = ring[(a.index + 1) % ring.size()];
+    const ArcPolyline::Arc* bend = bend_of(arcs, a.index);
+    const Mm len = bend != nullptr ? path_length(arc_path(*bend, p, q)) : segment_length(p, q);
     return attach_fill(
         a.format.empty() ? std::string("{}") + attach_unit_suffix(a.unit) : a.format,
         format_dimension_length(len, static_cast<DrawingUnit>(a.unit), a.precision, a.separator));

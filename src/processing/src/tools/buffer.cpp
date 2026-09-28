@@ -67,16 +67,20 @@ void gather(const InputEntity& e, core::BufferSource& source)
         }
     };
 
+    // A LINE OR AN AREA WITH ARC EDGES is buffered as it is drawn, as a curve
+    // is: its rings are its corners, and the buffer of those would cut every
+    // rounded corner off by its chord.
+    const std::vector<InputEntity::Ring>& shape = e.drawn.empty() ? e.rings : e.drawn;
     switch (e.cls) {
     case Applies::Points:
         if (!e.rings.empty() && !e.rings.front().points.empty())
             source.points.push_back(e.rings.front().points.front());
         break;
     case Applies::Lines:
-        for (const InputEntity::Ring& ring : e.rings)
+        for (const InputEntity::Ring& ring : shape)
             if (ring.points.size() >= 2) source.runs.push_back(ring.points);
         break;
-    case Applies::Faces: faces_of(e.rings); break;
+    case Applies::Faces: faces_of(shape); break;
     case Applies::Curves:
         // A CLOSED CURVE ENCLOSES what it draws round, as a face does: the
         // ground within 5 m of a circular pond includes the pond.

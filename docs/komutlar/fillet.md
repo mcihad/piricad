@@ -18,38 +18,33 @@ kenara da **teğettir**: kenarlar yaya kırılmadan bağlanır. Üç biçimde ç
 Köşe noktası, teğet noktalarıyla değiştirilir. Teğet noktalarının köşeye uzaklığı
 `r / tan(θ/2)`'dir — dik bir köşede bu tam olarak `r` kadardır.
 
-### Açık çizgide yay ayrı bir nesnedir
+### Yuvarlanan köşe gerçek bir yaydır
 
-Açık bir çizgide yuvarlatma **üç nesne** bırakır: köşenin iki yanındaki iki çizgi
-ve aralarında yeni bir [`YAY`](arc_draw.md).
+Yuvarlatılan köşe, **aynı nesnenin** gerçek bir yay kenarı olur: kısa doğrulardan
+çizilmiş bir yaklaşık değil, merkezi ve yarıçapı olan bir yay. Nesne ikiye bölünmez
+ve yanına ayrı bir yay eklenmez:
 
-Bu bir eksiklik değil, dürüstlüktür. Bu belge modelinde çoklu çizgi köşe
-noktalarını tutar, "bulge" denen yay katsayılarını değil. Ayrı bir `YAY`
-nesnesinin gerçek merkezi ve gerçek yarıçapı vardır, dolayısıyla uzunluğu ve
-geometrisi kesindir.
+- **Açık bir çizgi** köşesi yuvarlanınca tek bir **yaylı çoklu çizgi** olur.
+- **Bir alan** (parsel, dikdörtgen, kapalı çizgi) köşesi yuvarlanınca **yaylı kenarlı
+  bir alan** olur ve alan olarak kalır: alanı ölçülür, köşeleri numaralanır, uzunlukları
+  yazılır, tampon alınır.
 
-Yayın süpürme yönü köşenin dönüş yönünden anlaşılır; ayrıca belirtmeniz gerekmez.
-
-### Kapalı şekil yerinde yuvarlatılır
-
-Bir **dikdörtgenin, alanın ya da kapalı çizginin** köşesi de yuvarlatılır ve şekil
-**aynı nesne** olarak kalır: kimliği, katmanı, öznitelikleri (ada/parsel no) ve
-ona bağlı yazılar korunur, alan olmaya devam eder — alanı ölçülür, ifraz edilir,
-tampon alınır.
-
-Kapalı bir şekli ikiye bölmek onu bir şeyi çevrelemez hâle getirirdi; bu yüzden yay
-şeklin sınırına **köşe noktalarıyla** çizilir: iki teğet noktası ve aralarında,
-[`YAY`](arc_draw.md)'ın kendisinin çizildiği noktalar (çeyrek daire için 16 kenar).
-Komut, çizilen köşenin gerçek yaydan en çok ne kadar saptığını söyler:
+Nesnenin kimliği, katmanı, stili, öznitelikleri (ada/parsel no) ve ona bağlı yazılar
+korunur.
 
 ```text
-Köşe yuvarlatıldı (yarıçap 5,000 m). Kapalı şeklin sınırı köşe noktalarından oluştuğu için yay 16 kenarla çizildi; gerçek yaydan en çok 6 mm sapar.
+Köşe yuvarlatıldı (yarıçap 5,000 m); alan yaylı kenarlı bir alan oldu.
 ```
 
-Alan da yuvarlatılmış hâliyle hesaplanır: 40 × 30 m'lik bir alanın bir köşesi 5 m
-yarıçapla yuvarlatılınca [`ALANÖLÇ`](measure_area.md) 1200,00 m² yerine 1194,60 m²
-okur. Gerçek yayla alan `r² − πr²/4` kadar, yani 1194,64 m² olurdu; aradaki
-0,04 m² yayın 16 kenarla çizilmesinden gelir.
+Alan, yayın kendisinden hesaplanır. 40 × 30 m'lik bir alanın bir köşesi 5 m yarıçapla
+yuvarlatılınca [`ALANÖLÇ`](measure_area.md) 1200,00 m² yerine **1194,63 m²** okur:
+köşeden `r² − πr²/4` kadar, yani 5,37 m² eksilir.
+
+Yaylı kenarlı bir alanın **öteki köşeleri de** yuvarlanabilir. Köşenin bir kenarı
+zaten yaysa — daha önce yuvarlanmış ya da [`KENARTÜRÜ`](edge_kind.md) ile yaya
+çevrilmiş bir kenar, DXF'ten gelen bir yay — yeni yay **iki kenara da teğet** olur ve
+eski yay kendi merkezinde ve yarıçapında kısalır. Bir yayın düz kenara teğet
+bağlandığı nokta köşe değildir; orada yuvarlanacak bir köşe yoktur.
 
 Diğer kurallar [`PAH`](chamfer.md) ile aynıdır: açık çizginin uçları köşe
 değildir ve teğet noktaları komşu kenarların dışına taşamaz. Bir alanın **içbükey**
@@ -130,21 +125,26 @@ YUVARLA nesne=<k> [<k> …] hepsi=evet yaricap=<metre>
 
 ### Komut satırı
 
-Açık bir çizginin köşesi:
+Yeni bir çizimde, bir alanın köşesi — alan aynı nesne kalır:
 
 ```text
-YUVARLA nesne=1 nokta=485300,4310200 yaricap=8
+ALAN 0,0 40,0 40,30 0,30
+YUVARLA nesne=1 nokta=0,0 yaricap=5
 ```
 
 ```text
-Köşe yuvarlatıldı.
+Köşe yuvarlatıldı (yarıçap 5,000 m); alan yaylı kenarlı bir alan oldu.
 ```
 
-Bir dikdörtgenin köşesi — şekil aynı nesne kalır:
+Yeni bir çizimde, açık bir çizginin köşesi:
 
 ```text
-DİKDÖRTGEN 0,0 20,12
-YUVARLA nesne=1 nokta=20,12 yaricap=5
+ÇOKLUÇİZGİ 20,0 0,0 0,20
+YUVARLA nesne=1 nokta=0,0 yaricap=5
+```
+
+```text
+Köşe yuvarlatıldı (yarıçap 5,000 m); çizgi yaylı çoklu çizgi oldu.
 ```
 
 Yeni bir çizimde, L biçiminde buluşan iki ayrı çizgi arasındaki köşe:
@@ -191,15 +191,29 @@ YUVARLA nesne=1 2 hepsi=evet yaricap=2
 ```
 
 ```text
-6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu çizgi oldu.
+6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu çizgi ve 1 alan yaylı kenarlı alan oldu.
+```
+
+Yeni bir çizimde, bir karenin dört köşesi:
+
+```text
+ALAN 0,0 10,0 10,10 0,10
+YUVARLA nesne=1 hepsi=evet yaricap=2
+```
+
+```text
+4 köşe yuvarlatıldı; alan yaylı kenarlı bir alan oldu.
 ```
 
 ### Arayüz
 
 Şeritte **Giriş ▸ Değiştir ▸ Yuvarla**'ya (ya da **Değiştir ▸ Köşe ▸ Yuvarla**'ya) basın.
+Bir alan ya da çizgi seçiliyken araç, öne gelen **Alan ▸ Kes ve Köşe** ya da **Çizgi ▸
+Köşe** sekmesinde de durur.
 
 1. Yuvarlatılacak köşeye tıklayın. Nesne de bu tıklamayla seçilir.
-2. İmleci köşeden uzaklaştırın: yay ve iki bacak tuvalde vurgulu çizilir.
+2. İmleci köşeden uzaklaştırın: yuvarlanmış köşe, yayıyla birlikte tuvalde vurgulu
+   çizilir.
 3. İstediğiniz yerde tıklayın **ya da** yarıçapı komut satırına yazıp Enter'a
    basın (`8`).
 
@@ -231,14 +245,16 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 ## Geri alma
 
-`YUVARLA` tek bir geri alma adımıdır: [`GERİAL`](undo.md) açık çizgide hem yayı
-kaldırır hem köşeyi geri getirir; kapalı şekilde köşeyi eski hâline döndürür.
+`YUVARLA` tek bir geri alma adımıdır: [`GERİAL`](undo.md) köşeyi eski hâline döndürür;
+yaylı çoklu çizgi olan nesne yeniden düz çoklu çizgi olur. İki nesne arasındaki
+yuvarlamada hem yayı kaldırır hem iki nesneyi eski boylarına getirir.
 
 ## Betikten kullanım
 
 Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir; iki nesnede
-`ikinci_nokta` da. Yapılandırılmış cevap, kısaltılan nesnelerin kimliklerini
-(`duzenlenen`) ve eklenen yayın kimliğini (`eklenen`) söyler.
+`ikinci_nokta` da. İki nesne arasındaki yuvarlamada yapılandırılmış cevap, kısaltılan
+nesnelerin kimliklerini (`duzenlenen`) ve eklenen yayın kimliğini (`eklenen`) söyler;
+`hepsi=evet` ile düzenlenen nesneleri (`duzenlenen`) söyler.
 
 ## Hatalar
 
@@ -248,12 +264,15 @@ Betikten çağrıldığında `nesne`, `nokta` ve `yaricap` verilmelidir; iki nes
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 | `YUVARLA için nesne belirtilmedi. Örnek: YUVARLA nesne=1 nokta=10,10 yaricap=3` | Betik ne nesneyi ne köşeyi verdi | `nesne=` ve `nokta=` verin |
 | `Orada köşesi kesilecek bir çizgi ya da alan yok. ...` | Tıklanan yerde nesne yok | Bir çizginin iki kenarının buluştuğu köşeye tıklayın |
-| `Nesne N bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.` | Daire, yay, yazı ya da nokta verildi | Çizgi ya da alan seçin |
+| `Nesne N bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.` | Daire, yay, yazı ya da nokta verildi | Çizgi ya da alan seçin; bir daire ile bir çizgi arasındaki köşe için iki nesneyi birden verin |
 | `Burada iki kenarın buluştuğu bir köşe yok. ...` | Açık bir çizginin ucu gösterildi | İki kenarın buluştuğu bir köşe gösterin |
 | `Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.` | Kenarlar doğrusal | Gerçek bir köşe gösterin |
 | `Yarıçap sıfırdan büyük olmalı.` | Sıfır ya da eksi yarıçap | Artı bir yarıçap verin |
 | `Kesim komşu kenardan uzun: kenarlar 12,000 m ve 20,000 m, gereken 21,000 m. ...` | Yarıçap bu köşeye büyük | Daha küçük bir yarıçap verin ya da daha yakına tıklayın |
 | `Bu köşe yuvarlatılamıyor: kenarlar üst üste geliyor.` | Kenarlar aynı doğrultuda geri dönüyor | Gerçek bir köşe gösterin |
+| `Bu köşede kenarlar birbirine teğet uzanıyor; yuvarlatılacak bir köşe yok.` | Gösterilen nokta bir yayın düz kenara teğet bağlandığı yer | Gerçek bir köşe gösterin |
+| `Bu yarıçapta, köşenin iki kenarına da teğet bir yay bu köşeye sığmıyor. Daha küçük bir yarıçap verin.` | Köşenin bir kenarı yay ve bu yarıçaptaki yay köşeye sığmıyor | Daha küçük bir yarıçap verin |
+| `Köşe işlemleri doğru ve yay kenarlarında çalışır; bu köşede elips ya da spline var.` | Köşenin bir kenarı elips ya da spline | Elips ya da spline kenarları bu sürümde yuvarlanmaz |
 | `Bu yarıçapta, seçtiğiniz taraflarda iki nesneye de teğet bir yay yok. ...` | İki nesne paralel ya da seçimler bu yarıçapa uymuyor | Yarıçapı değiştirin ya da nesneleri köşeye yakın yerlerinden seçin |
 | `Yarıçap sığmıyor: birinci nesnede teğet noktası köşenin öbür yanına düşüyor. ...` | Bu yarıçaptaki yay seçilen köşede değil karşısındaki köşede kalıyor | Daha küçük bir yarıçap verin |
 | `Köşe sığmıyor: seçtiğiniz parçanın tamamını götürüyor. Daha küçük bir değer verin.` | Teğet noktası tıklanan parçanın ötesinde | Daha küçük bir yarıçap verin |

@@ -236,7 +236,8 @@ Applies classify(const core::Document& doc, core::EntityId e)
     if (e >= ents.size() || !ents.alive(e)) return Applies::None;
     switch (ents.kind[e]) {
     case core::kPointKind: return Applies::Points;
-    case core::kPolylineKind: {
+    case core::kPolylineKind:
+    case core::kArcPolylineKind: {
         if (doc.texts().has(ents.slot[e])) return Applies::Texts;
         const core::RingSpan rs = doc.geometry().rings_of(ents.slot[e]);
         if (rs.count == 0) return Applies::None;
@@ -247,10 +248,16 @@ Applies classify(const core::Document& doc, core::EntityId e)
     case core::kCircleKind:
     case core::kArcKind:
     case core::kEllipseKind:
-    case core::kSplineKind:
-    case core::kArcPolylineKind: return Applies::Curves;
+    case core::kSplineKind: return Applies::Curves;
     default: return Applies::None;
     }
+}
+
+std::vector<core::ArcPolyline::Arc> edge_arcs(const InputEntity& e)
+{
+    if (e.kind != core::kArcPolylineKind) return {};
+    auto def = core::decode_arc_polyline(e.payload);
+    return def ? std::move(def.value().arcs) : std::vector<core::ArcPolyline::Arc>{};
 }
 
 core::Error cancelled()

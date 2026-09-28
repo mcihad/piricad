@@ -20,42 +20,18 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 
+#include "parcel_face.hpp"
+
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
-
-bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& out)
-{
-    const core::RingGeometry& geom = doc.geometry();
-    const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
-
-    out.exterior.clear();
-    out.holes.clear();
-
-    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-        if (geom.ring_role[r] == core::RingRole::Open) continue;
-
-        const auto xs = geom.ring_xs(r);
-        const auto ys = geom.ring_ys(r);
-
-        std::vector<core::Point2> ring;
-        ring.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            ring.push_back(core::Point2{xs[v], ys[v]});
-
-        if (geom.ring_role[r] == core::RingRole::Exterior && out.exterior.empty())
-            out.exterior = std::move(ring);
-        else if (ring.size() >= 3)
-            out.holes.push_back(std::move(ring));
-    }
-    return out.exterior.size() >= 3;
-}
 
 Task<void> run(Context& ctx)
 {
@@ -75,8 +51,11 @@ Task<void> run(Context& ctx)
 
     const core::Document& doc = ctx.document();
 
-    std::vector<core::Polygon> parcels;
+    // THE PARCELS AS FACES, their arcs as arcs (parcel_face.hpp, TODOS O-3):
+    // one rounded parcel among them sends the union through the kernel.
+    std::vector<core::KernelFace> parcels;
     std::vector<core::EntityId> slots;
+    bool curved = false;
     for (std::int64_t raw : requested) {
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
@@ -86,22 +65,21 @@ Task<void> run(Context& ctx)
             co_return; // the bus rolls the whole transaction back
         }
 
-        core::Polygon poly;
-        if (!polygon_of(doc, slot, poly)) {
+        std::optional<cadastre::ParcelFace> face = cadastre::parcel_face(doc, slot);
+        if (!face) {
             ctx.refuse(core::ErrorCode::Unsupported,
                        "Nesne " + std::to_string(raw) +
                            " kapalı bir alan değil; tevhit yalnız alanlar üzerinde çalışır.");
             co_return;
         }
-        parcels.push_back(std::move(poly));
+        curved = curved || face->curved;
+        parcels.push_back(std::move(face->face));
         slots.push_back(slot);
     }
 
     // ---- the union ----
-    std::vector<core::Polygon> subject{parcels.front()};
-    std::vector<core::Polygon> clip(parcels.begin() + 1, parcels.end());
-
-    auto merged = core::polygon_boolean(subject, clip, core::BooleanOp::Union);
+    auto merged = cadastre::parcel_boolean(
+        std::span(parcels).first(1), std::span(parcels).subspan(1), core::BooleanOp::Union, curved);
     if (!merged) {
         ctx.refuse(merged.error());
         co_return;
@@ -124,14 +102,7 @@ Task<void> run(Context& ctx)
     }
 
     // ---- write it ----
-    const core::Polygon& result = merged.value().front();
-
-    std::vector<core::RingGeometry::RingInput> rings;
-    rings.push_back(core::RingGeometry::RingInput{result.exterior, core::RingRole::Exterior, 0});
-    for (const std::vector<core::Point2>& hole : result.holes)
-        rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
-
-    auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
+    auto created = cadastre::add_face(ctx, ctx.active_layer(), merged.value().front());
     if (!created) {
         ctx.refuse(created.error());
         co_return;

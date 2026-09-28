@@ -4163,6 +4163,40 @@ TEST_CASE("DXF: şişkinlikli çoklu çizgi yaylı çoklu çizgi olur; alanı ta
     CHECK(said.find("LWPOLYLINE 1") != std::string::npos);
 }
 
+TEST_CASE("DXF: köşesi YUVARLA ile yuvarlanan parsel şişkinlikle gidiyor, aynı yay olarak dönüyor")
+{
+    // TODOS O-2: a rounded corner is an arc, and it leaves the program as one —
+    // a bulge on the LWPOLYLINE — and comes back as the same arc, the same area.
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-yuvarla");
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("YUVARLA nesne=1 nokta=0,0 yaricap=5", Origin::Test).ok());
+    const core::Mm2 area   = rig.doc.entity_area(rig.doc.slot_of(static_cast<core::EntityKey>(1)));
+    const std::string path = dir.file("yuvarla.dxf");
+    REQUIRE(rig.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    // The file says it as a bulge: tan(90° / 4) for a quarter turn.
+    std::ifstream in(path);
+    std::stringstream text;
+    text << in.rdbuf();
+    CHECK(text.str().find("LWPOLYLINE") != std::string::npos);
+    CHECK(text.str().find("0.41421") != std::string::npos);
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto read = back.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test);
+    if (!read) FAIL_WITH("İÇEAKTAR", read.error().message);
+    REQUIRE_EQ(back.doc.live_entity_count(), 1u);
+    CHECK_EQ(back.doc.entities().kind[0], core::kArcPolylineKind);
+    auto def = core::arc_polyline_of(back.doc.geometry(), back.doc.entities().slot[0]);
+    REQUIRE(def.ok());
+    REQUIRE_EQ(def.value().arcs.size(), 1u);
+    CHECK_EQ(def.value().arcs[0].radius, 5000);
+    CHECK(def.value().arcs[0].centre == core::Point2{5'000, 5'000});
+    CHECK(std::abs(back.doc.entity_area(0) - area) <= 2);
+}
+
 TEST_CASE("DXF: XDATA bayt bayt korunur, tutamak kaynak_kimlik olur, dışa aktarımla geri döner")
 {
     if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");

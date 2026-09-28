@@ -11,6 +11,10 @@ uzunluğunu yazar. Yazı kenara **paraleldir**, soldan sağa okunur, kenarın or
 oturur ve kenarın seçtiğiniz yanına yüksekliğinin yarısı kadar açıkta durur. Ürettiği
 her yazı sıradan bir [`METİN`](text.md) nesnesidir: taşınır, düzenlenir, silinir.
 
+**Yay kenarına yayın boyu** yazılır, kirişin değil: köşesi 2 m yarıçapla yuvarlanmış
+bir parselin yay kenarına `3,14 m` yazar (düz kiriş 2,83 m olurdu). Yazı yayın ortasına,
+yayın o noktadaki teğetine paralel oturur.
+
 Yazı kenarına **bağlıdır** (`bagla=evet`, varsayılan): çizgi taşınınca, dönünce ya da bir
 köşesi çekilince yazı kenarının yanına yeniden yerleşir ve kenar uzayınca sayı yeniden
 yazılır — aynı işlem, aynı geri alma adımı içinde. Ne olduğu ve nasıl kapatılacağı

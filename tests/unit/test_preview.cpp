@@ -27,6 +27,7 @@
 #include "kentos_cad/processing/registry.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -603,7 +604,7 @@ TEST_CASE(
     CHECK(last.args.get("nesne").as_ids() == Value::Ints{1});
 }
 
-TEST_CASE("YUVARLA: tek tıklama ve yazılan yarıçap; kapalı alanı sebebiyle reddeder")
+TEST_CASE("YUVARLA: tek tıklama ve yazılan yarıçap; çizgi ve alan tek nesne kalır")
 {
     Rig r;
     REQUIRE(r.bus.execute_line("ÇOKLUÇİZGİ 0,0 20,0 20,10", Origin::Test).ok());
@@ -617,8 +618,10 @@ TEST_CASE("YUVARLA: tek tıklama ve yazılan yarıçap; kapalı alanı sebebiyle
         CHECK(s.prompt().rubber_shape == RubberShape::Corner);
         REQUIRE(s.supply(Value::number(2.0)).ok());
         REQUIRE(r.bus.finish(s).ok());
-        // Two legs and the arc between them.
-        CHECK_EQ(r.doc.live_entity_count(), std::size_t{4});
+        // THE SAME LINE, its corner an arc: nothing added (O-2).
+        CHECK_EQ(r.doc.live_entity_count(), std::size_t{2});
+        CHECK(r.doc.entities().kind[r.doc.slot_of(static_cast<core::EntityKey>(1))] ==
+              core::kArcPolylineKind);
     }
     {
         // A PARCEL CORNER is rounded in place: the parcel stays one object.
@@ -878,55 +881,80 @@ TEST_CASE("ÇİZGİDÜZENLE tanınmayan işlemi hiçbir şeyi düzenlemeden redd
 // core: the corner cut and the grip edits the previews draw
 // =============================================================================
 
-TEST_CASE("core::cut_corner pahı, yuvarlatmayı ve sınırları hesaplar")
+TEST_CASE("core::cut_path_corner pahı, yuvarlatmayı ve sınırları hesaplar")
 {
     const std::vector<core::Point2> run{{0, 0}, {20'000, 0}, {20'000, 10'000}};
+    const auto path_of_run = [](const std::vector<core::Point2>& pts, bool closed) {
+        core::CurvePath p;
+        p.closed = closed;
+        for (std::size_t i = 0; i + 1 < pts.size(); ++i)
+            p.pieces.push_back(core::PathPiece{.from = pts[i], .to = pts[i + 1]});
+        if (closed) p.pieces.push_back(core::PathPiece{.from = pts.back(), .to = pts.front()});
+        return p;
+    };
+    const core::CurvePath line = path_of_run(run, false);
 
-    auto chamfer = core::cut_corner(run, false, 1, 3'000, false);
+    auto chamfer = core::cut_path_corner(line, 1, 3'000, false);
     REQUIRE(chamfer.ok());
-    CHECK(chamfer.value().kept ==
+    CHECK(core::path_vertices(chamfer.value().path) ==
           std::vector<core::Point2>{{0, 0}, {17'000, 0}, {20'000, 3'000}, {20'000, 10'000}});
-    CHECK_FALSE(chamfer.value().arc);
 
     // A right angle's fillet: the tangent points are the radius back along each
-    // edge and the centre is the radius in from both.
-    auto fillet = core::cut_corner(run, false, 1, 2'000, true);
+    // edge and the centre is the radius in from both — and the result is ONE
+    // path, the arc between its two legs.
+    auto fillet = core::cut_path_corner(line, 1, 2'000, true);
     REQUIRE(fillet.ok());
-    CHECK(fillet.value().arc);
     CHECK(fillet.value().centre == core::Point2{18'000, 2'000});
     CHECK(fillet.value().radius == 2'000);
-    CHECK(fillet.value().kept.back() == core::Point2{18'000, 0});
-    CHECK(fillet.value().second.front() == core::Point2{20'000, 2'000});
+    const core::CurvePath& bent = fillet.value().path;
+    REQUIRE_EQ(bent.pieces.size(), 3u);
+    CHECK(bent.pieces[0].to == core::Point2{18'000, 0});
+    CHECK(bent.pieces[1].kind == core::PathPiece::Kind::Arc);
+    CHECK(bent.pieces[1].sweep_udeg == 90'000'000); // turning left: counter-clockwise
+    CHECK(bent.pieces[2].from == core::Point2{20'000, 2'000});
 
     // Too long for the edge and an end are refused.
-    CHECK_FALSE(core::cut_corner(run, false, 1, 12'000, false).ok());
-    CHECK_FALSE(core::cut_corner(run, false, 0, 1'000, false).ok());
+    CHECK_FALSE(core::cut_path_corner(line, 1, 12'000, false).ok());
+    CHECK_FALSE(core::cut_path_corner(line, 0, 1'000, false).ok());
     const std::vector<core::Point2> square{{0, 0}, {10'000, 0}, {10'000, 10'000}, {0, 10'000}};
-    CHECK(core::cut_corner(square, true, 2, 1'000, false).ok());
+    CHECK(core::cut_path_corner(path_of_run(square, true), 2, 1'000, false).ok());
 
-    // A CLOSED RING IS ROUNDED IN PLACE: one ring, the corner replaced by the
-    // two tangent points and the arc drawn between them in the ring's order —
-    // both for a counter-clockwise ring and for its mirror image.
+    // A CLOSED RING IS ROUNDED WITH A TRUE ARC, in place: one closed path,
+    // the corner replaced by its arc — for a counter-clockwise ring and for its
+    // mirror image, which walks the arc clockwise.
     for (const bool reversed : {false, true}) {
         std::vector<core::Point2> ring = square;
         if (reversed) std::reverse(ring.begin(), ring.end());
         const std::size_t corner = reversed ? 1 : 2; // (10000, 10000) either way
-        auto round               = core::cut_corner(ring, true, corner, 1'000, true);
+        auto round = core::cut_path_corner(path_of_run(ring, true), corner, 1'000, true);
         REQUIRE(round.ok());
-        CHECK_FALSE(round.value().arc);
-        CHECK(round.value().rounded);
-        CHECK(round.value().second.empty());
-        CHECK_EQ(round.value().edges, 16u);
-        CHECK(round.value().deviation <= 2);
-        const auto& kept = round.value().kept;
-        REQUIRE_EQ(kept.size(), square.size() - 1 + 17);
-        CHECK(kept[corner] == round.value().cut_a);
-        CHECK(kept[corner + 16] == round.value().cut_b);
-        // The arc runs FROM the tangent point toward the previous vertex: the
-        // ring does not fold back on itself.
-        CHECK(core::distance_squared(kept[corner], ring[corner - 1]) <
-              core::distance_squared(kept[corner + 16], ring[corner - 1]));
+        const core::CurvePath& face = round.value().path;
+        CHECK(face.closed);
+        REQUIRE_EQ(face.pieces.size(), 5u);
+        std::size_t arcs = 0;
+        for (const core::PathPiece& p : face.pieces)
+            if (p.kind == core::PathPiece::Kind::Arc) {
+                ++arcs;
+                CHECK(p.centre == core::Point2{9'000, 9'000});
+                CHECK(p.radius == 1'000);
+                CHECK(p.sweep_udeg == (reversed ? -90'000'000 : 90'000'000));
+            }
+        CHECK_EQ(arcs, 1u);
+        // THE AREA IS THE ARC'S: the square less r² − πr²/4, exactly.
+        const double expected = 100'000'000.0 - (1'000'000.0 - std::acos(-1.0) * 250'000.0);
+        CHECK(std::abs(std::abs(static_cast<double>(core::path_area(face))) - expected) <= 1.0);
+        for (std::size_t i = 0; i < face.pieces.size(); ++i)
+            CHECK(face.pieces[i].to == face.pieces[(i + 1) % face.pieces.size()].from);
     }
+
+    // AN EDGE USED UP: a 4 m edge between two 2 m fillets is gone, and the two
+    // arcs meet where it was — a stadium, not a refusal.
+    const std::vector<core::Point2> slot{{0, 0}, {10'000, 0}, {10'000, 4'000}, {0, 4'000}};
+    const core::PathCorners stadium =
+        core::cut_every_path_corner(path_of_run(slot, true), 2'000, true);
+    CHECK_EQ(stadium.cut, 4u);
+    CHECK_EQ(stadium.skipped, 0u);
+    CHECK_EQ(stadium.path.pieces.size(), 6u); // two long edges and four arcs
 
     // The nearest vertex names the corner; an end names nothing.
     CHECK(core::nearest_corner(run, false, {19'000, 1'000}) == std::optional<std::size_t>{1});

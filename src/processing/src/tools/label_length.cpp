@@ -16,6 +16,7 @@
 #include "kentos_cad/processing/registry.hpp"
 
 #include "kentos_cad/core/attach.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <string>
@@ -62,8 +63,12 @@ public:
         for (const InputEntity& e : input.entities) {
             if (progress.cancelled()) return cancelled();
             bool any = false;
+            // A ROUNDED CORNER IS WRITTEN ITS ARC'S LENGTH, at the arc's middle
+            // — an arc polyline's bends, on its one ring (TODOS O-2).
+            const std::vector<core::ArcPolyline::Arc> bends = edge_arcs(e);
             for (std::size_t r = 0; r < e.rings.size(); ++r) {
                 const InputEntity::Ring& ring = e.rings[r];
+                const core::EdgeArcs arcs     = r == 0 ? core::EdgeArcs(bends) : core::EdgeArcs{};
                 const std::size_t n           = ring.points.size();
                 if (n < 2) continue;
                 const bool closed      = ring.role != core::RingRole::Open;
@@ -91,12 +96,20 @@ public:
                 for (std::size_t i = 0; i < segs; ++i) {
                     const core::Point2 a = ring.points[i];
                     const core::Point2 b = ring.points[(i + 1) % n];
-                    const core::Mm len   = core::segment_length(a, b);
+                    core::Mm len         = core::segment_length(a, b);
+                    for (const core::ArcPolyline::Arc& bend : arcs)
+                        if (bend.segment == i) {
+                            core::CurvePath one;
+                            one.pieces.push_back(
+                                core::arc_piece(bend.centre, bend.radius, a, b, bend.ccw));
+                            len = core::path_length(one);
+                        }
                     if (len <= 0 || len < shortest) continue;
 
-                    rule.index       = static_cast<std::uint32_t>(i);
-                    const auto place = core::attach_place(ring.points, closed, rule, height);
-                    const auto text  = core::attach_text(ring.points, closed, rule);
+                    rule.index = static_cast<std::uint32_t>(i);
+                    const auto place =
+                        core::attach_place(ring.points, closed, rule, height, true, arcs);
+                    const auto text = core::attach_text(ring.points, closed, rule, arcs);
                     if (!place || !text) continue;
 
                     ToolOutput::Caption cap;

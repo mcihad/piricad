@@ -2900,24 +2900,20 @@ void MapCanvas::buildOverlay()
             }
         } else if (shape == command::RubberShape::Corner) {
             // THE CUT THE CLICK WILL MAKE, from the function PAH and YUVARLA make
-            // it with (`core::cut_corner`), at the cursor's distance from the
-            // corner — which is also what the click answers (`pick_distance`).
-            // The corner used to be asked for and then a number typed blind: the
-            // user found out on Enter whether 3 m was too much for the edge.
+            // it with (`core::cut_path_corner`), at the cursor's distance from
+            // the corner — which is also what the click answers
+            // (`pick_distance`). A rounded corner is drawn as the arc it will
+            // be, by the path's own outline.
             if (auto decoded = core::decode_corner_preview(session->prompt().rubber_payload)) {
                 const core::Document& doc = controller_.document();
-                const core::EntityId e    = doc.slot_of(
-                    static_cast<core::EntityKey>(static_cast<std::uint64_t>(decoded.value().key)));
-                if (e != core::kNoEntity && doc.alive(e)) {
-                    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
-                    const auto xs             = doc.geometry().ring_xs(span.first);
-                    const auto ys             = doc.geometry().ring_ys(span.first);
-                    std::vector<core::Point2> run;
-                    run.reserve(xs.size());
-                    for (std::size_t v = 0; v < xs.size(); ++v)
-                        run.push_back(core::Point2{xs[v], ys[v]});
-                    const bool closed =
-                        doc.geometry().ring_role[span.first] != core::RingRole::Open;
+                const auto path_of_key =
+                    [&doc](std::int64_t key) -> std::optional<core::CurvePath> {
+                    const core::EntityId e =
+                        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
+                    if (e == core::kNoEntity || !doc.alive(e)) return std::nullopt;
+                    return core::path_of(doc, e);
+                };
+                if (const auto path = path_of_key(decoded.value().key)) {
                     const core::Mm size =
                         core::segment_length(session->prompt().rubber_origin, cursorWorld());
                     // WHAT THE CLICK WILL ANSWER, named: the radius or the cut,
@@ -2931,64 +2927,26 @@ void MapCanvas::buildOverlay()
                         addReadout(c.x + 12.0F, c.y + 24.0F, text);
                         guide_label_ = text;
                     }
+                    const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
+                    const auto draw       = [&](const core::CurvePath& cut) {
+                        curve_scratch_x_.clear();
+                        curve_scratch_y_.clear();
+                        core::path_outline(cut, curve_scratch_x_, curve_scratch_y_);
+                        addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, false);
+                    };
                     if (decoded.value().every) {
-                        // EVERY CORNER AT ONCE, by `core::cut_every_corner`:
-                        // each run as the chain edit will leave it — the
-                        // first object and every other one the payload names.
-                        const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
-                        const auto draw = [&](const std::vector<core::Point2>& pts, bool shut) {
-                            const core::CornerRun all =
-                                core::cut_every_corner(pts, shut, size, decoded.value().fillet);
-                            curve_scratch_x_.clear();
-                            curve_scratch_y_.clear();
-                            if (all.bent) {
-                                core::path_outline(all.path, curve_scratch_x_, curve_scratch_y_);
-                            } else {
-                                for (const core::Point2& p : all.ring) {
-                                    curve_scratch_x_.push_back(p.x);
-                                    curve_scratch_y_.push_back(p.y);
-                                }
-                            }
-                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut && !all.bent);
-                        };
-                        draw(run, closed);
-                        for (const std::int64_t other : decoded.value().also) {
-                            const core::EntityId o = doc.slot_of(
-                                static_cast<core::EntityKey>(static_cast<std::uint64_t>(other)));
-                            if (o == core::kNoEntity || !doc.alive(o)) continue;
-                            const core::RingSpan more =
-                                doc.geometry().rings_of(doc.entities().slot[o]);
-                            if (more.count != 1) continue;
-                            const auto ox = doc.geometry().ring_xs(more.first);
-                            const auto oy = doc.geometry().ring_ys(more.first);
-                            std::vector<core::Point2> pts;
-                            pts.reserve(ox.size());
-                            for (std::size_t v = 0; v < ox.size(); ++v)
-                                pts.push_back(core::Point2{ox[v], oy[v]});
-                            draw(pts, doc.geometry().ring_role[more.first] != core::RingRole::Open);
-                        }
-                    } else if (auto cut = core::cut_corner(run, closed, decoded.value().at, size,
-                                                           decoded.value().fillet)) {
-                        const std::size_t lit = nextBatch(tokens_->accent.rgba(), 1.5f, false);
-                        const auto add = [&](const std::vector<core::Point2>& pts, bool shut) {
-                            curve_scratch_x_.clear();
-                            curve_scratch_y_.clear();
-                            for (const core::Point2& p : pts) {
-                                curve_scratch_x_.push_back(p.x);
-                                curve_scratch_y_.push_back(p.y);
-                            }
-                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, shut);
-                        };
-                        add(cut.value().kept, closed);
-                        if (cut.value().arc) {
-                            add(cut.value().second, false);
-                            curve_scratch_x_.clear();
-                            curve_scratch_y_.clear();
-                            core::arc_outline(cut.value().centre, cut.value().radius,
-                                              cut.value().start, cut.value().end, curve_scratch_x_,
-                                              curve_scratch_y_);
-                            addWorldRun(lit, curve_scratch_x_, curve_scratch_y_, false);
-                        }
+                        // EVERY CORNER AT ONCE, by `core::cut_every_path_corner`:
+                        // each object as the chain edit will leave it — the
+                        // first and every other one the payload names.
+                        draw(core::cut_every_path_corner(*path, size, decoded.value().fillet).path);
+                        for (const std::int64_t other : decoded.value().also)
+                            if (const auto more = path_of_key(other))
+                                draw(
+                                    core::cut_every_path_corner(*more, size, decoded.value().fillet)
+                                        .path);
+                    } else if (auto cut = core::cut_path_corner(*path, decoded.value().at, size,
+                                                                decoded.value().fillet)) {
+                        draw(cut.value().path);
                     }
                 }
             }

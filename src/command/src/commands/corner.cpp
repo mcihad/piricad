@@ -11,18 +11,15 @@
 // platforms (§7.3). The half-angle identities below exist for that reason and not
 // to save a call.
 //
-// ON AN OPEN LINE A FILLET'S ARC IS A SEPARATE OBJECT, because a polyline in
-// this model holds vertices and not bulges (model.md R9-R12). That is honest
-// rather than convenient: the arc is a `core.arc` with a real centre and a real
-// radius, so its length and its geometry are exact.
-//
-// A CLOSED SHAPE IS ROUNDED IN PLACE. It used to be refused — "PAH kullanın" —
-// and a rectangle's or a parcel's corner is the corner most often rounded, so
-// the tool looked broken to anyone who tried it with the mouse. Breaking the
-// ring in two would leave a parcel that encloses nothing, so the arc is drawn
-// into the ring (`core::cut_corner`): the object keeps its key, its attributes
-// and what is attached to it, stays a face, and the echo says how far the drawn
-// corner strays from the true arc.
+// A ROUNDED CORNER IS AN ARC AND THE OBJECT STAYS ONE OBJECT (TODOS O-2). The
+// corner is cut on the object's path (`core::cut_path_corner`) and the path is
+// written back into the same slot (`rewrite_path`): a polyline rounded at a
+// corner becomes an arc polyline in place, keeping its key, its layer, its
+// attributes and whatever follows it, and a parcel stays a face whose area is
+// the arc's own (model.md R9b). It used to break an open line into two lines
+// and an arc, and to draw a closed shape's arc into the ring as sixteen chords
+// with a sentence about how far they strayed — "you add points", the user
+// said, "a rounded corner should be an arc".
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
@@ -36,6 +33,7 @@
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -53,29 +51,46 @@ std::string metres_text(core::Mm value)
     return (value < 0 ? "-" : "") + std::to_string(whole / 1000) + "," + frac + " m";
 }
 
-/// Why object `id` has no corners to cut, or nothing when it has them: then
-/// the polyline behind it, its vertices and its ring's role.
-std::optional<core::Error> corner_problem(const core::Document& doc, std::int64_t id,
-                                          core::EntityId& slot, std::vector<core::Point2>& pts,
-                                          core::RingRole& role)
+/// A line or an area whose corners can be cut: its slot, its ring's vertices
+/// (what names a corner), whether it closes, and its path (what is cut).
+struct Cornered
+{
+    std::int64_t id{0};
+    core::EntityId slot{core::kNoEntity};
+    std::vector<core::Point2> pts;
+    bool closed{false};
+    core::CurvePath path;
+};
+
+/// Whether a slot of this kind holds corners: a polyline or an arc polyline,
+/// never a caption's baseline.
+bool has_corners(const core::Document& doc, core::EntityId slot)
+{
+    const core::KindId kind = doc.entities().kind[slot];
+    return (kind == core::kPolylineKind || kind == core::kArcPolylineKind) &&
+           !doc.texts().has(doc.entities().slot[slot]);
+}
+
+/// Why object `id` has no corners to cut, or nothing when it has them.
+std::optional<core::Error> corner_problem(const core::Document& doc, std::int64_t id, Cornered& out)
 {
     if (id <= 0)
         return core::err(core::ErrorCode::InvalidArgument,
                          "Geçersiz nesne kimliği: " + std::to_string(id) +
                              ". Kimlikler 1'den başlar.");
+    out.id         = id;
     const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
-    slot           = doc.slot_of(key);
-    if (slot == core::kNoEntity || !doc.alive(slot))
+    out.slot       = doc.slot_of(key);
+    if (out.slot == core::kNoEntity || !doc.alive(out.slot))
         return core::err(core::ErrorCode::NotFound,
                          "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
-    if (doc.entities().kind[slot] != core::kPolylineKind ||
-        doc.texts().has(doc.entities().slot[slot]))
+    if (!has_corners(doc, out.slot))
         return core::err(core::ErrorCode::Unsupported,
                          "Nesne " + std::to_string(id) +
                              " bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve "
                              "alanlarda çalışır.");
 
-    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[out.slot]);
     if (span.count != 1)
         return core::err(core::ErrorCode::Unsupported,
                          "Nesne " + std::to_string(id) +
@@ -83,29 +98,39 @@ std::optional<core::Error> corner_problem(const core::Document& doc, std::int64_
 
     const auto xs = doc.geometry().ring_xs(span.first);
     const auto ys = doc.geometry().ring_ys(span.first);
-    pts.clear();
-    pts.reserve(xs.size());
+    out.pts.clear();
+    out.pts.reserve(xs.size());
     for (std::size_t v = 0; v < xs.size(); ++v)
-        pts.push_back(core::Point2{xs[v], ys[v]});
-    role = doc.geometry().ring_role[span.first];
+        out.pts.push_back(core::Point2{xs[v], ys[v]});
+    out.closed = doc.geometry().ring_role[span.first] != core::RingRole::Open;
+    auto path  = core::path_of(doc, out.slot);
+    if (!path)
+        return core::err(core::ErrorCode::Unsupported,
+                         "Nesne " + std::to_string(id) + " bir yol olarak okunamıyor.");
+    out.path = std::move(*path);
     return std::nullopt;
 }
 
-/// The polyline behind one id, its vertices and its ring's role — or the
-/// reason refused.
-bool corner_of(const Context& ctx, const Value& given, core::EntityId& slot,
-               std::vector<core::Point2>& pts, std::int64_t& id, core::RingRole& role)
+/// The object behind one id — or the reason refused.
+bool corner_of(const Context& ctx, const Value& given, Cornered& out)
 {
-    id = 0;
+    std::int64_t id = 0;
     if (given.kind() != Value::Kind::IdList)
         id = given.as_int();
     else if (given.as_ids().size() == 1)
         id = given.as_ids()[0];
-    if (auto problem = corner_problem(ctx.document(), id, slot, pts, role)) {
+    if (auto problem = corner_problem(ctx.document(), id, out)) {
         ctx.refuse(std::move(*problem));
         return false;
     }
     return true;
+}
+
+/// Whether a path has an arc piece: the object is an arc polyline once written.
+bool bends(const core::CurvePath& path)
+{
+    return std::ranges::any_of(
+        path.pieces, [](const core::PathPiece& p) { return p.kind == core::PathPiece::Kind::Arc; });
 }
 
 /// The path behind one object of a pair, or nothing with the reason said.
@@ -134,9 +159,7 @@ std::optional<core::CurvePath> pair_path(const Context& ctx, std::int64_t id, co
 std::optional<std::size_t> corner_under(const core::Document& doc, core::EntityId slot,
                                         core::Point2 at, core::Mm reach)
 {
-    if (doc.entities().kind[slot] != core::kPolylineKind ||
-        doc.texts().has(doc.entities().slot[slot]))
-        return std::nullopt;
+    if (!has_corners(doc, slot)) return std::nullopt;
     const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
     if (span.count != 1) return std::nullopt;
     const auto xs = doc.geometry().ring_xs(span.first);
@@ -272,19 +295,11 @@ Task<void> run_pair(Context& ctx, bool fillet, std::int64_t id_a, core::Point2 p
 /// to cut passed over and counted too (TODOS C-06).
 Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>& ids)
 {
-    struct Target
-    {
-        std::int64_t id{0};
-        core::EntityId slot{core::kNoEntity};
-        std::vector<core::Point2> pts;
-        core::RingRole role{core::RingRole::Open};
-    };
-
-    std::vector<Target> targets;
+    std::vector<Cornered> targets;
     std::size_t unfit_objects = 0;
     for (const std::int64_t id : ids) {
-        Target t{.id = id};
-        auto problem = corner_problem(ctx.document(), id, t.slot, t.pts, t.role);
+        Cornered t;
+        auto problem = corner_problem(ctx.document(), id, t);
         if (!problem && t.pts.size() < 3)
             problem = core::err(core::ErrorCode::InvalidArgument, "Bu çizginin köşesi yok.");
         if (problem) {
@@ -306,9 +321,8 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
         co_return;
     }
 
-    const Target& lead      = targets.front();
-    const bool lead_closed  = lead.role != core::RingRole::Open;
-    const std::size_t first = lead_closed ? 0 : 1;
+    const Cornered& lead    = targets.front();
+    const std::size_t first = lead.closed ? 0 : 1;
     core::CornerPreview shown{
         .key = lead.id, .at = static_cast<std::uint32_t>(first), .fillet = fillet, .every = true};
     for (std::size_t k = 1; k < targets.size(); ++k)
@@ -333,11 +347,11 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
         co_return;
     }
 
-    std::vector<core::CornerRun> runs;
+    std::vector<core::PathCorners> runs;
     runs.reserve(targets.size());
     std::size_t cut = 0;
-    for (const Target& t : targets) {
-        runs.push_back(core::cut_every_corner(t.pts, t.role != core::RingRole::Open, want, fillet));
+    for (const Cornered& t : targets) {
+        runs.push_back(core::cut_every_path_corner(t.path, want, fillet));
         cut += runs.back().cut;
     }
     if (cut == 0) {
@@ -346,31 +360,24 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
         co_return;
     }
 
+    // EACH OBJECT WRITTEN BACK INTO ITSELF: a polyline whose corners became
+    // arcs is an arc polyline now, by the same key, with its attributes and
+    // its followers (model.md R9b, TODOS C-08, O-2).
     std::vector<PathEdit> edits;
-    std::size_t skipped = 0;
-    std::size_t bent    = 0;
-    std::size_t touched = 0;
-    core::Mm deviation  = 0;
+    std::size_t skipped       = 0;
+    std::size_t touched       = 0;
+    std::size_t bent_lines    = 0;
+    std::size_t bent_areas    = 0;
+    const core::Document& doc = ctx.document();
     for (std::size_t k = 0; k < targets.size(); ++k) {
-        const core::CornerRun& all = runs[k];
+        const core::PathCorners& all = runs[k];
         skipped += all.skipped;
         if (all.cut == 0) continue;
         ++touched;
-        deviation = std::max(deviation, all.deviation);
-        if (all.bent) {
-            // THE SAME OBJECT, now an arc polyline (model.md R9b): its key,
-            // attributes and followers stay, rather than a new object drawn
-            // like it and the line erased (TODOS C-08).
-            if (!rewrite_path(ctx, targets[k].slot, all.path)) co_return;
-            edits.push_back(PathEdit{.source = targets[k].id, .result = {targets[k].id}});
-            ++bent;
-        } else {
-            const core::RingGeometry::RingInput ring{all.ring, targets[k].role, 0};
-            if (auto st = ctx.transaction().set_geometry(targets[k].slot, {&ring, 1}); !st) {
-                ctx.refuse(st.error());
-                co_return;
-            }
-        }
+        const bool was_plain = doc.entities().kind[targets[k].slot] == core::kPolylineKind;
+        if (!rewrite_path(ctx, targets[k].slot, all.path)) co_return;
+        edits.push_back(PathEdit{.source = targets[k].id, .result = {targets[k].id}});
+        if (was_plain && bends(all.path)) ++(targets[k].closed ? bent_areas : bent_lines);
     }
     ctx.record("nesne", Value::ids(ids));
     ctx.record("hepsi", Value::boolean(true));
@@ -381,21 +388,26 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
     std::string said =
         std::to_string(cut) + (fillet ? " köşe yuvarlatıldı" : " köşeye pah kırıldı");
     if (targets.size() + unfit_objects > 1) said += " (" + std::to_string(touched) + " nesnede)";
-    if (bent == 1 && targets.size() == 1)
+    if (targets.size() == 1 && bent_lines == 1) {
         said += "; çizgi tek bir yaylı çoklu çizgi oldu.";
-    else if (bent != 0)
-        said += "; " + std::to_string(bent) + " açık çizgi yaylı çoklu çizgi oldu.";
-    else
+    } else if (targets.size() == 1 && bent_areas == 1) {
+        said += "; alan yaylı kenarlı bir alan oldu.";
+    } else if (bent_lines + bent_areas != 0) {
+        std::string became;
+        if (bent_lines != 0) became = std::to_string(bent_lines) + " açık çizgi yaylı çoklu çizgi";
+        if (bent_areas != 0)
+            became += (became.empty() ? "" : " ve ") + std::to_string(bent_areas) +
+                      " alan yaylı kenarlı alan";
+        said += "; " + became + " oldu.";
+    } else {
         said += '.';
+    }
     if (skipped != 0)
         said += "\n  " + std::to_string(skipped) +
                 " köşe bu değere sığmadığı ya da düz olduğu için olduğu gibi kaldı.";
     if (unfit_objects != 0)
         said += "\n  " + std::to_string(unfit_objects) +
                 " nesne köşeli bir çizgi ya da alan olmadığı için olduğu gibi kaldı.";
-    if (deviation != 0)
-        said += "\n  Kapalı şeklin yayları kenarlarla çizildi; gerçek yaydan en çok " +
-                std::to_string(deviation) + " mm sapar.";
     ctx.echo(said);
 }
 
@@ -508,7 +520,7 @@ Task<void> run_corner(Context& ctx, bool fillet)
         // TWO EDGES OF ONE POLYLINE are the corner between them.
         const auto path = core::path_of(doc, hit);
         const auto at   = path ? shared_corner(*path, *first, *second) : std::nullopt;
-        if (!at || doc.entities().kind[hit] != core::kPolylineKind) {
+        if (!at || !has_corners(doc, hit)) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
                        "İki tıklama aynı nesnenin bitişik olmayan yerlerinde; köşesini "
                        "işlemek için köşeye tıklayın.");
@@ -537,20 +549,15 @@ Task<void> run_vertex(Context& ctx, bool fillet, Value given, std::optional<core
     // place on the drawing, and pointing at it is the whole question.
     // The object and, when the dispatcher took it from a click, the corner:
     // `run_corner` has already decided this is a polyline's own corner.
-
-    core::EntityId slot = core::kNoEntity;
-    std::vector<core::Point2> pts;
-    std::int64_t id     = 0;
-    core::RingRole role = core::RingRole::Open;
-    if (!corner_of(ctx, given, slot, pts, id, role)) co_return;
-    const bool closed = role != core::RingRole::Open;
+    Cornered target;
+    if (!corner_of(ctx, given, target)) co_return;
 
     if (!at_pt) {
         at_pt = co_await ctx.point("nokta", "İşlem yapılacak köşe");
         if (!at_pt) co_return;
     }
 
-    const std::optional<std::size_t> at = core::nearest_corner(pts, closed, *at_pt);
+    const std::optional<std::size_t> at = core::nearest_corner(target.pts, target.closed, *at_pt);
     if (!at) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
                    "Burada iki kenarın buluştuğu bir köşe yok. Açık bir çizginin uçları köşe "
@@ -559,75 +566,54 @@ Task<void> run_vertex(Context& ctx, bool fillet, Value given, std::optional<core
     }
 
     // THE SIZE, TYPED OR SHOWN, with the cut drawn at the cursor. The preview is
-    // `core::cut_corner` — the function the command is about to call — at the
-    // cursor's distance from the corner, and a click there hands that distance
-    // back as the answer (`pick_distance`). Before this, the corner was asked for
-    // and then the user typed a number blind and found out on Enter.
+    // `core::cut_path_corner` — the function the command is about to call — at
+    // the cursor's distance from the corner, and a click there hands that
+    // distance back as the answer (`pick_distance`).
     PointOptions guide;
     guide.rubber_band    = true;
-    guide.rubber_origin  = pts[*at];
+    guide.rubber_origin  = target.pts[*at];
     guide.rubber_shape   = RubberShape::Corner;
-    guide.rubber_payload = core::encode_corner_preview(
-        core::CornerPreview{.key = id, .at = static_cast<std::uint32_t>(*at), .fillet = fillet});
-    guide.pick_distance = true;
-    auto size           = co_await ctx.number(fillet ? "yaricap" : "mesafe",
+    guide.rubber_payload = core::encode_corner_preview(core::CornerPreview{
+        .key    = target.id,
+        .at     = static_cast<std::uint32_t>(*at),
+        .fillet = fillet,
+    });
+    guide.pick_distance  = true;
+    auto size            = co_await ctx.number(fillet ? "yaricap" : "mesafe",
                                     fillet ? "Yuvarlatma yarıçapı (metre) — yazın ya da gösterin"
-                                                     : "Köşeden kesilecek mesafe (metre) — yazın ya da "
-                                                       "gösterin",
+                                                      : "Köşeden kesilecek mesafe (metre) — yazın ya da "
+                                                        "gösterin",
                                     std::move(guide));
     if (!size) co_return;
 
     const core::Mm want = core::mm_round(*size * static_cast<double>(core::kMmPerMetre));
-    auto cut            = core::cut_corner(pts, closed, *at, want, fillet);
+    auto cut            = core::cut_path_corner(target.path, *at, want, fillet);
     if (!cut) {
         ctx.refuse(cut.error());
         co_return;
     }
 
-    // The FIRST piece keeps the object, so its key, layer, style and attributes
-    // stay with it (model.md R4, R28), exactly as BÖL does.
-    const core::RingGeometry::RingInput ring{cut.value().kept, role, 0};
-    if (auto st = ctx.transaction().set_geometry(slot, {&ring, 1}); !st) {
-        ctx.refuse(st.error());
-        co_return;
-    }
-
-    if (cut.value().arc) {
-        auto second =
-            ctx.transaction().add_polyline(doc.entities().layer[slot], cut.value().second);
-        if (!second) {
-            ctx.refuse(second.error());
-            co_return;
-        }
-        if (const core::StyleId style = doc.entities().style[slot]; style != core::kByLayerStyle) {
-            auto styled = ctx.transaction().set_entity_style(second.value(), style);
-            if (!styled) {
-                ctx.refuse(styled.error());
-                co_return;
-            }
-        }
-        const auto made =
-            ctx.transaction().add_arc(doc.entities().layer[slot], cut.value().centre,
-                                      cut.value().radius, cut.value().start, cut.value().end);
-        if (!made) {
-            ctx.refuse(made.error());
-            co_return;
-        }
-    }
+    // THE SAME OBJECT, its corner cut: its key, layer, style, attributes and
+    // followers stay (model.md R4, R9b, R28).
+    const bool was_plain = doc.entities().kind[target.slot] == core::kPolylineKind;
+    if (!rewrite_path(ctx, target.slot, cut.value().path)) co_return;
 
     // ONE SHAPE ON EVERY ROAD: `nesne=1` typed parses to a number, a click and
     // a script's `[1]` to a list, and the journal is to be the same line from
     // all three (Article 6.4). The declared shape is a selection, so a list.
-    ctx.record("nesne", Value::ids({id}));
+    ctx.record("nesne", Value::ids({target.id}));
     ctx.record("nokta", Value::point(*at_pt));
     ctx.record(fillet ? "yaricap" : "mesafe", Value::number(*size));
-    if (cut.value().rounded)
+    if (!fillet)
+        ctx.echo("Köşeye pah kırıldı.");
+    else if (was_plain && target.closed)
         ctx.echo("Köşe yuvarlatıldı (yarıçap " + metres_text(want) +
-                 "). Kapalı şeklin sınırı köşe noktalarından oluştuğu için yay " +
-                 std::to_string(cut.value().edges) + " kenarla çizildi; gerçek yaydan en çok " +
-                 std::to_string(cut.value().deviation) + " mm sapar.");
+                 "); alan yaylı kenarlı bir alan oldu.");
+    else if (was_plain)
+        ctx.echo("Köşe yuvarlatıldı (yarıçap " + metres_text(want) +
+                 "); çizgi yaylı çoklu çizgi oldu.");
     else
-        ctx.echo(fillet ? "Köşe yuvarlatıldı." : "Köşeye pah kırıldı.");
+        ctx.echo("Köşe yuvarlatıldı (yarıçap " + metres_text(want) + ").");
 }
 
 Task<void> run_chamfer(Context& ctx)

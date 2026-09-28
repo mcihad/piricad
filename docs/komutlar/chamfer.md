@@ -44,6 +44,9 @@ Birbirine yetişmeyen iki çizgi önce kesişecekleri yere uzatılmış sayılı
 - Kısaltmadan yalnız pah kenarını koymak için `budama=hayir` verin.
 - Pah yalnız **düz** kenarlar arasında kırılır; bir yay ya da daire ile köşe için
   [`YUVARLA`](fillet.md) kullanın. Paralel iki çizgi arasında köşe yoktur.
+- Yaylı kenarlı bir alanın ya da yaylı çoklu çizginin de **iki düz kenarı arasındaki**
+  köşesine pah kırılır; nesne yaylı olarak kalır, yayları değişmez. Bir kenarı yay olan
+  köşe reddedilir.
 - Mesafe tıkladığınız parçanın tamamını götürüyorsa komut bunu söyleyerek reddeder.
 - Pah kenarı birinci çizginin katmanında ve stilindedir.
 
@@ -198,6 +201,7 @@ Betikten çağrıldığında `nesne`, `nokta` ve `mesafe` verilmelidir; iki çiz
 | `Nesne N bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır.` | Daire, yay, yazı ya da nokta verildi | Çizgi ya da alan seçin |
 | `Burada iki kenarın buluştuğu bir köşe yok. ...` | Açık bir çizginin ucu gösterildi | İki kenarın buluştuğu bir köşe gösterin |
 | `Bu köşede kenarlar aynı doğrultuda; kesilecek bir köşe yok.` | Kenarlar doğrusal | Gerçek bir köşe gösterin |
+| `PAH iki düz kenarın buluştuğu köşeyi keser; bu köşenin bir kenarı yay. Köşeyi YUVARLA ile yuvarlatın.` | Yaylı kenarlı bir nesnenin yay kenarına bitişik köşesi | Köşeyi [`YUVARLA`](fillet.md) ile yuvarlatın |
 | `Mesafe sıfırdan büyük olmalı.` | Sıfır ya da eksi mesafe | Artı bir mesafe verin |
 | `Kesim komşu kenardan uzun: kenarlar 12,000 m ve 20,000 m, gereken 21,000 m. ...` | Değer kenarlardan büyük | Daha küçük bir değer verin ya da daha yakına tıklayın |
 | `Pah iki düz kenar arasında kırılır; yay ile köşe için YUVARLA kullanın.` | İki çizgiden biri yay ya da daire | [`YUVARLA`](fillet.md) kullanın |

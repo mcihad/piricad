@@ -72,7 +72,11 @@ public:
             co_return core::err(core::ErrorCode::InvalidArgument,
                                 "Kenardan ya da köşeden çekmek tek bir alan ister; kapsamda " +
                                     std::to_string(input.entities.size()) + " nesne var.");
-        const InputEntity& face               = input.entities.front();
+        const InputEntity& face = input.entities.front();
+        if (face.kind == core::kArcPolylineKind)
+            co_return core::err(core::ErrorCode::Unsupported,
+                                "Alanın kenarlarından biri yay; ALANDÜZENLE yaylı kenarlı alanı bu "
+                                "sürümde düzenlemez.");
         const std::vector<core::Point2>* ring = exterior(face);
         if (ring == nullptr || ring->size() < 3)
             co_return core::err(core::ErrorCode::InvalidArgument, "Nesne kapalı bir alan değil.");
@@ -140,6 +144,17 @@ public:
         std::size_t done = 0;
         for (const InputEntity& e : input.entities) {
             if (progress.cancelled()) return cancelled();
+            // AN AREA WITH ARC EDGES IS PASSED OVER, AND SAID: the correction
+            // moves corners and edges of a ring of straight edges, and applied
+            // to the corners of an arc polyline it would carry each arc's ends
+            // away from its centre. Its turn comes with the kernel (TODOS O-3).
+            if (e.kind == core::kArcPolylineKind) {
+                output.notes.push_back("nesne " + std::to_string(e.key) +
+                                       ": kenarlarından biri yay; ALANDÜZENLE yaylı kenarlı "
+                                       "alanı bu sürümde düzenlemez.");
+                progress.at(++done, input.entities.size());
+                continue;
+            }
             const std::vector<core::Point2>* ring = exterior(e);
             if (ring == nullptr || ring->size() < 3) {
                 progress.at(++done, input.entities.size());

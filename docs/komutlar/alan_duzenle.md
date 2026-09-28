@@ -26,6 +26,11 @@ Bu bir [işlem aracıdır](../islem/README.md): kapsam, asenkron çalışma ve t
 adımı orada anlatılır. `hepsi` kipi kapsamdaki **her** alana uygulanır; `kenar` ve `kose`
 tek bir alan ister.
 
+**Yaylı kenarlı alan bu sürümde düzenlenmez.** Köşesi [`YUVARLA`](fillet.md) ile
+yuvarlanmış ya da bir kenarı yay olan bir alan `hepsi` kipinde atlanır ve özet bunu
+söyler; `kenar` ve `kose` kiplerinde komut reddeder. Köşeleri kaydırmak yayın uçlarını
+merkezinden uzaklaştırırdı.
+
 ## Adlar
 
 | Ad | Tür |
@@ -129,6 +134,8 @@ Betikte `nesneler` ya da `kapsam` ve `alan` verilmelidir. `kenar`/`kose` kipleri
 | `Kenar bu kadar kaydırılamaz: komşu kenarlar onunla kesişmiyor.` | Komşu kenarlar kaydırılan kenara paralel | Başka bir kenar ya da `mod=hepsi` |
 | `Alan bu değere her taraftan daraltılarak getirilemiyor …` | Şekil hedefe varmadan bölünüyor ya da yok oluyor | Daha yakın bir hedef ya da kenar/köşe kipi |
 | `Kapsamda bu araca uygun nesne yok …` | Kapsamda kapalı alan yok | Bir alan seçin |
+| `nesne N: kenarlarından biri yay; ALANDÜZENLE yaylı kenarlı alanı bu sürümde düzenlemez.` | `hepsi` kipinde kapsamda yaylı kenarlı bir alan var | O alan atlanır; ötekiler düzenlenir |
+| `Alanın kenarlarından biri yay; ALANDÜZENLE yaylı kenarlı alanı bu sürümde düzenlemez.` | `kenar`/`kose` kipinde yaylı kenarlı bir alan | Yaylı kenarlı alan bu sürümde düzenlenmez |
 
 ## İlgili
 

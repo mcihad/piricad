@@ -28,12 +28,16 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include "parcel_face.hpp"
+
 #include <cmath>
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -63,33 +67,6 @@ std::string square_metres(core::Mm2 v)
     return std::to_string(cm2 / 100) + "," + frac + " m²";
 }
 
-bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& out)
-{
-    const core::RingGeometry& geom = doc.geometry();
-    const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
-
-    out.exterior.clear();
-    out.holes.clear();
-
-    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-        if (geom.ring_role[r] == core::RingRole::Open) continue;
-
-        const auto xs = geom.ring_xs(r);
-        const auto ys = geom.ring_ys(r);
-
-        std::vector<core::Point2> ring;
-        ring.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            ring.push_back(core::Point2{xs[v], ys[v]});
-
-        if (geom.ring_role[r] == core::RingRole::Exterior && out.exterior.empty())
-            out.exterior = std::move(ring);
-        else if (ring.size() >= 3)
-            out.holes.push_back(std::move(ring));
-    }
-    return out.exterior.size() >= 3;
-}
-
 /// A half-plane covering everything on the near side of the line that runs in
 /// direction `(ux, uy)` and sits `offset` along the normal from `origin`.
 core::Polygon half_plane(core::Point2 origin, double ux, double uy, double offset, double reach)
@@ -111,11 +88,11 @@ core::Polygon half_plane(core::Point2 origin, double ux, double uy, double offse
     return poly;
 }
 
-core::Mm2 area_of(const std::vector<core::Polygon>& pieces)
+core::Mm2 area_of(const std::vector<core::KernelFace>& pieces)
 {
     core::Mm2 total = 0;
-    for (const core::Polygon& p : pieces)
-        total += abs_area(core::ring_area(p.exterior));
+    for (const core::KernelFace& p : pieces)
+        total += cadastre::outer_area(p);
     return total;
 }
 
@@ -175,15 +152,18 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    core::Polygon parcel;
-    if (!polygon_of(doc, slot, parcel)) {
+    // THE PARCEL AS A FACE, its arcs as arcs (parcel_face.hpp, TODOS O-3): the
+    // area searched for is the area with the arc, and the arc stays on the
+    // side it falls on.
+    const std::optional<cadastre::ParcelFace> parcel = cadastre::parcel_face(doc, slot);
+    if (!parcel) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(requested.front()) +
                        " kapalı bir alan değil; ifraz yalnız alanlar üzerinde çalışır.");
         co_return;
     }
 
-    const core::Mm2 whole = abs_area(core::ring_area(parcel.exterior));
+    const core::Mm2 whole = cadastre::outer_area(parcel->face);
     if (target >= whole) {
         ctx.refuse(core::ErrorCode::InvalidArgument, "İstenen alan (" + square_metres(target) +
                                                          ") parselin tamamından (" +
@@ -195,10 +175,20 @@ Task<void> run(Context& ctx)
     const double nx = -uy;
     const double ny = ux;
 
+    // Over the boundary AS DRAWN, so an arc's bulge past its two ends is in
+    // the range.
+    std::vector<core::Mm> outline_x;
+    std::vector<core::Mm> outline_y;
+    core::path_outline(parcel->face.outer, outline_x, outline_y);
+    std::vector<core::Point2> outline;
+    outline.reserve(outline_x.size());
+    for (std::size_t v = 0; v < outline_x.size(); ++v)
+        outline.push_back(core::Point2{outline_x[v], outline_y[v]});
+
     double low = 0.0, high = 0.0;
     bool first_vertex = true;
     double reach      = 0.0;
-    for (const core::Point2& p : parcel.exterior) {
+    for (const core::Point2& p : outline) {
         const double t =
             (static_cast<double>(p.x - first->x)) * nx + (static_cast<double>(p.y - first->y)) * ny;
         const double along =
@@ -218,13 +208,14 @@ Task<void> run(Context& ctx)
     // The area behind the line grows monotonically as the line slides, so this
     // converges on THE offset rather than on one of several. Sixty halvings of a
     // parcel-sized range is far below a millimetre.
-    std::vector<core::Polygon> kept;
+    std::vector<core::KernelFace> kept;
     double lo = low, hi = high;
     for (int i = 0; i < kSteps; ++i) {
         const double mid = (lo + hi) * 0.5;
 
-        auto side = core::polygon_boolean({parcel}, {half_plane(*first, ux, uy, mid, reach)},
-                                          core::BooleanOp::Intersection);
+        const core::KernelFace cutter = cadastre::face_of(half_plane(*first, ux, uy, mid, reach));
+        auto side = cadastre::parcel_boolean(std::span(&parcel->face, 1), std::span(&cutter, 1),
+                                             core::BooleanOp::Intersection, parcel->curved);
         if (!side) {
             ctx.refuse(side.error());
             co_return;
@@ -257,7 +248,8 @@ Task<void> run(Context& ctx)
     }
 
     // ---- the remainder ----
-    auto rest = core::polygon_boolean({parcel}, kept, core::BooleanOp::Difference);
+    auto rest = cadastre::parcel_boolean(std::span(&parcel->face, 1), kept,
+                                         core::BooleanOp::Difference, parcel->curved);
     if (!rest) {
         ctx.refuse(rest.error());
         co_return;
@@ -267,16 +259,10 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = doc.attributes();
     std::string said             = "Alana göre ifraz:";
 
-    const auto emit = [&](const std::vector<core::Polygon>& pieces,
+    const auto emit = [&](const std::vector<core::KernelFace>& pieces,
                           const char* label) -> core::Status {
-        for (const core::Polygon& piece : pieces) {
-            std::vector<core::RingGeometry::RingInput> rings;
-            rings.push_back(
-                core::RingGeometry::RingInput{piece.exterior, core::RingRole::Exterior, 0});
-            for (const std::vector<core::Point2>& hole : piece.holes)
-                rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
-
-            auto created = ctx.transaction().add_area(ctx.active_layer(), rings);
+        for (const core::KernelFace& piece : pieces) {
+            auto created = cadastre::add_face(ctx, ctx.active_layer(), piece);
             if (!created) return created.error();
             // The parent, by key: it leaves the sheet, the piece remembers it.
             const core::EntityId parent[] = {slot};
@@ -291,8 +277,7 @@ Task<void> run(Context& ctx)
                     !st)
                     return st.error();
             }
-            said +=
-                std::string("\n  ") + label + ": " + square_metres(core::ring_area(piece.exterior));
+            said += std::string("\n  ") + label + ": " + square_metres(cadastre::outer_area(piece));
         }
         return core::ok();
     };

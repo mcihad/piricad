@@ -21,6 +21,7 @@
 // dependent's entity row, folded into the content hash, written to the file.
 #pragma once
 
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/text_store.hpp"
@@ -110,21 +111,29 @@ struct AttachPlacement
     std::optional<TextAnchor> anchor{};
 };
 
+/// THE BENT EDGES of the ring an attachment reads: an arc polyline's
+/// (`ArcPolyline::arcs`, by edge), empty for every other ring. An edge that
+/// bends is placed at its ARC's middle, read along the arc's tangent there, and
+/// measured along the arc — a rounded corner's length is its arc, never the
+/// chord between its ends (TODOS O-2).
+using EdgeArcs = std::span<const ArcPolyline::Arc>;
+
 /// The rule's place for a caption of height `height` attached by `a` to the
 /// ring `ring` (`closed` says whether it is a face). With `with_offset` the
 /// hand's `along`/`across` are added; without it the bare rule is returned,
 /// which is what measuring a new offset needs. Nothing when the anchor is not
 /// on the ring — an index past its end, a degenerate edge.
 std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool closed,
-                                            const Attachment& a, Mm height,
-                                            bool with_offset = true);
+                                            const Attachment& a, Mm height, bool with_offset = true,
+                                            EdgeArcs arcs = {});
 
 /// The text the rule derives for `a` over `ring`, or nothing when the dependent
 /// keeps its own words (`AttachDerive::Keep`), when its words are filled from
 /// the whole source rather than one ring (`AttachDerive::Fields`, which the
-/// command layer does) or when the anchor is not on the ring.
+/// command layer does) or when the anchor is not on the ring. An edge in
+/// `arcs` is measured along its arc.
 std::optional<std::string> attach_text(std::span<const Point2> ring, bool closed,
-                                       const Attachment& a);
+                                       const Attachment& a, EdgeArcs arcs = {});
 
 /// Writes into `a.along`/`a.across` the offset that carries the bare rule's
 /// caption (`rule`, computed WITHOUT offset) to `actual`, in the rule's reading

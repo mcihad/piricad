@@ -10,6 +10,7 @@ add_library(kentos_domain_cadastre STATIC
     src/merge_command.cpp
     src/split_command.cpp
     src/area_split_command.cpp
+    src/parcel_face.cpp
     src/commands.cpp
 )
 

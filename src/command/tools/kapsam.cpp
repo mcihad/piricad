@@ -233,6 +233,10 @@ struct Probe
     /// Interior rings: what a face's holes are, and what an offset must keep.
     std::size_t holes{0};
     Outline outline;
+    /// The first ring's STORED vertices — an arc polyline's corners, a
+    /// polyline's points — which is what tells a straight piece of a curve
+    /// from the curve turned into chords (`curve_kept`).
+    std::vector<Point2> ring;
 };
 
 Probe probe(const Rig& r, EntityKey key)
@@ -252,6 +256,12 @@ Probe probe(const Rig& r, EntityKey key)
     const core::RingSpan span   = g.rings_of(r.doc.entities().slot[e]);
     for (std::uint32_t ring = span.first; ring < span.first + span.count; ++ring)
         if (g.ring_role[ring] == core::RingRole::Interior) ++p.holes;
+    if (span.count != 0) {
+        const auto xs = g.ring_xs(span.first);
+        const auto ys = g.ring_ys(span.first);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            p.ring.push_back(Point2{xs[v], ys[v]});
+    }
     return p;
 }
 
@@ -385,12 +395,15 @@ std::vector<Fixture> fixtures()
         {"coklucizgi", "Köşeli çoklu çizgi", Shape::Open, true, 90.0, std::nullopt,
          [](Rig& r) { return build(r, {"ÇOKLUÇİZGİ 0,0 50,0 50,40"}); }},
 
-        {"yayli", "Yaylı çoklu çizgi (DXF şişkinliği)", Shape::Open, true, pi * 25.0 + 30.0,
-         std::nullopt,
+        // A BULGE OF 0,5 on the first edge: an arc of 4·atan(0,5) = 106,26° over the
+        // 50 m chord, radius 31,25 m, meeting the second edge at (50, 0) in a
+        // real corner — a half circle (bulge 1) would arrive tangent to it, and
+        // there would be no corner there for YUVARLA to round.
+        {"yayli", "Yaylı çoklu çizgi (DXF şişkinliği)", Shape::Open, true,
+         (31.25 * 4.0 * std::atan(0.5)) + 30.0, std::nullopt,
          [](Rig& r) {
-             // THE ONLY ROAD THIS KIND HAS, which is itself a finding: no command
-             // makes an arc polyline; it arrives from a DXF bulge and nowhere
-             // else. So its row is built the way a user gets one.
+             // Built the way a user most often gets one: from a DXF bulge. (YUVARLA
+             // and KENARTÜRÜ make them too, TODOS C-07 and O-2.)
              const std::string path = g_data_root + "/tests/support/kapsam/yayli-cizgi.dxf";
              return build(r, {"İÇEAKTAR dosya=\"" + path + "\""});
          }},
@@ -584,11 +597,24 @@ bool true_curve(KindId k)
 }
 
 /// The verdict for an edit that must leave a curve a curve.
+/// Whether polyline piece `p` of curve `before` is the curve turned into CHORDS
+/// rather than a straight stretch of it: chords put corners the curve never had
+/// between the piece's two ends. A cut past an arc polyline's arc leaves its
+/// straight edge as a straight polyline, which is right, not a loss.
+bool chords_of(const Probe& before, const Probe& p)
+{
+    if (!true_curve(before.kind) || !is_polyline(p.kind)) return false;
+    if (p.ring.size() <= 2) return before.kind != core::kArcPolylineKind;
+    for (std::size_t v = 1; v + 1 < p.ring.size(); ++v)
+        if (std::ranges::find(before.ring, p.ring[v]) == before.ring.end()) return true;
+    return false;
+}
+
 Cell curve_kept(const Probe& before, const std::vector<Probe>& after, const std::string& done)
 {
     if (after.empty()) return refused("komut başarılı döndü ama nesne kalmadı");
     for (const Probe& p : after) {
-        if (true_curve(before.kind) && is_polyline(p.kind))
+        if (chords_of(before, p))
             return partial(done + "; " + kind_name(before.kind) + " kirişlere (" +
                            kind_name(p.kind) + ") dönüştü");
     }

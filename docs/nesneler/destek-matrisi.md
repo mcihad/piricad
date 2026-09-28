@@ -26,8 +26,8 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | Tür | Seç | Yakala | Tutamaç | Taşı | Döndür | Ölçekle | Aynala | Kes (BUDA) | Uzat | Böl | Kır | Paralel (OFSET) | Yuvarla | Pah | Uç uca | Ölç | Proje dosyası |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [Çizgi](#cizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | ✓ |
-| [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✓ | ✓ | ✓ |
-| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| [Köşeli çoklu çizgi](#coklucizgi) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Yaylı çoklu çizgi (DXF şişkinliği)](#yayli) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✗ | ✓ | ✓ | ✓ |
 | [Delikli alan](#alan) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | — | ✗ | ✗ | ✓ | ✗ | ✗ | — | ✓ | ✓ |
 | [Çok parçalı alan](#cokparca) | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ | ⊘ |
 | [Daire](#daire) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✗ | ✓ | ✓ | — | — | — | ✓ | ✓ |
@@ -41,7 +41,7 @@ gidiş-dönüş, her derlemenin yazıp okuduğu proje dosyasıdır.
 | [Ölçü](#olcu) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | ✓ | ✓ |
 | [Kılavuz çizgi](#lider) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | — | — | ✗ | ✓ | ✓ |
 
-238 hücre: 159 destekli, 4 kısmi, 23 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
+238 hücre: 161 destekli, 3 kısmi, 22 yok, 52 uygulanamaz. ⊘ işaretli satırların türü hiçbir komutla oluşturulamadığı için ölçülemedi;
 nedeni o türün kanıt bölümündedir.
 
 ## Sessiz retler
@@ -88,7 +88,7 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
 | Kır | ✓ destekli | aradaki parça çıktı: 90.000 m → 60.300 m; sonuç: ÇOKLUÇİZGİ, ÇOKLUÇİZGİ |
 | Paralel (OFSET) | ✓ destekli | 2 paralel (ÇOKLUÇİZGİ), kaynak korundu |
-| Yuvarla | ◐ kısmi | 5 m yarıçapla yuvarlandı; yuvarlatma yayı kirişlerle (ÇOKLUÇİZGİ) |
+| Yuvarla | ✓ destekli | 5 m yarıçapla yuvarlandı; sonuç: YAYLIÇİZGİ |
 | Pah | ✓ destekli | 5 m pah kırıldı; sonuç: ÇOKLUÇİZGİ |
 | Uç uca | ✓ destekli | iki parça tek ÇOKLUÇİZGİ oldu, uzunluk korundu |
 | Ölç | ✓ destekli | çevre 90.000 m — analitik değerle aynı |
@@ -105,15 +105,15 @@ Yok: reddeden her komut reddini hata olarak döndürüyor.
 | Döndür | ✓ destekli | 90° döndü: en ve boy yer değiştirdi, çevre korundu |
 | Ölçekle | ✓ destekli | ×2: kapsam iki katına çıktı |
 | Aynala | ✓ destekli | dikey eksende aynalandı, tür ve çevre korundu |
-| Kes (BUDA) | ✓ destekli | kesildi: 108.540 m → 69.270 m; sonuç: YAYLIÇİZGİ |
-| Uzat | ✓ destekli | uzadı: 108.540 m → 118.540 m; sonuç: YAYLIÇİZGİ |
+| Kes (BUDA) | ✓ destekli | kesildi: 87.956 m → 58.978 m; sonuç: YAYLIÇİZGİ |
+| Uzat | ✓ destekli | uzadı: 87.956 m → 97.956 m; sonuç: YAYLIÇİZGİ |
 | Böl | ✓ destekli | 2 parça, toplam uzunluk korundu; sonuç: YAY, YAYLIÇİZGİ |
-| Kır | ✓ destekli | aradaki parça çıktı: 108.540 m → 72.719 m; sonuç: YAY, YAYLIÇİZGİ |
+| Kır | ✓ destekli | aradaki parça çıktı: 87.956 m → 58.929 m; sonuç: YAY, ÇOKLUÇİZGİ |
 | Paralel (OFSET) | ◐ kısmi | YAYLIÇİZGİ paraleli kirişlerle (ÇOKLUÇİZGİ) üretildi |
-| Yuvarla | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
-| Pah | ✗ yok | Nesne 1 bir eğri, yazı ya da nokta; köşe işlemleri yalnız çizgi ve alanlarda çalışır. |
+| Yuvarla | ✓ destekli | 5 m yarıçapla yuvarlandı; sonuç: YAYLIÇİZGİ |
+| Pah | ✗ yok | PAH iki düz kenarın buluştuğu köşeyi keser; bu köşenin bir kenarı yay. |
 | Uç uca | ✓ destekli | iki parça tek YAYLIÇİZGİ oldu, uzunluk korundu |
-| Ölç | ✓ destekli | çevre 108.540 m — analitik değerle aynı |
+| Ölç | ✓ destekli | çevre 87.956 m — analitik değerle aynı |
 | Proje dosyası | ✓ destekli | kaydet ve aç: tür, kapsam, çevre ve alan birebir aynı |
 
 ### <a id="alan"></a>Delikli alan

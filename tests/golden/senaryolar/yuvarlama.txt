@@ -1,0 +1,17 @@
+# Köşe gerçek yayla yuvarlanır, nesne aynı nesne kalır (TODOS O-2). Beklenen
+# değerler el hesabı: dik köşede teğet noktaları yarıçap kadar geride, merkez
+# iki kenardan yarıçap kadar içeride; alanın ve çizginin yayı ağaçta yaylı çoklu
+# çizginin yükünde (merkez, yarıçap, yön), halkada yalnız köşeler.
+KATMAN ad=PARSEL
+ALAN 0,0 40,0 40,30 0,30
+YUVARLA nesne=1 nokta=40,30 yaricap=5
+ALAN 50,0 70,0 70,15 50,15
+YUVARLA nesne=2 hepsi=evet yaricap=3
+ÇOKLUÇİZGİ 0,50 20,50 20,65 40,65
+YUVARLA nesne=3 hepsi=evet yaricap=4
+ALAN 80,0 100,0 100,10 80,10
+KENARTÜRÜ nesne=4 kenar=1 tur=yay nokta=90,-3
+YUVARLA nesne=4 nokta=100,0 yaricap=1.5
+PAH nesne=4 nokta=80,10 mesafe=1
+ALAN 110,0 120,0 120,4 110,4
+YUVARLA nesne=5 hepsi=evet yaricap=2

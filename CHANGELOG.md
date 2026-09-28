@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — köşe yuvarlama gerçek yay (O-2)
+
+- **Yuvarlanan köşe gerçek bir yaydır ve nesne tek nesne kalır.** Açık bir çizginin köşesi
+  yuvarlanınca çizgi tek bir yaylı çoklu çizgi olur; önceden iki çizgiye ve ayrı bir yaya
+  bölünüyordu. Bir alanın köşesi yuvarlanınca alan yaylı kenarlı bir alan olur; önceden
+  yay 16 kısa kenarla çiziliyor ve "gerçek yaydan N mm sapar" deniyordu. Kimlik, katman,
+  öznitelikler ve bağlı yazılar korunur; alan yayın kendisinden hesaplanır (40 × 30 m'lik
+  alanın bir köşesi 5 m ile yuvarlanınca 1194,63 m²).
+- Yaylı kenarlı bir alanın ya da yaylı çoklu çizginin **öteki köşeleri de** yuvarlanır;
+  kenarı yay olan köşede yeni yay iki kenara da teğettir. PAH, yay kenarının yanındaki
+  köşeyi nedenini söyleyerek reddeder; iki düz kenar arasındaki köşeyi keser.
+- **Önizleme gerçek yayı çizer:** imleç yarıçapı gösterirken yuvarlanmış köşe tuvalde
+  yayıyla görünür.
+- Yaylı kenarlı alan her yerde alandır: **Araçlar** işlemleri onu alan sayar (Köşe
+  Numarala uygular); **Uzunluk Yaz** yay kenarına kirişi değil **yayın boyunu**, yayın
+  ortasına yazar; kenarı sonradan yaya çevrilen bir kenarın bağlı yazısı da yayın boyunu
+  söyler; **Alanı Düzenle** yaylı kenarlı alanı atlar ve söyler.
+- İFRAZ, ALANİFRAZ ve TEVHİT yaylı kenarlı bir parseli bölerken ve birleştirirken yayı
+  **kirişe çevirmez**; yay merkezi ve yarıçapıyla kalır (geometri çekirdeğiyle). Düz
+  kenarlı parseller eskisi gibi işlenir; mevzuata dair hiçbir kural değişmedi.
+- DXF'e yuvarlanan köşe şişkinlikle (bulge) gider ve aynı yay olarak döner.
+
 ### Değişti — seçilen nesnenin araçları öne gelir, işe yaramayan araç soluk
 
 - **Seçilen nesnenin sekmesi öne gelir**: bir parsel seçince **Alan**, bir çizgi seçince

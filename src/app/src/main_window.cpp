@@ -8189,6 +8189,99 @@ int MainWindow::probeRealMouse()
             check(home == nullptr || bar->categoryByIndex(bar->currentIndex()) == home,
                   QStringLiteral("seçim bırakılınca Giriş sekmesine dönüldü"));
         }
+
+        // ---- 48. A ROUNDED CORNER IS AN ARC (TODOS O-2, the user's rule) ----
+        //
+        // The corner clicked, the radius SHOWN with the cursor — the preview
+        // is the arc the click makes — and the parcel is the same parcel with
+        // an arc edge: one object, its area the arc's own. Then every corner of
+        // a second parcel, and its lengths written, the arc's its arc's.
+        {
+            const auto on_screen = [this](core::Point2 world) {
+                const auto at = canvas_->view().to_screen(world);
+                return QPointF(at.x, at.y);
+            };
+            const auto click = [&onCanvas](QPointF at) {
+                onCanvas(QEvent::MouseMove, at, Qt::NoButton);
+                onCanvas(QEvent::MouseButtonPress, at, Qt::LeftButton);
+                onCanvas(QEvent::MouseButtonRelease, at, Qt::LeftButton);
+            };
+            runScriptLine(QStringLiteral("YENİ"));
+            endCommand();
+            for (const char* line :
+                 {"KATMAN ad=PARSEL",
+                  "ALAN 485300,4310200 485340,4310200 485340,4310230 485300,4310230",
+                  "ALAN 485350,4310200 485375,4310200 485375,4310220 485350,4310220"}) {
+                runScriptLine(QString::fromUtf8(line));
+                endCommand();
+            }
+            canvas_->zoomToBox(core::Box2{.min_x = 485'290'000,
+                                          .min_y = 4'310'190'000,
+                                          .max_x = 485'385'000,
+                                          .max_y = 4'310'240'000});
+            const core::Point2 corner{485'340'000, 4'310'230'000};
+            actFillet_->trigger();
+            QCoreApplication::processEvents();
+            click(on_screen(corner));
+            check(controller_->awaitingInput() &&
+                      controller_->promptKind() == command::ParamKind::Number,
+                  QStringLiteral("YUVARLA köşeye tıklanınca yarıçapı soruyor"));
+            // THE RADIUS SHOWN: six metres in along the north edge.
+            const QPointF shown = on_screen(core::Point2{485'334'000, 4'310'230'000});
+            onCanvas(QEvent::MouseMove, shown, Qt::NoButton);
+            QCoreApplication::processEvents();
+            shoot("yuvarla-onizleme");
+            click(shown);
+            QCoreApplication::processEvents();
+            const core::Document& doc = controller_->document();
+            const core::EntityId e    = doc.slot_of(static_cast<core::EntityKey>(1));
+            const auto path           = e != core::kNoEntity ? core::path_of(doc, e) : std::nullopt;
+            std::size_t arcs          = 0;
+            core::Mm radius           = 0;
+            core::Point2 centre{};
+            if (path)
+                for (const core::PathPiece& p : path->pieces)
+                    if (p.kind == core::PathPiece::Kind::Arc) {
+                        ++arcs;
+                        radius = p.radius;
+                        centre = p.centre;
+                    }
+            check(e != core::kNoEntity && doc.entities().kind[e] == core::kArcPolylineKind &&
+                      doc.live_entity_count() == 2 && arcs == 1,
+                  QStringLiteral("parsel aynı nesne, köşesi tek bir gerçek yay"));
+            // What the cursor showed, to the few centimetres a pixel is — and the
+            // centre the radius in from both edges, whatever the radius came to.
+            check(std::abs(radius - 6'000) <= 150 && centre.x == corner.x - radius &&
+                      centre.y == corner.y - radius,
+                  QStringLiteral("yarıçap imlecin gösterdiği, merkez iki kenardan yarıçap kadar "
+                                 "içeride: %1 mm")
+                      .arg(radius));
+            const double pi       = std::acos(-1.0);
+            const double r_m      = static_cast<double>(radius) / 1000.0;
+            const double expected = 1200.0 - (r_m * r_m - pi * r_m * r_m / 4.0);
+            check(std::abs(std::abs(static_cast<double>(doc.entity_area(e))) / 1e6 - expected) <
+                      1e-4,
+                  QStringLiteral("alan yayın kendisinden"));
+            endCommand();
+            controller_->clearSelection();
+            QCoreApplication::processEvents();
+            shoot("yuvarla-sonuc");
+
+            // EVERY CORNER, and the lengths: the arcs' own.
+            runScriptLine(QStringLiteral("YUVARLA nesne=2 hepsi=evet yaricap=3"));
+            endCommand();
+            runScriptLine(QStringLiteral("UZUNLUKYAZ nesneler=2 katman=OLCU"));
+            endCommand();
+            bool arc_length = false;
+            for (core::EntityId c = 0; c < doc.entities().size(); ++c)
+                if (doc.alive(c) && doc.texts().has(doc.entities().slot[c]) &&
+                    doc.texts().text(doc.entities().slot[c]) == "4,71 m")
+                    arc_length = true;
+            check(arc_length, QStringLiteral("yay kenarına yayın boyu yazıldı (4,71 m, 3 m'lik "
+                                             "çeyrek yay)"));
+            QCoreApplication::processEvents();
+            shoot("yuvarla-hepsi-uzunluk");
+        }
     }
 
     (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);

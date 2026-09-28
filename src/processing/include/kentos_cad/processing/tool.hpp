@@ -25,6 +25,7 @@
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/value.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
 #include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
@@ -347,7 +348,15 @@ public:
 
 /// Classifies one live entity of the document into the class a tool sees, or
 /// `None` for a kind no tool takes (a dimension, a leader, a block reference).
+/// An arc polyline is what its ring is — a closed one an area, an open one a
+/// line — exactly as the ribbon sees it (`command::target_of`): a parcel with a
+/// rounded corner is a parcel to KÖŞENUMARALA as to İFRAZ.
 Applies classify(const core::Document& doc, core::EntityId e);
+
+/// The bent edges of a snapshot — an arc polyline's arcs, from its payload —
+/// or none for every other kind. What a tool that measures or places along
+/// an edge reads, so a rounded corner is its arc (core::EdgeArcs).
+std::vector<core::ArcPolyline::Arc> edge_arcs(const InputEntity& e);
 
 /// The error a tool returns when it was stopped.
 core::Error cancelled();

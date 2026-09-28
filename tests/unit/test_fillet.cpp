@@ -13,6 +13,7 @@
 #include "kentos_cad/core/fillet.hpp"
 #include "kentos_cad/core/pick.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -432,7 +433,9 @@ TEST_CASE("C-06: aynı çoklu çizginin bitişik iki kenarına tıklamak o köş
     CHECK(s.prompt().rubber_shape == RubberShape::Corner); ///< the polyline's own corner
     REQUIRE(s.supply(Value::number(2.0)).ok());
     REQUIRE(r.bus.finish(s).ok());
-    CHECK_EQ(r.doc.live_entity_count(), 3u); ///< two legs and the arc, as the corner tool makes
+    // ONE OBJECT: the line with its corner an arc, as the corner tool makes it.
+    CHECK_EQ(r.doc.live_entity_count(), 1u);
+    CHECK(r.doc.entities().kind[r.doc.slot_of(EntityKey{1})] == kArcPolylineKind);
 }
 
 TEST_CASE("C-06: bütün köşeler — açık çizgi tek yaylı çoklu çizgi olur, kapalı alan alan kalır")
@@ -507,7 +510,12 @@ TEST_CASE("C-06: YUVARLA ve PAH sayfalarının örnekleri yazıldığı gibi ça
               .find("4 köşeye pah kırıldı.") != std::string::npos);
     CHECK(said({"ALAN 0,0 10,0 10,10 0,10", "ÇOKLUÇİZGİ 0,20 10,20 10,30 20,30",
                 "YUVARLA nesne=1 2 hepsi=evet yaricap=2"})
-              .find("6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu çizgi oldu.") !=
+              .find("6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu çizgi ve 1 alan "
+                    "yaylı kenarlı alan oldu.") != std::string::npos);
+    CHECK(said({"ALAN 0,0 10,0 10,10 0,10", "YUVARLA nesne=1 hepsi=evet yaricap=2"})
+              .find("4 köşe yuvarlatıldı; alan yaylı kenarlı bir alan oldu.") != std::string::npos);
+    CHECK(said({"ALAN 0,0 40,0 40,30 0,30", "YUVARLA nesne=1 nokta=0,0 yaricap=5"})
+              .find("Köşe yuvarlatıldı (yarıçap 5,000 m); alan yaylı kenarlı bir alan oldu.") !=
           std::string::npos);
     CHECK(said({"ALAN 0,0 10,0 10,10 0,10", "ALAN 20,0 30,0 30,10 20,10",
                 "PAH nesne=1 2 hepsi=evet mesafe=1"})
@@ -581,17 +589,20 @@ TEST_CASE("C-06: bütün köşeler seçili bütün nesnelere birden uygulanır; 
     CHECK(selected.journal.entries().back().args.to_json().dump() ==
           typed.journal.entries().back().args.to_json().dump());
 
-    // Rounded, the open run becomes one arc-polyline and the parcels stay faces.
+    // Rounded, the open run becomes one arc polyline and the parcel an area
+    // with arc edges — each still one object, its arcs true arcs (O-2).
     Rig round;
     round.run("ALAN 0,0 10,0 10,10 0,10");
     round.run("ÇOKLUÇİZGİ 0,20 10,20 10,30 20,30");
     round.run("YUVARLA nesne=1 2 hepsi=evet yaricap=2");
     CHECK_MESSAGE(round.echoed.find("6 köşe yuvarlatıldı (2 nesnede); 1 açık çizgi yaylı çoklu "
-                                    "çizgi oldu.") != std::string::npos,
+                                    "çizgi ve 1 alan yaylı kenarlı alan oldu.") !=
+                      std::string::npos,
                   round.echoed);
     const auto all = live(round.doc);
     REQUIRE_EQ(all.size(), 2u);
-    CHECK(all[0].first == kPolylineKind);
+    CHECK(all[0].first == kArcPolylineKind);
+    CHECK(all[0].second.closed);
     CHECK(all[1].first == kArcPolylineKind);
 
     // The preview names every object the click will cut.
@@ -635,22 +646,24 @@ TEST_CASE("C-06: içbükey köşe de iki kenarına teğet yuvarlanır; pah girin
     REQUIRE(after_e != kNoEntity);
     const auto path = path_of(round.doc, after_e);
     REQUIRE(path);
-    const std::vector<Point2> ring = path_vertices(*path);
-    bool on_a                      = false;
-    bool on_b                      = false;
-    for (const Point2 p : ring) {
-        on_a = on_a || p == Point2{12'000, 10'000};
-        on_b = on_b || p == Point2{10'000, 12'000};
-        // Every point of the drawn arc is the radius from the centre in the notch.
-        if (p.x >= 10'000 && p.x <= 12'000 && p.y >= 10'000 && p.y <= 12'000)
-            CHECK(std::abs(gap(p, {12'000, 12'000}) - 2'000.0) <= 1.5);
+    bool on_a = false;
+    bool on_b = false;
+    for (const PathPiece& p : path->pieces) {
+        on_a = on_a || p.from == Point2{12'000, 10'000} || p.to == Point2{12'000, 10'000};
+        on_b = on_b || p.from == Point2{10'000, 12'000} || p.to == Point2{10'000, 12'000};
+        // The arc's centre is out in the notch, the radius from both edges.
+        if (p.kind == PathPiece::Kind::Arc) {
+            CHECK(p.centre == Point2{12'000, 12'000});
+            CHECK_EQ(p.radius, Mm{2'000});
+        }
     }
     CHECK(on_a);
     CHECK(on_b);
-    const double rounded = std::abs(
-        static_cast<double>(round.doc.geometry().area_of(round.doc.entities().slot[after_e])));
-    const double gained = (rounded - before) / 1.0e6;
-    CHECK(std::abs(gained - (4.0 - 3.14159265358979)) < 0.05);
+    // THE AREA IS THE ARC'S (`entity_area`, the kind's own): exact, not the
+    // chords' — the parcel gains r² − πr²/4.
+    const double rounded = std::abs(static_cast<double>(round.doc.entity_area(after_e)));
+    const double gained  = (rounded - before) / 1.0e6;
+    CHECK(std::abs(gained - (4.0 - std::acos(-1.0))) < 1e-5);
 
     Rig cut;
     cut.run("ALAN 0,0 20,0 20,10 10,10 10,20 0,20");
@@ -717,8 +730,8 @@ TEST_CASE("C-06: önizleme ve çıktı aynıdır — iki nesne arasında ve büt
     CHECK(corner.value().every);
     const auto before = path_of(run.doc, run.doc.slot_of(EntityKey{1}));
     REQUIRE(before);
-    const CornerRun drawn = cut_every_corner(path_vertices(*before), false, Mm{3'000}, true);
-    REQUIRE(drawn.bent);
+    const PathCorners drawn = cut_every_path_corner(*before, Mm{3'000}, true);
+    REQUIRE_EQ(drawn.cut, 4u);
     REQUIRE(e.supply(Value::number(3.0)).ok());
     REQUIRE(run.bus.finish(e).ok());
     const auto written = live(run.doc);
@@ -741,4 +754,131 @@ TEST_CASE("C-06: ekransız bir istemcinin yayın tam üstüne tıklaması yayı 
     CHECK(pick_nearest(r.doc, {9'600, 2'800}, 0) == r.doc.slot_of(EntityKey{1}));
     CHECK(pick_nearest(r.doc, {39'600, 2'800}, 0) == r.doc.slot_of(EntityKey{2}));
     CHECK(pick_nearest(r.doc, {9'600, 2'900}, 0) == kNoEntity); ///< 1 cm off it is off it
+}
+
+// =============================================================================
+// O-2: a rounded corner is an arc, and a rounded parcel is still a parcel
+// =============================================================================
+
+TEST_CASE("O-2: yuvarlanmış parselin öteki köşesi de yuvarlanıyor; iki yay da gerçek yay")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("YUVARLA nesne=1 nokta=20,10 yaricap=2"); // an arc polyline now
+    r.run("YUVARLA nesne=1 nokta=0,0 yaricap=3");   // its corner too
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), 1u);
+    CHECK(all[0].first == kArcPolylineKind);
+    CHECK(all[0].second.closed);
+    std::vector<std::pair<Point2, Mm>> arcs;
+    for (const PathPiece& p : all[0].second.pieces)
+        if (p.kind == PathPiece::Kind::Arc) arcs.emplace_back(p.centre, p.radius);
+    REQUIRE_EQ(arcs.size(), 2u);
+    CHECK(std::find(arcs.begin(), arcs.end(), std::pair{Point2{18'000, 8'000}, Mm{2'000}}) !=
+          arcs.end());
+    CHECK(std::find(arcs.begin(), arcs.end(), std::pair{Point2{3'000, 3'000}, Mm{3'000}}) !=
+          arcs.end());
+    // EXACT AREA: 200 m² less both corners' r² − πr²/4.
+    const double pi       = std::acos(-1.0);
+    const double expected = 200.0 - (4.0 - pi) - (9.0 - pi * 9.0 / 4.0);
+    const EntityId e      = r.doc.slot_of(EntityKey{1});
+    CHECK(std::abs(std::abs(static_cast<double>(r.doc.entity_area(e))) / 1.0e6 - expected) < 1e-5);
+    // AND IT IS STILL THE PARCEL: one key, two undo steps back to the square.
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    const auto back = live(r.doc);
+    REQUIRE_EQ(back.size(), 1u);
+    CHECK(back[0].first == kPolylineKind);
+    CHECK(path_vertices(back[0].second).size() == 5u); // four corners, the seam repeated
+}
+
+TEST_CASE("O-2: yay kenarı ile düz kenarın köşesi ikisine teğet yayla yuvarlanıyor")
+{
+    // A parcel whose south edge bends out through (10, −3): the corner at
+    // (20, 0) is between that arc and the straight east edge.
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("KENARTÜRÜ nesne=1 kenar=1 tur=yay nokta=10,-3");
+    const auto bent = live(r.doc);
+    REQUIRE_EQ(bent.size(), 1u);
+    PathPiece edge;
+    for (const PathPiece& p : bent[0].second.pieces)
+        if (p.kind == PathPiece::Kind::Arc) edge = p;
+    REQUIRE(edge.radius > 0);
+
+    r.run("YUVARLA nesne=1 nokta=20,0 yaricap=1");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), 1u);
+    const CurvePath& face = all[0].second;
+    PathPiece fillet;
+    std::size_t arcs = 0;
+    for (const PathPiece& p : face.pieces)
+        if (p.kind == PathPiece::Kind::Arc) {
+            ++arcs;
+            if (p.radius == 1'000) fillet = p;
+        }
+    CHECK_EQ(arcs, 2u); // the bent edge, shortened, and the fillet
+    REQUIRE_EQ(fillet.radius, Mm{1'000});
+    // TANGENT TO BOTH: the east edge's line x = 20 is one radius from the centre,
+    // and the bent edge's circle is its radius plus or minus one.
+    CHECK(std::abs(static_cast<double>(20'000 - fillet.centre.x) - 1'000.0) <= 1.0);
+    const double to_edge = gap(fillet.centre, edge.centre);
+    CHECK((std::abs(to_edge - static_cast<double>(edge.radius - 1'000)) <= 1.5 ||
+           std::abs(to_edge - static_cast<double>(edge.radius + 1'000)) <= 1.5));
+    // The bent edge kept its circle.
+    for (const PathPiece& p : face.pieces)
+        if (p.kind == PathPiece::Kind::Arc && p.radius != 1'000) {
+            CHECK(p.centre == edge.centre);
+            CHECK_EQ(p.radius, edge.radius);
+        }
+    // The path runs on without a gap.
+    for (std::size_t i = 0; i < face.pieces.size(); ++i)
+        CHECK(face.pieces[i].to == face.pieces[(i + 1) % face.pieces.size()].from);
+}
+
+TEST_CASE("O-2: yay kenarının yanında PAH sebebini söyleyerek reddediliyor; teğet köşe köşe değil")
+{
+    Rig r;
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("KENARTÜRÜ nesne=1 kenar=1 tur=yay nokta=10,-3");
+    const std::uint64_t before = r.doc.content_hash();
+    auto chamfer = r.bus.execute_line("PAH nesne=1 nokta=20,0 mesafe=1", Origin::Test);
+    REQUIRE_FALSE(chamfer.ok());
+    CHECK(chamfer.error().message.find("bir kenarı yay") != std::string::npos);
+    CHECK_EQ(r.doc.content_hash(), before);
+
+    // A tangent join — where a fillet ran into its edge — is no corner: every
+    // corner of a rounded square rounded again finds only the four arcs' ends,
+    // and passes over all eight.
+    Rig again;
+    again.run("ALAN 0,0 10,0 10,10 0,10");
+    again.run("YUVARLA nesne=1 hepsi=evet yaricap=2");
+    const std::uint64_t rounded = again.doc.content_hash();
+    auto twice = again.bus.execute_line("YUVARLA nesne=1 hepsi=evet yaricap=1", Origin::Test);
+    REQUIRE_FALSE(twice.ok());
+    CHECK(twice.error().message.find("hiçbir köşeye sığmıyor") != std::string::npos);
+    CHECK_EQ(again.doc.content_hash(), rounded);
+}
+
+TEST_CASE("O-2: yuvarlanan parselin kimliği ve özniteliği kalıyor, tek geri alma adımı")
+{
+    Rig r;
+    r.run("KATMAN ad=PARSEL");
+    r.run("ALAN 0,0 20,0 20,10 0,10");
+    r.run("SÜTUN kimlik=ada_no tur=metin");
+    r.run("ÖZNİTELİK ad=ada_no nesne=1 deger=1284");
+    const std::size_t before = r.doc.live_entity_count();
+    const std::size_t steps  = r.undo.undo_depth();
+    r.run("YUVARLA nesne=1 nokta=20,10 yaricap=2");
+    CHECK_EQ(r.doc.live_entity_count(), before);
+    const EntityId e = r.doc.slot_of(EntityKey{1});
+    REQUIRE(e != kNoEntity);
+    CHECK(r.doc.entities().kind[e] == kArcPolylineKind);
+    bool kept = false;
+    for (std::size_t c = 0; c < r.doc.attributes().columns(); ++c) {
+        auto v = r.doc.attribute(static_cast<AttrId>(c), e);
+        kept   = kept || (v && v.value().present);
+    }
+    CHECK(kept);
+    CHECK_EQ(r.undo.undo_depth(), steps + 1); // ONE step for the rounding
 }

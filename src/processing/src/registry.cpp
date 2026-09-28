@@ -183,8 +183,10 @@ InputEntity snapshot(const core::Document& doc, core::EntityId e, Applies cls)
     }
     // A CURVE'S DRAWN FORM, from the kind's own outline — the code the canvas
     // draws it with — so a tool that measures or buffers what is on the sheet
-    // reads the same vertices the eye does.
-    if (cls == Applies::Curves) {
+    // reads the same vertices the eye does. An arc polyline's too, although it
+    // is a line or an area to a tool: its rings are its corners, and a buffer
+    // of those would cut every rounded corner off by its chord.
+    if (cls == Applies::Curves || ents.kind[e] == core::kArcPolylineKind) {
         core::EmitBuffer buf;
         if (core::curve_outline(ents.kind[e], geom, ents.slot[e], buf))
             for (std::size_t r = 0; r < buf.run_total(); ++r) {

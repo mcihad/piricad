@@ -1,0 +1,67 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 5
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman PARSEL gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=5
+nesne 0 katman=PARSEL stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000100000002000000b888000000000000a861000000000000881300000000000001
+  halka rol=1 parca=0 tepe=5
+    0 0
+    40000 0
+    40000 25000
+    35000 30000
+    0 30000
+  alan_mm2 1194634954  cevre_mm 137854
+nesne 1 katman=PARSEL stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000400000001000000b805010000000000b80b000000000000b80b0000000000000103000000b805010000000000e02e000000000000b80b000000000000010500000008cf000000000000e02e000000000000b80b000000000000010700000008cf000000000000b80b000000000000b80b00000000000001
+  halka rol=1 parca=0 tepe=8
+    53000 0
+    67000 0
+    70000 3000
+    70000 12000
+    67000 15000
+    53000 15000
+    50000 12000
+    50000 3000
+  alan_mm2 292274332  cevre_mm 64850
+nesne 2 katman=PARSEL stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000200000001000000803e000000000000f0d2000000000000a00f0000000000000103000000c05d00000000000048ee000000000000a00f00000000000000
+  halka rol=0 parca=0 tepe=6
+    0 50000
+    16000 50000
+    20000 54000
+    20000 61000
+    24000 65000
+    40000 65000
+  alan_mm2 0  cevre_mm 51566
+nesne 3 katman=PARSEL stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000200000000000000905f0100000000003f3b000000000000f7460000000000000101000000c4800100000000003e03000000000000dc0500000000000001
+  halka rol=1 parca=0 tepe=6
+    80000 0
+    99265 -460
+    100000 830
+    100000 10000
+    81000 10000
+    80000 9000
+  alan_mm2 240101052  cevre_mm 60450
+nesne 4 katman=PARSEL stil=0 halka=1 tur=6 yuk=010000000000000000000000000000000400000001000000f0cc010000000000d007000000000000d0070000000000000102000000f0cc010000000000d007000000000000d007000000000000010400000080b5010000000000d007000000000000d007000000000000010500000080b5010000000000d007000000000000d00700000000000001
+  halka rol=1 parca=0 tepe=6
+    112000 0
+    118000 0
+    120000 2000
+    118000 4000
+    112000 4000
+    110000 2000
+  alan_mm2 36566372  cevre_mm 24566
+kapsam 0 -2995 120000 65000
+icerik-ozeti 6c3ad5ba2374e5a3
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"PARSEL"},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":2,"cmd":"core.area","args":{"noktalar":[[0,0],[40000,0],[40000,30000],[0,30000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":3,"cmd":"core.fillet","args":{"nesne":[1],"nokta":[40000,30000],"yaricap":5.0},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":4,"cmd":"core.area","args":{"noktalar":[[50000,0],[70000,0],[70000,15000],[50000,15000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":5,"cmd":"core.fillet","args":{"nesne":[2],"yaricap":3.0,"hepsi":true},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":6,"cmd":"core.polyline","args":{"noktalar":[[0,50000],[20000,50000],[20000,65000],[40000,65000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":7,"cmd":"core.fillet","args":{"nesne":[3],"yaricap":4.0,"hepsi":true},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":8,"cmd":"core.area","args":{"noktalar":[[80000,0],[100000,0],[100000,10000],[80000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":9,"cmd":"core.edge_kind","args":{"nesne":[4],"kenar":1,"tur":"yay","nokta":[90000,-3000]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":10,"cmd":"core.fillet","args":{"nesne":[4],"nokta":[100000,0],"yaricap":1.5},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":11,"cmd":"core.chamfer","args":{"nesne":[4],"nokta":[80000,10000],"mesafe":1.0},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":12,"cmd":"core.area","args":{"noktalar":[[110000,0],[120000,0],[120000,4000],[110000,4000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
+  {"seq":13,"cmd":"core.fillet","args":{"nesne":[5],"yaricap":2.0,"hepsi":true},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
