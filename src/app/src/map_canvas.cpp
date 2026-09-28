@@ -453,13 +453,20 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     // is "which ones", plural, and a click that replaced the answer so far made
     // BİRLEŞTİR — which needs two — impossible to answer by pointing: the second
     // object threw the first away. Ctrl still removes; Shift adds as it did.
-    if (mods.testFlag(Qt::ShiftModifier) || (picking && !mods.testFlag(Qt::ControlModifier)))
+    // A QUESTION FOR ONE OBJECT is answered by the click that names it
+    // (`Prompt::pick_most`): the pick REPLACES rather than adds, and it is
+    // handed over at once — the same `SEÇ` line, then the same ids Enter sends.
+    const bool one = picking && !is_box && controller_.promptPickMost() == 1 &&
+                     !mods.testFlag(Qt::ControlModifier);
+    if (!one &&
+        (mods.testFlag(Qt::ShiftModifier) || (picking && !mods.testFlag(Qt::ControlModifier))))
         args.set("islem", command::Value::text("EKLE"));
     else if (mods.testFlag(Qt::ControlModifier))
         args.set("islem", command::Value::text("ÇIKAR"));
 
     controller_.runInvocation(
         command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+    if (one && !controller_.bus().selection().keys().empty()) controller_.supplyPickedObjects();
 }
 
 void MapCanvas::buildSelection()

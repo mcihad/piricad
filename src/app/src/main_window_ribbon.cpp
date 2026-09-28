@@ -48,10 +48,13 @@
 #include <QDockWidget>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QHash>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
 #include <QMenu>
+#include <QPainter>
 #include <QSet>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -61,8 +64,10 @@
 #include <QWidgetAction>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <optional>
+#include <utility>
 
 namespace kentos::app {
 
@@ -412,59 +417,71 @@ void MainWindow::buildRibbon()
     //
     // A method a hand needs twice a year is under its family's arrow, where it
     // costs no room and is still one click away.
-    auto* rectangleRotated = methodTool(
-        Glyph::Rectangle, tr("Dikdörtgen — döndürülmüş"), QStringLiteral("DİKDÖRTGEN yontem=3n"),
-        tr("Bir kenarın iki köşesi ve yüksekliği veren üçüncü nokta"));
-    auto* regularOutside =
-        methodTool(Glyph::Polygon, tr("Çokgen — dıştan"), QStringLiteral("ÇOKGEN yontem=dis"),
-                   tr("Kenarlar çembere teğet; yarıçap iç yarıçaptır"));
-    auto* regularSide =
-        methodTool(Glyph::Polygon, tr("Çokgen — kenardan"), QStringLiteral("ÇOKGEN yontem=kenar"),
-                   tr("Kenar uzunluğundan; yarıçap sorulmaz"));
-    auto* circleTwo =
-        methodTool(Glyph::Circle, tr("Daire — çapın iki ucu"), QStringLiteral("DAİRE yontem=2n"),
-                   tr("İki nokta çapı verir; merkez ortalarıdır"));
-    auto* circleThree =
-        methodTool(Glyph::Circle, tr("Daire — üç nokta"), QStringLiteral("DAİRE yontem=3n"),
-                   tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde"));
-    auto* circleTangent = methodTool(Glyph::Circle, tr("Daire — iki doğruya teğet"),
-                                     QStringLiteral("DAİRE yontem=ttr"),
-                                     tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
-    auto* ellipseAxis   = methodTool(Glyph::Ellipse, tr("Elips — eksenin iki ucu"),
-                                     QStringLiteral("ELİPS yontem=eksen"),
-                                     tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
-                                          "verir"));
-    auto* arcThree = methodTool(Glyph::Arc, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
-                                tr("Başlangıç, üzerinden geçtiği nokta ve bitiş"));
-    auto* arcAngle =
-        methodTool(Glyph::Arc, tr("Yay — başlangıç, merkez, açı"), QStringLiteral("YAY yontem=bma"),
-                   tr("Süpürme açısı oturumun birim ve kuralıyla okunur"));
-    auto* arcRadius = methodTool(Glyph::Arc, tr("Yay — başlangıç, bitiş, yarıçap"),
+    auto* rectangleRotated =
+        methodTool(Glyph::RectangleRotated, tr("Dikdörtgen — döndürülmüş"),
+                   QStringLiteral("DİKDÖRTGEN yontem=3n"),
+                   tr("Bir kenarın iki köşesi ve yüksekliği veren üçüncü nokta"));
+    auto* regularOutside = methodTool(Glyph::PolygonOutside, tr("Çokgen — dıştan"),
+                                      QStringLiteral("ÇOKGEN yontem=dis"),
+                                      tr("Kenarlar çembere teğet; yarıçap iç yarıçaptır"));
+    auto* regularSide    = methodTool(Glyph::PolygonSide, tr("Çokgen — kenardan"),
+                                      QStringLiteral("ÇOKGEN yontem=kenar"),
+                                      tr("Kenar uzunluğundan; yarıçap sorulmaz"));
+    auto* circleTwo      = methodTool(Glyph::CircleTwoPoint, tr("Daire — çapın iki ucu"),
+                                      QStringLiteral("DAİRE yontem=2n"),
+                                      tr("İki nokta çapı verir; merkez ortalarıdır"));
+    auto* circleThree    = methodTool(Glyph::CircleThreePoint, tr("Daire — üç nokta"),
+                                      QStringLiteral("DAİRE yontem=3n"),
+                                      tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde"));
+    auto* circleTangent  = methodTool(Glyph::CircleTangent, tr("Daire — iki doğruya teğet"),
+                                      QStringLiteral("DAİRE yontem=ttr"),
+                                      tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
+    auto* ellipseAxis    = methodTool(Glyph::EllipseAxis, tr("Elips — eksenin iki ucu"),
+                                      QStringLiteral("ELİPS yontem=eksen"),
+                                      tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
+                                            "verir"));
+    auto* arcThree =
+        methodTool(Glyph::ArcThreePoint, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
+                   tr("Başlangıç, üzerinden geçtiği nokta ve bitiş"));
+    auto* arcAngle = methodTool(Glyph::ArcCentreAngle, tr("Yay — başlangıç, merkez, açı"),
+                                QStringLiteral("YAY yontem=bma"),
+                                tr("Süpürme açısı oturumun birim ve kuralıyla okunur"));
+    auto* arcRadius = methodTool(Glyph::ArcEndsRadius, tr("Yay — başlangıç, bitiş, yarıçap"),
                                  QStringLiteral("YAY yontem=bby"),
                                  tr("İki çözüm vardır; yon=sol|sag hangisi olduğunu söyler"));
     auto* arcOn =
-        methodTool(Glyph::Arc, tr("Yay — teğet devam"), QStringLiteral("YAY yontem=devam"),
+        methodTool(Glyph::ArcContinue, tr("Yay — teğet devam"), QStringLiteral("YAY yontem=devam"),
                    tr("Son çizilen çizginin ya da yayın ucundan teğet devam eder"));
     auto* crossDistances =
-        methodTool(Glyph::PointIntersect, tr("Kesişim — iki mesafeden"),
+        methodTool(Glyph::IntersectDistances, tr("Kesişim — iki mesafeden"),
                    QStringLiteral("KESİŞİMNOKTA yontem=mesafe"),
                    tr("İki bilinen noktadan ölçülen iki uzaklık; iki çözümden birini "
                       "gösterirsiniz"));
-    auto* crossLines    = methodTool(Glyph::PointIntersect, tr("Kesişim — iki doğrudan"),
+    auto* crossLines    = methodTool(Glyph::IntersectLines, tr("Kesişim — iki doğrudan"),
                                      QStringLiteral("KESİŞİMNOKTA yontem=dogru"),
                                      tr("İki doğrunun her birinden iki nokta"));
-    auto* alongDistance = methodTool(Glyph::PointAlong, tr("Ara Nokta — mesafeden"),
+    auto* alongDistance = methodTool(Glyph::AlongDistance, tr("Ara Nokta — mesafeden"),
                                      QStringLiteral("ARANOKTA yontem=mesafe"),
                                      tr("Oran değil, ilk noktadan metre cinsinden uzaklık"));
-    auto* areaByCorners = methodTool(Glyph::MeasureArea, tr("Alan Ölç — köşelerden"),
+    auto* areaByCorners = methodTool(Glyph::MeasureAreaCorners, tr("Alan Ölç — köşelerden"),
                                      QStringLiteral("ALANÖLÇ yontem=nokta"),
                                      tr("Köşelere tıklayın; alan ve çevre imleçle birlikte "
                                         "yazılır, Enter bitirir"));
     // Corners clicked, not objects picked: a selected line does not grey it.
     areaByCorners->setProperty(kIgnoresSelectionProperty, true);
-    auto* guide = commandAction(Glyph::Guide, tr("Cetvel Kılavuzu"), QStringLiteral("KILAVUZ"),
-                                tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
-                                   "kısaltma: KLV"));
+    // THE GUIDES A HAND PLACES: through the point clicked, across or down —
+    // the same guide a drag off the ruler leaves — at an angle, and the list.
+    auto* guideAcross =
+        methodTool(Glyph::GuideHorizontal, tr("Yatay Kılavuz"), QStringLiteral("KILAVUZ yon=yatay"),
+                   tr("Tıkladığınız noktadan geçen yatay kılavuz; cetvelden "
+                      "sürüklemek de koyar"));
+    auto* guideDown =
+        methodTool(Glyph::GuideVertical, tr("Düşey Kılavuz"), QStringLiteral("KILAVUZ yon=düşey"),
+                   tr("Tıkladığınız noktadan geçen düşey kılavuz"));
+    auto* guideList =
+        commandAction(Glyph::GuideList, tr("Kılavuzları Listele"), QStringLiteral("KILAVUZ"),
+                      tr("KILAVUZ — çizimdeki kılavuzları listeler  ·  kısaltma: "
+                         "KLV"));
 
     // EVERY DIMENSION TYPE ITS OWN TOOL (TODOS C-17). The one Ölçü button drew
     // an aligned dimension and nothing else: a radius, an angle or an ordinate
@@ -533,8 +550,9 @@ void MainWindow::buildRibbon()
            Size::Large, tr("Dikdörtgen"));
     family(sketch, {actEllipse_, ellipseAxis}, Size::Icon);
     family(sketch, {actPoint_, actPerpOffset_, actSurvey_, actIntersect_, actAlong_}, Size::Icon);
-    icon(sketch, actSpline_);
-    family(sketch, {actHatch_, actHatchEdit_, actBoundary_}, Size::Icon);
+    // THE SPLINE AND THE HATCH are on the drawing tab, where drawing has its
+    // room: here they cost the home tab the width it needs to fit a 1440 px
+    // window.
     launcher(sketch, tr("Çizim ve yakalama ayarları"),
              [this] { openSettingsSection(QStringLiteral("Çizim ve Yakalama")); });
 
@@ -557,6 +575,9 @@ void MainWindow::buildRibbon()
     icon(change, actErase_);
     icon(change, actExplode_);
     icon(change, actOffset_);
+    // STİL KOPYALA IS AN EDIT, where Netcad keeps its Biçim Boya: beside the
+    // other verbs, not a large button beside the colour boxes.
+    icon(change, actStyleCopy_);
 
     SARibbonPanel* note = home->addPanel(tr("Açıklama"));
     family(note, {actText_, actTextEdit_}, Size::Large, tr("Metin"));
@@ -579,7 +600,7 @@ void MainWindow::buildRibbon()
     connect(layersPanel, &QAction::triggered, this, &MainWindow::showLayerPanel);
     large(layers, layersPanel);
     ribbonLive_->layer = new RibbonLayerBox(layers);
-    ribbonLive_->layer->setFixedWidth(188);
+    ribbonLive_->layer->setFixedWidth(160);
     ribbonLive_->layer->setToolTip(
         tr("Seçim yokken: yeni nesnelerin çizileceği etkin katman (KATMAN ad=…).\n"
            "Seçim varken: seçilen nesnelerin katmanı; başka bir katman seçmek onları oraya "
@@ -599,18 +620,17 @@ void MainWindow::buildRibbon()
     // THE COLOURS IN HAND AND HOW TO BORROW A LOOK: the stroke and the fill of
     // the selection (or of the active layer), each opening RENK's swatches.
     SARibbonPanel* looks = home->addPanel(tr("Özellikler"));
-    large(looks, actStyleCopy_);
-    ribbonLive_->stroke = new RibbonColourBox(looks);
+    ribbonLive_->stroke  = new RibbonColourBox(looks);
     ribbonLive_->stroke->setObjectName(QStringLiteral("ribbonStrokeBox"));
     ribbonLive_->stroke->setAccessibleName(tr("Çizgi rengi"));
-    ribbonLive_->stroke->setFixedWidth(138);
+    ribbonLive_->stroke->setFixedWidth(118);
     connect(ribbonLive_->stroke, &RibbonColourBox::menuRequested, this,
             [this] { openColourMenu(0); });
     looks->addMediumWidget(captioned(looks, tr("Çizgi"), ribbonLive_->stroke, 34));
     ribbonLive_->fill = new RibbonColourBox(looks);
     ribbonLive_->fill->setObjectName(QStringLiteral("ribbonFillBox"));
     ribbonLive_->fill->setAccessibleName(tr("Dolgu rengi"));
-    ribbonLive_->fill->setFixedWidth(138);
+    ribbonLive_->fill->setFixedWidth(118);
     connect(ribbonLive_->fill, &RibbonColourBox::menuRequested, this,
             [this] { openColourMenu(1); });
     looks->addMediumWidget(captioned(looks, tr("Dolgu"), ribbonLive_->fill, 34));
@@ -636,7 +656,7 @@ void MainWindow::buildRibbon()
     large(lines, actLine_);
     large(lines, actPolyline_);
     small(lines, actSpline_);
-    family(lines, {guide, actAngledGuide_}, Size::Small, tr("Kılavuz"));
+    family(lines, {guideAcross, guideDown, actAngledGuide_, guideList}, Size::Small, tr("Kılavuz"));
 
     SARibbonPanel* shapes = drawTab->addPanel(tr("Şekil"));
     family(shapes, {actCircle_, circleTwo, circleThree, circleTangent}, Size::Large, tr("Daire"));
@@ -683,18 +703,18 @@ void MainWindow::buildRibbon()
         group->setGridMinimumWidth(58);
         group->setGridMaximumWidth(58);
         gallery->setCurrentViewGroup(group);
-        // Four patterns show; the arrow under the scroll buttons opens them all.
-        gallery->setFixedWidth(4 * 58 + 20);
+        // Three patterns show; the arrow under the scroll buttons opens them all.
+        gallery->setFixedWidth((3 * 58) + 20);
     }
     small(fills, actHatchEdit_);
     small(fills, actBoundary_);
 
+    // EXPLODE is the modify tab's and the external reference the map tab's;
+    // here each cost the tab a column it did not have room for.
     SARibbonPanel* blocks = drawTab->addPanel(tr("Blok"));
     large(blocks, actInsert_);
     small(blocks, actBlockLibrary_);
     small(blocks, actBlock_);
-    small(blocks, actExplode_);
-    small(blocks, actXref_);
     // THE THREE WAYS TO CLIP, one split button: the face runs the one used last.
     family(blocks, {actBlockClip_, actBlockClipPolygon_, actBlockClipObject_}, Size::Small,
            tr("Kırp"));
@@ -912,7 +932,7 @@ void MainWindow::buildRibbon()
         const auto& spec = each->spec();
         tools->addAction(processingAction(QString::fromStdString(spec.id), QString()));
     }
-    menuButton(process, tools, Glyph::Function, true);
+    menuButton(process, tools, Glyph::Toolbox, true);
     auto* showTools = new QAction(tr("Araçlar Paneli"), this);
     showTools->setData(static_cast<int>(Glyph::Tune));
     showTools->setStatusTip(tr("Sağ paneldeki Araçlar sekmesini açar"));
@@ -1038,7 +1058,25 @@ void MainWindow::buildRibbon()
     printHead->setMenu(printMenu_);
     connect(printHead, &QAction::triggered, actPrint_, &QAction::trigger);
     sheets->addLargeAction(printHead, QToolButton::MenuButtonPopup);
-    menuButton(sheets, layoutMenu_, Glyph::Layout, true);
+    // THE SHEETS, AS ONE WORD ON THE BUTTON: "Çıktı Yerleşimleri" broke over the
+    // button's two lines as "Çıktı / erleşimle", its first letter lost under the
+    // arrow. A menu of its own, filled from the layout menu each time it opens,
+    // for the reason the quick access printer has one (the layout menu's own
+    // action would be shown twice).
+    auto* layoutsHere = new QMenu(this);
+    layoutsHere->setObjectName(QStringLiteral("ribbonLayoutMenu"));
+    connect(layoutsHere, &QMenu::aboutToShow, this, [this, layoutsHere] {
+        rebuildLayoutMenu();
+        layoutsHere->clear();
+        layoutsHere->addActions(layoutMenu_->actions());
+    });
+    auto* layoutsHead = new QAction(tr("Yerleşimler"), this);
+    layoutsHead->setObjectName(QStringLiteral("ribbonLayouts"));
+    layoutsHead->setData(static_cast<int>(Glyph::Layout));
+    layoutsHead->setToolTip(tr("Çıktı yerleşimleri: çizimin başlıklı, lejantlı pafta düzenleri, "
+                               "yeni bir yerleşim, yönetici ve şablonlar"));
+    layoutsHead->setMenu(layoutsHere);
+    sheets->addLargeAction(layoutsHead, QToolButton::InstantPopup);
     // THE PLOT SCALE, where a sheet is set up: the denominator every paper
     // measure is multiplied by (`AYAR plan_ölçeği`).
     ribbonLive_->plotScale = new ComboBox(sheets);
@@ -1575,14 +1613,10 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     // typed.
     SARibbonCategory* area =
         context(RibbonContext::Area, tr("Alan Araçları"), tr("Alan"), t.accent);
-    // Straight to the command, on the selection with the tool's defaults.
+    // Straight to the command, on the selection with the tool's defaults —
+    // which is what every tool that needs no figure does now.
     const auto direct = [this](const char* id, const QString& word) {
-        QAction* a = processingAction(QString::fromLatin1(id), word);
-        disconnect(a, &QAction::triggered, nullptr, nullptr);
-        const QString line = a->property(kToolCommand).toString();
-        connect(a, &QAction::triggered, this,
-                [this, line] { controller_->runLine(line, command::Origin::Gui); });
-        return a;
+        return processingAction(QString::fromLatin1(id), word);
     };
     SARibbonPanel* areaRead = area->addPanel(tr("Ölç"));
     areaRead->addLargeAction(actMeasureArea_);
@@ -1778,13 +1812,30 @@ QAction* MainWindow::processingAction(const QString& id, const QString& word)
         return action;
     }
     const auto& spec = found->spec();
+    // A TOOL THAT NEEDS A FIGURE FIRST — TAMPON's distance, ALANDÜZENLE's
+    // target area: a number with no default — opens where the figure is typed
+    // and says so with `…`. EVERY OTHER TOOL RUNS WHEN PRESSED, on the
+    // selection or on the objects it then asks for, with its defaults; its
+    // settings are one ↘ away on the panel. It used to open the panel always,
+    // which from the chair was a button that did nothing on the drawing — the
+    // user's "çalışmayan araçlar".
+    const bool needs_figure = std::ranges::any_of(spec.params, [](const processing::ToolParam& p) {
+        return p.kind == command::ParamKind::Number && p.fallback.empty();
+    });
     // THE TOOL'S OWN TITLE, unless the ribbon row is too short for it: a menu
     // row may say "Kenar uzunluklarını yaz", a ribbon row says "Uzunluk Yaz".
-    action->setText(word.isEmpty() ? turkish_title(QString::fromStdString(spec.title)) : word);
+    QString label = word.isEmpty() ? turkish_title(QString::fromStdString(spec.title)) : word;
+    if (needs_figure && !label.endsWith(QStringLiteral("…"))) label += QStringLiteral("…");
+    action->setText(label);
     action->setToolTip(QString::fromStdString(spec.summary));
     action->setStatusTip(QString::fromStdString(spec.summary));
-    action->setProperty(kToolCommand, QString::fromStdString(spec.names.front()));
-    connect(action, &QAction::triggered, this, [this, id] { showToolsPanel(id); });
+    const QString line = QString::fromStdString(spec.names.front());
+    action->setProperty(kToolCommand, line);
+    if (needs_figure)
+        connect(action, &QAction::triggered, this, [this, id] { showToolsPanel(id); });
+    else
+        connect(action, &QAction::triggered, this,
+                [this, line] { controller_->runLine(line, command::Origin::Gui); });
     return action;
 }
 
@@ -2207,7 +2258,15 @@ void MainWindow::gatherTargetTools()
         if (word.isEmpty() || action->property(kIgnoresSelectionProperty).toBool()) continue;
         const command::CommandSpec* spec = controller_->registry().resolve(word.toStdString());
         if (spec == nullptr) continue;
-        TargetTool one{.action = action, .targets = spec->targets};
+        // THE METHOD THE BUTTON SENDS narrows what it takes (`verb_targets`):
+        // "Böl — eşit parçaya" cuts a line, never an area.
+        command::Args given;
+        const QString line = action->property(kToolCommand).toString();
+        for (const QString& token : line.split(QLatin1Char(' '), Qt::SkipEmptyParts).mid(1))
+            if (const qsizetype eq = token.indexOf(QLatin1Char('=')); eq > 0)
+                given.set(token.left(eq).toStdString(),
+                          command::Value::text(token.mid(eq + 1).toStdString()));
+        TargetTool one{.action = action, .targets = command::targets_of(*spec, given)};
         if (const processing::ProcessingTool* tool = processing::find_tool(spec->id);
             tool != nullptr)
             one.applies = static_cast<std::uint8_t>(tool->spec().applies);
@@ -2450,6 +2509,182 @@ QList<QToolButton*> MainWindow::ribbonButtons() const
         for (SARibbonToolButton* button : tab->findChildren<SARibbonToolButton*>())
             if (button->defaultAction() != nullptr) out << button;
     return out;
+}
+
+// =============================================================================
+// The ribbon, photographed
+// =============================================================================
+
+int MainWindow::probeRibbonSheet()
+{
+    const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_RIBBON_SHEET"));
+    QDir().mkpath(into);
+    SARibbonBar* bar = ribbonBar();
+    if (bar == nullptr) return 1;
+    const auto settle = [] {
+        for (int i = 0; i < 4; ++i)
+            QCoreApplication::processEvents();
+    };
+    const auto save = [&into](const QImage& image, const QString& name) {
+        const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
+        (void)std::fprintf(image.save(path) ? stdout : stderr, "[şerit] %s\n", qPrintable(path));
+    };
+    const auto file_word = [](QString word) {
+        word = word.toLower();
+        for (QChar& c : word)
+            if (!c.isLetterOrNumber()) c = QLatin1Char('-');
+        return word;
+    };
+
+    // ONE OF EACH KIND, so every editor tab can be brought up.
+    runScriptLine(QStringLiteral("YENİ"));
+    endCommand();
+    for (const char* line : {
+             "KATMAN ad=PARSEL",
+             "ALAN 0,0 30,0 30,20 0,20",
+             "ÇOKLUÇİZGİ 40,0 55,0 55,15",
+             "DAİRE 70,10 76,10",
+             "METİN 5,10 \"1234/7\" 2000",
+             "TARAMA nesneler=1",
+             "ÖLÇÜ 0,-5 30,-5 15,-9",
+         }) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+    settle();
+
+    // ---- every tab, in the order the bar has them ----
+    int n = 0;
+    for (SARibbonCategory* tab : bar->categoryPages(false)) {
+        if (tab == nullptr || tab->isContextCategory()) continue;
+        bar->raiseCategory(tab);
+        settle();
+        // THE WIDTH IT ASKS FOR, panel by panel: what decides whether it fits.
+        int wanted = 0;
+        QStringList widths;
+        for (const SARibbonPanel* panel : tab->panelList()) {
+            const int w = panel->sizeHint().width();
+            wanted += w;
+            widths << QStringLiteral("%1 %2").arg(panel->panelName()).arg(w);
+        }
+        (void)std::fprintf(stdout, "[şerit] genişlik %s: %d (%s)\n",
+                           qPrintable(tab->categoryName()), wanted,
+                           qPrintable(widths.join(QStringLiteral(", "))));
+        save(bar->grab().toImage(), QStringLiteral("%1-%2")
+                                        .arg(++n, 2, 10, QLatin1Char('0'))
+                                        .arg(file_word(tab->categoryName())));
+    }
+
+    // ---- every editor tab, raised by an object of its kind ----
+    const std::array<std::pair<const char*, const char*>, 6> picks{{
+        {"1", "alan"},
+        {"2", "cizgi"},
+        {"3", "egri"},
+        {"4", "yazi"},
+        {"5", "tarama"},
+        {"6", "olcu"},
+    }};
+    for (const auto& [key, word] : picks) {
+        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=") + QString::fromLatin1(key));
+        endCommand();
+        settle();
+        save(bar->grab().toImage(), QStringLiteral("baglam-") + QString::fromLatin1(word));
+    }
+    controller_->clearSelection();
+    settle();
+
+    // ---- every picture, with its name and its command ----
+    struct Entry
+    {
+        const QAction* action{nullptr};
+        QString label;
+        QString command;
+        int glyph{-1};
+    };
+
+    std::vector<Entry> entries;
+    QSet<const QAction*> seen;
+    const auto take = [&](const QAction* a) {
+        if (a == nullptr || seen.contains(a) || a->text().isEmpty()) return;
+        seen.insert(a);
+        entries.push_back(Entry{.action  = a,
+                                .label   = QString(a->text()).remove(QLatin1Char('&')),
+                                .command = a->property(kToolCommand).toString(),
+                                .glyph   = a->data().isValid() ? a->data().toInt() : -1});
+    };
+    for (const QToolButton* button : ribbonButtons()) {
+        const QAction* shown = button->defaultAction();
+        bool member          = false;
+        for (const RibbonFamily* f : std::as_const(families_))
+            if (f->head() == shown) {
+                for (const QAction* m : f->members())
+                    take(m);
+                member = true;
+            }
+        if (!member) take(shown);
+    }
+
+    const Tokens& t      = tokensFor(theme_);
+    const GlyphInks k    = actionInks();
+    constexpr int kCols  = 10;
+    constexpr int kCellW = 168;
+    constexpr int kCellH = 104;
+    const int rows       = static_cast<int>((entries.size() + kCols - 1) / kCols);
+    QImage sheet(kCols * kCellW, (rows * kCellH) + 8, QImage::Format_ARGB32);
+    sheet.fill(t.bgPanel);
+    {
+        QPainter p(&sheet);
+        p.setRenderHint(QPainter::Antialiasing);
+        QFont name = font();
+        name.setPixelSize(12);
+        QFont small = font();
+        small.setPixelSize(10);
+        for (std::size_t i = 0; i < entries.size(); ++i) {
+            const int col = static_cast<int>(i % kCols);
+            const int row = static_cast<int>(i / kCols);
+            const QRect cell(col * kCellW, row * kCellH, kCellW, kCellH);
+            p.setPen(t.lineSoft);
+            p.drawRect(cell.adjusted(0, 0, -1, -1));
+            const Entry& e = entries[i];
+            const QIcon picture =
+                e.glyph >= 0 ? colour_icon(static_cast<Glyph>(e.glyph), k, 32) : e.action->icon();
+            picture.paint(&p, QRect(cell.center().x() - 16, cell.top() + 8, 32, 32));
+            p.setFont(name);
+            p.setPen(t.text);
+            p.drawText(QRect(cell.left() + 4, cell.top() + 44, kCellW - 8, 34),
+                       Qt::AlignHCenter | Qt::TextWordWrap, e.label);
+            p.setFont(small);
+            p.setPen(t.textFaint);
+            p.drawText(QRect(cell.left() + 4, cell.top() + 80, kCellW - 8, 20), Qt::AlignHCenter,
+                       e.command.left(28));
+        }
+    }
+    save(sheet, QStringLiteral("ikonlar"));
+
+    // ---- what the reviewer should look at ----
+    int findings = 0;
+    QHash<int, QStringList> by_glyph;
+    for (const Entry& e : entries) {
+        if (e.glyph < 0 && e.action->icon().isNull()) {
+            ++findings;
+            (void)std::fprintf(stdout, "[şerit] resimsiz: %s (%s)\n", qPrintable(e.label),
+                               qPrintable(e.command));
+        }
+        if (e.glyph == static_cast<int>(Glyph::Function)) {
+            ++findings;
+            (void)std::fprintf(stdout, "[şerit] genel işaret: %s (%s)\n", qPrintable(e.label),
+                               qPrintable(e.command));
+        }
+        const QString word = e.command.section(QLatin1Char(' '), 0, 0);
+        if (e.glyph >= 0 && !word.isEmpty() && !by_glyph[e.glyph].contains(word))
+            by_glyph[e.glyph] << word;
+    }
+    for (auto it = by_glyph.cbegin(); it != by_glyph.cend(); ++it)
+        if (it.value().size() > 1)
+            (void)std::fprintf(stdout, "[şerit] bir resim birçok komut: %s\n",
+                               qPrintable(it.value().join(QStringLiteral(", "))));
+    (void)std::fprintf(stdout, "[şerit] %zu düğme, %d bulgu\n", entries.size(), findings);
+    return 0;
 }
 
 // =============================================================================

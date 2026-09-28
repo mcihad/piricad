@@ -2288,7 +2288,7 @@ cad.guide(
 |---|---|---|---|
 | `direction` | `str` | `yon` | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir |
 | `value` | `int` | `deger` | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
-| `point` | `Coord` | `nokta` | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | doğru: iki yöne sonsuz · ışın: noktadan ileriye |
 | `delete` | `bool` | `sil` | Verilen yerdeki kılavuzu siler |
 

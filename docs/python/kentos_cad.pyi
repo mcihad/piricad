@@ -1506,7 +1506,7 @@ def guide(
     Komut: core.guide (KILAVUZ)
         direction — yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir
         value — Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa
-        point — Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa [mm, Sağa (Y) önce]
+        point — Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur [mm, Sağa (Y) önce]
         type — doğru: iki yöne sonsuz · ışın: noktadan ileriye
         delete — Verilen yerdeki kılavuzu siler
     """

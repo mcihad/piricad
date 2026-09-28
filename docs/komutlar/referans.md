@@ -762,7 +762,7 @@ Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
 
 Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.
 
-Uygulandığı nesneler: çizgi, alan, eğri.
+Uygulandığı nesneler: çizgi, alan, eğri; `yontem=nokta`, `yontem=kesisim`, `yontem=esit` ya da `yontem=mesafe` ile çizgi, eğri.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1301,7 +1301,7 @@ Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler.
 |---|---|---|---|
 | `yon` | text | isteğe bağlı | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir |
 | `deger` | integer | isteğe bağlı | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
-| `nokta` | point_list | isteğe bağlı | Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa |
+| `nokta` | point_list | isteğe bağlı | Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur |
 | `tur` | text | isteğe bağlı | doğru: iki yöne sonsuz · ışın: noktadan ileriye |
 | `sil` | bool | isteğe bağlı | Verilen yerdeki kılavuzu siler |
 
@@ -6793,7 +6793,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "maxItems": 1
             }
           ],
-          "description": "Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "tur": {
           "type": "string",
@@ -11357,7 +11357,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_split",
     "title": "Böl",
-    "description": "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.\nKomut: BÖL (BOL, SPLIT, BL)\nUygulandığı nesneler: çizgi, alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.\nKomut: BÖL (BOL, SPLIT, BL)\nUygulandığı nesneler: çizgi, alan, eğri; `yontem=nokta`, `yontem=kesisim`, `yontem=esit` ya da `yontem=mesafe` ile çizgi, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {

@@ -754,6 +754,12 @@ core::KindId Controller::promptPickKind() const
     return session_->prompt().pick_kind;
 }
 
+std::size_t Controller::promptPickMost() const
+{
+    if (!session_ || !session_->waiting()) return 0;
+    return session_->prompt().pick_most;
+}
+
 void Controller::supplyPoint(core::Point2 world)
 {
     supplyValue(command::Value::point(world));
@@ -933,7 +939,15 @@ void Controller::finishInteractive()
     if (session_ && session_->working()) return;
     if (session_ && session_->waiting()) {
         const command::Prompt& asking = session_->prompt();
-        if (asking.kind == command::ParamKind::Point) {
+        // AT THE RUN'S FIRST POINT there is no run to finish: Enter there puts
+        // the tool down, as the right button does. Answered with nothing, a
+        // command started with its method already given (the rotated
+        // rectangle's `yontem=3n`) went on to the bus's check of what it
+        // resolved and said
+        // "zorunlu 'noktalar' parametresi eksik" — a sentence about a
+        // parameter, to a user who had only pressed Enter.
+        const bool started = !session_->resolved().get(asking.param).as_points().empty();
+        if (asking.kind == command::ParamKind::Point && started) {
             for (const command::Param& p : session_->spec().params)
                 if (p.name == asking.param && p.kind == command::ParamKind::PointList) {
                     supplyValue(command::Value{});

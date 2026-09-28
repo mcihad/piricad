@@ -2,6 +2,8 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <string>
 
 #include "kentos_cad/core/text.hpp"
 
@@ -41,6 +43,17 @@ const char* target_name(Targets one)
     return "?";
 }
 
+Targets targets_of(const CommandSpec& spec, const Args& args)
+{
+    for (const VerbTargets& row : spec.verb_targets) {
+        const Value v = args.get(row.param);
+        if (v.kind() != Value::Kind::Text) continue;
+        if (core::turkish_fold_key(v.as_text()) == core::turkish_fold_key(row.word))
+            return row.targets;
+    }
+    return spec.targets;
+}
+
 std::string target_names(Targets set)
 {
     std::string out;
@@ -56,6 +69,29 @@ std::string target_names(Targets set)
              Targets::Leaders,
          })
         if (has_target(set, one)) out += (out.empty() ? "" : ", ") + std::string(target_name(one));
+    return out;
+}
+
+std::string targets_sentence(const CommandSpec& spec)
+{
+    if (spec.targets == Targets::Any) return {};
+    std::string out = target_names(spec.targets);
+    // Rows that narrow one parameter to the same classes are one clause: four
+    // methods that all walk an edge are said once, not four times.
+    for (std::size_t i = 0; i < spec.verb_targets.size();) {
+        const VerbTargets& first = spec.verb_targets[i];
+        std::size_t end          = i + 1;
+        while (end < spec.verb_targets.size() && spec.verb_targets[end].param == first.param &&
+               spec.verb_targets[end].targets == first.targets)
+            ++end;
+        out += "; ";
+        for (std::size_t k = i; k < end; ++k) {
+            if (k > i) out += k + 1 == end ? " ya da " : ", ";
+            out += "`" + spec.verb_targets[k].param + "=" + spec.verb_targets[k].word + "`";
+        }
+        out += " ile " + target_names(first.targets);
+        i = end;
+    }
     return out;
 }
 

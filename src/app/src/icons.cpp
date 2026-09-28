@@ -2,6 +2,8 @@
 #include "kentos_cad/app/icons.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <numbers>
 
 #include <QFont>
 #include <QPainter>
@@ -131,6 +133,115 @@ void writeSmall(QPainter& p, const QPointF& centre, const QString& text, const Q
     const QRectF box(centre.x() - 6.0, centre.y() - 4.0, 12.0, 8.0);
     p.drawText(box, Qt::AlignCenter, text);
     p.restore();
+}
+
+void draw(QPainter& p, Glyph g, const GlyphInks& k);
+
+/// What a method adds to its family's picture, in the corner.
+enum class Mark : std::uint8_t {
+    Fence,     ///< a dashed zigzag: across the pieces
+    Keep,      ///< a tick: what is clicked stays
+    Carry,     ///< a dashed run and its arrow: carried on
+    Points,    ///< three dots in a row: at points
+    Crossing,  ///< a small cross: where things cross
+    Equal,     ///< two bars with ticks: equal parts
+    Distance,  ///< a ruler's ticks: a measured distance
+    Reference, ///< an angle's two arms: by reference
+    Copy,      ///< a plus: the original kept
+    Corners,   ///< four dots at a square's corners: every corner
+    Edit,      ///< a pencil: changed in place
+};
+
+/// THE FAMILY'S PICTURE, SMALLER, AND THE METHOD'S MARK IN ITS CORNER — the way
+/// every icon set tells a variant from its base without a second drawing that
+/// would drift from the first.
+void badged(QPainter& p, Glyph base, Mark mark, const GlyphInks& k)
+{
+    p.save();
+    p.scale(0.74, 0.74);
+    draw(p, base, k);
+    p.restore();
+
+    const QColor& c = k.ink;
+    p.save();
+    switch (mark) {
+    case Mark::Fence:
+        p.setPen(QPen(k.cut, 1.5, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawPolyline(QPolygonF(
+            {QPointF(14.6, 22.4), QPointF(17.6, 15.6), QPointF(20.0, 22.0), QPointF(23.0, 15.2)}));
+        break;
+    case Mark::Keep:
+        p.setPen(stroke(k.add, 2.0));
+        p.drawPolyline(QPolygonF({QPointF(15.0, 19.0), QPointF(17.8, 21.8), QPointF(22.8, 15.8)}));
+        break;
+    case Mark::Carry:
+        p.setPen(QPen(k.shape, 1.5, Qt::DashLine, Qt::RoundCap));
+        p.drawLine(QPointF(14.4, 19.4), QPointF(20.4, 19.4));
+        arrowHead(p, QPointF(23.4, 19.4), QPointF(19.4, 19.4), k.shape, 3.6);
+        break;
+    case Mark::Points:
+        for (const qreal x : {15.6, 19.0, 22.4})
+            grip(p, QPointF(x, 19.6), k.note);
+        break;
+    case Mark::Crossing:
+        p.setPen(stroke(k.note, 1.8));
+        p.drawLine(QPointF(15.4, 15.4), QPointF(22.6, 22.6));
+        p.drawLine(QPointF(22.6, 15.4), QPointF(15.4, 22.6));
+        break;
+    case Mark::Equal:
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(14.8, 19.4), QPointF(23.2, 19.4));
+        for (const qreal x : {14.8, 19.0, 23.2})
+            p.drawLine(QPointF(x, 17.0), QPointF(x, 21.8));
+        break;
+    case Mark::Distance:
+        p.setPen(stroke(k.note, 1.4));
+        p.drawRect(QRectF(14.4, 17.2, 9.0, 4.6));
+        for (const qreal x : {16.6, 19.0, 21.2})
+            p.drawLine(QPointF(x, 17.2), QPointF(x, x == 19.0 ? 19.8 : 18.8));
+        break;
+    case Mark::Reference:
+        p.setPen(stroke(k.note, 1.6));
+        p.drawPolyline(QPolygonF({QPointF(23.0, 15.4), QPointF(15.0, 22.2), QPointF(23.4, 22.2)}));
+        p.drawArc(QRectF(12.0, 17.4, 9.6, 9.6), 0, 40 * 16);
+        break;
+    case Mark::Copy:
+        p.setPen(stroke(k.add, 2.0));
+        p.drawLine(QPointF(19.0, 14.8), QPointF(19.0, 23.2));
+        p.drawLine(QPointF(14.8, 19.0), QPointF(23.2, 19.0));
+        break;
+    case Mark::Corners:
+        p.setPen(stroke(c, 1.2));
+        p.drawRect(QRectF(15.4, 15.4, 7.2, 7.2));
+        for (const QPointF at :
+             {QPointF(15.4, 15.4), QPointF(22.6, 15.4), QPointF(22.6, 22.6), QPointF(15.4, 22.6)})
+            grip(p, at, k.note);
+        break;
+    case Mark::Edit: {
+        p.setPen(stroke(k.note, 1.5));
+        QPainterPath pencil;
+        pencil.moveTo(15.2, 23.0);
+        pencil.lineTo(15.8, 20.2);
+        pencil.lineTo(21.4, 14.6);
+        pencil.lineTo(23.6, 16.8);
+        pencil.lineTo(18.0, 22.4);
+        pencil.closeSubpath();
+        p.drawPath(pencil);
+        break;
+    }
+    }
+    p.restore();
+}
+
+/// A regular hexagon about `centre`, one corner due east.
+QPolygonF hexagon(QPointF centre, qreal radius)
+{
+    QPolygonF out;
+    for (int i = 0; i < 6; ++i) {
+        const qreal a = i * std::numbers::pi / 3.0;
+        out << QPointF(centre.x() + (radius * std::cos(a)), centre.y() + (radius * std::sin(a)));
+    }
+    return out;
 }
 
 void draw(QPainter& p, Glyph g, const GlyphInks& k)
@@ -621,23 +732,36 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         break;
 
     case Glyph::Boundary: {
-        // CROSSING LINES AND THE CELL THEY CLOSE: the lines run past each other
-        // the way loose linework does, the one face they make is filled, and
-        // the click that found it sits inside.
+        // THE CLICK INSIDE AND THE BOUNDARY FOUND ROUND IT: the region's edge
+        // drawn dashed as SINIR shows it, and the pointer that asked.
+        const QPolygonF region({
+            QPointF(3.2, 8.0),
+            QPointF(9.0, 3.4),
+            QPointF(20.6, 5.6),
+            QPointF(19.4, 17.4),
+            QPointF(8.6, 20.6),
+        });
         QColor fill = k.shape;
-        fill.setAlphaF(k.fill.alphaF() * 1.6F);
+        fill.setAlphaF(k.fill.alphaF());
         p.setPen(Qt::NoPen);
         p.setBrush(k.fill.alpha() == 0 ? QColor(Qt::transparent) : fill);
-        p.drawRect(QRectF(7.0, 7.0, 10.0, 10.0));
+        p.drawPolygon(region);
         p.setBrush(Qt::NoBrush);
-        p.setPen(stroke(c, 1.6));
-        p.drawLine(QPointF(3.0, 7.0), QPointF(21.0, 7.0));
-        p.drawLine(QPointF(3.0, 17.0), QPointF(21.0, 17.0));
-        p.drawLine(QPointF(7.0, 3.0), QPointF(7.0, 21.0));
-        p.drawLine(QPointF(17.0, 3.0), QPointF(17.0, 21.0));
-        p.setPen(stroke(c, 1.3));
-        p.drawLine(QPointF(10.2, 12.0), QPointF(13.8, 12.0));
-        p.drawLine(QPointF(12.0, 10.2), QPointF(12.0, 13.8));
+        p.setPen(QPen(k.shape, 1.7, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawPolygon(region);
+        // The pointer.
+        QPainterPath arrow;
+        arrow.moveTo(10.4, 9.0);
+        arrow.lineTo(10.4, 17.4);
+        arrow.lineTo(12.6, 15.2);
+        arrow.lineTo(14.2, 18.6);
+        arrow.lineTo(15.6, 17.8);
+        arrow.lineTo(14.0, 14.6);
+        arrow.lineTo(17.0, 14.6);
+        arrow.closeSubpath();
+        p.setPen(stroke(c, 1.2));
+        p.setBrush(k.paper);
+        p.drawPath(arrow);
         break;
     }
 
@@ -1789,6 +1913,36 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         grip(p, QPointF(12.0, 12.0), c);
         break;
 
+    case Glyph::GuideHorizontal:
+    case Glyph::GuideVertical: {
+        // THE RULER IT COMES OFF, and the dashed line through the point clicked.
+        const bool across = g == Glyph::GuideHorizontal;
+        p.save();
+        if (!across) {
+            p.translate(12.0, 12.0);
+            p.rotate(90.0);
+            p.translate(-12.0, -12.0);
+        }
+        p.setPen(stroke(c, 1.3));
+        p.drawRect(QRectF(2.8, 2.8, 18.4, 4.2));
+        for (const qreal x : {6.0, 9.6, 13.2, 16.8})
+            p.drawLine(QPointF(x, 2.8), QPointF(x, x == 9.6 || x == 16.8 ? 5.4 : 4.4));
+        p.setPen(QPen(k.shape, 1.7, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(2.8, 14.0), QPointF(21.2, 14.0));
+        p.restore();
+        grip(p, across ? QPointF(12.0, 14.0) : QPointF(10.0, 12.0), c);
+    } break;
+
+    case Glyph::GuideList:
+        // THE GUIDES, LISTED: three dashed lines and their readings.
+        for (const qreal y : {6.0, 12.0, 18.0}) {
+            p.setPen(QPen(k.shape, 1.5, Qt::DashLine, Qt::FlatCap));
+            p.drawLine(QPointF(9.0, y), QPointF(21.0, y));
+            p.setPen(stroke(c, 1.8));
+            p.drawLine(QPointF(3.0, y), QPointF(5.6, y));
+        }
+        break;
+
     case Glyph::Spline: {
         // The control polygon, faint and dashed, and the curve it pulls.
         p.setPen(QPen(washed(c, 0.55F), 1.0, Qt::DashLine, Qt::FlatCap));
@@ -2190,7 +2344,7 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.setPen(stroke(k.shape, 1.6));
         p.drawEllipse(QPointF(17.0, 17.4), 2.6, 2.6);
         for (int i = 0; i < 6; ++i) {
-            const qreal a = i * 60.0 * 3.14159265358979 / 180.0;
+            const qreal a = i * std::numbers::pi / 3.0;
             p.drawLine(QPointF(17.0 + 3.4 * std::cos(a), 17.4 + 3.4 * std::sin(a)),
                        QPointF(17.0 + 4.6 * std::cos(a), 17.4 + 4.6 * std::sin(a)));
         }
@@ -2365,6 +2519,250 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         break;
     }
 
+    // ---- methods, told apart ------------------------------------------------
+    case Glyph::CircleTwoPoint: {
+        QPainterPath disc;
+        disc.addEllipse(QPointF(12.0, 12.0), 8.4, 8.4);
+        face(p, disc, k);
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(3.6, 12.0), QPointF(20.4, 12.0));
+        grip(p, QPointF(3.6, 12.0), c);
+        grip(p, QPointF(20.4, 12.0), c);
+    } break;
+
+    case Glyph::CircleThreePoint: {
+        QPainterPath disc;
+        disc.addEllipse(QPointF(12.0, 12.0), 8.4, 8.4);
+        face(p, disc, k);
+        grip(p, QPointF(12.0, 3.6), c);
+        grip(p, QPointF(4.7, 16.2), c);
+        grip(p, QPointF(19.3, 16.2), c);
+    } break;
+
+    case Glyph::CircleTangent: {
+        // Two lines meeting in a corner, and the circle that touches both.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.6, 2.6), QPointF(3.6, 21.2));
+        p.drawLine(QPointF(2.6, 20.4), QPointF(21.4, 20.4));
+        QPainterPath disc;
+        disc.addEllipse(QPointF(11.0, 13.0), 7.4, 7.4);
+        face(p, disc, k);
+        grip(p, QPointF(3.6, 13.0), k.note);
+        grip(p, QPointF(11.0, 20.4), k.note);
+    } break;
+
+    case Glyph::ArcThreePoint:
+        p.setPen(stroke(k.shape));
+        p.drawArc(QRectF(3.6, 6.0, 16.8, 16.8), 20 * 16, 140 * 16);
+        grip(p, QPointF(4.1, 11.5), c);
+        grip(p, QPointF(12.0, 6.0), c);
+        grip(p, QPointF(19.9, 11.5), c);
+        break;
+
+    case Glyph::ArcCentreAngle: {
+        const QPointF centre(12.0, 17.0);
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::RoundCap));
+        p.drawLine(centre, QPointF(20.0, 14.1));
+        p.drawLine(centre, QPointF(4.0, 14.1));
+        p.setPen(stroke(k.shape));
+        p.drawArc(QRectF(3.5, 8.5, 17.0, 17.0), 20 * 16, 140 * 16);
+        p.setPen(stroke(k.note, 1.5));
+        p.drawArc(QRectF(8.0, 13.0, 8.0, 8.0), 20 * 16, 140 * 16);
+        grip(p, centre, c);
+        grip(p, QPointF(20.0, 14.1), c);
+    } break;
+
+    case Glyph::ArcEndsRadius: {
+        p.setPen(stroke(k.shape));
+        p.drawArc(QRectF(3.6, 6.0, 16.8, 16.8), 20 * 16, 140 * 16);
+        p.setPen(QPen(k.note, 1.5, Qt::DashLine, Qt::RoundCap));
+        p.drawLine(QPointF(12.0, 14.4), QPointF(12.0, 6.6));
+        grip(p, QPointF(12.0, 14.4), k.note);
+        grip(p, QPointF(4.1, 11.5), c);
+        grip(p, QPointF(19.9, 11.5), c);
+    } break;
+
+    case Glyph::ArcContinue:
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(2.8, 19.6), QPointF(10.6, 19.6));
+        p.setPen(stroke(k.shape));
+        p.drawArc(QRectF(2.6, 3.6, 16.0, 16.0), -90 * 16, 90 * 16);
+        grip(p, QPointF(10.6, 19.6), c);
+        grip(p, QPointF(18.6, 11.6), c);
+        break;
+
+    case Glyph::RectangleRotated:
+        face(p,
+             polygonPath(QPolygonF({
+                 QPointF(7.9, 5.0),
+                 QPointF(20.1, 12.0),
+                 QPointF(16.1, 19.0),
+                 QPointF(3.9, 12.0),
+             })),
+             k);
+        grip(p, QPointF(7.9, 5.0), c);
+        grip(p, QPointF(20.1, 12.0), c);
+        grip(p, QPointF(16.1, 19.0), k.note);
+        break;
+
+    case Glyph::PolygonOutside: {
+        face(p, polygonPath(hexagon(QPointF(12.0, 12.0), 9.0)), k, 1.7);
+        p.setPen(QPen(k.note, 1.3, Qt::DashLine, Qt::RoundCap));
+        p.drawEllipse(QPointF(12.0, 12.0), 7.6, 7.6);
+    } break;
+
+    case Glyph::PolygonSide: {
+        const QPolygonF hex = hexagon(QPointF(12.0, 11.0), 8.6);
+        face(p, polygonPath(hex), k, 1.7);
+        p.setPen(stroke(k.note, 2.2));
+        p.drawLine(hex[1], hex[2]);
+        grip(p, hex[1], c);
+        grip(p, hex[2], c);
+    } break;
+
+    case Glyph::EllipseAxis: {
+        QPainterPath oval;
+        oval.addEllipse(QRectF(2.8, 6.4, 18.4, 11.2));
+        face(p, oval, k);
+        p.setPen(stroke(k.note, 1.5));
+        p.drawLine(QPointF(2.8, 12.0), QPointF(21.2, 12.0));
+        grip(p, QPointF(2.8, 12.0), c);
+        grip(p, QPointF(21.2, 12.0), c);
+    } break;
+
+    case Glyph::AreaDraw: {
+        // A PARCEL, not a regular polygon: four corners at no particular
+        // angle, each one a click.
+        const QPolygonF parcel(
+            {QPointF(3.6, 18.4), QPointF(6.4, 4.8), QPointF(19.8, 6.6), QPointF(17.2, 19.6)});
+        face(p, polygonPath(parcel), k);
+        for (const QPointF& at : parcel)
+            grip(p, at, c);
+    } break;
+
+    case Glyph::Combine: {
+        // TWO FACES, ONE OUTLINE: the seam they shared drawn faint inside.
+        p.save();
+        p.setBrush(k.fill);
+        p.setPen(stroke(k.add, 1.8));
+        p.drawPath(polygonPath(QPolygonF({
+            QPointF(3.0, 4.6),
+            QPointF(14.0, 4.6),
+            QPointF(14.0, 9.4),
+            QPointF(21.0, 9.4),
+            QPointF(21.0, 19.4),
+            QPointF(10.0, 19.4),
+            QPointF(10.0, 14.6),
+            QPointF(3.0, 14.6),
+        })));
+        p.restore();
+        p.setPen(QPen(washed(c, 0.6F), 1.1, Qt::DashLine));
+        p.drawPolyline(QPolygonF({QPointF(10.0, 14.6), QPointF(10.0, 9.4), QPointF(14.0, 9.4)}));
+    } break;
+
+    case Glyph::Polygonize: {
+        // LINES THAT RUN PAST EACH OTHER, AND THE FACE THEY CLOSE — what ALANÜRET
+        // finds in loose linework. Three lines, not a grid: at 16 px a grid
+        // read as "#".
+        const QPolygonF cell({QPointF(6.0, 18.0), QPointF(18.0, 18.0), QPointF(12.0, 6.5)});
+        face(p, polygonPath(cell), k, 1.2);
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(2.6, 18.0), QPointF(21.4, 18.0));
+        p.drawLine(QPointF(4.4, 21.0), QPointF(13.6, 3.4));
+        p.drawLine(QPointF(10.4, 3.4), QPointF(19.6, 21.0));
+        break;
+    }
+
+    case Glyph::AreaEdit: {
+        // THE AREA ASKED FOR: an edge moved out until the figure is right.
+        face(p,
+             polygonPath(QPolygonF(
+                 {QPointF(3.4, 5.4), QPointF(14.2, 5.4), QPointF(14.2, 18.6), QPointF(3.4, 18.6)})),
+             k);
+        p.setPen(QPen(k.shape, 1.6, Qt::DashLine, Qt::RoundCap));
+        p.drawLine(QPointF(20.6, 5.4), QPointF(20.6, 18.6));
+        p.setPen(stroke(k.note, 1.7));
+        p.drawLine(QPointF(15.4, 12.0), QPointF(18.6, 12.0));
+        arrowHead(p, QPointF(20.2, 12.0), QPointF(16.0, 12.0), k.note, 3.6);
+    } break;
+
+    case Glyph::BlockDefine: {
+        // WHAT IS GATHERED, THE BOX ROUND IT AND THE BASE IT IS PLACED BY.
+        p.setPen(QPen(c, 1.2, Qt::DashLine, Qt::RoundCap));
+        p.drawRect(QRectF(2.8, 2.8, 18.4, 18.4));
+        QPainterPath roof;
+        roof.addPolygon(QPolygonF({QPointF(6.4, 12.0), QPointF(12.0, 6.4), QPointF(17.6, 12.0)}));
+        roof.closeSubpath();
+        face(p, roof, k, 1.6);
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawRect(QRectF(7.8, 12.0, 8.4, 5.6));
+        grip(p, QPointF(7.8, 17.6), k.note);
+    } break;
+
+    case Glyph::HatchEdit: badged(p, Glyph::Hatch, Mark::Edit, k); break;
+    case Glyph::SaveAs: badged(p, Glyph::Save, Mark::Edit, k); break;
+
+    case Glyph::ArrayPolar: {
+        p.setPen(QPen(washed(c, 0.7F), 1.1, Qt::DashLine));
+        p.drawEllipse(QPointF(12.0, 12.0), 7.6, 7.6);
+        grip(p, QPointF(12.0, 12.0), c);
+        p.setPen(stroke(k.shape, 1.4));
+        p.setBrush(k.fill);
+        for (int i = 0; i < 6; ++i) {
+            const qreal a = (i * std::numbers::pi / 3.0) - (std::numbers::pi / 2.0);
+            const QPointF at(12.0 + (7.6 * std::cos(a)), 12.0 + (7.6 * std::sin(a)));
+            p.drawRect(QRectF(at.x() - 1.9, at.y() - 1.9, 3.8, 3.8));
+        }
+        p.setBrush(Qt::NoBrush);
+    } break;
+
+    case Glyph::ArrayPath: {
+        QPainterPath path;
+        path.moveTo(2.8, 19.0);
+        path.cubicTo(7.0, 3.0, 15.0, 22.0, 21.2, 5.4);
+        p.setPen(QPen(washed(c, 0.7F), 1.2, Qt::DashLine));
+        p.drawPath(path);
+        p.setPen(stroke(k.shape, 1.4));
+        p.setBrush(k.fill);
+        for (const qreal t : {0.0, 0.33, 0.66, 1.0}) {
+            const QPointF at = path.pointAtPercent(t);
+            p.drawRect(QRectF(at.x() - 1.9, at.y() - 1.9, 3.8, 3.8));
+        }
+        p.setBrush(Qt::NoBrush);
+    } break;
+
+    case Glyph::Toolbox:
+        // THE TOOLBOX: a case and its handle, the tools' tips showing.
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(3.0, 9.0, 18.0, 11.4), 1.6, 1.6);
+        p.drawPolyline(QPolygonF(
+            {QPointF(8.6, 9.0), QPointF(8.6, 5.6), QPointF(15.4, 5.6), QPointF(15.4, 9.0)}));
+        p.setPen(stroke(k.note, 1.7));
+        p.drawLine(QPointF(3.0, 13.6), QPointF(21.0, 13.6));
+        p.setPen(stroke(k.shape, 1.9));
+        p.drawLine(QPointF(10.6, 12.2), QPointF(10.6, 15.0));
+        p.drawLine(QPointF(13.4, 12.2), QPointF(13.4, 15.0));
+        break;
+
+    case Glyph::TrimFence: badged(p, Glyph::Trim, Mark::Fence, k); break;
+    case Glyph::TrimKeep: badged(p, Glyph::Trim, Mark::Keep, k); break;
+    case Glyph::TrimCarry: badged(p, Glyph::Trim, Mark::Carry, k); break;
+    case Glyph::ExtendFence: badged(p, Glyph::Extend, Mark::Fence, k); break;
+    case Glyph::ExtendCarry: badged(p, Glyph::Extend, Mark::Carry, k); break;
+    case Glyph::SplitPoints: badged(p, Glyph::Split, Mark::Points, k); break;
+    case Glyph::SplitCrossings: badged(p, Glyph::Split, Mark::Crossing, k); break;
+    case Glyph::SplitEqual: badged(p, Glyph::Split, Mark::Equal, k); break;
+    case Glyph::SplitDistance: badged(p, Glyph::Split, Mark::Distance, k); break;
+    case Glyph::RotateReference: badged(p, Glyph::Rotate, Mark::Reference, k); break;
+    case Glyph::ScaleReference: badged(p, Glyph::Scale, Mark::Reference, k); break;
+    case Glyph::MirrorCopy: badged(p, Glyph::Mirror, Mark::Copy, k); break;
+    case Glyph::FilletAll: badged(p, Glyph::Fillet, Mark::Corners, k); break;
+    case Glyph::ChamferAll: badged(p, Glyph::Chamfer, Mark::Corners, k); break;
+    case Glyph::MeasureAreaCorners: badged(p, Glyph::MeasureArea, Mark::Points, k); break;
+    case Glyph::IntersectDistances: badged(p, Glyph::PointIntersect, Mark::Distance, k); break;
+    case Glyph::IntersectLines: badged(p, Glyph::PointIntersect, Mark::Crossing, k); break;
+    case Glyph::AlongDistance: badged(p, Glyph::PointAlong, Mark::Distance, k); break;
+
     case Glyph::Plug:
         // A two-pin plug on its lead: a client that is actually connected.
         p.setPen(stroke(c, 1.7));
@@ -2428,8 +2826,8 @@ Glyph glyph_named(std::string_view name)
         {"uzunluk", Glyph::LabelLength},
         {"bagla", Glyph::Attach},
         {"bag_coz", Glyph::Detach},
-        {"alan_uret", Glyph::ToArea},
-        {"alan_duzenle", Glyph::VertexMove},
+        {"alan_uret", Glyph::Polygonize},
+        {"alan_duzenle", Glyph::AreaEdit},
     };
     for (const Named& n : kNamed)
         if (n.word == name) return n.glyph;

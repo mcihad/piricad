@@ -61,6 +61,9 @@ AutoCAD kullanıcısı `Çizgi`'yi, `Buda`'yı ve katman listesini aradığı ye
 
 **Giriş** sekmesi öteki sekmelerin kısa biçimidir: çizimin tamamı **Çizim**'de,
 düzenlemenin tamamı **Değiştir**'dedir; Giriş en çok kullanılanları bir arada tutar.
+Spline ve tarama bu yüzden **Çizim** sekmesindedir; **Stil Kopyala** Giriş'te öteki
+düzenleme fiillerinin yanında, **Değiştir** panelindedir. Her sekme 1440 piksel genişliğinde
+bir pencereye kaydırmadan sığar.
 
 **Her sekmenin ilk öğesi Seç aracıdır.** Hangi sekmede olursanız olun elinizdeki aracı
 oradan bırakırsınız; okundaki listede **Alan Seç**, **Tümünü Seç** (**Ctrl+A**) ve
@@ -80,8 +83,8 @@ belirir; hiçbir düğme gizlenmez.
 | Boy | Ne için |
 |---|---|
 | **Büyük** — resim üstte, ad altta | En sık yapılan iş: Çizgi, Çoklu Çizgi, Daire, Yay, Alan, Dikdörtgen, Metin, Katmanlar, Yapıştır |
-| **Satır** — küçük resim ve ad | İkinci sıradakiler: Taşı, Kopyala, Döndür, Kılavuz Çizgi |
-| **Simge** — yalnız resim | Herkesin resminden tanıdığı araçlar: Elips, Nokta, Spline, Sil, Patlat, Ofset |
+| **Satır** — küçük resim ve ad | İkinci sıradakiler: Taşı, Kopyala, Döndür, Kılavuz |
+| **Simge** — yalnız resim | Herkesin resminden tanıdığı araçlar: Elips, Nokta, Sil, Patlat, Ofset, Stil Kopyala |
 
 Simgeler renklidir ve renk her simgede aynı şeyi söyler: mavi komutun çizdiği ya da
 değiştirdiği şekil, kırmızı kestiği ya da sildiği, turuncu yazdığı, sarı veri ve katman,
@@ -112,9 +115,11 @@ daire vardır; **Buda**'nın okunda çitle budama, tıklananı tutma, sınırı 
 | Dikdörtgen | `DİKDÖRTGEN` · döndürülmüş · `ÇOKGEN` · dıştan · kenardan |
 | Alan | `ALAN` · `HALKA` · `DİLİM` |
 | Nokta | `NOKTA` · `DİKAYAK` · `ALIM` · `KESİŞİMNOKTA` · `ARANOKTA` |
-| Tarama | `TARAMA` · `TARAMADÜZENLE` · `SINIR` |
+| Kesişim, Ara Nokta | `KESİŞİMNOKTA` · iki mesafeden · iki doğrudan / `ARANOKTA` · mesafeyle |
+| Kılavuz | yatay (`KILAVUZ yon=yatay`) · düşey (`yon=düşey`) · açılı (`yon=45g`) · kılavuzları listele (`KILAVUZ`) |
 | Döndür, Aynala, Ölçekle | komut ve referansla / kopyalayarak biçimi |
 | Buda | `BUDA` · çitle · tıklanan kalsın · sınırı uzatarak · `UZAT` · çitle · uzatarak |
+| Böl | `BÖL` (kesme çizgisiyle) · noktalardan · kesişimlerden · eşit parçaya · baştan uzaklıkla |
 | Yuvarla | `YUVARLA` · bütün köşeler · `PAH` · bütün köşeler |
 | Dizi | `DİZİ` · kutupsal · yol boyunca |
 | Metin | `METİN` · `YAZIDÜZENLE` |
@@ -234,6 +239,11 @@ eder; başka bir nesne verilirse nedenini söyleyerek reddeder.
   parselin kenarına kadar budanır.
 - Seçimi kullanmayan yöntemler de soluklaşmaz: **Alan Ölç — köşelerden** köşelere
   tıklatır, **Bloğu Kaydet** açık düzenlemenin nesnelerini kaydeder.
+- Bir ailenin **yöntemleri** kendi nesnelerini ayrıca bildirebilir. **Böl** bir alanı
+  yalnız kesme çizgisiyle böler; **noktalardan**, **kesişimlerden**, **eşit parçaya** ve
+  **baştan uzaklıkla** bir kenar boyunca yürür ve yalnız çizgi ile eğride çalışır. Bir
+  parsel seçiliyken bu dört satır soluktur, Böl'ün kendisi açıktır. Komut başvurusu bunu
+  **Uygulandığı nesneler** satırında yöntem yöntem yazar.
 
 Bir aile düğmesinin yüzündeki araç soluk, okundaki bir üyesi açıksa düğme basılabilir
 kalır; basınca üyelerin listesi açılır.
@@ -348,6 +358,18 @@ araç hangi nesneleri istediğini sorar. Tek nesneyle çalışan bir araca birde
 nesne seçiliyken basarsanız reddetmez; "2 nesne seçili; bu araç bir seferde 1
 nesneyle çalışır" diyerek istediği nesneyi sorar.
 
+**Tek nesne isteyen bir soru tek tıkla cevaplanır.** Kır, Uzunluk, Bölümle ve Stil
+Kopyala'nın kaynak sorusu bir nesne ister; tıkladığınız nesne cevaptır, **Enter**'a
+basmanız gerekmez. Birden çok nesne isteyen sorular (Taşı'nın nesneleri gibi) seçime
+eklemeye devam eder ve **Enter** ya da sağ tıkla biter.
+
+**Stil Kopyala** önce **kaynak** nesneyi, sonra stili alacak nesneleri sorar. Bir nesne
+seçiliyken basarsanız seçili nesne kaynak olur ve yalnız hedefler sorulur.
+
+Bir çizim aracının **ilk noktası** sorulurken **Enter**'a basmak (ya da komut satırını
+boş göndermek) aracı hatasız bırakır; henüz çizilmiş bir şey olmadığı için geri alınacak
+bir şey de kalmaz.
+
 Cevabı belli bir kümeden olan istemler o kümeyi de gösterir: **Blok Ekle**
 çizimdeki blokların adlarını, **Katman** ve **Etiket** katman adlarını,
 **Katman Görünümü** alabileceği işlem sözcüklerini listeler. Listeden seçmek de
@@ -359,7 +381,10 @@ Sorgula) cevabı sağ panelin **Geçmiş** sekmesine yazar ve o sekmeyi kendili�
 
 Değerini bir formda isteyen araçlar — şeritte adı `…` ile biten **Tampon…**, **Alanı
 Düzenle…** gibi — **Araçlar** panelinde açılır ve klavye formun **ilk alanına** geçer,
-içindeki değer seçili olur: yazdığınız onun yerine geçer.
+içindeki değer seçili olur: yazdığınız onun yerine geçer. Her değerinin bir varsayılanı
+olan işlemler — **Köşe Numarala**, **Uzunluk Yaz**, **Alan Üret**, **Bağla**, **Bağı
+Çöz** — şeritten basınca **doğrudan çalışır**: seçim varsa seçime, yoksa sorduğu nesnelere,
+varsayılan değerlerle. Değerleri değiştirmek için aynı işlemi **Araçlar** panelinden açın.
 
 ## Tek belge, sekmesiz
 

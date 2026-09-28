@@ -231,20 +231,26 @@ Task<void> run_tool(Context& ctx)
         ctx.refuse(core::ErrorCode::InvalidArgument, why);
         co_return;
     }
-    // ---- the objects the tool's OBJECT parameters name, snapshotted too ----
+    // ---- the objects the tool's OBJECT parameters name: checked now, so a
+    //      wrong id fails before anyone is asked to point; snapshotted once the
+    //      ones not named have been asked for (below) ----
+    const auto named_object = [&doc](const ToolInput& in, const ToolParam& p) -> core::EntityId {
+        const Value* v = in.args.find(p.name);
+        if (v == nullptr || v->as_ids().empty()) return core::kNoEntity;
+        return doc.slot_of(
+            static_cast<core::EntityKey>(static_cast<std::uint64_t>(v->as_ids().front())));
+    };
     for (const ToolParam& p : spec.params) {
         if (p.kind != command::ParamKind::Selection) continue;
         const Value* v = input.args.find(p.name);
         if (v == nullptr || v->as_ids().empty()) continue;
-        const std::int64_t raw = v->as_ids().front();
-        const core::EntityId e =
-            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
-        if (e == core::kNoEntity || !doc.alive(e)) {
-            ctx.refuse(core::ErrorCode::NotFound,
-                       "'" + p.name + "' nesnesi bulunamadı veya silinmiş: " + std::to_string(raw));
+        if (const core::EntityId e = named_object(input, p);
+            e == core::kNoEntity || !doc.alive(e)) {
+            ctx.refuse(core::ErrorCode::NotFound, "'" + p.name +
+                                                      "' nesnesi bulunamadı veya silinmiş: " +
+                                                      std::to_string(v->as_ids().front()));
             co_return;
         }
-        input.references.push_back(snapshot(doc, e, classify(doc, e)));
     }
 
     command::Bus& bus = ctx.session().bus();
@@ -337,6 +343,39 @@ Task<void> run_tool(Context& ctx)
                        " nesne bakıldı). Araç şunlara uygulanır: " + takes + ".");
         co_return;
     }
+
+    // ---- an OBJECT PARAMETER NOT NAMED IS ASKED FOR, one click ----
+    //
+    // BAĞLA pressed on the ribbon ran with no way to say which object its
+    // captions hang off, and could only refuse "kaynak verilmedi". It is asked
+    // for once the objects the tool works on are known — pick the captions,
+    // press `Bağla`, click the line — and the answer is an argument like any
+    // other, recorded with them, so a replay needs no hand. A client that
+    // cannot point is told the form it should have written.
+    for (const ToolParam& p : spec.params) {
+        if (p.kind != command::ParamKind::Selection || named_object(input, p) != core::kNoEntity)
+            continue;
+        auto picked = co_await ctx.objects(p.name, p.help + " — tıklayın", core::kNoKind, 1);
+        if (!picked || picked->empty()) {
+            if (!ctx.session().cancel_requested())
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "'" + p.name + "' verilmedi: " + p.help +
+                               ".\n  Örnek: " + spec.names.front() + " " + p.name + "=<kimlik>");
+            co_return;
+        }
+        input.args.set(p.name, Value::ids({picked->front()}));
+        if (const core::EntityId e = named_object(input, p);
+            e == core::kNoEntity || !doc.alive(e)) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "Nesne bulunamadı veya silinmiş: " + std::to_string(picked->front()));
+            co_return;
+        }
+    }
+    for (const ToolParam& p : spec.params)
+        if (p.kind == command::ParamKind::Selection) {
+            const core::EntityId e = named_object(input, p);
+            input.references.push_back(snapshot(doc, e, classify(doc, e)));
+        }
 
     // ---- the tool's own questions, on the bus thread, before the worker ----
     if (auto asked = co_await tool->interact(ctx, input); !asked) {

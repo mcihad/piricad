@@ -6,6 +6,43 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — şeritteki her araç sürüldü; çalışmayan, yanlış çalışan ve simgesi kötü olanlar
+
+Şeridin her düğmesi bir elin yapacağı gibi basılıp cevaplandı (iki tur: seçmeden ve önce
+seçip; 267 çalıştırma). Bulunan ve düzeltilenler:
+
+- **Araçlar işlemleri şeritten doğrudan çalışır.** Köşe Numarala, Uzunluk Yaz, Alan Üret,
+  Bağla ve Bağı Çöz yalnız Araçlar panelini açıyordu; artık seçime (yoksa sorduğu
+  nesnelere) varsayılan değerlerle uygulanır. Bir değer isteyenler (**Tampon…**,
+  **Alanı Düzenle…**) adlarındaki `…` ile paneli açar.
+- **Bağla, yazıların bağlanacağı nesneyi sorar** — tek tıkla; önceden "kaynak verilmedi"
+  diyerek reddediyordu. Cevap günlüğe argüman olarak yazılır.
+- **Stil Kopyala önce kaynağı, sonra hedefleri sorar** (Netcad'in Biçim Boya'sı gibi); bir
+  nesne seçiliyken basılırsa o nesne kaynaktır. Önceden seçim yokken reddediyordu. Simge
+  Giriş'te **Değiştir** panelinde, öteki düzenleme fiillerinin yanında.
+- **Kılavuz düğmesi kılavuz koyar:** okunda **Yatay Kılavuz** ve **Düşey Kılavuz**
+  (tıklanan noktadan), **Açılı Cetvel Kılavuzu** ve **Kılavuzları Listele** var. Önceden
+  düğme yalnız listeliyordu. `KILAVUZ yon=yatay` `deger` verilmezse noktayı sorar.
+- **Böl'ün dört yöntemi alan seçiliyken soluk:** noktalardan, kesişimlerden, eşit parçaya
+  ve baştan uzaklıkla bölme yalnız çizgi ve eğride çalışır; önceden basılıp reddediyordu.
+  Komut başvurusu her yöntemin nesnelerini ayrıca yazar.
+- **Tek nesne isteyen soru tek tıkla cevaplanır** (Kır, Uzunluk, Bölümle, Stil Kopyala'nın
+  kaynağı, Bağla'nın nesnesi); Enter gerekmez.
+- **Bir çizim aracının ilk sorusunda Enter aracı hatasız bırakır**; önceden teknik bir
+  "parametre eksik" hatası veriyordu.
+- **OTURT döndüren ya da ölçekleyen bir oturtmada daireyi, yayı, yazıyı ve bloğu bozmaz.**
+  Her nesne Döndür/Ölçekle'nin taşıdığı gibi taşınır; önceden içinde daire olan her çizimde
+  "Dairenin yarıçap tutamağı merkezin tam doğusunda…" diyerek bütün oturtmayı reddediyordu.
+  Artıklar yine tam uygulanan dönüşümle ölçülür.
+- **Simgeler:** 42 yeni simge — daire ve yay yöntemleri, dikdörtgen ve çokgen yöntemleri,
+  Buda/Uzat/Böl/Dizi/Döndür/Ölçekle/Aynala/Yuvarla/Pah'ın her biçimi (ana simge ve köşede
+  bir işaret), Alan Üret, Alanı Düzenle, Birleştir, Blok Tanımla, Sınır Bul, üç kılavuz
+  simgesi. Aynı resmi paylaşan iki ayrı araç kalmadı.
+- **Sekmeler 1440 piksele sığar:** Giriş ve Çizim taşıyordu; Spline ve tarama Çizim
+  sekmesinde, Patlat ve Dış Referans Blok panelinden kendi sekmelerine döndü.
+- **Çıktı ▸ Yazdır ▸ Yerleşimler:** "Çıktı Yerleşimleri" düğmede iki satıra bölünüp baş
+  harfini okun altında kaybediyordu.
+
 ### Değişti — köşe yuvarlama gerçek yay (O-2)
 
 - **Yuvarlanan köşe gerçek bir yaydır ve nesne tek nesne kalır.** Açık bir çizginin köşesi

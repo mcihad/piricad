@@ -322,6 +322,18 @@ struct VerbEffect
     Effect effect{Effect::Query}; ///< what that word does
 };
 
+/// WHAT ONE WORD OF A METHOD PARAMETER TAKES, when it takes less than the
+/// command does: BÖL cuts an area with a cut line (`yontem=cizgi`), and every
+/// other way it has of saying where — points, crossings, equal parts, a
+/// distance — runs ALONG an edge, which an area does not open along. Declared
+/// on the spec beside `targets`, never in the shell (CLAUDE.md 5.10).
+struct VerbTargets
+{
+    std::string param;             ///< the method parameter, `yontem`
+    std::string word;              ///< one of its words, ASCII-folded as `Param::choices` holds it
+    Targets targets{Targets::Any}; ///< what a call with that word takes
+};
+
 /// Combines flags, so a spec can declare several in one expression.
 constexpr Flags operator|(Flags a, Flags b)
 {
@@ -429,6 +441,9 @@ struct CommandSpec
     /// each object and refuses, in words, one it does not take.
     Targets targets{Targets::Any};
 
+    /// Narrower `targets` for some words of a method parameter (`VerbTargets`).
+    std::vector<VerbTargets> verb_targets;
+
     /// The parameter that holds the verb, when one word decides the effect.
     /// Empty when the command does one thing.
     std::string effect_verb;
@@ -456,6 +471,19 @@ struct CommandSpec
 /// This is the one place the question is answered. A policy, an audit record and
 /// the inventory all ask it here, so they cannot disagree (CLAUDE.md 5.10).
 Effect effect_of(const CommandSpec& spec, const Args& args);
+
+/// WHAT A CALL WITH `args` TAKES FROM THE SELECTION: the command's `targets`,
+/// narrowed by the first `verb_targets` row whose parameter holds that word.
+Targets targets_of(const CommandSpec& spec, const Args& args);
+
+/// THE SENTENCE THAT SAYS WHAT A COMMAND ACTS ON, without its label: the
+/// classes of `targets`, then each narrowing of `verb_targets`, the words
+/// that take the same classes named together — for BÖL,
+/// `çizgi, alan, eğri; yontem=nokta ya da yontem=esit ile çizgi, eğri`. The
+/// reference and the agent's tool description both read it here, so the two
+/// cannot describe one command two ways (CLAUDE.md 5.20). Empty for a command
+/// that acts on anything.
+std::string targets_sentence(const CommandSpec& spec);
 
 /// The same question with no arguments in hand: the command's WORST CASE over
 /// every word its verb can take. What a catalogue tells a client before it has

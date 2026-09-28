@@ -10,6 +10,12 @@ Ekibin istasyonu kurup ona 0,0 dediği ve bir hafta oradan çalıştığı iş i
 vardır. Çizimin **kendi içinde** her mesafesi ve her açısı doğrudur; olmadığı tek
 şey haritanın üzerinde olmaktır.
 
+Her nesne **kendi türünün taşındığı gibi** taşınır — [DÖNDÜR](rotate.md) ve
+[ÖLÇEKLE](scale.md)'nin yaptığının aynısı: daire yuvarlak kalır ve yarıçapı ölçekle
+büyür, yay açıklığını koruyarak döner, köşesi yuvarlatılmış bir parselin yayı yay
+kalır, yazı satırıyla birlikte döner ve yüksekliği ölçeklenir, blok dönüklüğünü ve
+ölçeğini alır.
+
 ### Neden benzerlik, afin değil
 
 Bir ölçünün iç geometrisi **veridir**: kendi çizgileri arasındaki açılar ölçülmüş
@@ -102,7 +108,7 @@ tek tek sorar:
 
 ## Geri alma
 
-**Tek adımdır ve bu bir gerekliliktir.** Çizimin her köşesi ya taşınır ya hiçbiri
+**Tek adımdır ve bu bir gerekliliktir.** Çizimin her nesnesi ya taşınır ya hiçbiri
 taşınmaz; yarı taşınmış bir kadastro paftası Anayasa 1.6'nın adını koyduğu
 hatadır ve burada her yerden daha kötüdür, çünkü iki yarısı da makul görünür.
 

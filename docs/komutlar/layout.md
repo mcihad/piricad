@@ -249,9 +249,9 @@ Kuruma özel bir kâğıt:
 
 ### Arayüz
 
-#### Çıktı Yerleşimleri listesinden
+#### Yerleşimler listesinden
 
-**Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri** yerleşimlerin ana kapısıdır; aynı liste hızlı
+**Çıktı ▸ Yazdır ▸ Yerleşimler** yerleşimlerin ana kapısıdır; aynı liste hızlı
 erişimdeki yazıcının okunda ve **KentOS CAD ▸ Çıktı Yerleşimleri**'nde de açılır:
 
 | Giriş | Ne yapar |

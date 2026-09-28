@@ -29,6 +29,7 @@ konsaydı kaçınılmaz olurdu.
 ```text
 KILAVUZ                                     → kılavuzları listeler
 KILAVUZ yon=yatay|düşey deger=<mm>          → cetvel kılavuzu ekler
+KILAVUZ yon=yatay|düşey                     → tıklanan noktadan geçen cetvel kılavuzu
 KILAVUZ yon=<açı> nokta=<n>                 → açılı kılavuz ekler
 KILAVUZ yon=<açı> nokta=<n> tur=isin        → ışın ekler (tek yöne)
 KILAVUZ yon=yatay deger=<mm> sil=evet       → siler
@@ -39,8 +40,8 @@ KILAVUZ yon=yatay deger=<mm> sil=evet       → siler
 | Parametre | Ne yapar |
 |---|---|
 | `yon` | `yatay`, `düşey` ya da **bir açı** (`45`, `45g`, `30d`, `0.7r`); yoksa kılavuzlar listelenir |
-| `deger` | Koordinat, **milimetre** — yatayda yukarı, düşeyde sağa. Yalnız cetvel kılavuzunda |
-| `nokta` | Açılı kılavuzun **geçtiği nokta**. Yalnız `yon` bir açıysa; verilmezse sorulur |
+| `deger` | Koordinat, **milimetre** — yatayda yukarı, düşeyde sağa. Yalnız cetvel kılavuzunda; verilmezse kılavuzun geçeceği nokta sorulur |
+| `nokta` | Kılavuzun **geçtiği nokta**: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur |
 | `tur` | `doğru` (varsayılan, iki yöne sonsuz) ya da `ışın` (noktadan ileriye). Yalnız açılı kılavuzda |
 | `sil` | Verilen yerdeki kılavuzu siler |
 
@@ -115,8 +116,19 @@ KILAVUZ yon=yatay deger=4310220500 sil=evet
 
 Vazgeçmek için cetvele **geri bırakın** — kılavuz konmaz.
 
-Şeritteki **Çizim ▸ Çizgi ▸ Kılavuz** düğmesinin okunda iki satır vardır: **Cetvel
-Kılavuzu** (`KILAVUZ`) ve **Açılı Cetvel Kılavuzu** (`KILAVUZ yon=45g`).
+Şeritteki **Çizim ▸ Çizgi ▸ Kılavuz** düğmesinin okunda dört satır vardır:
+
+| Satır | Çalıştırdığı | Ne yapar |
+|---|---|---|
+| **Yatay Kılavuz** | `KILAVUZ yon=yatay` | Tıkladığınız noktadan geçen yatay kılavuz |
+| **Düşey Kılavuz** | `KILAVUZ yon=düşey` | Tıkladığınız noktadan geçen düşey kılavuz |
+| **Açılı Cetvel Kılavuzu** | `KILAVUZ yon=45g` | Tıkladığınız noktadan geçen açılı kılavuz |
+| **Kılavuzları Listele** | `KILAVUZ` | Çizimdeki kılavuzları **Geçmiş**'e yazar |
+
+Düğmenin yüzü en son kullandığınız satırı çalıştırır. Yatay ve düşey kılavuzda
+tıkladığınız noktanın yalnız **bir koordinatı** kullanılır — yatayda yukarı, düşeyde
+sağa — ve günlüğe `deger` olarak yazılır: kaydı yeniden oynatan bir betik tıklamaya
+ihtiyaç duymaz. Yakalama açıktır, yani kılavuzu bir parsel köşesinden geçirebilirsiniz.
 
 **Açılı kılavuz için** komutu açıyla çalıştırın: `KILAVUZ yon=45g` yazın, program
 kılavuzun geçtiği noktayı sorar, tuvalde tıklarsınız. Yakalama açıktır, yani
@@ -159,7 +171,9 @@ betik, aksları kılavuz olarak bırakabilir.
 
 > `Kılavuzun koordinatı eksik. Örnek: KILAVUZ yon=yatay deger=4310220.5`
 
-`yon` verildi ama `deger` verilmedi.
+`yon` verildi ama `deger` de `nokta` da verilmedi ve komutu çalıştıran istemci
+bir nokta gösteremiyor (betik, komut satırı dosyası, ajan). Arayüzde bu soru
+tıklamayla cevaplanır.
 
 > `Orada <yön> kılavuz yok: <koordinat>`
 

@@ -843,6 +843,15 @@ KENTOS_COMMAND(split)
                    "baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır.",
         .run     = &run_split,
         .targets = Targets::Lines | Targets::Faces | Targets::Curves,
+        // ONLY THE CUT LINE OPENS AN AREA: points, crossings, equal parts and a
+        // distance run along an edge, and the body refuses an area for them.
+        .verb_targets =
+            {
+                {.param = "yontem", .word = "nokta", .targets = Targets::Lines | Targets::Curves},
+                {.param = "yontem", .word = "kesisim", .targets = Targets::Lines | Targets::Curves},
+                {.param = "yontem", .word = "esit", .targets = Targets::Lines | Targets::Curves},
+                {.param = "yontem", .word = "mesafe", .targets = Targets::Lines | Targets::Curves},
+            },
     };
 }
 

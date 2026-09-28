@@ -21,9 +21,12 @@
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/block_reference.hpp"
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
 
@@ -596,6 +599,64 @@ TEST_CASE("OTURT tek geri alma adımıdır: ya hepsi taşınır ya hiçbiri")
     // both halves would look plausible. One undo must put every vertex back.
     REQUIRE(bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK(doc.content_hash() == before);
+}
+
+TEST_CASE("OTURT: dönük ya da ölçekli bir oturtma daireyi ve yayı bozmadan taşır")
+{
+    // A fit that TURNS used to be refused on any drawing with a circle in it:
+    // every vertex was carried on its own, so the circle's radius handle left
+    // due east of its centre and the kind said so — in a sentence about the
+    // handle. Each object now moves the way its kind moves (`transform_entity`),
+    // a circle round, its radius scaled with the fit.
+    const auto rig = [](kentos::core::Document& doc, kentos::command::Registry& reg,
+                        kentos::command::Bus& bus) {
+        kentos::command::register_builtin_commands(reg);
+        kentos::domain::geodesy::register_geodesy_commands(reg);
+        using kentos::command::Origin;
+        REQUIRE(bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());  // 1
+        REQUIRE(bus.execute_line("DAİRE 10,0 12,0", Origin::Test).ok()); // 2: r = 2 m
+        REQUIRE(bus.execute_line("YAY 0,0 5,0 0,5", Origin::Test).ok()); // 3: r = 5 m
+        (void)doc;
+    };
+    using kentos::command::Origin;
+
+    namespace core = kentos::core;
+    {
+        core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+        rig(doc, reg, bus);
+        // A quarter turn: local east becomes map north.
+        auto fitted = bus.execute_line("OTURT noktalar=0,0 100,100 10,0 100,110", Origin::Test);
+        if (!fitted) FAIL_WITH("OTURT", fitted.error().message);
+        const core::RingGeometry& g = doc.geometry();
+        const auto slot             = [&doc](std::uint64_t key) {
+            return doc.entities().slot[doc.slot_of(core::EntityKey{key})];
+        };
+        CHECK_EQ(core::circle_centre_of(g, slot(2)), core::Point2{100'000, 110'000});
+        CHECK_EQ(core::circle_radius_of(g, slot(2)), core::Mm{2'000});
+        CHECK_EQ(core::arc_centre_of(g, slot(3)), core::Point2{100'000, 100'000});
+        CHECK_EQ(core::arc_radius_of(g, slot(3)), core::Mm{5'000});
+        CHECK_EQ(core::arc_start_of(g, slot(3)), core::Point2{100'000, 105'000});
+        CHECK_EQ(core::arc_end_of(g, slot(3)), core::Point2{95'000, 100'000});
+    }
+
+    {
+        core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+        rig(doc, reg, bus);
+        // Twice the size and a quarter turn: the radius doubles with the sheet.
+        auto fitted = bus.execute_line("OTURT noktalar=0,0 0,0 10,0 0,20", Origin::Test);
+        if (!fitted) FAIL_WITH("OTURT", fitted.error().message);
+        const std::uint32_t circle = doc.entities().slot[doc.slot_of(core::EntityKey{2})];
+        CHECK_EQ(core::circle_centre_of(doc.geometry(), circle), core::Point2{0, 20'000});
+        CHECK_EQ(core::circle_radius_of(doc.geometry(), circle), core::Mm{4'000});
+    }
 }
 
 TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")

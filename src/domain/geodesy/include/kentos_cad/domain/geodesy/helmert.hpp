@@ -32,6 +32,7 @@
 
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/core/transform.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -73,7 +74,14 @@ struct Helmert2D
     /// The largest single residual, in millimetres.
     core::Mm worst{0};
 
-    /// Applies the fit to one point.
+    /// The fit as the transform every edit verb carries: the `Align` of `HİZALA`,
+    /// turned and scaled about the origin by (a, b) and carried by (tx, ty). OTURT
+    /// moves each object through it (`command::transform_entity`), so a circle
+    /// stays round and a caption upright — and `apply` is this, so a residual is
+    /// measured on exactly what the drawing gets.
+    core::Xform xform() const noexcept;
+
+    /// Applies the fit to one point: `core::transformed(xform(), p)`.
     core::Point2 apply(core::Point2 p) const noexcept;
 };
 

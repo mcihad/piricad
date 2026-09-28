@@ -212,12 +212,30 @@ Task<void> run(Context& ctx)
         }
     }
 
-    if (value.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Kılavuzun koordinatı eksik. Örnek: KILAVUZ yon=yatay deger=4310220.5");
-        co_return;
+    // THE COORDINATE, GIVEN OR SHOWN. The ribbon's horizontal and vertical buttons
+    // send `yon=` alone: the guide goes through the point clicked next — its
+    // northing for a horizontal guide, its easting for a vertical one — which
+    // is what a hand pulling one off the ruler says too. Named with `deger`, as
+    // a script does, nothing is asked.
+    core::Mm coordinate = 0;
+    if (!value.empty()) {
+        coordinate = static_cast<core::Mm>(value.as_int());
+    } else {
+        const bool removing = !remove.empty() && remove.as_bool();
+        std::string asking = axis == core::GuideAxis::Horizontal ? "Yatay kılavuzun geçeceği nokta"
+                                                                 : "Düşey kılavuzun geçeceği nokta";
+        if (removing) asking = "Silinecek kılavuzun üzerindeki nokta";
+        auto at = co_await ctx.point("nokta", std::move(asking));
+        if (!at) {
+            // Esc says it for itself; a call that gave neither is told the form.
+            if (!ctx.session().cancel_requested())
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Kılavuzun koordinatı eksik. Örnek: KILAVUZ yon=yatay deger=4310220.5");
+            co_return;
+        }
+        coordinate = axis == core::GuideAxis::Horizontal ? at->y : at->x;
+        ctx.record("nokta", Value{});
     }
-    const auto coordinate = static_cast<core::Mm>(value.as_int());
 
     if (!remove.empty() && remove.as_bool()) {
         // A guide is removed by naming where it is, within half a metre — which is
@@ -269,7 +287,8 @@ KENTOS_COMMAND(guide)
                                "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa")
                     .en("value"),
                 Param::points("nokta", Arity::optional(),
-                              "Açılı kılavuzun geçtiği nokta; yalnız `yon` bir açıysa")
+                              "Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş "
+                              "cetvel kılavuzunda; verilmezse sorulur")
                     .en("point"),
                 Param::choice("tur", Arity::optional(), {"dogru", "isin"},
                               "doğru: iki yöne sonsuz · ışın: noktadan ileriye")

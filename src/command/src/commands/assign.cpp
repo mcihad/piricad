@@ -126,10 +126,42 @@ Task<void> run_match_style(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!co_await gather(ctx, requested, slots, "STİLKOPYALA kaynak=1 nesneler=2 nesneler=3"))
-        co_return;
-
     Value source_arg = ctx.argument("kaynak");
+
+    // THE ORDER A HAND WORKS IN — Netcad's Biçim Boya, AutoCAD's MATCHPROP:
+    // the object to copy FROM, then the objects to copy ONTO. With nothing
+    // named and at most one object highlighted, that one — or the one clicked
+    // next — is the source, and the targets are asked for; pressing the button
+    // used to refuse outright here ("kaynağı ve hedefleri birlikte seçin").
+    const std::vector<core::EntityKey> highlighted = ctx.session().bus().selection().keys();
+    if (source_arg.empty() && ctx.argument("nesneler").empty() && highlighted.size() <= 1) {
+        if (highlighted.size() == 1) {
+            source_arg = Value::ids({static_cast<std::int64_t>(core::raw(highlighted.front()))});
+        } else {
+            auto source = co_await ctx.objects(
+                "kaynak", "Stili kopyalanacak KAYNAK nesneye tıklayın", core::kNoKind, 1);
+            if (!source || source->empty()) co_return;
+            source_arg = Value::ids({source->front()});
+        }
+        auto targets =
+            co_await ctx.objects("nesneler", "Stili alacak nesneleri seçin, sonra Enter");
+        if (!targets || targets->empty()) co_return;
+        requested = std::move(*targets);
+        for (const std::int64_t raw : requested) {
+            const core::EntityId e = ctx.document().slot_of(
+                static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+            if (e == core::kNoEntity || !ctx.document().alive(e)) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+                co_return;
+            }
+            slots.push_back(e);
+        }
+    } else if (!co_await gather(ctx, requested, slots,
+                                "STİLKOPYALA kaynak=1 nesneler=2 nesneler=3")) {
+        co_return;
+    }
+
     if (source_arg.empty()) {
         // THE CLICK SAYS WHICH ONE IS THE SOURCE.
         //

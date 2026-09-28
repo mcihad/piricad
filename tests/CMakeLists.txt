@@ -59,6 +59,7 @@ add_executable(kentos_tests
     unit/test_kernel.cpp
     unit/test_targets.cpp
     unit/test_rounded.cpp
+    unit/test_tool_drive.cpp
     unit/test_common_preview.cpp
     unit/test_textfields.cpp
     unit/test_planar.cpp

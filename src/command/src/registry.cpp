@@ -99,6 +99,11 @@ std::uint64_t Registry::fingerprint() const
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->undo), h);
         h = core::fnv1a(spec->summary, h);
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->targets), h);
+        for (const VerbTargets& row : spec->verb_targets) {
+            h = core::fnv1a(row.param, h);
+            h = core::fnv1a(row.word, h);
+            h = core::fnv1a_int(static_cast<std::int64_t>(row.targets), h);
+        }
         for (const Param& p : spec->params) {
             h = core::fnv1a(p.name, h);
             h = core::fnv1a_int(static_cast<std::int64_t>(p.kind), h);

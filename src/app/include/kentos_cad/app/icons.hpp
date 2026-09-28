@@ -249,6 +249,52 @@ enum class Glyph {
     DimArcLength, ///< an arc, the arc beside it that measures it and ⌒: ÖLÇÜ tur=yay
     // ---- ties between objects (TODOS F-04) ------------------------------------
     Dependency, ///< a source, the arrow to what was made from it, a mark on that: BAĞIMLILIK
+    // ---- a method told apart from its family (the ribbon review, 28 Sept 2026) --
+    // The user: "ikonu kötü olanlar var". Four circles, five arcs and the
+    // rest wore their family's picture, so the arrow's list read as one
+    // picture repeated; each method now shows what makes it that method.
+    CircleTwoPoint,     ///< a circle and the diameter its two points give: DAİRE yontem=2n
+    CircleThreePoint,   ///< a circle through three marked points: DAİRE yontem=3n
+    CircleTangent,      ///< a circle in the corner two lines make: DAİRE yontem=ttr
+    ArcThreePoint,      ///< an arc through its start, a point on it and its end: YAY yontem=3n
+    ArcCentreAngle,     ///< the centre, the start, and the angle swept: YAY yontem=bma
+    ArcEndsRadius,      ///< the two ends and the radius from the centre: YAY yontem=bby
+    ArcContinue,        ///< a line running on, tangent, into an arc: YAY yontem=devam
+    RectangleRotated,   ///< a rectangle turned off the axes: DİKDÖRTGEN yontem=3n
+    PolygonOutside,     ///< a hexagon round the circle it touches: ÇOKGEN yontem=dis
+    PolygonSide,        ///< a hexagon from one side: ÇOKGEN yontem=kenar
+    EllipseAxis,        ///< an ellipse and the axis its two points give: ELİPS yontem=eksen
+    AreaDraw,           ///< a parcel, drawn corner by corner: ALAN
+    Combine,            ///< two faces become one, the seam gone: BİRLEŞTİR
+    Polygonize,         ///< lines that cross, and the faces they close: ALANÜRET
+    AreaEdit,           ///< an edge moved out to the area asked for: ALANDÜZENLE
+    BlockDefine,        ///< objects gathered into one block at a base point: BLOK
+    HatchEdit,          ///< a hatch, and the pencil that changes it: TARAMADÜZENLE
+    SaveAs,             ///< the disk, and the pencil that names a new file: FARKLIKAYDET
+    ArrayPolar,         ///< copies round a centre: DİZİ mod=KUTUPSAL
+    ArrayPath,          ///< copies along a path: DİZİ mod=YOL
+    Toolbox,            ///< the processing tools, all of them: İşlem Araçları
+    TrimFence,          ///< Buda, with a fence drawn across the pieces
+    TrimKeep,           ///< Buda, the piece clicked kept
+    TrimCarry,          ///< Buda, the boundaries carried on
+    ExtendFence,        ///< Uzat, with a fence
+    ExtendCarry,        ///< Uzat, the boundaries carried on
+    SplitPoints,        ///< Böl at points on the object
+    SplitCrossings,     ///< Böl where the objects cross
+    SplitEqual,         ///< Böl into equal parts
+    SplitDistance,      ///< Böl at a distance from the start
+    RotateReference,    ///< Döndür by a reference angle
+    ScaleReference,     ///< Ölçekle by a reference length
+    MirrorCopy,         ///< Aynala, the original kept
+    FilletAll,          ///< Yuvarla, every corner
+    ChamferAll,         ///< Pah, every corner
+    MeasureAreaCorners, ///< Alan Ölç, by clicking the corners
+    IntersectDistances, ///< Kesişim from two distances
+    IntersectLines,     ///< Kesişim of two lines
+    AlongDistance,      ///< Ara Nokta at a distance
+    GuideHorizontal,    ///< a guide across, off the ruler's top: KILAVUZ yon=yatay
+    GuideVertical,      ///< a guide down, off the ruler's side: KILAVUZ yon=düşey
+    GuideList,          ///< the guides, listed: KILAVUZ
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

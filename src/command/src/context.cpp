@@ -211,15 +211,18 @@ InputAwaiter<bool> Context::boolean(std::string param, std::string message)
 }
 
 InputAwaiter<Value::Ints> Context::objects(std::string param, std::string message,
-                                           core::KindId kind)
+                                           core::KindId kind, std::size_t most)
 {
     // Arity starts at ONE: a modify command with nothing to modify is not a
     // command that ran, and the bus should say so rather than the body.
     Param p{param, ParamKind::Selection, Arity{1, 0xFFFFFFFFu}, "İşlem yapılacak nesneler"};
-    Prompt prompt{.message   = std::move(message),
-                  .kind      = ParamKind::Selection,
-                  .param     = std::move(param),
-                  .pick_kind = kind};
+    Prompt prompt{
+        .message   = std::move(message),
+        .kind      = ParamKind::Selection,
+        .param     = std::move(param),
+        .pick_kind = kind,
+        .pick_most = most,
+    };
     return InputAwaiter<Value::Ints>(session_, std::move(p), std::move(prompt), &to_ids);
 }
 
@@ -280,7 +283,7 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
                   std::to_string(most) + " nesneyle çalışır. " + message;
     }
 
-    auto picked = co_await ctx.objects(param, std::move(message), kind);
+    auto picked = co_await ctx.objects(param, std::move(message), kind, most);
     if (crowded != 0 && (!picked || picked->empty()))
         co_return refuse("Bir seferde en fazla " + std::to_string(most) + " nesne; " +
                          std::to_string(crowded) + " nesne seçili.");

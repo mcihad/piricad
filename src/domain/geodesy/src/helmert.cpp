@@ -8,11 +8,22 @@
 
 namespace kentos::domain::geodesy {
 
+core::Xform Helmert2D::xform() const noexcept
+{
+    // The pair (a, b) is the turn times the scale: divided by the scale it is
+    // the turn's cosine and sine, and still no angle is ever formed.
+    core::Xform x;
+    x.kind   = core::Xform::Kind::Align;
+    x.base   = core::Point2{0, 0};
+    x.axis_b = core::Point2{tx, ty};
+    x.factor = scale;
+    x.turn   = core::SinCos{.sin = b / scale, .cos = a / scale};
+    return x;
+}
+
 core::Point2 Helmert2D::apply(core::Point2 p) const noexcept
 {
-    const double x = static_cast<double>(p.x);
-    const double y = static_cast<double>(p.y);
-    return core::Point2{core::mm_round(a * x - b * y) + tx, core::mm_round(b * x + a * y) + ty};
+    return core::transformed(xform(), p);
 }
 
 core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, bool lock_scale)
@@ -89,9 +100,12 @@ core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, boo
     }
 
     // The translation closes the fit on the centroids, so the fitted drawing and
-    // the control agree at their common centre whatever the residuals are.
-    fit.tx = mx - core::mm_round(fit.a * static_cast<double>(lx) - fit.b * static_cast<double>(ly));
-    fit.ty = my - core::mm_round(fit.b * static_cast<double>(lx) + fit.a * static_cast<double>(ly));
+    // the control agree at their common centre whatever the residuals are: the
+    // local centroid turned and scaled by the very arithmetic `apply` uses, with
+    // no translation yet, lands exactly (tx, ty) short of the map's.
+    const core::Point2 turned = fit.apply(core::Point2{lx, ly});
+    fit.tx                    = mx - turned.x;
+    fit.ty                    = my - turned.y;
 
     // ---- what it cost ----
     //

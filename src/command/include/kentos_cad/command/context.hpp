@@ -206,8 +206,10 @@ public:
     /// `nesneler=1 2`, a CLI line, an AI tool result — and by pointing when it did
     /// not: the canvas picks into the live selection and Enter hands it over. The
     /// body cannot tell which happened, which is the whole point (Article 1.2).
+    /// `most` is how many the question takes (0: any number); a question for
+    /// ONE object is answered by the click that names it (`Prompt::pick_most`).
     InputAwaiter<Value::Ints> objects(std::string param, std::string message,
-                                      core::KindId kind = core::kNoKind);
+                                      core::KindId kind = core::kNoKind, std::size_t most = 0);
 
     /// Whole-parameter fetch for non-interactive parameters (a script passing a
     /// full point list at once). Returns an empty Value when absent.

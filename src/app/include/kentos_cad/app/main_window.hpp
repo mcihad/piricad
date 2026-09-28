@@ -459,6 +459,20 @@ public:
     /// screen.
     int probeFit();
 
+    /// THE WHOLE RIBBON, PHOTOGRAPHED (`KENTOS_RIBBON_SHEET=<dir>`): every tab,
+    /// every editor tab with an object of its kind picked, and one sheet of
+    /// every button's picture with its name and command — and a list of what a
+    /// reviewer should look at: a button with no picture, one wearing the
+    /// generic mark, one picture that stands for two different commands. The
+    /// review of the ribbon's pictures reads this sheet, not a guess.
+    int probeRibbonSheet();
+
+    /// EVERY RIBBON TOOL, USED (`KENTOS_TOOL_DRIVE=<dir>`, main_window_drive.cpp):
+    /// pressed with nothing selected on a drawing with an object of every
+    /// class, its questions answered the way a hand would, the outcome written
+    /// down, and undone. A measurement for the review of what does not work.
+    int probeToolDrive();
+
     /// THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so
     /// nothing there can see whether the payload reached `QClipboard` under the
     /// agreed MIME type and came back out of it. Copies two parcels, clears the

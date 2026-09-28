@@ -75,6 +75,7 @@ qt_add_executable(kentos_cad
     src/main.cpp
     src/main_window.cpp
     src/main_window_ribbon.cpp
+    src/main_window_drive.cpp
     src/map_canvas.cpp
     src/layout_render.cpp
     src/layout_designer.cpp

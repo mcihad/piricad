@@ -66,16 +66,23 @@ STİLKOPYALA kaynak=1
 
 ### Arayüz
 
-Kaynağı ve hedefleri **birlikte** seçin, şeritteki **Giriş ▸ Özellikler ▸ Stil Kopyala**
-düğmesine (bir yazı seçiliyken beliren **Yazı** sekmesinde de vardır) basın, sonra stili **kopyalanacak** nesneye tıklayın. Tıkladığınız nesne
-kaynaktır; seçimdeki diğerleri onun stilini alır.
+Şeritteki **Giriş ▸ Değiştir ▸ Stil Kopyala** simgesi (bir nesne seçiliyken beliren
+**Yazı**, **Alan** ve **Çizgi** sekmelerinde de vardır) Netcad'in Biçim Boya'sı gibi
+çalışır — önce kaynak, sonra hedefler:
+
+1. **Hiçbir şey seçmeden** basın. Komut satırı `Stili kopyalanacak KAYNAK nesneye
+   tıklayın` der; kaynağa **bir kez** tıklayın — Enter gerekmez.
+2. `Stili alacak nesneleri seçin, sonra Enter` sorusunda hedefleri tıklayın ya da
+   kutuyla seçin, **Enter**'a ya da sağ tuşa basın.
+
+**Bir nesne seçiliyken** basarsanız seçili nesne kaynaktır ve yalnız hedefler sorulur.
+
+Kaynağı ve hedefleri **birlikte** seçip basarsanız eski yol geçerlidir: komut stili
+**kopyalanacak** nesneye tıklatır; tıkladığınız kaynaktır, seçimdeki diğerleri onun
+stilini alır.
 
 Kaynağı komut satırından da verebilirsiniz: `STİLKOPYALA kaynak=<kimlik>`. O zaman
-tıklama sorulmaz.
-
-Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
-yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
-Nesneleri önceden seçtiyseniz sorulmaz.
+kaynak sorulmaz. Vazgeçmek için Esc.
 
 ### Betik
 

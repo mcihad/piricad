@@ -196,6 +196,10 @@ public:
     /// any (`command::Prompt::pick_kind`).
     core::KindId promptPickKind() const;
 
+    /// How many objects the waiting question takes, 0 for any number
+    /// (`command::Prompt::pick_most`): one, and the click that names it answers.
+    std::size_t promptPickMost() const;
+
     void cancelInteractive();
 
     /// Whether the running command's prompt can take its newest point back

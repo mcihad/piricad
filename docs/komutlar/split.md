@@ -175,6 +175,11 @@ seçtiyseniz doğrudan kesme çizgisine geçer.
 - **Böl — eşit parçaya**: nesneleri seçin, parça sayısını yazın.
 - **Böl — baştan uzaklıkla**: nesneleri seçin, uzaklığı metre olarak yazın.
 
+Bu dört satır yalnız çizgide ve eğride çalışır; seçimde bir alan varken **soluk**
+görünür ve basılmaz, çünkü bir alan yalnız kesme çizgisiyle bölünür. Düğmenin
+kendisi (**Böl**) alan seçiliyken de açıktır. [Komut başvurusu](referans.md) bunu
+**Uygulandığı nesneler** satırında yöntem yöntem yazar.
+
 ### Betik
 
 ```json

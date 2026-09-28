@@ -11,6 +11,7 @@
 #include "kentos_cad/command/value.hpp"
 #include "kentos_cad/core/identity.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -209,6 +210,15 @@ struct Prompt
     /// asking which; `SEÇ mod=NOKTA sira=` is the line it sends, so a keyboard
     /// reaches the same object (CLAUDE.md 5.15). `kNoKind`: any.
     core::KindId pick_kind{core::kNoKind};
+
+    /// HOW MANY OBJECTS THE QUESTION TAKES; 0 is any number. A question for ONE
+    /// — KIR's line, UZUNLUK's, the block BLOKKIRP clips, the source a style is
+    /// copied from —
+    /// is answered by the click that names it, as it is in every CAD: a click
+    /// and then a right click to say "this one" was a second gesture for no
+    /// second choice. The answer is the same `SEÇ` line and the same ids a
+    /// keyboard sends, so nothing reaches the command a script could not send.
+    std::size_t pick_most{0};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

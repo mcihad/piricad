@@ -8,6 +8,7 @@
 // edge is in must not change because its kind did (model.md R9b).
 #include "kentos_test.hpp"
 
+#include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -166,4 +167,36 @@ TEST_CASE("HEDEF: BİRLEŞTİR yaylı kenarlı alanı kirişe çevirmek yerine r
     REQUIRE_FALSE(refused.ok());
     CHECK(refused.error().message.find("yaylı kenarlı") != std::string::npos);
     CHECK_EQ(r.doc.live_entity_count(), 2u);
+}
+
+TEST_CASE("HEDEF: yöntemin daralttığı sınıflar — BÖL alanı yalnız kesme çizgisiyle alıyor")
+{
+    Rig r;
+    const CommandSpec* split = r.reg.resolve("BÖL");
+    REQUIRE(split != nullptr);
+    Args plain;
+    CHECK(targets_of(*split, plain) == (Targets::Lines | Targets::Faces | Targets::Curves));
+    Args cut;
+    cut.set("yontem", Value::text("cizgi"));
+    CHECK(has_target(targets_of(*split, cut), Targets::Faces));
+    for (const char* word : {"nokta", "kesisim", "esit", "mesafe"}) {
+        Args along;
+        along.set("yontem", Value::text(word));
+        CHECK_FALSE_MESSAGE(has_target(targets_of(*split, along), Targets::Faces), word);
+        CHECK(has_target(targets_of(*split, along), Targets::Lines));
+    }
+    // The word is matched folded: `EŞİT` is `esit`.
+    Args loud;
+    loud.set("yontem", Value::text("EŞİT"));
+    CHECK_FALSE(has_target(targets_of(*split, loud), Targets::Faces));
+
+    // ONE SENTENCE SAYS IT, the four methods that walk an edge named together,
+    // and the reference and the agent's tool description both carry it.
+    const std::string takes = targets_sentence(*split);
+    CHECK_EQ(takes, std::string("çizgi, alan, eğri; `yontem=nokta`, `yontem=kesisim`, "
+                                "`yontem=esit` ya da `yontem=mesafe` ile çizgi, eğri"));
+    CHECK(ai::tool_for(*split, ai::Style::Agent).description.find(takes) != std::string::npos);
+    const CommandSpec* move = r.reg.resolve("TAŞI");
+    REQUIRE(move != nullptr);
+    CHECK(targets_sentence(*move).empty());
 }

@@ -7,7 +7,7 @@
 // nirengi, poligon, a röper with a TUREF coordinate — and the drawing has to move
 // onto them WITHOUT deforming: a similarity, never an affine (`helmert.hpp`).
 //
-// ONE TRANSACTION FOR THE WHOLE DRAWING. Every vertex moves or none does. A
+// ONE TRANSACTION FOR THE WHOLE DRAWING. Every object moves or none does. A
 // half-transformed cadastral sheet is the exact failure Article 1.6 names, and it
 // is worse here than anywhere else because the halves would both look plausible.
 //
@@ -20,6 +20,7 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/command/transform_edit.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 
 #include "kentos_cad/core/crs.hpp"
@@ -139,44 +140,26 @@ Task<void> run(Context& ctx)
             "\n  " + std::to_string(i + 1) + ". nokta artığı: " + mm_text(fit.residuals[i]) + " m";
     ctx.echo(report);
 
-    // ---- move every vertex ----
+    // ---- move every object, each the way its kind moves ----
+    //
+    // THE FIT AS A TRANSFORM EVERY VERB KNOWS (`Helmert2D::xform`), the one the
+    // residuals above were measured with. Through `transform_entity` a circle
+    // stays round with its radius scaled, an arc keeps its sweep turned with the
+    // sheet, an arc polyline's arcs keep their centres, a caption its letters
+    // the right size on its line and a block its turn (TODOS C-08). Moving each
+    // vertex on its own, which this did, was right for a polyline only: a turned
+    // fit left a circle's radius handle off due east of its centre, and the
+    // whole fit was refused with a sentence about the handle.
+    const core::Xform x = fit.xform();
+
     const core::Document& doc      = ctx.document();
     const core::RingGeometry& geom = doc.geometry();
-
-    std::vector<core::Point2> moved;
-    std::vector<core::RingGeometry::RingInput> rings;
-    std::size_t touched = 0;
-
-    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
-        if (!doc.alive(e)) continue;
-
-        const core::RingSpan span = geom.rings_of(doc.entities().slot[e]);
-        rings.clear();
-
-        // The vertices are copied out before anything is written, because
-        // `set_geometry` replaces the entity's rings and the spans above would
-        // then name storage that has moved on.
-        std::vector<std::vector<core::Point2>> parts;
-        parts.reserve(span.count);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = geom.ring_xs(r);
-            const auto ys = geom.ring_ys(r);
-
-            moved.clear();
-            moved.reserve(xs.size());
-            for (std::size_t v = 0; v < xs.size(); ++v)
-                moved.push_back(fit.apply(core::Point2{xs[v], ys[v]}));
-
-            parts.push_back(moved);
-            rings.push_back(
-                core::RingGeometry::RingInput{parts.back(), geom.ring_role[r], geom.ring_part[r]});
-        }
-
-        if (rings.empty()) continue;
-        if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
-            ctx.refuse(st.error());
-            co_return; // the bus rolls the whole drawing back
-        }
+    std::size_t touched            = 0;
+    // Counted before anything is written: an object is carried once.
+    const std::size_t count = doc.entities().size();
+    for (core::EntityId e = 0; e < count; ++e) {
+        if (!doc.alive(e) || geom.rings_of(doc.entities().slot[e]).count == 0) continue;
+        if (!transform_entity(ctx, e, x)) co_return; // refused; the bus rolls the drawing back
         ++touched;
     }
 

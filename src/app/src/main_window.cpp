@@ -198,15 +198,17 @@ constexpr int kLayoutVersion = 6;
 /// Named here because the shell is what must not write. See the save path.
 bool probe_run()
 {
-    for (const char* probe :
-         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",   "KENTOS_SHOT_DIR",
-          "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE",  "KENTOS_DIALOG_PROBE",
-          "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",    "KENTOS_PICK_PROBE",
-          "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",   "KENTOS_CHAT_PROBE",
-          "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",   "KENTOS_FAMILY_PROBE",
-          "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",     "KENTOS_FRAME_DUMP",
-          "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE",     "KENTOS_MENU_PROBE",
-          "KENTOS_FIT_PROBE",      "KENTOS_REALMOUSE_PROBE"})
+    for (const char* probe : {
+             "KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",    "KENTOS_SHOT_DIR",
+             "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE",   "KENTOS_DIALOG_PROBE",
+             "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",     "KENTOS_PICK_PROBE",
+             "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",    "KENTOS_CHAT_PROBE",
+             "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",    "KENTOS_FAMILY_PROBE",
+             "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",      "KENTOS_FRAME_DUMP",
+             "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE",      "KENTOS_MENU_PROBE",
+             "KENTOS_FIT_PROBE",      "KENTOS_REALMOUSE_PROBE", "KENTOS_RIBBON_SHEET",
+             "KENTOS_TOOL_DRIVE",
+         })
         if (qEnvironmentVariableIsSet(probe)) return true;
     return false;
 }
@@ -773,7 +775,7 @@ void MainWindow::buildActions()
     actSaveAs_ = new QAction(tr("Farklı Kaydet…"), this);
     actSaveAs_->setShortcut(QKeySequence::SaveAs);
     actSaveAs_->setToolTip(tr("FARKLIKAYDET — çizimi yeni bir dosyaya yazar"));
-    actSaveAs_->setData(static_cast<int>(Glyph::Save));
+    actSaveAs_->setData(static_cast<int>(Glyph::SaveAs));
     actSaveAs_->setProperty(kToolCommand, QStringLiteral("FARKLIKAYDET"));
     connect(actSaveAs_, &QAction::triggered, this, &MainWindow::saveProjectAs);
 
@@ -900,7 +902,7 @@ void MainWindow::buildActions()
         return action;
     };
 
-    actPolygon_ = drawTool(Glyph::Polygon, tr("Alan"), QStringLiteral("ALAN"),
+    actPolygon_ = drawTool(Glyph::AreaDraw, tr("Alan"), QStringLiteral("ALAN"),
                            tr("ALAN — kapalı bir alan çizer  ·  kısaltma: AL"));
     actRegular_ = drawTool(Glyph::Polygon, tr("Düzgün Çokgen"), QStringLiteral("ÇOKGEN"),
                            tr("ÇOKGEN — merkez ve kenar sayısından düzgün çokgen; içten, dıştan "
@@ -992,11 +994,11 @@ void MainWindow::buildActions()
     // THE HATCH'S OWN EDIT (TODOS C-11): pattern, angle, scale, spacing, origin
     // and island rule of a hatch already drawn, keeping its tie to its parcel.
     actHatchEdit_ =
-        modifyTool(Glyph::Hatch, tr("Taramayı Düzenle"), QStringLiteral("TARAMADÜZENLE"),
+        modifyTool(Glyph::HatchEdit, tr("Taramayı Düzenle"), QStringLiteral("TARAMADÜZENLE"),
                    tr("TARAMADÜZENLE — taramayı seçin, desenini yazın; açı, ölçek, "
                       "aralık, başlangıç ve ada kuralı nitelik panelinde  ·  "
                       "kısaltma: TDZ"));
-    actBlock_  = modifyTool(Glyph::Duplicate, tr("Blok"), QStringLiteral("BLOK"),
+    actBlock_  = modifyTool(Glyph::BlockDefine, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
                                 "referans koyar  ·  kısaltma: BLK"));
     actInsert_ = drawTool(Glyph::BlockInsert, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
@@ -1252,7 +1254,7 @@ void MainWindow::buildActions()
     // menu rather than sitting on the column looking like the everyday tools.
     // Merging two woodland patches on opposite sides of a valley is a correct map
     // operation and a refused tevhit; one button cannot honestly be both.
-    actCombine_ = modifyTool(Glyph::Union, tr("Birleştir"), QStringLiteral("BİRLEŞTİR"),
+    actCombine_ = modifyTool(Glyph::Combine, tr("Birleştir"), QStringLiteral("BİRLEŞTİR"),
                              tr("BİRLEŞTİR — seçili alanları tek alanda birleştirir, uç uca "
                                 "değen çizgileri tek çizgi yapar  ·  kısaltma: BRL"));
     actUnion_   = modifyTool(Glyph::Union, tr("Tevhit"), QStringLiteral("TEVHİT"),
@@ -1331,23 +1333,24 @@ void MainWindow::buildActions()
     // so a hand reaches it: a turn or a scale found from a reference on the
     // drawing, a mirrored copy, and arrays round a centre and along a path.
     actArrayPolar_ =
-        modifyTool(Glyph::Array, tr("Dizi — kutupsal"), QStringLiteral("DİZİ mod=KUTUPSAL"),
+        modifyTool(Glyph::ArrayPolar, tr("Dizi — kutupsal"), QStringLiteral("DİZİ mod=KUTUPSAL"),
                    tr("DİZİ mod=KUTUPSAL — seçili nesneleri bir merkez etrafında çoğaltır"));
     actArrayPath_ =
-        modifyTool(Glyph::Array, tr("Dizi — yol boyunca"), QStringLiteral("DİZİ mod=YOL"),
+        modifyTool(Glyph::ArrayPath, tr("Dizi — yol boyunca"), QStringLiteral("DİZİ mod=YOL"),
                    tr("DİZİ mod=YOL — seçili nesneleri bir çizgi ya da yay boyunca eşit aralıkla "
                       "dizer, her kopyayı yolun doğrultusuna döndürür"));
     actRotateRef_ = modifyTool(
-        Glyph::Rotate, tr("Döndür — referansla"), QStringLiteral("DÖNDÜR yontem=referans"),
+        Glyph::RotateReference, tr("Döndür — referansla"), QStringLiteral("DÖNDÜR yontem=referans"),
         tr("DÖNDÜR yontem=referans — iki noktayla gösterilen doğrultuyu yeni "
            "doğrultuya döndürür"));
-    actScaleRef_ = modifyTool(
-        Glyph::Scale, tr("Ölçekle — referansla"), QStringLiteral("ÖLÇEKLE yontem=referans"),
-        tr("ÖLÇEKLE yontem=referans — iki noktayla gösterilen uzunluğu yeni uzunluğa "
-           "getirir"));
-    actMirrorCopy_ =
-        modifyTool(Glyph::Mirror, tr("Aynala — kopyalayarak"), QStringLiteral("AYNALA kopya=evet"),
-                   tr("AYNALA kopya=evet — özgün yerinde kalır, aynalanmış kopyası çizilir"));
+    actScaleRef_ =
+        modifyTool(Glyph::ScaleReference, tr("Ölçekle — referansla"),
+                   QStringLiteral("ÖLÇEKLE yontem=referans"),
+                   tr("ÖLÇEKLE yontem=referans — iki noktayla gösterilen uzunluğu yeni uzunluğa "
+                      "getirir"));
+    actMirrorCopy_ = modifyTool(
+        Glyph::MirrorCopy, tr("Aynala — kopyalayarak"), QStringLiteral("AYNALA kopya=evet"),
+        tr("AYNALA kopya=evet — özgün yerinde kalır, aynalanmış kopyası çizilir"));
     actExtend_ = modifyTool(Glyph::Extend, tr("Uzat"), QStringLiteral("UZAT"),
                             tr("UZAT — ucu en yakın sınıra kadar uzatır: çizgiyi doğrultusunda, "
                                "yayı çemberi boyunca"));
@@ -1356,23 +1359,23 @@ void MainWindow::buildActions()
     // rather than the one to lose, and a boundary that stops short taken as
     // running on. They were parameters only a typed line could set.
     actTrimFence_ =
-        modifyTool(Glyph::Trim, tr("Buda — çitle"), QStringLiteral("BUDA yontem=çit"),
+        modifyTool(Glyph::TrimFence, tr("Buda — çitle"), QStringLiteral("BUDA yontem=çit"),
                    tr("BUDA yontem=çit — çizdiğiniz çitin geçtiği bütün parçaları tek seferde "
                       "budar; Enter uygular"));
     actTrimKeep_ =
-        modifyTool(Glyph::Trim, tr("Buda — tıklanan kalsın"), QStringLiteral("BUDA tut=evet"),
+        modifyTool(Glyph::TrimKeep, tr("Buda — tıklanan kalsın"), QStringLiteral("BUDA tut=evet"),
                    tr("BUDA tut=evet — tıkladığınız parça kalır, iki yanındaki kesimlerin dışında "
                       "kalan gider"));
-    actTrimCarry_ =
-        modifyTool(Glyph::Trim, tr("Buda — sınırları uzatarak"), QStringLiteral("BUDA uzanti=evet"),
-                   tr("BUDA uzanti=evet — nesneye yetişmeyen bir sınır kendi doğrultusunda "
-                      "uzatılmış sayılır"));
+    actTrimCarry_ = modifyTool(
+        Glyph::TrimCarry, tr("Buda — sınırları uzatarak"), QStringLiteral("BUDA uzanti=evet"),
+        tr("BUDA uzanti=evet — nesneye yetişmeyen bir sınır kendi doğrultusunda "
+           "uzatılmış sayılır"));
     actExtendFence_ =
-        modifyTool(Glyph::Extend, tr("Uzat — çitle"), QStringLiteral("UZAT yontem=çit"),
+        modifyTool(Glyph::ExtendFence, tr("Uzat — çitle"), QStringLiteral("UZAT yontem=çit"),
                    tr("UZAT yontem=çit — çizdiğiniz çitin yanından geçtiği bütün uçları sınıra "
                       "uzatır; Enter uygular"));
     actExtendCarry_ = modifyTool(
-        Glyph::Extend, tr("Uzat — sınırları uzatarak"), QStringLiteral("UZAT uzanti=evet"),
+        Glyph::ExtendCarry, tr("Uzat — sınırları uzatarak"), QStringLiteral("UZAT uzanti=evet"),
         tr("UZAT uzanti=evet — uca yetişmeyen bir sınır kendi doğrultusunda uzatılmış sayılır"));
     actSplit_ = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
                            tr("BÖL — çizdiğiniz kesme çizgisiyle böler: çizgi, yay, daire, yaylı "
@@ -1380,19 +1383,19 @@ void MainWindow::buildActions()
     // THE OTHER FOUR WAYS TO SAY WHERE (TODOS C-05), each its own entry: they
     // were not there at all, and BÖL could cut nothing but a line.
     actSplitPoint_ =
-        modifyTool(Glyph::Split, tr("Böl — noktalardan"), QStringLiteral("BÖL yontem=nokta"),
+        modifyTool(Glyph::SplitPoints, tr("Böl — noktalardan"), QStringLiteral("BÖL yontem=nokta"),
                    tr("BÖL yontem=nokta — nesnenin üstüne tıkladığınız noktalardan böler; "
                       "parçalar Enter'dan önce görünür, ⌫ son noktayı geri alır"));
-    actSplitCross_ =
-        modifyTool(Glyph::Split, tr("Böl — kesişimlerden"), QStringLiteral("BÖL yontem=kesisim"),
-                   tr("BÖL yontem=kesisim — seçtiğiniz nesneleri birbirini kestikleri her yerden "
-                      "böler"));
+    actSplitCross_ = modifyTool(
+        Glyph::SplitCrossings, tr("Böl — kesişimlerden"), QStringLiteral("BÖL yontem=kesisim"),
+        tr("BÖL yontem=kesisim — seçtiğiniz nesneleri birbirini kestikleri her yerden "
+           "böler"));
     actSplitEqual_ =
-        modifyTool(Glyph::Split, tr("Böl — eşit parçaya"), QStringLiteral("BÖL yontem=esit"),
+        modifyTool(Glyph::SplitEqual, tr("Böl — eşit parçaya"), QStringLiteral("BÖL yontem=esit"),
                    tr("BÖL yontem=esit — seçtiğiniz nesneleri verdiğiniz sayıda eşit parçaya "
                       "böler"));
     actSplitDistance_ = modifyTool(
-        Glyph::Split, tr("Böl — baştan uzaklıkla"), QStringLiteral("BÖL yontem=mesafe"),
+        Glyph::SplitDistance, tr("Böl — baştan uzaklıkla"), QStringLiteral("BÖL yontem=mesafe"),
         tr("BÖL yontem=mesafe — seçtiğiniz nesneleri başından verdiğiniz uzaklıkta böler"));
     actChamfer_ = modifyTool(Glyph::Chamfer, tr("Pah"), QStringLiteral("PAH"),
                              tr("PAH — köşeye ya da iki çizgiye kalacak parçalarından tıklayın; "
@@ -1406,11 +1409,11 @@ void MainWindow::buildActions()
     // it: a chain rounded or cut by one size, the corners it does not fit
     // passed over and counted.
     actChamferAll_ =
-        modifyTool(Glyph::Chamfer, tr("Pah — bütün köşeler"), QStringLiteral("PAH hepsi=evet"),
+        modifyTool(Glyph::ChamferAll, tr("Pah — bütün köşeler"), QStringLiteral("PAH hepsi=evet"),
                    tr("PAH hepsi=evet — çizgiye ya da alana tıklayın; bütün köşelerine aynı "
                       "mesafeyle pah kırar"));
     actFilletAll_ = modifyTool(
-        Glyph::Fillet, tr("Yuvarla — bütün köşeler"), QStringLiteral("YUVARLA hepsi=evet"),
+        Glyph::FilletAll, tr("Yuvarla — bütün köşeler"), QStringLiteral("YUVARLA hepsi=evet"),
         tr("YUVARLA hepsi=evet — çizgiye ya da alana tıklayın; bütün köşelerini aynı "
            "yarıçapla yuvarlatır"));
     actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"), QStringLiteral("KATMANAT"),
@@ -1682,7 +1685,7 @@ void MainWindow::buildActions()
     // THE TWO QUESTIONS OF P7, as tools rather than as menu rows only: both arm
     // and then wait for the hand, so they belong in the exclusive group beside
     // ÖLÇ and ALANÖLÇ, and `modifyTool` is what puts them there.
-    actEntityInfo_ = modifyTool(Glyph::Identify, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
+    actEntityInfo_ = modifyTool(Glyph::Info, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
                                 tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
                                    "öznitelikler  ·  kısaltma: NB"));
     actMeasureAngle_ = modifyTool(Glyph::MeasureAngle, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
@@ -2680,6 +2683,12 @@ void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
         send({key}, "ÇIKAR");
     else
         send({key}, nullptr);
+    // A QUESTION FOR ONE OBJECT is answered by the row chosen, as by a click on
+    // the canvas (`Prompt::pick_most`).
+    if (controller_->awaitingInput() &&
+        controller_->promptKind() == command::ParamKind::Selection &&
+        controller_->promptPickMost() == 1 && !modifiers.testFlag(Qt::ControlModifier))
+        controller_->supplyPickedObjects();
 }
 
 void MainWindow::probePickList()
