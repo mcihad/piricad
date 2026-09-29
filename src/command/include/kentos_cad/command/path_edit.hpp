@@ -21,6 +21,7 @@
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/parallel.hpp"
 
 #include <cstdint>
 #include <span>
@@ -64,6 +65,15 @@ bool add_path_like(Context& ctx, core::EntityId like, const core::CurvePath& pat
 /// and the source erased when nothing stayed in it.
 bool replace_with_pieces(Context& ctx, core::EntityId slot,
                          const std::vector<core::CurvePath>& pieces, PathEdit& edit);
+
+/// Adds one piece of a parallel (`core::ParallelPiece`) to the transaction, on
+/// `layer`, as the kind that holds it: a circle, an arc, an area with its
+/// holes, a polyline — and the kernel's answer as a polyline, an area or, where
+/// an edge bends, an arc polyline (`core::path_record`). OFSET and ÇİFTÇİZGİ
+/// both write their parallels through it, so a piece is stored one way whoever
+/// asked for it. The caller refuses with the error it returns.
+core::Result<core::EntityId> add_parallel_piece(Context& ctx, core::LayerId layer,
+                                                const core::ParallelPiece& piece);
 
 /// The key→keys map of a run's edits, for `Context::report`: one entry per
 /// source, `{"kaynak": key, "sonuc": [keys]}`.

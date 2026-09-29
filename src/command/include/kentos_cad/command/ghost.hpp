@@ -3,7 +3,8 @@
 //
 // THE GHOST IS THE OBJECT. While a drawing command waits for its next point the
 // canvas draws what that point would make — the segment, the face, the circle,
-// the arc, the ellipse, the polygon, the rectangle, the curve. That shape is
+// the arc, the ellipse, the polygon, the rectangle, the curve, the double line
+// with its parallels. That shape is
 // worked out HERE, once, from the prompt the command put up and by the core
 // constructions the command bodies commit with, at the density the kind itself
 // is drawn at. So the ghost under the cursor and the object the click writes

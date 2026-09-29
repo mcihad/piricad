@@ -12,6 +12,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 |---|---|---|---|---|---|---|
 | [`core.line`](line.md) | Çizgi | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.polyline`](polyline.md) | Çoklu Çizgi | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `ÇOKLUDOĞRU`, `COKLUDOGRU`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
+| [`core.double_line`](double_line.md) | Çift Çizgi | `ÇİFTÇİZGİ`, `CIFTCIZGI`, `DOUBLELINE`, `ÇFÇ`, `CFC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı. |
 | [`core.point_draw`](point_draw.md) | Nokta | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`core.perp_offset`](perp_offset.md) | Dik Ayak | `DİKAYAK`, `DIKAYAK`, `YANNOKTA`, `PERPOFFSET`, `DA` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir. |
 | [`core.survey_polar`](survey_polar.md) | Alım | `ALIM`, `SURVEY`, `ALM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir. |
@@ -173,6 +174,23 @@ Birden çok noktadan TEK bir çizgi nesnesi çizer.
 | `noktalar` | point_list | en az 2 | Çoklu çizginin köşe noktaları; hepsi tek nesne olur |
 
 Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
+
+### `core.double_line` — ÇİFTÇİZGİ (Çift Çizgi)
+
+Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 2 | Eksenin köşe noktaları; en az iki nokta. Paraleller eksenin çizildiği yöne bakarak sol ve sağ yanına çizilir |
+| `sol` | number | 1 | Sol paralelin eksene uzaklığı, metre; 0 verilirse sol yan çizilmez. Sol, eksenin çizildiği yöne bakarken soldur |
+| `sag` | number | 1 | Sağ paralelin eksene uzaklığı, metre; 0 verilirse sağ yan çizilmez. Sağ, eksenin çizildiği yöne bakarken sağdır |
+| `kose` | text | isteğe bağlı | Eksenin kırıklarında dış köşenin biçimi: keskin (öntanımlı) kesişimde birleşir, yuvarlak gerçek bir yay olur, pah düz kesilir. İç köşe her zaman kesişimde birleşir |
+| `eksen` | text | isteğe bağlı | ciz (öntanımlı): eksenin kendisi de çizilir · cizme: yalnız paraleller çizilir |
+| `uclar` | text | isteğe bağlı | acik (öntanımlı): uçlar açık kalır · kapali: eksenin iki ucu birer çizgiyle kapatılır |
+| `katman_sol` | text | isteğe bağlı | Sol paralelin katmanı; yoksa oluşturulur. Verilmezse etkin katman |
+| `katman_sag` | text | isteğe bağlı | Sağ paralelin katmanı; yoksa oluşturulur. Verilmezse etkin katman |
+
+Ayrıntılı kullanım: [ÇİFTÇİZGİ](double_line.md)
 
 ### `core.point_draw` — NOKTA (Nokta)
 
@@ -5753,6 +5771,136 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BOLUMLE",
         "DIVIDE",
         "BLM"
+      ]
+    }
+  },
+  {
+    "name": "core_double_line",
+    "title": "Çift Çizgi",
+    "description": "Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı.\nKomut: ÇİFTÇİZGİ (CIFTCIZGI, DOUBLELINE, ÇFÇ, CFC)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "minItems": 2
+            }
+          ],
+          "description": "Eksenin köşe noktaları; en az iki nokta. Paraleller eksenin çizildiği yöne bakarak sol ve sağ yanına çizilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "sol": {
+          "type": "number",
+          "description": "Sol paralelin eksene uzaklığı, metre; 0 verilirse sol yan çizilmez. Sol, eksenin çizildiği yöne bakarken soldur [m] (sayı)"
+        },
+        "sag": {
+          "type": "number",
+          "description": "Sağ paralelin eksene uzaklığı, metre; 0 verilirse sağ yan çizilmez. Sağ, eksenin çizildiği yöne bakarken sağdır [m] (sayı)"
+        },
+        "kose": {
+          "type": "string",
+          "enum": [
+            "keskin",
+            "yuvarlak",
+            "pah"
+          ],
+          "description": "Eksenin kırıklarında dış köşenin biçimi: keskin (öntanımlı) kesişimde birleşir, yuvarlak gerçek bir yay olur, pah düz kesilir. İç köşe her zaman kesişimde birleşir (metin)"
+        },
+        "eksen": {
+          "type": "string",
+          "enum": [
+            "ciz",
+            "cizme"
+          ],
+          "description": "ciz (öntanımlı): eksenin kendisi de çizilir · cizme: yalnız paraleller çizilir (metin)"
+        },
+        "uclar": {
+          "type": "string",
+          "enum": [
+            "acik",
+            "kapali"
+          ],
+          "description": "acik (öntanımlı): uçlar açık kalır · kapali: eksenin iki ucu birer çizgiyle kapatılır (metin)"
+        },
+        "katman_sol": {
+          "type": "string",
+          "description": "Sol paralelin katmanı; yoksa oluşturulur. Verilmezse etkin katman (metin)"
+        },
+        "katman_sag": {
+          "type": "string",
+          "description": "Sağ paralelin katmanı; yoksa oluşturulur. Verilmezse etkin katman (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "noktalar",
+        "sol",
+        "sag"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.double_line",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "ÇİFTÇİZGİ",
+        "CIFTCIZGI",
+        "DOUBLELINE",
+        "ÇFÇ",
+        "CFC"
       ]
     }
   },

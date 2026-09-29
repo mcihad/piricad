@@ -43,6 +43,7 @@ Tek tek komutlar:
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |
+| `ÇİFTÇİZGİ` | [Eksenin iki yanında paralel](komutlar/double_line.md) |
 | `NOKTA` | [Ölçülmüş nokta](komutlar/point_draw.md) |
 | `DİKAYAK` | [Dik ayak / dik boy ile nokta](komutlar/perp_offset.md) |
 | `PRİZMA` | [Noktanın dik ayağını ve dik boyunu okumak](komutlar/station_offset.md) |

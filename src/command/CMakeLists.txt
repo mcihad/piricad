@@ -81,6 +81,7 @@ add_library(kentos_command STATIC
     src/commands/tracking.cpp
     src/commands/point.cpp
     src/commands/polyline.cpp
+    src/commands/double_line.cpp
     src/commands/settings.cpp
     src/commands/style.cpp
     src/commands/symbol.cpp

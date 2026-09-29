@@ -458,17 +458,13 @@ Result<ParallelSide> parallel_side_at(const Document& doc, EntityId e, Point2 p)
     return which > 0 ? ParallelSide::Left : ParallelSide::Right;
 }
 
-Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, ParallelSide side,
-                                 JoinStyle join)
+namespace {
+
+/// The parallel of a shape already read: the ONE body an object and a run that
+/// is not an object yet (`run_parallel`) are moved sideways by, so the canvas's
+/// preview under the cursor and the result a command writes cannot differ.
+Result<Parallel> parallel_of(const Shape& s, Mm distance, ParallelSide side, JoinStyle join)
 {
-    if (distance <= 0)
-        return err(ErrorCode::InvalidArgument,
-                   "Paralel mesafesi sıfırdan büyük olmalı; tarafı `taraf` söyler.");
-
-    auto shape = shape_of(doc, e);
-    if (!shape) return shape.error();
-    const Shape& s = shape.value();
-
     Parallel out;
     out.approximate    = s.approximate;
     out.deviation      = s.deviation;
@@ -597,6 +593,155 @@ Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, P
         }
     }
     return out;
+}
+
+/// The two ends of a side's parallel — where it starts and where it stops, the
+/// start being the end nearer the axis's first point — or nothing when the side
+/// did not come back as ONE open line. The nearer-end rule is what keeps a cap
+/// from crossing itself if a backend hands a side back running the other way.
+std::optional<std::array<Point2, 2>> ends_of(const std::vector<ParallelPiece>& pieces,
+                                             Point2 axis_start, Point2 axis_end)
+{
+    if (pieces.size() != 1) return std::nullopt;
+    const ParallelPiece& only = pieces.front();
+    Point2 a{};
+    Point2 b{};
+    switch (only.shape) {
+    case ParallelPiece::Shape::Run:
+        if (only.closed || only.run.size() < 2) return std::nullopt;
+        a = only.run.front();
+        b = only.run.back();
+        break;
+    case ParallelPiece::Shape::Path:
+        if (only.path.closed || only.path.pieces.empty()) return std::nullopt;
+        a = only.path.pieces.front().from;
+        b = only.path.pieces.back().to;
+        break;
+    default: return std::nullopt;
+    }
+    const auto gap2 = [](Point2 p, Point2 q) {
+        const Int128 dx = p.x - q.x;
+        const Int128 dy = p.y - q.y;
+        return dx * dx + dy * dy;
+    };
+    if (gap2(a, axis_start) + gap2(b, axis_end) > gap2(b, axis_start) + gap2(a, axis_end))
+        std::swap(a, b);
+    return std::array<Point2, 2>{a, b};
+}
+
+} // namespace
+
+Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, ParallelSide side,
+                                 JoinStyle join)
+{
+    if (distance <= 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Paralel mesafesi sıfırdan büyük olmalı; tarafı `taraf` söyler.");
+
+    auto shape = shape_of(doc, e);
+    if (!shape) return shape.error();
+    return parallel_of(shape.value(), distance, side, join);
+}
+
+Result<Parallel> run_parallel(std::span<const Point2> run, Mm distance, ParallelSide side,
+                              JoinStyle join)
+{
+    if (distance <= 0)
+        return err(ErrorCode::InvalidArgument, "Paralel mesafesi sıfırdan büyük olmalı.");
+
+    Shape shape;
+    shape.cls = Shape::Class::Runs;
+    shape.runs.emplace_back(run.begin(), run.end());
+    return parallel_of(shape, distance, side, join);
+}
+
+Status check_double_line(const DoubleLineSpec& spec)
+{
+    if (spec.left < 0 || spec.right < 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Yan genişliği eksi olamaz. Bir yanı çizmemek için o yanın genişliğine 0 "
+                   "yazın; yön sol ve sağ diye ayrılır, eksi işaretle değil.");
+    if (spec.left == 0 && spec.right == 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Çift çizgi için en az bir yanın genişliği sıfırdan büyük olmalı: sol ya da "
+                   "sağ.");
+    if (spec.left > kMmCoordinateLimit || spec.right > kMmCoordinateLimit)
+        return err(ErrorCode::InvalidArgument,
+                   "Yan genişliği çizimin koordinat sınırını aşıyor; metre olarak yazdığınızdan "
+                   "emin olun.");
+    return ok();
+}
+
+Result<DoubleLine> double_line(std::span<const Point2> axis, const DoubleLineSpec& spec)
+{
+    if (const Status st = check_double_line(spec); !st) return st.error();
+
+    DoubleLine out;
+    if (spec.left > 0) {
+        auto beside = run_parallel(axis, spec.left, ParallelSide::Left, spec.join);
+        if (!beside) return beside.error();
+        out.left = std::move(beside.value().pieces);
+    }
+    if (spec.right > 0) {
+        auto beside = run_parallel(axis, spec.right, ParallelSide::Right, spec.join);
+        if (!beside) return beside.error();
+        out.right = std::move(beside.value().pieces);
+    }
+
+    if (spec.close_ends) {
+        // THE CAPS JOIN THE ENDS THE PARALLELS ACTUALLY HAVE, not a second
+        // offset of the axis's end points: a corner solved at the last vertex, a
+        // rounding at the millimetre, all are already in the pieces.
+        const Point2 first = axis.front();
+        const Point2 last  = axis.back();
+        std::optional<std::array<Point2, 2>> l;
+        std::optional<std::array<Point2, 2>> r;
+        if (spec.left > 0) {
+            l = ends_of(out.left, first, last);
+            if (!l)
+                return err(ErrorCode::Unsupported,
+                           "Eksenin sol yanındaki paralel tek parça çıkmadı; uçları kapatılacak "
+                           "bir uç yok. Daha dar bir genişlik verin ya da uclar=acik kullanın.");
+        }
+        if (spec.right > 0) {
+            r = ends_of(out.right, first, last);
+            if (!r)
+                return err(ErrorCode::Unsupported,
+                           "Eksenin sağ yanındaki paralel tek parça çıkmadı; uçları kapatılacak "
+                           "bir uç yok. Daha dar bir genişlik verin ya da uclar=acik kullanın.");
+        }
+        // A ONE-SIDED DOUBLE LINE IS CLOSED AGAINST THE AXIS ITSELF.
+        out.caps.push_back({l ? (*l)[0] : first, r ? (*r)[0] : first});
+        out.caps.push_back({l ? (*l)[1] : last, r ? (*r)[1] : last});
+    }
+    return out;
+}
+
+std::vector<std::uint8_t> encode_double_line_preview(const DoubleLineSpec& spec)
+{
+    // version, join, closed ends, left, right — little-endian as the machine
+    // writes it, because the bytes never leave the process (a prompt to the
+    // canvas), like `encode_parallel_preview`.
+    std::vector<std::uint8_t> bytes(3 + 2 * sizeof(Mm));
+    bytes[0] = 1;
+    bytes[1] = static_cast<std::uint8_t>(spec.join);
+    bytes[2] = spec.close_ends ? 1 : 0;
+    std::memcpy(bytes.data() + 3, &spec.left, sizeof(Mm));
+    std::memcpy(bytes.data() + 3 + sizeof(Mm), &spec.right, sizeof(Mm));
+    return bytes;
+}
+
+Result<DoubleLineSpec> decode_double_line_preview(std::span<const std::uint8_t> bytes)
+{
+    if (bytes.size() != 3 + 2 * sizeof(Mm) || bytes[0] != 1 ||
+        bytes[1] > static_cast<std::uint8_t>(JoinStyle::Bevel) || bytes[2] > 1)
+        return err(ErrorCode::InvalidArgument, "Çift çizgi önizlemesinin baytları tanınmıyor.");
+    DoubleLineSpec spec;
+    spec.join       = static_cast<JoinStyle>(bytes[1]);
+    spec.close_ends = bytes[2] == 1;
+    std::memcpy(&spec.left, bytes.data() + 3, sizeof(Mm));
+    std::memcpy(&spec.right, bytes.data() + 3 + sizeof(Mm), sizeof(Mm));
+    return spec;
 }
 
 std::vector<std::uint8_t> encode_parallel_preview(const ParallelPreview& preview)

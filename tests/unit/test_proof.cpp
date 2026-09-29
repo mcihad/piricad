@@ -14,6 +14,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/planar.hpp"
 
 #include "kentos_cad/command/bus.hpp"
@@ -3412,4 +3413,70 @@ TEST_CASE("PROOF: BUDA, UZAT, KIR ve BÖL elips ile spline'da arayüz, komut sat
                 .typed    = "BÖL yontem=esit nesne=1 sayi=3",
                 .scripted = R"({"ad":"BÖL","komutlar":[{"cmd":"core.split","args":{
                     "yontem":"esit","nesne":[1],"sayi":3}}]})"});
+}
+
+TEST_CASE("PROOF: ÇİFTÇİZGİ arayüz, komut satırı, betik ve oynatmadan aynı belgeyi ve günlüğü "
+          "bırakır")
+{
+    // N-11. The hand types both widths at the prompts and clicks the three
+    // corners of an L, ending the run with Enter (an empty answer); a line
+    // types the same; a script names them in millimetres. Key 1 is the axis,
+    // 2 the left parallel (2 m) and 3 the right (3 m).
+    prove_verb({.name    = "ÇİFTÇİZGİ",
+                .id      = "core.double_line",
+                .setup   = {},
+                .objects = {},
+                .answers = {Value::number(2.0), Value::number(3.0),
+                            Value::point(core::Point2{0, 0}), Value::point(core::Point2{10'000, 0}),
+                            Value::point(core::Point2{10'000, 10'000}), Value{}},
+                .typed   = "ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3",
+                .scripted = R"({"ad":"ÇİFTÇİZGİ","komutlar":[{"cmd":"core.double_line","args":{
+                    "noktalar":[[0,0],[10000,0],[10000,10000]],"sol":2,"sag":3}}]})"});
+
+    // EVERY OPTION AT ONCE: the corner bevelled, the axis left out, the ends
+    // closed, each side on a layer of its own — the widths already in the line
+    // that starts the tool, so the hand is asked for the points only.
+    prove_verb({.name = "ÇİFTÇİZGİ sol=2.5 sag=0 kose=pah eksen=cizme uclar=kapali katman_sol=SOL",
+                .id      = "core.double_line",
+                .setup   = {"KATMAN ad=YOL"},
+                .objects = {},
+                .answers = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{20'000, 0}),
+                            Value::point(core::Point2{20'000, 15'000}), Value{}},
+                .typed = "ÇİFTÇİZGİ noktalar=0,0 20,0 20,15 sol=2.5 sag=0 kose=pah eksen=cizme "
+                         "uclar=kapali katman_sol=SOL",
+                .scripted = R"({"ad":"ÇİFTÇİZGİ","komutlar":[{"cmd":"core.double_line","args":{
+                    "noktalar":[[0,0],[20000,0],[20000,15000]],"sol":2.5,"sag":0,
+                    "kose":"pah","eksen":"cizme","uclar":"kapali","katman_sol":"SOL"}}]})"});
+
+    // A ROUND CORNER — a true arc — reaches the same drawing by every road.
+    if (core::kernel_available())
+        prove_verb(
+            {.name     = "ÇİFTÇİZGİ sol=1 sag=4 kose=yuvarlak",
+             .id       = "core.double_line",
+             .setup    = {},
+             .objects  = {},
+             .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{12'000, 0}),
+                          Value::point(core::Point2{12'000, 9'000}), Value{}},
+             .typed    = "ÇİFTÇİZGİ noktalar=0,0 12,0 12,9 sol=1 sag=4 kose=yuvarlak",
+             .scripted = R"({"ad":"ÇİFTÇİZGİ","komutlar":[{"cmd":"core.double_line","args":{
+                    "noktalar":[[0,0],[12000,0],[12000,9000]],"sol":1,"sag":4,
+                    "kose":"yuvarlak"}}]})"});
+
+    // AND THE JOURNAL REPLAYS to the same drawing and the same record.
+    Rig cli;
+    REQUIRE_MESSAGE(cli.bus
+                        .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 uclar=kapali "
+                                      "katman_sag=SAG",
+                                      Origin::CommandLine)
+                        .ok(),
+                    "ÇİFTÇİZGİ");
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        if (auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}); !r.ok())
+            FAIL_WITH(e.command_id, r.error().message);
+    CHECK_EQ(cli.doc.content_hash(), replay.doc.content_hash());
+    CHECK_EQ(what_happened(cli.journal), what_happened(replay.journal));
+    // The record says what was asked — not the parallels it derived.
+    REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
+    CHECK_EQ(cli.journal.entries().front().command_id, std::string("core.double_line"));
 }

@@ -205,6 +205,21 @@ ikili: **ayak** tabanda A'dan kaç metre gidildiği, **boy** oradan kaç metre d
 çıkıldığı. A'dan B'ye bakarken **sağ pozitif, sol negatiftir** (Netcad'deki gibi).
 Cephe alımının alfabesidir; `dik(A,B,ayak,boy)` ile yazılır.
 
+**Eksen** — Bir yolun, kanalın ya da demiryolunun ortasından geçen çizgi; genişliği ondan iki
+yana ölçülür. Çizildiği yön sol ile sağı belirler: eksene çizildiği yöne bakarken sağ taraf
+sağdır. Bkz. [`ÇİFTÇİZGİ`](komutlar/double_line.md).
+
+**Paralel** — Bir çizginin, şeklin ya da yayın kendisinden sabit uzaklıkta çizilmiş karşılığı:
+açık çizginin paraleli açık bir çizgi, alanın paraleli alan, dairenin paraleli daire. İki
+yanını saran kapalı alan paralel değil **tampondur**. Bkz. [`OFSET`](komutlar/offset.md).
+
+**Çift çizgi** — Bir eksen ile iki yanında, her biri kendi genişliğinde çizilmiş iki paralelin
+bütünü; yol, kanal ve demiryolu gösteriminin temeli. `ÇİFTÇİZGİ` eksen çizilirken üretir.
+Bkz. [`ÇİFTÇİZGİ`](komutlar/double_line.md).
+
+**Uç çizgisi** — Çift çizginin bir ucunu kapatan düz çizgi: iki yan varsa sol yanın ucundan
+sağ yanın ucuna, tek yan varsa eksenin ucundan o yanın ucuna. `uclar=kapali` çizer.
+
 **Açı kuralı** — Bir açının nereden ve hangi yöne sayıldığını söyleyen oturum modu
 (`açı_kuralı`, kısa adı `kural`): `semt` kuzeyden saat yönüne (varsayılan), `matematik`
 doğudan saat yönünün tersine. Yalnız yazılan metni etkiler; komut günlüğü çözülmüş

@@ -104,6 +104,8 @@ enum class RubberShape : std::uint8_t {
     DimensionNext, ///< the next dimension of a run: from the chain's first point to the
                    ///< cursor, on the line through the chain's second, with
                    ///< `rubber_payload`'s figures and direction: ZİNCİRÖLÇÜ, BAZÖLÇÜ
+    DoubleLine,    ///< the axis the chain and the cursor make, with the parallels and caps
+                   ///< `rubber_payload` asks of it, drawn by `core::double_line`: ÇİFTÇİZGİ
 };
 
 struct Prompt

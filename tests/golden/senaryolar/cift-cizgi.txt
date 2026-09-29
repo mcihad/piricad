@@ -1,0 +1,12 @@
+# ÇİFTÇİZGİ eksenin iki yanında paralel çizer (netcad_plan.md N-11). Beklenen değerler
+# el hesabı: doğuya sonra kuzeye giden L eksenin solu (kuzey, sonra batı) kırığın
+# İÇİ, sağı DIŞIdır. 2 m solda y = 2 ile x = 8 çizgileri (8, 2)'de, 3 m sağda y = -3
+# ile x = 13 çizgileri (13, -3)'te birleşir. İkinci eksende yalnız sağ yan, dış köşe
+# pahlı: (10, -3)'ten (13, 0)'a düz kesik; eksen çizilmez. Üçüncüsünde dış köşe
+# merkezi (10, 40) ve yarıçapı 3 m gerçek yay, iki uç birer çizgiyle kapalı. Dördüncüsünde
+# her yan kendi katmanında.
+KATMAN ad=YOL
+ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3
+ÇİFTÇİZGİ noktalar=0,20 10,20 10,30 sol=0 sag=3 kose=pah eksen=cizme
+ÇİFTÇİZGİ noktalar=0,40 10,40 10,50 sol=2 sag=3 kose=yuvarlak uclar=kapali
+ÇİFTÇİZGİ noktalar=0,60 20,60 20,75 sol=3.5 sag=3.5 katman_sol=SOLKENAR katman_sag=SAGKENAR

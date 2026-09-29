@@ -30,6 +30,7 @@
 // unless told otherwise (`oznitelik=aktarma`), and the source stays unless told
 // otherwise (`kaynak=sil`).
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -65,45 +66,6 @@ std::string metres(core::Mm v)
     while (frac.size() < 3)
         frac.insert(frac.begin(), '0');
     return (negative ? "-" : "") + std::to_string(whole / 1000) + "," + frac + " m";
-}
-
-/// Adds one piece of a parallel to the transaction, on `layer`.
-core::Result<core::EntityId> add_piece(Context& ctx, core::LayerId layer,
-                                       const core::ParallelPiece& piece)
-{
-    switch (piece.shape) {
-    case core::ParallelPiece::Shape::Circle:
-        return ctx.transaction().add_circle(layer, piece.centre, piece.radius);
-    case core::ParallelPiece::Shape::Arc:
-        return ctx.transaction().add_arc(layer, piece.centre, piece.radius, piece.start, piece.end);
-    case core::ParallelPiece::Shape::Face: {
-        std::vector<core::RingGeometry::RingInput> rings;
-        for (const core::Polygon& face : piece.faces) {
-            rings.push_back(
-                core::RingGeometry::RingInput{face.exterior, core::RingRole::Exterior, 0});
-            for (const std::vector<core::Point2>& hole : face.holes)
-                rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
-        }
-        return ctx.transaction().add_area(layer, rings);
-    }
-    case core::ParallelPiece::Shape::Run:
-        if (piece.closed) {
-            const core::RingGeometry::RingInput ring{piece.run, core::RingRole::Exterior, 0};
-            return ctx.transaction().add_area(layer, {&ring, 1});
-        }
-        return ctx.transaction().add_polyline(layer, piece.run);
-    case core::ParallelPiece::Shape::Path: {
-        // THE KERNEL'S ANSWER, written as the kind that holds it: a polyline or
-        // an area when no edge bends, an arc polyline when one does (R9b).
-        const core::PathRecord rec = core::path_record(piece.path);
-        const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
-        if (rec.kind == core::kPolylineKind && rec.role == core::RingRole::Open)
-            return ctx.transaction().add_polyline(layer, rec.ring);
-        if (rec.kind == core::kPolylineKind) return ctx.transaction().add_area(layer, {&ring, 1});
-        return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);
-    }
-    }
-    return core::err(core::ErrorCode::Internal, "Tanınmayan paralel parçası.");
 }
 
 Task<void> run(Context& ctx)
@@ -259,7 +221,7 @@ Task<void> run(Context& ctx)
         const core::LayerId layer = on_active ? ctx.active_layer() : doc.entities().layer[e];
         const core::StyleId style = doc.entities().style[e];
         for (const core::ParallelPiece& piece : parallel.value().pieces) {
-            auto added = add_piece(ctx, layer, piece);
+            auto added = add_parallel_piece(ctx, layer, piece);
             if (!added) {
                 ctx.refuse(added.error());
                 co_return;

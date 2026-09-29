@@ -228,5 +228,6 @@ de aynı biçimde söylenir.
 ## İlgili
 
 - [ALAN](area.md) — kapalı alan çizme
+- [ÇİFTÇİZGİ](double_line.md) — ekseni çizerken iki yanına birden, aynı hesapla
 - [BUDA](trim.md) — fazlalığı kesme
 - [Nesne türleri destek matrisi](../nesneler/destek-matrisi.md) — hangi türün paraleli alınır

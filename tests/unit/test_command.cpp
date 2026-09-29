@@ -16,6 +16,7 @@
 #include <sstream>
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -28,6 +29,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/parallel.hpp"
@@ -5181,6 +5183,38 @@ TEST_CASE("PARALEL: köşeli çizginin içi kesişimde kırpılır, dışı sivr
     CHECK_FALSE(parallel_run({{5, 5}, {5, 5}}, 1000).ok()); ///< no direction to be beside
 }
 
+TEST_CASE("PARALEL: pahlı ve yuvarlak dış köşe paraleli ikiye bölmez")
+{
+    using namespace kentos::core;
+    // THE REGRESSION ÇİFTÇİZGİ FOUND (N-11): the two ends of a bevel — and of a
+    // round corner's arc — lie exactly on the lines of the two edges that meet,
+    // the same distance from both. The nearest edge was a tie, the first edge
+    // said "on the line", and the vertex counted as neither side: the outer
+    // parallel of an L came back as two runs with the chord missing.
+    const std::vector<Point2> ell{{0, 0}, {10000, 0}, {10000, 10000}}; // turns left
+
+    auto bevel = parallel_run(ell, -2000, JoinStyle::Bevel);
+    REQUIRE(bevel.ok());
+    REQUIRE_EQ(bevel.value().size(), std::size_t{1});
+    CHECK_EQ(bevel.value().front().points,
+             (std::vector<Point2>{{0, -2000}, {10000, -2000}, {12000, 0}, {12000, 10000}}));
+
+    auto round = parallel_run(ell, -2000, JoinStyle::Round);
+    REQUIRE(round.ok());
+    REQUIRE_EQ(round.value().size(), std::size_t{1});
+    const std::vector<Point2>& fan = round.value().front().points;
+    CHECK_EQ(fan.front(), Point2{0, -2000});
+    CHECK_EQ(fan.back(), Point2{12000, 10000});
+    // Every vertex round the bend stands 2 m from the corner, to the millimetre
+    // the fan is rounded to.
+    for (const Point2& p : fan) {
+        if (p.x < 10000 || p.y > 0) continue;
+        const double dx = static_cast<double>(p.x - 10000);
+        const double dy = static_cast<double>(p.y);
+        CHECK(std::fabs(std::sqrt(dx * dx + dy * dy) - 2000.0) <= 2.0);
+    }
+}
+
 TEST_CASE("PARALEL: delikli alanın ofsetinde delik delik kalır")
 {
     using namespace kentos::core;
@@ -5367,6 +5401,561 @@ TEST_CASE("OFSET seçim boşken sebebini söyler")
 
     said += REFUSED(f.bus.execute_line("OFSET mesafe=1000", Origin::Test));
     CHECK(said.find("nesne yok") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// ÇİFTÇİZGİ — an axis and the two parallels beside it (core.double_line, N-11)
+// -----------------------------------------------------------------------------
+
+namespace {
+
+/// The vertices of the only ring of the object with `key`.
+std::vector<core::Point2> ring_points_of(const core::Document& doc, std::int64_t key)
+{
+    std::vector<core::Point2> out;
+    const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+    if (e == core::kNoEntity) return out;
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+    const auto xs             = doc.geometry().ring_xs(span.first);
+    const auto ys             = doc.geometry().ring_ys(span.first);
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(core::Point2{xs[v], ys[v]});
+    return out;
+}
+
+/// The name of the layer the object with `key` is on.
+std::string layer_name_of(const core::Document& doc, std::int64_t key)
+{
+    const core::EntityId e = doc.slot_of(static_cast<core::EntityKey>(key));
+    const core::Layer* on  = e == core::kNoEntity ? nullptr : doc.layer(doc.entities().layer[e]);
+    return on == nullptr ? std::string() : on->name;
+}
+
+/// The path of the object with `key`, arcs as arcs.
+core::CurvePath path_of_key(const core::Document& doc, std::int64_t key)
+{
+    const auto path = core::path_of(doc, doc.slot_of(static_cast<core::EntityKey>(key)));
+    return path ? *path : core::CurvePath{};
+}
+
+/// The arcs of a path.
+std::vector<core::PathPiece> arcs_in(const core::CurvePath& path)
+{
+    std::vector<core::PathPiece> out;
+    for (const core::PathPiece& piece : path.pieces)
+        if (piece.kind == core::PathPiece::Kind::Arc) out.push_back(piece);
+    return out;
+}
+
+/// The runs the renderer draws every live object with, in row order.
+std::vector<GhostRun> drawn_runs(const core::Document& doc)
+{
+    std::vector<GhostRun> out;
+    const core::EntityTable& entities = doc.entities();
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!doc.alive(e)) continue;
+        core::EmitBuffer buf;
+        if (core::entity_outline(doc, e, buf)) {
+            for (std::size_t r = 0; r < buf.run_start.size(); ++r) {
+                GhostRun run;
+                run.closed = buf.run_closed[r] != 0;
+                for (std::uint32_t v = 0; v < buf.run_count[r]; ++v)
+                    run.points.push_back(
+                        core::Point2{buf.xs[buf.run_start[r] + v], buf.ys[buf.run_start[r] + v]});
+                out.push_back(std::move(run));
+            }
+            continue;
+        }
+        const core::RingSpan span = doc.geometry().rings_of(entities.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            GhostRun run;
+            run.closed    = doc.geometry().ring_role[r] != core::RingRole::Open;
+            const auto xs = doc.geometry().ring_xs(r);
+            const auto ys = doc.geometry().ring_ys(r);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                run.points.push_back(core::Point2{xs[v], ys[v]});
+            out.push_back(std::move(run));
+        }
+    }
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("ÇİFTÇİZGİ: L eksenin 2 m solu ve 3 m sağı el hesabıyla, köşeler kesişimde")
+{
+    Fixture f;
+    auto made = f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3", Origin::Test);
+    if (!made) FAIL_WITH("ÇİFTÇİZGİ", made.error().message);
+
+    // THE AXIS, THEN THE LEFT, THEN THE RIGHT — keys 1, 2, 3, every one a plain
+    // polyline of its own.
+    REQUIRE(f.doc.live_entity_count() == 3);
+    for (const std::int64_t key : {1, 2, 3})
+        CHECK(f.doc.entities().kind[f.doc.slot_of(static_cast<core::EntityKey>(key))] ==
+              core::kPolylineKind);
+    CHECK(ring_points_of(f.doc, 1) ==
+          std::vector<core::Point2>{{0, 0}, {10'000, 0}, {10'000, 10'000}});
+
+    // EAST, THEN NORTH: the axis turns left, so its LEFT is the inside of the
+    // turn and its right the outside. The left, 2 m off, is y = 2 and x = 8 —
+    // they meet at (8, 2). The right, 3 m off, is y = −3 and x = 13, meeting at
+    // (13, −3).
+    CHECK(ring_points_of(f.doc, 2) ==
+          std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+    CHECK(ring_points_of(f.doc, 3) ==
+          std::vector<core::Point2>{{0, -3'000}, {13'000, -3'000}, {13'000, 10'000}});
+
+    // ONE COMMAND, ONE UNDO STEP: all three objects go together.
+    CHECK(f.undo.undo_depth() == 1);
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 0);
+}
+
+TEST_CASE("ÇİFTÇİZGİ: yönü çevrilen eksende sol ile sağ yer değiştirir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİFTÇİZGİ noktalar=10,10 10,0 0,0 sol=2 sag=3", Origin::Test).ok());
+    // South, then west: the L above walked the other way. What was its left,
+    // north of the first leg, is now its right, and each width keeps to its
+    // own side. Looking south the left is east, x = 12; looking west it is
+    // south, y = −2 — they meet at (12, −2), the outside of this right turn.
+    // The right, 3 m off, is x = 7 and y = 3, meeting at (7, 3).
+    CHECK(ring_points_of(f.doc, 2) ==
+          std::vector<core::Point2>{{12'000, 10'000}, {12'000, -2'000}, {0, -2'000}});
+    CHECK(ring_points_of(f.doc, 3) ==
+          std::vector<core::Point2>{{7'000, 10'000}, {7'000, 3'000}, {0, 3'000}});
+}
+
+TEST_CASE("ÇİFTÇİZGİ: bir yana 0 verilince o yan çizilmez")
+{
+    {
+        Fixture f;
+        REQUIRE(
+            f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=0 sag=3", Origin::Test).ok());
+        REQUIRE(f.doc.live_entity_count() == 2); ///< the axis and the right side only
+        CHECK(ring_points_of(f.doc, 2) ==
+              std::vector<core::Point2>{{0, -3'000}, {13'000, -3'000}, {13'000, 10'000}});
+    }
+    {
+        Fixture f;
+        REQUIRE(
+            f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=0", Origin::Test).ok());
+        REQUIRE(f.doc.live_entity_count() == 2);
+        CHECK(ring_points_of(f.doc, 2) ==
+              std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+    }
+}
+
+TEST_CASE("ÇİFTÇİZGİ: eksen=cizme yalnız paralelleri çizer")
+{
+    Fixture f;
+    REQUIRE(
+        f.bus
+            .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 eksen=cizme", Origin::Test)
+            .ok());
+    REQUIRE(f.doc.live_entity_count() == 2);
+    // Without the axis the sides are the first objects: keys 1 and 2.
+    CHECK(ring_points_of(f.doc, 1) ==
+          std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+    CHECK(ring_points_of(f.doc, 2) ==
+          std::vector<core::Point2>{{0, -3'000}, {13'000, -3'000}, {13'000, 10'000}});
+}
+
+TEST_CASE("ÇİFTÇİZGİ: kose=pah dış köşeyi düz keser, iç köşe yine kesişimde")
+{
+    Fixture f;
+    REQUIRE(
+        f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 kose=pah", Origin::Test)
+            .ok());
+    // The right is the outside of the turn: cut straight across from the end of
+    // its first edge (10, −3) to the start of its second (13, 0).
+    CHECK(ring_points_of(f.doc, 3) ==
+          std::vector<core::Point2>{{0, -3'000}, {10'000, -3'000}, {13'000, 0}, {13'000, 10'000}});
+    CHECK(ring_points_of(f.doc, 2) ==
+          std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+}
+
+TEST_CASE("ÇİFTÇİZGİ: kose=yuvarlak dış köşede gerçek yay, iç köşede kesişim")
+{
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    Fixture f;
+    REQUIRE(f.bus
+                .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 kose=yuvarlak",
+                              Origin::Test)
+                .ok());
+
+    // THE OUTSIDE OF THE TURN IS AN ARC ABOUT THE AXIS'S OWN CORNER: centre
+    // (10, 0), radius 3 m, from (10, −3) round to (13, 0).
+    const core::EntityId right = f.doc.slot_of(static_cast<core::EntityKey>(3));
+    REQUIRE(right != core::kNoEntity);
+    CHECK(f.doc.entities().kind[right] == core::kArcPolylineKind);
+    const core::CurvePath outer = path_of_key(f.doc, 3);
+    CHECK_FALSE(outer.closed);
+    CHECK_EQ(outer.pieces.front().from, core::Point2{0, -3'000});
+    CHECK_EQ(outer.pieces.back().to, core::Point2{13'000, 10'000});
+    const std::vector<core::PathPiece> arcs = arcs_in(outer);
+    REQUIRE_EQ(arcs.size(), std::size_t{1});
+    CHECK_EQ(arcs.front().centre, core::Point2{10'000, 0});
+    CHECK_EQ(arcs.front().radius, core::Mm{3'000});
+    CHECK_EQ(arcs.front().from, core::Point2{10'000, -3'000});
+    CHECK_EQ(arcs.front().to, core::Point2{13'000, 0});
+
+    // The inside is trimmed, never rounded: a plain polyline, corner at (8, 2).
+    CHECK(f.doc.entities().kind[f.doc.slot_of(static_cast<core::EntityKey>(2))] ==
+          core::kPolylineKind);
+    CHECK(ring_points_of(f.doc, 2) ==
+          std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+}
+
+TEST_CASE("ÇİFTÇİZGİ: her yan OFSET'in o yandaki paraleliyle bire bir aynıdır")
+{
+    // NOT A SECOND COMPUTATION: the double line's left and right are what OFSET
+    // draws beside the same axis, vertex for vertex and arc for arc.
+    for (const char* corner : {"keskin", "pah", "yuvarlak"}) {
+        if (std::string(corner) == "yuvarlak" && !core::kernel_available()) continue;
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line(std::string("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 4,14 sol=2 sag=3 "
+                                              "kose=") +
+                                      corner,
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.doc.live_entity_count() == 3);
+        const std::string offset_corner = std::string(corner) == "keskin" ? "kose" : corner;
+        REQUIRE(f.bus
+                    .execute_line("OFSET nesneler=1 mesafe=2000 taraf=sol kose=" + offset_corner,
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.bus
+                    .execute_line("OFSET nesneler=1 mesafe=3000 taraf=sag kose=" + offset_corner,
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.doc.live_entity_count() == 5);
+        CHECK_MESSAGE(path_of_key(f.doc, 2) == path_of_key(f.doc, 4), corner);
+        CHECK_MESSAGE(path_of_key(f.doc, 3) == path_of_key(f.doc, 5), corner);
+    }
+
+    // AND THE FUNCTION THE GUIDE CALLS IS THE ONE THE OBJECT'S PARALLEL IS MADE
+    // BY: `run_parallel` over the points equals `entity_parallel` over the
+    // polyline they become.
+    Fixture g;
+    REQUIRE(g.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10 4,14", Origin::Test).ok());
+    const std::vector<core::Point2> axis{{0, 0}, {10'000, 0}, {10'000, 10'000}, {4'000, 14'000}};
+    const core::EntityId slot = g.doc.slot_of(static_cast<core::EntityKey>(1));
+    for (const core::JoinStyle join :
+         {core::JoinStyle::Miter, core::JoinStyle::Bevel, core::JoinStyle::Round})
+        for (const core::ParallelSide side :
+             {core::ParallelSide::Left, core::ParallelSide::Right}) {
+            if (join == core::JoinStyle::Round && !core::kernel_available()) continue;
+            auto object = core::entity_parallel(g.doc, slot, 2'500, side, join);
+            auto run    = core::run_parallel(axis, 2'500, side, join);
+            REQUIRE(object.ok());
+            REQUIRE(run.ok());
+            REQUIRE_EQ(object.value().pieces.size(), run.value().pieces.size());
+            for (std::size_t i = 0; i < run.value().pieces.size(); ++i) {
+                const core::ParallelPiece& a = object.value().pieces[i];
+                const core::ParallelPiece& b = run.value().pieces[i];
+                CHECK(a.shape == b.shape);
+                CHECK(a.side == b.side);
+                CHECK(a.run == b.run);
+                CHECK(a.closed == b.closed);
+                CHECK(a.path == b.path);
+            }
+        }
+}
+
+TEST_CASE("ÇİFTÇİZGİ: uclar=kapali iki ucu birer çizgiyle kapatır")
+{
+    {
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 uclar=kapali",
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.doc.live_entity_count() == 5); ///< axis, left, right, then the two caps
+        // From the left side's end to the right side's, across the axis's end.
+        CHECK(ring_points_of(f.doc, 4) == std::vector<core::Point2>{{0, 2'000}, {0, -3'000}});
+        CHECK(ring_points_of(f.doc, 5) ==
+              std::vector<core::Point2>{{8'000, 10'000}, {13'000, 10'000}});
+    }
+    {
+        // ONE SIDE ONLY: each cap runs from the axis's own end to that side's.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=0 sag=3 uclar=kapali",
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.doc.live_entity_count() == 4);
+        CHECK(ring_points_of(f.doc, 3) == std::vector<core::Point2>{{0, 0}, {0, -3'000}});
+        CHECK(ring_points_of(f.doc, 4) ==
+              std::vector<core::Point2>{{10'000, 10'000}, {13'000, 10'000}});
+    }
+}
+
+TEST_CASE("ÇİFTÇİZGİ: katman_sol ve katman_sag her yanı kendi katmanına koyar")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus
+                .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 uclar=kapali "
+                              "katman_sol=SOLKENAR katman_sag=SAGKENAR",
+                              Origin::Test)
+                .ok());
+    REQUIRE(f.doc.live_entity_count() == 5);
+    // The layers a side is named for are made; the axis and the caps stay on
+    // the active one.
+    CHECK(layer_name_of(f.doc, 1) == "YOL");
+    CHECK(layer_name_of(f.doc, 2) == "SOLKENAR");
+    CHECK(layer_name_of(f.doc, 3) == "SAGKENAR");
+    CHECK(layer_name_of(f.doc, 4) == "YOL");
+    CHECK(layer_name_of(f.doc, 5) == "YOL");
+
+    // Nothing named: every object on the active layer.
+    Fixture g;
+    REQUIRE(g.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(g.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3", Origin::Test).ok());
+    for (const std::int64_t key : {1, 2, 3})
+        CHECK(layer_name_of(g.doc, key) == "YOL");
+}
+
+TEST_CASE("ÇİFTÇİZGİ: paraleller eksenden türetilmiş olarak kaydedilir; eksiz çizimde kaydedilmez")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 uclar=kapali", Origin::Test)
+                .ok());
+    // The left, the right and the two caps each know they came from the axis.
+    for (const std::int64_t key : {2, 3, 4, 5}) {
+        const core::EntityId e      = f.doc.slot_of(static_cast<core::EntityKey>(key));
+        const core::Lineage* origin = f.doc.lineage().get(e);
+        REQUIRE_MESSAGE(origin != nullptr, key);
+        CHECK(origin->operation == "core.double_line");
+        REQUIRE_EQ(origin->sources.size(), std::size_t{1});
+        CHECK(static_cast<std::int64_t>(core::raw(origin->sources.front())) == 1);
+    }
+    CHECK(f.doc.lineage().get(f.doc.slot_of(static_cast<core::EntityKey>(1))) == nullptr);
+
+    // With no axis there is nothing to come from.
+    Fixture g;
+    REQUIRE(g.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 eksen=cizme", Origin::Test)
+                .ok());
+    CHECK(g.doc.lineage().get(g.doc.slot_of(static_cast<core::EntityKey>(1))) == nullptr);
+}
+
+TEST_CASE("ÇİFTÇİZGİ: yapılandırılmış cevap her parçanın anahtarını söyler")
+{
+    Fixture f;
+    auto made = f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 uclar=kapali",
+                                   Origin::Test);
+    REQUIRE(made.ok());
+    const core::Json& report = made.value().report;
+    REQUIRE(report.find("eksen") != nullptr);
+    CHECK(report.find("eksen")->as_int() == 1);
+    REQUIRE(report.find("sol") != nullptr);
+    CHECK(report.find("sol")->as_array().size() == 1);
+    CHECK(report.find("sol")->as_array().front().as_int() == 2);
+    CHECK(report.find("sag")->as_array().front().as_int() == 3);
+    REQUIRE(report.find("uclar") != nullptr);
+    CHECK(report.find("uclar")->as_array().size() == 2);
+    CHECK(report.find("uclar")->as_array().back().as_int() == 5);
+}
+
+TEST_CASE("ÇİFTÇİZGİ: geçersiz genişlik ve eksen sebebiyle söylenir, hiçbir şey çizilmez")
+{
+    Fixture f;
+    const std::size_t before = f.undo.undo_depth();
+
+    // Both zero: nothing to draw beside the axis.
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=0 sag=0", Origin::Test))
+              .find("en az bir yanın") != std::string::npos);
+    // Negative: a side is named, not signed.
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=-2 sag=3", Origin::Test))
+              .find("eksi olamaz") != std::string::npos);
+    // A word the bus does not know is refused before the body runs.
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 kose=yuvar",
+                                     Origin::Test))
+              .find("kose") != std::string::npos);
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 uclar=yarim",
+                                     Origin::Test))
+              .find("uclar") != std::string::npos);
+    // A width is required: a script that forgot one is told which.
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2", Origin::Test))
+              .find("sag") != std::string::npos);
+    // One point is no axis.
+    CHECK(REFUSED(f.bus.execute_line("ÇİFTÇİZGİ noktalar=0,0 sol=2 sag=3", Origin::Test))
+              .find("en az") != std::string::npos);
+
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(f.undo.undo_depth() == before);
+}
+
+TEST_CASE("ÇİFTÇİZGİ: yan tek parça çıkmayınca uçlar kapatılamaz ve hiçbir şey kalmaz")
+{
+    // A U whose two legs are a metre apart: its inside is narrower than twice
+    // the 2 m width, so that side does not come back as one line, and there is
+    // no end to close. The command says so and leaves nothing behind.
+    Fixture f;
+    const std::string u = "noktalar=0,0 10,0 10,1 0,1 sol=2 sag=2";
+    auto refused        = f.bus.execute_line("ÇİFTÇİZGİ " + u + " uclar=kapali", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().message.find("tek parça çıkmadı") != std::string::npos);
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(f.undo.undo_depth() == 0);
+
+    // Open-ended it draws, and says how many pieces the inside became.
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    REQUIRE(f.bus.execute_line("ÇİFTÇİZGİ " + u, Origin::Test).ok());
+    CHECK(said.find("Çift çizgi çizildi: eksen, sol paralel 2,000 m") != std::string::npos);
+}
+
+TEST_CASE("ÇİFTÇİZGİ: arayüzde önce iki genişlik sorulur, sonra eksen; Esc hiçbir şey çizmez")
+{
+    // THE HAND: widths first, then the points of the axis, each with the double
+    // line so far under the cursor.
+    Fixture f;
+    auto started = f.bus.begin_interactive("ÇİFTÇİZGİ", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "sol");
+    CHECK(s.prompt().kind == ParamKind::Number);
+    REQUIRE(s.supply(Value::number(2.0)).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "sag");
+    REQUIRE(s.supply(Value::number(3.0)).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "noktalar");
+    CHECK_FALSE(s.prompt().has_rubber_band); ///< the first point has no guide yet
+
+    REQUIRE(s.supply(Value::point({0, 0})).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().has_rubber_band);
+    CHECK(s.prompt().rubber_shape == RubberShape::DoubleLine);
+    CHECK(s.prompt().rubber_chain == std::vector<core::Point2>{{0, 0}});
+    // Esc here draws nothing: the run was never finished.
+    s.cancel();
+    auto done = f.bus.finish(s);
+    REQUIRE(done.ok());
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(f.undo.undo_depth() == 0);
+
+    // Esc at the very first question, too.
+    auto again = f.bus.begin_interactive("ÇİFTÇİZGİ sol=2 sag=3", Origin::Gui);
+    REQUIRE(again.ok());
+    again.value()->cancel();
+    REQUIRE(f.bus.finish(*again.value()).ok());
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(f.undo.undo_depth() == 0);
+
+    // Esc after two points ENDS the axis where it stands, as it ends a
+    // ÇOKLUÇİZGİ: the double line of what was given is drawn, one undo step.
+    auto ended = f.bus.begin_interactive("ÇİFTÇİZGİ sol=2 sag=3", Origin::Gui);
+    REQUIRE(ended.ok());
+    REQUIRE(ended.value()->supply(Value::point({0, 0})).ok());
+    REQUIRE(ended.value()->supply(Value::point({10'000, 0})).ok());
+    ended.value()->cancel();
+    REQUIRE(f.bus.finish(*ended.value()).ok());
+    CHECK(f.doc.live_entity_count() == 3);
+    CHECK(f.undo.undo_depth() == 1);
+    CHECK(ring_points_of(f.doc, 2) == std::vector<core::Point2>{{0, 2'000}, {10'000, 2'000}});
+    CHECK(ring_points_of(f.doc, 3) == std::vector<core::Point2>{{0, -3'000}, {10'000, -3'000}});
+}
+
+TEST_CASE("ÇİFTÇİZGİ: imlecin altındaki çizgi sonucun kendisidir")
+{
+    // THE GUIDE IS THE RESULT: what `ghost_outline` says the canvas draws with
+    // the cursor on the next corner is, run for run, what the command draws when
+    // that corner is clicked.
+    for (const char* corner : {"keskin", "pah", "yuvarlak"}) {
+        if (std::string(corner) == "yuvarlak" && !core::kernel_available()) continue;
+        Fixture f;
+        auto started = f.bus.begin_interactive(
+            std::string("ÇİFTÇİZGİ sol=2 sag=3 uclar=kapali kose=") + corner, Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        REQUIRE(s.waiting());
+        REQUIRE(s.supply(Value::point({0, 0})).ok());
+        REQUIRE(s.supply(Value::point({10'000, 0})).ok());
+        REQUIRE(s.waiting());
+
+        const core::Point2 cursor{10'000, 10'000};
+        const std::vector<GhostRun> shown =
+            ghost_outline(s.prompt(), cursor, f.bus.angle_convention());
+
+        REQUIRE(s.supply(Value::point(cursor)).ok());
+        REQUIRE(s.supply(Value{}).ok()); ///< Enter ends the run
+        auto done = f.bus.finish(s);
+        if (!done) FAIL_WITH(corner, done.error().message);
+
+        // The axis, the left, the right, the two caps: five runs, and the same
+        // five drawn.
+        const std::vector<GhostRun> made = drawn_runs(f.doc);
+        REQUIRE_MESSAGE(shown.size() == made.size(), corner);
+        for (std::size_t i = 0; i < shown.size(); ++i) {
+            CHECK_MESSAGE(shown[i].closed == made[i].closed, corner);
+            CHECK_MESSAGE(shown[i].points == made[i].points, corner);
+        }
+    }
+}
+
+TEST_CASE("ÇİFTÇİZGİ: paralel çıkmayan imleç yerinde yalnız eksen gösterilir")
+{
+    Fixture f;
+    auto started = f.bus.begin_interactive("ÇİFTÇİZGİ sol=2 sag=3", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point({0, 0})).ok());
+    REQUIRE(s.waiting());
+    // The cursor on the only point: no direction, so no parallel yet — the axis
+    // alone, and nothing is refused or thrown.
+    const std::vector<GhostRun> shown = ghost_outline(s.prompt(), {0, 0}, f.bus.angle_convention());
+    REQUIRE_EQ(shown.size(), std::size_t{1});
+    // Off the point the sides appear beside it.
+    CHECK_EQ(ghost_outline(s.prompt(), {10'000, 0}, f.bus.angle_convention()).size(),
+             std::size_t{3});
+    s.cancel();
+    REQUIRE(f.bus.finish(s).ok());
+}
+
+TEST_CASE("ÇİFTÇİZGİ: önizleme baytları gidip gelir ve bozuk bayt reddedilir")
+{
+    const core::DoubleLineSpec sent{
+        .left = 2'000, .right = 3'500, .join = core::JoinStyle::Bevel, .close_ends = true};
+    auto back = core::decode_double_line_preview(core::encode_double_line_preview(sent));
+    REQUIRE(back.ok());
+    CHECK_EQ(back.value().left, sent.left);
+    CHECK_EQ(back.value().right, sent.right);
+    CHECK(back.value().join == sent.join);
+    CHECK_EQ(back.value().close_ends, sent.close_ends);
+
+    CHECK_FALSE(core::decode_double_line_preview({}).ok());
+    std::vector<std::uint8_t> bytes = core::encode_double_line_preview(sent);
+    bytes[0]                        = 9; ///< a version nobody wrote
+    CHECK_FALSE(core::decode_double_line_preview(bytes).ok());
+    bytes    = core::encode_double_line_preview(sent);
+    bytes[1] = 77; ///< a corner that is none
+    CHECK_FALSE(core::decode_double_line_preview(bytes).ok());
+    bytes = core::encode_double_line_preview(sent);
+    bytes.pop_back(); ///< cut short
+    CHECK_FALSE(core::decode_double_line_preview(bytes).ok());
+}
+
+TEST_CASE("ÇİFTÇİZGİ: günlük yeniden oynatılınca aynı çizimi bırakır")
+{
+    Fixture f;
+    REQUIRE(f.bus
+                .execute_line("ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3 kose=pah uclar=kapali "
+                              "katman_sol=SOL",
+                              Origin::CommandLine)
+                .ok());
+    Fixture replay;
+    for (const auto& e : f.journal.entries())
+        if (auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}); !r.ok())
+            FAIL_WITH(e.command_id, r.error().message);
+    CHECK_EQ(replay.doc.content_hash(), f.doc.content_hash());
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    CHECK_EQ(f.journal.entries().front().command_id, std::string("core.double_line"));
 }
 
 // -----------------------------------------------------------------------------
@@ -6907,8 +7496,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + TARAMADÜZENLE (TODOS C-11) + BULDEĞİŞTİR (TODOS C-12)
     // + BLOKDÜZENLE (TODOS C-13) + DIŞREFERANS, BLOKKIRP (TODOS C-14)
     // + YERELKOPYA (TODOS F-02) + BAĞIMLILIK (TODOS F-04) + ÖNİZLE (TODOS F-05)
-    // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02)
-    CHECK_EQ(f.reg.size(), std::size_t{112});
+    // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02) + ÇİFTÇİZGİ (N-11)
+    CHECK_EQ(f.reg.size(), std::size_t{113});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
