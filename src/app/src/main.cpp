@@ -2423,6 +2423,24 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
+        // AND THE ADA ROUND A PARCEL, picked from inside the parcel (`SEÇ İÇEREN
+        // sira=2`): the block the four parcels make, drawn round them, lit, and
+        // the transcript listing both faces smallest first.
+        later([&window] {
+            window.controller()->cancelAll(); ///< the re-armed ALANÖLÇ
+            window.runScriptLine(QStringLiteral("KATMAN ad=ADA"));
+            window.runScriptLine(
+                QStringLiteral("ALAN 485295,4310180 485385,4310180 485385,4310265 485295,4310265"));
+            window.endCommand();
+            QCoreApplication::sendPostedEvents(); ///< the re-arm, landed and put down
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(
+                QStringLiteral("YAKINLAŞ PENCERE pencere=485285,4310170 485395,4310275"));
+            window.runScriptLine(QStringLiteral("SEÇ İÇEREN 485320,4310215 sira=2"));
+        });
+        later([&window, shot] { shot(QStringLiteral("35-iceren-secim"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

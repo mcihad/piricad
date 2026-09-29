@@ -48,6 +48,12 @@ enum class Mode : std::uint8_t {
     Box,
     Point,
 
+    /// İÇEREN — the closed objects whose face holds a point, smallest first: the
+    /// parcel, then the ada it lies in, then the mahalle (`core::pick_containing`).
+    /// A click INSIDE, where NOKTA's is a click ON: the parcel is found by its
+    /// interior and the ada round it by `sira=2`, with no edge to aim at.
+    Containing,
+
     /// ÇOKGEN / ÇOKGENKESEN — a polygon instead of a box. A parcel block is not
     /// rectangular and neither is a road corridor, so a box either misses what
     /// the user meant or takes the neighbours with it.
@@ -95,6 +101,8 @@ bool parse_mode(const std::string& typed, Mode& out)
         out = Mode::Box;
     } else if (matches(typed, {"NOKTA", "POINT", "P"})) {
         out = Mode::Point;
+    } else if (matches(typed, {"İÇEREN", "ICEREN", "CONTAINING"})) {
+        out = Mode::Containing;
         // `ÇOKGENPENCERE` IS THE UNAMBIGUOUS SPELLING and the one the plan used.
         // `ÇOKGEN` is also a DRAW command (the regular polygon), so a user who
         // has just used it and then types `SEÇ ÇOKGEN` is saying one word for two
@@ -128,6 +136,7 @@ const char* mode_name(Mode m)
     case Mode::Crossing: return "KESEN";
     case Mode::Box: return "KUTU";
     case Mode::Point: return "NOKTA";
+    case Mode::Containing: return "İÇEREN";
     case Mode::Polygon: return "ÇOKGEN";
     case Mode::PolygonCrossing: return "ÇOKGENKESEN";
     case Mode::Fence: return "ÇİT";
@@ -198,6 +207,34 @@ void report(Context& ctx, const Selection& selection)
     ctx.echo(std::to_string(selection.size()) + " nesne seçili: " + key_list(selection.keys()));
 }
 
+/// An area in square metres to two decimals, divided in integers (Article 2.4).
+std::string square_metres(core::Mm2 v)
+{
+    const bool negative     = v < 0;
+    const auto abs_mm2      = static_cast<std::uint64_t>(negative ? -v : v);
+    const std::uint64_t cm2 = (abs_mm2 + 5000) / 10000;
+    std::string frac        = std::to_string(cm2 % 100);
+    if (frac.size() < 2) frac = "0" + frac;
+    return (negative ? "-" : "") + std::to_string(cm2 / 100) + "," + frac + " m²";
+}
+
+/// Which row of a list the caller asked for: 1 when `sira` is absent, a
+/// refusal naming what the first row is when it is below one.
+bool wanted_row(Context& ctx, const char* first_is, std::size_t& want)
+{
+    want = 1;
+    if (const Value n = ctx.argument("sira"); !n.empty()) {
+        const double asked = n.as_number();
+        if (asked < 1.0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       std::string("'sira' 1'den küçük olamaz; 1 ") + first_is + ".");
+            return false;
+        }
+        want = static_cast<std::size_t>(asked);
+    }
+    return true;
+}
+
 Task<void> run_select(Context& ctx)
 {
     Bus& bus                  = ctx.session().bus();
@@ -210,7 +247,7 @@ Task<void> run_select(Context& ctx)
         if (!parse_mode(v.as_text(), mode)) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
                        "Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
-                       "NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
+                       "NOKTA | İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
                            v.as_text() + "'");
             co_return;
         }
@@ -308,6 +345,14 @@ Task<void> run_select(Context& ctx)
         }
     } else if (mode == Mode::Point && supplied.empty()) {
         auto aim = co_await ctx.point("noktalar", "Seçilecek nesnenin üzerinde bir nokta");
+        if (!aim) co_return;
+        supplied.push_back(*aim);
+    } else if (mode == Mode::Containing && supplied.empty()) {
+        // NOT SNAPPED, for SINIR's reason (`Prompt::aids`): a click inside a
+        // parcel near its edge would land ON the edge, and on the edge the
+        // point is in both parcels or in neither.
+        auto aim = co_await ctx.point("noktalar", "Seçilecek alanın içine tıklayın",
+                                      PointOptions{.aids = false});
         if (!aim) co_return;
         supplied.push_back(*aim);
     }
@@ -448,15 +493,7 @@ Task<void> run_select(Context& ctx)
         // Without it, reaching past the top object would be a thing only a mouse
         // could do (CLAUDE.md 5.15) and a script could never repeat.
         std::size_t want = 1;
-        if (const Value n = ctx.argument("sira"); !n.empty()) {
-            const double asked = n.as_number();
-            if (asked < 1.0) {
-                ctx.refuse(core::ErrorCode::InvalidArgument,
-                           "'sira' 1'den küçük olamaz; 1 en yakın nesnedir.");
-                co_return;
-            }
-            want = static_cast<std::size_t>(asked);
-        }
+        if (!wanted_row(ctx, "en yakın nesnedir", want)) co_return;
 
         if (want == 1) {
             const core::EntityId hit = core::pick_nearest(doc, aim, radius);
@@ -473,6 +510,36 @@ Task<void> run_select(Context& ctx)
             co_return;
         }
         picked.push_back(doc.key_of(under[want - 1]));
+        break;
+    }
+
+    case Mode::Containing: {
+        if (!need_points(1)) co_return;
+        std::size_t want = 1;
+        if (!wanted_row(ctx, "en küçük alandır", want)) co_return;
+
+        std::vector<core::EntityId> holding;
+        core::pick_containing(doc, supplied.front(), holding);
+        if (holding.empty()) break;
+
+        // THE LIST, SMALLEST FIRST, so the row `sira=2` names is read off the
+        // transcript rather than guessed: the parcel, the ada, the mahalle.
+        std::string rows;
+        for (std::size_t i = 0; i < holding.size() && i < 12; ++i)
+            rows += (i ? "; " : "") + std::to_string(i + 1) + ". nesne " +
+                    std::to_string(core::raw(doc.key_of(holding[i]))) + " (" +
+                    square_metres(doc.entity_area(holding[i])) + ")";
+        if (holding.size() > 12) rows += "; …";
+        ctx.echo("Noktayı içeren " + std::to_string(holding.size()) +
+                 " kapalı nesne, küçükten büyüğe: " + rows);
+
+        if (want > holding.size()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "O noktayı " + std::to_string(holding.size()) + " kapalı nesne içeriyor; " +
+                           std::to_string(want) + ". istendi.");
+            co_return;
+        }
+        picked.push_back(doc.key_of(holding[want - 1]));
         break;
     }
 
@@ -578,7 +645,7 @@ Task<void> run_select(Context& ctx)
     if (const Value v = ctx.argument("tur"); !v.empty())
         if (const core::KindSpec* k = core::builtin_kinds().find_name(v.as_text()); k != nullptr)
             ctx.record("tur", Value::text(k->names[0]));
-    if (mode == Mode::Point)
+    if (mode == Mode::Point || mode == Mode::Containing)
         if (const Value n = ctx.argument("sira"); !n.empty()) ctx.record("sira", n);
     // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
     // than only restoring the keys it happened to find. The resolved selection is
@@ -621,11 +688,11 @@ KENTOS_COMMAND(select)
             {
                 Param::text("mod", Arity::optional(),
                             "TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | "
-                            "ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON")
+                            "İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON")
                     .en("mode"),
                 Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
                               "Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama "
-                              "noktası")
+                              "noktası (NOKTA, İÇEREN)")
                     .en("points"),
                 Param::text("tur", Arity::optional(),
                             "Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…")
@@ -640,7 +707,8 @@ KENTOS_COMMAND(select)
                               "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı")
                     .en("tolerance"),
                 Param::number("sira", Arity::optional(),
-                              "NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki")
+                              "Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 "
+                              "en küçük alan, 2 onu içeren")
                     .en("order"),
             },
         // R43: a selection is not document state, so it is not undoable and not
@@ -652,7 +720,7 @@ KENTOS_COMMAND(select)
         // what the engineer has highlighted could change what the next SİL
         // removes without ever emitting SİL itself (.claude/ai.md, §5.1).
         .summary = "Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, "
-                   "önceki seçim, son nesne ya da tek nokta.",
+                   "önceki seçim, son nesne, tek nokta ya da bir noktayı içeren alan.",
         .run = &run_select,
         // NOT A QUERY, THOUGH IT WRITES NOTHING. A changed highlight changes
         // what the next SİL deletes, so it is treated as an edit to the thing

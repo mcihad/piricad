@@ -6,6 +6,14 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — bir noktayı içeren alanı seçmek
+
+- `SEÇ İÇEREN <nokta> [sira=<sıra>]`: noktayı içeren kapalı nesneler küçükten büyüğe
+  sıralanır ve en küçüğü seçilir — parsel, onu içeren ada `sira=2`, mahalle `sira=3`
+  (Netcad'in iç içe alanları küçükten büyüğe listelemesi). Transkript listeyi alanlarıyla
+  yazar. Alan türün kendi hesabıdır (daire πr²); açık çizgi, yay, nokta ve yazı sayılmaz,
+  delikteki nokta deliği olan alanı seçmez, tıklama yakalanmaz.
+
 ### Eklendi — içine tıklayarak alan ölçmek
 
 - `ALANÖLÇ yontem=ic nokta=…`: gevşek çizgilerin kapattığı bir bölgenin içine tıklayın,

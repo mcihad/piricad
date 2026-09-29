@@ -175,7 +175,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.attribute`](#cadattribute) | `core.attribute` | `ÖZNİTELİK` | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`cad.column`](#cadcolumn) | `core.column` | `SÜTUN` | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
 | [`cad.erase`](#caderase) | `core.erase` | `SİL` | Seçilen nesneleri siler. |
-| [`cad.select`](#cadselect) | `core.select` | `SEÇ` | Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne ya da tek nokta. |
+| [`cad.select`](#cadselect) | `core.select` | `SEÇ` | Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne, tek nokta ya da bir noktayı içeren alan. |
 | [`cad.label`](#cadlabel) | `core.label` | `ETİKET` | Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler. |
 | [`cad.layer`](#cadlayer) | `core.layer` | `KATMAN` | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`cad.layer_visibility`](#cadlayer_visibility) | `core.layer_visibility` | `KATMANGÖRÜNÜM` | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
@@ -2414,7 +2414,7 @@ cad.erase(
 
 ### `cad.select`
 
-Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne ya da tek nokta.
+Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne, tek nokta ya da bir noktayı içeren alan.
 
 Komut: `core.select` — `SEÇ`
 
@@ -2433,14 +2433,14 @@ cad.select(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `mode` | `str` | `mod` | TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON |
-| `points` | `Coords` | `noktalar` | Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası [mm, Sağa (Y) önce] |
+| `mode` | `str` | `mod` | TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON |
+| `points` | `Coords` | `noktalar` | Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası (NOKTA, İÇEREN) [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS… |
 | `objects` | `list[int]` | `nesneler` | NESNE modunda nesne kimlikleri [kalıcı nesne anahtarı] |
 | `layer` | `str` | `katman` | KATMAN modunda katman adı |
 | `action` | `str` | `islem` | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
 | `tolerance` | `float` | `tolerans` | NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı |
-| `order` | `float` | `sira` | NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki |
+| `order` | `float` | `sira` | Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 en küçük alan, 2 onu içeren |
 
 [Komut sayfası](../komutlar/select.md)
 

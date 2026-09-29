@@ -129,6 +129,26 @@ struct Runs
     }
 };
 
+/// Whether `p` lies in the FACE of entity `e`: inside one of its closed runs and
+/// inside none of its holes. A hole vetoes — the court cut out of a building is
+/// not the building. The one rule for "inside": the pick distance and
+/// `pick_containing` both ask it, so a click that picks a parcel by its interior
+/// and `SEÇ mod=İÇEREN` cannot disagree about where the parcel is.
+bool face_holds(const Document& doc, EntityId e, const Runs& runs, Point2 p)
+{
+    bool in_exterior = false;
+    bool in_hole     = false;
+    for (std::uint32_t r = 0; r < runs.count; ++r) {
+        if (!runs.closed(doc, e, r)) continue;
+        if (!ring_contains(runs.xs(doc, e, r), runs.ys(doc, e, r), p)) continue;
+        if (runs.hole(doc, e, r))
+            in_hole = true;
+        else
+            in_exterior = true;
+    }
+    return in_exterior && !in_hole;
+}
+
 double min_distance_squared(const Document& doc, EntityId e, Point2 p)
 {
     // A CAPTION IS MEASURED TO ITS LETTERS. Everything below walks the entity's
@@ -201,22 +221,8 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
     // tool that starts by asking WHICH objects unusable: the click found nothing
     // and the command waited for a selection that could not be made.
     //
-    // A hole vetoes: the court cut out of a building is not the building.
-    if (best != 0.0) {
-        bool in_exterior = false;
-        bool in_hole     = false;
-        for (std::uint32_t r = 0; r < runs.count; ++r) {
-            if (!runs.closed(doc, e, r)) continue;
-            const auto xs = runs.xs(doc, e, r);
-            const auto ys = runs.ys(doc, e, r);
-            if (!ring_contains(xs, ys, p)) continue;
-            if (runs.hole(doc, e, r))
-                in_hole = true;
-            else
-                in_exterior = true;
-        }
-        if (in_exterior && !in_hole) return 0.0;
-    }
+    // A hole vetoes (`face_holds`).
+    if (best != 0.0 && face_holds(doc, e, runs, p)) return 0.0;
     return best;
 }
 
@@ -748,6 +754,43 @@ void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityI
 
     out.reserve(found.size());
     for (const auto& [distance, entity] : found)
+        out.push_back(entity);
+}
+
+void pick_containing(const Document& doc, Point2 probe, std::vector<EntityId>& out)
+{
+    out.clear();
+
+    const Box2 box{probe.x, probe.y, probe.x, probe.y};
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+
+    // The area rides alongside the id, for the reason `pick_all` gives for its
+    // distance: the kind's area walks the rings, and the comparator must not.
+    std::vector<std::pair<Mm2, EntityId>> found;
+
+    for_each_candidate(doc, box, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        if (!boxes_overlap(entities.box_of(e), box)) return;
+        // A CAPTION ENCLOSES NOTHING. Its face, for a pick, is its letters
+        // (`text_quad`), and a word does not hold the parcel it is written on.
+        if (doc.texts().has(entities.slot[e])) return;
+        // THE KIND'S OWN AREA, net of its holes: a circle is pi*r^2, an open line
+        // and an arc enclose nothing and are left out here.
+        const Mm2 area = doc.entity_area(e);
+        if (area <= 0) return;
+
+        Runs runs;
+        runs.build(doc, e);
+        if (face_holds(doc, e, runs, probe)) found.emplace_back(area, e);
+    });
+
+    // SMALLEST FIRST, stable, so two faces of one area stay in slot order.
+    std::stable_sort(found.begin(), found.end(),
+                     [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    out.reserve(found.size());
+    for (const auto& [area, entity] : found)
         out.push_back(entity);
 }
 

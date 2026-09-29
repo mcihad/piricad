@@ -253,4 +253,14 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius);
 /// to it.
 void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out);
 
+/// EVERY visible closed entity whose FACE holds `probe`, SMALLEST FIRST: the
+/// parcel, then the ada it lies in, then the mahalle. `out` is cleared first.
+///
+/// Inside is what a pick already calls inside — in a closed run and in none of
+/// the entity's holes — and the order is the kind's own net area
+/// (`Document::entity_area`), ties on the lower slot. What encloses nothing is
+/// left out: an open line, an arc, a point, a caption. This is `SEÇ
+/// mod=İÇEREN`, and Netcad's nested-area list (217387890) from the command line.
+void pick_containing(const Document& doc, Point2 probe, std::vector<EntityId>& out);
+
 } // namespace kentos::core

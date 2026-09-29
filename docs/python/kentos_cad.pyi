@@ -1602,17 +1602,17 @@ def select(
     tolerance: float = ...,
     order: float = ...,
 ) -> int:
-    """Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne ya da tek nokta.
+    """Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, önceki seçim, son nesne, tek nokta ya da bir noktayı içeren alan.
 
     Komut: core.select (SEÇ)
-        mode — TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON
-        points — Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası [mm, Sağa (Y) önce]
+        mode — TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON
+        points — Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası (NOKTA, İÇEREN) [mm, Sağa (Y) önce]
         type — Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…
         objects — NESNE modunda nesne kimlikleri [kalıcı nesne anahtarı]
         layer — KATMAN modunda katman adı
         action — DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE
         tolerance — NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı
-        order — NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki
+        order — Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 en küçük alan, 2 onu içeren
     """
 
 def label(

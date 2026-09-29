@@ -2395,6 +2395,106 @@ TEST_CASE("ALANÖLÇ yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; t�
     CHECK(done.value().report.find("alan_mm2")->as_int() == 1'200'000'000);
 }
 
+TEST_CASE("SEÇ mod=İÇEREN: iç içe üç alan küçükten büyüğe; sira hangisini söyler")
+{
+    // A MAHALLE, AN ADA IN IT, A PARCEL IN THAT — and round the point, things
+    // that enclose nothing: an open line through it and a caption on it.
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    for (const char* line : {
+             "ALAN 0,0 100,0 100,100 0,100", ///< 1: 10 000 m²
+             "ALAN 10,10 60,10 60,60 10,60", ///< 2:  2 500 m²
+             "ALAN 20,20 40,20 40,40 20,40", ///< 3:    400 m²
+             "ALAN 70,10 90,10 90,30 70,30", ///< 4: beside it, not round it
+             "ÇİZGİ 0,30 100,30",            ///< 5: through it
+             "METİN 30,30 \"PARSEL\" 2000",  ///< 6: on it
+         })
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    const auto selected = [&f] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+
+    REQUIRE(f.bus.execute_line("SEÇ mod=İÇEREN noktalar=30,30", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{3});
+    CHECK(said.find("Noktayı içeren 3 kapalı nesne, küçükten büyüğe: 1. nesne 3 (400,00 m²); "
+                    "2. nesne 2 (2500,00 m²); 3. nesne 1 (10000,00 m²)") != std::string::npos);
+
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 30,30 sira=2", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{2});
+    REQUIRE(f.bus.execute_line("SEÇ CONTAINING 30,30 sira=3", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1});
+
+    // A ROW THAT IS NOT THERE is refused with the count, and the selection stays.
+    auto past = f.bus.execute_line("SEÇ İÇEREN 30,30 sira=4", Origin::CommandLine);
+    REQUIRE_FALSE(past.ok());
+    CHECK(past.error().message == "O noktayı 3 kapalı nesne içeriyor; 4. istendi.");
+    CHECK(selected() == std::vector<std::uint64_t>{1});
+    auto zero = f.bus.execute_line("SEÇ İÇEREN 30,30 sira=0", Origin::CommandLine);
+    REQUIRE_FALSE(zero.ok());
+    CHECK(zero.error().message == "'sira' 1'den küçük olamaz; 1 en küçük alandır.");
+
+    // Only the mahalle holds a point in its corner, and nothing holds one outside.
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 95,95", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1});
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 150,150", Origin::CommandLine).ok());
+    CHECK(selected().empty());
+}
+
+TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düşürür, tıklama yakalanmaz")
+{
+    Fixture f;
+    const auto selected = [&f] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+
+    // A CIRCLE BETWEEN TWO SQUARES. Its area is the kind's, pi*r², and not the
+    // shoelace over the centre and the handle it stores — which is zero.
+    for (const char* line : {
+             "ALAN 0,0 100,0 100,100 0,100", ///< 1: 10 000 m²
+             "DAİRE 50,50 80,50",            ///< 2: r = 30 m, 2 827,43 m²
+             "ALAN 40,40 60,40 60,60 40,60", ///< 3: 400 m²
+         })
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 50,50", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{3});
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 50,50 sira=2", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{2});
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 50,50 sira=3", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1});
+
+    // A HOLE VETOES. SINIR's face round an island does not hold a point in the
+    // island; the island does.
+    for (const char* line : {"ÇİZGİ 200,0 240,0", "ÇİZGİ 240,0 240,30", "ÇİZGİ 240,30 200,30",
+                             "ÇİZGİ 200,30 200,0", "ALAN 205,5 215,5 215,15 205,15"})
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    const std::uint64_t island = 8;
+    REQUIRE(f.bus.execute_line("SINIR nokta=230,20", Origin::CommandLine).ok());
+    const std::uint64_t face = 9;
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 210,10", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{island});
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 230,20", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{face});
+
+    // NOT SNAPPED: with every snap on, the click is asked for without the aids
+    // and a point 1 mm inside the small square's edge stays inside it.
+    REQUIRE(f.bus.execute_line("MOD ad=yakalama_modları deger=127", Origin::Test).ok());
+    auto started = f.bus.begin_interactive("SEÇ İÇEREN", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    CHECK_FALSE(session.prompt().aids);
+    REQUIRE(session.supply(Value::aimed_point(core::Point2{40'001, 50'000})).ok());
+    REQUIRE(f.bus.finish(session).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{3});
+}
+
 TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")
 {
     Fixture f;

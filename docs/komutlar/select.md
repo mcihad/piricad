@@ -53,6 +53,7 @@ SEÇ PENCERE <köşe> <köşe>
 SEÇ KESEN <köşe> <köşe>
 SEÇ KUTU <köşe> <köşe>
 SEÇ NOKTA <nokta> [tolerans=<metre>]
+SEÇ İÇEREN <nokta> [sira=<sıra>]
 SEÇ ÇOKGENPENCERE <köşe> <köşe> <köşe> ...   (kısası: ÇOKGEN)
 SEÇ ÇOKGENKESEN <köşe> <köşe> <köşe> ...
 SEÇ ÇİT <nokta> <nokta> ...
@@ -67,19 +68,20 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 
 | Parametre | Ne yapar |
 |---|---|
-| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `ÇOKGENPENCERE` (ya da `ÇOKGEN`), `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
-| `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` modunda tek tıklama noktası |
+| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `İÇEREN`, `ÇOKGENPENCERE` (ya da `ÇOKGEN`), `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
+| `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` ve `İÇEREN` modlarında tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
 | `tur` | Yalnız bu **türdeki** nesneler: `ÇOKLUÇİZGİ`, `DAİRE`, `YAY`, `NOKTA`, `ELİPS`… Her kiple birlikte çalışır |
 | `islem` | `DEĞİŞTİR` (varsayılan), `EKLE`, `ÇIKAR` veya `TERSİNE` |
 | `tolerans` | `NOKTA` modunda arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
-| `sira` | `NOKTA` modunda kaçıncı nesne: `1` en yakını (varsayılan), `2` onun altındaki |
+| `sira` | `NOKTA` modunda kaçıncı nesne: `1` en yakını (varsayılan), `2` onun altındaki. `İÇEREN` modunda kaçıncı alan: `1` en küçüğü (varsayılan), `2` onu içeren |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Her modun İngilizce ve karaktersiz karşılıkları da kabul edilir: `TUMU`/`ALL`,
-`TEMIZLE`/`CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`, `ADD`, `REMOVE`, `TOGGLE`.
+`TEMIZLE`/`CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`, `ICEREN`/`CONTAINING`, `ADD`, `REMOVE`,
+`TOGGLE`.
 
 ### Aynı noktada birden çok nesne varsa
 
@@ -110,6 +112,31 @@ Komut: SEÇ mod=NOKTA noktalar=485320,4310220 tolerans=2 sira=2
 O noktada olmayan bir sıra istenirse komut kaç nesne olduğunu söyler ve seçimi
 değiştirmez. Bu, listenin fareye özel bir yetenek olmamasının sebebidir: aynı
 seçimi bir betik de, bir yapay zekâ önerisi de yazabilir.
+
+### Bir noktayı içeren alanlar: `İÇEREN`
+
+`NOKTA` bir nesnenin **üstüne** tıklamaktır; `İÇEREN` bir alanın **içine**. Netcad'in
+iç içe alanları küçükten büyüğe sıralaması gibi: tıkladığınız noktayı içeren bütün kapalı
+nesneler bulunur, en küçüğü seçilir — parsel, onu içeren ada, adayı içeren mahalle.
+Transkript hepsini sırasıyla ve alanlarıyla yazar; bir üstteki `sira=2`'dir:
+
+```text
+Noktayı içeren 3 kapalı nesne, küçükten büyüğe: 1. nesne 6 (400,00 m²); 2. nesne 5 (2500,00 m²); 3. nesne 4 (10000,00 m²)
+```
+
+- **Kapalı ve alanı olan her nesne sayılır:** alan, kapalı çoklu çizgi, daire, elips,
+  tarama. Alan, nesnenin türünün kendi hesabıdır — bir dairenin alanı πr²'dir.
+  Açık bir çizgi, bir yay, bir nokta ya da bir yazı hiçbir şeyi içermez.
+- **Delik sayılmaz.** Deliği olan bir alan, deliğin içindeki bir noktayı içermez; o
+  noktayı deliği dolduran ada içerir.
+- **Tıklama yakalanmaz.** Nesne yakalama açık olsa bile nokta tıkladığınız yerde kalır.
+  Yakalansaydı kenara yakın bir tıklama kenarın üstüne oturur, iki parselin ortak
+  sınırında hangisinin kastedildiği belirsiz kalırdı.
+- Olmayan bir sıra istenirse komut kaç alan olduğunu söyler ve seçimi değiştirmez. Hiçbir
+  alan noktayı içermiyorsa seçim boşalır, tıklanan boş bir yer gibi.
+
+Şeritteki yeri **Seçim** bağlam sekmesiyle **Faz 1'de** gelecek; o zamana dek komut
+satırından ya da **Ctrl+K** aramasından çalışır.
 
 ### Tolerans neden pikseldir
 
@@ -233,6 +260,28 @@ Transkript şuna benzer bir satır yazar:
 2 nesne seçili: 2, 3
 ```
 
+İç içe üç alan çizin — bir mahalle, içinde bir ada, adanın içinde bir parsel — ve
+parselin içine tıklayın:
+
+```
+KATMAN ad=PARSEL
+ALAN 100,0 200,0 200,100 100,100
+ALAN 110,10 160,10 160,60 110,60
+ALAN 120,20 140,20 140,40 120,40
+SEÇ İÇEREN 130,30
+```
+
+```text
+Noktayı içeren 3 kapalı nesne, küçükten büyüğe: 1. nesne 6 (400,00 m²); 2. nesne 5 (2500,00 m²); 3. nesne 4 (10000,00 m²)
+1 nesne bulundu (DEĞİŞTİR). Seçimde 1 nesne var: 6
+```
+
+Parseli değil, onu içeren adayı seçin:
+
+```
+SEÇ İÇEREN 130,30 sira=2
+```
+
 ### Arayüz
 
 Harita alanında hiçbir komut çalışmıyorken sol fare tuşu seçim yapar:
@@ -338,7 +387,9 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Beklenen mod: TÜMÜ \| TEMİZLE \| NESNE \| KATMAN \| PENCERE \| KESEN \| KUTU \| NOKTA. Girilen: 'OLMAYAN'` | Tanınmayan mod adı | Tablodaki adlardan birini yazın |
+| `Beklenen mod: TÜMÜ \| TEMİZLE \| NESNE \| KATMAN \| PENCERE \| KESEN \| KUTU \| NOKTA \| İÇEREN \| …. Girilen: 'OLMAYAN'` | Tanınmayan mod adı | Tablodaki adlardan birini yazın |
+| `O noktayı 3 kapalı nesne içeriyor; 4. istendi.` | `İÇEREN` modunda `sira`, noktayı içeren alan sayısından büyük | Transkriptteki listeden bir sıra seçin |
+| `'sira' 1'den küçük olamaz; 1 en küçük alandır.` | `İÇEREN` modunda `sira=0` ya da eksi | `sira` 1'den başlar |
 | `'KATMAN' bir katman adı bekliyor.` | `mod=KATMAN` verilmiş, `katman=` verilmemiş | Katman adını `katman=` ile yazın |
 | `Katman bulunamadı: <ad>` | Çizimde o adda katman yok | [KATMAN](layer.md) ile adları listeleyin; Türkçe `i`/`ı` ayrımına dikkat edin |
 | `Beklenen işlem: DEĞİŞTİR \| EKLE \| ÇIKAR \| TERSİNE. Girilen: 'BİLİNMEYEN'` | Tanınmayan `islem` değeri | `EKLE`, `ÇIKAR` veya `TERSİNE` yazın |

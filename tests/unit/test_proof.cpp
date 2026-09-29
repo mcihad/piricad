@@ -2814,6 +2814,56 @@ TEST_CASE("PROOF: SEÇ ÇİT gui, komut satırı ve betikten aynı seçimi verir
         CHECK_EQ(rig->undo.undo_depth(), std::size_t{3}); ///< the three runs only
 }
 
+TEST_CASE("PROOF: SEÇ İÇEREN gui, komut satırı ve betikten aynı alanı seçer")
+{
+    // Article 6.4 for `core.select`'s İÇEREN mode. As for ÇİT, the thing that has
+    // to agree is the SELECTION (model.md R43): the ada round the parcel, named
+    // by `sira=2`, is what the next command would act on.
+    const char* kSetup[] = {"ALAN 0,0 100,0 100,100 0,100", "ALAN 10,10 60,10 60,60 10,60",
+                            "ALAN 20,20 40,20 40,40 20,40"};
+
+    const auto keys_of = [](const Rig& rig) {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : rig.bus.selection().keys())
+            out.push_back(core::raw(k));
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    for (Rig* rig : {&gui, &cli, &scr})
+        for (const char* line : kSetup)
+            REQUIRE(rig->bus.execute_line(line, Origin::Test).ok());
+
+    {
+        auto started = gui.bus.begin_interactive("SEÇ İÇEREN sira=2", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{30'000, 30'000})).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+    REQUIRE(cli.bus.execute_line("SEÇ İÇEREN 30,30 sira=2", Origin::CommandLine).ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "İçeren kanıtı",
+            "komutlar": [ {"cmd": "core.select", "args": {
+                "mod": "İÇEREN", "noktalar": [[30000, 30000]], "sira": 2 }} ]
+        })");
+        if (!r.ok()) FAIL_WITH("İÇEREN betiği", r.error().message);
+    }
+
+    CHECK_EQ(keys_of(gui), keys_of(cli));
+    CHECK_EQ(keys_of(cli), keys_of(scr));
+    CHECK_EQ(keys_of(cli), std::vector<std::uint64_t>{2}); ///< the ada, not the parcel
+
+    // AND NOTHING WAS DRAWN. A selection is not a mutation.
+    for (const Rig* rig : {&gui, &cli, &scr})
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{3}); ///< the three areas only
+}
+
 TEST_CASE("PROOF: ÖLÇÜ tur=koordinat gui, komut satırı ve betikten aynı belgeyi bırakır")
 {
     // Article 6.4 for `core.dimension`'s ordinate type — P5's own addition. The
