@@ -571,16 +571,17 @@ TEST_CASE("NOKTA FONKSİYONU: bilinen üçgende her fonksiyon milimetresine kada
     CHECK_EQ(fn("semt(0,0,100,100)").value(), (core::Point2{100000, 0})); // 100 grad is east
 
     // DİK AYAK / DİK BOY. Fifty metres along A→B is B itself; ten metres to the
-    // LEFT of that direction is the positive side (P1a-6), the right the
-    // negative. Left of (0,6 · 0,8) is (−0,8 · 0,6).
-    CHECK_EQ(fn("dik(0,0,30,40,50,10)").value(), (core::Point2{22000, 46000}));
-    CHECK_EQ(fn("dik(0,0,30,40,50,-10)").value(), (core::Point2{38000, 34000}));
+    // RIGHT of that direction is the positive side — Netcad's sign, since 29
+    // September 2026 (P1a-6 had left) — the left the negative. Right of
+    // (0,6 · 0,8) is (0,8 · −0,6).
+    CHECK_EQ(fn("dik(0,0,30,40,50,10)").value(), (core::Point2{38000, 34000}));
+    CHECK_EQ(fn("dik(0,0,30,40,50,-10)").value(), (core::Point2{22000, 46000}));
     CHECK_EQ(fn("dik(0,0,30,40,50,0)").value(), kB);
 
     // The sign again on an axis, where it is impossible to misread: walking east
-    // along A→B, the left hand points north.
-    CHECK_EQ(fn("dik(0,0,100,0,30,5)").value(), (core::Point2{30000, 5000}));
-    CHECK_EQ(fn("dik(0,0,100,0,30,-5)").value(), (core::Point2{30000, -5000}));
+    // along A→B, the right hand points south.
+    CHECK_EQ(fn("dik(0,0,100,0,30,5)").value(), (core::Point2{30000, -5000}));
+    CHECK_EQ(fn("dik(0,0,100,0,30,-5)").value(), (core::Point2{30000, 5000}));
 
     // Two directions: east from the origin meets south from (100,100).
     CHECK_EQ(fn("kes(0,0,100,100,100,200)").value(), (core::Point2{100000, 0}));
@@ -632,7 +633,7 @@ TEST_CASE("NOKTA FONKSİYONU: son, göreli argüman ve iç içe çağrı")
 
     // Nested: the midpoint of two midpoints.
     CHECK_EQ(fn("orta(orta(0,0,100,0),orta(0,100,100,100))").value(), (core::Point2{50000, 50000}));
-    CHECK_EQ(fn("dik(orta(0,0,0,80),100,40,0,10)").value(), (core::Point2{0, 50000}));
+    CHECK_EQ(fn("dik(orta(0,0,0,80),100,40,0,10)").value(), (core::Point2{0, 30000}));
 
     // An angle inside a call takes the same suffix a polar coordinate takes.
     CHECK_EQ(fn("semt(0,0,90d,100)").value(), (core::Point2{100000, 0}));
@@ -846,13 +847,13 @@ TEST_CASE("NOKTA FONKSİYONU: komut satırından çizilen belge çözülmüş no
     const auto ys   = f.doc.geometry().ring_ys(span.first);
     REQUIRE_EQ(xs.size(), std::size_t{2});
     CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{50000, 0}));
-    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30000, -5000}));
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30000, 5000}));
 
     REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
     const Value::Points recorded = f.journal.entries().front().args.get("noktalar").as_points();
     REQUIRE_EQ(recorded.size(), std::size_t{2});
     CHECK_EQ(recorded[0], (core::Point2{50000, 0}));
-    CHECK_EQ(recorded[1], (core::Point2{30000, -5000}));
+    CHECK_EQ(recorded[1], (core::Point2{30000, 5000}));
     CHECK(f.journal.entries().front().args.to_json().dump().find("orta") == std::string::npos);
 }
 
@@ -861,18 +862,18 @@ TEST_CASE("DİKAYAK: taban çizgisine göre dik ayak ve dik boy nokta koyar")
     Fixture f;
 
     // A baseline along the east axis makes every answer readable by eye: a foot
-    // of 30 m and an offset of 5 m is (30, +5), and LEFT IS POSITIVE, so the
-    // negative offset lands on the other side. The same numbers the `dik()`
-    // point function is tested with, because both call
-    // `core::perpendicular_offset` and a second copy of the sign convention is
-    // how one of them would end up mirrored.
+    // of 30 m and an offset of 5 m is (30, −5), because RIGHT IS POSITIVE and
+    // the right of an eastward line is south; the negative offset lands north.
+    // The same numbers the `dik()` point function is tested with, because both
+    // call `core::perpendicular_offset` and a second copy of the sign
+    // convention is how one of them would end up mirrored.
     REQUIRE(f.bus
                 .execute_line("DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5 ayak=60 boy=5",
                               Origin::CommandLine)
                 .ok());
 
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
-    const core::Point2 expected[3]{{10'000, 5'000}, {30'000, -5'000}, {60'000, 5'000}};
+    const core::Point2 expected[3]{{10'000, -5'000}, {30'000, 5'000}, {60'000, -5'000}};
     for (std::size_t i = 0; i < 3; ++i) {
         const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
         const auto xs   = f.doc.geometry().ring_xs(span.first);
@@ -912,8 +913,8 @@ TEST_CASE("DİKAYAK: cizgi=evet noktaları verildikleri sırayla birleştirir")
     const auto xs   = f.doc.geometry().ring_xs(span.first);
     const auto ys   = f.doc.geometry().ring_ys(span.first);
     REQUIRE_EQ(xs.size(), std::size_t{2});
-    CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{10'000, 5'000}));
-    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30'000, -5'000}));
+    CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{10'000, -5'000}));
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30'000, 5'000}));
 
     // One command, one undo step (CLAUDE.md 1.5): the points and the line go
     // together or not at all.
@@ -8025,11 +8026,11 @@ TEST_CASE("release listesi: DİKAYAK'ın yazılı biçimi belgelenen biçimdir")
 
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
     const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
-    // 30 m along the east-running baseline, 5 m to its RIGHT — negative is right,
+    // 30 m along the east-running baseline, 5 m to its LEFT — negative is left,
     // which the page states and this pins.
     CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
                            f.doc.geometry().ring_ys(span.first)[0]}),
-             (core::Point2{30'000, -5'000}));
+             (core::Point2{30'000, 5'000}));
 }
 
 TEST_CASE("SEÇ tur= seçimi türe göre daraltır, her kipte")

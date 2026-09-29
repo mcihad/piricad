@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 118 (104 tanesi onay ister)
-- Katalog parmak izi: `16954621629071363492`
+- Katalog parmak izi: `13394175511955481592`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1300,7 +1300,7 @@ Onay ister.
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
-| `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı) |
+| `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir (sayı) |
 | `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 

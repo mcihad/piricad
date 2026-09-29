@@ -196,18 +196,20 @@ bir çift verilseydi P sessizce boşa giderdi.
 ### Dik ayak ve dik boy — işaret kuralı
 
 `dik(A,B,ayak,boy)`, A'dan B'ye **yürürken** düşünülür: `ayak` bu yönde kaç metre
-gidildiği, `boy` oradan kaç metre yana çıkıldığıdır. **Sol pozitif, sağ negatiftir.**
+gidildiği, `boy` oradan kaç metre yana çıkıldığıdır. **Sağ pozitif, sol negatiftir** —
+Netcad'in Yan Nokta Hesabı, Bina Oluştur ve enkesitlerle aynı kural. Netcad'de ölçülmüş
+bir dik boy burada olduğu gibi yazılır.
 
-> **Netcad'den gelenler için:** Netcad'in Yan Nokta Hesabı'nda dik boy **sağda pozitif**,
-> solda negatiftir — bu programın tersi. Netcad'de ölçülmüş bir dik boy değerini burada
-> kullanırken **işaretini çevirin**: Netcad'deki `+5` (sağda) burada `-5` yazılır.
+> **29 Eylül 2026'dan önce yazılmış betikler için:** bu kural o güne kadar sol pozitifti.
+> Eski bir betikteki `dik(...)` ya da `DİKAYAK boy=` değerlerinin işaretini çevirin.
+> Günlükler ve kaydedilmiş çizimler etkilenmez: günlük hesabı değil, bulunan noktayı tutar.
 
 ```
 ÇİZGİ dik(0,0,100,0,30,5) dik(0,0,100,0,30,-5)
 ```
 
-Taban `0,0` → `100,0`, yani doğu. Doğuya yürürken sol el kuzeyi gösterir, bu yüzden
-ilk nokta `(30, 5)`, ikincisi `(30, −5)` olur.
+Taban `0,0` → `100,0`, yani doğu. Doğuya yürürken sağ el güneyi gösterir, bu yüzden
+ilk nokta `(30, −5)`, ikincisi `(30, 5)` olur.
 
 Bir ölçü krokisindeki cephe alımı tek satırdır — taban bir kez yazılır, cepheye ait
 ayak/boy çiftleri sırayla gelir:

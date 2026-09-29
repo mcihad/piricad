@@ -169,7 +169,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 | KHM › Çizgi İzle · Obje İzle | 217386679 | — | ✗ | → N-06 |
 | KHM › Kesişim (4 nokta) · 2 Noktalı Kesişim | 217386679 | `kes(A,B,C,D)`, `kes(A,r1,B,r2,yön)` | ✓ | |
 | KHM › Dik-çık · Dik Düş · Teğet | 217386679 | dik ayak ve teğet yakalama | ✓ | |
-| KHM › Dik-abs (dik ayak / dik boy) | 217386679 | `dik(A,B,ayak,boy)` | ✓ | İşaret kuralı Netcad'den farklı → Açık soru 3 |
+| KHM › Dik-abs (dik ayak / dik boy) | 217386679 | `dik(A,B,ayak,boy)` | ✓ | İşaret kuralı Netcad'inki: sağ pozitif (29 Eylül; Açık soru 3) |
 | KHM › Paralel Nokta (hat + paralel mesafe + uçtan sapma) | 217386679 | paralel yakalama, `ile()` | ◐ | Tek adımda yok → N-04 (`boyunca()`) |
 | KHM › Hat Üzerinde a/b | 217386679 | `ara(A,B,oran)` | ✓ | |
 | KHM › Obje Üzerinde (başlangıca mesafe + sapma) | 217386679 | — | ✗ | → N-04 (`boyunca()`) |
@@ -368,7 +368,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 | Dönüşümler › N Noktadan Helmert (uyuşum testi, M0) | 217384998 | `core.fit` OTURT (artıklar, RMS) | ◐ | Nokta çıkarınca M0'ın değişimi yok → S-02 katkısı |
 | Dönüşümler › N Noktadan Afin · Helmert Matrisinden | 217384998 | — | ✗ | → S-02 katkısı |
 | Kesişim 4 Nokta · Kesişim 2 Kenar | 217389329, 217389339 | `core.intersect_point` KESİŞİMNOKTA | ✓ | Nokta adı/kotu → S-01 |
-| Yan Nokta Hesabı | 217389335 | `core.perp_offset` DİKAYAK | ✓ | İşaret kuralı farklı → Açık soru 3 |
+| Yan Nokta Hesabı | 217389335 | `core.perp_offset` DİKAYAK | ✓ | İşaret kuralı aynı: sağ pozitif (29 Eylül; Açık soru 3) |
 | Eğik Kenar–Düşey Açı · Yatay Kenar Kot Farkı · Yatay Kenar Düşey Açı · Takeometrik (etkileşimli) | 217389337, 217389328, 217389333, 217389336 | `core.survey_polar` ALIM (2B) | ◐ | Düşey açı, alet/reflektör yüksekliği ve kot yok → S-02, N-05 |
 | Takeometrik Hesap (MIR) · Yatay Kenar (YDE; total station oku) · Prizmatik Hesap (PRZ) | 217389341, 217389332, 217389285, 217389278 | — | ✗ | → S-01 katkısı (saha verisi) |
 | Netveri Koordinat Editörü (total station oku/yaz, koordine özet) | 217389281 | `core.points` NOKTALAR (metin listesi) | ◐ | Alet biçimleri yok → S-01 |
@@ -824,7 +824,7 @@ Her ad çapraz kayıt çakışma kapısından geçer ve 6.14 gereği altı belge
 | karelaj | karelaj (çizimde, basılır) ≠ ızgara (ekran yardımı, basılmaz) | İkisi ayrı şeydir; kılavuz ikisini ayırır |
 | kurp | yay | sözlüğe |
 | alinman · cephe · kutur · röleve · kroki | aynı | `docs/sozluk.md`'ye eklenir |
-| dik ayak / dik boy | aynı | **işaret kuralı** — Açık soru 3 |
+| dik ayak / dik boy | aynı | **işaret kuralı** aynı: sağ pozitif (Açık soru 3, 29 Eylül) |
 | semt | semt (azimut) | aynı |
 | tecviz / yanılma sınırı | tolerans (katalogdan) | [M] |
 | sayısallaştırma kalemi | kalem | G-04 |
@@ -927,6 +927,8 @@ etmeden başlamaz.
    diye yazıyor — araştırma bunu doğrulamıyor. Seçenekler: (a) Netcad kuralına geçmek, (b) kuralı koruyup
    belgeyi düzeltmek, (c) proje ayarı. Günlük çözülmüş noktayı tuttuğu için eski günlükler etkilenmez;
    etkilenen canlı metin, betik dizeleri ve yapay zekâdır. N-02, N-13, N-16 ve `boyunca()` bu karara bağlı.
+   **Karar (29 Eylül 2026): (a) — Netcad gibi sağ pozitif.** `core::perpendicular_offset`, `dik()`,
+   `DİKAYAK` ve belgeler değişti; N-02, N-13, N-16 ve `boyunca()` bu kuralla yazılır.
 4. **Ad çakışmaları:** `KES` (bizde panoya kesip siler, Netcad'de budar) ne olsun? "Değiştir" sekmesi
    "Düzenle" olsun mu? `KAYDIR` görünümde kalsın mı?
 5. **Netcad kısayol profili** (Ctrl+C = Çoklu Doğru, Ctrl+N = Nokta, Ctrl+A = Alan Sor, F tuşlarındaki yakalama anahtarları — yalnız F4 doğrulandı)
@@ -960,6 +962,6 @@ etmeden başlamaz.
   tuşlarının varsayılanları (yalnız F4 yardım metninde geçiyor); Dronet, EPlanet, Yapınet, Water, Atıksu,
   Mine sekmelerinin içeriği; NETPRO, NETÇAP, NETKAMU ve NETTOP'un alt sayfaları (yalnız dizin sayfaları
   okundu); Karo Oluşturucu ve Katalog'un ayrıntıları. Plan bunlara dayanmaz.
-- **KentOSCad'de bulunan iki belge tutarsızlığı** (bu planda düzeltilmedi): `docs/komutlar/komut-satiri.md`
-  işaret kuralı bölümü Netcad'in kuralını yanlış aktarıyor (Açık soru 3) ve aynı bölüm "Aynı işin fareyle
-  yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek" diyor — `core.perp_offset` DİKAYAK zaten var.
+- **KentOSCad'de bulunan iki belge tutarsızlığı** (29 Eylül 2026'da düzeltildi): `docs/komutlar/komut-satiri.md`
+  işaret kuralı bölümü Netcad'in kuralını yanlış aktarıyordu (Açık soru 3; kural 29 Eylül'de Netcad'inkine
+  geçti) ve aynı bölüm "Aynı işin fareyle yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek" diyordu.

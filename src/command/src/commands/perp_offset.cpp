@@ -10,8 +10,8 @@
 // THE MATHS IS `core`'S, NOT THIS FILE'S. `dik(A,B,ayak,boy)` in the one grammar
 // (`point_function.cpp`) and this command draw the same points from two
 // different clients, so both call `core::perpendicular_offset` and neither
-// carries its own copy of the sign convention. LEFT IS POSITIVE — Netcad's sign —
-// and that is on the command page because it is the whole content of the
+// carries its own copy of the sign convention. RIGHT IS POSITIVE — Netcad's
+// sign — and that is on the command page because it is the whole content of the
 // function for the user.
 //
 // A LOOP, because a baseline is worth setting up only if a run of details comes
@@ -99,7 +99,7 @@ Task<void> run(Context& ctx)
             core::perpendicular_offset(*a, *b, core::mm_from_metres(*foot), 0, on_base))
             with_foot.push_back(on_base);
 
-        auto offset = co_await ctx.number("boy", "Boy: dik uzaklık (m, sol pozitif)",
+        auto offset = co_await ctx.number("boy", "Boy: dik uzaklık (m, sağ pozitif)",
                                           PointOptions{.rubber_band   = true,
                                                        .rubber_origin = *a,
                                                        .rubber_shape  = RubberShape::Fixed,
@@ -158,7 +158,7 @@ KENTOS_COMMAND(perp_offset)
                               "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir")
                     .en("chainage"),
                 Param::number("boy", Arity::at_least(0),
-                              "Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir")
+                              "Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir")
                     .en("offset"),
                 Param::boolean("cizgi", Arity::optional(),
                                "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir")

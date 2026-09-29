@@ -520,11 +520,11 @@ TEST_CASE("PROOF: `dik(...)` arayüzden, komut satırından ve betikten aynı be
     //
     // The line drawn is the perpendicular a surveyor sets out every day: from
     // the base 0,0 → 100,0, thirty metres along and five to the right, then the
-    // midpoint of the base. `boy` is negative because right is negative and
-    // left is positive (P1a-6), which is what the command page says too.
+    // midpoint of the base. `boy` is positive because right is positive —
+    // Netcad's sign — which is what the command page says too.
     constexpr core::Point2 kFoot{30000, -5000};
     constexpr core::Point2 kMid{50000, 0};
-    const char* const kTyped[] = {"dik(0,0,100,0,30,-5)", "orta(0,0,100,0)"};
+    const char* const kTyped[] = {"dik(0,0,100,0,30,5)", "orta(0,0,100,0)"};
 
     // ---- client 1: the GUI, answering each prompt with typed text exactly as
     //      the controller does ----
@@ -565,7 +565,7 @@ TEST_CASE("PROOF: `dik(...)` arayüzden, komut satırından ve betikten aynı be
             "ad": "Dik ayak kanıtı",
             "komutlar": [
                 {"cmd": "core.line",
-                 "args": {"noktalar": ["dik(0,0,100,0,30,-5)", "orta(0,0,100,0)"]}}
+                 "args": {"noktalar": ["dik(0,0,100,0,30,5)", "orta(0,0,100,0)"]}}
             ]
         })betik");
         REQUIRE_MESSAGE(r.ok(), r.error().message);
@@ -701,7 +701,7 @@ TEST_CASE("PROOF: DİKAYAK gui, komut satırı ve betikten aynı belgeyi ve ayn�
     const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
     CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
                            cli.doc.geometry().ring_ys(span.first)[0]}),
-             (core::Point2{10'000, 5'000}));
+             (core::Point2{10'000, -5'000}));
 
     CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
     CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));

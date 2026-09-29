@@ -307,7 +307,7 @@ cad.perp_offset(
 | `start` | `Coord` | `baslangic` | Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce] |
 | `chainage` | `list[float]` | `ayak` | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
-| `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir |
+| `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir |
 | `connect` | `bool` | `cizgi` | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
 
 [Komut sayfası](../komutlar/perp_offset.md)

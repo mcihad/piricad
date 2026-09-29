@@ -145,8 +145,10 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   nokta yok".
 - [x] **P1a-4** `orta(A,B)` — iki nokta ortası.
 - [x] **P1a-5** `ile(P, @dx,dy)` / `ile(P, @d<a)` — P tabanlı göreli.
-- [x] **P1a-6** `dik(A,B,ayak,boy)` — **dik ayak / dik boy**: AB üzerinde A'dan `ayak`, sola pozitif `boy`
-  dik. İşaret kuralı belgelenir (sol +, Netcad ile aynı).
+- [x] **P1a-6** `dik(A,B,ayak,boy)` — **dik ayak / dik boy**: AB üzerinde A'dan `ayak`, sağa pozitif `boy`
+  dik. İşaret kuralı belgelenir. (İlk hâli sol pozitifti ve "Netcad ile aynı" deniyordu; Netcad'in
+  yardımı dört sayfada sağ pozitif diyor. 29 Eylül 2026, bakımcının kararıyla sağ pozitif oldu —
+  netcad_plan.md Açık soru 3.)
 - [x] **P1a-7** `semt(S,açı,kenar)` — istasyondan semt + kenar (P0 kuralı; sonek alır).
 - [x] **P1a-8** `kes(A,açı1,B,açı2)` — iki doğrultu (`line_intersection`; paralelse hata adlarıyla).
 - [x] **P1a-9** `kes(A,r1,B,r2,yön)` — iki mesafe, iki çözüm; `yön`: `sol`|`sağ` ya da yakın nokta;

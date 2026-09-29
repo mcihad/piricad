@@ -64,10 +64,10 @@ söylemek:
 ```
 
 Taban `0,0` → `100,0` doğrusudur. İki nokta da taban üzerinde 30 metre ilerideki
-noktadan 5 metre yana çıkar: ilki **sola**, ikincisi sağa. Kural budur —
-**sol pozitif, sağ negatif**, tabana A'dan B'ye yürüyor gibi bakarak. `0,0`'dan
-`100,0`'a, yani doğuya yürürken sol el kuzeyi gösterir, bu yüzden ilk nokta
-`(30, 5)`, ikincisi `(30, −5)` olur.
+noktadan 5 metre yana çıkar: ilki **sağa**, ikincisi sola. Kural budur —
+**sağ pozitif, sol negatif**, tabana A'dan B'ye yürüyor gibi bakarak; Netcad'de de
+böyledir. `0,0`'dan `100,0`'a, yani doğuya yürürken sağ el güneyi gösterir, bu yüzden
+ilk nokta `(30, −5)`, ikincisi `(30, 5)` olur.
 
 `orta`, `kes`, `semt`, `ara` ve numaralı ölçü noktasını getiren `n(1284)` de aynı
 şekilde yazılır: [Nokta fonksiyonları](../komutlar/komut-satiri.md#nokta-fonksiyonları).

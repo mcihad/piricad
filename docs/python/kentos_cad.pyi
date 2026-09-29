@@ -133,7 +133,7 @@ def perp_offset(
         start — Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce]
         end — Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce]
         chainage — A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir
-        offset — Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir
+        offset — Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir
         connect — Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir
     """
 

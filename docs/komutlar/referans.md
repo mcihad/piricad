@@ -191,7 +191,7 @@ Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
 | `baslangic` | point | 1 | Taban çizgisinin ilk noktası (A) |
 | `bitis` | point | 1 | Taban çizgisinin ikinci noktası (B) |
 | `ayak` | number | en az 0 | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
-| `boy` | number | en az 0 | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir |
+| `boy` | number | en az 0 | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir |
 | `cizgi` | bool | isteğe bağlı | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
 
 Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
@@ -9773,7 +9773,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "boy": {
           "type": "number",
-          "description": "Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı)"
+          "description": "Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir (sayı)"
         },
         "cizgi": {
           "type": "boolean",

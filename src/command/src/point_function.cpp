@@ -472,12 +472,11 @@ core::AngleConvention applied_to(const Token& angle, const ResolveContext& ctx)
     return applied;
 }
 
-/// `boy` metres to the LEFT of A→B, `ayak` metres along it from A.
+/// `boy` metres to the RIGHT of A→B, `ayak` metres along it from A.
 ///
-/// LEFT IS POSITIVE, which is what Netcad's dik ayak / dik boy means and what
-/// `core::circle_intersection` calls its left solution. The sign is the whole
-/// content of the function for the user, so it is stated on the command page
-/// and tested both ways (TODOS-CAD P1a-6).
+/// RIGHT IS POSITIVE, as Netcad counts dik boy (`core::perpendicular_offset`).
+/// The sign is the whole content of the function for the user, so it is stated
+/// on the command page and tested both ways (TODOS-CAD P1a-6).
 core::Result<Point2> perpendicular(Point2 a, Point2 b, double foot_m, double offset_m)
 {
     // THE CONSTRUCTION IS `core`'S, not this file's. The `DİKAYAK` command draws

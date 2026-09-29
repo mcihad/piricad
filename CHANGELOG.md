@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — dik boy artık sağ pozitif, Netcad gibi
+
+- `dik(A,B,ayak,boy)` ve `DİKAYAK`'ta **boy, A'dan B'ye bakarken sağda pozitif, solda
+  negatiftir** — Netcad'in Yan Nokta Hesabı, Bina Oluştur ve enkesitlerdeki kuralı. Önceden
+  sol pozitifti ve belgeler bunu yanlışlıkla "Netcad'deki gibi" diye anlatıyordu. Netcad'de
+  ölçülmüş bir dik boy artık olduğu gibi yazılır.
+- **Eski betiklerde işaret çevrilir**: bu tarihten önce yazılmış bir `dik(...)` ya da
+  `DİKAYAK boy=` değeri noktayı tabanın öbür yanına koyar. Günlükler ve kaydedilmiş çizimler
+  etkilenmez; günlük hesabı değil, bulunan noktayı tutar.
+
 ### Eklendi — Netcad NCZ içe aktarma
 
 - **İÇEAKTAR ve DIŞREFERANS Netcad çizimini (.ncz) doğrudan okur**, her yapıda (kütüphane

@@ -202,8 +202,8 @@ tek bir noktaya çözülür ve komut satırında, betikte, çalışan bir komutu
 
 **Dik ayak · dik boy** — Bir tabana (AB doğrusuna) göre bir noktanın yerini söyleyen
 ikili: **ayak** tabanda A'dan kaç metre gidildiği, **boy** oradan kaç metre dik
-çıkıldığı. A'dan B'ye bakarken **sol pozitif, sağ negatiftir**. Cephe alımının
-alfabesidir; `dik(A,B,ayak,boy)` ile yazılır.
+çıkıldığı. A'dan B'ye bakarken **sağ pozitif, sol negatiftir** (Netcad'deki gibi).
+Cephe alımının alfabesidir; `dik(A,B,ayak,boy)` ile yazılır.
 
 **Açı kuralı** — Bir açının nereden ve hangi yöne sayıldığını söyleyen oturum modu
 (`açı_kuralı`, kısa adı `kural`): `semt` kuzeyden saat yönüne (varsayılan), `matematik`

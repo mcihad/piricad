@@ -18,9 +18,10 @@ Bir Türk ölçü karnesinde bir duvar, bir bordür, bir direk ya da bir bina k�
 tam bu iki sayıyla yazılır. Alet yalnız şerit metre ve prizma çubuğu olduğunda
 detay çizime böyle girer.
 
-**Boy'un işareti: A→B yönünde SOL pozitiftir.** Netcad'in Yan Nokta Hesabı'nda ise sağ
-pozitiftir; Netcad'de ölçülmüş bir boy değerini burada kullanırken işaretini çevirin.
-`boy=5` çizginin solunda, `boy=-5` sağında bir nokta koyar. Hangi taraf olduğu
+**Boy'un işareti: A→B yönünde SAĞ pozitif, sol negatiftir** — Netcad'in Yan Nokta
+Hesabı'ndaki gibi; Netcad'de ölçülmüş bir boy değeri burada olduğu gibi yazılır (29 Eylül
+2026'dan önce kural sol pozitifti; eski betiklerde işaret çevrilir). `boy=5` çizginin
+sağında, `boy=-5` solunda bir nokta koyar. Hangi taraf olduğu
 taban çizgisini hangi sırayla verdiğinize bağlıdır: `0,0 100,0` ile `100,0 0,0`
 aynı çizgi ama ters yöndür, dolayısıyla aynı `boy` karşı tarafa düşer.
 
@@ -68,7 +69,7 @@ Bu yüzden ret, doğru yazımı gösterir.
 | `baslangic` | nokta | 1 | Taban çizgisinin ilk noktası (A) |
 | `bitis` | nokta | 1 | Taban çizgisinin ikinci noktası (B) |
 | `ayak` | sayı | 0..n | A'dan taban boyunca uzaklık (m) |
-| `boy` | sayı | 0..n | Tabana dik uzaklık (m); **sol pozitif** |
+| `boy` | sayı | 0..n | Tabana dik uzaklık (m); **sağ pozitif**, sol negatif |
 | `cizgi` | mantıksal | 0..1 | Noktaları verildikleri sırayla çizgiyle birleştirir |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
@@ -87,8 +88,8 @@ DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5 ayak=60 boy=5
 3 nokta dik ayak/dik boy ile yerleştirildi.
 ```
 
-Noktalar sırasıyla (10, +5), (30, −5) ve (60, +5) metrededir — ikincisi çizginin
-öbür tarafındadır.
+Noktalar sırasıyla (10, −5), (30, 5) ve (60, −5) metrededir: doğuya giden tabanın sağı
+güneydir. İkincisi çizginin öbür tarafındadır.
 
 Bir bina cephesini çizgiyle birleştirerek:
 

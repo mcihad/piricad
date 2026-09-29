@@ -435,8 +435,8 @@ bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& 
     const auto foot = static_cast<double>(foot_mm);
     const auto off  = static_cast<double>(offset_mm);
 
-    // LEFT IS POSITIVE: the left normal of (ux, uy) is (-uy, ux).
-    out = Point2{a.x + mm_round(foot * ux - off * uy), a.y + mm_round(foot * uy + off * ux)};
+    // RIGHT IS POSITIVE: the right normal of (ux, uy) is (uy, -ux).
+    out = Point2{a.x + mm_round(foot * ux + off * uy), a.y + mm_round(foot * uy - off * ux)};
     return true;
 }
 

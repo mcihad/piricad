@@ -125,9 +125,11 @@ bool circumcircle(Point2 a, Point2 b, Point2 c, Point2& centre, Mm& radius) noex
 /// b coincide, which leaves no direction to drop a perpendicular from.
 ///
 /// DİK AYAK / DİK BOY, the way a Turkish survey crew records a detail off a
-/// baseline: walk `foot` along the line from A, turn left, go out `offset`. LEFT
-/// IS POSITIVE, which is Netcad's sign and the same side `circle_intersection`
-/// calls its left solution — one convention for the whole program.
+/// baseline: walk `foot` along the line from A, turn right, go out `offset`.
+/// RIGHT IS POSITIVE and left negative, looking from A to B — Netcad's sign in
+/// its side-point computation, its building tool and its cross-sections, and
+/// the one sign every offset from a baseline in this program uses (the
+/// maintainer's decision of 29 September 2026; it used to be left positive).
 ///
 /// Shared by `dik(A,B,ayak,boy)` in the one grammar and by the `DİKAYAK` command
 /// that draws the same points interactively, because two copies of a sign
