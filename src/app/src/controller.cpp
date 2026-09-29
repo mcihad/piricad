@@ -109,6 +109,13 @@ Controller::Controller(QObject* parent)
     // them exactly as an agent does (Article 1.2).
     ai::register_ai_commands(registry_);
 
+    // A COMMAND A NAME COLLISION DROPPED is said, not lost: four of the modules
+    // above drop `Registry::add`'s status, and the command would be missing from
+    // the program with nothing in the log (the test that assembles all six fails
+    // on it too).
+    for (const std::string& refused : registry_.refused())
+        command::log_error("Komut kaydedilemedi, programda yok: " + refused);
+
     // The CRS resolver, so a drawing knows that TUREF/TM30 is EPSG:5254 without
     // the user restating it. A missing or unreadable /data/crs package leaves the
     // hook uninstalled: an unresolved CRS keeps its id and says so, which is the

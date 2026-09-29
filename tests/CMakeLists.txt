@@ -36,6 +36,7 @@ add_executable(kentos_tests
     unit/test_text_atlas.cpp
     unit/test_print.cpp
     unit/test_proof.cpp
+    unit/test_registry.cpp
     unit/test_preview.cpp
     unit/test_colour.cpp
     unit/test_curve_path.cpp

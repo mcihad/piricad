@@ -20,7 +20,16 @@ class Registry
 public:
     /// Adds a command. Fails on a duplicate id or a name already claimed by
     /// another command — silent shadowing is not permitted.
+    ///
+    /// A FAILURE IS ALSO KEPT (`refused`): four of the six modules that register
+    /// commands drop this status on the floor, so a name that collided removed
+    /// a command from the program with no trace but a green build. What was
+    /// refused stays readable here for the application to report and for the
+    /// test that assembles all six to fail on.
     core::Status add(CommandSpec spec);
+
+    /// Every `add` that failed, in order: the command's id and why.
+    const std::vector<std::string>& refused() const noexcept { return refused_; }
 
     const CommandSpec* by_id(std::string_view id) const;
 
@@ -58,9 +67,12 @@ public:
     std::size_t size() const noexcept { return specs_.size(); }
 
 private:
+    core::Status admit(CommandSpec spec);
+
     std::vector<CommandSpec> specs_;
     std::unordered_map<std::string, std::size_t> by_id_;
     std::unordered_map<std::string, std::size_t> by_name_; ///< keyed on turkish_fold_key(name)
+    std::vector<std::string> refused_;
 };
 
 /// The process-wide registry, populated once by register_builtin_commands().

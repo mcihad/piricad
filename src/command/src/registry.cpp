@@ -10,6 +10,16 @@ namespace kentos::command {
 
 core::Status Registry::add(CommandSpec spec)
 {
+    const std::string id  = spec.id;
+    core::Status admitted = admit(std::move(spec));
+    if (!admitted)
+        refused_.push_back((id.empty() ? std::string("(kimliksiz)") : id) + ": " +
+                           admitted.error().message);
+    return admitted;
+}
+
+core::Status Registry::admit(CommandSpec spec)
+{
     using core::ErrorCode;
 
     if (spec.id.empty()) return core::err(ErrorCode::InvalidArgument, "Komut kimliği boş olamaz.");
