@@ -2301,7 +2301,7 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
 
-        // AND KAPSAMDENETİM'S ANSWER: the four parcels and a point fallen to
+        // AND `KAPSAMDENETİM`'S ANSWER: the four parcels and a point fallen to
         // 0,0, framed together, the straggler marked where it lies and the
         // transcript naming it with the line that would move it.
         later([&window] {
