@@ -54,6 +54,9 @@ SEÇ KESEN <köşe> <köşe>
 SEÇ KUTU <köşe> <köşe>
 SEÇ NOKTA <nokta> [tolerans=<metre>]
 SEÇ İÇEREN <nokta> [sira=<sıra>]
+SEÇ GEÇEN <nokta> [tolerans=<metre>]
+SEÇ DAİRE <merkez> <çevre-noktası>
+SEÇ DIŞINDA <köşe> <köşe>
 SEÇ ÇOKGENPENCERE <köşe> <köşe> <köşe> ...   (kısası: ÇOKGEN)
 SEÇ ÇOKGENKESEN <köşe> <köşe> <köşe> ...
 SEÇ ÇİT <nokta> <nokta> ...
@@ -68,20 +71,20 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 
 | Parametre | Ne yapar |
 |---|---|
-| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `İÇEREN`, `ÇOKGENPENCERE` (ya da `ÇOKGEN`), `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
-| `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` ve `İÇEREN` modlarında tek tıklama noktası |
+| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU`, `NOKTA`, `İÇEREN`, `GEÇEN`, `DAİRE`, `DIŞINDA`, `ÇOKGENPENCERE` (ya da `ÇOKGEN`), `ÇOKGENKESEN`, `ÇİT`, `ÖNCEKİ` veya `SON`. Verilmezse seçim yalnızca raporlanır |
+| `noktalar` | Kutu köşeleri (iki nokta; `DIŞINDA`'da da), `DAİRE`'de merkez ve çevre üzerinde bir nokta, ya da `NOKTA`, `İÇEREN` ve `GEÇEN` modlarında tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
 | `tur` | Yalnız bu **türdeki** nesneler: `ÇOKLUÇİZGİ`, `DAİRE`, `YAY`, `NOKTA`, `ELİPS`… Her kiple birlikte çalışır |
 | `islem` | `DEĞİŞTİR` (varsayılan), `EKLE`, `ÇIKAR` veya `TERSİNE` |
-| `tolerans` | `NOKTA` modunda arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
+| `tolerans` | `NOKTA` ve `GEÇEN` modlarında arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
 | `sira` | `NOKTA` modunda kaçıncı nesne: `1` en yakını (varsayılan), `2` onun altındaki. `İÇEREN` modunda kaçıncı alan: `1` en küçüğü (varsayılan), `2` onu içeren |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Her modun İngilizce ve karaktersiz karşılıkları da kabul edilir: `TUMU`/`ALL`,
-`TEMIZLE`/`CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`, `ICEREN`/`CONTAINING`, `ADD`, `REMOVE`,
-`TOGGLE`.
+`TEMIZLE`/`CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`, `ICEREN`/`CONTAINING`, `GECEN`/`THROUGH`,
+`DAIRE`/`CIRCLE`, `DISINDA`/`OUTSIDE`, `ADD`, `REMOVE`, `TOGGLE`.
 
 ### Aynı noktada birden çok nesne varsa
 
@@ -150,10 +153,13 @@ piksel toleransı yoktur.** Başsız çalışan bir betik `SEÇ NOKTA` yazdığ�
 noktanın tam üstündeki nesneyi bulur. Aralık isterse `tolerans=` ile metre cinsinden
 söyler — böylece betik bir şey uydurmak yerine ne istediğini yazmış olur.
 
-## Beş kip daha
+## Başka kipler
 
 | Kip | Ne alır | Ne zaman |
 |---|---|---|
+| `DAİRE` | Merkezi ve çevresi üzerindeki bir noktayla verilen dairenin **tamamen içindeki** nesneler | Bir kuyunun yirmi metresindeki ağaçlar, bir kavşağın çevresindeki rögarlar |
+| `DIŞINDA` | Kutuya **hiç değmeyen** nesneler | Tutacağınız kısmın çevresine kutu çizmek kolaysa, paftanın geri kalanı |
+| `GEÇEN` | Noktadan **geçen** her çizgi | Bir röper taşında buluşan bütün sınırlar |
 | `ÇOKGENPENCERE` · `ÇOKGEN` | Çizdiğiniz çokgenin **tamamen içindeki** nesneler | Bir ada dikdörtgen değildir: kutu ya kastettiğinizi kaçırır ya komşuyu da alır |
 | `ÇOKGENKESEN` | Çokgenin **değdiği** her nesne | Bir koridorun kestiği her parsel |
 | `ÇİT` | Çizdiğiniz **hattın kestiği** her nesne | Yol boyunca bir bordür dizisi, arkasındaki binalar olmadan |
@@ -169,6 +175,17 @@ tutamadığı bir yığındır. İki kez `ÖNCEKİ` ileri geri gider. Arada sili
 nesne **geri getirilmez**: önceki seçim kalıcı anahtarları tutar ve karşılığı
 gitmiş bir anahtar atılır, çünkü bir sonraki `SİL`'in zaten gitmiş bir şeyi
 sildiğini bildirmesi yanlış olur.
+
+**`DAİRE` nesnenin her noktasına bakar**, kutusuna değil: köşeleri daireden taşan bir kare,
+kutusu dairenin kutusuna sığsa da alınmaz. Yazının harfleri de dairenin içinde olmalıdır.
+
+**`DIŞINDA`, `KESEN`'in almadıklarıdır** — bir farkla: kutuyu içine alan bir parsel, çizgileri
+kutuya değmese de dışında sayılmaz, çünkü kutu onun üstündedir.
+
+**`GEÇEN` yüzü saymaz.** `NOKTA` bir parselin içine tıklanınca parseli bulur; `GEÇEN` yalnız
+çizgisi noktadan geçenleri. `NOKTA` gibi yakalamayla tıklanır — bir köşeye oturan tıklama o
+köşede buluşan her çizgiyi alır — ve ekranı olmayan bir istemci için tam noktanın üstündekini
+alır; aralık `tolerans=` ile metre olarak verilir.
 
 **`ÇİT` tek bir noktayı almaz.** Bir çit bir hattır ve bir hattın bir röperden
 geçmesi, tam üstünden geçmesi demektir — bir elin çizebileceği bir şey değil.
@@ -282,6 +299,20 @@ Parseli değil, onu içeren adayı seçin:
 SEÇ İÇEREN 130,30 sira=2
 ```
 
+Adanın köşesinde buluşan çizgiler, parselin çevresindeki daire ve adaya değmeyenler:
+
+```
+SEÇ GEÇEN 110,10
+SEÇ DAİRE 130,30 145,30
+SEÇ DIŞINDA 105,5 165,65
+```
+
+```text
+1 nesne bulundu (DEĞİŞTİR). Seçimde 1 nesne var: 5
+1 nesne bulundu (DEĞİŞTİR). Seçimde 1 nesne var: 6
+3 nesne bulundu (DEĞİŞTİR). Seçimde 3 nesne var: 1, 2, 3
+```
+
 ### Arayüz
 
 Harita alanında hiçbir komut çalışmıyorken sol fare tuşu seçim yapar:
@@ -390,6 +421,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Beklenen mod: TÜMÜ \| TEMİZLE \| NESNE \| KATMAN \| PENCERE \| KESEN \| KUTU \| NOKTA \| İÇEREN \| …. Girilen: 'OLMAYAN'` | Tanınmayan mod adı | Tablodaki adlardan birini yazın |
 | `O noktayı 3 kapalı nesne içeriyor; 4. istendi.` | `İÇEREN` modunda `sira`, noktayı içeren alan sayısından büyük | Transkriptteki listeden bir sıra seçin |
 | `'sira' 1'den küçük olamaz; 1 en küçük alandır.` | `İÇEREN` modunda `sira=0` ya da eksi | `sira` 1'den başlar |
+| `Seçim dairesinin yarıçapı sıfır: çevre noktası merkezle aynı.` | `DAİRE`'nin iki noktası aynı | Çevre üzerinde başka bir nokta verin |
 | `'KATMAN' bir katman adı bekliyor.` | `mod=KATMAN` verilmiş, `katman=` verilmemiş | Katman adını `katman=` ile yazın |
 | `Katman bulunamadı: <ad>` | Çizimde o adda katman yok | [KATMAN](layer.md) ile adları listeleyin; Türkçe `i`/`ı` ayrımına dikkat edin |
 | `Beklenen işlem: DEĞİŞTİR \| EKLE \| ÇIKAR \| TERSİNE. Girilen: 'BİLİNMEYEN'` | Tanınmayan `islem` değeri | `EKLE`, `ÇIKAR` veya `TERSİNE` yazın |

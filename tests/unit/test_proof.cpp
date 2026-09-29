@@ -2912,6 +2912,77 @@ TEST_CASE("PROOF: SEÇ İÇEREN gui, komut satırı ve betikten aynı alanı se�
         CHECK_EQ(rig->undo.undo_depth(), std::size_t{3}); ///< the three areas only
 }
 
+TEST_CASE("PROOF: SEÇ DAİRE, DIŞINDA ve GEÇEN gui, komut satırı ve betikten aynı seçimi verir")
+{
+    // Article 6.4 for `core.select`'s three N-04 modes, the ÇİT proof's way: the
+    // thing that has to agree is the SELECTION the next command acts on.
+    const char* kSetup[] = {"ÇİZGİ -3,0 3,0", "ÇİZGİ 5,0 15,0", "ÇİZGİ 0,-10 0,10",
+                            "ALAN 20,20 30,20 30,30 20,30"};
+
+    struct Case
+    {
+        const char* mode;
+        std::vector<core::Point2> clicks;
+        const char* typed;
+        const char* scripted;
+    };
+
+    const Case cases[] = {
+        {"DAİRE",
+         {{0, 0}, {4'000, 0}},
+         "SEÇ DAİRE 0,0 4,0",
+         R"({"ad":"Daire","komutlar":[{"cmd":"core.select","args":{
+            "mod":"DAİRE","noktalar":[[0,0],[4000,0]]}}]})"},
+        {"DIŞINDA",
+         {{-5'000, -5'000}, {16'000, 5'000}},
+         "SEÇ DIŞINDA -5,-5 16,5",
+         R"({"ad":"Dışında","komutlar":[{"cmd":"core.select","args":{
+            "mod":"DIŞINDA","noktalar":[[-5000,-5000],[16000,5000]]}}]})"},
+        {"GEÇEN",
+         {{0, 0}},
+         "SEÇ GEÇEN 0,0",
+         R"({"ad":"Geçen","komutlar":[{"cmd":"core.select","args":{
+            "mod":"GEÇEN","noktalar":[[0,0]]}}]})"},
+    };
+
+    const auto keys_of = [](const Rig& rig) {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : rig.bus.selection().keys())
+            out.push_back(core::raw(k));
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+
+    for (const Case& c : cases) {
+        INFO(c.mode);
+        Rig gui;
+        Rig cli;
+        Rig scr;
+        for (Rig* rig : {&gui, &cli, &scr})
+            for (const char* line : kSetup)
+                REQUIRE(rig->bus.execute_line(line, Origin::Test).ok());
+        {
+            auto started = gui.bus.begin_interactive(std::string("SEÇ ") + c.mode, Origin::Gui);
+            REQUIRE(started.ok());
+            auto& session = *started.value();
+            for (const core::Point2& click : c.clicks)
+                CHECK(session.supply(Value::point(click)).ok());
+            REQUIRE(gui.bus.finish(session).ok());
+        }
+        REQUIRE(cli.bus.execute_line(c.typed, Origin::CommandLine).ok());
+        {
+            script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+            auto r = runner.run_text(c.scripted);
+            if (!r.ok()) FAIL_WITH(c.mode, r.error().message);
+        }
+        CHECK_EQ(keys_of(gui), keys_of(cli));
+        CHECK_EQ(keys_of(cli), keys_of(scr));
+        CHECK_FALSE(keys_of(cli).empty());
+        for (const Rig* rig : {&gui, &cli, &scr})
+            CHECK_EQ(rig->undo.undo_depth(), std::size_t{4}); ///< the setup only
+    }
+}
+
 TEST_CASE("PROOF: ÖLÇÜ tur=koordinat gui, komut satırı ve betikten aynı belgeyi bırakır")
 {
     // Article 6.4 for `core.dimension`'s ordinate type — P5's own addition. The

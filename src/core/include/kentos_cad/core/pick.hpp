@@ -253,6 +253,22 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius);
 /// to it.
 void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out);
 
+/// EVERY visible entity wholly inside the circle round `centre` of `radius`: all
+/// of its drawn points, and a caption's letters, within the radius. `SEÇ DAİRE`,
+/// the window of a circle; `out` is cleared first, slot order.
+void pick_in_circle(const Document& doc, Point2 centre, Mm radius, std::vector<EntityId>& out);
+
+/// EVERY visible entity wholly OUTSIDE `box`: no edge of it touches the box — what
+/// a crossing box would not take — and the box does not lie on its face, so a
+/// parcel round the window is not outside it. `SEÇ DIŞINDA`; slot order.
+void pick_outside_box(const Document& doc, const Box2& box, std::vector<EntityId>& out);
+
+/// EVERY visible entity whose LINE comes within `radius` of `cursor`, nearest
+/// first — `pick_all` without its face rule: a parcel is through a point only
+/// along its boundary, not for a point inside it. `SEÇ GEÇEN`, "what passes
+/// through here".
+void pick_through(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out);
+
 /// EVERY visible closed entity whose FACE holds `probe`, SMALLEST FIRST: the
 /// parcel, then the ada it lies in, then the mahalle. `out` is cleared first.
 ///

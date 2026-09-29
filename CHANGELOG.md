@@ -6,6 +6,14 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — üç seçim kipi: DAİRE, DIŞINDA, GEÇEN
+
+- `SEÇ DAİRE <merkez> <çevre-noktası>`: dairenin tamamen içindekiler; nesnenin her noktasına
+  bakılır, kutusuna değil. `SEÇ DIŞINDA <köşe> <köşe>`: kutuya hiç değmeyenler — kutuyu içine
+  alan parsel dışında sayılmaz. `SEÇ GEÇEN <nokta> [tolerans=]`: noktadan geçen her çizgi;
+  noktayı içine alan alanın yüzü sayılmaz (Netcad'in Seçim Süzgeci'nde Daire, Dışındakiler ve
+  Noktadan Geçenler).
+
 ### Eklendi — içine tıklayarak taramak
 
 - `TARAMA yontem=ic nokta=…`: gevşek çizgilerin kapattığı bölgenin içine tıklayın, bölge

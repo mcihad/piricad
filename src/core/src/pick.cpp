@@ -149,7 +149,10 @@ bool face_holds(const Document& doc, EntityId e, const Runs& runs, Point2 p)
     return in_exterior && !in_hole;
 }
 
-double min_distance_squared(const Document& doc, EntityId e, Point2 p)
+/// `faces`: whether a point inside a face is ON it, at distance zero. True for a
+/// pick; false for `pick_through`, where a parcel is through a point only along
+/// its boundary.
+double min_distance_squared(const Document& doc, EntityId e, Point2 p, bool faces = true)
 {
     // A CAPTION IS MEASURED TO ITS LETTERS. Everything below walks the entity's
     // rings, and a text entity's ring is the hairline UNDER the letters — so a
@@ -222,8 +225,34 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
     // and the command waited for a selection that could not be made.
     //
     // A hole vetoes (`face_holds`).
-    if (best != 0.0 && face_holds(doc, e, runs, p)) return 0.0;
+    if (faces && best != 0.0 && face_holds(doc, e, runs, p)) return 0.0;
     return best;
+}
+
+/// Whether every drawn point of `e` lies within `sqrt(limit)` of `centre`: its
+/// runs' vertices, and for a caption the corners of its letters — the rule
+/// `pick_in_circle` applies, where a box's window test would take the corners a
+/// circle never reaches. A straight segment between two points inside a disc is
+/// inside it, so the vertices are enough; a curve is its drawn outline.
+bool inside_circle(const Document& doc, EntityId e, Point2 centre, double limit)
+{
+    if (std::array<Point2, 4> quad; text_quad(doc, e, quad)) {
+        for (const Point2& q : quad)
+            if (distance_squared(q, centre) > limit) return false;
+        return true;
+    }
+    Runs runs;
+    runs.build(doc, e);
+    bool any = false;
+    for (std::uint32_t r = 0; r < runs.count; ++r) {
+        const auto xs = runs.xs(doc, e, r);
+        const auto ys = runs.ys(doc, e, r);
+        for (std::size_t v = 0; v < xs.size(); ++v) {
+            any = true;
+            if (distance_squared(Point2{xs[v], ys[v]}, centre) > limit) return false;
+        }
+    }
+    return any;
 }
 
 } // namespace
@@ -752,6 +781,77 @@ void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityI
     std::stable_sort(found.begin(), found.end(),
                      [](const auto& a, const auto& b) { return a.first < b.first; });
 
+    out.reserve(found.size());
+    for (const auto& [distance, entity] : found)
+        out.push_back(entity);
+}
+
+void pick_in_circle(const Document& doc, Point2 centre, Mm radius, std::vector<EntityId>& out)
+{
+    out.clear();
+    if (radius <= 0) return;
+
+    const Box2 box{centre.x - radius, centre.y - radius, centre.x + radius, centre.y + radius};
+    const double limit          = static_cast<double>(radius) * static_cast<double>(radius);
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+
+    for_each_candidate(doc, box, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        // Inside the circle's box is necessary, and the box is in the cull block.
+        if (!box_contains_box(box, entities.box_of(e))) return;
+        if (inside_circle(doc, e, centre, limit)) out.push_back(e);
+    });
+}
+
+void pick_outside_box(const Document& doc, const Box2& box, std::vector<EntityId>& out)
+{
+    out.clear();
+    if (box.empty()) return;
+
+    std::vector<EntityId> touched;
+    pick_in_box(doc, box, PickMode::Crossing, touched);
+    std::sort(touched.begin(), touched.end());
+
+    // NO EDGE TOUCHES THE BOX, so the whole box lies on one side of each
+    // remaining entity and its centre says which: a parcel round the window has
+    // the window on it, and is not outside it.
+    const Point2 middle{box.min_x + (box.max_x - box.min_x) / 2,
+                        box.min_y + (box.max_y - box.min_y) / 2};
+    const EntityTable& entities = doc.entities();
+    for (EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.visible(e)) continue;
+        if (std::binary_search(touched.begin(), touched.end(), e)) continue;
+        Runs runs;
+        runs.build(doc, e);
+        if (face_holds(doc, e, runs, middle)) continue;
+        out.push_back(e);
+    }
+}
+
+void pick_through(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out)
+{
+    out.clear();
+    if (radius < 0) return;
+
+    const Box2 box{cursor.x - radius, cursor.y - radius, cursor.x + radius, cursor.y + radius};
+    const double limit = static_cast<double>(radius) * static_cast<double>(radius);
+
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+    std::vector<std::pair<double, EntityId>> found;
+
+    for_each_candidate(doc, box, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        if (!boxes_overlap(entities.box_of(e), box)) return;
+        const double d = min_distance_squared(doc, e, cursor, false);
+        if (d < 0.0 || d > limit) return;
+        found.emplace_back(d, e);
+    });
+
+    // Nearest first and stable, `pick_all`'s order.
+    std::stable_sort(found.begin(), found.end(),
+                     [](const auto& a, const auto& b) { return a.first < b.first; });
     out.reserve(found.size());
     for (const auto& [distance, entity] : found)
         out.push_back(entity);

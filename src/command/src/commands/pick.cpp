@@ -23,6 +23,7 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -53,6 +54,18 @@ enum class Mode : std::uint8_t {
     /// A click INSIDE, where NOKTA's is a click ON: the parcel is found by its
     /// interior and the ada round it by `sira=2`, with no edge to aim at.
     Containing,
+
+    /// DAİRE — what lies wholly inside a circle, a centre and a point on its rim:
+    /// the trees within twenty metres of a well, the manholes round a junction.
+    Circle,
+
+    /// DIŞINDA — what lies wholly outside a box: the rest of the sheet, when the
+    /// part being kept is the easy thing to draw a box round.
+    Outside,
+
+    /// GEÇEN — the lines through a point: every boundary meeting at a corner
+    /// stone, where NOKTA takes one and İÇEREN takes the faces round it.
+    Through,
 
     /// ÇOKGEN / ÇOKGENKESEN — a polygon instead of a box. A parcel block is not
     /// rectangular and neither is a road corridor, so a box either misses what
@@ -103,6 +116,12 @@ bool parse_mode(const std::string& typed, Mode& out)
         out = Mode::Point;
     } else if (matches(typed, {"İÇEREN", "ICEREN", "CONTAINING"})) {
         out = Mode::Containing;
+    } else if (matches(typed, {"DAİRE", "DAIRE", "CIRCLE"})) {
+        out = Mode::Circle;
+    } else if (matches(typed, {"DIŞINDA", "DISINDA", "OUTSIDE"})) {
+        out = Mode::Outside;
+    } else if (matches(typed, {"GEÇEN", "GECEN", "THROUGH"})) {
+        out = Mode::Through;
         // `ÇOKGENPENCERE` IS THE UNAMBIGUOUS SPELLING and the one the plan used.
         // `ÇOKGEN` is also a DRAW command (the regular polygon), so a user who
         // has just used it and then types `SEÇ ÇOKGEN` is saying one word for two
@@ -137,6 +156,9 @@ const char* mode_name(Mode m)
     case Mode::Box: return "KUTU";
     case Mode::Point: return "NOKTA";
     case Mode::Containing: return "İÇEREN";
+    case Mode::Circle: return "DAİRE";
+    case Mode::Outside: return "DIŞINDA";
+    case Mode::Through: return "GEÇEN";
     case Mode::Polygon: return "ÇOKGEN";
     case Mode::PolygonCrossing: return "ÇOKGENKESEN";
     case Mode::Fence: return "ÇİT";
@@ -247,7 +269,8 @@ Task<void> run_select(Context& ctx)
         if (!parse_mode(v.as_text(), mode)) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
                        "Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
-                       "NOKTA | İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON. Girilen: '" +
+                       "NOKTA | İÇEREN | GEÇEN | DAİRE | DIŞINDA | ÇOKGEN | ÇOKGENKESEN | ÇİT | "
+                       "ÖNCEKİ | SON. Girilen: '" +
                            v.as_text() + "'");
             co_return;
         }
@@ -284,9 +307,12 @@ Task<void> run_select(Context& ctx)
     // GUI is a client with less reach than the command line (Article 1.2).
     std::vector<core::Point2> supplied = ctx.argument("noktalar").as_points();
 
-    if (mode == Mode::Window || mode == Mode::Crossing || mode == Mode::Box) {
+    if (mode == Mode::Window || mode == Mode::Crossing || mode == Mode::Box ||
+        mode == Mode::Outside) {
         if (supplied.empty()) {
-            auto first = co_await ctx.point("noktalar", "Seçim kutusunun ilk köşesi");
+            auto first = co_await ctx.point("noktalar", mode == Mode::Outside
+                                                            ? "Dışı seçilecek kutunun ilk köşesi"
+                                                            : "Seçim kutusunun ilk köşesi");
             if (!first) co_return; // ESC before anything was picked
             supplied.push_back(*first);
         }
@@ -345,6 +371,26 @@ Task<void> run_select(Context& ctx)
         }
     } else if (mode == Mode::Point && supplied.empty()) {
         auto aim = co_await ctx.point("noktalar", "Seçilecek nesnenin üzerinde bir nokta");
+        if (!aim) co_return;
+        supplied.push_back(*aim);
+    } else if (mode == Mode::Circle) {
+        if (supplied.empty()) {
+            auto centre = co_await ctx.point("noktalar", "Seçim dairesinin merkezi");
+            if (!centre) co_return;
+            supplied.push_back(*centre);
+        }
+        if (supplied.size() < 2) {
+            auto rim = co_await ctx.point("noktalar", "Dairenin çevresi üzerinde bir nokta",
+                                          PointOptions{.rubber_band   = true,
+                                                       .rubber_origin = supplied.front(),
+                                                       .rubber_shape  = RubberShape::Circle});
+            if (!rim) co_return;
+            supplied.push_back(*rim);
+        }
+    } else if (mode == Mode::Through && supplied.empty()) {
+        // SNAPPED, unlike the `İÇEREN` click: "through this corner" is said by
+        // landing on the corner, and the end-point snap is how a hand lands.
+        auto aim = co_await ctx.point("noktalar", "Nesnelerin geçtiği nokta");
         if (!aim) co_return;
         supplied.push_back(*aim);
     } else if (mode == Mode::Containing && supplied.empty()) {
@@ -543,6 +589,41 @@ Task<void> run_select(Context& ctx)
         break;
     }
 
+    case Mode::Circle: {
+        if (!need_points(2)) co_return;
+        const core::Mm radius = core::segment_length(supplied[0], supplied[1]);
+        if (radius <= 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Seçim dairesinin yarıçapı sıfır: çevre noktası merkezle aynı.");
+            co_return;
+        }
+        core::pick_in_circle(doc, supplied[0], radius, slots);
+        picked = keys_of(doc, slots);
+        break;
+    }
+
+    case Mode::Outside: {
+        if (!need_points(2)) co_return;
+        core::Box2 box{};
+        box.extend(supplied[0]);
+        box.extend(supplied[1]);
+        core::pick_outside_box(doc, box, slots);
+        picked = keys_of(doc, slots);
+        break;
+    }
+
+    case Mode::Through: {
+        if (!need_points(1)) co_return;
+        // THE PICK RADIUS, as NOKTA's: pixels by default, metres when stated,
+        // and exactly the point for a client with no screen.
+        core::Mm radius = bus.aid_settings().pick_radius;
+        if (const Value t = ctx.argument("tolerans"); !t.empty())
+            radius = core::mm_from_metres(t.as_number());
+        core::pick_through(doc, supplied.front(), radius, slots);
+        picked = keys_of(doc, slots);
+        break;
+    }
+
     case Mode::Window:
     case Mode::Crossing:
     case Mode::Box: {
@@ -688,11 +769,13 @@ KENTOS_COMMAND(select)
             {
                 Param::text("mod", Arity::optional(),
                             "TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | "
-                            "İÇEREN | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON")
+                            "İÇEREN | GEÇEN | DAİRE | DIŞINDA | ÇOKGEN | ÇOKGENKESEN | ÇİT | "
+                            "ÖNCEKİ | SON")
                     .en("mode"),
                 Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
-                              "Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama "
-                              "noktası (NOKTA, İÇEREN)")
+                              "Kutu köşeleri (iki nokta; DIŞINDA da), çokgen/çit köşeleri, "
+                              "DAİRE'de merkez ve çevre noktası ya da tek tıklama noktası (NOKTA, "
+                              "İÇEREN, GEÇEN)")
                     .en("points"),
                 Param::text("tur", Arity::optional(),
                             "Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…")
@@ -704,7 +787,8 @@ KENTOS_COMMAND(select)
                 Param::text("islem", Arity::optional(), "DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE")
                     .en("action"),
                 Param::number("tolerans", Arity::optional(),
-                              "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı")
+                              "NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim "
+                              "toleransı")
                     .en("tolerance"),
                 Param::number("sira", Arity::optional(),
                               "Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 "
@@ -720,7 +804,8 @@ KENTOS_COMMAND(select)
         // what the engineer has highlighted could change what the next SİL
         // removes without ever emitting SİL itself (.claude/ai.md, §5.1).
         .summary = "Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, "
-                   "önceki seçim, son nesne, tek nokta ya da bir noktayı içeren alan.",
+                   "daire, kutunun dışı, önceki seçim, son nesne, tek nokta, bir noktayı içeren "
+                   "alan ya da noktadan geçen çizgiler.",
         .run = &run_select,
         // NOT A QUERY, THOUGH IT WRITES NOTHING. A changed highlight changes
         // what the next SİL deletes, so it is treated as an edit to the thing

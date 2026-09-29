@@ -2499,6 +2499,89 @@ TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düş�
     CHECK(selected() == std::vector<std::uint64_t>{face});
 }
 
+TEST_CASE("SEÇ DAİRE: dairenin tamamen içindekiler; keseni ve köşesi dışarıdakini almaz")
+{
+    Fixture f;
+    for (const char* line : {
+             "ÇİZGİ -3,0 3,0",           ///< 1: inside a 10 m circle round 0,0
+             "ÇİZGİ 5,0 15,0",           ///< 2: across the rim
+             "ÇİZGİ 20,20 25,20",        ///< 3: outside
+             "ALAN -2,-2 2,-2 2,2 -2,2", ///< 4: inside
+             "ALAN -8,-8 8,-8 8,8 -8,8", ///< 5: in the circle's box, corners 11,3 m out
+         })
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    const auto selected = [&f] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+
+    REQUIRE(f.bus.execute_line("SEÇ DAİRE 0,0 10,0", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1, 4});
+
+    auto flat = f.bus.execute_line("SEÇ DAİRE 0,0 0,0", Origin::CommandLine);
+    REQUIRE_FALSE(flat.ok());
+    CHECK(flat.error().message == "Seçim dairesinin yarıçapı sıfır: çevre noktası merkezle aynı.");
+
+    // ASKED FOR, the rim with the circle drawn from the centre.
+    REQUIRE(f.bus.execute_line("SEÇ TEMİZLE", Origin::Test).ok());
+    auto started = f.bus.begin_interactive("SEÇ DAİRE", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().rubber_shape == RubberShape::Circle);
+    CHECK(session.prompt().rubber_origin == core::Point2{0, 0});
+    REQUIRE(session.supply(Value::point(core::Point2{0, 10'000})).ok());
+    REQUIRE(f.bus.finish(session).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1, 4});
+}
+
+TEST_CASE("SEÇ DIŞINDA: kutuya değmeyenler; kutuyu içine alan alan dışında sayılmaz")
+{
+    Fixture f;
+    for (const char* line : {
+             "ÇİZGİ 0,0 10,0",                           ///< 1: inside the box
+             "ÇİZGİ 5,5 30,5",                           ///< 2: across its edge
+             "ÇİZGİ 40,40 50,40",                        ///< 3: outside
+             "ALAN -100,-100 100,-100 100,100 -100,100", ///< 4: round everything
+             "ALAN 60,0 70,0 70,10 60,10",               ///< 5: outside
+         })
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SEÇ DIŞINDA -5,-5 20,20", Origin::CommandLine).ok());
+    std::vector<std::uint64_t> got;
+    for (const core::EntityKey k : f.bus.selection().keys())
+        got.push_back(core::raw(k));
+    CHECK(got == std::vector<std::uint64_t>{3, 5});
+}
+
+TEST_CASE("SEÇ GEÇEN: noktadan geçen çizgiler; noktayı içine alan alan geçmez")
+{
+    Fixture f;
+    for (const char* line : {
+             "ÇİZGİ -10,0 10,0",                 ///< 1: through 0,0
+             "ÇİZGİ 0,-10 0,10",                 ///< 2: through 0,0
+             "ÇİZGİ 5,5 10,5",                   ///< 3: not
+             "ALAN -20,-20 20,-20 20,20 -20,20", ///< 4: 0,0 in its face, not on it
+             "ALAN 0,0 30,0 30,-30 0,-30",       ///< 5: its corner is 0,0
+         })
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    const auto selected = [&f] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+    // NO SCREEN, NO PIXELS: exactly what passes through the point.
+    REQUIRE(f.bus.execute_line("SEÇ GEÇEN 0,0", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1, 2, 5});
+    // Half a metre either side, in metres.
+    REQUIRE(f.bus.execute_line("SEÇ GEÇEN 7,5.3 tolerans=0.5", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{3});
+}
+
 TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")
 {
     Fixture f;
