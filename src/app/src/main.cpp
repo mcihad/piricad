@@ -2441,6 +2441,42 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("35-iceren-secim"), &window); });
 
+        // AND THE STRIP HATCHED BY A CLICK INSIDE IT (`TARAMA yontem=ic`), with
+        // the Tarama family's menu open under its button on `Çizim`.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+            window.runScriptLine(
+                QStringLiteral("TARAMA yontem=ic desen=ANSI31 olcek=200 nokta=485340,4310192"));
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonDraw")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, shot] { shot(QStringLiteral("36-tarama-ic"), &window); });
+        later([&window] {
+            SARibbonBar* bar = window.ribbonBar();
+            if (bar == nullptr) return;
+            QCoreApplication::sendPostedEvents(); ///< the tab laid out, its buttons placed
+            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+                const bool hatches =
+                    std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
+                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                               QStringLiteral("TARAMA yontem=ic");
+                    });
+                if (!hatches || f->head()->menu() == nullptr) continue;
+                for (auto* button : bar->findChildren<QToolButton*>())
+                    if (button->defaultAction() == f->head() && button->isVisible())
+                        f->head()->menu()->popup(button->mapToGlobal(QPoint(0, button->height())));
+            }
+        });
+        later([with_popup] {
+            with_popup(QStringLiteral("36b-tarama-ailesi"), QApplication::activePopupWidget());
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

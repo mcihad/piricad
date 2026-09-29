@@ -303,6 +303,7 @@ enum class Glyph {
     StationOffset,      ///< a point's foot and offset off a baseline: PRİZMA
     MeasureFixed,       ///< distances from one held first point: ÖLÇ sabit=evet
     MeasureAreaInside,  ///< the region round a click inside it: ALANÖLÇ yontem=ic
+    HatchInside,        ///< the region round a click inside it, hatched: TARAMA yontem=ic
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

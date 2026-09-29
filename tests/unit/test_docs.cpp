@@ -201,6 +201,17 @@ bool is_out_of_scope(const CommandSpec& spec)
     return spec.category == Category::File;
 }
 
+/// ALANÖLÇ and TARAMA by a point inside find their region the way SINIR does, on
+/// the same planar arrangement, and a build without it refuses them for the
+/// reason `is_out_of_scope` gives for SINIR. Only that method: their other
+/// examples run everywhere.
+bool needs_arrangement(const CommandSpec& spec, const std::string& line)
+{
+    if (kentos::core::network_available()) return false;
+    if (spec.id != "core.measure_area" && spec.id != "core.hatch") return false;
+    return line.find("yontem=ic") != std::string::npos || line.find(" nokta=") != std::string::npos;
+}
+
 /// A bare command name is a syntax skeleton when the command needs an argument —
 /// `ÇİZGİ` alone cannot run non-interactively, while `YARDIM` alone can. The
 /// registry decides, so this stays true as commands change.
@@ -261,7 +272,7 @@ TEST_CASE("DOKÜMAN: kılavuzda yazan her komut satırı çalışır")
 
                 // Only lines that start with a registered command name are input.
                 const CommandSpec* spec = rig->reg.resolve(first_word(line));
-                if (!spec || is_out_of_scope(*spec)) continue;
+                if (!spec || is_out_of_scope(*spec) || needs_arrangement(*spec, line)) continue;
                 if (line == first_word(line) && needs_arguments(*spec)) continue;
 
                 auto result = rig->bus.execute_line(line, Origin::Test);

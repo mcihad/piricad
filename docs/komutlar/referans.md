@@ -76,7 +76,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.annulus`](annulus.md) | Halka | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`core.ellipse_draw`](ellipse_draw.md) | Elips | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
 | [`core.spline`](spline.md) | Spline | `SPLINE`, `SPLINE`, `SPLINE`, `SPL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
-| [`core.hatch`](hatch.md) | Tarama | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
+| [`core.hatch`](hatch.md) | Tarama | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar. |
 | [`core.hatch_edit`](hatch_edit.md) | Tarama Düzenle | `TARAMADÜZENLE`, `TARAMADUZENLE`, `HATCHEDIT`, `TDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
@@ -1079,7 +1079,7 @@ Ayrıntılı kullanım: [SPLINE](spline.md)
 
 ### `core.hatch` — TARAMA (Tarama)
 
-Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
+Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1093,6 +1093,10 @@ Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tara
 | `aralik` | number | isteğe bağlı | Kendi desen çizgilerinizin aralığı, metre; desen= yerine |
 | `cift` | bool | isteğe bağlı | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
 | `baslangic` | point_list | isteğe bağlı | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) |
+| `yontem` | text | isteğe bağlı | nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge |
+| `nokta` | point | isteğe bağlı | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur |
+| `ada` | bool | isteğe bağlı | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet) |
+| `bosluk` | integer | isteğe bağlı | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç |
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
 
@@ -6924,7 +6928,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_hatch",
     "title": "Tarama",
-    "description": "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.\nKomut: TARAMA (TARAMA, HATCH, TRM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar.\nKomut: TARAMA (TARAMA, HATCH, TRM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7053,6 +7057,56 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "nesne",
+            "nokta",
+            "ic"
+          ],
+          "description": "nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge (metin)"
+        },
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "ada": {
+          "type": "boolean",
+          "description": "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet) (evet/hayır)"
+        },
+        "bosluk": {
+          "type": "integer",
+          "description": "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç (tam sayı)"
         },
         "varsayimlar": {
           "type": "array",

@@ -483,8 +483,8 @@ yönetmelik değeri yalnız `/data`'da (5.13); `tr()` ve iki `.ts` dosyası (6.9
   **Bağımlılık:** yok; eğim sütunu N-05'ten sonra.
   **3B:** Eğim (%) ve eğik mesafe tepe kotuyla gelir; `report` şeması `egim` alanını şimdiden taşır (kot yoksa "kot yok", sıfır değil).
 
-- [ ] **N-03 · P0 — İçine tıklayarak alan: bölge girdisi ve "noktayı içeren" seçimi.**
-  **Durum (29 Eylül 2026):** `ALANÖLÇ yontem=ic` yapıldı; incelemenin düzeltmeleriyle: `ctx.region` bir bekleyici yapılmadı, bölge `command::ask_region` ile sorulur (SINIR ile ALANÖLÇ aynı yolu, aynı ret sözlerini paylaşır; parametreler `yontem=ic nokta= ada= bosluk=`); bölge tıklaması yakalanmaz (`Prompt::aids`, `command::aids_for` — tuvalin işareti ile sonucun ayrışamadığı tek yer). `SEÇ İÇEREN` yapıldı (`core::pick_containing`: seçimin kendi iç kuralı, türün alanı, küçükten büyüğe; nokta SEÇ'in kendi `noktalar=`'ıyla verilir, ikinci bir nokta parametresi açılmadı; şeritteki yeri N-04'ün Seçim sekmesi). Kalan: `TARAMA` içine tıklayarak (yazı ve blokların ada sayılması bugün yok, önce karar).
+- [x] **N-03 · P0 — İçine tıklayarak alan: bölge girdisi ve "noktayı içeren" seçimi.**
+  **Durum (29 Eylül 2026):** `ALANÖLÇ yontem=ic` yapıldı; incelemenin düzeltmeleriyle: `ctx.region` bir bekleyici yapılmadı, bölge `command::ask_region` ile sorulur (SINIR ile ALANÖLÇ aynı yolu, aynı ret sözlerini paylaşır; parametreler `yontem=ic nokta= ada= bosluk=`); bölge tıklaması yakalanmaz (`Prompt::aids`, `command::aids_for` — tuvalin işareti ile sonucun ayrışamadığı tek yer). `SEÇ İÇEREN` yapıldı (`core::pick_containing`: seçimin kendi iç kuralı, türün alanı, küçükten büyüğe; nokta SEÇ'in kendi `noktalar=`'ıyla verilir, ikinci bir nokta parametresi açılmadı; şeritteki yeri N-04'ün Seçim sekmesi). `TARAMA yontem=ic` yapıldı (bölgenin yüzü tarama halkaları olur, adaları delik; çizgilere bağlanmaz, çünkü bağ sınırı kapalı nesnelerden yeniden kurar — satırda ve sayfada söylenir); Çizim ▸ Tarama bir aile oldu. **Ertelenen:** içteki yazı ve sembollerin taramadan boş kalması — kendiliğinden mi, seçerek mi, Açık soru 18.
   **Netcad:** Alan Seçim Aracı: tıklanan noktayı çevreleyen alanı kendiliğinden çevirir; F2 Çevir (köşeleri göster), F3 Seç (var olan alan), F4 Gelişmiş (8.6; kesişen, çok kırıklı geometride iç alan) 217387115; Alan Sor ve Alan Taramaları bu araçla çalışır 217385205, 217385786; Boşluk ve `/` iç içe alanları küçükten büyüğe listeler 217387890.
   **Bugün:** `core.boundary` SINIR aynı hesabı bir **komut** olarak yapıyor (CGAL düzenlemesi, `core/planar.hpp`; adalar delik, yaylar yay); başka komutlar onu girdi olarak kullanamıyor.
   **Tasarım:** Tek girdi türü `ctx.region(...)` — cevap üç biçimde gelir: köşeler (F2), var olan kapalı nesne (F3), **iç nokta** (F4; SINIR'ın kodu). Komut gövdesi hangisinin geldiğine göre dallanmaz (command.md P10); günlüğe **çözülmüş sınır** yazılır, tıklanan nokta değil — yeniden oynatma el istemez. İlk kullanıcılar: `ALANÖLÇ yontem=ic nokta=`, `TARAMA ic=` (içteki yazı ve semboller ada kuralıyla dışarıda kalır — Netcad'in "Diğer Objeler Seç"i). `core.select` SEÇ'e `mod=İÇEREN nokta=`: noktayı içeren kapalı nesneler **küçükten büyüğe** (parsel ⊂ ada ⊂ mahalle), `sira=` ile hangisi.
@@ -959,6 +959,12 @@ etmeden başlamaz.
 16. **İnceleme notları** (N-25): belge eşyası mı, katman nesnesi mi?
 17. **İFRAZ, ALANİFRAZ, TEVHİT** ve Netmap'in öteki işlemleri: tarifi ne zaman? (Kullanıcı "şimdi kalsın"
     demişti; S-03 ve S-04 o zamana kadar yalnız bu plandaki arayüz/geometri listesini taşır.)
+18. **Taramanın altında kalan yazı ve semboller (N-03).** `TARAMA yontem=ic` bölgenin içindeki kapalı
+    çizgileri boş bırakıyor; yazıları, blokları ve noktaları bırakmıyor. Seçenekler: (a) AutoCAD gibi
+    **kendiliğinden** — bölgedeki her yazının kutusu ve her sembolün çerçevesi bir pay bırakılarak delik
+    olur; (b) Netcad gibi **seçerek** — "Diğer Objeler Seç"in karşılığı `disarida=<nesneler>`, yalnız
+    gösterilenler boş kalır; (c) ikisi, (a) öntanımlı ve `yazilar=hayır` ile kapatılır. Pay (metre ya da
+    yazı yüksekliğinin katı) katalog değeri mi, parametre mi?
 
 ## 10. Kaynak notları
 

@@ -6,6 +6,15 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — içine tıklayarak taramak
+
+- `TARAMA yontem=ic nokta=…`: gevşek çizgilerin kapattığı bölgenin içine tıklayın, bölge
+  `SINIR`'ın bulduğu gibi bulunur ve taranır; içindeki kapalı çizgiler boş kalır
+  (`ada=hayır` onları da tarar), kapanmayan bölge `SINIR` ile aynı sözle reddedilir. Bu
+  tarama çizgilere bağlanmaz ve bunu söyler. **Çizim ▸ Tarama ▾ ▸ içine tıklayarak**.
+- İçindeki yazı ve semboller bugün taramanın altında kalır; onları boş bırakmak Faz 1'de
+  gelecek.
+
 ### Eklendi — bir noktayı içeren alanı seçmek
 
 - `SEÇ İÇEREN <nokta> [sira=<sıra>]`: noktayı içeren kapalı nesneler küçükten büyüğe

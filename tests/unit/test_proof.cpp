@@ -1378,6 +1378,7 @@ TEST_CASE(
 
 TEST_CASE("PROOF: ALANÖLÇ yontem=ic gui, komut satırı ve betikten aynı bölgeyi ölçer")
 {
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
     const char* kSides[] = {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
                             "ÇİZGİ 0,30 0,0"};
     Rig gui;
@@ -2722,6 +2723,53 @@ TEST_CASE("PROOF: SINIR — arayüz, komut satırı, betik ve oynatma aynı sın
                       {"cmd":"core.line","args":{"noktalar":[[0,10000],[0,0]]}},
                       {"cmd":"core.circle_draw","args":{"merkez":[10000,5000],"cevre":[12000,5000]}},
                       {"cmd":"core.boundary","args":{"nokta":[3000,3000]}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{6});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
+TEST_CASE("PROOF: TARAMA yontem=ic — arayüz, komut satırı, betik ve oynatma aynı taramayı çizer")
+{
+    // N-03. The GUI clicks inside the yard; the others name the point. The
+    // circle is the island the hatch stays out of.
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    const std::vector<std::string> setup{"ÇİZGİ 0,0 20,0", "ÇİZGİ 20,0 20,10", "ÇİZGİ 20,10 0,10",
+                                         "ÇİZGİ 0,10 0,0", "DAİRE 10,5 12,5"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("TARAMA yontem=ic desen=ANSI31", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{3'000, 3'000})).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(
+        cli.bus.execute_line("TARAMA yontem=ic desen=ANSI31 nokta=3,3", Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.line","args":{"noktalar":[[0,0],[20000,0]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[20000,0],[20000,10000]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[20000,10000],[0,10000]]}},
+                      {"cmd":"core.line","args":{"noktalar":[[0,10000],[0,0]]}},
+                      {"cmd":"core.circle_draw","args":{"merkez":[10000,5000],"cevre":[12000,5000]}},
+                      {"cmd":"core.hatch","args":{"yontem":"ic","desen":"ANSI31",
+                        "nokta":[3000,3000]}}]})")
                     .ok());
     }
     CHECK_EQ(gui.doc.live_entity_count(), std::size_t{6});

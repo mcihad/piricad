@@ -3,8 +3,9 @@
 ## Ne yapar
 
 Kapalı bir sınırın içini bir **desenle** doldurur: dolu (`SOLID`), 45° çizgiler
-(`ANSI31`), ağ (`NET`), toprak (`EARTH`)… Sınırı ya seçili kapalı nesnelerden alır —
-alan, daire, elips, kapalı çoklu çizgi — ya da `noktalar=` ile doğrudan köşelerden.
+(`ANSI31`), ağ (`NET`), toprak (`EARTH`)… Sınırı seçili kapalı nesnelerden alır —
+alan, daire, elips, kapalı çoklu çizgi —, `noktalar=` ile doğrudan köşelerden ya da
+`yontem=ic` ile içine tıkladığınız bölgeden.
 Sonuç bir [tarama nesnesidir](../nesneler/tarama.md): sınır halkaları ve desen
 birlikte saklanır, DXF'e `HATCH` olarak gider.
 
@@ -37,6 +38,20 @@ olduğunu, bir nesne için de onu kaç bağlı taramanın izlediğini söyler.
 `noktalar=` ile köşelerden çizilen tarama bağsızdır. Bağlamak istemediğinizde
 `bagla=hayır` verin. DXF'ten gelen bir taramanın "ilişkili" işareti (grup 71) bu
 çizimde bir bağ değildir: NESNEBİLGİ bunu ayrıca söyler.
+
+### İçine tıklayarak: `yontem=ic`
+
+Netcad'in alan taramaları gibi: gevşek çizgilerin, yayların, çoklu çizgilerin kapattığı
+bir bölgenin içine tıklarsınız, bölge [`SINIR`](boundary.md)'ın bulduğu gibi bulunur ve
+taranır. İçindeki kapalı çizgiler ada olur ve **boş kalır** (`ada=hayır` onları da tarar);
+kapanmayan bir bölge `SINIR` ile aynı sözle reddedilir. Tıklama yakalanmaz: kenara yakın
+bir tıklama kenarın üstüne oturmaz.
+
+- **Çizgilere bağlı değildir.** Bağ, sınırı kapalı nesnelerden yeniden kurar; bölgeyi
+  kapatan çizgilerin hiçbiri tek başına kapalı değildir. Çizgiler değişirse taramayı
+  yeniden çizin; TARAMA bunu çizdiği satırda da söyler.
+- **İçindeki yazılar ve semboller taramanın altında kalır.** Onları boş bırakmak
+  **Faz 1'de** gelecek.
 
 ### Desen kataloğu
 
@@ -103,6 +118,8 @@ TARAMA noktalar=<sağa>,<yukarı> <sağa>,<yukarı> <sağa>,<yukarı> ... [desen
 TARAMA nesneler=<kimlik> ... [desen=<ad>] [aci=<derece>] [olcek=<çarpan>] [baslangic=<nokta>] [cift=evet]
 TARAMA nesneler=<kimlik> ... aralik=<metre> [aci=<derece>] [cift=evet]
 TARAMA desen=<ad>            ← etkin seçimi tarar
+TARAMA yontem=ic [nokta=<nokta>] [ada=evet|hayır] [bosluk=<mm>] [desen=<ad>] [aci=<derece>] [olcek=<çarpan>]
+TARAMA nokta=<nokta> [desen=<ad>] ...
 ```
 
 ## Parametreler
@@ -119,6 +136,10 @@ TARAMA desen=<ad>            ← etkin seçimi tarar
 | `aralik` | Kendi desen çizgilerinizin aralığı, metre; `desen=` yerine. Bkz. [Kendi deseniniz](#kendi-deseniniz) |
 | `cift` | Desen bir de dik açıyla çizilsin mi (çapraz tarama) |
 | `baslangic` | Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) |
+| `yontem` | `nesne` (öntanımlı) — seçilen kapalı nesneler; `nokta` — köşeleri gösterilen sınır; `ic` — içine tıklanan bölge |
+| `nokta` | `yontem=ic` için bölgenin içindeki nokta; verilmezse tuvalde sorulur. Verilirse yöntem kendiliğinden `ic` olur |
+| `ada` | `yontem=ic`: bölgenin içindeki kapalı çizgiler boş kalır (öntanımlı `evet`) |
+| `bosluk` | `yontem=ic`: bu kadar milimetreye kadar açık uçlar köprülenir; öntanımlı 0, hiç köprülenmez |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -174,6 +195,23 @@ TARAMA nesneler=1 nesneler=2 desen=ANSI31
 'ANSI31' deseniyle tarama çizildi (3 sınır halkası, 2 delik); 2 sınır nesnesine bağlı, o değişince tarama da güncellenir.
 ```
 
+Dört gevşek çizginin kapattığı bir avlu, içindeki kare boş kalarak, içine tıklanıp
+taranır:
+
+<!-- örnek: yeni çizim -->
+```
+ÇİZGİ 0,0 40,0
+ÇİZGİ 40,0 40,30
+ÇİZGİ 40,30 0,30
+ÇİZGİ 0,30 0,0
+ALAN 5,5 15,5 15,15 5,15
+TARAMA nokta=20,20 desen=ANSI31
+```
+
+```text
+'ANSI31' deseniyle tarama çizildi (2 sınır halkası, 1 delik) — içine tıklanan bölge, 5 nesnenin çizgisinden; çizgilere bağlı değil, onlar değişirse yeniden tarayın.
+```
+
 İki buçuk metre aralıklı, 30°'lik kendi çapraz taramanız:
 
 <!-- örnek: yeni çizim -->
@@ -186,6 +224,8 @@ TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet
 
 **Çizim ▸ Tarama** panelinin galerisinden bir desene ya da **Tarama** düğmesine (**Giriş ▸
 Çizim**'de de vardır) basın. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
+Bir bölgenin içine tıklayarak taramak için **Tarama** düğmesinin okundan **Tarama — içine
+tıklayarak**'ı seçin; imleç gezdikçe altındaki bölge çizilir.
 Çizilmiş bir taramanın desenini, açısını, ölçeğini, aralığını ve ada kuralını
 nitelik panelinin **TARAMA** grubundan ya da [`TARAMADÜZENLE`](hatch_edit.md) ile
 değiştirin.
@@ -236,6 +276,12 @@ Bağlı taramaların izlemesi şu satırlarla bildirilir:
 > `Nesne 7 kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı çoklu çizgi olmalı.`
 
 Seçilen nesne açık bir çizgi.
+
+> `Bu bölge kapanmıyor: N açık uç var; …`
+
+`yontem=ic`: bölgeyi kapatan çizgilerde düğüm toleransından geniş bir boşluk var. Uçlar
+tuvalde işaretlenir; boşluğu kapatın ya da `bosluk=<mm>` verin. Bölgenin öbür retleri
+[`SINIR`](boundary.md#hatalar)'ınkilerdir.
 
 > `Tanınmayan tarama deseni: 'CIMEN'. Katalogdaki desenler: SOLID, ANSI31, …`
 

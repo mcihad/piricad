@@ -1205,8 +1205,12 @@ def hatch(
     spacing: float = ...,
     double: bool = ...,
     origin: Coord = ...,
+    method: str = ...,
+    point: Coord = ...,
+    islands: bool = ...,
+    gap: int = ...,
 ) -> int:
-    """Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
+    """Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar.
 
     Komut: core.hatch (TARAMA)
         points — Sınır köşeleri, nesne seçmek yerine; en az üç nokta [mm, Sağa (Y) önce]
@@ -1219,6 +1223,10 @@ def hatch(
         spacing — Kendi desen çizgilerinizin aralığı, metre; desen= yerine [m]
         double — Desen bir de dik açıyla çizilsin mi (çapraz tarama)
         origin — Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0) [mm, Sağa (Y) önce]
+        method — nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge
+        point — yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce]
+        islands — yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet)
+        gap — yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç
     """
 
 def hatch_edit(

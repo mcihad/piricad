@@ -696,7 +696,14 @@ void MainWindow::buildRibbon()
     // that pattern and asks for the boundary; the Tarama button itself uses the
     // last one given.
     SARibbonPanel* fills = drawTab->addPanel(tr("Tarama"));
-    large(fills, actHatch_);
+    // NETCAD'S AREA HATCHES through its area tool (wiki 217385786): the region
+    // round a click, hatched, found in loose linework the way SINIR finds it.
+    auto* hatchInside = methodTool(Glyph::HatchInside, tr("Tarama — içine tıklayarak"),
+                                   QStringLiteral("TARAMA yontem=ic"),
+                                   tr("Bölgenin içine tıklayın: çevreleyen çizgilerin kapattığı "
+                                      "alan taranır, içindeki kapalı çizgiler boş kalır"));
+    hatchInside->setProperty(kIgnoresSelectionProperty, true);
+    family(fills, {actHatch_, hatchInside}, Size::Large, tr("Tarama"));
     if (!ribbonLive_->patterns.empty()) {
         SARibbonGallery* gallery = fills->addGallery(false);
         gallery->setObjectName(QStringLiteral("ribbonHatchGallery"));

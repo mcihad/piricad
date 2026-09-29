@@ -14,6 +14,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/render/drawlist.hpp"
@@ -529,4 +530,76 @@ TEST_CASE("TARAMA: kâğıtta desen, paftasının ölçeğinde kendi aralığın
         seen = true;
     }
     CHECK(seen);
+}
+
+TEST_CASE("TARAMA yontem=ic: içine tıklanan bölge, adası delik, çizgilere bağsız")
+{
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    // FOUR LOOSE LINES round a 40 m × 30 m yard, and a closed 10 m square in it.
+    Rig r;
+    for (const char* line : {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
+                             "ÇİZGİ 0,30 0,0", "ALAN 5,5 15,5 15,15 5,15"})
+        r.run(line); ///< 1 … 5
+    const std::size_t steps = r.undo.undo_depth();
+    r.run("TARAMA nokta=20,20 desen=ANSI31"); ///< 6, the method implied by the point
+    CHECK(r.undo.undo_depth() == steps + 1);
+
+    // THE YARD WITH THE SQUARE CUT OUT, as SINIR would draw it.
+    const auto rings = r.rings(6);
+    REQUIRE(rings.size() == 2);
+    CHECK(rings[0].first == core::RingRole::Exterior);
+    CHECK(rings[1].first == core::RingRole::Interior);
+    CHECK(r.doc.entity_area(r.slot(6)) == 1'100'000'000);
+
+    // TIED TO NOTHING, and saying so: a link rebuilds loops from closed objects,
+    // and the four lines close nothing one by one.
+    CHECK(r.sources(6).empty());
+    CHECK(r.said.find("içine tıklanan bölge, 5 nesnenin çizgisinden; çizgilere bağlı değil") !=
+          std::string::npos);
+
+    // THE POINT AND THE METHOD ARE WHAT THE JOURNAL KEEPS, not the lines.
+    const auto& last = r.journal.entries().back();
+    CHECK(last.command_id == "core.hatch");
+    CHECK(last.args.get("yontem").as_text() == "ic");
+    CHECK(last.args.get("nokta").as_points().front() == Point2{20'000, 20'000});
+    CHECK_FALSE(last.args.has("nesneler"));
+
+    // WITHOUT ISLANDS the square is hatched over.
+    r.run("TARAMA yontem=ic nokta=20,20 ada=hayır"); ///< 7
+    CHECK(r.rings(7).size() == 1);
+    CHECK(r.doc.entity_area(r.slot(7)) == 1'200'000'000);
+}
+
+TEST_CASE("TARAMA yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; tıklama yakalanmaz")
+{
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    // THREE SIDES AND A SHORT FOURTH: a 50 cm gap at the top left corner.
+    Rig r;
+    for (const char* line :
+         {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0.5,30", "ÇİZGİ 0,30 0,0"})
+        r.run(line);
+    auto hatched = r.bus.execute_line("TARAMA nokta=20,15", Origin::CommandLine);
+    auto bounded = r.bus.execute_line("SINIR nokta=20,15", Origin::CommandLine);
+    REQUIRE_FALSE(hatched.ok());
+    REQUIRE_FALSE(bounded.ok());
+    CHECK(hatched.error().message.find("Bu bölge kapanmıyor") != std::string::npos);
+    CHECK(hatched.error().message == bounded.error().message);
+
+    // BRIDGED when asked: the 50 cm gap under a 60 cm `bosluk`.
+    r.run("TARAMA nokta=20,15 bosluk=600");
+    CHECK(r.doc.entity_area(r.slot(5)) > 0);
+
+    // NOT SNAPPED: with every snap on, a point 1 mm inside the bottom edge is
+    // still a point inside, and the region is previewed under the cursor.
+    r.run("ÇİZGİ 0.5,30 0,30"); ///< 6, the gap closed
+    r.run("MOD ad=yakalama_modları deger=127");
+    auto started = r.bus.begin_interactive("TARAMA yontem=ic", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    CHECK_FALSE(session.prompt().aids);
+    CHECK(session.prompt().rubber_shape == RubberShape::Region);
+    REQUIRE(session.supply(Value::aimed_point(core::Point2{20'000, 1})).ok());
+    REQUIRE(r.bus.finish(session).ok());
+    CHECK(r.doc.entity_area(r.slot(7)) == 1'200'000'000);
 }

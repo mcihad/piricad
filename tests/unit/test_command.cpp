@@ -4,6 +4,7 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/transform.hpp"
@@ -2318,6 +2319,7 @@ TEST_CASE("ALANÖLÇ köşelerden: ALAN satırını teklif eder; satır tek adı
 
 TEST_CASE("ALANÖLÇ yontem=ic: içine tıklanan bölgenin alanı, SINIR'ın bulduğu bölge")
 {
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
     // FOUR LOOSE LINES closing a 40 m × 30 m yard — no area object anywhere.
     Fixture f;
     for (const char* side :
@@ -2362,6 +2364,7 @@ TEST_CASE("ALANÖLÇ yontem=ic: içine tıklanan bölgenin alanı, SINIR'ın bul
 
 TEST_CASE("ALANÖLÇ yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; tıklama yakalanmaz")
 {
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
     // THREE SIDES AND A SHORT FOURTH: a 50 cm gap at the top left corner.
     Fixture f;
     for (const char* side :
@@ -2469,19 +2472,6 @@ TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düş�
     REQUIRE(f.bus.execute_line("SEÇ İÇEREN 50,50 sira=3", Origin::CommandLine).ok());
     CHECK(selected() == std::vector<std::uint64_t>{1});
 
-    // A HOLE VETOES. SINIR's face round an island does not hold a point in the
-    // island; the island does.
-    for (const char* line : {"ÇİZGİ 200,0 240,0", "ÇİZGİ 240,0 240,30", "ÇİZGİ 240,30 200,30",
-                             "ÇİZGİ 200,30 200,0", "ALAN 205,5 215,5 215,15 205,15"})
-        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
-    const std::uint64_t island = 8;
-    REQUIRE(f.bus.execute_line("SINIR nokta=230,20", Origin::CommandLine).ok());
-    const std::uint64_t face = 9;
-    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 210,10", Origin::CommandLine).ok());
-    CHECK(selected() == std::vector<std::uint64_t>{island});
-    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 230,20", Origin::CommandLine).ok());
-    CHECK(selected() == std::vector<std::uint64_t>{face});
-
     // NOT SNAPPED: with every snap on, the click is asked for without the aids
     // and a point 1 mm inside the small square's edge stays inside it.
     REQUIRE(f.bus.execute_line("MOD ad=yakalama_modları deger=127", Origin::Test).ok());
@@ -2493,6 +2483,20 @@ TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düş�
     REQUIRE(session.supply(Value::aimed_point(core::Point2{40'001, 50'000})).ok());
     REQUIRE(f.bus.finish(session).ok());
     CHECK(selected() == std::vector<std::uint64_t>{3});
+
+    // A HOLE VETOES. SINIR's face round an island does not hold a point in the
+    // island; the island does. The face needs the planar arrangement.
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    for (const char* line : {"ÇİZGİ 200,0 240,0", "ÇİZGİ 240,0 240,30", "ÇİZGİ 240,30 200,30",
+                             "ÇİZGİ 200,30 200,0", "ALAN 205,5 215,5 215,15 205,15"})
+        REQUIRE(f.bus.execute_line(line, Origin::Test).ok());
+    const std::uint64_t island = 8;
+    REQUIRE(f.bus.execute_line("SINIR nokta=230,20", Origin::CommandLine).ok());
+    const std::uint64_t face = 9;
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 210,10", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{island});
+    REQUIRE(f.bus.execute_line("SEÇ İÇEREN 230,20", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{face});
 }
 
 TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")

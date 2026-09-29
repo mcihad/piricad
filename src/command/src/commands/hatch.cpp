@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // core.hatch — TARAMA. A pattern-filled face over a boundary.
 //
-// The boundary is either a set of closed entities the user selects — a parcel,
-// a circle, a closed polyline — or a ring of points typed straight in. The
+// The boundary is a set of closed entities the user selects — a parcel, a
+// circle, a closed polyline — a ring of points typed straight in, or the region
+// round a point clicked inside it, found the way SINIR finds one. The
 // pattern comes from the catalogue under /data/catalogs/dxf by name (CLAUDE.md
 // 5.13: the angles and spacings are data), and the hatch is drawn through a
 // Symbol interned here, at commit, so the frame path reads one u32 (model.md
@@ -12,9 +13,11 @@
 #include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/region_input.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
@@ -161,6 +164,21 @@ bool read_pattern(Context& ctx, core::HatchDef& def, bool fresh)
     return true;
 }
 
+/// One ring of a region's face as the points a hatch holds: segments as they
+/// are, arcs by the routine a YAY is drawn with, the closing vertex not repeated.
+std::vector<core::Point2> hatch_loop(const core::FaceRing& ring)
+{
+    std::vector<core::Mm> xs;
+    std::vector<core::Mm> ys;
+    core::path_outline(ring.path, xs, ys);
+    std::vector<core::Point2> out;
+    out.reserve(xs.size());
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        out.push_back(core::Point2{xs[i], ys[i]});
+    if (out.size() > 1 && out.front() == out.back()) out.pop_back();
+    return out;
+}
+
 Task<void> run(Context& ctx)
 {
     // ---- the boundary -------------------------------------------------------
@@ -171,7 +189,29 @@ Task<void> run(Context& ctx)
     std::vector<core::Point2> typed;
     core::HatchBoundary boundary;
 
-    if (ctx.has_argument("noktalar")) {
+    // WHICH BOUNDARY: asked for by `yontem`, or implied by what was handed over —
+    // a point inside is the region, a run of corners is a ring.
+    const std::string method = ctx.argument("yontem").as_text();
+    const bool inside        = method == "ic" || (method.empty() && ctx.has_argument("nokta"));
+    const bool corners = method == "nokta" || (method.empty() && ctx.has_argument("noktalar"));
+    std::optional<FoundRegion> found;
+
+    if (inside) {
+        // THE REGION SINIR WOULD DRAW, and refused in SINIR's words when it does
+        // not close (`command::ask_region`). Its islands are the holes.
+        found = co_await ask_region(ctx, "Taranacak bölgenin içine tıklayın", false);
+        if (!found) co_return;
+        const core::NetworkFace& face = *found->region.face;
+        boundary.loops.push_back(hatch_loop(face.outer));
+        boundary.roles.push_back(core::RingRole::Exterior);
+        boundary.parts.push_back(0);
+        for (const core::FaceRing& hole : face.holes) {
+            boundary.loops.push_back(hatch_loop(hole));
+            boundary.roles.push_back(core::RingRole::Interior);
+            boundary.parts.push_back(0);
+        }
+        rings = boundary.rings();
+    } else if (corners) {
         // The corners, one awaited point at a time, the way ÇOKLUÇİZGİ reads
         // its own: a typed list and a JSON array both arrive this way.
         while (auto p = co_await ctx.point(
@@ -284,10 +324,14 @@ Task<void> run(Context& ctx)
     for (const core::RingRole role : boundary.roles)
         holes += role == core::RingRole::Interior ? 1 : 0;
 
-    if (!typed.empty())
+    if (inside) {
+        record_region(ctx, *found);
+        ctx.record("yontem", Value::text("ic"));
+    } else if (!typed.empty()) {
         ctx.record("noktalar", Value::points(typed));
-    else
+    } else {
         ctx.record("nesneler", Value::ids(requested));
+    }
     std::string said = pattern_phrase(def, true) + (def.double_lines ? " çapraz" : "") +
                        " tarama çizildi (" + std::to_string(rings.size()) + " sınır halkası";
     if (holes > 0) said += ", " + std::to_string(holes) + " delik";
@@ -295,6 +339,12 @@ Task<void> run(Context& ctx)
     if (link && !sources.empty())
         said += "; " + std::to_string(sources.size()) +
                 " sınır nesnesine bağlı, o değişince tarama da güncellenir";
+    // NOT TIED TO ITS LINES: a link rebuilds loops from closed objects, and the
+    // lines round a region close nothing one by one. Said, so nobody waits for
+    // the hatch to follow a moved line.
+    if (inside)
+        said += " — içine tıklanan bölge, " + std::to_string(found->region.sources.size()) +
+                " nesnenin çizgisinden; çizgilere bağlı değil, onlar değişirse yeniden tarayın";
     ctx.echo(said + "." +
              (dashes ? " Desenin kesik dizisi bu sürümde çizilmez, dosyada korunur." : ""));
 }
@@ -538,10 +588,28 @@ KENTOS_COMMAND(hatch)
                 Param::points("baslangic", Arity::optional(),
                               "Desenin geçtiği nokta; verilmezse çizimin başlangıç noktası (0,0)")
                     .en("origin"),
+                // LAST, so a typed run of points still fills the corners first.
+                Param::choice("yontem", Arity::optional(), {"nesne", "nokta", "ic"},
+                              "nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri "
+                              "gösterilen sınır; ic: içine tıklanan bölge")
+                    .en("method"),
+                Param{"nokta", ParamKind::Point, Arity::optional(),
+                      "yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic "
+                      "olur"}
+                    .en("point"),
+                Param::boolean("ada", Arity::optional(),
+                               "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz "
+                               "(öntanımlı evet)")
+                    .en("islands"),
+                Param::integer("bosluk", Arity::optional(),
+                               "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 "
+                               "hiç")
+                    .en("gap"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.",
+        .summary = "Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini "
+                   "katalogdaki bir desenle tarar.",
         .run = &run,
     };
 }
