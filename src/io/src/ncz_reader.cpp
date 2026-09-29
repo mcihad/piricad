@@ -40,6 +40,7 @@
 #include "dxf_common.hpp"
 #include "mapped_file.hpp"
 #include "ncz_format.hpp"
+#include "ncz_sheets.hpp"
 #include "ncz_symbols.hpp"
 
 #include <algorithm>
@@ -48,6 +49,7 @@
 #include <cmath>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <set>
@@ -434,6 +436,7 @@ public:
                            "); satırları bir nesneye bağlanmadığı için çizime aktarılmadı.");
 
         say_strays();
+        say_sheets();
         fields_report();
 
         if (report_.entities == 0)
@@ -605,7 +608,6 @@ private:
             }
             [[fallthrough]];
         case ncz::Kind::Polygon:
-        case ncz::Kind::MapSheet:
         case ncz::Kind::Triangle: {
             if (!run_to_mm(e.coords)) return invalid();
             // The closing vertex is implied (model.md R10).
@@ -617,11 +619,57 @@ private:
             const core::RingGeometry::RingInput ring{points_, core::RingRole::Exterior, 0};
             return tx_.add_area(slot, {&ring, 1});
         }
+        case ncz::Kind::MapSheet: return place_sheet(e, slot);
         case ncz::Kind::Circle: return place_circle(e, slot);
         case ncz::Kind::Arc: return place_arc(e, slot);
         case ncz::Kind::Text: return place_text(e, slot);
         }
         return core::err(ErrorCode::Internal, "bilinmeyen NCZ türü");
+    }
+
+    /// A map sheet, as the sheet it is (ncz_sheets.hpp): the frame recovered in
+    /// the projection the file declares, its four corners an area; the stored
+    /// box itself where the frame cannot be recovered, counted and said.
+    core::Result<command::EntityId> place_sheet(const ncz::Entity& e, core::LayerId slot)
+    {
+        if (e.coords.empty()) return invalid();
+        double min_e = e.coords.front().x, max_e = min_e;
+        double min_n = e.coords.front().y, max_n = min_n;
+        for (const ncz::Coord& c : e.coords) {
+            min_e = std::min(min_e, c.x);
+            max_e = std::max(max_e, c.x);
+            min_n = std::min(min_n, c.y);
+            max_n = std::max(max_n, c.y);
+        }
+        if (!sheets_) sheets_ = std::make_unique<ncz::SheetFrames>(final_);
+        std::optional<std::array<ncz::Coord, 4>> frame;
+        if (sheets_->usable()) frame = sheets_->frame(min_e, min_n, max_e, max_n);
+        points_.clear();
+        if (frame) {
+            for (const ncz::Coord& c : *frame) {
+                const auto p = to_mm(c);
+                if (!p) return invalid();
+                points_.push_back(*p);
+            }
+        } else if (!run_to_mm(e.coords)) {
+            return invalid();
+        }
+        while (points_.size() >= 2 && points_.back() == points_.front())
+            points_.pop_back();
+        if (points_.size() < 3)
+            return core::err(ErrorCode::ValidationFailed,
+                             "kapalı şekil milimetrede üç köşeye ulaşmıyor");
+        const core::RingGeometry::RingInput ring{points_, core::RingRole::Exterior, 0};
+        auto made = tx_.add_area(slot, {&ring, 1});
+        if (made) {
+            if (frame)
+                ++sheets_drawn_;
+            else if (sheets_->usable())
+                ++sheets_unfit_;
+            else
+                ++sheets_boxed_;
+        }
+        return made;
     }
 
     core::Result<command::EntityId> place_circle(const ncz::Entity& e, core::LayerId slot)
@@ -1022,6 +1070,33 @@ private:
     /// least 100 km on every side — far enough to shrink the fitted view to a
     /// twentieth, and never the long tail of a real town (the `Suşehri` plan's
     /// runs 10 km south of its centre and is not one).
+    /// What became of the map sheets (ncz_sheets.hpp): drawn as the sheets they
+    /// are, or kept as the boxes the file stores and why.
+    void say_sheets()
+    {
+        const auto count = [](std::uint64_t n) { return std::to_string(n); };
+        if (sheets_drawn_ != 0)
+            diag_.note(Severity::Info,
+                       count(sheets_drawn_) + " pafta çerçevesi, dosyanın bildirdiği " +
+                           report_.declared +
+                           " sisteminde gerçek biçimiyle, dönük dörtgen olarak çizildi: dosya "
+                           "bir paftanın yalnız sınırlayıcı kutusunu saklar.");
+        if (sheets_boxed_ != 0)
+            diag_.note(Severity::Warning,
+                       count(sheets_boxed_) +
+                           " pafta çerçevesi dosyanın sakladığı sınırlayıcı kutuyla çizildi, "
+                           "çünkü " +
+                           sheets_->why_not() +
+                           ". Kutu paftanın kendisi değildir: TM diliminde komşu paftalar "
+                           "birkaç metre üst üste biner.");
+        if (sheets_unfit_ != 0)
+            diag_.note(Severity::Warning,
+                       count(sheets_unfit_) +
+                           " pafta çerçevesi dosyanın sakladığı sınırlayıcı kutuyla çizildi: "
+                           "kutusu bir enlem-boylam paftasına oturmuyor (yerel bir pafta "
+                           "olabilir).");
+    }
+
     void say_strays()
     {
         if (places_.size() < 100) return;
@@ -1149,6 +1224,13 @@ private:
     std::unordered_map<std::uint64_t, core::StyleId> styles_;
     std::set<std::string> renamed_;
     std::vector<Point2> points_;
+
+    /// The map sheets' frames (ncz_sheets.hpp), made at the first sheet; what
+    /// became of each sheet, for `say_sheets`.
+    std::unique_ptr<ncz::SheetFrames> sheets_;
+    std::uint64_t sheets_drawn_{0};
+    std::uint64_t sheets_boxed_{0};
+    std::uint64_t sheets_unfit_{0};
 
     /// Where each object read begins, metres, and the layer it went to: what
     /// `say_strays` looks for strays in.

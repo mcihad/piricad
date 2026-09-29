@@ -456,6 +456,46 @@ def seed_planet():
     return s
 
 
+# A 2 × 2 block of 1:1000 sheets, each a 22,5″ × 22,5″ cell of latitude and
+# longitude from 40°11′15″ N, 38°04′52,5″ E — where the real plan's sheets lie —
+# and each stored as Netcad stores a sheet: the BOUNDING BOX of the cell
+# projected into the file's zone (ncz_sheets.hpp). The boxes were worked out
+# once with PROJ and are written here as numbers, so the seed is the same bytes
+# on every machine:
+#
+#   cs2cs +proj=longlat +ellps=GRS80 +to +proj=tmerc +lat_0=0 +lon_0=39 +k=1
+#         +x_0=500000 +y_0=0 +ellps=GRS80 +units=m   (corner by corner, min/max)
+#
+# (northing, easting) of the south-west and north-east of each box.
+SHEETS = [
+    ('SW', (4450747.6869809423, 421758.8335489006), (4451447.1806906024, 422298.2273740889)),
+    ('SE', (4450742.2352196742, 422291.0940323713), (4451441.6912473785, 422830.4388321189)),
+    ('NW', (4451441.6912473785, 421766.0157596478), (4452141.1858941708, 422305.3616443881)),
+    ('NE', (4451436.2392827179, 422298.2273740889), (4452135.6962464191, 422837.5242272436)),
+]
+
+
+def seed_sheets():
+    """A pafta index in TM39: four sheets the reader draws as the turned
+    quadrilaterals they are, and one local sheet — a rectangle in the
+    projection itself — it keeps as the box, saying why."""
+    s = mproj(3, 1, 39)
+    s += layer_table(['0', 'PINDEX_1000'])
+    for name, a, b in SHEETS:
+        s += map_sheet(a, b, name, layer=1)
+    s += map_sheet((N0, E0), (N0 + 400.0, E0 + 250.0), 'YEREL', layer=1)
+    return s
+
+
+def seed_sheets_undeclared():
+    """The same four sheets with no MPROJ: nothing says what zone the box was
+    worked out in, so each is drawn as the box and the reader says so."""
+    s = layer_table(['0', 'PINDEX_1000'])
+    for name, a, b in SHEETS:
+        s += map_sheet(a, b, name, layer=1)
+    return s
+
+
 def seed_truncated():
     """The first seed cut in the middle of a block."""
     whole = seed_everything()
@@ -470,6 +510,8 @@ SEEDS = {
     '05-oznitelik-tablolari.ncz': seed_attributes,
     '06-kesik.ncz': seed_truncated,
     '07-akilli-nesneler.ncz': seed_planet,
+    '08-paftalar.ncz': seed_sheets,
+    '09-paftalar-sistemsiz.ncz': seed_sheets_undeclared,
 }
 
 
