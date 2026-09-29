@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 121 (105 tanesi onay ister)
-- Katalog parmak izi: `6008056969357298700`
+- Katalog parmak izi: `1408348349520518290`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1276,7 +1276,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Ofseti alınacak nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `mesafe` | integer | hayır | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri (tam sayı) |
-| `kose` | string | hayır | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin) |
+| `kose` | string | hayır | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz (metin) |
 | `taraf` | string | hayır | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `kaynak` | string | hayır | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil (metin) |

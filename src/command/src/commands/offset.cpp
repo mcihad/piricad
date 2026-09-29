@@ -54,6 +54,7 @@ core::JoinStyle join_from(const std::string& word)
 {
     if (core::turkish_key_equals(word, "yuvarlak")) return core::JoinStyle::Round;
     if (core::turkish_key_equals(word, "pah")) return core::JoinStyle::Bevel;
+    if (core::turkish_key_equals(word, "uc")) return core::JoinStyle::Link;
     return core::JoinStyle::Miter;
 }
 
@@ -312,7 +313,12 @@ KENTOS_COMMAND(offset)
                                "Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse "
                                "işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri")
                     .en("distance"),
-                Param::text("kose", Arity::optional(), "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi")
+                Param::choice("kose", Arity::optional(),
+                              {"kose", "keskin", "yuvarlak", "pah", "uc"},
+                              "Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, "
+                              "YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar "
+                              "uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir "
+                              "şeyi uzatmaz ya da kırpmaz")
                     .en("corner"),
                 Param::choice("taraf", Arity::optional(), {"sol", "sag", "dis", "ic", "iki"},
                               "Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), "

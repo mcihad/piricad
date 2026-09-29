@@ -1145,7 +1145,7 @@ def offset(
     Komut: core.offset (OFSET)
         objects — Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı]
         distance — Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri
-        corner — KÖŞE | YUVARLAK | PAH — dış köşenin biçimi
+        corner — Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz
         side — Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan
         through — Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce]
         source — Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil

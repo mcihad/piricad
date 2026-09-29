@@ -5959,6 +5959,213 @@ TEST_CASE("ÇİFTÇİZGİ: günlük yeniden oynatılınca aynı çizimi bırakı
 }
 
 // -----------------------------------------------------------------------------
+// OFSET kose=uc — "ucuna bağla": every straight edge keeps its length (N-11)
+// -----------------------------------------------------------------------------
+
+namespace {
+
+/// The length of edge `i` of the ring `points` (the closing edge for the last
+/// one of a closed ring), in millimetres.
+core::Mm edge_length_of(const std::vector<core::Point2>& points, std::size_t i)
+{
+    return core::segment_length(points[i], points[(i + 1) % points.size()]);
+}
+
+} // namespace
+
+TEST_CASE("OFSET kose=uc: açık L'nin kenar uzunlukları korunur; dışı pah, içi kendini keser")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=uc", Origin::Test)
+                .ok()); // 2
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sol kose=uc", Origin::Test)
+                .ok()); // 3
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sol kose=pah", Origin::Test)
+                .ok()); // 4
+
+    // THE OUTSIDE OF THE TURN: each edge moved 2 m to the right on its own —
+    // (0,−2)→(10,−2) and (12,0)→(12,10) — and joined by the link (10,−2)→(12,0),
+    // which is the chord a bevel cuts. Both edges are the 10 m they were.
+    const std::vector<core::Point2> outer = ring_points_of(f.doc, 2);
+    CHECK(outer ==
+          std::vector<core::Point2>{{0, -2'000}, {10'000, -2'000}, {12'000, 0}, {12'000, 10'000}});
+    CHECK(edge_length_of(outer, 0) == 10'000);
+    CHECK(edge_length_of(outer, 2) == 10'000);
+
+    // THE INSIDE: (0,2)→(10,2) and (8,0)→(8,10) keep their 10 m, so they overrun
+    // each other — the first runs on past x = 8, the second starts below y = 2 —
+    // and the link between them, (10,2)→(8,0), runs back across. Nothing is
+    // trimmed: the line crosses itself at (8, 2), and that is the method.
+    const std::vector<core::Point2> inner = ring_points_of(f.doc, 3);
+    CHECK(inner ==
+          std::vector<core::Point2>{{0, 2'000}, {10'000, 2'000}, {8'000, 0}, {8'000, 10'000}});
+    CHECK(edge_length_of(inner, 0) == 10'000);
+    CHECK(edge_length_of(inner, 2) == 10'000);
+
+    // WHAT THE OTHER CORNERS GIVE THERE: a bevel trims the inside to its
+    // intersection, so its edges are shorter than the source's.
+    CHECK(ring_points_of(f.doc, 4) ==
+          std::vector<core::Point2>{{0, 2'000}, {8'000, 2'000}, {8'000, 10'000}});
+}
+
+TEST_CASE("OFSET kose=uc: dikdörtgeni dışa büyütünce sekizgen, içe alınca kenarları korur")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=dis kose=uc", Origin::Test)
+                .ok()); // 2
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=dis kose=pah", Origin::Test)
+                .ok()); // 3
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=ic kose=uc", Origin::Test)
+                .ok()); // 4
+
+    // GROWN, every corner is the outside of a turn, so the link is a bevel and
+    // the result is the octagon a bevelled offset draws: 20 × 10 m, a metre-wide
+    // strip along each side (60 m²) and four corner triangles of half a square
+    // metre. The long edges stay 20 m and the short ones 10 m.
+    const std::vector<core::Point2> grown = ring_points_of(f.doc, 2);
+    REQUIRE_EQ(grown.size(), std::size_t{8});
+    CHECK(core::ring_area(grown) == core::Mm2{262'000'000});
+    CHECK(edge_length_of(grown, 0) == 20'000);
+    CHECK(edge_length_of(grown, 2) == 10'000);
+    CHECK(edge_length_of(grown, 4) == 20'000);
+    CHECK(edge_length_of(grown, 6) == 10'000);
+    CHECK(core::ring_area(ring_points_of(f.doc, 3)) == core::ring_area(grown));
+
+    // SHRUNK, every corner is the inside of a turn: the four moved edges keep
+    // their lengths and overrun into a pinwheel, each link running back across.
+    const std::vector<core::Point2> pinwheel = ring_points_of(f.doc, 4);
+    CHECK(pinwheel == std::vector<core::Point2>{{0, 1'000},
+                                                {20'000, 1'000},
+                                                {19'000, 0},
+                                                {19'000, 10'000},
+                                                {20'000, 9'000},
+                                                {0, 9'000},
+                                                {1'000, 10'000},
+                                                {1'000, 0}});
+    CHECK(edge_length_of(pinwheel, 0) == 20'000);
+    CHECK(edge_length_of(pinwheel, 2) == 10'000);
+    CHECK(edge_length_of(pinwheel, 4) == 20'000);
+    CHECK(edge_length_of(pinwheel, 6) == 10'000);
+}
+
+TEST_CASE("OFSET kose=uc: delikli alanın deliği de kenarlarını korur")
+{
+    Fixture f;
+    REQUIRE(f.bus
+                .execute_line("ALAN 0,0 20,0 20,20 0,20 bolum=4 5,5 15,5 15,15 5,15 bolum=4",
+                              Origin::Test)
+                .ok());
+    REQUIRE(
+        f.bus.execute_line("OFSET nesneler=1 mesafe=1000 taraf=dis kose=uc", Origin::Test).ok());
+    const core::EntityId made = f.doc.slot_of(static_cast<core::EntityKey>(2));
+    REQUIRE(made != core::kNoEntity);
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[made]);
+    REQUIRE(span.count == 2); ///< the hole stays a hole
+    // Growing the face moves the hole's edges INTO the hole: its 10 m edges are
+    // still 10 m, the ring a pinwheel of them one metre in.
+    std::vector<core::Point2> hole;
+    const auto xs = f.doc.geometry().ring_xs(span.first + 1);
+    const auto ys = f.doc.geometry().ring_ys(span.first + 1);
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        hole.push_back(core::Point2{xs[v], ys[v]});
+    REQUIRE_EQ(hole.size(), std::size_t{8});
+    for (std::size_t i = 0; i < hole.size(); i += 2)
+        CHECK(edge_length_of(hole, i) == 10'000);
+}
+
+TEST_CASE("OFSET kose=uc: yay ve eğri içeren nesne reddedilir; daire ve yay köşesizdir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok()); // 1
+    REQUIRE(f.bus.execute_line("YUVARLA nesne=1 nokta=20,10 yaricap=2", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ELİPS merkez=100,0 birinci=110,0 ikinci=100,5", Origin::Test)
+                .ok());                                                               // 2
+    REQUIRE(f.bus.execute_line("DAİRE merkez=200,0 cevre=205,0", Origin::Test).ok()); // 3
+    const std::size_t before = f.doc.live_entity_count();
+
+    // A KERNEL-ROAD SHAPE (an arc in its edges) and a DRAWN CURVE cannot keep an
+    // edge's length; the answer is a sentence and nothing is drawn.
+    for (const char* line : {"OFSET nesneler=1 mesafe=1000 taraf=dis kose=uc",
+                             "OFSET nesneler=2 mesafe=1000 taraf=dis kose=uc"}) {
+        const std::string why = REFUSED(f.bus.execute_line(line, Origin::Test));
+        CHECK_MESSAGE(why.find("yay ya da eğri") != std::string::npos, line);
+    }
+    CHECK(f.doc.live_entity_count() == before);
+
+    // A circle has no corner: its parallel is what it always was.
+    REQUIRE(
+        f.bus.execute_line("OFSET nesneler=3 mesafe=1000 taraf=dis kose=uc", Origin::Test).ok());
+    CHECK(f.doc.entities().kind[f.doc.slot_of(static_cast<core::EntityKey>(4))] ==
+          core::kCircleKind);
+}
+
+TEST_CASE("OFSET: kose sözcüğü bus'ta doğrulanır; uc, UÇ ve keskin aynı ad")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::Test).ok());
+    // The list is declared, so a misspelling is refused before the body runs —
+    // it used to fall through to the sharp corner without a word.
+    const std::string why = REFUSED(
+        f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=yuvar", Origin::Test));
+    CHECK(why.find("Kabul edilenler") != std::string::npos);
+    CHECK(why.find("uc") != std::string::npos);
+    CHECK(f.doc.live_entity_count() == 1);
+
+    // Turkish folding: `UÇ` is `uc`, and `KÖŞE` and `keskin` are the sharp one.
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=UÇ", Origin::Test)
+                .ok()); // 2
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=uc", Origin::Test)
+                .ok()); // 3
+    CHECK(ring_points_of(f.doc, 2) == ring_points_of(f.doc, 3));
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=KÖŞE", Origin::Test)
+                .ok()); // 4
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag kose=keskin", Origin::Test)
+                .ok());                                                                       // 5
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=2000 taraf=sag", Origin::Test).ok()); // 6
+    CHECK(ring_points_of(f.doc, 4) == ring_points_of(f.doc, 5));
+    CHECK(ring_points_of(f.doc, 4) == ring_points_of(f.doc, 6));
+    CHECK(ring_points_of(f.doc, 4) ==
+          std::vector<core::Point2>{{0, -2'000}, {12'000, -2'000}, {12'000, 10'000}});
+}
+
+TEST_CASE("OFSET kose=uc: tuvalin çizdiği paralel yazılanın kendisidir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::Test).ok());
+
+    // THE PROMPT'S PAYLOAD carries the corner, and the canvas draws the parallel
+    // with `core::entity_parallel` under it — the very call OFSET makes.
+    auto started = f.bus.begin_interactive("OFSET nesneler=1 kose=uc", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value::number(2.0)).ok()); ///< metres, as the prompt asks
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::Parallel);
+    auto decoded = core::decode_parallel_preview(s.prompt().rubber_payload);
+    REQUIRE(decoded.ok());
+    CHECK(decoded.value().join == core::JoinStyle::Link);
+    CHECK_EQ(decoded.value().distance, core::Mm{2'000});
+
+    const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    auto shown                = core::entity_parallel(f.doc, slot, decoded.value().distance,
+                                                      core::ParallelSide::Right, decoded.value().join);
+    REQUIRE(shown.ok());
+    REQUIRE_EQ(shown.value().pieces.size(), std::size_t{1});
+    REQUIRE(s.supply(Value::point({5'000, -5'000})).ok()); ///< a click south: the right
+    REQUIRE(f.bus.finish(s).ok());
+    CHECK(ring_points_of(f.doc, 2) == shown.value().pieces.front().run);
+
+    // And the bytes go and come back with the new corner.
+    const core::ParallelPreview sent{{1}, 2'500, core::JoinStyle::Link};
+    auto back = core::decode_parallel_preview(core::encode_parallel_preview(sent));
+    REQUIRE(back.ok());
+    CHECK(back.value().join == core::JoinStyle::Link);
+}
+
+// -----------------------------------------------------------------------------
 // ELİPS — stored by its definition (core.ellipse_draw)
 // -----------------------------------------------------------------------------
 

@@ -1,0 +1,76 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 7
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman YOL gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=7
+nesne 0 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 0
+    10000 0
+    10000 10000
+  alan_mm2 0  cevre_mm 20000
+nesne 1 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    0 -2000
+    10000 -2000
+    12000 0
+    12000 10000
+  alan_mm2 0  cevre_mm 22828
+  koken core.offset 1
+nesne 2 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    0 2000
+    10000 2000
+    8000 0
+    8000 10000
+  alan_mm2 0  cevre_mm 22828
+  koken core.offset 1
+nesne 3 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 2000
+    8000 2000
+    8000 10000
+  alan_mm2 0  cevre_mm 16000
+  koken core.offset 1
+nesne 4 katman=YOL stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    40000 0
+    60000 0
+    60000 10000
+    40000 10000
+  alan_mm2 200000000  cevre_mm 60000
+nesne 5 katman=YOL stil=0 halka=1
+  halka rol=1 parca=0 tepe=8
+    40000 -1000
+    60000 -1000
+    61000 0
+    61000 10000
+    60000 11000
+    40000 11000
+    39000 10000
+    39000 0
+  alan_mm2 262000000  cevre_mm 65656
+  koken core.offset 5
+nesne 6 katman=YOL stil=0 halka=1
+  halka rol=1 parca=0 tepe=8
+    40000 1000
+    60000 1000
+    59000 0
+    59000 10000
+    60000 9000
+    40000 9000
+    41000 10000
+    41000 0
+  alan_mm2 142000000  cevre_mm 65656
+  koken core.offset 5
+kapsam 0 -2000 61000 11000
+icerik-ozeti b458e322981668e3
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"YOL"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":2,"cmd":"core.polyline","args":{"noktalar":[[0,0],[10000,0],[10000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":3,"cmd":"core.offset","args":{"nesneler":[1],"mesafe":2000,"kose":"uc","taraf":"sağ"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":4,"cmd":"core.offset","args":{"nesneler":[1],"mesafe":2000,"kose":"uc","taraf":"sol"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":5,"cmd":"core.offset","args":{"nesneler":[1],"mesafe":2000,"kose":"pah","taraf":"sol"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":6,"cmd":"core.area","args":{"noktalar":[[40000,0],[60000,0],[60000,10000],[40000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":7,"cmd":"core.offset","args":{"nesneler":[5],"mesafe":1000,"kose":"uc","taraf":"dış"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":8,"cmd":"core.offset","args":{"nesneler":[5],"mesafe":1000,"kose":"uc","taraf":"iç"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

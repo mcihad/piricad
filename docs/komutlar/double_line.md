@@ -125,7 +125,7 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Doğuya sonra kuzeye giden bir eksenin 2 m solu ve 3 m sağı:
 
-```text
+```
 ÇİFTÇİZGİ noktalar=0,0 10,0 10,10 sol=2 sag=3
 ```
 
@@ -140,7 +140,7 @@ paralel `y = -3` ile `x = 13` çizgilerinin `(13, -3)` köşesinden döner: `(0,
 
 Yalnız sağ yan — solun genişliği `0`:
 
-```text
+```
 ÇİFTÇİZGİ noktalar=0,20 10,20 10,30 sol=0 sag=3
 ```
 
@@ -151,7 +151,7 @@ Yalnız sağ yan — solun genişliği `0`:
 Dış köşe gerçek bir yay olsun; sağ paralel `(10, 40)` merkezli, 3 m yarıçaplı bir yay
 taşır:
 
-```text
+```
 ÇİFTÇİZGİ noktalar=0,40 10,40 10,50 sol=2 sag=3 kose=yuvarlak
 ```
 
@@ -161,7 +161,7 @@ taşır:
 
 Eksen çizilmesin, iki uç kapatılsın, iki yan da `KENAR` katmanına gitsin:
 
-```text
+```
 ÇİFTÇİZGİ noktalar=0,60 40,60 40,85 sol=3.5 sag=3.5 eksen=cizme uclar=kapali katman_sol=KENAR katman_sag=KENAR
 ```
 
@@ -171,7 +171,7 @@ Eksen çizilmesin, iki uç kapatılsın, iki yan da `KENAR` katmanına gitsin:
 
 Bir kırığın içi genişlikten dar kalınca:
 
-```text
+```
 ÇİFTÇİZGİ noktalar=0,100 10,100 10,101 0,101 sol=2 sag=2
 ```
 

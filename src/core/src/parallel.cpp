@@ -58,6 +58,60 @@ void bevel_corners(CurvePath& path, const CurvePath& source, Mm distance)
             piece = PathPiece{.from = piece.from, .to = piece.to};
 }
 
+/// Whether two computed points are more than the millimetre apart that makes
+/// them one point (`kSamePointMm`).
+bool apart(Point2 a, Point2 b)
+{
+    const double dx = static_cast<double>(a.x - b.x);
+    const double dy = static_cast<double>(a.y - b.y);
+    return dx * dx + dy * dy > kSamePointMm * kSamePointMm;
+}
+
+/// THE PARALLEL THAT KEEPS EVERY EDGE'S LENGTH (`JoinStyle::Link`, Netcad's
+/// "ucuna bağla"): each edge of the run or ring moved `signed_distance`
+/// sideways ON ITS OWN — to the left for a positive one, as `parallel_run` — and
+/// the end of one moved edge joined to the start of the next by a straight link.
+///
+/// NO OFFSET ARITHMETIC OF ITS OWN. An edge alone has no corner to solve, so
+/// what moves it is `parallel_run` over its two points — the function every
+/// other parallel of a straight line is made by — and all that is done here is
+/// to walk the edges and chain the answers. Nothing is carried to a meeting
+/// point and nothing is trimmed; that is the method, and it is why the result
+/// may cross itself where the source turns toward the side it is moved to.
+///
+/// Points closer than a millimetre are one point, so two collinear edges give
+/// one straight edge and a rounding does not leave a link a millimetre long.
+Result<std::vector<Point2>> linked_ring(const std::vector<Point2>& ring, bool closed,
+                                        Mm signed_distance)
+{
+    std::vector<Point2> src;
+    src.reserve(ring.size());
+    for (const Point2& p : ring)
+        if (src.empty() || src.back() != p) src.push_back(p);
+    if (closed && src.size() > 1 && src.front() == src.back()) src.pop_back();
+    if (src.size() < 2)
+        return err(ErrorCode::InvalidArgument,
+                   "Paralel için çizginin en az iki ayrı noktası olmalı. Verilen: " +
+                       std::to_string(src.size()));
+
+    const std::size_t edges = closed ? src.size() : src.size() - 1;
+    std::vector<Point2> out;
+    out.reserve(2 * edges);
+    for (std::size_t i = 0; i < edges; ++i) {
+        auto moved =
+            parallel_run({src[i], src[(i + 1) % src.size()]}, signed_distance, JoinStyle::Miter);
+        if (!moved) return moved.error();
+        if (moved.value().size() != 1 || moved.value().front().points.size() != 2)
+            return err(ErrorCode::Internal,
+                       "Bir kenarın paraleli tek bir kenar çıkmadı; kenar uzunlukları "
+                       "korunamıyor.");
+        for (const Point2& p : moved.value().front().points)
+            if (out.empty() || apart(out.back(), p)) out.push_back(p);
+    }
+    if (closed && out.size() > 2 && !apart(out.front(), out.back())) out.pop_back();
+    return out;
+}
+
 /// The path through `points`, segment by segment; closed back to the first.
 CurvePath path_through(const std::vector<Point2>& points, bool closed)
 {
@@ -460,6 +514,55 @@ Result<ParallelSide> parallel_side_at(const Document& doc, EntityId e, Point2 p)
 
 namespace {
 
+/// The parallel of a straight-edged line or face whose edges keep their
+/// lengths (`linked_ring`). A face is wound first — its boundary counter-
+/// clockwise, its holes clockwise — so that the material is on the left of
+/// every ring: growing the face moves each ring to the right, which pushes a
+/// hole's edges into the hole, and shrinking moves them left.
+Result<Parallel> linked_parallel(const Shape& s, Mm distance, ParallelSide side)
+{
+    Parallel out;
+    const bool faces = s.cls == Shape::Class::Faces;
+    for (const ParallelSide one : sides_of(side, faces)) {
+        if (!faces) {
+            for (const std::vector<Point2>& run : s.runs) {
+                auto moved =
+                    linked_ring(run, false, one == ParallelSide::Left ? distance : -distance);
+                if (!moved) return moved.error();
+                ParallelPiece piece;
+                piece.shape = ParallelPiece::Shape::Run;
+                piece.side  = one;
+                piece.run   = std::move(moved.value());
+                out.pieces.push_back(std::move(piece));
+            }
+            continue;
+        }
+
+        const Mm signed_distance = one == ParallelSide::Outside ? -distance : distance;
+        ParallelPiece piece;
+        piece.shape = ParallelPiece::Shape::Face;
+        piece.side  = one;
+        for (const Polygon& face : s.faces) {
+            const auto wound = [](std::vector<Point2> ring, bool counter_clockwise) {
+                if ((ring_area(ring) > 0) != counter_clockwise) std::ranges::reverse(ring);
+                return ring;
+            };
+            Polygon moved;
+            auto boundary = linked_ring(wound(face.exterior, true), true, signed_distance);
+            if (!boundary) return boundary.error();
+            moved.exterior = std::move(boundary.value());
+            for (const std::vector<Point2>& hole : face.holes) {
+                auto inner = linked_ring(wound(hole, false), true, signed_distance);
+                if (!inner) return inner.error();
+                moved.holes.push_back(std::move(inner.value()));
+            }
+            piece.faces.push_back(std::move(moved));
+        }
+        out.pieces.push_back(std::move(piece));
+    }
+    return out;
+}
+
 /// The parallel of a shape already read: the ONE body an object and a run that
 /// is not an object yet (`run_parallel`) are moved sideways by, so the canvas's
 /// preview under the cursor and the result a command writes cannot differ.
@@ -480,6 +583,23 @@ Result<Parallel> parallel_of(const Shape& s, Mm distance, ParallelSide side, Joi
             return err(ErrorCode::InvalidArgument,
                        "Açık bir çizginin içi ya da dışı yoktur; `taraf=sol` ya da `taraf=sag` "
                        "verin.");
+    }
+
+    // ---- "UCUNA BAĞLA": THE EDGES KEEP THEIR LENGTH (`JoinStyle::Link`) ----
+    //
+    // Only a straight edge keeps its length when it moves sideways: an arc's
+    // concentric parallel is longer or shorter than the arc, and a curve drawn
+    // as chords has a chord at every vertex. So the method is for lines and faces
+    // of straight edges, and for a shape with an arc or a drawn curve in it the
+    // answer is a sentence, not a corner the shape quietly did not get. A circle
+    // and an arc have no corner at all, and their parallel is what it always was.
+    if (join == JoinStyle::Link && (s.cls == Shape::Class::Runs || s.cls == Shape::Class::Faces)) {
+        if (s.approximate || s.path.has_value())
+            return err(ErrorCode::Unsupported,
+                       "kose=uc kenar uzunluklarını korur ve bunu yalnız düz kenar yapabilir; bu "
+                       "nesnenin bir kenarı yay ya da eğri. Düz kenarlı bir çizgi ya da alan "
+                       "verin, ya da kose=KÖŞE, YUVARLAK ya da PAH kullanın.");
+        return linked_parallel(s, distance, side);
     }
 
     // ---- THE KERNEL'S ROAD (TODOS O-4, CLAUDE.md 2.11) ----
@@ -767,7 +887,7 @@ Result<ParallelPreview> decode_parallel_preview(std::span<const std::uint8_t> by
 {
     constexpr std::size_t kHead = 2 + sizeof(Mm) + sizeof(std::uint32_t);
     if (bytes.size() < kHead || bytes[0] != 1 ||
-        bytes[1] > static_cast<std::uint8_t>(JoinStyle::Bevel))
+        bytes[1] > static_cast<std::uint8_t>(JoinStyle::Link))
         return err(ErrorCode::InvalidArgument, "Paralel önizlemesinin baytları tanınmıyor.");
     ParallelPreview preview;
     preview.join       = static_cast<JoinStyle>(bytes[1]);

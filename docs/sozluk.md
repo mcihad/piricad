@@ -213,6 +213,11 @@ sağdır. Bkz. [`ÇİFTÇİZGİ`](komutlar/double_line.md).
 açık çizginin paraleli açık bir çizgi, alanın paraleli alan, dairenin paraleli daire. İki
 yanını saran kapalı alan paralel değil **tampondur**. Bkz. [`OFSET`](komutlar/offset.md).
 
+**Ucuna bağla** — Paralelin bir köşe yöntemi (`OFSET kose=uc`, Netcad'deki adıyla Ucuna Bağla):
+her düz kenar uzunluğu değişmeden yana kaydırılır ve ardışık kenarların uçları düz bir çizgiyle
+bağlanır; hiçbir şey uzatılmaz ya da kırpılmaz. Kırığın dış yanında bağ pah kirişidir, iç yanında
+kenarlar birbirini aşar ve çizgi kendini keser. Bkz. [`OFSET`](komutlar/offset.md).
+
 **Çift çizgi** — Bir eksen ile iki yanında, her biri kendi genişliğinde çizilmiş iki paralelin
 bütünü; yol, kanal ve demiryolu gösteriminin temeli. `ÇİFTÇİZGİ` eksen çizilirken üretir.
 Bkz. [`ÇİFTÇİZGİ`](komutlar/double_line.md).

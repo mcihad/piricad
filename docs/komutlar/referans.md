@@ -1034,7 +1034,7 @@ Uygulandığı nesneler: çizgi, alan, eğri.
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Ofseti alınacak nesneler; yoksa etkin seçim |
 | `mesafe` | integer | isteğe bağlı | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri |
-| `kose` | text | isteğe bağlı | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi |
+| `kose` | text | isteğe bağlı | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz |
 | `taraf` | text | isteğe bağlı | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan |
 | `nokta` | point | isteğe bağlı | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer |
 | `kaynak` | text | isteğe bağlı | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil |
@@ -9677,7 +9677,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "kose": {
           "type": "string",
-          "description": "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin)"
+          "enum": [
+            "kose",
+            "keskin",
+            "yuvarlak",
+            "pah",
+            "uc"
+          ],
+          "description": "Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz (metin)"
         },
         "taraf": {
           "type": "string",

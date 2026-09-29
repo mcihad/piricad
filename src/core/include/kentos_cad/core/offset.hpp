@@ -32,6 +32,18 @@ enum class JoinStyle : std::uint8_t {
     Miter, ///< carried to the meeting point — the CAD default, and what a plan sheet shows
     Round, ///< an arc of the offset radius
     Bevel, ///< the corner cut straight across
+
+    /// Netcad's "ucuna bağla": EVERY EDGE KEEPS ITS LENGTH. Each straight edge is
+    /// moved sideways on its own, and the end of one moved edge is joined to the
+    /// start of the next by a straight link — nothing is carried to a meeting
+    /// point and nothing is trimmed. Outside a turn the link is the chord a bevel
+    /// cuts; inside it the two moved edges overrun each other and cross.
+    ///
+    /// It is a parallel's corner, not a polygon offset's: `entity_parallel` and
+    /// `run_parallel` (parallel.hpp) make it, for lines and faces with straight
+    /// edges only. The polygon functions of this header do not know it and read
+    /// it as `Miter`.
+    Link,
 };
 
 /// What happens at the two ends of an OPEN run.

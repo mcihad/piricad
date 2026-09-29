@@ -143,6 +143,11 @@ Result<ParallelSide> parallel_side_at(const Document& doc, EntityId e, Point2 p)
 /// parcel's "left" is a winding nobody drew on purpose. An arc takes all four:
 /// it is drawn counter-clockwise, so its left is its inside. `Both` gives the
 /// two sides the object has.
+///
+/// `JoinStyle::Link` keeps the length of every straight edge and is for lines
+/// and faces of straight edges only: a shape with an arc or a drawn curve in it
+/// is refused with a sentence, and a circle or an arc, which have no corner,
+/// are offset as always.
 Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, ParallelSide side,
                                  JoinStyle join = JoinStyle::Miter);
 

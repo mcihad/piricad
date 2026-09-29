@@ -1,0 +1,15 @@
+# OFSET kose=uc kenar uzunluklarını korur (netcad_plan.md N-11; Netcad'in "ucuna bağla"sı).
+# Beklenen değerler el hesabı: doğuya sonra kuzeye giden L çizginin 2 m sağı kırığın
+# dışıdır — (0,-2)→(10,-2) ve (12,0)→(12,10) kenarları 10 m kalır, aralarında
+# (10,-2)→(12,0) bağı, yani pah kirişi. Solu içtir — (0,2)→(10,2) ve (8,0)→(8,10)
+# kenarları 10 m kalıp birbirini aşar, bağ (10,2)→(8,0) geri döner, çizgi (8,2)'de kendini
+# keser; pahlı paralel ise içi kesişimde kırpar. 20 × 10 m dikdörtgen 1 m dışa büyüyünce
+# sekizgen (262 m²), 1 m içe alınınca dört kenarı 20, 10, 20, 10 m kalan bir çarkıfelek.
+KATMAN ad=YOL
+ÇOKLUÇİZGİ 0,0 10,0 10,10
+OFSET nesneler=1 mesafe=2000 taraf=sag kose=uc
+OFSET nesneler=1 mesafe=2000 taraf=sol kose=uc
+OFSET nesneler=1 mesafe=2000 taraf=sol kose=pah
+ALAN 40,0 60,0 60,10 40,10
+OFSET nesneler=5 mesafe=1000 taraf=dis kose=uc
+OFSET nesneler=5 mesafe=1000 taraf=ic kose=uc

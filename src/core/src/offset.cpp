@@ -17,6 +17,9 @@ Clipper2Lib::JoinType join_of(JoinStyle j)
     switch (j) {
     case JoinStyle::Round: return Clipper2Lib::JoinType::Round;
     case JoinStyle::Bevel: return Clipper2Lib::JoinType::Bevel;
+    // `Link` is no corner Clipper2 makes: `parallel.cpp` builds it edge by edge
+    // and never passes it here.
+    case JoinStyle::Link:
     case JoinStyle::Miter: break;
     }
     return Clipper2Lib::JoinType::Miter;

@@ -3480,3 +3480,30 @@ TEST_CASE("PROOF: ÇİFTÇİZGİ arayüz, komut satırı, betik ve oynatmadan ay
     REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
     CHECK_EQ(cli.journal.entries().front().command_id, std::string("core.double_line"));
 }
+
+TEST_CASE("PROOF: OFSET kose=uc arayüz, komut satırı, betik ve oynatmadan aynı belgeyi ve günlüğü "
+          "bırakır")
+{
+    // N-11, "ucuna bağla": the edges of the L keep their length. The hand names
+    // the object in the line that starts the tool, types the distance in metres
+    // and shows the side by clicking south of the first edge — the right; a line
+    // types the same, the click as `nokta`; a script names it in millimetres.
+    prove_verb({.name     = "OFSET nesneler=1 kose=uc",
+                .id       = "core.offset",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 10,0 10,10"},
+                .objects  = {},
+                .answers  = {Value::number(2.0), Value::point(core::Point2{5'000, -5'000})},
+                .typed    = "OFSET nesneler=1 mesafe=2000 nokta=5,-5 kose=uc",
+                .scripted = R"({"ad":"OFSET uc","komutlar":[{"cmd":"core.offset","args":{
+                    "nesneler":[1],"mesafe":2000,"nokta":[5000,-5000],"kose":"uc"}}]})"});
+
+    // A CLOSED SHAPE, both sides named: grown to an octagon, shrunk to a pinwheel.
+    prove_verb({.name     = "OFSET nesneler=1 mesafe=1000 taraf=ic kose=uc",
+                .id       = "core.offset",
+                .setup    = {"ALAN 0,0 20,0 20,10 0,10"},
+                .objects  = {},
+                .answers  = {},
+                .typed    = "OFSET nesneler=1 mesafe=1000 taraf=ic kose=uc",
+                .scripted = R"({"ad":"OFSET uc","komutlar":[{"cmd":"core.offset","args":{
+                    "nesneler":[1],"mesafe":1000,"taraf":"ic","kose":"uc"}}]})"});
+}
