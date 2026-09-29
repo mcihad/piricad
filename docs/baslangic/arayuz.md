@@ -100,6 +100,11 @@ sorarken) ya da hiçbir komut çalışmazken **sağ tık** veya **Esc**, süren 
 seçimi** bırakır; el yeniden **Seç** aracındadır (Netcad'deki gibi). Aracı bırakmanın bir
 yolu da **Seç**'e (veya başka bir araca) basmaktır. Çalışan aracın düğmesi basılı görünür.
 
+**Bıraktığınız aracı geri almak.** Araç bırakıldıktan sonra boş komut satırında **Enter**
+ya da **Boşluk** onu yöntemiyle yeniden başlatır. Netcad'deki gibi çizim alanında boş bir
+yere tıklamanın da yinelemesini isterseniz `TERCİH son_komut tik` yazın; ayrıntısı
+[Son komutu yinelemek](../komutlar/komut-satiri.md#son-komutu-yinelemek)'te.
+
 ### Aileler: bölünmüş düğmeler
 
 Birbirinin yerine geçen araçlar tek bir **bölünmüş düğmede** durur: düğmenin yüzü en son
@@ -1048,6 +1053,7 @@ yapabilecekleriniz:
 | Komut satırına yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
+| **Enter** ya da **Boşluk** (boş satırda) | Komut çalışmıyorken son komutu yöntemiyle yeniden başlatır ([Son komutu yinelemek](../komutlar/komut-satiri.md#son-komutu-yinelemek)) |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele. Çizgi, çoklu çizgi, alan ya da spline çizerken Ctrl+Z yalnız son noktayı geri alır |
 | **⌫** | Seçili nesneleri siler; çizerken yalnız son noktayı geri alır. Komut satırı boşken de çalışır |
 | **Ctrl+A** / **Ctrl+Shift+A** | Tümünü seç / seçimi temizle |

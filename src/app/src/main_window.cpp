@@ -454,11 +454,13 @@ MainWindow::MainWindow(QWidget* parent)
     // Enter on an empty command line is "done pointing". Focus is here far more
     // often than on the canvas, so without this the gesture had nowhere to land.
     connect(commandLine_, &CommandLine::accepted, this, [this] {
-        // AN EMPTY ENTER, in the order the three things it can mean are asked
-        // for: those objects · that wanted area · that is the shape, done.
+        // AN EMPTY ENTER, in the order the four things it can mean are asked
+        // for: those objects · that wanted area · that is the shape, done ·
+        // and with nothing running, the last command again (`son_komut`).
         if (controller_->supplyPickedObjects()) return;
         if (canvas_->acceptGuide()) return;
-        (void)canvas_->finishPointRun();
+        if (canvas_->finishPointRun()) return;
+        (void)controller_->repeatLast(Controller::Repeat::Key);
     });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
@@ -3470,6 +3472,132 @@ int MainWindow::probeHelpPage()
     check(on_one.detail == QStringLiteral("ÖLÇÜ"), QStringLiteral("sağ bölme ÖLÇÜ'yü anlatıyor"));
 
     palette_->hide();
+    return failures;
+}
+
+int MainWindow::probeRepeat()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[yinele] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+    const auto press = [](QWidget* into, int key) {
+        const QString text = key == Qt::Key_Space ? QStringLiteral(" ") : QString();
+        QKeyEvent down(QEvent::KeyPress, key, Qt::NoModifier, text);
+        QCoreApplication::sendEvent(into, &down);
+        QKeyEvent up(QEvent::KeyRelease, key, Qt::NoModifier, text);
+        QCoreApplication::sendEvent(into, &up);
+        QCoreApplication::processEvents();
+    };
+    const auto click = [this](QPointF at) {
+        const QPointF global = canvas_->mapToGlobal(at);
+        QMouseEvent down(QEvent::MouseButtonPress, at, global, Qt::LeftButton, Qt::LeftButton,
+                         Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &down);
+        QMouseEvent up(QEvent::MouseButtonRelease, at, global, Qt::LeftButton, Qt::NoButton,
+                       Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &up);
+        QCoreApplication::processEvents();
+    };
+    const auto running = [this] {
+        const command::Session* s = controller_->session();
+        return s != nullptr ? QString::fromStdString(s->spec().id) : QString();
+    };
+    const auto asking = [this] {
+        const command::Session* s = controller_->session();
+        return s != nullptr && s->waiting() ? QString::fromStdString(s->prompt().message)
+                                            : QString();
+    };
+    // A RUN THAT ENDED ON ITS OWN RE-ARMS ITS TOOL, queued (`rearm`), so the
+    // queue is let through before the Esc — or the tool comes back after it.
+    const auto letGo = [this] {
+        QCoreApplication::processEvents();
+        controller_->cancelAll();
+        QCoreApplication::processEvents();
+    };
+
+    // AN EMPTY DRAWING, so a click lands on nothing.
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    letGo();
+    runScriptLine(QStringLiteral("TERCİH son_komut enter"));
+
+    // TYPED WITH A METHOD, let go with Esc, and back — with the method — on an
+    // empty Enter.
+    onCommandSubmitted(QStringLiteral("DAİRE yontem=3n"));
+    check(running() == QStringLiteral("core.circle_draw"),
+          QStringLiteral("DAİRE yontem=3n başladı"));
+    letGo();
+    check(running().isEmpty(), QStringLiteral("Esc bıraktı"));
+    check(controller_->lastLine() == QStringLiteral("DAİRE yontem=3n"),
+          QStringLiteral("son komut yöntemiyle hatırlandı (%1)").arg(controller_->lastLine()));
+    press(commandLine_, Qt::Key_Return);
+    check(running() == QStringLiteral("core.circle_draw") &&
+              controller_->armedLine() == QStringLiteral("DAİRE yontem=3n"),
+          QStringLiteral("boş Enter DAİRE'yi yöntemiyle yeniden başlattı (%1)")
+              .arg(controller_->armedLine()));
+    letGo();
+
+    // SPACE ON AN EMPTY LINE IS ENTER, and is not typed into it.
+    press(commandLine_, Qt::Key_Space);
+    check(running() == QStringLiteral("core.circle_draw"),
+          QStringLiteral("boş satırda Boşluk da yineledi"));
+    check(commandLine_->text().isEmpty(), QStringLiteral("Boşluk satıra yazılmadı"));
+    letGo();
+
+    // A COMMAND THAT CANNOT COME BACK leaves the last one standing.
+    runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+    check(controller_->lastLine() == QStringLiteral("DAİRE yontem=3n"),
+          QStringLiteral("YAKINLAŞ son komutu değiştirmedi"));
+
+    // THE CANVAS'S OWN ENTER, for when it holds the focus.
+    press(canvas_, Qt::Key_Return);
+    check(running() == QStringLiteral("core.circle_draw"),
+          QStringLiteral("tuvalde Enter da yineledi"));
+    letGo();
+
+    // `kapali`: nothing comes back.
+    runScriptLine(QStringLiteral("TERCİH son_komut kapali"));
+    press(commandLine_, Qt::Key_Return);
+    check(running().isEmpty(), QStringLiteral("kapali: boş Enter bir şey başlatmadı"));
+
+    // `tik`: a click on empty ground brings ÇİZGİ back with the click as its
+    // first point, so it asks for the NEXT point, not the first.
+    runScriptLine(QStringLiteral("TERCİH son_komut enter"));
+    onCommandSubmitted(QStringLiteral("ÇİZGİ"));
+    const QString first = asking();
+    letGo();
+    runScriptLine(QStringLiteral("TERCİH son_komut tik"));
+    const QPointF middle(canvas_->width() / 2.0, canvas_->height() / 2.0);
+    click(middle);
+    check(running() == QStringLiteral("core.line"),
+          QStringLiteral("tik: boş yere tık ÇİZGİ'yi yeniden başlattı"));
+    check(!first.isEmpty() && !asking().isEmpty() && asking() != first,
+          QStringLiteral("tık ilk nokta oldu (önce '%1', şimdi '%2')").arg(first, asking()));
+    letGo();
+
+    // WITH A SELECTION STANDING the click lets go of it, as it always did, and
+    // repeats nothing: a repeated SİL would take the objects being put down.
+    runScriptLine(QStringLiteral("ÇİZGİ 0,0 10,0"));
+    endCommand();
+    letGo();
+    runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    QCoreApplication::processEvents();
+    check(!controller_->bus().selection().empty() && running().isEmpty(),
+          QStringLiteral("tik: çizgi seçili, komut yok"));
+    click(QPointF(canvas_->width() * 0.9, canvas_->height() * 0.9));
+    check(running().isEmpty(), QStringLiteral("tik: seçim varken tık yinelemedi"));
+    check(controller_->bus().selection().empty(), QStringLiteral("tik: tık seçimi bıraktı"));
+
+    // And under `enter` a click on empty ground only selects, as it always did.
+    runScriptLine(QStringLiteral("TERCİH son_komut enter"));
+    click(QPointF(canvas_->width() * 0.9, canvas_->height() * 0.9));
+    check(running().isEmpty(), QStringLiteral("enter: tık bir komut başlatmadı"));
+
+    runScriptLine(QStringLiteral("TERCİH son_komut varsayilan"));
     return failures;
 }
 

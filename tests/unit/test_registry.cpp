@@ -12,6 +12,7 @@
 
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/session.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
@@ -122,4 +123,36 @@ TEST_CASE("KAYIT: reddedilen bir kayıt kaybolmaz; nedeniyle okunur")
     REQUIRE(r.refused().size() == 1);
     CHECK(r.refused().front().rfind("test.cizgi_ikizi: ", 0) == 0);
     CHECK(r.refused().front().find("core.line") != std::string::npos);
+}
+
+TEST_CASE("KAYIT: son komut yalnız çizimde çalışan ve soru soran komut için döner")
+{
+    Registry program;
+    for (const Register add : kApplicationOrder)
+        add(program);
+    REQUIRE(program.refused().empty());
+
+    // THE METHOD COMES BACK, NOT THE PLACES (`rearm_line`), for a command that
+    // asks and works in the drawing.
+    CHECK(repeat_line(program, "DAİRE yontem=3n 0,0 10,0 0,10") == "DAİRE yontem=3n");
+    CHECK(repeat_line(program, "L 0,0 100,0") == "ÇİZGİ");
+    CHECK(repeat_line(program, "SİL") == "SİL");
+    CHECK(repeat_line(program, "KAYDIR") == "KAYDIR");
+    CHECK(repeat_line(program, "PARALEL mesafe=5000") == "OFSET mesafe=5000");
+
+    // NEVER ONE THAT TOUCHES A FILE OR THE WORLD OUTSIDE: a stray Enter must not
+    // save, open, import, paste from disk or run a script a second time.
+    CHECK(repeat_line(program, "KAYDET").empty());
+    CHECK(repeat_line(program, "İÇEAKTAR dosya=\"a.dxf\"").empty());
+    CHECK(repeat_line(program, "BETİK \"a.json\"").empty());
+    CHECK(repeat_line(program, "YAPIŞTIR").empty());
+    CHECK(repeat_line(program, "MCPSUNUCU islem=baslat").empty());
+
+    // NOR AN AGENT'S SUGGESTION: applying one is a deliberate act (5.7).
+    CHECK(repeat_line(program, "ÖNERİ islem=uygula").empty());
+
+    // A command that asks nothing ran whole the first time.
+    CHECK(repeat_line(program, "YAKINLAŞ KAPSAM").empty());
+    CHECK(repeat_line(program, "GERİAL").empty());
+    CHECK(repeat_line(program, "yokboyle").empty());
 }

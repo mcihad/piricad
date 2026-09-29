@@ -118,6 +118,24 @@ TERCİH ölçü_stilleri
 Yol çizime yazılmaz: desen ve stil, nesne oluşturulurken nesnenin **kendi yüküne**
 kopyalanır, katalog sonradan değişse çizim değişmez.
 
+### Son komutu yineleyen el: `son_komut`
+
+Boş komut satırında Enter ya da Boşluk son komutu yöntemiyle yeniden başlatır.
+`son_komut` bunu hangi elin yapacağını seçer:
+
+| Değer | Ne yineler |
+|---|---|
+| `enter` (varsayılan) | Boş satırda Enter ya da Boşluk |
+| `tik` | Ayrıca, hiçbir komut beklemezken ve seçim yokken çizim alanında boş bir yere sol tık (Netcad gibi); komut bir noktayla başlıyorsa tık o ilk noktadır |
+| `kapali` | Hiçbiri |
+
+```
+TERCİH son_komut tik
+```
+
+Hangi komutların yinelendiği [Son komutu yinelemek](komut-satiri.md#son-komutu-yinelemek)
+bölümündedir.
+
 ## Örnekler
 
 ### Komut satırı

@@ -350,6 +350,15 @@ public:
     /// command rather than by a private path.
     int probeHelpPage();
 
+    /// THE LAST COMMAND AGAIN, ASSERTED (`TERCİH son_komut`): typed with a
+    /// method and let go, an empty Enter — on the command line or the canvas —
+    /// and Space on an empty line start it again with that method; a command
+    /// that cannot come back leaves it standing; `kapali` starts nothing; and
+    /// under `tik` a click on empty ground starts it with the click as its
+    /// first point. Real key and mouse events, because the keys are the
+    /// feature: `/tests` links no Qt and cannot send one.
+    int probeRepeat();
+
     /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///

@@ -115,6 +115,32 @@ public:
     /// `MainWindow::syncToolSelection` to light the exact button pressed.
     const QString& armedLine() const noexcept { return armedLine_; }
 
+    /// WHAT STARTS THE LAST COMMAND AGAIN (`TERCİH son_komut`): a key — an
+    /// empty Enter or Space — or a left click on empty ground.
+    enum class Repeat {
+        Key,
+        Click,
+    };
+
+    /// Whether `how` starts the last command again under the user's
+    /// `son_komut`: `enter` answers the key, `tik` the key and the click, and
+    /// `kapali` neither.
+    bool repeats(Repeat how) const;
+
+    /// The line the last command that can come back was started with, as it
+    /// comes back (`command::repeat_line`): `DAİRE yontem=3n`, never its points.
+    /// Empty until one has run. A command that cannot come back — KAYDET, an
+    /// import, a script — leaves it as it was, which is Netcad's rule: a
+    /// command used once is not the one repeated.
+    const QString& lastLine() const noexcept { return lastLine_; }
+
+    /// Starts the last command again, the way typing its line does: the same
+    /// parser, the same bus, a journal line of its own (Article 1.2). The line
+    /// is echoed as a typed one is. Nothing happens — and false comes back —
+    /// while a command is running or a batch is open, with nothing to repeat,
+    /// or when `son_komut` does not answer `how`.
+    bool repeatLast(Repeat how);
+
     /// Dispatches a fully built invocation. This is `Bus::dispatch`, the same
     /// overload the JSON runner and the AI use (`.claude/command.md` R2): the
     /// canvas needs it because a rubber-band box carries `Point2` values that must
@@ -402,6 +428,9 @@ private:
     /// so the tool column and the prompt cannot disagree with the session.
     void settleSession();
 
+    /// Keeps `line` as `lastLine()` when it is a command that can come back.
+    void remember(const QString& line);
+
     bool finishing_{false}; ///< inside `finishInteractive`: the end is a finish, not a dismissal
     bool asked_{false};     ///< the running session has prompted for at least one value
 
@@ -480,6 +509,9 @@ private:
 
     /// The running session was started by `beginOneShot`: it re-arms nothing.
     bool oneShot_{false};
+
+    /// See `lastLine()`.
+    QString lastLine_;
 
     /// The worker running `session_`'s job, or null. Owned through Qt parenting;
     /// waited on before the session goes.

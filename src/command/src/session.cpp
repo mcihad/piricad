@@ -67,6 +67,35 @@ std::string rearm_line(const Registry& registry, std::string_view line)
     return out;
 }
 
+std::string repeat_line(const Registry& registry, std::string_view line)
+{
+    std::string out = rearm_line(registry, line);
+    if (out.empty()) return {};
+
+    // `rearm_line` begins with the primary name, so it resolves.
+    const CommandSpec* spec = registry.resolve(std::string_view(out).substr(0, out.find(' ')));
+    if (spec == nullptr || !has_flag(spec->flags, Flags::Interactive) || spec->params.empty())
+        return {};
+
+    switch (spec->category) {
+    case Category::Draw:
+    case Category::Modify:
+    case Category::View:
+    case Category::Layer:
+    case Category::Query:
+    case Category::Processing: break;
+    case Category::File:
+    case Category::Script:
+    case Category::System: return {};
+    }
+
+    const Effect worst = effect_of(*spec);
+    if (has_effect(worst, Effect::FileRead) || has_effect(worst, Effect::FileWrite) ||
+        has_effect(worst, Effect::ExternalWrite))
+        return {};
+    return out;
+}
+
 const char* session_state_name(SessionState s)
 {
     switch (s) {

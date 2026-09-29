@@ -436,6 +436,7 @@ KENTOS_SETTING(yakalama_isaret_rengi);
 KENTOS_SETTING(yakalama_ipucu);
 KENTOS_SETTING(yakalama_adimi);
 KENTOS_SETTING(dinamik_girdi);
+KENTOS_SETTING(son_komut);
 KENTOS_SETTING(islem_pencere);
 KENTOS_SETTING(islem_hatirla);
 KENTOS_SETTING(izgara_rengi);
@@ -509,6 +510,7 @@ KENTOS_SETTING(alan_birimi);
     X(yakalama_ipucu)                                                                              \
     X(yakalama_adimi)                                                                              \
     X(dinamik_girdi)                                                                               \
+    X(son_komut)                                                                                   \
     X(islem_pencere)                                                                               \
     X(islem_hatirla)                                                                               \
     X(izgara_rengi)                                                                                \
@@ -572,6 +574,27 @@ KENTOS_SETTING(dinamik_girdi)
         .unit     = "",
         .summary  = "Sürüklenen kılavuzun üzerinde uzunluğu ve azimutu yazar. Ele ve "
                     "ekrana ait bir tercih olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+KENTOS_SETTING(son_komut)
+{
+    // THE ORDER IS READ BY INDEX (`app::Controller::repeats`): enter, tik,
+    // kapali. A new word goes at the end, never between.
+    return SettingSpec{
+        .id       = "core.arayuz.son_komut",
+        .names    = {"son_komut", "lastcommand", "repeat"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::between(0, 2),
+        .values   = {"enter", "tik", "kapali"},
+        .unit     = "",
+        .summary  = "Son komutu yeniden başlatan el: enter, boş komut satırında Enter ya da "
+                    "Boşluk; tik, bunlara ek olarak hiçbir komut beklemezken ve seçim yokken "
+                    "çizim alanında boş bir yere sol tık (Netcad gibi); kapali, hiçbiri. Ele "
+                    "ait bir tercih olduğu için uygulama kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

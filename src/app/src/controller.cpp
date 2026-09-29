@@ -470,6 +470,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
                 // because nothing but a button remembered a method.
                 armedLine_ =
                     QString::fromStdString(command::rearm_line(registry_, trimmed.toStdString()));
+                remember(trimmed);
                 if (!session_->finished()) {
                     settleSession();
                     return command::DispatchResult{};
@@ -664,9 +665,41 @@ void Controller::startInteractive(const QString& line, command::Origin origin, b
     session_ = std::move(started.value());
     // A one-shot arms nothing: no line for the window to light or re-arm.
     armedLine_ = one_shot ? QString() : line.trimmed();
-    oneShot_   = one_shot;
+    if (!one_shot) remember(line.trimmed());
+    oneShot_ = one_shot;
     ++sessionsBegun_;
     settleSession();
+}
+
+void Controller::remember(const QString& line)
+{
+    // ONLY A COMMAND THAT CAN COME BACK is remembered; any other leaves the
+    // last one standing (`command::repeat_line`).
+    const std::string again = command::repeat_line(registry_, line.toStdString());
+    if (!again.empty()) lastLine_ = QString::fromStdString(again);
+}
+
+bool Controller::repeats(Repeat how) const
+{
+    // THE DECLARED ORDER of `core.arayuz.son_komut`: enter, tik, kapali.
+    constexpr std::uint16_t kEnter = 0;
+    constexpr std::uint16_t kClick = 1;
+    const std::uint16_t chosen     = bus_.app_settings().get("core.arayuz.son_komut").as_enum();
+    if (how == Repeat::Key) return chosen == kEnter || chosen == kClick;
+    return chosen == kClick;
+}
+
+bool Controller::repeatLast(Repeat how)
+{
+    if (!repeats(how) || lastLine_.isEmpty() || session_ || bus_.in_batch()) return false;
+
+    // ECHOED AS A TYPED LINE IS, because it is one: the transcript shows what
+    // ran, and a repeat that left no line there would be a command out of
+    // nowhere. A key is the command line's gesture, a click the canvas's.
+    const QString line = lastLine_;
+    emit echoed(QStringLiteral("> ") + line);
+    runLine(line, how == Repeat::Key ? command::Origin::CommandLine : command::Origin::Gui);
+    return true;
 }
 
 void Controller::settleSession()

@@ -317,6 +317,18 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(help-page PROPERTIES TIMEOUT 120)
 
+    # AND THE LAST COMMAND AGAIN (`TERCİH son_komut`). The keys are the feature —
+    # an empty Enter, Space on an empty line, a click on empty ground — and
+    # `unit` links no Qt, so it cannot send one: this runs the real binary and
+    # sends them.
+    add_test(NAME repeat-last
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_REPEAT_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(repeat-last PROPERTIES TIMEOUT 120)
+
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page
     # box, the author field and the encryption of what came out — plus the print

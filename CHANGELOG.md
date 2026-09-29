@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — son komutu yinelemek
+
+- Hiçbir komut çalışmıyorken **boş komut satırında Enter ya da Boşluk** son komutu
+  yöntemiyle yeniden başlatır: `DAİRE yontem=3n` üç nokta ister, merkez değil. Tuval
+  odaktayken Enter da aynısını yapar. Transkripte ve günlüğe yazılmış gibi geçer.
+- Yalnız çizimde çalışan ve soru soran komutlar yinelenir. Dosya açan, kaydeden, içe ya da
+  dışa aktaran, betik çalıştıran, sunucu başlatan ve yapay zekâ önerisini uygulayan komut
+  kazayla basılan bir Enter'la yinelenmez ve son komutu da değiştirmez (Netcad'in tek
+  seferlik komut kuralı).
+- `TERCİH son_komut` (`enter` varsayılan, `tik`, `kapali`): `tik` Netcad'in "sol tuş son
+  işlemi tekrarlasın" seçeneğidir — seçim yokken boş yere sol tık da yineler ve komut bir
+  noktayla başlıyorsa tık o ilk noktadır. Nesneye tık yine seçer; seçim varken boş yere
+  tık yine seçimi bırakır.
+
 ### Eklendi — Komut Ara sıralıyor ve Netcad'in adlarını da buluyor
 
 - `Ctrl+K` araması artık **sıralı**: yazılan bir komutun adıysa o komut en üstte, sonra

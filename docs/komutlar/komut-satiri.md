@@ -360,12 +360,50 @@ açıklığı ekran pikselidir; bir köşeye on beş santimetre kala yazılan `4
 
 Bir köşeyi yazarak almak istiyorsanız köşenin kendisini yazın ya da tıklayın.
 
+## Son komutu yinelemek
+
+Hiçbir komut çalışmıyorken **boş** komut satırında **Enter**'a ya da **Boşluk**'a basmak
+son komutu yeniden başlatır. Komut **yöntemiyle** gelir, noktalarıyla gelmez:
+
+```
+DAİRE yontem=3n                ← Enter, üç nokta ister
+                               ← …üç nokta verildi, sonra Esc
+                               ← Enter: DAİRE yontem=3n yeniden başlar, yine üç nokta ister
+```
+
+Transkriptte yazılmış gibi görünür (`> DAİRE yontem=3n`) ve günlüğe de öyle geçer; tuşun
+yaptığı, satırı sizin yerinize yazmaktır. Tuval odaktayken Enter da aynısını yapar.
+
+**Hangi komutlar yinelenir.** Çizimde çalışan ve soru soran komutlar: çizim, düzenleme,
+görünüm, katman, sorgu ve işlem araçları. Dosya açan, kaydeden, içe ya da dışa aktaran,
+betik çalıştıran, bir sunucu başlatan ya da bir yapay zekâ önerisini uygulayan komut
+**yinelenmez** — kazayla basılan bir Enter bir dosyayı yeniden içe almasın, bir öneriyi
+kimse bakmadan uygulamasın. Böyle bir komut son komutu da değiştirmez: `DAİRE`'den sonra
+`KAYDET` yazıp Enter'a basarsanız `DAİRE` gelir. Soru sormadan tek adımda biten komutlar
+(`YAKINLAŞ KAPSAM`, `GERİAL`) da yinelenmez. Netcad de tek seferlik komutları tekrar
+etmez.
+
+**Tercih.** Hangi elin yineleyeceğini [`TERCİH son_komut`](preference.md) seçer:
+
+| Değer | Ne yineler |
+|---|---|
+| `enter` (varsayılan) | Boş satırda Enter ya da Boşluk |
+| `tik` | Bunlara ek olarak, hiçbir komut beklemezken ve hiçbir nesne seçili değilken çizim alanında **boş bir yere** sol tık — Netcad'in "sol tuş son işlemi tekrarlasın" seçeneği. Komut bir noktayla başlıyorsa tıkladığınız yer o ilk noktadır. Bir nesnenin üzerine tıklamak onu yine seçer, sürüklemek yine kutu çizer; seçim varken boş yere tık yine seçimi bırakır ve bir şey yinelemez, yoksa yinelenen bir `SİL` bırakılmak istenen nesneleri silerdi |
+| `kapali` | Hiçbiri |
+
+```
+TERCİH son_komut tik
+TERCİH son_komut kapali
+TERCİH son_komut varsayilan
+```
+
 ## Geçmiş
 
 | Tuş | İşlev |
 |---|---|
 | **Yukarı ok** | Bir önceki komut |
 | **Aşağı ok** | Bir sonraki komut |
+| **Enter** ya da **Boşluk** (boş satırda, komut çalışmıyorken) | Son komutu yöntemiyle yeniden başlatır (bkz. [Son komutu yinelemek](#son-komutu-yinelemek)) |
 | **Esc** | Satırı temizler; satır zaten boşsa çalışan komutu iptal eder |
 
 Aynı komutu iki kez yazarsanız geçmişte bir kez durur.

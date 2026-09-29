@@ -249,6 +249,15 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
         else
             clear();
         return;
+    case Qt::Key_Space:
+        // SPACE ON AN EMPTY LINE IS ENTER, as in every CAD since AutoCAD: the
+        // thumb is already on it. A space between two words is still a space —
+        // the line is not empty then — so nothing typed changes meaning.
+        if (text().isEmpty()) {
+            emit accepted();
+            return;
+        }
+        break;
     case Qt::Key_Backspace:
         // NOTHING TO ERASE HERE, SO THE RUN'S LAST POINT: a user who typed
         // `@10,0` and Enter has the focus in this line, and ⌫ is the key their

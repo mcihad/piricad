@@ -346,7 +346,7 @@ int main(int argc, char** argv)
              "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE",  "KENTOS_CLIP_PROBE",
              "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
              "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
-             "KENTOS_TOOL_DRIVE",
+             "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -2567,6 +2567,12 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
+    }
+
+    // THE LAST COMMAND AGAIN, ASSERTED with real keys and a real click.
+    if (qEnvironmentVariableIsSet("KENTOS_REPEAT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeRepeat() == 0 ? 0 : 1); });
     }
 
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {

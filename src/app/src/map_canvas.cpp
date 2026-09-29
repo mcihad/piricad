@@ -439,6 +439,26 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
             emit pickAmbiguous(under, mods);
             return;
         }
+
+        // A CLICK ON EMPTY GROUND WITH NOTHING RUNNING starts the last command
+        // again, when the user chose Netcad's way (`TERCİH son_komut tik`). A
+        // click on an object still selects it and a drag still draws a box.
+        // The click is where the command begins when it begins with a point,
+        // which is the whole gesture: click, and the next line starts there.
+        //
+        // NOT WITH A SELECTION STANDING. Then the same click means "let go of
+        // these", as it always did, and a repeated SİL would take the objects
+        // the user was putting down instead.
+        if (under.empty() && !picking && mods == Qt::NoModifier && !controller_.session() &&
+            controller_.bus().selection().empty() &&
+            controller_.repeatLast(Controller::Repeat::Click)) {
+            if (controller_.awaitingInput() &&
+                (controller_.promptKind() == command::ParamKind::Point ||
+                 controller_.promptKind() == command::ParamKind::PointList))
+                controller_.supplyAimedPoint(a);
+            update();
+            return;
+        }
     }
 
     command::Args args;
@@ -4283,6 +4303,12 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             return;
         }
         if (finishPointRun()) return;
+        // Nothing running: the last command again, as the command line's
+        // empty Enter does (`Controller::repeatLast`).
+        if (controller_.repeatLast(Controller::Repeat::Key)) {
+            update();
+            return;
+        }
     }
 
     if (event->key() == Qt::Key_Escape) {

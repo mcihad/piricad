@@ -62,6 +62,21 @@ bool asks_retract(const Registry& registry, std::string_view line);
 /// command.
 std::string rearm_line(const Registry& registry, std::string_view line);
 
+/// The line an empty Enter starts again (`TERCİH son_komut`): `rearm_line`'s
+/// line — the method travels, the places do not — for a command that works IN
+/// THE DRAWING and asks for its input, and empty for any other.
+///
+/// Netcad's rule, for Netcad's reason: a command used once is not repeated
+/// (wiki.netcad.com.tr 217386629). Here that is read off the declaration rather
+/// than listed: the command must ask (`Flags::Interactive`), sit in a drawing
+/// category — draw, modify, view, layer, query, processing — and never read or
+/// write a file or reach outside (`Effect::FileRead`, `FileWrite`,
+/// `ExternalWrite`, for its worst verb). So a stray Enter never saves, opens,
+/// imports, runs a script, starts a server — or applies an agent's suggestion,
+/// which is `ÖNERİ`'s job, in System, and only ever a deliberate act (CLAUDE.md
+/// 5.7).
+std::string repeat_line(const Registry& registry, std::string_view line);
+
 /// The command bus; see bus.hpp. Declared rather than included because the bus
 /// includes this header.
 class Bus;

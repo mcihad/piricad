@@ -696,7 +696,7 @@ kullanıcısı için nokta her işin başıdır.
 
 | TODOS | Netcad kaynağı (pageId) | Eklenecekler |
 |---|---|---|
-| **U-01** araç keşfi, komut satırı | 217386600, 217386629, 217387057 | (1) Çakışmasız **eş adlar** (§5.3): OFSET'e `PARALEL`, PATLAT'a `AYRIŞTIR`, STİLKOPYALA'ya `BİÇİMBOYA`, YUVARLA'ya `KÖŞEYUVARLAT`, ÇOKLUÇİZGİ'ye `ÇOKLUDOĞRU`, ALANÖLÇ'e `ALANSOR`, KOORDİNAT'a `XYZSOR`, ÖLÇ'e `CETVEL`, YAZDIR'a `ÇİZDİR`, KATMAN'a `TABAKA`, KATMANAT'a `TABAKADEĞİŞTİR`, YAKINLAŞ'a `LİMİTBUL`, DİKDÖRTGEN'e `KUTU`, BÖL'e `OBJEBÖL`, DİKAYAK'a `YANNOKTA`. (2) Çakışan terimler için **yalnız aramada** görünen "bilinen adlar" alanı (`CommandSpec`'e ek alan, ayrıştırıcı okumaz; 6.14) — "kaydır" araması TAŞI'yı "bilinen adı: Kaydır" diye üstte gösterir. (3) Komut Ara ▸ Git = "Şeritte göster" (N-20). (4) **Son komutu yinele**: boş komut satırında Enter ya da Boşluk son komutu yöntemiyle yeniden başlatır; Netcad'in "sol tık tekrarlar"ı isteğe bağlı tercih (`TERCİH son_komut=enter`, `=tik` ya da `=kapali`, varsayılan `enter`; tık seçimle çakıştığı için varsayılan değil) |
+| **U-01** araç keşfi, komut satırı | 217386600, 217386629, 217387057 | (1) Çakışmasız **eş adlar** (§5.3): OFSET'e `PARALEL`, PATLAT'a `AYRIŞTIR`, STİLKOPYALA'ya `BİÇİMBOYA`, YUVARLA'ya `KÖŞEYUVARLAT`, ÇOKLUÇİZGİ'ye `ÇOKLUDOĞRU`, ALANÖLÇ'e `ALANSOR`, KOORDİNAT'a `XYZSOR`, ÖLÇ'e `CETVEL`, YAZDIR'a `ÇİZDİR`, KATMAN'a `TABAKA`, KATMANAT'a `TABAKADEĞİŞTİR`, YAKINLAŞ'a `LİMİTBUL`, DİKDÖRTGEN'e `KUTU`, BÖL'e `OBJEBÖL`, DİKAYAK'a `YANNOKTA`. (2) Çakışan terimler için **yalnız aramada** görünen "bilinen adlar" alanı (`CommandSpec`'e ek alan, ayrıştırıcı okumaz; 6.14) — "kaydır" araması TAŞI'yı "bilinen adı: Kaydır" diye üstte gösterir. (3) Komut Ara ▸ Git = "Şeritte göster" (N-20). (4) **Son komutu yinele**: boş komut satırında Enter ya da Boşluk son komutu yöntemiyle yeniden başlatır; Netcad'in "sol tık tekrarlar"ı isteğe bağlı tercih (`TERCİH son_komut enter`, `tik` ya da `kapali`, varsayılan `enter`; tık seçimle çakıştığı için varsayılan değil). **Durum (29 Eylül 2026):** (1), (2) ve (4) M1'de yapıldı; `tik`'te nesneye tık yine seçer; seçim yokken boş yere tık yineler ve komut noktayla başlıyorsa ilk noktası olur, seçim varken seçimi bırakır. (3) N-20'yi bekliyor |
 | **U-02** dinamik sayısal giriş | 217386622, 217387846 | Çizim Hesap Araçları: referans eksene göre **açı**, önceki kenara göre **sapma**, **eğim %**, dX/dY, koordinat; "yakalanacak açı/eğim değerleri" listesi (yakalanınca vurgu); rakama basınca giriş (bizde odak komut satırında, R53); Referans Noktası (bizde İZ); Netcad'in Shift+1…5 geçişleri bizde istem seçeneği |
 | **U-03** yakalama ve seçim | 217387890, 217388230, 217391827 | Boşlukla alttaki nesne ve aday listesi; `/` ile iç içe alanlar (N-03 `SEÇ mod=İÇEREN`); "seçilince bir kez yanıp sönsün"; süzgeç kurallarının (`A*`, `-A*`, `~`, `#3,569`, `500..521`, `1..10,2`, `+ & %`) tek ayrıştırıcıya **fonksiyon olarak** girmesi (`desen()`, `aralik()`; 5.11 — ikinci gramer yok) |
 | **U-04** tek özellik paneli | 217385435, 217385154, 217385175 | Toplu Obje Değiştir: karışık seçimde ortak özellikler (Genel / Görünüm / Nesne), uzunluk ve yarıçapta **aritmetik** (+, −, ½); Biçim Boya'nın katman ve sınıf aktarımı (STİLKOPYALA'ya `katman=evet`, `oznitelik=`); proje ölçeği değişince yazı ve blok boylarını uyarlama seçeneği (217388073) |
@@ -795,6 +795,12 @@ Her ad çapraz kayıt çakışma kapısından geçer ve 6.14 gereği altı belge
 | Kutu | `KUTU` | `core.rectangle` (`SEÇ mod=KUTU` bir kip sözcüğüdür, komut adı değil) |
 | Obje Böl | `OBJEBÖL` (`OBJEBOL`) | `core.split` |
 | Yan Nokta Hesabı | `YANNOKTA` | `core.perp_offset` |
+
+**Durum (29 Eylül 2026).** On iki ad normal ad olarak eklendi (995b701). `CETVEL`, `TABAKA`
+ve `KUTU` komut adı **olmadı**: istemde yazılan ilk sözcük kayıttaysa bekleyen komut
+kapanır ve üçü de yazı ya da katman adı olarak yazılır. Kullanıcının kararıyla yalnız
+aramada bulunurlar (`CommandSpec::known_as`, f154275); Netcad'in `KAYDIR`'ı da orada,
+`TAŞI`'nın bilinen adı olarak.
 
 ### 5.4 Çakışmalar — karar gerekir
 
