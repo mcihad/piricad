@@ -27,6 +27,8 @@ namespace kentos::command {
 /// One running command; see session.hpp. Declared rather than included so this
 /// header stays cheap for every command body that includes it.
 class Session;
+/// A next step a command offers; session.hpp.
+struct Offer;
 
 /// Applies the input aids — object snap, `dik mod`, `kutupsal izleme` and
 /// `ızgaraya yakalama` — to a point value on its way into a command body.
@@ -301,6 +303,11 @@ public:
     /// It goes nowhere near the document: not hashed, not journalled, not
     /// undoable. It rides out on `DispatchResult::report`.
     void report(core::Json data) const;
+
+    /// OFFERS ONE NEXT STEP (`Offer`): a line the user may run, and the words a
+    /// button says it with. Never run here — offered — and a later offer from
+    /// the same run replaces it. Rides out on `DispatchResult::offer`.
+    void offer(Offer next) const;
 
     /// Leaves what a measurement measured on the canvas, when there is one
     /// (`Bus::on_measure_mark`); nothing otherwise. Never recorded: a mark is

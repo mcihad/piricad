@@ -426,6 +426,11 @@ void Context::report(core::Json data) const
     session_.set_report(std::move(data));
 }
 
+void Context::offer(Offer next) const
+{
+    session_.set_offer(std::move(next));
+}
+
 void Context::wrote(std::string path) const
 {
     session_.add_output(std::move(path));

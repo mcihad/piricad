@@ -365,6 +365,12 @@ public:
     /// drawing forgets where the old one was looked at.
     int probeViewHistory();
 
+    /// A COMMAND'S OFFER, ASSERTED in the real window (`command::Offer`):
+    /// ALANÖLÇ by corners puts "Alan olarak çiz" over the canvas, one press
+    /// draws exactly one area and takes the banner away, and the next command
+    /// that finishes puts a stale offer away.
+    int probeOffer();
+
     /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///
@@ -1203,10 +1209,18 @@ private:
     Banner* remedyBanner_{nullptr}; ///< the strip over the canvas; hidden until offered
     Button* remedyButton_{nullptr}; ///< its one button
     QString remedy_;                ///< the command line the button runs
+    Banner* offerBanner_{nullptr};  ///< a finished command's next step
+    Button* offerButton_{nullptr};  ///< the step's one button
+    QString offer_;                 ///< the line that button runs
 
 public:
     /// The command line the canvas's remedy strip offers, empty when none is
     /// shown — for the real-window probe.
+    /// The line the offer banner would run, empty when none is shown; and a press
+    /// of its button, as a hand makes it (`command::Offer`).
+    QString offerForProbe() const;
+    bool pressOfferForProbe();
+
     QString remedyForProbe() const;
 
     /// Presses the strip's button as a user would; false when none is shown.

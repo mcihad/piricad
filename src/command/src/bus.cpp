@@ -706,6 +706,7 @@ core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transacti
     if (result) {
         result.value().lines  = std::move(said);
         result.value().report = session.report();
+        result.value().offer  = session.offer();
     }
     if (result && borrow && nested == nullptr) ++batch_commands_;
     return result;
@@ -947,6 +948,7 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // what 5.15 forbids. `lines` is not restorable here: the echoes happened
     // during the `supply` calls the host made, each outside this call.
     result.report = session.report();
+    result.offer  = session.offer();
 
     // A NESTED RUN IS ITS HOST'S: the host's line is the record, and a replay
     // of it runs this again (`run_nested`).

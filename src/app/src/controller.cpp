@@ -268,6 +268,13 @@ void Controller::wireBus()
     bus_.on_command_finished = [this](const command::DispatchResult& done) {
         emit commandFinished(QString::fromStdString(done.command_id),
                              QString::fromStdString(done.report.dump()));
+        // AFTER `commandFinished`, which puts the last offer away: this one is
+        // about the command that has just ended (`command::Offer`).
+        if (done.offer)
+            emit offerMade(QString::fromStdString(done.offer->title),
+                           QString::fromStdString(done.offer->text),
+                           QString::fromStdString(done.offer->label),
+                           QString::fromStdString(done.offer->line));
     };
 }
 
@@ -666,6 +673,22 @@ void Controller::startInteractive(const QString& line, command::Origin origin, b
     oneShot_ = one_shot;
     ++sessionsBegun_;
     settleSession();
+}
+
+void Controller::runWhole(const QString& line, command::Origin origin)
+{
+    if (session_) cancelInteractive();
+    if (session_) {
+        sayBusy();
+        return;
+    }
+    emit echoed(QStringLiteral("> ") + line);
+    auto result = bus_.execute_line(line.trimmed().toStdString(), origin);
+    if (!result)
+        refused(result.error());
+    else if (!result.value().message.empty())
+        emit echoed(QString::fromStdString(result.value().message));
+    settle();
 }
 
 void Controller::remember(const QString& line)

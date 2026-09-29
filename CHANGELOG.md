@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — komutun önerdiği sonraki adım: Alan olarak çiz
+
+- `ALANÖLÇ` köşelerden bitince tuvalin üstünde **Alan olarak çiz** düğmesi belirir: aynı
+  köşelerle `ALAN` satırını çalıştırır — tek geri alma adımı, günlükte düz bir
+  `core.area` satırı (Netcad'in Alan Sor'u ölçtüğünü alan olarak da üretir). Transkript aynı
+  satırı yazar; `ALANÖLÇ` yine hiçbir şey çizmez.
+- `KAPSAMDENETİM` kopuk nesneleri seçen **Seç** düğmesini sunar.
+- Genel yol: bir komut bittiğinde bir sonraki adımı önerebilir (`command::Offer`); şerit
+  bir düğmelidir, bir sonraki komut bittiğinde kalkar, düğme satırı baştan sona tek seferde
+  çalıştırır.
+
 ### Eklendi — ÖLÇ'te ilk nokta sabit
 
 - `ÖLÇ sabit=evet`: ikinci noktadan sonra her nokta ilk noktadan ölçülür (Netcad'in İlk

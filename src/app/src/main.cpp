@@ -349,6 +349,7 @@ int main(int argc, char** argv)
              "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
              "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
              "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",  "KENTOS_VIEW_PROBE",
+             "KENTOS_OFFER_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -2339,6 +2340,18 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
+        // AND AN OFFER (`command::Offer`): a yard measured by its corners, and
+        // "Alan olarak çiz" over the canvas, waiting to be taken or left.
+        later([&window] {
+            window.cancelCommand();
+            window.canvas()->clearMeasureMarks(); ///< PRİZMA's, from the frame before
+            window.runScriptLine(QStringLiteral(
+                "ALANÖLÇ yontem=nokta noktalar=485320,4310205 485335,4310205 485335,4310225 "
+                "485320,4310225"));
+            window.endCommand();
+        });
+        later([&window, shot] { shot(QStringLiteral("33-alan-olarak-ciz"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 
@@ -2688,6 +2701,12 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
+    }
+
+    // A COMMAND'S OFFER, ASSERTED over the real canvas.
+    if (qEnvironmentVariableIsSet("KENTOS_OFFER_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeOffer() == 0 ? 0 : 1); });
     }
 
     // THE VIEW HISTORY, ASSERTED on the real canvas.

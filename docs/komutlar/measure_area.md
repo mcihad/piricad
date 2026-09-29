@@ -105,6 +105,19 @@ köşelerden**'i seçin. Köşelere sırayla
 tıklayın: ikinci köşeden sonra alan imleçle birlikte dolgulu çizilir, imlecin yanında
 alanı ve çevresi yazar. **Enter** ya da **sağ tık** bitirir.
 
+**Alan olarak çizmek.** Köşelerden ölçüm bitince tuvalin üstünde **Alan olarak çiz**
+düğmesi belirir (Netcad'in Alan Sor'u ölçtüğü alanı nesne olarak da üretir). Düğme aynı
+köşelerle `ALAN` satırını çalıştırır; transkript de aynı satırı yazar, komut satırında
+çalışan el onu kopyalayabilir:
+
+```text
+Alan olarak çizmek için: ALAN 485300.000,4310200.000 485340.000,4310200.000 485340.000,4310230.000 485300.000,4310230.000
+```
+
+`ALANÖLÇ` kendisi yine hiçbir şey çizmez; alan `ALAN`'ın işidir, tek geri alma adımıdır ve
+günlüğe `core.area` satırı olarak girer. Nesneden ölçümde düğme çıkmaz: nesne zaten
+çizimdedir.
+
 ### Betik
 
 Betik önce iki alan çizer, sonra ikisini birlikte ölçer:

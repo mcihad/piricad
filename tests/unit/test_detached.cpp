@@ -104,9 +104,13 @@ TEST_CASE("KAPSAMDENETİM: on bin parselde üç kopuk nesneyi tam bulur, hiçbir
     CHECK(r.journal.entries().size() == logged);
 
     // And the line it offers does what it says: it selects exactly those three.
+    // The shell's button runs the same line the transcript printed.
     const std::string lead   = "Seçmek için: "; ///< counted in bytes: `ç` is two
     const std::size_t at     = r.said.find(lead) + lead.size();
     const std::string select = r.said.substr(at, r.said.find('\n', at) - at);
+    REQUIRE(checked.value().offer.has_value());
+    CHECK(checked.value().offer->line == select);
+    CHECK(checked.value().offer->label == "Seç");
     r.run(select);
     CHECK(r.bus.selection().keys().size() == 3);
 }

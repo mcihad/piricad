@@ -303,6 +303,21 @@ MainWindow::MainWindow(QWidget* parent)
         if (!line.isEmpty()) runScriptLine(line);
     });
     stack->addWidget(remedyBanner_);
+    // THE NEXT STEP A COMMAND OFFERS (`command::Offer`), in the same place: an
+    // invitation, not a warning, so in the accent's tone. One button, the
+    // banner's rule; the line it runs is the one the transcript printed.
+    offerBanner_ = new Banner(Tone::Accent, QString(), QString(), column);
+    offerButton_ = offerBanner_->addButton(QString());
+    offerBanner_->setVisible(false);
+    connect(offerButton_, &QPushButton::clicked, this, [this] {
+        const QString line = offer_;
+        offer_.clear();
+        offerBanner_->setVisible(false);
+        // WHOLE, not as a typed line: ALAN given its corners would otherwise sit
+        // waiting for a fifth, and one click would not be one area.
+        if (!line.isEmpty()) controller_->runWhole(line, command::Origin::Gui);
+    });
+    stack->addWidget(offerBanner_);
     stack->addWidget(canvas_, 1);
     stack->addWidget(commandLineRule_);
     stack->addWidget(commandLine_);
@@ -362,7 +377,19 @@ MainWindow::MainWindow(QWidget* parent)
     connect(controller_, &Controller::commandFinished, this, [this] {
         remedy_.clear();
         if (remedyBanner_ != nullptr) remedyBanner_->setVisible(false);
+        offer_.clear();
+        if (offerBanner_ != nullptr) offerBanner_->setVisible(false);
     });
+    connect(controller_, &Controller::offerMade, this,
+            [this](const QString& title, const QString& text, const QString& label,
+                   const QString& line) {
+                if (offerBanner_ == nullptr || line.isEmpty()) return;
+                offerBanner_->setTitle(title);
+                offerBanner_->setText(text);
+                offerButton_->setText(label);
+                offer_ = line;
+                offerBanner_->setVisible(true);
+            });
 
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::panRequested, this, &MainWindow::onPanRequested);
@@ -3872,6 +3899,61 @@ int MainWindow::probeViewHistory()
     (void)controller_->bus().on_view_move(
         command::ViewMove{.kind = command::ViewMove::Kind::Reset, .fresh = true});
     check(behind() == 0 && ahead() == 0, QStringLiteral("yeni çizim görünüm geçmişini sildi"));
+    return failures;
+}
+
+int MainWindow::probeOffer()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[teklif] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+    // A finished run re-arms its tool, queued; let it land, then put it down.
+    const auto letGo = [this] {
+        QCoreApplication::processEvents();
+        controller_->cancelAll();
+        QCoreApplication::processEvents();
+    };
+    const auto count = [this] { return controller_->document().live_entity_count(); };
+
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    letGo();
+    check(offerForProbe().isEmpty(), QStringLiteral("başta teklif yok"));
+
+    // ALANÖLÇ BY CORNERS, typed and ended with Enter as a hand ends it.
+    runScriptLine(
+        QStringLiteral("ALANÖLÇ yontem=nokta noktalar=485300,4310200 485340,4310200 485340,4310230 "
+                       "485300,4310230"));
+    endCommand();
+    QCoreApplication::processEvents();
+    const QString offered = offerForProbe();
+    check(offered == QStringLiteral("ALAN 485300.000,4310200.000 485340.000,4310200.000 "
+                                    "485340.000,4310230.000 485300.000,4310230.000"),
+          QStringLiteral("Alan olarak çiz teklif edildi (%1)").arg(offered));
+    check(count() == 0, QStringLiteral("teklif bir şey çizmedi"));
+
+    // ONE PRESS, ONE AREA: the whole line runs, and the banner goes.
+    check(pressOfferForProbe(), QStringLiteral("düğmeye basıldı"));
+    QCoreApplication::processEvents();
+    check(count() == 1, QStringLiteral("bir alan çizildi (%1)").arg(count()));
+    check(controller_->session() == nullptr || !controller_->session()->waiting() ||
+              controller_->session()->spec().id != "core.area",
+          QStringLiteral("ALAN beşinci köşeyi beklemiyor"));
+    check(offerForProbe().isEmpty(), QStringLiteral("teklif kalktı"));
+    letGo();
+
+    // A STALE OFFER GOES with the next command that finishes.
+    runScriptLine(QStringLiteral("ALANÖLÇ yontem=nokta noktalar=0,0 10,0 10,10"));
+    endCommand();
+    QCoreApplication::processEvents();
+    check(!offerForProbe().isEmpty(), QStringLiteral("ikinci teklif"));
+    letGo();
+    runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+    QCoreApplication::processEvents();
+    check(offerForProbe().isEmpty(), QStringLiteral("sonraki komut teklifi kaldırdı"));
     return failures;
 }
 
@@ -8777,6 +8859,18 @@ void MainWindow::offerRemedy(const QString& message, const QString& remedy)
     remedyBanner_->setText(message);
     remedy_ = remedy;
     remedyBanner_->setVisible(true);
+}
+
+QString MainWindow::offerForProbe() const
+{
+    return offerBanner_ != nullptr && offerBanner_->isVisible() ? offer_ : QString();
+}
+
+bool MainWindow::pressOfferForProbe()
+{
+    if (offerForProbe().isEmpty()) return false;
+    offerButton_->click();
+    return true;
 }
 
 QString MainWindow::remedyForProbe() const

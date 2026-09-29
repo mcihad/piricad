@@ -494,6 +494,10 @@ struct DispatchResult
     /// them. Empty when nothing changed.
     ChangeSummary changes;
 
+    /// THE NEXT STEP THE COMMAND OFFERED, when it offered one (`Context::offer`):
+    /// shown by a client, run only if the user runs it.
+    std::optional<Offer> offer;
+
     /// WHAT THE CALL COULD NOT HONOUR WITHOUT FAILING.
     ///
     /// A layout that printed with one broken map link, a table that did not fit

@@ -84,6 +84,20 @@ class Bus;
 /// Work handed to a host thread; see job.hpp.
 struct Job;
 
+/// A NEXT STEP A COMMAND OFFERS, named and not taken (`Context::offer`): the one
+/// line that would act on what it just answered — ALANÖLÇ's corners drawn as an
+/// area, `KAPSAMDENETİM`'s stragglers selected. A client shows it as it can: the
+/// shell as one button over the canvas, the transcript as the line itself.
+/// Taking it is running that line, journalled as itself (Article 1.2); leaving
+/// it costs nothing.
+struct Offer
+{
+    std::string title; ///< what was found: the banner's heading
+    std::string text;  ///< one sentence on what the line does
+    std::string label; ///< the button's words: `Alan olarak çiz`
+    std::string line;  ///< the command line it runs
+};
+
 class Session
 {
 public:
@@ -246,6 +260,11 @@ public:
 
     void set_report(core::Json report) { report_ = std::move(report); }
 
+    /// The next step the command offered, when it offered one (`Context::offer`).
+    const std::optional<Offer>& offer() const noexcept { return offer_; }
+
+    void set_offer(Offer offer) { offer_ = std::move(offer); }
+
     /// Files this run wrote, and what it could not honour. Both ride out on
     /// `DispatchResult` so a client learns them without parsing Turkish prose.
     const std::vector<std::string>& outputs() const noexcept { return outputs_; }
@@ -299,6 +318,7 @@ private:
     SessionState state_{SessionState::Ready};
     Prompt prompt_{};
     core::Json report_{};
+    std::optional<Offer> offer_;
     std::vector<std::string> outputs_{};
     std::vector<std::string> warnings_{};
     std::coroutine_handle<> parked_{};

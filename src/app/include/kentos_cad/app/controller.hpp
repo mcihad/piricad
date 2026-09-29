@@ -134,6 +134,14 @@ public:
     /// command used once is not the one repeated.
     const QString& lastLine() const noexcept { return lastLine_; }
 
+    /// RUNS A WHOLE LINE TO ITS END AT ONCE, the way a script runs it: a command
+    /// that takes a run of points and is given them writes them and stops, rather
+    /// than asking for more as a typed line does. For a line the program wrote
+    /// complete — a command's offer (`command::Offer`). A waiting command is put
+    /// down first, as typing another command puts it down; one whose job is out
+    /// is not interrupted. The line is echoed as a typed one is.
+    void runWhole(const QString& line, command::Origin origin);
+
     /// Starts the last command again, the way typing its line does: the same
     /// parser, the same bus, a journal line of its own (Article 1.2). The line
     /// is echoed as a typed one is. Nothing happens — and false comes back —
@@ -410,6 +418,11 @@ signals:
     /// what was refused, and the command line that does what it could not —
     /// for the shell to offer as a button beside the message.
     void remedyOffered(const QString& message, const QString& remedy);
+
+    /// A finished command's NEXT STEP (`command::Offer`): the line it would
+    /// run, and the words a button says it with — for the shell to offer.
+    void offerMade(const QString& title, const QString& text, const QString& label,
+                   const QString& line);
 
 private:
     /// Says a refusal on the transcript — and, when it names a way out, that

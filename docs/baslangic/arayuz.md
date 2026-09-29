@@ -679,6 +679,21 @@ katmanıdır, günlük kullanımda kapalıdır.
 Bu sürümde harita `QPainter` ile çizilir; GPU çizimi Faz 1'de devreye girecek
 (`CLAUDE.md` Article 8.1). Transkript açılışta bunu hatırlatır.
 
+### Tuvalin üstündeki şerit: bir çıkış yolu ya da bir sonraki adım
+
+Tuvalin üst kenarında bazen tek düğmeli bir şerit belirir:
+
+| Şerit | Ne zaman | Örnek |
+|---|---|---|
+| Uyarı renginde | Bir komut **reddedildi** ve reddin bir çıkış yolu var | Dış referanstaki bir nesne düzenlenmek istendi: **Yerel Kopya** |
+| Vurgu renginde | Bir komut **bitti** ve bir sonraki adımı öneriyor | `ALANÖLÇ` köşelerden bitti: **Alan olarak çiz**; `KAPSAMDENETİM` kopuk nesne buldu: **Seç** |
+
+Düğme, komutun transkripte yazdığı satırı çalıştırır — **Alan olarak çiz** aynı köşelerle
+`ALAN …` satırını; çizim o satırın kendisiyle, tek geri alma adımıyla ve günlükte kendi
+satırıyla değişir. Düğmeye basmak zorunlu değildir: şerit, bir sonraki komut bittiğinde
+kalkar. Komut satırında çalışan el aynı satırı transkriptten okur; betik ve yapay zekâ da
+komutun cevabında aynı satırı alır.
+
 ## Komut satırı
 
 Tuvalin altında, 28 piksellik bir şerit. Solunda değişmeyen bir **`Komut:`** yazısı

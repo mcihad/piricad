@@ -128,6 +128,11 @@ Task<void> run_extent_check(Context& ctx)
     // THE NEXT STEP, NAMED AND NOT TAKEN: moving an object is an edit of a
     // legal document, and the engineer decides which of these is wrong.
     ctx.echo("Seçmek için: SEÇ" + named);
+    ctx.offer(Offer{.title = "Kopuk nesne: " + std::to_string(found.detached.size()),
+                    .text  = "Çizimin çoğunluğundan ayrı duruyorlar. Seçin, sonra ne "
+                             "yapacağınıza karar verin; hiçbiri taşınmadı.",
+                    .label = "Seç",
+                    .line  = "SEÇ" + named});
     ctx.echo("Ayrı bir katmana almak için: KATMANAT" + named + " katman=HATALI");
     if (found.detached.size() > kNamedAtMost)
         ctx.echo("(İlk " + std::to_string(kNamedAtMost) +

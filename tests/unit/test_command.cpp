@@ -2281,6 +2281,41 @@ TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("ALANÖLÇ köşelerden: ALAN satırını teklif eder; satır tek adımda aynı alanı çizer")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    auto measured = f.bus.execute_line("ALANÖLÇ yontem=nokta noktalar=0,0 40,0 40,30 0,30",
+                                       Origin::CommandLine);
+    REQUIRE(measured.ok());
+    REQUIRE(measured.value().offer.has_value());
+    const Offer next = *measured.value().offer;
+    CHECK(next.label == "Alan olarak çiz");
+    CHECK(next.line == "ALAN 0.000,0.000 40.000,0.000 40.000,30.000 0.000,30.000");
+    // The same line on the transcript, for the hand at the keyboard.
+    CHECK(said.find("Alan olarak çizmek için: " + next.line) != std::string::npos);
+
+    // OFFERED, NOT MADE: the question drew nothing.
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(f.journal.entries().empty());
+
+    // TAKEN: one area with those corners, one undo step, one plain core.area
+    // journal line — the offer is ALAN's own line, not a side door.
+    REQUIRE(f.bus.execute_line(next.line, Origin::Gui).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+    CHECK(f.doc.entity_area(0) == 1'200'000'000); ///< 40 m × 30 m
+    CHECK(f.undo.undo_depth() == 1);
+    REQUIRE(f.journal.entries().size() == 1);
+    CHECK(f.journal.entries().front().command_id == "core.area");
+
+    // An area measured by its OBJECT offers nothing: the object is there.
+    auto of_object = f.bus.execute_line("ALANÖLÇ nesneler=1", Origin::CommandLine);
+    REQUIRE(of_object.ok());
+    CHECK_FALSE(of_object.value().offer.has_value());
+}
+
 TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")
 {
     Fixture f;

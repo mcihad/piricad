@@ -343,6 +343,16 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(view-history PROPERTIES TIMEOUT 120)
 
+    # AND A COMMAND'S OFFER (`command::Offer`): the banner over the canvas, the
+    # one press that runs the whole offered line, and the stale offer put away.
+    add_test(NAME offer-banner
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_OFFER_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(offer-banner PROPERTIES TIMEOUT 120)
+
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page
     # box, the author field and the encryption of what came out — plus the print

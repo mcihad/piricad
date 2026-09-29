@@ -103,8 +103,9 @@ KATMANAT nesneler=101 katman=HATALI
 
 ### Arayüz
 
-**Analiz ▸ Denetim ▸ Kapsam Denetimi** aynı komutu çalıştırır. Sonuç Transkript'e yazılır
-ve her kopuk nesne tuvalde `kopuk · 4337,5 km` yazılı bir işaretle gösterilir; işaretler
+**Analiz ▸ Denetim ▸ Kapsam Denetimi** aynı komutu çalıştırır. Sonuç Transkript'e yazılır,
+tuvalin üstünde kopuk nesneleri seçen **Seç** düğmesi belirir (transkriptteki `SEÇ` satırını
+çalıştırır) ve her kopuk nesne tuvalde `kopuk · 4337,5 km` yazılı bir işaretle gösterilir; işaretler
 çizim değişince ya da hiçbir komut çalışmıyorken **Esc**'e basınca kalkar. Uzak nesneyi
 görmek için `YAKINLAŞ KAPSAM`, bulduktan sonra ona gitmek için
 [`YAKINLAŞ SEÇİM`](zoom.md).

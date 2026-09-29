@@ -249,6 +249,22 @@ Task<void> measure_by_corners(Context& ctx)
     report.set("kose", core::Json::integer(static_cast<std::int64_t>(ring.size())));
     ctx.report(std::move(report));
 
+    // THE FACE, DRAWN IF WANTED: the same corners as an ALAN line. Netcad's
+    // Alan Sor makes the area object when it is done (wiki 217385205); here it
+    // is OFFERED, not made — ALANÖLÇ stays a question, and the area is ALAN's
+    // own, one undo step and one journal line (netcad_plan.md N-02). Metres
+    // with a decimal point, the way the command line reads a coordinate.
+    std::string line = "ALAN";
+    for (const core::Point2 corner : ring)
+        line +=
+            " " + core::metres_fixed(corner.x, 3, '.') + "," + core::metres_fixed(corner.y, 3, '.');
+    ctx.echo("Alan olarak çizmek için: " + line);
+    ctx.offer(Offer{.title = "Ölçülen alan",
+                    .text  = "Alan: " + square_metres(area) + " · " + std::to_string(ring.size()) +
+                            " köşe. Aynı köşelerle bir alan çizer.",
+                    .label = "Alan olarak çiz",
+                    .line  = line});
+
     ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Ring,
                          .points = ring,
                          .labels = {square_metres(area) + " · çevre " + metres(perimeter)}});
