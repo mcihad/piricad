@@ -244,12 +244,11 @@ void StatusStrip::relayout()
     // left over past step 10 is chips that do not fit and are not drawn.
     const QString sheetFull =
         scale_.isEmpty() && crs_.isEmpty() ? QString() : scale_ + QStringLiteral("  ·  ") + crs_;
-    const QString crsShort = first_part(crs_);
-    const QString sheetShort =
-        scale_.isEmpty() ? crsShort
-        : crsShort.isEmpty() ? scale_
-                             : scale_ + QStringLiteral("  ·  ") + crsShort;
-    const QString perfShort = first_part(performance_);
+    const QString crsShort   = first_part(crs_);
+    const QString sheetShort = scale_.isEmpty()     ? crsShort
+                               : crsShort.isEmpty() ? scale_
+                                                    : scale_ + QStringLiteral("  ·  ") + crsShort;
+    const QString perfShort  = first_part(performance_);
 
     const QFontMetrics chipMetrics(sans(kStatusPx, QFont::DemiBold, 0.4));
     int chipsWidth = 0;
@@ -292,8 +291,8 @@ void StatusStrip::relayout()
         cell->left = x;
     }
     rightEdge_ = x;
-    agentRect_ = agentCell_.shown ? QRect(agentCell_.left, 1, agentCell_.width, kStatusHeight - 1)
-                                  : QRect();
+    agentRect_ =
+        agentCell_.shown ? QRect(agentCell_.left, 1, agentCell_.width, kStatusHeight - 1) : QRect();
 
     // The chips, from the coordinate rightwards — and a chip that would reach
     // into the readings is not drawn at all rather than drawn under them.
@@ -301,8 +300,9 @@ void StatusStrip::relayout()
     int cx              = coordWidth_ + 1;
     bool room           = true;
     for (Chip& chip : chips_) {
-        chip.left  = cx;
-        chip.width = chipPad_ + static_cast<int>(chipMetrics.horizontalAdvance(chip.label)) + chipPad_;
+        chip.left = cx;
+        chip.width =
+            chipPad_ + static_cast<int>(chipMetrics.horizontalAdvance(chip.label)) + chipPad_;
         if (!room || chip.left + chip.width > chipLimit) {
             room       = false;
             chip.width = 0;
@@ -532,9 +532,9 @@ void StatusStrip::paintEvent(QPaintEvent*)
             glyph_pixmap(Glyph::Cloud, connected_ ? t.ok : t.textFaint, kStatusIcon,
                          devicePixelRatioF()));
         p.setPen(t.textDim);
-        p.drawText(
-            QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, connCell_.width, kStatusHeight - 1),
-            Qt::AlignVCenter | Qt::AlignLeft, connCell_.text);
+        p.drawText(QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, connCell_.width,
+                         kStatusHeight - 1),
+                   Qt::AlignVCenter | Qt::AlignLeft, connCell_.text);
         p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
     }
 

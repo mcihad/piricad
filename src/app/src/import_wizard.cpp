@@ -916,8 +916,8 @@ void ImportWizard::startProbe()
     // never guesses (io.md R20), and a DXF that names no unit is read in the
     // project's unit here exactly as İÇEAKTAR will read it.
     io::ImportOptions options;
-    const core::Crs& mine = controller_.document().crs();
-    options.project_crs   = mine.resolved() ? "EPSG:" + std::to_string(mine.epsg()) : mine.id();
+    const core::Crs& mine    = controller_.document().crs();
+    options.project_crs      = mine.resolved() ? "EPSG:" + std::to_string(mine.epsg()) : mine.id();
     options.project_meridian = mine.central_meridian_deg();
     options.drawing_unit =
         core::drawing_unit_from_setting(controller_.bus().setting("core.cizim.birim").as_enum());

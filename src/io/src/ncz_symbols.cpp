@@ -56,7 +56,7 @@ std::optional<double> number(std::string_view value)
 {
     std::string v(value);
     std::replace(v.begin(), v.end(), ',', '.');
-    double out = 0.0;
+    double out           = 0.0;
     const auto [ptr, ec] = std::from_chars(v.data(), v.data() + v.size(), out);
     if (ec != std::errc{} || ptr != v.data() + v.size() || !std::isfinite(out)) return std::nullopt;
     return out;
@@ -119,11 +119,11 @@ Stroke text(std::string words, core::TextAnchor anchor, double x, double y, doub
 /// storeys either side of it — `5 / A–3 / 3`.
 std::optional<Symbol> settlement(const Entity& e)
 {
-    const auto on    = shown(e, "txtOn");
-    const auto arka  = shown(e, "txtArka");
-    const auto yan   = shown(e, "txtYan");
-    const auto kat   = shown(e, "kat");
-    const auto nizam = shown(e, "nizam");
+    const auto on          = shown(e, "txtOn");
+    const auto arka        = shown(e, "txtArka");
+    const auto yan         = shown(e, "txtYan");
+    const auto kat         = shown(e, "kat");
+    const auto nizam       = shown(e, "nizam");
     const std::string code = nizam ? order_code(*nizam) : std::string();
     std::string top;
     if (on) top = *on;
@@ -140,12 +140,13 @@ std::optional<Symbol> settlement(const Entity& e)
     } else if (!code.empty()) {
         s.strokes.push_back(text(code, core::TextAnchor::MiddleCentre, 0.0, 0.0, h));
     }
-    if (!top.empty()) s.strokes.push_back(text(top, core::TextAnchor::MiddleCentre, 0.0, 0.52 * kR, h));
+    if (!top.empty())
+        s.strokes.push_back(text(top, core::TextAnchor::MiddleCentre, 0.0, 0.52 * kR, h));
     if (yan) s.strokes.push_back(text(*yan, core::TextAnchor::MiddleCentre, 0.0, -0.52 * kR, h));
     if (s.strokes.size() == 1) return std::nullopt; // nothing to say
     const std::string middle = code + (kat ? "-" + *kat : std::string());
-    s.key     = "NCZ Yerleşim " + top + "_" + middle + "_" + yan.value_or("");
-    s.summary = "Netcad yerleşim sembolü: " + middle;
+    s.key                    = "NCZ Yerleşim " + top + "_" + middle + "_" + yan.value_or("");
+    s.summary                = "Netcad yerleşim sembolü: " + middle;
     return s;
 }
 
@@ -164,8 +165,8 @@ std::optional<Symbol> construction(const Entity& e)
     };
     const std::string taks = pair("taks", "minTaks");
     const std::string kaks = pair("kaks", "minKaks");
-    const bool ratios      = setting(e, "choiceType").value_or("1") != "0" &&
-                        (!taks.empty() || !kaks.empty());
+    const bool ratios =
+        setting(e, "choiceType").value_or("1") != "0" && (!taks.empty() || !kaks.empty());
 
     Symbol s;
     if (ratios) {
@@ -178,8 +179,8 @@ std::optional<Symbol> construction(const Entity& e)
             s.strokes.push_back(text(taks, core::TextAnchor::MiddleCentre, 0.0, 0.36 * kR, h));
             s.strokes.push_back(text(kaks, core::TextAnchor::MiddleCentre, 0.0, -0.36 * kR, h));
         } else {
-            s.strokes.push_back(text(taks.empty() ? kaks : taks, core::TextAnchor::MiddleCentre,
-                                     0.0, 0.0, h));
+            s.strokes.push_back(
+                text(taks.empty() ? kaks : taks, core::TextAnchor::MiddleCentre, 0.0, 0.0, h));
         }
         s.key     = "NCZ Yapılaşma " + taks + "_" + kaks;
         s.summary = "Netcad yapılaşma sembolü: TAKS " + taks + ", KAKS " + kaks;
@@ -195,7 +196,8 @@ std::optional<Symbol> construction(const Entity& e)
     // In metres unless the symbol names its unit (`Kat`): the plan's own text
     // beside such a symbol reads `Yençok=15.50 m`.
     if (const auto v = shown(e, "yEncok"))
-        lines.push_back("Yençok=" + fixed(*v, decimals) + " " + shown(e, "YencokType").value_or("m"));
+        lines.push_back("Yençok=" + fixed(*v, decimals) + " " +
+                        shown(e, "YencokType").value_or("m"));
     if (lines.empty()) return std::nullopt;
     const auto n = static_cast<double>(lines.size());
     std::string joined;
@@ -214,8 +216,8 @@ std::optional<Symbol> road(const Entity& e)
 {
     const auto w = shown(e, "genislik");
     if (!w) return std::nullopt;
-    const std::string full = fixed(*w, 2);
-    const std::size_t dot  = full.find('.');
+    const std::string full  = fixed(*w, 2);
+    const std::size_t dot   = full.find('.');
     const std::string whole = dot == std::string::npos ? full : full.substr(0, dot);
     const std::string frac  = dot == std::string::npos ? std::string("00") : full.substr(dot + 1);
 
@@ -224,8 +226,7 @@ std::optional<Symbol> road(const Entity& e)
     s.strokes.push_back(circle(kR));
     s.strokes.push_back(text(whole, core::TextAnchor::MiddleRight, -0.05 * kR, 0.0, 0.55 * kR));
     s.strokes.push_back(text(frac, core::TextAnchor::BaselineLeft, 0.12 * kR, 0.06 * kR, small));
-    const double under =
-        core::mm_to_metres(core::text_width(frac, core::mm_from_metres(small)));
+    const double under = core::mm_to_metres(core::text_width(frac, core::mm_from_metres(small)));
     s.strokes.push_back(line(0.12 * kR, 0.02 * kR, 0.12 * kR + under, 0.02 * kR));
     s.key     = "NCZ Yol " + full;
     s.summary = "Netcad yol genişliği sembolü: " + full + " m";
@@ -260,7 +261,7 @@ std::optional<Symbol> plan_note(const Entity& e)
     // As tall as the note's paragraphs fit its box, and never wider than the
     // longest line allows: the RTF's own point sizes are relative to a page
     // Netcad scales into the box, so the box is what is known.
-    std::size_t lines = 1;
+    std::size_t lines   = 1;
     std::size_t longest = 0;
     std::size_t run     = 0;
     for (const char ch : body) {
@@ -272,7 +273,7 @@ std::optional<Symbol> plan_note(const Entity& e)
             ++run; // a character, not a UTF-8 continuation byte
         }
     }
-    longest = std::max(longest, run);
+    longest       = std::max(longest, run);
     double height = *h / (static_cast<double>(lines) * 1.45);
     if (longest > 0) height = std::min(height, *w / (static_cast<double>(longest) * 0.62));
     height = std::max(height, *h / 400.0);
@@ -283,7 +284,7 @@ std::optional<Symbol> plan_note(const Entity& e)
     box.points = {{0.0, 0.0}, {*w, 0.0}, {*w, -*h}, {0.0, -*h}};
     box.closed = true;
     s.strokes.push_back(std::move(box));
-    Stroke words = text(body, core::TextAnchor::TopLeft, 0.02 * *w, -0.02 * *h, height);
+    Stroke words     = text(body, core::TextAnchor::TopLeft, 0.02 * *w, -0.02 * *h, height);
     words.wrap_width = 0.96 * *w;
     s.strokes.push_back(std::move(words));
 
@@ -298,8 +299,8 @@ std::optional<Symbol> plan_note(const Entity& e)
     for (int k = 0; k < 8; ++k)
         tag.push_back(kHex[(hash >> (60 - 4 * k)) & 15]);
     std::string first = body.substr(0, std::min<std::size_t>(body.find('\n'), 40));
-    s.key     = "NCZ Plan notu " + tag;
-    s.summary = "Netcad plan notu: " + first;
+    s.key             = "NCZ Plan notu " + tag;
+    s.summary         = "Netcad plan notu: " + first;
     return s;
 }
 
@@ -389,15 +390,17 @@ std::string rtf_text(std::string_view rtf)
 {
     // Destinations that hold no text of the document.
     static constexpr std::array<std::string_view, 16> kSkip{
-        "fonttbl", "colortbl", "stylesheet", "info",       "pict",      "object",
-        "themedata", "colorschememapping", "latentstyles", "datastore", "xmlnstbl",
-        "listtable", "listoverridetable", "rsidtbl",     "generator", "header"};
+        "fonttbl",  "colortbl",  "stylesheet",         "info",         "pict",
+        "object",   "themedata", "colorschememapping", "latentstyles", "datastore",
+        "xmlnstbl", "listtable", "listoverridetable",  "rsidtbl",      "generator",
+        "header"};
 
     struct Group
     {
         bool skip;
         int uc;
     };
+
     std::vector<Group> stack{{false, 1}};
     std::string out;
     int fallback    = 0; // characters still to drop after a `\u`
@@ -453,7 +456,8 @@ std::string rtf_text(std::string_view rtf)
         if (next == '\'') {
             if (i + 4 <= rtf.size()) {
                 unsigned byte = 0;
-                const auto [p, ec] = std::from_chars(rtf.data() + i + 2, rtf.data() + i + 4, byte, 16);
+                const auto [p, ec] =
+                    std::from_chars(rtf.data() + i + 2, rtf.data() + i + 4, byte, 16);
                 if (ec == std::errc{} && p == rtf.data() + i + 4) {
                     if (fallback > 0) {
                         --fallback;
@@ -475,7 +479,8 @@ std::string rtf_text(std::string_view rtf)
             continue;
         }
         std::size_t j = i + 1;
-        while (j < rtf.size() && ((rtf[j] >= 'a' && rtf[j] <= 'z') || (rtf[j] >= 'A' && rtf[j] <= 'Z')))
+        while (j < rtf.size() &&
+               ((rtf[j] >= 'a' && rtf[j] <= 'z') || (rtf[j] >= 'A' && rtf[j] <= 'Z')))
             ++j;
         const std::string_view word = rtf.substr(i + 1, j - i - 1);
         bool has_arg                = false;

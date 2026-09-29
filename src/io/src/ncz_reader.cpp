@@ -217,7 +217,7 @@ public:
         : tx_(tx), options_(options), report_(report), diag_(report.diagnostics),
           source_(std::move(source)), stop_(std::move(stop))
     {
-        everything_ = options_.fields.size() == 1 && options_.fields.front() == "*";
+        everything_       = options_.fields.size() == 1 && options_.fields.front() == "*";
         diag_.unit        = core::DrawingUnit::Metre;
         diag_.unit_source = UnitSource::Crs;
     }
@@ -248,15 +248,15 @@ public:
             ++skipped_[kind];
             ++diag_.skipped;
             if (diag_.skipped_reason.empty())
-                diag_.skipped_reason = std::string(ncz::kind_name(e.kind)) + ": " +
-                                       made.error().message;
+                diag_.skipped_reason =
+                    std::string(ncz::kind_name(e.kind)) + ": " + made.error().message;
             return true;
         }
         const command::EntityId id = made.value();
 
         // ITS OWN COLOUR AND ITS OWN PEN: a colour only where it is not the
         // layer's, a width only where the file gives one.
-        const bool own_colour = e.color && (!layer->colour || *e.color != *layer->colour);
+        const bool own_colour       = e.color && (!layer->colour || *e.color != *layer->colour);
         const std::int32_t width_um = pen_width_um(e.line_width);
         if (width_um > 0) {
             ++widths_;
@@ -280,6 +280,7 @@ public:
     }
 
     bool cancelled() const noexcept { return cancelled_; }
+
     const std::optional<core::Error>& failure() const noexcept { return failure_; }
 
     /// Everything said once the file has been read: the census, the losses, the
@@ -294,13 +295,12 @@ public:
         // damaged one — hands over whatever bytes follow. A transcript is not the
         // place for them: anything but a digit first and digits, letters and dots
         // after it is no version, and the report says none.
-        const std::string& v = h.version_name;
-        const bool versionlike =
-            !v.empty() && v.size() <= 32 && v.front() >= '0' && v.front() <= '9' &&
-            std::all_of(v.begin(), v.end(), [](char ch) {
-                return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
-                       (ch >= 'a' && ch <= 'z') || ch == '.';
-            });
+        const std::string& v   = h.version_name;
+        const bool versionlike = !v.empty() && v.size() <= 32 && v.front() >= '0' &&
+                                 v.front() <= '9' && std::all_of(v.begin(), v.end(), [](char ch) {
+                                     return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
+                                            (ch >= 'a' && ch <= 'z') || ch == '.';
+                                 });
         if (versionlike) report_.version = v;
         report_.declared = declared_of(h);
         report_.layer_names.assign(census_.begin(), census_.end());
@@ -341,7 +341,8 @@ public:
                                               unknown_types + "); okunmadı.");
         if (h.swept_entities != 0)
             diag_.note(Severity::Info,
-                       std::to_string(h.swept_entities) + " nesne, eski NCZ okuyucularının atladığı " +
+                       std::to_string(h.swept_entities) +
+                           " nesne, eski NCZ okuyucularının atladığı " +
                            std::to_string(h.swept_blocks) +
                            " bölümden okundu (Netcad 8 düzeni: ayarlar geometrinin arasında).");
         if (!planet_.empty()) {
@@ -383,14 +384,15 @@ public:
                                            "alanında.");
         if (widths_ != 0) {
             const auto mm = [](std::int32_t um) {
-                std::string out = std::to_string(um / 1000) + ",";
+                std::string out         = std::to_string(um / 1000) + ",";
                 const std::int32_t rest = (um % 1000) / 10;
                 if (rest < 10) out += "0";
                 out += std::to_string(rest);
                 return out;
             };
-            diag_.note(Severity::Info, std::to_string(widths_) + " nesnenin çizgi kalınlığı okundu (" +
-                                           mm(thinnest_um_) + "–" + mm(widest_um_) +
+            diag_.note(Severity::Info, std::to_string(widths_) +
+                                           " nesnenin çizgi kalınlığı okundu (" + mm(thinnest_um_) +
+                                           "–" + mm(widest_um_) +
                                            " mm); ekranda görmek için durum çubuğunda KALINLIK "
                                            "açık olmalı.");
         }
@@ -403,13 +405,11 @@ public:
                                                " yay tam turdan geniş olduğu için daire olarak "
                                                "okundu.");
         if (flat_rotation_ != 0)
-            diag_.note(Severity::Degraded,
-                       std::to_string(flat_rotation_) +
-                           " yazının dönüklüğü sayı değildi; yatay yazıldı.");
+            diag_.note(Severity::Degraded, std::to_string(flat_rotation_) +
+                                               " yazının dönüklüğü sayı değildi; yatay yazıldı.");
         if (!renamed_.empty())
-            diag_.note(Severity::Degraded,
-                       std::to_string(renamed_.size()) +
-                           " katman adındaki denetim karakterleri atıldı.");
+            diag_.note(Severity::Degraded, std::to_string(renamed_.size()) +
+                                               " katman adındaki denetim karakterleri atıldı.");
         if (unwritable_cells_ != 0)
             diag_.note(Severity::Degraded, std::to_string(unwritable_cells_) +
                                                " sayı değeri sütuna sığmadığı ya da sayı "
@@ -477,8 +477,9 @@ private:
     bool wanted(const std::string& name) const
     {
         if (options_.only.empty()) return true;
-        return std::any_of(options_.only.begin(), options_.only.end(),
-                           [&](const std::string& pick) { return core::turkish_iequals(pick, name); });
+        return std::any_of(
+            options_.only.begin(), options_.only.end(),
+            [&](const std::string& pick) { return core::turkish_iequals(pick, name); });
     }
 
     const Layer* layer_for(const std::string& name, std::uint8_t code)
@@ -487,8 +488,8 @@ private:
         Layer made;
         made.slot = tx_.ensure_layer(name);
         if (made.slot == core::kNoLayer) {
-            failure_ = core::err(ErrorCode::ValidationFailed,
-                                   "'" + name + "' katmanı oluşturulamadı.");
+            failure_ =
+                core::err(ErrorCode::ValidationFailed, "'" + name + "' katmanı oluşturulamadı.");
             return nullptr;
         }
         // The layer's OWN colour — what an entity of colour code 0 on it takes —
@@ -575,7 +576,7 @@ private:
     static core::Error invalid()
     {
         return core::err(ErrorCode::ValidationFailed,
-                           "koordinatı sayı değil ya da ±100 000 km dışında");
+                         "koordinatı sayı değil ya da ±100 000 km dışında");
     }
 
     core::Result<command::EntityId> place(const ncz::Entity& e, core::LayerId slot)
@@ -612,7 +613,7 @@ private:
                 points_.pop_back();
             if (points_.size() < 3)
                 return core::err(ErrorCode::ValidationFailed,
-                                   "kapalı şekil milimetrede üç köşeye ulaşmıyor");
+                                 "kapalı şekil milimetrede üç köşeye ulaşmıyor");
             const core::RingGeometry::RingInput ring{points_, core::RingRole::Exterior, 0};
             return tx_.add_area(slot, {&ring, 1});
         }
@@ -691,7 +692,7 @@ private:
         const Point2 b = dxf::point_on_circle(*centre, radius, to);
         if (a == b)
             return core::err(ErrorCode::ValidationFailed,
-                               "yayın iki ucu milimetrede aynı noktaya düşüyor");
+                             "yayın iki ucu milimetrede aynı noktaya düşüyor");
         return tx_.add_arc(slot, *centre, radius, a, b);
     }
 
@@ -711,7 +712,8 @@ private:
     /// ByBlock, so each reference draws it in its own layer's colour.
     core::Result<core::BlockId> block_for(const ncz::Symbol& symbol)
     {
-        if (const auto found = blocks_.find(symbol.key); found != blocks_.end()) return found->second;
+        if (const auto found = blocks_.find(symbol.key); found != blocks_.end())
+            return found->second;
         auto made = tx_.add_block(symbol.key, symbol.summary, Point2{0, 0});
         if (!made) return made.error();
         const core::BlockId block = made.value();
@@ -722,7 +724,9 @@ private:
             member_style_ = tx_.intern_style(a);
         }
         const auto mm = [](double metres) { return core::mm_from_metres(metres); };
-        const auto at = [&](std::pair<double, double> xy) { return Point2{mm(xy.first), mm(xy.second)}; };
+        const auto at = [&](std::pair<double, double> xy) {
+            return Point2{mm(xy.first), mm(xy.second)};
+        };
         for (const ncz::Stroke& st : symbol.strokes) {
             core::Result<command::EntityId> member = core::err(ErrorCode::Internal, "");
             switch (st.type) {
@@ -756,7 +760,8 @@ private:
                 if (member) {
                     core::TextLines lines;
                     lines.wrap = st.wrap_width > 0.0;
-                    if (auto t = tx_.set_text(member.value(), st.text, height, st.anchor, lines); !t)
+                    if (auto t = tx_.set_text(member.value(), st.text, height, st.anchor, lines);
+                        !t)
                         return t.error();
                 }
                 break;
@@ -793,10 +798,10 @@ private:
             ++planet_unsized_;
         }
         core::BlockReference ref;
-        ref.block = block.value();
-        ref.sx    = ratio_of(size);
-        ref.sy    = ref.sx;
-        double turn = std::isfinite(e.rotation) ? e.rotation : 0.0;
+        ref.block         = block.value();
+        ref.sx            = ratio_of(size);
+        ref.sy            = ref.sx;
+        double turn       = std::isfinite(e.rotation) ? e.rotation : 0.0;
         std::int64_t udeg = dxf::udeg_from_degrees(turn) % core::kUDegFullCircle;
         if (udeg < 0) udeg += core::kUDegFullCircle;
         ref.rotation_udeg = udeg;
@@ -893,7 +898,8 @@ private:
             const core::AttrColumn* held = table.column(found);
             if (held != nullptr && held->spec().type == type) return found;
             diag_.note(Severity::Degraded,
-                       "'" + std::string(id) + "' sütunu belgede başka türde tanımlı; alan okunmadı.");
+                       "'" + std::string(id) +
+                           "' sütunu belgede başka türde tanımlı; alan okunmadı.");
             return std::nullopt;
         }
         core::AttrSpec spec;
@@ -927,8 +933,9 @@ private:
     bool asked(std::size_t k) const
     {
         if (everything_) return true;
-        return std::any_of(options_.fields.begin(), options_.fields.end(),
-                           [&](const std::string& f) { return core::turkish_iequals(f, kFields[k].id); });
+        return std::any_of(
+            options_.fields.begin(), options_.fields.end(),
+            [&](const std::string& f) { return core::turkish_iequals(f, kFields[k].id); });
     }
 
     /// The asked fields of `e` onto `id`.
@@ -1013,7 +1020,7 @@ private:
     /// that dot deserves to be told why. The bulk is where 96 % of the objects
     /// are; a stray is outside that box grown by twenty times its size and at
     /// least 100 km on every side — far enough to shrink the fitted view to a
-    /// twentieth, and never the long tail of a real town (the Suşehri plan's
+    /// twentieth, and never the long tail of a real town (the `Suşehri` plan's
     /// runs 10 km south of its centre and is not one).
     void say_strays()
     {
@@ -1027,10 +1034,10 @@ private:
             std::nth_element(v.begin(), v.begin() + at, v.end());
             return v[static_cast<std::size_t>(at)];
         };
-        const double x0 = percentile(true, 0.02);
-        const double x1 = percentile(true, 0.98);
-        const double y0 = percentile(false, 0.02);
-        const double y1 = percentile(false, 0.98);
+        const double x0   = percentile(true, 0.02);
+        const double x1   = percentile(true, 0.98);
+        const double y0   = percentile(false, 0.02);
+        const double y1   = percentile(false, 0.98);
         const double grow = std::max(20.0 * std::max(x1 - x0, y1 - y0), 100000.0);
 
         std::size_t strays = 0;
@@ -1063,8 +1070,7 @@ private:
             return core::metres_fixed(core::mm_from_metres(v), 0, ',');
         };
         diag_.note(Severity::Warning,
-                   std::to_string(strays) +
-                       " nesne çizimin geri kalanından çok uzakta (" + layers +
+                   std::to_string(strays) + " nesne çizimin geri kalanından çok uzakta (" + layers +
                        "; ilki Y " + metres(first->x) + ", X " + metres(first->y) +
                        " yakınında). YAKINLAŞ KAPSAM bu yüzden çizimi küçük gösterir; kaynakta "
                        "yanlış yere düşmüşlerse silin.");
@@ -1099,11 +1105,11 @@ private:
         }
 
         if (report_.declared.empty()) {
-            diag_.note(Severity::Warning,
-                       "Dosya koordinat sistemi bildirmiyor. Çizimin kendi sistemi varsayıldı: " +
-                           crs +
-                           ". Yanlışsa GERİAL ile geri alın, AYAR koordinat_sistemi ile doğrusunu "
-                           "kurun ve yeniden aktarın.");
+            diag_.note(
+                Severity::Warning,
+                "Dosya koordinat sistemi bildirmiyor. Çizimin kendi sistemi varsayıldı: " + crs +
+                    ". Yanlışsa GERİAL ile geri alın, AYAR koordinat_sistemi ile doğrusunu "
+                    "kurun ve yeniden aktarın.");
             return core::ok();
         }
 
@@ -1112,8 +1118,8 @@ private:
         if (h.mproj && h.projection == 3 && options_.project_meridian != 0 &&
             static_cast<int>(h.zone) != options_.project_meridian) {
             diag_.note(Severity::Warning,
-                       "Dosya " + report_.declared + " bildiriyor; çizimin sistemi (" + crs +
-                           ") " + std::to_string(options_.project_meridian) +
+                       "Dosya " + report_.declared + " bildiriyor; çizimin sistemi (" + crs + ") " +
+                           std::to_string(options_.project_meridian) +
                            "° orta meridyenli. Koordinatlar dönüştürülmedi: dilimler farklıysa "
                            "çizim yanlış yere düşer. GERİAL ile geri alın, AYAR "
                            "koordinat_sistemi ile doğru dilimi kurun ve yeniden aktarın.");
@@ -1152,6 +1158,7 @@ private:
         double y;
         const Layer* layer;
     };
+
     std::vector<Place> places_;
 
     std::optional<core::AttrId> number_column_;
@@ -1203,10 +1210,11 @@ command::Task<core::Result<NczReport>> import_ncz(command::Transaction& tx, std:
     // one. A fresh drawing has TUREF/TM36; only a drawing whose system was
     // cleared arrives here without.
     if (options.project_crs.empty())
-        co_return core::err(ErrorCode::ValidationFailed,
-                            "'" + path +
-                                "' koordinatları çizimin sisteminde okunur ama çizimin koordinat "
-                                "sistemi yok. AYAR koordinat_sistemi ile kurun ve yeniden aktarın.");
+        co_return core::err(
+            ErrorCode::ValidationFailed,
+            "'" + path +
+                "' koordinatları çizimin sisteminde okunur ama çizimin koordinat "
+                "sistemi yok. AYAR koordinat_sistemi ile kurun ve yeniden aktarın.");
 
     auto mapped = MappedFile::open(path);
     if (!mapped)
@@ -1227,7 +1235,8 @@ command::Task<core::Result<NczReport>> import_ncz(command::Transaction& tx, std:
     if (const auto& failed = mapper.failure(); failed) co_return *failed;
 
     auto tables = ncz::attribute_tables(data, stop);
-    if (!tables) co_return core::err(ErrorCode::Cancelled, "İçe aktarma durduruldu; çizim değişmedi.");
+    if (!tables)
+        co_return core::err(ErrorCode::Cancelled, "İçe aktarma durduruldu; çizim değişmedi.");
 
     if (auto st = mapper.finish(header, *tables, path); !st) co_return st.error();
     co_return report;

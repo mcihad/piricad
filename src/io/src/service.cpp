@@ -927,12 +927,12 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
                           "AÇ komutunu kullanın.");
 
     ImportOptions options;
-    options.driver       = std::move(format);
-    options.project_crs  = effective_crs(bus_);
+    options.driver           = std::move(format);
+    options.project_crs      = effective_crs(bus_);
     options.project_meridian = bus_.document().crs().central_meridian_deg();
-    options.only         = std::move(only);
-    options.fields       = std::move(fields);
-    options.drawing_unit = effective_unit(bus_);
+    options.only             = std::move(only);
+    options.fields           = std::move(fields);
+    options.drawing_unit     = effective_unit(bus_);
 
     // PHASE ONE: the read, into a document of its own. Everything below `job.work`
     // may run on a host thread while this frame sits suspended; the scratch

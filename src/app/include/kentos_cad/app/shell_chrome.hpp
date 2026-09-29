@@ -209,10 +209,10 @@ private:
     int coordWidth_  = 0;
     ThemeMode theme_ = ThemeMode::Dark;
 
-    Cell sheetCell_; ///< the plot scale and the coordinate system
-    Cell agentCell_; ///< the agent listener
-    Cell connCell_;  ///< the database connection
-    Cell perfCell_;  ///< the drawing backend
+    Cell sheetCell_;     ///< the plot scale and the coordinate system
+    Cell agentCell_;     ///< the agent listener
+    Cell connCell_;      ///< the database connection
+    Cell perfCell_;      ///< the drawing backend
     int chipPad_    = 0; ///< a chip's inner margin: less of it when room is short
     int rightEdge_  = 0; ///< the left edge of the right-hand cells
     int compaction_ = 0; ///< how many steps the layout had to take to fit

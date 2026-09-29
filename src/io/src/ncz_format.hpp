@@ -46,7 +46,7 @@
 //     between the geometry, the reference's walk reads a letter of them as a block
 //     type, and whatever that "block" spans is skipped: on a 72 MB Sivas UİP that
 //     was 190 582 objects — a third of the file, and 0,1 % of them duplicates of
-//     what it did read. On the 12 MB Suşehri plan it finds nothing more.
+//     what it did read. On the 12 MB `Suşehri` plan it finds nothing more.
 //   * A SMARTOBJECT WITH NO RECTANGLE IS KEPT AS A POINT. The reference needs
 //     a rectangle of at least a millimetre and dropped the rest; Netcad 8's plan
 //     notations are anchored at a point — 4 088 of them had no size, and 5 689
@@ -161,14 +161,14 @@ struct Entity
 {
     Kind kind{Kind::Point};
     std::uint8_t layer_code{0};
-    std::string layer_name;              ///< empty when no table names the code
-    std::optional<std::uint32_t> color;  ///< 0xAARRGGBB, or none
-    std::string name;                    ///< a point's name — its number
-    std::string label;                   ///< text, symbol code, block/sheet name
-    double text_height{0.0};             ///< metres
-    double rotation{0.0};                ///< degrees, as the reference computes it
-    double box_width{0.0};               ///< metres
-    double box_height{0.0};              ///< metres
+    std::string layer_name;             ///< empty when no table names the code
+    std::optional<std::uint32_t> color; ///< 0xAARRGGBB, or none
+    std::string name;                   ///< a point's name — its number
+    std::string label;                  ///< text, symbol code, block/sheet name
+    double text_height{0.0};            ///< metres
+    double rotation{0.0};               ///< degrees, as the reference computes it
+    double box_width{0.0};              ///< metres
+    double box_height{0.0};             ///< metres
     double scale{0.0};
     double grid_x{0.0};
     double grid_y{0.0};
@@ -180,7 +180,7 @@ struct Entity
     /// DXF export writes as 0 — is left to the layer.
     double line_width{0.0};
     bool closed{false};
-    std::uint16_t set{0};    ///< `Field` bits
+    std::uint16_t set{0}; ///< `Field` bits
     std::vector<Coord> coords;
 
     /// A Netcad 8 SmartObject's class and properties; `None` and empty for
@@ -213,11 +213,11 @@ struct AttributeTable
 /// counts that the reference let fall silently.
 struct Header
 {
-    std::vector<std::string> layer_names;   ///< the layer tables, non-blank names only
+    std::vector<std::string> layer_names;    ///< the layer tables, non-blank names only
     std::vector<std::uint32_t> layer_colors; ///< LEX.ST2, 0xFFRRGGBB
-    std::string version_name;               ///< `5.2.0.1035N`
-    std::string epsg;                       ///< TILED_XML's `SRS…` as the reference cleans it
-    std::string projection_text;            ///< `ITRF / 3 / Zone 39`
+    std::string version_name;                ///< `5.2.0.1035N`
+    std::string epsg;                        ///< TILED_XML's `SRS…` as the reference cleans it
+    std::string projection_text;             ///< `ITRF / 3 / Zone 39`
 
     /// The MPROJ bytes the projection text is built from, for the checks the
     /// reader makes against the drawing's system. Meaningful when `mproj`.
@@ -289,8 +289,7 @@ enum class Outcome : std::uint8_t {
 /// Reads `data` the way the reference's `_NCZParser.parse` does — minus the
 /// attribute tables, which `attribute_tables` reads — handing every entity to
 /// `sink`, and fills `header`. Checks `stop` at least every 4 MB (io.md R15).
-Outcome read(std::span<const std::uint8_t> data, Sink& sink, Header& header,
-             std::stop_token stop);
+Outcome read(std::span<const std::uint8_t> data, Sink& sink, Header& header, std::stop_token stop);
 
 /// Only the header: the first of the two passes, for a caller that wants the
 /// tables and the declared system without the geometry.

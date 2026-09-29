@@ -14,14 +14,14 @@
 // record's own bounding box says (20 × size across, on all 15 722 objects of the
 // Sivas UİP):
 //
-//   Yerleşim    a circle; the front garden above a short dash, the side garden
+//   `Yerleşim`  a circle; the front garden above a short dash, the side garden
 //               below it, the order (A, B, BL…) left of it and the storeys right
-//   Yapılaşma   a circle split by a line, TAKS over KAKS (`0.30-0.40` when a
-//               minimum is set) — or, for Emsal, `E=1.00` and its lines, bare
-//   Yol         a circle; the width's whole metres, and its two decimals raised,
+//   `Yapılaşma` a circle split by a line, TAKS over KAKS (`0.30-0.40` when a
+//               minimum is set) — or, for `Emsal`, `E=1.00` and its lines, bare
+//   `Yol`       a circle; the width's whole metres, and its two decimals raised,
 //               small and underlined: `17⁰⁰`
-//   Plan Notu   its RTF as text, wrapped to the note's box, and the box
-//   Fonksiyon   the function's name
+//   `Plan Notu` its RTF as text, wrapped to the note's box, and the box
+//   `Fonksiyon` the function's name
 //
 // Built in the symbol's own space — metres, anchor at the origin, size one — so
 // one definition serves every object that says the same thing and the object's
@@ -62,8 +62,8 @@ struct Stroke
 /// A drawn symbol and what makes two of them the same drawing.
 struct Symbol
 {
-    std::string key;      ///< the block's name: the class and what the symbol reads
-    std::string summary;  ///< one line for the block's description
+    std::string key;     ///< the block's name: the class and what the symbol reads
+    std::string summary; ///< one line for the block's description
     std::vector<Stroke> strokes;
 };
 

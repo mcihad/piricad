@@ -3650,8 +3650,8 @@ int MainWindow::probeStatusStrip()
     // through `EPSG:5256`. At every width here, with the widest coordinate the
     // strip is given and a message besides, every region the strip draws is
     // inside it and apart from every other.
-    statusStrip_->setCoordinate(tr("Y %1  X %2").arg(QStringLiteral("-9 999 999,999"),
-                                                     QStringLiteral("-9 999 999,999")));
+    statusStrip_->setCoordinate(
+        tr("Y %1  X %2").arg(QStringLiteral("-9 999 999,999"), QStringLiteral("-9 999 999,999")));
     statusStrip_->setMessage(measured);
     for (const int wide : {1920, 1600, 1440, 1366, 1280, 1152, 1024}) {
         resize(wide, 900);

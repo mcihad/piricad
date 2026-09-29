@@ -117,8 +117,8 @@ constexpr double kDegToRad = core::kPi / 180.0;
 /// `_is_token_byte`.
 constexpr bool token_byte(std::uint8_t v) noexcept
 {
-    return (v >= '0' && v <= '9') || (v >= 'A' && v <= 'Z') || (v >= 'a' && v <= 'z') ||
-           v == '-' || v == '_';
+    return (v >= '0' && v <= '9') || (v >= 'A' && v <= 'Z') || (v >= 'a' && v <= 'z') || v == '-' ||
+           v == '_';
 }
 
 /// A byte that `str.strip()` would take as white space once decoded: the
@@ -196,7 +196,7 @@ std::uint32_t normalize_layer_color(std::uint32_t argb) noexcept
 
 /// `_geometry_color` against the tables in `h`.
 std::optional<std::uint32_t> geometry_color(const Header& h, std::uint8_t layer_code,
-                                                   std::uint8_t color_code) noexcept
+                                            std::uint8_t color_code) noexcept
 {
     if (color_code == 1) return to_argb(0, 0, 255);
     if (color_code == 255) return to_argb(255, 0, 0);
@@ -236,8 +236,7 @@ public:
            const Header* final_header)
         : data_(data.data()), size_(data.size()), mode_(mode), header_(header), sink_(sink),
           final_(final_header)
-    {
-    }
+    {}
 
     /// `_scan_blocks`.
     Outcome scan(const std::stop_token& stop)
@@ -507,18 +506,16 @@ private:
     /// the record's own header declares — which is why the block walk never saw
     /// it; on every one of those objects the next record starts exactly there.
     /// At +118 a version byte, the GUID again, four constant bytes, and at +139
-    /// the property count; the list ends four bytes before the record does. Then each property: its name, a type byte, its value,
-    /// the label Netcad shows for it — each a length and bytes, the lengths
-    /// 7-bit varints — and seven bytes of flags whose last says whether the
-    /// value is the user's. Every value is text. A record that does not hold
-    /// together — a count past the payload, a GUID that does not repeat — is not
-    /// one, and is read the reference's way.
-    /// Where a Netcad 8 SmartObject really ends, from `offset`: past its
-    /// property block, which the record's header does not count; 0 for any
-    /// other record. The walk resumes there, so the block's last 89 bytes are
-    /// never read as blocks of their own — which, at the top of a file, they
-    /// would be, and a "block" found in a property's text swallows the objects
-    /// after it. (The record's header declares 81 bytes fewer.)
+    /// the property count; the list ends four bytes before the record does. Then each property: its
+    /// name, a type byte, its value, the label Netcad shows for it — each a length and bytes, the
+    /// lengths 7-bit varints — and seven bytes of flags whose last says whether the value is the
+    /// user's. Every value is text. A record that does not hold together — a count past the
+    /// payload, a GUID that does not repeat — is not one, and is read the reference's way. Where a
+    /// Netcad 8 SmartObject really ends, from `offset`: past its property block, which the record's
+    /// header does not count; 0 for any other record. The walk resumes there, so the block's last
+    /// 89 bytes are never read as blocks of their own — which, at the top of a file, they would be,
+    /// and a "block" found in a property's text swallows the objects after it. (The record's header
+    /// declares 81 bytes fewer.)
     std::size_t smart_extent(std::size_t offset) const noexcept
     {
         if (offset + 143 > size_ || data_[offset + 6] != 15) return 0;
@@ -554,7 +551,7 @@ private:
             if (guid == id) e.smart = cls;
 
         std::vector<SmartProperty> props;
-        std::size_t at = 143;
+        std::size_t at  = 143;
         const auto text = [&](std::string& out) {
             std::size_t n = 0;
             if (!varint(p, end, at, n) || n > end - at) return false;
@@ -631,15 +628,15 @@ private:
             const std::uint8_t projection = data_[offset + 16];
             const std::uint8_t datum      = data_[offset + 17];
             const std::uint8_t zone       = data_[offset + 21];
-            const char* p = projection == 1 ? "Geographic"
-                            : projection == 2 ? "6"
-                            : projection == 3 ? "3"
-                                              : "Undefined";
-            const char* d = datum == 0     ? "WGS-84"
-                            : datum == 1   ? "ITRF"
-                            : datum == 4   ? "ED50"
-                            : datum == 254 ? "ED50-HGK"
-                                           : "Undefined";
+            const char* p                 = projection == 1   ? "Geographic"
+                                            : projection == 2 ? "6"
+                                            : projection == 3 ? "3"
+                                                              : "Undefined";
+            const char* d                 = datum == 0     ? "WGS-84"
+                                            : datum == 1   ? "ITRF"
+                                            : datum == 4   ? "ED50"
+                                            : datum == 254 ? "ED50-HGK"
+                                                           : "Undefined";
             header_.projection_text =
                 std::string(d) + " / " + p + " / Zone " + std::to_string(zone);
             header_.mproj      = true;
@@ -695,8 +692,9 @@ private:
             }
             if (stopped_) return Outcome::Stopped;
 
-            const bool is_geometry = data_[cursor] == kGeometry || data_[cursor] == kGeometryExtended;
-            const bool matching    = data_[cursor + 5] == data_[cursor + 6];
+            const bool is_geometry =
+                data_[cursor] == kGeometry || data_[cursor] == kGeometryExtended;
+            const bool matching = data_[cursor + 5] == data_[cursor + 6];
             if (!is_geometry || !matching) {
                 ++cursor;
                 continue;
@@ -709,7 +707,8 @@ private:
             }
             parse_geometry(cursor, static_cast<std::size_t>(inner),
                            data_[cursor] == kGeometryExtended ? kExtendedHeader : 0);
-            cursor += static_cast<std::size_t>(std::max<std::uint64_t>(total, smart_extent(cursor)));
+            cursor +=
+                static_cast<std::size_t>(std::max<std::uint64_t>(total, smart_extent(cursor)));
         }
         return Outcome::Complete;
     }
@@ -733,7 +732,7 @@ private:
             }
         }
         const std::uint64_t before = appended_;
-        record_ = offset;
+        record_                    = offset;
         switch (type) {
         case 1: parse_point(offset, ext); break;
         case 2: parse_line(offset, block_size); break;
@@ -944,7 +943,7 @@ private:
         const std::size_t block_end = std::min(size_, offset + block_size + 1);
         std::size_t symbol_offset   = offset + ext + 94;
         if (symbol_offset >= block_end) symbol_offset = offset + 94;
-        const std::uint8_t code = symbol_offset < block_end ? data_[symbol_offset] : 0;
+        const std::uint8_t code    = symbol_offset < block_end ? data_[symbol_offset] : 0;
         std::optional<double> size = positive_float(offset + ext + 86);
         if (!size) size = positive_float(offset + 86);
         const double rotation = py_mod(f32(offset + ext + 90) * kRadToDeg, 360.0);
@@ -991,21 +990,21 @@ private:
         const double angle_radians    = rotation_degrees * kDegToRad;
         // A NaN rotation — a float the file does not hold as a number — gives NaN
         // corners, as `math.sin(nan)` does; the reader then refuses the entity.
-        const core::SinCos t = std::isfinite(angle_radians)
-                                   ? core::sin_cos_rad(angle_radians)
-                                   : core::SinCos{std::nan(""), std::nan("")};
-        const double side_x           = t.sin;
-        const double side_y           = t.cos;
-        const double bottom_x         = t.cos;
-        const double bottom_y         = -t.sin;
-        const double p0x              = raw_x1;
-        const double p0y              = raw_y1;
-        const double p1x              = p0x + bottom_x * width;
-        const double p1y              = p0y + bottom_y * width;
-        const double p2x              = p1x + side_x * height;
-        const double p2y              = p1y + side_y * height;
-        const double p3x              = p0x + side_x * height;
-        const double p3y              = p0y + side_y * height;
+        const core::SinCos t  = std::isfinite(angle_radians)
+                                    ? core::sin_cos_rad(angle_radians)
+                                    : core::SinCos{std::nan(""), std::nan("")};
+        const double side_x   = t.sin;
+        const double side_y   = t.cos;
+        const double bottom_x = t.cos;
+        const double bottom_y = -t.sin;
+        const double p0x      = raw_x1;
+        const double p0y      = raw_y1;
+        const double p1x      = p0x + bottom_x * width;
+        const double p1y      = p0y + bottom_y * width;
+        const double p2x      = p1x + side_x * height;
+        const double p2y      = p1y + side_y * height;
+        const double p3x      = p0x + side_x * height;
+        const double p3y      = p0y + side_y * height;
 
         Entity& e = begin(Kind::Polygon);
         e.coords.push_back(coordinate(p0x, p0y, 0.0));
@@ -1116,9 +1115,9 @@ private:
         // label (see ncz_format.hpp). What the reference would have KEPT still
         // decides the `S0` rule, so that stays the reference's.
         const bool reference_keeps = !(width < 0.001 || height < 0.001);
-        const bool rectangle       = width >= 0.001 && height >= 0.001 && width <= 100000000.0 &&
-                               height <= 100000000.0;
-        const bool point           = !rectangle;
+        const bool rectangle =
+            width >= 0.001 && height >= 0.001 && width <= 100000000.0 && height <= 100000000.0;
+        const bool point         = !rectangle;
         const double angle_grads = f32(offset + 82);
         const double rotation_degrees =
             std::isfinite(angle_grads) ? py_mod(angle_grads * 0.9, 360.0) : 0.0;
@@ -1157,7 +1156,7 @@ private:
             std::string label = whole.find(kBasicLabel) != std::string_view::npos
                                     ? std::string(kBasicLabel)
                                     : ascii_token(offset + 145, block_end);
-            Entity& e = begin(Kind::SmartObject);
+            Entity& e         = begin(Kind::SmartObject);
             e.coords.push_back(coordinate(raw_x1, raw_y1, 0.0));
             e.rotation = rotation_degrees;
             e.scale    = scale;
@@ -1291,13 +1290,13 @@ private:
             pending.insert(pending.end(), i);
 
         const auto removable = [&](std::size_t i) {
-            const Coord& p  = points[prev[i]];
-            const Coord& c  = points[i];
-            const Coord& n  = points[next[i]];
-            const double ax = c.x - p.x;
-            const double ay = c.y - p.y;
-            const double bx = n.x - c.x;
-            const double by = n.y - c.y;
+            const Coord& p     = points[prev[i]];
+            const Coord& c     = points[i];
+            const Coord& n     = points[next[i]];
+            const double ax    = c.x - p.x;
+            const double ay    = c.y - p.y;
+            const double bx    = n.x - c.x;
+            const double by    = n.y - c.y;
             const double a_len = std::sqrt(ax * ax + ay * ay);
             const double b_len = std::sqrt(bx * bx + by * by);
             if (a_len < 0.001 || b_len < 0.001) return true;
@@ -1344,11 +1343,10 @@ private:
         std::array<Coord, 4> u;
         if (!simplify_collinear_ring(c, count, u)) return false;
 
-        using Edge                = std::array<double, 2>;
-        const std::array<Edge, 4> e = {Edge{u[1].x - u[0].x, u[1].y - u[0].y},
-                                       Edge{u[2].x - u[1].x, u[2].y - u[1].y},
-                                       Edge{u[3].x - u[2].x, u[3].y - u[2].y},
-                                       Edge{u[0].x - u[3].x, u[0].y - u[3].y}};
+        using Edge                  = std::array<double, 2>;
+        const std::array<Edge, 4> e = {
+            Edge{u[1].x - u[0].x, u[1].y - u[0].y}, Edge{u[2].x - u[1].x, u[2].y - u[1].y},
+            Edge{u[3].x - u[2].x, u[3].y - u[2].y}, Edge{u[0].x - u[3].x, u[0].y - u[3].y}};
         std::array<double, 4> lengths{};
         for (std::size_t k = 0; k < 4; ++k)
             lengths[k] = std::sqrt(e[k][0] * e[k][0] + e[k][1] * e[k][1]);
@@ -1385,11 +1383,11 @@ private:
         entity_.text_height = entity_.rotation = entity_.box_width = entity_.box_height = 0.0;
         entity_.scale = entity_.grid_x = entity_.grid_y = 0.0;
         entity_.radius = entity_.start_angle = entity_.end_angle = 0.0;
-        entity_.line_width                                      = 0.0;
-        entity_.closed                                          = false;
-        entity_.smart                                           = SmartClass::None;
+        entity_.line_width                                       = 0.0;
+        entity_.closed                                           = false;
+        entity_.smart                                            = SmartClass::None;
         entity_.properties.clear();
-        entity_.set    = 0;
+        entity_.set = 0;
         entity_.coords.clear();
         return entity_;
     }
@@ -1477,6 +1475,7 @@ struct Chunk
         if (at + 2 > size) return 0;
         return static_cast<std::int64_t>(data[at]) | (static_cast<std::int64_t>(data[at + 1]) << 8);
     }
+
     std::int64_t u32(std::size_t at) const noexcept
     {
         if (at + 4 > size) return 0;
@@ -1485,6 +1484,7 @@ struct Chunk
             v |= static_cast<std::uint32_t>(data[at + k]) << (8 * k);
         return static_cast<std::int64_t>(v);
     }
+
     double f32(std::size_t at) const noexcept
     {
         if (at + 4 > size) return 0.0;
@@ -1492,6 +1492,7 @@ struct Chunk
         std::memcpy(&v, data + at, sizeof v);
         return static_cast<double>(v);
     }
+
     double f64(std::size_t at) const noexcept
     {
         if (at + 8 > size) return 0.0;
@@ -1499,6 +1500,7 @@ struct Chunk
         std::memcpy(&v, data + at, sizeof v);
         return v;
     }
+
     std::int64_t at_or_zero(std::size_t at) const noexcept { return at < size ? data[at] : 0; }
 };
 
@@ -1584,12 +1586,12 @@ AttributeRow parse_attribute_row(const Chunk& r, const std::string& table_ref,
 
     if (!label_text.empty()) {
         const std::size_t sep = 29 + label_length;
-        Cell c1x = safe_round(r.f64(sep + 8));
-        Cell c1y = safe_round(r.f64(sep + 16));
-        Cell c2x = safe_round(r.f64(sep + 50));
-        Cell c2y = safe_round(r.f64(sep + 58));
-        Cell c3x = safe_round(r.f64(sep + 66));
-        Cell c3y = safe_round(r.f64(sep + 74));
+        Cell c1x              = safe_round(r.f64(sep + 8));
+        Cell c1y              = safe_round(r.f64(sep + 16));
+        Cell c2x              = safe_round(r.f64(sep + 50));
+        Cell c2y              = safe_round(r.f64(sep + 58));
+        Cell c3x              = safe_round(r.f64(sep + 66));
+        Cell c3y              = safe_round(r.f64(sep + 74));
         variant("label");
         col.emplace_back("label", std::move(label_text));
         col.emplace_back("label_length", static_cast<std::int64_t>(label_length));
