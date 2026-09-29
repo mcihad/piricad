@@ -1,0 +1,95 @@
+crs TUREF/TM36
+katman-sayisi 4
+nesne-sayisi 12
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman YOL gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=10
+katman SOLKENAR gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+katman SAGKENAR gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=1
+nesne 0 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 0
+    10000 0
+    10000 10000
+  alan_mm2 0  cevre_mm 20000
+nesne 1 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 2000
+    8000 2000
+    8000 10000
+  alan_mm2 0  cevre_mm 16000
+  koken core.double_line 1
+nesne 2 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 -3000
+    13000 -3000
+    13000 10000
+  alan_mm2 0  cevre_mm 26000
+  koken core.double_line 1
+nesne 3 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    0 17000
+    10000 17000
+    13000 20000
+    13000 30000
+  alan_mm2 0  cevre_mm 24243
+nesne 4 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 40000
+    10000 40000
+    10000 50000
+  alan_mm2 0  cevre_mm 20000
+nesne 5 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 42000
+    8000 42000
+    8000 50000
+  alan_mm2 0  cevre_mm 16000
+  koken core.double_line 5
+nesne 6 katman=YOL stil=0 halka=1 tur=6 yuk=0100000000000000000000000000000001000000010000001027000000000000409c000000000000b80b00000000000001
+  halka rol=0 parca=0 tepe=4
+    0 37000
+    10000 37000
+    13000 40000
+    13000 50000
+  alan_mm2 0  cevre_mm 24712
+  koken core.double_line 5
+nesne 7 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 42000
+    0 37000
+  alan_mm2 0  cevre_mm 5000
+  koken core.double_line 5
+nesne 8 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    8000 50000
+    13000 50000
+  alan_mm2 0  cevre_mm 5000
+  koken core.double_line 5
+nesne 9 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 60000
+    20000 60000
+    20000 75000
+  alan_mm2 0  cevre_mm 35000
+nesne 10 katman=SOLKENAR stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 63500
+    16500 63500
+    16500 75000
+  alan_mm2 0  cevre_mm 28000
+  koken core.double_line 10
+nesne 11 katman=SAGKENAR stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 56500
+    23500 56500
+    23500 75000
+  alan_mm2 0  cevre_mm 42000
+  koken core.double_line 10
+kapsam 0 -3000 23500 75000
+icerik-ozeti ced753babe16edb5
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"YOL"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":2,"cmd":"core.double_line","args":{"noktalar":[[0,0],[10000,0],[10000,10000]],"sol":2.0,"sag":3.0},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":3,"cmd":"core.double_line","args":{"noktalar":[[0,20000],[10000,20000],[10000,30000]],"sol":0.0,"sag":3.0,"kose":"pah","eksen":"cizme"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":4,"cmd":"core.double_line","args":{"noktalar":[[0,40000],[10000,40000],[10000,50000]],"sol":2.0,"sag":3.0,"kose":"yuvarlak","uclar":"kapali"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":5,"cmd":"core.double_line","args":{"noktalar":[[0,60000],[20000,60000],[20000,75000]],"sol":3.5,"sag":3.5,"katman_sol":"SOLKENAR","katman_sag":"SAGKENAR"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

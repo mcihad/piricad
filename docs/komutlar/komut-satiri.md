@@ -389,7 +389,7 @@ Bir köşeyi yazarak almak istiyorsanız köşenin kendisini yazın ya da tıkla
 ### Çizimin katmanı: `katman=`
 
 Çizim komutları — `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `DAİRE`, `YAY`, `ELİPS`, `DİKDÖRTGEN`,
-`ÇOKGEN`, `SPLINE`, `NOKTA`, `METİN`, `TARAMA`, `DİLİM`, `HALKA`, `DİKAYAK`, `ALIM`,
+`ÇOKGEN`, `SPLINE`, `NOKTA`, `METİN`, `TARAMA`, `DİLİM`, `HALKA`, `DİKAYAK`, `ALIM`, `ÇİFTÇİZGİ`,
 `KESİŞİMNOKTA`, `ARANOKTA`, `BÖLÜMLE`, `ÖLÇÜ`, `LİDER`, `SINIR` ve `BLOKEKLE` — `katman=`
 alır: çizdikleri o katmana gider, **etkin katman değişmez**. Katman adıyla verilir, büyük
 küçük harf ayrımı yoktur ve yalnız adıyla yazılır; satırın sonunda kalan adsız bir sözcük

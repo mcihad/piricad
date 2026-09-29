@@ -554,12 +554,21 @@ yönetmelik değeri yalnız `/data`'da (5.13); `tr()` ve iki `.ts` dosyası (6.9
   **Bağımlılık:** O-5, O-6, C-01.
   **3B:** Plan inşalarıdır; uç kotlarından enterpolasyon (N-05); düşey kurp T-04'ün işi.
 
-- [ ] **N-11 · P1 — Çift çizgi: eksen çizerken iki yanda paralel (Paralel Çizgi).**
+- [x] **N-11 · P1 — Çift çizgi: eksen çizerken iki yanda paralel (Paralel Çizgi).**
   **Netcad:** Paralel Çizgi: eksenin sağına ve soluna genişlik, köşe kesişimleri kendiliğinden çözülür, bir yana 0 verince tek yan 217385136; Paralel'in "Ucuna Bağla" köşe yöntemi (kenar uzunlukları korunur) 217385395.
   **Tasarım:** `core.double_line` — `ÇİFTÇİZGİ`, `CIFTCIZGI`, `DOUBLELINE`, `ÇFÇ`, `CFC`: `noktalar` (eksen), `sol`, `sag` (m; 0 = o yan yok), `kose=keskin|yuvarlak|pah`, `eksen=ciz|cizme`, `uclar=acik|kapali`, `katman_sol`, `katman_sag`. `core::entity_parallel` ve `kernel_offset` yeniden kullanılır — ikinci bir paralel hesabı yazılmaz; önizleme sonucun kendisidir. OFSET'e `kose=uc` ("ucuna bağla") eklenir.
   **Kabul:** L eksenin 2 m ve 3 m paralelleri el hesabıyla, köşeler kesişimde; `sol=0` tek yan; `kose=yuvarlak` gerçek yay (O-4); OFSET `kose=uc` vakası; üç istemci.
   **Bağımlılık:** O-4.
   **3B:** Eksen kotluysa paraleller aynı kotu taşır (N-05); şevli yol T-04.
+  **Durum (29 Eylül 2026):** yapıldı. `core.double_line` (ÇİFTÇİZGİ) tasarımdaki parametrelerle ve
+  ortak `katman=` ile (eksen ve katmanı verilmemiş yan; `katman_sol`/`katman_sag` yoksa oluşturulur);
+  paralel `core::run_parallel`/`entity_parallel`'in tek gövdesinden, önizleme `ghost_outline` ile
+  sonucun kendisi (`RubberShape::DoubleLine`). OFSET `kose=uc` ("ucuna bağla": her kenar kendi
+  boyunda taşınır, uçları doğruyla bağlanır; yay-çoklu çizgi, elips ve eğri sözle reddedilir); OFSET'in
+  `kose`'si serbest metinden sözcük listesine geçti. Yolda bulunan hata düzeltildi: `parallel_run`
+  eşit uzaklıktaki köşe tepelerini yanlış yana sayıyordu (pahlı dış köşe ikiye bölünüyor, 120°'den keskin
+  büküm bir kolunu yitiriyordu) — `band_side`, regresyon testi ve `cift-cizgi-sivri` altın senaryosu.
+  Şeritte düğme yok (komut satırı ve Ctrl+K).
 
 - [ ] **N-12 · P1 — Yazı ekleri: sıkıştırma, zemin maskesi, ardışık artırma, okunur yön, metin dosyası, joker bul-değiştir.**
   **Netcad:** Yazı: Sıkışma (genişlik çarpanı), Fon, `++` ardışık artırma, uygulama noktası 217385103; Metin Dosya Yükle 217385186; komut satırında `MAKE TEXTS READABLE` 217386603; Bul Değiştir joker kuralları 217385430.

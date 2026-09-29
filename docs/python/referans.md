@@ -92,6 +92,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 |---|---|---|---|
 | [`cad.line`](#cadline) | `core.line` | `ÇİZGİ` | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`cad.polyline`](#cadpolyline) | `core.polyline` | `ÇOKLUÇİZGİ` | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
+| [`cad.double_line`](#caddouble_line) | `core.double_line` | `ÇİFTÇİZGİ` | Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı. |
 | [`cad.point_draw`](#cadpoint_draw) | `core.point_draw` | `NOKTA` | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`cad.perp_offset`](#cadperp_offset) | `core.perp_offset` | `DİKAYAK` | Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir. |
 | [`cad.survey_polar`](#cadsurvey_polar) | `core.survey_polar` | `ALIM` | İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir. |
@@ -273,6 +274,40 @@ cad.polyline(
 | `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/polyline.md)
+
+### `cad.double_line`
+
+Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı.
+
+Komut: `core.double_line` — `ÇİFTÇİZGİ`
+
+```python
+cad.double_line(
+    points: Coords,
+    left: float,
+    right: float,
+    corner: str,
+    axis: str,
+    ends: str,
+    left_layer: str,
+    right_layer: str,
+    layer: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `points` | `Coords` | `noktalar` | Eksenin köşe noktaları; en az iki nokta. Paraleller eksenin çizildiği yöne bakarak sol ve sağ yanına çizilir [mm, Sağa (Y) önce] |
+| `left` | `float` | `sol` | Sol paralelin eksene uzaklığı, metre; 0 verilirse sol yan çizilmez. Sol, eksenin çizildiği yöne bakarken soldur [m] |
+| `right` | `float` | `sag` | Sağ paralelin eksene uzaklığı, metre; 0 verilirse sağ yan çizilmez. Sağ, eksenin çizildiği yöne bakarken sağdır [m] |
+| `corner` | `str` | `kose` | Eksenin kırıklarında dış köşenin biçimi: keskin (öntanımlı) kesişimde birleşir, yuvarlak gerçek bir yay olur, pah düz kesilir. İç köşe her zaman kesişimde birleşir |
+| `axis` | `str` | `eksen` | ciz (öntanımlı): eksenin kendisi de çizilir · cizme: yalnız paraleller çizilir |
+| `ends` | `str` | `uclar` | acik (öntanımlı): uçlar açık kalır · kapali: eksenin iki ucu birer çizgiyle kapatılır |
+| `left_layer` | `str` | `katman_sol` | Sol paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman |
+| `right_layer` | `str` | `katman_sag` | Sağ paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
+
+[Komut sayfası](../komutlar/double_line.md)
 
 ### `cad.point_draw`
 
@@ -1787,7 +1822,7 @@ cad.offset(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
 | `distance` | `int` | `mesafe` | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri |
-| `corner` | `str` | `kose` | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi |
+| `corner` | `str` | `kose` | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz |
 | `side` | `str` | `taraf` | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan |
 | `through` | `Coord` | `nokta` | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce] |
 | `source` | `str` | `kaynak` | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil |

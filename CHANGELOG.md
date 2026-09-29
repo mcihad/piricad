@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ÇİFTÇİZGİ ve OFSET'in "ucuna bağla" köşesi
+
+- `ÇİFTÇİZGİ noktalar=… sol=<m> sag=<m>`: eksen çizilirken iki yanında paralel (Netcad'in
+  Paralel Çizgi'si); `0` o yanı çizmez. `kose=keskin|yuvarlak|pah` (yuvarlak gerçek yay),
+  `eksen=cizme`, `uclar=kapali`, `katman_sol`, `katman_sag`, `katman=`. Tuvaldeki önizleme
+  çizilecek nesnelerin kendisidir.
+- `OFSET kose=uc`: Netcad'in "ucuna bağla"sı — her kenar kendi boyunda taşınır, uçları doğruyla
+  bağlanır. OFSET'in `kose` değeri artık sözcük listesinden okunur; yanlış yazılan bir sözcük
+  sessizce keskin köşe olmak yerine reddedilir.
+
+### Düzeltildi — paralelin dış köşeleri
+
+- OFSET'in açık çizgide `kose=pah` köşesi ikiye bölünüyordu, 120°'den keskin bir büküm ise bir
+  kolunu yitiriyordu: bir köşede birleşen iki kenar artık yanı birlikte belirler.
+
 ### Eklendi — çizim komutları kendi katmanına çizer: `katman=`
 
 - 23 çizim ve açıklama komutu (`ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `DAİRE`, `YAY`, `METİN`,

@@ -3,7 +3,9 @@
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/spline.hpp"
 
@@ -60,6 +62,24 @@ std::vector<GhostRun> chained(const Prompt& prompt, core::Point2 at, bool closed
         run.points.push_back(at);
     }
     return {std::move(run)};
+}
+
+/// One piece of a parallel as the run the renderer draws it with: a line's own
+/// vertices, and a kernel path — a round corner's true arc — by the path's own
+/// outline. A piece a double line cannot make (a face, a circle) draws nothing.
+void append_piece(std::vector<GhostRun>& out, const core::ParallelPiece& piece)
+{
+    switch (piece.shape) {
+    case core::ParallelPiece::Shape::Run: out.push_back(GhostRun{piece.run, piece.closed}); break;
+    case core::ParallelPiece::Shape::Path: {
+        std::vector<core::Mm> xs;
+        std::vector<core::Mm> ys;
+        core::path_outline(piece.path, xs, ys);
+        out.push_back(zipped(xs, ys, piece.path.closed));
+        break;
+    }
+    default: break;
+    }
 }
 
 } // namespace
@@ -177,6 +197,26 @@ std::vector<GhostRun> ghost_outline(const Prompt& prompt, core::Point2 at,
         core::spline_points(controls, def, core::kSplineSamplesPerSpan, xs, ys);
         if (xs.size() < 2) return {};
         return {zipped(xs, ys, def.closed)};
+    }
+
+    case RubberShape::DoubleLine: {
+        // THE DOUBLE LINE THE CLICK WILL MAKE (TODOS N-11): the axis so far run
+        // on to the cursor, and beside it what `core::double_line` makes of it —
+        // the very call ÇİFTÇİZGİ commits with, so the guide and the drawing are
+        // one answer. Where the parallels cannot be made yet (a lone point, the
+        // cursor on the last one) the axis alone is shown.
+        const auto spec = core::decode_double_line_preview(prompt.rubber_payload);
+        if (!spec) return {};
+        std::vector<GhostRun> out = chained(prompt, at, false);
+        const auto made           = core::double_line(out.front().points, spec.value());
+        if (!made) return out;
+        for (const core::ParallelPiece& piece : made.value().left)
+            append_piece(out, piece);
+        for (const core::ParallelPiece& piece : made.value().right)
+            append_piece(out, piece);
+        for (const std::array<core::Point2, 2>& cap : made.value().caps)
+            out.push_back(GhostRun{{cap[0], cap[1]}, false});
+        return out;
     }
 
     default: return {};

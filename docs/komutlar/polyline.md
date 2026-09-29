@@ -119,6 +119,7 @@ Betikten çağrıldığında `noktalar` verilmelidir; en az iki nokta gerekir.
 ## İlgili
 
 - [`ÇİZGİ`](line.md) — her parçayı ayrı nesne yapar
+- [`ÇİFTÇİZGİ`](double_line.md) — ekseni çizerken iki yanına paralel çizer
 - [`ALAN`](area.md) — kapalı yüzey çizer
 - [`ALANAÇEVİR`](to_area.md) — var olan çizgileri kapalı alana çevirir
 - [`KÖŞETAŞI`](vertex_move.md) · [`KÖŞEEKLE`](vertex_insert.md) — köşelerini düzeltir

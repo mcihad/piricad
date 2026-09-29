@@ -13,6 +13,7 @@ namespace kentos::command {
 #define KENTOS_BUILTIN_COMMANDS(X)                                                                 \
     X(line)                                                                                        \
     X(polyline)                                                                                    \
+    X(double_line)                                                                                 \
     X(point_draw)                                                                                  \
     X(perp_offset)                                                                                 \
     X(survey_polar)                                                                                \

@@ -113,6 +113,32 @@ def polyline(
         layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
+def double_line(
+    *,
+    points: Coords = ...,
+    left: float = ...,
+    right: float = ...,
+    corner: str = ...,
+    axis: str = ...,
+    ends: str = ...,
+    left_layer: str = ...,
+    right_layer: str = ...,
+    layer: str = ...,
+) -> int:
+    """Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı.
+
+    Komut: core.double_line (ÇİFTÇİZGİ)
+        points — Eksenin köşe noktaları; en az iki nokta. Paraleller eksenin çizildiği yöne bakarak sol ve sağ yanına çizilir [mm, Sağa (Y) önce]
+        left — Sol paralelin eksene uzaklığı, metre; 0 verilirse sol yan çizilmez. Sol, eksenin çizildiği yöne bakarken soldur [m]
+        right — Sağ paralelin eksene uzaklığı, metre; 0 verilirse sağ yan çizilmez. Sağ, eksenin çizildiği yöne bakarken sağdır [m]
+        corner — Eksenin kırıklarında dış köşenin biçimi: keskin (öntanımlı) kesişimde birleşir, yuvarlak gerçek bir yay olur, pah düz kesilir. İç köşe her zaman kesişimde birleşir
+        axis — ciz (öntanımlı): eksenin kendisi de çizilir · cizme: yalnız paraleller çizilir
+        ends — acik (öntanımlı): uçlar açık kalır · kapali: eksenin iki ucu birer çizgiyle kapatılır
+        left_layer — Sol paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman
+        right_layer — Sağ paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
+    """
+
 def point_draw(
     *,
     points: Coords = ...,
@@ -1151,7 +1177,7 @@ def offset(
     Komut: core.offset (OFSET)
         objects — Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı]
         distance — Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri
-        corner — KÖŞE | YUVARLAK | PAH — dış köşenin biçimi
+        corner — Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz
         side — Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan
         through — Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce]
         source — Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil

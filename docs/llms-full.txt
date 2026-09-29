@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 120 (104 tanesi onay ister)
-- Katalog parmak izi: `3365594765661610171`
+- Araç sayısı: 121 (105 tanesi onay ister)
+- Katalog parmak izi: `10657128115953884225`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -613,6 +613,27 @@ Onay ister.
 | `aralik` | number | hayır | Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı) |
 | `blok` | string | hayır | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı (metin) |
 | `hizala` | boolean | hayır | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_double_line` — Çift Çizgi
+
+Bir eksenin sol ve sağında verilen genişliklerde paralel çizgiler çizer; köşeler keskin, yuvarlak ya da pahlı, uçlar açık ya da kapalı.
+Komut: ÇİFTÇİZGİ (CIFTCIZGI, DOUBLELINE, ÇFÇ, CFC)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Eksenin köşe noktaları; en az iki nokta. Paraleller eksenin çizildiği yöne bakarak sol ve sağ yanına çizilir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `sol` | number | evet | Sol paralelin eksene uzaklığı, metre; 0 verilirse sol yan çizilmez. Sol, eksenin çizildiği yöne bakarken soldur [m] (sayı) |
+| `sag` | number | evet | Sağ paralelin eksene uzaklığı, metre; 0 verilirse sağ yan çizilmez. Sağ, eksenin çizildiği yöne bakarken sağdır [m] (sayı) |
+| `kose` | string | hayır | Eksenin kırıklarında dış köşenin biçimi: keskin (öntanımlı) kesişimde birleşir, yuvarlak gerçek bir yay olur, pah düz kesilir. İç köşe her zaman kesişimde birleşir (metin) |
+| `eksen` | string | hayır | ciz (öntanımlı): eksenin kendisi de çizilir · cizme: yalnız paraleller çizilir (metin) |
+| `uclar` | string | hayır | acik (öntanımlı): uçlar açık kalır · kapali: eksenin iki ucu birer çizgiyle kapatılır (metin) |
+| `katman_sol` | string | hayır | Sol paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman (metin) |
+| `katman_sag` | string | hayır | Sağ paralelin katmanı; yoksa oluşturulur. Verilmezse katman= ya da etkin katman (metin) |
 | `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
@@ -1271,7 +1292,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Ofseti alınacak nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `mesafe` | integer | hayır | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri (tam sayı) |
-| `kose` | string | hayır | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin) |
+| `kose` | string | hayır | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz (metin) |
 | `taraf` | string | hayır | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `kaynak` | string | hayır | Kaynak nesne: koru (öntanımlı) ya da paralel çizilince sil (metin) |

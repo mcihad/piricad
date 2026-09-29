@@ -1,0 +1,8 @@
+# ÇİFTÇİZGİ'nin sivri kırığı (netcad_plan.md N-11). Eksen doğuya gidip (10, 0)'da 122° sola
+# dönerek (5, 8)'e varır. Sağ yan dış yandır: keskin köşesi genişliğin iki katını aşacağından
+# (2,06 kat) Clipper2 onu düz keser ve köşe iki nokta alır; sağ paralel ikinci bacağıyla
+# birlikte gelir ve (5,848 ; 8,530)'da biter. Sol yan içtir, kesişimde kırpılır. İkinci
+# eksen aynı kırığı pahlı verir.
+KATMAN ad=YOL
+ÇİFTÇİZGİ noktalar=0,0 10,0 5,8 sol=1 sag=1
+ÇİFTÇİZGİ noktalar=0,20 10,20 5,28 sol=1 sag=1 kose=pah

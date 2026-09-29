@@ -1,0 +1,53 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 6
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman YOL gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=6
+nesne 0 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 0
+    10000 0
+    5000 8000
+  alan_mm2 0  cevre_mm 19434
+nesne 1 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 1000
+    8196 1000
+    4152 7470
+  alan_mm2 0  cevre_mm 15826
+  koken core.double_line 1
+nesne 2 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    0 -1000
+    10589 -1000
+    11160 30
+    5848 8530
+  alan_mm2 0  cevre_mm 21790
+  koken core.double_line 1
+nesne 3 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 20000
+    10000 20000
+    5000 28000
+  alan_mm2 0  cevre_mm 19434
+nesne 4 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    0 21000
+    8196 21000
+    4152 27470
+  alan_mm2 0  cevre_mm 15826
+  koken core.double_line 4
+nesne 5 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    0 19000
+    10000 19000
+    10848 20530
+    5848 28530
+  alan_mm2 0  cevre_mm 21183
+  koken core.double_line 4
+kapsam 0 -1000 11160 28530
+icerik-ozeti 6de175b2aea9665a
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"YOL"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":2,"cmd":"core.double_line","args":{"noktalar":[[0,0],[10000,0],[5000,8000]],"sol":1.0,"sag":1.0},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
+  {"seq":3,"cmd":"core.double_line","args":{"noktalar":[[0,20000],[10000,20000],[5000,28000]],"sol":1.0,"sag":1.0,"kose":"pah"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

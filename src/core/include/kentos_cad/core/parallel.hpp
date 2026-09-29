@@ -20,6 +20,12 @@
 //
 // THE TWO-SIDED BAND IS NOT HERE. That is a BUFFER, a GIS operation that makes a
 // face (`core::buffer`, the TAMPON tool); a parallel of a line is a line.
+//
+// A DOUBLE LINE IS (`double_line`, TODOS N-11): an axis and the two parallels
+// that run beside it, drawn as the axis is drawn. It is not a second parallel
+// computation — each side is `run_parallel`, which is the body `entity_parallel`
+// runs for an open line, handed the points instead of a slot — and the canvas
+// draws the same call under the cursor, so the preview is the result.
 #pragma once
 
 #include "kentos_cad/core/curve_path.hpp"
@@ -28,6 +34,7 @@
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/result.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -136,8 +143,75 @@ Result<ParallelSide> parallel_side_at(const Document& doc, EntityId e, Point2 p)
 /// parcel's "left" is a winding nobody drew on purpose. An arc takes all four:
 /// it is drawn counter-clockwise, so its left is its inside. `Both` gives the
 /// two sides the object has.
+///
+/// `JoinStyle::Link` keeps the length of every straight edge and is for lines
+/// and faces of straight edges only: a shape with an arc or a drawn curve in it
+/// is refused with a sentence, and a circle or an arc, which have no corner,
+/// are offset as always.
 Result<Parallel> entity_parallel(const Document& doc, EntityId e, Mm distance, ParallelSide side,
                                  JoinStyle join = JoinStyle::Miter);
+
+/// The parallel of an OPEN RUN that is not an object — the axis a command is
+/// still asking the points of — `distance` millimetres (positive) to its `Left`
+/// or `Right`, or `Both`.
+///
+/// NOT A SECOND COMPUTATION: this builds the same shape `entity_parallel` reads
+/// from an open polyline and runs the same body over it, so a run and the object
+/// it becomes are moved sideways by one function — the straight and bevelled
+/// corners from Clipper2, a round corner as a true arc from the kernel
+/// (CLAUDE.md 2.11). The run keeps its direction of travel: the left of
+/// `(0,0)→(10,0)` is `y > 0`. Refused for a run of fewer than two distinct
+/// points, and for `Outside`/`Inside`, which a run does not have.
+Result<Parallel> run_parallel(std::span<const Point2> run, Mm distance, ParallelSide side,
+                              JoinStyle join = JoinStyle::Miter);
+
+/// What a DOUBLE LINE is asked for (`ÇİFTÇİZGİ`, netcad_plan.md N-11).
+struct DoubleLineSpec
+{
+    Mm left{0};  ///< how far the left parallel runs from the axis, millimetres; zero draws none
+    Mm right{0}; ///< the same for the right of the axis's direction of travel
+    JoinStyle join{JoinStyle::Miter}; ///< how each parallel turns a corner it moves away from
+    bool close_ends{false};           ///< a straight cap across each end of the axis
+};
+
+/// The pieces a double line is made of, in the shapes `ParallelPiece` draws
+/// them with: a line or, where a round corner was asked for, a line with true
+/// arcs. The axis itself is the caller's own points and is not repeated here.
+struct DoubleLine
+{
+    std::vector<ParallelPiece> left;  ///< the left parallel, source side first; empty for none
+    std::vector<ParallelPiece> right; ///< the right parallel; empty for none
+
+    /// The two caps of a closed-ended double line — the one across the axis's
+    /// first end, then the one across its last — each as the two points it joins,
+    /// left one first. Empty unless `DoubleLineSpec::close_ends`.
+    std::vector<std::array<Point2, 2>> caps;
+};
+
+/// Whether `spec` asks for a double line at all: refused, with the sentence a
+/// user reads, for a negative width, for both widths zero, and for a width past
+/// the drawing's coordinate limit. `double_line` refuses the same three; a
+/// command asks first, so that it does not collect an axis for nothing.
+Status check_double_line(const DoubleLineSpec& spec);
+
+/// The double line of `axis`: the parallel `spec.left` to its left and the one
+/// `spec.right` to its right, each side omitted when its width is zero.
+///
+/// A side may come back in several pieces — the inside of a turn tighter than
+/// the width breaks in two — and that is said by the caller, but it makes the
+/// ends of that side ambiguous, so a closed-ended double line is refused when a
+/// side did. A cap joins the two sides' ends; with one side only, it joins that
+/// side's end to the axis's own.
+Result<DoubleLine> double_line(std::span<const Point2> axis, const DoubleLineSpec& spec);
+
+/// The payload a DOUBLE LINE preview carries (`command::RubberShape::DoubleLine`):
+/// the widths, the corner and whether the ends are closed, so the canvas can call
+/// `double_line` for the axis so far plus the cursor. Versioned like every other
+/// preview payload.
+std::vector<std::uint8_t> encode_double_line_preview(const DoubleLineSpec& spec);
+
+/// The preview back, refused when the bytes are not what the encoder writes.
+Result<DoubleLineSpec> decode_double_line_preview(std::span<const std::uint8_t> bytes);
 
 /// The payload a PARALLEL preview carries (`command::RubberShape::Parallel`):
 /// the objects, the distance and the corner, so the canvas can call

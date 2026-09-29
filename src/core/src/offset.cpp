@@ -17,6 +17,9 @@ Clipper2Lib::JoinType join_of(JoinStyle j)
     switch (j) {
     case JoinStyle::Round: return Clipper2Lib::JoinType::Round;
     case JoinStyle::Bevel: return Clipper2Lib::JoinType::Bevel;
+    // `Link` is no corner Clipper2 makes: `parallel.cpp` builds it edge by edge
+    // and never passes it here.
+    case JoinStyle::Link:
     case JoinStyle::Miter: break;
     }
     return Clipper2Lib::JoinType::Miter;
@@ -176,6 +179,56 @@ double segment_distance2(Point2 a, Point2 b, Point2 p, double start, double& alo
     const double qy = static_cast<double>(a.y) + t * dy - static_cast<double>(p.y);
     along           = start + t * std::sqrt(len);
     return qx * qx + qy * qy;
+}
+
+/// WHICH SIDE OF THE RUN a vertex of its band is on: positive for the left,
+/// negative for the right, looking along the run; zero only for a vertex on the
+/// run's own line, which belongs to neither.
+///
+/// `nearest` is the edge closest to `v` and `gap2` its squared distance. Usually
+/// that edge's own cross product is the answer. It is not at a CORNER, and the
+/// vertices that matter most are there: the two ends of a bevel and of a round
+/// corner lie exactly on the lines of the two edges that meet, and so does the
+/// tip of a mitre that Clipper2 squared off for being past its limit. Such a
+/// vertex is as near the shared corner from one edge as from the other, and
+/// whichever edge won the tie decided its side by a half-plane that says
+/// nothing about the other edge: on a bevel it answered "on the line", on a
+/// squared tip it answered the wrong side. The parallel then broke in two, or
+/// lost the whole of a leg, at every bend of about 120 degrees or more and at
+/// every bevelled bend.
+///
+/// So an edge next to the nearest one that is no farther than the millimetre
+/// the band was rounded to (`Point64`) is the OTHER half of the corner, and the
+/// two edges together decide by what a bend is: the inside of a left turn is
+/// left of both edges, the inside of a right turn is right of both, and
+/// everything else — the outside — is the other side.
+Int128 band_side(const std::vector<Point2>& src, const std::vector<double>& starts, Point2 v,
+                 std::size_t nearest, double gap2)
+{
+    const double reach = std::sqrt(gap2) + 1.0;
+    const auto tied    = [&](std::size_t s) {
+        double unused = 0.0;
+        return segment_distance2(src[s], src[s + 1], v, starts[s], unused) <= reach * reach;
+    };
+
+    // The edges that meet in a corner, in the order the run goes.
+    std::size_t before = nearest;
+    std::size_t after  = nearest;
+    if (nearest + 2 < src.size() && tied(nearest + 1))
+        after = nearest + 1;
+    else if (nearest > 0 && tied(nearest - 1))
+        before = nearest - 1;
+
+    const Int128 c1 = cross(src[before], src[before + 1], v);
+    if (before == after) return c1;
+
+    const Int128 c2 = cross(src[after], src[after + 1], v);
+    const Int128 turn =
+        static_cast<Int128>(src[before + 1].x - src[before].x) * (src[after + 1].y - src[after].y) -
+        static_cast<Int128>(src[before + 1].y - src[before].y) * (src[after + 1].x - src[after].x);
+    if (turn > 0) return c1 > 0 && c2 > 0 ? 1 : -1;
+    if (turn < 0) return c1 < 0 && c2 < 0 ? -1 : 1;
+    return c1 != 0 ? c1 : c2; // no bend: either edge's line says
 }
 
 void push_polygons(const std::vector<Polygon>& in, Clipper2Lib::Paths64& out)
@@ -400,8 +453,9 @@ Result<std::vector<OffsetRing>> parallel_run(const std::vector<Point2>& run, Mm 
         if (n < 2) continue;
 
         // WHICH SIDE EACH VERTEX IS ON: the side of the source edge nearest to it,
-        // by the exact sign of a cross product. A band vertex is never ON the
-        // source (it is the distance away), so the sign is never zero for one.
+        // by the exact sign of a cross product — or, at a corner, of the two edges
+        // that meet there (`band_side`). A band vertex is never ON the source (it
+        // is the distance away), though it can lie on the LINE of an edge.
         std::vector<char> on(n, 0);
         std::vector<double> along(n, 0.0);
         for (std::size_t i = 0; i < n; ++i) {
@@ -417,7 +471,7 @@ Result<std::vector<OffsetRing>> parallel_run(const std::vector<Point2>& run, Mm 
                     along[i] = at;
                 }
             }
-            const Int128 side = cross(src[near], src[near + 1], v);
+            const Int128 side = band_side(src, starts, v, near, best);
             on[i]             = left ? side > 0 : side < 0;
         }
 

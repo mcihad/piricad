@@ -156,3 +156,15 @@ TEST_CASE("katman= soru sürerken: katman almayan komutta satır bir yanıttır"
     session.cancel();
     (void)r.bus.finish(session);
 }
+
+TEST_CASE("katman=: ÇİFTÇİZGİ ekseni ve katmanı verilmemiş yanı katman='a çizer")
+{
+    Rig r;
+    r.run("KATMAN ad=YOL");
+    r.run("KATMAN ad=PARSEL");
+    r.run("ÇİFTÇİZGİ noktalar=0,0 10,0 sol=2 sag=3 katman=YOL katman_sag=KALDIRIM");
+    CHECK(r.layer_of(1) == r.doc.find_layer("YOL")); ///< the axis
+    CHECK(r.layer_of(2) == r.doc.find_layer("YOL")); ///< the left side, no layer of its own
+    CHECK(r.layer_of(3) == r.doc.find_layer("KALDIRIM"));
+    CHECK(r.bus.active_layer() == r.doc.find_layer("PARSEL"));
+}

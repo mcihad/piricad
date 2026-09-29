@@ -3098,6 +3098,13 @@ void MapCanvas::buildOverlay()
             // The arm from the centre, so the size being set is readable as a
             // distance and not only as a shape.
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::DoubleLine) {
+            // THE DOUBLE LINE THE CLICK WILL MAKE: the axis so far run on to the
+            // cursor and the parallels and caps beside it, from the function
+            // ÇİFTÇİZGİ commits with (`core::double_line`, through
+            // `command::ghost_outline`) — round corners as the true arcs they
+            // will be. Nothing here computes a parallel.
+            addGhost(batch, command::ghost_outline(session->prompt(), cursorWorld(), convention));
         } else if (shape == command::RubberShape::EdgeRectangle &&
                    session->prompt().rubber_chain.size() >= 2) {
             // THE ROTATED RECTANGLE the third click will make. This branch is

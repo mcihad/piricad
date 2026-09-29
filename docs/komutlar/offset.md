@@ -63,6 +63,32 @@ yuvarlanmaz, kesilir; açık bir L'nin iç yanı keskin köşeli kalır.
 **delikli bir alanın** yuvarlak köşeli paraleli (yaylı kenarlı bir nesne tek halka
 taşır, deliği tutamaz) ve **yaylı çoklu çizginin pahlı** (`kose=PAH`) paraleli.
 
+### Ucuna bağla: kenar uzunlukları korunur
+
+`kose=uc`, Netcad'in Paralel aracındaki **Ucuna Bağla** köşe yöntemidir. Her düz kenar
+**kendi başına**, uzunluğu değişmeden yana kaydırılır; ardışık iki kaydırılmış kenarın
+uçları düz bir çizgiyle birbirine **bağlanır**. Hiçbir şey kesişme noktasına kadar
+uzatılmaz, hiçbir şey kırpılmaz.
+
+| Kırığın yanı | Ne olur |
+|---|---|
+| **Dış** — kırığın döndüğü yönün ters yanı | Bağ, iki kenarın uçlarını birleştiren kiriştir; sonuç `kose=PAH` ile aynıdır |
+| **İç** — kırığın döndüğü yön | Kaydırılmış kenarlar birbirinin üstünden geçer, bağ aralarından geri döner ve çizgi **kendini keser** |
+
+`(0,0)`, `(10,0)`, `(10,10)` çizgisinin 2 m **sağı** `(0,-2)`, `(10,-2)`, `(12,0)`,
+`(12,10)`'dur: iki kenar da 10 m'dir. 2 m **solu** `(0,2)`, `(10,2)`, `(8,0)`, `(8,10)`'dur:
+kenarlar yine 10 m'dir ve çizgi `(8,2)`'de kendini keser; fazlalığı [`BUDA`](trim.md) ile
+kesersiniz. `KÖŞE` ve `PAH` ise iç köşeyi kesişimde kendiliğinden kırpar, kenarlar kısalır.
+
+Kapalı bir şekilde: dışa büyütülen dışbükey bir şekil `PAH`'ın sekizgenini verir. **İçe**
+alınan şekilde her köşe iç köşedir, sonuç bir **çarkıfelek**tir — kenarlar korunur, ama
+halka kendini keser ve alanı anlamlı bir parsel alanı değildir. Yöntem açık çizgiler ve dışa
+büyütülen şekiller içindir. Delikli alanda delik de aynı kuralla kaydırılır.
+
+Yalnız **düz kenar** uzunluğunu koruyabilir: bir kenarı yay ya da eğri olan nesnede
+(yaylı çoklu çizgi, elips, spline) komut sebebini söyler ve hiçbir şey çizmez. Daire ve yayın
+köşesi yoktur; paralelleri her zamanki gibi alınır.
+
 ### Hangi kütüphane
 
 Ofset çözülmüş bir problemdir ve CLAUDE.md 5.16 çözülmüş bir problemi yeniden
@@ -71,8 +97,10 @@ köşelinin — geometri çekirdeği **OpenCASCADE** ile hesaplanır
 ([Geometri çekirdeği](../veri/geometri-cekirdegi.md)); sonuç bir kez milimetreye
 yuvarlanır ve üç platformda aynı milimetreyi verir. Düz kenarlı şeklin keskin ve pahlı
 köşeli paraleli **Clipper2** ile kaydırılır; hangi parçanın istenen tarafta kaldığı
-kaynak kenara göre tam aritmetikle belirlenir. Clipper2'nin BSL-1.0 lisansı ve
-OpenCASCADE'in LGPL-2.1 (istisnalı) lisansı GPLv3 ile uyumludur.
+kaynak kenara göre tam aritmetikle belirlenir. `kose=uc` için her kenar yine aynı
+işlevle, tek başına kaydırılır — tek kenarın çözülecek bir köşesi yoktur — ve sonuçlar
+zincirlenir. Clipper2'nin BSL-1.0 lisansı ve OpenCASCADE'in LGPL-2.1 (istisnalı) lisansı
+GPLv3 ile uyumludur.
 
 ## Adlar
 
@@ -88,7 +116,7 @@ OpenCASCADE'in LGPL-2.1 (istisnalı) lisansı GPLv3 ile uyumludur.
 
 ```text
 OFSET [nesneler=<kimlikler>] [mesafe=<mm>] [taraf=sol|sag|dis|ic|iki] [nokta=<n>]
-      [kose=KÖŞE|YUVARLAK|PAH] [kaynak=koru|sil] [ozellik=kaynak|aktif]
+      [kose=KÖŞE|YUVARLAK|PAH|UC] [kaynak=koru|sil] [ozellik=kaynak|aktif]
       [oznitelik=aktar|aktarma]
 ```
 
@@ -100,7 +128,7 @@ OFSET [nesneler=<kimlikler>] [mesafe=<mm>] [taraf=sol|sag|dis|ic|iki] [nokta=<n>
 | `mesafe` | Paralel mesafesi, **milimetre**. Verilmezse **metre** olarak sorulur |
 | `taraf` | `sol`, `sag` (açık çizgi), `dis`, `ic` (kapalı şekil, yay), `iki` (iki yan) |
 | `nokta` | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer |
-| `kose` | Dış köşenin biçimi: `KÖŞE` (öntanımlı), `YUVARLAK`, `PAH` |
+| `kose` | Köşenin biçimi: `KÖŞE` ya da `keskin` (öntanımlı), `YUVARLAK`, `PAH`, `UC` (ucuna bağla: kenar uzunlukları korunur) |
 | `kaynak` | `koru` (öntanımlı) ya da `sil`: paralel çizilince kaynak silinir |
 | `ozellik` | `kaynak` (öntanımlı): paralel kaynağın katmanına ve stiline; `aktif`: etkin katmana |
 | `oznitelik` | `aktar` (öntanımlı): kaynağın öznitelik değerleri paralele de yazılır; `aktarma`: paralel boş başlar |
@@ -144,6 +172,25 @@ Bir parselin içine öznitelik taşımayan bir çekme hattı çizmek:
 ALAN 0,0 30,0 30,20 0,20
 OFSET nesneler=1 mesafe=5000 taraf=ic oznitelik=aktarma
 ```
+
+<!-- örnek: yeni çizim -->
+Köşelerde kenar uzunluklarını korumak (**ucuna bağla**): doğuya sonra kuzeye giden bir
+çizginin 2 m sağı ve solu.
+
+```
+ÇOKLUÇİZGİ 0,0 10,0 10,10
+OFSET nesneler=1 mesafe=2000 taraf=sag kose=uc
+OFSET nesneler=1 mesafe=2000 taraf=sol kose=uc
+```
+
+```text
+1 paralel çizildi (2,000 m).
+1 paralel çizildi (2,000 m).
+```
+
+Sağ yan `(0,-2)`, `(10,-2)`, `(12,0)`, `(12,10)` noktalarından, sol yan `(0,2)`, `(10,2)`,
+`(8,0)`, `(8,10)` noktalarından geçer; ikisinin de iki uzun kenarı 10 m'dir. Sol yan
+`(8,2)`'de kendini keser.
 
 ### Arayüz
 
@@ -222,11 +269,17 @@ Taraf sorulduğunda boş bir Enter verildi.
 
 > `'core.offset': 'oznitelik' için tanınmayan değer '…'. Kabul edilenler: aktar / aktarma`
 
-`oznitelik` yanlış yazıldı; `aktar` ya da `aktarma` yazın. `kaynak` ve `ozellik` için
-de aynı biçimde söylenir.
+`oznitelik` yanlış yazıldı; `aktar` ya da `aktarma` yazın. `kaynak`, `ozellik` ve `kose`
+için de aynı biçimde söylenir (`kose` için: `kose / keskin / yuvarlak / pah / uc`).
+
+> `Nesne 1: kose=uc kenar uzunluklarını korur ve bunu yalnız düz kenar yapabilir; bu nesnenin bir kenarı yay ya da eğri. Düz kenarlı bir çizgi ya da alan verin, ya da kose=KÖŞE, YUVARLAK ya da PAH kullanın.`
+
+`kose=uc` yaylı çoklu çizgiye, elipse ya da spline'a verildi; bu nesnelerin paraleli kenar
+uzunluğunu koruyamaz. Başka bir köşe biçimi seçin.
 
 ## İlgili
 
 - [ALAN](area.md) — kapalı alan çizme
+- [ÇİFTÇİZGİ](double_line.md) — ekseni çizerken iki yanına birden, aynı hesapla
 - [BUDA](trim.md) — fazlalığı kesme
 - [Nesne türleri destek matrisi](../nesneler/destek-matrisi.md) — hangi türün paraleli alınır
