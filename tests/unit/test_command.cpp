@@ -19,6 +19,7 @@
 #include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
@@ -2584,6 +2585,34 @@ TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düş�
     CHECK(selected() == std::vector<std::uint64_t>{island});
     REQUIRE(f.bus.execute_line("SEÇ İÇEREN 230,20", Origin::CommandLine).ok());
     CHECK(selected() == std::vector<std::uint64_t>{face});
+}
+
+TEST_CASE("SEÇ kipleri: sekmenin her kipi SEÇ'te çalışır; LAST, SON'dur")
+{
+    // THE TAB'S LIST IS SEÇ'S OWN TABLE (select_modes.hpp): every mode it offers
+    // is a word SEÇ parses, and runs with as many clicks as its row says.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,20 10,20", Origin::Test).ok());
+    REQUIRE_FALSE(select_modes().empty());
+    for (const SelectModeInfo& mode : select_modes()) {
+        std::string line = "SEÇ " + std::string(mode.word);
+        if (mode.points == 1) line += " 5,0";
+        if (mode.points == 2) line += " -1,-1 30,30";
+        if (mode.points < 0) line += " -1,-1 30,-1 30,30";
+        if (mode.adds) line += " islem=EKLE";
+        INFO(line);
+        CHECK_FALSE(mode.label.empty());
+        CHECK_FALSE(mode.summary.empty());
+        CHECK(f.bus.execute_line(line, Origin::CommandLine).ok());
+    }
+
+    // `LAST` IS SON'S: it used to sit in NESNE's list too, first, and asked for ids.
+    REQUIRE(f.bus.execute_line("SEÇ LAST", Origin::CommandLine).ok());
+    std::vector<std::uint64_t> got;
+    for (const core::EntityKey k : f.bus.selection().keys())
+        got.push_back(core::raw(k));
+    CHECK(got == std::vector<std::uint64_t>{2});
 }
 
 TEST_CASE("SEÇ DAİRE: dairenin tamamen içindekiler; keseni ve köşesi dışarıdakini almaz")

@@ -349,7 +349,7 @@ int main(int argc, char** argv)
              "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
              "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
              "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",  "KENTOS_VIEW_PROBE",
-             "KENTOS_OFFER_PROBE",
+             "KENTOS_OFFER_PROBE",     "KENTOS_PROMPT_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -2477,6 +2477,45 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
+        // AND THE SEÇİM TAB (`.claude/ui.md` R48a), up while TAŞI asks for
+        // objects; then ÇİT started from it, two corners clicked into the line.
+        const auto clickAt = [&window](kentos::core::Point2 world) {
+            kentos::app::MapCanvas* canvas = window.canvas();
+            const auto at                  = canvas->view().to_screen(world);
+            const QPointF p(at.x, at.y);
+            QMouseEvent press(QEvent::MouseButtonPress, p, canvas->mapToGlobal(p), Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &press);
+            QMouseEvent release(QEvent::MouseButtonRelease, p, canvas->mapToGlobal(p),
+                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &release);
+        };
+        later([&window] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("TAŞI"));
+            QCoreApplication::sendPostedEvents();
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab =
+                        bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonPromptSelect")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, shot] { shot(QStringLiteral("37-secim-sekmesi"), &window); });
+        later([&window, clickAt] {
+            if (auto* fence = window.findChild<QAction*>(QStringLiteral("promptSelect.ÇİT")))
+                fence->trigger();
+            clickAt(kentos::core::Point2{485310000, 4310250000});
+            clickAt(kentos::core::Point2{485330000, 4310190000});
+        });
+        later([hover] { hover(kentos::core::Point2{485370000, 4310240000}); });
+        later([&window, shot] { shot(QStringLiteral("37b-secim-cit"), &window); });
+        later([&window] {
+            QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.findChild<QLineEdit*>(), &esc);
+            window.controller()->cancelAll();
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
         later([] { QApplication::exit(0); });
     }
 
@@ -2826,6 +2865,13 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
+    }
+
+    // THE PROMPT TABS AND A LINE COMPOSED WITH THE SCENE, over the real canvas.
+    if (qEnvironmentVariableIsSet("KENTOS_PROMPT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probePromptTabs() == 0 ? 0 : 1);
+        });
     }
 
     // A COMMAND'S OFFER, ASSERTED over the real canvas.

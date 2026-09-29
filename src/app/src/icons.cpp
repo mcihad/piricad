@@ -1983,6 +1983,133 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(12.0, 9.8), QPointF(12.0, 13.8));
         break;
     }
+    case Glyph::SelectWindow: {
+        // THE FRAME AND WHAT IS WHOLLY INSIDE IT, the pointer's box made solid.
+        p.setBrush(k.fill);
+        p.setPen(stroke(k.shape, 1.5));
+        p.drawRect(QRectF(3.4, 4.4, 17.2, 15.2));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(7.0, 9.0), QPointF(13.0, 9.0));
+        p.drawLine(QPointF(9.0, 15.0), QPointF(17.0, 13.0));
+        break;
+    }
+    case Glyph::SelectCrossing: {
+        // A DASHED FRAME, and a line that only has to touch it.
+        p.setBrush(k.fill);
+        p.setPen(QPen(k.shape, 1.5, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(3.4, 4.4, 12.6, 15.2));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(9.0, 12.0), QPointF(21.0, 7.0));
+        break;
+    }
+    case Glyph::SelectPolygon: {
+        const QPolygonF ring({QPointF(4.0, 8.0), QPointF(12.0, 3.6), QPointF(20.4, 9.0),
+                              QPointF(18.0, 20.0), QPointF(6.4, 18.6)});
+        p.setBrush(k.fill);
+        p.setPen(stroke(k.shape, 1.5));
+        p.drawPolygon(ring);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(9.0, 12.4), QPointF(15.4, 14.6));
+        break;
+    }
+    case Glyph::SelectPolygonCross: {
+        const QPolygonF ring({QPointF(3.6, 8.4), QPointF(10.6, 4.0), QPointF(16.4, 8.6),
+                              QPointF(14.6, 19.6), QPointF(5.4, 18.4)});
+        p.setBrush(k.fill);
+        p.setPen(QPen(k.shape, 1.5, Qt::DashLine, Qt::FlatCap));
+        p.drawPolygon(ring);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(9.0, 13.0), QPointF(21.0, 10.4));
+        break;
+    }
+    case Glyph::SelectFence: {
+        // THE RUN DRAWN THROUGH THEM, and the three short lines it takes.
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(7.0, 5.0), QPointF(7.0, 19.0));
+        p.drawLine(QPointF(12.0, 5.0), QPointF(12.0, 19.0));
+        p.drawLine(QPointF(17.0, 5.0), QPointF(17.0, 19.0));
+        p.setPen(QPen(k.shape, 1.6, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawPolyline(QPolygonF(
+            {QPointF(2.6, 15.0), QPointF(9.4, 9.4), QPointF(14.6, 14.2), QPointF(21.4, 8.6)}));
+        break;
+    }
+    case Glyph::SelectCircle: {
+        p.setBrush(k.fill);
+        p.setPen(stroke(k.shape, 1.5));
+        p.drawEllipse(QPointF(12.0, 12.0), 8.6, 8.6);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(8.6, 13.4), QPointF(15.2, 10.2));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(12.0, 12.0), 1.2, 1.2);
+        break;
+    }
+    case Glyph::SelectOutside: {
+        // THE FRAME IS WHAT IS KEPT OUT: faint inside it, bold around it.
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(k.shape, 1.5, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(7.4, 7.4, 9.2, 9.2));
+        p.setPen(stroke(k.shape, 1.2));
+        p.drawLine(QPointF(9.8, 12.0), QPointF(14.2, 12.0));
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(2.8, 4.0), QPointF(8.0, 3.0));
+        p.drawLine(QPointF(16.0, 21.0), QPointF(21.2, 19.6));
+        p.drawLine(QPointF(20.4, 4.0), QPointF(20.4, 9.6));
+        break;
+    }
+    case Glyph::SelectContaining: {
+        // FACES IN FACES, and the click in the smallest: the parcel in its ada.
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(k.shape, 1.3));
+        p.drawRect(QRectF(2.8, 2.8, 18.4, 18.4));
+        p.setBrush(k.fill);
+        p.setPen(stroke(c, 1.7));
+        p.drawRect(QRectF(7.2, 7.2, 9.6, 9.6));
+        p.setPen(stroke(k.note, 1.8));
+        p.drawLine(QPointF(10.2, 12.0), QPointF(13.8, 12.0));
+        p.drawLine(QPointF(12.0, 10.2), QPointF(12.0, 13.8));
+        break;
+    }
+    case Glyph::SelectThrough: {
+        // THREE LINES MEETING AT A POINT, the point marked where they meet.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(3.0, 12.0), QPointF(21.0, 12.0));
+        p.drawLine(QPointF(5.6, 4.4), QPointF(18.4, 19.6));
+        p.drawLine(QPointF(15.0, 3.0), QPointF(9.0, 21.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(12.0, 12.0), 2.4, 2.4);
+        break;
+    }
+    case Glyph::SelectEverything: {
+        p.setBrush(k.fill);
+        p.setPen(QPen(k.shape, 1.3, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(2.6, 2.6, 18.8, 18.8));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(6.0, 7.0), QPointF(11.0, 7.0));
+        p.drawLine(QPointF(14.0, 6.0), QPointF(18.0, 10.0));
+        p.drawLine(QPointF(6.0, 17.0), QPointF(10.0, 13.0));
+        p.drawLine(QPointF(13.0, 17.0), QPointF(18.0, 17.0));
+        break;
+    }
+    case Glyph::SelectNewest: {
+        // THE NEWEST, BOLD, its end marked; the ones before it faint.
+        p.setPen(stroke(k.shape, 1.2));
+        p.drawLine(QPointF(3.4, 6.0), QPointF(12.0, 4.0));
+        p.drawLine(QPointF(3.4, 11.0), QPointF(13.0, 10.0));
+        p.setPen(stroke(c, 2.0));
+        p.drawLine(QPointF(4.0, 19.0), QPointF(17.0, 15.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(18.4, 14.6), 2.4, 2.4);
+        break;
+    }
     case Glyph::HatchInside: {
         // THE REGION ROUND A CLICK, HATCHED: `MeasureAreaInside`'s four loose
         // lines, the ground they close filled with the pattern, and the click.

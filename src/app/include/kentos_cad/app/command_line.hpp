@@ -55,6 +55,28 @@ public:
     /// command names.
     bool offeringChoices() const noexcept { return choosing_; }
 
+    /// COMPOSES A LINE WITH THE SCENE (`.claude/ui.md` R48a): writes `fragment`
+    /// and, while composing, takes each click on the canvas as text — the
+    /// clicked coordinate, or after `nesne(` the clicked object's key — written
+    /// at the cursor with the separator the grammar wants in front of it. After
+    /// `clicks` clicks the line is submitted as if Enter were pressed; with none,
+    /// Enter submits it. What is submitted is exactly what was typed would be:
+    /// the tab that started it has no road of its own (CLAUDE.md 1.2).
+    void beginCompose(const QString& fragment, int clicks);
+
+    /// Whether the line is listening to the scene.
+    bool composing() const noexcept { return composing_; }
+
+    /// Whether the next click answers an OBJECT: `nesne(` just before the cursor.
+    bool composeWantsObject() const;
+
+    /// Writes one click's answer at the cursor. True when the line wants another
+    /// click; false once it has submitted itself or stopped listening.
+    bool composeWrite(const QString& value);
+
+    /// Stops listening to the scene. The text stays, for the keyboard.
+    void endCompose();
+
     void applyTheme(ThemeMode mode) override;
 
 signals:
@@ -72,6 +94,13 @@ signals:
     /// widget never interprets a command, because the parser is shared and there
     /// is exactly one (5.11).
     void submitted(const QString& line);
+
+    /// The line started composing and wants the scene's next click — an object
+    /// when `object`. Emitted once; the window re-arms after each answer.
+    void composeClickWanted(bool object);
+
+    /// The line stopped listening to the scene.
+    void composeEnded();
 
 protected:
     /// Draws the permanent `Komut:` prefix `design.md` §7 puts at the left of the
@@ -102,7 +131,9 @@ private:
     QStringList history_;
     int history_pos_{-1};
     QString prompt_;
-    bool choosing_{false}; ///< the list is a prompt's choices, not the command names
+    bool choosing_{false};  ///< the list is a prompt's choices, not the command names
+    bool composing_{false}; ///< the scene's clicks are written into the line
+    int clicksLeft_{0};     ///< clicks before the line submits itself; 0: Enter does
     int prefixWidth_{0};
     ThemeMode theme_{ThemeMode::Dark};
 };

@@ -304,6 +304,17 @@ enum class Glyph {
     MeasureFixed,       ///< distances from one held first point: ÖLÇ sabit=evet
     MeasureAreaInside,  ///< the region round a click inside it: ALANÖLÇ yontem=ic
     HatchInside,        ///< the region round a click inside it, hatched: TARAMA yontem=ic
+    SelectWindow,       ///< a solid frame, the objects wholly inside it: SEÇ PENCERE
+    SelectCrossing,     ///< a dashed frame and the line crossing it: SEÇ KESEN
+    SelectPolygon,      ///< a solid polygon round an object: SEÇ ÇOKGEN
+    SelectPolygonCross, ///< a dashed polygon a line crosses: SEÇ ÇOKGENKESEN
+    SelectFence,        ///< a run drawn through three short lines: SEÇ ÇİT
+    SelectCircle,       ///< a circle round an object: SEÇ DAİRE
+    SelectOutside,      ///< a dashed frame, the objects outside it bold: SEÇ DIŞINDA
+    SelectContaining,   ///< nested faces, a click in the smallest: SEÇ İÇEREN
+    SelectThrough,      ///< three lines meeting at a dot: SEÇ GEÇEN
+    SelectEverything,   ///< a frame round four objects, every one bold: SEÇ TÜMÜ
+    SelectNewest,       ///< two faint lines and the newest bold, its end marked: SEÇ SON
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

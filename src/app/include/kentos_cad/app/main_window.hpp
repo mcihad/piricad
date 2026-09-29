@@ -44,6 +44,8 @@ namespace kentos::command {
 /// The registry's categories (`spec.hpp`), declared here so the ribbon's
 /// leftovers can be asked for by category without pulling the spec in.
 enum class Category : std::uint8_t;
+/// One of SEÇ's modes as the Seçim prompt tab offers it (`select_modes.hpp`).
+struct SelectModeInfo;
 } // namespace kentos::command
 
 /// Qt widgets this header only holds pointers to. Forward-declared rather than
@@ -370,6 +372,12 @@ public:
     /// draws exactly one area and takes the banner away, and the next command
     /// that finishes puts a stale offer away.
     int probeOffer();
+
+    /// THE PROMPT TABS AND A LINE COMPOSED WITH THE SCENE (`.claude/ui.md` R48a),
+    /// driven by real clicks on the canvas: the Seçim tab up while objects are
+    /// asked for, its modes finished by clicks, and a `dik(` built by clicks
+    /// leaving the journal line typing it leaves. Returns the failures.
+    int probePromptTabs();
 
     /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
@@ -872,6 +880,22 @@ private:
     /// only its kind, and reads the first object's values into its boxes.
     void refreshContextTabs();
 
+    /// SHOWS THE PROMPT TAB THE RUNNING QUESTION WANTS (`.claude/ui.md` R48a):
+    /// `Seçim` while a command asks for objects, `Nokta Girişi` while it asks
+    /// for a point, neither otherwise. A tab shows; it does not come forward, so
+    /// a hand on `Çizim` stays there. When the tab the hand is on goes, the tab
+    /// it was on before comes back.
+    void refreshPromptTabs();
+
+    /// Arms the canvas for the next click of a line being composed
+    /// (`CommandLine::beginCompose`): an object pick after `nesne(`, a snapped
+    /// point otherwise. The answer is written into the line.
+    void armComposeClick(bool object);
+
+    /// Starts `mode` from the Seçim tab: a line that needs no click runs at
+    /// once; one that does is composed, the clicks written into it.
+    void startSelectMode(const command::SelectModeInfo& mode);
+
     /// Finds, once the ribbon is built, every action whose command acts on some
     /// classes of object only (`CommandSpec::targets`), wherever it is shown.
     void gatherTargetTools();
@@ -1177,6 +1201,20 @@ private:
     SARibbonContextCategory* blockEditTab_{nullptr};
     /// The tab the hand was on when an edit raised its own, to go back to.
     QPointer<SARibbonCategory> beforeBlockEdit_;
+
+    /// The two prompt tabs (R48a) and the tab the hand was on before it went to
+    /// one, for when the question is answered.
+    SARibbonContextCategory* promptPointTab_{nullptr};
+    SARibbonContextCategory* promptSelectTab_{nullptr};
+    QPointer<SARibbonCategory> beforePromptTab_;
+    /// The kind filter on the Seçim tab: `tur=` for every line it writes, or
+    /// empty for every kind.
+    ComboBox* selectKind_{nullptr};
+    /// A composed line took a click and wants the next: armed again when the
+    /// canvas has finished putting the last pick away (`captureEnded`).
+    bool composeRearm_{false};
+    /// The canvas's pick is armed for a composed line, not for a form field.
+    bool composeCapture_{false};
 
     /// A BLOCK DEFINITION OUT ON THE SHEET for editing (`BLOKDÜZENLE aç`). What
     /// belongs to the edit is the client's to say — the command is stateless so

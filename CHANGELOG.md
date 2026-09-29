@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — soru sürerken Seçim sekmesi
+
+- Bir komut nesne isterken şeritte **Seçim** sekmesi belirir (Netcad'in Seçim Süzgeci):
+  Pencere, Kesen, Çokgen, Çokgen Kesen, Çit, Daire, Dışında, İçeren, Geçen; Tümü, Önceki,
+  Son, Temizle, Tersine Çevir; **Tür** süzgeci ve **Seçimi Ver**. Sekme öne gelmez, soru
+  cevaplanınca kaybolur. Düğmeler `SEÇ`'in kendi kip tablosundan üretilir.
+- Her düğme bir satır yazar: tıklama isteyen kip satırı komut satırına başlatır ve tuvaldeki
+  tıklamalar koordinat olarak satıra yazılır; satır, yazılmışçasına çalışır ve günlüğe
+  öyle geçer.
+
+### Düzeltildi — `SEÇ LAST`
+
+- `LAST` hem `NESNE`'nin hem `SON`'un eş adıydı ve `NESNE` önce geldiği için `SEÇ LAST`
+  kimlik istiyordu; artık en son çizilen nesneyi alır.
+
 ### Eklendi — bir nesne boyunca nokta: `boyunca(nesne(k), mesafe, sapma)`
 
 - Her nokta isteminde: `k` kimlikli çizgi, çoklu çizgi, yay, daire ya da yaylı çizgi

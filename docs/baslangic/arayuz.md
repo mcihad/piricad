@@ -216,6 +216,33 @@ hiçbiri öne gelmez. Seçim boşalınca önceki sekmeye dönülür. Bir komut s
 isterken (TAŞI'nın nesneleri gibi) düzenleyici sekmeleri görünmez; her birinin en
 sağındaki **Seçimi Bırak** seçimi boşaltır.
 
+### Soru sürerken: Seçim sekmesi
+
+Bir komut sizden **nesne** isterken — TAŞI'nın, SİL'in, KOPYALA'nın sorusu — sekme
+satırının sonunda **Seçim** sekmesi belirir ve soru cevaplanınca kaybolur. Sekme
+**öne gelmez**: bulunduğunuz sekmede kalırsınız, gerektiğinde tıklarsınız.
+
+| Panel | Düğmeler |
+|---|---|
+| **Seçim Kipi** | Pencere, Kesen, Çokgen, Çokgen Kesen, Çit, Daire, Dışında, İçeren, Geçen |
+| **Küme** | Tümü, Önceki, Son, Temizle, Tersine Çevir |
+| **Süzgeç** | **Tür** kutusu: yalnız bu türdeki nesneler |
+| **Bitir** | **Seçimi Ver** — Enter ve sağ tıkla aynı |
+
+**Her düğme bir satır yazar.** Tıklama istemeyen bir kip — Tümü, Önceki, Son — hemen
+çalışır. Tıklama isteyen bir kip satırı **komut satırına başlatır** ve tuvalde yaptığınız
+tıklamalar koordinat olarak satıra yazılır: Pencere iki köşeden, İçeren tek tıklamadan
+sonra kendi çalışır; Çokgen ve Çit'i Enter bitirir. Sekmenin bulduğu, seçmekte olduğunuz
+nesnelere **eklenir** (`islem=EKLE`), Tür kutusu seçiliyse satıra `tur=` da yazılır:
+
+```text
+SEÇ ÇİT islem=EKLE 485310.000,4310250.000 485330.000,4310190.000
+```
+
+Satırı kendiniz yazsaydınız olacak olan neyse o olur; komut günlüğü de aynı satırı
+tutar. Kiplerin ne aldığı [SEÇ](../komutlar/select.md) sayfasındadır. Esc satırı ve
+tıklama beklemeyi bırakır.
+
 ### Soluk araçlar
 
 Bir araç seçtiğiniz nesnelerde işe yaramıyorsa **soluk** görünür ve basılmaz. Bir yazı

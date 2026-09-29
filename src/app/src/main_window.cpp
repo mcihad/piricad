@@ -47,6 +47,7 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/colour.hpp"
+#include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/command/selection.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/dimension.hpp"
@@ -485,10 +486,26 @@ MainWindow::MainWindow(QWidget* parent)
             pendingPick_ = nullptr;
             done(std::nullopt);
         }
+        composeCapture_                 = false;
         const command::Session* session = controller_->session();
         commandLine_->setPrompt(session != nullptr && session->waiting()
                                     ? QString::fromStdString(session->prompt().message)
                                     : QString());
+        // THE NEXT CLICK OF A COMPOSED LINE, armed only now: armed inside the
+        // answer, the pick would have been ended by the close of its own.
+        if (composeRearm_) {
+            composeRearm_ = false;
+            armComposeClick(commandLine_->composeWantsObject());
+        }
+    });
+
+    // A LINE COMPOSED WITH THE SCENE (`CommandLine::beginCompose`, `.claude/ui.md`
+    // R48a): its first click is armed here, each next one when the last is put
+    // away; a line that stops listening puts its pick away.
+    connect(commandLine_, &CommandLine::composeClickWanted, this, &MainWindow::armComposeClick);
+    connect(commandLine_, &CommandLine::composeEnded, this, [this] {
+        composeRearm_ = false;
+        if (composeCapture_ && canvas_->capturing()) canvas_->cancelCapture();
     });
 
     // Enter on an empty command line is "done pointing". Focus is here far more
@@ -3975,6 +3992,137 @@ int MainWindow::probeOffer()
     QCoreApplication::processEvents();
     check(offerForProbe().isEmpty(), QStringLiteral("sonraki komut teklifi kaldırdı"));
     letGo();
+    return failures;
+}
+
+int MainWindow::probePromptTabs()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[istem] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+    const auto letGo = [this] {
+        QCoreApplication::processEvents();
+        controller_->cancelAll();
+        QCoreApplication::processEvents();
+    };
+    const auto click = [this](core::Point2 world) {
+        const auto at = canvas_->view().to_screen(world);
+        const QPointF p(at.x, at.y);
+        QMouseEvent press(QEvent::MouseButtonPress, p, canvas_->mapToGlobal(p), Qt::LeftButton,
+                          Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, p, canvas_->mapToGlobal(p), Qt::LeftButton,
+                            Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &release);
+    };
+    const auto press = [this](const QString& name) {
+        auto* a = findChild<QAction*>(name);
+        if (a != nullptr) a->trigger();
+        return a != nullptr;
+    };
+    const auto picked = [this] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : controller_->bus().selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+    SARibbonBar* bar = ribbonBar();
+
+    // A PARCEL, TWO LINES AND A CIRCLE, far from anything else, and in view.
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    letGo();
+    runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30")); ///< 1
+    endCommand();
+    letGo();
+    runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,20"));    ///< 2
+    runScriptLine(QStringLiteral("ÇİZGİ 70,0 70,20"));    ///< 3
+    runScriptLine(QStringLiteral("DAİRE 100,10 105,10")); ///< 4
+    endCommand();
+    letGo();
+    runScriptLine(QStringLiteral("YAKINLAŞ PENCERE pencere=-10,-10 120,40"));
+    QCoreApplication::processEvents();
+
+    // ---- the Seçim tab, while TAŞI asks for objects ----
+    runScriptLine(QStringLiteral("TAŞI"));
+    QCoreApplication::processEvents();
+    check(bar != nullptr && promptSelectTab_ != nullptr &&
+              bar->isContextCategoryVisible(promptSelectTab_),
+          QStringLiteral("nesne sorulurken Seçim sekmesi görünür"));
+
+    // PENCERE: two clicks finish the line, and it adds what it finds.
+    check(press(QStringLiteral("promptSelect.PENCERE")), QStringLiteral("Pencere düğmesi var"));
+    check(commandLine_->composing() &&
+              commandLine_->text() == QStringLiteral("SEÇ PENCERE islem=EKLE "),
+          QStringLiteral("Pencere satırı yazıldı (%1)").arg(commandLine_->text()));
+    click(core::Point2{55'000, -5'000});
+    click(core::Point2{75'000, 25'000});
+    QCoreApplication::processEvents();
+    check(!commandLine_->composing(), QStringLiteral("iki tıklamadan sonra satır kendi gitti"));
+    check(picked() == std::vector<std::uint64_t>{2, 3},
+          QStringLiteral("pencere iki çizgiyi aldı (%1 nesne)").arg(picked().size()));
+
+    // İÇEREN: one click inside the parcel, added to the two lines.
+    check(press(QStringLiteral("promptSelect.İÇEREN")), QStringLiteral("İçeren düğmesi var"));
+    click(core::Point2{20'000, 15'000});
+    QCoreApplication::processEvents();
+    check(picked() == std::vector<std::uint64_t>{1, 2, 3},
+          QStringLiteral("İçeren parseli ekledi (%1 nesne)").arg(picked().size()));
+
+    // THE KIND FILTER: TÜMÜ narrowed to circles adds only the circle.
+    if (selectKind_ != nullptr)
+        selectKind_->setCurrentIndex(selectKind_->findData(QStringLiteral("DAİRE")));
+    check(press(QStringLiteral("promptSelect.TÜMÜ")), QStringLiteral("Tümü düğmesi var"));
+    QCoreApplication::processEvents();
+    check(picked() == std::vector<std::uint64_t>{1, 2, 3, 4},
+          QStringLiteral("tür süzgeciyle Tümü yalnız daireyi ekledi (%1 nesne)")
+              .arg(picked().size()));
+    if (selectKind_ != nullptr) selectKind_->setCurrentIndex(0);
+
+    // HANDED OVER, and the question becomes a point: the tab goes.
+    check(press(QStringLiteral("promptSelect.VER")), QStringLiteral("Seçimi Ver düğmesi var"));
+    QCoreApplication::processEvents();
+    check(!bar->isContextCategoryVisible(promptSelectTab_),
+          QStringLiteral("nokta sorulurken Seçim sekmesi gitti"));
+    letGo();
+    check(!bar->isContextCategoryVisible(promptSelectTab_),
+          QStringLiteral("komut bitince Seçim sekmesi yok"));
+
+    // ---- a `dik(` built by clicks is the line typing it is ----
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("ÇİZGİ"));
+    QCoreApplication::processEvents();
+    commandLine_->beginCompose(QStringLiteral("dik("), 0);
+    click(core::Point2{0, 35'000});
+    click(core::Point2{40'000, 35'000});
+    QCoreApplication::processEvents();
+    commandLine_->insert(QStringLiteral(",10,5)"));
+    const QString composed = commandLine_->text();
+    check(composed.startsWith(QStringLiteral("dik(")) &&
+              composed.endsWith(QStringLiteral(",10,5)")),
+          QStringLiteral("dik( tıklamalarla kuruldu (%1)").arg(composed));
+    QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QCoreApplication::sendEvent(commandLine_, &enter);
+    runScriptLine(QStringLiteral("@10,0"));
+    endCommand();
+    letGo();
+    const auto& entries = controller_->journal().entries();
+    const std::string built =
+        entries.empty() ? std::string() : entries.back().args.to_json().dump();
+    check(!built.empty() && entries.back().command_id == "core.line",
+          QStringLiteral("paletten kurulan çizgi günlükte"));
+    runScriptLine(QStringLiteral("GERİAL"));
+    runScriptLine(QStringLiteral("ÇİZGİ ") + composed + QStringLiteral(" @10,0"));
+    endCommand();
+    letGo();
+    const std::string typed = entries.empty()
+                                  ? std::string()
+                                  : controller_->journal().entries().back().args.to_json().dump();
+    check(built == typed, QStringLiteral("paletten kurulan ile yazılan aynı günlük satırı (%1)")
+                              .arg(QString::fromStdString(built)));
     return failures;
 }
 
@@ -10579,12 +10727,89 @@ void MainWindow::syncToolSelection()
         actSelect_->setChecked(true);
 }
 
+void MainWindow::armComposeClick(bool object)
+{
+    if (!commandLine_->composing()) return;
+    // ONE PICK AT A TIME, as a form field's: one that was waiting gets nothing.
+    if (pendingPick_) {
+        auto earlier = std::move(pendingPick_);
+        pendingPick_ = nullptr;
+        earlier(std::nullopt);
+    }
+    pendingPick_ = [this](std::optional<QString> got) {
+        if (!got) {
+            commandLine_->endCompose(); ///< Esc or the right button on the canvas
+            return;
+        }
+        composeRearm_ = commandLine_->composeWrite(*got);
+    };
+    composeCapture_ = true;
+    canvas_->beginCapture(object ? MapCanvas::Capture::Object : MapCanvas::Capture::Point);
+}
+
+void MainWindow::startSelectMode(const command::SelectModeInfo& mode)
+{
+    // THE LINE THE BUTTON STANDS FOR: the mode, added to what is being picked
+    // when the mode takes objects, narrowed to the tab's kind when one is set.
+    QString line = QStringLiteral("SEÇ ") +
+                   QString::fromUtf8(mode.word.data(), static_cast<qsizetype>(mode.word.size()));
+    if (mode.adds) line += QStringLiteral(" islem=EKLE");
+    if (selectKind_ != nullptr)
+        if (const QString kind = selectKind_->currentData().toString(); !kind.isEmpty())
+            line += QStringLiteral(" tur=") + kind;
+    if (mode.points == 0) {
+        controller_->runLine(line, command::Origin::Gui);
+        return;
+    }
+    // The clicks it takes finish it: after the last it runs, a run is Enter's.
+    commandLine_->beginCompose(line + QLatin1Char(' '), mode.points > 0 ? mode.points : 0);
+}
+
+void MainWindow::refreshPromptTabs()
+{
+    SARibbonBar* bar = ribbonBar();
+    if (bar == nullptr || promptSelectTab_ == nullptr) return;
+
+    const command::Session* live = controller_->session();
+    const bool asking            = live != nullptr && live->waiting();
+    const command::ParamKind kind =
+        asking ? live->prompt().kind : command::ParamKind::Text; ///< Text: neither tab
+    const bool objects = asking && kind == command::ParamKind::Selection;
+    const bool point =
+        asking && (kind == command::ParamKind::Point || kind == command::ParamKind::PointList);
+
+    SARibbonCategory* current = bar->categoryByIndex(bar->currentIndex());
+    const auto holds          = [current](SARibbonContextCategory* tab) {
+        return tab != nullptr && current != nullptr && tab->isHaveCategory(current);
+    };
+    const bool onPrompt = holds(promptSelectTab_) || holds(promptPointTab_);
+    // THE TAB THE HAND WAS ON as the question came, to go back to after it.
+    if (!onPrompt) beforePromptTab_ = current;
+
+    bool leaving    = false;
+    const auto show = [&](SARibbonContextCategory* tab, bool want) {
+        if (tab == nullptr || bar->isContextCategoryVisible(tab) == want) return;
+        leaving = leaving || (!want && holds(tab));
+        bar->setContextCategoryVisible(tab, want);
+    };
+    show(promptSelectTab_, objects);
+    show(promptPointTab_, point);
+    if (leaving) {
+        if (beforePromptTab_ != nullptr)
+            bar->raiseCategory(beforePromptTab_);
+        else
+            bar->setCurrentIndex(0);
+    }
+}
+
 void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
     // A command that starts asking puts the editor tabs away; one that ends
     // brings them back for what is still selected.
     refreshContextTabs();
+    // And the tab for the question itself, while it is asked (R48a).
+    refreshPromptTabs();
 
     // The first line of a new drawing has nothing on the stack to undo, and a
     // disabled action takes no shortcut: Ctrl+Z has to be live for the point.

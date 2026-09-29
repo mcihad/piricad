@@ -212,8 +212,58 @@ void CommandLine::setPrompt(const QString& prompt)
                                         : prompt + QStringLiteral(":"));
 }
 
+void CommandLine::beginCompose(const QString& fragment, int clicks)
+{
+    setText(fragment);
+    setCursorPosition(static_cast<int>(fragment.size()));
+    setFocus(Qt::OtherFocusReason);
+    composing_  = true;
+    clicksLeft_ = clicks > 0 ? clicks : 0;
+    emit composeClickWanted(composeWantsObject());
+}
+
+bool CommandLine::composeWantsObject() const
+{
+    return text().left(cursorPosition()).endsWith(QStringLiteral("nesne("), Qt::CaseInsensitive);
+}
+
+bool CommandLine::composeWrite(const QString& value)
+{
+    if (!composing_) return false;
+
+    // THE SEPARATOR THE GRAMMAR WANTS: none after an opening bracket, a comma or
+    // a space; a comma inside a call — `dik(A,B,…)` — and a space between the
+    // tokens of a line — `SEÇ ÇİT … A B`.
+    const QString before = text().left(cursorPosition());
+    QString piece        = value;
+    if (composeWantsObject()) {
+        piece += QLatin1Char(')'); ///< `nesne(12)`, closed where it was opened
+    } else if (!before.isEmpty() && !before.endsWith(QLatin1Char('(')) &&
+               !before.endsWith(QLatin1Char(',')) && !before.endsWith(QLatin1Char(' '))) {
+        const bool inCall = before.count(QLatin1Char('(')) > before.count(QLatin1Char(')'));
+        piece.prepend(inCall ? QLatin1Char(',') : QLatin1Char(' '));
+    }
+    insert(piece);
+
+    if (clicksLeft_ > 0 && --clicksLeft_ == 0) {
+        endCompose();
+        submit();
+        return false;
+    }
+    return true;
+}
+
+void CommandLine::endCompose()
+{
+    if (!composing_) return;
+    composing_  = false;
+    clicksLeft_ = 0;
+    emit composeEnded();
+}
+
 void CommandLine::submit()
 {
+    endCompose(); ///< a composed line is submitted like any other, and is done
     const QString line = text().trimmed();
     if (line.isEmpty()) {
         emit accepted();
@@ -242,12 +292,15 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Up: historyStep(-1); return;
     case Qt::Key_Down: historyStep(+1); return;
     case Qt::Key_Escape:
-        // Words half typed go first; then Esc lets go of the command AND the
-        // selection, as it does on the canvas (`Controller::cancelAll`).
-        if (text().isEmpty())
+        // Words half typed go first — a composed line and its listening with
+        // them; then Esc lets go of the command AND the selection, as it does on
+        // the canvas (`Controller::cancelAll`).
+        if (text().isEmpty() && !composing_) {
             controller_.cancelAll();
-        else
+        } else {
             clear();
+            endCompose();
+        }
         return;
     case Qt::Key_Space:
         // SPACE ON AN EMPTY LINE IS ENTER, as in every CAD since AutoCAD: the

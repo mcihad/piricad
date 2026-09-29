@@ -289,6 +289,11 @@ inline constexpr std::size_t kRibbonContextCount = 7;
 /// selection's editor tab, so past `RibbonContext`'s range (TODOS C-13).
 inline constexpr int kBlockEditContextId = 100;
 
+/// The tabs that are up while a command ASKS (`.claude/ui.md` R48a): for a point,
+/// and for objects. Not a selection's editor tabs either, so past both ranges.
+inline constexpr int kPromptPointContextId  = 101;
+inline constexpr int kPromptSelectContextId = 102;
+
 /// The editor tab object `e` of `doc` belongs to, if any: what brings a tab
 /// up for a selection and what a double click on the object opens.
 std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::EntityId e);

@@ -28,9 +28,11 @@
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/command/targets.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/style.hpp"
@@ -1799,6 +1801,88 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     inside->addLargeAction(actCircle_);
     inside->addSmallAction(actMove_);
     inside->addSmallAction(actErase_);
+
+    // ------------------------------------------------------------- `Seçim`
+    //
+    // UP WHILE A COMMAND ASKS FOR OBJECTS (`.claude/ui.md` R48a) — Netcad's
+    // Seçim Süzgeci — and gone when they are handed over. EVERY BUTTON WRITES A
+    // LINE: a SEÇ mode that needs no click runs as typed; one that does is
+    // started in the command line and the canvas's clicks finish it
+    // (`CommandLine::beginCompose`). The modes are SEÇ's own table
+    // (`command::select_modes`), so the tab lists nothing SEÇ does not know.
+    promptSelectTab_ = bar->addContextCategory(tr("Seçim"), t.accent, kPromptSelectContextId);
+    SARibbonCategory* picking = promptSelectTab_->addCategoryPage(tr("Seçim"));
+    picking->setObjectName(QStringLiteral("ribbonPromptSelect"));
+    SARibbonPanel* gestures = picking->addPanel(tr("Seçim Kipi"));
+    SARibbonPanel* sets     = picking->addPanel(tr("Küme"));
+    // A PICTURE PER MODE, by its word; a mode added to SEÇ later still gets its
+    // button, under the plain selection mark.
+    const auto glyphOf = [](const QString& word) {
+        static const QHash<QString, Glyph> known{
+            {QStringLiteral("PENCERE"), Glyph::SelectWindow},
+            {QStringLiteral("KESEN"), Glyph::SelectCrossing},
+            {QStringLiteral("ÇOKGEN"), Glyph::SelectPolygon},
+            {QStringLiteral("ÇOKGENKESEN"), Glyph::SelectPolygonCross},
+            {QStringLiteral("ÇİT"), Glyph::SelectFence},
+            {QStringLiteral("DAİRE"), Glyph::SelectCircle},
+            {QStringLiteral("DIŞINDA"), Glyph::SelectOutside},
+            {QStringLiteral("İÇEREN"), Glyph::SelectContaining},
+            {QStringLiteral("GEÇEN"), Glyph::SelectThrough},
+            {QStringLiteral("TÜMÜ"), Glyph::SelectEverything},
+            {QStringLiteral("ÖNCEKİ"), Glyph::History},
+            {QStringLiteral("SON"), Glyph::SelectNewest},
+            {QStringLiteral("TEMİZLE"), Glyph::Close},
+        };
+        return known.value(word, Glyph::Select);
+    };
+    for (const command::SelectModeInfo& mode : command::select_modes()) {
+        const QString word =
+            QString::fromUtf8(mode.word.data(), static_cast<qsizetype>(mode.word.size()));
+        auto* a = new QAction(
+            QString::fromUtf8(mode.label.data(), static_cast<qsizetype>(mode.label.size())), this);
+        a->setObjectName(QStringLiteral("promptSelect.%1").arg(word));
+        a->setData(static_cast<int>(glyphOf(word)));
+        a->setToolTip(tr("SEÇ %1%2 — %3")
+                          .arg(word, mode.adds ? QStringLiteral(" islem=EKLE") : QString(),
+                               QString::fromUtf8(mode.summary.data(),
+                                                 static_cast<qsizetype>(mode.summary.size()))));
+        connect(a, &QAction::triggered, this, [this, mode] { startSelectMode(mode); });
+        (mode.points != 0 ? gestures : sets)->addSmallAction(a);
+    }
+    auto* invert = new QAction(tr("Tersine Çevir"), this);
+    invert->setObjectName(QStringLiteral("promptSelect.TERSİNE"));
+    invert->setData(static_cast<int>(Glyph::Invert));
+    invert->setToolTip(tr("SEÇ TÜMÜ islem=TERSİNE — seçili olanlar çıkar, olmayanlar girer"));
+    connect(invert, &QAction::triggered, this, [this] {
+        QString line = QStringLiteral("SEÇ TÜMÜ islem=TERSİNE");
+        if (const QString kind = selectKind_->currentData().toString(); !kind.isEmpty())
+            line += QStringLiteral(" tur=") + kind;
+        controller_->runLine(line, command::Origin::Gui);
+    });
+    sets->addSmallAction(invert);
+    // THE KIND EVERY LINE OF THIS TAB IS NARROWED TO (`tur=`), from the kind
+    // table itself, so a kind a plugin registers is offered the day it is.
+    SARibbonPanel* kinds = picking->addPanel(tr("Süzgeç"));
+    selectKind_          = new ComboBox(kinds);
+    selectKind_->setObjectName(QStringLiteral("promptSelectKind"));
+    selectKind_->setControlSize(ControlSize::Compact);
+    selectKind_->setAccessibleName(tr("Seçilecek nesne türü"));
+    selectKind_->addItem(tr("Her tür"), QString());
+    for (const core::KindSpec& kind : core::builtin_kinds().all())
+        if (kind.names[0] != nullptr) {
+            const QString name = QString::fromUtf8(kind.names[0]);
+            selectKind_->addItem(turkish_title(name), name);
+        }
+    kinds->addSmallWidget(captioned(kinds, tr("Tür"), selectKind_, 34));
+    // AND THE WAY TO HAND THEM OVER, for a hand on the mouse: what Enter and the
+    // right button do.
+    SARibbonPanel* handOver = picking->addPanel(tr("Bitir"));
+    auto* give              = new QAction(tr("Seçimi Ver"), this);
+    give->setObjectName(QStringLiteral("promptSelect.VER"));
+    give->setData(static_cast<int>(Glyph::Check));
+    give->setToolTip(tr("Seçilenleri soran komuta verir — Enter ya da sağ tık"));
+    connect(give, &QAction::triggered, this, [this] { (void)controller_->supplyPickedObjects(); });
+    handOver->addLargeAction(give);
 }
 
 void MainWindow::loadRibbonCatalogues()

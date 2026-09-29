@@ -329,6 +329,11 @@ Harita alanında hiçbir komut çalışmıyorken sol fare tuşu seçim yapar:
 Şeritte her sekmenin ilk öğesi olan **Seç** düğmesinin okunda **Tümünü Seç** (**Ctrl+A**)
 ve **Seçimi Temizle** (**Ctrl+Shift+A**) vardır.
 
+Bir komut nesne isterken sekme satırının sonunda **Seçim** sekmesi belirir: bu sayfadaki
+kiplerin her biri orada bir düğmedir, tıklamanız gereken noktaları tuvalde verirsiniz ve
+düğme satırı komut satırına sizin yerinize yazar
+([Soru sürerken: Seçim sekmesi](../baslangic/arayuz.md#soru-sürerken-seçim-sekmesi)).
+
 Seçili nesneler tuvalde kalın ve renkli çizilir. Sürükleme sırasında kutunun kendisi
 de görünür: pencere kutusu düz çerçeveli, kesen kutu kesik çerçevelidir.
 

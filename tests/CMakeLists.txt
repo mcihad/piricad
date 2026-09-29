@@ -353,6 +353,17 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(offer-banner PROPERTIES TIMEOUT 120)
 
+    # AND THE PROMPT TABS (`.claude/ui.md` R48a): the Seçim tab while a command
+    # asks for objects, its modes finished by real clicks, and a `dik(` built by
+    # clicks leaving the journal line typing it leaves.
+    add_test(NAME prompt-tabs
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_PROMPT_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(prompt-tabs PROPERTIES TIMEOUT 120)
+
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page
     # box, the author field and the encryption of what came out — plus the print

@@ -19,6 +19,7 @@
 // after a compaction would delete the neighbouring parcel.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -28,6 +29,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -96,76 +98,133 @@ bool matches(const std::string& folded, std::initializer_list<const char*> names
     return false;
 }
 
+/// One mode, once: its canonical name, every spelling `parse_mode` takes, and
+/// what the Seçim prompt tab shows for it (`select_modes`). THE list — the
+/// parser, the recorded name and the tab all read it (CLAUDE.md 5.10).
+struct ModeRow
+{
+    Mode mode;
+    const char* name;                   ///< canonical, what the record says
+    std::array<const char*, 6> aliases; ///< every spelling, the name among them
+    const char* label;                  ///< the tab's button; null when it has none
+    int points;                         ///< clicks: 0 none, n exactly n, -1 a run
+    bool adds;                          ///< the tab adds what it finds (`islem=EKLE`)
+    const char* summary;                ///< the button's tip, after the line it writes
+};
+
+constexpr std::array<ModeRow, 17> kModes{{
+    {Mode::Window,
+     "PENCERE",
+     {"PENCERE", "WINDOW", "W"},
+     "Pencere",
+     2,
+     true,
+     "tamamen içinde kalanlar; iki köşe tıklayın"},
+    {Mode::Crossing,
+     "KESEN",
+     {"KESEN", "CROSSING", "C"},
+     "Kesen",
+     2,
+     true,
+     "kutuya değen her şey; iki köşe tıklayın"},
+    {Mode::Polygon,
+     "ÇOKGEN",
+     {"ÇOKGENPENCERE", "COKGENPENCERE", "ÇOKGEN", "COKGEN", "WPOLYGON", "WP"},
+     "Çokgen",
+     -1,
+     true,
+     "çokgenin tamamen içindekiler; köşeleri tıklayın, Enter bitirir"},
+    {Mode::PolygonCrossing,
+     "ÇOKGENKESEN",
+     {"ÇOKGENKESEN", "COKGENKESEN", "CPOLYGON", "CP"},
+     "Çokgen Kesen",
+     -1,
+     true,
+     "çokgenin değdiği her şey; köşeleri tıklayın, Enter bitirir"},
+    {Mode::Fence,
+     "ÇİT",
+     {"ÇİT", "CIT", "FENCE", "F"},
+     "Çit",
+     -1,
+     true,
+     "hattın kestiği her şey; noktaları tıklayın, Enter bitirir"},
+    {Mode::Circle,
+     "DAİRE",
+     {"DAİRE", "DAIRE", "CIRCLE"},
+     "Daire",
+     2,
+     true,
+     "dairenin tamamen içindekiler; merkezi, sonra çevreyi tıklayın"},
+    {Mode::Outside,
+     "DIŞINDA",
+     {"DIŞINDA", "DISINDA", "OUTSIDE"},
+     "Dışında",
+     2,
+     true,
+     "kutuya hiç değmeyenler; iki köşe tıklayın"},
+    {Mode::Containing,
+     "İÇEREN",
+     {"İÇEREN", "ICEREN", "CONTAINING"},
+     "İçeren",
+     1,
+     true,
+     "noktayı içeren en küçük alan; alanın içine tıklayın"},
+    {Mode::Through,
+     "GEÇEN",
+     {"GEÇEN", "GECEN", "THROUGH"},
+     "Geçen",
+     1,
+     true,
+     "noktadan geçen çizgiler; noktaya tıklayın"},
+    {Mode::All,
+     "TÜMÜ",
+     {"TÜMÜ", "TUMU", "ALL", "HEPSİ", "HEPSI"},
+     "Tümü",
+     0,
+     true,
+     "görünür bütün nesneler"},
+    {Mode::Previous,
+     "ÖNCEKİ",
+     {"ÖNCEKİ", "ONCEKI", "PREVIOUS", "PR"},
+     "Önceki",
+     0,
+     false,
+     "bundan önceki seçim"},
+    {Mode::Last, "SON", {"SON", "LAST", "L"}, "Son", 0, true, "en son çizilen nesne"},
+    {Mode::Clear,
+     "TEMİZLE",
+     {"TEMİZLE", "TEMIZLE", "CLEAR", "NONE", "HİÇ", "HIC"},
+     "Temizle",
+     0,
+     false,
+     "seçimi boşaltır"},
+    // TYPED OR POINTED AT, not started from the tab: an id, a layer name, and
+    // the click and the drag the canvas already makes.
+    {Mode::Objects, "NESNE", {"NESNE", "NESNELER", "OBJECT"}, nullptr, 0, false, ""},
+    {Mode::Layer, "KATMAN", {"KATMAN", "LAYER", "K"}, nullptr, 0, false, ""},
+    {Mode::Box, "KUTU", {"KUTU", "BOX", "B"}, nullptr, 2, false, ""},
+    {Mode::Point, "NOKTA", {"NOKTA", "POINT", "P"}, nullptr, 1, false, ""},
+}};
+
+/// The mode `typed` names, folded the Turkish way. `LAST` is SON's alone: it
+/// used to sit in NESNE's list too, which came first, so `SEÇ LAST` asked for
+/// object ids instead of taking the newest object.
 bool parse_mode(const std::string& typed, Mode& out)
 {
-    if (matches(typed, {"TÜMÜ", "TUMU", "ALL", "HEPSİ", "HEPSI"})) {
-        out = Mode::All;
-    } else if (matches(typed, {"TEMİZLE", "TEMIZLE", "CLEAR", "NONE", "HİÇ", "HIC"})) {
-        out = Mode::Clear;
-    } else if (matches(typed, {"NESNE", "NESNELER", "OBJECT", "LAST"})) {
-        out = Mode::Objects;
-    } else if (matches(typed, {"KATMAN", "LAYER", "K"})) {
-        out = Mode::Layer;
-    } else if (matches(typed, {"PENCERE", "WINDOW", "W"})) {
-        out = Mode::Window;
-    } else if (matches(typed, {"KESEN", "CROSSING", "C"})) {
-        out = Mode::Crossing;
-    } else if (matches(typed, {"KUTU", "BOX", "B"})) {
-        out = Mode::Box;
-    } else if (matches(typed, {"NOKTA", "POINT", "P"})) {
-        out = Mode::Point;
-    } else if (matches(typed, {"İÇEREN", "ICEREN", "CONTAINING"})) {
-        out = Mode::Containing;
-    } else if (matches(typed, {"DAİRE", "DAIRE", "CIRCLE"})) {
-        out = Mode::Circle;
-    } else if (matches(typed, {"DIŞINDA", "DISINDA", "OUTSIDE"})) {
-        out = Mode::Outside;
-    } else if (matches(typed, {"GEÇEN", "GECEN", "THROUGH"})) {
-        out = Mode::Through;
-        // `ÇOKGENPENCERE` IS THE UNAMBIGUOUS SPELLING and the one the plan used.
-        // `ÇOKGEN` is also a DRAW command (the regular polygon), so a user who
-        // has just used it and then types `SEÇ ÇOKGEN` is saying one word for two
-        // things. Both reach this mode; the long one says which.
-    } else if (matches(typed,
-                       {"ÇOKGENPENCERE", "COKGENPENCERE", "ÇOKGEN", "COKGEN", "WPOLYGON", "WP"})) {
-        out = Mode::Polygon;
-    } else if (matches(typed, {"ÇOKGENKESEN", "COKGENKESEN", "CPOLYGON", "CP"})) {
-        out = Mode::PolygonCrossing;
-    } else if (matches(typed, {"ÇİT", "CIT", "FENCE", "F"})) {
-        out = Mode::Fence;
-    } else if (matches(typed, {"ÖNCEKİ", "ONCEKI", "PREVIOUS", "PR"})) {
-        out = Mode::Previous;
-    } else if (matches(typed, {"SON", "LAST", "L"})) {
-        out = Mode::Last;
-    } else {
-        return false;
-    }
-    return true;
+    for (const ModeRow& row : kModes)
+        for (const char* alias : row.aliases)
+            if (alias != nullptr && core::turkish_key_equals(typed, alias)) {
+                out = row.mode;
+                return true;
+            }
+    return false;
 }
 
 const char* mode_name(Mode m)
 {
-    switch (m) {
-    case Mode::Report: return "DURUM";
-    case Mode::All: return "TÜMÜ";
-    case Mode::Clear: return "TEMİZLE";
-    case Mode::Objects: return "NESNE";
-    case Mode::Layer: return "KATMAN";
-    case Mode::Window: return "PENCERE";
-    case Mode::Crossing: return "KESEN";
-    case Mode::Box: return "KUTU";
-    case Mode::Point: return "NOKTA";
-    case Mode::Containing: return "İÇEREN";
-    case Mode::Circle: return "DAİRE";
-    case Mode::Outside: return "DIŞINDA";
-    case Mode::Through: return "GEÇEN";
-    case Mode::Polygon: return "ÇOKGEN";
-    case Mode::PolygonCrossing: return "ÇOKGENKESEN";
-    case Mode::Fence: return "ÇİT";
-    case Mode::Previous: return "ÖNCEKİ";
-    case Mode::Last: return "SON";
-    }
-    return "DURUM";
+    for (const ModeRow& row : kModes)
+        if (row.mode == m) return row.name;
+    return "DURUM"; ///< the implied mode: no mode given, the selection reported
 }
 
 bool parse_op(const std::string& typed, Op& out)
@@ -757,6 +816,20 @@ Task<void> run_select(Context& ctx)
 }
 
 } // namespace
+
+std::span<const SelectModeInfo> select_modes()
+{
+    // BUILT ONCE FROM THE TABLE: the rows a hand starts from the tab, in order.
+    static const std::vector<SelectModeInfo> offered = [] {
+        std::vector<SelectModeInfo> out;
+        for (const ModeRow& row : kModes)
+            if (row.label != nullptr)
+                out.push_back(
+                    SelectModeInfo{row.name, row.label, row.points, row.adds, row.summary});
+        return out;
+    }();
+    return offered;
+}
 
 KENTOS_COMMAND(select)
 {
