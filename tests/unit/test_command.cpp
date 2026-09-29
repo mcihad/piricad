@@ -2316,6 +2316,85 @@ TEST_CASE("ALANÖLÇ köşelerden: ALAN satırını teklif eder; satır tek adı
     CHECK_FALSE(of_object.value().offer.has_value());
 }
 
+TEST_CASE("ALANÖLÇ yontem=ic: içine tıklanan bölgenin alanı, SINIR'ın bulduğu bölge")
+{
+    // FOUR LOOSE LINES closing a 40 m × 30 m yard — no area object anywhere.
+    Fixture f;
+    for (const char* side :
+         {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30", "ÇİZGİ 0,30 0,0"})
+        REQUIRE(f.bus.execute_line(side, Origin::Test).ok());
+
+    auto inside = f.bus.execute_line("ALANÖLÇ yontem=ic nokta=20,15", Origin::CommandLine);
+    REQUIRE(inside.ok());
+    auto corners = f.bus.execute_line("ALANÖLÇ yontem=nokta noktalar=0,0 40,0 40,30 0,30",
+                                      Origin::CommandLine);
+    REQUIRE(corners.ok());
+    // The same ground, to the square millimetre, either way it is asked.
+    CHECK(inside.value().report.find("alan_mm2")->as_int() == 1'200'000'000);
+    CHECK(inside.value().report.find("alan_mm2")->as_int() ==
+          corners.value().report.find("alan_mm2")->as_int());
+    CHECK(inside.value().report.find("cevre_mm")->as_int() == 140'000);
+    CHECK(inside.value().report.find("kaynaklar")->as_array().size() == 4);
+    // The mode is implied by the point.
+    auto implied = f.bus.execute_line("ALANÖLÇ nokta=20,15", Origin::CommandLine);
+    REQUIRE(implied.ok());
+    CHECK(implied.value().report.find("alan_mm2")->as_int() == 1'200'000'000);
+
+    // OFFERED AS SINIR'S LINE, and taking it writes the region once.
+    REQUIRE(inside.value().offer.has_value());
+    CHECK(inside.value().offer->label == "Sınır olarak çiz");
+    CHECK(inside.value().offer->line == "SINIR nokta=20.000,15.000");
+    const std::size_t lines = f.doc.live_entity_count();
+    const std::size_t steps = f.undo.undo_depth();
+    REQUIRE(f.bus.execute_line(inside.value().offer->line, Origin::Gui).ok());
+    CHECK(f.doc.live_entity_count() == lines + 1);
+    CHECK(f.undo.undo_depth() == steps + 1);
+    CHECK(f.journal.entries().back().command_id == "core.boundary");
+
+    // A HOLE IS TAKEN OFF: a closed 10 m square inside the yard is an island.
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 5,5 15,5 15,15 5,15 5,5", Origin::Test).ok());
+    auto holed = f.bus.execute_line("ALANÖLÇ yontem=ic nokta=30,20", Origin::CommandLine);
+    REQUIRE(holed.ok());
+    CHECK(holed.value().report.find("ada")->as_int() >= 1);
+    CHECK(holed.value().report.find("alan_mm2")->as_int() ==
+          holed.value().report.find("dis_alan_mm2")->as_int() - 100'000'000);
+}
+
+TEST_CASE("ALANÖLÇ yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; tıklama yakalanmaz")
+{
+    // THREE SIDES AND A SHORT FOURTH: a 50 cm gap at the top left corner.
+    Fixture f;
+    for (const char* side :
+         {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0.5,30", "ÇİZGİ 0,30 0,0"})
+        REQUIRE(f.bus.execute_line(side, Origin::Test).ok());
+    auto measured = f.bus.execute_line("ALANÖLÇ yontem=ic nokta=20,15", Origin::CommandLine);
+    auto bounded  = f.bus.execute_line("SINIR nokta=20,15", Origin::CommandLine);
+    REQUIRE_FALSE(measured.ok());
+    REQUIRE_FALSE(bounded.ok());
+    CHECK(measured.error().message.find("Bu bölge kapanmıyor") != std::string::npos);
+    CHECK(measured.error().message == bounded.error().message);
+
+    auto on_line = f.bus.execute_line("ALANÖLÇ yontem=ic nokta=20,0", Origin::CommandLine);
+    REQUIRE_FALSE(on_line.ok());
+    CHECK(on_line.error().message.find("Nokta bir çizginin üstünde") != std::string::npos);
+
+    // THE CLICK IS NOT CARRIED ONTO THE LINE: a point 1 mm inside the bottom
+    // edge, with the nearest-point snap on, is still a point inside.
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0.5,30 0,30", Origin::Test).ok()); ///< close the gap
+    // 127 turns on every mode from the end point to the nearest point.
+    REQUIRE(f.bus.execute_line("MOD ad=yakalama_modları deger=127", Origin::Test).ok());
+    auto started = f.bus.begin_interactive("ALANÖLÇ yontem=ic", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    CHECK_FALSE(session.prompt().aids);
+    CHECK(session.prompt().rubber_shape == RubberShape::Region);
+    REQUIRE(session.supply(Value::aimed_point(core::Point2{20000, 1})).ok());
+    auto done = f.bus.finish(session);
+    REQUIRE(done.ok());
+    CHECK(done.value().report.find("alan_mm2")->as_int() == 1'200'000'000);
+}
+
 TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")
 {
     Fixture f;

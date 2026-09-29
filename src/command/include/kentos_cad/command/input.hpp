@@ -219,6 +219,13 @@ struct Prompt
     /// second choice. The answer is the same `SEÇ` line and the same ids a
     /// keyboard sends, so nothing reaches the command a script could not send.
     std::size_t pick_most{0};
+
+    /// WHETHER THE INPUT AIDS APPLY to the answer (`apply_input_aids`). False
+    /// for a point that only has to be INSIDE something — the seed of a region
+    /// (SINIR, ALANÖLÇ `yontem=ic`): snapped, a click inside a parcel near its
+    /// edge landed ON the edge and was refused as "on a line". The canvas
+    /// shows no snap marker for such a prompt, since none will be taken.
+    bool aids{true};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

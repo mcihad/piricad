@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — içine tıklayarak alan ölçmek
+
+- `ALANÖLÇ yontem=ic nokta=…`: gevşek çizgilerin kapattığı bir bölgenin içine tıklayın,
+  alanı ölçülür (Netcad'in Alan Seçim Aracı). Hesap `SINIR`'ınki: düğüm toleransı, ada
+  olarak düşülen iç kapalı çizgiler, yay kalan yaylar; kapanmayan bölge `SINIR` ile aynı
+  sözle reddedilir. Sonuçta **Sınır olarak çiz** aynı noktayla `SINIR`'ı çalıştırır.
+  **Harita ▸ Ölçüm ▸ Alan Ölç ▾ ▸ içine tıklayarak**.
+
+### Düzeltildi — bölgenin içine yapılan tıklama artık yakalanmıyor
+
+- `SINIR`'da ve `ALANÖLÇ yontem=ic`'te bölgenin içine yapılan tıklamaya nesne yakalama,
+  ızgara ve dik mod uygulanmıyor. Önceden bir kenara yakın tıklama o kenarın üstüne oturur
+  ve "Nokta bir çizginin üstünde" diye reddedilirdi.
+- Tuvalin üstündeki öneri şeridi (**Alan olarak çiz**, **Sınır olarak çiz**) ya da uyarı
+  şeridi kalkınca tuval o anda yukarı uzanıyor. Önceden macOS'ta şeridin yerinde, fare
+  kıpırdayana dek boş bir bant kalıyordu.
+
 ### Eklendi — komutun önerdiği sonraki adım: Alan olarak çiz
 
 - `ALANÖLÇ` köşelerden bitince tuvalin üstünde **Alan olarak çiz** düğmesi belirir: aynı

@@ -135,6 +135,10 @@ struct PointOptions
     /// The newest point of the run may be taken back. See `Prompt::can_retract`;
     /// the body learns of it through `Context::took_back`.
     bool can_retract{false};
+
+    /// The input aids apply to the answer. See `Prompt::aids`: off for a
+    /// region's seed, a point that only has to be inside.
+    bool aids{true};
 };
 
 class Context;

@@ -1376,6 +1376,51 @@ TEST_CASE(
         CHECK_EQ(rig->doc.content_hash(), hash);
 }
 
+TEST_CASE("PROOF: ALANÖLÇ yontem=ic gui, komut satırı ve betikten aynı bölgeyi ölçer")
+{
+    const char* kSides[] = {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
+                            "ÇİZGİ 0,30 0,0"};
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    for (Rig* rig : {&gui, &cli, &scr})
+        for (const char* side : kSides)
+            REQUIRE(rig->bus.execute_line(side, Origin::Test).ok());
+    const std::uint64_t hash = cli.doc.content_hash();
+
+    core::Json from_gui;
+    {
+        auto started = gui.bus.begin_interactive("ALANÖLÇ yontem=ic", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.supply(Value::aimed_point(core::Point2{20000, 15000})).ok());
+        auto done = gui.bus.finish(session);
+        REQUIRE(done.ok());
+        from_gui = done.value().report;
+    }
+    const auto typed = cli.bus.execute_line("ALANÖLÇ yontem=ic nokta=20,15", Origin::CommandLine);
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "İçine tıklanan bölge kanıtı",
+            "komutlar": [ {"cmd": "core.measure_area",
+                           "args": {"yontem": "ic", "nokta": [20000, 15000]}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    command::Args args;
+    args.set("yontem", Value::text("ic"));
+    args.set("nokta", Value::point(core::Point2{20000, 15000}));
+    const auto scripted = scr.bus.dispatch(Invocation{"core.measure_area", args, Origin::Script});
+    REQUIRE(scripted.ok());
+
+    CHECK_EQ(from_gui.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), scripted.value().report.dump());
+    for (const Rig* rig : {&gui, &cli, &scr})
+        CHECK_EQ(rig->doc.content_hash(), hash);
+}
+
 TEST_CASE("PROOF: ÖLÇ sabit=evet gui, komut satırı ve betikten aynı uzaklıkları okur")
 {
     Rig gui;

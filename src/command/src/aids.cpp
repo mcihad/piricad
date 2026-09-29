@@ -155,7 +155,10 @@ AidSettings aids_for(const AidSettings& set, const Prompt& p)
     // it; an object snap would carry it onto the nearest corner or crossing —
     // on a trim, the one place that names no piece — and a grid node can lie
     // off the object altogether.
-    if (p.rubber_shape == RubberShape::Trim) {
+    // A POINT THAT ONLY HAS TO BE INSIDE — a region's seed (`Prompt::aids`) — is
+    // a pick of the same sort: every aid would carry it onto the linework it is
+    // inside, and a click on a line finds no region.
+    if (p.rubber_shape == RubberShape::Trim || !p.aids) {
         out.modes          = core::SnapNone;
         out.ortho          = false;
         out.normal_lock    = false;

@@ -14,10 +14,12 @@
 // happened to be.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/region_input.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/json.hpp"
@@ -271,6 +273,65 @@ Task<void> measure_by_corners(Context& ctx)
     ctx.record("yontem", Value::text("nokta"));
 }
 
+/// ALANÖLÇ `yontem=ic`: the area of the region round a point — Netcad's
+/// `Alan Seçim Aracı` (wiki 217387115) — found the way SINIR finds it
+/// (`command::ask_region`: islands as holes, the node tolerance, a bridge when
+/// asked). Measured, not made: drawing it is SINIR's, offered as its line.
+Task<void> measure_inside(Context& ctx)
+{
+    auto found = co_await ask_region(ctx, "Ölçülecek bölgenin içine tıklayın", false);
+    if (!found) co_return;
+    const core::NetworkFace& face = *found->region.face;
+    const core::Mm perimeter      = core::path_length(face.outer.path);
+    const core::Document& doc     = ctx.document();
+
+    std::string said = "Alan: " + square_metres(face.area) + "   çevre: " + metres(perimeter);
+    if (!face.holes.empty())
+        said += "   (dış sınır " + square_metres(face.outer_area) + ", " +
+                std::to_string(face.holes.size()) + " ada düşüldü)";
+    said += "   — içine tıklanan bölge, " + std::to_string(found->region.sources.size()) +
+            " nesnenin çizgisinden";
+    ctx.echo(said);
+
+    core::Json from = core::Json::array({});
+    for (const core::EntityId e : found->region.sources)
+        from.push(core::Json::integer(static_cast<std::int64_t>(core::raw(doc.entities().key[e]))));
+    core::Json report;
+    report.set("alan_mm2", core::Json::integer(face.area));
+    report.set("cevre_mm", core::Json::integer(perimeter));
+    report.set("dis_alan_mm2", core::Json::integer(face.outer_area));
+    report.set("ada", core::Json::integer(static_cast<std::int64_t>(face.holes.size())));
+    report.set("kaynaklar", std::move(from));
+    ctx.report(std::move(report));
+
+    std::vector<core::Mm> xs;
+    std::vector<core::Mm> ys;
+    core::path_outline(face.outer.path, xs, ys);
+    std::vector<core::Point2> outline;
+    outline.reserve(xs.size());
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        outline.push_back(core::Point2{xs[i], ys[i]});
+    ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Ring,
+                         .points = std::move(outline),
+                         .labels = {square_metres(face.area) + " · çevre " + metres(perimeter)}});
+
+    // THE REGION, DRAWN IF WANTED: SINIR with the same point — the command
+    // that writes a region, with its lineage and its one undo step.
+    std::string line = "SINIR nokta=" + core::metres_fixed(found->query.at.x, 3, '.') + "," +
+                       core::metres_fixed(found->query.at.y, 3, '.');
+    if (ctx.has_argument("ada")) line += found->query.islands ? " ada=evet" : " ada=hayır";
+    if (found->query.bridge > 0) line += " bosluk=" + std::to_string(found->query.bridge);
+    ctx.echo("Sınır olarak çizmek için: " + line);
+    ctx.offer(Offer{.title = "Ölçülen bölge",
+                    .text  = "Alan: " + square_metres(face.area) +
+                            ". Bölgenin sınırını bir alan olarak çizer.",
+                    .label = "Sınır olarak çiz",
+                    .line  = line});
+
+    record_region(ctx, *found);
+    ctx.record("yontem", Value::text("ic"));
+}
+
 Task<void> run_measure_area(Context& ctx)
 {
     // BY CORNERS when asked for, or when corners were handed over: a script's
@@ -280,9 +341,14 @@ Task<void> run_measure_area(Context& ctx)
         co_await measure_by_corners(ctx);
         co_return;
     }
+    // INSIDE, when asked for, or when the point inside was handed over.
+    if (method == "ic" || (method.empty() && !ctx.argument("nokta").empty())) {
+        co_await measure_inside(ctx);
+        co_return;
+    }
     if (!method.empty() && method != "nesne") {
         ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Tanınmayan yöntem: '" + method + "'. Yöntemler: nesne / nokta");
+                   "Tanınmayan yöntem: '" + method + "'. Yöntemler: nesne / nokta / ic");
         co_return;
     }
 
@@ -452,14 +518,26 @@ KENTOS_COMMAND(measure_area)
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
                          .en("objects"),
-                     Param::choice("yontem", Arity::optional(), {"nesne", "nokta"},
+                     Param::choice("yontem", Arity::optional(), {"nesne", "nokta", "ic"},
                                    "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: "
-                                     "köşeleri gösterilen alan")
+                                     "köşeleri gösterilen alan; ic: içine tıklanan bölge")
                          .en("method"),
                      Param::points("noktalar", Arity::at_least(0),
                                    "yontem=nokta için alanın köşeleri; verilirse yöntem "
                                      "kendiliğinden nokta olur")
-                         .en("points")},
+                         .en("points"),
+                     Param{"nokta", ParamKind::Point, Arity::optional(),
+                         "yontem=ic için bölgenin içindeki nokta; verilirse yöntem "
+                           "kendiliğinden ic olur"}
+                         .en("point"),
+                     Param::boolean("ada", Arity::optional(),
+                                    "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak "
+                                      "düşülür (öntanımlı evet)")
+                         .en("islands"),
+                     Param::integer("bosluk", Arity::optional(),
+                                    "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; "
+                                      "0 hiç")
+                         .en("gap")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "

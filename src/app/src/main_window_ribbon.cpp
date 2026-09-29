@@ -469,6 +469,13 @@ void MainWindow::buildRibbon()
                                         "yazılır, Enter bitirir"));
     // Corners clicked, not objects picked: a selected line does not grey it.
     areaByCorners->setProperty(kIgnoresSelectionProperty, true);
+    // NETCAD'S ALAN SEÇİM ARACI (wiki 217387115): the region round a click,
+    // found in loose linework the way SINIR finds it.
+    auto* areaInside = methodTool(Glyph::MeasureAreaInside, tr("Alan Ölç — içine tıklayarak"),
+                                  QStringLiteral("ALANÖLÇ yontem=ic"),
+                                  tr("Bölgenin içine tıklayın: çevreleyen çizgilerin kapattığı "
+                                     "alan ölçülür, içindeki kapalı çizgiler ada olarak düşülür"));
+    areaInside->setProperty(kIgnoresSelectionProperty, true);
     // NETCAD'S İLK NOKTA SABİT (wiki 217385201): every point measured from the
     // first, where Ölç measures each from the one before.
     auto* measureFixed = methodTool(
@@ -892,7 +899,7 @@ void MainWindow::buildRibbon()
     // point, and PRİZMA — three ways of reading distances off points.
     SARibbonPanel* tape = mapTab->addPanel(tr("Ölçüm"));
     family(tape, {actMeasure_, measureFixed, actStationOffset_}, Size::Large, tr("Ölç"));
-    family(tape, {actMeasureArea_, areaByCorners}, Size::Small, tr("Alan Ölç"));
+    family(tape, {actMeasureArea_, areaByCorners, areaInside}, Size::Small, tr("Alan Ölç"));
     small(tape, actMeasureAngle_);
 
     SARibbonPanel* geodesy = mapTab->addPanel(tr("Jeodezi"));

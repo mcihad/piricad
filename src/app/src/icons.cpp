@@ -1965,6 +1965,24 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::MeasureAreaInside: {
+        // THE REGION ROUND A CLICK: four loose lines that cross at the corners —
+        // no area object, only linework — the ground they close washed, and the
+        // click inside it.
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.fill);
+        p.drawRect(QRectF(5.0, 5.4, 14.0, 12.8));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(2.6, 5.4), QPointF(21.4, 5.4));
+        p.drawLine(QPointF(2.6, 18.2), QPointF(21.4, 18.2));
+        p.drawLine(QPointF(5.0, 3.0), QPointF(5.0, 20.6));
+        p.drawLine(QPointF(19.0, 3.0), QPointF(19.0, 20.6));
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(10.0, 11.8), QPointF(14.0, 11.8));
+        p.drawLine(QPointF(12.0, 9.8), QPointF(12.0, 13.8));
+        break;
+    }
     case Glyph::MeasureFixed: {
         // THE FIRST POINT HELD: a pinned point at the bottom left and a spoke
         // from it to each point measured, in the measuring ink — a star, where

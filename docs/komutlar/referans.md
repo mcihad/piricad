@@ -957,8 +957,11 @@ Uygulandığı nesneler: alan, eğri, tarama.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim |
-| `yontem` | text | isteğe bağlı | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan |
+| `yontem` | text | isteğe bağlı | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan; ic: içine tıklanan bölge |
 | `noktalar` | point_list | en az 0 | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur |
+| `nokta` | point | isteğe bağlı | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur |
+| `ada` | bool | isteğe bağlı | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) |
+| `bosluk` | integer | isteğe bağlı | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç |
 
 Ayrıntılı kullanım: [ALANÖLÇ](measure_area.md)
 
@@ -9064,9 +9067,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "enum": [
             "nesne",
-            "nokta"
+            "nokta",
+            "ic"
           ],
-          "description": "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan (metin)"
+          "description": "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan; ic: içine tıklanan bölge (metin)"
         },
         "noktalar": {
           "anyOf": [
@@ -9113,6 +9117,47 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "nokta": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "ada": {
+          "type": "boolean",
+          "description": "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) (evet/hayır)"
+        },
+        "bosluk": {
+          "type": "integer",
+          "description": "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç (tam sayı)"
         },
         "varsayimlar": {
           "type": "array",

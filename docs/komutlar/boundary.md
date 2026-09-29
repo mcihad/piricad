@@ -117,9 +117,13 @@ SINIR nokta=5,5 bosluk=2000
 Sınır çıkarıldı: 200,00 m² alan; 4 nesnenin çizgisinden. 1 boşluk köprülendi: 1,50 m.
 ```
 
-Yazılan bir nokta yazıldığı yere düşer; yakalama yalnız fareyle nişan alınan noktaya
-uygulanır. Küçük bir boşluğu fareyle çizerek denemek istiyorsanız önce yakınlaşın:
-yakınlaşma uzaksa, bir köşeye birkaç santimetre kala tıklanan uç o köşeye oturur.
+Bölgenin içine yapılan tıklama **yakalanmaz**: nesne yakalama, ızgara ya da dik mod açık
+olsa bile nokta tıklandığı yerde kalır — yakalansaydı kenara yakın bir tıklama kenarın
+üstüne oturur ve "çizginin üstünde" diye reddedilirdi. Aynı bölgeyi yalnız ölçmek için
+[`ALANÖLÇ yontem=ic`](measure_area.md); ikisi aynı bölgeyi bulur ve aynı sözle reddeder.
+Küçük bir boşluğu kapatmak için çizdiğiniz çizginin uçları ise yakalamayla oturur; önce
+yakınlaşın: yakınlaşma uzaksa, bir köşeye birkaç santimetre kala tıklanan uç o köşeye
+oturur.
 
 ### Arayüz
 

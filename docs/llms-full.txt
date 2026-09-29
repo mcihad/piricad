@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 120 (104 tanesi onay ister)
-- Katalog parmak izi: `11635226798749527441`
+- Katalog parmak izi: `13122684751244189339`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1186,8 +1186,11 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `yontem` | string | hayır | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan (metin) |
+| `yontem` | string | hayır | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan; ic: içine tıklanan bölge (metin) |
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `ada` | boolean | hayır | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) (evet/hayır) |
+| `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç (tam sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_merge` — Tevhit

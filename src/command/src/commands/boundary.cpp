@@ -23,6 +23,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/measure_mark.hpp"
+#include "kentos_cad/command/region_input.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -40,21 +41,6 @@
 
 namespace kentos::command {
 namespace {
-
-/// Millimetres as metres, trimmed: "5 cm" reads better than "0,050 m" for a gap,
-/// and a gap is what this prints most.
-std::string length_words(core::Mm v)
-{
-    const core::Mm a = v < 0 ? -v : v;
-    if (a < 1000) {
-        if (a % 10 == 0) return std::to_string(a / 10) + " cm";
-        return std::to_string(a) + " mm";
-    }
-    std::string frac = std::to_string((a % 1000 + 5) / 10);
-    if (frac.size() < 2) frac = "0" + frac;
-    if (frac == "100") return std::to_string(a / 1000 + 1) + ",00 m";
-    return std::to_string(a / 1000) + "," + frac + " m";
-}
 
 /// An area in square metres to two decimals, divided in integers (Article 2.4).
 std::string square_metres(core::Mm2 v)
@@ -90,118 +76,16 @@ Result<core::EntityId> write_face(Context& ctx, const core::NetworkFace& face, c
     return ctx.transaction().add_area(ctx.active_layer(), input);
 }
 
-/// The open ends, as the canvas marks them: the ones a gap away from other
-/// linework first — nearest the click first, each end in one gap only, so two
-/// ends that see each other are one line and a corner gets no second, wider
-/// one — and bare ends, a line stopping in the open, only when no end has a gap
-/// to show.
-void mark_open_ends(const Context& ctx, const std::vector<core::OpenEnd>& open)
-{
-    // A dozen is what a person reads; the rest are counted in the sentence.
-    constexpr std::size_t kShown = 12;
-    std::set<core::Point2> used;
-    std::size_t shown = 0;
-    for (const core::OpenEnd& end : open) {
-        if (shown == kShown) break;
-        if (!end.has_nearest || used.contains(end.at) || used.contains(end.nearest)) continue;
-        used.insert(end.at);
-        used.insert(end.nearest);
-        MeasureMark m;
-        m.shape  = MeasureMark::Shape::Gap;
-        m.points = {end.at, end.nearest};
-        m.labels = {"boşluk " + length_words(end.distance)};
-        ctx.mark(m);
-        ++shown;
-    }
-    if (shown > 0) return;
-    for (std::size_t i = 0; i < open.size() && i < 3; ++i) {
-        MeasureMark m;
-        m.shape  = MeasureMark::Shape::Gap;
-        m.points = {open[i].at};
-        m.labels = {"açık uç"};
-        ctx.mark(m);
-    }
-}
-
 Task<void> run(Context& ctx)
 {
-    Bus& bus                  = ctx.session().bus();
     const core::Document& doc = ctx.document();
 
-    core::RegionQuery query;
-    query.islands        = ctx.has_argument("ada") ? ctx.argument("ada").as_bool(true) : true;
-    query.node_tolerance = bus.project_settings().get("core.topoloji.dugum_toleransi").as_length();
-    query.bridge         = ctx.has_argument("bosluk") ? ctx.argument("bosluk").as_int() : 0;
-    if (query.bridge < 0) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Köprülenecek boşluk eksi olamaz; milimetre olarak 0 ya da daha büyük verin.");
-        co_return;
-    }
-    std::vector<std::int64_t> keys;
-    if (ctx.has_argument("nesneler")) {
-        keys = ctx.argument("nesneler").as_ids();
-        for (const std::int64_t raw : keys) {
-            const core::EntityId slot =
-                raw > 0 ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)))
-                        : core::kNoEntity;
-            if (slot == core::kNoEntity || !doc.alive(slot)) {
-                ctx.refuse(core::ErrorCode::NotFound,
-                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
-                co_return;
-            }
-            query.only.push_back(slot);
-        }
-    }
-
-    // THE POINT: given, or shown — and while it is shown the region under the
-    // cursor is drawn, found by the same call the click makes.
-    if (const Value given = ctx.argument("nokta"); !given.empty() && !given.as_points().empty()) {
-        query.at = given.as_points().front();
-    } else {
-        const core::RegionPreview preview{query.islands, query.node_tolerance, query.bridge, keys};
-        auto pointed = co_await ctx.point(
-            "nokta", "Sınırı çıkarılacak bölgenin içine tıklayın",
-            PointOptions{.rubber_band    = true,
-                         .rubber_base    = false,
-                         .rubber_shape   = RubberShape::Region,
-                         .rubber_payload = core::encode_region_preview(preview)});
-        if (!pointed) co_return;
-        query.at = *pointed;
-    }
-
-    auto found = core::region_at(doc, query);
-    if (!found) {
-        ctx.refuse(found.error());
-        co_return;
-    }
-    const core::Region& region = found.value();
-    if (region.on_linework) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Nokta bir çizginin üstünde; sınırı çıkarılacak bölgenin İÇİNE tıklayın.");
-        co_return;
-    }
-    if (!region.face) {
-        if (region.open.empty()) {
-            ctx.refuse(core::ErrorCode::NotFound,
-                       "Bu noktayı çevreleyen kapalı bir çizgi yok. Bölgenin içine tıklayın; "
-                       "gizli katmanlardaki çizgiler sınır sayılmaz.");
-            co_return;
-        }
-        mark_open_ends(ctx, region.open);
-        // The nearest end to the click that is a GAP away from other linework;
-        // an end in the open, with nothing near it, is counted but not measured.
-        const auto gap =
-            std::ranges::find_if(region.open, [](const core::OpenEnd& e) { return e.has_nearest; });
-        std::string why =
-            "Bu bölge kapanmıyor: " + std::to_string(region.open.size()) + " açık uç var";
-        if (gap != region.open.end())
-            why += "; tıkladığınız yere en yakını bir çizgiye " + length_words(gap->distance) +
-                   " uzakta";
-        why += ". Uçlar tuvalde işaretlendi. Boşluğu yakalamayla kapatın ya da köprülemek için "
-               "bosluk=<mm> verin.";
-        ctx.refuse(core::ErrorCode::InvalidArgument, why);
-        co_return;
-    }
+    // THE REGION, asked the one way every command that takes one asks it
+    // (`command::ask_region`): SINIR's point, islands, bridge and boundary set.
+    auto found = co_await ask_region(ctx, "Sınırı çıkarılacak bölgenin içine tıklayın", true);
+    if (!found) co_return;
+    const core::RegionQuery& query = found->query;
+    const core::Region& region     = found->region;
 
     const core::NetworkFace& face = *region.face;
     core::Mm chords               = 0;
@@ -224,10 +108,7 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    ctx.record("nokta", Value::point(query.at));
-    if (ctx.has_argument("ada")) ctx.record("ada", Value::boolean(query.islands));
-    if (query.bridge > 0) ctx.record("bosluk", Value::integer(query.bridge));
-    if (!keys.empty()) ctx.record("nesneler", Value::ids(keys));
+    record_region(ctx, *found);
 
     // THE SENTENCE: what was made and how big, then everything that was not the
     // drawing's own — bridges, joins, chords, curves as drawn — so nothing about
@@ -242,19 +123,19 @@ Task<void> run(Context& ctx)
     if (!region.bridges.empty()) {
         said += " " + std::to_string(region.bridges.size()) + " boşluk köprülendi:";
         for (std::size_t i = 0; i < region.bridges.size(); ++i)
-            said += (i == 0 ? " " : ", ") + length_words(region.bridges[i].width);
+            said += (i == 0 ? " " : ", ") + gap_words(region.bridges[i].width);
         said += '.';
     }
     if (region.snaps.moved > 0)
         said += " " + std::to_string(region.snaps.moved) +
-                " uç düğüm toleransıyla birleştirildi (en çok " +
-                length_words(region.snaps.largest) + ").";
+                " uç düğüm toleransıyla birleştirildi (en çok " + gap_words(region.snaps.largest) +
+                ").";
     if (region.approximate)
         said += " Elips ya da spline çizildiği hâliyle izlendi (sapma ≤ " +
-                length_words(region.deviation) + ").";
+                gap_words(region.deviation) + ").";
     if (chords > 0)
         said += " Delikli bir alan yay taşıyamadığı için yaylar kirişlerle yazıldı (sapma ≤ " +
-                length_words(chords) + ").";
+                gap_words(chords) + ").";
     ctx.echo(said);
 
     core::Json report = core::Json::object({});

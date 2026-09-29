@@ -2352,6 +2352,77 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("33-alan-olarak-ciz"), &window); });
 
+        // AND A REGION FOUND BY A CLICK INSIDE IT (`ALANÖLÇ yontem=ic`): a road
+        // strip south of the parcels, closed by three loose lines and the
+        // parcels' own edges. Previewed under the cursor, clicked, measured,
+        // and "Sınır olarak çiz" offered over the canvas.
+        const kentos::core::Point2 strip{485340000, 4310192000};
+        later([&window] {
+            window.cancelCommand();
+            window.canvas()->clearMeasureMarks(); ///< the yard's, from the frame before
+            window.runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ 485300,4310200 485300,4310185"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ 485300,4310185 485380,4310185"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ 485380,4310185 485380,4310200"));
+            window.endCommand();
+            // The finished run re-arms ÇİZGİ, queued: let it land, then put it
+            // down. POSTED EVENTS ONLY, not `processEvents`: the run is behind
+            // its timers, and a turn of the loop here ran the next step inside
+            // this one — ALANÖLÇ typed, then put down by the `cancelAll` below.
+            QCoreApplication::sendPostedEvents();
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+        });
+        later([&window] {
+            window.runScriptLine(
+                QStringLiteral("YAKINLAŞ PENCERE pencere=485295,4310178 485385,4310238"));
+            window.runScriptLine(QStringLiteral("ALANÖLÇ yontem=ic"));
+        });
+        later([hover, strip] { hover(strip); });
+        later([&window, shot] { shot(QStringLiteral("34-alan-ic-onizleme"), &window); });
+        later([&window, strip] {
+            kentos::app::MapCanvas* canvas = window.canvas();
+            const auto at                  = canvas->view().to_screen(strip);
+            const QPointF p(at.x, at.y);
+            QMouseEvent press(QEvent::MouseButtonPress, p, canvas->mapToGlobal(p), Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &press);
+            QMouseEvent release(QEvent::MouseButtonRelease, p, canvas->mapToGlobal(p),
+                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &release);
+            QCoreApplication::sendPostedEvents(); ///< the tool re-armed, as a hand finds it
+        });
+        // The cursor moved off, so the re-armed tool previews no region over
+        // the one just measured.
+        later([hover] { hover(kentos::core::Point2{485290000, 4310232000}); });
+        later([&window, shot] { shot(QStringLiteral("34b-alan-ic"), &window); });
+        // The family's menu, open under its button on `Harita`.
+        later([&window] {
+            SARibbonBar* bar = window.ribbonBar();
+            if (bar == nullptr) return;
+            if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonMap")))
+                bar->raiseCategory(tab);
+            QCoreApplication::sendPostedEvents(); ///< the tab laid out, its buttons placed
+            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+                const bool measures =
+                    std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
+                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                               QStringLiteral("ALANÖLÇ yontem=ic");
+                    });
+                if (!measures || f->head()->menu() == nullptr) continue;
+                for (auto* button : bar->findChildren<QToolButton*>())
+                    if (button->defaultAction() == f->head() && button->isVisible())
+                        f->head()->menu()->popup(button->mapToGlobal(QPoint(0, button->height())));
+            }
+        });
+        later([with_popup] {
+            with_popup(QStringLiteral("34c-alan-olc-ailesi"), QApplication::activePopupWidget());
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

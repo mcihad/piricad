@@ -22,6 +22,7 @@ add_library(kentos_command STATIC
     src/registry.cpp
     src/selection.cpp
     src/session.cpp
+    src/region_input.cpp
     src/spec.cpp
     src/targets.cpp
     src/transaction.cpp

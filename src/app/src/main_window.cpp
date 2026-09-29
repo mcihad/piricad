@@ -219,6 +219,19 @@ QString format_metres(core::Mm v)
     return QString::number(core::mm_to_metres(v), 'f', 3);
 }
 
+/// Shows or hides a banner over the canvas and lays the column out AT ONCE.
+///
+/// Qt activates the parent's layout synchronously when a child is shown, but
+/// on a hide it only POSTS the request, and on macOS a posted event can wait
+/// for the next input event (see `rearm`): the offer went away and the canvas
+/// left a blank band where the banner had been until the mouse moved.
+void show_banner(QWidget* banner, bool shown)
+{
+    banner->setVisible(shown);
+    if (QWidget* column = banner->parentWidget(); column != nullptr && column->layout() != nullptr)
+        column->layout()->activate();
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget* parent)
@@ -299,7 +312,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(remedyButton_, &QPushButton::clicked, this, [this] {
         const QString line = remedy_;
         remedy_.clear();
-        remedyBanner_->setVisible(false);
+        show_banner(remedyBanner_, false);
         if (!line.isEmpty()) runScriptLine(line);
     });
     stack->addWidget(remedyBanner_);
@@ -312,7 +325,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(offerButton_, &QPushButton::clicked, this, [this] {
         const QString line = offer_;
         offer_.clear();
-        offerBanner_->setVisible(false);
+        show_banner(offerBanner_, false);
         // WHOLE, not as a typed line: ALAN given its corners would otherwise sit
         // waiting for a fifth, and one click would not be one area.
         if (!line.isEmpty()) controller_->runWhole(line, command::Origin::Gui);
@@ -376,9 +389,9 @@ MainWindow::MainWindow(QWidget* parent)
     // — the offered one, or any other — has moved past it.
     connect(controller_, &Controller::commandFinished, this, [this] {
         remedy_.clear();
-        if (remedyBanner_ != nullptr) remedyBanner_->setVisible(false);
+        if (remedyBanner_ != nullptr) show_banner(remedyBanner_, false);
         offer_.clear();
-        if (offerBanner_ != nullptr) offerBanner_->setVisible(false);
+        if (offerBanner_ != nullptr) show_banner(offerBanner_, false);
     });
     connect(controller_, &Controller::offerMade, this,
             [this](const QString& title, const QString& text, const QString& label,
@@ -388,7 +401,7 @@ MainWindow::MainWindow(QWidget* parent)
                 offerBanner_->setText(text);
                 offerButton_->setText(label);
                 offer_ = line;
-                offerBanner_->setVisible(true);
+                show_banner(offerBanner_, true);
             });
 
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
@@ -3950,10 +3963,18 @@ int MainWindow::probeOffer()
     endCommand();
     QCoreApplication::processEvents();
     check(!offerForProbe().isEmpty(), QStringLiteral("ikinci teklif"));
-    letGo();
+    check(canvas_->y() > 0, QStringLiteral("şerit tuvalin üstünde yer tutuyor"));
+    // NOT `letGo` first: putting the re-armed tool down finishes a command too,
+    // and the banner went with it before KATMAN was typed.
     runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+    // THE CANVAS TAKES THE BANNER'S ROOM AT ONCE, with no turn of the event
+    // loop in between: on macOS the posted relayout waited for the next input
+    // event, and a blank band stood where the banner had been.
+    check(canvas_->y() == 0,
+          QStringLiteral("şerit kalkınca tuval hemen yukarı uzandı (y=%1)").arg(canvas_->y()));
     QCoreApplication::processEvents();
     check(offerForProbe().isEmpty(), QStringLiteral("sonraki komut teklifi kaldırdı"));
+    letGo();
     return failures;
 }
 
@@ -8858,7 +8879,7 @@ void MainWindow::offerRemedy(const QString& message, const QString& remedy)
         spec != nullptr && !spec->title.empty() ? QString::fromStdString(spec->title) : word);
     remedyBanner_->setText(message);
     remedy_ = remedy;
-    remedyBanner_->setVisible(true);
+    show_banner(remedyBanner_, true);
 }
 
 QString MainWindow::offerForProbe() const

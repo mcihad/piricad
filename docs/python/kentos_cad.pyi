@@ -1046,13 +1046,19 @@ def measure_area(
     objects: list[int] = ...,
     method: str = ...,
     points: Coords = ...,
+    point: Coord = ...,
+    islands: bool = ...,
+    gap: int = ...,
 ) -> int:
     """Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
 
     Komut: core.measure_area (ALANÖLÇ)
         objects — Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
-        method — nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan
+        method — nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan; ic: içine tıklanan bölge
         points — yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce]
+        point — yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce]
+        islands — yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet)
+        gap — yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç
     """
 
 def coordinate(

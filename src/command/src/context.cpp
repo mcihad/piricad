@@ -103,6 +103,7 @@ Value snap_value(Session& session, const Prompt& prompt, Value v, bool up_front)
 
 Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_front)
 {
+
     // A DISTANCE SHOWN RATHER THAN TYPED (`Prompt::pick_distance`): the click is
     // snapped like any other — a chamfer taken to a corner of the next parcel
     // lands exactly there — and what is handed on, and journalled, is its
@@ -145,6 +146,7 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
     prompt.can_retract     = o.can_retract;
+    prompt.aids            = o.aids;
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
 }
 

@@ -1645,14 +1645,20 @@ cad.measure_area(
     objects: list[int],
     method: str,
     points: Coords,
+    point: Coord,
+    islands: bool,
+    gap: int,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `method` | `str` | `yontem` | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan |
+| `method` | `str` | `yontem` | nesne: seçilen nesnelerin alanı (öntanımlı); nokta: köşeleri gösterilen alan; ic: içine tıklanan bölge |
 | `points` | `Coords` | `noktalar` | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce] |
+| `islands` | `bool` | `ada` | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) |
+| `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç |
 
 [Komut sayfası](../komutlar/measure_area.md)
 
