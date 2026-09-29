@@ -225,6 +225,19 @@ Bkz. [`ÇİFTÇİZGİ`](komutlar/double_line.md).
 **Uç çizgisi** — Çift çizginin bir ucunu kapatan düz çizgi: iki yan varsa sol yanın ucundan
 sağ yanın ucuna, tek yan varsa eksenin ucundan o yanın ucuna. `uclar=kapali` çizer.
 
+**Derinlik** — Bir binanın ölçülmüş cephe kenarından karşı kenarına uzaklığı. İlk köşeden
+ikinciye bakarken **sağ pozitif, sol negatiftir**: dik boyla aynı kural.
+`DİKDÖRTGEN yontem=derinlik` bu sayıyla çalışır. Bkz. [DİKDÖRTGEN](komutlar/rectangle.md).
+
+**Dördüncü köşe** — Ölçülen üç köşeden hesaplanan köşe: ikinci köşenin karşısındaki,
+`birinci + üçüncü − ikinci`. Ulaşılamayan bir köşenin yerini krokide bu hesap tutar;
+`DÖRDÜNCÜKÖŞE`. Bina dik açılıysa `dik=evet` üçüncü köşeyi dik doğruya çeker ve sapmayı
+söyler. Bkz. [DÖRDÜNCÜKÖŞE](komutlar/fourth_corner.md).
+
+**Kutu** — `DİKDÖRTGEN yontem=olcu` ile bir köşe, en ve boy ya da kâğıt boyu ve ölçekle
+çizilen dikdörtgen. `en` doğu–batı, `boy` kuzey–güney boyutudur; bir kâğıtta zemin boyu
+kâğıdın ölçüsü çarpı ölçek paydasıdır (A3, 1:1000'de 420 × 297 m): yerel paftanın çerçevesi.
+
 **Açı kuralı** — Bir açının nereden ve hangi yöne sayıldığını söyleyen oturum modu
 (`açı_kuralı`, kısa adı `kural`): `semt` kuzeyden saat yönüne (varsayılan), `matematik`
 doğudan saat yönünün tersine. Yalnız yazılan metni etkiler; komut günlüğü çözülmüş

@@ -577,11 +577,19 @@ yönetmelik değeri yalnız `/data`'da (5.13); `tr()` ve iki `.ts` dosyası (6.9
   **Bağımlılık:** C-12, C-18, G-07.
   **3B:** Yok.
 
-- [ ] **N-13 · P1 — Ölçü krokisinden hızlı çizim: dördüncü köşe, derinlikle bina, ölçülü kutu, iki noktayla blok.**
+- [x] **N-13 · P1 — Ölçü krokisinden hızlı çizim: dördüncü köşe, derinlikle bina, ölçülü kutu, iki noktayla blok.**
   **Netcad:** 4.Köşeyi Oluştur (üç ölçülü köşeden dördüncü) 217385354; Bina Oluştur (iki köşe + derinlik; + sağ, − sol) 217385353; Kutu (ad, kâğıt boyu, dY/dX, açı) 217385090; Sembol ve Blok "2 Nokta ile" 217385184, 217385182.
   **Tasarım:** `core.fourth_corner` — `DÖRDÜNCÜKÖŞE`, `DORDUNCUKOSE`, `FOURTHCORNER`, `DKÖ`, `DKO` (üç köşeden paralelkenar; `dik=evet` dik açıyı dayatır ve sapmayı söyler); `DİKDÖRTGEN yontem=derinlik derinlik=<m>` (işaret kuralı `dik()` ile aynı — Açık soru 3); `DİKDÖRTGEN yontem=olcu en= boy= aci=` ve `kagit=A4|A3|…` (kâğıt ölçüsü × plan ölçeği = zemin boyu); `BLOKEKLE yontem=2n` (iki noktayla ölçek ve açı).
   **Kabul:** (0,0), (10,0), (10,6) → (0,6); 3 cm dik açı sapmasında sapma yazılır; A3 × 1:1000 kutu 420 × 297 m; `yontem=2n` bloğun eni iki nokta arasına oturur; üç istemci.
   **Bağımlılık:** C-02; Açık soru 3.
+  **Durum (29 Eylül 2026):** yapıldı. `core.fourth_corner` (DÖRDÜNCÜKÖŞE, `dik=evet` sapmayı grad ve
+  milimetreyle söyler, yapılandırılmış rapor); `DİKDÖRTGEN yontem=derinlik` (sağ artı) ve `yontem=olcu`
+  (`en`/`boy` ya da `kagit=A5…A0` × `olcek`, `yon`, `aci` oturumun açı kuralıyla); `BLOKEKLE yontem=2n`
+  (bloğun eni iki nokta arasına, ölçek ve açı iki noktadan; günlük iki noktayı tutar). Kâğıt ölçüleri
+  `core::paper_size_mm`'den — ikinci bir tablo yok. Birleştirmede: DİKDÖRTGEN'in `noktalar`'ı yönteme
+  göre 1–3 olduğu için betikte eksik kalan köşe, derinlik ya da ölçü sessizce "başarılı" dönüyordu;
+  soru soramayan çalıştırma artık baştan, sözle reddedilir (`Session::client_driven`), arayüz sorar.
+  DÖRDÜNCÜKÖŞE ortak `katman=`'ı aldı. Şeritte düğme yok (komut satırı ve Ctrl+K).
   **3B:** Üç köşe kotluysa dördüncüye düzlem kotu (N-05).
 
 - [ ] **N-14 · P2 — Yasla: nesneleri bir referans nesnenin kenarına ya da ortasına hizalamak (Netcad Hizala).**

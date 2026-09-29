@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ölçü krokisinden hızlı çizim
+
+- `DÖRDÜNCÜKÖŞE noktalar=A B C`: ölçülen üç köşeden dördüncüsü (Netcad'in 4. Köşeyi Oluştur'u);
+  `dik=evet` ikinci köşedeki açıyı dik yapar ve sapmayı grad ve milimetreyle söyler.
+- `DİKDÖRTGEN yontem=derinlik derinlik=<m>`: iki köşe ve derinlik, sağ artı (Bina Oluştur).
+- `DİKDÖRTGEN yontem=olcu`: bir köşe ve `en`/`boy`, ya da `kagit=A3` gibi bir kâğıt boyu ve ölçek
+  (A3, 1:1000'de 420 × 297 m); `aci=` döndürür.
+- `BLOKEKLE yontem=2n noktalar=A B`: bloğun eni iki nokta arasına oturur, ölçek ve açı iki
+  noktadan gelir.
+- Betikte eksik kalan köşe, derinlik ya da ölçü sözle reddedilir; betik o adımda durur.
+
 ### Eklendi — ÇİFTÇİZGİ ve OFSET'in "ucuna bağla" köşesi
 
 - `ÇİFTÇİZGİ noktalar=… sol=<m> sag=<m>`: eksen çizilirken iki yanında paralel (Netcad'in

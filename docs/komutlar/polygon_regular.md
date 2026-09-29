@@ -77,7 +77,7 @@ yazıyla da verebilirsiniz:
 | `kenar_uzunlugu` | sayı | 0..1 | `kenar` yönteminin uzunluğu (m) |
 | `aci` | sayı | 0..1 | İlk köşenin doğrultusu; varsayılan 0 |
 | `kose` | nokta | 0..1 | Boyun ve yönün gösterildiği nokta; `yaricap` verilmişse sorulmaz |
-| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
+| `katman` | metin | 0..1 | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

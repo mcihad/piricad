@@ -121,7 +121,8 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.find_replace`](#cadfind_replace) | `core.find_replace` | `BULDEĞİŞTİR` | Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı. |
 | [`cad.exportstyle`](#cadexportstyle) | `core.exportstyle` | `STİLAKTAR` | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`cad.area`](#cadarea) | `core.area` | `ALAN` | Kapalı bir alan çizer; istenirse içine delik açar. |
-| [`cad.rectangle`](#cadrectangle) | `core.rectangle` | `DİKDÖRTGEN` | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
+| [`cad.rectangle`](#cadrectangle) | `core.rectangle` | `DİKDÖRTGEN` | Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer. |
+| [`cad.fourth_corner`](#cadfourth_corner) | `core.fourth_corner` | `DÖRDÜNCÜKÖŞE` | Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler. |
 | [`cad.circle_draw`](#cadcircle_draw) | `core.circle_draw` | `DAİRE` | Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer. |
 | [`cad.arc_draw`](#cadarc_draw) | `core.arc_draw` | `YAY` | Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer. |
 | [`cad.vertex_move`](#cadvertex_move) | `core.vertex_move` | `KÖŞETAŞI` | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
@@ -161,7 +162,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.hatch_edit`](#cadhatch_edit) | `core.hatch_edit` | `TARAMADÜZENLE` | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`cad.block_edit`](#cadblock_edit) | `core.block_edit` | `BLOKDÜZENLE` | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
-| [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`cad.insert`](#cadinsert) | `core.insert` | `BLOKEKLE` | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir. |
 | [`cad.xref`](#cadxref) | `core.xref` | `DIŞREFERANS` | Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
 | [`cad.block_clip`](#cadblock_clip) | `core.block_clip` | `BLOKKIRP` | Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür. |
 | [`cad.dimension`](#caddimension) | `core.dimension` | `ÖLÇÜ` | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
@@ -1009,7 +1010,7 @@ cad.area(
 
 ### `cad.rectangle`
 
-Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
+Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.
 
 Komut: `core.rectangle` — `DİKDÖRTGEN`
 
@@ -1017,17 +1018,53 @@ Komut: `core.rectangle` — `DİKDÖRTGEN`
 cad.rectangle(
     points: Coords,
     method: str,
+    depth: float,
+    width: float,
+    length: float,
+    paper: str,
+    orientation: str,
+    scale: int,
+    angle: float,
     layer: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `points` | `Coords` | `noktalar` | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce] |
-| `method` | `str` | `yontem` | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
+| `points` | `Coords` | `noktalar` | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta · derinlik: bir kenarın iki köşesi · olcu: kutunun ilk köşesi [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş · derinlik: bir kenar ve derinlik, sağ artı, sol eksi · olcu: bir köşe, en ve boy ya da kâğıt boyu |
+| `depth` | `float` | `derinlik` | yontem=derinlik için kenardan karşı kenara uzaklık (m); ilk köşeden ikinciye bakarken SAĞ pozitif, sol negatiftir [m] |
+| `width` | `float` | `en` | yontem=olcu için kutunun eni (m); aci verilmemişken doğu–batı boyutu [m] |
+| `length` | `float` | `boy` | yontem=olcu için kutunun boyu (m); aci verilmemişken kuzey–güney boyutu [m] |
+| `paper` | `str` | `kagit` | yontem=olcu için kâğıt boyu (A5, A4, A3, A2, A1, A0): en ve boy kâğıdın ölçüsü çarpı ölçek paydasıdır; en ve boy ile birlikte verilmez |
+| `orientation` | `str` | `yon` | kagit ile: yatay (varsayılan) kâğıdın uzun kenarı doğu–batı, dikey kuzey–güney |
+| `scale` | `int` | `olcek` | kagit ile: ölçek paydası (1:N); verilmezse projenin plan ölçeği (AYAR plan_ölçeği) |
+| `angle` | `float` | `aci` | yontem=olcu için kutunun dönüklüğü: oturumun açı biriminde (öntanımlı grad), açıların arttığı yönde (öntanımlı kuzeyden saat yönünde) döner; varsayılan 0 |
 | `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/rectangle.md)
+
+### `cad.fourth_corner`
+
+Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.
+
+Komut: `core.fourth_corner` — `DÖRDÜNCÜKÖŞE`
+
+```python
+cad.fourth_corner(
+    points: Coords,
+    right_angle: bool,
+    layer: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `points` | `Coords` | `noktalar` | Üç köşe sırayla: birinci, ikinci (birinci ile üçüncünün arasındaki) ve üçüncü; dördüncü ikincinin karşısına düşer [mm, Sağa (Y) önce] |
+| `right_angle` | `bool` | `dik` | evet: ikinci köşedeki açı dik yapılır — üçüncü köşe birinci kenarın dikine çekilir ve sapma söylenir; varsayılan hayır: üç köşenin paralelkenarı |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
+
+[Komut sayfası](../komutlar/fourth_corner.md)
 
 ### `cad.circle_draw`
 
@@ -2071,7 +2108,7 @@ cad.block_edit(
 
 ### `cad.insert`
 
-Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir.
 
 Komut: `core.insert` — `BLOKEKLE`
 
@@ -2079,6 +2116,8 @@ Komut: `core.insert` — `BLOKEKLE`
 cad.insert(
     name: str,
     point: Coord,
+    method: str,
+    points: Coords,
     scale: float,
     scale_y: float,
     angle: float,
@@ -2095,7 +2134,9 @@ cad.insert(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `name` | `str` | `ad` | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı |
-| `point` | `Coord` | `nokta` | Ekleme noktası [mm, Sağa (Y) önce] |
+| `point` | `Coord` | `nokta` | Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile verilmez [mm, Sağa (Y) önce] |
+| `method` | `str` | `yontem` | 2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki noktadan gelir, nokta, olcek, olcek_y ve aci verilmez |
+| `points` | `Coords` | `noktalar` | yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol ucunun, ikincisi sağ ucunun geleceği yer [mm, Sağa (Y) önce] |
 | `scale` | `float` | `olcek` | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `scale_y` | `float` | `olcek_y` | Y ölçeği, farklıysa; varsayılan olcek |
 | `angle` | `float` | `aci` | Dönme açısı, derece; varsayılan 0 |

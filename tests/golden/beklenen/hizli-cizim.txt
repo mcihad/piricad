@@ -1,0 +1,99 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 12
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman KROKI gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=12
+nesne 0 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 0
+    10000 0
+    10000 6000
+    0 6000
+  alan_mm2 60000000  cevre_mm 32000
+nesne 1 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    20000 0
+    30000 0
+    30000 6000
+    20000 6000
+  alan_mm2 60000000  cevre_mm 32000
+nesne 2 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    40000 0
+    50000 0
+    54000 6000
+    44000 6000
+  alan_mm2 60000000  cevre_mm 34422
+nesne 3 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    200000 0
+    230000 40000
+    238000 34000
+    208000 -6000
+  alan_mm2 500000000  cevre_mm 120000
+nesne 4 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 20000
+    30000 40000
+    35547 31679
+    5547 11679
+  alan_mm2 360570000  cevre_mm 92112
+nesne 5 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    100000 20000
+    110000 20000
+    110000 26000
+    100000 26000
+  alan_mm2 60000000  cevre_mm 32000
+nesne 6 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 100000
+    28284 71716
+    42426 85858
+    14142 114142
+  alan_mm2 799984656  cevre_mm 120000
+nesne 7 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    100000 100000
+    520000 100000
+    520000 397000
+    100000 397000
+  alan_mm2 124740000000  cevre_mm 1434000
+nesne 8 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    600000 100000
+    705000 100000
+    705000 248500
+    600000 248500
+  alan_mm2 15592500000  cevre_mm 507000
+nesne 10 katman=KROKI stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 300000
+    2000 300000
+    2000 301000
+    0 301000
+  alan_mm2 2000000  cevre_mm 6000
+nesne 11 katman=KROKI stil=0 halka=1 tur=9 yuk=0100000000000000000000000100000000000000010000000000000001000000000000000100000000000000000000000000000001000100000000000000000000000000000000000000000000000000e093040000000000d007000000000000c897040000000000
+  halka rol=0 parca=0 tepe=1
+    0 300000
+  alan_mm2 0  cevre_mm 0
+nesne 12 katman=KROKI stil=0 halka=1 tur=9 yuk=01000000000000000000000005000000000000000200000000000000050000000000000002000000000000000a9732020000000001000100000000000000000000000000000000004448000000000000e093040000000000c05d00000000000068a7040000000000
+  halka rol=0 parca=0 tepe=1
+    20000 300000
+  alan_mm2 0  cevre_mm 0
+kapsam 0 -6000 705000 397000
+icerik-ozeti 4bd12db5f2421027
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"KROKI"},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":2,"cmd":"core.fourth_corner","args":{"noktalar":[[0,0],[10000,0],[10000,6000]]},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":3,"cmd":"core.fourth_corner","args":{"noktalar":[[20000,0],[30000,0],[30030,6000]],"dik":true},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":4,"cmd":"core.fourth_corner","args":{"noktalar":[[40000,0],[50000,0],[54000,6000]]},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":5,"cmd":"core.rectangle","args":{"noktalar":[[200000,0],[230000,40000]],"yontem":"derinlik","derinlik":10.0},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":6,"cmd":"core.rectangle","args":{"noktalar":[[0,20000],[30000,40000]],"yontem":"derinlik","derinlik":10.0},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":7,"cmd":"core.rectangle","args":{"noktalar":[[100000,20000],[110000,20000]],"yontem":"derinlik","derinlik":-6.0},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":8,"cmd":"core.rectangle","args":{"noktalar":[[0,100000]],"yontem":"olcu","en":40.0,"boy":20.0,"aci":50.0},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":9,"cmd":"core.rectangle","args":{"noktalar":[[100000,100000]],"yontem":"olcu","kagit":"A3","yon":"yatay","olcek":1000},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":10,"cmd":"core.rectangle","args":{"noktalar":[[600000,100000]],"yontem":"olcu","kagit":"A4","yon":"dikey","olcek":500},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":11,"cmd":"core.rectangle","args":{"noktalar":[[0,300000],[2000,301000]]},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":12,"cmd":"core.block","args":{"ad":"KAPI","taban":[0,300000],"nesneler":[10]},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}
+  {"seq":13,"cmd":"core.insert","args":{"ad":"KAPI","yontem":"2n","noktalar":[[20000,300000],[24000,303000]]},"origin":"test","crs":"TUREF/TM36","katman":"KROKI"}

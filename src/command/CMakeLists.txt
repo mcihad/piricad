@@ -47,6 +47,7 @@ add_library(kentos_command STATIC
     src/commands/layout.cpp
     src/commands/area.cpp
     src/commands/rectangle.cpp
+    src/commands/fourth_corner.cpp
     src/commands/arc.cpp
     src/commands/assign.cpp
     src/commands/colour.cpp

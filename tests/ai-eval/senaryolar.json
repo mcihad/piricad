@@ -337,6 +337,88 @@
     "BAĞIMLILIK",
     "BAĞIMLILIK islem=kabul nesneler=2"
    ]
+  },
+  {
+   "id": "dorduncu-kose",
+   "istek": "Binanın üç köşesini ölçtüm: (0,0), (10,0), (10,6). Dördüncü köşeyi hesapla ve alanı çiz.",
+   "terimler": [
+    "bina",
+    "köşe",
+    "dördüncü köşe"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DÖRDÜNCÜKÖŞE 0,0 10,0 10,6"
+   ]
+  },
+  {
+   "id": "dorduncu-kose-dik",
+   "istek": "Bina dik açılı ama üçüncü köşeyi 3 cm yana kaçık ölçtüm: (0,0), (10,0), (10.03,6). Dördüncü köşeyi dik açıyla bul ve sapmayı söyle.",
+   "terimler": [
+    "bina",
+    "dik açı",
+    "sapma"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,6 dik=evet"
+   ]
+  },
+  {
+   "id": "bina-derinlik",
+   "istek": "Cephe kenarı (0,0) ile (18,0) arasında; bina kenarın sağında, 11,5 metre derinlikte. Binayı çiz.",
+   "terimler": [
+    "bina",
+    "cephe",
+    "derinlik"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DİKDÖRTGEN yontem=derinlik noktalar=0,0 18,0 derinlik=11.5"
+   ]
+  },
+  {
+   "id": "olculu-kutu",
+   "istek": "Bir köşesi (100,200) olan, 40 metreye 20 metrelik, 50 grad döndürülmüş bir kutu çiz.",
+   "terimler": [
+    "kutu",
+    "en",
+    "boy",
+    "açı"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DİKDÖRTGEN yontem=olcu noktalar=100,200 en=40 boy=20 aci=50"
+   ]
+  },
+  {
+   "id": "pafta-cercevesi",
+   "istek": "1/1000 ölçekli A3 bir paftanın zemindeki çerçevesini (485000,4310000) köşesinden başlatarak çiz.",
+   "terimler": [
+    "pafta",
+    "kâğıt boyu",
+    "ölçek"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DİKDÖRTGEN yontem=olcu noktalar=485000,4310000 kagit=A3 olcek=1000"
+   ]
+  },
+  {
+   "id": "kapiyi-iki-noktaya",
+   "istek": "KAPI bloğunu (10,0) ile (14,0) noktalarının arasına, eni o iki nokta arasına gelecek biçimde yerleştir.",
+   "terimler": [
+    "blok",
+    "kapı",
+    "iki nokta"
+   ],
+   "kurulum": [
+    "DİKDÖRTGEN 0,0 2,1",
+    "BLOK ad=KAPI taban=0,0 nesneler=1"
+   ],
+   "komutlar": [
+    "BLOKEKLE ad=KAPI yontem=2n noktalar=10,0 14,0"
+   ]
   }
  ]
 }

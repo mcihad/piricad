@@ -168,3 +168,13 @@ TEST_CASE("katman=: ÇİFTÇİZGİ ekseni ve katmanı verilmemiş yanı katman='
     CHECK(r.layer_of(3) == r.doc.find_layer("KALDIRIM"));
     CHECK(r.bus.active_layer() == r.doc.find_layer("PARSEL"));
 }
+
+TEST_CASE("katman=: DÖRDÜNCÜKÖŞE alanı katman='a çizer")
+{
+    Rig r;
+    r.run("KATMAN ad=BINA");
+    r.run("KATMAN ad=PARSEL");
+    r.run("DÖRDÜNCÜKÖŞE noktalar=0,0 10,0 10,6 katman=BINA");
+    CHECK(r.layer_of(1) == r.doc.find_layer("BINA"));
+    CHECK(r.bus.active_layer() == r.doc.find_layer("PARSEL"));
+}

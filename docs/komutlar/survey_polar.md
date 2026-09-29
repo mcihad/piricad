@@ -57,7 +57,7 @@ ALIM <istasyon> [baglama=<nokta>] aci=<açı> kenar=<m> [aci=… kenar=… …] 
 | `aci` | sayı | 0..n | Okunan açı, oturumun açı biriminde |
 | `kenar` | sayı | 0..n | Alete olan uzaklık, metre; eksi olamaz |
 | `cizgi` | mantıksal | 0..1 | Noktaları okundukları sırayla çizgiyle birleştirir |
-| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
+| `katman` | metin | 0..1 | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

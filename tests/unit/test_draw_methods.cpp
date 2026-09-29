@@ -512,6 +512,15 @@ std::vector<Method> methods()
          {-3'000, 4'000},
          false,
          "DİKDÖRTGEN yontem=3n noktalar=0,0 8,6 -3,4"},
+        // N-13: with the right angle asked for, the third corner's ghost IS the
+        // rectangle — the very corners `edge_rectangle_corners` gives the command.
+        {"DÖRDÜNCÜKÖŞE dik=evet",
+         nullptr,
+         "DÖRDÜNCÜKÖŞE dik=evet",
+         {pt(0, 0), pt(10'000, 0)},
+         {10'030, 6'000},
+         false,
+         "DÖRDÜNCÜKÖŞE noktalar=0,0 10,0 10.03,6 dik=evet"},
         {"ÇOKGEN ic",
          nullptr,
          "ÇOKGEN",

@@ -3604,3 +3604,139 @@ TEST_CASE("PROOF: OFSET kose=uc arayüz, komut satırı, betik ve oynatmadan ayn
                 .scripted = R"({"ad":"OFSET uc","komutlar":[{"cmd":"core.offset","args":{
                     "nesneler":[1],"mesafe":1000,"taraf":"ic","kose":"uc"}}]})"});
 }
+
+// ============================================================================
+// N-13 — quick drawing from a field sketch: each new command and method, three clients alike
+// ============================================================================
+
+TEST_CASE("PROOF: DÖRDÜNCÜKÖŞE gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.fourth_corner`, both ways it draws: the parallelogram
+    // of three corners, and the right angle forced with the deviation said (the
+    // third corner 30 mm off the perpendicular).
+    prove_verb({.name    = "DÖRDÜNCÜKÖŞE",
+                .id      = "core.fourth_corner",
+                .setup   = {},
+                .objects = {},
+                .answers = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{10'000, 0}),
+                            Value::point(core::Point2{10'000, 6'000})},
+                .typed   = "DÖRDÜNCÜKÖŞE 0,0 10,0 10,6",
+                .scripted = R"({"ad":"DÖRDÜNCÜKÖŞE","komutlar":[{"cmd":"core.fourth_corner","args":{
+                    "noktalar":[[0,0],[10000,0],[10000,6000]]}}]})"});
+
+    prove_verb({.name    = "DÖRDÜNCÜKÖŞE dik=evet",
+                .id      = "core.fourth_corner",
+                .setup   = {},
+                .objects = {},
+                .answers = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{10'000, 0}),
+                            Value::point(core::Point2{10'030, 6'000})},
+                .typed   = "DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,6 dik=evet",
+                .scripted = R"({"ad":"DÖRDÜNCÜKÖŞE","komutlar":[{"cmd":"core.fourth_corner","args":{
+                    "noktalar":[[0,0],[10000,0],[10030,6000]],"dik":true}}]})"});
+}
+
+TEST_CASE("PROOF: DİKDÖRTGEN yontem=derinlik gui, komut satırı ve betikten aynı belgeyi ve aynı "
+          "günlüğü bırakır")
+{
+    // The two corners are clicked and the depth typed; the line and the script
+    // say the same three things. Right of the edge is positive, and the edge runs
+    // east, so the box hangs to the south.
+    prove_verb({.name    = "DİKDÖRTGEN yontem=derinlik",
+                .id      = "core.rectangle",
+                .setup   = {},
+                .objects = {},
+                .answers = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{10'000, 0}),
+                            Value::number(6.0)},
+                .typed   = "DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=6",
+                .scripted = R"({"ad":"DİKDÖRTGEN","komutlar":[{"cmd":"core.rectangle","args":{
+                    "yontem":"derinlik","noktalar":[[0,0],[10000,0]],"derinlik":6}}]})"});
+}
+
+TEST_CASE("PROOF: DİKDÖRTGEN yontem=olcu gui, komut satırı ve betikten aynı belgeyi ve aynı "
+          "günlüğü bırakır")
+{
+    // A SHEET OF PAPER: only the corner is asked. A3 at the project's 1:1000.
+    prove_verb({.name     = "DİKDÖRTGEN yontem=olcu kagit=A3",
+                .id       = "core.rectangle",
+                .setup    = {},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{0, 0})},
+                .typed    = "DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3",
+                .scripted = R"({"ad":"DİKDÖRTGEN","komutlar":[{"cmd":"core.rectangle","args":{
+                    "yontem":"olcu","noktalar":[[0,0]],"kagit":"A3"}}]})"});
+
+    // A MEASURED BOX, TURNED: the width and the length are typed, then the corner
+    // is clicked; the turn came with the line. Fifty grad, the session's unit.
+    prove_verb({.name     = "DİKDÖRTGEN yontem=olcu aci=50",
+                .id       = "core.rectangle",
+                .setup    = {},
+                .objects  = {},
+                .answers  = {Value::number(40.0), Value::number(20.0),
+                             Value::point(core::Point2{100'000, 200'000})},
+                .typed    = "DİKDÖRTGEN yontem=olcu noktalar=100,200 en=40 boy=20 aci=50",
+                .scripted = R"({"ad":"DİKDÖRTGEN","komutlar":[{"cmd":"core.rectangle","args":{
+                    "yontem":"olcu","noktalar":[[100000,200000]],"en":40,"boy":20,"aci":50}}]})"});
+}
+
+TEST_CASE("PROOF: BLOKEKLE yontem=2n gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü "
+          "bırakır")
+{
+    // The block's width between two clicked points, and between the same two
+    // points typed and scripted: the same scale, the same turn, the same place.
+    prove_verb({.name     = "BLOKEKLE ad=KAPI yontem=2n",
+                .id       = "core.insert",
+                .setup    = {"DİKDÖRTGEN 0,0 2,1", "BLOK ad=KAPI taban=0,0 nesneler=1"},
+                .objects  = {},
+                .answers  = {Value::point(core::Point2{10'000, 0}),
+                             Value::point(core::Point2{14'000, 3'000})},
+                .typed    = "BLOKEKLE ad=KAPI yontem=2n noktalar=10,0 14,3",
+                .scripted = R"({"ad":"BLOKEKLE","komutlar":[{"cmd":"core.insert","args":{
+                    "ad":"KAPI","yontem":"2n","noktalar":[[10000,0],[14000,3000]]}}]})"});
+}
+
+TEST_CASE("PROOF: N-13 komutları günlükten, JSON'a gidip gelerek, aynı belgeyi yeniden kurar")
+{
+    // Article 6.4's replay clause. One drawing made of everything N-13 adds; its
+    // journal goes through JSON and back as a file would carry it, and is replayed
+    // into an empty drawing whose PLAN SCALE HAS SINCE CHANGED — the paper box
+    // must still come out 420 m by 297 m, because the line recorded the scale it
+    // was drawn at and not the one in force when it is read.
+    Rig live;
+    for (const char* line :
+         {"DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,6 dik=evet", "DÖRDÜNCÜKÖŞE 20,0 30,0 34,6",
+          "DİKDÖRTGEN yontem=derinlik noktalar=0,20 10,20 derinlik=-6",
+          "DİKDÖRTGEN yontem=olcu noktalar=100,0 en=40 boy=20 aci=50",
+          "DİKDÖRTGEN yontem=olcu noktalar=0,100 kagit=A3", "DİKDÖRTGEN 0,500 2,501"})
+        REQUIRE_MESSAGE(live.bus.execute_line(line, Origin::CommandLine).ok(), line);
+
+    // The last box becomes a block, its base at its left end, and that block's
+    // width goes between two points.
+    const auto newest = static_cast<std::int64_t>(
+        core::raw(live.doc.entities().key[live.doc.entities().size() - 1]));
+    REQUIRE(live.bus
+                .execute_line("BLOK ad=KAPI taban=0,500 nesneler=" + std::to_string(newest),
+                              Origin::CommandLine)
+                .ok());
+    REQUIRE(
+        live.bus
+            .execute_line("BLOKEKLE ad=KAPI yontem=2n noktalar=50,500 54,503", Origin::CommandLine)
+            .ok());
+    const std::uint64_t golden = live.doc.content_hash();
+
+    Rig again;
+    REQUIRE(
+        again.bus.project_settings().set("core.plan.olcek", core::SettingValue::integer(500)).ok());
+    for (const JournalEntry& entry : live.journal.entries()) {
+        // Through the wire form: dumped, parsed, read back as an entry.
+        auto parsed = core::Json::parse(entry.to_json(false).dump());
+        REQUIRE(parsed.ok());
+        auto read = JournalEntry::from_json(parsed.value());
+        REQUIRE_MESSAGE(read.ok(), entry.command_id);
+        auto ran = again.bus.dispatch(
+            Invocation{read.value().command_id, read.value().args, Origin::Batch});
+        REQUIRE_MESSAGE(ran.ok(), entry.command_id
+                                      << ": " << (ran.ok() ? std::string() : ran.error().message));
+    }
+    CHECK_EQ(again.doc.content_hash(), golden);
+    CHECK_EQ(what_happened(live.journal), what_happened(again.journal));
+}

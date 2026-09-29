@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <string>
 
 namespace kentos::core {
@@ -312,6 +313,36 @@ Point2 unplace_block_point(const BlockReference& ref, Point2 insertion, Point2 b
         return r.num < 0 ? mul_div_round(v, -r.den, -r.num) : mul_div_round(v, r.den, r.num);
     };
     return Point2{base.x + unscale(local.x, ref.sx), base.y + unscale(local.y, ref.sy)};
+}
+
+bool two_point_placement(Point2 first, Point2 second, Mm left, Mm right,
+                         TwoPointPlacement& out) noexcept
+{
+    const Mm span  = right - left;
+    const Mm reach = segment_length(first, second);
+    if (span <= 0 || reach <= 0) return false;
+
+    // THE SCALE IS A RATIO OF TWO WHOLE-MILLIMETRE LENGTHS, kept exact: the
+    // drawn width comes out as `reach` to the millimetre, where a scale typed as
+    // a decimal would have been rounded to the sixth place first.
+    const std::int64_t common = std::gcd(reach, span);
+    out.scale                 = Ratio{reach / common, span / common};
+
+    // THE TURN IS THE DIRECTION OF THE TWO POINTS, in the model's own unit
+    // (counter-clockwise from east), so the four axes are exact.
+    out.rotation_udeg = atan2_udeg(second.y - first.y, second.x - first.x);
+
+    // WHERE THE LEFT END STANDS, relative to the base point, once scaled and
+    // turned: the base point is put that far back from `first`, so the left end
+    // — and with it the whole width — lands on the two points.
+    BlockReference ref;
+    ref.sx            = out.scale;
+    ref.sy            = out.scale;
+    ref.rotation_udeg = out.rotation_udeg;
+    const Point2 to_left =
+        place_block_point(ref, Point2{0, 0}, Point2{0, 0}, Point2{left, 0}, 0, 0);
+    out.insertion = Point2{first.x - to_left.x, first.y - to_left.y};
+    return true;
 }
 
 bool expand_block_reference(const Document& doc, EntityId e, EmitBuffer& into, int depth)

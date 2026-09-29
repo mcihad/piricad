@@ -43,6 +43,7 @@ namespace kentos::command {
     X(exportstyle)                                                                                 \
     X(area)                                                                                        \
     X(rectangle)                                                                                   \
+    X(fourth_corner)                                                                               \
     X(circle_draw)                                                                                 \
     X(arc_draw)                                                                                    \
     X(vertex_move)                                                                                 \

@@ -617,13 +617,41 @@ def rectangle(
     *,
     points: Coords = ...,
     method: str = ...,
+    depth: float = ...,
+    width: float = ...,
+    length: float = ...,
+    paper: str = ...,
+    orientation: str = ...,
+    scale: int = ...,
+    angle: float = ...,
     layer: str = ...,
 ) -> int:
-    """Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
+    """Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.
 
     Komut: core.rectangle (DİKDÖRTGEN)
-        points — 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce]
-        method — 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş
+        points — 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta · derinlik: bir kenarın iki köşesi · olcu: kutunun ilk köşesi [mm, Sağa (Y) önce]
+        method — 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş · derinlik: bir kenar ve derinlik, sağ artı, sol eksi · olcu: bir köşe, en ve boy ya da kâğıt boyu
+        depth — yontem=derinlik için kenardan karşı kenara uzaklık (m); ilk köşeden ikinciye bakarken SAĞ pozitif, sol negatiftir [m]
+        width — yontem=olcu için kutunun eni (m); aci verilmemişken doğu–batı boyutu [m]
+        length — yontem=olcu için kutunun boyu (m); aci verilmemişken kuzey–güney boyutu [m]
+        paper — yontem=olcu için kâğıt boyu (A5, A4, A3, A2, A1, A0): en ve boy kâğıdın ölçüsü çarpı ölçek paydasıdır; en ve boy ile birlikte verilmez
+        orientation — kagit ile: yatay (varsayılan) kâğıdın uzun kenarı doğu–batı, dikey kuzey–güney
+        scale — kagit ile: ölçek paydası (1:N); verilmezse projenin plan ölçeği (AYAR plan_ölçeği)
+        angle — yontem=olcu için kutunun dönüklüğü: oturumun açı biriminde (öntanımlı grad), açıların arttığı yönde (öntanımlı kuzeyden saat yönünde) döner; varsayılan 0
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
+    """
+
+def fourth_corner(
+    *,
+    points: Coords = ...,
+    right_angle: bool = ...,
+    layer: str = ...,
+) -> int:
+    """Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.
+
+    Komut: core.fourth_corner (DÖRDÜNCÜKÖŞE)
+        points — Üç köşe sırayla: birinci, ikinci (birinci ile üçüncünün arasındaki) ve üçüncü; dördüncü ikincinin karşısına düşer [mm, Sağa (Y) önce]
+        right_angle — evet: ikinci köşedeki açı dik yapılır — üçüncü köşe birinci kenarın dikine çekilir ve sapma söylenir; varsayılan hayır: üç köşenin paralelkenarı
         layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
@@ -1363,6 +1391,8 @@ def insert(
     *,
     name: str = ...,
     point: Coord = ...,
+    method: str = ...,
+    points: Coords = ...,
     scale: float = ...,
     scale_y: float = ...,
     angle: float = ...,
@@ -1374,11 +1404,13 @@ def insert(
     file: str = ...,
     layer: str = ...,
 ) -> int:
-    """Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+    """Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir.
 
     Komut: core.insert (BLOKEKLE)
         name — Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı
-        point — Ekleme noktası [mm, Sağa (Y) önce]
+        point — Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile verilmez [mm, Sağa (Y) önce]
+        method — 2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki noktadan gelir, nokta, olcek, olcek_y ve aci verilmez
+        points — yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol ucunun, ikincisi sağ ucunun geleceği yer [mm, Sağa (Y) önce]
         scale — Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür
         scale_y — Y ölçeği, farklıysa; varsayılan olcek
         angle — Dönme açısı, derece; varsayılan 0

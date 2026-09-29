@@ -35,6 +35,7 @@
 #include "kentos_cad/core/parallel.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/text_store.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 using namespace kentos;
 using namespace kentos::command;
@@ -2050,6 +2051,726 @@ TEST_CASE("DİKDÖRTGEN 3n: döndürülmüş, ve üçüncü nokta yalnız yükse
         REQUIRE(f.bus.execute_line("DİKDÖRTGEN 0,0 100,40", Origin::CommandLine).ok());
         const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
         CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{4});
+    }
+}
+
+// =============================================================================
+// N-13 — quick drawing from a field sketch: the fourth corner, a depth, a measured box
+// =============================================================================
+
+namespace {
+
+/// The corners of the newest live object's first ring, in the order stored.
+std::vector<core::Point2> newest_ring(const core::Document& doc)
+{
+    std::vector<core::Point2> out;
+    for (auto e = static_cast<core::EntityId>(doc.entities().size()); e-- > 0;) {
+        if (!doc.alive(e)) continue;
+        const auto span = doc.geometry().rings_of(doc.entities().slot[e]);
+        const auto xs   = doc.geometry().ring_xs(span.first);
+        const auto ys   = doc.geometry().ring_ys(span.first);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            out.push_back(core::Point2{xs[v], ys[v]});
+        break;
+    }
+    return out;
+}
+
+/// A fixture that keeps what the commands say.
+struct Talking : Fixture
+{
+    std::string said;
+
+    Talking()
+    {
+        bus.on_echo = [this](std::string_view t) { said += std::string(t) + "\n"; };
+    }
+
+    /// The refusal a line meets; the empty string when it ran.
+    std::string refused(const std::string& line)
+    {
+        auto r = bus.execute_line(line, Origin::Test);
+        return r.ok() ? std::string() : r.error().message;
+    }
+};
+
+using Ring = std::vector<core::Point2>;
+
+} // namespace
+
+TEST_CASE("DÖRDÜNCÜKÖŞE: üç köşeden paralelkenarı tamamlar ve dördüncünün koordinatını söyler")
+{
+    // THE PLAN'S CASE (N-13): (0,0), (10,0), (10,6) — the fourth corner is (0,6),
+    // drawn as one closed face through all four, in the order given.
+    Talking f;
+    auto made = f.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 10,6", Origin::CommandLine);
+    REQUIRE(made.ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    CHECK(newest_ring(f.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, 6'000}, {0, 6'000}});
+    CHECK_EQ(f.said, "Dördüncü köşe: Y 0,000 m  X 6,000 m; dört köşeli alan çizildi.\n");
+
+    // AND THE ANSWER IS DATA TOO, for a client that does not read Turkish.
+    const core::Json& report = made.value().report;
+    REQUIRE(report.find("dorduncu") != nullptr);
+    CHECK_EQ(report.find("dorduncu")->dump(), "[0,6000]");
+    CHECK_EQ(report.find("koseler")->as_array().size(), std::size_t{4});
+    CHECK_FALSE(report.find("dik")->as_bool());
+    CHECK(report.find("sapma_mm") == nullptr); ///< nothing was forced, so nothing deviated
+
+    // ONE COMMAND, ONE UNDO STEP; the journal holds the THREE corners as given.
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    CHECK_EQ(f.journal.entries().front().command_id, "core.fourth_corner");
+    const Value::Points asked = f.journal.entries().front().args.get("noktalar").as_points();
+    CHECK(asked == Value::Points{{0, 0}, {10'000, 0}, {10'000, 6'000}});
+    CHECK_FALSE(f.journal.entries().front().args.has("dik"));
+
+    // A LEANING BUILDING: (0,0), (10,0), (14,6) — the third corner is not above the
+    // second, so the fourth leans the same way: a + c − b = (4, 6).
+    Talking g;
+    REQUIRE(g.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 14,6", Origin::CommandLine).ok());
+    CHECK(newest_ring(g.doc) == Ring{{0, 0}, {10'000, 0}, {14'000, 6'000}, {4'000, 6'000}});
+
+    // THE ASCII AND ENGLISH NAMES AND BOTH ABBREVIATIONS reach the same command.
+    for (const char* name : {"DORDUNCUKOSE", "FOURTHCORNER", "DKÖ", "DKO", "dördüncüköşe"}) {
+        Talking h;
+        REQUIRE_MESSAGE(h.bus.execute_line(std::string(name) + " 0,0 10,0 10,6", Origin::Test).ok(),
+                        name);
+        CHECK_EQ(h.doc.live_entity_count(), std::size_t{1});
+    }
+
+    // RELATIVE COORDINATES chain from the corner before, as on every other line.
+    Talking r;
+    REQUIRE(r.bus.execute_line("DÖRDÜNCÜKÖŞE 100,200 @10,0 @0,6", Origin::Test).ok());
+    CHECK(newest_ring(r.doc) ==
+          Ring{{100'000, 200'000}, {110'000, 200'000}, {110'000, 206'000}, {100'000, 206'000}});
+    CHECK_EQ(r.said, "Dördüncü köşe: Y 100,000 m  X 206,000 m; dört köşeli alan çizildi.\n");
+}
+
+TEST_CASE("DÖRDÜNCÜKÖŞE dik=evet: dik açıyı dayatır ve 3 cm'lik sapmayı yazar")
+{
+    // A BUILDING MEASURED 3 cm OFF SQUARE: the third corner stands 30 mm east of
+    // the perpendicular through the second. The first edge is trusted; the third
+    // corner is brought onto the perpendicular, so the fourth is (0, 6) exactly —
+    // and the transcript says how far the corner moved and how far from a right
+    // angle the second corner was.
+    Talking f;
+    auto made = f.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,6 dik=evet", Origin::CommandLine);
+    REQUIRE(made.ok());
+    CHECK(newest_ring(f.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, 6'000}, {0, 6'000}});
+
+    // atan(0,03 / 6) = 0,2865° = 0,3183 grad: the angle at the second corner was
+    // 100,3183 grad, the corner moved 0,030 m.
+    CHECK_EQ(f.said,
+             "Dördüncü köşe: Y 0,000 m  X 6,000 m; dört köşeli alan çizildi.\n"
+             "Dik açı dayatıldı: üçüncü köşe 0,030 m kaydırıldı (ikinci köşedeki açı 100,3183 "
+             "grad ölçülmüştü, sapma +0,3183 grad).\n");
+
+    const core::Json& report = made.value().report;
+    CHECK(report.find("dik")->as_bool());
+    CHECK_EQ(report.find("sapma_mm")->as_int(), std::int64_t{30});
+    CHECK_EQ(report.find("kayma_mm")->dump(), "[-30,0]");
+    CHECK_EQ(report.find("olculen_aci_metin")->as_string(), "100,3183 grad");
+    CHECK_EQ(report.find("aci_sapmasi_metin")->as_string(), "+0,3183 grad");
+    // Whole micro-degrees, from integer directions: atan(0,03 / 6) is 0,286 477°
+    // to the micro-degree, so the angle read was 90,286 477°.
+    CHECK_EQ(report.find("aci_sapmasi_udeg")->as_int(), std::int64_t{286'477});
+    CHECK_EQ(report.find("olculen_aci_udeg")->as_int(), std::int64_t{90'286'477});
+
+    // `dik` is in the journal, the moved corner is NOT: the three corners as
+    // measured are what the line replays from.
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    const JournalEntry& line = f.journal.entries().front();
+    CHECK(line.args.get("dik").as_bool());
+    CHECK(line.args.get("noktalar").as_points() ==
+          Value::Points{{0, 0}, {10'000, 0}, {10'030, 6'000}});
+
+    // THE OTHER SIDE, and the other lean: the third corner 3 cm WEST of the
+    // perpendicular reads a smaller angle, and the sign says so.
+    Talking g;
+    REQUIRE(g.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 9.97,6 dik=evet", Origin::Test).ok());
+    CHECK(newest_ring(g.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, 6'000}, {0, 6'000}});
+    CHECK(g.said.find("üçüncü köşe 0,030 m kaydırıldı (ikinci köşedeki açı 99,6817 grad "
+                      "ölçülmüştü, sapma -0,3183 grad)") != std::string::npos);
+
+    // A THIRD CORNER BELOW THE BASELINE is the mirror: the rectangle is drawn
+    // south, and the deviation is the same 30 mm.
+    Talking h;
+    REQUIRE(h.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,-6 dik=evet", Origin::Test).ok());
+    CHECK(newest_ring(h.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, -6'000}, {0, -6'000}});
+    CHECK(h.said.find("0,030 m kaydırıldı") != std::string::npos);
+
+    // A SQUARE BUILDING has nothing to report but that it is square.
+    Talking s;
+    REQUIRE(s.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 10,6 dik=evet", Origin::Test).ok());
+    CHECK_EQ(s.said, "Dördüncü köşe: Y 0,000 m  X 6,000 m; dört köşeli alan çizildi.\n"
+                     "Dik açı: üçüncü köşe zaten dik açının üzerinde; sapma yok.\n");
+
+    // A SKEW BASE, in whole millimetres: (0,0)→(30,40) and a third corner
+    // (38,34) is exactly (8,-6) off the base's normal at its end.
+    Talking k;
+    REQUIRE(k.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 30,40 38,34 dik=evet", Origin::Test).ok());
+    CHECK(newest_ring(k.doc) == Ring{{0, 0}, {30'000, 40'000}, {38'000, 34'000}, {8'000, -6'000}});
+    CHECK(k.said.find("sapma yok") != std::string::npos);
+
+    // `dik=hayır` is the default spelled out: the parallelogram, and no `dik` in
+    // the journal.
+    Talking p;
+    REQUIRE(p.bus.execute_line("DÖRDÜNCÜKÖŞE 0,0 10,0 10.03,6 dik=hayır", Origin::Test).ok());
+    CHECK(newest_ring(p.doc) == Ring{{0, 0}, {10'000, 0}, {10'030, 6'000}, {30, 6'000}});
+    CHECK_FALSE(p.journal.entries().front().args.has("dik"));
+}
+
+TEST_CASE("DÖRDÜNCÜKÖŞE: aynı köşe, bir doğru üstündeki üç köşe ve doğrultudaki üçüncü köşe "
+          "reddedilir")
+{
+    Talking f;
+    // Two corners on top of each other name no edge.
+    CHECK(f.refused("DÖRDÜNCÜKÖŞE 0,0 0,0 10,6").find("aynı nokta") != std::string::npos);
+    CHECK(f.refused("DÖRDÜNCÜKÖŞE 0,0 10,0 10,0").find("aynı nokta") != std::string::npos);
+    // Three in a line enclose nothing.
+    CHECK_EQ(f.refused("DÖRDÜNCÜKÖŞE 0,0 10,0 20,0"),
+             "Üç köşe bir doğru üzerinde; dördüncü köşe bir alan kapatmaz.");
+    CHECK_EQ(f.refused("DÖRDÜNCÜKÖŞE 0,0 10,10 30,30"),
+             "Üç köşe bir doğru üzerinde; dördüncü köşe bir alan kapatmaz.");
+    // With the right angle asked for, the third corner ON the first edge's line
+    // has no depth to give.
+    CHECK_EQ(f.refused("DÖRDÜNCÜKÖŞE 0,0 10,0 20,0 dik=evet"),
+             "Üçüncü köşe birinci kenarın doğrultusunda; dik açı bir alan kapatmaz.");
+
+    // NOTHING WAS DRAWN, JOURNALLED OR MADE UNDOABLE by a refusal.
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    CHECK(f.journal.entries().empty());
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+
+    // A parameter the command does not have is named, not ignored.
+    CHECK(f.refused("DÖRDÜNCÜKÖŞE 0,0 10,0 10,6 derinlik=3").find("derinlik") != std::string::npos);
+}
+
+TEST_CASE("DÖRDÜNCÜKÖŞE: tıklanırken önizleme, Esc'te boş geri alma")
+{
+    // THE PROMPTS AFTER THE FIRST CORNER PREVIEW, and the third shows the shape it
+    // will make: the triangle of the three corners without `dik` (half the
+    // parallelogram) and the rectangle itself with it — the very corners
+    // `edge_rectangle_corners` gives the command.
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("DÖRDÜNCÜKÖŞE", Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        REQUIRE(s.waiting());
+        REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().has_rubber_band);
+        CHECK(s.prompt().rubber_shape == RubberShape::Line);
+        CHECK(s.prompt().rubber_origin == (core::Point2{0, 0}));
+        REQUIRE(s.supply(Value::point(core::Point2{10'000, 0})).ok());
+        REQUIRE(s.waiting());
+        CHECK(s.prompt().has_rubber_band);
+        CHECK(s.prompt().rubber_shape == RubberShape::Ring);
+        CHECK(s.prompt().rubber_chain ==
+              std::vector<core::Point2>{core::Point2{0, 0}, core::Point2{10'000, 0}});
+        REQUIRE(s.supply(Value::point(core::Point2{10'000, 6'000})).ok());
+        REQUIRE(f.bus.finish(s).ok());
+        CHECK(newest_ring(f.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, 6'000}, {0, 6'000}});
+    }
+    {
+        Fixture f;
+        auto started = f.bus.begin_interactive("DÖRDÜNCÜKÖŞE dik=evet", Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+        REQUIRE(s.supply(Value::point(core::Point2{10'000, 0})).ok());
+        CHECK(s.prompt().rubber_shape == RubberShape::EdgeRectangle);
+        s.cancel();
+        (void)f.bus.finish(s);
+    }
+
+    // ESC AT ANY POINT leaves nothing: no object, no journal line, no undo step.
+    for (std::size_t asked = 1; asked <= 3; ++asked) {
+        Fixture f;
+        auto started = f.bus.begin_interactive("DÖRDÜNCÜKÖŞE", Origin::Gui);
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        const core::Point2 corners[]{{0, 0}, {10'000, 0}, {10'000, 6'000}};
+        for (std::size_t i = 0; i + 1 < asked; ++i)
+            REQUIRE(s.supply(Value::point(corners[i])).ok());
+        s.cancel();
+        REQUIRE(f.bus.finish(s).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+        CHECK(f.journal.entries().empty());
+        CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+    }
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=derinlik: iki köşe ve derinlik; sağ pozitif, sol negatif")
+{
+    // THE SIGN, the project's one rule: RIGHT of first→second is positive. The
+    // edge runs east, so its right is south.
+    Talking f;
+    auto right = f.bus.execute_line("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=6",
+                                    Origin::CommandLine);
+    REQUIRE(right.ok());
+    CHECK(newest_ring(f.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, -6'000}, {0, -6'000}});
+    CHECK_EQ(f.said, "Dikdörtgen çizildi: 10,000 m × 6,000 m (derinlik sağda).\n");
+
+    // Negative is the left: north of an eastward edge.
+    Talking g;
+    REQUIRE(
+        g.bus.execute_line("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=-6", Origin::Test)
+            .ok());
+    CHECK(newest_ring(g.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, 6'000}, {0, 6'000}});
+    CHECK_EQ(g.said, "Dikdörtgen çizildi: 10,000 m × 6,000 m (derinlik solda).\n");
+
+    // THE SAME SIGN AS dik(A,B,ayak,boy): the depth-side far corner IS the point
+    // `dik(A,B,0,depth)` names, on a skew 3-4-5 edge where every figure is whole
+    // millimetres.
+    Talking k;
+    REQUIRE(
+        k.bus
+            .execute_line("DİKDÖRTGEN yontem=derinlik noktalar=0,0 30,40 derinlik=10", Origin::Test)
+            .ok());
+    CHECK(newest_ring(k.doc) == Ring{{0, 0}, {30'000, 40'000}, {38'000, 34'000}, {8'000, -6'000}});
+    REQUIRE(k.bus.execute_line("NOKTA dik(0,0,30,40,0,10)", Origin::Test).ok());
+    CHECK(newest_ring(k.doc) == Ring{{8'000, -6'000}});
+
+    // WALKED THE OTHER WAY the same depth is on the other side of the ground.
+    Talking w;
+    REQUIRE(
+        w.bus.execute_line("DİKDÖRTGEN yontem=derinlik noktalar=10,0 0,0 derinlik=6", Origin::Test)
+            .ok());
+    CHECK(newest_ring(w.doc) == Ring{{10'000, 0}, {0, 0}, {0, 6'000}, {10'000, 6'000}});
+
+    // A millimetre: the smallest depth there is.
+    Talking m;
+    REQUIRE(m.bus
+                .execute_line("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=0.001",
+                              Origin::Test)
+                .ok());
+    CHECK(newest_ring(m.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, -1}, {0, -1}});
+
+    // RECORDED as asked — the two corners and the depth, in the method's own
+    // words — and one undo step.
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    const JournalEntry& line = f.journal.entries().front();
+    CHECK_EQ(line.args.get("yontem").as_text(), "derinlik");
+    CHECK(line.args.get("noktalar").as_points() == Value::Points{{0, 0}, {10'000, 0}});
+    CHECK_EQ(line.args.get("derinlik").as_number(), 6.0);
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=derinlik: reddedilenler bir şey bırakmaz")
+{
+    Talking f;
+    // A depth the millimetre swallows, and none at all.
+    CHECK(f.refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=0")
+              .find("Derinlik sıfır olamaz") != std::string::npos);
+    CHECK(f.refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=0.0001")
+              .find("Derinlik sıfır olamaz") != std::string::npos);
+    // Two corners that are one point name no edge.
+    CHECK(f.refused("DİKDÖRTGEN yontem=derinlik noktalar=5,5 5,5 derinlik=3").find("aynı nokta") !=
+          std::string::npos);
+    // A third point belongs to `3n`; the depth method is told so.
+    CHECK(f.refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 10,5 derinlik=3")
+              .find("iki köşe ister: kenarın iki ucu; 3 nokta verildi.") != std::string::npos);
+    // The parameters of another method are named and refused, never ignored.
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0 derinlik=3 en=5"),
+             "`en` yalnız yontem=olcu ile verilir; yontem=derinlik onu kullanmaz.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN noktalar=0,0 10,5 derinlik=3"),
+             "`derinlik` yalnız yontem=derinlik ile verilir; yontem=2n onu kullanmaz.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=3n noktalar=0,0 10,0 5,5 aci=30"),
+             "`aci` yalnız yontem=olcu ile verilir; yontem=3n onu kullanmaz.");
+    // A word that names no method is the bus's to refuse, from the declared list.
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=xyz 0,0 10,5"),
+             "'core.rectangle': 'yontem' için tanınmayan değer 'xyz'. Kabul edilenler: 2n / 3n / "
+             "derinlik / olcu");
+
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    CHECK(f.journal.entries().empty());
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+
+    // THE SAME WORD MET BY A SESSION (a line typed in the window) is caught after the
+    // body has run, and the face it drew is taken back whole: a validation failure
+    // leaves nothing, whichever road it came by.
+    {
+        auto started = f.bus.begin_interactive("DİKDÖRTGEN yontem=xyz 0,0 10,5", Origin::Gui);
+        REQUIRE(started.ok());
+        auto done = f.bus.finish(*started.value());
+        REQUIRE_FALSE(done.ok());
+        CHECK(done.error().message.find("'yontem' için tanınmayan değer 'xyz'") !=
+              std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+        CHECK(f.journal.entries().empty());
+        CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+    }
+
+    // THE OLD FORMS ARE UNTOUCHED: two corners with no method, and `3n`.
+    REQUIRE(f.bus.execute_line("DİKDÖRTGEN 0,0 100,40", Origin::Test).ok());
+    CHECK(newest_ring(f.doc) == Ring{{0, 0}, {100'000, 0}, {100'000, 40'000}, {0, 40'000}});
+    CHECK_FALSE(f.journal.entries().front().args.has("yontem"));
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=derinlik: tıklanan köşeler ve yazılan derinlik; Esc boş bırakır")
+{
+    Fixture f;
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN yontem=derinlik", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value::point(core::Point2{0, 0})).ok());
+    CHECK(s.prompt().rubber_shape == RubberShape::Line);
+    REQUIRE(s.supply(Value::point(core::Point2{10'000, 0})).ok());
+
+    // THE EDGE STAYS ON SCREEN while the depth is typed, and the question is a
+    // number, not a point: a click is not a depth.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().kind == ParamKind::Number);
+    CHECK(s.prompt().param == "derinlik");
+    CHECK(s.prompt().has_rubber_band);
+    CHECK(s.prompt().rubber_shape == RubberShape::Fixed);
+    CHECK(s.prompt().rubber_chain ==
+          std::vector<core::Point2>{core::Point2{0, 0}, core::Point2{10'000, 0}});
+    REQUIRE(s.supply(Value::number(6.0)).ok());
+    REQUIRE(f.bus.finish(s).ok());
+    CHECK(newest_ring(f.doc) == Ring{{0, 0}, {10'000, 0}, {10'000, -6'000}, {0, -6'000}});
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+
+    // ESC at the depth leaves the drawing as it was.
+    Fixture g;
+    auto again = g.bus.begin_interactive("DİKDÖRTGEN yontem=derinlik", Origin::Gui);
+    REQUIRE(again.ok());
+    Session& t = *again.value();
+    REQUIRE(t.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(t.supply(Value::point(core::Point2{10'000, 0})).ok());
+    t.cancel();
+    REQUIRE(g.bus.finish(t).ok());
+    CHECK_EQ(g.doc.live_entity_count(), std::size_t{0});
+    CHECK(g.journal.entries().empty());
+    CHECK_EQ(g.undo.undo_depth(), std::size_t{0});
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=olcu: bir köşe, en ve boy; açı oturumun kuralıyla okunur")
+{
+    // UNTURNED: the width runs east and the length north from the corner.
+    Talking f;
+    REQUIRE(f.bus
+                .execute_line("DİKDÖRTGEN yontem=olcu noktalar=100,200 en=40 boy=20",
+                              Origin::CommandLine)
+                .ok());
+    CHECK(newest_ring(f.doc) ==
+          Ring{{100'000, 200'000}, {140'000, 200'000}, {140'000, 220'000}, {100'000, 220'000}});
+    CHECK_EQ(f.said, "Kutu çizildi: 40,000 m × 20,000 m.\n");
+
+    // A QUARTER TURN, 100 grad — the default unit — CLOCKWISE, the default rule:
+    // the width now runs south and the length east.
+    Talking g;
+    REQUIRE(g.bus
+                .execute_line("DİKDÖRTGEN yontem=olcu noktalar=100,200 en=40 boy=20 aci=100",
+                              Origin::Test)
+                .ok());
+    CHECK(newest_ring(g.doc) ==
+          Ring{{100'000, 200'000}, {100'000, 160'000}, {120'000, 160'000}, {120'000, 200'000}});
+    CHECK_EQ(g.said, "Kutu çizildi: 40,000 m × 20,000 m; 100,0000 grad döndürüldü.\n");
+
+    // UNDER MATEMATİK the same 100 grad turns the other way: counter-clockwise, so
+    // the width runs north and the length west.
+    Talking h;
+    REQUIRE(h.bus.execute_line("MOD kural matematik", Origin::Test).ok());
+    REQUIRE(h.bus
+                .execute_line("DİKDÖRTGEN yontem=olcu noktalar=100,200 en=40 boy=20 aci=100",
+                              Origin::Test)
+                .ok());
+    CHECK(newest_ring(h.doc) ==
+          Ring{{100'000, 200'000}, {100'000, 240'000}, {80'000, 240'000}, {80'000, 200'000}});
+
+    // AND IN DEGREES, when the session says so: 90 is the same quarter turn.
+    Talking d;
+    REQUIRE(d.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    d.said.clear(); ///< the setting says what it changed; the box is what is compared
+    REQUIRE(
+        d.bus.execute_line("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=40 boy=20 aci=90", Origin::Test)
+            .ok());
+    CHECK(newest_ring(d.doc) == Ring{{0, 0}, {0, -40'000}, {20'000, -40'000}, {20'000, 0}});
+    CHECK_EQ(d.said, "Kutu çizildi: 40,000 m × 20,000 m; 90,0000° döndürüldü.\n");
+
+    // RECORDED as asked, the numbers in one form whoever typed them; and the
+    // turn only when there was one.
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    const JournalEntry& plain = f.journal.entries().front();
+    CHECK_EQ(plain.args.get("yontem").as_text(), "olcu");
+    CHECK(plain.args.get("noktalar").as_points() == Value::Points{{100'000, 200'000}});
+    CHECK_EQ(plain.args.get("en").as_number(), 40.0);
+    CHECK_EQ(plain.args.get("boy").as_number(), 20.0);
+    CHECK_FALSE(plain.args.has("aci"));
+    CHECK_EQ(g.journal.entries().front().args.get("aci").as_number(), 100.0);
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+}
+
+TEST_CASE("DİKDÖRTGEN ve BLOKEKLE: soru soramayan çalıştırma eksik değer için reddedilir")
+{
+    // A SCRIPT'S VALUES ENDING SHORT were a success that drew nothing and said
+    // nothing once `noktalar` stopped being "two or three" for every method:
+    // the next command ran as if this one had. A line or a script that cannot
+    // be asked is refused up front, by name; a session a person drives asks.
+    Talking f;
+    const auto refused = [&f](const char* line, const char* why) {
+        const auto got = f.bus.execute_line(line, Origin::Test);
+        REQUIRE_FALSE(got.ok());
+        CHECK_MESSAGE(got.error().message.find(why) != std::string::npos, got.error().message);
+    };
+    refused("DİKDÖRTGEN noktalar=0,0", "yontem=2n iki karşı köşe ister; 1 nokta verildi");
+    refused("DİKDÖRTGEN", "zorunlu 'noktalar' parametresi eksik"); ///< the bus's own, first
+    refused("DİKDÖRTGEN yontem=3n noktalar=0,0 10,0", "yontem=3n üç nokta ister");
+    refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 10,0", "derinlik=<metre> ister");
+    refused("DİKDÖRTGEN yontem=derinlik noktalar=0,0 derinlik=5", "kenarın iki köşesini ister");
+    refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=40", "en= ve boy= ya da kagit= ister");
+    refused("DİKDÖRTGEN yontem=olcu en=40 boy=20", "zorunlu 'noktalar' parametresi eksik");
+    CHECK(f.doc.live_entity_count() == 0);
+
+    // THE SAME SCRIPT FAILS AT THAT STEP, not three steps later.
+    script::JsonRunner runner(f.bus, script::Sandbox::Project);
+    const auto ran = runner.run_text(R"({"komutlar":[
+        {"cmd":"core.rectangle","args":{"noktalar":[[0,0]]}},
+        {"cmd":"core.line","args":{"noktalar":[[0,0],[1000,0]]}}]})");
+    CHECK_FALSE(ran.ok());
+    CHECK(f.doc.live_entity_count() == 0);
+
+    // A SESSION ASKS: the first corner typed, the second clicked.
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN noktalar=0,0", Origin::CommandLine);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    REQUIRE(session.supply(Value::point(core::Point2{10'000, 5'000})).ok());
+    REQUIRE(f.bus.finish(session).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+
+    // AND A BLOCK BY TWO POINTS given one.
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 1,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("BLOK ad=K taban=0,0 nesneler=2", Origin::Test).ok());
+    refused("BLOKEKLE ad=K yontem=2n noktalar=5,5", "yontem=2n iki nokta ister");
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=olcu kagit=: kâğıt ölçüsü çarpı plan ölçeği zemin boyudur")
+{
+    // THE PLAN'S CASE (N-13): A3 at the project's own 1:1000 is 420 m east–west
+    // by 297 m north–south, from the corner given.
+    Talking f;
+    REQUIRE_EQ(f.bus.project_settings().get("core.plan.olcek").as_int(), std::int64_t{1000});
+    REQUIRE(f.bus
+                .execute_line("DİKDÖRTGEN yontem=olcu noktalar=485000,4310000 kagit=A3",
+                              Origin::CommandLine)
+                .ok());
+    CHECK(newest_ring(f.doc) == Ring{{485'000'000, 4'310'000'000},
+                                     {485'420'000, 4'310'000'000},
+                                     {485'420'000, 4'310'297'000},
+                                     {485'000'000, 4'310'297'000}});
+    CHECK_EQ(f.said, "Kutu çizildi: 420,000 m × 297,000 m (A3 yatay, 1:1000).\n");
+
+    // THE SCALE IS RECORDED RESOLVED, so a replay draws the same box after the
+    // plan scale changes; the sheet is spelled as the table spells it.
+    const JournalEntry& line = f.journal.entries().front();
+    CHECK_EQ(line.args.get("kagit").as_text(), "A3");
+    CHECK_EQ(line.args.get("yon").as_text(), "yatay");
+    CHECK_EQ(line.args.get("olcek").as_int(), std::int64_t{1000});
+    CHECK_FALSE(line.args.has("en"));
+
+    // `olcek=` says another scale and `yon=dikey` stands the sheet up: A4 is
+    // 210 × 297 mm, at 1:500 105 m by 148,5 m.
+    Talking g;
+    REQUIRE(g.bus
+                .execute_line("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=a4 olcek=500 yon=dikey",
+                              Origin::Test)
+                .ok());
+    CHECK(newest_ring(g.doc) == Ring{{0, 0}, {105'000, 0}, {105'000, 148'500}, {0, 148'500}});
+    CHECK_EQ(g.said, "Kutu çizildi: 105,000 m × 148,500 m (A4 dikey, 1:500).\n");
+    CHECK_EQ(g.journal.entries().front().args.get("kagit").as_text(), "A4");
+
+    // WITHOUT `olcek=` the drawing's own plan scale decides, and a changed scale
+    // changes the box: A3 at 1:5000 is 2100 m by 1485 m.
+    Talking h;
+    REQUIRE(h.bus.execute_line("AYAR core.plan.olcek 5000", Origin::Test).ok());
+    REQUIRE(h.bus.execute_line("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3", Origin::Test).ok());
+    CHECK(newest_ring(h.doc) ==
+          Ring{{0, 0}, {2'100'000, 0}, {2'100'000, 1'485'000}, {0, 1'485'000}});
+
+    // EVERY SHEET THE TABLE HAS, at 1:1: the size in millimetres is the paper's,
+    // landscape.
+    const struct
+    {
+        const char* name;
+        core::Mm wide;
+        core::Mm narrow;
+    } sheets[] = {{"A5", 210, 148}, {"A4", 297, 210}, {"A3", 420, 297},
+                  {"A2", 594, 420}, {"A1", 841, 594}, {"A0", 1189, 841}};
+
+    for (const auto& sheet : sheets) {
+        Talking s;
+        REQUIRE(s.bus
+                    .execute_line("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=" +
+                                      std::string(sheet.name) + " olcek=1",
+                                  Origin::Test)
+                    .ok());
+        CHECK_MESSAGE(newest_ring(s.doc)[2] == (core::Point2{sheet.wide, sheet.narrow}),
+                      sheet.name);
+    }
+
+    // THE TABLE IS THE ONE THE PRINT PROFILES READ: asking it gives the same
+    // portrait millimetres this landscape box was cut from.
+    const auto a3 = core::paper_size_mm("A3");
+    REQUIRE(a3.has_value());
+    CHECK_EQ(a3->first, std::int64_t{297});
+    CHECK_EQ(a3->second, std::int64_t{420});
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=olcu: bozuk ölçüler ve karışan parametreler adıyla reddedilir")
+{
+    Talking f;
+
+    // A SHEET THE TABLE DOES NOT HAVE, and a word out of the declared lists, are the
+    // bus's to refuse before the body runs — from the very table the print
+    // profiles read. `ozel` is a size the user GIVES, and here that is en= and boy=.
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A9"),
+             "'core.rectangle': 'kagit' için tanınmayan değer 'A9'. Kabul edilenler: A5 / A4 / "
+             "A3 / A2 / A1 / A0");
+    CHECK(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=ozel")
+              .find("'kagit' için tanınmayan değer 'ozel'") != std::string::npos);
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3 yon=capraz"),
+             "'core.rectangle': 'yon' için tanınmayan değer 'capraz'. Kabul edilenler: yatay / "
+             "dikey");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3 olcek=0"),
+             "'core.rectangle': 'olcek' 1 ile 1000000 arasında olmalı, 0 geldi.");
+    CHECK_FALSE(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3 olcek=2000000").empty());
+
+    // THE SAME WORDS TYPED AT A PROMPT-DRIVEN LINE (a session) are met by the body,
+    // which cannot draw from them: it says so at once, before asking for anything.
+    const auto met = [&f](const char* line) {
+        auto started = f.bus.begin_interactive(line, Origin::Gui);
+        REQUIRE(started.ok());
+        auto done = f.bus.finish(*started.value());
+        return done.ok() ? std::string() : done.error().message;
+    };
+    CHECK(met("DİKDÖRTGEN yontem=olcu kagit=A9")
+              .find("Tanınmayan kâğıt: 'A9'. Kâğıtlar: A5, A4, A3, A2, A1, A0; başka bir ölçü "
+                    "için en= ve boy= verin.") != std::string::npos);
+    CHECK_EQ(met("DİKDÖRTGEN yontem=olcu kagit=A3 yon=capraz"),
+             "Beklenen yön: yatay | dikey. Girilen: 'capraz'");
+    CHECK(met("DİKDÖRTGEN yontem=olcu kagit=A3 olcek=0").find("Ölçek bilinmiyor") !=
+          std::string::npos);
+
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 kagit=A3 en=10"),
+             "`kagit` verilince en ve boy kâğıttan gelir; `kagit` ile `en` ya da `boy` birlikte "
+             "verilmez.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=10 boy=5 yon=dikey"),
+             "`yon` ve `olcek` yalnız `kagit` ile verilir: kâğıdın yönü ve ölçeği kâğıt boyunu "
+             "zemine indirir.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=0 boy=5"),
+             "Kutunun eni ve boyu sıfırdan büyük olmalı; en 0,000 m, boy 5,000 m geldi.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=10 boy=-5"),
+             "Kutunun eni ve boyu sıfırdan büyük olmalı; en 10,000 m, boy -5,000 m geldi.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 10,10 en=10 boy=5"),
+             "yontem=olcu tek nokta ister: kutunun ilk köşesi; 2 nokta verildi.");
+    CHECK_EQ(f.refused("DİKDÖRTGEN yontem=olcu noktalar=0,0 en=10 boy=5 derinlik=2"),
+             "`derinlik` yalnız yontem=derinlik ile verilir; yontem=olcu onu kullanmaz.");
+
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    CHECK(f.journal.entries().empty());
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+}
+
+TEST_CASE("DİKDÖRTGEN yontem=olcu: en ve boy sorulur, sonra köşe; Esc boş bırakır")
+{
+    Fixture f;
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN yontem=olcu", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+
+    // THE SIZE FIRST, the way a dialog asks: two numbers, then the click.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().kind == ParamKind::Number);
+    CHECK(s.prompt().param == "en");
+    REQUIRE(s.supply(Value::number(40.0)).ok());
+    CHECK(s.prompt().param == "boy");
+    REQUIRE(s.supply(Value::number(20.0)).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().kind == ParamKind::Point);
+    CHECK(s.prompt().param == "noktalar");
+    REQUIRE(s.supply(Value::point(core::Point2{100'000, 200'000})).ok());
+    REQUIRE(f.bus.finish(s).ok());
+    CHECK(newest_ring(f.doc) ==
+          Ring{{100'000, 200'000}, {140'000, 200'000}, {140'000, 220'000}, {100'000, 220'000}});
+
+    // A SHEET asks only for the corner.
+    Fixture g;
+    auto sheet = g.bus.begin_interactive("DİKDÖRTGEN yontem=olcu kagit=A3", Origin::Gui);
+    REQUIRE(sheet.ok());
+    Session& t = *sheet.value();
+    REQUIRE(t.waiting());
+    CHECK(t.prompt().param == "noktalar");
+    REQUIRE(t.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(g.bus.finish(t).ok());
+    CHECK(newest_ring(g.doc)[2] == (core::Point2{420'000, 297'000}));
+
+    // ESC at the width, at the length and at the corner: nothing.
+    for (std::size_t asked = 0; asked < 3; ++asked) {
+        Fixture h;
+        auto again = h.bus.begin_interactive("DİKDÖRTGEN yontem=olcu", Origin::Gui);
+        REQUIRE(again.ok());
+        Session& u = *again.value();
+        if (asked >= 1) REQUIRE(u.supply(Value::number(40.0)).ok());
+        if (asked >= 2) REQUIRE(u.supply(Value::number(20.0)).ok());
+        u.cancel();
+        REQUIRE(h.bus.finish(u).ok());
+        CHECK_EQ(h.doc.live_entity_count(), std::size_t{0});
+        CHECK(h.journal.entries().empty());
+        CHECK_EQ(h.undo.undo_depth(), std::size_t{0});
+    }
+}
+
+TEST_CASE("N-13 KILAVUZ: sayfalarda gösterilen çıktılar programın gerçekten yazdığıdır")
+{
+    // The manual prints what these lines say (docs/komutlar/fourth_corner.md,
+    // rectangle.md, insert.md); the docs test runs the lines, this holds the
+    // words. A page that shows an output the program does not write is the manual
+    // lying, and the first place a reader trusts it.
+    struct Example
+    {
+        const char* line;
+        const char* says;
+    };
+
+    const Example examples[] = {
+        {"DÖRDÜNCÜKÖŞE 0,0 10,0 10,6",
+         "Dördüncü köşe: Y 0,000 m  X 6,000 m; dört köşeli alan çizildi.\n"},
+        {"DÖRDÜNCÜKÖŞE 0,0 10,0 14,6",
+         "Dördüncü köşe: Y 4,000 m  X 6,000 m; dört köşeli alan çizildi.\n"},
+        {"DÖRDÜNCÜKÖŞE 100,200 @10,0 @0,6",
+         "Dördüncü köşe: Y 100,000 m  X 206,000 m; dört köşeli alan çizildi.\n"},
+        {"DÖRDÜNCÜKÖŞE 485320.15,4310220.4 485338.15,4310220.4 485338.18,4310231.9 dik=evet",
+         "Dördüncü köşe: Y 485320,150 m  X 4310231,900 m; dört köşeli alan çizildi.\n"
+         "Dik açı dayatıldı: üçüncü köşe 0,030 m kaydırıldı (ikinci köşedeki açı 100,1661 grad "
+         "ölçülmüştü, sapma +0,1661 grad).\n"},
+        {"DÖRDÜNCÜKÖŞE 0,0 10,0 10,6 dik=evet",
+         "Dördüncü köşe: Y 0,000 m  X 6,000 m; dört köşeli alan çizildi.\n"
+         "Dik açı: üçüncü köşe zaten dik açının üzerinde; sapma yok.\n"},
+        {"DİKDÖRTGEN yontem=derinlik noktalar=485320,4310220 485338,4310220 derinlik=11.5",
+         "Dikdörtgen çizildi: 18,000 m × 11,500 m (derinlik sağda).\n"},
+        {"DİKDÖRTGEN yontem=derinlik noktalar=485320,4310220 485338,4310220 derinlik=-11.5",
+         "Dikdörtgen çizildi: 18,000 m × 11,500 m (derinlik solda).\n"},
+        {"DİKDÖRTGEN yontem=olcu noktalar=485320,4310220 en=40 boy=20",
+         "Kutu çizildi: 40,000 m × 20,000 m.\n"},
+        {"DİKDÖRTGEN yontem=olcu noktalar=485320,4310220 en=40 boy=20 aci=50",
+         "Kutu çizildi: 40,000 m × 20,000 m; 50,0000 grad döndürüldü.\n"},
+        {"DİKDÖRTGEN yontem=olcu noktalar=485000,4310000 kagit=A3",
+         "Kutu çizildi: 420,000 m × 297,000 m (A3 yatay, 1:1000).\n"},
+        {"DİKDÖRTGEN yontem=olcu noktalar=485000,4310000 kagit=A4 olcek=500 yon=dikey",
+         "Kutu çizildi: 105,000 m × 148,500 m (A4 dikey, 1:500).\n"},
+    };
+    Talking f;
+    for (const Example& e : examples) {
+        f.said.clear();
+        auto r = f.bus.execute_line(e.line, Origin::Test);
+        REQUIRE_MESSAGE(r.ok(), e.line);
+        CHECK_MESSAGE(f.said == e.says, e.line);
     }
 }
 
@@ -7744,7 +8465,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + BLOKDÜZENLE (TODOS C-13) + DIŞREFERANS, BLOKKIRP (TODOS C-14)
     // + YERELKOPYA (TODOS F-02) + BAĞIMLILIK (TODOS F-04) + ÖNİZLE (TODOS F-05)
     // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02) + ÇİFTÇİZGİ (N-11)
-    CHECK_EQ(f.reg.size(), std::size_t{113});
+    // + DÖRDÜNCÜKÖŞE (N-13)
+    CHECK_EQ(f.reg.size(), std::size_t{114});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

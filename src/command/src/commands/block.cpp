@@ -19,6 +19,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -180,6 +181,28 @@ Task<void> run_block(Context& ctx)
 
 Task<void> run_insert(Context& ctx)
 {
+    // `yontem=2n` — THE BLOCK'S WIDTH BETWEEN TWO POINTS (netcad_plan.md N-13;
+    // Netcad's placement "2 Nokta ile"). Scale and turn come from the points, so
+    // the arguments that would also say them are refused rather than ignored
+    // (command.md P15) — and before anything is imported or asked, so a refusal
+    // leaves nothing behind.
+    const Value how      = ctx.argument("yontem");
+    const bool two_point = !how.empty() && core::turkish_key_equals(how.as_text(), "2n");
+    if (two_point) {
+        for (const char* own : {"nokta", "olcek", "olcek_y", "aci"}) {
+            if (!ctx.has_argument(own)) continue;
+            ctx.refuse(
+                core::ErrorCode::InvalidArgument,
+                std::string("`") + own +
+                    "` yontem=2n ile verilmez: ekleme yeri, ölçek ve açı iki noktadan gelir.");
+            co_return;
+        }
+    } else if (ctx.has_argument("noktalar")) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "`noktalar` yalnız yontem=2n ile verilir; öbür yerleştirme `nokta` ister.");
+        co_return;
+    }
+
     // A BLOCK FROM A LIBRARY FILE (TODOS C-13): a project, DXF or DWG file
     // kept as a symbol library. Its block — the one `ad=` names, its only one,
     // or the whole drawing named after the file — is brought into this drawing
@@ -325,15 +348,81 @@ Task<void> run_insert(Context& ctx)
     ref.column_spacing = column_spacing;
     ref.row_spacing    = row_spacing;
 
-    // The reference, drawn under the cursor before it is placed: the canvas
-    // expands the definition with the same scale, turn and grid.
-    auto at = co_await ctx.point("nokta", "Ekleme noktası",
-                                 PointOptions{.rubber_band    = true,
-                                              .rubber_shape   = RubberShape::Block,
-                                              .rubber_payload = core::encode_block_reference(ref)});
-    if (!at) co_return;
+    core::Point2 at{};
+    core::Point2 first_end{};
+    core::Point2 second_end{};
+    core::TwoPointPlacement fitted{};
+    if (two_point) {
+        // A RUN THAT CANNOT ASK is refused for the point it was not given, before
+        // anything is placed — the spec's `noktalar` is optional because only
+        // this method takes it (the rectangle's `given_to_a_run_that_cannot_ask`).
+        if (const std::size_t given = ctx.argument("noktalar").as_points().size();
+            !ctx.session().client_driven() && given < 2) {
+            ctx.refuse(core::ErrorCode::ValidationFailed,
+                       "BLOKEKLE yontem=2n iki nokta ister: bloğun sol ucunun ve sağ ucunun "
+                       "geleceği yer; " +
+                           std::to_string(given) + " nokta verildi.");
+            co_return;
+        }
+        // THE TWO ENDS OF THE WIDTH. The second is aimed from the first with a
+        // line between them — the very line the block will lie along.
+        auto p1 = co_await ctx.point("noktalar", "Bloğun enini sınırlayan ilk nokta");
+        if (!p1) co_return;
+        auto p2 = co_await ctx.point("noktalar", "İkinci nokta: blok bu noktaya kadar uzanır",
+                                     PointOptions{.rubber_band   = true,
+                                                  .rubber_origin = *p1,
+                                                  .rubber_shape  = RubberShape::Line});
+        if (!p2) co_return;
+        first_end  = *p1;
+        second_end = *p2;
 
-    auto placed = place_reference(ctx, *at, ref);
+        // THE WIDTH IS THE DRAWN FORM'S, measured on the definition at scale 1,
+        // unturned, at the origin: what `block_reference_bounds` answers is the
+        // box of what the block DRAWS, from its base point.
+        core::BlockReference unit;
+        unit.block = block;
+        const core::Box2 box =
+            core::block_reference_bounds(ctx.document(), core::Point2{0, 0}, unit);
+        if (box.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'" + *name + "' bloğunda çizilecek bir şey yok; eni ölçülemez.");
+            co_return;
+        }
+        if (box.max_x - box.min_x <= 0) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "'" + *name +
+                           "' bloğunun eni sıfır (bütün üyeleri aynı düşey doğru üzerinde); iki "
+                           "noktaya sığdırılamaz.");
+            co_return;
+        }
+        if (first_end == second_end) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "İki nokta aynı yerde; blok bir uzaklığa sığdırılır, sıfır uzaklığa "
+                       "değil.");
+            co_return;
+        }
+        if (!core::two_point_placement(first_end, second_end, box.min_x, box.max_x, fitted)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Blok iki noktanın arasına yerleştirilemedi.");
+            co_return;
+        }
+        ref.sx            = fitted.scale;
+        ref.sy            = fitted.scale;
+        ref.rotation_udeg = fitted.rotation_udeg;
+        at                = fitted.insertion;
+    } else {
+        // The reference, drawn under the cursor before it is placed: the canvas
+        // expands the definition with the same scale, turn and grid.
+        auto point =
+            co_await ctx.point("nokta", "Ekleme noktası",
+                               PointOptions{.rubber_band    = true,
+                                            .rubber_shape   = RubberShape::Block,
+                                            .rubber_payload = core::encode_block_reference(ref)});
+        if (!point) co_return;
+        at = *point;
+    }
+
+    auto placed = place_reference(ctx, at, ref);
     if (!placed) {
         ctx.refuse(placed.error());
         co_return;
@@ -408,10 +497,18 @@ Task<void> run_insert(Context& ctx)
     }
 
     ctx.record("ad", Value::text(*name));
-    ctx.record("nokta", Value::point(*at));
-    ctx.record("olcek", Value::number(sx));
-    if (sy != sx) ctx.record("olcek_y", Value::number(sy));
-    ctx.record("aci", Value::number(angle_deg));
+    if (two_point) {
+        // THE TWO POINTS ARE WHAT WAS ASKED; the scale, the turn and where the base
+        // point landed are what they derive, and recording them beside the points
+        // would give the line two answers to one question (Article 1.4).
+        ctx.record("yontem", Value::text("2n"));
+        ctx.record("noktalar", Value::points(Value::Points{first_end, second_end}));
+    } else {
+        ctx.record("nokta", Value::point(at));
+        ctx.record("olcek", Value::number(sx));
+        if (sy != sx) ctx.record("olcek_y", Value::number(sy));
+        ctx.record("aci", Value::number(angle_deg));
+    }
     if (columns > 1 || rows > 1) {
         ctx.record("sutun", Value::integer(columns));
         ctx.record("satir", Value::integer(rows));
@@ -420,7 +517,20 @@ Task<void> run_insert(Context& ctx)
     }
     if (!recorded.empty()) ctx.record("deger", Value::texts(recorded));
     std::string said = library_note.empty() ? std::string() : library_note + " ";
-    said += "'" + *name + "' bloğu yerleştirildi";
+    if (two_point) {
+        // What the two points made of it, said in the units a hand reads: the
+        // factor to three decimals and the direction under the session's rule.
+        const core::AngleConvention convention = ctx.session().bus().angle_convention();
+        said += "'" + *name + "' bloğu iki noktanın arasına yerleştirildi (ölçek " +
+                core::metres_fixed(core::mul_div_round(1000, fitted.scale.num, fitted.scale.den), 3,
+                                   ',') +
+                ", yön " +
+                core::angle_text(core::direction_turns(first_end, second_end, convention.rule),
+                                 convention.unit) +
+                ")";
+    } else {
+        said += "'" + *name + "' bloğu yerleştirildi";
+    }
     if (columns > 1 || rows > 1)
         said += " (" + std::to_string(columns) + "×" + std::to_string(rows) + " dizi)";
     if (!recorded.empty()) {
@@ -966,7 +1076,18 @@ KENTOS_COMMAND(insert)
                 Param::text("ad", Arity::optional(),
                             "Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı")
                     .en("name"),
-                Param::point("nokta", "Ekleme noktası").en("point"),
+                Param{"nokta", ParamKind::Point, Arity::optional(),
+                      "Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile "
+                      "verilmez"}
+                    .en("point"),
+                Param::choice("yontem", Arity::optional(), {"2n"},
+                              "2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki "
+                              "noktadan gelir, nokta, olcek, olcek_y ve aci verilmez")
+                    .en("method"),
+                Param::points("noktalar", Arity{0, 2},
+                              "yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol "
+                              "ucunun, ikincisi sağ ucunun geleceği yer")
+                    .en("points"),
                 Param::number("olcek", Arity::optional(),
                               "Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da "
                               "eksi olur ve ikisi birlikte yarım dönüştür")
@@ -996,10 +1117,11 @@ KENTOS_COMMAND(insert)
                     .en("file"),
                 Param::draw_layer(),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.",
-        .run     = &run_insert,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni "
+                   "iki noktanın arasına oturacak biçimde yerleştirir.",
+        .run = &run_insert,
     };
 }
 

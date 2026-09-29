@@ -246,7 +246,9 @@ ayak/boy çiftleri sırayla gelir:
 
 Gerçek bir krokide taban iki ölçü noktasıdır; `0,0` ve `40,0` yerine `n(1)` ve `n(2)`
 yazarsınız. Aynı işi fareyle ve tek tek sorarak [`DİKAYAK`](perp_offset.md) yapar; işaret
-kuralı aynıdır.
+kuralı aynıdır. Bir binanın **derinliği** de aynı kuralla işaretlenir:
+[`DİKDÖRTGEN yontem=derinlik`](rectangle.md) `derinlik=6`'yı kenarın sağına, `derinlik=-6`'yı
+soluna kurar.
 
 ### İki mesafe kesişimi — iki çözüm vardır
 
@@ -390,7 +392,7 @@ Bir köşeyi yazarak almak istiyorsanız köşenin kendisini yazın ya da tıkla
 
 Çizim komutları — `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `DAİRE`, `YAY`, `ELİPS`, `DİKDÖRTGEN`,
 `ÇOKGEN`, `SPLINE`, `NOKTA`, `METİN`, `TARAMA`, `DİLİM`, `HALKA`, `DİKAYAK`, `ALIM`, `ÇİFTÇİZGİ`,
-`KESİŞİMNOKTA`, `ARANOKTA`, `BÖLÜMLE`, `ÖLÇÜ`, `LİDER`, `SINIR` ve `BLOKEKLE` — `katman=`
+`KESİŞİMNOKTA`, `ARANOKTA`, `BÖLÜMLE`, `DÖRDÜNCÜKÖŞE`, `ÖLÇÜ`, `LİDER`, `SINIR` ve `BLOKEKLE` — `katman=`
 alır: çizdikleri o katmana gider, **etkin katman değişmez**. Katman adıyla verilir, büyük
 küçük harf ayrımı yoktur ve yalnız adıyla yazılır; satırın sonunda kalan adsız bir sözcük
 katman sayılmaz.

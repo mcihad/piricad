@@ -41,7 +41,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.find_replace`](find_replace.md) | Bul ve Değiştir | `BULDEĞİŞTİR`, `BULDEGISTIR`, `FINDREPLACE`, `BUL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri alma adımı. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
-| [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
+| [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer. |
+| [`core.fourth_corner`](fourth_corner.md) | Dördüncü Köşe | `DÖRDÜNCÜKÖŞE`, `DORDUNCUKOSE`, `FOURTHCORNER`, `DKÖ`, `DKO` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler. |
 | [`core.circle_draw`](circle_draw.md) | Daire | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer. |
 | [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer. |
 | [`core.vertex_move`](vertex_move.md) | Köşe Taşı | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
@@ -81,7 +82,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.hatch_edit`](hatch_edit.md) | Tarama Düzenle | `TARAMADÜZENLE`, `TARAMADUZENLE`, `HATCHEDIT`, `TDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
-| [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir. |
 | [`core.xref`](xref.md) | Dış Referans | `DIŞREFERANS`, `DISREFERANS`, `XREF`, `DRF` | Dosya | tek işlem | betiklenebilir, AI erişimli | Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
 | [`core.block_clip`](block_clip.md) | Blok Kırp | `BLOKKIRP`, `BLOKKIRP`, `XCLIP`, `BKR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
@@ -588,17 +589,36 @@ Ayrıntılı kullanım: [ALAN](area.md)
 
 ### `core.rectangle` — DİKDÖRTGEN (Dikdörtgen)
 
-Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
+Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.
 
 Bilinen adı: `KUTU` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `noktalar` | point_list | 2–3 | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta |
-| `yontem` | text | isteğe bağlı | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
+| `noktalar` | point_list | 1–3 | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta · derinlik: bir kenarın iki köşesi · olcu: kutunun ilk köşesi |
+| `yontem` | text | isteğe bağlı | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş · derinlik: bir kenar ve derinlik, sağ artı, sol eksi · olcu: bir köşe, en ve boy ya da kâğıt boyu |
+| `derinlik` | number | isteğe bağlı | yontem=derinlik için kenardan karşı kenara uzaklık (m); ilk köşeden ikinciye bakarken SAĞ pozitif, sol negatiftir |
+| `en` | number | isteğe bağlı | yontem=olcu için kutunun eni (m); aci verilmemişken doğu–batı boyutu |
+| `boy` | number | isteğe bağlı | yontem=olcu için kutunun boyu (m); aci verilmemişken kuzey–güney boyutu |
+| `kagit` | text | isteğe bağlı | yontem=olcu için kâğıt boyu (A5, A4, A3, A2, A1, A0): en ve boy kâğıdın ölçüsü çarpı ölçek paydasıdır; en ve boy ile birlikte verilmez |
+| `yon` | text | isteğe bağlı | kagit ile: yatay (varsayılan) kâğıdın uzun kenarı doğu–batı, dikey kuzey–güney |
+| `olcek` | integer | isteğe bağlı | kagit ile: ölçek paydası (1:N); verilmezse projenin plan ölçeği (AYAR plan_ölçeği) |
+| `aci` | number | isteğe bağlı | yontem=olcu için kutunun dönüklüğü: oturumun açı biriminde (öntanımlı grad), açıların arttığı yönde (öntanımlı kuzeyden saat yönünde) döner; varsayılan 0 |
 | `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
+
+### `core.fourth_corner` — DÖRDÜNCÜKÖŞE (Dördüncü Köşe)
+
+Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | 3 | Üç köşe sırayla: birinci, ikinci (birinci ile üçüncünün arasındaki) ve üçüncü; dördüncü ikincinin karşısına düşer |
+| `dik` | bool | isteğe bağlı | evet: ikinci köşedeki açı dik yapılır — üçüncü köşe birinci kenarın dikine çekilir ve sapma söylenir; varsayılan hayır: üç köşenin paralelkenarı |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
+
+Ayrıntılı kullanım: [DÖRDÜNCÜKÖŞE](fourth_corner.md)
 
 ### `core.circle_draw` — DAİRE (Daire)
 
@@ -1192,12 +1212,14 @@ Ayrıntılı kullanım: [BLOKDÜZENLE](block_edit.md)
 
 ### `core.insert` — BLOKEKLE (Blok Ekle)
 
-Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `ad` | text | isteğe bağlı | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı |
-| `nokta` | point | 1 | Ekleme noktası |
+| `nokta` | point | isteğe bağlı | Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile verilmez |
+| `yontem` | text | isteğe bağlı | 2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki noktadan gelir, nokta, olcek, olcek_y ve aci verilmez |
+| `noktalar` | point_list | 0–2 | yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol ucunun, ikincisi sağ ucunun geleceği yer |
 | `olcek` | number | isteğe bağlı | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür |
 | `olcek_y` | number | isteğe bağlı | Y ölçeği, farklıysa; varsayılan olcek |
 | `aci` | number | isteğe bağlı | Dönme açısı, derece; varsayılan 0 |
@@ -7033,6 +7055,102 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_fourth_corner",
+    "title": "Dördüncü Köşe",
+    "description": "Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.\nKomut: DÖRDÜNCÜKÖŞE (DORDUNCUKOSE, FOURTHCORNER, DKÖ, DKO)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          ],
+          "description": "Üç köşe sırayla: birinci, ikinci (birinci ile üçüncünün arasındaki) ve üçüncü; dördüncü ikincinin karşısına düşer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "dik": {
+          "type": "boolean",
+          "description": "evet: ikinci köşedeki açı dik yapılır — üçüncü köşe birinci kenarın dikine çekilir ve sapma söylenir; varsayılan hayır: üç köşenin paralelkenarı (evet/hayır)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.fourth_corner",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "policy",
+      "cad.kentos/names": [
+        "DÖRDÜNCÜKÖŞE",
+        "DORDUNCUKOSE",
+        "FOURTHCORNER",
+        "DKÖ",
+        "DKO"
+      ]
+    }
+  },
+  {
     "name": "core_guide",
     "title": "Kılavuz",
     "description": "Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler.\nKomut: KILAVUZ (GUIDE, KLV)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
@@ -7486,7 +7604,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_insert",
     "title": "Blok Ekle",
-    "description": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.\nKomut: BLOKEKLE (BLOKEKLE, INSERT, BE)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir.\nKomut: BLOKEKLE (BLOKEKLE, INSERT, BE)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7525,7 +7643,61 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
             }
           ],
-          "description": "Ekleme noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+          "description": "Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "2n"
+          ],
+          "description": "2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki noktadan gelir, nokta, olcek, olcek_y ve aci verilmez (metin)"
+        },
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "maxItems": 2
+            }
+          ],
+          "description": "yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol ucunun, ikincisi sağ ucunun geleceği yer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "olcek": {
           "type": "number",
@@ -7579,9 +7751,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
         }
       },
-      "required": [
-        "nokta"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {
@@ -11003,7 +11173,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_rectangle",
     "title": "Dikdörtgen",
-    "description": "Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nNetcad adı: KUTU (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nNetcad adı: KUTU (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -11049,19 +11219,63 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
                 ],
                 "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
               },
-              "minItems": 2,
+              "minItems": 1,
               "maxItems": 3
             }
           ],
-          "description": "2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta · derinlik: bir kenarın iki köşesi · olcu: kutunun ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
         "yontem": {
           "type": "string",
           "enum": [
             "2n",
-            "3n"
+            "3n",
+            "derinlik",
+            "olcu"
           ],
-          "description": "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin)"
+          "description": "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş · derinlik: bir kenar ve derinlik, sağ artı, sol eksi · olcu: bir köşe, en ve boy ya da kâğıt boyu (metin)"
+        },
+        "derinlik": {
+          "type": "number",
+          "description": "yontem=derinlik için kenardan karşı kenara uzaklık (m); ilk köşeden ikinciye bakarken SAĞ pozitif, sol negatiftir [m] (sayı)"
+        },
+        "en": {
+          "type": "number",
+          "description": "yontem=olcu için kutunun eni (m); aci verilmemişken doğu–batı boyutu [m] (sayı)"
+        },
+        "boy": {
+          "type": "number",
+          "description": "yontem=olcu için kutunun boyu (m); aci verilmemişken kuzey–güney boyutu [m] (sayı)"
+        },
+        "kagit": {
+          "type": "string",
+          "enum": [
+            "A5",
+            "A4",
+            "A3",
+            "A2",
+            "A1",
+            "A0"
+          ],
+          "description": "yontem=olcu için kâğıt boyu (A5, A4, A3, A2, A1, A0): en ve boy kâğıdın ölçüsü çarpı ölçek paydasıdır; en ve boy ile birlikte verilmez (metin)"
+        },
+        "yon": {
+          "type": "string",
+          "enum": [
+            "yatay",
+            "dikey"
+          ],
+          "description": "kagit ile: yatay (varsayılan) kâğıdın uzun kenarı doğu–batı, dikey kuzey–güney (metin)"
+        },
+        "olcek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "kagit ile: ölçek paydası (1:N); verilmezse projenin plan ölçeği (AYAR plan_ölçeği) (tam sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "yontem=olcu için kutunun dönüklüğü: oturumun açı biriminde (öntanımlı grad), açıların arttığı yönde (öntanımlı kuzeyden saat yönünde) döner; varsayılan 0 (sayı)"
         },
         "katman": {
           "type": "string",
