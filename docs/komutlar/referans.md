@@ -1541,11 +1541,13 @@ Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRA
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `mod` | text | isteğe bağlı | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
+| `mod` | text | isteğe bağlı | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ | SEÇİM | KATMAN; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
 | `carpan` | number | isteğe bağlı | ÇARPAN modunda ölçek katsayısı |
 | `pencere` | point_list | 0–2 | PENCERE modunda pencerenin iki karşı köşesi; verilince mod PENCERE olur |
 | `merkez` | point_list | isteğe bağlı | MERKEZ modunda görünümün ortasına gelecek nokta; verilince mod MERKEZ olur |
 | `olcek` | integer | isteğe bağlı | MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır |
+| `nesneler` | selection | en az 0 | SEÇİM modunda çerçevelenecek nesneler; verilmezse seçim |
+| `katman` | text | isteğe bağlı | KATMAN modunda bütün nesneleri çerçevelenecek katmanın adı |
 
 Ayrıntılı kullanım: [YAKINLAŞ](zoom.md)
 
@@ -13421,7 +13423,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "properties": {
         "mod": {
           "type": "string",
-          "description": "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) (metin)"
+          "description": "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ | SEÇİM | KATMAN; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) (metin)"
         },
         "carpan": {
           "type": "number",
@@ -13526,6 +13528,15 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "minimum": 1,
           "maximum": 100000000,
           "description": "MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır (tam sayı)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "SEÇİM modunda çerçevelenecek nesneler; verilmezse seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "KATMAN modunda bütün nesneleri çerçevelenecek katmanın adı (metin)"
         },
         "varsayimlar": {
           "type": "array",

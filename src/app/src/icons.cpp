@@ -1965,6 +1965,23 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::ZoomSelection: {
+        // THE SELECTION, FRAMED: `Kapsama Yakınlaş`'s corner brackets round one
+        // object shown the way the canvas shows a selected one — its outline
+        // and a grip at each corner.
+        p.setPen(stroke(c, 1.5));
+        const qreal x0 = 2.8, y0 = 4.4, x1 = 21.2, y1 = 19.6, n = 4.4;
+        p.drawPolyline(QPolygonF({QPointF(x0, y0 + n), QPointF(x0, y0), QPointF(x0 + n, y0)}));
+        p.drawPolyline(QPolygonF({QPointF(x1 - n, y0), QPointF(x1, y0), QPointF(x1, y0 + n)}));
+        p.drawPolyline(QPolygonF({QPointF(x1, y1 - n), QPointF(x1, y1), QPointF(x1 - n, y1)}));
+        p.drawPolyline(QPolygonF({QPointF(x0 + n, y1), QPointF(x0, y1), QPointF(x0, y1 - n)}));
+        p.setPen(stroke(k.shape, 1.6));
+        p.drawRect(QRectF(8.0, 8.8, 8.0, 6.4));
+        for (const QPointF corner :
+             {QPointF(8.0, 8.8), QPointF(16.0, 8.8), QPointF(16.0, 15.2), QPointF(8.0, 15.2)})
+            grip(p, corner, c);
+        break;
+    }
     case Glyph::ViewWindow: {
         // A WINDOW DRAWN, dashed as the canvas draws it, and the magnifier over
         // its corner: `Yakınlaştır`'s lens, looking into the box it was given.

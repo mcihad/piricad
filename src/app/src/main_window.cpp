@@ -1570,6 +1570,9 @@ void MainWindow::buildActions()
     actViewWindow_->setProperty(kToolCommand, QStringLiteral("YAKINLAŞ"));
     connect(actViewWindow_, &QAction::triggered, this, [this] { canvas_->beginWindowZoom(); });
     addAction(actViewWindow_);
+    actZoomSelection_ =
+        commandAction(Glyph::ZoomSelection, tr("Seçime Yakınlaş"), QStringLiteral("YAKINLAŞ SEÇİM"),
+                      tr("YAKINLAŞ SEÇİM — seçili nesneleri görünüme sığdırır"));
 
     actPan_ = new QAction(tr("Kaydır"), this);
     actPan_->setCheckable(true);
@@ -3818,6 +3821,44 @@ int MainWindow::probeViewHistory()
     check(canvas_->view().centre() == core::Point2{485320000, 4310215000} &&
               std::abs(ratio - 500.0) < 1e-6,
           QStringLiteral("MERKEZ olcek=500: 1 : %1").arg(ratio));
+
+    // FRAMED, WITH KAPSAM'S MARGIN: the box inside the view and the view
+    // wider than it, the margin being what tells framing from a window.
+    const auto framed_with_margin = [this](const core::Box2& box) {
+        const core::Box2 seen = canvas_->view().visible_box();
+        return seen.min_x < box.min_x && seen.max_x > box.max_x && seen.min_y < box.min_y &&
+               seen.max_y > box.max_y;
+    };
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    runScriptLine(
+        QStringLiteral("ALAN 485300,4310200 485340,4310200 485340,4310230 485300,4310230"));
+    endCommand();
+    QCoreApplication::processEvents();
+    controller_->cancelAll();
+    runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+    (void)controller_->bus().execute_line("ÇİZGİ 485500,4310400 485520,4310405",
+                                          command::Origin::Gui);
+    const core::Box2 parcel{485300000, 4310200000, 485340000, 4310230000};
+    const core::Box2 road{485500000, 4310400000, 485520000, 4310405000};
+
+    // THE LAYER MENU'S "Katmana yakınlaş" frames the layer it was opened on.
+    runScriptLine(QStringLiteral("YAKINLAŞ MERKEZ merkez=485520,4310405 olcek=50"));
+    check(layerPanel_->triggerContextEntry(QStringLiteral("PARSEL"), tr("Katmana yakınlaş")),
+          QStringLiteral("katman menüsünde Katmana yakınlaş var"));
+    QCoreApplication::processEvents();
+    check(framed_with_margin(parcel), QStringLiteral("Katmana yakınlaş PARSEL'i çerçeveledi"));
+
+    // SEÇİME YAKINLAŞ frames what is selected — the road, not the parcel.
+    (void)controller_->bus().execute_line("SEÇ mod=KUTU noktalar=485490,4310390 485530,4310410",
+                                          command::Origin::Gui);
+    actZoomSelection_->trigger();
+    QCoreApplication::processEvents();
+    check(framed_with_margin(road) &&
+              canvas_->view().visible_box().width() < canvas_->view().visible_box().height() * 100,
+          QStringLiteral("Seçime Yakınlaş seçili yolu çerçeveledi"));
+    check(!framed_with_margin(parcel) || !(canvas_->view().visible_box().min_x < parcel.min_x),
+          QStringLiteral("seçim çerçevesi seçilmeyen parseli içermiyor"));
+    (void)controller_->bus().execute_line("SEÇ TEMİZLE", command::Origin::Gui);
 
     // AND A NEW DRAWING FORGETS where the old one was looked at.
     (void)controller_->bus().on_view_move(

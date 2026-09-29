@@ -988,6 +988,7 @@ void MainWindow::buildRibbon()
     small(navigate, actPan_);
     small(navigate, actViewPrevious_);
     small(navigate, actViewNext_);
+    small(navigate, actZoomSelection_);
 
     SARibbonPanel* aids = viewTab->addPanel(tr("Yardımcılar"));
     large(aids, actSnap_);

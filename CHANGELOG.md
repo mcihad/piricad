@@ -6,6 +6,15 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — seçime ve katmana yakınlaş
+
+- `YAKINLAŞ SEÇİM` seçili nesneleri — `nesneler=` verilirse onları — `KAPSAM` gibi payla
+  pencereye sığdırır; **Görünüm ▸ Gezinme ▸ Seçime Yakınlaş**.
+- `YAKINLAŞ KATMAN katman=PARSEL` bir katmanın bütün nesnelerini sığdırır; Katmanlar
+  panelinde satırın sağ tık menüsünde **Katmana yakınlaş** (Netcad'in katman menüsündeki
+  Limit Bul'u).
+- Çerçeveleyen kiplerin cevabında çerçevelenen kutu da var (`kutu`, milimetre).
+
 ### Eklendi — pencereyle yakınlaş ve bir noktayı ortaya almak
 
 - `YAKINLAŞ PENCERE pencere=<köşe> <köşe>` iki köşeli pencereyi görünüme paysız sığdırır;

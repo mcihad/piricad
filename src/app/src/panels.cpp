@@ -791,6 +791,18 @@ QStringList LayerPanel::contextEntries(const QString& layerName, const QString& 
     return {};
 }
 
+bool LayerPanel::popContextMenu(const QString& layerName, const QPoint& global)
+{
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
+        if (!(*it)->data(0, Qt::UserRole).isValid() || (*it)->text(0) != layerName) continue;
+        QMenu* menu = buildContextMenu(*it);
+        menu->setAttribute(Qt::WA_DeleteOnClose, true);
+        menu->popup(global);
+        return true;
+    }
+    return false;
+}
+
 QMenu* LayerPanel::visibilityMenu(const QStringList& subject, bool visible, QWidget* parent)
 {
     auto* menu     = new QMenu(tr("Görünüm"), parent);
@@ -877,6 +889,15 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
         QAction* pick = menu.addAction(tr("Tümünü seç"));
         pick->setToolTip(tr("Bu katmandaki bütün nesneleri seçer"));
         connect(pick, &QAction::triggered, this, [this, name] { selectAllOn(name); });
+
+        // Netcad's Limit Bul, from the layer menu (wiki 217385147): the layer
+        // named, framed — through the command, so a script frames it the same.
+        QAction* frame = menu.addAction(tr("Katmana yakınlaş"));
+        frame->setToolTip(tr("YAKINLAŞ KATMAN — bu katmanın bütün nesnelerini görünüme sığdırır"));
+        connect(frame, &QAction::triggered, this, [this, name] {
+            controller_.runLine(QStringLiteral("YAKINLAŞ KATMAN katman=\"%1\"").arg(name),
+                                command::Origin::Gui);
+        });
 
         QAction* table = menu.addAction(tr("Öznitelik tablosu"));
         table->setToolTip(tr("Bu katmanın öznitelik tablosunu açar"));

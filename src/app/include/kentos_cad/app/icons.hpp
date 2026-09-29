@@ -298,6 +298,7 @@ enum class Glyph {
     ViewPrevious,       ///< the view before this one: YAKINLAŞ ÖNCEKİ
     ViewNext,           ///< the view after, again: YAKINLAŞ SONRAKİ
     ViewWindow,         ///< a window drawn and zoomed into: YAKINLAŞ PENCERE
+    ZoomSelection,      ///< the selection framed: YAKINLAŞ SEÇİM
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

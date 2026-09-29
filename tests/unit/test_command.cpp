@@ -3243,6 +3243,63 @@ TEST_CASE("YAKINLAŞ PENCERE iki köşeyi, MERKEZ bir noktayı ve ölçeği gör
     CHECK(f.undo.undo_depth() == 0);
 }
 
+TEST_CASE("YAKINLAŞ SEÇİM seçimi ya da verilen nesneleri, KATMAN bir katmanı çerçeveler")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 100,100 120,105", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=BOŞ", Origin::Test).ok());
+
+    std::vector<ViewMove> asked;
+    f.bus.on_view_move = [&asked](const ViewMove& move) {
+        asked.push_back(move);
+        return ViewMoved{.moved = true, .behind = 1, .ahead = 0};
+    };
+    const std::uint64_t before = f.doc.content_hash();
+
+    // THE OBJECTS NAMED — the agent's road — framed with KAPSAM's margin.
+    auto named = f.bus.execute_line("YAKINLAŞ SEÇİM nesneler=2", Origin::CommandLine);
+    REQUIRE(named.ok());
+    REQUIRE(asked.size() == 1);
+    CHECK(asked.back().kind == ViewMove::Kind::Fit);
+    CHECK(asked.back().window == core::Box2{100000, 100000, 120000, 105000});
+    const core::Json* box = named.value().report.find("kutu");
+    REQUIRE(box != nullptr);
+    CHECK(box->dump() == "[100000,100000,120000,105000]");
+
+    // THE SELECTION, when no objects are named; the mode is implied by nesneler=.
+    REQUIRE(f.bus.execute_line("SEÇ mod=TÜMÜ", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("YAKINLAŞ SEÇİM", Origin::CommandLine).ok());
+    CHECK(asked.back().window == core::Box2{0, 0, 120000, 105000});
+    REQUIRE(f.bus.execute_line("ZOOM nesneler=1", Origin::CommandLine).ok());
+    CHECK(asked.back().window == core::Box2{0, 0, 40000, 30000});
+    REQUIRE(f.bus.execute_line("SEÇ TEMİZLE", Origin::Test).ok());
+    auto nothing = f.bus.execute_line("YAKINLAŞ SEÇİM", Origin::CommandLine);
+    REQUIRE_FALSE(nothing.ok());
+    CHECK(nothing.error().message.find("seçili nesne yok") != std::string::npos);
+
+    // A LAYER BY NAME, Turkish-folded like every name; the mode implied by katman=.
+    REQUIRE(f.bus.execute_line("YAKINLAŞ KATMAN katman=parsel", Origin::CommandLine).ok());
+    CHECK(asked.back().kind == ViewMove::Kind::Fit);
+    CHECK(asked.back().window == core::Box2{0, 0, 40000, 30000});
+    REQUIRE(f.bus.execute_line("YAKINLAŞ katman=YOL", Origin::CommandLine).ok());
+    CHECK(asked.back().window == core::Box2{100000, 100000, 120000, 105000});
+    auto unknown = f.bus.execute_line("YAKINLAŞ KATMAN katman=YOKBÖYLE", Origin::CommandLine);
+    REQUIRE_FALSE(unknown.ok());
+    CHECK(unknown.error().message == "'YOKBÖYLE' adlı katman yok.");
+    auto empty = f.bus.execute_line("YAKINLAŞ KATMAN katman=BOŞ", Origin::CommandLine);
+    REQUIRE_FALSE(empty.ok());
+    CHECK(empty.error().message.find("katmanında nesne yok") != std::string::npos);
+    auto nameless = f.bus.execute_line("YAKINLAŞ KATMAN", Origin::CommandLine);
+    REQUIRE_FALSE(nameless.ok());
+    CHECK(nameless.error().message.find("katman adı ister") != std::string::npos);
+
+    // View state only: the drawing is as it was.
+    CHECK(f.doc.content_hash() == before);
+}
+
 TEST_CASE("read-only commands never become an undo step")
 {
     Fixture f;

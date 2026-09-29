@@ -1328,6 +1328,54 @@ TEST_CASE("PROOF: YAKINLAŞ PENCERE gui, komut satırı ve betikten aynı pencer
     }
 }
 
+TEST_CASE(
+    "PROOF: YAKINLAŞ KATMAN katman menüsünden, komut satırından ve betikten aynı kutuyu ister")
+{
+    // Article 6.4 for the layer framing: the Katmanlar panel's "Katmana
+    // yakınlaş" sends the line a hand types, and a script names the same
+    // arguments. The viewport is asked to frame one box, from the document.
+    const char* kSetup[] = {"KATMAN ad=PARSEL", "ALAN 0,0 40,0 40,30 0,30", "KATMAN ad=YOL",
+                            "ÇİZGİ 100,100 120,105"};
+    const auto viewport  = [](Rig& rig, std::vector<core::Box2>& asked) {
+        rig.bus.on_view_move = [&asked](const ViewMove& move) {
+            asked.push_back(move.window);
+            return ViewMoved{.moved = true, .behind = 1, .ahead = 0};
+        };
+    };
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    std::vector<core::Box2> gui_asked, cli_asked, scr_asked;
+    for (Rig* rig : {&gui, &cli, &scr})
+        for (const char* line : kSetup)
+            REQUIRE(rig->bus.execute_line(line, Origin::Test).ok());
+    viewport(gui, gui_asked);
+    viewport(cli, cli_asked);
+    viewport(scr, scr_asked);
+
+    const auto from_menu = gui.bus.execute_line("YAKINLAŞ KATMAN katman=\"PARSEL\"", Origin::Gui);
+    const auto typed = cli.bus.execute_line("YAKINLAŞ KATMAN katman=PARSEL", Origin::CommandLine);
+    REQUIRE(from_menu.ok());
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Katman kanıtı",
+            "komutlar": [ {"cmd": "core.zoom", "args": {"mod": "KATMAN", "katman": "PARSEL"}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    const core::Box2 parcel{0, 0, 40000, 30000};
+    CHECK(gui_asked == std::vector<core::Box2>{parcel});
+    CHECK(cli_asked == gui_asked);
+    CHECK(scr_asked == gui_asked);
+    CHECK_EQ(from_menu.value().report.dump(), typed.value().report.dump());
+    const std::uint64_t hash = gui.doc.content_hash();
+    for (const Rig* rig : {&cli, &scr})
+        CHECK_EQ(rig->doc.content_hash(), hash);
+}
+
 TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur")
 {
     // Article 6.4 for `core.measure_angle`, and the reading is the one a hand

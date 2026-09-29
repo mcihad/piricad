@@ -928,8 +928,8 @@ Altta bir sayaç: kaç katman var ve kaçı düzenlenebilir.
 **Birden fazla katman seçebilirsiniz**: Ctrl ile tek tek, Shift ile aralık. Vurgulamak
 bir düzenleme değildir — aktif katmanı değiştirmez.
 
-Sağ tuş menüsü, tıkladığınız satırın komutlarını sunar: **Tümünü seç**, **Öznitelik
-tablosu**, **Aktif katman yap**, **Özniteliklerden etiketle…**, **Görünüm** alt menüsü,
+Sağ tuş menüsü, tıkladığınız satırın komutlarını sunar: **Tümünü seç**, **Katmana
+yakınlaş** (`YAKINLAŞ KATMAN`), **Öznitelik tablosu**, **Aktif katman yap**, **Özniteliklerden etiketle…**, **Görünüm** alt menüsü,
 kilit, **Gruba taşı…** ve en altta **Katman Özellikleri…**.
 
 **Görünüm** alt menüsü gösterme ve gizlemeye dairdir: göster, gizle, yalnız bunu göster,

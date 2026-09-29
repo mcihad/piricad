@@ -152,10 +152,13 @@ yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 | **Kilit** simgesine tek tık | Kilidi ters çevirir |
 | Satıra çift tık | O katmanı **aktif** yapar |
 | Ctrl / Shift ile tık | **Birden fazla katman** seçer |
-| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, [**Görünüm**](layer_visibility.md) alt menüsü, gruba taşı… ve en altta **Katman Özellikleri…** |
+| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Katmana yakınlaş**, **Öznitelik tablosu**, aktif yap, [**Görünüm**](layer_visibility.md) alt menüsü, gruba taşı… ve en altta **Katman Özellikleri…** |
 
 **Tümünü seç**, o katmandaki bütün nesneleri seçer — çalıştırdığı satır
 [`SEÇ mod=KATMAN katman="..."`](select.md) satırıdır.
+
+**Katmana yakınlaş**, o katmanın bütün nesnelerini — gizli olanlar da dahil — görünüme
+sığdırır; çalıştırdığı satır [`YAKINLAŞ KATMAN katman="..."`](zoom.md) satırıdır.
 
 **Öznitelik tablosu**, [o katmanın öznitelik tablosunu](../veri/oznitelik-tablosu.md)
 açar. **Sağ tıkladığınız katmanın**, aktif katmanın değil: bir katmanın

@@ -6,11 +6,13 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace kentos::command {
 namespace {
@@ -32,12 +34,19 @@ Task<void> run(Context& ctx)
     const Value::Points corners = ctx.argument("pencere").as_points();
     const Value::Points centre  = ctx.argument("merkez").as_points();
     const std::int64_t scale    = ctx.argument("olcek").as_int();
+    const Value picked          = ctx.argument("nesneler");
+    const std::string layer     = ctx.argument("katman").as_text();
 
     // THE MODE CAN BE LEFT TO THE PLACE: `YAKINLAŞ pencere=…` can only mean a
     // window and `YAKINLAŞ merkez=…` a centre, and making a hand say it twice
     // would be a rule with nothing behind it.
     if (ctx.argument("mod").empty() && !corners.empty()) mode = "PENCERE";
     if (ctx.argument("mod").empty() && corners.empty() && !centre.empty()) mode = "MERKEZ";
+    if (ctx.argument("mod").empty() && corners.empty() && centre.empty() && !picked.empty())
+        mode = "SECIM";
+    if (ctx.argument("mod").empty() && corners.empty() && centre.empty() && picked.empty() &&
+        !layer.empty())
+        mode = "KATMAN";
 
     // The word, folded, to the move and to the name the answer is given under.
     ViewMove move;
@@ -93,11 +102,74 @@ Task<void> run(Context& ctx)
         ctx.record("merkez", Value::points(centre));
         if (scale > 0) ctx.record("olcek", Value::integer(scale));
         said = "MERKEZ";
+    } else if (mode == "SECIM" || mode == "SELECTION") {
+        // THE OBJECTS NAMED, or the ones selected when none are: an agent names
+        // its objects rather than trusting whatever a hand left highlighted.
+        std::vector<core::EntityKey> keys;
+        if (!picked.empty()) {
+            for (const std::int64_t k : picked.as_ids())
+                keys.push_back(static_cast<core::EntityKey>(k));
+            ctx.record("nesneler", picked);
+        } else {
+            keys.assign(bus.selection().keys().begin(), bus.selection().keys().end());
+        }
+        const core::Document& doc = bus.document();
+        core::Box2 box{};
+        for (const core::EntityKey k : keys) {
+            const core::EntityId e = doc.slot_of(k);
+            if (e == core::kNoEntity || !doc.alive(e)) continue;
+            const core::Box2 each = doc.entity_extent(e);
+            if (each.empty()) continue;
+            box.extend(core::Point2{each.min_x, each.min_y});
+            box.extend(core::Point2{each.max_x, each.max_y});
+        }
+        if (box.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "SEÇİM için seçili nesne yok: önce nesneleri seçin ya da nesneler= ile "
+                       "verin.");
+            co_return;
+        }
+        move.kind   = ViewMove::Kind::Fit;
+        move.window = box;
+        said        = "SEÇİM";
+    } else if (mode == "KATMAN" || mode == "LAYER") {
+        if (layer.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "KATMAN bir katman adı ister: YAKINLAŞ KATMAN katman=<ad>.");
+            co_return;
+        }
+        const core::Document& doc = bus.document();
+        const core::LayerId on    = doc.find_layer(layer);
+        if (on == core::kNoLayer) {
+            ctx.refuse(core::ErrorCode::NotFound, "'" + layer + "' adlı katman yok.");
+            co_return;
+        }
+        // EVERY OBJECT ON IT, hidden ones included: asked for by name, the layer
+        // is what the user wants to see, not what the screen happens to show.
+        core::Box2 box{};
+        const core::EntityTable& table = doc.entities();
+        for (core::EntityId e = 0; e < table.size(); ++e) {
+            if (!doc.alive(e) || table.layer[e] != on) continue;
+            const core::Box2 each = doc.entity_extent(e);
+            if (each.empty()) continue;
+            box.extend(core::Point2{each.min_x, each.min_y});
+            box.extend(core::Point2{each.max_x, each.max_y});
+        }
+        if (box.empty()) {
+            ctx.refuse(core::ErrorCode::NotFound,
+                       "'" + layer + "' katmanında nesne yok; gösterilecek bir şey yok.");
+            co_return;
+        }
+        ctx.record("katman", Value::text(layer));
+        move.kind   = ViewMove::Kind::Fit;
+        move.window = box;
+        said        = "KATMAN";
     } else {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ. "
-                   "Girilen: '" +
-                       mode + "'");
+        ctx.refuse(
+            core::ErrorCode::InvalidArgument,
+            "Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ | "
+            "SEÇİM | KATMAN. Girilen: '" +
+                mode + "'");
         co_return;
     }
 
@@ -121,6 +193,15 @@ Task<void> run(Context& ctx)
     report.set("degisti", core::Json::boolean(done.moved));
     report.set("geri", core::Json::integer(static_cast<std::int64_t>(done.behind)));
     report.set("ileri", core::Json::integer(static_cast<std::int64_t>(done.ahead)));
+    // WHAT WAS FRAMED, in millimetres, for the modes that frame something: an
+    // agent that zoomed to a layer learns the layer's extent in the same answer.
+    if (move.kind == ViewMove::Kind::Window || move.kind == ViewMove::Kind::Fit) {
+        core::Json box = core::Json::array({});
+        for (const core::Mm edge :
+             {move.window.min_x, move.window.min_y, move.window.max_x, move.window.max_y})
+            box.push(core::Json::integer(edge));
+        report.set("kutu", std::move(box));
+    }
     ctx.report(std::move(report));
 }
 
@@ -181,8 +262,9 @@ KENTOS_COMMAND(zoom)
         .params =
             {
                 Param::text("mod", Arity::optional(),
-                            "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; "
-                            "ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım)")
+                            "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ | "
+                            "SEÇİM | KATMAN; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider "
+                            "(30 adım)")
                     .en("mode"),
                 Param::number("carpan", Arity::optional(), "ÇARPAN modunda ölçek katsayısı")
                     .en("factor"),
@@ -197,6 +279,12 @@ KENTOS_COMMAND(zoom)
                 Param::integer_range("olcek", Arity::optional(), 1, 100000000,
                                      "MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır")
                     .en("scale"),
+                Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "SEÇİM modunda çerçevelenecek nesneler; verilmezse seçim"}
+                    .en("objects"),
+                Param::text("katman", Arity::optional(),
+                            "KATMAN modunda bütün nesneleri çerçevelenecek katmanın adı")
+                    .en("layer"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Scriptable | Flags::AiAccessible | Flags::Transparent | Flags::ReadOnly,

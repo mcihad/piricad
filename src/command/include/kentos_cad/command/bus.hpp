@@ -536,11 +536,12 @@ struct ViewMove
         Next,     ///< SONRAKİ: one step forward again
         Window,   ///< PENCERE: `window` fills the viewport, with no margin
         Centre,   ///< MERKEZ: `centre` in the middle, at `scale` when given
+        Fit,      ///< SEÇİM, KATMAN: `window` framed as KAPSAM frames, with its margin
     };
 
     Kind kind{Kind::Extents}; ///< the move asked for
     double factor{1.0};       ///< ÇARPAN's factor
-    core::Box2 window{};      ///< PENCERE's window, document millimetres
+    core::Box2 window{};      ///< PENCERE's window, or what SEÇİM and KATMAN frame
     core::Point2 centre{};    ///< MERKEZ's centre
     std::int64_t scale{0};    ///< MERKEZ's 1:N, the status bar's reading; 0 keeps the scale
 

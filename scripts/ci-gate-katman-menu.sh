@@ -92,11 +92,13 @@ bekle "[katman] Öznitelik tablosu · PARSEL → 2 satır"
 # Özellikleri window shown as items in a list beside `Gizle` and `Gruba taşı…` —
 # and one was put in: `Katman Özellikleri…`, last, after a rule, where every
 # desktop program puts the entry that OPENS something rather than doing it.
+# `Katmana yakınlaş` sits beside `Tümünü seç`: the two entries that reach the
+# layer's objects, one selecting them and one framing them (netcad_plan.md N-01).
 #
 # Checked as a whole line rather than entry by entry, because the order is part
 # of the claim: a properties entry in the middle of the list is the thing this
 # replaced.
-bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Görünüm | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
+bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Katmana yakınlaş | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Görünüm | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
 
 # THE GÖRÜNÜM SUBMENU. In the line above a submenu is its title and nothing more,
 # so its own shape is a line of its own. `Gizle` used to be a top-level entry

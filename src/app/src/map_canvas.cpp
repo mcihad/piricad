@@ -311,6 +311,7 @@ command::ViewMoved MapCanvas::moveView(const command::ViewMove& move)
         update();
         break;
     }
+    case Kind::Fit: zoomToBox(move.window); break;
     case Kind::Centre: {
         // THE 1:N THE STATUS BAR READS: ground millimetres per paper millimetre,
         // at this screen's own pixel size (`pixelsPerPaperMm`), so `olcek=500`

@@ -8,6 +8,7 @@
 #include "kentos_cad/app/layout_render.hpp"
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
+#include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/provider_dialog.hpp"
 #include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
@@ -2260,6 +2261,8 @@ int main(int argc, char** argv)
                   "485340,4310230 485380,4310230 485380,4310260 485340,4310260"})
                 window.runScriptLine(QStringLiteral("ALAN %1").arg(QLatin1String(corners)));
             window.endCommand();
+            // The finished run re-arms ALAN, queued: let it land, then put it down.
+            QCoreApplication::processEvents();
             window.cancelCommand();
             window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
         });
@@ -2280,6 +2283,22 @@ int main(int argc, char** argv)
         later([&window] {
             QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
             QCoreApplication::sendEvent(window.canvas(), &esc);
+        });
+
+        // AND THE LAYER ROW'S MENU, open over the panel, with `Katmana yakınlaş`
+        // beside `Tümünü seç` (Netcad's Limit Bul from the layer menu).
+        later([&window] {
+            auto* layers = window.findChild<kentos::app::LayerPanel*>();
+            if (layers != nullptr)
+                (void)layers->popContextMenu(
+                    QStringLiteral("PARSEL"),
+                    layers->mapToGlobal(QPoint(layers->width() / 4, layers->height() / 5)));
+        });
+        later([with_popup] {
+            with_popup(QStringLiteral("30-katman-menusu"), QApplication::activePopupWidget());
+        });
+        later([] {
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
 
         later([] { QApplication::exit(0); });

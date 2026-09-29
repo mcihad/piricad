@@ -135,6 +135,12 @@ public:
     /// calls together are the whole shape.
     QStringList contextEntries(const QString& layerName, const QString& submenu = QString());
 
+    /// Opens the row's context menu for `layerName` at `global`, not waiting on
+    /// it, for the screenshot run (`KENTOS_SHOT_DIR`): the same menu the right
+    /// click builds, which closes and deletes itself. False when no row has
+    /// the name.
+    bool popContextMenu(const QString& layerName, const QPoint& global);
+
     /// Highlights exactly the rows named, for `KENTOS_LAYER_PROBE`: a menu that
     /// acts on the selection can only be tested with a selection in place.
     void probeSelect(const QStringList& layerNames);
