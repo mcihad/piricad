@@ -2301,6 +2301,25 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
 
+        // AND KAPSAMDENETİM'S ANSWER: the four parcels and a point fallen to
+        // 0,0, framed together, the straggler marked where it lies and the
+        // transcript naming it with the line that would move it.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("NOKTA 10,10"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+            window.runScriptLine(QStringLiteral("KAPSAMDENETİM"));
+        });
+        later([&window, shot] { shot(QStringLiteral("31-kapsam-denetimi"), &window); });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonAnalyse")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, shot] { shot(QStringLiteral("31b-analiz-denetim"), window.ribbonBar()); });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

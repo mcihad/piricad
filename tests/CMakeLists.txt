@@ -38,6 +38,7 @@ add_executable(kentos_tests
     unit/test_proof.cpp
     unit/test_registry.cpp
     unit/test_view_history.cpp
+    unit/test_detached.cpp
     unit/test_preview.cpp
     unit/test_colour.cpp
     unit/test_curve_path.cpp

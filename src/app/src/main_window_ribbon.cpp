@@ -946,6 +946,7 @@ void MainWindow::buildRibbon()
     large(audit, actDependency_);
     small(audit, actDependencyRefresh_);
     small(audit, actTopology_);
+    small(audit, actExtentCheck_);
 
     SARibbonPanel* agents = analyseTab->addPanel(tr("Yapay zekâ"));
     large(agents, actAi_);

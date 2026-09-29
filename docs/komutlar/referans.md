@@ -68,6 +68,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
 | [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`core.extent_check`](extent_check.md) | Kapsam Denetimi | `KAPSAMDENETİM`, `KAPSAMDENETIM`, `EXTENTCHECK`, `KPD` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`core.pan`](pan.md) | Kaydır | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`core.offset`](offset.md) | Ofset | `OFSET`, `PARALEL`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire. |
 | [`core.sector`](sector.md) | Daire Dilimi | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
@@ -968,6 +969,14 @@ Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yaz
 | `nokta` | point | 1 | Okunacak nokta |
 
 Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
+
+### `core.extent_check` — KAPSAMDENETİM (Kapsam Denetimi)
+
+Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [KAPSAMDENETİM](extent_check.md)
 
 ### `core.pan` — KAYDIR (Kaydır)
 
@@ -6475,6 +6484,34 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "UZAT",
         "EXTEND",
         "UZ"
+      ]
+    }
+  },
+  {
+    "name": "core_extent_check",
+    "title": "Kapsam Denetimi",
+    "description": "Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.\nKomut: KAPSAMDENETİM (KAPSAMDENETIM, EXTENTCHECK, KPD)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.extent_check",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "KAPSAMDENETİM",
+        "KAPSAMDENETIM",
+        "EXTENTCHECK",
+        "KPD"
       ]
     }
   },

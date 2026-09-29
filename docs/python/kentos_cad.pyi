@@ -1063,6 +1063,14 @@ def coordinate(
         point — Okunacak nokta [mm, Sağa (Y) önce]
     """
 
+def extent_check(
+    *,
+) -> int:
+    """Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.
+
+    Komut: core.extent_check (KAPSAMDENETİM)
+    """
+
 def pan(
     *,
     start: Coord = ...,

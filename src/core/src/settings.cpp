@@ -437,6 +437,7 @@ KENTOS_SETTING(yakalama_ipucu);
 KENTOS_SETTING(yakalama_adimi);
 KENTOS_SETTING(dinamik_girdi);
 KENTOS_SETTING(son_komut);
+KENTOS_SETTING(kopukluk_carpani);
 KENTOS_SETTING(islem_pencere);
 KENTOS_SETTING(islem_hatirla);
 KENTOS_SETTING(izgara_rengi);
@@ -481,6 +482,7 @@ KENTOS_SETTING(alan_birimi);
     X(ai_uzerine_yazma)                                                                            \
     X(dugum_toleransi)                                                                             \
     X(en_kucuk_alan)                                                                               \
+    X(kopukluk_carpani)                                                                            \
     X(tema)                                                                                        \
     X(dil)                                                                                         \
     X(otomatik_kayit)                                                                              \
@@ -1356,6 +1358,25 @@ KENTOS_SETTING(en_kucuk_alan)
                     "bugün hiçbir denetim okumuyor, parseller arası boşluk denetimiyle Faz 1'de "
                     "gelecek. Denetim çıktısını değiştireceği için proje kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+KENTOS_SETTING(kopukluk_carpani)
+{
+    return SettingSpec{
+        .id       = "core.denetim.kopukluk_carpani",
+        .names    = {"kopukluk_çarpanı", "kopukluk_carpani", "outlierfactor"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::integer(8),
+        .range    = SettingRange::between(2, 1000),
+        .values   = {},
+        .unit     = "",
+        .summary = "KAPSAMDENETİM'in eşiği: bir nesne, onu çizimin çoğunluğundan ayıran boş "
+                   "bant çoğunluğun yarıçapının bu kadar katı genişse kopuk sayılır. Büyüdükçe "
+                   "denetim yalnız çok uzaktakileri bildirir. Denetim çıktısını değiştirdiği "
+                   "için proje kapsamındadır.",
+        .section = "Çizim ve Yakalama", // ui-label
     };
 }
 

@@ -69,6 +69,7 @@ namespace kentos::command {
     X(measure)                                                                                     \
     X(measure_area)                                                                                \
     X(coordinate)                                                                                  \
+    X(extent_check)                                                                                \
     X(pan)                                                                                         \
     X(offset)                                                                                      \
     X(sector)                                                                                      \

@@ -1053,6 +1053,7 @@ private:
     QAction* actViewNext_{nullptr};      ///< YAKINLAŞ SONRAKİ
     QAction* actViewWindow_{nullptr};    ///< the window gesture, Alt+Z
     QAction* actZoomSelection_{nullptr}; ///< YAKINLAŞ SEÇİM
+    QAction* actExtentCheck_{nullptr};   ///< KAPSAMDENETİM
     QAction* actZoomIn_{nullptr};
     QAction* actZoomOut_{nullptr};
     QAction* actUndo_{nullptr};

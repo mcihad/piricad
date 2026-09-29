@@ -165,6 +165,13 @@ Bir ayarı bildirilen varsayılanına döndürün:
 AYAR koordinat_hassasiyeti varsayilan
 ```
 
+[`KAPSAMDENETİM`](extent_check.md)'in eşiğini yükseltin — yalnız çok uzaktakiler
+bildirilsin:
+
+```
+AYAR kopukluk_çarpanı 20
+```
+
 Kimlikle de çalışır, betiklerde tercih edilen yazım budur:
 
 ```

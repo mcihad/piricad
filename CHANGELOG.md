@@ -6,6 +6,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — KAPSAMDENETİM: çizimin çoğunluğundan kopuk nesneler
+
+- Kapsama yakınlaşınca bütün Türkiye'yi gösteren çizimdeki suçluları bulur: 0,0'a düşmüş,
+  başka bir TM diliminde gelmiş, sağa ve yukarı değeri yer değiştirmiş nesneler. Bulur,
+  tuvalde işaretler ve bildirir; **hiçbirini taşımaz**. Netcad'in Shift+Limit Bul'u gibi
+  kendiliğinden bir katmana almak yerine, işi yapacak satırı yazar (`SEÇ nesneler=…`,
+  `KATMANAT … katman=HATALI`) ve kararı mühendise bırakır.
+- Kural boş bir bant arar: çoğunluğun (ortanca merkezden yakın yarı) yarıçapının
+  `kopukluk_çarpanı` katı (varsayılan 8, proje ayarı) genişliğinde bir boşlukla ayrılan
+  nesneler kopuktur. Yavaş yavaş seyrekleşen çizimde kopuk nesne çıkmaz.
+- **Analiz ▸ Denetim ▸ Kapsam Denetimi**; yapılandırılmış cevapta her kopuk nesnenin
+  kimliği, katmanı, yeri ve uzaklığı.
+
 ### Eklendi — seçime ve katmana yakınlaş
 
 - `YAKINLAŞ SEÇİM` seçili nesneleri — `nesneler=` verilirse onları — `KAPSAM` gibi payla

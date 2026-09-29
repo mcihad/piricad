@@ -108,8 +108,9 @@ bekle "[sema] seçenekler son bölüm: Ağ ve Kimlik"
 # units travel with the drawing and the dimension style joined them — the count
 # said twelve for two weeks after that, unseen, because this gate waits when
 # there is no display and nothing ran it with one — and fifteen since the
-# export curve tolerance joined them (TODOS F-03).
-bekle "[sema] proje ayarı: 15"
+# export curve tolerance joined them (TODOS F-03), and sixteen since the extent
+# check's threshold did (netcad_plan.md N-01).
+bekle "[sema] proje ayarı: 16"
 
 # The two nobody would think to look for outside their own topic page, which is
 # the reason the gathered page exists at all.

@@ -107,9 +107,10 @@ TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
     // Every X-macro line was accepted: 62, plus MCP, the AI settings, the run
     // behaviour, the angle rule (`core.aci.kural`), the project's dimension
     // style (`core.olcu.stil`, TODOS C-10), the export chord tolerance
-    // (`core.aktarim.egri_sapmasi`, TODOS F-03) and the hand that repeats the
-    // last command (`core.arayuz.son_komut`, netcad_plan.md U-01).
-    CHECK(cat.size() == 75);
+    // (`core.aktarim.egri_sapmasi`, TODOS F-03), the hand that repeats the
+    // last command (`core.arayuz.son_komut`, netcad_plan.md U-01) and the
+    // extent check's threshold (`core.denetim.kopukluk_carpani`, N-01).
+    CHECK(cat.size() == 76);
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());

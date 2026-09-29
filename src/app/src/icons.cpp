@@ -1965,6 +1965,22 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::ExtentCheck: {
+        // THE STRAGGLER, MEASURED: the drawing's objects together bottom left,
+        // one far off at the top right in the cut ink, and the distance between
+        // them dashed in the measuring ink — what KAPSAMDENETİM finds.
+        p.setPen(stroke(k.shape, 1.3));
+        p.setBrush(k.fill);
+        for (const QPointF at :
+             {QPointF(3.0, 12.4), QPointF(7.6, 12.4), QPointF(3.0, 16.8), QPointF(7.6, 16.8)})
+            p.drawRect(QRectF(at, QSizeF(3.4, 3.4)));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(k.note, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(11.8, 12.0), QPointF(17.4, 6.6));
+        p.setPen(stroke(k.cut, 1.8));
+        p.drawEllipse(QPointF(19.2, 5.0), 2.4, 2.4);
+        break;
+    }
     case Glyph::ZoomSelection: {
         // THE SELECTION, FRAMED: `Kapsama Yakınlaş`'s corner brackets round one
         // object shown the way the canvas shows a selected one — its outline

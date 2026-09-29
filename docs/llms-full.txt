@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 118 (104 tanesi onay ister)
-- Katalog parmak izi: `11983895928479120550`
+- Araç sayısı: 119 (104 tanesi onay ister)
+- Katalog parmak izi: `7140330416489816254`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -735,6 +735,17 @@ Onay ister.
 | `cit` | konum (tutamak ya da göreli nokta) | hayır | Çitin köşeleri; çitin yanından geçtiği her uç uzatılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `uzanti` | boolean | hayır | Sınırlar kendi yolunda uzatılmış sayılır; ucun doğrultusuna yetişmeyen bir sınıra da ulaşılır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_extent_check` — Kapsam Denetimi
+
+Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.
+Komut: KAPSAMDENETİM (KAPSAMDENETIM, EXTENTCHECK, KPD)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
 
 ### `core_fillet` — Yuvarla
 

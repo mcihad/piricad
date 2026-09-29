@@ -148,6 +148,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`cad.extent_check`](#cadextent_check) | `core.extent_check` | `KAPSAMDENETİM` | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`cad.pan`](#cadpan) | `core.pan` | `KAYDIR` | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`cad.offset`](#cadoffset) | `core.offset` | `OFSET` | Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire. |
 | [`cad.sector`](#cadsector) | `core.sector` | `DİLİM` | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
@@ -1669,6 +1670,18 @@ cad.coordinate(
 | `point` | `Coord` | `nokta` | Okunacak nokta [mm, Sağa (Y) önce] |
 
 [Komut sayfası](../komutlar/coordinate.md)
+
+### `cad.extent_check`
+
+Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.
+
+Komut: `core.extent_check` — `KAPSAMDENETİM`
+
+```python
+cad.extent_check() -> int
+```
+
+[Komut sayfası](../komutlar/extent_check.md)
 
 ### `cad.pan`
 

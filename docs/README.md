@@ -144,6 +144,7 @@ Tek tek komutlar:
 | `İFRAZ` | [Parsel ayırma](komutlar/split_parcel.md) |
 | `ALANİFRAZ` | [Alana göre parsel ayırma](komutlar/split_area.md) |
 | `TOPOLOJİ` | [Geometri denetimi](komutlar/topology.md) |
+| `KAPSAMDENETİM` | [Çizimin çoğunluğundan kopuk nesneler](komutlar/extent_check.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

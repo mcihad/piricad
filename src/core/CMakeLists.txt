@@ -7,6 +7,7 @@ add_library(kentos_core STATIC
     src/attach.cpp
     src/attribute.cpp
     src/document.cpp
+    src/detached.cpp
     src/arc.cpp
     src/arc_polyline.cpp
     src/circle.cpp

@@ -1573,6 +1573,10 @@ void MainWindow::buildActions()
     actZoomSelection_ =
         commandAction(Glyph::ZoomSelection, tr("Seçime Yakınlaş"), QStringLiteral("YAKINLAŞ SEÇİM"),
                       tr("YAKINLAŞ SEÇİM — seçili nesneleri görünüme sığdırır"));
+    actExtentCheck_ =
+        commandAction(Glyph::ExtentCheck, tr("Kapsam Denetimi"), QStringLiteral("KAPSAMDENETİM"),
+                      tr("KAPSAMDENETİM — çizimin çoğunluğundan kopuk nesneleri bulur ve "
+                         "işaretler; hiçbirini taşımaz"));
 
     actPan_ = new QAction(tr("Kaydır"), this);
     actPan_->setCheckable(true);
