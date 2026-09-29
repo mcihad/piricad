@@ -5215,6 +5215,46 @@ TEST_CASE("PARALEL: pahlı ve yuvarlak dış köşe paraleli ikiye bölmez")
     }
 }
 
+TEST_CASE("PARALEL: sınırı aşıp düz kesilen sivri dış köşe paraleli bir bacağını kaybetmez")
+{
+    using namespace kentos::core;
+    // THE SECOND HALF OF THE SAME DEFECT. A bend of 122 degrees — a right side
+    // whose mitre would stand 2,06 widths from the corner, past Clipper2's limit
+    // of two — is squared off, and the tip of that square lies on the line of the
+    // first edge, as near the corner from one edge as from the other. The first
+    // edge's half-plane put it on the LEFT, so the outer parallel came back as
+    // the first leg alone: `(0,-1000)→(10589,-1000)` and nothing of the second.
+    const std::vector<Point2> sharp{{0, 0}, {10000, 0}, {5000, 8000}}; // turns left 122°
+
+    auto outer = parallel_run(sharp, -1000);
+    REQUIRE(outer.ok());
+    REQUIRE_EQ(outer.value().size(), std::size_t{1});
+    const std::vector<Point2>& run = outer.value().front().points;
+    // It starts where the first leg's right side does and ends where the second
+    // leg's does: the second leg, (10, 0)→(5, 8) at 9,434 m, moves 1 m to its
+    // right by (0,848 ; 0,530) — (5,848 ; 8,530).
+    CHECK_EQ(run.front(), Point2{0, -1'000});
+    CHECK_EQ(run.back(), Point2{5'848, 8'530});
+    CHECK(run.size() >= 4); ///< the squared corner has two vertices of its own
+    // And every vertex of it is a metre off the source, the millimetre it is
+    // rounded to: nothing of the other side crept in.
+    for (const Point2& p : run) {
+        double nearest = 1e18;
+        for (std::size_t i = 0; i + 1 < sharp.size(); ++i) {
+            const Point2 on = closest_point_on_segment(sharp[i], sharp[i + 1], p);
+            nearest         = std::min(nearest, std::sqrt(distance_squared(on, p)));
+        }
+        CHECK(nearest >= 999.0);
+    }
+
+    // The inside of the same bend is the trimmed corner, as ever.
+    auto inner = parallel_run(sharp, 1000);
+    REQUIRE(inner.ok());
+    REQUIRE_EQ(inner.value().size(), std::size_t{1});
+    CHECK_EQ(inner.value().front().points.front(), Point2{0, 1'000});
+    CHECK_EQ(inner.value().front().points.size(), std::size_t{3});
+}
+
 TEST_CASE("PARALEL: delikli alanın ofsetinde delik delik kalır")
 {
     using namespace kentos::core;
