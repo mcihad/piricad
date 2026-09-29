@@ -1943,6 +1943,29 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         }
         break;
 
+    case Glyph::ViewPrevious:
+    case Glyph::ViewNext: {
+        // THE VIEW'S FRAME — Kapsama Yakınlaş's corner brackets — with an arrow
+        // across it: back for ÖNCEKİ, and the same mirrored for SONRAKİ, the way
+        // Yinele mirrors Geri Al.
+        p.save();
+        if (g == Glyph::ViewNext) {
+            p.translate(kGrid, 0.0);
+            p.scale(-1.0, 1.0);
+        }
+        p.setPen(stroke(c, 1.5));
+        const qreal x0 = 2.8, y0 = 4.4, x1 = 21.2, y1 = 19.6, n = 4.4;
+        p.drawPolyline(QPolygonF({QPointF(x0, y0 + n), QPointF(x0, y0), QPointF(x0 + n, y0)}));
+        p.drawPolyline(QPolygonF({QPointF(x1 - n, y0), QPointF(x1, y0), QPointF(x1, y0 + n)}));
+        p.drawPolyline(QPolygonF({QPointF(x1, y1 - n), QPointF(x1, y1), QPointF(x1 - n, y1)}));
+        p.drawPolyline(QPolygonF({QPointF(x0 + n, y1), QPointF(x0, y1), QPointF(x0, y1 - n)}));
+        p.setPen(stroke(k.shape, 2.0));
+        p.drawLine(QPointF(17.2, 12.0), QPointF(9.4, 12.0));
+        arrowHead(p, QPointF(6.8, 12.0), QPointF(12.0, 12.0), k.shape, 5.0);
+        p.restore();
+        break;
+    }
+
     case Glyph::Spline: {
         // The control polygon, faint and dashed, and the curve it pulls.
         p.setPen(QPen(washed(c, 0.55F), 1.0, Qt::DashLine, Qt::FlatCap));

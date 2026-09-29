@@ -295,6 +295,8 @@ enum class Glyph {
     GuideHorizontal,    ///< a guide across, off the ruler's top: KILAVUZ yon=yatay
     GuideVertical,      ///< a guide down, off the ruler's side: KILAVUZ yon=düşey
     GuideList,          ///< the guides, listed: KILAVUZ
+    ViewPrevious,       ///< the view before this one: YAKINLAŞ ÖNCEKİ
+    ViewNext,           ///< the view after, again: YAKINLAŞ SONRAKİ
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

@@ -346,7 +346,7 @@ int main(int argc, char** argv)
              "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE",  "KENTOS_CLIP_PROBE",
              "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
              "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
-             "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",
+             "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",  "KENTOS_VIEW_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -1258,6 +1258,32 @@ int main(int argc, char** argv)
         });
         later([] {
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+        // AND A SEARCH IN ANOTHER PROGRAM'S WORD (`CommandSpec::known_as`):
+        // `kaydır` is KAYDIR's own name and Netcad's word for TAŞI, so the ranked
+        // list shows both, in that order, and `TAŞI`'s row says why it is there.
+        later([&window] { window.openCommandSearch(); });
+        later([] {
+            if (QWidget* top = QApplication::activePopupWidget())
+                if (auto* query = top->findChild<QLineEdit*>(QStringLiteral("paletteQuery")))
+                    query->setText(QStringLiteral("kaydır"));
+        });
+        later([shot] {
+            shot(QStringLiteral("5c-komut-arama-netcad"), QApplication::activePopupWidget());
+        });
+        later([] {
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+        // AND WHERE THE VIEW HISTORY SITS: Görünüm ▸ Gezinme, Önceki and Sonraki
+        // beside `Kaydır`.
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonView")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, shot] { shot(QStringLiteral("5d-gorunum-gezinme"), window.ribbonBar()); });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
         // The import wizard, both pages. `KENTOS_IMPORT_SAMPLE` names a file to
@@ -2567,6 +2593,13 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
+    }
+
+    // THE VIEW HISTORY, ASSERTED on the real canvas.
+    if (qEnvironmentVariableIsSet("KENTOS_VIEW_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeViewHistory() == 0 ? 0 : 1);
+        });
     }
 
     // THE LAST COMMAND AGAIN, ASSERTED with real keys and a real click.

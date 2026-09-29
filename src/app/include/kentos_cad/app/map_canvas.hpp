@@ -31,8 +31,10 @@
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/view.hpp"
+#include "kentos_cad/render/view_history.hpp"
 
 #include <QCursor>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QRectF>
 
@@ -65,6 +67,11 @@ struct AreaGhost; ///< core/area_edit.hpp; the .cpp includes the definition
 /// first. Only the .cpp includes the full definition.
 struct EmitBuffer;
 } // namespace kentos::core
+
+namespace kentos::command {
+struct ViewMove;  ///< command/bus.hpp; the .cpp includes the definition
+struct ViewMoved; ///< command/bus.hpp
+} // namespace kentos::command
 
 namespace kentos::app {
 
@@ -208,6 +215,17 @@ public:
     void setCentre(core::Point2 centre);
     void resetView();
 
+    /// Makes the move a view command asked for (`Bus::on_view_move`) and says
+    /// what came of it: the one road `YAKINLAŞ` and `YENİ` take to the view.
+    command::ViewMoved moveView(const command::ViewMove& move);
+
+    /// How many steps the view history holds back and forward, for the probes.
+    std::pair<std::size_t, std::size_t> viewHistoryForProbe() const noexcept
+    {
+        return {history_.behind(), history_.ahead()};
+    }
+
+    /// The live backend's name, for the status strip and the probes.
     QString backendName() const;
 
     /// Whether the live backend draws on the GPU. The draw-call budget is only
@@ -683,6 +701,27 @@ private:
     /// the drawing. Rebuilt every frame by `buildZoomStack`.
     QRectF zoom_stack_;
     render::ViewTransform view_;
+
+    /// WHERE THE VIEW HAS BEEN (`YAKINLAŞ ÖNCEKİ`, `SONRAKİ`). Every move this
+    /// canvas makes is reported to it (`noteMove`); a step it gives back is not.
+    render::ViewHistory history_;
+
+    /// The clock a wheel burst is timed on (`render::ViewHistory::kFoldMs`).
+    QElapsedTimer clock_;
+
+    /// Where a panning drag began, so the whole drag is one step back.
+    render::ViewState pan_from_{};
+
+    /// The view, as the history keeps it.
+    render::ViewState viewState() const;
+
+    /// Reports a move from `from` to where the view is now.
+    void noteMove(const render::ViewState& from,
+                  render::ViewHistory::Move how = render::ViewHistory::Move::Step);
+
+    /// Puts the view where a step back or forward lands.
+    void showState(const render::ViewState& state);
+
     render::DrawList draw_;
     render::Overlay overlay_;
 

@@ -102,7 +102,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
 | [`core.style`](style.md) | Stil | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | Sembol | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
-| [`core.zoom`](zoom.md) | Yakınlaş | `YAKINLAŞ`, `YAKINLAS`, `LİMİTBUL`, `LIMITBUL`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
+| [`core.zoom`](zoom.md) | Yakınlaş | `YAKINLAŞ`, `YAKINLAS`, `LİMİTBUL`, `LIMITBUL`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider. |
 | [`core.undo`](undo.md) | Geri Al | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | Yinele | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
 | [`core.new`](new.md) | Yeni | `YENİ`, `YENI`, `NEW` | Dosya | geri alınmaz | betiklenebilir | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
@@ -1537,11 +1537,11 @@ Ayrıntılı kullanım: [SEMBOL](symbol.md)
 
 ### `core.zoom` — YAKINLAŞ (Yakınlaş)
 
-Görünümü çizim kapsamına veya verilen çarpana ayarlar.
+Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `mod` | text | isteğe bağlı | KAPSAM | ÇARPAN | SIFIRLA |
+| `mod` | text | isteğe bağlı | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
 | `carpan` | number | isteğe bağlı | ÇARPAN modunda ölçek katsayısı |
 
 Ayrıntılı kullanım: [YAKINLAŞ](zoom.md)
@@ -13412,13 +13412,13 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_zoom",
     "title": "Yakınlaş",
-    "description": "Görünümü çizim kapsamına veya verilen çarpana ayarlar.\nKomut: YAKINLAŞ (YAKINLAS, LİMİTBUL, LIMITBUL, ZOOM, Z)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider.\nKomut: YAKINLAŞ (YAKINLAS, LİMİTBUL, LIMITBUL, ZOOM, Z)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "mod": {
           "type": "string",
-          "description": "KAPSAM | ÇARPAN | SIFIRLA (metin)"
+          "description": "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) (metin)"
         },
         "carpan": {
           "type": "number",

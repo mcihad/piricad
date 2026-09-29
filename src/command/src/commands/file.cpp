@@ -124,7 +124,8 @@ Task<void> run_new(Context& ctx)
     // `YAKINLAŞ SIFIRLA`'s, so it touches no document and no journal line — and
     // it is HERE rather than in the window, because a capability reachable only
     // by mouse is the one thing Article 5.15 forbids outright.
-    if (bus.on_view_request) bus.on_view_request("SIFIRLA", 1.0);
+    if (bus.on_view_move)
+        (void)bus.on_view_move(ViewMove{.kind = ViewMove::Kind::Reset, .fresh = true});
 }
 
 // ------------------------------------------------------------------- AÇ -----

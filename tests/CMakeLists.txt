@@ -37,6 +37,7 @@ add_executable(kentos_tests
     unit/test_print.cpp
     unit/test_proof.cpp
     unit/test_registry.cpp
+    unit/test_view_history.cpp
     unit/test_preview.cpp
     unit/test_colour.cpp
     unit/test_curve_path.cpp
@@ -328,6 +329,18 @@ if(TARGET kentos_cad)
                 "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(repeat-last PROPERTIES TIMEOUT 120)
+
+    # AND THE VIEW HISTORY (`YAKINLAŞ ÖNCEKİ`, `SONRAKİ`). The rule is held by
+    # `test_view_history.cpp`; what only the real canvas can show is that every
+    # move it makes is reported — the wheel as one burst, a drag as one step —
+    # and that the Alt+C action reaches it.
+    add_test(NAME view-history
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_VIEW_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(view-history PROPERTIES TIMEOUT 120)
 
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page

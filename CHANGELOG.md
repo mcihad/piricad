@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — önceki ve sonraki görünüm
+
+- `YAKINLAŞ ÖNCEKİ` bir önceki görünüme, `YAKINLAŞ SONRAKİ` yeniden ileri gider; otuz adım,
+  Netcad'in Önceki Pencere'si gibi. **Alt+C** ve **Görünüm ▸ Gezinme ▸ Önceki Görünüm**,
+  **Sonraki Görünüm**. `YAKINLAŞ`'ın her kipi, `KAYDIR`, fare tekerleği ve orta tuşla
+  sürükleme geçmişe girer; art arda tekerlek çentikleri ve bir sürükleme **tek adımdır**.
+  Görünümü değiştirmeyen hamle adım sayılmaz, `YENİ` geçmişi siler. Geçmiş oturumun
+  görünüm durumudur: dosyaya, geri almaya ve günlüğe girmez.
+- `YAKINLAŞ` artık ne yaptığını yapılandırılmış olarak da söyler: `mod`, `degisti`,
+  `geri`, `ileri`.
+
 ### Eklendi — son komutu yinelemek
 
 - Hiçbir komut çalışmıyorken **boş komut satırında Enter ya da Boşluk** son komutu

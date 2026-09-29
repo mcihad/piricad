@@ -401,7 +401,6 @@ signals:
     /// `label` and a Durdur, and stays live while the read runs.
     void jobStarted(const QString& label);
     void jobFinished();
-    void viewRequested(const QString& mode, double factor);
 
     /// KAYDIR asks the canvas to slide so `from` lands on `to`.
     void panRequested(core::Point2 from, core::Point2 to);

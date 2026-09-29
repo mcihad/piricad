@@ -121,6 +121,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <QWidgetAction>
 
 namespace kentos::app {
@@ -364,7 +365,6 @@ MainWindow::MainWindow(QWidget* parent)
     });
 
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
-    connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::panRequested, this, &MainWindow::onPanRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
     connect(controller_, &Controller::selectionChanged, this, [this] {
@@ -1545,6 +1545,17 @@ void MainWindow::buildActions()
     actZoomOut_ = commandAction(Glyph::ZoomOut, tr("Uzaklaştır"),
                                 QStringLiteral("YAKINLAŞ ÇARPAN carpan=0.8"),
                                 tr("YAKINLAŞ ÇARPAN carpan=0.8"), QKeySequence::ZoomOut);
+    // NETCAD'S KEY FOR IT: Alt+C is Önceki Pencere there (wiki 217385173), and
+    // nothing here held it. Sonraki has no key of its own in Netcad either; the
+    // command line reaches it (`YAKINLAŞ SONRAKİ`), so no hand is left out.
+    actViewPrevious_ =
+        commandAction(Glyph::ViewPrevious, tr("Önceki Görünüm"), QStringLiteral("YAKINLAŞ ÖNCEKİ"),
+                      tr("YAKINLAŞ ÖNCEKİ — bir önceki görünüme döner (Alt+C)"),
+                      QKeySequence(Qt::ALT | Qt::Key_C));
+    actViewNext_ =
+        commandAction(Glyph::ViewNext, tr("Sonraki Görünüm"), QStringLiteral("YAKINLAŞ SONRAKİ"),
+                      tr("YAKINLAŞ SONRAKİ — geri dönülen görünümden ileri gider"));
+    addAction(actViewPrevious_); // the key works with focus anywhere in the shell
 
     actPan_ = new QAction(tr("Kaydır"), this);
     actPan_->setCheckable(true);
@@ -1829,6 +1840,14 @@ void MainWindow::buildPanels()
     // the view hooks: the command says what, the canvas draws it.
     controller_->bus().on_measure_mark = [this](const command::MeasureMark& mark) {
         if (canvas_ != nullptr) canvas_->addMeasureMark(mark);
+    };
+    // WHERE THE VIEW GOES, and whether it could: `YAKINLAŞ ÖNCEKİ` with no
+    // earlier view is told so (`command::ViewMoved`). The canvas owns the view
+    // and its history, so the canvas makes the move.
+    controller_->bus().on_view_move = [this](const command::ViewMove& move) {
+        const command::ViewMoved done = canvas_->moveView(move);
+        refreshStatus();
+        return done;
     };
     controller_->bus().on_view_query = [this] {
         const render::ViewTransform& view = canvas_->view();
@@ -3598,6 +3617,101 @@ int MainWindow::probeRepeat()
     check(running().isEmpty(), QStringLiteral("enter: tık bir komut başlatmadı"));
 
     runScriptLine(QStringLiteral("TERCİH son_komut varsayilan"));
+    return failures;
+}
+
+int MainWindow::probeViewHistory()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[gorunum] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+    const auto scale  = [this] { return canvas_->view().mm_per_pixel(); };
+    const auto behind = [this] { return canvas_->viewHistoryForProbe().first; };
+    const auto ahead  = [this] { return canvas_->viewHistoryForProbe().second; };
+
+    // A NEW DRAWING'S VIEW, with no past: the reset YENİ sends.
+    (void)controller_->bus().on_view_move(
+        command::ViewMove{.kind = command::ViewMove::Kind::Reset, .fresh = true});
+    check(behind() == 0 && ahead() == 0, QStringLiteral("yeni çizimin görünüm geçmişi boş"));
+
+    // Thirty-one zooms, each its own step; the scale after each is kept.
+    std::vector<double> scales{scale()};
+    for (int i = 0; i < 31; ++i) {
+        runScriptLine(QStringLiteral("YAKINLAŞ ÇARPAN carpan=1.1"));
+        scales.push_back(scale());
+    }
+    check(behind() == render::ViewHistory::kDepth,
+          QStringLiteral("31 değişiklikten 30 adım tutuldu (%1)").arg(behind()));
+
+    // Thirty steps back land on the view after the FIRST zoom: the one before
+    // it is the thirty-first, which the depth let go.
+    for (int i = 0; i < 30; ++i)
+        runScriptLine(QStringLiteral("YAKINLAŞ ÖNCEKİ"));
+    check(scale() == scales[1],
+          QStringLiteral("30 ÖNCEKİ ilk yakınlaştırmanın görünümüne döndü (%1 / %2)")
+              .arg(scale())
+              .arg(scales[1]));
+    const double stopped = scale();
+    runScriptLine(QStringLiteral("YAKINLAŞ ÖNCEKİ"));
+    check(scale() == stopped && behind() == 0, QStringLiteral("otuz birinci ÖNCEKİ yerinde kaldı"));
+
+    for (int i = 0; i < 30; ++i)
+        runScriptLine(QStringLiteral("YAKINLAŞ SONRAKİ"));
+    check(scale() == scales[31] && ahead() == 0,
+          QStringLiteral("30 SONRAKİ son görünüme geri getirdi"));
+
+    // A WHEEL BURST IS ONE STEP: five notches, sent at once. Ten steps back
+    // first, so the history has room and a burst kept as five would show.
+    for (int i = 0; i < 10; ++i)
+        runScriptLine(QStringLiteral("YAKINLAŞ ÖNCEKİ"));
+    const std::size_t before_wheel = behind();
+    const double wheel_from        = scale();
+    const QPointF middle(canvas_->width() / 2.0, canvas_->height() / 2.0);
+    for (int i = 0; i < 5; ++i) {
+        QWheelEvent notch(middle, canvas_->mapToGlobal(middle), QPoint(), QPoint(0, 120),
+                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(canvas_, &notch);
+    }
+    QCoreApplication::processEvents();
+    check(
+        behind() == before_wheel + 1 && ahead() == 0 && scale() != wheel_from,
+        QStringLiteral("beş tekerlek çentiği tek adım (%1 → %2)").arg(before_wheel).arg(behind()));
+
+    // A PANNING DRAG IS ONE STEP, however many moves it made.
+    const std::size_t before_drag = behind();
+    const core::Point2 centre     = canvas_->view().centre();
+    const auto mouse              = [this](QEvent::Type type, QPointF at, Qt::MouseButton button,
+                              Qt::MouseButtons held) {
+        QMouseEvent e(type, at, canvas_->mapToGlobal(at), button, held, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &e);
+    };
+    mouse(QEvent::MouseButtonPress, middle, Qt::MiddleButton, Qt::MiddleButton);
+    for (int i = 1; i <= 6; ++i)
+        mouse(QEvent::MouseMove, middle + QPointF(i * 10.0, i * 4.0), Qt::NoButton,
+              Qt::MiddleButton);
+    mouse(QEvent::MouseButtonRelease, middle + QPointF(60.0, 24.0), Qt::MiddleButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+    check(behind() == before_drag + 1 && ahead() == 0 && !(canvas_->view().centre() == centre),
+          QStringLiteral("orta tuşla sürükleme tek adım"));
+    runScriptLine(QStringLiteral("YAKINLAŞ ÖNCEKİ"));
+    check(canvas_->view().centre() == centre,
+          QStringLiteral("ÖNCEKİ sürüklemeden önceki yere döndü"));
+
+    // THE KEY: Önceki Görünüm carries Netcad's Alt+C and does what the line does.
+    check(actViewPrevious_->shortcut() == QKeySequence(Qt::ALT | Qt::Key_C),
+          QStringLiteral("Önceki Görünüm Alt+C"));
+    const std::size_t before_key = behind();
+    actViewPrevious_->trigger();
+    QCoreApplication::processEvents();
+    check(behind() + 1 == before_key, QStringLiteral("Önceki Görünüm bir adım geri gitti"));
+
+    // AND A NEW DRAWING FORGETS where the old one was looked at.
+    (void)controller_->bus().on_view_move(
+        command::ViewMove{.kind = command::ViewMove::Kind::Reset, .fresh = true});
+    check(behind() == 0 && ahead() == 0, QStringLiteral("yeni çizim görünüm geçmişini sildi"));
     return failures;
 }
 
@@ -10386,17 +10500,6 @@ void MainWindow::onCursorMoved(core::Point2 world)
     // instrument: the axis letter, then the number, digit-aligned in mono.
     statusStrip_->setCoordinate(
         tr("Y %1  X %2").arg(format_metres(world.x), format_metres(world.y)));
-}
-
-void MainWindow::onViewRequested(const QString& mode, double factor)
-{
-    if (mode == QLatin1String("KAPSAM") || mode == QLatin1String("EXTENTS"))
-        canvas_->zoomToExtents();
-    else if (mode == QLatin1String("SIFIRLA") || mode == QLatin1String("RESET"))
-        canvas_->resetView();
-    else
-        canvas_->zoomBy(factor);
-    refreshStatus();
 }
 
 void MainWindow::onPanRequested(core::Point2 from, core::Point2 to)

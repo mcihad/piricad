@@ -14,6 +14,7 @@ add_library(kentos_render STATIC
     src/symbology.cpp
     src/text_layout.cpp
     src/view.cpp
+    src/view_history.cpp
 )
 
 target_include_directories(kentos_render PUBLIC include)

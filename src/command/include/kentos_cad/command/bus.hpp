@@ -521,6 +521,37 @@ struct ViewInfo
     std::string crs;        ///< the CRS the coordinates are expressed in
 };
 
+/// ONE MOVE OF THE VIEW, as `YAKINLAŞ` and `YENİ` ask for it (`Bus::on_view_move`).
+///
+/// VIEW STATE, NOT DOCUMENT STATE (model.md R43), like `ViewInfo`: the viewport
+/// makes the move, and the command only says which.
+struct ViewMove
+{
+    /// Which move: one per `YAKINLAŞ` mode, and the reset `YENİ` asks for.
+    enum class Kind : std::uint8_t {
+        Extents,  ///< KAPSAM: the whole drawing, with a margin
+        Factor,   ///< ÇARPAN: `factor` times closer, about the centre
+        Reset,    ///< SIFIRLA: where a drawing starts
+        Previous, ///< ÖNCEKİ: one step back in the view history
+        Next,     ///< SONRAKİ: one step forward again
+    };
+
+    Kind kind{Kind::Extents}; ///< the move asked for
+    double factor{1.0};       ///< ÇARPAN's factor
+
+    /// A NEW DRAWING'S RESET forgets where the old one was looked at: a step
+    /// back from it would land on a place in a drawing no longer open.
+    bool fresh{false};
+};
+
+/// WHAT THE VIEWPORT DID with a move (`Bus::on_view_move`).
+struct ViewMoved
+{
+    bool moved{false};     ///< false only when there was nowhere to go
+    std::size_t behind{0}; ///< steps ÖNCEKİ can still take
+    std::size_t ahead{0};  ///< steps SONRAKİ can still take
+};
+
 /// One character of a caption that the drawing's typeface has no glyph for,
 /// as the shell's text engine reports it (TODOS C-12).
 struct MissingGlyph
@@ -888,7 +919,11 @@ public:
     /// View state is not document state, so it is not undoable and does not go
     /// through a transaction. The command still travels the bus, so a script and
     /// a toolbar button reach the viewport by the same route.
-    std::function<void(std::string_view mode, double factor)> on_view_request;
+    ///
+    /// IT ANSWERS. `ÖNCEKİ` with no earlier view has to be able to say so, and a
+    /// mode string with a double — what this hook used to carry — could neither
+    /// name a step back nor hear that there was none. Unset in a headless run.
+    std::function<ViewMoved(const ViewMove& move)> on_view_move;
 
     /// WHAT THE VIEW IS SHOWING. The write hooks above move it; nothing could
     /// read it, so no command could answer "where am I looking" and no agent

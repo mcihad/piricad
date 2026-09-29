@@ -182,7 +182,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
 | [`cad.style`](#cadstyle) | `core.style` | `STİL` | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`cad.symbol`](#cadsymbol) | `core.symbol` | `SEMBOL` | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
-| [`cad.zoom`](#cadzoom) | `core.zoom` | `YAKINLAŞ` | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
+| [`cad.zoom`](#cadzoom) | `core.zoom` | `YAKINLAŞ` | Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider. |
 | [`cad.undo`](#cadundo) | `core.undo` | `GERİAL` | Son işlemi geri alır. |
 | [`cad.redo`](#cadredo) | `core.redo` | `YİNELE` | Geri alınan işlemi yineler. |
 | [`cad.new`](#cadnew) | `core.new` | `YENİ` | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
@@ -2712,7 +2712,7 @@ cad.symbol(
 
 ### `cad.zoom`
 
-Görünümü çizim kapsamına veya verilen çarpana ayarlar.
+Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider.
 
 Komut: `core.zoom` — `YAKINLAŞ`
 
@@ -2725,7 +2725,7 @@ cad.zoom(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `mode` | `str` | `mod` | KAPSAM | ÇARPAN | SIFIRLA |
+| `mode` | `str` | `mod` | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
 | `factor` | `float` | `carpan` | ÇARPAN modunda ölçek katsayısı |
 
 [Komut sayfası](../komutlar/zoom.md)

@@ -1227,6 +1227,57 @@ TEST_CASE("PROOF: NESNEBİLGİ gui, komut satırı ve betikten aynı cevabı ver
     }
 }
 
+TEST_CASE("PROOF: YAKINLAŞ ÖNCEKİ gui, komut satırı ve betikten aynı cevabı verir")
+{
+    // Article 6.4 for the view history's step back. A view command has no
+    // document delta and no journal line (it is ReadOnly), so the proof is the
+    // answer: the three clients ask the viewport the same thing and are told
+    // the same, and nothing else moves.
+    const auto viewport = [](Rig& rig, std::vector<ViewMove::Kind>& asked) {
+        rig.bus.on_view_move = [&asked](const ViewMove& move) {
+            asked.push_back(move.kind);
+            return ViewMoved{.moved = true, .behind = 4, .ahead = 1};
+        };
+    };
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    std::vector<ViewMove::Kind> gui_asked, cli_asked, scr_asked;
+    viewport(gui, gui_asked);
+    viewport(cli, cli_asked);
+    viewport(scr, scr_asked);
+
+    const auto from_gui = gui.bus.execute_line("YAKINLAŞ ÖNCEKİ", Origin::Gui);
+    const auto typed    = cli.bus.execute_line("YAKINLAŞ ÖNCEKİ", Origin::CommandLine);
+    REQUIRE(from_gui.ok());
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Önceki görünüm kanıtı",
+            "komutlar": [ {"cmd": "core.zoom", "args": {"mod": "ÖNCEKİ"}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    // The runner keeps no report, so the same invocation is dispatched as data.
+    command::Args args;
+    args.set("mod", Value::text("ÖNCEKİ"));
+    const auto scripted = scr.bus.dispatch(Invocation{"core.zoom", args, Origin::Script});
+    REQUIRE(scripted.ok());
+
+    CHECK_EQ(from_gui.value().report.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), scripted.value().report.dump());
+    CHECK(gui_asked == std::vector<ViewMove::Kind>{ViewMove::Kind::Previous});
+    CHECK(cli_asked == gui_asked);
+    CHECK(scr_asked ==
+          std::vector<ViewMove::Kind>{ViewMove::Kind::Previous, ViewMove::Kind::Previous});
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK(rig->journal.entries().empty());
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
+    }
+}
+
 TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur")
 {
     // Article 6.4 for `core.measure_angle`, and the reading is the one a hand

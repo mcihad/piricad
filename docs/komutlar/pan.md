@@ -66,8 +66,9 @@ Betikte koordinatlar **milimetredir**.
 
 ## Geri alma
 
-Geri alınacak bir şey yoktur: `KAYDIR` çizimi değiştirmez. Önceki görünüme dönmek
-için `YAKINLAŞ SIFIRLA` ya da `YAKINLAŞ KAPSAM` kullanın.
+Geri alınacak bir şey yoktur: `KAYDIR` çizimi değiştirmez. Kaydırmadan önceki görünüme
+dönmek için `YAKINLAŞ ÖNCEKİ` (**Alt+C**) kullanın; her kaydırma görünüm geçmişinde bir
+adımdır.
 
 ## Betikten kullanım
 

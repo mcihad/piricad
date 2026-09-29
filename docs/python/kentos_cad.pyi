@@ -1836,10 +1836,10 @@ def zoom(
     mode: str = ...,
     factor: float = ...,
 ) -> int:
-    """Görünümü çizim kapsamına veya verilen çarpana ayarlar.
+    """Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider.
 
     Komut: core.zoom (YAKINLAŞ)
-        mode — KAPSAM | ÇARPAN | SIFIRLA
+        mode — KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım)
         factor — ÇARPAN modunda ölçek katsayısı
     """
 

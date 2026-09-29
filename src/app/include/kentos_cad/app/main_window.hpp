@@ -359,6 +359,12 @@ public:
     /// feature: `/tests` links no Qt and cannot send one.
     int probeRepeat();
 
+    /// THE VIEW HISTORY, ASSERTED on the real canvas: thirty-one zooms and
+    /// thirty steps back to the first, then forward again; a wheel burst and a
+    /// panning drag are one step each; Önceki Görünüm carries Alt+C; a new
+    /// drawing forgets where the old one was looked at.
+    int probeViewHistory();
+
     /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///
@@ -629,7 +635,6 @@ private slots:
     void onInteractiveFinished(const QString& id, bool mutated, bool dismissed);
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);
-    void onViewRequested(const QString& mode, double factor);
 
     /// KAYDIR: slide the canvas so `from` ends up at `to`, keeping the scale.
     void onPanRequested(core::Point2 from, core::Point2 to);
@@ -1044,6 +1049,8 @@ private:
     QAction* actBackspace_{nullptr};
     QAction* actLayer_{nullptr};
     QAction* actZoomExtents_{nullptr};
+    QAction* actViewPrevious_{nullptr}; ///< YAKINLAŞ ÖNCEKİ, Alt+C
+    QAction* actViewNext_{nullptr};     ///< YAKINLAŞ SONRAKİ
     QAction* actZoomIn_{nullptr};
     QAction* actZoomOut_{nullptr};
     QAction* actUndo_{nullptr};

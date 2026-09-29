@@ -262,9 +262,6 @@ void Controller::wireBus()
     bus_.on_setting_changed = [this](std::string_view id, core::SettingScope) {
         emit settingChanged(QString::fromUtf8(id.data(), static_cast<int>(id.size())));
     };
-    bus_.on_view_request = [this](std::string_view mode, double factor) {
-        emit viewRequested(QString::fromUtf8(mode.data(), static_cast<int>(mode.size())), factor);
-    };
     bus_.on_pan_request = [this](core::Point2 from, core::Point2 to) {
         emit panRequested(from, to);
     };

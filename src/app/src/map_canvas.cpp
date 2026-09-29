@@ -5,6 +5,7 @@
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/text_engine.hpp"
 #include "kentos_cad/command/aids.hpp"
+#include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/ghost.hpp"
 #include "kentos_cad/command/path_edit.hpp"
 #include "kentos_cad/core/angle.hpp"
@@ -82,6 +83,7 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
 
     view_.set_viewport(width(), height());
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0); // TUREF/TM30, 30. dilim
+    clock_.start();
 
     reloadGridSettings();
     publishViewScale();
@@ -164,7 +166,9 @@ void MapCanvas::zoomToExtents()
         resetView();
         return;
     }
+    const render::ViewState from = viewState();
     view_.fit(box, 0.08);
+    noteMove(from);
     publishViewScale();
     emit viewChanged();
     update();
@@ -173,7 +177,9 @@ void MapCanvas::zoomToExtents()
 void MapCanvas::zoomToBox(const core::Box2& box)
 {
     if (box.empty()) return;
+    const render::ViewState from = viewState();
     view_.fit(box, 0.08);
+    noteMove(from);
     publishViewScale();
     emit viewChanged();
     update();
@@ -181,7 +187,9 @@ void MapCanvas::zoomToBox(const core::Box2& box)
 
 void MapCanvas::zoomBy(double factor)
 {
+    const render::ViewState from = viewState();
     view_.zoom_at(render::ScreenPoint{width() * 0.5, height() * 0.5}, factor);
+    noteMove(from);
     publishViewScale();
     emit viewChanged();
     update();
@@ -189,7 +197,9 @@ void MapCanvas::zoomBy(double factor)
 
 void MapCanvas::setCentre(core::Point2 centre)
 {
+    const render::ViewState from = viewState();
     view_.set_centre(centre, view_.mm_per_pixel());
+    noteMove(from);
     snap_preview_valid_ = false;
     emit viewChanged();
     update();
@@ -197,10 +207,59 @@ void MapCanvas::setCentre(core::Point2 centre)
 
 void MapCanvas::resetView()
 {
+    const render::ViewState from = viewState();
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0);
+    noteMove(from);
     publishViewScale();
     emit viewChanged();
     update();
+}
+
+render::ViewState MapCanvas::viewState() const
+{
+    return render::ViewState{view_.centre(), view_.mm_per_pixel()};
+}
+
+void MapCanvas::noteMove(const render::ViewState& from, render::ViewHistory::Move how)
+{
+    history_.moved(from, viewState(), how, clock_.elapsed());
+}
+
+void MapCanvas::showState(const render::ViewState& state)
+{
+    view_.set_centre(state.centre, state.mm_per_pixel);
+    snap_preview_valid_ = false;
+    publishViewScale();
+    emit viewChanged();
+    update();
+}
+
+command::ViewMoved MapCanvas::moveView(const command::ViewMove& move)
+{
+    using Kind                    = command::ViewMove::Kind;
+    const render::ViewState start = viewState();
+    switch (move.kind) {
+    case Kind::Extents: zoomToExtents(); break;
+    case Kind::Factor: zoomBy(move.factor); break;
+    case Kind::Reset:
+        resetView();
+        // A NEW DRAWING HAS NO PAST: a step back would land on the old one.
+        if (move.fresh) history_.clear();
+        break;
+    case Kind::Previous:
+        if (const std::optional<render::ViewState> back = history_.back(start)) showState(*back);
+        break;
+    case Kind::Next:
+        if (const std::optional<render::ViewState> ahead = history_.forward(start))
+            showState(*ahead);
+        break;
+    }
+
+    command::ViewMoved out;
+    out.moved  = !(viewState() == start);
+    out.behind = history_.behind();
+    out.ahead  = history_.ahead();
+    return out;
 }
 
 void MapCanvas::resizeEvent(QResizeEvent* event)
@@ -3732,6 +3791,7 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::MiddleButton) {
         panning_    = true;
+        pan_from_   = viewState(); ///< the whole drag is one step back
         pan_anchor_ = event->position();
         setCursor(Qt::ClosedHandCursor);
         return;
@@ -3770,6 +3830,7 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
     if (print_aspect_ > 0.0 && event->button() == Qt::LeftButton) {
         panning_    = true;
+        pan_from_   = viewState(); ///< the whole drag is one step back
         pan_anchor_ = event->position();
         setCursor(Qt::ClosedHandCursor);
         return;
@@ -4101,6 +4162,7 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
 
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
+        noteMove(pan_from_);
         applyPointer();
         return;
     }
@@ -4113,7 +4175,8 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     // which is exactly how it was reported.
     if (event->button() == Qt::LeftButton && panning_) {
         panning_ = false;
-        cursor_  = event->position();
+        noteMove(pan_from_);
+        cursor_ = event->position();
         applyPointer();
         update();
         return;
@@ -4191,8 +4254,11 @@ void MapCanvas::wheelEvent(QWheelEvent* event)
     // import wizard cannot drift from this: one reading of the settings, one
     // direction. The lookup is two folded string compares and this runs on a
     // wheel event, not inside the frame budget.
+    const render::ViewState from = viewState();
     view_.zoom_at(render::ScreenPoint{event->position().x(), event->position().y()},
                   wheel_zoom_factor(controller_.bus().app_settings(), notches));
+    // ONE BURST, ONE STEP: the history folds the notches (`ViewHistory`).
+    noteMove(from, render::ViewHistory::Move::Wheel);
     publishViewScale();
     updateSnapPreview();
     emit viewChanged();

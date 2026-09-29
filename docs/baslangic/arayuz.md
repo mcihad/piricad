@@ -1060,6 +1060,7 @@ yapabilecekleriniz:
 | **Ctrl+H** (macOS'ta **Cmd+Option+F**) | [Bul ve Değiştir](../komutlar/find_replace.md): yazılarda bul, önizle, hepsini değiştir. macOS'ta Cmd+H programı gizlediği için orada başka tuştur |
 | **F3** / **F8** / **F10** / **F9** | Nesne yakalama / dik mod / yüzey normali / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |
+| **Alt+C** | Önceki görünüm — Netcad'deki gibi (`YAKINLAŞ ÖNCEKİ`, otuz adım) |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |
 | **F1** | [Komut listesi](../komutlar/help.md) — `Ctrl+K` ile aynı sayfa |

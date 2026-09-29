@@ -3112,6 +3112,81 @@ TEST_CASE("her komutun insan okuyacağı bir Türkçe başlığı var")
     }());
 }
 
+TEST_CASE(
+    "YAKINLAŞ ÖNCEKİ ve SONRAKİ görünüm geçmişinde gider; belgeye, geri almaya, günlüğe dokunmaz")
+{
+    Fixture f;
+
+    // A viewport with two steps behind it, as the canvas would answer.
+    std::vector<ViewMove::Kind> asked;
+    std::size_t behind = 2;
+    std::size_t ahead  = 0;
+    f.bus.on_view_move = [&](const ViewMove& move) {
+        asked.push_back(move.kind);
+        ViewMoved out;
+        if (move.kind == ViewMove::Kind::Previous && behind > 0) {
+            --behind;
+            ++ahead;
+            out.moved = true;
+        } else if (move.kind == ViewMove::Kind::Next && ahead > 0) {
+            --ahead;
+            ++behind;
+            out.moved = true;
+        }
+        out.behind = behind;
+        out.ahead  = ahead;
+        return out;
+    };
+    std::string said;
+    f.bus.on_echo              = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    const std::uint64_t before = f.doc.content_hash();
+
+    auto back = f.bus.execute_line("YAKINLAŞ ÖNCEKİ", Origin::CommandLine);
+    REQUIRE(back.ok());
+    const core::Json& report = back.value().report;
+    CHECK(report.find("mod")->as_string() == "ÖNCEKİ");
+    CHECK(report.find("degisti")->as_bool());
+    CHECK(report.find("geri")->as_int() == 1);
+    CHECK(report.find("ileri")->as_int() == 1);
+
+    // Every spelling: English, and ASCII folded.
+    REQUIRE(f.bus.execute_line("ZOOM PREVIOUS", Origin::CommandLine).ok());
+    CHECK(behind == 0);
+
+    // NOTHING BEHIND IS SAID, NOT REFUSED: a script walking back until it stops
+    // is not an error.
+    auto none = f.bus.execute_line("YAKINLAS onceki", Origin::CommandLine);
+    REQUIRE(none.ok());
+    CHECK_FALSE(none.value().report.find("degisti")->as_bool());
+    CHECK(said.find("Geri dönülecek görünüm yok") != std::string::npos);
+
+    auto forward = f.bus.execute_line("YAKINLAŞ SONRAKİ", Origin::CommandLine);
+    REQUIRE(forward.ok());
+    CHECK(forward.value().report.find("mod")->as_string() == "SONRAKİ");
+    CHECK(forward.value().report.find("ileri")->as_int() == 1);
+    REQUIRE(f.bus.execute_line("YAKINLAŞ mod=NEXT", Origin::CommandLine).ok());
+    auto past_end = f.bus.execute_line("YAKINLAŞ SONRAKİ", Origin::CommandLine);
+    REQUIRE(past_end.ok());
+    CHECK(said.find("İleri gidilecek görünüm yok") != std::string::npos);
+
+    CHECK(asked == std::vector<ViewMove::Kind>{ViewMove::Kind::Previous, ViewMove::Kind::Previous,
+                                               ViewMove::Kind::Previous, ViewMove::Kind::Next,
+                                               ViewMove::Kind::Next, ViewMove::Kind::Next});
+
+    // View state, never document state (model.md R43).
+    CHECK(f.doc.content_hash() == before);
+    CHECK(f.undo.undo_depth() == 0);
+    CHECK(f.journal.entries().empty());
+
+    // And the old modes reach the same hook, under their own kind.
+    asked.clear();
+    REQUIRE(f.bus.execute_line("YAKINLAŞ", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("YAKINLAŞ ÇARPAN carpan=1.25", Origin::CommandLine).ok());
+    REQUIRE(f.bus.execute_line("YAKINLAŞ SIFIRLA", Origin::CommandLine).ok());
+    CHECK(asked == std::vector<ViewMove::Kind>{ViewMove::Kind::Extents, ViewMove::Kind::Factor,
+                                               ViewMove::Kind::Reset});
+}
+
 TEST_CASE("read-only commands never become an undo step")
 {
     Fixture f;
