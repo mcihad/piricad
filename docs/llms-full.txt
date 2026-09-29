@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 120 (104 tanesi onay ister)
-- Katalog parmak izi: `3520172222070751139`
+- Katalog parmak izi: `11635226798749527441`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1145,7 +1145,7 @@ Onay ister.
 
 ### `core_measure` — Ölç
 
-Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
+Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir.
 Komut: ÖLÇ (OLC, MEASURE, MS)
 Netcad adı: CETVEL (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
@@ -1156,7 +1156,8 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ilk noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `devam` | konum (tutamak ya da göreli nokta) | hayır | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `devam` | konum (tutamak ya da göreli nokta) | hayır | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; sabit=evet ise her biri ilk noktadan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `sabit` | boolean | hayır | İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk Nokta Sabit'i) (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_measure_angle` — Açı Ölç

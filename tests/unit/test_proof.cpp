@@ -1376,6 +1376,51 @@ TEST_CASE(
         CHECK_EQ(rig->doc.content_hash(), hash);
 }
 
+TEST_CASE("PROOF: ÖLÇ sabit=evet gui, komut satırı ve betikten aynı uzaklıkları okur")
+{
+    Rig gui;
+    Rig cli;
+    Rig scr;
+
+    core::Json from_gui;
+    {
+        auto started = gui.bus.begin_interactive("ÖLÇ sabit=evet", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        for (const core::Point2 at :
+             {core::Point2{0, 0}, core::Point2{30000, 40000}, core::Point2{60000, 80000}})
+            REQUIRE(session.supply(Value::aimed_point(at)).ok());
+        REQUIRE(session.supply(Value{}).ok()); ///< Enter: the run ends with its own answer
+        auto done = gui.bus.finish(session);
+        REQUIRE(done.ok());
+        from_gui = done.value().report;
+    }
+    const auto typed =
+        cli.bus.execute_line("ÖLÇ 0,0 30,40 devam=60,80 sabit=evet", Origin::CommandLine);
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Sabit ilk nokta kanıtı",
+            "komutlar": [ {"cmd": "core.measure",
+                           "args": {"baslangic": [0, 0], "bitis": [30000, 40000],
+                                    "devam": [[60000, 80000]], "sabit": true}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    command::Args args;
+    args.set("baslangic", Value::point(core::Point2{0, 0}));
+    args.set("bitis", Value::point(core::Point2{30000, 40000}));
+    args.set("devam", Value::points({core::Point2{60000, 80000}}));
+    args.set("sabit", Value::boolean(true));
+    const auto scripted = scr.bus.dispatch(Invocation{"core.measure", args, Origin::Script});
+    REQUIRE(scripted.ok());
+
+    CHECK_EQ(from_gui.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), scripted.value().report.dump());
+    CHECK(typed.value().report.find("uzakliklar_mm")->dump() == "[50000,100000]");
+}
+
 TEST_CASE("PROOF: PRİZMA gui, komut satırı ve betikten aynı dik ayak ve boyu okur")
 {
     // Article 6.4 for `core.station_offset`: the points clicked one by one, the

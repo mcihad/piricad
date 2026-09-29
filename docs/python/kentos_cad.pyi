@@ -1030,13 +1030,15 @@ def measure(
     start: Coord = ...,
     end: Coord = ...,
     more: Coords = ...,
+    fixed: bool = ...,
 ) -> int:
-    """Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
+    """Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir.
 
     Komut: core.measure (ÖLÇ)
         start — Ölçümün ilk noktası [mm, Sağa (Y) önce]
         end — Ölçümün ikinci noktası [mm, Sağa (Y) önce]
-        more — Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır [mm, Sağa (Y) önce]
+        more — Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; sabit=evet ise her biri ilk noktadan ölçülür [mm, Sağa (Y) önce]
+        fixed — İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk Nokta Sabit'i)
     """
 
 def measure_area(

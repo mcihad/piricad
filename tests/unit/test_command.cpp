@@ -2281,6 +2281,45 @@ TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("ÖLÇ sabit=evet: her nokta ilk noktadan ölçülür; toplam yazılmaz")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    std::vector<MeasureMark> marks;
+    f.bus.on_measure_mark = [&marks](const MeasureMark& m) { marks.push_back(m); };
+
+    // A STAR, NOT A RUN: 30,40 and 60,80 are 50 m and 100 m from the first
+    // point, and 0,10 is 10 m from it — none is measured from the one before.
+    auto star =
+        f.bus.execute_line("ÖLÇ 0,0 30,40 devam=60,80 0,10 sabit=evet", Origin::CommandLine);
+    REQUIRE(star.ok());
+    const core::Json& report = star.value().report;
+    CHECK(report.find("sabit")->as_bool());
+    CHECK(report.find("toplam_mm") == nullptr);
+    const auto& from_first = report.find("uzakliklar_mm")->as_array();
+    REQUIRE(from_first.size() == 3);
+    CHECK(from_first[0].as_int() == 50000);
+    CHECK(from_first[1].as_int() == 100000);
+    CHECK(from_first[2].as_int() == 10000);
+    CHECK(said.find("Nokta 2: 100,000 m ilk noktadan") != std::string::npos);
+    CHECK(said.find("Toplam uzunluk") == std::string::npos);
+    // One spoke per point, each from the first.
+    REQUIRE(marks.size() == 3);
+    for (const MeasureMark& m : marks) {
+        REQUIRE(m.points.size() == 2);
+        CHECK(m.points.front() == core::Point2{0, 0});
+    }
+
+    // WITHOUT IT, the run it always was: side after side, and the total.
+    said.clear();
+    auto run = f.bus.execute_line("ÖLÇ 0,0 30,40 devam=60,80", Origin::CommandLine);
+    REQUIRE(run.ok());
+    CHECK(run.value().report.find("kenarlar_mm")->dump() == "[50000,50000]");
+    CHECK(run.value().report.find("toplam_mm")->as_int() == 100000);
+    CHECK(f.journal.entries().empty());
+}
+
 TEST_CASE("PRİZMA: dik ayak ve dik boy, dik()'in tersi; boy sağda pozitif")
 {
     // THE REVERSE, IN CORE: whatever perpendicular_offset puts down reads back

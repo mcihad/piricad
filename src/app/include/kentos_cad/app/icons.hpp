@@ -301,6 +301,7 @@ enum class Glyph {
     ZoomSelection,      ///< the selection framed: YAKINLAŞ SEÇİM
     ExtentCheck,        ///< a straggler far from the rest: KAPSAMDENETİM
     StationOffset,      ///< a point's foot and offset off a baseline: PRİZMA
+    MeasureFixed,       ///< distances from one held first point: ÖLÇ sabit=evet
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

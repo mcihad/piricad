@@ -1965,6 +1965,23 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::MeasureFixed: {
+        // THE FIRST POINT HELD: a pinned point at the bottom left and a spoke
+        // from it to each point measured, in the measuring ink — a star, where
+        // Ölç's picture is a ruler along one run.
+        p.setPen(stroke(k.note, 1.6));
+        p.drawLine(QPointF(4.6, 18.4), QPointF(19.6, 5.4));
+        p.drawLine(QPointF(4.6, 18.4), QPointF(20.2, 15.0));
+        p.setPen(stroke(c, 1.4));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(19.6, 5.4), 1.8, 1.8);
+        p.drawEllipse(QPointF(20.2, 15.0), 1.8, 1.8);
+        p.setPen(stroke(k.shape, 1.4));
+        p.setBrush(k.shape);
+        p.drawEllipse(QPointF(4.6, 18.4), 2.6, 2.6);
+        p.setBrush(Qt::NoBrush);
+        break;
+    }
     case Glyph::StationOffset: {
         // DİK AYAK AND DİK BOY, READ: the baseline, a point off it, and the
         // perpendicular dashed from its foot in the measuring ink, the right

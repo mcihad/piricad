@@ -469,6 +469,13 @@ void MainWindow::buildRibbon()
                                         "yazılır, Enter bitirir"));
     // Corners clicked, not objects picked: a selected line does not grey it.
     areaByCorners->setProperty(kIgnoresSelectionProperty, true);
+    // NETCAD'S İLK NOKTA SABİT (wiki 217385201): every point measured from the
+    // first, where Ölç measures each from the one before.
+    auto* measureFixed = methodTool(
+        Glyph::MeasureFixed, tr("Ölç — ilk nokta sabit"), QStringLiteral("ÖLÇ sabit=evet"),
+        tr("Her nokta ilk noktadan ölçülür: bir köşenin çevresindeki yapılara "
+           "uzaklıkları okumanın yolu; Enter bitirir"));
+    measureFixed->setProperty(kIgnoresSelectionProperty, true);
     // THE GUIDES A HAND PLACES: through the point clicked, across or down —
     // the same guide a drag off the ruler leaves — at an angle, and the list.
     auto* guideAcross =
@@ -881,11 +888,12 @@ void MainWindow::buildRibbon()
     small(ask, actEntityInfo_);
     small(ask, actCoordinate_);
 
+    // ÖLÇ'S FAMILY, as the plan names it: the run, the star from a held first
+    // point, and PRİZMA — three ways of reading distances off points.
     SARibbonPanel* tape = mapTab->addPanel(tr("Ölçüm"));
-    large(tape, actMeasure_);
+    family(tape, {actMeasure_, measureFixed, actStationOffset_}, Size::Large, tr("Ölç"));
     family(tape, {actMeasureArea_, areaByCorners}, Size::Small, tr("Alan Ölç"));
     small(tape, actMeasureAngle_);
-    small(tape, actStationOffset_);
 
     SARibbonPanel* geodesy = mapTab->addPanel(tr("Jeodezi"));
     large(geodesy, actTraverse_);
@@ -982,15 +990,25 @@ void MainWindow::buildRibbon()
     viewTab->setObjectName(QStringLiteral("ribbonView"));
     selectFirst(viewTab);
 
+    // THE PANEL'S OWN WORDS ON ITS BUTTONS — Pencere, Seçime, Önceki, Sonraki —
+    // the plan's names for them; a menu row and a tooltip still say the whole
+    // "Önceki Görünüm" (`QAction::iconText`). The tab fits 1440 px only if they
+    // do: with the full words this panel alone took 429 px. `Yakınlaştır` and
+    // `Uzaklaştır` are pictures here, the magnifier every program draws, because
+    // the canvas carries its own + and − beside the view.
     SARibbonPanel* navigate = viewTab->addPanel(tr("Gezinme"));
     large(navigate, actZoomExtents_);
+    actViewWindow_->setIconText(tr("Pencere"));
+    actZoomSelection_->setIconText(tr("Seçime"));
+    actViewPrevious_->setIconText(tr("Önceki"));
+    actViewNext_->setIconText(tr("Sonraki"));
     small(navigate, actViewWindow_);
-    small(navigate, actZoomIn_);
-    small(navigate, actZoomOut_);
+    small(navigate, actZoomSelection_);
     small(navigate, actPan_);
     small(navigate, actViewPrevious_);
     small(navigate, actViewNext_);
-    small(navigate, actZoomSelection_);
+    icon(navigate, actZoomIn_);
+    icon(navigate, actZoomOut_);
 
     SARibbonPanel* aids = viewTab->addPanel(tr("Yardımcılar"));
     large(aids, actSnap_);
@@ -1036,7 +1054,10 @@ void MainWindow::buildRibbon()
 
     SARibbonPanel* look = viewTab->addPanel(tr("Tema"));
     large(look, actTheme_);
-    small(look, actHud_);
+    // A PICTURE, NOT A LABEL: the developer's panel is F12 for the one who
+    // wants it, and its words cost this tab the width the navigation buttons
+    // need to fit 1440 px (netcad_plan.md N-01). The tooltip still names it.
+    icon(look, actHud_);
     launcher(look, tr("Görünüm ve tema ayarları"),
              [this] { openSettingsSection(QStringLiteral("Görünüm ve Tema")); });
 

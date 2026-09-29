@@ -13,6 +13,12 @@ nokta bir kenar daha ekler, o kenarın uzunluğunu, açısını ve **toplam** uz
 yazar. **Enter** ölçümü bitirir; birden çok kenar ölçtüyseniz son satır toplamı ve
 kenar sayısını verir.
 
+**İlk nokta sabit** (`sabit=evet`, Netcad'in İlk Nokta Sabit'i): ikinci noktadan sonra
+her nokta bir öncekinden değil **ilk noktadan** ölçülür — bir köşenin çevresindeki
+yapılara, bir röperin dört yanındaki noktalara uzaklıklar. Sonuç bir yıldızdır; toplam
+yazılmaz, çünkü kolların toplamı hiçbir şeyin uzunluğu değildir. Ölçüm başladıktan sonra
+kip değiştirilmez; Netcad'deki gibi ölçüm ortasında geçiş ileride gelecek.
+
 **Sonuç tuvalde kalır.** Ölçülen hat, her kenarın üstünde uzunluğu ve son noktanın
 yanında toplamı ile vurgulu çizilir. Çizim değiştiğinde ya da hiçbir komut
 çalışmıyorken **Esc**'e bastığınızda silinir; çizimin bir parçası değildir, kaydedilmez.
@@ -50,6 +56,7 @@ konumlarından alınan bir ölçüm o anki yakınlaştırma kadar yanılırdı.
 ÖLÇ <n1> <n2>
 ÖLÇ <n1> <n2> <n3> …
 ÖLÇ baslangic=<n> bitis=<n> [devam=<n> …]
+ÖLÇ sabit=evet <n1> <n2> [<n3> …]
 ```
 
 ## Parametreler
@@ -59,6 +66,7 @@ konumlarından alınan bir ölçüm o anki yakınlaştırma kadar yanılırdı.
 | `baslangic` | Ölçümün ilk noktası |
 | `bitis` | Ölçümün ikinci noktası |
 | `devam` | Sonraki noktalar; her biri bir kenar daha ekler. Verilmezse ölçüm iki noktada biter (arayüzde Enter'a kadar sorulur) |
+| `sabit` | `evet` ise ikinci noktadan sonraki her nokta ilk noktadan ölçülür; toplam yazılmaz |
 
 ## Örnekler
 
@@ -84,10 +92,22 @@ Kenar 2: 20,000 m   Açı: 0,0000 grad   Toplam: 70,000 m
 Toplam uzunluk: 70,000 m   (2 kenar)
 ```
 
+Aynı noktaları ilk noktadan ölçmek için `sabit=evet`:
+
+```text
+ÖLÇ 485300,4310200 485330,4310240 devam=485340,4310200 sabit=evet
+```
+
+```text
+Mesafe: 50,000 m   ΔY: 30,000 m   ΔX: 40,000 m   Açı: 40,9666 grad (kuzeyden saat yönünde)
+Nokta 2: 40,000 m ilk noktadan   ΔY: 40,000 m   ΔX: 0,000 m   Açı: 100,0000 grad
+```
+
 ### Arayüz
 
 Şeritte **Harita ▸ Ölçüm ▸ Ölç**'e basın (ya da `ÖLÇ` yazın) ve noktaları sırayla
-tıklayın. İmleç hareket ettikçe ölçülen hat ve imlece giden kenar çizilir; biten her
+tıklayın. **Ölç**'ün okundaki listede **Ölç — ilk nokta sabit** (`ÖLÇ sabit=evet`) ve
+[**Prizma**](station_offset.md) da vardır; düğmenin yüzü en son kullandığınızı çalıştırır. İmleç hareket ettikçe ölçülen hat ve imlece giden kenar çizilir; biten her
 kenarın üstünde uzunluğu, imlecin yanında o kenarın uzunluğu, açısı ve **toplam**
 yazar. Yakalama açıkken noktalar mevcut köşelere oturur, yani parsel köşeleri
 arasındaki gerçek mesafeyi okursunuz.
@@ -120,7 +140,8 @@ depolama birimi kullanılır (`485300000` = 485 300 m).
 
 Betikten çağrıldığında `baslangic` ve `bitis` verilmelidir; `devam` isteğe
 bağlıdır. Sonuç transkripte yazılır. Yapılandırılmış sonuç (`kenarlar_mm`,
-`toplam_mm`) bir ajana ve Python'a da döner.
+`toplam_mm`) bir ajana ve Python'a da döner; `sabit=evet` ile `sabit: true` ve her
+noktanın ilk noktaya uzaklığı `uzakliklar_mm` olarak.
 
 ## Hatalar
 

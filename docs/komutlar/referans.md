@@ -65,7 +65,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.rotate`](rotate.md) | Döndür | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur. |
 | [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
-| [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
+| [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
 | [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.extent_check`](extent_check.md) | Kapsam Denetimi | `KAPSAMDENETİM`, `KAPSAMDENETIM`, `EXTENTCHECK`, `KPD` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
@@ -935,7 +935,7 @@ Ayrıntılı kullanım: [AYNALA](mirror.md)
 
 ### `core.measure` — ÖLÇ (Ölç)
 
-Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
+Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir.
 
 Bilinen adı: `CETVEL` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
 
@@ -943,7 +943,8 @@ Bilinen adı: `CETVEL` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına ya
 |---|---|---|---|
 | `baslangic` | point | 1 | Ölçümün ilk noktası |
 | `bitis` | point | 1 | Ölçümün ikinci noktası |
-| `devam` | point_list | en az 0 | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır |
+| `devam` | point_list | en az 0 | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; sabit=evet ise her biri ilk noktadan ölçülür |
+| `sabit` | bool | isteğe bağlı | İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk Nokta Sabit'i) |
 
 Ayrıntılı kullanım: [ÖLÇ](measure.md)
 
@@ -8762,7 +8763,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_measure",
     "title": "Ölç",
-    "description": "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nNetcad adı: CETVEL (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nNetcad adı: CETVEL (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8876,7 +8877,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
               }
             }
           ],
-          "description": "Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+          "description": "Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; sabit=evet ise her biri ilk noktadan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "sabit": {
+          "type": "boolean",
+          "description": "İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk Nokta Sabit'i) (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

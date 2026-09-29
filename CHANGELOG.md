@@ -6,6 +6,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ÖLÇ'te ilk nokta sabit
+
+- `ÖLÇ sabit=evet`: ikinci noktadan sonra her nokta ilk noktadan ölçülür (Netcad'in İlk
+  Nokta Sabit'i); toplam yazılmaz, her kol tuvalde ayrı işaretlenir. **Harita ▸ Ölçüm**'de
+  **Ölç** artık bir aile: Ölç, Ölç — ilk nokta sabit ve Prizma.
+
+### Değişti — Görünüm sekmesi yine 1440 pikselde
+
+- Gezinme panelindeki yeni düğmeler şeritte kısa adlarıyla durur — Pencere, Seçime,
+  Önceki, Sonraki (menüde ve ipucunda tam adları); Yakınlaştır ve Uzaklaştır resim
+  olarak, Geliştirici Bilgisi de resim olarak (F12). Görünüm sekmesi 1706 pikselden 1403'e
+  indi ve 1440 piksellik bir dizüstünde yine kaydırmadan sığıyor.
+
 ### Eklendi — PRİZMA: noktanın dik ayağı ve dik boyu
 
 - `PRİZMA A B nokta…` her noktanın iki noktalı bir tabana göre dik ayağını ve dik boyunu

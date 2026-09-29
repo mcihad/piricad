@@ -145,7 +145,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.rotate`](#cadrotate) | `core.rotate` | `DÖNDÜR` | Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya da bir referans doğrultudan bulunur. |
 | [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
-| [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir. |
+| [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`cad.extent_check`](#cadextent_check) | `core.extent_check` | `KAPSAMDENETİM` | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
@@ -1612,7 +1612,7 @@ cad.mirror(
 
 ### `cad.measure`
 
-Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
+Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir.
 
 Komut: `core.measure` — `ÖLÇ`
 
@@ -1621,6 +1621,7 @@ cad.measure(
     start: Coord,
     end: Coord,
     more: Coords,
+    fixed: bool,
 ) -> int
 ```
 
@@ -1628,7 +1629,8 @@ cad.measure(
 |---|---|---|---|
 | `start` | `Coord` | `baslangic` | Ölçümün ilk noktası [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Ölçümün ikinci noktası [mm, Sağa (Y) önce] |
-| `more` | `Coords` | `devam` | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır [mm, Sağa (Y) önce] |
+| `more` | `Coords` | `devam` | Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; sabit=evet ise her biri ilk noktadan ölçülür [mm, Sağa (Y) önce] |
+| `fixed` | `bool` | `sabit` | İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk Nokta Sabit'i) |
 
 [Komut sayfası](../komutlar/measure.md)
 

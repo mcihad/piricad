@@ -72,6 +72,47 @@ PointOptions measuring(const std::vector<core::Point2>& run, RubberShape shape)
     return o;
 }
 
+/// ÖLÇ `sabit=evet`: after the first two points, every further one is measured
+/// from `a` too. No total, because a star's sum is no length of anything; each
+/// answer is its own spoke on the canvas.
+template<typename Bearing>
+Task<void> measure_from_first(Context& ctx, core::Point2 a, core::Point2 b, core::Mm first,
+                              const Bearing& bearing)
+{
+    const std::vector<core::Point2> hub{a};
+    std::vector<core::Point2> reached{b};
+    std::vector<core::Mm> distances{first};
+    for (;;) {
+        auto next =
+            co_await ctx.point("devam", "Sonraki nokta, ilk noktadan ölçülür (Enter bitirir)",
+                               measuring(hub, RubberShape::MeasureRun));
+        if (!next) break;
+        const core::Mm d = core::segment_length(a, *next);
+        ctx.echo("Nokta " + std::to_string(distances.size() + 1) + ": " + metres(d) +
+                 " ilk noktadan   ΔY: " + metres(next->x - a.x) +
+                 "   ΔX: " + metres(next->y - a.y) + "   Açı: " + bearing(a, *next));
+        distances.push_back(d);
+        reached.push_back(*next);
+    }
+
+    core::Json all = core::Json::array({});
+    for (const core::Mm d : distances)
+        all.push(core::Json::integer(d));
+    core::Json report;
+    report.set("sabit", core::Json::boolean(true));
+    report.set("uzakliklar_mm", std::move(all));
+    ctx.report(std::move(report));
+
+    for (std::size_t i = 0; i < reached.size(); ++i)
+        ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Run,
+                             .points = {a, reached[i]},
+                             .labels = {metres(distances[i])}});
+
+    ctx.record("sabit", Value::boolean(true));
+    ctx.record("baslangic", Value::point(a));
+    ctx.record("bitis", Value::point(b));
+}
+
 Task<void> run_measure(Context& ctx)
 {
     // A RUN, NOT A PAIR. ÖLÇ measured one segment and stopped, so the three
@@ -79,6 +120,11 @@ Task<void> run_measure(Context& ctx)
     // measured one ÖLÇ at a time and added up by hand. The first two points
     // still give the one-segment answer they always gave; every point after
     // that adds a segment and the running total, until Enter.
+    // THE FIRST POINT HELD (`sabit=evet`), Netcad's `İlk Nokta Sabit` (wiki
+    // 217385201): every point after it is measured from it, a star rather than
+    // a run — how a corner's distances to the buildings round it are read.
+    const bool fixed = ctx.argument("sabit").as_bool(false);
+
     auto a = co_await ctx.point("baslangic", "Ölçümün ilk noktası");
     if (!a) co_return;
     std::vector<core::Point2> run{*a};
@@ -104,6 +150,11 @@ Task<void> run_measure(Context& ctx)
     ctx.echo("Mesafe: " + metres(first) + "   ΔY: " + metres(b->x - a->x) +
              "   ΔX: " + metres(b->y - a->y) + "   Açı: " + bearing(*a, *b) + " (" +
              core::angle_rule_label(convention.rule) + ")");
+
+    if (fixed) {
+        co_await measure_from_first(ctx, *a, *b, first, bearing);
+        co_return;
+    }
 
     std::vector<core::Mm> sides{first};
     core::Mm total = first;
@@ -358,13 +409,19 @@ KENTOS_COMMAND(measure)
                 Param::point("baslangic", "Ölçümün ilk noktası").en("start"),
                 Param::point("bitis", "Ölçümün ikinci noktası").en("end"),
                 Param::points("devam", Arity::at_least(0),
-                              "Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır")
+                              "Sonraki noktalar: her biri bir kenar daha ekler, toplam da yazılır; "
+                              "sabit=evet ise her biri ilk noktadan ölçülür")
                     .en("more"),
+                Param::boolean("sabit", Arity::optional(),
+                               "İlk nokta sabit: her nokta ilk noktadan ölçülür (Netcad'in İlk "
+                               "Nokta Sabit'i)")
+                    .en("fixed"),
             },
         .undo  = UndoPolicy::None,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla "
-                   "nokta kenarları ve toplam uzunluğu verir.",
+                   "nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya "
+                   "uzaklığını verir.",
         .run = &run_measure,
     };
 }
