@@ -25,6 +25,8 @@ Geometri, katman, öznitelik ve yazı **değişmez**; yalnız görünüm değiş
 |---|---|
 | `STİLKOPYALA` | Türkçe, birincil |
 | `STILKOPYALA` | ASCII karşılık |
+| `BİÇİMBOYA` | Türkçe eş ad: Netcad'deki adı (Biçim Boya) |
+| `BICIMBOYA` | ASCII karşılık |
 | `MATCHPROP` | İngilizce karşılık |
 | `SK` | Kısaltma |
 | `core.match_style` | Komut kimliği |

@@ -68,6 +68,8 @@ AutoCAD'in EXPLODE'u gibi: parçalar tanımın bütün bileşenleridir ve çıkt
 | Ad | Tür |
 |---|---|
 | `PATLAT` | Türkçe, birincil |
+| `AYRIŞTIR` | Türkçe eş ad: Netcad'deki adı (Ayrıştır) |
+| `AYRISTIR` | ASCII karşılık |
 | `EXPLODE` | İngilizce karşılık |
 | `PTL` | Kısaltma |
 | `core.explode` | Komut kimliği |

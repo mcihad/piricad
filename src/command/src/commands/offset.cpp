@@ -338,7 +338,7 @@ KENTOS_COMMAND(offset)
 {
     return CommandSpec{
         .id       = "core.offset",
-        .names    = {"OFSET", "OFFSET", "OF"},
+        .names    = {"OFSET", "PARALEL", "OFFSET", "OF"},
         .title    = "Ofset",
         .category = Category::Modify,
         .params =

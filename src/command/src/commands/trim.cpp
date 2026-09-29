@@ -807,7 +807,7 @@ KENTOS_COMMAND(split)
 {
     return CommandSpec{
         .id       = "core.split",
-        .names    = {"BÖL", "BOL", "SPLIT", "BL"},
+        .names    = {"BÖL", "BOL", "OBJEBÖL", "OBJEBOL", "SPLIT", "BL"},
         .title    = "Böl",
         .category = Category::Modify,
         .params =

@@ -36,6 +36,7 @@ delikler eksi. Delikli bir parselin alanı deliksiz gösterilmez.
 |---|---|
 | `ALANÖLÇ` | Türkçe, birincil |
 | `ALANOLC` | ASCII karşılık |
+| `ALANSOR` | Türkçe eş ad: Netcad'deki adı (Alan Sor) |
 | `AREAOF` | İngilizce karşılık |
 | `AÖ` | Kısaltma |
 | `core.measure_area` | Komut kimliği |

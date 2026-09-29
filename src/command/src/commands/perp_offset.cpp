@@ -147,7 +147,7 @@ KENTOS_COMMAND(perp_offset)
 {
     return CommandSpec{
         .id       = "core.perp_offset",
-        .names    = {"DİKAYAK", "DIKAYAK", "PERPOFFSET", "DA"},
+        .names    = {"DİKAYAK", "DIKAYAK", "YANNOKTA", "PERPOFFSET", "DA"},
         .title    = "Dik Ayak",
         .category = Category::Draw,
         .params =

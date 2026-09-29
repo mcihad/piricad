@@ -962,6 +962,6 @@ etmeden başlamaz.
   tuşlarının varsayılanları (yalnız F4 yardım metninde geçiyor); Dronet, EPlanet, Yapınet, Water, Atıksu,
   Mine sekmelerinin içeriği; NETPRO, NETÇAP, NETKAMU ve NETTOP'un alt sayfaları (yalnız dizin sayfaları
   okundu); Karo Oluşturucu ve Katalog'un ayrıntıları. Plan bunlara dayanmaz.
-- **KentOSCad'de bulunan iki belge tutarsızlığı** (29 Eylül 2026'da düzeltildi): `docs/komutlar/komut-satiri.md`
+- **KentOSCad'de bulunan iki belge tutarsızlığı** (874ce64'te, 28 Eylül 2026'da düzeltildi): `docs/komutlar/komut-satiri.md`
   işaret kuralı bölümü Netcad'in kuralını yanlış aktarıyordu (Açık soru 3; kural 29 Eylül'de Netcad'inkine
   geçti) ve aynı bölüm "Aynı işin fareyle yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek" diyordu.

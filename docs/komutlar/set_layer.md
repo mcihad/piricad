@@ -25,6 +25,8 @@ taşınamaz — komut bunu söyler ve hiçbir şey değiştirmez.
 |---|---|
 | `KATMANAT` | Türkçe, birincil |
 | `KATMANATA` | Türkçe eşanlamlı |
+| `TABAKADEĞİŞTİR` | Türkçe eş ad: Netcad'deki adı (Tabaka Değiştir) |
+| `TABAKADEGISTIR` | ASCII karşılık |
 | `SETLAYER` | İngilizce karşılık |
 | `KA` | Kısaltma |
 | `core.set_layer` | Komut kimliği |

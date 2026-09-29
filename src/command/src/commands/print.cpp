@@ -380,7 +380,7 @@ KENTOS_COMMAND(print)
 {
     return CommandSpec{
         .id       = "core.print",
-        .names    = {"YAZDIR", "PRINT", "PLOT", "YZDR"},
+        .names    = {"YAZDIR", "ÇİZDİR", "CIZDIR", "PRINT", "PLOT", "YZDR"},
         .title    = "Yazdır",
         .category = Category::File,
         .params =

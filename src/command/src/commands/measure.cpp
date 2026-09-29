@@ -372,7 +372,7 @@ KENTOS_COMMAND(measure_area)
 {
     return CommandSpec{
         .id       = "core.measure_area",
-        .names    = {"ALANÖLÇ", "ALANOLC", "AREAOF", "AÖ"},
+        .names    = {"ALANÖLÇ", "ALANOLC", "ALANSOR", "AREAOF", "AÖ"},
         .title    = "Alan Ölç",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
@@ -399,7 +399,7 @@ KENTOS_COMMAND(coordinate)
 {
     return CommandSpec{
         .id       = "core.coordinate",
-        .names    = {"KOORDİNAT", "KOORDINAT", "COORDINATE", "KRD"},
+        .names    = {"KOORDİNAT", "KOORDINAT", "XYZSOR", "COORDINATE", "KRD"},
         .title    = "Koordinat Oku",
         .category = Category::Query,
         .params   = {Param::point("nokta", "Okunacak nokta").en("point")},

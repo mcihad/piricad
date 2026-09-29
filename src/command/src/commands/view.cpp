@@ -91,7 +91,7 @@ KENTOS_COMMAND(zoom)
 {
     return CommandSpec{
         .id       = "core.zoom",
-        .names    = {"YAKINLAŞ", "YAKINLAS", "ZOOM", "Z"},
+        .names    = {"YAKINLAŞ", "YAKINLAS", "LİMİTBUL", "LIMITBUL", "ZOOM", "Z"},
         .title    = "Yakınlaş",
         .category = Category::View,
         .params =

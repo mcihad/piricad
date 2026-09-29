@@ -678,7 +678,7 @@ KENTOS_COMMAND(fillet)
 {
     return CommandSpec{
         .id       = "core.fillet",
-        .names    = {"YUVARLA", "FILLET", "YV"},
+        .names    = {"YUVARLA", "KÖŞEYUVARLAT", "KOSEYUVARLAT", "FILLET", "YV"},
         .title    = "Yuvarla",
         .category = Category::Modify,
         .params =

@@ -928,7 +928,7 @@ KENTOS_COMMAND(explode)
 {
     return CommandSpec{
         .id       = "core.explode",
-        .names    = {"PATLAT", "EXPLODE", "PTL"},
+        .names    = {"PATLAT", "AYRIŞTIR", "AYRISTIR", "EXPLODE", "PTL"},
         .title    = "Patlat",
         .category = Category::Modify,
         .params   = {Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},

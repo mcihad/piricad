@@ -29,6 +29,8 @@ geometridir; totalstation çıktısı da öyle gelir.
 |---|---|
 | `ÇOKLUÇİZGİ` | Türkçe, birincil |
 | `COKLUCIZGI` | ASCII karşılık |
+| `ÇOKLUDOĞRU` | Türkçe eş ad: Netcad'deki adı (Çoklu Doğru) |
+| `COKLUDOGRU` | ASCII karşılık |
 | `POLYLINE` | İngilizce karşılık |
 | `ÇÇ`, `PL` | Kısaltma |
 | `core.polyline` | Komut kimliği |

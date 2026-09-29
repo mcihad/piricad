@@ -269,8 +269,8 @@ Task<void> run_match_style(Context& ctx)
 KENTOS_COMMAND(set_layer)
 {
     return CommandSpec{
-        .id       = "core.set_layer",
-        .names    = {"KATMANAT", "KATMANATA", "SETLAYER", "KA"},
+        .id = "core.set_layer",
+        .names = {"KATMANAT", "KATMANATA", "TABAKADEĞİŞTİR", "TABAKADEGISTIR", "SETLAYER", "KA"},
         .title    = "Katmana Ata",
         .category = Category::Modify,
         .params =
@@ -292,7 +292,7 @@ KENTOS_COMMAND(match_style)
 {
     return CommandSpec{
         .id       = "core.match_style",
-        .names    = {"STİLKOPYALA", "STILKOPYALA", "MATCHPROP", "SK"},
+        .names    = {"STİLKOPYALA", "STILKOPYALA", "BİÇİMBOYA", "BICIMBOYA", "MATCHPROP", "SK"},
         .title    = "Stil Kopyala",
         .category = Category::Modify,
         .params =

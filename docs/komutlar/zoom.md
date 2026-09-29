@@ -20,6 +20,8 @@ yakınlaşıp kaldığınız yerden devam edebilirsiniz.
 |---|---|
 | `YAKINLAŞ` | Türkçe, birincil |
 | `YAKINLAS` | Türkçe karaktersiz klavye için |
+| `LİMİTBUL` | Türkçe eş ad: Netcad'deki adı (Limit Bul). Tek başına yazılınca, `YAKINLAŞ` gibi, çizimin kapsamına yakınlaşır |
+| `LIMITBUL` | ASCII karşılık |
 | `ZOOM` | İngilizce karşılık |
 | `Z` | Kısaltma |
 | `core.zoom` | Komut kimliği |

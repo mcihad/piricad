@@ -36,6 +36,7 @@ aynıdır.
 |---|---|
 | `DİKAYAK` | Türkçe, birincil |
 | `DIKAYAK` | ASCII katlanmış Türkçe |
+| `YANNOKTA` | Türkçe eş ad: Netcad'deki adı (Yan Nokta Hesabı); boy işareti de onunki gibidir, sağ pozitif |
 | `PERPOFFSET` | İngilizce karşılık |
 | `DA` | Kısaltma |
 | `core.perp_offset` | Komut kimliği |

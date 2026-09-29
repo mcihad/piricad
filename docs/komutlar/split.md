@@ -64,6 +64,8 @@ Parsel bölecekseniz `İFRAZ` kullanın.
 |---|---|
 | `BÖL` | Türkçe, birincil |
 | `BOL` | ASCII karşılık |
+| `OBJEBÖL` | Türkçe eş ad: Netcad'deki adı (Obje Böl) |
+| `OBJEBOL` | ASCII karşılık |
 | `SPLIT` | İngilizce karşılık |
 | `BL` | Kısaltma |
 | `core.split` | Komut kimliği |

@@ -74,8 +74,8 @@ Task<void> run(Context& ctx)
 KENTOS_COMMAND(polyline)
 {
     return CommandSpec{
-        .id       = "core.polyline",
-        .names    = {"ÇOKLUÇİZGİ", "COKLUCIZGI", "POLYLINE", "ÇÇ", "PL"},
+        .id = "core.polyline",
+        .names = {"ÇOKLUÇİZGİ", "COKLUCIZGI", "ÇOKLUDOĞRU", "COKLUDOGRU", "POLYLINE", "ÇÇ", "PL"},
         .title    = "Çoklu Çizgi",
         .category = Category::Draw,
         .params   = {Param::points("noktalar", Arity::at_least(2),

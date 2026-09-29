@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Netcad'deki adlarıyla on iki komut
+
+- Netcad'den gelen el, komutu kendi bildiği adla da yazabilir: `PARALEL` (`OFSET`),
+  `AYRIŞTIR` (`PATLAT`), `BİÇİMBOYA` (`STİLKOPYALA`), `KÖŞEYUVARLAT` (`YUVARLA`),
+  `ÇOKLUDOĞRU` (`ÇOKLUÇİZGİ`), `ALANSOR` (`ALANÖLÇ`), `XYZSOR` (`KOORDİNAT`), `ÇİZDİR`
+  (`YAZDIR`), `TABAKADEĞİŞTİR` (`KATMANAT`), `LİMİTBUL` (`YAKINLAŞ`, tek başına kapsama),
+  `OBJEBÖL` (`BÖL`) ve `YANNOKTA` (`DİKAYAK`). Türkçe harfli olanların ASCII yazımı da
+  geçer (`AYRISTIR`, `CIZDIR`…). Hiçbiri başka bir adla çakışmaz; altı modülün kaydını
+  birlikte kuran sınama bunu denetler.
+- `KUTU`, `TABAKA` ve `CETVEL` bilerek eklenmedi: bir komut soru sorarken yazılınca o
+  komutu kapatırlardı, oysa katman adı ya da yazı olarak yazılmaları olağandır.
+
 ### Değişti — dik boy artık sağ pozitif, Netcad gibi
 
 - `dik(A,B,ayak,boy)` ve `DİKAYAK`'ta **boy, A'dan B'ye bakarken sağda pozitif, solda

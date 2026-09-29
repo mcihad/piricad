@@ -43,6 +43,8 @@ License 1.1, ayrılmış ad "Plex") taşır; komutun iletisi de aynı şeyi yaza
 | Ad | Tür |
 |---|---|
 | `YAZDIR` | Türkçe, birincil |
+| `ÇİZDİR` | Türkçe eş ad: Netcad'deki adı (Çizdir) |
+| `CIZDIR` | ASCII karşılık |
 | `PRINT` | İngilizce karşılık |
 | `PLOT` | İngilizce karşılık (CAD alışkanlığı) |
 | `YZDR` | Kısaltma |

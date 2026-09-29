@@ -19,9 +19,14 @@ yazılır: yuvarlama tam sayılarla, yarımdan uzağa yapılır. Ayrıntı:
 
 ## Adlar
 
-| Türkçe | ASCII | İngilizce | Kısaltma |
-|---|---|---|---|
-| `KOORDİNAT` | `KOORDINAT` | `COORDINATE` | `KRD` |
+| Ad | Tür |
+|---|---|
+| `KOORDİNAT` | Türkçe, birincil |
+| `KOORDINAT` | ASCII karşılık |
+| `XYZSOR` | Türkçe eş ad: Netcad'deki adı (XYZ Sor) |
+| `COORDINATE` | İngilizce karşılık |
+| `KRD` | Kısaltma |
+| `core.coordinate` | Komut kimliği |
 
 ## Sözdizimi
 

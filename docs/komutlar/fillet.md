@@ -98,6 +98,8 @@ alan olmayan nesne (daire, yay, yazı) atlanır ve sayılır.
 | Ad | Tür |
 |---|---|
 | `YUVARLA` | Türkçe, birincil |
+| `KÖŞEYUVARLAT` | Türkçe eş ad: Netcad'deki adı (Köşe Yuvarlat) |
+| `KOSEYUVARLAT` | ASCII karşılık |
 | `FILLET` | İngilizce karşılık |
 | `YV` | Kısaltma |
 | `core.fillet` | Komut kimliği |

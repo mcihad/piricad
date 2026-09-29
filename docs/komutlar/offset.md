@@ -76,9 +76,13 @@ OpenCASCADE'in LGPL-2.1 (istisnalı) lisansı GPLv3 ile uyumludur.
 
 ## Adlar
 
-| Türkçe | İngilizce | Kısaltma |
-|---|---|---|
-| `OFSET` | `OFFSET` | `OF` |
+| Ad | Tür |
+|---|---|
+| `OFSET` | Türkçe, birincil |
+| `PARALEL` | Türkçe eş ad: Netcad'deki adı (Paralel) |
+| `OFFSET` | İngilizce karşılık |
+| `OF` | Kısaltma |
+| `core.offset` | Komut kimliği |
 
 ## Sözdizimi
 
