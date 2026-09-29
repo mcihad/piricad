@@ -186,6 +186,19 @@ public:
     /// two points a palette's `dik(` stands on. Empty puts the trace away.
     void setComposeTrace(std::vector<core::Point2> points);
 
+    /// THE BADGE BESIDE A CLICK THAT LANDED ON SEVERAL THINGS: which of how many
+    /// is taken and what it is — `2/3 · Alan · PARSEL · 1 200,00 m²` — written
+    /// where the click was. Empty text takes it away (`MainWindow::PickCycle`).
+    void setPickBadge(core::Point2 at, std::string text);
+
+    /// Where the last click that landed on several things was, in document
+    /// millimetres — the point `pickAmbiguous` and `captureAmbiguous` were
+    /// emitted for, and where the badge belongs.
+    core::Point2 lastPickPoint() const noexcept { return last_pick_point_; }
+
+    /// What the badge says now, for `KENTOS_PICK_PROBE`.
+    const std::string& pickBadgeForProbe() const noexcept { return pick_badge_; }
+
     /// Tells the canvas the document may have changed. The shell calls it after
     /// every command; a mark taken before a change describes a drawing that is
     /// gone and is dropped at the next frame.
@@ -917,6 +930,9 @@ private:
 
     std::vector<StoredMark> marks_;
     std::vector<core::Point2> compose_trace_; ///< a composed line's clicks, in order
+    core::Point2 pick_badge_at_{};            ///< where the badge's click was
+    core::Point2 last_pick_point_{};          ///< the last ambiguous click (`lastPickPoint`)
+    std::string pick_badge_;                  ///< what it says; empty: no badge
 
     /// The last region SINIR's preview found, kept while the cursor stays in it:
     /// an arrangement per mouse move is a cost a hover should not pay. Stale

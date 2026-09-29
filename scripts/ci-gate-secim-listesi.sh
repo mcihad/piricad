@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GATE: a click that hits several objects asks which one, and the answer holds.
+# GATE: a click that hits several objects takes one AND LETS THE HAND WALK TO THE
+# OTHERS IN PLACE — no window — and the one kept holds.
 #
-# THE PROBLEM IT GUARDS. `core::pick_nearest` answers a click with ONE entity,
-# by distance and then by the lower slot. That is correct and, on a plan sheet,
-# unhelpful: a click lands on a parcel, on the boundary that closes it and on the
-# ada boundary drawn over that, all at zero distance, and the user has no way to
-# say they meant the second one. The shell opens a chooser; this checks that the
-# chooser opens, describes what is under the cursor, and that taking a row other
-# than the first actually selects that object.
+# THE PROBLEM IT GUARDS. A click on a plan sheet lands on a parcel, on the ada
+# round it and on a road drawn through, all at zero distance, and the user has
+# to be able to say which one. It used to be a modal list; the user found that
+# clumsy and chose the walk other programs use (Netcad's Space through nested
+# areas, MicroStation's reset, AutoCAD's cycling): the first candidate is taken
+# at once, a badge beside the click says which of how many, Space and Shift+Space
+# walk on and back, Enter keeps, Esc puts the selection back.
+#
+# THE ORDER IS `core::pick_all`'s: nearest first, and among what the point is on
+# or inside, the SMALLEST first — the road (no area), the parcel, then the ada.
 #
 # WHY IT IS A SHELL GATE. /tests links no Qt (Article 3.4), so a canvas, a mouse
-# event and a modal dialog cannot be built there. What IS tested there is the
-# half that is Qt-free — `core::pick_all`'s order and `SEÇ mod=NOKTA sira=` —
-# and this gate covers the half that only exists on a screen. It starts at a real
-# click for the reason the layer probe does: calling the handler proves the
-# handler works and says nothing about the route from the click to it.
+# event and a key cannot be built there. What IS tested there is the half that is
+# Qt-free — `core::pick_all`'s order and `SEÇ mod=NOKTA sira=` — and this gate
+# covers the half that only exists on a screen, starting at a real click.
 set -euo pipefail
 
 kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -77,27 +79,27 @@ bekle() {
     fi
 }
 
-# All three, nearest first — which for three shapes the point is INSIDE is slot
-# order, the same tie `pick_nearest` breaks.
-bekle "[secim] liste: 3 satır"
+# THREE UNDER THE POINT, AND NO WINDOW: the first taken, the badge saying so.
+bekle "[secim] aday: 3"
+bekle "[secim] pencere: yok"
+bekle "[secim] rozet: 1/3 · ÇOKLUÇİZGİ · YOL · 60.000 m — Boşluk: sıradaki"
+bekle "[secim] seçim: 1 nesne, kimlik 3"
 
-# AND WHAT EACH ROW SAYS. The columns are the reason the window is a table and
-# not a menu of ids: a layer, a type and a measurement are what tell two parcels
-# apart, and a row that lost its measurement would still look like a row.
-# The thousands space is part of the check: `1 600.00` is what the attribute
-# table prints and `1600.00` is what a column of areas cannot be scanned in.
-bekle "[secim] satır 1: ALAN · PARSEL · 1 600.00 m² · 1"
-bekle "[secim] satır 2: ALAN · ADA · 3 600.00 m² · 2"
-bekle "[secim] satır 3: ÇOKLUÇİZGİ · YOL · 60.000 m · 3"
+# SPACE WALKS ON — the parcel, then the ada round it, then round to the road —
+# and each step selects what it names: a badge that moved while the selection
+# stayed would pass the badge lines alone.
+bekle "[secim] boşluk: 2/3 · ALAN · PARSEL · 1 600.00 m² — Boşluk: sıradaki | 1 nesne, kimlik 1"
+bekle "[secim] boşluk: 3/3 · ALAN · ADA · 3 600.00 m² — Boşluk: sıradaki | 1 nesne, kimlik 2"
+bekle "[secim] boşluk: 1/3 · ÇOKLUÇİZGİ · YOL · 60.000 m — Boşluk: sıradaki | 1 nesne, kimlik 3"
+bekle "[secim] geri: 3/3 · ALAN · ADA · 3 600.00 m² — Boşluk: sıradaki | 1 nesne, kimlik 2"
 
-# THE SECOND ROW, AND THE DOCUMENT AGREES. The probe takes row 2; a chooser that
-# opened, listed correctly and then selected the top object anyway would pass
-# every check above.
-bekle "[secim] seçim: 1 nesne, kimlik 2"
+# ENTER KEEPS, AND ESC PUTS BACK what was selected before the click.
+bekle "[secim] enter: 1 nesne, kimlik 2 | rozet yok"
+bekle "[secim] esc: 1 nesne, kimlik 2 | rozet yok"
 
 if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
-echo "secim-listesi: OK — üç nesnenin üstüne yapılan tıklama listeyi açıyor, satırlar"
-echo "secim-listesi:   tür · katman · ölçü · kimlik yazıyor, ikinci satır ikinci nesneyi seçiyor"
+echo "secim-listesi: OK — üç nesnenin üstüne tıklama pencere açmadan ilkini alıyor; rozet,"
+echo "secim-listesi:   Boşluk, Shift+Boşluk, Enter ve Esc yerinde çalışıyor"

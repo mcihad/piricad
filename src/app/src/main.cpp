@@ -2544,6 +2544,26 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
+        // AND A CLICK ON TWO THINGS AT ONCE — a parcel and the ada round it —
+        // walked in place: the parcel taken, the badge beside the click, and
+        // Space taking the ada.
+        later([&window] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        });
+        later([clickAt] { clickAt(kentos::core::Point2{485320000, 4310245000}); });
+        later([&window, shot] { shot(QStringLiteral("39-yerinde-gezinme"), &window); });
+        later([&window] {
+            QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.canvas(), &space);
+        });
+        later([&window, shot] { shot(QStringLiteral("39b-yerinde-gezinme-bosluk"), &window); });
+        later([&window] {
+            QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.canvas(), &enter);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

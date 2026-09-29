@@ -283,9 +283,9 @@ public:
     /// list as a click on the drawing, and the row chosen answers the field.
     void chooseCapture(const std::vector<core::EntityId>& candidates);
 
-    /// Clicks the middle of the canvas with a REAL mouse event, answers the
-    /// chooser that opens by taking its SECOND row, and prints what the document
-    /// ended up with.
+    /// Clicks where three objects meet with a REAL mouse event and walks the
+    /// things under the click in place — Space, Shift+Space, Enter, Esc —
+    /// printing the badge and the selection at every step.
     ///
     /// It starts at the click for the reason `LayerPanel::probeByHand` does:
     /// calling `choosePick` would prove `choosePick` works and say nothing about
@@ -714,6 +714,9 @@ private slots:
     void resetLayout();
 
 protected:
+    /// The pick walk's keys, on the canvas and the command line while it is live.
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
     /// Asks before losing work, and lets the user say no.
     ///
     /// THE ONE PLACE A CLOSE CAN BE REFUSED. Every road out of the application —
@@ -898,6 +901,34 @@ private:
 
     /// Reads the snap mask back into the `Nokta Girişi` tab's switches (R47).
     void refreshPointTab();
+
+    /// ONE OF THE THINGS UNDER A CLICK, WALKED IN PLACE — the user's choice over a
+    /// modal list: the first is taken at once, a badge beside the click says which
+    /// of how many, Space and `/` take the next (Shift+Space the one before),
+    /// Enter keeps it and Esc puts the selection back as it was. Netcad's Space
+    /// through nested areas, MicroStation's reset, AutoCAD's selection cycling.
+    struct PickCycle
+    {
+        std::vector<core::EntityKey> keys;   ///< `core::pick_all`'s order: nearest, then smallest
+        std::size_t at{0};                   ///< the one taken now
+        std::vector<core::EntityKey> before; ///< the selection before the click, for Esc
+        Qt::KeyboardModifiers modifiers;     ///< the click's: Shift adds, Ctrl removes
+        core::Point2 where{};                ///< where the click was, for the badge
+        bool capture{false}; ///< a form field's pick: the answer is the field's, not a selection
+    };
+
+    void startPickCycle(const std::vector<core::EntityId>& candidates,
+                        Qt::KeyboardModifiers modifiers, bool capture);
+    /// Takes the current candidate — by the click's modifiers, against the
+    /// selection before it — and writes the badge.
+    void showPickCycle();
+    void stepPickCycle(int by);
+    /// Ends the walk: `keep` leaves the current one (a field's pick is answered
+    /// with it), otherwise the selection is put back; `handOver` also answers a
+    /// question for one object, as Enter does.
+    void endPickCycle(bool keep, bool handOver = false);
+    /// The selection as `keys` — one `SEÇ NESNE` line, `SEÇ TEMİZLE` for none.
+    void sendSelection(const std::vector<core::EntityKey>& keys);
 
     /// Finds, once the ribbon is built, every action whose command acts on some
     /// classes of object only (`CommandSpec::targets`), wherever it is shown.
@@ -1220,6 +1251,10 @@ private:
     bool composeCapture_{false};
     /// The points a composed line was given by clicks, for the canvas's trace.
     std::vector<core::Point2> composeTrace_;
+    /// The walk through the things under a click, while one is live.
+    std::optional<PickCycle> pickCycle_;
+    /// The cursor's last world point (`onCursorMoved`): where a click landed.
+    core::Point2 lastCursor_{};
     /// The `Nokta Girişi` tab's snap switches, one per engine bit, to read back.
     QList<QAction*> promptSnaps_;
 

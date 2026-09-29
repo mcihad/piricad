@@ -729,6 +729,7 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius)
 
     EntityId best = kNoEntity;
     double best_d = 0.0;
+    Mm2 best_area = 0; ///< only read when two candidates are both at distance zero
 
     for_each_candidate(doc, box, scratch, [&](EntityId e) {
         if (!entities.visible(e)) return;
@@ -740,8 +741,19 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius)
         // Strictly less: candidates arrive in ascending slot order, so the first
         // of two equally close entities wins and the answer is stable.
         if (best == kNoEntity || d < best_d) {
-            best   = e;
-            best_d = d;
+            best      = e;
+            best_d    = d;
+            best_area = d == 0.0 ? doc.entity_area(e) : 0;
+            return;
+        }
+        // BOTH UNDER THE POINT — a click inside a parcel inside its ada — and
+        // the SMALLER wins (`zero_distance_first`): the parcel, not the ada.
+        if (d == 0.0 && best_d == 0.0) {
+            const Mm2 area = doc.entity_area(e);
+            if (area < best_area) {
+                best      = e;
+                best_area = area;
+            }
         }
     });
 
@@ -762,8 +774,15 @@ void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityI
     // The distance rides ALONGSIDE the id rather than being recomputed in the
     // comparator: `min_distance_squared` walks the entity's rings, and a sort
     // that called it would walk them O(n log n) times for a list a user is about
-    // to read four rows of.
-    std::vector<std::pair<double, EntityId>> found;
+    // to read four rows of. So does the area, which only a tie at zero reads.
+    struct Found
+    {
+        double distance;
+        Mm2 area;
+        EntityId entity;
+    };
+
+    std::vector<Found> found;
 
     for_each_candidate(doc, box, scratch, [&](EntityId e) {
         if (!entities.visible(e)) return;
@@ -771,19 +790,24 @@ void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityI
 
         const double d = min_distance_squared(doc, e, cursor);
         if (d < 0.0 || d > limit) return;
-        found.emplace_back(d, e);
+        found.push_back(Found{d, d == 0.0 ? doc.entity_area(e) : 0, e});
     });
 
-    // STABLE, and on the distance alone. Candidates arrive in ascending slot
-    // order, so a stable sort leaves two equally close entities in slot order —
-    // which is the tie `pick_nearest` breaks the same way, and is what lets
-    // `out.front()` be its answer.
-    std::stable_sort(found.begin(), found.end(),
-                     [](const auto& a, const auto& b) { return a.first < b.first; });
+    // STABLE, on the distance and, AT ZERO, ON THE AREA: everything the point is
+    // on or inside is at distance zero, and among those the smallest comes
+    // first — a line (no area), then the parcel, then the ada round it, the
+    // order Netcad walks nested areas in (217387890) and `SEÇ İÇEREN` lists
+    // them in. Candidates arrive in ascending slot order, so what is still
+    // tied stays in slot order — the tie `pick_nearest` breaks the same way,
+    // which is what lets `out.front()` be its answer.
+    std::stable_sort(found.begin(), found.end(), [](const Found& a, const Found& b) {
+        if (a.distance != b.distance) return a.distance < b.distance;
+        return a.distance == 0.0 && a.area < b.area;
+    });
 
     out.reserve(found.size());
-    for (const auto& [distance, entity] : found)
-        out.push_back(entity);
+    for (const Found& f : found)
+        out.push_back(f.entity);
 }
 
 void pick_in_circle(const Document& doc, Point2 centre, Mm radius, std::vector<EntityId>& out)

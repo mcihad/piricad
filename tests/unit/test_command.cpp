@@ -2587,6 +2587,27 @@ TEST_CASE("SEÇ mod=İÇEREN: daire alanı türünden, delik dış alanı düş�
     CHECK(selected() == std::vector<std::uint64_t>{face});
 }
 
+TEST_CASE("SEÇ NOKTA: iç içe alanların içinde önce en küçüğü, sira=2 onu içeren")
+{
+    // EVERYTHING THE POINT IS INSIDE IS AT DISTANCE ZERO, and among those the
+    // smallest comes first (`core::pick_all`): the parcel, then the ada, the
+    // order the canvas's Space walks and Netcad lists nested areas in. It used
+    // to be drawing order, so a click in a parcel drawn after its ada took the ada.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 100,0 100,100 0,100", Origin::Test).ok()); ///< 1, ada
+    REQUIRE(f.bus.execute_line("ALAN 20,20 40,20 40,40 20,40", Origin::Test).ok()); ///< 2
+    const auto selected = [&f] {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            out.push_back(core::raw(k));
+        return out;
+    };
+    REQUIRE(f.bus.execute_line("SEÇ NOKTA 30,30", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{2});
+    REQUIRE(f.bus.execute_line("SEÇ NOKTA 30,30 sira=2", Origin::CommandLine).ok());
+    CHECK(selected() == std::vector<std::uint64_t>{1});
+}
+
 TEST_CASE("SEÇ kipleri: sekmenin her kipi SEÇ'te çalışır; LAST, SON'dur")
 {
     // THE TAB'S LIST IS SEÇ'S OWN TABLE (select_modes.hpp): every mode it offers

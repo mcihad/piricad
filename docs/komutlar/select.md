@@ -88,19 +88,30 @@ Her modun İngilizce ve karaktersiz karşılıkları da kabul edilir: `TUMU`/`AL
 
 ### Aynı noktada birden çok nesne varsa
 
-Bir imar paftasında tek bir tıklama **aynı anda** parsele, onu kapatan sınıra ve
-üstündeki ada sınırına düşer. Üçü de imlecin altındadır ve üçünün de uzaklığı
-sıfırdır; "en yakın" sorusunun tek bir doğru cevabı yoktur.
+Bir imar paftasında tek bir tıklama **aynı anda** parsele, onu içine alan adaya ve
+içinden geçen yola düşer. Üçü de imlecin altındadır ve üçünün de uzaklığı sıfırdır.
 
-**Arayüzde** böyle bir tıklama bir liste açar. Listede her aday bir satırdır ve
-satır dört şey yazar: **tür**, **katman**, **ölçü** (alan, uzunluk ya da yarıçap
-— nesnenin ne olduğuna göre) ve **kimlik**. Satırlar arasında gezindikçe seçim
-çizimde canlı olarak değişir, böylece hangi satırın hangi nesne olduğunu
-görürsünüz. **Enter** ya da çift tık seçer, **Esc** vazgeçer ve seçimi liste
-açılmadan önceki hâline geri alır.
+**Sıra:** önce en yakın; noktanın üstünde ya da içinde olanlar arasında **önce en
+küçüğü** — çizgi (alanı yok), sonra parsel, sonra onu içine alan ada. Netcad'in iç içe
+alanları küçükten büyüğe gezmesiyle aynı sıra.
 
-İlk satır her zaman komutun kendi başına seçeceği nesnedir — yani listeyi görmezden
-gelip Enter'a basmak eski davranışın tıpatıp aynısıdır.
+**Arayüzde pencere açılmaz.** Tıklama ilk adayı hemen seçer ve imlecin yanında küçük bir
+rozet kaç aday olduğunu ve seçilenin ne olduğunu söyler:
+
+```text
+1/3 · ÇOKLUÇİZGİ · YOL · 60.000 m — Boşluk: sıradaki
+```
+
+| Tuş | Ne yapar |
+|---|---|
+| **Boşluk** ya da **/** | Sıradaki adayı seçer; sonuncudan sonra başa döner |
+| **Shift + Boşluk** | Bir öncekini seçer |
+| **Enter** | Seçileni tutar; rozet kalkar. Komut tek nesne soruyorsa ona verir |
+| **Esc** | Seçimi tıklamadan önceki hâline geri alır |
+
+İmleci tıklanan yerden uzaklaştırmak, başka bir tuşa basmak ya da yeniden tıklamak
+gezinmeyi bitirir; o an seçili olan kalır. Shift ve Ctrl tıklamadaki anlamlarını korur:
+Shift ile gezilen aday seçime eklenir, Ctrl ile çıkarılır.
 
 **Komut satırında ve betikte** aynı şeyi `sira` yapar:
 

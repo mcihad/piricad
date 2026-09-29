@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — üst üste binen nesneler pencere açmadan, yerinde gezilir
+
+- Birden çok nesnenin üstüne yapılan tıklama artık "Hangisi?" penceresini açmıyor: ilk aday
+  hemen seçilir, imlecin yanındaki rozet kaç aday olduğunu ve seçilenin türünü, katmanını,
+  ölçüsünü yazar (`1/3 · ALAN · PARSEL · 1 600.00 m²`). **Boşluk** ya da **/** sıradakine,
+  **Shift + Boşluk** öncekine geçer; **Enter** tutar, **Esc** tıklamadan önceki seçime döner.
+  Netcad'in Boşluk'la iç içe alanları gezmesi, MicroStation'ın ve AutoCAD'in seçim döngüsü.
+- Sıra: önce en yakın; noktanın üstünde ya da içinde olanlar arasında önce en küçüğü — çizgi,
+  sonra parsel, sonra onu içine alan ada. `SEÇ NOKTA` da aynı sırayla seçer (önceden çizim
+  sırasıydı; parselden önce çizilmiş ada, parselin içine tıklayınca seçiliyordu).
+- Bir alanın nesnesini tuvalden gösterirken de aynı gezinme; Enter alana yazar.
+
 ### Eklendi — soru sürerken Nokta Girişi sekmesi
 
 - Bir komut nokta isterken şeritte **Nokta Girişi** sekmesi belirir (Netcad'in Nokta Seçim

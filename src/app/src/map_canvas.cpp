@@ -571,6 +571,7 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
             if (matches != 1) order = 0;
         }
         if (under.size() > 1 && order == 0) {
+            last_pick_point_ = a;
             emit pickAmbiguous(under, mods);
             return;
         }
@@ -2136,6 +2137,14 @@ void MapCanvas::setComposeTrace(std::vector<core::Point2> points)
     update();
 }
 
+void MapCanvas::setPickBadge(core::Point2 at, std::string text)
+{
+    if (at == pick_badge_at_ && text == pick_badge_) return;
+    pick_badge_at_ = at;
+    pick_badge_    = std::move(text);
+    update();
+}
+
 void MapCanvas::buildComposeTrace()
 {
     if (compose_trace_.empty()) return;
@@ -2774,6 +2783,11 @@ void MapCanvas::buildOverlay()
     buildBrokenLinks();
     buildPreviewGhosts();
     buildComposeTrace();
+    // THE BADGE OF A CLICK ON SEVERAL THINGS, beside and below where it landed.
+    if (!pick_badge_.empty()) {
+        const render::ScreenPointF at = render::to_f(view_.to_screen(pick_badge_at_));
+        addReadout(at.x + 16.0F, at.y + 22.0F, pick_badge_);
+    }
 
     guide_vertices_ = 0;
     guide_label_.clear();
@@ -4003,6 +4017,7 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             return;
         }
         if (under.size() > 1) {
+            last_pick_point_ = at;
             emit captureAmbiguous(under);
             return;
         }

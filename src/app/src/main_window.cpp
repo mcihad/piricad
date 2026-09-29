@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/main_window.hpp"
+#include "kentos_cad/app/measure_text.hpp"
 
 #include "kentos_cad/app/about_dialog.hpp"
 #include "kentos_cad/app/ai_transport.hpp"
@@ -19,7 +20,6 @@
 #include "kentos_cad/app/layout_manager.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
-#include "kentos_cad/app/pick_list.hpp"
 #include "kentos_cad/app/print_dialog.hpp"
 #include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/provider_service.hpp"
@@ -2737,68 +2737,180 @@ void MainWindow::activateEntity(core::EntityKey key)
 void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
                             Qt::KeyboardModifiers modifiers)
 {
-    if (candidates.empty()) return;
+    // IN PLACE, NOT IN A WINDOW: the first is taken as a lone candidate would
+    // be, and the others are a Space away (`PickCycle`).
+    startPickCycle(candidates, modifiers, false);
+}
 
-    // WHAT WAS SELECTED BEFORE, so Esc means what Esc means. The window changes
-    // the selection while the user walks the rows — that is how they see which
-    // row is which — and a cancel that left the last row highlighted would have
-    // silently made the choice it was cancelling.
-    const std::vector<core::EntityKey> before = controller_->bus().selection().keys();
+void MainWindow::sendSelection(const std::vector<core::EntityKey>& keys)
+{
+    // ONE LINE, ALWAYS THE SAME LINE. Walking, keeping and putting back all leave
+    // through `core.select`, so the transcript of a walk reads exactly like the
+    // command a script would have sent (Article 1.2).
+    command::Args args;
+    if (keys.empty()) {
+        args.set("mod", command::Value::text("TEMİZLE"));
+    } else {
+        std::vector<std::int64_t> ids;
+        ids.reserve(keys.size());
+        for (const core::EntityKey key : keys)
+            ids.push_back(static_cast<std::int64_t>(static_cast<std::uint64_t>(key)));
+        args.set("mod", command::Value::text("NESNE"));
+        args.set("nesneler", command::Value::ids(std::move(ids)));
+    }
+    controller_->runInvocation(
+        command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+}
 
-    // ONE LINE, ALWAYS THE SAME LINE. Browsing, choosing and cancelling all leave
-    // through `core.select`, so the transcript of a click in this window reads
-    // exactly like the command a script would have sent (Article 1.2).
-    const auto send = [this](const std::vector<core::EntityKey>& keys, const char* how) {
-        command::Args args;
-        if (keys.empty()) {
-            args.set("mod", command::Value::text("TEMİZLE"));
-        } else {
-            std::vector<std::int64_t> ids;
-            ids.reserve(keys.size());
-            for (const core::EntityKey key : keys)
-                ids.push_back(static_cast<std::int64_t>(static_cast<std::uint64_t>(key)));
-            args.set("mod", command::Value::text("NESNE"));
-            args.set("nesneler", command::Value::ids(std::move(ids)));
-            if (how != nullptr) args.set("islem", command::Value::text(how));
-        }
-        controller_->runInvocation(
-            command::Invocation{"core.select", std::move(args), command::Origin::Gui});
-    };
-
-    PickList chooser(*controller_, candidates, this);
-    chooser.applyTheme(theme_);
-
-    // Replace while browsing whatever the modifiers say, because the question the
-    // preview answers is "which one is this row", and a Shift-add preview would
-    // answer a different one.
-    connect(&chooser, &PickList::highlighted, this,
-            [&send](core::EntityKey key) { send({key}, nullptr); });
-
-    if (chooser.exec() != QDialog::Accepted) {
-        send(before, nullptr);
+void MainWindow::startPickCycle(const std::vector<core::EntityId>& candidates,
+                                Qt::KeyboardModifiers modifiers, bool capture)
+{
+    if (pickCycle_) endPickCycle(true); ///< a new click ends the walk before it
+    if (candidates.empty()) {
+        if (capture) canvas_->cancelCapture();
         return;
     }
+    PickCycle cycle;
+    cycle.keys.reserve(candidates.size());
+    for (const core::EntityId e : candidates)
+        cycle.keys.push_back(controller_->document().key_of(e));
+    // WHAT WAS SELECTED BEFORE, so Esc means what Esc means: the walk changes
+    // the selection as it goes — that is how the candidate is seen — and a
+    // cancel that left the last one lit would have made the choice it cancels.
+    cycle.before    = controller_->bus().selection().keys();
+    cycle.modifiers = modifiers;
+    cycle.where     = canvas_->lastPickPoint();
+    cycle.capture   = capture;
+    pickCycle_      = std::move(cycle);
+    canvas_->installEventFilter(this);
+    commandLine_->installEventFilter(this);
+    showPickCycle();
+}
 
-    // AND NOW THE MODIFIERS, against the selection as it was before the window
-    // opened rather than against the preview it left behind. QGIS keys, the same
-    // three `dispatchSelection` sends: Shift adds, Ctrl removes, a plain click
-    // replaces.
-    send(before, nullptr);
-    const core::EntityKey key = chooser.picked();
-    if (key == core::EntityKey::None) return;
+void MainWindow::showPickCycle()
+{
+    if (!pickCycle_) return;
+    const PickCycle& c            = *pickCycle_;
+    const core::EntityKey current = c.keys[c.at];
 
-    if (modifiers.testFlag(Qt::ShiftModifier))
-        send({key}, "EKLE");
-    else if (modifiers.testFlag(Qt::ControlModifier))
-        send({key}, "ÇIKAR");
-    else
-        send({key}, nullptr);
-    // A QUESTION FOR ONE OBJECT is answered by the row chosen, as by a click on
-    // the canvas (`Prompt::pick_most`).
-    if (controller_->awaitingInput() &&
+    // THE CLICK'S OWN RULES, against the selection before it (`dispatchSelection`):
+    // Ctrl removes, Shift adds, a click while a command asks which objects adds,
+    // a question for ONE object is answered by the one — and a plain click
+    // replaces. A field's pick only lights the candidate; the selection is put
+    // back when the walk ends (model.md R43).
+    std::vector<core::EntityKey> result;
+    if (c.capture) {
+        result = {current};
+    } else {
+        const bool picking = controller_->awaitingInput() &&
+                             controller_->promptKind() == command::ParamKind::Selection;
+        const bool ctrl = c.modifiers.testFlag(Qt::ControlModifier);
+        const bool one  = picking && controller_->promptPickMost() == 1 && !ctrl;
+        result          = c.before;
+        const auto held = std::find(result.begin(), result.end(), current);
+        if (ctrl) {
+            if (held != result.end()) result.erase(held);
+        } else if (one || (!picking && !c.modifiers.testFlag(Qt::ShiftModifier))) {
+            result = {current};
+        } else if (held == result.end()) {
+            result.push_back(current);
+        }
+    }
+    sendSelection(result);
+
+    // THE BADGE: which of how many, what it is, what it belongs to, how big.
+    const core::Document& doc = controller_->document();
+    const core::EntityId e    = doc.slot_of(current);
+    if (e == core::kNoEntity) return;
+    QString layer;
+    if (const core::LayerId on = doc.entities().layer[e]; on < doc.layers().size())
+        layer = QString::fromStdString(doc.layers()[on].name);
+    const QString badge =
+        tr("%1/%2 · %3 · %4 · %5 — Boşluk: sıradaki")
+            .arg(c.at + 1)
+            .arg(c.keys.size())
+            .arg(measure::shapeName(doc, doc.entities().kind[e], doc.entities().slot[e]), layer,
+                 measure::spacedThousands(measure::sizeSummary(doc, e)));
+    canvas_->setPickBadge(c.where, badge.toStdString());
+}
+
+void MainWindow::stepPickCycle(int by)
+{
+    if (!pickCycle_) return;
+    PickCycle& c   = *pickCycle_;
+    const auto n   = static_cast<std::ptrdiff_t>(c.keys.size());
+    const auto now = static_cast<std::ptrdiff_t>(c.at);
+    c.at           = static_cast<std::size_t>(((now + by) % n + n) % n);
+    showPickCycle();
+}
+
+void MainWindow::endPickCycle(bool keep, bool handOver)
+{
+    if (!pickCycle_) return;
+    const PickCycle c = std::move(*pickCycle_);
+    pickCycle_.reset();
+    canvas_->removeEventFilter(this);
+    commandLine_->removeEventFilter(this);
+    canvas_->setPickBadge({}, {});
+
+    // A FIELD'S PICK IS NOT A SELECTION: the selection goes back as it was, and
+    // the field has its answer — or keeps waiting, when the walk was left.
+    if (c.capture) {
+        sendSelection(c.before);
+        if (handOver) canvas_->finishCapture(c.keys[c.at]);
+        if (!keep) canvas_->cancelCapture();
+        return;
+    }
+    if (!keep) {
+        sendSelection(c.before);
+        return;
+    }
+    // A QUESTION FOR ONE OBJECT is answered by the one kept, as by a click.
+    if (handOver && controller_->awaitingInput() &&
         controller_->promptKind() == command::ParamKind::Selection &&
-        controller_->promptPickMost() == 1 && !modifiers.testFlag(Qt::ControlModifier))
+        controller_->promptPickMost() == 1 && !c.modifiers.testFlag(Qt::ControlModifier))
         controller_->supplyPickedObjects();
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (pickCycle_ && (watched == canvas_ || watched == commandLine_)) {
+        if (event->type() == QEvent::KeyPress) {
+            const auto* key = static_cast<QKeyEvent*>(event);
+            switch (key->key()) {
+            case Qt::Key_Space:
+                stepPickCycle(key->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1);
+                return true;
+            case Qt::Key_Slash: stepPickCycle(1); return true;
+            case Qt::Key_Return:
+            case Qt::Key_Enter: endPickCycle(true, true); return true;
+            case Qt::Key_Escape: endPickCycle(false); return true;
+            case Qt::Key_Shift:
+            case Qt::Key_Control:
+            case Qt::Key_Alt:
+            case Qt::Key_Meta: break; ///< a modifier alone is not a new key
+            default:
+                // ANY OTHER KEY IS THE HAND MOVING ON: the one taken stays, and
+                // the key does what it does.
+                endPickCycle(true);
+                break;
+            }
+        } else if (event->type() == QEvent::MouseButtonPress && watched == canvas_) {
+            // A NEW CLICK is a new question: the walk ends where it stood —
+            // and a field's pick, still armed, takes the new click.
+            if (pickCycle_->capture) {
+                const PickCycle c = *pickCycle_;
+                pickCycle_.reset();
+                canvas_->removeEventFilter(this);
+                commandLine_->removeEventFilter(this);
+                canvas_->setPickBadge({}, {});
+                sendSelection(c.before);
+            } else {
+                endPickCycle(true);
+            }
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::probePickList()
@@ -2807,72 +2919,65 @@ void MainWindow::probePickList()
         (void)std::fprintf(stdout, "[secim] %s\n", text.toUtf8().constData());
         (void)std::fflush(stdout);
     };
-
     if (canvas_ == nullptr) {
         say(QStringLiteral("tuval yok"));
         return;
     }
-
-    // ARMED BEFORE THE CLICK, because the click opens a MODAL window and does not
-    // return until it closes. The timer fires inside that nested event loop,
-    // which is the only place the chooser can be answered from.
-    QTimer::singleShot(200, this, [say] {
-        auto* chooser = qobject_cast<PickList*>(QApplication::activeModalWidget());
-        if (chooser == nullptr) {
-            say(QStringLiteral("liste açılmadı"));
-            return;
-        }
-
-        auto* grid = chooser->findChild<QTableWidget*>();
-        if (grid == nullptr || grid->rowCount() < 2) {
-            say(QStringLiteral("listede iki satır yok"));
-            chooser->reject();
-            return;
-        }
-
-        say(QStringLiteral("liste: %1 satır").arg(grid->rowCount()));
-        for (int row = 0; row < grid->rowCount(); ++row)
-            say(QStringLiteral("satır %1: %2 · %3 · %4 · %5")
-                    .arg(row + 1)
-                    .arg(grid->item(row, 0) != nullptr ? grid->item(row, 0)->text() : QString())
-                    .arg(grid->item(row, 1) != nullptr ? grid->item(row, 1)->text() : QString())
-                    .arg(grid->item(row, 2) != nullptr ? grid->item(row, 2)->text() : QString())
-                    .arg(grid->item(row, 3) != nullptr ? grid->item(row, 3)->text() : QString()));
-
-        // THE SECOND ROW, which is the whole point: the first is what
-        // `pick_nearest` was already choosing, and reaching past it is the
-        // capability that did not exist.
-        grid->setCurrentCell(1, 0);
-
-        // Photographed when the variable carries a path, the same bargain
-        // `KENTOS_HAND_PROBE` makes: a transcript proves the rows are right and
-        // says nothing about whether a person can read them.
-        if (const QByteArray into = qgetenv("KENTOS_PICK_PROBE"); !into.isEmpty() && into != "1") {
-            const QString file = QString::fromLocal8Bit(into);
-            if (chooser->grab().save(file))
-                say(QStringLiteral("kare yazıldı: %1").arg(file));
-            else
-                say(QStringLiteral("kare yazılamadı: %1").arg(file));
-        }
-
-        chooser->accept();
-    });
-
-    const QPoint at(canvas_->width() / 2, canvas_->height() / 2);
-    QMouseEvent press(QEvent::MouseButtonPress, at, canvas_->mapToGlobal(at), Qt::LeftButton,
-                      Qt::LeftButton, Qt::NoModifier);
-    QMouseEvent release(QEvent::MouseButtonRelease, at, canvas_->mapToGlobal(at), Qt::LeftButton,
-                        Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(canvas_, &press);
-    QCoreApplication::sendEvent(canvas_, &release);
-
-    const command::Selection& picked = controller_->bus().selection();
-    say(QStringLiteral("seçim: %1 nesne%2")
+    const auto badge  = [this] { return QString::fromStdString(canvas_->pickBadgeForProbe()); };
+    const auto chosen = [this] {
+        const command::Selection& picked = controller_->bus().selection();
+        QStringList ids;
+        for (const core::EntityKey k : picked.keys())
+            ids << QString::number(static_cast<qulonglong>(core::raw(k)));
+        return QStringLiteral("%1 nesne%2")
             .arg(picked.size())
-            .arg(picked.size() == 1 ? QStringLiteral(", kimlik %1")
-                                          .arg(static_cast<qulonglong>(
-                                              static_cast<std::uint64_t>(picked.keys().front())))
-                                    : QString()));
+            .arg(ids.isEmpty() ? QString() : QStringLiteral(", kimlik %1").arg(ids.join(u',')));
+    };
+    // A REAL CLICK where the drawing's origin is, which is where the three
+    // objects of the gate's scene meet: the parcel, its ada and the road through.
+    const auto click = [this] {
+        const auto p = canvas_->view().to_screen(core::Point2{0, 0});
+        const QPointF at(p.x, p.y);
+        QMouseEvent move(QEvent::MouseMove, at, canvas_->mapToGlobal(at), Qt::NoButton,
+                         Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &move);
+        QMouseEvent press(QEvent::MouseButtonPress, at, canvas_->mapToGlobal(at), Qt::LeftButton,
+                          Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, at, canvas_->mapToGlobal(at),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &press);
+        QCoreApplication::sendEvent(canvas_, &release);
+    };
+    const auto key = [this](int code, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+        QKeyEvent down(QEvent::KeyPress, code, mods);
+        QCoreApplication::sendEvent(canvas_, &down);
+    };
+
+    // NO WINDOW OPENS: the first candidate is taken and the badge says the rest.
+    click();
+    say(QStringLiteral("aday: %1").arg(pickCycle_ ? pickCycle_->keys.size() : 0));
+    say(QStringLiteral("pencere: %1")
+            .arg(QApplication::activeModalWidget() != nullptr ? QStringLiteral("açıldı")
+                                                              : QStringLiteral("yok")));
+    say(QStringLiteral("rozet: %1").arg(badge()));
+    say(QStringLiteral("seçim: %1").arg(chosen()));
+    // SPACE WALKS ON, round to the first; SHIFT+SPACE WALKS BACK.
+    for (int step = 0; step < 3; ++step) {
+        key(Qt::Key_Space);
+        say(QStringLiteral("boşluk: %1 | %2").arg(badge(), chosen()));
+    }
+    key(Qt::Key_Space, Qt::ShiftModifier);
+    say(QStringLiteral("geri: %1 | %2").arg(badge(), chosen()));
+    // ENTER KEEPS the one taken, and the badge goes.
+    key(Qt::Key_Return);
+    say(QStringLiteral("enter: %1 | rozet %2")
+            .arg(chosen(), badge().isEmpty() ? QStringLiteral("yok") : badge()));
+    // ESC PUTS BACK what was selected before the click.
+    click();
+    key(Qt::Key_Space);
+    key(Qt::Key_Escape);
+    say(QStringLiteral("esc: %1 | rozet %2")
+            .arg(chosen(), badge().isEmpty() ? QStringLiteral("yok") : badge()));
 }
 
 void MainWindow::probeSurfaceNormal()
@@ -10499,41 +10604,10 @@ void MainWindow::resetLayout()
 
 void MainWindow::chooseCapture(const std::vector<core::EntityId>& candidates)
 {
-    if (candidates.empty()) {
-        canvas_->cancelCapture();
-        return;
-    }
-
-    // The same window as `choosePick`, and the same care about the selection: the
-    // list highlights rows by SELECTING them, so whatever was selected before is
-    // put back either way — a field's pick is not a selection (model.md R43).
-    const std::vector<core::EntityKey> before = controller_->bus().selection().keys();
-    const auto send                           = [this](const std::vector<core::EntityKey>& keys) {
-        command::Args args;
-        if (keys.empty()) {
-            args.set("mod", command::Value::text("TEMİZLE"));
-        } else {
-            std::vector<std::int64_t> ids;
-            ids.reserve(keys.size());
-            for (const core::EntityKey key : keys)
-                ids.push_back(static_cast<std::int64_t>(static_cast<std::uint64_t>(key)));
-            args.set("mod", command::Value::text("NESNE"));
-            args.set("nesneler", command::Value::ids(std::move(ids)));
-        }
-        controller_->runInvocation(
-            command::Invocation{"core.select", std::move(args), command::Origin::Gui});
-    };
-
-    PickList chooser(*controller_, candidates, this);
-    chooser.applyTheme(theme_);
-    connect(&chooser, &PickList::highlighted, this, [&send](core::EntityKey key) { send({key}); });
-    const bool accepted = chooser.exec() == QDialog::Accepted;
-    send(before);
-    if (!accepted || chooser.picked() == core::EntityKey::None) {
-        canvas_->cancelCapture();
-        return;
-    }
-    canvas_->finishCapture(chooser.picked());
+    // The same walk as a click's (`PickCycle`), for a form field: the candidate
+    // is lit by selecting it, Enter answers the field, and the selection is put
+    // back either way — a field's pick is not a selection (model.md R43).
+    startPickCycle(candidates, Qt::NoModifier, true);
 }
 
 void MainWindow::onEcho(const QString& text)
@@ -11078,6 +11152,16 @@ void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
 
 void MainWindow::onCursorMoved(core::Point2 world)
 {
+    lastCursor_ = world;
+    // THE HAND LEFT THE SPOT: a walk through the things under a click ends
+    // where it stands once the cursor is well away from where it was.
+    if (pickCycle_) {
+        const auto here  = canvas_->view().to_screen(world);
+        const auto there = canvas_->view().to_screen(pickCycle_->where);
+        const double dx  = here.x - there.x;
+        const double dy  = here.y - there.y;
+        if ((dx * dx) + (dy * dy) > 24.0 * 24.0) endPickCycle(true);
+    }
     // Turkish surveying convention, which EPSG:5254 itself declares: Y is the
     // easting (`sağa değer`) and X is the northing (`yukarı değer`). Storage is
     // unaffected — Point2::x holds the easting either way (.claude/model.md R37a).

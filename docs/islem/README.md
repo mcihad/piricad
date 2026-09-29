@@ -80,7 +80,8 @@ Karttaki bir **nokta** ya da **nesne** alanı sahneden doldurulabilir: alanın y
 nişan düğmesine basınca (ya da alandayken **F4**) işaretçi seçim işaretçisine döner,
 durum satırı ne istendiğini söyler, tuvaldeki bir tık alanı doldurur — `KÖŞENUMARALA`'nın
 **baslangic** köşesi, `BAĞLA`'nın **kaynak** nesnesi böyle seçilir. Bir nokta seçilirken
-köşeler yakalanır; tıklanan yerde birden çok nesne varsa "Hangisi?" listesi açılır;
+köşeler yakalanır; tıklanan yerde birden çok nesne varsa ilki alınır, **Boşluk** sıradakine
+geçer ve **Enter** alana yazar;
 **Esc** vazgeçer. Değeri elle yazmak her zaman mümkündür ([Bileşenler](../baslangic/bilesenler.md)).
 
 Etiketleme araçlarının yazdığı yazılar kaynaklarına **bağlıdır**: çizgi taşınınca yazı

@@ -88,7 +88,8 @@ kaynak nesnesi). Kutuya değeri yazabilirsiniz — nokta için `x,y` metre, nesn
 ya da sağdaki **nişan düğmesine** basarsınız: düğme basılı kalır, kutu "sahneden
 seçiliyor…" der, durum satırı ne istendiğini söyler ve fare işaretçisi seçim işaretçisine
 döner. Tuvalde bir tık kutuyu doldurur: nokta seçerken köşeler yakalanır, nesne seçerken
-tıkladığınız yerde birden çok nesne varsa "Hangisi?" listesi açılır. **Esc** ya da sağ tık
+tıkladığınız yerde birden çok nesne varsa ilki alınır ve **Boşluk** sıradakine geçer; **Enter**
+seçileni alana yazar. **Esc** ya da sağ tık
 vazgeçer, düğmeye yeniden basmak da. Seçim yapılırken çizim seçimi değişmez.
 
 **Değiştirilmiş ile Hatalı farklı şeyler söyler.** Turuncu "bunu siz değiştirdiniz ve
@@ -235,7 +236,6 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | **Yeni Sütun** | üstte etiketli form satırları, zorunlu işaretleri, birincil `Tanımla` |
 | **İçe Aktar** | ikincil `Gözat…`, yükleme çizgisi, birincil `İleri` |
 | **Veritabanı** | bölüm başlıkları, etiketi üstte alanlar, birincil `Bağlan`, hayalet `Yenile`, yıkıcı `Projeyi Sil` |
-| **Hangisi?** | birincil `Seç`, ikincil `Vazgeç` |
 | **Yapay Zeka** paneli | döküm, ileti balonu, düşünme göstergesi, ek pençesi, bağlam ölçeri, açılır liste (model seçimi), ikon düğmeler (`Dosya ekle`, `Yeni sohbet`), ikincil `Dur`, birincil `Gönder` |
 | **Öneri kartı** | kesikli çerçeve, `ÖNERİ` rozeti, tek aralıklı komut satırları, uyarı şeridi (çizim değiştiyse), ikincil `Reddet`, birincil `Uygula` |
 | **Araçlar kartı** | segment (Kapsam), parametre alanları, sahneden seçme girdileri (nokta, nesne), birincil `Çalıştır` |
