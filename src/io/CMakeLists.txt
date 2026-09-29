@@ -21,6 +21,9 @@ add_library(kentos_io STATIC
     src/dxf_reader.cpp
     src/dxf_writer.cpp
     src/mapped_file.cpp
+    src/ncz_format.cpp
+    src/ncz_reader.cpp
+    src/ncz_symbols.cpp
     src/project_reader.cpp
     src/project_writer.cpp
     src/postgis.cpp

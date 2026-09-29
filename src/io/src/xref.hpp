@@ -28,6 +28,9 @@ bool looks_like_dxf(const std::string& path);
 /// `.dwg` by extension, case-folded.
 bool looks_like_dwg(const std::string& path);
 
+/// `.ncz` by extension, case-folded: a Netcad drawing (`io/ncz.hpp`).
+bool looks_like_ncz(const std::string& path);
+
 /// A GIS file the vector reader may read — GeoPackage, Shapefile and the rest of
 /// the allow-list (`vector_formats`) — by extension; never a DXF, which has its
 /// own reader.

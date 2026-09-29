@@ -27,6 +27,8 @@
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/render/scene.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
@@ -552,6 +554,53 @@ TEST_CASE("C-13 GÖRÜNÜM: ölçekli referansta üye yazısı referansla büyü
     const std::vector<core::EntityId> made = r.pieces();
     REQUIRE_EQ(made.size(), std::size_t{1});
     CHECK_EQ(r.doc.texts().height(r.doc.entities().slot[made[0]]), 1'000);
+}
+
+TEST_CASE("GÖRÜNÜM: uzaktan bakılan küçük daire noktaya çökmez; blok içindeki de")
+{
+    // The regression: the picture's vertex filter measured each vertex from its
+    // stored predecessor, so a circle whose 128 chords were each under 0.75 px
+    // lost every vertex but its two ends and drew as a dot — at 1:1000, every
+    // settlement and TAKS circle of an imported zoning plan.
+    Rig r;
+    r.run("DAİRE merkez=0,0 cevre=5,0"); // 5 m: a chord is 245 mm
+    r.run("DAİRE merkez=40,0 cevre=50,0");
+    r.run("BLOK ad=HALKA taban=40,0 nesneler=2");    // leaves a 10 m reference at 40,0
+    r.run("BLOKEKLE ad=HALKA nokta=20,0 olcek=0.5"); // the same 5 m, through a block
+
+    render::ViewTransform view;
+    view.set_viewport(1000, 800);
+    view.set_centre(Point2{10'000, 0}, 370.0); // a chord is 0.66 px; a circle 27 px across
+    render::DrawList list;
+    render::build_scene(r.doc, view, render::SceneOptions{}, list);
+
+    // Each circle's own run, as wide and as tall as it is drawn.
+    std::vector<std::pair<float, float>> spans; // width, height in pixels
+    for (const render::PolylineBatch& b : list.polylines) {
+        std::size_t at = 0;
+        for (const std::uint32_t n : b.runs) {
+            float x0 = b.xs[at];
+            float x1 = x0;
+            float y0 = b.ys[at];
+            float y1 = y0;
+            for (std::size_t v = at; v < at + n; ++v) {
+                x0 = std::min(x0, b.xs[v]);
+                x1 = std::max(x1, b.xs[v]);
+                y0 = std::min(y0, b.ys[v]);
+                y1 = std::max(y1, b.ys[v]);
+            }
+            spans.emplace_back(x1 - x0, y1 - y0);
+            at += n;
+        }
+    }
+    REQUIRE_EQ(spans.size(), std::size_t{3});
+    std::sort(spans.begin(), spans.end());
+    // 10 m across at 370 mm a pixel is 27.03 px; the 10 m reference twice that.
+    const std::array<float, 3> across{27.03f, 27.03f, 54.05f};
+    for (std::size_t i = 0; i < spans.size(); ++i) {
+        CHECK(std::abs(spans[i].first - across[i]) < 1.0f);
+        CHECK(std::abs(spans[i].second - across[i]) < 1.0f);
+    }
 }
 
 TEST_CASE("C-13 KOPYA: dönüşümün ret sebebi 'kopya dönüştürülemedi' ile ezilmez")

@@ -1045,14 +1045,15 @@ void MainWindow::buildActions()
     // No `kToolCommand`, for the library button's reason: the press opens a
     // file window before any command runs.
     actXref_->setObjectName(QStringLiteral("xrefAttach"));
-    actXref_->setToolTip(tr("DIŞREFERANS — bir proje, DXF, DWG ya da CBS dosyasını (GeoPackage, "
-                            "Shapefile) dış referans olarak bağlar: yerinde çizilir, düzenlenmez, "
-                            "dosyası değişince yenilenir  ·  kısaltma: DRF"));
+    actXref_->setToolTip(tr("DIŞREFERANS — bir proje, DXF, DWG, Netcad NCZ ya da CBS dosyasını "
+                            "(GeoPackage, Shapefile) dış referans olarak bağlar: yerinde çizilir, "
+                            "düzenlenmez, dosyası değişince yenilenir  ·  kısaltma: DRF"));
     actXref_->setStatusTip(actXref_->toolTip());
     connect(actXref_, &QAction::triggered, this, [this] {
         const QString path = QFileDialog::getOpenFileName(
             this, tr("Dış referans"), QFileInfo(controller_->currentFile()).absolutePath(),
-            tr("Çizim ya da CBS dosyası (*.pcad *.dxf *.dwg *.gpkg *.shp);;Tüm dosyalar (*)"));
+            tr("Çizim ya da CBS dosyası (*.pcad *.dxf *.dwg *.ncz *.gpkg *.shp);;Tüm dosyalar "
+               "(*)"));
         if (path.isEmpty()) return;
         controller_->runLine(QStringLiteral("DIŞREFERANS dosya=\"%1\"").arg(path),
                              command::Origin::Gui);
@@ -3642,6 +3643,37 @@ int MainWindow::probeStatusStrip()
         (void)some.save(into + QStringLiteral("/serit-olcum.png"));
         (void)lots.save(into + QStringLiteral("/serit-uzun.png"));
     }
+
+    // NOTHING ON TOP OF ANYTHING, AT ANY WIDTH. The cells used to be laid out
+    // from their own ends and nothing stopped them meeting: on a window a
+    // laptop is wide, with the cursor's coordinate showing, `KALINLIK` was drawn
+    // through `EPSG:5256`. At every width here, with the widest coordinate the
+    // strip is given and a message besides, every region the strip draws is
+    // inside it and apart from every other.
+    statusStrip_->setCoordinate(tr("Y %1  X %2").arg(QStringLiteral("-9 999 999,999"),
+                                                     QStringLiteral("-9 999 999,999")));
+    statusStrip_->setMessage(measured);
+    for (const int wide : {1920, 1600, 1440, 1366, 1280, 1152, 1024}) {
+        resize(wide, 900);
+        QCoreApplication::processEvents();
+        const QVector<QRect> regions = statusStrip_->probeRegions();
+        const int strip              = statusStrip_->width();
+        bool apart                   = true;
+        bool within                  = true;
+        for (int i = 0; i < regions.size(); ++i) {
+            within = within && regions[i].left() >= 0 && regions[i].right() < strip;
+            for (int j = i + 1; j < regions.size(); ++j)
+                apart = apart && !regions[i].intersects(regions[j]);
+        }
+        check(apart && within, QStringLiteral("%1 px: %2 bölge, hiçbiri üst üste değil ve şeridin "
+                                              "içinde (kısaltma adımı %3)")
+                                   .arg(strip)
+                                   .arg(regions.size())
+                                   .arg(statusStrip_->probeCompaction()));
+        if (shooting)
+            (void)statusStrip_->grab().save(into + QStringLiteral("/serit-%1.png").arg(strip));
+    }
+    resize(1600, 1000);
 
     statusStrip_->setMessage(QString());
     (void)std::fprintf(stdout, "[şerit] %d kusur\n", failures);
@@ -10338,6 +10370,10 @@ QString MainWindow::externalFormatFilter(bool for_writing) const
     // offer is a format the user has no way to know exists. Reading only: io.md
     // P8 forbids a native DWG writer, so it must never appear in a save dialog.
     if (!for_writing && io::dwg_backend_available()) entries << tr("AutoCAD DWG (*.dwg)");
+
+    // NOR IS NCZ: Netcad's own drawing, read natively in every build and routed
+    // by extension like DWG (io/ncz.hpp). Reading only — there is no NCZ writer.
+    if (!for_writing) entries << tr("Netcad çizimi (*.ncz)");
 
     entries << tr("Tüm dosyalar (*)");
     return entries.join(QStringLiteral(";;"));

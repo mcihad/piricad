@@ -26,6 +26,13 @@ struct ImportOptions
     /// DWG). Never guessed from the coordinates (io.md R20).
     std::string project_crs;
 
+    /// The central meridian of the drawing's TM zone, in whole degrees; 0 when
+    /// it is not a TM zone or nobody resolved it (`core::Crs::central_meridian_deg`).
+    /// A format that DECLARES its zone — a Netcad NCZ — is compared with it, so
+    /// a TM39 file read into a TM36 drawing is said rather than drawn 250 km
+    /// off (model.md R36: the TM30/TM33 blunder made detectable).
+    int project_meridian{0};
+
     /// The layers to read; empty means every layer. Matched Turkish-folded.
     std::vector<std::string> only;
 

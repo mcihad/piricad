@@ -7,6 +7,7 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
+#include "kentos_cad/io/ncz.hpp"
 #include "kentos_cad/io/options.hpp"
 #include "kentos_cad/io/vector.hpp"
 
@@ -82,6 +83,12 @@ bool looks_like_dwg(const std::string& path)
     return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
 }
 
+bool looks_like_ncz(const std::string& path)
+{
+    if (path.size() < 4) return false;
+    return core::turkish_upper(path.substr(path.size() - 4)) == ".NCZ";
+}
+
 bool looks_like_gis(const std::string& path)
 {
     const VectorFormat* format = vector_format_for_path(path);
@@ -110,6 +117,11 @@ command::Task<core::Status> read_drawing(core::Document& scratch, std::string pa
             co_return err(ErrorCode::Unsupported,
                           "Bu yapıda DWG okuyucu yok; dosyayı DXF olarak kaydedin.");
         auto read = co_await import_dwg(into, path, reading, stop);
+        if (!read) co_return read.error();
+    } else if (looks_like_ncz(path)) {
+        // A NETCAD DRAWING — a base map kept as NCZ, linked as it is. Read in the
+        // drawing's system, as İÇEAKTAR reads it (io/ncz.hpp).
+        auto read = co_await import_ncz(into, path, reading, stop);
         if (!read) co_return read.error();
     } else if (looks_like_gis(path)) {
         // A GIS FILE, LINKED RATHER THAN COPIED (TODOS F-02): its layers and

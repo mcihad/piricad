@@ -68,6 +68,16 @@ public:
     /// copy of the arithmetic this is meant to guard.
     int probeRightCellsWidth() const;
 
+    /// Every region the strip draws something in, as laid out for its current
+    /// width — the coordinate, each chip, each right-hand cell that is shown —
+    /// for `KENTOS_STRIP_PROBE` to prove that no two of them overlap at any
+    /// window width. The message is not one: it takes what is left between.
+    QVector<QRect> probeRegions() const;
+
+    /// How many right-hand cells are shortened or hidden at the current width:
+    /// 0 when everything is shown in full.
+    int probeCompaction() const { return compaction_; }
+
     /// A command's work is running on a thread: `label` takes the message cell,
     /// a moving segment under it says the program is alive, and a `Durdur` chip
     /// beside it requests the stop (`stopRequested`). Off, the cell reads as
@@ -137,8 +147,14 @@ signals:
     void configureRequested(const QString& id);
 
 protected:
-    /// Draws the coordinate cell, the chips and the two right-hand cells.
+    /// Draws the coordinate cell, the chips and the right-hand cells.
     void paintEvent(QPaintEvent* event) override;
+    /// Lays the strip out again for its new width: what fits is shown in full,
+    /// what does not is shortened and then hidden, least important first.
+    void resizeEvent(QResizeEvent* event) override;
+    /// The FULL text of whatever is under the pointer — a cell shortened to
+    /// fit, a message elided at the right, a coordinate — as a tooltip.
+    bool event(QEvent* event) override;
 
     /// Tracks which chip the pointer is over.
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -157,6 +173,21 @@ private:
         int width = 0;
     };
 
+    /// One right-hand cell as it will be drawn: the text it shows at this
+    /// width (its own, shortened, or none beside the icon), whether it is shown
+    /// at all, where it starts and how wide it is.
+    struct Cell
+    {
+        QString text;
+        bool icon  = true;
+        bool shown = false;
+        int left   = 0;
+        int width  = 0;
+    };
+
+    /// Everything's position for the strip's current width. THE ONE LAYOUT: the
+    /// painter, the pointer and the probe read the same answer, so what is drawn
+    /// is what is clicked is what is checked.
     void relayout();
     int cellWidth(const QString& text, bool withIcon) const;
 
@@ -168,7 +199,7 @@ private:
     QString connection_;
     QString agent_;
     AgentState agentState_{AgentState::Off};
-    QRect agentRect_; ///< where the agent cell was last painted
+    QRect agentRect_; ///< where the agent cell is laid out; empty when hidden
     QString scale_;   ///< the plot scale, formatted
     QString crs_;     ///< the coordinate system, formatted
     bool agentHot_{false};
@@ -177,6 +208,14 @@ private:
     int hot_         = -1;
     int coordWidth_  = 0;
     ThemeMode theme_ = ThemeMode::Dark;
+
+    Cell sheetCell_; ///< the plot scale and the coordinate system
+    Cell agentCell_; ///< the agent listener
+    Cell connCell_;  ///< the database connection
+    Cell perfCell_;  ///< the drawing backend
+    int chipPad_    = 0; ///< a chip's inner margin: less of it when room is short
+    int rightEdge_  = 0; ///< the left edge of the right-hand cells
+    int compaction_ = 0; ///< how many steps the layout had to take to fit
 
     bool busy_ = false;
     QString busyLabel_;

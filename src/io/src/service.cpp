@@ -11,6 +11,7 @@
 
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
+#include "kentos_cad/io/ncz.hpp"
 
 #include "kentos_cad/core/text.hpp"
 
@@ -135,6 +136,23 @@ core::Result<ImportProbe> probe_import(core::Document& scratch, const std::strin
         return out;
     }
 
+    // A NETCAD DRAWING (io/ncz.hpp): read natively, in every build.
+    if (looks_like_ncz(path) || core::turkish_iequals(options.driver, "NCZ")) {
+        auto read = drive(import_ncz(tx, path, everything, std::move(stop)));
+        if (!read) return read.error();
+
+        const NczReport& n = read.value();
+        out.driver         = n.version.empty() ? "NCZ" : "NCZ " + n.version;
+        out.crs            = n.crs;
+        out.entities       = n.entities;
+        out.diagnostics    = n.diagnostics;
+        out.fields         = n.fields;
+        out.layers.reserve(n.layer_names.size());
+        for (const auto& [name, made] : n.layer_names)
+            out.layers.emplace_back(name, static_cast<std::uint64_t>(made));
+        return out;
+    }
+
     if (looks_like_dwg(path)) {
         auto read = drive(import_dwg(tx, path, everything, std::move(stop)));
         if (!read) return read.error();
@@ -216,6 +234,18 @@ core::Result<ImportOutcome> read_into_scratch(command::Transaction& tx, const st
         out.layers         = d.layers;
         out.layer_names    = d.layer_names;
         out.diagnostics    = d.diagnostics;
+        return out;
+    }
+    if (looks_like_ncz(path) || core::turkish_iequals(options.driver, "NCZ")) {
+        auto read = drive(import_ncz(tx, path, options, std::move(stop)));
+        if (!read) return read.error();
+        const NczReport& n = read.value();
+        out.driver         = n.version.empty() ? "NCZ" : "NCZ " + n.version;
+        out.crs            = n.crs;
+        out.entities       = n.entities;
+        out.layers         = n.layers;
+        out.layer_names    = n.layer_names;
+        out.diagnostics    = n.diagnostics;
         return out;
     }
     if (looks_like_dwg(path)) {
@@ -899,6 +929,7 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     ImportOptions options;
     options.driver       = std::move(format);
     options.project_crs  = effective_crs(bus_);
+    options.project_meridian = bus_.document().crs().central_meridian_deg();
     options.only         = std::move(only);
     options.fields       = std::move(fields);
     options.drawing_unit = effective_unit(bus_);

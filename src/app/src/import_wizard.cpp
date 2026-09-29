@@ -711,6 +711,8 @@ void ImportWizard::judgePick(const QString& text)
         for (const io::VectorFormat& f : io::vector_formats())
             if (f.read && QString::fromStdString(f.extension).toLower() == suffix) readable = true;
         if (suffix == QStringLiteral(".dwg")) readable = io::dwg_backend_available();
+        // A Netcad drawing needs no library: every build reads it (io/ncz.hpp).
+        if (suffix == QStringLiteral(".ncz")) readable = true;
 
         if (!readable)
             why = suffix == QStringLiteral(".dwg")
@@ -869,13 +871,15 @@ bool ImportWizard::probeSettle(int page, int msecs)
 void ImportWizard::browse()
 {
     QStringList filters;
-    filters << tr("Desteklenen tüm dosyalar (%1)").arg(QStringLiteral("*.dxf *.shp *.gpkg *.dwg"));
+    filters << tr("Desteklenen tüm dosyalar (%1)")
+                   .arg(QStringLiteral("*.dxf *.shp *.gpkg *.dwg *.ncz"));
     for (const io::VectorFormat& f : io::vector_formats())
         if (f.read)
             filters << QStringLiteral("%1 (*%2)")
                            .arg(QString::fromStdString(f.label),
                                 QString::fromStdString(f.extension));
     if (io::dwg_backend_available()) filters << tr("AutoCAD DWG (*.dwg)");
+    filters << tr("Netcad çizimi (*.ncz)");
 
     const QString picked = QFileDialog::getOpenFileName(
         this, tr("İçe aktarılacak dosya"), QFileInfo(pathField_->text()).absolutePath(),
@@ -914,6 +918,7 @@ void ImportWizard::startProbe()
     io::ImportOptions options;
     const core::Crs& mine = controller_.document().crs();
     options.project_crs   = mine.resolved() ? "EPSG:" + std::to_string(mine.epsg()) : mine.id();
+    options.project_meridian = mine.central_meridian_deg();
     options.drawing_unit =
         core::drawing_unit_from_setting(controller_.bus().setting("core.cizim.birim").as_enum());
 

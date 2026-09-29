@@ -75,7 +75,9 @@ QSize StatusStrip::sizeHint() const
 int StatusStrip::cellWidth(const QString& text, bool withIcon) const
 {
     const QFontMetrics metrics(mono(kStatusPx));
-    return kStatusPadX + (withIcon ? kStatusIcon + kStatusGap : 0) +
+    // An icon with no text beside it — a cell shortened to its mark — needs no
+    // gap after the mark.
+    return kStatusPadX + (withIcon ? kStatusIcon + (text.isEmpty() ? 0 : kStatusGap) : 0) +
            static_cast<int>(metrics.horizontalAdvance(text)) + kStatusPadX;
 }
 
@@ -105,8 +107,18 @@ void StatusStrip::setCoordinate(const QString& text)
 
 int StatusStrip::probeRightCellsWidth() const
 {
-    return cellWidth(performance_, false) + cellWidth(connection_, true) +
-           (agent_.isEmpty() ? 0 : cellWidth(agent_, true));
+    return width() - rightEdge_;
+}
+
+QVector<QRect> StatusStrip::probeRegions() const
+{
+    QVector<QRect> out;
+    out.push_back(QRect(0, 0, coordWidth_, kStatusHeight));
+    for (const Chip& chip : chips_)
+        if (chip.width > 0) out.push_back(QRect(chip.left, 0, chip.width, kStatusHeight));
+    for (const Cell* cell : {&sheetCell_, &agentCell_, &connCell_, &perfCell_})
+        if (cell->shown) out.push_back(QRect(cell->left, 0, cell->width, kStatusHeight));
+    return out;
 }
 
 void StatusStrip::setMessage(const QString& text)
@@ -120,6 +132,7 @@ void StatusStrip::setConnection(const QString& text, bool connected)
 {
     connection_ = text;
     connected_  = connected;
+    relayout();
     update();
 }
 
@@ -128,6 +141,7 @@ void StatusStrip::setAgent(const QString& text, AgentState state)
     if (agent_ == text && agentState_ == state) return;
     agent_      = text;
     agentState_ = state;
+    relayout();
     update();
 }
 
@@ -135,6 +149,7 @@ void StatusStrip::setScale(const QString& text)
 {
     if (scale_ == text) return;
     scale_ = text;
+    relayout();
     update();
 }
 
@@ -142,6 +157,7 @@ void StatusStrip::setCrs(const QString& text)
 {
     if (crs_ == text) return;
     crs_ = text;
+    relayout();
     update();
 }
 
@@ -149,6 +165,7 @@ void StatusStrip::setPerformance(const QString& text)
 {
     if (performance_ == text) return;
     performance_ = text;
+    relayout();
     update();
 }
 
@@ -185,20 +202,156 @@ void StatusStrip::pulse()
     update();
 }
 
+namespace {
+
+/// The part of an `A · B` reading before its first separator: `EPSG:5256` out
+/// of `EPSG:5256 · TUREF/TM36`, `QRhi` out of `QRhi (GPU · geometri · yazı)`.
+QString first_part(const QString& text)
+{
+    qsizetype at = text.indexOf(QStringLiteral(" · "));
+    if (const qsizetype paren = text.indexOf(QStringLiteral(" ("));
+        paren >= 0 && (at < 0 || paren < at))
+        at = paren;
+    return at < 0 ? text : text.left(at);
+}
+
+/// How many steps `relayout` may take before the chips themselves give way.
+constexpr int kCompactionSteps = 10;
+
+} // namespace
+
 void StatusStrip::relayout()
 {
     // The coordinate cell is as wide as its own text, so the chips start where
     // the reading ends and the whole strip stays left-packed as §7 draws it.
     coordWidth_ = cellWidth(coordinate_, true);
 
-    const QFontMetrics metrics(sans(kStatusPx, QFont::DemiBold, 0.4));
-    int x = coordWidth_ + 1;
-    for (Chip& chip : chips_) {
-        chip.left = x;
-        chip.width =
-            kStatusPadX + static_cast<int>(metrics.horizontalAdvance(chip.label)) + kStatusPadX;
-        x += chip.width;
+    // WHAT FITS, IN FULL, AND WHAT GIVES WAY FIRST. Every cell used to be drawn
+    // at its full width from its own end — the chips from the left, the readings
+    // from the right — and nothing stopped the two meeting. They met as soon as
+    // the coordinate appeared under a moving cursor on a laptop-wide window, and
+    // the strip drew `KALINLIK` through the middle of `EPSG:5256`. Now the strip
+    // takes the fewest of these steps that make everything fit, each one keeping
+    // what the step before it kept:
+    //
+    //   1 the backend keeps its first word              6 the scale goes too
+    //   2 the system's name goes, its EPSG code stays   7 the connection goes
+    //   3 the connection keeps only its icon            8 the chips close up
+    //   4 the listener keeps only its mark              9 the sheet cell goes
+    //   5 the backend goes                             10 the listener goes
+    //
+    // A shortened cell's full text is its tooltip (`event`), and whatever is
+    // left over past step 10 is chips that do not fit and are not drawn.
+    const QString sheetFull =
+        scale_.isEmpty() && crs_.isEmpty() ? QString() : scale_ + QStringLiteral("  ·  ") + crs_;
+    const QString crsShort = first_part(crs_);
+    const QString sheetShort =
+        scale_.isEmpty() ? crsShort
+        : crsShort.isEmpty() ? scale_
+                             : scale_ + QStringLiteral("  ·  ") + crsShort;
+    const QString perfShort = first_part(performance_);
+
+    const QFontMetrics chipMetrics(sans(kStatusPx, QFont::DemiBold, 0.4));
+    int chipsWidth = 0;
+    for (int step = 0; step <= kCompactionSteps; ++step) {
+        compaction_ = step;
+        chipPad_    = step >= 8 ? kStatusPadX / 2 : kStatusPadX;
+
+        sheetCell_.text  = step >= 6 ? crsShort : step >= 2 ? sheetShort : sheetFull;
+        sheetCell_.icon  = true;
+        sheetCell_.shown = !sheetFull.isEmpty() && step < 9;
+        perfCell_.text   = step >= 1 ? perfShort : performance_;
+        perfCell_.icon   = false;
+        perfCell_.shown  = !performance_.isEmpty() && step < 5;
+        connCell_.text   = step >= 3 ? QString() : connection_;
+        connCell_.icon   = true;
+        connCell_.shown  = !connection_.isEmpty() && step < 7;
+        agentCell_.text  = step >= 4 ? QString() : agent_;
+        agentCell_.icon  = true;
+        agentCell_.shown = !agent_.isEmpty() && step < 10;
+
+        int right = 0;
+        for (Cell* cell : {&perfCell_, &connCell_, &agentCell_, &sheetCell_}) {
+            cell->width = cell->shown ? cellWidth(cell->text, cell->icon) : 0;
+            right += cell->width;
+        }
+        chipsWidth = 0;
+        for (const Chip& chip : chips_)
+            chipsWidth +=
+                chipPad_ + static_cast<int>(chipMetrics.horizontalAdvance(chip.label)) + chipPad_;
+
+        // One pad of air between the chips and the first reading, always.
+        if (coordWidth_ + 1 + chipsWidth + (right > 0 ? kStatusPadX : 0) + right <= width()) break;
     }
+
+    // The readings, from the right edge leftwards.
+    int x = width();
+    for (Cell* cell : {&perfCell_, &connCell_, &agentCell_, &sheetCell_}) {
+        if (!cell->shown) continue;
+        x -= cell->width;
+        cell->left = x;
+    }
+    rightEdge_ = x;
+    agentRect_ = agentCell_.shown ? QRect(agentCell_.left, 1, agentCell_.width, kStatusHeight - 1)
+                                  : QRect();
+
+    // The chips, from the coordinate rightwards — and a chip that would reach
+    // into the readings is not drawn at all rather than drawn under them.
+    const int chipLimit = rightEdge_ - (rightEdge_ < width() ? kStatusPadX : 0);
+    int cx              = coordWidth_ + 1;
+    bool room           = true;
+    for (Chip& chip : chips_) {
+        chip.left  = cx;
+        chip.width = chipPad_ + static_cast<int>(chipMetrics.horizontalAdvance(chip.label)) + chipPad_;
+        if (!room || chip.left + chip.width > chipLimit) {
+            room       = false;
+            chip.width = 0;
+        }
+        cx += chip.width;
+    }
+}
+
+void StatusStrip::resizeEvent(QResizeEvent* event)
+{
+    QStatusBar::resizeEvent(event);
+    relayout();
+    update();
+}
+
+bool StatusStrip::event(QEvent* event)
+{
+    if (event->type() != QEvent::ToolTip) return QStatusBar::event(event);
+
+    // THE WHOLE TEXT OF WHAT IS UNDER THE POINTER. A reading shortened to fit, a
+    // message elided at the right, a coordinate: the strip gives each of them
+    // less room than it wants, and hovering is how the rest is read.
+    const auto* help = static_cast<QHelpEvent*>(event);
+    const int at     = help->pos().x();
+    QString text;
+    const auto inside = [at](const Cell& cell) {
+        return cell.shown && at >= cell.left && at < cell.left + cell.width;
+    };
+    if (at < coordWidth_) {
+        text = coordinate_;
+    } else if (inside(sheetCell_)) {
+        text = scale_.isEmpty() ? crs_ : scale_ + QStringLiteral("  ·  ") + crs_;
+    } else if (inside(agentCell_)) {
+        text = agent_;
+    } else if (inside(connCell_)) {
+        text = connection_;
+    } else if (inside(perfCell_)) {
+        text = performance_;
+    } else if (!busy_ && !chips_.isEmpty() && at >= chips_.back().left + chips_.back().width &&
+               at < rightEdge_) {
+        text = message_;
+    }
+    if (text.isEmpty()) {
+        QToolTip::hideText();
+        event->ignore();
+        return true;
+    }
+    QToolTip::showText(help->globalPos(), text, this);
+    return true;
 }
 
 void StatusStrip::applyTheme(ThemeMode mode)
@@ -273,6 +426,7 @@ void StatusStrip::paintEvent(QPaintEvent*)
     for (int i = 0; i < chips_.size(); ++i) {
         const Chip& chip = chips_[i];
         const QRect box(chip.left, 1, chip.width, kStatusHeight - 1);
+        if (chip.width <= 0) continue; // no room for it at this width (`relayout`)
 
         // An ON aid is stated twice — a lighter ground AND the accent — because
         // colour alone is not a state a colour-blind user can read (§13).
@@ -282,29 +436,17 @@ void StatusStrip::paintEvent(QPaintEvent*)
             p.fillRect(box, t.hoverRow);
 
         p.setPen(chip.on ? t.accent : (i == hot_ ? t.text : t.textFaint));
-        p.drawText(box, Qt::AlignCenter, chip.label);
+        if (chip.width > 0) p.drawText(box, Qt::AlignCenter, chip.label);
     }
 
     // ---- the right-hand cells ----
     //
-    // ALL THREE OF THEM, measured before anything is drawn. There were two when
-    // this was written and the agent listener made it three, but the gap the
-    // message is given still subtracted only two: a long line — and `ÖLÇ` writes
+    // Where `relayout` put them, at the length it chose. The message is given
+    // the gap to their left and nothing beyond it: a long line — `ÖLÇ` writes
     // one, "Mesafe: 58,941 m  ΔY: 57,000 m  ΔX: 15,000 m  Açı: 83,6183 grad" —
-    // was elided to a box that ran under the MCP cell and the two were drawn on
-    // top of each other. A user reported the measuring tool as broken; what was
-    // broken was where its answer landed.
-    const int perfWidth  = cellWidth(performance_, false);
-    const int connWidth  = cellWidth(connection_, true);
-    const int agentWidth = agent_.isEmpty() ? 0 : cellWidth(agent_, true);
-    const QString sheet =
-        scale_.isEmpty() && crs_.isEmpty() ? QString() : scale_ + QStringLiteral("  ·  ") + crs_;
-    const int sheetWidth = sheet.isEmpty() ? 0 : cellWidth(sheet, true);
-
-    /// The left edge of the right-hand cells: nothing may be drawn past it.
-    const int rightEdge = width() - perfWidth - connWidth - agentWidth - sheetWidth;
-
-    int x = width() - perfWidth;
+    // was once elided to a box that ran under the MCP cell, and the two were
+    // drawn on top of each other.
+    const int rightEdge = rightEdge_;
 
     // ---- a job in flight: its label, a live segment, and Durdur ----
     //
@@ -375,20 +517,26 @@ void StatusStrip::paintEvent(QPaintEvent*)
     }
 
     p.setFont(mono(kStatusPx));
-    p.setPen(t.textDim);
-    p.drawText(QRect(x + kStatusPadX, 1, perfWidth, kStatusHeight - 1),
-               Qt::AlignVCenter | Qt::AlignLeft, performance_);
-    p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+    if (perfCell_.shown) {
+        const int x = perfCell_.left;
+        p.setPen(t.textDim);
+        p.drawText(QRect(x + kStatusPadX, 1, perfCell_.width, kStatusHeight - 1),
+                   Qt::AlignVCenter | Qt::AlignLeft, perfCell_.text);
+        p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+    }
 
-    x -= connWidth;
-    p.drawPixmap(
-        QRect(x + kStatusPadX, (kStatusHeight - kStatusIcon) / 2, kStatusIcon, kStatusIcon),
-        glyph_pixmap(Glyph::Cloud, connected_ ? t.ok : t.textFaint, kStatusIcon,
-                     devicePixelRatioF()));
-    p.setPen(t.textDim);
-    p.drawText(QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, connWidth, kStatusHeight - 1),
-               Qt::AlignVCenter | Qt::AlignLeft, connection_);
-    p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+    if (connCell_.shown) {
+        const int x = connCell_.left;
+        p.drawPixmap(
+            QRect(x + kStatusPadX, (kStatusHeight - kStatusIcon) / 2, kStatusIcon, kStatusIcon),
+            glyph_pixmap(Glyph::Cloud, connected_ ? t.ok : t.textFaint, kStatusIcon,
+                         devicePixelRatioF()));
+        p.setPen(t.textDim);
+        p.drawText(
+            QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, connCell_.width, kStatusHeight - 1),
+            Qt::AlignVCenter | Qt::AlignLeft, connCell_.text);
+        p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+    }
 
     // ---- the agent listener ----
     //
@@ -396,10 +544,10 @@ void StatusStrip::paintEvent(QPaintEvent*)
     // hollow ring, up-and-guarded is a filled dot, and up-with-no-token is a
     // filled TRIANGLE — the one shape in the shell that means "look at this" —
     // beside the word `KORUMASIZ`. Clicking the cell runs `MCPSUNUCU`, which is
-    // the same command the menu entry runs.
-    if (!agent_.isEmpty()) {
-        x -= agentWidth;
-        agentRect_ = QRect(x, 1, agentWidth, kStatusHeight - 1);
+    // the same command the menu entry runs. Short of room it keeps the mark,
+    // which carries the state on its own.
+    if (agentCell_.shown) {
+        const int x = agentCell_.left;
         if (agentHot_) p.fillRect(agentRect_, t.hoverRow);
 
         const QRectF mark(x + kStatusPadX, (kStatusHeight - kStatusIcon) / 2.0 + 1.0,
@@ -429,28 +577,26 @@ void StatusStrip::paintEvent(QPaintEvent*)
 
         p.setFont(mono(kStatusPx));
         p.setPen(agentState_ == AgentState::Unprotected ? t.danger : t.textDim);
-        p.drawText(
-            QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, agentWidth, kStatusHeight - 1),
-            Qt::AlignVCenter | Qt::AlignLeft, agent_);
+        p.drawText(QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, agentCell_.width,
+                         kStatusHeight - 1),
+                   Qt::AlignVCenter | Qt::AlignLeft, agentCell_.text);
         p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
-    } else {
-        agentRect_ = QRect();
     }
 
     // ---- the sheet: the plot scale and the coordinate system ----
     //
     // Read, never edited here: the scale is YAZDIR's and AYAR plan_ölçeği's,
     // the system the project's (`design.md` §7).
-    if (!sheet.isEmpty()) {
-        x -= sheetWidth;
+    if (sheetCell_.shown) {
+        const int x = sheetCell_.left;
         p.drawPixmap(
             QRect(x + kStatusPadX, (kStatusHeight - kStatusIcon) / 2, kStatusIcon, kStatusIcon),
             glyph_pixmap(Glyph::Globe, t.textFaint, kStatusIcon, devicePixelRatioF()));
         p.setFont(mono(kStatusPx));
         p.setPen(t.readout);
-        p.drawText(
-            QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, sheetWidth, kStatusHeight - 1),
-            Qt::AlignVCenter | Qt::AlignLeft, sheet);
+        p.drawText(QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, sheetCell_.width,
+                         kStatusHeight - 1),
+                   Qt::AlignVCenter | Qt::AlignLeft, sheetCell_.text);
         p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
     }
 }

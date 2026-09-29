@@ -25,6 +25,7 @@ add_executable(kentos_tests
     unit/test_golden.cpp
     unit/test_index.cpp
     unit/test_io.cpp
+    unit/test_ncz.cpp
     unit/test_jitter.cpp
     unit/test_python.cpp
     unit/test_settings.cpp

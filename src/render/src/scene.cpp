@@ -341,14 +341,21 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             batch.ys.push_back(view.offset_y_f(ys[v]));
         };
 
+        // Measured from the last vertex KEPT, not from the stored predecessor:
+        // measured from the predecessor, a run of steps each shorter than a
+        // pixel lost every one of them however far they went together, so a
+        // 128-chord circle 27 pixels across drew as a dot at its east handle —
+        // every settlement and TAKS circle of a zoning plan at 1:1000.
+        std::size_t kept = 0;
         for (std::size_t v = 0; v < xs.size(); ++v) {
             const bool endpoint = (v == 0 || v + 1 == xs.size());
             if (!endpoint && lod_mm > 0.0 && batch.xs.size() > first) {
-                const double px = static_cast<double>(xs[v] - xs[v - 1]);
-                const double py = static_cast<double>(ys[v] - ys[v - 1]);
+                const double px = static_cast<double>(xs[v] - xs[kept]);
+                const double py = static_cast<double>(ys[v] - ys[kept]);
                 if (std::sqrt(px * px + py * py) < lod_mm) continue;
             }
             push(v);
+            kept = v;
         }
 
         // A closed ring is stored without its duplicated closing vertex, so the

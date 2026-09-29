@@ -188,8 +188,14 @@ inline SinCos sin_cos_rad(double radians) noexcept
 
 namespace detail {
 
-/// atan(t) on [0, tan(π/8)] by its Taylor series, twelve terms in fixed Horner
-/// order. At the fold point the next term is below 1e-16, a few ulps.
+/// atan(t) by its Taylor series, twelve terms in fixed Horner order.
+///
+/// MEASURED, not asserted: at tan(π/8), the top of the range `atan_unit` hands
+/// it, the first omitted term is about 1e-11 and the worst error over [0, 1] is
+/// 9.3e-12 rad — half a thousandth of a micro-degree, which `atan2_udeg` rounds
+/// away. At tan(π/16) it is below 1e-18, which is why `atan_fine` folds that far
+/// before it asks. (This comment used to promise "below 1e-16, a few ulps" at
+/// tan(π/8); the NCZ reader's parity run against CPython found otherwise.)
 constexpr double atan_poly(double t) noexcept
 {
     const double z = t * t;
@@ -212,12 +218,30 @@ constexpr double atan_poly(double t) noexcept
 inline constexpr double kTanEighth = 0.41421356237309503;
 
 /// atan(t) on [0, 1], in radians. Arguments past tan(π/8) are folded through
-/// atan(t) = π/8 + atan((t − c)/(1 + t·c)) with c = tan(π/8), so the series only
-/// ever sees [0, tan(π/16)] where twelve terms carry it to the last bit.
+/// atan(t) = π/8 + atan((t − c)/(1 + t·c)) with c = tan(π/8), so the series sees
+/// [0, tan(π/8)] and is good to 9.3e-12 rad there (`atan_poly`). Enough for a
+/// micro-degree, which is what its one caller rounds to; unchanged on purpose,
+/// because every angle `atan2_udeg` has ever stored came through it.
 constexpr double atan_unit(double t) noexcept
 {
     if (t <= kTanEighth) return atan_poly(t);
     return kPi / 8.0 + atan_poly((t - kTanEighth) / (1.0 + t * kTanEighth));
+}
+
+/// tan(π/16) and tan(3π/16): where `atan_fine` changes fold. Only the branch
+/// depends on them, never the answer's accuracy, so their last digit is free.
+inline constexpr double kTanSixteenth      = 0.19891236737965798;
+inline constexpr double kTanThreeSixteenth = 0.6681786379192989;
+
+/// atan(t) on [0, 1] to the last few bits, for `atan2_rad`: folded about π/8 or
+/// π/4 so the series only ever sees |t| ≤ tan(π/16), where it is exact to below
+/// an ulp. Measured at two ulps against CPython's libm over the whole range.
+constexpr double atan_fine(double t) noexcept
+{
+    if (t <= kTanSixteenth) return atan_poly(t);
+    if (t <= kTanThreeSixteenth)
+        return kPi / 8.0 + atan_poly((t - kTanEighth) / (1.0 + t * kTanEighth));
+    return kPi / 4.0 + atan_poly((t - 1.0) / (1.0 + t));
 }
 
 } // namespace detail
@@ -262,6 +286,44 @@ constexpr std::int64_t atan2_udeg(std::int64_t dy, std::int64_t dx) noexcept
     if (dy < 0) a = kUDegFullCircle - a;
     if (a >= kUDegFullCircle) a -= kUDegFullCircle;
     return a;
+}
+
+/// The direction of the vector (dx, dy) in RADIANS, in [−π, π], answered the way
+/// `std::atan2` answers it — signed zeros, infinities and NaN included — but
+/// deterministic on every platform.
+///
+/// For a CONTINUOUS value a reader must reproduce rather than store: the
+/// rotation a Netcad NCZ reader works out for a rectangle it recognises
+/// (`io/src/ncz_format.cpp`), which has to agree with the reference parser to
+/// the last few bits and with itself on three operating systems. A stored angle
+/// is micro-degrees and goes through `atan2_udeg`.
+///
+/// The octant reduction is one IEEE-754 division; the octant's residue reaches
+/// `detail::atan_fine`, and the reflections are one subtraction each. Accurate to
+/// a few ulps, like `sin_cos_rad` — and a test holds it to that against libm.
+inline double atan2_rad(double dy, double dx) noexcept
+{
+    if (std::isnan(dx) || std::isnan(dy)) return dx + dy;
+
+    const double ax = std::fabs(dx);
+    const double ay = std::fabs(dy);
+    double a        = 0.0;
+    if (ax == 0.0 && ay == 0.0) {
+        a = 0.0; // the zeros: 0 or π by the sign of dx, below
+    } else if (std::isinf(ax) && std::isinf(ay)) {
+        a = kPi / 4.0;
+    } else if (std::isinf(ax)) {
+        a = 0.0;
+    } else if (std::isinf(ay)) {
+        a = kPi / 2.0;
+    } else {
+        const bool steep = ay > ax;
+        const double t   = steep ? ax / ay : ay / ax;
+        const double r   = detail::atan_fine(t);
+        a                = steep ? kPi / 2.0 - r : r;
+    }
+    if (std::signbit(dx)) a = kPi - a;
+    return std::signbit(dy) ? -a : a;
 }
 
 /// `p` turned about `base` by `udeg` counter-clockwise.
