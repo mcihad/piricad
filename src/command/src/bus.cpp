@@ -67,7 +67,25 @@ ResolveContext Bus::resolve_context() const
     return ResolveContext{
         .convention  = angle_convention(),
         .named_point = [this](std::int64_t number) { return numbered_point(number); },
+        .object_path = [this](std::int64_t key) { return object_path(key); },
     };
+}
+
+core::Result<core::CurvePath> Bus::object_path(std::int64_t key) const
+{
+    const core::EntityId slot =
+        key > 0 ? doc_.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)))
+                : core::kNoEntity;
+    if (slot == core::kNoEntity || !doc_.alive(slot))
+        return core::err(core::ErrorCode::NotFound,
+                         "nesne(" + std::to_string(key) + "): böyle bir nesne yok ya da silinmiş.");
+    auto path = core::path_of(doc_, slot);
+    if (!path)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "nesne(" + std::to_string(key) +
+                             ") boyunca yürünecek bir çizgi değil: çizgi, çoklu çizgi, yay, daire "
+                             "ya da yaylı çizgi olmalı.");
+    return std::move(*path);
 }
 
 std::optional<core::Point2> Bus::numbered_point(std::int64_t number) const

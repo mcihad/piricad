@@ -115,6 +115,7 @@ enum class ArgKind : std::uint8_t {
     Offset,    ///< `@dx,dy` or `@d<a`, measured from the argument before it
     Ratio,     ///< a number, or a number and the word `m` meaning metres
     Direction, ///< `sol` · `sağ`, or `yon=<nokta>` naming the solution wanted
+    Object,    ///< `nesne(<kimlik>)`, an object of the drawing by its key
 };
 
 /// Short spellings, used only by the table below so a signature fits one line.
@@ -124,6 +125,7 @@ constexpr ArgKind kAng = ArgKind::Angle;
 constexpr ArgKind kOff = ArgKind::Offset;
 constexpr ArgKind kRat = ArgKind::Ratio;
 constexpr ArgKind kDir = ArgKind::Direction;
+constexpr ArgKind kObj = ArgKind::Object;
 
 /// The longest signature this grammar has — `kes(A,r1,B,r2,yön)`.
 inline constexpr std::size_t kMaxArgs = 5;
@@ -150,7 +152,7 @@ struct PointForm
 /// i are already handled and `UZANTI`, `uzanti` and `uzantı` are one entry.
 /// Order matters only for the message a call that fits nothing gets: the shapes
 /// are listed in the order they appear here.
-constexpr std::array<PointForm, 12> kForms{{
+constexpr std::array<PointForm, 14> kForms{{
     {"son", "SON", "son", {{}}, 0},
     {"n", "N", "n(nokta_no)", {{kNum}}, 1},
     {"orta", "ORTA", "orta(A,B)", {{kPt, kPt}}, 2},
@@ -163,6 +165,8 @@ constexpr std::array<PointForm, 12> kForms{{
     {"ara", "ARA", "ara(A,B,oran) · ara(A,B,mesafe m)", {{kPt, kPt, kRat}}, 3},
     {"uzanti", "UZANTI", "uzanti(A,B,mesafe)", {{kPt, kPt, kNum}}, 3},
     {"xy", "XY", "xy(P,Q)", {{kPt, kPt}}, 2},
+    {"boyunca", "BOYUNCA", "boyunca(nesne(kimlik),mesafe,sapma)", {{kObj, kNum, kNum}}, 3},
+    {"boyunca.yol", "BOYUNCA", "boyunca(nesne(kimlik),mesafe)", {{kObj, kNum}}, 2},
 }};
 
 /// The name a user typed for `form`, which is the id up to its dot: the three
@@ -368,6 +372,31 @@ bool consume(Attempt& m, ArgKind kind, std::size_t index)
             return false;
         }
         return consume_point(m, index, f.substr(eq + 1));
+    }
+
+    case ArgKind::Object: {
+        // `nesne(12)` AND NOTHING ELSE: a bare number here would read as well as
+        // a distance, and an object named by a number in silence is the guess
+        // this grammar refuses. `nesne` is not a point function — it names an
+        // object, not a place — so it is read here and nowhere else.
+        const std::size_t open = f.find('(');
+        if (shape_of(f) != Shape::Name || open == std::string_view::npos || f.back() != ')' ||
+            core::turkish_fold_key(trim(f.substr(0, open))) != "NESNE") {
+            m.why = m.where(index) + "`nesne(<kimlik>)` olmalı. " + m.got();
+            return false;
+        }
+        auto key = number_token(trim(f.substr(open + 1, f.size() - open - 2)), false);
+        if (!key) {
+            m.why = m.where(index) + "nesne kimliği: " + key.error().message;
+            return false;
+        }
+        Token t;
+        t.kind = Token::Kind::Call;
+        t.word = "nesne";
+        t.nested.push_back(std::move(key.value()));
+        m.out.push_back(std::move(t));
+        ++m.at;
+        return true;
     }
     }
     return false;
@@ -752,6 +781,33 @@ core::Result<Point2> resolve_call(const Token& t, Point2 last, const ResolveCont
         auto q = point_at(1);
         if (!q) return q.error();
         return Point2{p.value().x, q.value().y};
+    }
+
+    if (form == "boyunca" || form == "boyunca.yol") {
+        // ALONG AN OBJECT from its first point, and off it to the RIGHT the way
+        // it runs — Netcad's Obje Üzerinde and Paralel Nokta, the sign of
+        // `dik()`. The walk and the offset are `core`'s (`core::point_along`).
+        const double raw = t.nested[0].nested[0].a;
+        if (raw != std::floor(raw) || raw < 1.0 || raw > 9.0e15)
+            return err(ErrorCode::InvalidArgument,
+                       "boyunca(): nesne kimliği 1'den büyük bir tam sayı olmalı. Girilen: " +
+                           describe(t.nested[0]));
+        if (!ctx.object_path)
+            return err(ErrorCode::InvalidArgument,
+                       "boyunca(): bu bağlamda çizim yok, nesne aranamaz.");
+        auto path = ctx.object_path(static_cast<std::int64_t>(raw));
+        if (!path) return path.error();
+
+        const double along_m  = number_at(1);
+        const core::Mm length = core::path_length(path.value());
+        const core::Mm along  = core::mm_from_metres(along_m);
+        if (along_m < 0.0 || along > length)
+            return err(ErrorCode::InvalidArgument,
+                       "boyunca(): nesne " + std::to_string(static_cast<std::int64_t>(raw)) + " " +
+                           metres_text(length) + " m uzunluğunda; " + metres_text(along) +
+                           " m istendi.");
+        const double offset_m = form == "boyunca" ? number_at(2) : 0.0;
+        return core::point_along(path.value(), along, core::mm_from_metres(offset_m));
     }
 
     return err(ErrorCode::InvalidArgument, "Bilinmeyen nokta fonksiyonu: '" + form + "'");

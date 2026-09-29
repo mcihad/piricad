@@ -163,6 +163,7 @@ istemine yazdığınız yanıtta aynı şeydir — üçü de aynı gramerden ge�
 | `ara(A,B,oran)` · `ara(A,B,mesafe m)` | AB üzerinde oranla ya da metreyle |
 | `uzanti(A,B,mesafe)` | AB doğrultusunda B'den `mesafe` metre öte |
 | `xy(P,Q)` | P'nin sağa değeri, Q'nun yukarı değeri |
+| `boyunca(nesne(k),mesafe,sapma)` · `boyunca(nesne(k),mesafe)` | `k` kimlikli çizgi, çoklu çizgi, yay, daire ya da yaylı çizgi boyunca, ilk noktasından `mesafe` metre; oradan `sapma` metre yana (sağ pozitif) |
 
 Adlar büyük/küçük harf ve noktalı/noktasız i farkı gözetmez: `ORTA`, `orta`,
 `uzantı` ve `uzanti` aynı fonksiyondur.
@@ -192,6 +193,27 @@ ayarlarından okunur — kutupsal koordinatla tıpatıp aynı kural.
 
 `ile`'nin ikinci argümanı `@` ile başlamak zorundadır: ölçüm P'den yapılır ve mutlak
 bir çift verilseydi P sessizce boşa giderdi.
+
+### Bir nesne boyunca: `boyunca` ve `nesne`
+
+`boyunca(nesne(k),mesafe,sapma)` bir nesnenin **üzerinde yürür**: `k` kimlikli nesnenin
+ilk noktasından, çizildiği yönde, `mesafe` metre ilerler — yayda ve dairede eğrinin
+kendisi boyunca, kirişleri boyunca değil — ve oradan `sapma` metre yana çıkar. Sapma
+`dik()`'in kuralıyla **sağ pozitiftir**: saat yönünün tersine çizilmiş bir yayda sağ,
+dışarısıdır. Netcad'in Obje Üzerinde ve Paralel Nokta hesabının karşılığıdır.
+
+`nesne(k)` bir **nesnedir, nokta değil**: yalnız `boyunca`'nın ilk argümanı olarak
+yazılır; kimliği `NESNEBİLGİ` ya da seçim satırı söyler. 20 m yarıçaplı bir yayda,
+yay boyunca 25 m ve 3 m sağda bir nokta:
+
+<!-- örnek: yeni çizim -->
+```
+YAY merkez=0,0 baslangic=20,0 bitis=-20,0
+NOKTA boyunca(nesne(1),25,3)
+```
+
+Nokta yayın merkezinden 23 m uzakta, 7,252 m sağa ve 21,827 m yukarıya düşer —
+25/20 radyanlık açının kosinüsü ve sinüsüyle aynı milimetre.
 
 ### Dik ayak ve dik boy — işaret kuralı
 
@@ -441,6 +463,10 @@ Hata mesajları ne beklendiğini ve ne geldiğini birlikte söyler.
 | `kes(): çemberler birbirine ulaşmıyor. Yarıçaplar … merkezler arası …` | İki mesafe ölçüsü kesişmiyor | Mesafeleri ve merkez noktalarını karşılaştırın |
 | `kes(): yön noktası iki çözüme eşit uzaklıkta…` | Verilen yakın nokta iki çözümün tam ortasında | `yon=sol` ya da `yon=sağ` yazın |
 | `Nokta fonksiyonları en fazla 16 kat iç içe yazılır.` | İç içe fonksiyon çok derin | İnşayı birkaç komuta bölün |
+| `boyunca(): nesne 1 62,832 m uzunluğunda; 70,000 m istendi.` | Mesafe nesnenin boyundan uzun ya da eksi | Mesafeyi nesnenin boyunca kalacak biçimde verin |
+| `nesne(99): böyle bir nesne yok ya da silinmiş.` | Kimlik çizimde yok | Kimliği `NESNEBİLGİ` ile okuyun |
+| `nesne(2) boyunca yürünecek bir çizgi değil: …` | Kimlik bir noktanın, yazının ya da deliği olan bir alanın | Çizgi, çoklu çizgi, yay, daire ya da yaylı çizgi verin |
+| `boyunca(): argümanlar hiçbir biçime uymuyor. Biçimler: …` | İlk argüman `nesne(k)` biçiminde değil | `boyunca(nesne(12),25,3)` biçiminde yazın |
 | `'(1+2' ifadesi: kapanmamış parantez` | Parantez kapatılmamış | Parantezi kapatın |
 | `'1/0' ifadesi: sıfıra bölme` | Sıfıra bölme | İfadeyi düzeltin |
 | `'abc' ifadesi: sayı bekleniyordu (konum 0)` | İfadede sayı olmayan bir şey var | İfadeyi düzeltin |

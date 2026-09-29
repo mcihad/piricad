@@ -958,6 +958,59 @@ PathPlace place_at_length(const CurvePath& path, Mm length)
     return path_end(path);
 }
 
+Point2 point_along(const CurvePath& path, Mm length, Mm offset)
+{
+    if (path.pieces.empty()) return Point2{};
+    const PathPlace at = place_at_length(path, length);
+    const PathPiece& p = path.pieces[std::min(at.piece, path.pieces.size() - 1)];
+    const double t     = std::clamp(at.t, 0.0, 1.0);
+
+    // THE BASE POINT AND THE WAY THE PATH RUNS THERE, in double: rounding the
+    // base to the millimetre and then adding the offset would round twice, and a
+    // hand calculation rounds once.
+    double bx = 0.0;
+    double by = 0.0;
+    double tx = 1.0;
+    double ty = 0.0;
+    if (p.kind == PathPiece::Kind::Segment) {
+        const auto dx  = static_cast<double>(p.to.x - p.from.x);
+        const auto dy  = static_cast<double>(p.to.y - p.from.y);
+        const double n = std::sqrt((dx * dx) + (dy * dy));
+        bx             = static_cast<double>(p.from.x) + (dx * t);
+        by             = static_cast<double>(p.from.y) + (dy * t);
+        if (n > 0.0) {
+            tx = dx / n;
+            ty = dy / n;
+        }
+    } else if (curved(p)) {
+        // An ellipse or a spline, as drawn: `PathScope::Curves` only.
+        const curve::Eval eval(p, p.from);
+        const Point2 q     = eval.world(t);
+        const curve::Vec v = eval.tangent(t);
+        const double n     = std::sqrt((v.x * v.x) + (v.y * v.y));
+        bx                 = static_cast<double>(q.x);
+        by                 = static_cast<double>(q.y);
+        if (n > 0.0) {
+            tx = v.x / n;
+            ty = v.y / n;
+        }
+    } else {
+        // AN ARC, on its own circle: the angle from the centre, the radius out,
+        // the tangent the way the arc is walked.
+        const auto turn =
+            static_cast<std::int64_t>(std::llround(static_cast<double>(p.sweep_udeg) * t));
+        const SinCos sc = sin_cos_udeg(wrap(angle_of(p.centre, p.from) + turn));
+        bx = static_cast<double>(p.centre.x) + (static_cast<double>(p.radius) * sc.cos);
+        by = static_cast<double>(p.centre.y) + (static_cast<double>(p.radius) * sc.sin);
+        tx = p.sweep_udeg >= 0 ? -sc.sin : sc.sin;
+        ty = p.sweep_udeg >= 0 ? sc.cos : -sc.cos;
+    }
+
+    // RIGHT OF THE WAY IT RUNS is positive: the tangent turned a quarter clockwise.
+    const auto o = static_cast<double>(offset);
+    return Point2{mm_round(bx + (o * ty)), mm_round(by - (o * tx))};
+}
+
 std::vector<CurvePath> split_path(const CurvePath& path, std::vector<PathPlace> cuts)
 {
     std::vector<CurvePath> out;

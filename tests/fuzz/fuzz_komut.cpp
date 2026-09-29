@@ -72,6 +72,33 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             default: return std::nullopt;
             }
         };
+        // AND FOR `nesne(k)`, THREE PATHS: a 20 m arc, a straight 100 m segment
+        // and a closed 10 m square — a curve, a line and a ring to walk along —
+        // and a refusal for every other key.
+        ctx.object_path = [](std::int64_t key) -> kentos::core::Result<kentos::core::CurvePath> {
+            kentos::core::CurvePath path;
+            if (key == 1) {
+                path.pieces.push_back(kentos::core::arc_piece(Point2{0, 0}, 20000, Point2{20000, 0},
+                                                              Point2{-20000, 0}, true));
+            } else if (key == 2) {
+                kentos::core::PathPiece line;
+                line.from = Point2{0, 0};
+                line.to   = Point2{100000, 0};
+                path.pieces.push_back(line);
+            } else if (key == 3) {
+                const Point2 corners[] = {{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
+                for (std::size_t i = 0; i < 4; ++i) {
+                    kentos::core::PathPiece side;
+                    side.from = corners[i];
+                    side.to   = corners[(i + 1) % 4];
+                    path.pieces.push_back(side);
+                }
+                path.closed = true;
+            } else {
+                return kentos::core::err(kentos::core::ErrorCode::NotFound, "yok");
+            }
+            return path;
+        };
         return ctx;
     };
 

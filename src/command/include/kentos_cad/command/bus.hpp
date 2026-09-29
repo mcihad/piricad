@@ -806,6 +806,12 @@ public:
     /// twice, where both points are the same coordinate anyway.
     std::optional<core::Point2> numbered_point(std::int64_t number) const;
 
+    /// THE PATH OF THE OBJECT WITH KEY `key`, for `boyunca(nesne(key), …)`: a
+    /// line, a polyline, an arc, a circle or an arc-polyline as it is walked
+    /// from its first point (`core::path_of`). Refused, in the user's words,
+    /// when there is no such object or it is not a line to walk along.
+    core::Result<core::CurvePath> object_path(std::int64_t key) const;
+
     /// THE NUMBER OF THE SURVEY POINT STANDING EXACTLY AT `at`, when one does:
     /// the reverse of `numbered_point`, for an answer that names what it measured
     /// (PRİZMA). Empty when no numbered point is there.

@@ -649,6 +649,31 @@ ResolveContext with_points()
         default: return std::nullopt;
         }
     };
+    // `nesne(k)`, the fuzz harness's three paths: a 20 m arc, a 100 m segment and
+    // a closed 10 m square; every other key is refused.
+    ctx.object_path = [](std::int64_t key) -> core::Result<core::CurvePath> {
+        core::CurvePath path;
+        if (key == 1) {
+            path.pieces.push_back(core::arc_piece(core::Point2{0, 0}, 20000, core::Point2{20000, 0},
+                                                  core::Point2{-20000, 0}, true));
+        } else if (key == 2) {
+            core::PathPiece line;
+            line.to = core::Point2{100000, 0};
+            path.pieces.push_back(line);
+        } else if (key == 3) {
+            const core::Point2 corners[] = {{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
+            for (std::size_t i = 0; i < 4; ++i) {
+                core::PathPiece side;
+                side.from = corners[i];
+                side.to   = corners[(i + 1) % 4];
+                path.pieces.push_back(side);
+            }
+            path.closed = true;
+        } else {
+            return core::err(core::ErrorCode::NotFound, "yok");
+        }
+        return path;
+    };
     return ctx;
 }
 
@@ -991,6 +1016,68 @@ TEST_CASE("NOKTA FONKSİYONU: komut satırından çizilen belge çözülmüş no
     CHECK_EQ(recorded[0], (core::Point2{50000, 0}));
     CHECK_EQ(recorded[1], (core::Point2{30000, 5000}));
     CHECK(f.journal.entries().front().args.to_json().dump().find("orta") == std::string::npos);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: boyunca() yayda, çizgide el hesabıyla; sapma sağda pozitif")
+{
+    Fixture f;
+    const auto where = [&f](std::uint64_t key) {
+        const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(key));
+        return core::point_position_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    };
+
+    // A 20 m ARC round the origin from 20,0, anticlockwise. 25 m along it is
+    // 1,25 rad round, and the right of an anticlockwise arc is OUTWARD: 3 m
+    // right is 23 m from the centre. By hand, 23·cos 1,25 = 7,25241 m and
+    // 23·sin 1,25 = 21,82665 m; 3 m left is 17 m out, and none is 20.
+    REQUIRE(f.bus.execute_line("YAY merkez=0,0 baslangic=20,0 bitis=-20,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("NOKTA boyunca(nesne(1),25,3)", Origin::CommandLine).ok());
+    CHECK_EQ(where(2), (core::Point2{7'252, 21'827}));
+    REQUIRE(f.bus.execute_line("NOKTA boyunca(nesne(1),25,-3)", Origin::CommandLine).ok());
+    CHECK_EQ(where(3), (core::Point2{5'360, 16'133}));
+    REQUIRE(f.bus.execute_line("NOKTA boyunca(nesne(1),25)", Origin::CommandLine).ok());
+    CHECK_EQ(where(4), (core::Point2{6'306, 18'980}));
+
+    // A LINE, and the sign of `dik()`: 30 m along the east axis and 5 m right
+    // is 5 m south, the same point `dik(0,0,100,0,30,5)` gives.
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::Test).ok()); ///< 5
+    REQUIRE(f.bus.execute_line("NOKTA boyunca(nesne(5),30,5)", Origin::CommandLine).ok());
+    CHECK_EQ(where(6), (core::Point2{30'000, -5'000}));
+    CHECK_EQ(where(6), fn("dik(0,0,100,0,30,5)").value());
+
+    // WHAT THE JOURNAL KEEPS is the point, not the walk.
+    const auto& drawn = f.journal.entries().back();
+    CHECK(drawn.args.to_json().dump().find("boyunca") == std::string::npos);
+
+    // REFUSED, each saying what it found: past the end of the 62,832 m arc, an
+    // object that is not there, one that is not a line, a bare number, and no
+    // drawing to search at all.
+    auto past = f.bus.execute_line("NOKTA boyunca(nesne(1),70)", Origin::CommandLine);
+    REQUIRE_FALSE(past.ok());
+    CHECK(past.error().message.find("nesne 1 62,832 m uzunluğunda; 70,000 m istendi") !=
+          std::string::npos);
+    auto gone = f.bus.execute_line("NOKTA boyunca(nesne(99),1)", Origin::CommandLine);
+    REQUIRE_FALSE(gone.ok());
+    CHECK(gone.error().message.find("nesne(99): böyle bir nesne yok") != std::string::npos);
+    auto dot = f.bus.execute_line("NOKTA boyunca(nesne(2),1)", Origin::CommandLine);
+    REQUIRE_FALSE(dot.ok());
+    CHECK(dot.error().message.find("nesne(2) boyunca yürünecek bir çizgi değil") !=
+          std::string::npos);
+    auto bare = fn("boyunca(1,25,3)");
+    REQUIRE_FALSE(bare.ok());
+    // Two shapes, so the refusal lists both rather than one shape's complaint.
+    CHECK(bare.error().message.find("Biçimler: boyunca(nesne(kimlik),mesafe,sapma)") !=
+          std::string::npos);
+    // THE GRAMMAR ALONE, against the stand-in arc: the same point as the drawing.
+    CHECK_EQ(fn("boyunca(nesne(1),25,3)", {}, with_points()).value(),
+             (core::Point2{7'252, 21'827}));
+    // 5 m up the anticlockwise square's east side, running north: right is east,
+    // out of the square.
+    CHECK_EQ(fn("boyunca(nesne(3),15,1)", {}, with_points()).value(),
+             (core::Point2{11'000, 5'000}));
+    auto headless = fn("boyunca(nesne(1),1)");
+    REQUIRE_FALSE(headless.ok());
+    CHECK(headless.error().message.find("bu bağlamda çizim yok") != std::string::npos);
 }
 
 TEST_CASE("DİKAYAK: taban çizgisine göre dik ayak ve dik boy nokta koyar")
@@ -2771,7 +2858,7 @@ TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırıl�
                                 ResolveContext{
                                     core::AngleConvention{static_cast<core::AngleUnit>(unit),
                                                           static_cast<core::AngleRule>(rule)},
-                                    drawing.named_point});
+                                    drawing.named_point, drawing.object_path});
                             if (p) last = p.value();
                         }
                 }

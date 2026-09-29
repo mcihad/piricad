@@ -179,6 +179,14 @@ Box2 path_bounds(const CurvePath& path);
 /// path — what a split at a distance and a split into equal parts walk to.
 PathPlace place_at_length(const CurvePath& path, Mm length);
 
+/// The point `length` millimetres along `path` from its start and `offset`
+/// millimetres to its RIGHT, the way it runs — the side a dik boy is positive on
+/// (Netcad's rule, `perpendicular_offset`); a negative offset is to the left.
+/// Worked in double and rounded to the millimetre ONCE, so it agrees with a hand
+/// calculation to the millimetre. `boyunca()` of the grammar. The length is
+/// clamped like `place_at_length`'s: the caller refuses one past the end.
+Point2 point_along(const CurvePath& path, Mm length, Mm offset);
+
 /// `path` cut at `cuts`, every piece kept, in order: an open path from its
 /// start to the first cut and on to its end; a closed one from each cut to the
 /// next, round the seam. Cuts are sorted and a repeated or an end cut is

@@ -1,0 +1,3 @@
+NOKTA boyunca(nesne(1),70) boyunca(nesne(99),1) boyunca(1,25,3) boyunca(nesne(),1) boyunca(nesne(1.5),1)
+NOKTA boyunca(nesne(1)) boyunca(nesne(1),1,2,3) boyunca(nesne(1),-1) boyunca(nesne(abc),1) nesne(1)
+NOKTA boyunca(nesne(1),1e308) boyunca(nesne(1),0/0) boyunca(nesne(1),1,1e308) boyunca(nesne(nesne(1)),1)

@@ -839,7 +839,7 @@ core::Result<ParsedLine> parse_line(std::string_view line)
 namespace {
 const char* const kCoordinateForms =
     "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı | nokta fonksiyonu: orta, dik, semt, kes, "
-    "ara, uzanti, xy, n, son). Girilen: ";
+    "ara, uzanti, xy, boyunca, n, son). Girilen: ";
 } // namespace
 
 bool is_coordinate(const Token& t)

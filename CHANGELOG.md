@@ -6,6 +6,14 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — bir nesne boyunca nokta: `boyunca(nesne(k), mesafe, sapma)`
+
+- Her nokta isteminde: `k` kimlikli çizgi, çoklu çizgi, yay, daire ya da yaylı çizgi
+  boyunca, ilk noktasından `mesafe` metre ve oradan `sapma` metre yana — sağ pozitif,
+  `dik()` ile aynı kural (Netcad'in Obje Üzerinde ve Paralel Nokta'sı). Yayda eğrinin
+  kendisi boyunca yürür ve milimetreye tek kez yuvarlar: 20 m yarıçaplı yayda 25 m ve 3 m
+  el hesabıyla aynı milimetre. `nesne(k)` yalnız `boyunca`'nın argümanıdır.
+
 ### Eklendi — üç seçim kipi: DAİRE, DIŞINDA, GEÇEN
 
 - `SEÇ DAİRE <merkez> <çevre-noktası>`: dairenin tamamen içindekiler; nesnenin her noktasına

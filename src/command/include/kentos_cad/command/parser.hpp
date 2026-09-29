@@ -32,6 +32,7 @@
 
 #include "kentos_cad/command/value.hpp"
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -156,6 +157,12 @@ core::Result<bool> evaluate_predicate(std::string_view expr, const FieldReader& 
 /// turns object snap off.
 using NamedPointLookup = std::function<std::optional<core::Point2>(std::int64_t number)>;
 
+/// How `nesne(12)` finds the path of object 12 — the line, arc, circle or
+/// arc-polyline `boyunca()` walks — or the reason there is none, worded for the
+/// user. Supplied by the caller for `NamedPointLookup`'s reason; empty where there
+/// is no document, and `boyunca()` then refuses by saying so.
+using ObjectPathLookup = std::function<core::Result<core::CurvePath>(std::int64_t key)>;
+
 /// Everything turning a coordinate into a point needs, besides the coordinate and
 /// the point before it.
 ///
@@ -173,6 +180,9 @@ struct ResolveContext
 
     /// How `n(1284)` finds point 1284; empty where there is no document to search.
     NamedPointLookup named_point{};
+
+    /// How `nesne(12)` finds object 12's path; empty where there is no document.
+    ObjectPathLookup object_path{};
 };
 
 /// Converts a coordinate token to an absolute point, resolving @ forms against
