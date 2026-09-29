@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 119 (104 tanesi onay ister)
-- Katalog parmak izi: `7140330416489816254`
+- Araç sayısı: 120 (104 tanesi onay ister)
+- Katalog parmak izi: `3520172222070751139`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1621,6 +1621,20 @@ Onay ister.
 | `baglama` | konum (tutamak ya da göreli nokta) | hayır | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nesneler` | string | hayır | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_station_offset` — Prizma (Dik Ayak ve Dik Boy)
+
+Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir.
+Komut: PRİZMA (PRIZMA, STATIONOFFSET, PRZ)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `baslangic` | konum (tutamak ya da göreli nokta) | evet | Tabanın başlangıcı (A) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `bitis` | konum (tutamak ya da göreli nokta) | evet | Tabanın sonu (B) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Dik ayağı ve dik boyu okunacak noktalar; boy A'dan B'ye bakarken sağda pozitif — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 
 ### `core_stretch` — Esnet
 

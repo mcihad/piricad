@@ -172,6 +172,7 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 ## İlgili
 
 - [Komut satırı](komut-satiri.md) — `dik(A,B,ayak,boy)` nokta fonksiyonu, aynı hesabın yazılı hâli
+- [PRİZMA](station_offset.md) — tersi: çizimdeki bir noktanın dik ayağını ve dik boyunu okumak
 - [NOKTA](point_draw.md) — tıklanan tek nokta
 - [NOKTALAR](points.md) — nokta no, Y, X listesinden okuma
 - [ÇOKLUÇİZGİ](polyline.md) — noktaları elle birleştirmek

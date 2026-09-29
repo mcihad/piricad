@@ -885,6 +885,7 @@ void MainWindow::buildRibbon()
     large(tape, actMeasure_);
     family(tape, {actMeasureArea_, areaByCorners}, Size::Small, tr("Alan Ölç"));
     small(tape, actMeasureAngle_);
+    small(tape, actStationOffset_);
 
     SARibbonPanel* geodesy = mapTab->addPanel(tr("Jeodezi"));
     large(geodesy, actTraverse_);

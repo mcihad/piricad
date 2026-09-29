@@ -802,6 +802,11 @@ public:
     /// twice, where both points are the same coordinate anyway.
     std::optional<core::Point2> numbered_point(std::int64_t number) const;
 
+    /// THE NUMBER OF THE SURVEY POINT STANDING EXACTLY AT `at`, when one does:
+    /// the reverse of `numbered_point`, for an answer that names what it measured
+    /// (PRİZMA). Empty when no numbered point is there.
+    std::optional<std::string> point_number_at(core::Point2 at) const;
+
     /// Writes a declared setting into whichever store its scope names.
     ///
     /// Calls `on_settings_changed` with that scope afterwards, so whoever owns

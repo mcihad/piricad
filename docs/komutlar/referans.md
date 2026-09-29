@@ -69,6 +69,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.extent_check`](extent_check.md) | Kapsam Denetimi | `KAPSAMDENETİM`, `KAPSAMDENETIM`, `EXTENTCHECK`, `KPD` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
+| [`core.station_offset`](station_offset.md) | Prizma (Dik Ayak ve Dik Boy) | `PRİZMA`, `PRIZMA`, `STATIONOFFSET`, `PRZ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
 | [`core.pan`](pan.md) | Kaydır | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`core.offset`](offset.md) | Ofset | `OFSET`, `PARALEL`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire. |
 | [`core.sector`](sector.md) | Daire Dilimi | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
@@ -977,6 +978,18 @@ Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
 Parametre almaz.
 
 Ayrıntılı kullanım: [KAPSAMDENETİM](extent_check.md)
+
+### `core.station_offset` — PRİZMA (Prizma (Dik Ayak ve Dik Boy))
+
+Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `baslangic` | point | 1 | Tabanın başlangıcı (A) |
+| `bitis` | point | 1 | Tabanın sonu (B) |
+| `noktalar` | point_list | en az 1 | Dik ayağı ve dik boyu okunacak noktalar; boy A'dan B'ye bakarken sağda pozitif |
+
+Ayrıntılı kullanım: [PRİZMA](station_offset.md)
 
 ### `core.pan` — KAYDIR (Kaydır)
 
@@ -11884,6 +11897,152 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "APLIKASYON",
         "STAKEOUT",
         "APL"
+      ]
+    }
+  },
+  {
+    "name": "core_station_offset",
+    "title": "Prizma (Dik Ayak ve Dik Boy)",
+    "description": "Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir.\nKomut: PRİZMA (PRIZMA, STATIONOFFSET, PRZ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baslangic": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Tabanın başlangıcı (A) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "bitis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "taban": {
+                  "type": "string",
+                  "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                  "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                },
+                "dogu": {
+                  "type": "integer",
+                  "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                },
+                "kuzey": {
+                  "type": "integer",
+                  "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                }
+              },
+              "required": [
+                "taban"
+              ],
+              "additionalProperties": false,
+              "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+            }
+          ],
+          "description": "Tabanın sonu (B) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "noktalar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+              "description": "nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                    "description": "köşe — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "taban": {
+                        "type": "string",
+                        "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+                        "description": "taban noktası — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+                      },
+                      "dogu": {
+                        "type": "integer",
+                        "description": "tabandan doğuya (Sağa), milimetre; batı eksi"
+                      },
+                      "kuzey": {
+                        "type": "integer",
+                        "description": "tabandan kuzeye (Yukarı), milimetre; güney eksi"
+                      }
+                    },
+                    "required": [
+                      "taban"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Bir tutamaktan ölçüyle uzaklaşan nokta: {\"taban\": \"@….0\", \"dogu\": 10000, \"kuzey\": 0} tabanın 10 m doğusudur."
+                  }
+                ],
+                "description": "köşe — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "Dik ayağı ve dik boyu okunacak noktalar; boy A'dan B'ye bakarken sağda pozitif — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis",
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.station_offset",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "PRİZMA",
+        "PRIZMA",
+        "STATIONOFFSET",
+        "PRZ"
       ]
     }
   },

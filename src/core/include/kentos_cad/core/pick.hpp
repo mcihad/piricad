@@ -121,8 +121,8 @@ bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, doub
 /// rounded once (§7.3).
 bool circumcircle(Point2 a, Point2 b, Point2 c, Point2& centre, Mm& radius) noexcept;
 
-/// `offset_mm` to the LEFT of a→b, `foot_mm` along it from `a`. False when a and
-/// b coincide, which leaves no direction to drop a perpendicular from.
+/// `offset_mm` to the RIGHT of a→b, `foot_mm` along it from `a`. False when a
+/// and b coincide, which leaves no direction to drop a perpendicular from.
 ///
 /// DİK AYAK / DİK BOY, the way a Turkish survey crew records a detail off a
 /// baseline: walk `foot` along the line from A, turn right, go out `offset`.
@@ -138,6 +138,17 @@ bool circumcircle(Point2 a, Point2 b, Point2 c, Point2& centre, Mm& radius) noex
 /// Determinism: one `std::sqrt`, which IEEE-754 rounds correctly, and one
 /// `mm_round` per coordinate (§7.3, core.md R20).
 bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& out) noexcept;
+
+/// THE REVERSE OF `perpendicular_offset`: where `p` stands off the baseline a→b —
+/// `foot_mm` along it from `a`, `offset_mm` out from it, RIGHT POSITIVE, the same
+/// sign every offset here uses. PRİZMA's question, Netcad's Prizma: which
+/// station, and how far out. False when a and b coincide.
+///
+/// The two are one convention written twice only as its two directions: a point
+/// put down by `dik(A,B,ayak,boy)` reads back as that `ayak` and `boy`, to the
+/// millimetre each is rounded to (a test holds it). One `std::sqrt` and one
+/// `mm_round` each (§7.3).
+bool station_offset(Point2 a, Point2 b, Point2 p, Mm& foot_mm, Mm& offset_mm) noexcept;
 
 /// Why two circles of given radii did or did not meet — the answer
 /// `circle_intersection` has to give, because "false" is four different

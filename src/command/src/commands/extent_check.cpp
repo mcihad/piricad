@@ -116,10 +116,8 @@ Task<void> run_extent_check(Context& ctx)
 
         // MARKED WHERE IT IS, as a measurement is (`measure_mark.hpp`): view
         // state, gone when the drawing changes or Esc is pressed.
-        if (bus.on_measure_mark)
-            bus.on_measure_mark(MeasureMark{MeasureMark::Shape::Point,
-                                            {d.centre},
-                                            {"kopuk · " + distance_text(d.distance_mm)}});
+        ctx.mark(MeasureMark{
+            MeasureMark::Shape::Point, {d.centre}, {"kopuk · " + distance_text(d.distance_mm)}});
 
         if (named_count < kNamedAtMost) {
             named += " nesneler=" + std::to_string(key);

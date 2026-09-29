@@ -1071,6 +1071,20 @@ def extent_check(
     Komut: core.extent_check (KAPSAMDENETİM)
     """
 
+def station_offset(
+    *,
+    start: Coord = ...,
+    end: Coord = ...,
+    points: Coords = ...,
+) -> int:
+    """Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir.
+
+    Komut: core.station_offset (PRİZMA)
+        start — Tabanın başlangıcı (A) [mm, Sağa (Y) önce]
+        end — Tabanın sonu (B) [mm, Sağa (Y) önce]
+        points — Dik ayağı ve dik boyu okunacak noktalar; boy A'dan B'ye bakarken sağda pozitif [mm, Sağa (Y) önce]
+    """
+
 def pan(
     *,
     start: Coord = ...,

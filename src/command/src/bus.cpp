@@ -92,6 +92,25 @@ std::optional<core::Point2> Bus::numbered_point(std::int64_t number) const
     return std::nullopt;
 }
 
+std::optional<std::string> Bus::point_number_at(core::Point2 at) const
+{
+    const core::AttrId column = doc_.attributes().find("nokta_no");
+    if (column == core::kNoAttr) return std::nullopt;
+
+    for (core::EntityId e = 0; e < doc_.entities().size(); ++e) {
+        if (!doc_.alive(e) || doc_.entities().kind[e] != core::kPointKind) continue;
+        const core::RingSpan span = doc_.geometry().rings_of(doc_.entities().slot[e]);
+        if (span.count == 0) continue;
+        const auto xs = doc_.geometry().ring_xs(span.first);
+        const auto ys = doc_.geometry().ring_ys(span.first);
+        if (xs.empty() || xs[0] != at.x || ys[0] != at.y) continue;
+
+        const auto cell = doc_.attribute(column, e);
+        if (cell && cell.value().present && !cell.value().text.empty()) return cell.value().text;
+    }
+    return std::nullopt;
+}
+
 core::Result<core::SettingChange> Bus::set_setting(std::string_view id,
                                                    const core::SettingValue& value)
 {

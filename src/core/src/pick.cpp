@@ -440,6 +440,24 @@ bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& 
     return true;
 }
 
+bool station_offset(Point2 a, Point2 b, Point2 p, Mm& foot_mm, Mm& offset_mm) noexcept
+{
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (len == 0.0) return false;
+
+    const double ux = dx / len;
+    const double uy = dy / len;
+    const auto px   = static_cast<double>(p.x - a.x);
+    const auto py   = static_cast<double>(p.y - a.y);
+
+    // Along the unit direction, and along its RIGHT normal (uy, -ux).
+    foot_mm   = mm_round(px * ux + py * uy);
+    offset_mm = mm_round(px * uy - py * ux);
+    return true;
+}
+
 void pick_candidates(const Document& doc, const Box2& box, std::vector<EntityId>& out)
 {
     out.clear();

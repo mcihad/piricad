@@ -2320,6 +2320,25 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
+        // AND PRİZMA'S ANSWER: a baseline along the parcels' south edge and two
+        // points off it, each with its perpendicular and its two figures.
+        later([&window] {
+            window.runScriptLine(
+                QStringLiteral("YAKINLAŞ PENCERE pencere=485290,4310170 485390,4310245"));
+            window.runScriptLine(QStringLiteral(
+                "PRİZMA 485300,4310200 485380,4310200 485315,4310225 485360,4310185"));
+        });
+        later([&window, shot] { shot(QStringLiteral("32-prizma"), &window); });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonMap")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, shot] { shot(QStringLiteral("32b-harita-olcum"), window.ribbonBar()); });
+        later([&window] {
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

@@ -1726,6 +1726,10 @@ void MainWindow::buildActions()
     actMeasureAngle_ = modifyTool(Glyph::MeasureAngle, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
                                   tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
                                      "kuralıyla yazar  ·  kısaltma: AÇÖ"));
+    actStationOffset_ =
+        modifyTool(Glyph::StationOffset, tr("Prizma"), QStringLiteral("PRİZMA"),
+                   tr("PRİZMA — iki noktalı bir tabana göre noktaların dik ayağını ve dik "
+                      "boyunu okur; boy sağda pozitif  ·  kısaltma: PRZ"));
 
     // ESNET IS A MODAL TOOL, not a menu row: it arms, then asks for a window and
     // an offset. `modifyTool` puts it in the exclusive group with TAŞI and BUDA,

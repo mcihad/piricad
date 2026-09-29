@@ -1376,6 +1376,59 @@ TEST_CASE(
         CHECK_EQ(rig->doc.content_hash(), hash);
 }
 
+TEST_CASE("PROOF: PRİZMA gui, komut satırı ve betikten aynı dik ayak ve boyu okur")
+{
+    // Article 6.4 for `core.station_offset`: the points clicked one by one, the
+    // line typed and the script's data give one answer, and nothing changes.
+    Rig gui;
+    Rig cli;
+    Rig scr;
+
+    core::Json from_gui;
+    {
+        auto started = gui.bus.begin_interactive("PRİZMA", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        for (const core::Point2 at : {core::Point2{0, 0}, core::Point2{100000, 0},
+                                      core::Point2{30000, 5000}, core::Point2{70000, -2500}})
+            REQUIRE(session.supply(Value::aimed_point(at)).ok());
+        // Enter: "that is all", the empty answer that ends a run (not a cancel).
+        REQUIRE(session.supply(Value{}).ok());
+        auto done = gui.bus.finish(session);
+        REQUIRE(done.ok());
+        from_gui = done.value().report;
+    }
+    const auto typed = cli.bus.execute_line("PRİZMA 0,0 100,0 30,5 70,-2.5", Origin::CommandLine);
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Prizma kanıtı",
+            "komutlar": [ {"cmd": "core.station_offset",
+                           "args": {"baslangic": [0, 0], "bitis": [100000, 0],
+                                    "noktalar": [[30000, 5000], [70000, -2500]]}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    command::Args args;
+    args.set("baslangic", Value::point(core::Point2{0, 0}));
+    args.set("bitis", Value::point(core::Point2{100000, 0}));
+    args.set("noktalar", Value::points({core::Point2{30000, 5000}, core::Point2{70000, -2500}}));
+    const auto scripted = scr.bus.dispatch(Invocation{"core.station_offset", args, Origin::Script});
+    REQUIRE(scripted.ok());
+
+    CHECK_EQ(from_gui.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), scripted.value().report.dump());
+    const core::Json& second = typed.value().report.find("noktalar")->as_array()[1];
+    CHECK(second.find("ayak_mm")->as_int() == 70000);
+    CHECK(second.find("boy_mm")->as_int() == 2500); ///< south of an eastward line: right
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK(rig->journal.entries().empty());
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{0});
+    }
+}
+
 TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur")
 {
     // Article 6.4 for `core.measure_angle`, and the reading is the one a hand

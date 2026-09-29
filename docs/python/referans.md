@@ -149,6 +149,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`cad.extent_check`](#cadextent_check) | `core.extent_check` | `KAPSAMDENETİM` | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
+| [`cad.station_offset`](#cadstation_offset) | `core.station_offset` | `PRİZMA` | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
 | [`cad.pan`](#cadpan) | `core.pan` | `KAYDIR` | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`cad.offset`](#cadoffset) | `core.offset` | `OFSET` | Seçili nesnelerin verilen mesafede, gösterilen tarafta paralelini çizer: açık çizgiye tek yanda çizgi, alana delikleriyle alan, daireye daire. |
 | [`cad.sector`](#cadsector) | `core.sector` | `DİLİM` | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
@@ -1682,6 +1683,28 @@ cad.extent_check() -> int
 ```
 
 [Komut sayfası](../komutlar/extent_check.md)
+
+### `cad.station_offset`
+
+Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir.
+
+Komut: `core.station_offset` — `PRİZMA`
+
+```python
+cad.station_offset(
+    start: Coord,
+    end: Coord,
+    points: Coords,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `start` | `Coord` | `baslangic` | Tabanın başlangıcı (A) [mm, Sağa (Y) önce] |
+| `end` | `Coord` | `bitis` | Tabanın sonu (B) [mm, Sağa (Y) önce] |
+| `points` | `Coords` | `noktalar` | Dik ayağı ve dik boyu okunacak noktalar; boy A'dan B'ye bakarken sağda pozitif [mm, Sağa (Y) önce] |
+
+[Komut sayfası](../komutlar/station_offset.md)
 
 ### `cad.pan`
 

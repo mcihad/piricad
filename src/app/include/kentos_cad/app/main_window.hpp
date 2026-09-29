@@ -1034,9 +1034,10 @@ private:
     QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; `Kadastro ▸ Parsel`
     QAction* actMeasureArea_{nullptr};
     QAction* actCoordinate_{nullptr};
-    QAction* actEntityInfo_{nullptr};   ///< NESNEBİLGİ — what is this
-    QAction* actMeasureAngle_{nullptr}; ///< AÇIÖLÇ — the angle at this corner
-    QAction* actStretch_{nullptr};      ///< ESNET — the window is the vertex filter
+    QAction* actEntityInfo_{nullptr};    ///< NESNEBİLGİ — what is this
+    QAction* actMeasureAngle_{nullptr};  ///< AÇIÖLÇ — the angle at this corner
+    QAction* actStationOffset_{nullptr}; ///< PRİZMA — dik ayak and dik boy off a baseline
+    QAction* actStretch_{nullptr};       ///< ESNET — the window is the vertex filter
     QAction* actStyleCopy_{nullptr};
     QAction* actColour_{nullptr}; ///< RENK — the colour chips' command, on a menu row too
     QAction* actTopology_{nullptr};

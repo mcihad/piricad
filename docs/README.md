@@ -45,6 +45,7 @@ Tek tek komutlar:
 | `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |
 | `NOKTA` | [Ölçülmüş nokta](komutlar/point_draw.md) |
 | `DİKAYAK` | [Dik ayak / dik boy ile nokta](komutlar/perp_offset.md) |
+| `PRİZMA` | [Noktanın dik ayağını ve dik boyunu okumak](komutlar/station_offset.md) |
 | `ALIM` | [Açı ve kenarla nokta](komutlar/survey_polar.md) |
 | `KESİŞİMNOKTA` | [Kesişimden nokta](komutlar/intersect_point.md) |
 | `ARANOKTA` | [Doğru üzerinde ara nokta](komutlar/point_along.md) |

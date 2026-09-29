@@ -300,6 +300,7 @@ enum class Glyph {
     ViewWindow,         ///< a window drawn and zoomed into: YAKINLAŞ PENCERE
     ZoomSelection,      ///< the selection framed: YAKINLAŞ SEÇİM
     ExtentCheck,        ///< a straggler far from the rest: KAPSAMDENETİM
+    StationOffset,      ///< a point's foot and offset off a baseline: PRİZMA
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

@@ -56,6 +56,7 @@ add_library(kentos_command STATIC
     src/commands/text.cpp
     src/commands/extent_check.cpp
     src/commands/measure.cpp
+    src/commands/station_offset.cpp
     src/commands/ellipse.cpp
     src/commands/guide.cpp
     src/commands/offset.cpp

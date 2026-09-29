@@ -6,6 +6,14 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — PRİZMA: noktanın dik ayağı ve dik boyu
+
+- `PRİZMA A B nokta…` her noktanın iki noktalı bir tabana göre dik ayağını ve dik boyunu
+  okur; boy A'dan B'ye bakarken sağda pozitif, solda negatif — `dik()` ve `DİKAYAK`'ın
+  kuralı. `dik()` ile konmuş bir nokta kendi ayağını ve boyunu geri verir. Numaralı bir
+  nokta numarasıyla adlandırılır. Netcad'in Prizma aracı. **Harita ▸ Ölçüm ▸ Prizma**;
+  taban ve dikmeler tuvalde ölçü işareti olarak kalır. Hiçbir şeyi değiştirmez.
+
 ### Eklendi — KAPSAMDENETİM: çizimin çoğunluğundan kopuk nesneler
 
 - Kapsama yakınlaşınca bütün Türkiye'yi gösteren çizimdeki suçluları bulur: 0,0'a düşmüş,

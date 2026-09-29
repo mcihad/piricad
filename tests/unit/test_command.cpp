@@ -3,6 +3,7 @@
 
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/grips.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/polygon.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/transform.hpp"
@@ -2278,6 +2279,80 @@ TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
     CHECK_FALSE(refused.ok());
     CHECK(refused.error().message.find("aynı") != std::string::npos);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("PRİZMA: dik ayak ve dik boy, dik()'in tersi; boy sağda pozitif")
+{
+    // THE REVERSE, IN CORE: whatever perpendicular_offset puts down reads back
+    // as the same two figures, to the millimetre, on every side of a slanted
+    // baseline.
+    const core::Point2 a{485300000, 4310200000};
+    const core::Point2 b{485370000, 4310260000};
+    for (const core::Mm foot : {-12345, 0, 30000, 91800})
+        for (const core::Mm off : {-7500, -1, 0, 1, 5000}) {
+            core::Point2 p{};
+            REQUIRE(core::perpendicular_offset(a, b, foot, off, p));
+            core::Mm back_foot = 0;
+            core::Mm back_off  = 0;
+            REQUIRE(core::station_offset(a, b, p, back_foot, back_off));
+            CHECK(std::llabs(back_foot - foot) <= 1);
+            CHECK(std::llabs(back_off - off) <= 1);
+        }
+    core::Mm unused = 0;
+    CHECK_FALSE(core::station_offset(a, a, b, unused, unused));
+
+    // THE PLAN'S CASE: baseline (0,0)→(100,0), point (30,5). North of an
+    // eastward line is its LEFT, so the offset is −5 m.
+    Fixture f;
+    std::string said;
+    f.bus.on_echo         = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    std::size_t marks     = 0;
+    f.bus.on_measure_mark = [&marks](const MeasureMark&) { ++marks; };
+    auto read = f.bus.execute_line("PRİZMA 0,0 100,0 30,5 30,-5 50,0", Origin::CommandLine);
+    REQUIRE(read.ok());
+    const core::Json& report = read.value().report;
+    CHECK(report.find("taban")->find("uzunluk_mm")->as_int() == 100000);
+    const auto& rows = report.find("noktalar")->as_array();
+    REQUIRE(rows.size() == 3);
+    CHECK(rows[0].find("ayak_mm")->as_int() == 30000);
+    CHECK(rows[0].find("boy_mm")->as_int() == -5000);
+    CHECK(rows[1].find("boy_mm")->as_int() == 5000);
+    CHECK(rows[2].find("boy_mm")->as_int() == 0);
+    CHECK(said.find("ayak 30,000 m · boy -5,000 m (solda)") != std::string::npos);
+    CHECK(said.find("boy 5,000 m (sağda)") != std::string::npos);
+    CHECK(said.find("tabanın üstünde") != std::string::npos);
+    CHECK(marks == 4); ///< the baseline and one tick per point
+
+    // A POINT PUT DOWN BY dik() READS BACK AS ITS OWN FIGURES — the one sign.
+    REQUIRE(f.bus.execute_line("NOKTA dik(0,0,100,0,40,7.5)", Origin::CommandLine).ok());
+    auto back = f.bus.execute_line("PRİZMA 0,0 100,0 dik(0,0,100,0,40,7.5)", Origin::CommandLine);
+    REQUIRE(back.ok());
+    const core::Json& row = back.value().report.find("noktalar")->as_array().front();
+    CHECK(row.find("ayak_mm")->as_int() == 40000);
+    CHECK(row.find("boy_mm")->as_int() == 7500);
+
+    // A NUMBERED POINT IS NAMED by its number (NOKTALAR's `nokta_no`).
+    REQUIRE(f.bus.execute_line("NOKTA 20,3", Origin::CommandLine).ok());
+    const auto key =
+        static_cast<std::uint64_t>(core::raw(f.doc.entities().key[f.doc.entities().size() - 1]));
+    REQUIRE(f.bus.execute_line("SÜTUN nokta_no metin \"nokta no\"", Origin::CommandLine).ok());
+    REQUIRE(f.bus
+                .execute_line("ÖZNİTELİK nokta_no " + std::to_string(key) + " 1284",
+                              Origin::CommandLine)
+                .ok());
+    said.clear();
+    auto named = f.bus.execute_line("PRİZMA 0,0 100,0 n(1284)", Origin::CommandLine);
+    REQUIRE(named.ok());
+    CHECK(named.value().report.find("noktalar")->as_array().front().find("nokta_no")->as_string() ==
+          "1284");
+    CHECK(said.find("1284 numaralı nokta: ayak 20,000 m · boy -3,000 m (solda)") !=
+          std::string::npos);
+
+    // A baseline with no direction is refused; a read touches nothing.
+    auto flat = f.bus.execute_line("PRİZMA 5,5 5,5 1,1", Origin::CommandLine);
+    REQUIRE_FALSE(flat.ok());
+    CHECK(flat.error().message.find("aynı nokta") != std::string::npos);
+    CHECK(f.undo.undo_depth() == 3); ///< the three NOKTA/SÜTUN/ÖZNİTELİK steps, nothing of PRİZMA's
 }
 
 TEST_CASE("NOKTA FONKSİYONU: n(1284) çizimdeki noktayı komutlar üzerinden bulur")
@@ -6355,8 +6430,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + TARAMADÜZENLE (TODOS C-11) + BULDEĞİŞTİR (TODOS C-12)
     // + BLOKDÜZENLE (TODOS C-13) + DIŞREFERANS, BLOKKIRP (TODOS C-14)
     // + YERELKOPYA (TODOS F-02) + BAĞIMLILIK (TODOS F-04) + ÖNİZLE (TODOS F-05)
-    // + KAPSAMDENETİM (netcad_plan.md N-01)
-    CHECK_EQ(f.reg.size(), std::size_t{111});
+    // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02)
+    CHECK_EQ(f.reg.size(), std::size_t{112});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

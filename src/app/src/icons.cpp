@@ -1965,6 +1965,22 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::StationOffset: {
+        // DİK AYAK AND DİK BOY, READ: the baseline, a point off it, and the
+        // perpendicular dashed from its foot in the measuring ink, the right
+        // angle marked where it stands.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(2.8, 17.6), QPointF(21.2, 17.6));
+        p.setPen(QPen(k.note, 1.5, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(14.0, 17.6), QPointF(14.0, 8.4));
+        p.setPen(stroke(k.note, 1.2));
+        p.drawPolyline(QPolygonF({QPointF(14.0, 14.6), QPointF(17.0, 14.6), QPointF(17.0, 17.6)}));
+        p.setPen(stroke(k.shape, 1.6));
+        p.setBrush(k.fill);
+        p.drawEllipse(QPointF(14.0, 6.0), 2.4, 2.4);
+        p.setBrush(Qt::NoBrush);
+        break;
+    }
     case Glyph::ExtentCheck: {
         // THE STRAGGLER, MEASURED: the drawing's objects together bottom left,
         // one far off at the top right in the cut ink, and the distance between
