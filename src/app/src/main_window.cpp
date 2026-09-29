@@ -502,9 +502,15 @@ MainWindow::MainWindow(QWidget* parent)
     // A LINE COMPOSED WITH THE SCENE (`CommandLine::beginCompose`, `.claude/ui.md`
     // R48a): its first click is armed here, each next one when the last is put
     // away; a line that stops listening puts its pick away.
-    connect(commandLine_, &CommandLine::composeClickWanted, this, &MainWindow::armComposeClick);
+    connect(commandLine_, &CommandLine::composeClickWanted, this, [this](bool object) {
+        composeTrace_.clear(); ///< a new line: its clicks start again
+        canvas_->setComposeTrace({});
+        armComposeClick(object);
+    });
     connect(commandLine_, &CommandLine::composeEnded, this, [this] {
         composeRearm_ = false;
+        composeTrace_.clear();
+        canvas_->setComposeTrace({});
         if (composeCapture_ && canvas_->capturing()) canvas_->cancelCapture();
     });
 
@@ -4091,11 +4097,61 @@ int MainWindow::probePromptTabs()
     check(!bar->isContextCategoryVisible(promptSelectTab_),
           QStringLiteral("komut bitince Seçim sekmesi yok"));
 
-    // ---- a `dik(` built by clicks is the line typing it is ----
+    // ---- the `Nokta Girişi` tab, while ÇİZGİ asks for a point ----
     runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
     runScriptLine(QStringLiteral("ÇİZGİ"));
     QCoreApplication::processEvents();
-    commandLine_->beginCompose(QStringLiteral("dik("), 0);
+    check(promptPointTab_ != nullptr && bar->isContextCategoryVisible(promptPointTab_) &&
+              !bar->isContextCategoryVisible(promptSelectTab_),
+          QStringLiteral("nokta sorulurken Nokta Girişi sekmesi görünür, Seçim değil"));
+
+    // A SNAP SWITCH writes the mask through MOD and reads it back.
+    const auto mask = [this] {
+        return static_cast<std::uint32_t>(
+            controller_->bus().session_settings().get("core.yakalama.modlar").as_int());
+    };
+    const std::uint32_t before = mask();
+    auto* endpoint             = findChild<QAction*>(QStringLiteral("promptPoint.snap.uc"));
+    check(endpoint != nullptr, QStringLiteral("uç nokta anahtarı var"));
+    if (endpoint != nullptr) {
+        endpoint->trigger();
+        QCoreApplication::processEvents();
+        check((mask() ^ before) == core::SnapEndpoint &&
+                  endpoint->isChecked() == ((mask() & core::SnapEndpoint) != 0),
+              QStringLiteral("uç nokta anahtarı yakalamayı değiştirdi ve durumu okudu"));
+        endpoint->trigger(); ///< as it was
+        QCoreApplication::processEvents();
+    }
+    // Snap put out of the way of the clicks below, which land in empty ground.
+    runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=0"));
+
+    // ORTA from the palette, its two points clicked, sent with Gönder: the
+    // bracket closes by itself.
+    check(press(QStringLiteral("promptPoint.fn.orta")), QStringLiteral("Orta Nokta düğmesi var"));
+    check(commandLine_->text() == QStringLiteral("orta("),
+          QStringLiteral("orta( yazıldı (%1)").arg(commandLine_->text()));
+    click(core::Point2{0, 50'000});
+    click(core::Point2{40'000, 60'000});
+    QCoreApplication::processEvents();
+    check(press(QStringLiteral("promptPoint.GONDER")), QStringLiteral("Gönder düğmesi var"));
+    QCoreApplication::processEvents();
+    runScriptLine(QStringLiteral("@10,0"));
+    endCommand();
+    letGo();
+    {
+        const auto& all = controller_->journal().entries();
+        const command::Value::Points run =
+            all.empty() ? command::Value::Points{} : all.back().args.get("noktalar").as_points();
+        check(!run.empty() && run.front() == core::Point2{20'000, 55'000},
+              QStringLiteral("orta() iki tıklamanın ortasına düştü"));
+    }
+    runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(before));
+
+    // ---- a `dik(` built from the palette is the line typing it is ----
+    runScriptLine(QStringLiteral("ÇİZGİ"));
+    QCoreApplication::processEvents();
+    runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=0"));
+    check(press(QStringLiteral("promptPoint.fn.dik")), QStringLiteral("Dik Ayak düğmesi var"));
     click(core::Point2{0, 35'000});
     click(core::Point2{40'000, 35'000});
     QCoreApplication::processEvents();
@@ -4123,6 +4179,9 @@ int MainWindow::probePromptTabs()
                                   : controller_->journal().entries().back().args.to_json().dump();
     check(built == typed, QStringLiteral("paletten kurulan ile yazılan aynı günlük satırı (%1)")
                               .arg(QString::fromStdString(built)));
+    runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(before));
+    check(!bar->isContextCategoryVisible(promptPointTab_),
+          QStringLiteral("komut bitince Nokta Girişi sekmesi yok"));
     return failures;
 }
 
@@ -10731,15 +10790,30 @@ void MainWindow::armComposeClick(bool object)
 {
     if (!commandLine_->composing()) return;
     // ONE PICK AT A TIME, as a form field's: one that was waiting gets nothing.
+    // BUT A COMPOSED LINE'S OWN EARLIER PICK IS DROPPED, NOT ANSWERED: its answer
+    // is "stop listening", and it would stop the line that has just replaced it
+    // — a Dik Ayak pressed while a Çit was still composing wrote nothing.
     if (pendingPick_) {
         auto earlier = std::move(pendingPick_);
         pendingPick_ = nullptr;
-        earlier(std::nullopt);
+        if (!composeCapture_) earlier(std::nullopt);
     }
     pendingPick_ = [this](std::optional<QString> got) {
         if (!got) {
             commandLine_->endCompose(); ///< Esc or the right button on the canvas
             return;
+        }
+        // A COORDINATE is traced on the canvas; an object key is not a place.
+        if (const QStringList xy = got->split(QLatin1Char(',')); xy.size() == 2) {
+            bool okx       = false;
+            bool oky       = false;
+            const double x = xy[0].toDouble(&okx);
+            const double y = xy[1].toDouble(&oky);
+            if (okx && oky) {
+                composeTrace_.push_back(
+                    core::Point2{core::mm_from_metres(x), core::mm_from_metres(y)});
+                canvas_->setComposeTrace(composeTrace_);
+            }
         }
         composeRearm_ = commandLine_->composeWrite(*got);
     };
@@ -10763,6 +10837,16 @@ void MainWindow::startSelectMode(const command::SelectModeInfo& mode)
     }
     // The clicks it takes finish it: after the last it runs, a run is Enter's.
     commandLine_->beginCompose(line + QLatin1Char(' '), mode.points > 0 ? mode.points : 0);
+}
+
+void MainWindow::refreshPointTab()
+{
+    const auto mask = static_cast<std::uint32_t>(
+        controller_->bus().session_settings().get("core.yakalama.modlar").as_int());
+    for (QAction* a : std::as_const(promptSnaps_)) {
+        const QSignalBlocker quiet(a);
+        a->setChecked((mask & a->property(kSnapBitProperty).toUInt()) != 0);
+    }
 }
 
 void MainWindow::refreshPromptTabs()
@@ -10794,6 +10878,7 @@ void MainWindow::refreshPromptTabs()
     };
     show(promptSelectTab_, objects);
     show(promptPointTab_, point);
+    if (point) refreshPointTab();
     if (leaving) {
         if (beforePromptTab_ != nullptr)
             bar->raiseCategory(beforePromptTab_);

@@ -77,6 +77,10 @@ public:
     /// Stops listening to the scene. The text stays, for the keyboard.
     void endCompose();
 
+    /// Submits the line as Enter does — the `Nokta Girişi` tab's `Gönder`, for a
+    /// hand on the mouse.
+    void submitLine() { submit(); }
+
     void applyTheme(ThemeMode mode) override;
 
 signals:

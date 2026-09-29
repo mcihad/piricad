@@ -431,6 +431,10 @@ Düğmelerin basılı hâli değerin kendisinden okunur: komut satırına
 F3 yakalamayı kapatırken maskeyi hatırlar; yeniden açtığınızda seçtiğiniz modlar geri
 gelir, varsayılana dönmez.
 
+**MOD şeffaftır.** Bir komut nokta beklerken F3'e basmak, durum şeridinden bir modu açmak
+ya da `MOD ad=yakalama_modları deger=…` yazmak komutu bitirmez: mod değişir ve komut bir
+sonraki noktayı yeni modla alır.
+
 Bir komut nokta beklerken imlecin altında **yakalama işareti** belirir: her modun
 kendi sembolü ve adı vardır — uç nokta kare, orta nokta üçgen, merkez daire, kesişim
 çarpı, dik ayak dik açı işareti, en yakın kum saati, ızgara kafes, kutupsal ve dik mod

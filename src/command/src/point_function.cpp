@@ -144,6 +144,10 @@ struct PointForm
     /// The arguments in order; entries past `arity` are never read.
     std::array<ArgKind, kMaxArgs> args;
     std::size_t arity; ///< how many of `args` this shape has
+
+    /// The `Nokta Girişi` palette's name for the function (`point_functions`), on
+    /// the FIRST shape of a name only: `kes` is one button, not three.
+    const char* label{nullptr};
 };
 
 /// EVERY POINT FUNCTION, once (CLAUDE.md 5.10 applied to the grammar).
@@ -153,19 +157,24 @@ struct PointForm
 /// Order matters only for the message a call that fits nothing gets: the shapes
 /// are listed in the order they appear here.
 constexpr std::array<PointForm, 14> kForms{{
-    {"son", "SON", "son", {{}}, 0},
-    {"n", "N", "n(nokta_no)", {{kNum}}, 1},
-    {"orta", "ORTA", "orta(A,B)", {{kPt, kPt}}, 2},
-    {"ile", "ILE", "ile(P,@dx,dy)", {{kPt, kOff}}, 2},
-    {"dik", "DIK", "dik(A,B,ayak,boy)", {{kPt, kPt, kNum, kNum}}, 4},
-    {"semt", "SEMT", "semt(S,açı,kenar)", {{kPt, kAng, kNum}}, 3},
-    {"kes.dogrultu", "KES", "kes(A,açı1,B,açı2)", {{kPt, kAng, kPt, kAng}}, 4},
+    {"son", "SON", "son", {{}}, 0, "Son Nokta"},
+    {"n", "N", "n(nokta_no)", {{kNum}}, 1, "Numaralı Nokta"},
+    {"orta", "ORTA", "orta(A,B)", {{kPt, kPt}}, 2, "Orta Nokta"},
+    {"ile", "ILE", "ile(P,@dx,dy)", {{kPt, kOff}}, 2, "Göreli"},
+    {"dik", "DIK", "dik(A,B,ayak,boy)", {{kPt, kPt, kNum, kNum}}, 4, "Dik Ayak"},
+    {"semt", "SEMT", "semt(S,açı,kenar)", {{kPt, kAng, kNum}}, 3, "Semt ve Kenar"},
+    {"kes.dogrultu", "KES", "kes(A,açı1,B,açı2)", {{kPt, kAng, kPt, kAng}}, 4, "Kesişim"},
     {"kes.mesafe", "KES", "kes(A,r1,B,r2,sol|sağ|yon=<nokta>)", {{kPt, kNum, kPt, kNum, kDir}}, 5},
     {"kes.dogru", "KES", "kes(A,B,C,D)", {{kPt, kPt, kPt, kPt}}, 4},
-    {"ara", "ARA", "ara(A,B,oran) · ara(A,B,mesafe m)", {{kPt, kPt, kRat}}, 3},
-    {"uzanti", "UZANTI", "uzanti(A,B,mesafe)", {{kPt, kPt, kNum}}, 3},
-    {"xy", "XY", "xy(P,Q)", {{kPt, kPt}}, 2},
-    {"boyunca", "BOYUNCA", "boyunca(nesne(kimlik),mesafe,sapma)", {{kObj, kNum, kNum}}, 3},
+    {"ara", "ARA", "ara(A,B,oran) · ara(A,B,mesafe m)", {{kPt, kPt, kRat}}, 3, "Ara Nokta"},
+    {"uzanti", "UZANTI", "uzanti(A,B,mesafe)", {{kPt, kPt, kNum}}, 3, "Uzantı"},
+    {"xy", "XY", "xy(P,Q)", {{kPt, kPt}}, 2, "X ve Y"},
+    {"boyunca",
+     "BOYUNCA",
+     "boyunca(nesne(kimlik),mesafe,sapma)",
+     {{kObj, kNum, kNum}},
+     3,
+     "Boyunca"},
     {"boyunca.yol", "BOYUNCA", "boyunca(nesne(kimlik),mesafe)", {{kObj, kNum}}, 2},
 }};
 
@@ -828,3 +837,27 @@ std::string describe_call(const Token& t)
 }
 
 } // namespace kentos::command::detail
+
+namespace kentos::command {
+
+const std::vector<PointFunctionInfo>& point_functions()
+{
+    // ONE ENTRY PER NAME, from THE table: a later shape of a name adds its
+    // spelling to the first's, so `kes` is one button whose tip shows all three.
+    static const std::vector<PointFunctionInfo> offered = [] {
+        std::vector<PointFunctionInfo> out;
+        for (const detail::PointForm& f : detail::kForms) {
+            const std::string_view name = detail::display_name(f.form);
+            if (f.label != nullptr) {
+                out.push_back(PointFunctionInfo{name, f.label, f.syntax, f.arity > 0});
+                continue;
+            }
+            for (PointFunctionInfo& known : out)
+                if (known.name == name) known.syntax += std::string(" · ") + f.syntax;
+        }
+        return out;
+    }();
+    return offered;
+}
+
+} // namespace kentos::command

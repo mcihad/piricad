@@ -263,6 +263,17 @@ void CommandLine::endCompose()
 
 void CommandLine::submit()
 {
+    // A COMPOSED LINE CLOSES WHAT IT OPENED: `dik(` was written by a button and
+    // two clicks, and the hand that typed the two numbers after them pressed
+    // Enter rather than looking for the bracket.
+    if (composing_) {
+        QString closed = text();
+        for (int open = static_cast<int>(closed.count(QLatin1Char('('))) -
+                        static_cast<int>(closed.count(QLatin1Char(')')));
+             open > 0; --open)
+            closed += QLatin1Char(')');
+        setText(closed);
+    }
     endCompose(); ///< a composed line is submitted like any other, and is done
     const QString line = text().trimmed();
     if (line.isEmpty()) {

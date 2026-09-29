@@ -168,6 +168,10 @@ istemine yazdığınız yanıtta aynı şeydir — üçü de aynı gramerden ge�
 Adlar büyük/küçük harf ve noktalı/noktasız i farkı gözetmez: `ORTA`, `orta`,
 `uzantı` ve `uzanti` aynı fonksiyondur.
 
+Bir komut nokta beklerken şeritteki **Nokta Girişi** sekmesinde her fonksiyon bir
+düğmedir: düğme fonksiyonu satıra başlatır, tuvaldeki tıklamalar noktalarını yazar
+([Soru sürerken: Nokta Girişi sekmesi](../baslangic/arayuz.md#soru-sürerken-nokta-girişi-sekmesi)).
+
 ### Argüman yazmanın kuralı
 
 Argümanlar virgülle ayrılır — ve **koordinat da virgülle yazılır**. Bu yüzden bir
@@ -355,8 +359,8 @@ satırına koordinat yazabilirsiniz. İkisi de aynı kapıya çıkar:
                                ← Esc, komut biter
 ```
 
-Komut çalışırken şeffaf bir komut yazarsanız (`YAKINLAŞ` gibi) araya girer, görünümü
-değiştirir ve çalışan komut kaldığı yerden devam eder.
+Komut çalışırken şeffaf bir komut yazarsanız (`YAKINLAŞ` ya da `MOD` gibi) araya girer,
+görünümü ya da modu değiştirir ve çalışan komut kaldığı yerden devam eder.
 
 **Son noktayı geri almak.** `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN` ya da `SPLINE` bir sonraki noktayı
 beklerken `G` yazıp Enter'a basarsanız yalnız son nokta geri alınır ve komut onu yeniden

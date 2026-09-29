@@ -241,7 +241,31 @@ SEÇ ÇİT islem=EKLE 485310.000,4310250.000 485330.000,4310190.000
 
 Satırı kendiniz yazsaydınız olacak olan neyse o olur; komut günlüğü de aynı satırı
 tutar. Kiplerin ne aldığı [SEÇ](../komutlar/select.md) sayfasındadır. Esc satırı ve
-tıklama beklemeyi bırakır.
+tıklama beklemeyi bırakır. Tıkladığınız noktalar tuvalde kesik bir izle, imlece kadar
+çizilir.
+
+### Soru sürerken: Nokta Girişi sekmesi
+
+Bir komut sizden **nokta** isterken — ÇİZGİ'nin, DAİRE'nin, TAŞI'nın taban noktası —
+**Nokta Girişi** sekmesi belirir (Netcad'in Nokta Seçim Araçları ve Koordinat Hesap
+Makinası). Seçim sekmesi gibi öne gelmez ve soru bitince kaybolur.
+
+| Panel | Düğmeler |
+|---|---|
+| **Yakalama** | Her yakalama modu bir anahtardır: uç nokta, orta nokta, merkez, kesişim… `MOD yakalama_modları` yazar, basılı hâli ayardan okunur |
+| **Hesap** | Her [nokta fonksiyonu](../komutlar/komut-satiri.md#nokta-fonksiyonları) bir düğmedir: Son Nokta, Numaralı Nokta, Orta Nokta, Göreli, Dik Ayak, Semt ve Kenar, Kesişim, Ara Nokta, Uzantı, X ve Y, Boyunca |
+| **Satır** | **Gönder** (Enter) · **Vazgeç** (Esc) |
+
+**Hesap düğmesi fonksiyonu satıra başlatır**, tıkladığınız noktalar içine yazılır, sayıları
+siz yazarsınız: **Dik Ayak**'a basıp taban çizgisinin iki ucuna tıklayın, `,30,5` yazın ve
+Enter'a ya da **Gönder**'e basın — açık parantez kendiliğinden kapanır:
+
+```text
+dik(485300.000,4310200.000,485380.000,4310200.000,30,5)
+```
+
+**Boyunca**'da `nesne(` yazıldıktan sonraki tıklama noktayı değil, **tıkladığınız nesnenin
+kimliğini** yazar. Yakalama anahtarları ve **F3** çalışan komutu bölmez: `MOD` şeffaftır.
 
 ### Soluk araçlar
 

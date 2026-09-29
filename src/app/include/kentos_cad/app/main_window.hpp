@@ -896,6 +896,9 @@ private:
     /// once; one that does is composed, the clicks written into it.
     void startSelectMode(const command::SelectModeInfo& mode);
 
+    /// Reads the snap mask back into the `Nokta Girişi` tab's switches (R47).
+    void refreshPointTab();
+
     /// Finds, once the ribbon is built, every action whose command acts on some
     /// classes of object only (`CommandSpec::targets`), wherever it is shown.
     void gatherTargetTools();
@@ -1215,6 +1218,10 @@ private:
     bool composeRearm_{false};
     /// The canvas's pick is armed for a composed line, not for a form field.
     bool composeCapture_{false};
+    /// The points a composed line was given by clicks, for the canvas's trace.
+    std::vector<core::Point2> composeTrace_;
+    /// The `Nokta Girişi` tab's snap switches, one per engine bit, to read back.
+    QList<QAction*> promptSnaps_;
 
     /// A BLOCK DEFINITION OUT ON THE SHEET for editing (`BLOKDÜZENLE aç`). What
     /// belongs to the edit is the client's to say — the command is stateless so

@@ -2110,6 +2110,103 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawEllipse(QPointF(18.4, 14.6), 2.4, 2.4);
         break;
     }
+    case Glyph::FnLast: {
+        // THE POINT BEFORE: a run's last corner marked, the arrow coming back.
+        p.setPen(stroke(k.shape, 1.4));
+        p.drawPolyline(QPolygonF({QPointF(3.0, 18.0), QPointF(9.0, 9.0), QPointF(16.0, 13.0)}));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(16.0, 13.0), 2.6, 2.6);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.6));
+        p.drawArc(QRectF(12.0, 3.0, 9.0, 9.0), 0, 180 * 16);
+        arrowHead(p, QPointF(16.5, 10.8), QPointF(21.0, 7.5), c, 3.6);
+        break;
+    }
+    case Glyph::FnNumbered: {
+        // A SURVEY POINT and its number: the mark and the digits beside it.
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(4.0, 16.0), QPointF(10.0, 16.0));
+        p.drawLine(QPointF(7.0, 13.0), QPointF(7.0, 19.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(7.0, 16.0), 1.8, 1.8);
+        p.setPen(stroke(k.shape, 1.4));
+        p.drawLine(QPointF(12.0, 5.0), QPointF(12.0, 11.0));
+        p.drawLine(QPointF(15.0, 5.0), QPointF(15.0, 11.0));
+        p.drawLine(QPointF(10.8, 7.0), QPointF(16.6, 7.0));
+        p.drawLine(QPointF(10.4, 9.4), QPointF(16.2, 9.4));
+        p.drawLine(QPointF(18.0, 5.0), QPointF(21.0, 5.0));
+        p.drawLine(QPointF(19.5, 5.0), QPointF(19.5, 11.0));
+        break;
+    }
+    case Glyph::FnMid: {
+        // HALFWAY: the two ends and the point between them.
+        p.setPen(stroke(k.shape, 1.4));
+        p.drawLine(QPointF(4.0, 17.0), QPointF(20.0, 7.0));
+        p.setPen(stroke(c, 1.5));
+        p.drawEllipse(QPointF(4.0, 17.0), 2.0, 2.0);
+        p.drawEllipse(QPointF(20.0, 7.0), 2.0, 2.0);
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(12.0, 12.0), 2.6, 2.6);
+        break;
+    }
+    case Glyph::FnRelative: {
+        // FROM P, BY AN OFFSET: the base point and the arrow to the new one.
+        p.setPen(stroke(c, 1.5));
+        p.drawEllipse(QPointF(5.0, 17.0), 2.2, 2.2);
+        p.setPen(QPen(k.shape, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(7.0, 17.0), QPointF(18.0, 17.0));
+        p.drawLine(QPointF(18.0, 17.0), QPointF(18.0, 8.0));
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(6.6, 15.4), QPointF(16.6, 7.8));
+        arrowHead(p, QPointF(18.0, 6.8), QPointF(14.0, 9.8), c, 3.8);
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(18.4, 6.6), 2.2, 2.2);
+        break;
+    }
+    case Glyph::FnBeyond: {
+        // ON PAST B: the line A→B drawn, carried on dashed, the point out there.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.0, 18.0), QPointF(12.0, 11.0));
+        p.drawEllipse(QPointF(3.0, 18.0), 1.8, 1.8);
+        p.drawEllipse(QPointF(12.0, 11.0), 1.8, 1.8);
+        p.setPen(QPen(k.shape, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(13.6, 9.8), QPointF(19.4, 5.2));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(20.0, 4.8), 2.6, 2.6);
+        break;
+    }
+    case Glyph::FnXY: {
+        // ONE POINT'S EASTING, ANOTHER'S NORTHING: P down the left, Q along the
+        // bottom, the point where their lines meet.
+        p.setPen(stroke(c, 1.5));
+        p.drawEllipse(QPointF(5.0, 5.0), 2.0, 2.0);
+        p.drawEllipse(QPointF(19.0, 19.0), 2.0, 2.0);
+        p.setPen(QPen(k.shape, 1.3, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(5.0, 7.0), QPointF(5.0, 19.0));
+        p.drawLine(QPointF(17.0, 19.0), QPointF(5.0, 19.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(5.0, 19.0), 2.6, 2.6);
+        break;
+    }
+    case Glyph::FnAlong: {
+        // ALONG AN OBJECT AND OFF IT: an arc, the place along it, the step right.
+        p.setPen(stroke(c, 1.6));
+        p.drawArc(QRectF(2.0, 6.0, 20.0, 20.0), 20 * 16, 140 * 16);
+        p.setPen(QPen(k.shape, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(12.0, 6.0), QPointF(12.0, 1.8));
+        p.setPen(stroke(c, 1.4));
+        p.drawEllipse(QPointF(12.0, 6.0), 1.6, 1.6);
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.note);
+        p.drawEllipse(QPointF(12.0, 2.2), 2.2, 2.2);
+        break;
+    }
     case Glyph::HatchInside: {
         // THE REGION ROUND A CLICK, HATCHED: `MeasureAreaInside`'s four loose
         // lines, the ground they close filled with the pattern, and the click.

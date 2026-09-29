@@ -185,6 +185,21 @@ struct ResolveContext
     ObjectPathLookup object_path{};
 };
 
+/// One point function as the `Nokta Girişi` prompt tab offers it (`.claude/ui.md`
+/// R48a): a button that writes `name(` and lets the canvas's clicks fill it.
+struct PointFunctionInfo
+{
+    std::string_view name;      ///< what the line writes before the bracket: `dik`
+    std::string_view label;     ///< the palette's name for it: `Dik Ayak`
+    std::string syntax;         ///< every shape, as the docs spell them, ` · ` between
+    bool takes_arguments{true}; ///< false for `son`, written whole
+};
+
+/// Every point function once, in the grammar's order, read from THE table the
+/// grammar parses (point_function.cpp), so a function added there is a button
+/// the day it is added (CLAUDE.md 5.10).
+const std::vector<PointFunctionInfo>& point_functions();
+
 /// Converts a coordinate token to an absolute point, resolving @ forms against
 /// `last`. Returns an error for a non-coordinate token.
 ///

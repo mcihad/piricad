@@ -15,6 +15,7 @@
 #include "kentos_cad/app/main_window.hpp"
 
 #include "kentos_cad/app/app_menu.hpp"
+#include "kentos_cad/app/command_line.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/print_service.hpp"
@@ -27,6 +28,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/command/targets.hpp"
@@ -35,6 +37,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/settings.hpp"
+#include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/text_store.hpp"
@@ -1883,6 +1886,98 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     give->setToolTip(tr("Seçilenleri soran komuta verir — Enter ya da sağ tık"));
     connect(give, &QAction::triggered, this, [this] { (void)controller_->supplyPickedObjects(); });
     handOver->addLargeAction(give);
+
+    // ------------------------------------------------------ `Nokta Girişi`
+    //
+    // UP WHILE A COMMAND ASKS FOR A POINT (R48a) — Netcad's
+    // `Nokta Seçim Araçları` and its `Koordinat Hesap Makinası`. The snaps are the engine's
+    // own bits (`core::snap_mode_label`), the palette is the grammar's own
+    // table (`command::point_functions`): a button writes `dik(` into the
+    // command line, the canvas's clicks write the points, the hand types the
+    // figures, and Enter — or Gönder — answers with the line as typed.
+    promptPointTab_ = bar->addContextCategory(tr("Nokta Girişi"), t.accent, kPromptPointContextId);
+    SARibbonCategory* pointing = promptPointTab_->addCategoryPage(tr("Nokta Girişi"));
+    pointing->setObjectName(QStringLiteral("ribbonPromptPoint"));
+
+    SARibbonPanel* snaps = pointing->addPanel(tr("Yakalama"));
+    promptSnaps_.clear();
+    for (const std::uint32_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
+        if ((core::SnapAllMask & *bit) == 0) continue;
+        auto* a = new QAction(turkish_title(QString::fromUtf8(core::snap_mode_label(*bit))), this);
+        a->setObjectName(
+            QStringLiteral("promptPoint.snap.%1").arg(QString::fromUtf8(core::snap_mode_id(*bit))));
+        a->setCheckable(true);
+        a->setProperty(kSnapBitProperty, *bit);
+        a->setToolTip(tr("MOD yakalama_modları — %1 yakalamayı açar ya da kapatır")
+                          .arg(QString::fromUtf8(core::snap_mode_label(*bit))));
+        const std::uint32_t mine = *bit;
+        connect(a, &QAction::triggered, this, [this, mine](bool on) {
+            const auto mask = static_cast<std::uint32_t>(
+                controller_->bus().session_settings().get("core.yakalama.modlar").as_int());
+            controller_->runLine(QStringLiteral("MOD ad=yakalama_modları deger=%1")
+                                     .arg(on ? (mask | mine) : (mask & ~mine)),
+                                 command::Origin::Gui);
+        });
+        promptSnaps_ << a;
+        snaps->addSmallAction(a);
+    }
+
+    SARibbonPanel* palette = pointing->addPanel(tr("Hesap"));
+    // A PICTURE PER FUNCTION, by its name — the construction it does, drawn; a
+    // function added to the grammar later still gets its button, under ƒ.
+    const auto fnGlyph = [](const QString& name) {
+        static const QHash<QString, Glyph> known{
+            {QStringLiteral("son"), Glyph::FnLast},
+            {QStringLiteral("n"), Glyph::FnNumbered},
+            {QStringLiteral("orta"), Glyph::FnMid},
+            {QStringLiteral("ile"), Glyph::FnRelative},
+            {QStringLiteral("dik"), Glyph::PerpOffset},
+            {QStringLiteral("semt"), Glyph::Survey},
+            {QStringLiteral("kes"), Glyph::PointIntersect},
+            {QStringLiteral("ara"), Glyph::PointAlong},
+            {QStringLiteral("uzanti"), Glyph::FnBeyond},
+            {QStringLiteral("xy"), Glyph::FnXY},
+            {QStringLiteral("boyunca"), Glyph::FnAlong},
+        };
+        return known.value(name, Glyph::Function);
+    };
+    for (const command::PointFunctionInfo& fn : command::point_functions()) {
+        const QString name =
+            QString::fromUtf8(fn.name.data(), static_cast<qsizetype>(fn.name.size()));
+        auto* a = new QAction(
+            QString::fromUtf8(fn.label.data(), static_cast<qsizetype>(fn.label.size())), this);
+        a->setObjectName(QStringLiteral("promptPoint.fn.%1").arg(name));
+        a->setData(static_cast<int>(fnGlyph(name)));
+        a->setToolTip(tr("%1 — noktaları tuvalde tıklayın, sayıları yazın, Enter")
+                          .arg(QString::fromStdString(fn.syntax)));
+        const bool whole = !fn.takes_arguments;
+        connect(a, &QAction::triggered, this, [this, name, whole] {
+            // A FUNCTION OF NOTHING is the answer as it stands: `son()`.
+            if (whole) {
+                controller_->runLine(name + QStringLiteral("()"), command::Origin::Gui);
+                return;
+            }
+            commandLine_->beginCompose(name + QLatin1Char('('), 0);
+        });
+        palette->addSmallAction(a);
+    }
+
+    SARibbonPanel* send = pointing->addPanel(tr("Satır"));
+    auto* go            = new QAction(tr("Gönder"), this);
+    go->setObjectName(QStringLiteral("promptPoint.GONDER"));
+    go->setData(static_cast<int>(Glyph::Check));
+    go->setToolTip(tr("Kurulan satırı soran komuta verir — Enter; açık parantezler kapanır"));
+    connect(go, &QAction::triggered, this, [this] { commandLine_->submitLine(); });
+    send->addLargeAction(go);
+    auto* drop = new QAction(tr("Vazgeç"), this);
+    drop->setObjectName(QStringLiteral("promptPoint.VAZGEC"));
+    drop->setData(static_cast<int>(Glyph::Close));
+    drop->setToolTip(tr("Kurulan satırı siler, soru sürer — Esc"));
+    connect(drop, &QAction::triggered, this, [this] {
+        commandLine_->clear();
+        commandLine_->endCompose();
+    });
+    send->addSmallAction(drop);
 }
 
 void MainWindow::loadRibbonCatalogues()
@@ -2119,6 +2214,7 @@ void MainWindow::refreshRibbon()
     refreshRibbonDefaults();
     refreshContextTabs();
     refreshToolAvailability();
+    refreshPointTab();
 }
 
 void MainWindow::refreshLayerBox()
@@ -2476,6 +2572,12 @@ void MainWindow::refreshRibbonPictures()
             a->setIcon(anchor_icon(a->property("kentos.anchor.col").toInt(),
                                    a->property("kentos.anchor.row").toInt(), t.iconInk,
                                    t.iconNote));
+    // THE SNAP SWITCHES WEAR THE CANVAS'S OWN MARKERS, in the note ink.
+    for (QAction* a : std::as_const(promptSnaps_))
+        a->setIcon(snap_icon(a->property(kSnapBitProperty).toUInt(), t.iconNote));
+    // And the prompt tabs wear the accent cap, as the editor tabs do.
+    for (SARibbonContextCategory* tab : {promptSelectTab_, promptPointTab_})
+        if (tab != nullptr) tab->setContextColor(t.accent);
 }
 
 // =============================================================================

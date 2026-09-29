@@ -2511,7 +2511,35 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("37b-secim-cit"), &window); });
         later([&window] {
             QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-            QCoreApplication::sendEvent(window.findChild<QLineEdit*>(), &esc);
+            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
+            window.controller()->cancelAll();
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
+        });
+
+        // AND THE NOKTA GİRİŞİ TAB, up while ÇİZGİ asks for a point: Dik Ayak
+        // started from its palette, the baseline's two ends clicked into the
+        // line and traced on the canvas, on to the cursor.
+        later([&window] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("ÇİZGİ"));
+            QCoreApplication::sendPostedEvents();
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab =
+                        bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonPromptPoint")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window, clickAt] {
+            if (auto* dik = window.findChild<QAction*>(QStringLiteral("promptPoint.fn.dik")))
+                dik->trigger();
+            clickAt(kentos::core::Point2{485300000, 4310200000});
+            clickAt(kentos::core::Point2{485380000, 4310200000});
+        });
+        later([hover] { hover(kentos::core::Point2{485330000, 4310214000}); });
+        later([&window, shot] { shot(QStringLiteral("38-nokta-girisi"), &window); });
+        later([&window] {
+            QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
             window.controller()->cancelAll();
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });

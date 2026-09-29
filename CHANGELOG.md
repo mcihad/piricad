@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — soru sürerken Nokta Girişi sekmesi
+
+- Bir komut nokta isterken şeritte **Nokta Girişi** sekmesi belirir (Netcad'in Nokta Seçim
+  Araçları ve Koordinat Hesap Makinası): her yakalama modu bir anahtar, her nokta
+  fonksiyonu bir düğme — ikisi de kendi tablolarından üretilir. Hesap düğmesi fonksiyonu
+  komut satırına başlatır, tuvaldeki tıklamalar noktalarını (Boyunca'da nesne kimliğini)
+  yazar; **Gönder** açık parantezi kapatıp satırı verir. Kurulan satırın noktaları tuvalde
+  kesik bir izle çizilir.
+
+### Düzeltildi — F3 çalışan komutu bitiriyordu
+
+- `MOD` şeffaf oldu: bir komut nokta beklerken F3'e, durum şeridindeki yakalama ve kutupsal
+  anahtarlarına basmak ya da `MOD …` yazmak artık komutu kapatmıyor; komut bir sonraki
+  noktayı yeni modla alıyor.
+
 ### Eklendi — soru sürerken Seçim sekmesi
 
 - Bir komut nesne isterken şeritte **Seçim** sekmesi belirir (Netcad'in Seçim Süzgeci):

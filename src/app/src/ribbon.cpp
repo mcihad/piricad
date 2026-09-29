@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/ribbon.hpp"
 
+#include "kentos_cad/render/snap_marker.hpp"
+
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/command/drawing_catalogs.hpp"
@@ -760,6 +762,34 @@ QIcon anchor_icon(int column, int row, const QColor& ink, const QColor& mark)
     p.setPen(Qt::NoPen);
     p.setBrush(mark);
     p.drawEllipse(QPointF(mx, my), 2.3, 2.3);
+    return QIcon(pm);
+}
+
+QIcon snap_icon(std::uint32_t mode, const QColor& mark)
+{
+    constexpr qreal kDpr = 2.0;
+    constexpr int kSide  = 20;
+    QPixmap pm(QSize(kSide, kSide) * kDpr);
+    pm.setDevicePixelRatio(kDpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(QPen(mark, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.setBrush(Qt::NoBrush);
+
+    constexpr float kCentre     = kSide / 2.0F;
+    constexpr float kHalf       = 6.5F;
+    const render::Marker marker = render::snap_marker(mode, kCentre, kCentre, kHalf);
+    for (const render::MarkerRun& run : marker.runs) {
+        QPolygonF line;
+        for (const render::ScreenPointF& q : run.points)
+            line << QPointF(q.x, q.y);
+        if (run.closed)
+            p.drawPolygon(line);
+        else
+            p.drawPolyline(line);
+    }
+    if (marker.ring > 0.0F) p.drawEllipse(QPointF(kCentre, kCentre), marker.ring, marker.ring);
     return QIcon(pm);
 }
 

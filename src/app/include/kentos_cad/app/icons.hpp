@@ -315,6 +315,13 @@ enum class Glyph {
     SelectThrough,      ///< three lines meeting at a dot: SEÇ GEÇEN
     SelectEverything,   ///< a frame round four objects, every one bold: SEÇ TÜMÜ
     SelectNewest,       ///< two faint lines and the newest bold, its end marked: SEÇ SON
+    FnLast,             ///< a run's last point, marked, an arrow back to it: son()
+    FnNumbered,         ///< a survey point with its number beside it: n(1284)
+    FnMid,              ///< two points and the one halfway between them: orta()
+    FnRelative,         ///< a point, and an offset arrow from it to another: ile()
+    FnBeyond,           ///< a line from A to B carried on past B, the point there: uzanti()
+    FnXY,               ///< two points, the one at P's easting and Q's northing: xy()
+    FnAlong,            ///< an arc, a point along it, stepped off to its right: boyunca()
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

@@ -2129,6 +2129,47 @@ void MapCanvas::clearMeasureMarks()
     update();
 }
 
+void MapCanvas::setComposeTrace(std::vector<core::Point2> points)
+{
+    if (points == compose_trace_) return;
+    compose_trace_ = std::move(points);
+    update();
+}
+
+void MapCanvas::buildComposeTrace()
+{
+    if (compose_trace_.empty()) return;
+    const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+
+    std::vector<render::ScreenPointF> run;
+    run.reserve(compose_trace_.size() + 1);
+    for (const core::Point2& p : compose_trace_)
+        run.push_back(render::to_f(view_.to_screen(p)));
+    // ON TO THE CURSOR while the line waits for another click: to the snapped
+    // point when an aid has fired, where the next click will land.
+    if (capture_ && cursor_valid_) {
+        QPointF to = cursor_;
+        if (snap_preview_valid_) {
+            const auto snapped = view_.to_screen(snap_preview_.point);
+            to                 = QPointF(snapped.x, snapped.y);
+        }
+        run.push_back(toScreenF(to));
+    }
+    if (run.size() >= 2) addRun(batch, run, false);
+
+    // EACH CLICK MARKED, so a point the line holds is seen where it stands.
+    constexpr float kHalf = 3.5F;
+    for (std::size_t i = 0; i < compose_trace_.size(); ++i) {
+        const render::ScreenPointF q = run[i];
+        addRun(batch,
+               {{q.x - kHalf, q.y - kHalf},
+                {q.x + kHalf, q.y - kHalf},
+                {q.x + kHalf, q.y + kHalf},
+                {q.x - kHalf, q.y + kHalf}},
+               true);
+    }
+}
+
 void MapCanvas::buildMeasureMarks()
 {
     // A MARK OLDER THAN THE DRAWING DESCRIBES A DRAWING THAT IS GONE: a length
@@ -2732,6 +2773,7 @@ void MapCanvas::buildOverlay()
     buildMeasureMarks();
     buildBrokenLinks();
     buildPreviewGhosts();
+    buildComposeTrace();
 
     guide_vertices_ = 0;
     guide_label_.clear();

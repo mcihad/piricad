@@ -179,6 +179,13 @@ public:
     /// Takes every measurement mark off the canvas.
     void clearMeasureMarks();
 
+    /// THE CLICKS OF A LINE BEING COMPOSED (`CommandLine::beginCompose`,
+    /// `.claude/ui.md` R48a): the points written into the command line, drawn
+    /// joined in the order they were clicked and on to the cursor while the
+    /// line waits for another — the fence a Seçim tab's Çit is drawing, the
+    /// two points a palette's `dik(` stands on. Empty puts the trace away.
+    void setComposeTrace(std::vector<core::Point2> points);
+
     /// Tells the canvas the document may have changed. The shell calls it after
     /// every command; a mark taken before a change describes a drawing that is
     /// gone and is dropped at the next frame.
@@ -538,6 +545,9 @@ private:
     /// make or change dashed in the accent ink, the ones it would erase dashed
     /// in the warning ink — until the suggestion is decided.
     void buildPreviewGhosts();
+
+    /// Draws `compose_trace_` (`setComposeTrace`).
+    void buildComposeTrace();
 
     void buildBrokenLinks();
 
@@ -906,6 +916,7 @@ private:
     };
 
     std::vector<StoredMark> marks_;
+    std::vector<core::Point2> compose_trace_; ///< a composed line's clicks, in order
 
     /// The last region SINIR's preview found, kept while the cursor stays in it:
     /// an arrangement per mouse move is a cost a hover should not pay. Stale

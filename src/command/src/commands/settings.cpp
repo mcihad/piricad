@@ -331,8 +331,14 @@ KENTOS_COMMAND(mode)
             },
         // Transient by R39: not undoable, not journalled as a document mutation.
         // ReadOnly is the flag that says so to the bus, exactly as TERCİH does.
+        //
+        // TRANSPARENT, as AutoCAD's 'OSNAP and 'ORTHO are: a mode is changed IN
+        // THE MIDDLE of drawing, and the next point is taken with it. Without the
+        // flag the line closed the command it was typed into — F3, the status
+        // strip's chips and the Nokta Girişi tab's snap switches all run MOD, so
+        // turning the end-point snap on under a waiting ÇİZGİ put ÇİZGİ away.
         .undo    = UndoPolicy::None,
-        .flags   = Flags::Scriptable | Flags::ReadOnly,
+        .flags   = Flags::Scriptable | Flags::ReadOnly | Flags::Transparent,
         .summary = "Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur "
                    "ve değiştirir.",
         .run     = &run_mode,

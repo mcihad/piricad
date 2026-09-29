@@ -271,6 +271,12 @@ QIcon hatch_swatch(const command::HatchPattern& pattern, const QColor& ink, cons
 /// `row` — where the point sits on the text.
 QIcon anchor_icon(int column, int row, const QColor& ink, const QColor& mark);
 
+/// The `Nokta Girişi` tab's picture for snap `mode`: THE MARKER THE CANVAS DRAWS
+/// for it (`render::snap_marker`) — the square of the end point, the triangle of
+/// the midpoint — so the switch and what it makes appear under the cursor are
+/// one drawing, and a mode added to the engine has its picture the day it does.
+QIcon snap_icon(std::uint32_t mode, const QColor& mark);
+
 /// The editor tabs a selection brings up, in the order `RibbonLive::contexts`
 /// holds them (`.claude/ui.md` R48).
 enum class RibbonContext : std::uint8_t {
@@ -293,6 +299,10 @@ inline constexpr int kBlockEditContextId = 100;
 /// and for objects. Not a selection's editor tabs either, so past both ranges.
 inline constexpr int kPromptPointContextId  = 101;
 inline constexpr int kPromptSelectContextId = 102;
+
+/// Property under which a `Nokta Girişi` snap switch carries its engine bit —
+/// not `QAction::data()`, which is the glyph.
+inline constexpr const char* kSnapBitProperty = "kentos.snap.bit";
 
 /// The editor tab object `e` of `doc` belongs to, if any: what brings a tab
 /// up for a selection and what a double click on the object opens.
