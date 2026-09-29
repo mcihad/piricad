@@ -15,6 +15,7 @@
 
 #include <coroutine>
 #include <exception>
+#include <new>
 #include <type_traits>
 #include <utility>
 
