@@ -16,9 +16,29 @@ Task<void> run_help(Context& ctx)
 
     if (const Value v = ctx.argument("komut"); !v.empty()) {
         const CommandSpec* spec = bus.registry().resolve(v.as_text());
+
+        // ASKED BY ANOTHER PROGRAM'S WORD, answered with this program's
+        // command: `YARDIM komut=KUTU` is a question a Netcad hand asks, and
+        // the answer is `DİKDÖRTGEN`'s page (`CommandSpec::known_as`). A word
+        // two commands are known by has no one page, so it is refused with
+        // both names.
         if (!spec) {
-            ctx.refuse(core::ErrorCode::NotFound, "Bilinmeyen komut: '" + v.as_text() + "'");
-            co_return;
+            const std::vector<const CommandSpec*> meant = bus.registry().known_as(v.as_text());
+            if (meant.size() != 1) {
+                std::string text = "Bilinmeyen komut: '" + v.as_text() + "'";
+                for (std::size_t i = 0; i < meant.size(); ++i) {
+                    const char* joint = i == 0                  ? ". Karşılığı "
+                                        : i + 1 == meant.size() ? " ya da "
+                                                                : ", ";
+                    text += joint + meant[i]->names.front();
+                }
+                if (!meant.empty()) text += ".";
+                ctx.refuse(core::ErrorCode::NotFound, text);
+                co_return;
+            }
+            spec = meant.front();
+            ctx.echo(v.as_text() + " bu programda komut adı değil; karşılığı " +
+                     spec->names.front() + ".");
         }
         ctx.record("komut", v);
 

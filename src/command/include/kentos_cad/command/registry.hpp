@@ -37,6 +37,13 @@ public:
     /// declared alias and abbreviation. Returns nullptr when unresolved.
     const CommandSpec* resolve(std::string_view typed) const;
 
+    /// The commands another program calls `word` (`CommandSpec::known_as`):
+    /// Netcad's `KUTU` is DİKDÖRTGEN. What an unknown word can still be told —
+    /// which command the user meant. `resolve` never reads it, which is why a
+    /// known name may be any word, another command's name included (`KAYDIR`).
+    /// Empty when no command claims the word.
+    std::vector<const CommandSpec*> known_as(std::string_view word) const;
+
     /// Names starting with the given prefix, for command-line completion.
     std::vector<std::string> complete(std::string_view prefix, std::size_t limit = 16) const;
 
@@ -74,6 +81,31 @@ private:
     std::unordered_map<std::string, std::size_t> by_name_; ///< keyed on turkish_fold_key(name)
     std::vector<std::string> refused_;
 };
+
+/// WHAT A SEARCH WORD MATCHED IN ONE COMMAND, and how well (`search_match`).
+struct SearchMatch
+{
+    static constexpr int kNone = -1; ///< not an answer at all
+
+    /// 0 is the best answer. In order: the word IS one of the command's names;
+    /// one of its known names; a name begins with it; a known name begins with
+    /// it; a name or the id contains it; a known name contains it; its label or
+    /// its summary does.
+    int tier{kNone};
+
+    /// The known name that matched, when that is what matched: the row says it,
+    /// because the command's own name is not the word the user typed.
+    const KnownName* known{nullptr};
+};
+
+/// How well `spec` answers the search `word` — the order the command search
+/// (`Ctrl+K`) lists its answers in. Turkish-folded like every name (CLAUDE.md
+/// 5.6), so `kaydir` is `KAYDIR`. An empty word matches nothing.
+///
+/// A NAME BEFORE A KNOWN NAME: typed at the prompt, `KAYDIR` pans the view, so
+/// the search has to agree that KAYDIR is first; TAŞI, which Netcad calls
+/// `Kaydır`, comes right under it and says so.
+SearchMatch search_match(const CommandSpec& spec, std::string_view word);
 
 /// The process-wide registry, populated once by register_builtin_commands().
 Registry& registry();

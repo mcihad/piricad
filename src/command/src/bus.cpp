@@ -382,6 +382,41 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
     return args;
 }
 
+/// "Bilinmeyen komut" — and, when another program calls one of this program's
+/// commands `word` (`CommandSpec::known_as`), which one. A Netcad hand that
+/// types `KUTU` is told DİKDÖRTGEN rather than sent to read the whole list.
+///
+/// NO SUFFIX ON A WORD THAT VARIES. `KUTU'nun`, `Netcad'de` need Turkish vowel
+/// harmony, and a message that guessed it for the next program's name would
+/// be wrong in the one place it is read; the program goes in brackets.
+core::Error unknown_command(const Registry& reg, const std::string& word)
+{
+    std::string text                            = "Bilinmeyen komut: '" + word + "'.";
+    const std::vector<const CommandSpec*> meant = reg.known_as(word);
+    if (meant.empty())
+        return core::err(ErrorCode::NotFound, text + " YARDIM yazarak komut listesini görün.");
+
+    const std::string folded = core::turkish_fold_key(word);
+    std::string declared;
+    std::vector<std::string> programs;
+    std::string commands;
+    for (std::size_t i = 0; i < meant.size(); ++i) {
+        for (const KnownName& known : meant[i]->known_as) {
+            if (core::turkish_fold_key(known.name) != folded) continue;
+            if (declared.empty()) declared = known.name;
+            if (std::find(programs.begin(), programs.end(), known.program) == programs.end())
+                programs.push_back(known.program);
+        }
+        if (i > 0) commands += i + 1 == meant.size() ? " ya da " : ", ";
+        commands += meant[i]->names.front();
+    }
+    std::string from;
+    for (std::size_t i = 0; i < programs.size(); ++i)
+        from += (i > 0 ? ", " : "") + programs[i];
+    return core::err(ErrorCode::NotFound,
+                     text + " " + declared + " (" + from + ") burada " + commands + " komutudur.");
+}
+
 } // namespace
 
 Bus::Bus(core::Document& doc, Registry& reg, Journal& journal, UndoStack& undo)
@@ -497,9 +532,7 @@ core::Result<DispatchResult> Bus::dispatch_into(const Invocation& inv, Transacti
     } const restore{for_agent_, agent_before};
 
     const CommandSpec* spec = reg_.resolve(inv.name);
-    if (!spec)
-        return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + inv.name +
-                                                  "'. YARDIM yazarak komut listesini görün.");
+    if (!spec) return unknown_command(reg_, inv.name);
 
     // NOT WHILE A JOB READS THE DRAWING (`writable`). A run nested inside a
     // command is that command's own, and a parked command runs none. The job is
@@ -665,9 +698,7 @@ core::Result<Invocation> Bus::parse_invocation(std::string_view line, Origin ori
     if (!parsed) return parsed.error();
 
     const CommandSpec* spec = reg_.resolve(parsed.value().command);
-    if (!spec)
-        return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
-                                                  "'. YARDIM yazarak komut listesini görün.");
+    if (!spec) return unknown_command(reg_, parsed.value().command);
 
     auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
@@ -694,9 +725,7 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
     if (!parsed) return parsed.error();
 
     const CommandSpec* spec = reg_.resolve(parsed.value().command);
-    if (!spec)
-        return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
-                                                  "'. YARDIM yazarak komut listesini görün.");
+    if (!spec) return unknown_command(reg_, parsed.value().command);
 
     auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();

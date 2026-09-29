@@ -88,6 +88,24 @@ Kısaltma da çalışır:
 ? komut=KAT
 ```
 
+Başka bir programın adıyla da sorulabilir. Netcad'in `KUTU`'su bu programda bir komut
+adı değildir; `YARDIM` karşılığını söyler ve o komutu anlatır:
+
+```
+YARDIM komut=KUTU
+```
+
+Çıktı:
+
+```text
+KUTU bu programda komut adı değil; karşılığı DİKDÖRTGEN.
+core.rectangle  (DİKDÖRTGEN, DIKDORTGEN, RECTANGLE, DKD, REC)  — Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
+    noktalar : point_list [2..3]  2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta
+    yontem : text [0..1]  2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş
+```
+
+Arayüzde sayfa da `DİKDÖRTGEN`'in üzerinde açılır.
+
 ### Arayüz
 
 **KentOS CAD ▸ Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
@@ -145,6 +163,7 @@ make reference
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Bilinmeyen komut: 'XYZ'` | `komut=` ile verilen ad bulunamadı | Parametresiz `YARDIM` ile listeye bakın |
+| `Bilinmeyen komut: 'XYZ'. Karşılığı A ya da B.` | Verilen ad başka bir programda iki ayrı komutun adı | Mesajdaki komutlardan birini sorun: `YARDIM komut=A` |
 | `'core.help': bilinmeyen parametre 'ad'. Tanımlı parametreler: komut` | Parametre adı yanlış | `komut=` yazın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

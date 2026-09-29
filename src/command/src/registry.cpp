@@ -44,6 +44,20 @@ core::Status Registry::admit(CommandSpec spec)
         folded.push_back(std::move(f));
     }
 
+    // A KNOWN NAME SAYS WHOSE WORD IT IS, and it is not one of the command's own
+    // names: those resolve already, and declaring one again as "known" would
+    // tell the search a command is called what it is called.
+    for (const KnownName& known : spec.known_as) {
+        if (known.name.empty() || known.program.empty())
+            return core::err(ErrorCode::InvalidArgument,
+                             "'" + spec.id + "' komutunun bilinen adında ad ya da program boş.");
+        const std::string f = core::turkish_fold_key(known.name);
+        if (std::find(folded.begin(), folded.end(), f) != folded.end())
+            return core::err(ErrorCode::InvalidArgument,
+                             "'" + known.name + "' zaten '" + spec.id +
+                                 "' komutunun adı; bilinen ad olarak yinelenmez.");
+    }
+
     const std::size_t index = specs_.size();
     by_id_.emplace(spec.id, index);
     // The id itself always resolves, so scripts and the AI can use it directly.
@@ -66,6 +80,20 @@ const CommandSpec* Registry::resolve(std::string_view typed) const
     if (typed.empty()) return nullptr;
     auto it = by_name_.find(core::turkish_fold_key(typed));
     return it == by_name_.end() ? nullptr : &specs_[it->second];
+}
+
+std::vector<const CommandSpec*> Registry::known_as(std::string_view word) const
+{
+    std::vector<const CommandSpec*> out;
+    const std::string folded = core::turkish_fold_key(word);
+    if (folded.empty()) return out;
+    for (const CommandSpec& spec : specs_)
+        for (const KnownName& known : spec.known_as)
+            if (core::turkish_fold_key(known.name) == folded) {
+                out.push_back(&spec);
+                break;
+            }
+    return out;
 }
 
 std::vector<std::string> Registry::complete(std::string_view prefix, std::size_t limit) const
@@ -104,6 +132,12 @@ std::uint64_t Registry::fingerprint() const
         h                       = core::fnv1a(spec->id, h);
         for (const std::string& name : spec->names)
             h = core::fnv1a(name, h);
+        // A known name is part of what an agent is told (`ai::tool_for`), so a
+        // new one has to read as a changed surface.
+        for (const KnownName& known : spec->known_as) {
+            h = core::fnv1a(known.name, h);
+            h = core::fnv1a(known.program, h);
+        }
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->category), h);
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->flags), h);
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->undo), h);
@@ -129,6 +163,47 @@ std::uint64_t Registry::fingerprint() const
         }
     }
     return h;
+}
+
+SearchMatch search_match(const CommandSpec& spec, std::string_view word)
+{
+    SearchMatch out;
+    const std::string needle = core::turkish_fold_key(word);
+    if (needle.empty()) return out;
+
+    const auto better = [&out](int tier, const KnownName* known) {
+        if (out.tier == SearchMatch::kNone || tier < out.tier) {
+            out.tier  = tier;
+            out.known = known;
+        }
+    };
+    const auto contains = [&needle](const std::string& folded) {
+        return folded.find(needle) != std::string::npos;
+    };
+
+    for (const std::string& name : spec.names) {
+        const std::string f = core::turkish_fold_key(name);
+        if (f == needle)
+            better(0, nullptr);
+        else if (f.starts_with(needle))
+            better(2, nullptr);
+        else if (contains(f))
+            better(4, nullptr);
+    }
+    for (const KnownName& known : spec.known_as) {
+        const std::string f = core::turkish_fold_key(known.name);
+        if (f == needle)
+            better(1, &known);
+        else if (f.starts_with(needle))
+            better(3, &known);
+        else if (contains(f))
+            better(5, &known);
+    }
+    if (contains(core::turkish_fold_key(spec.id))) better(4, nullptr);
+    if (contains(core::turkish_fold_key(spec.title)) ||
+        contains(core::turkish_fold_key(spec.summary)))
+        better(6, nullptr);
+    return out;
 }
 
 Registry& registry()

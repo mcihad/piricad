@@ -558,6 +558,8 @@ Ayrıntılı kullanım: [ALAN](area.md)
 
 Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
 
+Bilinen adı: `KUTU` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
+
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `noktalar` | point_list | 2–3 | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta |
@@ -702,6 +704,8 @@ Ayrıntılı kullanım: [TEMİZLE](cleanup.md)
 ### `core.move` — TAŞI (Taşı)
 
 Seçilen nesneleri iki nokta arasındaki kadar taşır.
+
+Bilinen adı: `KAYDIR` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -930,6 +934,8 @@ Ayrıntılı kullanım: [AYNALA](mirror.md)
 ### `core.measure` — ÖLÇ (Ölç)
 
 Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
+
+Bilinen adı: `CETVEL` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1382,6 +1388,8 @@ Ayrıntılı kullanım: [ETİKET](label.md)
 ### `core.layer` — KATMAN (Katman)
 
 Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
+
+Bilinen adı: `TABAKA` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -2138,6 +2146,19 @@ Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan
 | `araclar` | bool | isteğe bağlı | Uç noktaya araç kataloğu gönderilsin mi; varsayılan evet |
 
 Ayrıntılı kullanım: [YAPAYZEKAMODELİ](ai_provider.md)
+
+## Başka programlardaki adlar
+
+Bu adlar komut satırında karşılıklarını başlatmaz: yazılan sözcük ya bir
+sorunun yanıtıdır ya da bu programda başka bir komutun adıdır. Komut Ara
+(`Ctrl+K`) onları bulur, `YARDIM komut=<ad>` karşılığını söyler.
+
+| Ad | Program | Bu programda |
+|---|---|---|
+| `KUTU` | Netcad | [DİKDÖRTGEN](rectangle.md) |
+| `KAYDIR` | Netcad | [TAŞI](move.md) |
+| `CETVEL` | Netcad | [ÖLÇ](measure.md) |
+| `TABAKA` | Netcad | [KATMAN](layer.md) |
 
 ## AI araç kataloğu
 
@@ -7744,7 +7765,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_layer",
     "title": "Katman",
-    "description": "Katman oluşturur, aktif yapar ve özelliklerini değiştirir.\nKomut: KATMAN (LAYER, KAT)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Katman oluşturur, aktif yapar ve özelliklerini değiştirir.\nKomut: KATMAN (LAYER, KAT)\nNetcad adı: TABAKA (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -8686,7 +8707,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_measure",
     "title": "Ölç",
-    "description": "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nNetcad adı: CETVEL (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -9223,7 +9244,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_move",
     "title": "Taşı",
-    "description": "Seçilen nesneleri iki nokta arasındaki kadar taşır.\nKomut: TAŞI (TASI, MOVE, TŞ)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesneleri iki nokta arasındaki kadar taşır.\nKomut: TAŞI (TASI, MOVE, TŞ)\nNetcad adı: KAYDIR (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -10557,7 +10578,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_rectangle",
     "title": "Dikdörtgen",
-    "description": "Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nNetcad adı: KUTU (arama bulur; komut satırında bu komutu başlatmaz).\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {

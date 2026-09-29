@@ -3426,6 +3426,41 @@ int MainWindow::probeHelpPage()
     check(!page.selected.isEmpty(), QStringLiteral("bir komut seçili"));
     check(!page.detail.isEmpty(), QStringLiteral("sağ bölme dolu"));
 
+    // A SEARCH IS RANKED, AND ANOTHER PROGRAM'S WORD FINDS THIS ONE'S COMMAND.
+    // `kaydır` is KAYDIR's own name, so KAYDIR is first — typed at the prompt it
+    // pans — and TAŞI, which Netcad calls `Kaydır`, is right under it. `kutu` is
+    // no command's name and finds DİKDÖRTGEN (`CommandSpec::known_as`).
+    if (auto* query = palette_->findChild<QLineEdit*>(QStringLiteral("paletteQuery"));
+        query != nullptr) {
+        query->setText(QStringLiteral("kaydır"));
+        QCoreApplication::processEvents();
+        const CommandPalette::Shown moved = palette_->shown();
+        (void)std::fprintf(stdout, "[yardim] kaydır: %s\n",
+                           moved.first.join(QStringLiteral(", ")).toUtf8().constData());
+        check(moved.first.size() >= 2 && moved.first.at(0) == QStringLiteral("KAYDIR") &&
+                  moved.first.at(1) == QStringLiteral("TAŞI"),
+              QStringLiteral("kaydır: önce KAYDIR, hemen altında Netcad'in Kaydır'ı TAŞI"));
+        check(moved.headings == 0, QStringLiteral("sıralı aramada kategori başlığı yok"));
+
+        query->setText(QStringLiteral("kutu"));
+        QCoreApplication::processEvents();
+        const CommandPalette::Shown boxed = palette_->shown();
+        check(!boxed.first.isEmpty() && boxed.first.front() == QStringLiteral("DİKDÖRTGEN"),
+              QStringLiteral("kutu: en üstte DİKDÖRTGEN (%1)")
+                  .arg(boxed.first.join(QStringLiteral(", "))));
+        query->clear();
+        QCoreApplication::processEvents();
+    } else {
+        check(false, QStringLiteral("arama kutusu bulundu"));
+    }
+
+    // Asked by another program's word, the page opens on this program's command.
+    controller_->runLine(QStringLiteral("YARDIM komut=KUTU"), command::Origin::Gui);
+    QCoreApplication::processEvents();
+    check(palette_->shown().selected == QStringLiteral("DİKDÖRTGEN"),
+          QStringLiteral("YARDIM komut=KUTU DİKDÖRTGEN'i seçti (%1)")
+              .arg(palette_->shown().selected));
+
     // And asked about ONE command, the page opens on it — the `komut=` form.
     controller_->runLine(QStringLiteral("YARDIM komut=ÖLÇÜ"), command::Origin::Gui);
     QCoreApplication::processEvents();

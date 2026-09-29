@@ -337,6 +337,12 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style)
             text += ")";
         }
     }
+    // ANOTHER PROGRAM'S WORD FOR IT, because the user an agent works for may
+    // speak it: "bir kutu çiz" from a Netcad hand is DİKDÖRTGEN. Said not to
+    // start the command when typed, so it is never sent as one.
+    for (const command::KnownName& known : spec.known_as)
+        text += "\n" + known.program + " adı: " + known.name +
+                " (arama bulur; komut satırında bu komutu başlatmaz).";
     // WHAT IT TAKES, when it takes some objects and not others: an agent that
     // hands İFRAZ a line is refused, and it can know that before it asks.
     if (const std::string takes = command::targets_sentence(spec); !takes.empty())

@@ -15,6 +15,16 @@ Mesajlar burada göründüğü gibi yazılır; değişken kısımlar örnek değ
 komut kimliğinin herhangi biri çalışır. Türkçe karakter yazamıyorsanız `CIZGI`, `SIL`,
 `YAKINLAS`, `GERIAL`, `YINELE`, `BETIK` karşılıklarını kullanın.
 
+### `Bilinmeyen komut: 'KUTU'. KUTU (Netcad) burada DİKDÖRTGEN komutudur.`
+
+**Sebep.** Yazdığınız sözcük başka bir programda — burada Netcad'de — bir komutun adı;
+bu programda komut adı değil. Böyle adlar bilerek komut yapılmaz: bir komut soru
+sorarken yazılan `KUTU`, `TABAKA` ya da `CETVEL` o sorunun yanıtıdır (bir yazı, bir
+katman adı) ve komut olsalardı soruyu kapatırlardı.
+
+**Çözüm.** Mesajın söylediği komutu yazın: `DİKDÖRTGEN`. `Ctrl+K` ile Netcad'deki adıyla
+aramak da bu komutu en üstte bulur.
+
 ### `Bilinmeyen komut: 'XYZ'`
 
 **Sebep.** `YARDIM komut=XYZ` ile sorduğunuz komut yok.

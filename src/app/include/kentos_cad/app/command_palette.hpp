@@ -11,6 +11,7 @@
 #include "kentos_cad/app/theme.hpp"
 
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 #include <vector>
 
@@ -59,6 +60,7 @@ public:
         int height{0};     ///< the page's own height in pixels
         QString selected;  ///< the row the cursor is on
         QString detail;    ///< the right-hand pane's title
+        QStringList first; ///< the first five command rows, top down: the ranking
     };
 
     /// What the page is showing right now.
@@ -87,10 +89,13 @@ private:
         QString shorts;  ///< the abbreviations, e.g. `Ç · L` — what the prompt takes
         QString group;   ///< the category's Turkish name, the heading it sits under
         QString names;   ///< every accepted spelling, for the detail pane
+        QString known;   ///< other programs' words for it, for the detail pane
         QString detail;  ///< the parameter table, built once from the spec
         int category{0}; ///< `command::Category`, for ordering the groups
-        std::string key; ///< every name folded, for matching
     };
+
+    /// Adds one command row to the list, `summary` on its second line.
+    void addRow(const Row& row, const QString& summary);
 
     /// Fills the right-hand pane from the row the cursor is on.
     void showDetail();

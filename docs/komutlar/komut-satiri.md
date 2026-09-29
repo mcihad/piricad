@@ -386,6 +386,7 @@ Hata mesajları ne beklendiğini ve ne geldiğini birlikte söyler.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Bilinmeyen komut: 'XYZ'. YARDIM yazarak komut listesini görün.` | Komut adı yanlış | `YARDIM` ile listeye bakın |
+| `Bilinmeyen komut: 'KUTU'. KUTU (Netcad) burada DİKDÖRTGEN komutudur.` | Yazılan, başka bir programın adı; bu programda komut adı değil | Mesajdaki komutu yazın: `DİKDÖRTGEN` |
 | `'core.line': 'noktalar' parametresi en az 2 değer istiyor, 1 değer geldi.` | Çizgi için tek nokta verilmiş | İkinci noktayı ekleyin |
 | `'core.layer': bilinmeyen parametre 'yokboyle'. Tanımlı parametreler: ad, gorunur, kilitli, renk` | Parametre adı yanlış yazılmış | Doğru adı listeden alın |
 | `'core.layer': zorunlu 'ad' parametresi eksik. Beklenen: metin` | Zorunlu parametre verilmemiş | Parametreyi ekleyin |

@@ -1408,6 +1408,7 @@ KENTOS_COMMAND(move)
     return CommandSpec{
         .id       = "core.move",
         .names    = {"TAŞI", "TASI", "MOVE", "TŞ"},
+        .known_as = {{"KAYDIR", "Netcad"}}, // KAYDIR is the pan here
         .title    = "Taşı",
         .category = Category::Modify,
         .params =

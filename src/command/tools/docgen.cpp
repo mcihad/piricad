@@ -111,6 +111,12 @@ std::string build(const Registry& reg)
         // declaration the ribbon greys a tool by (`CommandSpec::targets`).
         if (const std::string takes = targets_sentence(spec); !takes.empty())
             out += "Uygulandığı nesneler: " + takes + ".\n\n";
+        // ANOTHER PROGRAM'S WORD FOR IT (`CommandSpec::known_as`): found by the
+        // search, never typed as a command.
+        for (const auto& known : spec.known_as)
+            out +=
+                "Bilinen adı: `" + known.name + "` (" + known.program +
+                "). Komut Ara (`Ctrl+K`) bulur; komut satırına yazılınca bu komutu başlatmaz.\n\n";
 
         if (spec.params.empty()) {
             out += "Parametre almaz.\n\n";
@@ -123,6 +129,24 @@ std::string build(const Registry& reg)
             out += "\n";
         }
         out += "Ayrıntılı kullanım: [" + spec.names.front() + "](" + slug(spec.id) + ".md)\n\n";
+    }
+
+    // OTHER PROGRAMS' WORDS, gathered from the same declarations: the one table
+    // a Netcad hand reads to find this program's name for a thing, generated
+    // because a hand-kept one would be a second command list (CLAUDE.md 5.18).
+    {
+        std::string rows;
+        for (const auto& spec : reg.all())
+            for (const auto& known : spec.known_as)
+                rows += "| `" + known.name + "` | " + known.program + " | [" + spec.names.front() +
+                        "](" + slug(spec.id) + ".md) |\n";
+        if (!rows.empty()) {
+            out += "## Başka programlardaki adlar\n\n";
+            out += "Bu adlar komut satırında karşılıklarını başlatmaz: yazılan sözcük ya bir\n";
+            out += "sorunun yanıtıdır ya da bu programda başka bir komutun adıdır. Komut Ara\n";
+            out += "(`Ctrl+K`) onları bulur, `YARDIM komut=<ad>` karşılığını söyler.\n\n";
+            out += "| Ad | Program | Bu programda |\n|---|---|---|\n" + rows + "\n";
+        }
     }
 
     // THE CATALOGUE AS AN AGENT RECEIVES IT, from `ai::build_catalog` and from

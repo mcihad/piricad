@@ -144,6 +144,7 @@ KENTOS_COMMAND(rectangle)
     return CommandSpec{
         .id       = "core.rectangle",
         .names    = {"DİKDÖRTGEN", "DIKDORTGEN", "RECTANGLE", "DKD", "REC"},
+        .known_as = {{"KUTU", "Netcad"}}, // a caption, a layer, a SEÇ mode: never a name
         .title    = "Dikdörtgen",
         .category = Category::Draw,
         .params =

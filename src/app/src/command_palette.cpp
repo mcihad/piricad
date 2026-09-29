@@ -327,10 +327,14 @@ CommandPalette::CommandPalette(const command::Registry& registry, QWidget* paren
                 all << QString::fromStdString(alias);
             row.names = all.join(QStringLiteral(" · "));
         }
-        for (const std::string& alias : spec.names)
-            row.key += core::turkish_fold_key(alias) + '\x1f';
-        row.key += core::turkish_fold_key(spec.id) + '\x1f';
-        row.key += core::turkish_fold_key(spec.summary);
+        {
+            QStringList all;
+            for (const command::KnownName& known : spec.known_as)
+                all << tr("%1 adı: %2 — aramada bulunur, komut satırında bu komutu başlatmaz")
+                           .arg(QString::fromStdString(known.program),
+                                QString::fromStdString(known.name));
+            row.known = all.join(QLatin1Char('\n'));
+        }
         rows_.push_back(std::move(row));
     }
 
@@ -378,33 +382,63 @@ void CommandPalette::reveal(const QString& focus_on)
 
 void CommandPalette::refilter()
 {
-    const std::string needle = core::turkish_fold_key(query_->text().toStdString());
+    const std::string typed = query_->text().trimmed().toStdString();
 
     list_->clear();
 
-    QString open;
     int shown = 0;
-    for (const Row& row : rows_) {
-        if (!needle.empty() && row.key.find(needle) == std::string::npos) continue;
-
-        // The heading is written once, where its run starts. A fact that repeats
-        // down a run of rows belongs to the run, not to the row.
-        if (row.group != open) {
-            open       = row.group;
-            auto* head = new QListWidgetItem(list_);
-            head->setData(kGroupRole, open);
-            // NOT SELECTABLE AND NOT A TAB STOP: a heading is not a command, and
-            // arrowing down the list must not stop on one.
-            head->setFlags(Qt::NoItemFlags);
+    if (typed.empty()) {
+        // BROWSING: every command under its category, in the order the
+        // registry declared them.
+        QString open;
+        for (const Row& row : rows_) {
+            // The heading is written once, where its run starts. A fact that
+            // repeats down a run of rows belongs to the run, not to the row.
+            if (row.group != open) {
+                open       = row.group;
+                auto* head = new QListWidgetItem(list_);
+                head->setData(kGroupRole, open);
+                // NOT SELECTABLE AND NOT A TAB STOP: a heading is not a command,
+                // and arrowing down the list must not stop on one.
+                head->setFlags(Qt::NoItemFlags);
+            }
+            addRow(row, row.summary);
+            ++shown;
         }
+    } else {
+        // SEARCHING: the answers in the order they answer, and no headings —
+        // a group heading over a ranked list would put TAŞI above KAYDIR for
+        // `kaydır` because Düzenleme comes before Görünüm. The ranking is the
+        // command layer's (`command::search_match`), where it is tested; ties
+        // keep the browsing order, category first.
+        struct Hit
+        {
+            const Row* row;
+            command::SearchMatch match;
+        };
 
-        auto* item = new QListWidgetItem(row.name, list_);
-        item->setData(Qt::UserRole, row.name);
-        item->setData(kShortsRole, row.shorts);
-        item->setData(kSummaryRole, row.summary);
-        item->setToolTip(row.summary.isEmpty() ? row.id
-                                               : row.id + QStringLiteral("\n") + row.summary);
-        ++shown;
+        std::vector<Hit> hits;
+        for (const Row& row : rows_) {
+            const command::CommandSpec* spec = registry_.by_id(row.id.toStdString());
+            if (spec == nullptr) continue;
+            const command::SearchMatch match = command::search_match(*spec, typed);
+            if (match.tier != command::SearchMatch::kNone) hits.push_back({&row, match});
+        }
+        std::stable_sort(hits.begin(), hits.end(),
+                         [](const Hit& a, const Hit& b) { return a.match.tier < b.match.tier; });
+        for (const Hit& hit : hits) {
+            // FOUND BY ANOTHER PROGRAM'S WORD, AND THE ROW SAYS WHICH: the name on
+            // it is not the word that was typed, and without this line a Netcad
+            // hand who typed `kutu` would see DİKDÖRTGEN and not know why.
+            const QString summary =
+                hit.match.known == nullptr
+                    ? hit.row->summary
+                    : tr("%1 adı: %2 · %3")
+                          .arg(QString::fromStdString(hit.match.known->program),
+                               QString::fromStdString(hit.match.known->name), hit.row->summary);
+            addRow(*hit.row, summary);
+            ++shown;
+        }
     }
 
     // WHAT IS ON SCREEN, AND WHAT TO DO WHEN NOTHING IS. An empty result used to
@@ -413,14 +447,24 @@ void CommandPalette::refilter()
     if (shown == 0)
         footer_->setText(tr("Eşleşen komut yok. Aramayı kısaltın ya da temizleyin — "
                             "arama adı, kısaltmayı ve ne yaptığını birlikte tarar."));
-    else if (needle.empty())
+    else if (typed.empty())
         footer_->setText(
             tr("%1 komut. Yazarak süzün; ↑ ↓ ile gezin, Enter komut satırına yazar.").arg(shown));
     else
-        footer_->setText(tr("%1 / %2 komut eşleşti.").arg(shown).arg(rows_.size()));
+        footer_->setText(
+            tr("%1 / %2 komut eşleşti; en iyi eşleşen üstte.").arg(shown).arg(rows_.size()));
 
     selectFirstCommand();
     showDetail();
+}
+
+void CommandPalette::addRow(const Row& row, const QString& summary)
+{
+    auto* item = new QListWidgetItem(row.name, list_);
+    item->setData(Qt::UserRole, row.name);
+    item->setData(kShortsRole, row.shorts);
+    item->setData(kSummaryRole, summary);
+    item->setToolTip(summary.isEmpty() ? row.id : row.id + QStringLiteral("\n") + summary);
 }
 
 void CommandPalette::selectFirstCommand()
@@ -454,7 +498,8 @@ void CommandPalette::showDetail()
         // agent write; the aliases are what a hand may type. Both belong here
         // and neither belongs on a list row, which has one line to be scanned.
         detailMeta_->setText(row.group + QStringLiteral("  ·  ") + row.id + QStringLiteral("\n") +
-                             row.names);
+                             row.names +
+                             (row.known.isEmpty() ? QString() : QStringLiteral("\n") + row.known));
         detailBody_->setText(
             row.summary.isEmpty()
                 ? row.detail
@@ -476,6 +521,9 @@ CommandPalette::Shown CommandPalette::shown() const
     out.height     = height();
     if (QListWidgetItem* at = list_->currentItem(); at != nullptr)
         out.selected = at->data(Qt::UserRole).toString();
+    for (int i = 0; i < list_->count() && out.first.size() < 5; ++i)
+        if (const QVariant carried = list_->item(i)->data(Qt::UserRole); carried.isValid())
+            out.first << carried.toString();
     out.detail = detailName_->text();
     return out;
 }

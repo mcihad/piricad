@@ -62,6 +62,140 @@ TEST_CASE("registry resolves turkish names, english names and abbreviations")
     CHECK(f.reg.resolve("YOKBÖYLEKOMUT") == nullptr);
 }
 
+TEST_CASE("registry: başka programın adı komut satırında çözülmez; karşılığı bulunur")
+{
+    Fixture f;
+
+    // Netcad's KUTU, TABAKA and CETVEL are no name of ours: typed at a prompt
+    // they are the answer to it, never a command that closes it
+    // (`CommandSpec::known_as`).
+    for (const char* word : {"KUTU", "kutu", "TABAKA", "CETVEL"})
+        CHECK(f.reg.resolve(word) == nullptr);
+    const auto box = f.reg.known_as("kutu");
+    REQUIRE(box.size() == 1);
+    CHECK(box.front()->id == "core.rectangle");
+    REQUIRE(f.reg.known_as("tabaka").size() == 1);
+    CHECK(f.reg.known_as("tabaka").front()->id == "core.layer");
+    REQUIRE(f.reg.known_as("CETVEL").size() == 1);
+    CHECK(f.reg.known_as("CETVEL").front()->id == "core.measure");
+
+    // KAYDIR is a name here AND Netcad's word for another command: the name
+    // decides at the prompt, and the other command is only ever found.
+    REQUIRE(f.reg.resolve("KAYDIR") != nullptr);
+    CHECK(f.reg.resolve("KAYDIR")->id == "core.pan");
+    REQUIRE(f.reg.known_as("kaydır").size() == 1);
+    CHECK(f.reg.known_as("kaydır").front()->id == "core.move");
+
+    CHECK(f.reg.known_as("").empty());
+    CHECK(f.reg.known_as("YOKBÖYLEKOMUT").empty());
+}
+
+TEST_CASE("registry: bilinen ad programını söyler ve komutun kendi adını yinelemez")
+{
+    Registry r;
+    register_builtin_commands(r);
+    const std::size_t before = r.size();
+
+    CommandSpec own = *r.by_id("core.line");
+    own.id          = "test.kendi_adi";
+    own.names       = {"TESTÇİZGİ"};
+    own.known_as    = {{"testcizgi", "Netcad"}}; ///< its own name, folded
+    CHECK_FALSE(static_cast<bool>(r.add(own)));
+
+    CommandSpec nameless = own;
+    nameless.id          = "test.programsiz";
+    nameless.names       = {"TESTİKİ"};
+    nameless.known_as    = {{"BAŞKA", ""}};
+    CHECK_FALSE(static_cast<bool>(r.add(nameless)));
+    CHECK(r.size() == before);
+
+    // Two commands may share another program's word; the answer names both.
+    CommandSpec second = own;
+    second.id          = "test.ikinci_kutu";
+    second.names       = {"TESTÜÇ"};
+    second.known_as    = {{"KUTU", "Netcad"}};
+    CHECK(static_cast<bool>(r.add(second)));
+    CHECK(r.known_as("KUTU").size() == 2);
+}
+
+TEST_CASE("arama: önce ad, hemen ardından başka programın adı; sonra başlayan, içeren")
+{
+    Fixture f;
+    const auto rank = [&f](const char* id, const char* word) {
+        const CommandSpec* spec = f.reg.by_id(id);
+        REQUIRE(spec != nullptr);
+        return search_match(*spec, word);
+    };
+
+    // `kaydır` pans when typed, so KAYDIR is the first answer and TAŞI, which
+    // Netcad calls `Kaydır`, the second — and it says whose word matched.
+    CHECK(rank("core.pan", "kaydır").tier == 0);
+    const SearchMatch moved = rank("core.move", "kaydır");
+    CHECK(moved.tier == 1);
+    REQUIRE(moved.known != nullptr);
+    CHECK(moved.known->name == "KAYDIR");
+    CHECK(moved.known->program == "Netcad");
+    CHECK(rank("core.pan", "kaydır").known == nullptr);
+
+    CHECK(rank("core.rectangle", "kutu").tier == 1);
+    CHECK(rank("core.rectangle", "dikdö").tier == 2); ///< a name begins with it, folded
+    CHECK(rank("core.rectangle", "ku").tier == 3);    ///< only the known name begins with it
+    CHECK(rank("core.rectangle", "ORTGE").tier == 4); ///< inside a name
+    CHECK(rank("core.pan", "tutulan").tier == 6);     ///< only in the summary
+    CHECK(rank("core.line", "cizgi").tier == 0);      ///< CLAUDE.md 5.6 folding
+
+    CHECK(rank("core.line", "").tier == SearchMatch::kNone);
+    CHECK(rank("core.line", "YOKBÖYLE").tier == SearchMatch::kNone);
+}
+
+TEST_CASE("bilinmeyen komut: başka programın adıysa buradaki karşılığını söyler")
+{
+    Fixture f;
+
+    auto typed = f.bus.execute_line("KUTU", Origin::CommandLine);
+    REQUIRE_FALSE(typed);
+    CHECK(typed.error().message ==
+          "Bilinmeyen komut: 'KUTU'. KUTU (Netcad) burada DİKDÖRTGEN komutudur.");
+
+    // Every client is told the same (Article 1.2): a script's call by name, and
+    // a session started from a line.
+    auto scripted = f.bus.dispatch(Invocation{"tabaka", Args{}, Origin::Script});
+    REQUIRE_FALSE(scripted);
+    CHECK(scripted.error().message ==
+          "Bilinmeyen komut: 'tabaka'. TABAKA (Netcad) burada KATMAN komutudur.");
+    auto started = f.bus.begin_interactive("cetvel", Origin::CommandLine);
+    REQUIRE_FALSE(started);
+    CHECK(started.error().message.find("ÖLÇ komutudur") != std::string::npos);
+
+    auto nothing = f.bus.execute_line("YOKBÖYLEKOMUT", Origin::CommandLine);
+    REQUIRE_FALSE(nothing);
+    CHECK(nothing.error().message ==
+          "Bilinmeyen komut: 'YOKBÖYLEKOMUT'. YARDIM yazarak komut listesini görün.");
+
+    // Refused, so nothing ran and nothing was journalled.
+    CHECK(f.doc.entities().size() == 0);
+    CHECK(f.journal.entries().empty());
+}
+
+TEST_CASE("YARDIM: başka programın adıyla sorulunca buradaki komutu anlatır")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    std::string page;
+    f.bus.on_help_page = [&page](const std::string& name) { page = name; };
+
+    REQUIRE(f.bus.execute_line("YARDIM komut=KUTU", Origin::CommandLine));
+    CHECK(said.find("KUTU bu programda komut adı değil; karşılığı DİKDÖRTGEN.") !=
+          std::string::npos);
+    CHECK(said.find("core.rectangle") != std::string::npos);
+    CHECK(page == "DİKDÖRTGEN");
+
+    auto unknown = f.bus.execute_line("YARDIM komut=YOKBÖYLEKOMUT", Origin::CommandLine);
+    REQUIRE_FALSE(unknown);
+    CHECK(unknown.error().message.find("Bilinmeyen komut: 'YOKBÖYLEKOMUT'") != std::string::npos);
+}
+
 TEST_CASE("registry: bir adın HER yazımı aynı komuta ulaşır")
 {
     // The defect this pins down, and it was live: `turkish_upper` raises Turkish's

@@ -76,6 +76,7 @@ KENTOS_COMMAND(layer)
     return CommandSpec{
         .id       = "core.layer",
         .names    = {"KATMAN", "LAYER", "KAT"},
+        .known_as = {{"TABAKA", "Netcad"}}, // a layer may be called that: never a name
         .title    = "Katman",
         .category = Category::Layer,
         .params =

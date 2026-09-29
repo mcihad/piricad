@@ -21,6 +21,7 @@ Her çizim `0` adlı katmanla açılır.
 | `LAYER` | İngilizce karşılık |
 | `KAT` | Kısaltma |
 | `core.layer` | Komut kimliği |
+| `TABAKA` | **Netcad'deki adı, komut adı değil.** Komut Ara (`Ctrl+K`) ve `YARDIM komut=TABAKA` bulur; komut satırında bu komutu başlatmaz, çünkü bir katmana `TABAKA` adı da verilir |
 
 ## Sözdizimi
 

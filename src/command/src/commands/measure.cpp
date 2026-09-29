@@ -350,6 +350,7 @@ KENTOS_COMMAND(measure)
     return CommandSpec{
         .id       = "core.measure",
         .names    = {"ÖLÇ", "OLC", "MEASURE", "MS"},
+        .known_as = {{"CETVEL", "Netcad"}}, // the canvas ruler, a caption: never a name
         .title    = "Ölç",
         .category = Category::Query,
         .params =

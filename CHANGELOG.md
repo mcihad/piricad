@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Komut Ara sıralıyor ve Netcad'in adlarını da buluyor
+
+- `Ctrl+K` araması artık **sıralı**: yazılan bir komutun adıysa o komut en üstte, sonra
+  başka bir programdaki adı olan, sonra adı o harflerle başlayan, adında geçen ve en son
+  açıklamasında geçen komutlar gelir. Ararken kategori başlıkları kalkar. Önceden liste
+  kategori sırasıyla süzülüyordu ve `kaydır` araması `TAŞI`'yı hiç bulmuyordu.
+- **Başka programlardaki adlar**: Netcad'in `KUTU` (`DİKDÖRTGEN`), `TABAKA` (`KATMAN`),
+  `CETVEL` (`ÖLÇ`) ve `KAYDIR` (`TAŞI`) sözcükleri aramada bulunur; satır hangi sözcüğün
+  eşleştiğini yazar (`Netcad adı: KUTU`). Komut satırında komut başlatmazlar: boş satıra
+  yazılınca program karşılığını söyler — `Bilinmeyen komut: 'KUTU'. KUTU (Netcad) burada
+  DİKDÖRTGEN komutudur.` — ve `YARDIM komut=KUTU` `DİKDÖRTGEN`'i anlatır. Aynı söz betiğe
+  ve ajana da söylenir; ajanın araç açıklaması da bu adları taşır. Tam liste üretilmiş komut
+  referansının sonunda.
+
 ### Eklendi — Netcad'deki adlarıyla on iki komut
 
 - Netcad'den gelen el, komutu kendi bildiği adla da yazabilir: `PARALEL` (`OFSET`),
@@ -15,8 +29,9 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   `OBJEBÖL` (`BÖL`) ve `YANNOKTA` (`DİKAYAK`). Türkçe harfli olanların ASCII yazımı da
   geçer (`AYRISTIR`, `CIZDIR`…). Hiçbiri başka bir adla çakışmaz; altı modülün kaydını
   birlikte kuran sınama bunu denetler.
-- `KUTU`, `TABAKA` ve `CETVEL` bilerek eklenmedi: bir komut soru sorarken yazılınca o
-  komutu kapatırlardı, oysa katman adı ya da yazı olarak yazılmaları olağandır.
+- `KUTU`, `TABAKA` ve `CETVEL` bilerek komut adı yapılmadı: bir komut soru sorarken
+  yazılınca o komutu kapatırlardı, oysa katman adı ya da yazı olarak yazılmaları
+  olağandır. Aramada bulunurlar (aşağıda).
 
 ### Değişti — dik boy artık sağ pozitif, Netcad gibi
 

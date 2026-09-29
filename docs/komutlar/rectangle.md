@@ -55,6 +55,7 @@ alan her komut — [`ÇİZGİ`](line.md), [`ALAN`](area.md) — aynı kilide uya
 | `DKD` | Kısaltma |
 | `REC` | Kısaltma |
 | `core.rectangle` | Komut kimliği |
+| `KUTU` | **Netcad'deki adı, komut adı değil.** Komut Ara (`Ctrl+K`) ve `YARDIM komut=KUTU` bulur; komut satırında bu komutu başlatmaz. Bir komut soru sorarken yazılan `KUTU` o sorunun yanıtıdır (bir yazı, bir katman adı), `SEÇ mod=KUTU` da bir seçim kipidir |
 
 ## İki yöntem
 

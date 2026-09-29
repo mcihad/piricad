@@ -41,6 +41,7 @@ konumlarından alınan bir ölçüm o anki yakınlaştırma kadar yanılırdı.
 | `MEASURE` | İngilizce karşılık |
 | `MS` | Kısaltma |
 | `core.measure` | Komut kimliği |
+| `CETVEL` | **Netcad'deki adı, komut adı değil.** Komut Ara (`Ctrl+K`) ve `YARDIM komut=CETVEL` bulur; komut satırında bu komutu başlatmaz. Tuvalin kenarındaki cetvel de bu adı taşır |
 
 ## Sözdizimi
 

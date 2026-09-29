@@ -361,6 +361,14 @@ enum class UndoPolicy : std::uint8_t {
 /// owned a closure could not be a constant description of the product.
 using CommandFn = Task<void> (*)(Context&);
 
+/// A WORD ANOTHER PROGRAM USES FOR A COMMAND'S WORK: `KUTU` is what Netcad calls
+/// DİKDÖRTGEN, `KAYDIR` what it calls moving objects (`CommandSpec::known_as`).
+struct KnownName
+{
+    std::string name;    ///< the word, as that program's user searches for it: `KUTU`
+    std::string program; ///< whose word it is, as the reader knows it: `Netcad`
+};
+
 /// Everything the product knows about one command.
 ///
 /// This declaration is the SINGLE source: the command line's help, the script
@@ -402,6 +410,24 @@ struct CommandSpec
     /// label and the tool name, and it is never resolved against.
     std::string python;
     std::vector<std::string> names; ///< Turkish primary, English equivalent, abbreviations
+
+    /// NAMES THE SEARCH FINDS AND THE PARSER NEVER RESOLVES.
+    ///
+    /// A word in `names` is a COMMAND wherever it is typed — at a prompt too,
+    /// where it finishes the command that asked (THE FIRST WORD DECIDES,
+    /// `Controller::runLineResult`). Netcad's `KUTU`, `TABAKA` and `CETVEL` are
+    /// words a user writes as a layer name or a caption, so as names they would
+    /// close a command in the middle of its question; and Netcad's `KAYDIR`
+    /// moves objects, while ours already pans the view.
+    ///
+    /// So they are declared here, for the one reader each is for: a hand that
+    /// knows the other program's word and not this one's. The command search
+    /// (`Ctrl+K`) ranks them beside the names and says whose word it is;
+    /// `YARDIM komut=KUTU` answers with the command; and a word typed where a
+    /// command was expected is refused with the command it names elsewhere
+    /// (`Registry::known_as`). None of those runs anything, and nothing is
+    /// journalled under one.
+    std::vector<KnownName> known_as;
     /// The human Turkish label: `Blok Ekle`, `Yazdırma Profili`, `Eşyükselti`.
     ///
     /// A NAME IS NOT A LABEL. `names.front()` is the word typed at the prompt and

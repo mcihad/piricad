@@ -325,7 +325,7 @@ aldığı parametreler.
 
 | Bölüm | Ne gösterir |
 |---|---|
-| Süzgeç | Yazdıkça süzer; ad, kısaltma, komut kimliği ve açıklama aranır |
+| Süzgeç | Yazdıkça süzer ve sıralar; ad, kısaltma, başka programdaki adı, komut kimliği ve açıklama aranır |
 | Sol liste | Çizim · Düzenleme · Görünüm · Katman · Dosya · Sorgu · İşlem · Betik · Sistem başlıkları altında komut adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
 | Sağ bölme | Komutun kategorisi, kimliği, kabul ettiği bütün yazımlar, açıklaması ve parametreleri — her parametrenin tipi, gerekliliği, aralığı, birimi ve varsa sözcük listesi |
 | Alt satır | Komut sayısı ve tuşlar |
@@ -336,6 +336,32 @@ komut da hiçbir liste güncellenmeden orada olur.
 Arama Türkçe katlamayla çalışır: `cizgi` yazınca `ÇİZGİ`, `olcek` yazınca `ÖLÇEK`
 bulunur. `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazıp imleci sonuna
 koyar — çünkü argümanı olan bir komutun argümanı yazılmalıdır — `Esc` kapatır.
+
+Bir şey yazınca kategori başlıkları kalkar ve liste **en iyi eşleşen üstte** olacak
+biçimde sıralanır:
+
+| Sıra | Eşleşme | Örnek |
+|---|---|---|
+| 1 | Yazılan, komutun adlarından biri | `kaydır` → `KAYDIR` |
+| 2 | Yazılan, komutun başka bir programdaki adı | `kaydır` → `TAŞI` (Netcad'de Kaydır) |
+| 3 | Adlardan biri yazılanla başlıyor | `dikd` → `DİKDÖRTGEN` |
+| 4 | Başka programdaki adı yazılanla başlıyor | `ku` → `DİKDÖRTGEN` (Netcad'de Kutu) |
+| 5 | Yazılan bir adın ya da komut kimliğinin içinde geçiyor | `ortge` → `DİKDÖRTGEN` |
+| 6 | Yazılan başka programdaki adın içinde geçiyor | |
+| 7 | Yazılan komutun başlığında ya da açıklamasında geçiyor | `tutulan` → `KAYDIR` |
+
+Aynı sıradakiler kategori sırasıyla gelir.
+
+**Netcad'den gelenler için.** Netcad'in adıyla aramak da bulur: `kutu` yazınca
+`DİKDÖRTGEN`, `tabaka` yazınca `KATMAN`, `cetvel` yazınca `ÖLÇ` en üstte çıkar ve satırın
+ikinci satırında `Netcad adı: KUTU` gibi hangi sözcüğün eşleştiği yazar. Bu adlar
+**komut satırında komut başlatmaz**: bir komut soru sorarken yazılan `KUTU` o sorunun
+yanıtıdır — bir yazı, bir katman adı — ve boş komut satırına yazılınca program
+karşılığını söyler (`KUTU (Netcad) burada DİKDÖRTGEN komutudur.`). Netcad'deki adıyla
+**yazılabilen** komutlar (`PARALEL`, `ÇİZDİR`, `LİMİTBUL`…) her komutun sayfasındaki
+Adlar tablosundadır; aramada bulunan ama yazılamayanların tam listesi üretilmiş
+[komut referansının](../komutlar/referans.md) sonunda, **Başka programlardaki adlar**
+başlığı altındadır.
 
 ### Komutun istediği şeyi vermek
 

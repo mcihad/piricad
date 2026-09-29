@@ -27,6 +27,7 @@ birbirinden bağımsız oynatmak daire olmayan bir kayıt bırakırdı.
 | `MOVE` | İngilizce karşılık |
 | `TŞ` | Kısaltma |
 | `core.move` | Komut kimliği |
+| `KAYDIR` | **Netcad'deki adı, burada başka bir komut.** Netcad nesneyi `KAYDIR` ile taşır; bu programda `KAYDIR` görünümü kaydırır ([KAYDIR](pan.md)). Komut Ara'da `kaydır` yazınca `KAYDIR`'ın hemen altında `TAŞI` çıkar ve satırında `Netcad adı: KAYDIR` yazar |
 
 ## Sözdizimi
 

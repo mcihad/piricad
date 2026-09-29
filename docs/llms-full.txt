@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 118 (104 tanesi onay ister)
-- Katalog parmak izi: `8870920778840040882`
+- Katalog parmak izi: `4243684434736817154`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -948,6 +948,7 @@ Onay ister.
 
 Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 Komut: KATMAN (LAYER, KAT)
+Netcad adı: TABAKA (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1135,6 +1136,7 @@ Onay ister.
 
 Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu verir.
 Komut: ÖLÇ (OLC, MEASURE, MS)
+Netcad adı: CETVEL (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1210,6 +1212,7 @@ Onay ister.
 
 Seçilen nesneleri iki nokta arasındaki kadar taşır.
 Komut: TAŞI (TASI, MOVE, TŞ)
+Netcad adı: KAYDIR (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
@@ -1431,6 +1434,7 @@ Onay ister.
 
 Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
 Komut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)
+Netcad adı: KUTU (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
 Onay ister.
