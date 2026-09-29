@@ -39,6 +39,7 @@ DİLİM merkez=<sağa>,<yukarı> baslangic=<sağa>,<yukarı> bitis=<sağa>,<yuka
 | `merkez` | Dilimin merkezi |
 | `baslangic` | İlk kenarın ucu; **yarıçapı bu belirler** |
 | `bitis` | İkinci kenarın yönü |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

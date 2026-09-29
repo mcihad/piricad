@@ -30,6 +30,7 @@ HALKA merkez=<sağa>,<yukarı> ic=<sağa>,<yukarı> dis=<sağa>,<yukarı>
 | `merkez` | Halkanın merkezi |
 | `ic` | İç çember üzerinde bir nokta |
 | `dis` | Dış çember üzerinde bir nokta |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

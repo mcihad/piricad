@@ -305,6 +305,7 @@ enum class Glyph {
     MeasureAreaInside,  ///< the region round a click inside it: ALANÖLÇ yontem=ic
     HatchInside,        ///< the region round a click inside it, hatched: TARAMA yontem=ic
     HatchExclude,       ///< a hatch with the selected caption left free: TARAMA disarida=
+    LayerFromObject,    ///< a layer stack and the object it is taken from: katman= from a click
     SelectWindow,       ///< a solid frame, the objects wholly inside it: SEÇ PENCERE
     SelectCrossing,     ///< a dashed frame and the line crossing it: SEÇ KESEN
     SelectPolygon,      ///< a solid polygon round an object: SEÇ ÇOKGEN

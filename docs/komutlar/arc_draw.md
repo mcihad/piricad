@@ -108,6 +108,7 @@ göreli (`@50,30`) ve kutupsal (`@100<45`).
 | `bitis` | Yayın biteceği yön. Yalnız yönü okunur, uzaklığı değil |
 | `yon` | `bby`: yayın hangi yandan geçeceği — `sol` ya da `sag` |
 | `yon_nokta` | `bby`: yanın gösterildiği nokta; `yon` verilmişse sorulmaz |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

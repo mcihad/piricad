@@ -2621,6 +2621,49 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
 
+        // AND A LINE DRAWN ONTO THE LAYER OF WHAT IS CLICKED (plan open question
+        // 19): ÇİZGİ with ADA active, `Katmanı nesneden al` pressed on the
+        // `Nokta Girişi` tab and the road's hatch clicked — the transcript says
+        // the line goes to YOL, the active layer staying ADA.
+        later([&window] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=ADA"));
+            window.runScriptLine(
+                QStringLiteral("YAKINLAŞ PENCERE pencere=485290,4310170 485450,4310232"));
+            window.runScriptLine(QStringLiteral("ÇİZGİ"));
+            QCoreApplication::sendPostedEvents();
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab =
+                        bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonPromptPoint")))
+                    bar->raiseCategory(tab);
+        });
+        later([clickAt] { clickAt(kentos::core::Point2{485300000, 4310222000}); });
+        later([&window, clickAt] {
+            if (auto* take = window.findChild<QAction*>(QStringLiteral("promptPoint.KATMAN")))
+                take->trigger();
+            // THE ROAD'S HATCH LIES INSIDE THE ADA: two things under the click,
+            // walked in place, the smaller first; Enter takes it.
+            clickAt(kentos::core::Point2{485340000, 4310192000});
+        });
+        later([&window] {
+            QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.canvas(), &enter);
+        });
+        later([hover] { hover(kentos::core::Point2{485440000, 4310222000}); });
+        later([&window, shot] { shot(QStringLiteral("41-katmani-nesneden-al"), &window); });
+        later([&window, clickAt] {
+            clickAt(kentos::core::Point2{485440000, 4310222000});
+            QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
+        });
+        later([&window, shot] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            shot(QStringLiteral("41b-cizgi-yol-katmaninda"), &window);
+        });
+
         later([] { QApplication::exit(0); });
     }
 

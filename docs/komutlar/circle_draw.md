@@ -113,6 +113,7 @@ göreli (`@50,30`) ve kutupsal (`@100<45`).
 |---|---|
 | `merkez` | Dairenin merkezi |
 | `cevre` | Çember üzerinde bir nokta. Merkezle arasındaki uzaklık yarıçaptır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Yarıçap doğrudan yazılmaz, **çember noktasıyla** verilir. Bunun sebebi pratiktir:
 fareyle daire böyle çizilir, ve bütün yakalama kuralları bu noktaya da uygulanır —

@@ -178,6 +178,7 @@ KENTOS_COMMAND(boundary)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Sınır sayılacak nesneler; yoksa görünen her çizgi"}
                     .en("objects"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

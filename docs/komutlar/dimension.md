@@ -188,6 +188,7 @@ program ise bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
 | `tolerans` | Simetrik tolerans, uzunlukta metre, açıda derece; ölçünün biriminde yazılır (grad bir açıda `tolerans=0.9` → `±1,00g`) |
 | `tolerans_ust`, `tolerans_alt` | Sapma; ikisi de pozitif yazılır |
 | `tolerans_bicim` | `simetrik`, `sapma`, `sinir` |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

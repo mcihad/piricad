@@ -48,6 +48,7 @@ geometridir; totalstation çıktısı da öyle gelir.
 | Parametre | Ne yapar |
 |---|---|
 | `noktalar` | Çoklu çizginin köşe noktaları. En az iki nokta; hepsi tek nesne olur |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

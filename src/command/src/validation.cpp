@@ -3,6 +3,8 @@
 
 #include "kentos_cad/core/text.hpp"
 
+#include <algorithm>
+
 namespace kentos::command {
 namespace {
 
@@ -152,10 +154,43 @@ void Validator::add_rule(std::shared_ptr<Rule> rule)
     if (rule) rules_.push_back(std::move(rule));
 }
 
+bool takes_draw_layer(const CommandSpec& spec) noexcept
+{
+    return std::ranges::any_of(spec.params,
+                               [](const Param& p) { return p.amendable && p.name == "katman"; });
+}
+
+core::Result<core::LayerId> draw_layer_of(const CommandSpec& spec, const Args& args,
+                                          const core::Document& doc)
+{
+    if (!takes_draw_layer(spec)) return core::kNoLayer;
+    const Value* given = args.find("katman");
+    if (given == nullptr || given->empty()) return core::kNoLayer;
+    const std::string name = given->as_text();
+    if (const core::LayerId found = doc.find_layer(name); found != core::kNoLayer) return found;
+
+    // THE LAYERS THERE ARE, so the refusal says what would have worked. A
+    // dozen is what a person reads; the rest are counted.
+    constexpr std::size_t kShown = 12;
+    std::string known;
+    std::size_t listed = 0;
+    for (const core::Layer& layer : doc.layers()) {
+        if (listed == kShown) break;
+        known += (known.empty() ? "" : ", ") + layer.name;
+        ++listed;
+    }
+    if (doc.layers().size() > kShown)
+        known += " ve " + std::to_string(doc.layers().size() - kShown) + " katman daha";
+    return core::err(core::ErrorCode::NotFound,
+                     "Katman bulunamadı: '" + name + "'. Çizimdeki katmanlar: " + known +
+                         ". Yeni bir katmanı önce KATMAN ad=" + name + " ile oluşturun.");
+}
+
 core::Status Validator::run(const ValidationRequest& req) const
 {
     auto st = check_against_spec(req.spec, req.args);
     if (!st) return st;
+    if (auto layer = draw_layer_of(req.spec, req.args, req.document); !layer) return layer.error();
 
     for (const auto& rule : rules_) {
         auto r = rule->check(req);

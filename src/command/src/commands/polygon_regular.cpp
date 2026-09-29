@@ -231,6 +231,7 @@ KENTOS_COMMAND(polygon_regular)
                               "Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap "
                               "verilmişse sorulmaz")
                     .en("corner"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

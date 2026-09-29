@@ -38,6 +38,7 @@ LİDER noktalar=<sağa>,<yukarı> <sağa>,<yukarı> ... [metin=<yazı>] [stil=<a
 | `metin` | Son köşenin yanına yazılacak metin; verilmezse arayüzde sorulur, betikte yazısız kalır |
 | `stil` | Ok ve yazı boyunu veren ölçü stili; verilmezse projenin [`ölçü_stili`](dimension_style.md) ayarı (başlangıçta `ISO-25`) |
 | `katalog` | Stil kataloğu dosyası; varsayılan `TERCİH ölçü_stilleri` |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

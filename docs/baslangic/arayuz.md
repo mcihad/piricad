@@ -254,6 +254,7 @@ Makinası). Seçim sekmesi gibi öne gelmez ve soru bitince kaybolur.
 |---|---|
 | **Yakalama** | Her yakalama modu bir anahtardır: uç nokta, orta nokta, merkez, kesişim… `MOD yakalama_modları` yazar, basılı hâli ayardan okunur |
 | **Hesap** | Her [nokta fonksiyonu](../komutlar/komut-satiri.md#nokta-fonksiyonları) bir düğmedir: Son Nokta, Numaralı Nokta, Orta Nokta, Göreli, Dik Ayak, Semt ve Kenar, Kesişim, Ara Nokta, Uzantı, X ve Y, Boyunca |
+| **Katman** | **Katmanı nesneden al**: basıp bir nesneye tıklayın, komutun çizdikleri o nesnenin katmanına gider; etkin katman değişmez. Kendi katmanına çizmeyen bir komutta soluktur |
 | **Satır** | **Gönder** (Enter) · **Vazgeç** (Esc) |
 
 **Hesap düğmesi fonksiyonu satıra başlatır**, tıkladığınız noktalar içine yazılır, sayıları
@@ -266,6 +267,8 @@ dik(485300.000,4310200.000,485380.000,4310200.000,30,5)
 
 **Boyunca**'da `nesne(` yazıldıktan sonraki tıklama noktayı değil, **tıkladığınız nesnenin
 kimliğini** yazar. Yakalama anahtarları ve **F3** çalışan komutu bölmez: `MOD` şeffaftır.
+**Katmanı nesneden al** komut satırına `katman="YOL"` yazmakla aynıdır; ikisi de
+[Çizimin katmanı](../komutlar/komut-satiri.md#çizimin-katmanı-katman)'nda anlatılır.
 
 ### Soluk araçlar
 

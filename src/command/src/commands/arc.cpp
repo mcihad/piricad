@@ -436,6 +436,7 @@ KENTOS_COMMAND(arc_draw)
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
                               "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre")
                     .en("side"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

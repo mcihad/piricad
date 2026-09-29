@@ -92,31 +92,37 @@ def write_file(path: str, text: str) -> None: ...
 def line(
     *,
     points: Coords = ...,
+    layer: str = ...,
 ) -> int:
     """İki veya daha fazla nokta arasında doğru parçaları çizer.
 
     Komut: core.line (ÇİZGİ)
         points — Ardışık doğru parçalarının köşe noktaları [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def polyline(
     *,
     points: Coords = ...,
+    layer: str = ...,
 ) -> int:
     """Birden çok noktadan TEK bir çizgi nesnesi çizer.
 
     Komut: core.polyline (ÇOKLUÇİZGİ)
         points — Çoklu çizginin köşe noktaları; hepsi tek nesne olur [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def point_draw(
     *,
     points: Coords = ...,
+    layer: str = ...,
 ) -> int:
     """Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
 
     Komut: core.point_draw (NOKTA)
         points — Yerleştirilecek noktalar [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def perp_offset(
@@ -126,6 +132,7 @@ def perp_offset(
     chainage: list[float] = ...,
     offset: list[float] = ...,
     connect: bool = ...,
+    layer: str = ...,
 ) -> int:
     """Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
 
@@ -135,6 +142,7 @@ def perp_offset(
         chainage — A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir
         offset — Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir
         connect — Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def survey_polar(
@@ -144,6 +152,7 @@ def survey_polar(
     angle: list[float] = ...,
     distance: list[float] = ...,
     connect: bool = ...,
+    layer: str = ...,
 ) -> int:
     """İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir.
 
@@ -153,6 +162,7 @@ def survey_polar(
         angle — Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi]
         distance — Alete olan uzaklık (m) [m]
         connect — Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def intersect_point(
@@ -169,6 +179,7 @@ def intersect_point(
     side: str = ...,
     side_point: Coord = ...,
     intersection: Coord = ...,
+    layer: str = ...,
 ) -> int:
     """İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.
 
@@ -185,6 +196,7 @@ def intersect_point(
         side — İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre
         side_point — mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce]
         intersection — Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def point_along(
@@ -194,6 +206,7 @@ def point_along(
     method: str = ...,
     value: list[float] = ...,
     count: int = ...,
+    layer: str = ...,
 ) -> int:
     """İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar.
 
@@ -203,6 +216,7 @@ def point_along(
         method — oran: 0 ile 1 arası · mesafe: ilk noktadan metre
         value — Oran ya da uzaklık; birden çok verilebilir
         count — Doğruyu bu kadar eşit parçaya böler
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def polygon_regular(
@@ -214,6 +228,7 @@ def polygon_regular(
     side_length: float = ...,
     angle: float = ...,
     corner: Coord = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan.
 
@@ -225,6 +240,7 @@ def polygon_regular(
         side_length — kenar yönteminin uzunluğu (m) [m]
         angle — İlk köşenin merkeze göre doğrultusu; varsayılan 0
         corner — Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def break(
@@ -330,6 +346,7 @@ def divide(
     spacing: float = ...,
     block: str = ...,
     align: bool = ...,
+    layer: str = ...,
 ) -> int:
     """Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.
 
@@ -339,6 +356,7 @@ def divide(
         spacing — Sabit aralık (m); başlangıçtan itibaren yürür [m]
         block — Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı
         align — Bloğu üzerinde durduğu kenarın doğrultusuna çevirir
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def pedit(
@@ -486,6 +504,7 @@ def text(
     alignment: str = ...,
     line_spacing: float = ...,
     width: float = ...,
+    layer: str = ...,
 ) -> int:
     """Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır aralığı ve kırılma genişliği verilebilir.
 
@@ -497,6 +516,7 @@ def text(
         alignment — Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde)
         line_spacing — Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü
         width — Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def edittext(
@@ -557,24 +577,28 @@ def area(
     *,
     points: Coords = ...,
     rings: list[int] = ...,
+    layer: str = ...,
 ) -> int:
     """Kapalı bir alan çizer; istenirse içine delik açar.
 
     Komut: core.area (ALAN)
         points — Alanın köşe noktaları; kapanış noktası tekrarlanmaz [mm, Sağa (Y) önce]
         rings — Halka uzunlukları: ilki dış sınır, sonrakiler delik
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def rectangle(
     *,
     points: Coords = ...,
     method: str = ...,
+    layer: str = ...,
 ) -> int:
     """Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
 
     Komut: core.rectangle (DİKDÖRTGEN)
         points — 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce]
         method — 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def circle_draw(
@@ -588,6 +612,7 @@ def circle_draw(
     fourth: Coord = ...,
     radius: float = ...,
     side: Coord = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer.
 
@@ -601,6 +626,7 @@ def circle_draw(
         fourth — ttr: ikinci doğrunun ikinci noktası [mm, Sağa (Y) önce]
         radius — ttr: teğet dairenin yarıçapı (m) [m]
         side — ttr: dairenin geleceği köşe; dört çözümden en yakını alınır [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def arc_draw(
@@ -614,6 +640,7 @@ def arc_draw(
     radius: float = ...,
     side_point: Coord = ...,
     side: str = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer.
 
@@ -627,6 +654,7 @@ def arc_draw(
         radius — bby: yarıçap (m) [m]
         side_point — bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce]
         side — bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def vertex_move(
@@ -713,6 +741,7 @@ def boundary(
     islands: bool = ...,
     gap: int = ...,
     objects: list[int] = ...,
+    layer: str = ...,
 ) -> int:
     """İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir.
 
@@ -721,6 +750,7 @@ def boundary(
         islands — İçerideki kapalı çizgiler delik olsun mu; varsayılan evet
         gap — Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm]
         objects — Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def cleanup(
@@ -1134,6 +1164,7 @@ def sector(
     center: Coord = ...,
     start: Coord = ...,
     end: Coord = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
 
@@ -1141,6 +1172,7 @@ def sector(
         center — Dilimin merkezi [mm, Sağa (Y) önce]
         start — İlk kenarın ucu; yarıçapı bu belirler [mm, Sağa (Y) önce]
         end — İkinci kenarın yönü; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def annulus(
@@ -1148,6 +1180,7 @@ def annulus(
     center: Coord = ...,
     inner: Coord = ...,
     outer: Coord = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez, iç ve dış yarıçaptan delikli halka çizer.
 
@@ -1155,6 +1188,7 @@ def annulus(
         center — Halkanın merkezi [mm, Sağa (Y) önce]
         inner — İç çember üzerinde bir nokta [mm, Sağa (Y) önce]
         outer — Dış çember üzerinde bir nokta [mm, Sağa (Y) önce]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def ellipse_draw(
@@ -1166,6 +1200,7 @@ def ellipse_draw(
     second_end: Coord = ...,
     start: float = ...,
     end: float = ...,
+    layer: str = ...,
 ) -> int:
     """Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 
@@ -1177,6 +1212,7 @@ def ellipse_draw(
         second_end — eksen: birinci eksenin öteki ucu [mm, Sağa (Y) önce]
         start — Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine
         end — Kısmi elips: bitiş açısı, derece; baslangic ile birlikte
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def spline(
@@ -1184,6 +1220,7 @@ def spline(
     points: Coords = ...,
     degree: int = ...,
     closed: bool = ...,
+    layer: str = ...,
 ) -> int:
     """Kontrol noktalarından NURBS eğrisi (spline) çizer.
 
@@ -1191,6 +1228,7 @@ def spline(
         points — Kontrol noktaları [mm, Sağa (Y) önce]
         degree — Eğrinin derecesi, 1–15; varsayılan 3
         closed — Son noktadan ilkine kapansın mı; varsayılan hayır
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def hatch(
@@ -1211,6 +1249,7 @@ def hatch(
     gap: int = ...,
     exclude: list[int] = ...,
     margin: float = ...,
+    layer: str = ...,
 ) -> int:
     """Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır.
 
@@ -1231,6 +1270,7 @@ def hatch(
         gap — yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç
         exclude — Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı]
         margin — disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m]
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def hatch_edit(
@@ -1306,6 +1346,7 @@ def insert(
     row_spacing: int = ...,
     values: list[str] = ...,
     file: str = ...,
+    layer: str = ...,
 ) -> int:
     """Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
@@ -1321,6 +1362,7 @@ def insert(
         row_spacing — Satırlar arası, milimetre, döndürülmüş eksende
         values — Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur
         file — Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def xref(
@@ -1374,6 +1416,7 @@ def dimension(
     text: str = ...,
     catalog: str = ...,
     associate: bool = ...,
+    layer: str = ...,
     prefix: str = ...,
     suffix: str = ...,
     unit: str = ...,
@@ -1397,6 +1440,7 @@ def dimension(
         text — Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
         associate — Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
         prefix — Değerin önüne yazılan: R, Ø, ≈ …
         suffix — Değerin ardına yazılan: " m", " (eski)" …
         unit — Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı)
@@ -1509,6 +1553,7 @@ def leader(
     text: str = ...,
     style: str = ...,
     catalog: str = ...,
+    layer: str = ...,
 ) -> int:
     """Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 
@@ -1517,6 +1562,7 @@ def leader(
         text — Son köşenin yanına yazılacak metin
         style — Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili
         catalog — Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri
+        layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
 
 def points(

@@ -269,6 +269,7 @@ KENTOS_COMMAND(intersect_point)
                     .en("side_point"),
                 Param::points("kesisim", Arity::optional(), "Bulunan nokta; günlüğe yazılır")
                     .en("intersection"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -298,6 +299,7 @@ KENTOS_COMMAND(point_along)
                 Param::integer_range("sayi", Arity::optional(), 2, 1000,
                                      "Doğruyu bu kadar eşit parçaya böler")
                     .en("count"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

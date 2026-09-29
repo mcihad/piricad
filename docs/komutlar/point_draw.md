@@ -45,6 +45,7 @@ NOKTA noktalar=<n1> noktalar=<n2> …
 | Parametre | Ne yapar |
 |---|---|
 | `noktalar` | Yerleştirilecek noktalar. Her biri ayrı bir nesne olur |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

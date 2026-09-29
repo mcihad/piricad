@@ -243,12 +243,14 @@ Komut: `core.line` — `ÇİZGİ`
 ```python
 cad.line(
     points: Coords,
+    layer: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | Ardışık doğru parçalarının köşe noktaları [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/line.md)
 
@@ -261,12 +263,14 @@ Komut: `core.polyline` — `ÇOKLUÇİZGİ`
 ```python
 cad.polyline(
     points: Coords,
+    layer: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | Çoklu çizginin köşe noktaları; hepsi tek nesne olur [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/polyline.md)
 
@@ -279,12 +283,14 @@ Komut: `core.point_draw` — `NOKTA`
 ```python
 cad.point_draw(
     points: Coords,
+    layer: str,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | Yerleştirilecek noktalar [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/point_draw.md)
 
@@ -301,6 +307,7 @@ cad.perp_offset(
     chainage: list[float],
     offset: list[float],
     connect: bool,
+    layer: str,
 ) -> int
 ```
 
@@ -311,6 +318,7 @@ cad.perp_offset(
 | `chainage` | `list[float]` | `ayak` | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
 | `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir |
 | `connect` | `bool` | `cizgi` | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/perp_offset.md)
 
@@ -327,6 +335,7 @@ cad.survey_polar(
     angle: list[float],
     distance: list[float],
     connect: bool,
+    layer: str,
 ) -> int
 ```
 
@@ -337,6 +346,7 @@ cad.survey_polar(
 | `angle` | `list[float]` | `aci` | Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] |
 | `distance` | `list[float]` | `kenar` | Alete olan uzaklık (m) [m] |
 | `connect` | `bool` | `cizgi` | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/survey_polar.md)
 
@@ -360,6 +370,7 @@ cad.intersect_point(
     side: str,
     side_point: Coord,
     intersection: Coord,
+    layer: str,
 ) -> int
 ```
 
@@ -377,6 +388,7 @@ cad.intersect_point(
 | `side` | `str` | `yon` | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
 | `side_point` | `Coord` | `yon_nokta` | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
 | `intersection` | `Coord` | `kesisim` | Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/intersect_point.md)
 
@@ -393,6 +405,7 @@ cad.point_along(
     method: str,
     value: list[float],
     count: int,
+    layer: str,
 ) -> int
 ```
 
@@ -403,6 +416,7 @@ cad.point_along(
 | `method` | `str` | `yontem` | oran: 0 ile 1 arası · mesafe: ilk noktadan metre |
 | `value` | `list[float]` | `deger` | Oran ya da uzaklık; birden çok verilebilir |
 | `count` | `int` | `sayi` | Doğruyu bu kadar eşit parçaya böler |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/point_along.md)
 
@@ -421,6 +435,7 @@ cad.polygon_regular(
     side_length: float,
     angle: float,
     corner: Coord,
+    layer: str,
 ) -> int
 ```
 
@@ -433,6 +448,7 @@ cad.polygon_regular(
 | `side_length` | `float` | `kenar_uzunlugu` | kenar yönteminin uzunluğu (m) [m] |
 | `angle` | `float` | `aci` | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
 | `corner` | `Coord` | `kose` | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/polygon_regular.md)
 
@@ -593,6 +609,7 @@ cad.divide(
     spacing: float,
     block: str,
     align: bool,
+    layer: str,
 ) -> int
 ```
 
@@ -603,6 +620,7 @@ cad.divide(
 | `spacing` | `float` | `aralik` | Sabit aralık (m); başlangıçtan itibaren yürür [m] |
 | `block` | `str` | `blok` | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı |
 | `align` | `bool` | `hizala` | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/divide.md)
 
@@ -837,6 +855,7 @@ cad.text(
     alignment: str,
     line_spacing: float,
     width: float,
+    layer: str,
 ) -> int
 ```
 
@@ -849,6 +868,7 @@ cad.text(
 | `alignment` | `str` | `hizalama` | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
 | `line_spacing` | `float` | `satir_araligi` | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
 | `width` | `float` | `genislik` | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/text.md)
 
@@ -940,6 +960,7 @@ Komut: `core.area` — `ALAN`
 cad.area(
     points: Coords,
     rings: list[int],
+    layer: str,
 ) -> int
 ```
 
@@ -947,6 +968,7 @@ cad.area(
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | Alanın köşe noktaları; kapanış noktası tekrarlanmaz [mm, Sağa (Y) önce] |
 | `rings` | `list[int]` | `bolum` | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/area.md)
 
@@ -960,6 +982,7 @@ Komut: `core.rectangle` — `DİKDÖRTGEN`
 cad.rectangle(
     points: Coords,
     method: str,
+    layer: str,
 ) -> int
 ```
 
@@ -967,6 +990,7 @@ cad.rectangle(
 |---|---|---|---|
 | `points` | `Coords` | `noktalar` | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta [mm, Sağa (Y) önce] |
 | `method` | `str` | `yontem` | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/rectangle.md)
 
@@ -987,6 +1011,7 @@ cad.circle_draw(
     fourth: Coord,
     radius: float,
     side: Coord,
+    layer: str,
 ) -> int
 ```
 
@@ -1001,6 +1026,7 @@ cad.circle_draw(
 | `fourth` | `Coord` | `dorduncu` | ttr: ikinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
 | `radius` | `float` | `yaricap` | ttr: teğet dairenin yarıçapı (m) [m] |
 | `side` | `Coord` | `yon` | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/circle_draw.md)
 
@@ -1021,6 +1047,7 @@ cad.arc_draw(
     radius: float,
     side_point: Coord,
     side: str,
+    layer: str,
 ) -> int
 ```
 
@@ -1035,6 +1062,7 @@ cad.arc_draw(
 | `radius` | `float` | `yaricap` | bby: yarıçap (m) [m] |
 | `side_point` | `Coord` | `yon_nokta` | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
 | `side` | `str` | `yon` | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/arc_draw.md)
 
@@ -1168,6 +1196,7 @@ cad.boundary(
     islands: bool,
     gap: int,
     objects: list[int],
+    layer: str,
 ) -> int
 ```
 
@@ -1177,6 +1206,7 @@ cad.boundary(
 | `islands` | `bool` | `ada` | İçerideki kapalı çizgiler delik olsun mu; varsayılan evet |
 | `gap` | `int` | `bosluk` | Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm] |
 | `objects` | `list[int]` | `nesneler` | Sınır sayılacak nesneler; yoksa görünen her çizgi [kalıcı nesne anahtarı] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/boundary.md)
 
@@ -1777,6 +1807,7 @@ cad.sector(
     center: Coord,
     start: Coord,
     end: Coord,
+    layer: str,
 ) -> int
 ```
 
@@ -1785,6 +1816,7 @@ cad.sector(
 | `center` | `Coord` | `merkez` | Dilimin merkezi [mm, Sağa (Y) önce] |
 | `start` | `Coord` | `baslangic` | İlk kenarın ucu; yarıçapı bu belirler [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | İkinci kenarın yönü; süpürme saat yönünün tersinedir [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/sector.md)
 
@@ -1799,6 +1831,7 @@ cad.annulus(
     center: Coord,
     inner: Coord,
     outer: Coord,
+    layer: str,
 ) -> int
 ```
 
@@ -1807,6 +1840,7 @@ cad.annulus(
 | `center` | `Coord` | `merkez` | Halkanın merkezi [mm, Sağa (Y) önce] |
 | `inner` | `Coord` | `ic` | İç çember üzerinde bir nokta [mm, Sağa (Y) önce] |
 | `outer` | `Coord` | `dis` | Dış çember üzerinde bir nokta [mm, Sağa (Y) önce] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/annulus.md)
 
@@ -1825,6 +1859,7 @@ cad.ellipse_draw(
     second_end: Coord,
     start: float,
     end: float,
+    layer: str,
 ) -> int
 ```
 
@@ -1837,6 +1872,7 @@ cad.ellipse_draw(
 | `second_end` | `Coord` | `ikinci_uc` | eksen: birinci eksenin öteki ucu [mm, Sağa (Y) önce] |
 | `start` | `float` | `baslangic` | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine |
 | `end` | `float` | `bitis` | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/ellipse_draw.md)
 
@@ -1851,6 +1887,7 @@ cad.spline(
     points: Coords,
     degree: int,
     closed: bool,
+    layer: str,
 ) -> int
 ```
 
@@ -1859,6 +1896,7 @@ cad.spline(
 | `points` | `Coords` | `noktalar` | Kontrol noktaları [mm, Sağa (Y) önce] |
 | `degree` | `int` | `derece` | Eğrinin derecesi, 1–15; varsayılan 3 |
 | `closed` | `bool` | `kapali` | Son noktadan ilkine kapansın mı; varsayılan hayır |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/spline.md)
 
@@ -1886,6 +1924,7 @@ cad.hatch(
     gap: int,
     exclude: list[int],
     margin: float,
+    layer: str,
 ) -> int
 ```
 
@@ -1907,6 +1946,7 @@ cad.hatch(
 | `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç |
 | `exclude` | `list[int]` | `disarida` | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı] |
 | `margin` | `float` | `pay` | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/hatch.md)
 
@@ -2013,6 +2053,7 @@ cad.insert(
     row_spacing: int,
     values: list[str],
     file: str,
+    layer: str,
 ) -> int
 ```
 
@@ -2029,6 +2070,7 @@ cad.insert(
 | `row_spacing` | `int` | `satir_aralik` | Satırlar arası, milimetre, döndürülmüş eksende |
 | `values` | `list[str]` | `deger` | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
 | `file` | `str` | `dosya` | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/insert.md)
 
@@ -2105,6 +2147,7 @@ cad.dimension(
     text: str,
     catalog: str,
     associate: bool,
+    layer: str,
     prefix: str,
     suffix: str,
     unit: str,
@@ -2129,6 +2172,7 @@ cad.dimension(
 | `text` | `str` | `metin` | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `associate` | `bool` | `bagla` | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 | `prefix` | `str` | `onek` | Değerin önüne yazılan: R, Ø, ≈ … |
 | `suffix` | `str` | `sonek` | Değerin ardına yazılan: " m", " (eski)" … |
 | `unit` | `str` | `birim` | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
@@ -2288,6 +2332,7 @@ cad.leader(
     text: str,
     style: str,
     catalog: str,
+    layer: str,
 ) -> int
 ```
 
@@ -2297,6 +2342,7 @@ cad.leader(
 | `text` | `str` | `metin` | Son köşenin yanına yazılacak metin |
 | `style` | `str` | `stil` | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili |
 | `catalog` | `str` | `katalog` | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 [Komut sayfası](../komutlar/leader.md)
 

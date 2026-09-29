@@ -175,6 +175,7 @@ KENTOS_COMMAND(survey_polar)
                 Param::boolean("cizgi", Arity::optional(),
                                "Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir")
                     .en("connect"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

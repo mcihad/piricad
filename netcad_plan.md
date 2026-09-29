@@ -982,7 +982,11 @@ etmeden başlamaz.
     (c) yapılmasın.
     **Karar (29 Eylül 2026): (a).** Çizim komutlarına `katman=`; Nokta Girişi sekmesindeki **Katmanı
     nesneden al** çalışan komutun `katman=`'ını tıklanan nesnenin katmanıyla doldurur, etkin katman
-    değişmez; `katman=` almayan komutta düğme soluktur.
+    değişmez; `katman=` almayan komutta düğme soluktur. **Yapıldı (29 Eylül 2026):** `Param::draw_layer()` 23 çizim ve açıklama
+    komutunda; adla verilir, konumsal değer almaz (`Param::amendable`); soru sürerken yazılan
+    `katman=YOL` `Session::amend` ile çalıştırmanın argümanı olur ve günlük ilk satırdakiyle aynıdır;
+    olmayan katman `draw_layer_of` ile ilk tıklamadan önce reddedilir. OFSET, BİRLEŞTİR ve ALANA
+    ÇEVİR gibi türeten fiiller bu turda katman almadı.
 
 ## 10. Kaynak notları
 

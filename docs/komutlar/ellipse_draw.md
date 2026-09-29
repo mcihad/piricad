@@ -58,6 +58,7 @@ ELİPS yontem=eksen birinci=<uç> ikinci_uc=<uç> ikinci=<uzaklık>
 | `birinci` | Birinci eksenin ucu |
 | `ikinci` | İkinci eksenin uzaklığı; **birinci eksene dik** ölçülür |
 | `baslangic`, `bitis` | Birlikte verilirse **kısmi elips**: yayın başlangıç ve bitiş açısı, derece, birinci eksenden saat yönünün tersine, elipsin kendi parametresinde |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

@@ -47,6 +47,17 @@ public:
     virtual core::Status check(const ValidationRequest& req) const = 0;
 };
 
+/// Whether `spec` declares the drawing layer (`Param::draw_layer`).
+bool takes_draw_layer(const CommandSpec& spec) noexcept;
+
+/// THE LAYER A DRAWING RUN NAMED (`Param::draw_layer`): its slot; `kNoLayer`
+/// when the run draws on the active layer — its command declares no such
+/// parameter, or it was given none; and an error naming the drawing's layers
+/// when the name is none of them. One rule for the first line, for a value
+/// given while the command waits and for the check at commit.
+core::Result<core::LayerId> draw_layer_of(const CommandSpec& spec, const Args& args,
+                                          const core::Document& doc);
+
 class Validator
 {
 public:

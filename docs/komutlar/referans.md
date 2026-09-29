@@ -161,6 +161,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `noktalar` | point_list | en az 2 | Ardışık doğru parçalarının köşe noktaları |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ÇİZGİ](line.md)
 
@@ -171,6 +172,7 @@ Birden çok noktadan TEK bir çizgi nesnesi çizer.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `noktalar` | point_list | en az 2 | Çoklu çizginin köşe noktaları; hepsi tek nesne olur |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
 
@@ -181,6 +183,7 @@ Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `noktalar` | point_list | en az 1 | Yerleştirilecek noktalar |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [NOKTA](point_draw.md)
 
@@ -195,6 +198,7 @@ Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
 | `ayak` | number | en az 0 | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
 | `boy` | number | en az 0 | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir |
 | `cizgi` | bool | isteğe bağlı | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
 
@@ -209,6 +213,7 @@ Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
 | `aci` | number | en az 0 | Okunan açı; kenar ile sırayla eşleşir |
 | `kenar` | number | en az 0 | Alete olan uzaklık (m) |
 | `cizgi` | bool | isteğe bağlı | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ALIM](survey_polar.md)
 
@@ -230,6 +235,7 @@ Ayrıntılı kullanım: [ALIM](survey_polar.md)
 | `yon` | text | isteğe bağlı | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
 | `yon_nokta` | point_list | isteğe bağlı | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz |
 | `kesisim` | point_list | isteğe bağlı | Bulunan nokta; günlüğe yazılır |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [KESİŞİMNOKTA](intersect_point.md)
 
@@ -244,6 +250,7 @@ Ayrıntılı kullanım: [KESİŞİMNOKTA](intersect_point.md)
 | `yontem` | text | isteğe bağlı | oran: 0 ile 1 arası · mesafe: ilk noktadan metre |
 | `deger` | number | en az 0 | Oran ya da uzaklık; birden çok verilebilir |
 | `sayi` | integer | isteğe bağlı | Doğruyu bu kadar eşit parçaya böler |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ARANOKTA](point_along.md)
 
@@ -260,6 +267,7 @@ Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da ken
 | `kenar_uzunlugu` | number | isteğe bağlı | kenar yönteminin uzunluğu (m) |
 | `aci` | number | isteğe bağlı | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
 | `kose` | point_list | isteğe bağlı | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
 
@@ -362,6 +370,7 @@ Uygulandığı nesneler: çizgi, alan, eğri.
 | `aralik` | number | isteğe bağlı | Sabit aralık (m); başlangıçtan itibaren yürür |
 | `blok` | text | isteğe bağlı | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı |
 | `hizala` | bool | isteğe bağlı | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [BÖLÜMLE](divide.md)
 
@@ -498,6 +507,7 @@ Ayrıntılı kullanım: [İZ](tracking.md)
 | `hizalama` | text | isteğe bağlı | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
 | `satir_araligi` | number | isteğe bağlı | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
 | `genislik` | number | isteğe bağlı | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [METİN](text.md)
 
@@ -553,6 +563,7 @@ Kapalı bir alan çizer; istenirse içine delik açar.
 |---|---|---|---|
 | `noktalar` | point_list | en az 3 | Alanın köşe noktaları; kapanış noktası tekrarlanmaz |
 | `bolum` | integer | en az 0 | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ALAN](area.md)
 
@@ -566,6 +577,7 @@ Bilinen adı: `KUTU` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına yaz�
 |---|---|---|---|
 | `noktalar` | point_list | 2–3 | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta |
 | `yontem` | text | isteğe bağlı | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
 
@@ -584,6 +596,7 @@ Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya 
 | `dorduncu` | point_list | isteğe bağlı | ttr: ikinci doğrunun ikinci noktası |
 | `yaricap` | number | isteğe bağlı | ttr: teğet dairenin yarıçapı (m) |
 | `yon` | point_list | isteğe bağlı | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [DAİRE](circle_draw.md)
 
@@ -602,6 +615,7 @@ Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da ba
 | `yaricap` | number | isteğe bağlı | bby: yarıçap (m) |
 | `yon_nokta` | point_list | isteğe bağlı | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz |
 | `yon` | text | isteğe bağlı | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [YAY](arc_draw.md)
 
@@ -689,6 +703,7 @@ Ayrıntılı kullanım: [ALANAÇEVİR](to_area.md)
 | `ada` | bool | isteğe bağlı | İçerideki kapalı çizgiler delik olsun mu; varsayılan evet |
 | `bosluk` | integer | isteğe bağlı | Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz |
 | `nesneler` | selection | en az 0 | Sınır sayılacak nesneler; yoksa görünen her çizgi |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [SINIR](boundary.md)
 
@@ -1034,6 +1049,7 @@ Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir
 | `merkez` | point | 1 | Dilimin merkezi |
 | `baslangic` | point | 1 | İlk kenarın ucu; yarıçapı bu belirler |
 | `bitis` | point | 1 | İkinci kenarın yönü; süpürme saat yönünün tersinedir |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [DİLİM](sector.md)
 
@@ -1046,6 +1062,7 @@ Merkez, iç ve dış yarıçaptan delikli halka çizer.
 | `merkez` | point | 1 | Halkanın merkezi |
 | `ic` | point | 1 | İç çember üzerinde bir nokta |
 | `dis` | point | 1 | Dış çember üzerinde bir nokta |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [HALKA](annulus.md)
 
@@ -1062,6 +1079,7 @@ Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 | `ikinci_uc` | point_list | isteğe bağlı | eksen: birinci eksenin öteki ucu |
 | `baslangic` | number | isteğe bağlı | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine |
 | `bitis` | number | isteğe bağlı | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
 
@@ -1074,6 +1092,7 @@ Kontrol noktalarından NURBS eğrisi (spline) çizer.
 | `noktalar` | point_list | en az 2 | Kontrol noktaları |
 | `derece` | integer | isteğe bağlı | Eğrinin derecesi, 1–15; varsayılan 3 |
 | `kapali` | bool | isteğe bağlı | Son noktadan ilkine kapansın mı; varsayılan hayır |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [SPLINE](spline.md)
 
@@ -1099,6 +1118,7 @@ Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini 
 | `bosluk` | integer | isteğe bağlı | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç |
 | `disarida` | selection | en az 0 | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler |
 | `pay` | number | isteğe bağlı | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
 
@@ -1168,6 +1188,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 | `satir_aralik` | integer | isteğe bağlı | Satırlar arası, milimetre, döndürülmüş eksende |
 | `deger` | text | en az 0 | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
 | `dosya` | text | isteğe bağlı | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
@@ -1219,6 +1240,7 @@ Ayrıntılı kullanım: [BLOKKIRP](block_clip.md)
 | `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
 | `bagla` | bool | isteğe bağlı | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 | `onek` | text | isteğe bağlı | Değerin önüne yazılan: R, Ø, ≈ … |
 | `sonek` | text | isteğe bağlı | Değerin ardına yazılan: " m", " (eski)" … |
 | `birim` | text | isteğe bağlı | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) |
@@ -1315,6 +1337,7 @@ Bir noktayı gösteren oklu kılavuz çizgi çizer, yanına yazı koyabilir.
 | `metin` | text | isteğe bağlı | Son köşenin yanına yazılacak metin |
 | `stil` | text | isteğe bağlı | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+| `katman` | text | isteğe bağlı | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
 Ayrıntılı kullanım: [LİDER](leader.md)
 
@@ -2613,6 +2636,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "Dış çember üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -2915,6 +2942,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre (metin)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -3004,6 +3035,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "type": "integer"
           },
           "description": "Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -3611,6 +3646,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
           "description": "Sınır sayılacak nesneler; yoksa görünen her çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -4239,6 +4278,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -5157,6 +5200,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "onek": {
           "type": "string",
           "description": "Değerin önüne yazılan: R, Ø, ≈ … (metin)"
@@ -5728,6 +5775,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir (evet/hayır)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -6206,6 +6257,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "bitis": {
           "type": "number",
           "description": "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -7119,6 +7174,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "number",
           "description": "disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] (sayı)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -7353,6 +7412,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "dosya": {
           "type": "string",
           "description": "Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur (metin)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -7693,6 +7756,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -8470,6 +8537,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "string",
           "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -8616,6 +8687,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -9979,6 +10054,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -10104,6 +10183,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "maximum": 1000,
           "description": "Doğruyu bu kadar eşit parçaya böler (tam sayı)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -10189,6 +10272,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Yerleştirilecek noktalar — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -10390,6 +10477,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -10477,6 +10568,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             }
           ],
           "description": "Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -10807,6 +10902,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "3n"
           ],
           "description": "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -11383,6 +11482,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           ],
           "description": "İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -11528,6 +11631,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "kapali": {
           "type": "boolean",
           "description": "Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",
@@ -12639,6 +12746,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "type": "boolean",
           "description": "Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir (evet/hayır)"
         },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
+        },
         "varsayimlar": {
           "type": "array",
           "items": {
@@ -12840,6 +12951,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "genislik": {
           "type": "number",
           "description": "Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] (sayı)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin)"
         },
         "varsayimlar": {
           "type": "array",

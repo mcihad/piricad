@@ -157,6 +157,7 @@ KENTOS_COMMAND(rectangle)
                               "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve "
                               "yükseklik, döndürülmüş")
                     .en("method"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

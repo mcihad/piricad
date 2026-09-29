@@ -163,6 +163,7 @@ KENTOS_COMMAND(perp_offset)
                 Param::boolean("cizgi", Arity::optional(),
                                "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir")
                     .en("connect"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -59,7 +59,9 @@ komut hemen çizer ve biter.
 
 Tek parametresi vardır: **`noktalar`** — en az iki nokta. Ardışık doğru parçalarının
 köşe noktalarıdır; birinci ile ikinci arasında bir segment, ikinci ile üçüncü arasında
-bir segment, diye devam eder.
+bir segment, diye devam eder. İsteğe bağlı **`katman`**, çizgilerin gideceği katmanı adıyla
+verir; etkin katman değişmez ve komut soru sorarken de yazılabilir
+([Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman)).
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 

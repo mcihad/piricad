@@ -47,6 +47,7 @@ BÖLÜMLE nesne=<kimlik> aralik=<m>
 | `aralik` | sayı | 0..1 | Sabit aralık (m) |
 | `blok` | Nokta yerine **bu bloğu** koyar; blok önceden `BLOK` ile tanımlı olmalı |
 | `hizala` | Bloğu üzerinde durduğu **kenarın doğrultusuna** çevirir; varsayılan hayır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

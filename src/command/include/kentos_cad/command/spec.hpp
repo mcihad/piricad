@@ -195,6 +195,17 @@ struct Param
     std::int64_t high{0};
     bool bounded{false};
 
+    /// ANSWERABLE AT ANY PROMPT OF THE RUN, not only on its first line
+    /// (`Session::amend`), and given by NAME only: a positional value never
+    /// lands in it.
+    ///
+    /// For a parameter the body reads when it WRITES rather than when it asks
+    /// — the layer a drawing goes on — a value given while the command waits
+    /// for its third corner is as good as one on the first line. It is kept in
+    /// the run's arguments like any other, so the journal line is the one a
+    /// first line carrying it would have written.
+    bool amendable{false};
+
     static Param points(std::string name, Arity a, std::string help = {});
     static Param point(std::string name, std::string help = {});
     static Param number(std::string name, Arity a, std::string help = {});
@@ -209,6 +220,12 @@ struct Param
     /// An `Integer` parameter with a closed range the bus enforces.
     static Param integer_range(std::string name, Arity a, std::int64_t low, std::int64_t high,
                                std::string help = {});
+
+    /// THE LAYER A DRAWING COMMAND DRAWS ON (plan open question 19): `katman=`,
+    /// by name, the active layer left as it is. Declared once, so every drawing
+    /// command's `katman` means one thing and is checked by one rule
+    /// (`draw_layer_of`); amendable, so it can be given while the command waits.
+    static Param draw_layer();
 
     /// Names the unit the number is in. Chained onto a factory:
     /// `Param::integer_range("x", ...).measured_in("kâğıt mm")`.

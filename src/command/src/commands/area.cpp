@@ -156,6 +156,7 @@ KENTOS_COMMAND(area)
                 Param::integer("bolum", Arity::at_least(0),
                                "Halka uzunlukları: ilki dış sınır, sonrakiler delik")
                     .en("rings"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

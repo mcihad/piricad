@@ -182,6 +182,7 @@ KENTOS_COMMAND(sector)
                 Param::point("baslangic", "İlk kenarın ucu; yarıçapı bu belirler").en("start"),
                 Param::point("bitis", "İkinci kenarın yönü; süpürme saat yönünün tersinedir")
                     .en("end"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -202,6 +203,7 @@ KENTOS_COMMAND(annulus)
                 Param::point("merkez", "Halkanın merkezi").en("center"),
                 Param::point("ic", "İç çember üzerinde bir nokta").en("inner"),
                 Param::point("dis", "Dış çember üzerinde bir nokta").en("outer"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

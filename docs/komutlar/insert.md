@@ -46,6 +46,7 @@ gibi yerleştirir:
 | Dosyada | Ne alınır |
 |---|---|
 | `ad=` ile adı verilen blok | O blok |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 | Tek blok | O blok, adı sorulmadan |
 | Birden çok blok, `ad=` yok | Arayüzde hangisi olduğu sorulur; betikte bloklar adlarıyla söylenir |
 | Hiç blok yok | **Bütün çizim**, dosyanın adıyla bir blok olur (taban noktası 0,0) |

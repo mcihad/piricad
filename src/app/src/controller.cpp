@@ -381,6 +381,18 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             return command::DispatchResult{};
         }
 
+        // `katman=YOL` WHILE A DRAWING WAITS names the layer it goes on
+        // (`command::amend_from_line`, plan open question 19). The prompt goes
+        // on asking; the value is the run's, as if its first line had carried
+        // it, and the active layer is left as it is.
+        if (auto amended = command::amend_from_line(*session_, trimmed.toStdString())) {
+            if (!*amended) {
+                refused(amended->error());
+                return amended->error();
+            }
+            return command::DispatchResult{};
+        }
+
         // THE FIRST WORD DECIDES. A word the registry knows is a COMMAND: a
         // transparent one (`YAKINLAŞ KAPSAM`) runs beside the waiting command; any
         // other finishes the waiting one first — the way Enter finishes it — and

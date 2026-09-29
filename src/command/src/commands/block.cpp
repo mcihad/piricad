@@ -994,6 +994,7 @@ KENTOS_COMMAND(insert)
                             "dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok "
                             "olur")
                     .en("file"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -59,6 +59,7 @@ SINIR [nokta=<n>] [ada=evet|hayır] [bosluk=<mm>] [nesneler=<kimlik> …]
 | `ada` | İçerideki kapalı çizgiler delik olsun mu. Varsayılan `evet` |
 | `bosluk` | Bu genişliğe kadar açık uçları köprüler, **milimetre**. Varsayılan `0`: köprü yok |
 | `nesneler` | Sınır sayılacak nesneler. Verilmezse görünen her çizgi sayılır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 

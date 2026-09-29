@@ -2828,6 +2828,57 @@ TEST_CASE("PROOF: TARAMA disarida= — arayüz, komut satırı, betik ve oynatma
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
 }
 
+TEST_CASE("PROOF: katman= — soru sürerken verilen, ilk satırdaki ve betikteki aynı çizgiyi bırakır")
+{
+    // Plan open question 19. The GUI names the layer at the second corner, as
+    // `Katmanı nesneden al` or a typed `katman=YOL` does; the command line on
+    // its first line; the script in its arguments.
+    const std::vector<std::string> setup{"KATMAN ad=YOL", "KATMAN ad=PARSEL"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started = gui.bus.begin_interactive("ÇİZGİ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(kP0)).ok());
+        const auto amended = amend_from_line(session, "katman=\"YOL\"");
+        REQUIRE(amended.has_value());
+        CHECK(amended->ok());
+        CHECK(session.supply(Value::point(kP1)).ok());
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(cli.bus
+                .execute_line("ÇİZGİ katman=YOL 485320.15,4310220.4 485370.15,4310250.4",
+                              Origin::CommandLine)
+                .ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.layer","args":{"ad":"YOL"}},
+                      {"cmd":"core.layer","args":{"ad":"PARSEL"}},
+                      {"cmd":"core.line","args":{"noktalar":[[485320150,4310220400],
+                        [485370150,4310250400]],"katman":"YOL"}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK_EQ(gui.bus.active_layer(), gui.doc.find_layer("PARSEL"));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

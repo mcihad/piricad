@@ -1997,6 +1997,19 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         palette->addSmallAction(a);
     }
 
+    // THE LAYER OF WHAT IS CLICKED, for what is being drawn (plan open question
+    // 19): Netcad's drawing onto the layer of the object pointed at, as a
+    // `katman=` the line carries — the active layer stays where it is.
+    SARibbonPanel* layerPanel = pointing->addPanel(tr("Katman"));
+    promptLayerPick_          = new QAction(tr("Katmanı nesneden al"), this);
+    promptLayerPick_->setObjectName(QStringLiteral("promptPoint.KATMAN"));
+    promptLayerPick_->setData(static_cast<int>(Glyph::LayerFromObject));
+    promptLayerPick_->setToolTip(
+        tr("Bir nesneye tıklayın: bu komutun çizdikleri onun katmanına gider, etkin katman "
+           "değişmez (katman=…)"));
+    connect(promptLayerPick_, &QAction::triggered, this, &MainWindow::pickLayerFromObject);
+    layerPanel->addLargeAction(promptLayerPick_);
+
     SARibbonPanel* send = pointing->addPanel(tr("Satır"));
     auto* go            = new QAction(tr("Gönder"), this);
     go->setObjectName(QStringLiteral("promptPoint.GONDER"));

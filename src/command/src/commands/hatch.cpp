@@ -708,6 +708,7 @@ KENTOS_COMMAND(hatch)
                               "varsayılan 0")
                     .measured_in("m")
                     .en("margin"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

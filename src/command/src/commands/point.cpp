@@ -55,12 +55,16 @@ KENTOS_COMMAND(point_draw)
         .names    = {"NOKTA", "POINT", "NK"},
         .title    = "Nokta",
         .category = Category::Draw,
-        .params   = {Param::points("noktalar", Arity::at_least(1), "Yerleştirilecek noktalar")
-                         .en("points")},
-        .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary  = "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.",
-        .run      = &run,
+        .params =
+            {
+                Param::points("noktalar", Arity::at_least(1), "Yerleştirilecek noktalar")
+                    .en("points"),
+                Param::draw_layer(),
+            },
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.",
+        .run     = &run,
     };
 }
 

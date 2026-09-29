@@ -392,12 +392,14 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         }
 
         // Positional: fill the current parameter until its arity is satisfied.
+        // An AMENDABLE one is given by name only: a word left over at the end
+        // of a line is a mistake to report, not a layer to draw on.
         while (positional < spec.params.size()) {
             const Param& p         = spec.params[positional];
             const std::size_t have = p.kind == ParamKind::PointList
                                          ? args.get(p.name).as_points().size()
                                          : (args.has(p.name) ? 1u : 0u);
-            if (p.arity.max != 0xFFFFFFFFu && have >= p.arity.max) {
+            if (p.amendable || (p.arity.max != 0xFFFFFFFFu && have >= p.arity.max)) {
                 ++positional;
                 continue;
             }
@@ -767,6 +769,9 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
 
     auto args = bind_tokens(*spec, parsed.value().tokens, resolve_context());
     if (!args) return args.error();
+    // A LAYER THE DRAWING DOES NOT HAVE is refused before the first click, not
+    // after the last one (`draw_layer_of`).
+    if (auto layer = draw_layer_of(*spec, args.value(), doc_); !layer) return layer.error();
 
     if (job_session_ != nullptr && has_effect(effect_of(*spec, args.value()), Effect::DocumentEdit))
         if (const auto st = writable(); !st) return st.error();

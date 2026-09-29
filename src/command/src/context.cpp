@@ -5,6 +5,7 @@
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/validation.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/geometry.hpp"
@@ -325,6 +326,12 @@ bool Context::has_argument(std::string_view name) const
 
 core::LayerId Context::active_layer() const
 {
+    // THE LAYER THE RUN NAMED (`Param::draw_layer`), read from what the run
+    // resolved — which starts as its first line and takes what `Session::amend`
+    // gave it since — and checked to exist each time it was given.
+    if (const auto named = draw_layer_of(session_.spec(), session_.resolved(), doc_);
+        named && named.value() != core::kNoLayer)
+        return named.value();
     return session_.bus().active_layer();
 }
 

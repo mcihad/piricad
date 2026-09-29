@@ -108,6 +108,7 @@ METİN noktalar=<nokta> yazi=<yazı> yukseklik=<mm> hizalama=<hiza> bitis=<nokta
 | `hizalama` | Noktanın yazının neresinde durduğu: yukarıdaki dokuz sözcükten biri; verilmezse `sol` |
 | `satir_araligi` | Satırlar arası, tek aralığın katı: 0,25–4. Tek aralık yüksekliğin 5/3'üdür |
 | `genislik` | Satırların kırılacağı genişlik, metre. Verilmezse satır yalnız `\n`'de kırılır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 `bitis` verildiğinde yazı o yöne döner. Bir yol adını yolun kendi doğrultusunda
 yazmak, ya da bir cephe ölçüsünü cepheye paralel koymak böyle yapılır. Taban

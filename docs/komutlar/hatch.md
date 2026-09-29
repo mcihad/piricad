@@ -174,6 +174,7 @@ TARAMA ... disarida=<kimlik> disarida=<kimlik> ... [pay=<metre>]
 | `bosluk` | `yontem=ic`: bu kadar milimetreye kadar açık uçlar köprülenir; öntanımlı 0, hiç köprülenmez |
 | `disarida` | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler; yalnız gösterilenler. Bkz. [Yazıları ve sembolleri boş bırakmak](#yazıları-ve-sembolleri-boş-bırakmak-disarida) |
 | `pay` | `disarida=` nesnelerinin çevresinde bırakılan boşluk, metre; öntanımlı 0 |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

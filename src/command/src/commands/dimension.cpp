@@ -1311,6 +1311,7 @@ KENTOS_COMMAND(dimension)
                              "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; "
                                "bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet")
                 .en("associate"),
+            Param::draw_layer(),
         }),
           .undo = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -1483,6 +1484,7 @@ KENTOS_COMMAND(leader)
                 Param::text("katalog", Arity::optional(),
                             "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                     .en("catalog"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

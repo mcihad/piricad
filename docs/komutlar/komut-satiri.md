@@ -386,6 +386,41 @@ açıklığı ekran pikselidir; bir köşeye on beş santimetre kala yazılan `4
 
 Bir köşeyi yazarak almak istiyorsanız köşenin kendisini yazın ya da tıklayın.
 
+### Çizimin katmanı: `katman=`
+
+Çizim komutları — `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `DAİRE`, `YAY`, `ELİPS`, `DİKDÖRTGEN`,
+`ÇOKGEN`, `SPLINE`, `NOKTA`, `METİN`, `TARAMA`, `DİLİM`, `HALKA`, `DİKAYAK`, `ALIM`,
+`KESİŞİMNOKTA`, `ARANOKTA`, `BÖLÜMLE`, `ÖLÇÜ`, `LİDER`, `SINIR` ve `BLOKEKLE` — `katman=`
+alır: çizdikleri o katmana gider, **etkin katman değişmez**. Katman adıyla verilir, büyük
+küçük harf ayrımı yoktur ve yalnız adıyla yazılır; satırın sonunda kalan adsız bir sözcük
+katman sayılmaz.
+
+<!-- örnek: yeni çizim -->
+```
+KATMAN ad=YOL
+KATMAN ad=PARSEL
+ÇİZGİ katman=YOL 0,0 40,0
+ALAN 0,0 20,0 20,10 0,10
+```
+
+Çizgi YOL'a, alan etkin katman PARSEL'e gider.
+
+**Komut soru sorarken de verilir.** Bir sonraki noktayı beklerken `katman=YOL` yazıp
+Enter'a basarsanız komut sormayı sürdürür ve o çalıştırmada çizdikleri YOL'a gider:
+
+```text
+ÇİZGİ                          ← Enter
+0,0                            ← Enter
+katman=YOL                     ← Enter — Bu komutun çizdikleri 'YOL' katmanına gider; etkin katman değişmez.
+40,0                           ← Enter
+                               ← Esc, çizgi YOL'a yazılır
+```
+
+Günlüğe ilk satırda verilmiş gibi yazılır: `ÇİZGİ katman=YOL 0,0 40,0`. **Nokta Girişi**
+sekmesindeki **Katmanı nesneden al** bunu fareyle yapar: basıp bir nesneye tıklayın, o
+nesnenin katmanı aynı satırla verilir (Netcad'de çizimin tıklanan nesnenin katmanına
+gitmesi). Çizimde olmayan bir katman reddedilir; önce `KATMAN ad=…` ile oluşturun.
+
 ## Son komutu yinelemek
 
 Hiçbir komut çalışmıyorken **boş** komut satırında **Enter**'a ya da **Boşluk**'a basmak
@@ -476,6 +511,8 @@ Hata mesajları ne beklendiğini ve ne geldiğini birlikte söyler.
 | `'abc' ifadesi: sayı bekleniyordu (konum 0)` | İfadede sayı olmayan bir şey var | İfadeyi düzeltin |
 | `Komut satırında kapanmamış tırnak var.` | Tırnak açılmış kapatılmamış | Tırnağı kapatın |
 | `'core.line' daha fazla argüman almıyor. Fazlalık: ...` | Komuta kapasitesinden fazla argüman verilmiş | Fazlalığı çıkarın |
+| `Katman bulunamadı: 'YOLL'. Çizimdeki katmanlar: 0, YOL, PARSEL. Yeni bir katmanı önce KATMAN ad=YOLL ile oluşturun.` | `katman=` çizimde olmayan bir katmanı adlandırıyor | Adı düzeltin ya da katmanı `KATMAN ad=…` ile oluşturun |
+| `'katman=' bir ad bekliyor: katman=YOL` | Soru sürerken `katman=` ardından ad yazılmamış | Katmanın adını yazın |
 
 Bütün mesajlar ve çözümleri: [Sorun giderme](../sorun-giderme.md).
 

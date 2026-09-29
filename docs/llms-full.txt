@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 120 (104 tanesi onay ister)
-- Katalog parmak izi: `11989191285862169000`
+- Katalog parmak izi: `3365594765661610171`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -126,6 +126,7 @@ Onay ister.
 | `merkez` | konum (tutamak ya da göreli nokta) | evet | Halkanın merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ic` | konum (tutamak ya da göreli nokta) | evet | İç çember üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `dis` | konum (tutamak ya da göreli nokta) | evet | Dış çember üzerinde bir nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_arc_draw` — Yay
@@ -147,6 +148,7 @@ Onay ister.
 | `yaricap` | number | hayır | bby: yarıçap (m) [m] (sayı) |
 | `yon_nokta` | konum (tutamak ya da göreli nokta) | hayır | bby: yayın hangi yandan geçeceği gösterilen nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yon` | string | hayır | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre (metin) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_area` — Alan
@@ -161,6 +163,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `bolum` | array | hayır | Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_array` — Dizi
@@ -270,6 +273,7 @@ Onay ister.
 | `ada` | boolean | hayır | İçerideki kapalı çizgiler delik olsun mu; varsayılan evet (evet/hayır) |
 | `bosluk` | integer | hayır | Bu genişliğe kadar açık uçları köprüle, milimetre; varsayılan 0: hiçbir boşluk kendiliğinden kapanmaz [mm] (tam sayı) |
 | `nesneler` | string | hayır | Sınır sayılacak nesneler; yoksa görünen her çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_break` — Kır
@@ -327,6 +331,7 @@ Onay ister.
 | `dorduncu` | konum (tutamak ya da göreli nokta) | hayır | ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yaricap` | number | hayır | ttr: teğet dairenin yarıçapı (m) [m] (sayı) |
 | `yon` | konum (tutamak ya da göreli nokta) | hayır | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_cleanup` — Temizle
@@ -493,6 +498,7 @@ Onay ister.
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, <> taşımayan metin elle yazılmış sayılır (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 | `bagla` | boolean | hayır | Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `onek` | string | hayır | Değerin önüne yazılan: R, Ø, ≈ … (metin) |
 | `sonek` | string | hayır | Değerin ardına yazılan: " m", " (eski)" … (metin) |
 | `birim` | string | hayır | Değerin yazıldığı birim. Uzunlukta cizim (çizimin birimi, varsayılan), mm, cm, m, km; açıda grad, derece, radyan (varsayılan projenin açı_birimi ayarı) (metin) |
@@ -607,6 +613,7 @@ Onay ister.
 | `aralik` | number | hayır | Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı) |
 | `blok` | string | hayır | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı (metin) |
 | `hizala` | boolean | hayır | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_earthwork` — Hacim Hesabı
@@ -676,6 +683,7 @@ Onay ister.
 | `ikinci_uc` | konum (tutamak ya da göreli nokta) | hayır | eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
 | `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_entity_info` — Nesne Bilgisi
@@ -843,6 +851,7 @@ Onay ister.
 | `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç (tam sayı) |
 | `disarida` | string | hayır | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `pay` | number | hayır | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] (sayı) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_hatch_edit` — Tarama Düzenle
@@ -888,6 +897,7 @@ Onay ister.
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `deger` | array | hayır | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin) |
 | `dosya` | string | hayır | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur (metin) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_intersect_point` — Kesişim Noktası
@@ -912,6 +922,7 @@ Onay ister.
 | `yon` | string | hayır | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin) |
 | `yon_nokta` | konum (tutamak ya da göreli nokta) | hayır | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `kesisim` | konum (tutamak ya da göreli nokta) | hayır | Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_job_template` — İş Şablonu
@@ -1085,6 +1096,7 @@ Onay ister.
 | `metin` | string | hayır | Son köşenin yanına yazılacak metin (metin) |
 | `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; verilmezse AYAR ölçü_stili (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_lengthen` — Uzunluk
@@ -1116,6 +1128,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_local_copy` — Yerel Kopya
@@ -1326,6 +1339,7 @@ Onay ister.
 | `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
 | `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir (sayı) |
 | `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_point_along` — Ara Nokta
@@ -1343,6 +1357,7 @@ Onay ister.
 | `yontem` | string | hayır | oran: 0 ile 1 arası · mesafe: ilk noktadan metre (metin) |
 | `deger` | number | hayır | Oran ya da uzaklık; birden çok verilebilir (sayı) |
 | `sayi` | integer | hayır | Doğruyu bu kadar eşit parçaya böler (tam sayı) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_point_draw` — Nokta
@@ -1356,6 +1371,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Yerleştirilecek noktalar — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_points` — Nokta Listesi
@@ -1391,6 +1407,7 @@ Onay ister.
 | `kenar_uzunlugu` | number | hayır | kenar yönteminin uzunluğu (m) [m] (sayı) |
 | `aci` | number | hayır | İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı) |
 | `kose` | konum (tutamak ya da göreli nokta) | hayır | Yerine işaret edilen nokta: yarıçapı ve yönü verir; yaricap verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_polyline` — Çoklu Çizgi
@@ -1404,6 +1421,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_preview` — Önizle
@@ -1464,6 +1482,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `yontem` | string | hayır | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_reproject` — Dönüştür
@@ -1535,6 +1554,7 @@ Onay ister.
 | `merkez` | konum (tutamak ya da göreli nokta) | evet | Dilimin merkezi — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_set_layer` — Katmana Ata
@@ -1564,6 +1584,7 @@ Onay ister.
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Kontrol noktaları — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `derece` | integer | hayır | Eğrinin derecesi, 1–15; varsayılan 3 (tam sayı) |
 | `kapali` | boolean | hayır | Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_split` — Böl
@@ -1735,6 +1756,7 @@ Onay ister.
 | `aci` | number | hayır | Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] (sayı) |
 | `kenar` | number | hayır | Alete olan uzaklık (m) [m] (sayı) |
 | `cizgi` | boolean | hayır | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir (evet/hayır) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_symbol` — Sembol
@@ -1770,6 +1792,7 @@ Onay ister.
 | `hizalama` | string | hayır | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) (metin) |
 | `satir_araligi` | number | hayır | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü (sayı) |
 | `genislik` | number | hayır | Satırların kırılacağı genişlik; verilirse uzun satır kelime sınırından alta geçer [m] (sayı) |
+| `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_to_area` — Alana Çevir

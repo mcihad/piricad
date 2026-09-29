@@ -899,8 +899,15 @@ private:
     /// once; one that does is composed, the clicks written into it.
     void startSelectMode(const command::SelectModeInfo& mode);
 
-    /// Reads the snap mask back into the `Nokta Girişi` tab's switches (R47).
+    /// Reads the snap mask back into the `Nokta Girişi` tab's switches (R47), and
+    /// greys `Katmanı nesneden al` for a command that draws on no layer of its own.
     void refreshPointTab();
+
+    /// `Katmanı nesneden al` (plan open question 19): the next click on the
+    /// canvas names an object, and its layer is given to the drawing that waits
+    /// as the line a user would type — `katman="YOL"` — the active layer left
+    /// as it is.
+    void pickLayerFromObject();
 
     /// ONE OF THE THINGS UNDER A CLICK, WALKED IN PLACE — the user's choice over a
     /// modal list: the first is taken at once, a badge beside the click says which
@@ -1257,6 +1264,8 @@ private:
     core::Point2 lastCursor_{};
     /// The `Nokta Girişi` tab's snap switches, one per engine bit, to read back.
     QList<QAction*> promptSnaps_;
+    /// The `Nokta Girişi` tab's `Katmanı nesneden al`, greyed per command.
+    QAction* promptLayerPick_{nullptr};
 
     /// A BLOCK DEFINITION OUT ON THE SHEET for editing (`BLOKDÜZENLE aç`). What
     /// belongs to the edit is the client's to say — the command is stateless so

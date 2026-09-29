@@ -150,6 +150,16 @@ Param Param::text(std::string name, Arity a, std::string help)
     return Param{std::move(name), ParamKind::Text, a, std::move(help)};
 }
 
+Param Param::draw_layer()
+{
+    Param p = Param::text("katman", Arity::optional(),
+                          "Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı "
+                          "değiştirmez; komut soru sorarken de yazılabilir")
+                  .en("layer");
+    p.amendable = true;
+    return p;
+}
+
 Param Param::boolean(std::string name, Arity a, std::string help)
 {
     return Param{std::move(name), ParamKind::Bool, a, std::move(help)};

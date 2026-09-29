@@ -29,6 +29,7 @@ SPLINE noktalar=<sağa>,<yukarı> <sağa>,<yukarı> ... [derece=<1-15>] [kapali=
 | `noktalar` | Kontrol noktaları, en az iki. Aynı `noktalar=` altında art arda yazılır |
 | `derece` | Eğrinin derecesi, 1–15; varsayılan 3. Nokta sayısı dereceye yetmiyorsa derece düşürülür ve söylenir |
 | `kapali` | `evet` ise son noktadan ilkine düz kapanır; varsayılan hayır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 

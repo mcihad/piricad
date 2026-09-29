@@ -55,6 +55,7 @@ göreli (`@50,30`) ve kutupsal (`@100<45`).
 |---|---|
 | `noktalar` | Alanın köşeleri. En az üç nokta. Kapanış noktası tekrarlanmaz |
 | `bolum` | Halka uzunlukları. Verilmezse bütün noktalar tek bir dış sınırdır |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 `bolum` verildiğinde nokta listesi sırayla bölünür: **ilk halka dış sınır**, sonraki her
 halka onun içinde bir **deliktir**. Uzunlukların toplamı nokta sayısına eşit olmalıdır ve

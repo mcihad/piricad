@@ -6,6 +6,17 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çizim komutları kendi katmanına çizer: `katman=`
+
+- 23 çizim ve açıklama komutu (`ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `DAİRE`, `YAY`, `METİN`,
+  `TARAMA`, `ÖLÇÜ`, `BLOKEKLE`…) `katman=<ad>` alır: çizdikleri o katmana gider, etkin katman
+  değişmez. Çizimde olmayan bir katman ilk tıklamadan önce, katmanları sayarak reddedilir.
+- **Soru sürerken de verilir:** bir sonraki noktayı beklerken `katman=YOL` yazmak komutu
+  bölmez; günlüğe ilk satırda verilmiş gibi yazılır.
+- **Nokta Girişi ▸ Katman ▸ Katmanı nesneden al**: bir nesneye tıklayın, komutun çizdikleri
+  onun katmanına gider (Netcad'in çizimi tıklanan nesnenin katmanına koyması). Kendi
+  katmanına çizmeyen bir komutta soluktur.
+
 ### Eklendi — tarama gösterilen yazıları ve simgeleri boş bırakır
 
 - `TARAMA … disarida=<nesneler>`: Netcad'in **Diğer Objeler Seç**'i. Gösterilen yazının

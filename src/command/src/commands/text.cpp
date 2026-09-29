@@ -703,6 +703,7 @@ KENTOS_COMMAND(text)
                               "sınırından alta geçer")
                     .measured_in("m")
                     .en("width"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

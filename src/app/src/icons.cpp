@@ -2227,6 +2227,28 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(12.0, 9.6), QPointF(12.0, 14.0));
         break;
     }
+    case Glyph::LayerFromObject: {
+        // THE LAYER TAKEN FROM WHAT IS POINTED AT: an object at the top left,
+        // the pointer on it, and the layer stack below that it hands on — the
+        // stack drawn as the layer manager's, its top sheet in the note ink.
+        const auto sheet = [&](qreal dy) {
+            return QPolygonF({QPointF(13.0, 10.6 + dy), QPointF(21.0, 14.4 + dy),
+                              QPointF(13.0, 18.2 + dy), QPointF(5.0, 14.4 + dy)});
+        };
+        p.setPen(stroke(c, 1.2));
+        p.setBrush(k.fill);
+        p.drawPolygon(sheet(3.4));
+        p.setBrush(k.note);
+        p.drawPolygon(sheet(0.0));
+        p.setBrush(k.shape);
+        p.drawEllipse(QPointF(5.4, 5.4), 3.0, 3.0);
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(Qt::NoBrush);
+        p.drawLine(QPointF(7.6, 7.6), QPointF(11.8, 11.8));
+        p.drawLine(QPointF(11.8, 11.8), QPointF(11.8, 8.8));
+        p.drawLine(QPointF(11.8, 11.8), QPointF(8.8, 11.8));
+        break;
+    }
     case Glyph::HatchExclude: {
         // THE PARCEL'S NUMBER LEFT FREE: the ground hatched, a box in the middle
         // the pattern stays out of, and in it the caption, in the note ink.

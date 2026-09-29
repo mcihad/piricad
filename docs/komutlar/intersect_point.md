@@ -54,7 +54,8 @@ KESİŞİMNOKTA yontem=dogru birinci=<nokta> ikinci=<nokta> ucuncu=<nokta> dordu
 ## Parametreler
 
 Üretilmiş [komut referansına](referans.md) bakın; hangi parametrenin istendiği
-`yontem`e bağlıdır ve arayüzde sırayla sorulur.
+`yontem`e bağlıdır ve arayüzde sırayla sorulur. Her yöntemde `katman=` konan noktanın katmanını adıyla
+verir; etkin katman değişmez ([Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman)).
 
 ## Örnekler
 

@@ -4,9 +4,14 @@
 #include "kentos_cad/command/job.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/validation.hpp"
 
 #include "kentos_cad/core/text.hpp"
+
+#include <algorithm>
+#include <cmath>
 
 namespace kentos::command {
 
@@ -128,6 +133,63 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
     // leaves it in place. Either way the journal records the effective bundle,
     // which is what makes a replay reproduce the run (kentoscad.md §2.2).
     if (const Args* preset = input_->preset()) resolved_ = *preset;
+}
+
+core::Status Session::amend(const std::string& name, Value v)
+{
+    const auto p =
+        std::ranges::find_if(spec_->params, [&name](const Param& q) { return q.name == name; });
+    if (p == spec_->params.end() || !p->amendable)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         spec_->names.front() + " '" + name +
+                             "' değerini soru sürerken almaz; komutun ilk satırında verin.");
+    if (!waiting())
+        return core::err(core::ErrorCode::InvalidArgument,
+                         spec_->names.front() + " şu anda bir şey sormuyor.");
+    if (v.kind() != Value::Kind::Text || v.as_text().empty())
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "'" + name + "=' bir ad bekliyor: " + name + "=YOL");
+    Args probe = resolved_;
+    probe.set(name, v);
+    if (auto layer = draw_layer_of(*spec_, probe, bus_.document()); !layer) return layer.error();
+    resolved_.set(name, std::move(v));
+    return core::ok();
+}
+
+std::optional<core::Status> amend_from_line(Session& session, std::string_view line)
+{
+    if (!session.waiting()) return std::nullopt;
+    // The line tokenised as VALUES, a stand-in word in front of it, as the
+    // command line reads an answer.
+    auto parsed = parse_line("YANIT " + std::string(line));
+    if (!parsed || parsed.value().tokens.size() != 1) return std::nullopt;
+    const Token& t = parsed.value().tokens.front();
+    if (t.kind != Token::Kind::KeyValue || t.nested.empty()) return std::nullopt;
+    const auto& params = session.spec().params;
+    const auto p       = std::ranges::find_if(params, [&t](const Param& q) {
+        return q.amendable && core::turkish_iequals(q.name, t.word);
+    });
+    if (p == params.end()) return std::nullopt;
+
+    // THE NAME AS WRITTEN: a bare word, a quoted one, or a number — a layer
+    // called `101` is a name, not a count.
+    const Token& v = t.nested.front();
+    std::string name;
+    if (v.kind == Token::Kind::Word) name = v.word;
+    if (v.kind == Token::Kind::Text) name = v.text;
+    if (v.kind == Token::Kind::Number && std::floor(v.a) == v.a)
+        name = std::to_string(static_cast<std::int64_t>(v.a));
+    auto st = session.amend(p->name, Value::text(name));
+    if (st) {
+        std::string said = "Bu komutun çizdikleri '";
+        if (const core::LayerId layer = session.bus().document().find_layer(name);
+            const core::Layer* l      = session.bus().document().layer(layer))
+            said += l->name;
+        else
+            said += name;
+        session.bus().echo(said + "' katmanına gider; etkin katman değişmez.");
+    }
+    return st;
 }
 
 Session::~Session()

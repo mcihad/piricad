@@ -1007,6 +1007,7 @@ KENTOS_COMMAND(divide)
                 Param::boolean("hizala", Arity::optional(),
                                "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir")
                     .en("align"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -98,6 +98,12 @@ struct Offer
     std::string line;  ///< the command line it runs
 };
 
+/// A LINE TYPED AT A PROMPT THAT NAMES ONE OF THE COMMAND'S AMENDABLE
+/// ARGUMENTS — `katman=YOL` while ÇİZGİ waits for a corner — given to it
+/// (`Session::amend`) and said on the transcript. Empty when the line is not
+/// such an argument, and is therefore the prompt's answer as before.
+std::optional<core::Status> amend_from_line(Session& session, std::string_view line);
+
 class Session
 {
 public:
@@ -116,6 +122,14 @@ public:
 
     /// Feeds one value into a waiting command and resumes it.
     core::Status supply(Value v);
+
+    /// GIVES A WAITING COMMAND AN ARGUMENT ITS BODY HAS NOT READ YET
+    /// (`Param::amendable`): the layer a drawing goes on, named at its third
+    /// corner. Kept with what the run resolved, so the journal records it as if
+    /// the first line had carried it. Refused for a parameter the command does
+    /// not declare amendable, when nothing is being asked, and for a value its
+    /// rule refuses — a layer the drawing does not have.
+    core::Status amend(const std::string& name, Value v);
 
     /// ESC. The command sees the input source as exhausted and returns normally,
     /// exactly as it would at the end of a script's argument list.

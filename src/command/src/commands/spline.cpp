@@ -119,6 +119,7 @@ KENTOS_COMMAND(spline)
                 Param::boolean("kapali", Arity::optional(),
                                "Son noktadan ilkine kapansın mı; varsayılan hayır")
                     .en("closed"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

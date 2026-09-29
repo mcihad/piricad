@@ -196,6 +196,7 @@ KENTOS_COMMAND(ellipse_draw)
                 Param::number("bitis", Arity::optional(),
                               "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte")
                     .en("end"),
+                Param::draw_layer(),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

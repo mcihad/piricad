@@ -91,6 +91,7 @@ Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat
 | Parametre | Zorunlu | Tür | Anlamı |
 |---|---|---|---|
 | `noktalar` | evet | nokta ×2 | Karşılıklı iki köşe. Kalan ikisi bunlardan türetilir |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 Başka parametresi yoktur. Köşe sayısı sabittir; delik açmak, üçten çok köşe vermek
 ya da açılı bir dörtgen çizmek [`ALAN`](area.md) işidir.

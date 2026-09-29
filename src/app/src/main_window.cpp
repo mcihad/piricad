@@ -49,6 +49,7 @@
 #include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/select_modes.hpp"
 #include "kentos_cad/command/selection.hpp"
+#include "kentos_cad/command/validation.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/dimension_link.hpp"
@@ -10921,6 +10922,51 @@ void MainWindow::refreshPointTab()
         const QSignalBlocker quiet(a);
         a->setChecked((mask & a->property(kSnapBitProperty).toUInt()) != 0);
     }
+    if (promptLayerPick_ != nullptr) {
+        // GREYED ONLY WHILE THE TAB IS UP FOR A COMMAND THAT DRAWS ON NO LAYER
+        // OF ITS OWN: greyed at any other time — nothing running, or SİL asking
+        // for objects — it would offer a screen reader no press to find it by.
+        const command::Session* live = controller_->session();
+        const bool asks_point        = live != nullptr && live->waiting() &&
+                                (live->prompt().kind == command::ParamKind::Point ||
+                                 live->prompt().kind == command::ParamKind::PointList);
+        const bool draws = !asks_point || command::takes_draw_layer(live->spec());
+        promptLayerPick_->setEnabled(draws);
+        promptLayerPick_->setProperty(
+            "kentos.unavailable",
+            draws ? QVariant()
+                  : QVariant(tr("Bu komut kendi katmanına çizmiyor; katman= almıyor.")));
+    }
+}
+
+void MainWindow::pickLayerFromObject()
+{
+    const command::Session* live = controller_->session();
+    if (live == nullptr || !live->waiting() || !command::takes_draw_layer(live->spec())) return;
+    // ONE PICK AT A TIME, as a composed line's: one that was waiting gets nothing.
+    if (pendingPick_) {
+        auto earlier = std::move(pendingPick_);
+        pendingPick_ = nullptr;
+        earlier(std::nullopt);
+    }
+    pendingPick_ = [this](std::optional<QString> got) {
+        if (!got) return;
+        bool ok                   = false;
+        const qulonglong raw      = got->toULongLong(&ok);
+        const core::Document& doc = controller_->document();
+        const core::EntityId e =
+            ok ? doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)))
+               : core::kNoEntity;
+        if (e == core::kNoEntity || !doc.alive(e)) return;
+        const core::Layer* layer = doc.layer(doc.entities().layer[e]);
+        if (layer == nullptr) return;
+        // THE LINE A USER WOULD TYPE, through the road a typed line takes: the
+        // journal cannot tell this button from the keyboard (Article 1.2).
+        controller_->runLine(
+            QStringLiteral("katman=\"%1\"").arg(QString::fromStdString(layer->name)),
+            command::Origin::Gui);
+    };
+    canvas_->beginCapture(MapCanvas::Capture::Object);
 }
 
 void MainWindow::refreshPromptTabs()
@@ -10952,7 +10998,9 @@ void MainWindow::refreshPromptTabs()
     };
     show(promptSelectTab_, objects);
     show(promptPointTab_, point);
-    if (point) refreshPointTab();
+    // Every time, not only when the tab shows: a TAŞI that greyed the layer
+    // pick must not leave it greyed after the question ends.
+    refreshPointTab();
     if (leaving) {
         if (beforePromptTab_ != nullptr)
             bar->raiseCategory(beforePromptTab_);

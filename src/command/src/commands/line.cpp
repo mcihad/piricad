@@ -92,13 +92,17 @@ KENTOS_COMMAND(line)
         .names    = {"ÇİZGİ", "CIZGI", "LINE", "Ç", "L"},
         .title    = "Çizgi",
         .category = Category::Draw,
-        .params   = {Param::points("noktalar", Arity::at_least(2),
-                                   "Ardışık doğru parçalarının köşe noktaları")
-                         .en("points")},
-        .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary  = "İki veya daha fazla nokta arasında doğru parçaları çizer.",
-        .run      = &run,
+        .params =
+            {
+                Param::points("noktalar", Arity::at_least(2),
+                              "Ardışık doğru parçalarının köşe noktaları")
+                    .en("points"),
+                Param::draw_layer(),
+            },
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "İki veya daha fazla nokta arasında doğru parçaları çizer.",
+        .run     = &run,
     };
 }
 

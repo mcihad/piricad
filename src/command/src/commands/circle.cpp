@@ -290,6 +290,7 @@ KENTOS_COMMAND(circle_draw)
                 Param::points("yon", Arity::optional(),
                               "ttr: dairenin geleceği köşe; dört çözümden en yakını alınır")
                     .en("side"),
+                Param::draw_layer(),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

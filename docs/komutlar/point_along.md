@@ -49,6 +49,7 @@ ARANOKTA <A> <B> sayi=<k>
 | `yontem` | sözcük | 0..1 | `oran` (varsayılan) ya da `mesafe` |
 | `deger` | sayı | 0..n | Oran ya da uzaklık; birden çok verilebilir |
 | `sayi` | tamsayı | 0..1 | 2–1000: doğruyu bu kadar eşit parçaya böler |
+| `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir. Bkz. [Çizimin katmanı](komut-satiri.md#çizimin-katmanı-katman) |
 
 ## Örnekler
 
