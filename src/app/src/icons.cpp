@@ -1965,6 +1965,19 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.restore();
         break;
     }
+    case Glyph::ViewWindow: {
+        // A WINDOW DRAWN, dashed as the canvas draws it, and the magnifier over
+        // its corner: `Yakınlaştır`'s lens, looking into the box it was given.
+        p.setPen(QPen(k.shape, 1.6, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(3.2, 4.4, 12.6, 9.6));
+        p.setBrush(k.fill);
+        p.setPen(stroke(c, 1.6));
+        p.drawEllipse(QPointF(15.4, 14.0), 4.2, 4.2);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 2.2));
+        p.drawLine(QPointF(18.5, 17.1), QPointF(21.2, 19.8));
+        break;
+    }
 
     case Glyph::Spline: {
         // The control polygon, faint and dashed, and the curve it pulls.

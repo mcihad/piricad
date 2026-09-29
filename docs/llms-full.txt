@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 118 (104 tanesi onay ister)
-- Katalog parmak izi: `13836315752762014671`
+- Katalog parmak izi: `3363360385653590708`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1891,8 +1891,11 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `mod` | string | hayır | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) (metin) |
+| `mod` | string | hayır | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) (metin) |
 | `carpan` | number | hayır | ÇARPAN modunda ölçek katsayısı (sayı) |
+| `pencere` | konum (tutamak ya da göreli nokta) | hayır | PENCERE modunda pencerenin iki karşı köşesi; verilince mod PENCERE olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `merkez` | konum (tutamak ya da göreli nokta) | hayır | MERKEZ modunda görünümün ortasına gelecek nokta; verilince mod MERKEZ olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `olcek` | integer | hayır | MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır (tam sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `geodesy_traverse` — Poligon Hesabı

@@ -215,6 +215,51 @@ void MapCanvas::resetView()
     update();
 }
 
+void MapCanvas::beginWindowZoom()
+{
+    window_zoom_         = true;
+    window_anchor_valid_ = false;
+    emit echoRequested(tr("Pencerenin bir köşesinden karşı köşesine sürükleyin ya da iki köşesine "
+                          "tıklayın; Esc vazgeçer."));
+    update();
+}
+
+void MapCanvas::cancelWindowZoom()
+{
+    window_zoom_         = false;
+    window_anchor_valid_ = false;
+    applyPointer();
+    update();
+}
+
+void MapCanvas::finishWindowZoom(QPointF from, QPointF to)
+{
+    cancelWindowZoom();
+    const core::Point2 a = view_.to_world(render::ScreenPoint{from.x(), from.y()});
+    const core::Point2 b = view_.to_world(render::ScreenPoint{to.x(), to.y()});
+
+    // THROUGH THE COMMAND, like the selection box: the drag is a gesture and
+    // `YAKINLAŞ PENCERE` is the feature, so a script frames the same window
+    // with the same line (Article 1.2).
+    command::Args args;
+    args.set("mod", command::Value::text("PENCERE"));
+    args.set("pencere", command::Value::points({a, b}));
+    controller_.runInvocation(
+        command::Invocation{"core.zoom", std::move(args), command::Origin::Gui});
+}
+
+void MapCanvas::buildWindowZoomBox()
+{
+    if (!window_zoom_ || !window_anchor_valid_ || !cursor_valid_) return;
+
+    // DASHED AND UNFILLED, so it is never read as a selection box, which is
+    // solid or dashed over a wash: this one picks nothing.
+    const std::size_t batch      = nextBatch(palette_.selectWindow.rgba(), 1.2f, true, 0U);
+    const render::ScreenPointF a = toScreenF(window_anchor_);
+    const render::ScreenPointF b = toScreenF(cursor_);
+    addRun(batch, {{a.x, a.y}, {b.x, a.y}, {b.x, b.y}, {a.x, b.y}}, true);
+}
+
 render::ViewState MapCanvas::viewState() const
 {
     return render::ViewState{view_.centre(), view_.mm_per_pixel()};
@@ -253,6 +298,36 @@ command::ViewMoved MapCanvas::moveView(const command::ViewMove& move)
         if (const std::optional<render::ViewState> ahead = history_.forward(start))
             showState(*ahead);
         break;
+    case Kind::Window: {
+        // NO MARGIN: the window drawn is the window seen. KAPSAM's margin is
+        // there so the drawing's edge is not on the screen's; a window is the
+        // user saying exactly where the edges go.
+        const render::ViewState from = viewState();
+        view_.fit(move.window, 0.0);
+        noteMove(from);
+        publishViewScale();
+        snap_preview_valid_ = false;
+        emit viewChanged();
+        update();
+        break;
+    }
+    case Kind::Centre: {
+        // THE 1:N THE STATUS BAR READS: ground millimetres per paper millimetre,
+        // at this screen's own pixel size (`pixelsPerPaperMm`), so `olcek=500`
+        // makes the bar say 1 : 500.
+        const render::ViewState from = viewState();
+        const double per_paper       = pixelsPerPaperMm();
+        const double mm_per_pixel    = move.scale > 0 && per_paper > 0.0
+                                           ? static_cast<double>(move.scale) / per_paper
+                                           : view_.mm_per_pixel();
+        view_.set_centre(move.centre, mm_per_pixel);
+        noteMove(from);
+        publishViewScale();
+        snap_preview_valid_ = false;
+        emit viewChanged();
+        update();
+        break;
+    }
     }
 
     command::ViewMoved out;
@@ -3658,6 +3733,7 @@ void MapCanvas::buildOverlay()
     }
 
     buildSelectionBox();
+    buildWindowZoomBox();
     buildGuides();
     buildTracking();
     // THE PRINT FRAME OVER THE DRAWING and under the rulers: it is a window on
@@ -3789,6 +3865,27 @@ void MapCanvas::paintEvent(QPaintEvent*)
 
 void MapCanvas::mousePressEvent(QMouseEvent* event)
 {
+    // AN ARMED WINDOW ZOOM TAKES THE LEFT BUTTON FIRST, before a command's
+    // question: it is the transparent YAKINLAŞ, and the command it interrupts
+    // gets the next click. The first press is a corner; a second press — the
+    // two-click way — is the other one. The right button lets go.
+    if (window_zoom_ && event->button() == Qt::LeftButton) {
+        cursor_       = event->position();
+        cursor_valid_ = true;
+        if (!window_anchor_valid_) {
+            window_anchor_       = event->position();
+            window_anchor_valid_ = true;
+            update();
+        } else {
+            finishWindowZoom(window_anchor_, event->position());
+        }
+        return;
+    }
+    if (window_zoom_ && event->button() == Qt::RightButton) {
+        cancelWindowZoom();
+        return;
+    }
+
     if (event->button() == Qt::MiddleButton) {
         panning_    = true;
         pan_from_   = viewState(); ///< the whole drag is one step back
@@ -4127,6 +4224,17 @@ void MapCanvas::mouseMoveEvent(QMouseEvent* event)
 
 void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
 {
+    // A DRAG ENDS THE WINDOW where the button comes up; a release where the
+    // press was is the first of two clicks, and the window waits for the second.
+    if (window_zoom_ && window_anchor_valid_ && event->button() == Qt::LeftButton) {
+        const double slack = static_cast<double>(
+            controller_.bus().app_settings().get("core.secim.tolerans").as_int());
+        const QPointF d = event->position() - window_anchor_;
+        if (std::abs(d.x()) > slack || std::abs(d.y()) > slack)
+            finishWindowZoom(window_anchor_, event->position());
+        return;
+    }
+
     if (event->button() == Qt::LeftButton && dragging_guide_ >= 0) {
         const int axis  = dragging_guide_;
         dragging_guide_ = -1;
@@ -4378,6 +4486,12 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     }
 
     if (event->key() == Qt::Key_Escape) {
+        // THE ARMED WINDOW is the innermost of all: Esc lets go of it and leaves
+        // the command it came through exactly where it was.
+        if (window_zoom_) {
+            cancelWindowZoom();
+            return;
+        }
         // A form field's pick is the innermost thing of all: Esc puts it away and
         // leaves the command, if one is running, exactly where it was.
         if (capture_) {

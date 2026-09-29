@@ -9,6 +9,9 @@
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include <algorithm>
+#include <string>
+
 namespace kentos::command {
 namespace {
 
@@ -26,6 +29,15 @@ Task<void> run(Context& ctx)
         factor = v.as_number(1.0);
         ctx.record("carpan", v);
     }
+    const Value::Points corners = ctx.argument("pencere").as_points();
+    const Value::Points centre  = ctx.argument("merkez").as_points();
+    const std::int64_t scale    = ctx.argument("olcek").as_int();
+
+    // THE MODE CAN BE LEFT TO THE PLACE: `YAKINLAŞ pencere=…` can only mean a
+    // window and `YAKINLAŞ merkez=…` a centre, and making a hand say it twice
+    // would be a rule with nothing behind it.
+    if (ctx.argument("mod").empty() && !corners.empty()) mode = "PENCERE";
+    if (ctx.argument("mod").empty() && corners.empty() && !centre.empty()) mode = "MERKEZ";
 
     // The word, folded, to the move and to the name the answer is given under.
     ViewMove move;
@@ -46,10 +58,46 @@ Task<void> run(Context& ctx)
     } else if (mode == "SONRAKI" || mode == "NEXT") {
         move.kind = ViewMove::Kind::Next;
         said      = "SONRAKİ";
+    } else if (mode == "PENCERE" || mode == "WINDOW") {
+        // TWO CORNERS, ASKED OF NOBODY. YAKINLAŞ is transparent, and a
+        // transparent command that stopped to prompt would take the prompt of
+        // the command it came through. The corners are on the line; the canvas
+        // gesture (Alt+Z) is what collects them by hand.
+        if (corners.size() != 2) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "PENCERE iki köşe ister: YAKINLAŞ PENCERE pencere=<köşe> <köşe>. Verilen: " +
+                           std::to_string(corners.size()) + " köşe.");
+            co_return;
+        }
+        const core::Point2 a = corners[0];
+        const core::Point2 b = corners[1];
+        if (a == b) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Pencerenin iki köşesi aynı nokta; bir pencere tanımlamıyor.");
+            co_return;
+        }
+        move.kind   = ViewMove::Kind::Window;
+        move.window = core::Box2{std::min(a.x, b.x), std::min(a.y, b.y), std::max(a.x, b.x),
+                                 std::max(a.y, b.y)};
+        ctx.record("pencere", Value::points(corners));
+        said = "PENCERE";
+    } else if (mode == "MERKEZ" || mode == "CENTRE" || mode == "CENTER") {
+        if (centre.size() != 1) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "MERKEZ bir nokta ister: YAKINLAŞ MERKEZ merkez=<nokta> [olcek=<1:N>].");
+            co_return;
+        }
+        move.kind   = ViewMove::Kind::Centre;
+        move.centre = centre.front();
+        move.scale  = scale;
+        ctx.record("merkez", Value::points(centre));
+        if (scale > 0) ctx.record("olcek", Value::integer(scale));
+        said = "MERKEZ";
     } else {
         ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ. Girilen: '" + mode +
-                       "'");
+                   "Beklenen mod: KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ. "
+                   "Girilen: '" +
+                       mode + "'");
         co_return;
     }
 
@@ -133,11 +181,22 @@ KENTOS_COMMAND(zoom)
         .params =
             {
                 Param::text("mod", Arity::optional(),
-                            "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ "
-                            "görünüm geçmişinde birer adım gider (30 adım)")
+                            "KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; "
+                            "ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım)")
                     .en("mode"),
                 Param::number("carpan", Arity::optional(), "ÇARPAN modunda ölçek katsayısı")
                     .en("factor"),
+                Param::points("pencere", Arity{0, 2},
+                              "PENCERE modunda pencerenin iki karşı köşesi; verilince mod "
+                              "PENCERE olur")
+                    .en("window"),
+                Param::points("merkez", Arity::optional(),
+                              "MERKEZ modunda görünümün ortasına gelecek nokta; verilince mod "
+                              "MERKEZ olur")
+                    .en("center"),
+                Param::integer_range("olcek", Arity::optional(), 1, 100000000,
+                                     "MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır")
+                    .en("scale"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Scriptable | Flags::AiAccessible | Flags::Transparent | Flags::ReadOnly,

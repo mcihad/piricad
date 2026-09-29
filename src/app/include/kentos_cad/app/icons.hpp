@@ -297,6 +297,7 @@ enum class Glyph {
     GuideList,          ///< the guides, listed: KILAVUZ
     ViewPrevious,       ///< the view before this one: YAKINLAŞ ÖNCEKİ
     ViewNext,           ///< the view after, again: YAKINLAŞ SONRAKİ
+    ViewWindow,         ///< a window drawn and zoomed into: YAKINLAŞ PENCERE
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

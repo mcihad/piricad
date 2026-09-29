@@ -2720,13 +2720,19 @@ Komut: `core.zoom` — `YAKINLAŞ`
 cad.zoom(
     mode: str,
     factor: float,
+    window: Coords,
+    center: Coord,
+    scale: int,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `mode` | `str` | `mod` | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
+| `mode` | `str` | `mod` | KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım) |
 | `factor` | `float` | `carpan` | ÇARPAN modunda ölçek katsayısı |
+| `window` | `Coords` | `pencere` | PENCERE modunda pencerenin iki karşı köşesi; verilince mod PENCERE olur [mm, Sağa (Y) önce] |
+| `center` | `Coord` | `merkez` | MERKEZ modunda görünümün ortasına gelecek nokta; verilince mod MERKEZ olur [mm, Sağa (Y) önce] |
+| `scale` | `int` | `olcek` | MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır |
 
 [Komut sayfası](../komutlar/zoom.md)
 

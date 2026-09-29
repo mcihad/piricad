@@ -1557,6 +1557,20 @@ void MainWindow::buildActions()
                       tr("YAKINLAŞ SONRAKİ — geri dönülen görünümden ileri gider"));
     addAction(actViewPrevious_); // the key works with focus anywhere in the shell
 
+    // PENCERE BY HAND: Alt+Z is Netcad's Pencere Büyüt (wiki 217385171). The
+    // button arms a gesture on the canvas rather than running the command,
+    // because the corners are what the hand is about to give; the gesture ends
+    // in `YAKINLAŞ PENCERE` with both of them (`MapCanvas::beginWindowZoom`).
+    actViewWindow_ = new QAction(tr("Pencereyle Yakınlaş"), this);
+    actViewWindow_->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Z));
+    actViewWindow_->setToolTip(
+        tr("YAKINLAŞ PENCERE — sürüklediğiniz ya da iki köşesine tıkladığınız pencereye "
+           "yakınlaşır (Alt+Z)"));
+    actViewWindow_->setData(static_cast<int>(Glyph::ViewWindow));
+    actViewWindow_->setProperty(kToolCommand, QStringLiteral("YAKINLAŞ"));
+    connect(actViewWindow_, &QAction::triggered, this, [this] { canvas_->beginWindowZoom(); });
+    addAction(actViewWindow_);
+
     actPan_ = new QAction(tr("Kaydır"), this);
     actPan_->setCheckable(true);
     actPan_->setToolTip(tr("KAYDIR — bir noktayı tutup başka bir yere taşır; ölçek değişmez  ·  "
@@ -3707,6 +3721,103 @@ int MainWindow::probeViewHistory()
     actViewPrevious_->trigger();
     QCoreApplication::processEvents();
     check(behind() + 1 == before_key, QStringLiteral("Önceki Görünüm bir adım geri gitti"));
+
+    // PENCERE BY LINE: the window fills the view along one side, exactly, and
+    // lies inside it along the other.
+    const auto fits = [this](const core::Box2& window) {
+        const core::Box2 seen = canvas_->view().visible_box();
+        const auto px         = [this](core::Mm mm) {
+            return static_cast<double>(mm) / canvas_->view().mm_per_pixel();
+        };
+        // Two pixels of slack for the millimetre the centre was rounded to.
+        const double slack = 2.0 * canvas_->view().mm_per_pixel();
+        const auto d       = [](core::Mm mm) { return static_cast<double>(mm); };
+        const bool inside =
+            d(seen.min_x) <= d(window.min_x) + slack && d(seen.max_x) >= d(window.max_x) - slack &&
+            d(seen.min_y) <= d(window.min_y) + slack && d(seen.max_y) >= d(window.max_y) - slack;
+        const bool snug = std::abs(px(seen.width()) - px(window.width())) <= 2.0 ||
+                          std::abs(px(seen.height()) - px(window.height())) <= 2.0;
+        return inside && snug;
+    };
+    const std::size_t before_window = behind();
+    runScriptLine(QStringLiteral("YAKINLAŞ PENCERE pencere=485300,4310200 485340,4310230"));
+    const core::Box2 typed_window{485300000, 4310200000, 485340000, 4310230000};
+    check(fits(typed_window), QStringLiteral("YAKINLAŞ PENCERE pencereyi paysız doldurdu"));
+    check(behind() == std::min<std::size_t>(before_window + 1, render::ViewHistory::kDepth),
+          QStringLiteral("pencere görünüm geçmişinde bir adım"));
+
+    // PENCERE BY HAND, dragged: Alt+Z's action arms it, a drag across the
+    // canvas is the window.
+    const auto world_at = [this](QPointF at) {
+        return canvas_->view().to_world(render::ScreenPoint{at.x(), at.y()});
+    };
+    const auto framed = [&](QPointF a, QPointF b) {
+        const core::Point2 wa = world_at(a);
+        const core::Point2 wb = world_at(b);
+        return core::Box2{std::min(wa.x, wb.x), std::min(wa.y, wb.y), std::max(wa.x, wb.x),
+                          std::max(wa.y, wb.y)};
+    };
+    check(actViewWindow_->shortcut() == QKeySequence(Qt::ALT | Qt::Key_Z),
+          QStringLiteral("Pencereyle Yakınlaş Alt+Z"));
+    const QPointF corner_a(canvas_->width() * 0.30, canvas_->height() * 0.30);
+    const QPointF corner_b(canvas_->width() * 0.55, canvas_->height() * 0.50);
+    core::Box2 wanted = framed(corner_a, corner_b);
+    actViewWindow_->trigger();
+    check(canvas_->windowZoomArmed(), QStringLiteral("Alt+Z pencereyi kurdu"));
+    mouse(QEvent::MouseButtonPress, corner_a, Qt::LeftButton, Qt::LeftButton);
+    mouse(QEvent::MouseMove, (corner_a + corner_b) / 2.0, Qt::NoButton, Qt::LeftButton);
+    mouse(QEvent::MouseButtonRelease, corner_b, Qt::LeftButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+    check(!canvas_->windowZoomArmed() && fits(wanted),
+          QStringLiteral("sürüklenen pencereye yakınlaştı"));
+
+    // Two clicks, the other way.
+    wanted = framed(corner_a, corner_b);
+    actViewWindow_->trigger();
+    mouse(QEvent::MouseButtonPress, corner_a, Qt::LeftButton, Qt::LeftButton);
+    mouse(QEvent::MouseButtonRelease, corner_a, Qt::LeftButton, Qt::NoButton);
+    check(canvas_->windowZoomArmed(),
+          QStringLiteral("ilk tık bir köşe; pencere ikinciyi bekliyor"));
+    mouse(QEvent::MouseButtonPress, corner_b, Qt::LeftButton, Qt::LeftButton);
+    mouse(QEvent::MouseButtonRelease, corner_b, Qt::LeftButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+    check(!canvas_->windowZoomArmed() && fits(wanted), QStringLiteral("iki tıkla yakınlaştı"));
+
+    // Esc lets go and moves nothing.
+    const core::Point2 still = canvas_->view().centre();
+    actViewWindow_->trigger();
+    {
+        QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &esc);
+    }
+    check(!canvas_->windowZoomArmed() && canvas_->view().centre() == still,
+          QStringLiteral("Esc pencereyi bıraktı, görünüm yerinde"));
+
+    // OVER A RUNNING COMMAND: ÇİZGİ waits for its first point, the window zooms
+    // the view, and ÇİZGİ is still waiting for the same point.
+    onCommandSubmitted(QStringLiteral("ÇİZGİ"));
+    const command::Session* line = controller_->session();
+    const QString asked          = line != nullptr && line->waiting()
+                                       ? QString::fromStdString(line->prompt().message)
+                                       : QString();
+    wanted                       = framed(corner_a, corner_b);
+    actViewWindow_->trigger();
+    mouse(QEvent::MouseButtonPress, corner_a, Qt::LeftButton, Qt::LeftButton);
+    mouse(QEvent::MouseButtonRelease, corner_b, Qt::LeftButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+    const command::Session* after = controller_->session();
+    check(fits(wanted) && after != nullptr && after->waiting() &&
+              QString::fromStdString(after->prompt().message) == asked && !asked.isEmpty(),
+          QStringLiteral("çizgi sürerken pencere; çizgi aynı noktayı bekliyor"));
+    controller_->cancelAll();
+    QCoreApplication::processEvents();
+
+    // MERKEZ at 1:500: the centre where it was asked, and the bar reads 1 : 500.
+    runScriptLine(QStringLiteral("YAKINLAŞ MERKEZ merkez=485320,4310215 olcek=500"));
+    const double ratio = canvas_->view().mm_per_pixel() * canvas_->pixelsPerPaperMm();
+    check(canvas_->view().centre() == core::Point2{485320000, 4310215000} &&
+              std::abs(ratio - 500.0) < 1e-6,
+          QStringLiteral("MERKEZ olcek=500: 1 : %1").arg(ratio));
 
     // AND A NEW DRAWING FORGETS where the old one was looked at.
     (void)controller_->bus().on_view_move(

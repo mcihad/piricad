@@ -44,6 +44,7 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
+#include <QKeyEvent>
 #include <QLibraryInfo>
 #include <QLineEdit>
 #include <QListWidget>
@@ -2243,6 +2244,43 @@ int main(int argc, char** argv)
         });
         later([&window] { window.runScriptLine(QStringLiteral("mavi")); });
         later([&window, shot] { shot(QStringLiteral("28-renk-mavi"), &window); });
+
+        // AND THE WINDOW ZOOM, armed and half drawn (Alt+Z): the dashed box that
+        // picks nothing, from its first corner to the pointer, over a block of
+        // four parcels. Last, because it clears the drawing it frames.
+        later([&window] {
+            window.cancelCommand();
+            window.runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+            window.runScriptLine(QStringLiteral("SİL"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            for (const char* corners :
+                 {"485300,4310200 485340,4310200 485340,4310230 485300,4310230",
+                  "485340,4310200 485380,4310200 485380,4310230 485340,4310230",
+                  "485300,4310230 485340,4310230 485340,4310260 485300,4310260",
+                  "485340,4310230 485380,4310230 485380,4310260 485340,4310260"})
+                window.runScriptLine(QStringLiteral("ALAN %1").arg(QLatin1String(corners)));
+            window.endCommand();
+            window.cancelCommand();
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window] {
+            kentos::app::MapCanvas* canvas = window.canvas();
+            canvas->beginWindowZoom();
+            const QPointF from(canvas->width() * 0.36, canvas->height() * 0.30);
+            const QPointF to(canvas->width() * 0.58, canvas->height() * 0.55);
+            QMouseEvent press(QEvent::MouseButtonPress, from, canvas->mapToGlobal(from),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &press);
+            QMouseEvent move(QEvent::MouseMove, to, canvas->mapToGlobal(to), Qt::NoButton,
+                             Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas, &move);
+            canvas->update();
+        });
+        later([&window, shot] { shot(QStringLiteral("29-pencere-yakinlas"), &window); });
+        later([&window] {
+            QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QCoreApplication::sendEvent(window.canvas(), &esc);
+        });
 
         later([] { QApplication::exit(0); });
     }

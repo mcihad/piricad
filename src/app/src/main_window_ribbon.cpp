@@ -982,6 +982,7 @@ void MainWindow::buildRibbon()
 
     SARibbonPanel* navigate = viewTab->addPanel(tr("Gezinme"));
     large(navigate, actZoomExtents_);
+    small(navigate, actViewWindow_);
     small(navigate, actZoomIn_);
     small(navigate, actZoomOut_);
     small(navigate, actPan_);

@@ -1061,6 +1061,7 @@ yapabilecekleriniz:
 | **F3** / **F8** / **F10** / **F9** | Nesne yakalama / dik mod / yüzey normali / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Alt+C** | Önceki görünüm — Netcad'deki gibi (`YAKINLAŞ ÖNCEKİ`, otuz adım) |
+| **Alt+Z** | Pencereyle yakınlaş: tuvalde sürüklediğiniz ya da iki köşesine tıkladığınız pencereye (`YAKINLAŞ PENCERE`); çalışan komutu bozmaz |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |
 | **F1** | [Komut listesi](../komutlar/help.md) — `Ctrl+K` ile aynı sayfa |

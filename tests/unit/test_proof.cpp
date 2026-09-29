@@ -1278,6 +1278,56 @@ TEST_CASE("PROOF: YAKINLAŞ ÖNCEKİ gui, komut satırı ve betikten aynı cevab
     }
 }
 
+TEST_CASE("PROOF: YAKINLAŞ PENCERE gui, komut satırı ve betikten aynı pencereyi ister")
+{
+    // Article 6.4 for the window zoom. The canvas gesture dispatches the corners
+    // as data (`MapCanvas::finishWindowZoom`), the command line types them and a
+    // script names them: the viewport is asked for one window, byte for byte,
+    // and told the same answer.
+    const auto viewport = [](Rig& rig, std::vector<core::Box2>& asked) {
+        rig.bus.on_view_move = [&asked](const ViewMove& move) {
+            asked.push_back(move.window);
+            return ViewMoved{.moved = true, .behind = 2, .ahead = 0};
+        };
+    };
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    std::vector<core::Box2> gui_asked, cli_asked, scr_asked;
+    viewport(gui, gui_asked);
+    viewport(cli, cli_asked);
+    viewport(scr, scr_asked);
+
+    command::Args from_hand;
+    from_hand.set("mod", Value::text("PENCERE"));
+    from_hand.set("pencere",
+                  Value::points({core::Point2{40000, 30000}, core::Point2{10000, 5000}}));
+    const auto gestured = gui.bus.dispatch(Invocation{"core.zoom", from_hand, Origin::Gui});
+    const auto typed =
+        cli.bus.execute_line("YAKINLAŞ PENCERE pencere=40,30 10,5", Origin::CommandLine);
+    REQUIRE(gestured.ok());
+    REQUIRE(typed.ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Pencere kanıtı",
+            "komutlar": [ {"cmd": "core.zoom",
+                           "args": {"mod": "PENCERE", "pencere": [[40000, 30000], [10000, 5000]]}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    const core::Box2 window{10000, 5000, 40000, 30000};
+    CHECK(gui_asked == std::vector<core::Box2>{window});
+    CHECK(cli_asked == gui_asked);
+    CHECK(scr_asked == gui_asked);
+    CHECK_EQ(gestured.value().report.dump(), typed.value().report.dump());
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK(rig->journal.entries().empty());
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
+    }
+}
+
 TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur")
 {
     // Article 6.4 for `core.measure_angle`, and the reading is the one a hand

@@ -534,10 +534,15 @@ struct ViewMove
         Reset,    ///< SIFIRLA: where a drawing starts
         Previous, ///< ÖNCEKİ: one step back in the view history
         Next,     ///< SONRAKİ: one step forward again
+        Window,   ///< PENCERE: `window` fills the viewport, with no margin
+        Centre,   ///< MERKEZ: `centre` in the middle, at `scale` when given
     };
 
     Kind kind{Kind::Extents}; ///< the move asked for
     double factor{1.0};       ///< ÇARPAN's factor
+    core::Box2 window{};      ///< PENCERE's window, document millimetres
+    core::Point2 centre{};    ///< MERKEZ's centre
+    std::int64_t scale{0};    ///< MERKEZ's 1:N, the status bar's reading; 0 keeps the scale
 
     /// A NEW DRAWING'S RESET forgets where the old one was looked at: a step
     /// back from it would land on a place in a drawing no longer open.

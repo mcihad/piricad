@@ -1835,12 +1835,18 @@ def zoom(
     *,
     mode: str = ...,
     factor: float = ...,
+    window: Coords = ...,
+    center: Coord = ...,
+    scale: int = ...,
 ) -> int:
     """Görünümü çizim kapsamına ya da verilen çarpana ayarlar; ÖNCEKİ ve SONRAKİ görünüm geçmişinde geri ve ileri gider.
 
     Komut: core.zoom (YAKINLAŞ)
-        mode — KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım)
+        mode — KAPSAM | ÇARPAN | SIFIRLA | ÖNCEKİ | SONRAKİ | PENCERE | MERKEZ; ÖNCEKİ ve SONRAKİ görünüm geçmişinde birer adım gider (30 adım)
         factor — ÇARPAN modunda ölçek katsayısı
+        window — PENCERE modunda pencerenin iki karşı köşesi; verilince mod PENCERE olur [mm, Sağa (Y) önce]
+        center — MERKEZ modunda görünümün ortasına gelecek nokta; verilince mod MERKEZ olur [mm, Sağa (Y) önce]
+        scale — MERKEZ modunda ölçek paydası, 1:N; verilmezse ölçek kalır
     """
 
 def undo(

@@ -3187,6 +3187,62 @@ TEST_CASE(
                                                ViewMove::Kind::Reset});
 }
 
+TEST_CASE("YAKINLAŞ PENCERE iki köşeyi, MERKEZ bir noktayı ve ölçeği görünüme verir")
+{
+    Fixture f;
+    std::vector<ViewMove> asked;
+    f.bus.on_view_move = [&asked](const ViewMove& move) {
+        asked.push_back(move);
+        return ViewMoved{.moved = true, .behind = 1, .ahead = 0};
+    };
+
+    // THE CORNERS IN ANY ORDER make the same window, normalised.
+    REQUIRE(f.bus.execute_line("YAKINLAŞ PENCERE pencere=40,30 10,5", Origin::CommandLine).ok());
+    REQUIRE(asked.size() == 1);
+    CHECK(asked.back().kind == ViewMove::Kind::Window);
+    CHECK(asked.back().window == core::Box2{10000, 5000, 40000, 30000});
+
+    // The keyword repeated is the same window; and the mode may be left to it.
+    REQUIRE(f.bus.execute_line("YAKINLAŞ pencere=10,5 pencere=40,30", Origin::CommandLine).ok());
+    CHECK(asked.back().kind == ViewMove::Kind::Window);
+    CHECK(asked.back().window == core::Box2{10000, 5000, 40000, 30000});
+    auto report = f.bus.execute_line("ZOOM WINDOW pencere=0,0 1,1", Origin::CommandLine);
+    REQUIRE(report.ok());
+    CHECK(report.value().report.find("mod")->as_string() == "PENCERE");
+
+    // NOT ASKED FOR: a transparent command does not prompt (the canvas gesture
+    // collects the corners by hand), so a missing corner is refused in words.
+    auto one = f.bus.execute_line("YAKINLAŞ PENCERE pencere=10,5", Origin::CommandLine);
+    REQUIRE_FALSE(one.ok());
+    CHECK(one.error().message.find("PENCERE iki köşe ister") != std::string::npos);
+    auto none = f.bus.execute_line("YAKINLAŞ PENCERE", Origin::CommandLine);
+    REQUIRE_FALSE(none.ok());
+    CHECK(none.error().message.find("Verilen: 0 köşe") != std::string::npos);
+    auto same = f.bus.execute_line("YAKINLAŞ PENCERE pencere=10,5 10,5", Origin::CommandLine);
+    REQUIRE_FALSE(same.ok());
+    CHECK(same.error().message.find("aynı nokta") != std::string::npos);
+
+    // MERKEZ: the point in the middle, at 1:500 when a scale is given, and at the
+    // current scale when it is not.
+    REQUIRE(
+        f.bus.execute_line("YAKINLAŞ MERKEZ merkez=485300,4310200 olcek=500", Origin::CommandLine)
+            .ok());
+    CHECK(asked.back().kind == ViewMove::Kind::Centre);
+    CHECK(asked.back().centre == core::Point2{485300000, 4310200000});
+    CHECK(asked.back().scale == 500);
+    REQUIRE(f.bus.execute_line("YAKINLAŞ merkez=10,20", Origin::CommandLine).ok());
+    CHECK(asked.back().kind == ViewMove::Kind::Centre);
+    CHECK(asked.back().scale == 0);
+    auto centreless = f.bus.execute_line("YAKINLAŞ MERKEZ", Origin::CommandLine);
+    REQUIRE_FALSE(centreless.ok());
+    CHECK(centreless.error().message.find("MERKEZ bir nokta ister") != std::string::npos);
+    // The bus bounds the scale before the body runs.
+    CHECK_FALSE(f.bus.execute_line("YAKINLAŞ merkez=10,20 olcek=0", Origin::CommandLine).ok());
+
+    CHECK(f.journal.entries().empty());
+    CHECK(f.undo.undo_depth() == 0);
+}
+
 TEST_CASE("read-only commands never become an undo step")
 {
     Fixture f;

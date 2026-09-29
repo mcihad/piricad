@@ -6,9 +6,10 @@ bozmadan yapmayı bileceksiniz.
 
 ## Ne yapar
 
-Harita görünümünü değiştirir. Beş kipi vardır: çizimin tamamını pencereye sığdırmak, bir
-çarpanla yakınlaştırıp uzaklaştırmak, başlangıç görünümüne dönmek, ve görünüm geçmişinde
-bir adım geri ya da ileri gitmek.
+Harita görünümünü değiştirir. Yedi kipi vardır: çizimin tamamını pencereye sığdırmak, bir
+çarpanla yakınlaştırıp uzaklaştırmak, başlangıç görünümüne dönmek, görünüm geçmişinde bir
+adım geri ya da ileri gitmek, iki köşeli bir pencereye yakınlaşmak, ve bir noktayı ortaya
+alıp istenen ölçeğe geçmek.
 
 `YAKINLAŞ` çizime dokunmaz. Görünüm ayarıdır, çizimin verisi değildir; bu yüzden geri
 alma yığınına girmez ve `GERİAL` ile geri gelmez.
@@ -37,9 +38,12 @@ YAKINLAŞ ÇARPAN carpan=<sayı>
 YAKINLAŞ SIFIRLA
 YAKINLAŞ ÖNCEKİ
 YAKINLAŞ SONRAKİ
+YAKINLAŞ PENCERE pencere=<köşe> <köşe>
+YAKINLAŞ MERKEZ merkez=<nokta> [olcek=<N>]
 ```
 
-Kip verilmezse `KAPSAM` varsayılır.
+Kip verilmezse `KAPSAM` varsayılır; `pencere=` verilmişse `PENCERE`, `merkez=` verilmişse
+`MERKEZ` anlaşılır, yani `YAKINLAŞ pencere=… …` da olur.
 
 ## Parametreler
 
@@ -47,6 +51,9 @@ Kip verilmezse `KAPSAM` varsayılır.
 |---|---|
 | `mod` | `KAPSAM`, `ÇARPAN`, `SIFIRLA`, `ÖNCEKİ` ya da `SONRAKİ`. İngilizce karşılıkları `EXTENTS`, `FACTOR`, `RESET`, `PREVIOUS`, `NEXT` de kabul edilir; Türkçe harfsiz yazım da geçer (`ONCEKI`, `SONRAKI`) |
 | `carpan` | `ÇARPAN` kipinde ölçek katsayısı. Birden büyük yakınlaştırır, birden küçük uzaklaştırır |
+| `pencere` | `PENCERE` kipinde pencerenin iki karşı köşesi, hangi sırayla olursa olsun. `pencere=` bir kez yazılıp iki köşe ardına verilebilir ya da iki kez yazılabilir |
+| `merkez` | `MERKEZ` kipinde görünümün ortasına gelecek nokta |
+| `olcek` | `MERKEZ` kipinde ölçek paydası: `500` yazılırsa görünüm 1:500 olur, durum çubuğu da `1 : 500` yazar. Verilmezse ölçek değişmez. 1 ile 100 000 000 arasında bir tam sayı |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -59,6 +66,8 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 | `SIFIRLA` | Başlangıç görünümüne döner |
 | `ÖNCEKİ` | Bir önceki görünüme döner. Netcad'in Önceki Pencere'si gibi otuz adım geri gider |
 | `SONRAKİ` | `ÖNCEKİ` ile geri dönülen görünümden bir adım ileri gider |
+| `PENCERE` | İki köşesi verilen pencereyi görünüme **paysız** sığdırır: pencerenin kenarı ekranın kenarına oturur. Netcad'in Pencere Büyüt'ü |
+| `MERKEZ` | Noktayı görünümün ortasına alır; `olcek` verilmişse o ölçeğe geçer |
 
 ### Görünüm geçmişi
 
@@ -127,6 +136,18 @@ Geri dönülen görünümden yeniden ileri git:
 YAKINLAŞ SONRAKİ
 ```
 
+Bir parselin çevresine pencereyle yakınlaş — köşelerin sırası önemsizdir:
+
+```
+YAKINLAŞ PENCERE pencere=485300,4310200 485340,4310230
+```
+
+Bir röper noktasını ortaya al ve 1:500'e geç:
+
+```
+YAKINLAŞ MERKEZ merkez=485320,4310215 olcek=500
+```
+
 Çizgi çizerken araya girmek — komut kaldığı yerden devam eder:
 
 ```
@@ -146,8 +167,13 @@ YAKINLAŞ KAPSAM          ← araya girer, görünüm değişir
 | **Görünüm ▸ Gezinme ▸ Uzaklaştır** | `YAKINLAŞ ÇARPAN carpan=0.8` |
 | **Görünüm ▸ Gezinme ▸ Önceki Görünüm** ya da **Alt+C** | `YAKINLAŞ ÖNCEKİ` |
 | **Görünüm ▸ Gezinme ▸ Sonraki Görünüm** | `YAKINLAŞ SONRAKİ` |
+| **Görünüm ▸ Gezinme ▸ Pencereyle Yakınlaş** ya da **Alt+Z** | Tuvalde pencerenin bir köşesinden karşı köşesine sürükleyin ya da iki köşesine birer kez tıklayın; bırakınca `YAKINLAŞ PENCERE pencere=<köşe> <köşe>` gider. **Esc** ya da sağ tık vazgeçer |
 | **Ctrl+0** | `YAKINLAŞ KAPSAM` |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
+
+**Pencere, çalışan komutu bozmaz.** Bir çizgi çizerken Alt+Z'ye basıp pencere
+çizebilirsiniz: görünüm pencereye gelir, çizgi aynı noktayı beklemeye devam eder. Pencere
+kurulu iken tuvale yapılan ilk sol tık pencerenin köşesidir, çizginin noktası değil.
 
 Fare tekerleği ve orta tuşla kaydırma her zaman çalışır ve komut göndermez; bunlar
 doğrudan görünüm etkileşimleridir. Görünüm geçmişine yine de girerler: `ÖNCEKİ` bir
@@ -204,10 +230,13 @@ Bu sayede aynı betik hem arayüzde hem başsız çalışabilir.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Beklenen mod: KAPSAM \| ÇARPAN \| SIFIRLA \| ÖNCEKİ \| SONRAKİ. Girilen: 'OLMAYAN'` | Geçersiz kip adı | Beş kipten birini yazın |
+| `Beklenen mod: KAPSAM \| ÇARPAN \| SIFIRLA \| ÖNCEKİ \| SONRAKİ \| PENCERE \| MERKEZ. Girilen: 'OLMAYAN'` | Geçersiz kip adı | Yedi kipten birini yazın |
+| `PENCERE iki köşe ister: YAKINLAŞ PENCERE pencere=<köşe> <köşe>. Verilen: 1 köşe.` | `PENCERE` kipinde köşe eksik. Komut köşeleri sormaz, çünkü şeffaf bir komut soru sorsaydı araya girdiği komutun sorusunu alırdı | İki köşeyi yazın ya da Alt+Z ile tuvalde gösterin |
+| `Pencerenin iki köşesi aynı nokta; bir pencere tanımlamıyor.` | İki köşe aynı | Karşı köşeyi verin |
+| `MERKEZ bir nokta ister: YAKINLAŞ MERKEZ merkez=<nokta> [olcek=<1:N>].` | `MERKEZ` kipinde nokta yok | `merkez=` ile noktayı verin |
 | `Geri dönülecek görünüm yok: görünüm geçmişi boş.` | `ÖNCEKİ` ile gidilecek daha eski bir görünüm kalmadı | Hata değildir; görünüm yerinde kalır |
 | `İleri gidilecek görünüm yok: ÖNCEKİ ile geri gidilmedi ya da o zamandan beri görünüm değişti.` | `SONRAKİ` için geri gidilmiş bir adım yok | Hata değildir; önce `ÖNCEKİ` ile geri gidin |
 | `Görünüm istemcisi bağlı değil (başsız çalışma).` | Arayüz olmadan çalışılıyor | Hata değildir; beklenen davranıştır |
-| `'core.zoom': bilinmeyen parametre 'oran'. Tanımlı parametreler: mod, carpan` | Parametre adı yanlış | `carpan` yazın |
+| `'core.zoom': bilinmeyen parametre 'oran'. Tanımlı parametreler: mod, carpan, pencere, merkez, olcek` | Parametre adı yanlış | `carpan` yazın |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

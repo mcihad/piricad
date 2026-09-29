@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — pencereyle yakınlaş ve bir noktayı ortaya almak
+
+- `YAKINLAŞ PENCERE pencere=<köşe> <köşe>` iki köşeli pencereyi görünüme paysız sığdırır;
+  **Alt+Z** ve **Görünüm ▸ Gezinme ▸ Pencereyle Yakınlaş** tuvalde sürükleyerek ya da iki
+  tıkla aynı pencereyi çizer (Netcad'in Pencere Büyüt'ü). Çalışan bir komutun arasında
+  kullanılabilir: görünüm değişir, komut aynı noktayı beklemeye devam eder.
+- `YAKINLAŞ MERKEZ merkez=<nokta> olcek=500` noktayı ortaya alır ve görünümü 1:500'e
+  getirir; durum çubuğu da `1 : 500` yazar.
+- `pencere=` ya da `merkez=` verilince kip ayrıca yazılmasa da anlaşılır.
+
 ### Eklendi — önceki ve sonraki görünüm
 
 - `YAKINLAŞ ÖNCEKİ` bir önceki görünüme, `YAKINLAŞ SONRAKİ` yeniden ileri gider; otuz adım,

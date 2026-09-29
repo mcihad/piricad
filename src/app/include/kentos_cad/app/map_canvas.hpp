@@ -219,6 +219,16 @@ public:
     /// what came of it: the one road `YAKINLAŞ` and `YENİ` take to the view.
     command::ViewMoved moveView(const command::ViewMove& move);
 
+    /// ARMS THE WINDOW ZOOM (Alt+Z, Görünüm ▸ Gezinme ▸ Pencere): the next drag —
+    /// or two clicks — on the canvas is a window, and the view is sent there by
+    /// `YAKINLAŞ PENCERE` with its two corners. Over a running command too, since
+    /// YAKINLAŞ is transparent: the command waits, the view moves, it carries on.
+    /// Esc or the right button lets go without moving anything.
+    void beginWindowZoom();
+
+    /// Whether the window zoom is armed, for the probes.
+    bool windowZoomArmed() const noexcept { return window_zoom_; }
+
     /// How many steps the view history holds back and forward, for the probes.
     std::pair<std::size_t, std::size_t> viewHistoryForProbe() const noexcept
     {
@@ -721,6 +731,21 @@ private:
 
     /// Puts the view where a step back or forward lands.
     void showState(const render::ViewState& state);
+
+    /// The window zoom is armed (`beginWindowZoom`).
+    bool window_zoom_{false};
+    /// Its first corner has been given, at `window_anchor_` (widget pixels).
+    bool window_anchor_valid_{false};
+    QPointF window_anchor_;
+
+    /// Sends the view to the window between two widget points, through the command.
+    void finishWindowZoom(QPointF from, QPointF to);
+
+    /// Lets go of an armed window zoom without moving the view.
+    void cancelWindowZoom();
+
+    /// Draws the armed window's rubber box, from its first corner to the cursor.
+    void buildWindowZoomBox();
 
     render::DrawList draw_;
     render::Overlay overlay_;
