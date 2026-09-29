@@ -96,6 +96,34 @@ Point2 place_block_point(const BlockReference& ref, Point2 insertion, Point2 bas
 Point2 unplace_block_point(const BlockReference& ref, Point2 insertion, Point2 base,
                            Point2 world) noexcept;
 
+/// How a reference is placed so its definition's width stands between two
+/// points (`BLOKEKLE yontem=2n`): where the base point lands, one scale for both
+/// axes, and the turn.
+struct TwoPointPlacement
+{
+    Point2 insertion{};            ///< where the definition's base point lands
+    Ratio scale{1, 1};             ///< the one factor for x and y, exact
+    std::int64_t rotation_udeg{0}; ///< counter-clockwise from east, whole micro-degrees
+};
+
+/// The placement that puts a definition's width between `first` and `second`.
+///
+/// `left` and `right` are the ends of the definition's DRAWN form along its own
+/// x axis, measured from the base point — what `block_reference_bounds` answers
+/// for a reference at scale 1, unturned, placed at the origin. The x axis is
+/// turned onto first→second, the scale is `|first second| / (right − left)` as an
+/// exact ratio of whole millimetres, and the base point is put where the LEFT end
+/// then stands on `first`: so the drawn form's width reaches from `first` to
+/// `second` whichever side of the base point it lies, and a block whose base is
+/// at its left end lands with the base on `first`. The y axis is left alone: the
+/// base point's own level stays on the line through the two points.
+///
+/// False when the definition has no width or the points coincide, the two cases
+/// with nothing to fit. Determinism: `atan2_udeg` for the turn, integers for the
+/// scale, `place_block_point` for the offset (§7.3).
+bool two_point_placement(Point2 first, Point2 second, Mm left, Mm right,
+                         TwoPointPlacement& out) noexcept;
+
 /// Appends the members of the reference `e` places, transformed, as runs — a
 /// member's own style, layer and caption on each run (`EmitBuffer::run_style`
 /// and friends), a member on the drawing's layer `0` and a ByBlock style

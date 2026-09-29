@@ -965,3 +965,262 @@ TEST_CASE("C-13 TABAN: taban noktası taşınır, bütün referanslar çizildikl
                     " taban=70,0")
               .find("farklı ölçekli") != std::string::npos);
 }
+
+// =============================================================================
+// N-13 — BLOKEKLE yontem=2n: the block's width between two points
+// =============================================================================
+
+namespace {
+
+/// The reference `key`, decoded.
+core::BlockReference reference_of(const Rig& r, std::int64_t key)
+{
+    return core::block_reference_of(r.doc.geometry(), r.doc.entities().slot[r.slot(key)]).value();
+}
+
+} // namespace
+
+TEST_CASE("N-13 BLOKEKLE 2n: iki noktaya yerleştirme, çekirdekte: ölçek tam oran, taban solda ya "
+          "da ortada")
+{
+    core::TwoPointPlacement p;
+
+    // A FORM 2 m WIDE, its base at its left end, between two points 4 m apart: the
+    // scale is exactly 2, there is no turn, and the base stands on the first point.
+    REQUIRE(core::two_point_placement({10'000, 0}, {14'000, 0}, 0, 2'000, p));
+    CHECK_EQ(p.scale, (core::Ratio{2, 1}));
+    CHECK_EQ(p.rotation_udeg, std::int64_t{0});
+    CHECK_EQ(p.insertion, (Point2{10'000, 0}));
+
+    // THE SAME FORM WITH ITS BASE AT ITS CENTRE: the form must still reach from
+    // the first point to the second, so the base lands half-way between them.
+    REQUIRE(core::two_point_placement({10'000, 0}, {14'000, 0}, -1'000, 1'000, p));
+    CHECK_EQ(p.scale, (core::Ratio{2, 1}));
+    CHECK_EQ(p.insertion, (Point2{12'000, 0}));
+
+    // AND WITH ITS BASE AT ITS RIGHT END: the base lands on the second point.
+    REQUIRE(core::two_point_placement({10'000, 0}, {14'000, 0}, -2'000, 0, p));
+    CHECK_EQ(p.insertion, (Point2{14'000, 0}));
+
+    // THE SCALE IS A RATIO OF WHOLE MILLIMETRES, reduced: 3 m over 2 m is 3/2, not
+    // a decimal rounded to the sixth place.
+    REQUIRE(core::two_point_placement({0, 0}, {3'000, 0}, 0, 2'000, p));
+    CHECK_EQ(p.scale, (core::Ratio{3, 2}));
+    REQUIRE(core::two_point_placement({0, 0}, {1'000, 0}, 0, 3'000, p));
+    CHECK_EQ(p.scale, (core::Ratio{1, 3}));
+
+    // THE TURN IS THE DIRECTION OF THE TWO POINTS, counter-clockwise from east: due
+    // north is a quarter turn, due west a half, and the 3-4-5 diagonal is
+    // atan(4/3) = 53,130 102°, with the scale 50 m over 1 m.
+    REQUIRE(core::two_point_placement({0, 0}, {0, 4'000}, 0, 1'000, p));
+    CHECK_EQ(p.rotation_udeg, std::int64_t{90'000'000});
+    REQUIRE(core::two_point_placement({0, 0}, {-4'000, 0}, 0, 1'000, p));
+    CHECK_EQ(p.rotation_udeg, std::int64_t{180'000'000});
+    REQUIRE(core::two_point_placement({0, 0}, {30'000, 40'000}, 0, 1'000, p));
+    CHECK_EQ(p.scale, (core::Ratio{50, 1}));
+    CHECK_EQ(p.rotation_udeg, std::int64_t{53'130'102});
+
+    // NOTHING TO FIT: no width, or no distance.
+    CHECK_FALSE(core::two_point_placement({0, 0}, {3'000, 0}, 500, 500, p));
+    CHECK_FALSE(core::two_point_placement({0, 0}, {3'000, 0}, 500, 100, p));
+    CHECK_FALSE(core::two_point_placement({5, 5}, {5, 5}, 0, 1'000, p));
+}
+
+TEST_CASE("N-13 BLOKEKLE yontem=2n: bloğun eni iki nokta arasına oturur")
+{
+    Rig r;
+    r.run("DİKDÖRTGEN 0,0 2,1");
+    r.run("BLOK ad=KAPI taban=0,0 nesneler=1"); // 2 m wide, 1 m tall, base at its left end
+
+    // THE PLAN'S CASE: the block's width between (10,0) and (14,0) — 4 m over 2 m,
+    // so twice as big, unturned, its left end on the first point and its right end
+    // on the second.
+    r.said.clear();
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=10,0 14,0");
+    const std::int64_t east = r.last_reference();
+    REQUIRE(east != 0);
+    const core::BlockReference a = reference_of(r, east);
+    CHECK_EQ(a.sx, (core::Ratio{2, 1}));
+    CHECK_EQ(a.sy, (core::Ratio{2, 1}));
+    CHECK_EQ(a.rotation_udeg, std::int64_t{0});
+    CHECK_EQ(a.bounds.min_x, core::Mm{10'000});
+    CHECK_EQ(a.bounds.max_x, core::Mm{14'000});
+    CHECK_EQ(a.bounds.min_y, core::Mm{0});
+    CHECK_EQ(a.bounds.max_y, core::Mm{2'000}); ///< the height grew with the width: one scale
+    CHECK_EQ(r.said, "'KAPI' bloğu iki noktanın arasına yerleştirildi (ölçek 2,000, yön "
+                     "100,0000 grad).\n");
+
+    // TURNED ONTO THE DIRECTION: north. The width now runs up the page, and the
+    // height leans west of it — a quarter turn counter-clockwise.
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=0,10 0,14");
+    const core::BlockReference b = reference_of(r, r.last_reference());
+    CHECK_EQ(b.rotation_udeg, std::int64_t{90'000'000});
+    CHECK_EQ(b.bounds.min_x, core::Mm{-2'000});
+    CHECK_EQ(b.bounds.max_x, core::Mm{0});
+    CHECK_EQ(b.bounds.min_y, core::Mm{10'000});
+    CHECK_EQ(b.bounds.max_y, core::Mm{14'000});
+    CHECK(r.said.find("(ölçek 2,000, yön 0,0000 grad)") != std::string::npos);
+
+    // THE 3-4-5 DIAGONAL: 50 m between the points over a 2 m width is ×25, and the
+    // right end of the block's base line lands on the second point to the
+    // millimetre.
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=100,0 130,40");
+    const std::int64_t diagonal  = r.last_reference();
+    const core::BlockReference c = reference_of(r, diagonal);
+    CHECK_EQ(c.sx, (core::Ratio{25, 1}));
+    CHECK_EQ(r.placed(diagonal, {0, 0}), (Point2{100'000, 0}));
+    CHECK_EQ(r.placed(diagonal, {2'000, 0}), (Point2{130'000, 40'000}));
+
+    // THE JOURNAL HOLDS THE TWO POINTS, and neither the place nor the scale nor the
+    // turn they derive: one answer to one question.
+    const JournalEntry& line = r.journal.entries()[r.journal.entries().size() - 3];
+    CHECK_EQ(line.command_id, "core.insert");
+    CHECK_EQ(line.args.get("yontem").as_text(), "2n");
+    CHECK(line.args.get("noktalar").as_points() == Value::Points{{10'000, 0}, {14'000, 0}});
+    CHECK_FALSE(line.args.has("nokta"));
+    CHECK_FALSE(line.args.has("olcek"));
+    CHECK_FALSE(line.args.has("aci"));
+}
+
+TEST_CASE("N-13 BLOKEKLE yontem=2n: taban ortadaysa da eni iki noktanın arasına oturur")
+{
+    // A COLUMN SYMBOL DRAWN ABOUT ITS CENTRE: 2 m wide, its base in the middle. The
+    // width must fit between the points all the same, so the base — and the
+    // symbol's own axis — lands half-way between them, and the form is as high
+    // above the line as below it.
+    Rig r;
+    r.run("DİKDÖRTGEN 0,0 2,1");
+    r.run("BLOK ad=SUTUN taban=1,0.5 nesneler=1");
+    r.run("BLOKEKLE ad=SUTUN yontem=2n noktalar=10,0 14,0");
+    const std::int64_t key         = r.last_reference();
+    const core::BlockReference ref = reference_of(r, key);
+    CHECK_EQ(ref.sx, (core::Ratio{2, 1}));
+    CHECK_EQ(ref.bounds.min_x, core::Mm{10'000});
+    CHECK_EQ(ref.bounds.max_x, core::Mm{14'000});
+    CHECK_EQ(ref.bounds.min_y, core::Mm{-1'000});
+    CHECK_EQ(ref.bounds.max_y, core::Mm{1'000});
+    CHECK_EQ(core::block_reference_insertion(r.doc.geometry(), r.doc.entities().slot[r.slot(key)]),
+             (Point2{12'000, 0}));
+}
+
+TEST_CASE("N-13 BLOKEKLE yontem=2n: dizi ilk kopyanın eniyle kurulur; karışan ve bozuk girdiler "
+          "reddedilir")
+{
+    Rig r;
+    r.run("DİKDÖRTGEN 0,0 2,1");
+    r.run("BLOK ad=KAPI taban=0,0 nesneler=1");
+    r.run("ÇİZGİ 0,0 0,5");
+    r.run("BLOK ad=DIK taban=0,0 nesneler=" + std::to_string(r.standalone().back()));
+
+    // AN ARRAY takes the scale from the first copy: 4 m over 2 m, and the second
+    // copy 5 m further along, unscaled as the spacing always is.
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=10,0 14,0 sutun=2 sutun_aralik=5000");
+    const core::BlockReference grid = reference_of(r, r.last_reference());
+    CHECK_EQ(grid.sx, (core::Ratio{2, 1}));
+    CHECK_EQ(grid.bounds.min_x, core::Mm{10'000});
+    CHECK_EQ(grid.bounds.max_x, core::Mm{19'000});
+
+    const std::size_t live  = r.doc.live_entity_count();
+    const std::size_t lines = r.journal.entries().size();
+    const std::size_t steps = r.undo.undo_depth();
+
+    // THE ARGUMENTS THAT WOULD SAY IT AGAIN are named and refused, not ignored.
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI yontem=2n noktalar=0,0 4,0 nokta=1,1"),
+             "`nokta` yontem=2n ile verilmez: ekleme yeri, ölçek ve açı iki noktadan gelir.");
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI yontem=2n noktalar=0,0 4,0 olcek=2"),
+             "`olcek` yontem=2n ile verilmez: ekleme yeri, ölçek ve açı iki noktadan gelir.");
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI yontem=2n noktalar=0,0 4,0 aci=45"),
+             "`aci` yontem=2n ile verilmez: ekleme yeri, ölçek ve açı iki noktadan gelir.");
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI noktalar=0,0 4,0"),
+             "`noktalar` yalnız yontem=2n ile verilir; öbür yerleştirme `nokta` ister.");
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI yontem=2n noktalar=0,0 4,0 8,0"),
+             "'core.insert': 'noktalar' parametresi en fazla 2 değer alır, 3 değer geldi.");
+
+    // NOTHING TO FIT THE WIDTH TO: the same point twice, a block with no width, a
+    // block that is not there.
+    CHECK_EQ(r.refused("BLOKEKLE ad=KAPI yontem=2n noktalar=5,5 5,5"),
+             "İki nokta aynı yerde; blok bir uzaklığa sığdırılır, sıfır uzaklığa değil.");
+    CHECK_EQ(r.refused("BLOKEKLE ad=DIK yontem=2n noktalar=0,0 4,0"),
+             "'DIK' bloğunun eni sıfır (bütün üyeleri aynı düşey doğru üzerinde); iki noktaya "
+             "sığdırılamaz.");
+    CHECK(r.refused("BLOKEKLE ad=YOK yontem=2n noktalar=0,0 4,0").find("adında blok yok") !=
+          std::string::npos);
+
+    // A REFUSAL LEAVES NOTHING: no object, no journal line, no undo step.
+    CHECK_EQ(r.doc.live_entity_count(), live);
+    CHECK_EQ(r.journal.entries().size(), lines);
+    CHECK_EQ(r.undo.undo_depth(), steps);
+
+    // AND THE OLD FORM IS UNTOUCHED: a point, a scale and a turn, journalled as
+    // before, with no method in the line.
+    r.run("BLOKEKLE ad=KAPI nokta=50,0 olcek=2 aci=90");
+    const JournalEntry& old = r.journal.entries().back();
+    CHECK_FALSE(old.args.has("yontem"));
+    CHECK_FALSE(old.args.has("noktalar"));
+    CHECK(old.args.get("nokta").as_point() == (Point2{50'000, 0}));
+    CHECK_EQ(old.args.get("olcek").as_number(), 2.0);
+    CHECK_EQ(old.args.get("aci").as_number(), 90.0);
+}
+
+TEST_CASE(
+    "N-13 BLOKEKLE yontem=2n: tıklanan iki nokta, ikincisinde çizgi önizlemesi; Esc boş bırakır")
+{
+    Rig r;
+    r.run("DİKDÖRTGEN 0,0 2,1");
+    r.run("BLOK ad=KAPI taban=0,0 nesneler=1");
+    const std::size_t steps = r.undo.undo_depth();
+
+    auto started = r.bus.begin_interactive("BLOKEKLE ad=KAPI yontem=2n", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "noktalar");
+    REQUIRE(s.supply(Value::point(Point2{10'000, 0})).ok());
+
+    // THE SECOND POINT IS AIMED FROM THE FIRST, with a line between them: the line
+    // the block will lie along.
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().has_rubber_band);
+    CHECK(s.prompt().rubber_shape == RubberShape::Line);
+    CHECK(s.prompt().rubber_origin == (Point2{10'000, 0}));
+    REQUIRE(s.supply(Value::point(Point2{14'000, 0})).ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK_EQ(reference_of(r, r.last_reference()).sx, (core::Ratio{2, 1}));
+    CHECK_EQ(r.undo.undo_depth(), steps + 1);
+
+    // ESC at the first point and at the second leave the drawing as it was.
+    for (std::size_t asked = 0; asked < 2; ++asked) {
+        const std::size_t live = r.doc.live_entity_count();
+        const std::size_t made = r.journal.entries().size();
+        const std::size_t undo = r.undo.undo_depth();
+        auto again             = r.bus.begin_interactive("BLOKEKLE ad=KAPI yontem=2n", Origin::Gui);
+        REQUIRE(again.ok());
+        Session& t = *again.value();
+        if (asked == 1) REQUIRE(t.supply(Value::point(Point2{0, 0})).ok());
+        t.cancel();
+        REQUIRE(r.bus.finish(t).ok());
+        CHECK_EQ(r.doc.live_entity_count(), live);
+        CHECK_EQ(r.journal.entries().size(), made);
+        CHECK_EQ(r.undo.undo_depth(), undo);
+    }
+}
+
+TEST_CASE("N-13 KILAVUZ: BLOKEKLE sayfasındaki 2n örneği yazıldığı gibi çalışır ve söylediğini "
+          "söyler")
+{
+    // docs/komutlar/insert.md runs these lines and prints what they say.
+    Rig r;
+    r.run("DİKDÖRTGEN 0,0 2,1");
+    r.run("BLOK ad=KAPI taban=0,0 nesneler=1");
+    r.said.clear();
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=10,0 14,0");
+    CHECK_EQ(r.said, "'KAPI' bloğu iki noktanın arasına yerleştirildi (ölçek 2,000, yön "
+                     "100,0000 grad).\n");
+    r.said.clear();
+    r.run("BLOKEKLE ad=KAPI yontem=2n noktalar=20,0 23,4");
+    CHECK_EQ(r.said, "'KAPI' bloğu iki noktanın arasına yerleştirildi (ölçek 2,500, yön "
+                     "40,9666 grad).\n");
+    const core::BlockReference diagonal = reference_of(r, r.last_reference());
+    CHECK_EQ(diagonal.sx, (core::Ratio{5, 2}));
+    CHECK_EQ(diagonal.rotation_udeg, std::int64_t{53'130'102});
+}

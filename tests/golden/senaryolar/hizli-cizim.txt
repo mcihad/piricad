@@ -1,0 +1,44 @@
+# N-13: ölçü krokisinden hızlı çizim, bilinen sayılarla.
+#
+# HEPSİ TAM MİLİMETREDİR VE BİT-ÖZDEŞ OLMAK ZORUNDA (§7.3): dördüncü köşe tam sayı
+# aritmetiği; derinlikli dikdörtgen `perpendicular_offset`'in tek karekökü; ölçülü
+# kutu `sin_cos_udeg` ve `mm_round`; iki noktadaki blok `atan2_udeg` ve tam oran.
+# Bir paftanın çerçevesi yarım milimetre kayarsa, o pafta iki makinede iki farklı
+# belge olur.
+#
+# DÖRDÜNCÜKÖŞE: (0,0), (10,0), (10,6) → (0,6). `dik=evet` üçüncü köşeyi 3 cm'lik
+# sapmayla dik doğrultuya çeker: dördüncü köşe yine (0,6) — ve çizilen dört köşe
+# ölçülen üçüncüyü değil, dik üçüncüyü taşır. Sonuncusu eğik bir bina: dördüncü
+# köşe a + c − b.
+#
+# DERİNLİK: sağ pozitif, sol negatif. (200,0)→(230,40) 3-4-5 kenarının 10 m sağı
+# (8,-6) kadar: köşeler (238,34) ve (208,-6). Başka bir eğim de var (üçüncü
+# köşe milimetreye yuvarlanır): (0,20)→(30,40). Doğuya giden kenarın 6 m solu
+# kuzeye.
+#
+# KUTU: en doğuya, boy kuzeye; aci semt kuralında (varsayılan) saat yönünde. A3'ün
+# zemin boyu 1:1000'de 420 × 297 m; A4 dikey 1:500'de 105 × 148,5 m.
+#
+# 2n: eni 2 m olan bloğun eni (20,300) ile (24,303) arasına oturur — 5 m'lik kiriş
+# 2,5 kat büyütür ve 3-4-5 yönünde döndürür.
+KATMAN ad=KROKI
+
+# Üç köşeden dördüncü
+DÖRDÜNCÜKÖŞE 0,0 10,0 10,6
+DÖRDÜNCÜKÖŞE 20,0 30,0 30.03,6 dik=evet
+DÖRDÜNCÜKÖŞE 40,0 50,0 54,6
+
+# Derinlikle
+DİKDÖRTGEN yontem=derinlik noktalar=200,0 230,40 derinlik=10
+DİKDÖRTGEN yontem=derinlik noktalar=0,20 30,40 derinlik=10
+DİKDÖRTGEN yontem=derinlik noktalar=100,20 110,20 derinlik=-6
+
+# Ölçüyle: sayılarla, kâğıtla, döndürülmüş
+DİKDÖRTGEN yontem=olcu noktalar=0,100 en=40 boy=20 aci=50
+DİKDÖRTGEN yontem=olcu noktalar=100,100 kagit=A3 olcek=1000
+DİKDÖRTGEN yontem=olcu noktalar=600,100 kagit=A4 olcek=500 yon=dikey
+
+# İki noktayla blok
+DİKDÖRTGEN 0,300 2,301
+BLOK ad=KAPI taban=0,300 nesneler=10
+BLOKEKLE ad=KAPI yontem=2n noktalar=20,300 24,303

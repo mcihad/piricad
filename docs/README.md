@@ -62,7 +62,8 @@ Tek tek komutlar:
 | `KES` | [Panoya al ve sil](komutlar/cut.md) |
 | `YAPIŞTIR` | [Panodakini koy](komutlar/paste.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
-| `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
+| `DİKDÖRTGEN` | [İki köşeden, derinlikle ya da ölçüyle dörtgen; kare ve kâğıt boyu](komutlar/rectangle.md) |
+| `DÖRDÜNCÜKÖŞE` | [Üç köşeden dördüncü köşe ve dik açı sapması](komutlar/fourth_corner.md) |
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |
 | `YAY` | [Yay çizme](komutlar/arc_draw.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
@@ -128,7 +129,7 @@ Tek tek komutlar:
 | `TARAMA` | [Tarama çizme](komutlar/hatch.md) |
 | `TARAMADÜZENLE` | [Çizilmiş taramayı düzenleme](komutlar/hatch_edit.md) |
 | `BLOK` | [Blok tanımlama](komutlar/block.md) |
-| `BLOKEKLE` | [Blok yerleştirme](komutlar/insert.md) |
+| `BLOKEKLE` | [Blok yerleştirme; eni iki noktanın arasına](komutlar/insert.md) |
 | `BLOKDÜZENLE` | [Bloğu düzenleme](komutlar/block_edit.md) |
 | `BLOKKIRP` | [Blok ya da dış referansı bir sınırla kırpma](komutlar/block_clip.md) |
 | `ÖLÇÜ` | [Ölçülendirme](komutlar/dimension.md) |

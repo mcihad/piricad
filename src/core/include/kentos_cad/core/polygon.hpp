@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the corners a regular polygon has, and a rectangle built on
-// an edge.
+// KentOSCad — core: the corners a regular polygon has, a rectangle built on an
+// edge or by its measures, and the fourth corner three measured ones fix.
 //
 // WHY THIS IS IN `core` AND NOT IN THE COMMAND THAT DRAWS IT.
 //
@@ -103,6 +103,55 @@ std::vector<Point2> regular_polygon_corners(Point2 centre, std::int64_t sides,
 /// `across` lies on it, which are the two cases that enclose nothing.
 bool edge_rectangle_corners(Point2 first, Point2 second, Point2 across,
                             std::array<Point2, 4>& out) noexcept;
+
+/// The fourth corner of the parallelogram whose corners run `a`, `b`, `c`, and a
+/// fourth: opposite `b`, so `a + c − b`. Exact integer arithmetic.
+///
+/// A FIELD SKETCH GIVES THREE CORNERS OF A BUILDING (`DÖRDÜNCÜKÖŞE`, the tool
+/// Netcad calls `4.Köşeyi Oluştur`) — the fourth is behind a fence, under a tree
+/// or was never reached — and a parallelogram is what three corners fix. `b` is
+/// the corner BETWEEN the other two, the one a right angle would sit at. Three
+/// points in a line give a fourth on the same line and enclose nothing; that is
+/// the caller's refusal to make, because a point is a fine answer to a question
+/// this function is not asked.
+constexpr Point2 fourth_corner(Point2 a, Point2 b, Point2 c) noexcept
+{
+    return {a.x + c.x - b.x, a.y + c.y - b.y};
+}
+
+/// The four corners of the rectangle that stands on the edge `first`–`second`
+/// and reaches `depth_mm` out from it: `first`, `second`, then the two the depth
+/// puts across. `depth_mm` is measured to the RIGHT of first→second — right is
+/// positive, left negative, the one sign every offset from a baseline in this
+/// program uses (`perpendicular_offset`, `dik()`, `DİKAYAK`, and the building
+/// tool Netcad calls `Bina Oluştur`). False when the edge is degenerate or the
+/// depth rounds to nothing, the two cases that enclose nothing.
+///
+/// THE OTHER TWO CORNERS ARE THE EDGE'S ENDS MOVED BY ONE VECTOR, worked out once
+/// (`perpendicular_offset` from `first` at a foot of zero) and added to both — so
+/// the far side is exactly as long as the edge to the millimetre, which is what a
+/// rectangle sold to a plan sheet has to be. Each end moved by a rounding of its
+/// own could differ from the other by one.
+bool depth_rectangle_corners(Point2 first, Point2 second, Mm depth_mm,
+                             std::array<Point2, 4>& out) noexcept;
+
+/// The four corners of a rectangle `width_mm` along its first side and
+/// `length_mm` along the one after it, standing on `origin`, then turned by
+/// `turns` of a full turn in the direction `rule` counts angles.
+///
+/// UNTURNED, the first side runs EAST and the second NORTH: the box a plan sheet
+/// or a building footprint is before anyone turns it. `turns` then swings it
+/// about `origin` in the direction the session's angles grow: clockwise under
+/// semt, so the second side's bearing is `turns` itself, and counter-clockwise
+/// under matematik. Only the sense of the rule matters here, never where its
+/// zero is — a box has no direction to read, only a turn to make.
+///
+/// The ring runs counter-clockwise from `origin` whichever rule is in force. The
+/// two sides are each rounded once from the deterministic sine and cosine
+/// (`polar_offset_turns`) and the far corner is their SUM, so opposite sides are
+/// equal to the millimetre. False for a side that is not positive.
+bool box_corners(Point2 origin, Mm width_mm, Mm length_mm, double turns, AngleRule rule,
+                 std::array<Point2, 4>& out) noexcept;
 
 /// What a polygon guide needs beyond the points it is handed.
 ///

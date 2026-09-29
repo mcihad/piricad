@@ -92,6 +92,41 @@ bool edge_rectangle_corners(Point2 first, Point2 second, Point2 across,
     return true;
 }
 
+bool depth_rectangle_corners(Point2 first, Point2 second, Mm depth_mm,
+                             std::array<Point2, 4>& out) noexcept
+{
+    // The depth as a VECTOR, from the same function every offset off a baseline
+    // goes through: a foot of zero and an offset of `depth_mm`, right positive.
+    Point2 moved{};
+    if (!perpendicular_offset(first, second, 0, depth_mm, moved)) return false;
+
+    const Mm dx = moved.x - first.x;
+    const Mm dy = moved.y - first.y;
+    if (dx == 0 && dy == 0) return false; // a depth the millimetre swallowed
+
+    out = {first, second, Point2{second.x + dx, second.y + dy}, Point2{first.x + dx, first.y + dy}};
+    return true;
+}
+
+bool box_corners(Point2 origin, Mm width_mm, Mm length_mm, double turns, AngleRule rule,
+                 std::array<Point2, 4>& out) noexcept
+{
+    if (width_mm <= 0 || length_mm <= 0) return false;
+
+    // Where each side points, as a fraction of a full turn under `rule`: east and
+    // north are a quarter turn apart, and which of the two the rule calls zero is
+    // the only thing the rule changes. The turn is then ADDED to both, so it grows
+    // the way the rule's angles grow.
+    const double east_turns  = rule == AngleRule::Semt ? 0.25 : 0.0;
+    const double north_turns = rule == AngleRule::Semt ? 0.0 : 0.25;
+
+    const Point2 along = polar_offset_turns(mm_to_metres(width_mm), east_turns + turns, rule);
+    const Point2 up    = polar_offset_turns(mm_to_metres(length_mm), north_turns + turns, rule);
+
+    out = {origin, origin + along, origin + along + up, origin + up};
+    return true;
+}
+
 std::vector<std::uint8_t> encode_polygon_guide(const PolygonGuide& guide)
 {
     std::vector<std::uint8_t> bytes(26);

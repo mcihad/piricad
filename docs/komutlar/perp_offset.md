@@ -173,6 +173,8 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 
 - [Komut satırı](komut-satiri.md) — `dik(A,B,ayak,boy)` nokta fonksiyonu, aynı hesabın yazılı hâli
 - [PRİZMA](station_offset.md) — tersi: çizimdeki bir noktanın dik ayağını ve dik boyunu okumak
+- [DİKDÖRTGEN](rectangle.md) — `yontem=derinlik`: bir binanın derinliği aynı işaret kuralıyla (sağ pozitif)
+- [DÖRDÜNCÜKÖŞE](fourth_corner.md) — üç ölçülü köşeden dördüncü köşeyi hesaplamak
 - [NOKTA](point_draw.md) — tıklanan tek nokta
 - [NOKTALAR](points.md) — nokta no, Y, X listesinden okuma
 - [ÇOKLUÇİZGİ](polyline.md) — noktaları elle birleştirmek

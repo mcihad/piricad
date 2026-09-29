@@ -246,7 +246,9 @@ ayak/boy çiftleri sırayla gelir:
 
 Gerçek bir krokide taban iki ölçü noktasıdır; `0,0` ve `40,0` yerine `n(1)` ve `n(2)`
 yazarsınız. Aynı işi fareyle ve tek tek sorarak [`DİKAYAK`](perp_offset.md) yapar; işaret
-kuralı aynıdır.
+kuralı aynıdır. Bir binanın **derinliği** de aynı kuralla işaretlenir:
+[`DİKDÖRTGEN yontem=derinlik`](rectangle.md) `derinlik=6`'yı kenarın sağına, `derinlik=-6`'yı
+soluna kurar.
 
 ### İki mesafe kesişimi — iki çözüm vardır
 

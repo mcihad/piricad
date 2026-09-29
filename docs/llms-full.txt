@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 120 (104 tanesi onay ister)
-- Katalog parmak izi: `14000376435367600391`
+- Araç sayısı: 121 (105 tanesi onay ister)
+- Katalog parmak izi: `17004872939406796091`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -800,6 +800,20 @@ Onay ister.
 | `sistem` | string | hayır | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
+### `core_fourth_corner` — Dördüncü Köşe
+
+Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.
+Komut: DÖRDÜNCÜKÖŞE (DORDUNCUKOSE, FOURTHCORNER, DKÖ, DKO)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Üç köşe sırayla: birinci, ikinci (birinci ile üçüncünün arasındaki) ve üçüncü; dördüncü ikincinin karşısına düşer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `dik` | boolean | hayır | evet: ikinci köşedeki açı dik yapılır — üçüncü köşe birinci kenarın dikine çekilir ve sapma söylenir; varsayılan hayır: üç köşenin paralelkenarı (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
 ### `core_guide` — Kılavuz
 
 Cetvel kılavuzu ve açılı kılavuz ekler, listeler ve siler.
@@ -867,7 +881,7 @@ Onay ister.
 
 ### `core_insert` — Blok Ekle
 
-Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni iki noktanın arasına oturacak biçimde yerleştirir.
 Komut: BLOKEKLE (BLOKEKLE, INSERT, BE)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -876,7 +890,9 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `ad` | string | hayır | Yerleştirilecek bloğun adı; dosya= ile kitaplıktaki bloğun adı (metin) |
-| `nokta` | konum (tutamak ya da göreli nokta) | evet | Ekleme noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `nokta` | konum (tutamak ya da göreli nokta) | hayır | Ekleme noktası: bloğun taban noktasının konacağı yer; yontem=2n ile verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
+| `yontem` | string | hayır | 2n: bloğun eni iki noktanın arasına oturur; ölçek ve açı iki noktadan gelir, nokta, olcek, olcek_y ve aci verilmez (metin) |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | yontem=2n için bloğun enini sınırlayan iki nokta: ilki bloğun sol ucunun, ikincisi sağ ucunun geleceği yer — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `olcek` | number | hayır | Ölçek; varsayılan 1. Eksi değer aynalar; olcek_y verilmezse o da eksi olur ve ikisi birlikte yarım dönüştür (sayı) |
 | `olcek_y` | number | hayır | Y ölçeği, farklıysa; varsayılan olcek (sayı) |
 | `aci` | number | hayır | Dönme açısı, derece; varsayılan 0 (sayı) |
@@ -1451,7 +1467,7 @@ Onay ister.
 
 ### `core_rectangle` — Dikdörtgen
 
-Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
+Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.
 Komut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)
 Netcad adı: KUTU (arama bulur; komut satırında bu komutu başlatmaz).
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
@@ -1460,8 +1476,15 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
-| `yontem` | string | hayır | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin) |
+| `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta · derinlik: bir kenarın iki köşesi · olcu: kutunun ilk köşesi — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
+| `yontem` | string | hayır | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş · derinlik: bir kenar ve derinlik, sağ artı, sol eksi · olcu: bir köşe, en ve boy ya da kâğıt boyu (metin) |
+| `derinlik` | number | hayır | yontem=derinlik için kenardan karşı kenara uzaklık (m); ilk köşeden ikinciye bakarken SAĞ pozitif, sol negatiftir [m] (sayı) |
+| `en` | number | hayır | yontem=olcu için kutunun eni (m); aci verilmemişken doğu–batı boyutu [m] (sayı) |
+| `boy` | number | hayır | yontem=olcu için kutunun boyu (m); aci verilmemişken kuzey–güney boyutu [m] (sayı) |
+| `kagit` | string | hayır | yontem=olcu için kâğıt boyu (A5, A4, A3, A2, A1, A0): en ve boy kâğıdın ölçüsü çarpı ölçek paydasıdır; en ve boy ile birlikte verilmez (metin) |
+| `yon` | string | hayır | kagit ile: yatay (varsayılan) kâğıdın uzun kenarı doğu–batı, dikey kuzey–güney (metin) |
+| `olcek` | integer | hayır | kagit ile: ölçek paydası (1:N); verilmezse projenin plan ölçeği (AYAR plan_ölçeği) (tam sayı) |
+| `aci` | number | hayır | yontem=olcu için kutunun dönüklüğü: oturumun açı biriminde (öntanımlı grad), açıların arttığı yönde (öntanımlı kuzeyden saat yönünde) döner; varsayılan 0 (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_reproject` — Dönüştür

@@ -13,6 +13,7 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/polygon.hpp"
 
 #include <cmath>
@@ -1237,6 +1238,116 @@ TEST_CASE("Kenar üzerine dikdörtgen: üçüncü nokta yüksekliği verir")
     // The two cases that enclose nothing are refused rather than drawn.
     CHECK_FALSE(edge_rectangle_corners(Point2{0, 0}, Point2{0, 0}, Point2{1, 1}, four));
     CHECK_FALSE(edge_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, Point2{5'000, 0}, four));
+}
+
+TEST_CASE("Dördüncü köşe: üç köşenin paralelkenarı, a + c − b")
+{
+    using namespace kentos::core;
+
+    // THE PLAN'S CASE (N-13): (0,0), (10,0), (10,6) — the fourth is (0,6).
+    CHECK_EQ(fourth_corner(Point2{0, 0}, Point2{10'000, 0}, Point2{10'000, 6'000}),
+             (Point2{0, 6'000}));
+
+    // A SKEWED ONE, worked by hand: a + c − b = (1+6−5, 1+6−2) = (2, 5) metres.
+    const Point2 a{1'000, 1'000};
+    const Point2 b{5'000, 2'000};
+    const Point2 c{6'000, 6'000};
+    const Point2 d = fourth_corner(a, b, c);
+    CHECK_EQ(d, (Point2{2'000, 5'000}));
+
+    // A PARALLELOGRAM: opposite sides are the same vector, whichever way it leans.
+    CHECK_EQ(d - a, c - b);
+    CHECK_EQ(d - c, a - b);
+
+    // A TUREF-sized coordinate loses nothing: it is integer arithmetic.
+    CHECK_EQ(fourth_corner(Point2{485'320'150, 4'310'220'400}, Point2{485'370'150, 4'310'220'400},
+                           Point2{485'370'150, 4'310'226'400}),
+             (Point2{485'320'150, 4'310'226'400}));
+}
+
+TEST_CASE("Derinlikle dikdörtgen: sağ pozitif, sol negatif, dik() ile aynı işaret")
+{
+    using namespace kentos::core;
+
+    // The edge runs EAST. Its right is south, so a positive depth goes south.
+    std::array<Point2, 4> four{};
+    REQUIRE(depth_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, 6'000, four));
+    CHECK_EQ(four[0], (Point2{0, 0}));
+    CHECK_EQ(four[1], (Point2{10'000, 0}));
+    CHECK_EQ(four[2], (Point2{10'000, -6'000}));
+    CHECK_EQ(four[3], (Point2{0, -6'000}));
+
+    // A negative depth is the left, north of an eastward edge.
+    REQUIRE(depth_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, -6'000, four));
+    CHECK_EQ(four[2], (Point2{10'000, 6'000}));
+    CHECK_EQ(four[3], (Point2{0, 6'000}));
+
+    // THE SIGN FOLLOWS THE EDGE'S DIRECTION, not the compass: walked west, the
+    // right is north.
+    REQUIRE(depth_rectangle_corners(Point2{10'000, 0}, Point2{0, 0}, 6'000, four));
+    CHECK_EQ(four[2], (Point2{0, 6'000}));
+    CHECK_EQ(four[3], (Point2{10'000, 6'000}));
+
+    // A SKEW 3-4-5 EDGE: its right normal is (0.8, -0.6), so ten metres deep is
+    // (8, -6) — exact millimetres, and the corner `dik(A,B,0,10)` would give.
+    REQUIRE(depth_rectangle_corners(Point2{0, 0}, Point2{30'000, 40'000}, 10'000, four));
+    CHECK_EQ(four[2], (Point2{38'000, 34'000}));
+    CHECK_EQ(four[3], (Point2{8'000, -6'000}));
+    Point2 by_dik{};
+    REQUIRE(perpendicular_offset(Point2{0, 0}, Point2{30'000, 40'000}, 0, 10'000, by_dik));
+    CHECK_EQ(four[3], by_dik);
+
+    // OPPOSITE SIDES ARE EQUAL to the millimetre whatever the slant: the two far
+    // corners are the two near ones plus one vector.
+    REQUIRE(depth_rectangle_corners(Point2{1'234, 5'678}, Point2{88'001, 40'017}, 7'331, four));
+    CHECK_EQ(four[2] - four[1], four[3] - four[0]);
+
+    // The two cases that enclose nothing are refused.
+    CHECK_FALSE(depth_rectangle_corners(Point2{5, 5}, Point2{5, 5}, 1'000, four));
+    CHECK_FALSE(depth_rectangle_corners(Point2{0, 0}, Point2{10'000, 0}, 0, four));
+}
+
+TEST_CASE("Ölçülü kutu: en doğuya, boy kuzeye; dönüş açıların arttığı yönde")
+{
+    using namespace kentos::core;
+
+    // UNTURNED, under either rule: the width runs east and the length north, the
+    // ring counter-clockwise from the corner it stands on.
+    std::array<Point2, 4> four{};
+    for (const AngleRule rule : {AngleRule::Semt, AngleRule::Matematik}) {
+        REQUIRE(box_corners(Point2{100'000, 200'000}, 40'000, 20'000, 0.0, rule, four));
+        CHECK_EQ(four[0], (Point2{100'000, 200'000}));
+        CHECK_EQ(four[1], (Point2{140'000, 200'000}));
+        CHECK_EQ(four[2], (Point2{140'000, 220'000}));
+        CHECK_EQ(four[3], (Point2{100'000, 220'000}));
+    }
+
+    // A QUARTER TURN UNDER SEMT is clockwise: the width now runs south and the
+    // length east.
+    REQUIRE(box_corners(Point2{0, 0}, 40'000, 20'000, 0.25, AngleRule::Semt, four));
+    CHECK_EQ(four[1], (Point2{0, -40'000}));
+    CHECK_EQ(four[2], (Point2{20'000, -40'000}));
+    CHECK_EQ(four[3], (Point2{20'000, 0}));
+
+    // THE SAME QUARTER TURN UNDER MATEMATİK is counter-clockwise: the width runs
+    // north and the length west.
+    REQUIRE(box_corners(Point2{0, 0}, 40'000, 20'000, 0.25, AngleRule::Matematik, four));
+    CHECK_EQ(four[1], (Point2{0, 40'000}));
+    CHECK_EQ(four[2], (Point2{-20'000, 40'000}));
+    CHECK_EQ(four[3], (Point2{-20'000, 0}));
+
+    // AN EIGHTH OF A TURN under semt, by hand: the width bears 135° (south-east),
+    // 40 m × sin 135° = 28 284,27 → 28 284 mm each way; the length bears 45°,
+    // 20 m × sin 45° = 14 142,14 → 14 142 mm each way.
+    REQUIRE(box_corners(Point2{0, 0}, 40'000, 20'000, 0.125, AngleRule::Semt, four));
+    CHECK_EQ(four[1], (Point2{28'284, -28'284}));
+    CHECK_EQ(four[3], (Point2{14'142, 14'142}));
+    CHECK_EQ(four[2], four[1] + four[3]);
+    CHECK_EQ(four[2] - four[1], four[3] - four[0]); ///< opposite sides equal to the millimetre
+
+    // A side that is not positive is refused.
+    CHECK_FALSE(box_corners(Point2{0, 0}, 0, 20'000, 0.0, AngleRule::Semt, four));
+    CHECK_FALSE(box_corners(Point2{0, 0}, 40'000, -1, 0.0, AngleRule::Semt, four));
 }
 
 TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
