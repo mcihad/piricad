@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/hatch_link.hpp"
 
+#include "kentos_cad/core/curve_path.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 
-#include "clipper2/clipper.h"
-
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 
@@ -175,41 +176,47 @@ Result<HatchBoundary> hatch_boundary(const Document& doc, std::span<const Entity
 
 namespace {
 
-Clipper2Lib::Path64 clipper_path(std::span<const Point2> loop)
+/// A closed path of segments through `ring`.
+CurvePath ring_path(std::span<const Point2> ring)
 {
-    Clipper2Lib::Path64 path;
-    path.reserve(loop.size());
-    for (const Point2& p : loop)
-        path.emplace_back(p.x, p.y);
-    return path;
+    CurvePath p;
+    p.closed = true;
+    p.pieces.reserve(ring.size());
+    for (std::size_t i = 0; i < ring.size(); ++i)
+        p.pieces.push_back(
+            PathPiece{.from = ring[i], .to = ring[i + 1 == ring.size() ? 0 : i + 1]});
+    return p;
 }
 
-/// Clipper2's paths as loops, the ones that enclose nothing left out.
-std::vector<std::vector<Point2>> loops_of(const Clipper2Lib::Paths64& paths)
+/// A path as the points a hatch holds: segments as they are, arcs by the
+/// routine a YAY is drawn with, the closing vertex not repeated.
+std::vector<Point2> loop_points(const CurvePath& path)
 {
-    std::vector<std::vector<Point2>> out;
-    for (const Clipper2Lib::Path64& path : paths) {
-        if (path.size() < 3 || Clipper2Lib::Area(path) == 0.0) continue;
-        std::vector<Point2> loop;
-        loop.reserve(path.size());
-        for (const Clipper2Lib::Point64& q : path)
-            loop.push_back(Point2{q.x, q.y});
-        out.push_back(std::move(loop));
-    }
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+    path_outline(path, xs, ys);
+    std::vector<Point2> out;
+    out.reserve(xs.size());
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        out.push_back(Point2{xs[i], ys[i]});
+    if (out.size() > 1 && out.front() == out.back()) out.pop_back();
     return out;
 }
 
-/// The OPEN runs an object draws — what a line is widened from.
-std::vector<std::vector<Point2>> open_runs_of(const Document& doc, EntityId e)
+/// The OPEN runs an object draws, as paths of segments — what a strip is grown
+/// from when the object has no path of its own: an ellipse's arc, a spline, a
+/// dimension's lines.
+std::vector<CurvePath> open_runs_of(const Document& doc, EntityId e)
 {
-    std::vector<std::vector<Point2>> out;
+    std::vector<CurvePath> out;
     const auto take = [&out](std::span<const Mm> xs, std::span<const Mm> ys) {
         if (xs.size() < 2) return;
-        std::vector<Point2> pts;
-        pts.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            pts.push_back(Point2{xs[v], ys[v]});
-        out.push_back(std::move(pts));
+        CurvePath p;
+        p.pieces.reserve(xs.size() - 1);
+        for (std::size_t v = 0; v + 1 < xs.size(); ++v)
+            p.pieces.push_back(
+                PathPiece{.from = Point2{xs[v], ys[v]}, .to = Point2{xs[v + 1], ys[v + 1]}});
+        out.push_back(std::move(p));
     };
     const RingGeometry& g = doc.geometry();
     EmitBuffer runs;
@@ -224,84 +231,136 @@ std::vector<std::vector<Point2>> open_runs_of(const Document& doc, EntityId e)
     return out;
 }
 
+/// `paths` moved `margin` off themselves — a closed one outward, an open one to
+/// a band round it — and made faces again. Square corners: what is left free
+/// round a caption is a box, as the caption's own is.
+Result<std::vector<KernelFace>> grown(std::span<const CurvePath> paths, Mm margin, bool open)
+{
+    std::vector<CurvePath> rings;
+    for (const CurvePath& p : paths) {
+        auto moved = kernel_offset(p, margin, OffsetCorner::Sharp, open);
+        if (!moved) return moved.error();
+        for (CurvePath& q : moved.value())
+            rings.push_back(std::move(q));
+    }
+    return kernel_faces_of(std::move(rings));
+}
+
 } // namespace
 
-std::vector<std::vector<Point2>> hatch_cutout(const Document& doc, EntityId e, Mm margin)
+Result<std::vector<KernelFace>> hatch_cutout(const Document& doc, EntityId e, Mm margin)
 {
-    using namespace Clipper2Lib;
-    if (e >= doc.entities().size() || !doc.alive(e) || margin < 0) return {};
+    if (e >= doc.entities().size() || !doc.alive(e) || margin < 0) return std::vector<KernelFace>{};
+    if (!kernel_available())
+        return err(ErrorCode::Unsupported,
+                   "disarida= geometri çekirdeğini ister; bu yapıda OpenCASCADE yok (" +
+                       kernel_version() + ").");
     const KindId kind = doc.entities().kind[e];
 
-    // A BLOCK OR A POINT KEEPS ITS BOX: the mask a symbol is left in. A point's
-    // box is a point, so only the margin gives it any ground.
+    // A BLOCK OR A POINT KEEPS ITS BOX: the mask a symbol is left in, grown by
+    // the margin in whole millimetres. A point's box is a point, so only the
+    // margin gives it any ground.
     if (kind == kBlockReferenceKind || kind == kPointKind) {
         const Box2 b = doc.entities().box_of(e);
-        const Path64 box{{b.min_x - margin, b.min_y - margin},
-                         {b.max_x + margin, b.min_y - margin},
-                         {b.max_x + margin, b.max_y + margin},
-                         {b.min_x - margin, b.max_y + margin}};
-        return loops_of(Paths64{box});
+        if (b.max_x - b.min_x + (2 * margin) <= 0 || b.max_y - b.min_y + (2 * margin) <= 0)
+            return std::vector<KernelFace>{};
+        const std::array<Point2, 4> box{
+            Point2{b.min_x - margin, b.min_y - margin}, Point2{b.max_x + margin, b.min_y - margin},
+            Point2{b.max_x + margin, b.max_y + margin}, Point2{b.min_x - margin, b.max_y + margin}};
+        return std::vector<KernelFace>{KernelFace{ring_path(box), {}}};
     }
 
-    Paths64 shape;
-    bool open = false;
+    // A CAPTION: its letters, not its hairline.
     if (std::array<Point2, 4> quad{}; text_quad(doc, e, quad)) {
-        shape.push_back(clipper_path(quad)); // a caption: its letters, not its hairline
-    } else if (const auto loops = closed_loops_of(doc, e); !loops.empty()) {
+        const CurvePath path = ring_path(quad);
+        if (margin == 0) return std::vector<KernelFace>{KernelFace{path, {}}};
+        return grown(std::span<const CurvePath>(&path, 1), margin, false);
+    }
+
+    // A CLOSED OBJECT: its face, a circle's a circle.
+    if (const auto path = path_of(doc, e, PathScope::Circular); path && path->closed) {
+        if (margin == 0) return std::vector<KernelFace>{KernelFace{*path, {}}};
+        return grown(std::span<const CurvePath>(&*path, 1), margin, false);
+    }
+    if (const auto loops = closed_loops_of(doc, e); !loops.empty()) {
+        // One with holes: its rings nested into faces, and with a margin each
+        // boundary grown and each hole shrunk by it.
+        std::vector<CurvePath> rings;
+        rings.reserve(loops.size());
         for (const auto& loop : loops)
-            shape.push_back(clipper_path(loop));
-    } else {
-        for (const auto& run : open_runs_of(doc, e))
-            shape.push_back(clipper_path(run));
-        open = true;
+            rings.push_back(ring_path(loop));
+        std::vector<KernelFace> faces = kernel_faces_of(std::move(rings));
+        if (margin == 0) return faces;
+        std::vector<CurvePath> moved;
+        for (const KernelFace& face : faces) {
+            auto out = kernel_offset(face.outer, margin, OffsetCorner::Sharp, false);
+            if (!out) return out.error();
+            for (CurvePath& q : out.value())
+                moved.push_back(std::move(q));
+            for (const CurvePath& hole : face.holes) {
+                auto in = kernel_offset(hole, -margin, OffsetCorner::Sharp, false);
+                if (!in) return in.error();
+                for (CurvePath& q : in.value())
+                    moved.push_back(std::move(q));
+            }
+        }
+        return kernel_faces_of(std::move(moved));
     }
-    if (open && margin == 0) return {}; // a line with no margin keeps no ground free
-    // ONE ORIENTATION before anything else: the face with its holes as holes,
-    // every outer loop the same way round, which is what the merge in
-    // `hatch_without` counts windings by.
-    if (!open) shape = Union(shape, FillRule::EvenOdd);
-    if (margin > 0) {
-        ClipperOffset grow;
-        grow.MiterLimit(2.0);
-        grow.AddPaths(shape, JoinType::Miter, open ? EndType::Square : EndType::Polygon);
-        Paths64 grown;
-        grow.Execute(static_cast<double>(margin), grown);
-        shape = Union(grown, FillRule::NonZero);
-    }
-    return loops_of(shape);
+
+    // AN OPEN LINE keeps ground only with a margin: a band that wide on either
+    // side, round at its ends.
+    if (margin == 0) return std::vector<KernelFace>{};
+    std::vector<CurvePath> runs;
+    if (auto path = path_of(doc, e, PathScope::Circular); path)
+        runs.push_back(std::move(*path));
+    else
+        runs = open_runs_of(doc, e);
+    return grown(runs, margin, true);
 }
 
 Result<HatchCut> hatch_without(const HatchBoundary& boundary,
-                               std::span<const std::vector<std::vector<Point2>>> cutouts)
+                               std::span<const std::vector<KernelFace>> cutouts)
 {
-    using namespace Clipper2Lib;
-    Paths64 subject;
+    std::vector<CurvePath> rings;
+    rings.reserve(boundary.loops.size());
     for (const auto& loop : boundary.loops)
-        subject.push_back(clipper_path(loop));
+        rings.push_back(ring_path(loop));
+    const std::vector<KernelFace> subject = kernel_faces_of(std::move(rings));
 
     HatchCut out;
-    Paths64 clip;
+    std::vector<KernelFace> clip;
     for (std::size_t i = 0; i < cutouts.size(); ++i) {
-        Paths64 one;
-        for (const auto& loop : cutouts[i])
-            one.push_back(clipper_path(loop));
         // IDLE: a cutout that shares no ground with the hatch. Counted, so the
         // sentence can say which of the objects shown changed nothing.
-        if (Intersect(subject, one, FillRule::EvenOdd).empty()) {
+        auto common = kernel_boolean(subject, cutouts[i], BooleanOp::Intersection);
+        if (!common) return common.error();
+        if (common.value().empty()) {
             out.idle.push_back(i);
             continue;
         }
-        clip.insert(clip.end(), one.begin(), one.end());
+        clip.insert(clip.end(), cutouts[i].begin(), cutouts[i].end());
     }
-    // MERGED FIRST, so overlapping cutouts make one hole and not an even-odd
-    // checkerboard of them.
-    clip                                   = Union(clip, FillRule::NonZero);
-    const Paths64 left                     = Difference(subject, clip, FillRule::EvenOdd);
-    std::vector<std::vector<Point2>> loops = loops_of(left);
-    if (loops.empty())
+    if (clip.empty()) {
+        out.boundary = boundary; // nothing touched: the hatch it would have been
+        return out;
+    }
+    // Every cutout a tool of one cut, so two that overlap take one hole out.
+    auto left = kernel_boolean(subject, clip, BooleanOp::Difference);
+    if (!left) return left.error();
+    if (left.value().empty())
         return err(ErrorCode::InvalidArgument,
                    "disarida= nesneleri taranacak yerin tamamını kaplıyor; taranacak yer kalmadı.");
-    out.boundary = nest_loops(std::move(loops), 0);
+    for (std::size_t part = 0; part < left.value().size(); ++part) {
+        const KernelFace& face = left.value()[part];
+        out.boundary.loops.push_back(loop_points(face.outer));
+        out.boundary.roles.push_back(RingRole::Exterior);
+        out.boundary.parts.push_back(static_cast<std::uint16_t>(part));
+        for (const CurvePath& hole : face.holes) {
+            out.boundary.loops.push_back(loop_points(hole));
+            out.boundary.roles.push_back(RingRole::Interior);
+            out.boundary.parts.push_back(static_cast<std::uint16_t>(part));
+        }
+    }
     return out;
 }
 

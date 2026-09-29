@@ -22,7 +22,9 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - `TARAMA … disarida=<nesneler>`: Netcad'in **Diğer Objeler Seç**'i. Gösterilen yazının
   harf kutusu, bloğun ve noktanın kutusu, kapalı bir nesnenin içi taramadan boş kalır;
   `pay=<metre>` çevresine pay bırakır, açık bir çizgiyi o genişlikte bir şeritle ayırır
-  (paysız bir nokta ya da çizgi yer açmaz; tarama yine çizilir ve bu söylenir). Yalnız
+  (paysız bir nokta ya da çizgi yer açmaz; tarama yine çizilir ve bu söylenir). Kesimi
+  geometri çekirdeği (OpenCASCADE) yapar: bir daire daire, şeridin uçları yay olarak
+  kesilir. Yalnız
   gösterilenler: tarama bölgedeki yazıları kendiliğinden aramaz. Üç sınır yolunun üçüyle
   de çalışır; böyle bir tarama sınırına bağlanmaz ve bunu söyler.
 - **Çizim ▸ Tarama ▸ Tarama — seçilenler dışarıda**: önce yazıları seçin, sonra bölgenin

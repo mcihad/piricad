@@ -14,6 +14,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/curve_path.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/planar.hpp"
 
 #include "kentos_cad/command/bus.hpp"
@@ -2785,6 +2786,7 @@ TEST_CASE("PROOF: TARAMA yontem=ic — arayüz, komut satırı, betik ve oynatma
 
 TEST_CASE("PROOF: TARAMA disarida= — arayüz, komut satırı, betik ve oynatma aynı taramayı çizer")
 {
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // Plan open question 18. The parcel's number left free, half a metre round;
     // the GUI names the caption the way the ribbon's button does and clicks.
     const std::vector<std::string> setup{"ALAN 0,0 20,0 20,10 0,10", "METİN 8,4 \"101\" 1000"};

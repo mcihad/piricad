@@ -971,9 +971,11 @@ etmeden başlamaz.
     yazı yüksekliğinin katı) katalog değeri mi, parametre mi?
     **Karar (29 Eylül 2026): (b) — Netcad gibi seçerek.** `TARAMA … disarida=<nesneler> [pay=<metre>]`
     yapıldı: yazı harf kutusuyla, blok ve nokta kutusuyla, kapalı nesne içiyle, açık çizgi `pay`
-    genişliğinde şeritle boş kalır (`core::hatch_cutout`, `core::hatch_without`, Clipper2; köşeler ve
-    şerit uçları dik, çünkü yuvarlak bir uç bir sinüstür ve her platformda aynı bit değildir). Pay bir
-    parametre, öntanımlı 0 — mevzuat değeri değil. Böyle bir tarama sınırına bağlanmaz ve bunu söyler.
+    genişliğinde şeritle boş kalır (`core::hatch_cutout`, `core::hatch_without`). Kesim geometri
+    çekirdeğinde, OpenCASCADE (`core/kernel.hpp`: `kernel_boolean`, `kernel_offset`, CLAUDE.md 2.11):
+    daire daire, şeridin uçları yuvarlak yay olarak kesilir; payın köşeleri dik; sonuç milimetreye bir
+    kez yuvarlanır ve tarama yayları kirişleriyle saklar. Pay bir parametre, öntanımlı 0 — mevzuat
+    değeri değil. Böyle bir tarama sınırına bağlanmaz ve bunu söyler.
     Şeritte **Tarama — seçilenler dışarıda**: önce seçilir, sonra bölgenin içine tıklanır.
 19. **"Katmanı nesneden al" (N-04).** Netcad'de çizim komutu, tıklanan nesnenin katmanına
     çizer. Bizde çizim komutlarının `katman=` parametresi yok; nesne etkin katmana gider.

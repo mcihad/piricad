@@ -12,6 +12,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
@@ -207,6 +208,10 @@ bool is_out_of_scope(const CommandSpec& spec)
 /// examples run everywhere.
 bool needs_arrangement(const CommandSpec& spec, const std::string& line)
 {
+    // `disarida=` is the geometry kernel's cut (`core::hatch_without`).
+    if (spec.id == "core.hatch" && !kentos::core::kernel_available() &&
+        line.find("disarida=") != std::string::npos)
+        return true;
     if (kentos::core::network_available()) return false;
     if (spec.id != "core.measure_area" && spec.id != "core.hatch") return false;
     return line.find("yontem=ic") != std::string::npos || line.find(" nokta=") != std::string::npos;

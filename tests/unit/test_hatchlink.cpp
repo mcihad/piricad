@@ -14,6 +14,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/style.hpp"
@@ -627,6 +628,7 @@ std::pair<core::Mm, core::Mm> caption_size(const Rig& r, std::int64_t key)
 
 TEST_CASE("TARAMA disarida=: gösterilen yazı boş kalır, pay deliği büyütür, sınıra bağlanmaz")
 {
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // A 40 m × 30 m PARCEL with its number in the middle, left free as Netcad's
     // `Diğer Objeler Seç` leaves it (plan open question 18).
     Rig r;
@@ -664,6 +666,7 @@ TEST_CASE("TARAMA disarida=: gösterilen yazı boş kalır, pay deliği büyüt�
 TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söylenir; üst üste "
           "binenler tek delik")
 {
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 40,0 40,30 0,30"); ///< 1
     r.run("NOKTA 10,10");              ///< 2
@@ -686,12 +689,17 @@ TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söy
     CHECK(r.doc.entity_area(r.slot(8)) == 1'200'000'000);
     CHECK(r.said.find("disarida= nesnelerinin hiçbiri yer açmadı") != std::string::npos);
 
-    // A METRE ROUND THE POINT is a 2 m × 2 m hole; half a metre round the line
-    // a strip 1 m wide, squared off half a metre past each end: 21 m × 1 m.
+    // A METRE ROUND THE POINT is a 2 m × 2 m hole, its corners square.
     r.run("TARAMA nesneler=1 disarida=2 pay=1"); ///< 9
     CHECK(r.doc.entity_area(r.slot(9)) == 1'200'000'000 - 4'000'000);
+
+    // HALF A METRE ROUND THE LINE is the kernel's buffer: a band 20 m × 1 m
+    // and, at its two round ends, a circle of half a metre — drawn back into
+    // the chords a hatch holds, so a little under π r² (785 398 mm²).
     r.run("TARAMA nesneler=1 disarida=3 pay=0.5"); ///< 10
-    CHECK(r.doc.entity_area(r.slot(10)) == 1'200'000'000 - 21'000'000);
+    const auto band = 1'200'000'000 - r.doc.entity_area(r.slot(10));
+    CHECK(band > 20'000'000 + 780'000);
+    CHECK(band < 20'000'000 + 785'399);
 
     // TWO THAT OVERLAP ARE ONE HOLE, 3 m × 2 m — not two squares with their
     // overlap filled in again by an even-odd count.
@@ -702,6 +710,7 @@ TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söy
 
 TEST_CASE("TARAMA disarida=: her şeyi kaplayan, bagla=evet ve tek başına pay reddedilir")
 {
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 40,0 40,30 0,30");    ///< 1
     r.run("METİN 100,100 \"uzak\" 2000"); ///< 2, far outside the parcel
@@ -733,6 +742,7 @@ TEST_CASE("TARAMA disarida=: her şeyi kaplayan, bagla=evet ve tek başına pay 
 TEST_CASE("TARAMA yontem=ic disarida=: tıklanan bölgenin yazısı ve adası boş kalır")
 {
     if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     for (const char* line : {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
                              "ÇİZGİ 0,30 0,0", "ALAN 5,5 15,5 15,15 5,15"})
@@ -743,4 +753,23 @@ TEST_CASE("TARAMA yontem=ic disarida=: tıklanan bölgenin yazısı ve adası bo
     CHECK(r.rings(7).size() == 3);
     CHECK(r.doc.entity_area(r.slot(7)) == 1'100'000'000 - (w * h));
     CHECK(r.journal.entries().back().args.get("yontem").as_text() == "ic");
+}
+
+TEST_CASE(
+    "TARAMA disarida=: gösterilen daire daire olarak kesilir, kirişleri taramanın kirişleridir")
+{
+    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    // A TREE'S CIRCLE of two metres in a 40 m × 30 m parcel: the kernel cuts
+    // the circle as a circle and the hatch takes it back in the chords a YAY
+    // is drawn with — a little under π r², and the same hole a closed
+    // polyline of those chords would have made.
+    Rig r;
+    r.run("ALAN 0,0 40,0 40,30 0,30");       ///< 1
+    r.run("DAİRE merkez=20,15 cevre=22,15"); ///< 2
+    r.run("TARAMA nesneler=1 disarida=2");   ///< 3
+    const auto hole = 1'200'000'000 - r.doc.entity_area(r.slot(3));
+    CHECK(hole > 12'500'000); // π · 2000² = 12 566 371
+    CHECK(hole < 12'566'371);
+    REQUIRE(r.rings(3).size() == 2);
+    CHECK(r.rings(3)[1].second.size() > 16); // a circle's chords, not a square
 }

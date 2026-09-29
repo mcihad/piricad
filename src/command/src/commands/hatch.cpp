@@ -23,6 +23,7 @@
 #include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/kernel.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/trig.hpp"
 
@@ -316,7 +317,7 @@ Task<void> run(Context& ctx)
     std::size_t idle   = 0; ///< shown, but sharing no ground with the hatch
     std::size_t hollow = 0; ///< shown, but keeping no ground free: no margin round them
     if (!excluded.empty()) {
-        std::vector<std::vector<std::vector<core::Point2>>> cutouts;
+        std::vector<std::vector<core::KernelFace>> cutouts;
         cutouts.reserve(excluded.size());
         for (const std::int64_t raw : excluded) {
             const core::EntityId slot =
@@ -332,11 +333,15 @@ Task<void> run(Context& ctx)
             // and said, not refused: a selection taken whole from the ribbon
             // holds the point beside the parcel's number as often as not.
             auto cut = core::hatch_cutout(ctx.document(), slot, margin);
-            if (cut.empty()) {
+            if (!cut) {
+                ctx.refuse(cut.error());
+                co_return;
+            }
+            if (cut.value().empty()) {
                 ++hollow;
                 continue;
             }
-            cutouts.push_back(std::move(cut));
+            cutouts.push_back(std::move(cut.value()));
         }
         if (!cutouts.empty()) {
             auto left = core::hatch_without(boundary, cutouts);

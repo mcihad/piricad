@@ -69,11 +69,12 @@ aynı çalışır.
 | Yazı | Harflerinin kutusu |
 | Blok | Kutusu |
 | Nokta | Kutusu bir noktadır; ancak `pay=` ile yer açar |
-| Kapalı nesne (alan, daire…) | İçi, kendi delikleriyle |
-| Açık çizgi | İki yanında `pay=` genişliğinde bir şerit; `pay=` verilmezse yer açmaz |
+| Kapalı nesne (alan, daire…) | İçi, kendi delikleriyle; bir daire daire olarak kesilir |
+| Açık çizgi | İki yanında `pay=` genişliğinde, uçları yuvarlak bir şerit; `pay=` verilmezse yer açmaz |
 
-`pay=<metre>` boş yerin çevresine o kadar pay bırakır; köşeleri ve şeridin uçları
-diktir. Üst üste binen iki yazının boşluğu tek deliktir. Taramaya hiç değmeyen bir
+`pay=<metre>` boş yerin çevresine o kadar pay bırakır; yazının, bloğun ve kapalı nesnenin
+payının köşeleri diktir. Kesimi geometri çekirdeği (OpenCASCADE) yapar: dairenin ve
+şeridin yayları yay olarak kesilir, tarama onları bir YAY'ın çizildiği kirişlerle saklar. Üst üste binen iki yazının boşluğu tek deliktir. Taramaya hiç değmeyen bir
 nesne ve `pay=` verilmemiş bir nokta ya da çizgi bir şey değiştirmez; tarama yine
 çizilir ve TARAMA hangilerinin yer açmadığını söyler:
 `1 nesne dışarıda bırakıldı (1 çizgi ya da nokta pay=<metre> verilmediği için yer açmadı)`.

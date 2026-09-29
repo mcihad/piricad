@@ -100,31 +100,32 @@ struct HatchBoundary
 /// every closed run of it. Empty for an object that closes nothing.
 std::vector<std::vector<Point2>> closed_loops_of(const Document& doc, EntityId e);
 
+struct KernelFace; ///< core/kernel.hpp, which reaches this header through the document
+
 /// THE GROUND ONE OBJECT KEEPS FREE OF A HATCH drawn over it, the answer to
-/// Netcad's `Diğer Objeler Seç` and `TARAMA disarida=`: a caption its letters' box, a closed object
-/// its face, a block or a point its box, an open line a strip `margin` wide on
-/// either side. Grown by `margin` all round, with mitred corners and square
-/// ends: Clipper2 works a round one out with sines, which are not the same bits
-/// on every platform (CLAUDE.md 2.5). Its normals go through `hypot`, which is
-/// exact along an axis, so an upright caption's box grows alike everywhere.
-/// Empty when the object keeps nothing free: an open line, or a point, with no
-/// margin.
-std::vector<std::vector<Point2>> hatch_cutout(const Document& doc, EntityId e, Mm margin);
+/// Netcad's `Diğer Objeler Seç` and `TARAMA disarida=`, as faces: a caption its
+/// letters' box, a block or a point its box, a closed object its face — a
+/// circle a circle — and an open line a band `margin` wide on either side,
+/// round at its ends. Grown by `margin` all round, the box's corners square.
+/// The kernel's work (CLAUDE.md 2.11), arcs kept arcs until the hatch takes its
+/// chords. Empty when the object keeps nothing free: an open line, or a point,
+/// with no margin; an error when the build has no kernel.
+Result<std::vector<KernelFace>> hatch_cutout(const Document& doc, EntityId e, Mm margin);
 
 /// What `hatch_without` left of a hatch.
 struct HatchCut
 {
-    HatchBoundary boundary;        ///< the loops left, nested again
+    HatchBoundary boundary;        ///< the loops left, a face's boundary and its holes each
     std::vector<std::size_t> idle; ///< the cutouts, by index, that took nothing out
 };
 
-/// `boundary` with every cutout taken out of it — one entry per object, its
-/// loops as `hatch_cutout` gives them — the cutouts merged first, so two
-/// captions that overlap make one hole. Straight edges, Clipper2's work
-/// (CLAUDE.md 2.11): a hatch's loops are already the chords its arcs are drawn
-/// with. An error when nothing is left to hatch.
+/// `boundary` with every cutout taken out of it — one entry per object, as
+/// `hatch_cutout` gives it; cutouts that overlap make one hole. A kernel
+/// difference (`kernel_boolean`), its faces drawn back into the chords a hatch
+/// holds by the routine a YAY is drawn with. An error when nothing is left to
+/// hatch; the boundary as it was when no cutout touches it.
 Result<HatchCut> hatch_without(const HatchBoundary& boundary,
-                               std::span<const std::vector<std::vector<Point2>>> cutouts);
+                               std::span<const std::vector<KernelFace>> cutouts);
 
 /// Closed `loops` nested by containment in `style` (see `hatch_boundary`): the
 /// rings a hatch's own loops make when there are no sources to read them from.
