@@ -72,12 +72,18 @@ gerekir.
 
 | EPSG | Sistem |
 |---|---|
-| `5253` | TUREF / TM30 |
-| `5254` | TUREF / TM33 |
-| `5255` | TUREF / TM39 (bkz. not) |
+| `5253` | TUREF / TM27 |
+| `5254` | TUREF / TM30 |
+| `5255` | TUREF / TM33 |
 | `5256` | TUREF / TM36 |
-| `5262`–`5269` | TUREF / 3 derecelik dilimler |
+| `5257` | TUREF / TM39 |
+| `5258` | TUREF / TM42 |
+| `5259` | TUREF / TM45 |
+| `5269`–`5275` | TUREF / 3 derecelik Gauss–Krüger dilimleri 9–15 (doğu değerinin başında dilim numarası: 9 500 000 gibi) |
 | `23035`–`23038` | ED50 / UTM 35–38 |
+
+TM dilimlerinin listesi programın kataloğundan (`data/crs/tm3-dilimleri.json`) gelir; Seçenekler
+sayfası da aynı listeyi gösterir.
 
 Doğru kodu `Seçenekler ▸ Koordinat Sistemleri` sayfasından da seçebilirsiniz.
 

@@ -45,6 +45,10 @@ kentos_fuzz_target(kentos_fuzz_proje fuzz_proje.cpp)
 # every client. test.md R9 lists it by name.
 kentos_fuzz_target(kentos_fuzz_komut fuzz_komut.cpp)
 
+# The Netcad NCZ reader (io/ncz.hpp): hand-written, so every byte of it is ours to
+# fuzz, and it needs no library — built whatever else is on.
+kentos_fuzz_target(kentos_fuzz_ncz fuzz_ncz.cpp)
+
 # The DXF harness exercises the KentOSCad side of the GDAL seam, so it only exists
 # when that seam is compiled in.
 if(KENTOS_WITH_GDAL)
@@ -64,7 +68,8 @@ endif()
 # (test.md R10).
 set(KENTOS_FUZZ_SCRATCH "${CMAKE_BINARY_DIR}/fuzz-corpus")
 file(MAKE_DIRECTORY "${KENTOS_FUZZ_SCRATCH}/proje" "${KENTOS_FUZZ_SCRATCH}/komut"
-                    "${KENTOS_FUZZ_SCRATCH}/dxf" "${KENTOS_FUZZ_SCRATCH}/shp")
+                    "${KENTOS_FUZZ_SCRATCH}/dxf" "${KENTOS_FUZZ_SCRATCH}/shp"
+                    "${KENTOS_FUZZ_SCRATCH}/ncz")
 
 add_test(NAME fuzz_proje_smoke
     COMMAND kentos_fuzz_proje "${KENTOS_FUZZ_SCRATCH}/proje"
@@ -74,6 +79,11 @@ add_test(NAME fuzz_proje_smoke
 add_test(NAME fuzz_komut_smoke
     COMMAND kentos_fuzz_komut "${KENTOS_FUZZ_SCRATCH}/komut"
             "${CMAKE_CURRENT_SOURCE_DIR}/tohum/komut"
+            -runs=2000 -max_total_time=30 -seed=1)
+
+add_test(NAME fuzz_ncz_smoke
+    COMMAND kentos_fuzz_ncz "${KENTOS_FUZZ_SCRATCH}/ncz"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tohum/ncz"
             -runs=2000 -max_total_time=30 -seed=1)
 
 if(KENTOS_WITH_GDAL)

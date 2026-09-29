@@ -79,7 +79,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`core.block_edit`](block_edit.md) | Bloğu Düzenle | `BLOKDÜZENLE`, `BLOKDUZENLE`, `BEDIT`, `BDZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
 | [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
-| [`core.xref`](xref.md) | Dış Referans | `DIŞREFERANS`, `DISREFERANS`, `XREF`, `DRF` | Dosya | tek işlem | betiklenebilir, AI erişimli | Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
+| [`core.xref`](xref.md) | Dış Referans | `DIŞREFERANS`, `DISREFERANS`, `XREF`, `DRF` | Dosya | tek işlem | betiklenebilir, AI erişimli | Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz. |
 | [`core.block_clip`](block_clip.md) | Blok Kırp | `BLOKKIRP`, `BLOKKIRP`, `XCLIP`, `BKR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi görünür. |
 | [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
 | [`core.dimension_edit`](dimension_edit.md) | Ölçü Düzenle | `ÖLÇÜDÜZENLE`, `OLCUDUZENLE`, `DIMEDIT`, `ÖDZ`, `ODZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, ondalıklarını, stilini ya da yazı yerini değiştirir. |
@@ -1135,12 +1135,12 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
 ### `core.xref` — DIŞREFERANS (Dış Referans)
 
-Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `islem` | text | isteğe bağlı | ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar |
-| `dosya` | text | isteğe bağlı | ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur |
+| `dosya` | text | isteğe bağlı | ekle ve yol için dosya: proje, DXF, DWG ya da NCZ; göreli yol proje dosyasının klasörüne göre okunur |
 | `ad` | text | isteğe bağlı | Dış referansın adı; ekle'de verilmezse dosyanın adı |
 | `nokta` | point | isteğe bağlı | ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir |
 | `olcek` | number | isteğe bağlı | ekle için ölçek; varsayılan 1 |
@@ -13273,7 +13273,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_xref",
     "title": "Dış Referans",
-    "description": "Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.\nKomut: DIŞREFERANS (DISREFERANS, XREF, DRF)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.\nKomut: DIŞREFERANS (DISREFERANS, XREF, DRF)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13293,7 +13293,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "dosya": {
           "type": "string",
-          "description": "ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur (metin)"
+          "description": "ekle ve yol için dosya: proje, DXF, DWG ya da NCZ; göreli yol proje dosyasının klasörüne göre okunur (metin)"
         },
         "ad": {
           "type": "string",

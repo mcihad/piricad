@@ -1290,11 +1290,11 @@ def xref(
     scale: float = ...,
     angle: float = ...,
 ) -> int:
-    """Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
+    """Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime yazılmaz.
 
     Komut: core.xref (DIŞREFERANS)
         action — ekle: dosyayı bağlar ve bir referans koyar (varsayılan); yenile: dosyayı yeniden okur; bosalt: çizimden çıkarır, referansı kalır; yukle: boşaltılanı geri getirir; yol: yeni dosyasını gösterir; bagla: çizime katar, sıradan blok olur; kaldir: referanslarıyla siler; listele: bağlı olanları sayar
-        file — ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje dosyasının klasörüne göre okunur
+        file — ekle ve yol için dosya: proje, DXF, DWG ya da NCZ; göreli yol proje dosyasının klasörüne göre okunur
         name — Dış referansın adı; ekle'de verilmezse dosyanın adı
         point — ekle için referansın konduğu nokta; varsayılan başlangıç noktası (0,0): dosya kendi koordinatında, yerinde çizilir [mm, Sağa (Y) önce]
         scale — ekle için ölçek; varsayılan 1

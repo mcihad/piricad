@@ -217,7 +217,8 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
 | [KentOSCad proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
-| [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
+| [Dış veri biçimleri](veri/dis-formatlar.md) | DXF, GeoPackage ve Netcad NCZ, koordinat sistemi, `.prj` dosyası |
+| [Netcad NCZ çizimleri](veri/netcad-ncz.md) | `.ncz` dosyasını içe alma ve altlık olarak bağlama: nesnelerin eşlemesi, katman ve renkler, akıllı nesneler, pafta çerçeveleri, koordinat sistemi uyarıları, raporun her satırı |
 | [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
 | [Geometri çekirdeği](veri/geometri-cekirdegi.md) | OpenCASCADE: yayları koruyan hesap, her bilgisayarda aynı milimetre, hangi işlemin hangi aşamada çekirdeğe geçtiği |

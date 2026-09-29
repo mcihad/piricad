@@ -674,6 +674,10 @@ QWidget* ImportWizard::buildFilePage()
                   f.write ? Tone::Neutral : Tone::Accent);
     }
 
+    // A Netcad drawing: read by this program's own reader, in every build
+    // (io/ncz.hpp), so it is on the list whatever else the build has.
+    formatRow(tr(".NCZ"), tr("Netcad çizimi"), tr("okunur"), Tone::Accent);
+
     // The io layer's status names a CMake flag, which is for the person who
     // builds the program; the person who uses it is told what to do instead.
     if (io::dwg_backend_available())

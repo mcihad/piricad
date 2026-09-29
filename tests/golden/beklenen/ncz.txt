@@ -1,0 +1,356 @@
+crs TUREF/TM36
+katman-sayisi 11
+nesne-sayisi 67
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=37
+katman PARSEL gorunur=1 kilitli=0 renk=ffff0000 kalinlik_um=0 nesne=5
+katman YAZI gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=5
+katman İMAR_ŞERİT gorunur=1 kilitli=0 renk=ff008000 kalinlik_um=0 nesne=4
+katman PAFTA gorunur=1 kilitli=0 renk=ff0a141e kalinlik_um=0 nesne=3
+katman KATMAN_6 gorunur=1 kilitli=0 renk=ff28323c kalinlik_um=0 nesne=1
+katman SM_YERLESIM gorunur=1 kilitli=0 renk=ffc80000 kalinlik_um=0 nesne=3
+katman SM_YAPILASMA gorunur=1 kilitli=0 renk=ff0000c8 kalinlik_um=0 nesne=3
+katman SM_YOL gorunur=1 kilitli=0 renk=ff007800 kalinlik_um=0 nesne=3
+katman SM_FONKADI gorunur=1 kilitli=0 renk=ff780078 kalinlik_um=0 nesne=1
+katman SM_NOT gorunur=1 kilitli=0 renk=ff505050 kalinlik_um=0 nesne=2
+nesne 0 katman=PARSEL stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    421000000 4448000000
+  alan_mm2 0  cevre_mm 0
+nesne 1 katman=PARSEL stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    421010000 4448010000
+  alan_mm2 0  cevre_mm 0
+nesne 2 katman=PARSEL stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    421000000 4448000000
+    421020000 4448020000
+  alan_mm2 0  cevre_mm 28284
+nesne 3 katman=YAZI stil=1 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    421050000 4448050000
+    421062500 4448050000
+  alan_mm2 490873852  cevre_mm 78540
+nesne 4 katman=YAZI stil=2 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    421080000 4448080000
+    421100000 4448080000
+    421099378 4448084948
+    421081415 4448099950
+  alan_mm2 0  cevre_mm 25000
+nesne 5 katman=YAZI stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    421090000 4448090000
+    421095000 4448090000
+    421094330 4448092500
+    421087500 4448094330
+  alan_mm2 0  cevre_mm 7854
+nesne 6 katman=YAZI stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    421005000 4448005000
+    421031365 4448020222
+  alan_mm2 0  cevre_mm 30444
+nesne 7 katman=YAZI stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    421006000 4448006000
+    421019590 4448006000
+  alan_mm2 0  cevre_mm 13590
+nesne 8 katman=İMAR_ŞERİT stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    421007000 4448007000
+  alan_mm2 0  cevre_mm 0
+nesne 9 katman=İMAR_ŞERİT stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    421000000 4448000000
+    421030000 4448000000
+    421030000 4448020000
+    421000000 4448020000
+  alan_mm2 600000000  cevre_mm 100000
+nesne 10 katman=İMAR_ŞERİT stil=0 halka=1
+  halka rol=0 parca=0 tepe=3
+    421000000 4448100000
+    421005000 4448110000
+    421003000 4448120000
+  alan_mm2 0  cevre_mm 21378
+nesne 11 katman=İMAR_ŞERİT stil=0 halka=1
+  halka rol=0 parca=0 tepe=4
+    421200000 4448200000
+    421202500 4448201500
+    421204000 4448203000
+    421201000 4448206000
+  alan_mm2 0  cevre_mm 9279
+nesne 12 katman=PAFTA stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    421300000 4448300000
+    421295206 4448308776
+    421317145 4448320761
+    421321940 4448311986
+  alan_mm2 249994562  cevre_mm 70000
+nesne 13 katman=KATMAN_6 stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    421400000 4448400000
+    421400000 4449100000
+    421940000 4449100000
+    421940000 4448400000
+  alan_mm2 378000000000  cevre_mm 2480000
+nesne 14 katman=PAFTA stil=0 halka=1
+  halka rol=1 parca=0 tepe=3
+    421500000 4448500000
+    421500000 4448510000
+    421509000 4448505000
+  alan_mm2 45000000  cevre_mm 30592
+nesne 15 katman=PAFTA stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    421600000 4448600000
+  alan_mm2 0  cevre_mm 0
+nesne 16 katman=PARSEL stil=3 halka=1
+  halka rol=0 parca=0 tepe=2
+    421700000 4448700000
+    421702000 4448701000
+  alan_mm2 0  cevre_mm 2236
+nesne 17 katman=PARSEL stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    421702000 4448702000
+  alan_mm2 0  cevre_mm 0
+nesne 18 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 19 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1600 0
+    2533 0
+  alan_mm2 0  cevre_mm 4133
+nesne 20 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1000 0
+    1000 0
+  alan_mm2 0  cevre_mm 2000
+nesne 21 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1600 0
+    5468 0
+  alan_mm2 0  cevre_mm 3868
+nesne 22 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 5200
+    3868 5200
+  alan_mm2 0  cevre_mm 3868
+nesne 23 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 -5200
+    3868 -5200
+  alan_mm2 0  cevre_mm 3868
+nesne 24 katman=SM_YERLESIM stil=0 halka=1 tur=9 yuk=010000000000000000000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000f821271900000000b8462e09010000000849271900000000c86d2e0901000000
+  halka rol=0 parca=0 tepe=1
+    422000000 4449000000
+  alan_mm2 0  cevre_mm 0
+nesne 25 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 26 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1600 0
+    5840 0
+  alan_mm2 0  cevre_mm 7440
+nesne 27 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1000 0
+    1000 0
+  alan_mm2 0  cevre_mm 2000
+nesne 28 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1600 0
+    5468 0
+  alan_mm2 0  cevre_mm 3868
+nesne 29 katman=SM_YERLESIM stil=0 halka=1 tur=9 yuk=0100000000000000010000000100000000000000020000000000000001000000000000000200000000000000000000000000000001000100000000000000000000000000000000002897271900000000b8462e090100000038be271900000000c86d2e0901000000
+  halka rol=0 parca=0 tepe=1
+    422030000 4449000000
+  alan_mm2 0  cevre_mm 0
+nesne 30 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 31 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1600 0
+    2610 0
+  alan_mm2 0  cevre_mm 4210
+nesne 32 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -1000 0
+    1000 0
+  alan_mm2 0  cevre_mm 2000
+nesne 33 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1600 0
+    5468 0
+  alan_mm2 0  cevre_mm 3868
+nesne 34 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 5200
+    10309 5200
+  alan_mm2 0  cevre_mm 10309
+nesne 35 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 -5200
+    3868 -5200
+  alan_mm2 0  cevre_mm 3868
+nesne 36 katman=SM_YERLESIM stil=0 halka=1 tur=9 yuk=010000000000000002000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000580c281900000000b8462e09010000000334281900000000c86d2e0901000000
+  halka rol=0 parca=0 tepe=1
+    422060000 4449000000
+  alan_mm2 0  cevre_mm 0
+nesne 37 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 38 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -6200 0
+    6200 0
+  alan_mm2 0  cevre_mm 12400
+nesne 39 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 3600
+    14249 3600
+  alan_mm2 0  cevre_mm 14249
+nesne 40 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 -3600
+    14249 -3600
+  alan_mm2 0  cevre_mm 14249
+nesne 41 katman=SM_YAPILASMA stil=0 halka=1 tur=9 yuk=010000000000000003000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000f82127190000000088d12d0901000000555127190000000098f82d0901000000
+  halka rol=0 parca=0 tepe=1
+    422000000 4448970000
+  alan_mm2 0  cevre_mm 0
+nesne 42 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 43 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -9000 0
+    9000 0
+  alan_mm2 0  cevre_mm 18000
+nesne 44 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 3600
+    17573 3600
+  alan_mm2 0  cevre_mm 17573
+nesne 45 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 -3600
+    17573 -3600
+  alan_mm2 0  cevre_mm 17573
+nesne 46 katman=SM_YAPILASMA stil=0 halka=1 tur=9 yuk=010000000000000004000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000289727190000000088d12d090100000003cd27190000000098f82d0901000000
+  halka rol=0 parca=0 tepe=1
+    422030000 4448970000
+  alan_mm2 0  cevre_mm 0
+nesne 47 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -16500 3150
+    6817 3150
+  alan_mm2 0  cevre_mm 23317
+nesne 48 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -16500 -6150
+    38521 -6150
+  alan_mm2 0  cevre_mm 55021
+nesne 49 katman=SM_YAPILASMA stil=0 halka=1 tur=9 yuk=010000000000000005000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000a6ff2719000000000dd92d09010000001d6b28190000000037eb2d0901000000
+  halka rol=0 parca=0 tepe=1
+    422060000 4448970000
+  alan_mm2 0  cevre_mm 0
+nesne 50 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 51 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -500 0
+    8956 0
+  alan_mm2 0  cevre_mm 9456
+nesne 52 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1200 600
+    6014 600
+  alan_mm2 0  cevre_mm 4814
+nesne 53 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1200 200
+    6014 200
+  alan_mm2 0  cevre_mm 4814
+nesne 54 katman=SM_YOL stil=0 halka=1 tur=9 yuk=010000000000000006000000330000000000000028000000000000003300000000000000280000000000000000000000000000000100010000000000000000000000000000000000b203271900000000123e2d09010000004e67271900000000aea12d0901000000
+  halka rol=0 parca=0 tepe=1
+    422000000 4448940000
+  alan_mm2 0  cevre_mm 0
+nesne 55 katman=0 stil=4 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    0 0
+    10000 0
+  alan_mm2 314159265  cevre_mm 62832
+nesne 56 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    -500 0
+    4228 0
+  alan_mm2 0  cevre_mm 4728
+nesne 57 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1200 600
+    6014 600
+  alan_mm2 0  cevre_mm 4814
+nesne 58 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1200 200
+    6014 200
+  alan_mm2 0  cevre_mm 4814
+nesne 59 katman=SM_YOL stil=0 halka=1 tur=9 yuk=010000000000000007000000090000000000000010000000000000000900000000000000100000000000000040a5ae02000000000100010000000000000000000000000000000000b894271900000000e8592d0901000000a8c0271900000000d8852d0901000000
+  halka rol=0 parca=0 tepe=1
+    422030000 4448940000
+  alan_mm2 0  cevre_mm 0
+nesne 60 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    0 500
+    112342 500
+  alan_mm2 0  cevre_mm 112342
+nesne 61 katman=SM_FONKADI stil=0 halka=1 tur=9 yuk=0100000000000000080000000100000000000000020000000000000001000000000000000200000000000000000000000000000001000100000000000000000000000000000000008035271900000000aafb2c0901000000eb10281900000000aafb2c0901000000
+  halka rol=0 parca=0 tepe=1
+    422000000 4448910000
+  alan_mm2 0  cevre_mm 0
+nesne 62 katman=0 stil=4 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 0
+    60000 0
+    60000 -20000
+    0 -20000
+  alan_mm2 1200000000  cevre_mm 160000
+nesne 63 katman=0 stil=4 halka=1
+  halka rol=0 parca=0 tepe=2
+    1200 -400
+    58800 -400
+  alan_mm2 0  cevre_mm 57600
+nesne 64 katman=SM_NOT stil=0 halka=1 tur=9 yuk=010000000000000009000000010000000000000002000000000000000100000000000000020000000000000000000000000000000100010000000000000000000000000000000000c0d127190000000090ac2c0901000000f046281900000000a0d32c0901000000
+  halka rol=0 parca=0 tepe=1
+    422040000 4448900000
+  alan_mm2 0  cevre_mm 0
+nesne 65 katman=SM_NOT stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    422000000 4448880000
+  alan_mm2 0  cevre_mm 0
+nesne 66 katman=SM_YOL stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    422030000 4448880000
+    422035000 4448880000
+    422035000 4448885000
+    422030000 4448885000
+  alan_mm2 25000000  cevre_mm 20000
+kapsam 421000000 4448000000 422079261 4449100000
+icerik-ozeti f223a35993cc364a
+gunluk
+  {"seq":1,"cmd":"core.import","args":{"dosya":"@TOHUM@/ncz/01-her-tur.ncz"},"origin":"test","crs":"TUREF/TM36","katman":"0"}
+  {"seq":2,"cmd":"core.import","args":{"dosya":"@TOHUM@/ncz/07-akilli-nesneler.ncz"},"origin":"test","crs":"TUREF/TM36","katman":"0"}

@@ -1,0 +1,11 @@
+# Netcad NCZ (io/ncz.hpp): tohum çizimlerinin okunuşu bayt bayt kilitli —
+# her türün karşılığı (daire daire, yay yay, yazı yazı), katman kodlarının
+# eklentiyle aynı okunuşu, renkler, kalınlıklar, akıllı nesnelerin sembol
+# blokları ve üyeleri. Koordinatlar metreden milimetreye bir kez yuvarlanır;
+# üç platformda aynı sayılar çıkmak zorundadır (§7.3). @TOHUM@ tests/fuzz/tohum'dur.
+#
+# Paftaların gerçek çerçevesi GDAL'ın PROJ'una bağlı olduğu için burada değil,
+# test_ncz.cpp'de GDAL denetimiyle sınanır; 01'in paftası ağa oturmayan bir
+# kutudur ve iki yapıda da kutu kalır.
+İÇEAKTAR "@TOHUM@/ncz/01-her-tur.ncz"
+İÇEAKTAR "@TOHUM@/ncz/07-akilli-nesneler.ncz"

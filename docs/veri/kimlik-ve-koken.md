@@ -85,7 +85,7 @@ Kilitli bir katmandaki nesnenin yalnız geometrisi değil **değeri, katmanı, s
 yazısı** da kilitlidir: ÖZNİTELİK, tablodan yazma, KATMANAT, STİLKOPYALA, STİL ve
 YAZIDÜZENLE onu adıyla reddeder.
 
-Bir [dış referansın](../komutlar/xref.md) — bağlı bir proje, DXF, DWG ya da CBS
+Bir [dış referansın](../komutlar/xref.md) — bağlı bir proje, DXF, DWG, Netcad NCZ ya da CBS
 dosyasının — nesnesi bu çizimin değil kendi dosyasınındır: burada değiştirilemez, çünkü
 bir sonraki yenilemede dosyasından yeniden okunur. Onu değiştirmek isteyen her iş
 reddedilir ve ret **yolu gösterir**: [YERELKOPYA](../komutlar/local_copy.md). Arayüzde

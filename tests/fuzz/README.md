@@ -14,6 +14,7 @@ PR (CLAUDE.md 6.7).
 | `kentos_fuzz_proje` | native project format (`.pcad`) | `tohum/proje/` |
 | `kentos_fuzz_dxf` | DXF import seam (GDAL/OGR + the KentOSCad conversion) | `tohum/dxf/` |
 | `kentos_fuzz_shp` | Shapefile import seam | `tohum/shp/` |
+| `kentos_fuzz_ncz` | the Netcad NCZ reader (`io/ncz.hpp`): the block walk, every geometry record, smart objects, attribute tables and the mapping into the document — hand-written, needs no library | `tohum/ncz/` |
 | `kentos_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions, with and without a numbered-point lookup behind `n()` | `tohum/komut/` |
 
 Still to land with their formats: DWG, GML/PlanGML, LAS/LAZ, GeoJSON and the
@@ -26,7 +27,7 @@ The targets are Clang-only (`-fsanitize=fuzzer`) and off by default:
 ```bash
 cmake -S . -B build/fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_COMPILER=clang++ -DKENTOS_BUILD_FUZZ=ON -DKENTOS_BUILD_APP=OFF
-cmake --build build/fuzz --target kentos_fuzz_proje kentos_fuzz_dxf kentos_fuzz_komut
+cmake --build build/fuzz --target kentos_fuzz_proje kentos_fuzz_dxf kentos_fuzz_komut kentos_fuzz_ncz
 
 mkdir -p build/fuzz/fuzz-corpus/proje build/fuzz/fuzz-corpus/dxf build/fuzz/fuzz-corpus/komut
 ./build/fuzz/bin/kentos_fuzz_proje build/fuzz/fuzz-corpus/proje tests/fuzz/tohum/proje \
@@ -49,7 +50,9 @@ each so a broken harness fails the build rather than the nightly job.
 **The corpora are exercised even without Clang.** `tests/unit/test_io.cpp` replays
 every seed in `tohum/proje/` through the same reader on every ordinary build, and
 `tests/unit/test_command.cpp` does the same for `tohum/komut/` through every entry
-point of the grammar, so the seeds never become dead weight.
+point of the grammar, and `tests/unit/test_ncz.cpp` for `tohum/ncz/` through
+İÇEAKTAR, so the seeds never become dead weight. The NCZ seeds are written by
+`scripts/ncz-tohum.py`; run it again after changing it and read the diff.
 
 ## What a seed is for
 
@@ -104,6 +107,17 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `komut/15-nokta-fonksiyonu.txt` | every point function and every shape of `kes`, nested calls, a suffixed angle inside a call, `son`, `yon=` |
 | `komut/16-nokta-fonksiyonu-bozuk.txt` | parallel directions, circles that do not meet, a missing `n()`, an argument list that fits no shape, unbalanced brackets |
 | `komut/17-nokta-derin.txt` | point functions nested past `detail::kMaxCallDepth` |
+| `ncz/01-her-tur.ncz` | every block type the reader knows, once: version, MPROJ, TILED_XML, layer table with a blank name, LEX.ST2 colours, point, line, circle, arc, text, symbol, closed and open multiline, compressed curve, box, map sheet, triangle, block reference, two unknown types, a container |
+| `ncz/02-akilli-nesne.ncz` | a SmartObject and the `S0` grid marks the reader then leaves out |
+| `ncz/03-gec-tablolar.ncz` | geometry before the tables that name its layers |
+| `ncz/04-bozuk-kayitlar.ncz` | records the reference drops in silence — too short, outside the world, no height, no area, one point, a compressed curve that goes bad — and bytes past the end: nothing readable, refused |
+| `ncz/05-oznitelik-tablolari.ncz` | two `@TAB` attribute tables after the block chain |
+| `ncz/06-kesik.ncz` | the first seed cut in the middle of a block: read as far as it goes, the cut said |
+| `ncz/07-akilli-nesneler.ncz` | Netcad 8 smart objects of every class, with their property lists and a plan note's RTF |
+| `ncz/08-paftalar.ncz` | a 1:1000 sheet index in TM39: four sheets stored as their bounding boxes, drawn as the turned quadrilaterals they are; one local sheet that keeps its box |
+| `ncz/09-paftalar-sistemsiz.ncz` | the same sheets with no declared system: boxes, said |
+| `ncz/10-cografi.ncz` | a geographic declaration over degrees: refused (io.md R20a) |
+| `ncz/11-cografi-bildirim-metre.ncz` | a geographic declaration over metres: the declaration is what is wrong, the numbers are read |
 
 ## When a crash is found
 

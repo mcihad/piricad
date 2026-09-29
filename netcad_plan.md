@@ -113,7 +113,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 | Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Yeni (şablon galerisi, favoriler) | 217387999 | `core.new` YENİ | ◐ | Boş çizim açar; proje şablonu ve galeri yok → U-06 |
-| Aç (NCZ, DWG/DXF/DGN, SHP/KML/MDB/SQLite/XLS, GML, NCN/XYZ, LAS/LAZ, raster, GPX/NMEA, ZIP, NCY) | 217387997 | `core.open` AÇ (.pcad), `core.import` İÇEAKTAR | ◐ | DXF, GPKG, SHP (okuma), DWG (derlemeye bağlı); ötekiler yok → I-01, I-02 |
+| Aç (NCZ, DWG/DXF/DGN, SHP/KML/MDB/SQLite/XLS, GML, NCN/XYZ, LAS/LAZ, raster, GPX/NMEA, ZIP, NCY) | 217387997 | `core.open` AÇ (.pcad), `core.import` İÇEAKTAR | ◐ | DXF, GPKG, SHP (okuma), NCZ (okuma; pafta indeksi gerçek biçimiyle — 29 Eylül), DWG (derlemeye bağlı); ötekiler yok → I-01, I-02 |
 | Projeye Ekle · Ayrı Projeler Olarak Aç | 217387997 | `core.import`, `core.xref` DIŞREFERANS | ◐ | Aynı anda tek belge açık (arayuz.md "Tek belge, sekmesiz") |
 | Dosya Ekle Yerleştir (`??` alanlarını sorar) | 217388012 | `core.insert` BLOKEKLE `dosya=` `deger=` | ✓ | Blok alanları `deger=` ile, eksikse sorulur |
 | Başka Projeden Özellik Ekle | 217388012 | — | ✗ | Katman/stil/blok tanımını başka projeden alma yok → U-06 |

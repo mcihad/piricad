@@ -273,6 +273,19 @@ public:
             if (!planet_properties(e, id)) return false;
         if (!stamp(e, id)) return false;
 
+        // A POINT'S HEIGHT, counted and not written: the float the reference
+        // reads as a point's Z is filled on few points of a real plan, and not
+        // always with a height (a 0,12 m next to a 1 088 m). Said, so that a
+        // surveyor who needs the heights takes them from a point list.
+        if (e.kind == ncz::Kind::Point && !e.coords.empty()) {
+            const double z = e.coords.front().z;
+            if (std::isfinite(z) && z != 0.0 && std::fabs(z) < 1e5) {
+                lowest_height_  = point_heights_ == 0 ? z : std::min(lowest_height_, z);
+                highest_height_ = point_heights_ == 0 ? z : std::max(highest_height_, z);
+                ++point_heights_;
+            }
+        }
+
         ++report_.entities;
         ++census_[name];
         ++read_[kind];
@@ -398,6 +411,16 @@ public:
                                            " mm); ekranda görmek için durum çubuğunda KALINLIK "
                                            "açık olmalı.");
         }
+        if (point_heights_ != 0) {
+            const auto metres = [](double v) {
+                return core::metres_fixed(core::mm_from_metres(v), 2, ',');
+            };
+            diag_.note(Severity::Skipped,
+                       std::to_string(point_heights_) + " noktada dosyanın yükseklik alanı dolu (" +
+                           metres(lowest_height_) + "–" + metres(highest_height_) +
+                           " m); bu okuyucu onu kot olarak yazmaz. Kot gerekiyorsa noktaları "
+                           "kotlarıyla bir nokta listesinden NOKTALAR ile aktarın.");
+        }
         if (h.smart_marks != 0)
             diag_.note(Severity::Info, std::to_string(h.smart_marks) +
                                            " ızgara işareti (katman 0'daki S0 sembolü) akıllı "
@@ -429,6 +452,16 @@ public:
         }
         report_.attribute_tables = tables.size();
         report_.attribute_rows   = rows;
+        // A CUT FILE, said: the reference walks on in silence (Header::truncated).
+        if (h.truncated)
+            diag_.note(
+                Severity::Warning,
+                "Dosya kesik ya da bozuk görünüyor: " + std::to_string(h.truncated_at) +
+                    ". bayttaki kayıt dosyanın bittiği yerden " +
+                    std::to_string(h.truncated_missing) +
+                    " bayt öteye uzanıyor. Sonrası kayıt kayıt değil, bayt bayt aranarak "
+                    "okundu; eksik nesne olabilir. Dosyayı Netcad'de açıp yeniden kaydedin.");
+
         if (!tables.empty())
             diag_.note(Severity::Skipped,
                        "Dosyada " + std::to_string(tables.size()) + " öznitelik tablosu var (" +
@@ -1263,6 +1296,9 @@ private:
     std::uint64_t widths_{0};
     std::int32_t thinnest_um_{0};
     std::int32_t widest_um_{0};
+    std::uint64_t point_heights_{0}; ///< points whose height field is filled, not written
+    double lowest_height_{0.0};
+    double highest_height_{0.0};
     std::uint64_t full_turns_{0};
     std::uint64_t flat_rotation_{0};
     std::uint64_t unwritable_cells_{0};

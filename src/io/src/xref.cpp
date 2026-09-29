@@ -209,11 +209,15 @@ command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, co
     // their EPSG codes where both resolve — `TUREF/TM30` is `EPSG:5254` — and
     // by name where not; a file in another system is carried into the
     // drawing's, and refused where nothing here can carry it.
-    // A DXF or a DWG is read IN the drawing's system (`read_drawing`'s `crs`,
-    // io.md R20), so only a project file, which carries its own, is compared.
+    // A DXF, a DWG or a Netcad NCZ is read IN the drawing's system
+    // (`read_drawing`'s `crs`, io.md R20; io/ncz.hpp never transforms), so only a
+    // file that carries its own system is compared. An NCZ taken for one was
+    // "carried" from the scratch drawing's default, TUREF/TM36, into the
+    // drawing's zone: 250 km for a TM39 plan.
     const std::string theirs_id = scratch.crs().id();
     const core::Crs& ours       = doc.crs();
-    const bool carries_its_own  = !looks_like_dxf(out.found_at) && !looks_like_dwg(out.found_at);
+    const bool carries_its_own  = !looks_like_dxf(out.found_at) && !looks_like_dwg(out.found_at) &&
+                                 !looks_like_ncz(out.found_at);
     if (carries_its_own && !theirs_id.empty() && !ours.id().empty()) {
         const core::Crs theirs = host != nullptr && host->on_crs_resolve
                                      ? host->on_crs_resolve(theirs_id)

@@ -192,9 +192,9 @@ XrefPanel::XrefPanel(Controller& controller, QWidget* parent)
     column->addWidget(tree_, 1);
 
     // AN EMPTY LIST IS AN INVITATION: what a reference is and how to make one.
-    empty_ = new QLabel(tr("Bu çizimde dış referans yok. Başlıktaki + ile bir proje, DXF ya "
-                           "da DWG dosyasını bağlayın: kendi koordinatlarında, yerinde çizilir, "
-                           "düzenlenmez ve dosyası değişince yenilenir."),
+    empty_ = new QLabel(tr("Bu çizimde dış referans yok. Başlıktaki + ile bir proje, DXF, "
+                           "DWG ya da Netcad NCZ dosyasını bağlayın: kendi koordinatlarında, "
+                           "yerinde çizilir, düzenlenmez ve dosyası değişince yenilenir."),
                         this);
     empty_->setWordWrap(true);
     // IT GIVES WAY: a sentence that wrapped to four lines made the whole dock

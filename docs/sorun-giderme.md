@@ -530,7 +530,7 @@ dosya ve satır numarasıyla yazar.
 **Sebep.** `AÇ` yalnızca KentOSCad proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
 başka bir biçim.
 
-**Çözüm.** DXF, GeoPackage gibi dış biçimler için `İÇEAKTAR` kullanın.
+**Çözüm.** DXF, GeoPackage, Netcad NCZ gibi dış biçimler için `İÇEAKTAR` kullanın.
 Bkz. [Dış veri alma](komutlar/import.md).
 
 ### `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor`

@@ -26,6 +26,7 @@
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -719,4 +720,41 @@ TEST_CASE("DIŞREFERANS: DXF'teki dış referans bloğu adıyla söylenir, boş 
     CHECK_EQ(r.members("ALTLIK"), std::size_t{0});
     CHECK_EQ(r.doc.blocks().at(altlik).flags, 0); // not an external reference here: no path
     CHECK(r.doc.find_layer("CIZGI") != core::kNoLayer);
+}
+
+TEST_CASE("DIŞREFERANS: Netcad NCZ çizimin sisteminde okunur, İÇEAKTAR gibi; dönüştürülmez")
+{
+    // An NCZ's coordinates are read in the drawing's system and never carried
+    // (io/ncz.hpp), exactly as a DXF's. It used to be taken for a file that
+    // carries its own system — the scratch drawing's default, TUREF/TM36 — and
+    // a TM39 drawing's base map was "carried" 250 km from TM36.
+    if (!domain::geodesy::Transform::available()) return; // PROJ off in this build
+    const std::string source =
+        (std::filesystem::path(KENTOS_FUZZ_DIR) / "tohum" / "ncz" / "01-her-tur.ncz").string();
+
+    Rig linked(true);
+    linked.run("AYAR core.crs.id EPSG:5257");
+    linked.run("DIŞREFERANS dosya=\"" + source + "\"");
+    CHECK(linked.said.find("dönüştürüldü") == std::string::npos);
+    std::vector<Point2> drawn = first_vertices(linked, "01-her-tur");
+
+    Rig imported(true);
+    imported.run("AYAR core.crs.id EPSG:5257");
+    imported.run("İÇEAKTAR \"" + source + "\"");
+    std::vector<Point2> read;
+    for (core::EntityId e = 0; e < imported.doc.entities().size(); ++e) {
+        if (!imported.doc.alive(e)) continue;
+        if ((imported.doc.entities().flags[e] & core::FlagInBlock) != 0) continue;
+        const core::RingSpan span =
+            imported.doc.geometry().rings_of(imported.doc.entities().slot[e]);
+        read.push_back(Point2{imported.doc.geometry().ring_xs(span.first)[0],
+                              imported.doc.geometry().ring_ys(span.first)[0]});
+    }
+    const auto by_place = [](const Point2& a, const Point2& b) {
+        return a.x != b.x ? a.x < b.x : a.y < b.y;
+    };
+    std::sort(drawn.begin(), drawn.end(), by_place);
+    std::sort(read.begin(), read.end(), by_place);
+    REQUIRE(!drawn.empty());
+    CHECK(drawn == read);
 }

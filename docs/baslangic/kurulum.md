@@ -194,7 +194,7 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
 | GPU canvas (`KENTOS_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `KENTOS_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
-| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
+| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır; Netcad NCZ okuma da GDAL istemez, yalnız pafta çerçeveleri GDAL'sız gerçek biçimiyle kurulamaz ve saklanan kutuyla çizilir | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
 
 Python artık eksik değil: `KENTOS_WITH_PYTHON=ON` ile gömülü CPython 3.14 betik motoru

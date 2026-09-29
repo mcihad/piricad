@@ -129,8 +129,9 @@ Task<void> attach(Context& ctx)
 {
     const Value file = ctx.argument("dosya");
     if (file.empty()) {
-        ctx.refuse(core::ErrorCode::InvalidArgument,
-                   "Bağlanacak dosyayı verin: DIŞREFERANS dosya=<proje, DXF ya da DWG dosyası>.");
+        ctx.refuse(
+            core::ErrorCode::InvalidArgument,
+            "Bağlanacak dosyayı verin: DIŞREFERANS dosya=<proje, DXF, DWG ya da NCZ dosyası>.");
         co_return;
     }
     const Value named = ctx.argument("ad");
@@ -399,8 +400,8 @@ Task<void> list(Context& ctx)
     report.set("dis_referanslar", std::move(rows));
     ctx.report(std::move(report));
     if (said.empty()) {
-        ctx.echo("Çizimde dış referans yok. DIŞREFERANS dosya=<yol> bir proje, DXF ya da DWG "
-                 "dosyasını bağlar.");
+        ctx.echo("Çizimde dış referans yok. DIŞREFERANS dosya=<yol> bir proje, DXF, DWG ya da "
+                 "Netcad NCZ dosyasını bağlar.");
         co_return;
     }
     ctx.echo("Dış referanslar:" + said);
@@ -450,8 +451,8 @@ KENTOS_COMMAND(xref)
                     "siler; listele: bağlı olanları sayar")
                     .en("action"),
                 Param::text("dosya", Arity::optional(),
-                            "ekle ve yol için dosya: proje, DXF ya da DWG; göreli yol proje "
-                            "dosyasının klasörüne göre okunur")
+                            "ekle ve yol için dosya: proje, DXF, DWG ya da NCZ; göreli yol "
+                            "proje dosyasının klasörüne göre okunur")
                     .en("file"),
                 Param::text("ad", Arity::optional(),
                             "Dış referansın adı; ekle'de verilmezse dosyanın adı")
@@ -468,9 +469,10 @@ KENTOS_COMMAND(xref)
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir proje, DXF ya da DWG dosyasını çizime dış referans olarak bağlar: yerinde "
-                   "çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi çizime "
-                   "yazılmaz.",
+        .summary =
+            "Bir proje, DXF, DWG ya da Netcad NCZ dosyasını çizime dış referans olarak bağlar: "
+            "yerinde çizilir, yakalanır, düzenlenmez; dosyası değişince yenilenir, kendisi "
+            "çizime yazılmaz.",
         .run = &run_xref,
     };
 }

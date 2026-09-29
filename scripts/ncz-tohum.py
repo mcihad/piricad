@@ -496,6 +496,24 @@ def seed_sheets_undeclared():
     return s
 
 
+def seed_geographic():
+    """A file that declares geographic coordinates and holds degrees: refused,
+    because the store counts millimetres and a degree read as a metre
+    collapses a parcel onto a point (io.md R20a)."""
+    s = mproj(1, 0, 0) + layer_table(['0', 'NOKTA'])
+    s += point(40.1875, 38.08125, 'A', layer=1)
+    s += point(40.19375, 38.0875, 'B', layer=1)
+    return s
+
+
+def seed_geographic_metres():
+    """A geographic declaration over numbers the size of metres: the declaration
+    is what is wrong, and the numbers are read."""
+    s = mproj(1, 0, 0) + layer_table(['0', 'NOKTA'])
+    s += point(N0, E0, 'A', layer=1)
+    return s
+
+
 def seed_truncated():
     """The first seed cut in the middle of a block."""
     whole = seed_everything()
@@ -512,6 +530,8 @@ SEEDS = {
     '07-akilli-nesneler.ncz': seed_planet,
     '08-paftalar.ncz': seed_sheets,
     '09-paftalar-sistemsiz.ncz': seed_sheets_undeclared,
+    '10-cografi.ncz': seed_geographic,
+    '11-cografi-bildirim-metre.ncz': seed_geographic_metres,
 }
 
 

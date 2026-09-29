@@ -138,9 +138,10 @@ Belgedeki koordinatlar her zaman milimetredir; ayar yalnız dosya sınırında i
 
 `cizim_birimi` **koordinat sisteminin birimi değildir.** Çizim her zaman metre sayan bir
 sistemde saklanır; GeoPackage ve Shapefile bu ayardan bağımsız olarak sistemlerinin
-metresiyle okunur ve yazılır. Metre dışında bir birimle yazılan DXF'in yanına `.prj`
-konmaz, çünkü `.prj`'yi okuyan bir CBS programı sayıları metre sayardı. Ayrıntı:
-[Dış veri biçimleri](../veri/dis-formatlar.md#koordinat-sistemi).
+metresiyle okunur ve yazılır; Netcad NCZ de bu ayardan bağımsız, metre olarak okunur.
+Metre dışında bir birimle yazılan DXF'in yanına `.prj` konmaz, çünkü `.prj`'yi okuyan bir
+CBS programı sayıları metre sayardı. Ayrıntı: [Dış veri
+biçimleri](../veri/dis-formatlar.md#koordinat-sistemi).
 
 Koordinat sistemi olarak yalnız metre sayan bir sistem kabul edilir. Coğrafi bir sistem
 (`AYAR koordinat_sistemi EPSG:4326`) reddedilir ve çizim değişmez: bkz.

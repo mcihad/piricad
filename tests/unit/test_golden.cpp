@@ -15,6 +15,7 @@
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
+#include "kentos_cad/io/service.hpp"
 #include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
@@ -144,12 +145,29 @@ std::string dump_document(const core::Document& doc)
 }
 
 /// The document half plus the journal — the whole fixture.
+/// Where a scenario's `@TOHUM@` points: the seed corpora, which a scenario may
+/// read (an NCZ import). The expected dump names the placeholder, not this
+/// machine's checkout, so it is the same file on every machine.
+const std::string& seeds_dir()
+{
+    static const std::string dir = std::string(KENTOS_FUZZ_DIR) + "/tohum";
+    return dir;
+}
+
+std::string replace_all(std::string text, const std::string& from, const std::string& to)
+{
+    for (std::size_t at = text.find(from); at != std::string::npos;
+         at             = text.find(from, at + to.size()))
+        text.replace(at, from.size(), to);
+    return text;
+}
+
 std::string dump(const core::Document& doc, const Journal& journal)
 {
     std::string out = dump_document(doc);
 
     out += "gunluk\n";
-    std::istringstream lines(journal.canonical());
+    std::istringstream lines(replace_all(journal.canonical(), seeds_dir(), "@TOHUM@"));
     std::string line;
     while (std::getline(lines, line))
         out += "  " + line + "\n";
@@ -164,6 +182,9 @@ struct Rig
     Journal journal;
     UndoStack undo;
     Bus bus{doc, reg, journal, undo};
+    // The file engine, for a scenario that reads a file (`ncz.txt` imports the
+    // NCZ seeds): without it İÇEAKTAR is refused as in a build with no engine.
+    io::FileService files{bus};
 
     Rig()
     {
@@ -211,7 +232,9 @@ std::string replay(const fs::path& scenario, std::string& error)
             const auto begin = line.find_first_not_of(" \t\r");
             if (begin == std::string::npos || line[begin] == '#') continue;
 
-            if (auto r = rig.bus.execute_line(line, Origin::Test); !r) {
+            if (auto r =
+                    rig.bus.execute_line(replace_all(line, "@TOHUM@", seeds_dir()), Origin::Test);
+                !r) {
                 error = "satır " + std::to_string(lineno) + ": " + r.error().message;
                 return {};
             }
@@ -238,7 +261,8 @@ bool run_into(Rig& rig, const fs::path& scenario, std::string& error)
         ++lineno;
         const auto begin = line.find_first_not_of(" \t\r");
         if (begin == std::string::npos || line[begin] == '#') continue;
-        if (auto r = rig.bus.execute_line(line, Origin::Test); !r) {
+        if (auto r = rig.bus.execute_line(replace_all(line, "@TOHUM@", seeds_dir()), Origin::Test);
+            !r) {
             error = "satır " + std::to_string(lineno) + ": " + r.error().message;
             return false;
         }

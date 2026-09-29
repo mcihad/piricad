@@ -7,8 +7,8 @@ ya da makineye taşıdığınızda neyin kendiliğinden bulunduğunu bileceksini
 
 ## Ne yapar
 
-Bir proje (`.pcad`), DXF, DWG ya da **CBS dosyasını** (GeoPackage, Shapefile) çizime
-**dış referans** olarak bağlar. Dosya
+Bir proje (`.pcad`), DXF, DWG, **Netcad NCZ** ya da **CBS dosyasını** (GeoPackage, Shapefile)
+çizime **dış referans** olarak bağlar. Dosya
 çizimde, **kendi koordinatlarında, yerinde** çizilir; köşelerine, merkezlerine ve
 kenarlarına her zamanki gibi yakalanırsınız. Ama **düzenlenmez**: onu değiştirmenin yeri
 kendi dosyasıdır. Kaynak değişince `DIŞREFERANS islem=yenile` değişikliği getirir; çizimi
@@ -67,11 +67,19 @@ köşe PROJ ile, daireleri, yazıları ve blokları o noktadaki yerel dönme ve 
 mesajı hangi sistemden geldiğini söyler: `EPSG:5255 sisteminden çizimin sistemine
 dönüştürüldü`. İki sistem, ikisi de çözülebiliyorsa EPSG kodlarıyla karşılaştırılır
 (`TUREF/TM30` ile `EPSG:5254` aynıdır). PROJ'suz bir yapıda böyle bir dosya adıyla
-reddedilir. DXF ve DWG dosyaları zaten çizimin sisteminde okunur.
+reddedilir. DXF, DWG ve Netcad NCZ dosyaları zaten çizimin sisteminde okunur.
 
 Çizimin kendisini DÖNÜŞTÜR ile başka bir sisteme geçirdiğinizde dış referanslar da
 **dosyalarından, yeni sisteme dönüştürülerek yeniden okunur** — aynı işlemin içinde:
 tek Ctrl+Z çizimi de referanslarını da geri getirir.
+
+### Netcad NCZ altlığı
+
+Bir Netcad NCZ dosyası ([Netcad NCZ çizimleri](../veri/netcad-ncz.md)) bütün katmanlarıyla
+bağlanır; koordinatları çizimin sisteminde, dönüştürülmeden okunur. [İÇEAKTAR](import.md)'ın
+koordinat sistemi raporu burada **yazılmaz**: dosyanın bildirdiği dilim çizimin diliminden farklı
+olsa da bağlama bunu söylemez. Bir NCZ'nin sistemine güvenmiyorsanız önce boş bir çizimde
+`İÇEAKTAR` ile açıp raporuna bakın. Derece sayan coğrafi bir NCZ bağlanmaz.
 
 ### İç içe dış referanslar
 
@@ -109,7 +117,7 @@ DIŞREFERANS islem=kaldir ad=<ad>
 | Parametre | Ne işe yarar |
 |---|---|
 | `islem` | `ekle` (varsayılan), `yenile`, `bosalt`, `yukle`, `yol`, `bagla`, `kaldir` ya da `listele` |
-| `dosya` | `ekle` ve `yol` için dosya: proje, DXF ya da DWG. Göreli yol proje dosyasının klasörüne göre okunur; hiç kaydedilmemiş bir çizimde çalışma klasörüne göre |
+| `dosya` | `ekle` ve `yol` için dosya: proje, DXF, DWG ya da Netcad NCZ. Göreli yol proje dosyasının klasörüne göre okunur; hiç kaydedilmemiş bir çizimde çalışma klasörüne göre |
 | `ad` | Dış referansın adı. `ekle`'de verilmezse dosyanın adı olur; içinde `|` olamaz |
 | `nokta` | `ekle` için referansın konduğu nokta. Verilmezse başlangıç noktası (0,0): dosya kendi koordinatlarında, yerinde çizilir |
 | `olcek` | `ekle` için ölçek; varsayılan 1 |
@@ -249,6 +257,8 @@ yazılır.
 | `uyarı: 'X' dış referansı yüklenemedi: … Çizim açıldı; referans boş çizilir. …` | Açılışta kaynak okunamadı | `islem=yol` ile yeni yerini gösterin |
 | `uyarı: 'X' dış referansı kayıtlı yerinde yoktu, proje klasöründe bulundu: …` | Kaynak proje dosyasının yanında adıyla bulundu | Bir şey gerekmez; kaydettiğinizde yeni yer yazılır |
 | `Dosya motoru bağlı değil; dış referans bu yapıda okunamıyor.` | Dosya motoru olmayan bir istemci | Uygulamayı ya da dosya motoru bağlı bir istemciyi kullanın |
+| `Dosya coğrafi koordinatlarda (…) ve bütün koordinatları derece aralığında. …` | Bağlanan Netcad NCZ derece sayan coğrafi bir sistem bildiriyor | Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden kaydedin ([Netcad NCZ](../veri/netcad-ncz.md#koordinat-sistemi)) |
+| `'…' okunabilir geometri içermiyor; çizime hiçbir şey eklenmedi.` | Bağlanan Netcad NCZ dosyasından hiçbir nesne okunamadı | [Netcad NCZ ▸ Hatalar](../veri/netcad-ncz.md#rapor-satırları-ve-hatalar) |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

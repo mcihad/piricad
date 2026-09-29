@@ -68,8 +68,8 @@ gösterir.
 ## Dış referans
 
 Tanımın üyeleri **başka bir dosyadan** da gelebilir: [DIŞREFERANS](../komutlar/xref.md) bir
-proje, DXF ya da DWG dosyasını böyle bir tanım olarak bağlar. Referans her blok referansı
-gibi çizilir, seçilir ve yakalanır; tanımın içi ise dosyanındır — düzenlenmez,
+proje, DXF, DWG ya da Netcad NCZ dosyasını böyle bir tanım olarak bağlar. Referans her blok
+referansı gibi çizilir, seçilir ve yakalanır; tanımın içi ise dosyanındır — düzenlenmez,
 patlatılmaz, proje dosyasına yazılmaz, her açılışta ve her yenilemede dosyasından okunur.
 Dosyanın katmanları ve blokları `AD|KATMAN`, `AD|BLOK` adıyla gelir.
 

@@ -435,6 +435,42 @@ Bundled in-tree
   (Shewchuk predicates.c will also be vendored here; public domain, single
    file, and §9.2 marks it as required rather than optional.)
 
+Ported from third-party code
+----------------------------
+
+Not a dependency: nothing below is linked, fetched or vendored. It is someone
+else's program translated into this one, which makes the files a derivative work
+of it, so its copyright notice and its licence travel with them.
+
+  Netcad NCZ reader       GPL-2.0-or-later      NCZ Reader 1.4.3
+      Copyright (C) 2026 Erdinç Örsan ÜNAL.
+      The QGIS plugin "NCZ Reader" (https://github.com/erdincunal/Jeomatik-NCZ-Reader),
+      licensed under the GNU General Public License version 2 "or (at your
+      option) any later version". This program takes that option and uses the
+      port under GPL-3.0-or-later, like the rest of the tree.
+
+      Ported from it:
+          src/io/src/ncz_format.hpp, src/io/src/ncz_format.cpp
+              the NCZ block reader: `ncz_pure.py`, function by function, every
+              block rule, offset, validity test and heuristic kept, so a file
+              reads into the same records with the same values; the places the
+              port differs on purpose are listed at the top of ncz_format.hpp.
+          src/io/src/ncz_reader.cpp, src/io/include/kentos_cad/io/ncz.hpp
+              the reading of an NCZ into a drawing follows `ncz_reader.py` and
+              `ncz_pure.py`: the entity kinds, the seventeen attribute fields.
+      Written for KentOSCad, not from the plugin: the Netcad 8 smart objects and
+      their symbols (src/io/src/ncz_symbols.*), map sheet frames recovered in the
+      file's projection (src/io/src/ncz_sheets.*), the sweep of unknown blocks
+      for geometry, the line width at +28, the cut-file report, and the mapping
+      to this program's entities, layers, columns and blocks.
+
+      "Jeomatik" and the plugin's logo are the author's trademarks and are not
+      licensed under the GPL; the name appears here only to identify the source,
+      and the logo is not included anywhere in this repository.
+
+      Article 2.7 applied and found no library: NCZ is Netcad's own binary format,
+      GDAL has no driver for it, and this plugin is the one open implementation.
+
 Deliberately hand-written
 -------------------------
 

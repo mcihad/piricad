@@ -1,7 +1,7 @@
 # İÇEAKTAR — Dış Veri Alma
 
 Başka bir programdan ya da kurumdan veri alan kullanıcı için; bu sayfayı
-bitirdiğinizde bir DXF ya da GeoPackage dosyasını çizime ekleyebilecek,
+bitirdiğinizde bir DXF, GeoPackage ya da Netcad NCZ dosyasını çizime ekleyebilecek,
 koordinat sisteminin nasıl taşındığını ve içe aktarmanın tek adımda nasıl geri
 alındığını bileceksiniz.
 
@@ -49,7 +49,7 @@ Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine a
 | Parametre | Ne işe yarar |
 |---|---|
 | `dosya` | İçe aktarılacak dosyanın yolu. Zorunlu |
-| `bicim` | Sürücü adı: `DXF` ya da `GPKG`. Verilmezse uzantıdan bulunur |
+| `bicim` | Sürücü adı: `DXF`, `GPKG` ya da `NCZ`. Verilmezse uzantıdan bulunur |
 | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır. Verilmezse dosyadaki bütün katmanlar okunur |
 | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; `*` hepsini okur. Verilmezse hiçbir alan okunmaz, yalnız geometri gelir |
 
@@ -219,9 +219,27 @@ OGR'ın kendi defter kayıtlarıdır ve hiçbir zaman sunulmaz.
 `alanlar` verilmezse dosyanın kaç alanı olduğu raporda yazılır, böylece bir şeyin
 okunmadığı sessizce geçmez.
 
+### Netcad NCZ
+
+Netcad'in kendi çizim dosyası (`.ncz`) uzantısından tanınır ve doğrudan okunur; uzantısı
+yanıltıcı bir dosyayı `bicim=NCZ` NCZ diye açar. Nesneler katmanlarıyla, renkleriyle ve çizgi
+kalınlıklarıyla gelir. Koordinatlar **dönüştürülmez**: çizimin sisteminde okunur ve dosyanın
+bildirdiği dilim çizimin diliminden farklıysa uyarı yazılır; bu yüzden içe aktarmadan önce
+`AYAR koordinat_sistemi` ile çizimin sistemini kurun. NCZ'de `alanlar` dosyadan gelen bir liste
+değil, okuyucunun sabit on yedi alanının adıdır (`layer_name`, `entity_type`, `label`…); `*`
+hepsini sütun yapar.
+
+```
+İÇEAKTAR "plan.ncz"
+İÇEAKTAR dosya="plan.ncz" katmanlar="PINDEX_1000" alanlar="layer_name,label"
+```
+
+Nesne eşlemesi, akıllı nesneler, pafta çerçeveleri, koordinat sistemi ve raporun her satırı:
+[Netcad NCZ çizimleri](../veri/netcad-ncz.md).
+
 ### Arayüz
 
-**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **iki adımlı içe
+**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **üç sayfalık içe
 aktarma sihirbazını** açar.
 
 **1 · DOSYA.** Sayfanın en üstünde ne olacağı yazar: dosya önce yalnızca okunur,
@@ -333,6 +351,18 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `İçe aktarma iptal edildi; çizim değişmedi.` | Sihirbazda **Okumayı durdur**'a basıldı | Yeniden **İleri**'ye basın |
 | `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
 | `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulup dönüştürün ve yeniden aktarın |
+| `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
+| `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
+| `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada çizgi, alan, nokta ya da yazı yok; ya da hepsi kâğıt alanında | Dosyayı bir CAD programında açıp model alanında ne olduğuna bakın |
+| `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |
+| `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
+| `'...' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
+| `'...' katmanı kilitli.` | Hedef katman kilitli | Katmanın kilidini açın |
+| `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
+| `Dosya coğrafi koordinatlarda (…) ve bütün koordinatları derece aralığında. …` | Bir Netcad NCZ dosyası derece sayan coğrafi bir sistem bildiriyor | Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden kaydedin ([Netcad NCZ](../veri/netcad-ncz.md#koordinat-sistemi)) |
+| `'…' okunabilir geometri içermiyor; çizime hiçbir şey eklenmedi.` | Bir Netcad NCZ dosyasından hiçbir nesne okunamadı: dosya bozuk, çizim boş ya da `katmanlar=` hiçbir katmanla eşleşmedi | [Netcad NCZ ▸ Hatalar](../veri/netcad-ncz.md#rapor-satırları-ve-hatalar) |
+
+Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 
 ## Bozuk öğeler atlanır, sayılır ve söylenir
 
@@ -353,13 +383,3 @@ Kayıp **sessiz de değildir** — atlanan her şey sayılır ve sebebi yazılı
 
 Dosyanın tamamı okunamıyorsa (bozuk başlık, tanınmayan biçim) durum farklıdır:
 o zaman içe aktarma **tamamen** başarısız olur ve çizim değişmez.
-| `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
-| `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
-| `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada çizgi, alan, nokta ya da yazı yok; ya da hepsi kâğıt alanında | Dosyayı bir CAD programında açıp model alanında ne olduğuna bakın |
-| `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |
-| `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
-| `'...' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
-| `'...' katmanı kilitli.` | Hedef katman kilitli | Katmanın kilidini açın |
-| `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
-
-Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

@@ -81,6 +81,19 @@ constexpr bool container_type(std::uint8_t type) noexcept
            type == 132 || type == 150 || type == 180;
 }
 
+/// A cut block, told from bytes that only look like a header (Header::truncated):
+/// a type the reference reads and a length a block has. Where the block chain
+/// ends and a file's attribute tables begin, the next four bytes read as a
+/// length of a gigabyte or more; a real block is kilobytes.
+constexpr std::uint64_t kLargestBlock = std::uint64_t{16} << 20;
+
+constexpr bool cut_block(std::uint8_t type, std::uint64_t block_size) noexcept
+{
+    const bool known = type == kVersion || type == kNamedData || type == kLayerTable ||
+                       type == kGeometry || type == kGeometryExtended || container_type(type);
+    return known && block_size <= kLargestBlock;
+}
+
 // ------------------------------------------------------ Python arithmetic ----
 
 /// Python's `x % y` for floats: the sign of the divisor, and `+0.0` for an
@@ -243,6 +256,11 @@ public:
     {
         std::size_t cursor     = 0;
         std::size_t next_check = 0;
+        // Where the next block begins if the file is whole: the start, then the
+        // end of each block read. A block found there that overruns the file is
+        // the cut (Header::truncated); one found by the byte walk after a
+        // damaged stretch is a guess, and is not reported as one.
+        std::size_t aligned = 0;
         while (cursor + 5 < size_) {
             if (cursor >= next_check) {
                 if (stop.stop_requested()) return Outcome::Cancelled;
@@ -253,6 +271,12 @@ public:
             const std::uint64_t block_size = static_cast<std::uint64_t>(u32(cursor + 1)) + 4;
             const std::uint64_t total      = block_size + 1;
             if (block_size < 4 || cursor + total > size_) {
+                if (cursor == aligned && cursor + total > size_ && !header_.truncated &&
+                    cut_block(data_[cursor], block_size)) {
+                    header_.truncated         = true;
+                    header_.truncated_at      = cursor;
+                    header_.truncated_missing = cursor + total - size_;
+                }
                 ++cursor;
                 continue;
             }
@@ -287,6 +311,7 @@ public:
                 }
             }
             cursor += static_cast<std::size_t>(advance);
+            aligned = cursor;
         }
         return stopped_ ? Outcome::Stopped : Outcome::Complete;
     }

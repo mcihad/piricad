@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Netcad NCZ içe aktarma
+
+- **İÇEAKTAR ve DIŞREFERANS Netcad çizimini (.ncz) doğrudan okur**, her yapıda (kütüphane
+  gerekmez): noktalar (adı `nokta_no` sütununa), çizgiler, çoklu çizgiler, alanlar, daire
+  daire ve yay yay olarak (72 ya da 48 kısa kenar değil), yazılar, semboller ve bloklar;
+  dosyanın katmanları, renkleri ve çizgi kalınlıkları. Netcad 8'in akıllı nesneleri
+  (Yerleşim, Yapılaşma, Yol, Plan Notu, Fonksiyon Adı) sembol bloğu olarak çizilir,
+  değerleri sütunlardadır. `katmanlar=` yalnız adı verilen katmanları, `alanlar=*`
+  on yedi öznitelik alanını getirir.
+- **Pafta indeksleri gerçek biçimiyle çizilir** (PINDEX_1000 gibi katmanlar): dosya bir
+  paftanın yalnız sınırlayıcı kutusunu saklar; okuyucu, dosyanın bildirdiği TM ya da UTM
+  diliminde paftanın gerçek, dönük dörtgenini kurar. Kutu olduğu gibi çizilseydi komşu
+  paftalar birkaç metre üst üste binerdi (Suşehri planında 5,5 m). Sistem bildirilmemişse
+  ya da pafta yerel bir dikdörtgense kutu kalır ve bu söylenir.
+- **Koordinatlar dönüştürülmez**: dosyanın bildirdiği sistem çizimin sistemiyle
+  karşılaştırılır, dilimler farklıysa uyarı verilir (TM39 bir dosya TM36 bir çizime).
+  Coğrafi koordinatlı dosya reddedilir.
+- **Her kayıp söylenir**: tanınmayan türler, okunamayan kayıtlar, bir nesneye bağlanmamış
+  öznitelik tabloları, kesik dosya (hangi baytta kesildiği) ve çizimin geri kalanından
+  çok uzağa düşmüş nesneler.
+- Okuyucu, Erdinç Örsan ÜNAL'ın QGIS eklentisi NCZ Reader 1.4.3'ün ayrıştırıcısının
+  taşımasıdır (GPL-2.0-or-later, bu programda GPL-3.0-or-later altında); ayrıntı
+  `NOTICE`'ta.
+
 ### Değişti — TAMPON gerçek yaylı; yaya bağlı yazı yay üstündeki yerini korur (O-3)
 
 - **TAMPON'un yuvarlak köşe ve uçları gerçek yaydır** (öntanımlı `kose=yuvarlak`,

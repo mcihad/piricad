@@ -98,6 +98,9 @@ paylaşımının ulusal çerçevesi.
 
 **PlanGML** — İmar planlarının sayısal değişimi için kullanılan GML tabanlı veri biçimi.
 
+**NCZ** — Netcad'in kendi ikili çizim biçimi (`.ncz`). KentOSCad onu okur, yazmaz.
+Bkz. [Netcad NCZ çizimleri](veri/netcad-ncz.md).
+
 **e-Plan** — Mekânsal planların elektronik ortamda sunulduğu otomasyon sistemi.
 
 **TUSAGA-Aktif / CORS-TR** — Türkiye Ulusal Sabit GNSS Ağı. Gerçek zamanlı hassas konum
@@ -315,6 +318,12 @@ antet. Tanımın nesneleri kendi başına çizilmez ve düzenlenmez.
 
 **Ekleme noktası** — Bir blok referansının yerleştirildiği nokta; yakalama modu
 `EKLEME`.
+
+**Akıllı nesne** — Netcad 8'in Planet modülünün plana koyduğu, resmini değil özelliklerini
+(nizam, kat, TAKS, KAKS, yol genişliği…) dosyaya yazdığı sembol; Netcad onu ekranda
+özelliklerinden çizer. KentOSCad NCZ içe aktarırken onu blok referansı olarak çizer ve
+değerlerini sütunlara yazar. Bkz.
+[Netcad 8 akıllı nesneleri](veri/netcad-ncz.md#netcad-8-akıllı-nesneleri).
 
 **Şişkinlik** — DXF'te bir çoklu çizgi kenarının yay olduğunu söyleyen sayı (bulge):
 kirişin yarısına oranla yayın yüksekliği. Okunurken yayın merkezine ve yarıçapına

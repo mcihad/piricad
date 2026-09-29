@@ -16,6 +16,7 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 | AutoCAD DWG | `.dwg` | evet¹ | **hayır** — aşağıya bakın |
 | ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
+| Netcad NCZ | `.ncz` | evet | **hayır** — aşağıya bakın |
 
 ¹ DWG okuma bir yapı seçeneğidir ve **kapalı gelir**: LibreDWG'nin okuyucusu bu
 sürümde altı nesne türünü tanır ve derlemesi kendi uyarılarını taşır. Açmak için
@@ -74,6 +75,16 @@ Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
 LibreDWG onları öyle verir; DXF yolunda libdxfrw da öyle verir. Yalnız libdxfrw
 kapalı derlenmiş bir yapıda GDAL çizgi parçalarına böler ve KentOSCad merkezle
 yarıçapı geri kurar — nasıl olduğu aşağıda.
+
+### Netcad NCZ okunur, yazılmaz
+
+Netcad'in kendi çizim biçimi **NCZ** doğrudan okunur; okuma bir kütüphaneye dayanmaz. Nesneler
+katmanlarıyla, renkleriyle ve çizgi kalınlıklarıyla gelir; daire ve yay gerçek eğridir, Netcad 8'in
+akıllı nesneleri (yerleşim, yapılaşma ve yol genişliği sembolleri…) çizilir, paftalar dosyanın
+bildirdiği dilimde gerçek çerçeveleriyle kurulur. Koordinatlar **dönüştürülmez**; çizimin
+sisteminde olduğu gibi okunur. Yazma yoktur: Netcad'e çizim vermek için DXF olarak dışa aktarın.
+
+Ayrıntı: [Netcad NCZ çizimleri](netcad-ncz.md).
 
 ### Shapefile dört dosyadır
 
@@ -165,6 +176,7 @@ ve ret mesajı dosyayı metre sayan bir sisteme dönüştürmenin yolunu söyler
 |---|---|
 | GeoPackage | Dosyanın içinde. Ek bir şey gerekmez |
 | DXF | **Taşımaz.** Yanındaki aynı adlı `.prj` dosyasından okunur |
+| Netcad NCZ | Dosyanın içinde, MPROJ ve TILED_XML bloklarında; olmayabilir. Okunur ve söylenir, ama koordinatlar **dönüştürülmez** ([ayrıntı](netcad-ncz.md#koordinat-sistemi)) |
 
 DXF'in koordinat sistemi için yeri yoktur — bu biçimin kendi eksiğidir, KentOSCad'in
 değil. Bu yüzden:
@@ -357,7 +369,9 @@ etmez. Dosyayı diske indirip öyle açın.
 
 KentOSCad, GDAL kütüphanesi olmadan da derlenebilir. O yapıda `İÇEAKTAR` ve
 `DIŞAAKTAR` **hata döndürür** ve hangi paketin kurulması gerektiğini söyler —
-sessizce boş bir katman döndürmez.
+sessizce boş bir katman döndürmez. Netcad NCZ bunun dışındadır: okuma bir kütüphane
+istemediği için `İÇEAKTAR` ve `DIŞREFERANS` onu GDAL'sız yapıda da okur (İçe Aktar penceresi ise
+GDAL olmadan açılmaz).
 
 Durumu görmek için:
 
@@ -388,4 +402,5 @@ make doctor
 | `'...' yerine tam konamadı. Yerine konan: … Konamayan: …` | Takımdan bir dosya başka bir programda açık ya da yerinde bir klasör var | Dosyaları kullanan programı kapatıp yineleyin ([Yazma yarıda kalırsa](#yazma-yarıda-kalırsa)) |
 | `'....prj' kaldırıldı: önceki bir metre dışa aktarımından kalmıştı …` (not) | Metre DXF'in yerine milimetre DXF yazıldı | Bir şey gerekmez; `.prj` isteniyorsa `AYAR çizim_birimi metre` ile yeniden aktarın |
 
+Netcad NCZ'ye özgü iletiler: [Netcad NCZ çizimleri](netcad-ncz.md#rapor-satırları-ve-hatalar).
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).

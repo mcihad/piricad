@@ -244,6 +244,14 @@ struct Header
     std::uint64_t swept_blocks{0};
     std::uint64_t swept_entities{0};
 
+    /// A block that begins where the one before it ended but runs past the end
+    /// of the file: the file was cut, or that block's length is damaged. The
+    /// reference then walks on byte by byte and says nothing; the reader says
+    /// where it happened and how far past the end the block reaches.
+    bool truncated{false};
+    std::uint64_t truncated_at{0};      ///< the block's offset, bytes from the start
+    std::uint64_t truncated_missing{0}; ///< how many bytes it reaches past the end
+
     /// SmartObjects kept as a point because they have no usable rectangle.
     std::uint64_t point_smart_objects{0};
 
