@@ -708,7 +708,42 @@ void MainWindow::buildRibbon()
                                    tr("Bölgenin içine tıklayın: çevreleyen çizgilerin kapattığı "
                                       "alan taranır, içindeki kapalı çizgiler boş kalır"));
     hatchInside->setProperty(kIgnoresSelectionProperty, true);
-    family(fills, {actHatch_, hatchInside}, Size::Large, tr("Tarama"));
+    // NETCAD'S "DİĞER OBJELER SEÇ" (plan open question 18): what is selected —
+    // a parcel's number, a block, a point — is left free of the pattern, and the
+    // region is the one clicked. The line is built from the selection when the
+    // button is pressed, so it is the one a user would type, and the journal's.
+    auto* hatchExclude = new QAction(tr("Tarama — seçilenler dışarıda"), this);
+    hatchExclude->setCheckable(true);
+    const QString excludeTip =
+        tr("Önce taramadan boş kalacak yazıları, blokları ya da noktaları seçin, sonra bölgenin "
+           "içine tıklayın: seçilenler taramada boş kalır (TARAMA yontem=ic disarida=…)");
+    hatchExclude->setToolTip(excludeTip);
+    hatchExclude->setStatusTip(excludeTip);
+    hatchExclude->setData(static_cast<int>(Glyph::HatchExclude));
+    hatchExclude->setProperty(kToolCommand, QStringLiteral("TARAMA yontem=ic disarida=…"));
+    hatchExclude->setProperty(kIgnoresSelectionProperty, true);
+    hatchExclude->setObjectName(QStringLiteral("toolAction.TARAMA yontem=ic disarida"));
+    drawingTools_->addAction(hatchExclude);
+    connect(hatchExclude, &QAction::triggered, this, [this, hatchExclude] {
+        QStringList keys;
+        for (const core::EntityKey k : controller_->bus().selection().keys())
+            keys << QStringLiteral("disarida=%1").arg(static_cast<qulonglong>(core::raw(k)));
+        // NOTHING SELECTED: said where the command line answers, since that is
+        // where the eye goes after a press that started nothing.
+        if (keys.isEmpty()) {
+            hatchExclude->setChecked(false);
+            onEcho(tr("Tarama — seçilenler dışarıda: önce taramadan boş kalacak yazıları, "
+                      "blokları ya da noktaları seçin, sonra bu düğmeyle bölgenin içine "
+                      "tıklayın."));
+            return;
+        }
+        // ONE SHOT: the objects left out belong to this region alone, so the
+        // run re-arms nothing — a re-armed line would carry them to the next
+        // region — and the selection stays, the way a grip edit leaves it.
+        controller_->beginOneShot(QStringLiteral("TARAMA yontem=ic ") +
+                                  keys.join(QLatin1Char(' ')));
+    });
+    family(fills, {actHatch_, hatchInside, hatchExclude}, Size::Large, tr("Tarama"));
     if (!ribbonLive_->patterns.empty()) {
         SARibbonGallery* gallery = fills->addGallery(false);
         gallery->setObjectName(QStringLiteral("ribbonHatchGallery"));

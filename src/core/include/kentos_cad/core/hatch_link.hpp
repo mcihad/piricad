@@ -100,6 +100,32 @@ struct HatchBoundary
 /// every closed run of it. Empty for an object that closes nothing.
 std::vector<std::vector<Point2>> closed_loops_of(const Document& doc, EntityId e);
 
+/// THE GROUND ONE OBJECT KEEPS FREE OF A HATCH drawn over it, the answer to
+/// Netcad's `Diğer Objeler Seç` and `TARAMA disarida=`: a caption its letters' box, a closed object
+/// its face, a block or a point its box, an open line a strip `margin` wide on
+/// either side. Grown by `margin` all round, with mitred corners and square
+/// ends: Clipper2 works a round one out with sines, which are not the same bits
+/// on every platform (CLAUDE.md 2.5). Its normals go through `hypot`, which is
+/// exact along an axis, so an upright caption's box grows alike everywhere.
+/// Empty when the object keeps nothing free: an open line, or a point, with no
+/// margin.
+std::vector<std::vector<Point2>> hatch_cutout(const Document& doc, EntityId e, Mm margin);
+
+/// What `hatch_without` left of a hatch.
+struct HatchCut
+{
+    HatchBoundary boundary;        ///< the loops left, nested again
+    std::vector<std::size_t> idle; ///< the cutouts, by index, that took nothing out
+};
+
+/// `boundary` with every cutout taken out of it — one entry per object, its
+/// loops as `hatch_cutout` gives them — the cutouts merged first, so two
+/// captions that overlap make one hole. Straight edges, Clipper2's work
+/// (CLAUDE.md 2.11): a hatch's loops are already the chords its arcs are drawn
+/// with. An error when nothing is left to hatch.
+Result<HatchCut> hatch_without(const HatchBoundary& boundary,
+                               std::span<const std::vector<std::vector<Point2>>> cutouts);
+
 /// Closed `loops` nested by containment in `style` (see `hatch_boundary`): the
 /// rings a hatch's own loops make when there are no sources to read them from.
 HatchBoundary nest_loops(std::vector<std::vector<Point2>> loops, std::uint16_t style);

@@ -2783,6 +2783,51 @@ TEST_CASE("PROOF: TARAMA yontem=ic — arayüz, komut satırı, betik ve oynatma
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
 }
 
+TEST_CASE("PROOF: TARAMA disarida= — arayüz, komut satırı, betik ve oynatma aynı taramayı çizer")
+{
+    // Plan open question 18. The parcel's number left free, half a metre round;
+    // the GUI names the caption the way the ribbon's button does and clicks.
+    const std::vector<std::string> setup{"ALAN 0,0 20,0 20,10 0,10", "METİN 8,4 \"101\" 1000"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    {
+        auto started =
+            gui.bus.begin_interactive("TARAMA desen=ANSI31 disarida=2 pay=0.5", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::ids({1})).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    REQUIRE(
+        cli.bus
+            .execute_line("TARAMA nesneler=1 desen=ANSI31 disarida=2 pay=0.5", Origin::CommandLine)
+            .ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.area","args":{"noktalar":[[0,0],[20000,0],[20000,10000],[0,10000]]}},
+                      {"cmd":"core.text","args":{"noktalar":[[8000,4000]],"yazi":"101","yukseklik":1000}},
+                      {"cmd":"core.hatch","args":{"nesneler":[1],"desen":"ANSI31",
+                        "disarida":[2],"pay":0.5}}]})")
+                    .ok());
+    }
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{3});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

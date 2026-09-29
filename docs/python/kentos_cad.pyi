@@ -1209,8 +1209,10 @@ def hatch(
     point: Coord = ...,
     islands: bool = ...,
     gap: int = ...,
+    exclude: list[int] = ...,
+    margin: float = ...,
 ) -> int:
-    """Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar.
+    """Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır.
 
     Komut: core.hatch (TARAMA)
         points — Sınır köşeleri, nesne seçmek yerine; en az üç nokta [mm, Sağa (Y) önce]
@@ -1227,6 +1229,8 @@ def hatch(
         point — yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce]
         islands — yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet)
         gap — yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç
+        exclude — Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı]
+        margin — disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m]
     """
 
 def hatch_edit(

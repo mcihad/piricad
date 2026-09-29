@@ -156,7 +156,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.annulus`](#cadannulus) | `core.annulus` | `HALKA` | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`cad.ellipse_draw`](#cadellipse_draw) | `core.ellipse_draw` | `ELİPS` | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
 | [`cad.spline`](#cadspline) | `core.spline` | `SPLINE` | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
-| [`cad.hatch`](#cadhatch) | `core.hatch` | `TARAMA` | Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar. |
+| [`cad.hatch`](#cadhatch) | `core.hatch` | `TARAMA` | Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır. |
 | [`cad.hatch_edit`](#cadhatch_edit) | `core.hatch_edit` | `TARAMADÜZENLE` | Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya da ada kuralını değiştirir; bağı ve sınırı korunur. |
 | [`cad.block`](#cadblock) | `core.block` | `BLOK` | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
 | [`cad.block_edit`](#cadblock_edit) | `core.block_edit` | `BLOKDÜZENLE` | Blok tanımını düzenlemeye açar ve düzenlenen nesnelerden yeniden kurar; bütün referanslar yeni biçimi çizer. |
@@ -1864,7 +1864,7 @@ cad.spline(
 
 ### `cad.hatch`
 
-Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar.
+Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır.
 
 Komut: `core.hatch` — `TARAMA`
 
@@ -1884,6 +1884,8 @@ cad.hatch(
     point: Coord,
     islands: bool,
     gap: int,
+    exclude: list[int],
+    margin: float,
 ) -> int
 ```
 
@@ -1903,6 +1905,8 @@ cad.hatch(
 | `point` | `Coord` | `nokta` | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce] |
 | `islands` | `bool` | `ada` | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet) |
 | `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç |
+| `exclude` | `list[int]` | `disarida` | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı] |
+| `margin` | `float` | `pay` | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] |
 
 [Komut sayfası](../komutlar/hatch.md)
 

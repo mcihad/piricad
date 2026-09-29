@@ -783,13 +783,17 @@ QIcon snap_icon(std::uint32_t mode, const QColor& mark)
     for (const render::MarkerRun& run : marker.runs) {
         QPolygonF line;
         for (const render::ScreenPointF& q : run.points)
-            line << QPointF(q.x, q.y);
+            line << QPointF(static_cast<qreal>(q.x), static_cast<qreal>(q.y));
         if (run.closed)
             p.drawPolygon(line);
         else
             p.drawPolyline(line);
     }
-    if (marker.ring > 0.0F) p.drawEllipse(QPointF(kCentre, kCentre), marker.ring, marker.ring);
+    if (marker.ring > 0.0F) {
+        const auto ring   = static_cast<qreal>(marker.ring);
+        const auto centre = static_cast<qreal>(kCentre);
+        p.drawEllipse(QPointF(centre, centre), ring, ring);
+    }
     return QIcon(pm);
 }
 

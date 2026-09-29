@@ -14,6 +14,7 @@
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/hatch_link.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/planar.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -22,6 +23,7 @@
 #include "kentos_cad/render/view.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
+#include <array>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -602,4 +604,143 @@ TEST_CASE("TARAMA yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; tıkl
     REQUIRE(session.supply(Value::aimed_point(core::Point2{20'000, 1})).ok());
     REQUIRE(r.bus.finish(session).ok());
     CHECK(r.doc.entity_area(r.slot(7)) == 1'200'000'000);
+}
+
+namespace {
+
+/// A caption's letters as an upright box: its width and height, millimetres.
+std::pair<core::Mm, core::Mm> caption_size(const Rig& r, std::int64_t key)
+{
+    std::array<Point2, 4> quad{};
+    REQUIRE(core::text_quad(r.doc, r.slot(key), quad));
+    core::Mm x0 = quad[0].x, x1 = quad[0].x, y0 = quad[0].y, y1 = quad[0].y;
+    for (const Point2 q : quad) {
+        x0 = std::min(x0, q.x);
+        x1 = std::max(x1, q.x);
+        y0 = std::min(y0, q.y);
+        y1 = std::max(y1, q.y);
+    }
+    return {x1 - x0, y1 - y0};
+}
+
+} // namespace
+
+TEST_CASE("TARAMA disarida=: gösterilen yazı boş kalır, pay deliği büyütür, sınıra bağlanmaz")
+{
+    // A 40 m × 30 m PARCEL with its number in the middle, left free as Netcad's
+    // `Diğer Objeler Seç` leaves it (plan open question 18).
+    Rig r;
+    r.run("ALAN 0,0 40,0 40,30 0,30"); ///< 1
+    r.run("METİN 15,14 \"101\" 2000"); ///< 2
+    const auto [w, h] = caption_size(r, 2);
+    REQUIRE(w > 0);
+    REQUIRE(h > 0);
+
+    const std::size_t steps = r.undo.undo_depth();
+    r.run("TARAMA nesneler=1 disarida=2 desen=ANSI31"); ///< 3
+    CHECK(r.undo.undo_depth() == steps + 1);
+    const auto rings = r.rings(3);
+    REQUIRE(rings.size() == 2);
+    CHECK(rings[0].first == core::RingRole::Exterior);
+    CHECK(rings[1].first == core::RingRole::Interior);
+    CHECK(r.doc.entity_area(r.slot(3)) == 1'200'000'000 - (w * h));
+
+    // NOT TIED, and saying so: the link rebuilds from the parcel alone and
+    // would fill the caption's hole in at the parcel's first edit.
+    CHECK(r.sources(3).empty());
+    CHECK(r.said.find("1 nesne dışarıda bırakıldı") != std::string::npos);
+    CHECK(r.said.find("sınır nesnelerine bağlanmadı") != std::string::npos);
+    const auto& last = r.journal.entries().back();
+    CHECK(last.args.get("disarida").as_ids() == std::vector<std::int64_t>{2});
+    CHECK_FALSE(last.args.has("pay"));
+    CHECK_FALSE(last.args.has("bagla"));
+
+    // HALF A METRE ROUND IT: the box grown by 50 cm on every side, square.
+    r.run("TARAMA nesneler=1 disarida=2 pay=0.5"); ///< 4
+    CHECK(r.doc.entity_area(r.slot(4)) == 1'200'000'000 - ((w + 1000) * (h + 1000)));
+    CHECK(r.journal.entries().back().args.get("pay").as_number() == doctest::Approx(0.5));
+}
+
+TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söylenir; üst üste "
+          "binenler tek delik")
+{
+    Rig r;
+    r.run("ALAN 0,0 40,0 40,30 0,30"); ///< 1
+    r.run("NOKTA 10,10");              ///< 2
+    r.run("ÇİZGİ 10,25 30,25");        ///< 3
+    r.run("NOKTA 30,10");              ///< 4
+    r.run("NOKTA 31,10");              ///< 5
+    r.run("METİN 15,14 \"101\" 2000"); ///< 6
+    const auto [w, h] = caption_size(r, 6);
+
+    // NO MARGIN, NO GROUND: a point and a line keep nothing free by themselves,
+    // and the hatch is drawn anyway, saying so — the caption beside them is
+    // still left out.
+    r.said.clear();
+    r.run("TARAMA nesneler=1 disarida=2 disarida=3 disarida=6"); ///< 7
+    CHECK(r.doc.entity_area(r.slot(7)) == 1'200'000'000 - (w * h));
+    CHECK(r.said.find("1 nesne dışarıda bırakıldı (2 çizgi ya da nokta pay=<metre> verilmediği "
+                      "için yer açmadı)") != std::string::npos);
+    r.said.clear();
+    r.run("TARAMA nesneler=1 disarida=2"); ///< 8
+    CHECK(r.doc.entity_area(r.slot(8)) == 1'200'000'000);
+    CHECK(r.said.find("disarida= nesnelerinin hiçbiri yer açmadı") != std::string::npos);
+
+    // A METRE ROUND THE POINT is a 2 m × 2 m hole; half a metre round the line
+    // a strip 1 m wide, squared off half a metre past each end: 21 m × 1 m.
+    r.run("TARAMA nesneler=1 disarida=2 pay=1"); ///< 9
+    CHECK(r.doc.entity_area(r.slot(9)) == 1'200'000'000 - 4'000'000);
+    r.run("TARAMA nesneler=1 disarida=3 pay=0.5"); ///< 10
+    CHECK(r.doc.entity_area(r.slot(10)) == 1'200'000'000 - 21'000'000);
+
+    // TWO THAT OVERLAP ARE ONE HOLE, 3 m × 2 m — not two squares with their
+    // overlap filled in again by an even-odd count.
+    r.run("TARAMA nesneler=1 disarida=4 disarida=5 pay=1"); ///< 11
+    CHECK(r.rings(11).size() == 2);
+    CHECK(r.doc.entity_area(r.slot(11)) == 1'200'000'000 - 6'000'000);
+}
+
+TEST_CASE("TARAMA disarida=: her şeyi kaplayan, bagla=evet ve tek başına pay reddedilir")
+{
+    Rig r;
+    r.run("ALAN 0,0 40,0 40,30 0,30");    ///< 1
+    r.run("METİN 100,100 \"uzak\" 2000"); ///< 2, far outside the parcel
+    r.run("METİN 15,14 \"101\" 2000");    ///< 3
+
+    const auto refused = [&r](const char* line, const char* why) {
+        const auto got = r.bus.execute_line(line, Origin::Test);
+        REQUIRE_FALSE(got.ok());
+        CHECK_MESSAGE(got.error().message.find(why) != std::string::npos, got.error().message);
+    };
+    refused("TARAMA nesneler=1 disarida=1", "taranacak yerin tamamını kaplıyor");
+    refused("TARAMA nesneler=1 disarida=3 bagla=evet", "sınırına bağlanamaz");
+    refused("TARAMA nesneler=1 pay=1", "disarida= ile birlikte verilir");
+    refused("TARAMA nesneler=1 disarida=3 pay=-1", "Pay eksi olamaz");
+    refused("TARAMA nesneler=1 disarida=99", "Nesne bulunamadı veya silinmiş: 99");
+    // A CAPTION IN THE BOUNDARY is pointed at the parameter it belongs to.
+    refused("TARAMA nesneler=1 nesneler=3", "disarida=3 ile verin");
+
+    // ONE THAT TOUCHES NOTHING changes nothing, and the sentence says which.
+    r.run("TARAMA nesneler=1 disarida=2"); ///< 4
+    CHECK(r.doc.entity_area(r.slot(4)) == 1'200'000'000);
+    CHECK(r.said.find("hiçbiri yer açmadı (1 nesne taramaya değmiyor)") != std::string::npos);
+    r.run("TARAMA nesneler=1 disarida=2 disarida=3 bagla=hayır"); ///< 5
+    CHECK(r.said.find("1 nesne dışarıda bırakıldı (1 nesne taramaya değmiyor)") !=
+          std::string::npos);
+    CHECK(r.journal.entries().back().args.get("bagla").as_bool(true) == false);
+}
+
+TEST_CASE("TARAMA yontem=ic disarida=: tıklanan bölgenin yazısı ve adası boş kalır")
+{
+    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    Rig r;
+    for (const char* line : {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
+                             "ÇİZGİ 0,30 0,0", "ALAN 5,5 15,5 15,15 5,15"})
+        r.run(line);                   ///< 1 … 5
+    r.run("METİN 25,20 \"101\" 2000"); ///< 6
+    const auto [w, h] = caption_size(r, 6);
+    r.run("TARAMA yontem=ic nokta=30,5 disarida=6"); ///< 7
+    CHECK(r.rings(7).size() == 3);
+    CHECK(r.doc.entity_area(r.slot(7)) == 1'100'000'000 - (w * h));
+    CHECK(r.journal.entries().back().args.get("yontem").as_text() == "ic");
 }

@@ -304,6 +304,7 @@ enum class Glyph {
     MeasureFixed,       ///< distances from one held first point: ÖLÇ sabit=evet
     MeasureAreaInside,  ///< the region round a click inside it: ALANÖLÇ yontem=ic
     HatchInside,        ///< the region round a click inside it, hatched: TARAMA yontem=ic
+    HatchExclude,       ///< a hatch with the selected caption left free: TARAMA disarida=
     SelectWindow,       ///< a solid frame, the objects wholly inside it: SEÇ PENCERE
     SelectCrossing,     ///< a dashed frame and the line crossing it: SEÇ KESEN
     SelectPolygon,      ///< a solid polygon round an object: SEÇ ÇOKGEN

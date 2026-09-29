@@ -6,6 +6,8 @@
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include "clipper2/clipper.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -169,6 +171,138 @@ Result<HatchBoundary> hatch_boundary(const Document& doc, std::span<const Entity
                    "Tarama sınırı kapalı bir şey çevrelemiyor: kapalı bir alan, daire, elips ya "
                    "da kapalı çoklu çizgi gerekir.");
     return nest_loops(std::move(all), style);
+}
+
+namespace {
+
+Clipper2Lib::Path64 clipper_path(std::span<const Point2> loop)
+{
+    Clipper2Lib::Path64 path;
+    path.reserve(loop.size());
+    for (const Point2& p : loop)
+        path.emplace_back(p.x, p.y);
+    return path;
+}
+
+/// Clipper2's paths as loops, the ones that enclose nothing left out.
+std::vector<std::vector<Point2>> loops_of(const Clipper2Lib::Paths64& paths)
+{
+    std::vector<std::vector<Point2>> out;
+    for (const Clipper2Lib::Path64& path : paths) {
+        if (path.size() < 3 || Clipper2Lib::Area(path) == 0.0) continue;
+        std::vector<Point2> loop;
+        loop.reserve(path.size());
+        for (const Clipper2Lib::Point64& q : path)
+            loop.push_back(Point2{q.x, q.y});
+        out.push_back(std::move(loop));
+    }
+    return out;
+}
+
+/// The OPEN runs an object draws — what a line is widened from.
+std::vector<std::vector<Point2>> open_runs_of(const Document& doc, EntityId e)
+{
+    std::vector<std::vector<Point2>> out;
+    const auto take = [&out](std::span<const Mm> xs, std::span<const Mm> ys) {
+        if (xs.size() < 2) return;
+        std::vector<Point2> pts;
+        pts.reserve(xs.size());
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            pts.push_back(Point2{xs[v], ys[v]});
+        out.push_back(std::move(pts));
+    };
+    const RingGeometry& g = doc.geometry();
+    EmitBuffer runs;
+    if (!entity_outline(doc, e, runs)) {
+        const RingSpan span = g.rings_of(doc.entities().slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            if (g.ring_role[r] == RingRole::Open) take(g.ring_xs(r), g.ring_ys(r));
+        return out;
+    }
+    for (std::size_t r = 0; r < runs.run_total(); ++r)
+        if (runs.run_closed[r] == 0) take(runs.run_xs(r), runs.run_ys(r));
+    return out;
+}
+
+} // namespace
+
+std::vector<std::vector<Point2>> hatch_cutout(const Document& doc, EntityId e, Mm margin)
+{
+    using namespace Clipper2Lib;
+    if (e >= doc.entities().size() || !doc.alive(e) || margin < 0) return {};
+    const KindId kind = doc.entities().kind[e];
+
+    // A BLOCK OR A POINT KEEPS ITS BOX: the mask a symbol is left in. A point's
+    // box is a point, so only the margin gives it any ground.
+    if (kind == kBlockReferenceKind || kind == kPointKind) {
+        const Box2 b = doc.entities().box_of(e);
+        const Path64 box{{b.min_x - margin, b.min_y - margin},
+                         {b.max_x + margin, b.min_y - margin},
+                         {b.max_x + margin, b.max_y + margin},
+                         {b.min_x - margin, b.max_y + margin}};
+        return loops_of(Paths64{box});
+    }
+
+    Paths64 shape;
+    bool open = false;
+    if (std::array<Point2, 4> quad{}; text_quad(doc, e, quad)) {
+        shape.push_back(clipper_path(quad)); // a caption: its letters, not its hairline
+    } else if (const auto loops = closed_loops_of(doc, e); !loops.empty()) {
+        for (const auto& loop : loops)
+            shape.push_back(clipper_path(loop));
+    } else {
+        for (const auto& run : open_runs_of(doc, e))
+            shape.push_back(clipper_path(run));
+        open = true;
+    }
+    if (open && margin == 0) return {}; // a line with no margin keeps no ground free
+    // ONE ORIENTATION before anything else: the face with its holes as holes,
+    // every outer loop the same way round, which is what the merge in
+    // `hatch_without` counts windings by.
+    if (!open) shape = Union(shape, FillRule::EvenOdd);
+    if (margin > 0) {
+        ClipperOffset grow;
+        grow.MiterLimit(2.0);
+        grow.AddPaths(shape, JoinType::Miter, open ? EndType::Square : EndType::Polygon);
+        Paths64 grown;
+        grow.Execute(static_cast<double>(margin), grown);
+        shape = Union(grown, FillRule::NonZero);
+    }
+    return loops_of(shape);
+}
+
+Result<HatchCut> hatch_without(const HatchBoundary& boundary,
+                               std::span<const std::vector<std::vector<Point2>>> cutouts)
+{
+    using namespace Clipper2Lib;
+    Paths64 subject;
+    for (const auto& loop : boundary.loops)
+        subject.push_back(clipper_path(loop));
+
+    HatchCut out;
+    Paths64 clip;
+    for (std::size_t i = 0; i < cutouts.size(); ++i) {
+        Paths64 one;
+        for (const auto& loop : cutouts[i])
+            one.push_back(clipper_path(loop));
+        // IDLE: a cutout that shares no ground with the hatch. Counted, so the
+        // sentence can say which of the objects shown changed nothing.
+        if (Intersect(subject, one, FillRule::EvenOdd).empty()) {
+            out.idle.push_back(i);
+            continue;
+        }
+        clip.insert(clip.end(), one.begin(), one.end());
+    }
+    // MERGED FIRST, so overlapping cutouts make one hole and not an even-odd
+    // checkerboard of them.
+    clip                                   = Union(clip, FillRule::NonZero);
+    const Paths64 left                     = Difference(subject, clip, FillRule::EvenOdd);
+    std::vector<std::vector<Point2>> loops = loops_of(left);
+    if (loops.empty())
+        return err(ErrorCode::InvalidArgument,
+                   "disarida= nesneleri taranacak yerin tamamını kaplıyor; taranacak yer kalmadı.");
+    out.boundary = nest_loops(std::move(loops), 0);
+    return out;
 }
 
 HatchBoundary nest_loops(std::vector<std::vector<Point2>> all, std::uint16_t style)

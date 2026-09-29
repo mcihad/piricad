@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — tarama gösterilen yazıları ve simgeleri boş bırakır
+
+- `TARAMA … disarida=<nesneler>`: Netcad'in **Diğer Objeler Seç**'i. Gösterilen yazının
+  harf kutusu, bloğun ve noktanın kutusu, kapalı bir nesnenin içi taramadan boş kalır;
+  `pay=<metre>` çevresine pay bırakır, açık bir çizgiyi o genişlikte bir şeritle ayırır
+  (paysız bir nokta ya da çizgi yer açmaz; tarama yine çizilir ve bu söylenir). Yalnız
+  gösterilenler: tarama bölgedeki yazıları kendiliğinden aramaz. Üç sınır yolunun üçüyle
+  de çalışır; böyle bir tarama sınırına bağlanmaz ve bunu söyler.
+- **Çizim ▸ Tarama ▸ Tarama — seçilenler dışarıda**: önce yazıları seçin, sonra bölgenin
+  içine tıklayın. Tek atımlıktır: bitince aynı nesnelerle yeniden kurulmaz.
+- Sınır olarak seçilen bir yazı ya da nokta artık `disarida=`'yı öneren sözle reddedilir.
+
 ### Değişti — üst üste binen nesneler pencere açmadan, yerinde gezilir
 
 - Birden çok nesnenin üstüne yapılan tıklama artık "Hangisi?" penceresini açmıyor: ilk aday

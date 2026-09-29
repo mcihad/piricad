@@ -5,7 +5,9 @@
 Kapalı bir sınırın içini bir **desenle** doldurur: dolu (`SOLID`), 45° çizgiler
 (`ANSI31`), ağ (`NET`), toprak (`EARTH`)… Sınırı seçili kapalı nesnelerden alır —
 alan, daire, elips, kapalı çoklu çizgi —, `noktalar=` ile doğrudan köşelerden ya da
-`yontem=ic` ile içine tıkladığınız bölgeden.
+`yontem=ic` ile içine tıkladığınız bölgeden. Gösterdiğiniz yazıları, blokları ve
+noktaları [`disarida=`](#yazıları-ve-sembolleri-boş-bırakmak-disarida) ile taramadan boş
+bırakır.
 Sonuç bir [tarama nesnesidir](../nesneler/tarama.md): sınır halkaları ve desen
 birlikte saklanır, DXF'e `HATCH` olarak gider.
 
@@ -35,7 +37,8 @@ uyarı renginde üstü çizili bir halka ve **sınır bağı koptu** yazısı du
 çıktısına girmez. [`NESNEBİLGİ`](entity_info.md) taramanın hangi nesnelere bağlı
 olduğunu, bir nesne için de onu kaç bağlı taramanın izlediğini söyler.
 
-`noktalar=` ile köşelerden çizilen tarama bağsızdır. Bağlamak istemediğinizde
+`noktalar=` ile köşelerden çizilen ve `disarida=` ile bir şeyi boş bırakan tarama
+bağsızdır. Bağlamak istemediğinizde
 `bagla=hayır` verin. DXF'ten gelen bir taramanın "ilişkili" işareti (grup 71) bu
 çizimde bir bağ değildir: NESNEBİLGİ bunu ayrıca söyler.
 
@@ -50,8 +53,36 @@ bir tıklama kenarın üstüne oturmaz.
 - **Çizgilere bağlı değildir.** Bağ, sınırı kapalı nesnelerden yeniden kurar; bölgeyi
   kapatan çizgilerin hiçbiri tek başına kapalı değildir. Çizgiler değişirse taramayı
   yeniden çizin; TARAMA bunu çizdiği satırda da söyler.
-- **İçindeki yazılar ve semboller taramanın altında kalır.** Onları boş bırakmak
-  **Faz 1'de** gelecek.
+- **İçindeki yazılar ve semboller kendiliğinden boş kalmaz.** Boş kalacakları
+  [`disarida=` ile gösterin](#yazıları-ve-sembolleri-boş-bırakmak-disarida).
+
+### Yazıları ve sembolleri boş bırakmak: `disarida=`
+
+Netcad'in **Diğer Objeler Seç**'i gibi: parselin numarası, bir blok ya da bir nokta
+taramanın altında kalmasın istiyorsanız onu `disarida=` ile gösterin. Yalnız
+gösterdikleriniz boş kalır; TARAMA başka hiçbir şeyi kendiliğinden aramaz. Sınır üç
+yoldan hangisiyle verilirse verilsin — seçilen nesneler, köşeler, içine tıklanan bölge —
+aynı çalışır.
+
+| Gösterilen | Boş kalan yer |
+|---|---|
+| Yazı | Harflerinin kutusu |
+| Blok | Kutusu |
+| Nokta | Kutusu bir noktadır; ancak `pay=` ile yer açar |
+| Kapalı nesne (alan, daire…) | İçi, kendi delikleriyle |
+| Açık çizgi | İki yanında `pay=` genişliğinde bir şerit; `pay=` verilmezse yer açmaz |
+
+`pay=<metre>` boş yerin çevresine o kadar pay bırakır; köşeleri ve şeridin uçları
+diktir. Üst üste binen iki yazının boşluğu tek deliktir. Taramaya hiç değmeyen bir
+nesne ve `pay=` verilmemiş bir nokta ya da çizgi bir şey değiştirmez; tarama yine
+çizilir ve TARAMA hangilerinin yer açmadığını söyler:
+`1 nesne dışarıda bırakıldı (1 çizgi ya da nokta pay=<metre> verilmediği için yer açmadı)`.
+
+- **Sınırına bağlanmaz.** Bağ, taramayı sınır nesnelerinden yeniden kurar ve dışarıda
+  bırakılanları bilmez; parselin ilk düzeltmesinde delikler dolardı. TARAMA bunu
+  çizdiği satırda söyler; `bagla=evet` ile birlikte verilen `disarida=` reddedilir.
+- **Boş kalan yer, yazının o anki yeridir.** Yazıyı sonra taşırsanız taramayı yeniden
+  çizin.
 
 ### Desen kataloğu
 
@@ -120,6 +151,7 @@ TARAMA nesneler=<kimlik> ... aralik=<metre> [aci=<derece>] [cift=evet]
 TARAMA desen=<ad>            ← etkin seçimi tarar
 TARAMA yontem=ic [nokta=<nokta>] [ada=evet|hayır] [bosluk=<mm>] [desen=<ad>] [aci=<derece>] [olcek=<çarpan>]
 TARAMA nokta=<nokta> [desen=<ad>] ...
+TARAMA ... disarida=<kimlik> disarida=<kimlik> ... [pay=<metre>]
 ```
 
 ## Parametreler
@@ -140,6 +172,8 @@ TARAMA nokta=<nokta> [desen=<ad>] ...
 | `nokta` | `yontem=ic` için bölgenin içindeki nokta; verilmezse tuvalde sorulur. Verilirse yöntem kendiliğinden `ic` olur |
 | `ada` | `yontem=ic`: bölgenin içindeki kapalı çizgiler boş kalır (öntanımlı `evet`) |
 | `bosluk` | `yontem=ic`: bu kadar milimetreye kadar açık uçlar köprülenir; öntanımlı 0, hiç köprülenmez |
+| `disarida` | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler; yalnız gösterilenler. Bkz. [Yazıları ve sembolleri boş bırakmak](#yazıları-ve-sembolleri-boş-bırakmak-disarida) |
+| `pay` | `disarida=` nesnelerinin çevresinde bırakılan boşluk, metre; öntanımlı 0 |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -212,6 +246,36 @@ TARAMA nokta=20,20 desen=ANSI31
 'ANSI31' deseniyle tarama çizildi (2 sınır halkası, 1 delik) — içine tıklanan bölge, 5 nesnenin çizgisinden; çizgilere bağlı değil, onlar değişirse yeniden tarayın.
 ```
 
+Parselin numarası ve bir sınır noktası, yarım metre payla boş kalarak:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 30,0 30,20 0,20
+METİN 12,9 "101" 2000
+NOKTA 5,15
+TARAMA nesneler=1 disarida=2 disarida=3 pay=0.5 desen=ANSI31
+```
+
+```text
+'ANSI31' deseniyle tarama çizildi (3 sınır halkası, 2 delik); 2 nesne dışarıda bırakıldı; disarida= verildiği için sınır nesnelerine bağlanmadı, sınır değişirse yeniden tarayın.
+```
+
+Gevşek çizgilerin kapattığı bir bölgede, içine tıklayarak, yazısı boş kalarak:
+
+<!-- örnek: yeni çizim -->
+```
+ÇİZGİ 0,0 40,0
+ÇİZGİ 40,0 40,30
+ÇİZGİ 40,30 0,30
+ÇİZGİ 0,30 0,0
+METİN 18,14 "102" 2000
+TARAMA nokta=5,5 disarida=5 desen=ANSI31
+```
+
+```text
+'ANSI31' deseniyle tarama çizildi (2 sınır halkası, 1 delik); 1 nesne dışarıda bırakıldı — içine tıklanan bölge, 4 nesnenin çizgisinden; çizgilere bağlı değil, onlar değişirse yeniden tarayın.
+```
+
 İki buçuk metre aralıklı, 30°'lik kendi çapraz taramanız:
 
 <!-- örnek: yeni çizim -->
@@ -226,6 +290,10 @@ TARAMA nesneler=1 aralik=2.5 aci=30 cift=evet
 Çizim**'de de vardır) basın. Kapalı nesneleri seçip Enter'a basın ya da köşeleri tıklayın.
 Bir bölgenin içine tıklayarak taramak için **Tarama** düğmesinin okundan **Tarama — içine
 tıklayarak**'ı seçin; imleç gezdikçe altındaki bölge çizilir.
+Yazıları, blokları ya da noktaları boş bırakmak için önce onları seçin, sonra aynı okun
+altındaki **Tarama — seçilenler dışarıda**'ya basıp bölgenin içine tıklayın. Düğme
+seçtiklerinizi `TARAMA yontem=ic disarida=…` satırıyla gönderir; seçim boşken ne
+seçeceğinizi durum çubuğunda söyler.
 Çizilmiş bir taramanın desenini, açısını, ölçeğini, aralığını ve ada kuralını
 nitelik panelinin **TARAMA** grubundan ya da [`TARAMADÜZENLE`](hatch_edit.md) ile
 değiştirin.
@@ -245,6 +313,21 @@ sürüklediğinizde tarama da güncellenir.
 }
 ```
 
+Parselin numarasını boş bırakan tarama; `disarida` kimlik dizisidir, `pay` metre:
+
+```json
+{
+  "komutlar": [
+    { "cmd": "core.area",
+      "args": { "noktalar": [[0,0],[30000,0],[30000,20000],[0,20000]] } },
+    { "cmd": "core.text",
+      "args": { "noktalar": [[12000,9000]], "yazi": "101", "yukseklik": 2000 } },
+    { "cmd": "core.hatch",
+      "args": { "nesneler": [1], "desen": "ANSI31", "disarida": [2], "pay": 0.5 } }
+  ]
+}
+```
+
 ## Geri alma
 
 Tek adımdır: `GERİAL` taramayı kaldırır; sınır olarak seçilen nesnelere dokunulmaz.
@@ -254,7 +337,8 @@ Bağlı taramanın sınırını izlemesi, onu doğuran komutla aynı adımdadır
 
 `noktalar` milimetre çiftleridir. Günlüğe sınırın nasıl verildiği (`noktalar` ya da
 `nesneler`), desen adı, açı ve **kullanılan** ölçek yazılır — varsayılandan geldiyse
-de yazılır, böylece pafta ölçeği değişse tekrar aynı taramayı kurar.
+de yazılır, böylece pafta ölçeği değişse tekrar aynı taramayı kurar. `disarida` ve
+`pay` verildiyse onlar da yazılır; oynatma aynı yerleri boş bırakır.
 
 ## Hatalar
 
@@ -273,9 +357,27 @@ Bağlı taramaların izlemesi şu satırlarla bildirilir:
 
 `noktalar` ile iki nokta verildi.
 
-> `Nesne 7 kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı çoklu çizgi olmalı.`
+> `Nesne 7 kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı çoklu çizgi olmalı. Taramadan boş kalacak bir yazı ya da simgeyse disarida=7 ile verin.`
 
-Seçilen nesne açık bir çizgi.
+Sınır olarak seçilen nesne açık bir çizgi, bir yazı ya da bir nokta. Boş kalması
+isteniyorsa `disarida=` ile gösterin.
+
+> `disarida= nesneleri taranacak yerin tamamını kaplıyor; taranacak yer kalmadı.`
+
+Dışarıda bırakılanlar sınırın bütününü örtüyor — örneğin parselin kendisi `disarida=`
+ile de verildi.
+
+> `disarida= ile çizilen tarama sınırına bağlanamaz: bağ, taramayı sınır nesnelerinden yeniden kurar ve dışarıda bırakılanları bilmez. bagla= vermeyin ya da bagla=hayır verin.`
+
+`disarida=` ile birlikte `bagla=evet` verildi.
+
+> `pay= dışarıda bırakılan nesnelerin çevresindeki boşluktur; disarida= ile birlikte verilir.`
+
+`pay=` tek başına verildi.
+
+> `Pay eksi olamaz; metre olarak 0 ya da daha büyük verin.`
+
+`pay=` eksi.
 
 > `Bu bölge kapanmıyor: N açık uç var; …`
 

@@ -2227,6 +2227,27 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(12.0, 9.6), QPointF(12.0, 14.0));
         break;
     }
+    case Glyph::HatchExclude: {
+        // THE PARCEL'S NUMBER LEFT FREE: the ground hatched, a box in the middle
+        // the pattern stays out of, and in it the caption, in the note ink.
+        QPainterPath ground;
+        ground.addRect(QRectF(3.0, 4.0, 18.0, 16.0));
+        QPainterPath free;
+        free.addRect(QRectF(6.6, 8.8, 10.8, 6.4));
+        ground = ground.subtracted(free);
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.fill);
+        p.drawPath(ground);
+        hatchInside(p, ground, k.shape);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c, 1.5));
+        p.drawRect(QRectF(3.0, 4.0, 18.0, 16.0));
+        p.setPen(stroke(k.note, 1.5));
+        p.drawLine(QPointF(8.8, 10.2), QPointF(8.8, 13.8));
+        p.drawEllipse(QRectF(10.8, 10.2, 2.4, 3.6));
+        p.drawLine(QPointF(15.2, 10.2), QPointF(15.2, 13.8));
+        break;
+    }
     case Glyph::MeasureFixed: {
         // THE FIRST POINT HELD: a pinned point at the bottom left and a spoke
         // from it to each point measured, in the measuring ink — a star, where

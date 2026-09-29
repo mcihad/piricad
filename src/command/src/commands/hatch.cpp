@@ -3,7 +3,9 @@
 //
 // The boundary is a set of closed entities the user selects — a parcel, a
 // circle, a closed polyline — a ring of points typed straight in, or the region
-// round a point clicked inside it, found the way SINIR finds one. The
+// round a point clicked inside it, found the way SINIR finds one. Objects shown
+// by `disarida` — a parcel's number, a block, a point — are left free of the
+// pattern, as Netcad's `Diğer Objeler Seç` leaves them (`core::hatch_without`). The
 // pattern comes from the catalogue under /data/catalogs/dxf by name (CLAUDE.md
 // 5.13: the angles and spacings are data), and the hatch is drawn through a
 // Symbol interned here, at commit, so the frame path reads one u32 (model.md
@@ -182,7 +184,6 @@ std::vector<core::Point2> hatch_loop(const core::FaceRing& ring)
 Task<void> run(Context& ctx)
 {
     // ---- the boundary -------------------------------------------------------
-    std::vector<std::vector<core::Point2>> store;
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> sources;
@@ -228,8 +229,10 @@ Task<void> run(Context& ctx)
             co_return;
         }
         if (typed.size() > 1 && typed.front() == typed.back()) typed.pop_back();
-        store.push_back(typed);
-        rings.push_back(core::RingGeometry::RingInput{store.back(), core::RingRole::Exterior, 0});
+        boundary.loops.push_back(typed);
+        boundary.roles.push_back(core::RingRole::Exterior);
+        boundary.parts.push_back(0);
+        rings = boundary.rings();
     } else {
         if (!co_await want_objects(ctx, "nesneler", "Taranacak kapalı nesneleri seçin, sonra Enter",
                                    requested, 0, "TARAMA nesneler=1 desen=ANSI31"))
@@ -249,11 +252,12 @@ Task<void> run(Context& ctx)
                 co_return;
             }
             if (core::closed_loops_of(ctx.document(), slot).empty()) {
-                ctx.refuse(
-                    core::ErrorCode::InvalidArgument,
-                    "Nesne " + std::to_string(raw) +
-                        " kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da kapalı "
-                        "çoklu çizgi olmalı.");
+                ctx.refuse(core::ErrorCode::InvalidArgument,
+                           "Nesne " + std::to_string(raw) +
+                               " kapalı değil; tarama sınırı kapalı bir alan, daire, elips ya da "
+                               "kapalı çoklu çizgi olmalı. Taramadan boş kalacak bir yazı ya da "
+                               "simgeyse disarida=" +
+                               std::to_string(raw) + " ile verin.");
                 co_return;
             }
             sources.push_back(slot);
@@ -268,9 +272,83 @@ Task<void> run(Context& ctx)
         boundary = std::move(made.value());
         rings    = boundary.rings();
     }
-    // `store` is complete now; the spans in `rings` point into it and must not
-    // be taken before it stops growing.
-    if (!typed.empty()) rings.front().points = std::span<const core::Point2>(store.front());
+
+    // ---- what the pattern leaves free ---------------------------------------
+    //
+    // NETCAD'S "DİĞER OBJELER SEÇ" (plan open question 18): the captions,
+    // blocks and points SHOWN are left free, each by its box and a margin round
+    // it. Nothing is found by itself — a hatch drawn over a sheet of parcel
+    // numbers keeps the ones it was told to.
+    std::vector<std::int64_t> excluded;
+    {
+        const Value given = ctx.argument("disarida");
+        excluded          = given.as_ids();
+        if (excluded.empty() && given.kind() == Value::Kind::Int)
+            excluded.push_back(given.as_int());
+    }
+    core::Mm margin = 0;
+    if (const Value m = ctx.argument("pay"); !m.empty()) {
+        if (excluded.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "pay= dışarıda bırakılan nesnelerin çevresindeki boşluktur; disarida= ile "
+                       "birlikte verilir.");
+            co_return;
+        }
+        if (!(m.as_number() >= 0.0)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Pay eksi olamaz; metre olarak 0 ya da daha büyük verin.");
+            co_return;
+        }
+        margin = static_cast<core::Mm>(std::llround(m.as_number() * 1000.0));
+    }
+    // THE LINK REBUILDS FROM THE BOUNDARY ALONE (`core::hatch_boundary`), and
+    // knows nothing of what was left out: the first edit of the parcel would
+    // fill the holes in again. Asked for outright, it is refused rather than
+    // quietly dropped.
+    const bool asked_link = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    if (!excluded.empty() && ctx.has_argument("bagla") && asked_link) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "disarida= ile çizilen tarama sınırına bağlanamaz: bağ, taramayı sınır "
+                   "nesnelerinden yeniden kurar ve dışarıda bırakılanları bilmez. bagla= "
+                   "vermeyin ya da bagla=hayır verin.");
+        co_return;
+    }
+    std::size_t idle   = 0; ///< shown, but sharing no ground with the hatch
+    std::size_t hollow = 0; ///< shown, but keeping no ground free: no margin round them
+    if (!excluded.empty()) {
+        std::vector<std::vector<std::vector<core::Point2>>> cutouts;
+        cutouts.reserve(excluded.size());
+        for (const std::int64_t raw : excluded) {
+            const core::EntityId slot =
+                raw > 0 ? ctx.document().slot_of(
+                              static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)))
+                        : core::kNoEntity;
+            if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+                co_return;
+            }
+            // A LINE OR A POINT WITH NO MARGIN keeps no ground free. Counted
+            // and said, not refused: a selection taken whole from the ribbon
+            // holds the point beside the parcel's number as often as not.
+            auto cut = core::hatch_cutout(ctx.document(), slot, margin);
+            if (cut.empty()) {
+                ++hollow;
+                continue;
+            }
+            cutouts.push_back(std::move(cut));
+        }
+        if (!cutouts.empty()) {
+            auto left = core::hatch_without(boundary, cutouts);
+            if (!left) {
+                ctx.refuse(left.error());
+                co_return;
+            }
+            idle     = left.value().idle.size();
+            boundary = std::move(left.value().boundary);
+            rings    = boundary.rings();
+        }
+    }
 
     // ---- the pattern --------------------------------------------------------
     //
@@ -304,7 +382,7 @@ Task<void> run(Context& ctx)
 
     // FOLLOWS ITS BOUNDARY (TODOS C-11): the objects it was drawn over, by key;
     // at every commit that reshapes one of them its loops are built again.
-    const bool link = !ctx.has_argument("bagla") || ctx.argument("bagla").as_bool(true);
+    const bool link = asked_link && excluded.empty();
     if (link && !sources.empty()) {
         std::vector<core::HatchSource> tied;
         tied.reserve(sources.size());
@@ -315,7 +393,7 @@ Task<void> run(Context& ctx)
             co_return;
         }
     }
-    if (!link) ctx.record("bagla", Value::boolean(false));
+    if (!asked_link) ctx.record("bagla", Value::boolean(false));
 
     bool dashes = false;
     for (const core::HatchDef::Family& f : def.families)
@@ -332,6 +410,8 @@ Task<void> run(Context& ctx)
     } else {
         ctx.record("nesneler", Value::ids(requested));
     }
+    if (!excluded.empty()) ctx.record("disarida", Value::ids(excluded));
+    if (ctx.has_argument("pay")) ctx.record("pay", ctx.argument("pay"));
     std::string said = pattern_phrase(def, true) + (def.double_lines ? " çapraz" : "") +
                        " tarama çizildi (" + std::to_string(rings.size()) + " sınır halkası";
     if (holes > 0) said += ", " + std::to_string(holes) + " delik";
@@ -339,6 +419,20 @@ Task<void> run(Context& ctx)
     if (link && !sources.empty())
         said += "; " + std::to_string(sources.size()) +
                 " sınır nesnesine bağlı, o değişince tarama da güncellenir";
+    if (!excluded.empty()) {
+        const std::size_t used = excluded.size() - idle - hollow;
+        said += used == 0 ? std::string("; disarida= nesnelerinin hiçbiri yer açmadı")
+                          : "; " + std::to_string(used) + " nesne dışarıda bırakıldı";
+        std::string why;
+        if (idle > 0) why = std::to_string(idle) + " nesne taramaya değmiyor";
+        if (hollow > 0)
+            why += (why.empty() ? "" : ", ") + std::to_string(hollow) +
+                   " çizgi ya da nokta pay=<metre> verilmediği için yer açmadı";
+        if (!why.empty()) said += " (" + why + ")";
+        if (!sources.empty())
+            said += "; disarida= verildiği için sınır nesnelerine bağlanmadı, sınır değişirse "
+                    "yeniden tarayın";
+    }
     // NOT TIED TO ITS LINES: a link rebuilds loops from closed objects, and the
     // lines round a region close nothing one by one. Said, so nobody waits for
     // the hatch to follow a moved line.
@@ -605,11 +699,20 @@ KENTOS_COMMAND(hatch)
                                "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 "
                                "hiç")
                     .en("gap"),
+                Param{"disarida", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler "
+                      "(Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler"}
+                    .en("exclude"),
+                Param::number("pay", Arity::optional(),
+                              "disarida= nesnelerinin çevresinde bırakılan boşluk, metre; "
+                              "varsayılan 0")
+                    .measured_in("m")
+                    .en("margin"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini "
-                   "katalogdaki bir desenle tarar.",
+                   "katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır.",
         .run = &run,
     };
 }

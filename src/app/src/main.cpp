@@ -2564,6 +2564,63 @@ int main(int argc, char** argv)
             QCoreApplication::sendEvent(window.canvas(), &enter);
         });
 
+        // AND A PARCEL'S NUMBER LEFT FREE OF ITS HATCH (plan open question 18):
+        // the caption and a point selected, `Tarama — seçilenler dışarıda`
+        // pressed, a click inside; then the Tarama family's list with it.
+        later([&window] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(
+                QStringLiteral("ALAN 485400,4310180 485440,4310180 485440,4310210 485400,4310210"));
+            window.runScriptLine(QStringLiteral("NOKTA 485429,4310197"));
+            window.runScriptLine(QStringLiteral("METİN 485414,4310193 \"2045\" 2500"));
+            window.endCommand();
+            QCoreApplication::sendPostedEvents();
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(
+                QStringLiteral("YAKINLAŞ PENCERE pencere=485394,4310174 485446,4310216"));
+            window.runScriptLine(QStringLiteral("SEÇ PENCERE 485410,4310190 485433,4310201"));
+            if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr)
+                if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonDraw")))
+                    bar->raiseCategory(tab);
+        });
+        later([&window] {
+            if (auto* a = window.findChild<QAction*>(
+                    QStringLiteral("toolAction.TARAMA yontem=ic disarida")))
+                a->trigger();
+        });
+        later([clickAt] { clickAt(kentos::core::Point2{485404000, 4310205000}); });
+        later([&window, shot] {
+            window.controller()->cancelAll();
+            QCoreApplication::sendPostedEvents();
+            window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+            shot(QStringLiteral("40-tarama-disarida"), &window);
+        });
+        later([&window] {
+            SARibbonBar* bar = window.ribbonBar();
+            if (bar == nullptr) return;
+            QCoreApplication::sendPostedEvents();
+            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+                const bool hatches =
+                    std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
+                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                               QStringLiteral("TARAMA yontem=ic");
+                    });
+                if (!hatches || f->head()->menu() == nullptr) continue;
+                for (auto* button : bar->findChildren<QToolButton*>())
+                    if (button->defaultAction() == f->head() && button->isVisible())
+                        f->head()->menu()->popup(button->mapToGlobal(QPoint(0, button->height())));
+            }
+        });
+        later([with_popup] {
+            with_popup(QStringLiteral("40b-tarama-ailesi-disarida"),
+                       QApplication::activePopupWidget());
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+
         later([] { QApplication::exit(0); });
     }
 

@@ -484,7 +484,7 @@ yönetmelik değeri yalnız `/data`'da (5.13); `tr()` ve iki `.ts` dosyası (6.9
   **3B:** Eğim (%) ve eğik mesafe tepe kotuyla gelir; `report` şeması `egim` alanını şimdiden taşır (kot yoksa "kot yok", sıfır değil).
 
 - [x] **N-03 · P0 — İçine tıklayarak alan: bölge girdisi ve "noktayı içeren" seçimi.**
-  **Durum (29 Eylül 2026):** `ALANÖLÇ yontem=ic` yapıldı; incelemenin düzeltmeleriyle: `ctx.region` bir bekleyici yapılmadı, bölge `command::ask_region` ile sorulur (SINIR ile ALANÖLÇ aynı yolu, aynı ret sözlerini paylaşır; parametreler `yontem=ic nokta= ada= bosluk=`); bölge tıklaması yakalanmaz (`Prompt::aids`, `command::aids_for` — tuvalin işareti ile sonucun ayrışamadığı tek yer). `SEÇ İÇEREN` yapıldı (`core::pick_containing`: seçimin kendi iç kuralı, türün alanı, küçükten büyüğe; nokta SEÇ'in kendi `noktalar=`'ıyla verilir, ikinci bir nokta parametresi açılmadı; şeritteki yeri N-04'ün Seçim sekmesi). `TARAMA yontem=ic` yapıldı (bölgenin yüzü tarama halkaları olur, adaları delik; çizgilere bağlanmaz, çünkü bağ sınırı kapalı nesnelerden yeniden kurar — satırda ve sayfada söylenir); Çizim ▸ Tarama bir aile oldu. **Ertelenen:** içteki yazı ve sembollerin taramadan boş kalması — kendiliğinden mi, seçerek mi, Açık soru 18.
+  **Durum (29 Eylül 2026):** `ALANÖLÇ yontem=ic` yapıldı; incelemenin düzeltmeleriyle: `ctx.region` bir bekleyici yapılmadı, bölge `command::ask_region` ile sorulur (SINIR ile ALANÖLÇ aynı yolu, aynı ret sözlerini paylaşır; parametreler `yontem=ic nokta= ada= bosluk=`); bölge tıklaması yakalanmaz (`Prompt::aids`, `command::aids_for` — tuvalin işareti ile sonucun ayrışamadığı tek yer). `SEÇ İÇEREN` yapıldı (`core::pick_containing`: seçimin kendi iç kuralı, türün alanı, küçükten büyüğe; nokta SEÇ'in kendi `noktalar=`'ıyla verilir, ikinci bir nokta parametresi açılmadı; şeritteki yeri N-04'ün Seçim sekmesi). `TARAMA yontem=ic` yapıldı (bölgenin yüzü tarama halkaları olur, adaları delik; çizgilere bağlanmaz, çünkü bağ sınırı kapalı nesnelerden yeniden kurar — satırda ve sayfada söylenir); Çizim ▸ Tarama bir aile oldu. **Ertelenen:** içteki yazı ve sembollerin taramadan boş kalması — kendiliğinden mi, seçerek mi, Açık soru 18. **29 Eylül 2026:** seçerek yapıldı, `TARAMA disarida=` (Açık soru 18'in kararı).
   **Netcad:** Alan Seçim Aracı: tıklanan noktayı çevreleyen alanı kendiliğinden çevirir; F2 Çevir (köşeleri göster), F3 Seç (var olan alan), F4 Gelişmiş (8.6; kesişen, çok kırıklı geometride iç alan) 217387115; Alan Sor ve Alan Taramaları bu araçla çalışır 217385205, 217385786; Boşluk ve `/` iç içe alanları küçükten büyüğe listeler 217387890.
   **Bugün:** `core.boundary` SINIR aynı hesabı bir **komut** olarak yapıyor (CGAL düzenlemesi, `core/planar.hpp`; adalar delik, yaylar yay); başka komutlar onu girdi olarak kullanamıyor.
   **Tasarım:** Tek girdi türü `ctx.region(...)` — cevap üç biçimde gelir: köşeler (F2), var olan kapalı nesne (F3), **iç nokta** (F4; SINIR'ın kodu). Komut gövdesi hangisinin geldiğine göre dallanmaz (command.md P10); günlüğe **çözülmüş sınır** yazılır, tıklanan nokta değil — yeniden oynatma el istemez. İlk kullanıcılar: `ALANÖLÇ yontem=ic nokta=`, `TARAMA ic=` (içteki yazı ve semboller ada kuralıyla dışarıda kalır — Netcad'in "Diğer Objeler Seç"i). `core.select` SEÇ'e `mod=İÇEREN nokta=`: noktayı içeren kapalı nesneler **küçükten büyüğe** (parsel ⊂ ada ⊂ mahalle), `sira=` ile hangisi.
@@ -929,6 +929,9 @@ etmeden başlamaz.
    sıra M4–M7'yi belirler.
 2. **Tepe kotu sütunu (N-05):** model.md'ye alan eklenmesi, dosya sürümü (`min_reader_version`) ve `kot`
    özniteliğinden göç onaylanıyor mu?
+   **Karar (29 Eylül 2026): onaylandı.** Tepe başına isteğe bağlı Z; kotsuz bir belgenin dosya baytı ve
+   `content_hash`'i değişmez; Z yalnız varsa yazılır ve dosya sürümü yalnız o zaman yükselir; `kot`
+   özniteliği açılışta bir kez tepelere taşınır ve sayısı söylenir; DXF/GPKG Z gidiş-dönüşü; `KOTVER`.
 3. **Dik boy işaret kuralı.** Netcad yardımı dört ayrı sayfada **sağ pozitif, sol negatif** diyor: Yan Nokta
    Hesabı ("dik boy sol tarafta kalıyorsa değeri eksi girilmelidir", 217389335), Bina Oluştur ("+ sağa, −
    sola", 217385353), Enkesit Editörü ("sol taraf negatif, sağ taraf pozitif", 217389314), KM yakalama
@@ -966,11 +969,20 @@ etmeden başlamaz.
     olur; (b) Netcad gibi **seçerek** — "Diğer Objeler Seç"in karşılığı `disarida=<nesneler>`, yalnız
     gösterilenler boş kalır; (c) ikisi, (a) öntanımlı ve `yazilar=hayır` ile kapatılır. Pay (metre ya da
     yazı yüksekliğinin katı) katalog değeri mi, parametre mi?
+    **Karar (29 Eylül 2026): (b) — Netcad gibi seçerek.** `TARAMA … disarida=<nesneler> [pay=<metre>]`
+    yapıldı: yazı harf kutusuyla, blok ve nokta kutusuyla, kapalı nesne içiyle, açık çizgi `pay`
+    genişliğinde şeritle boş kalır (`core::hatch_cutout`, `core::hatch_without`, Clipper2; köşeler ve
+    şerit uçları dik, çünkü yuvarlak bir uç bir sinüstür ve her platformda aynı bit değildir). Pay bir
+    parametre, öntanımlı 0 — mevzuat değeri değil. Böyle bir tarama sınırına bağlanmaz ve bunu söyler.
+    Şeritte **Tarama — seçilenler dışarıda**: önce seçilir, sonra bölgenin içine tıklanır.
 19. **"Katmanı nesneden al" (N-04).** Netcad'de çizim komutu, tıklanan nesnenin katmanına
     çizer. Bizde çizim komutlarının `katman=` parametresi yok; nesne etkin katmana gider.
     Seçenekler: (a) her çizim komutuna `katman=` (etkin katman değişmez); (b) sekmede
     "Katmanı nesneden al" = `KATMAN ad=<tıklanan nesnenin katmanı>` (etkin katman değişir);
     (c) yapılmasın.
+    **Karar (29 Eylül 2026): (a).** Çizim komutlarına `katman=`; Nokta Girişi sekmesindeki **Katmanı
+    nesneden al** çalışan komutun `katman=`'ını tıklanan nesnenin katmanıyla doldurur, etkin katman
+    değişmez; `katman=` almayan komutta düğme soluktur.
 
 ## 10. Kaynak notları
 
