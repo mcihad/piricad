@@ -108,6 +108,8 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `cizgi_renk`, `cizgi_kalinlik` | Hücre çizgilerinin rengi ve kalınlığı (mm; `0` kıl çizgi) |
 | `seritli`, `serit_renk` | Satırları birer atlayarak boyar, ve o satırların rengi |
 | `ondalik_isaret` | `virgul` (`1,25`, öntanımlı) ya da `nokta` (`1.25`); tablodaki bütün sayılar için |
+| `sirala` | Satırların sıralandığı kaynak: `$no`, `$y`, `$x`, `$alan`, `$uzunluk`, `$katman` ya da bir öznitelik; **doğal sırayla** (`2` önce, `10` sonra). `yok` çizimdeki sıra. Yeni tabloda `$no` |
+| `sirala_yon` | `artan` (öntanımlı) ya da `azalan`; numarası olmayan satırlar iki yönde de sonda |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
 | `yeni_ad` | `islem=ad` için öğenin yeni adı; `islem=cogalt` için kopyanın adı (verilmezse `olcek2` gibi türetilir) |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
@@ -146,8 +148,22 @@ bir yazı adlandırdığı şeyin biraz yanında durur ve listeye girseydi her n
 kez girerdi.
 
 **Yeni bir tablo koordinat listesi olarak gelir**: `No`, `Sağa (Y)`, `Yukarı (X)`
-sütunları ve köşe satırlarıyla; katmanın öznitelikleri siz eklemedikçe tabloya girmez.
-Koordinatlar iki ondalıkla (santimetre), sağa hizalı ve eş aralıklı yazılır.
+sütunları ve köşe satırlarıyla, **numara sırasıyla**; katmanın öznitelikleri siz eklemedikçe
+tabloya girmez. Koordinatlar iki ondalıkla (santimetre), sağa hizalı ve eş aralıklı yazılır.
+
+**Sıralama** (`sirala=`, `sirala_yon=artan|azalan`). Satırlar bir sütunun kaynağına göre
+**doğal sırayla** dizilir: `2`, `10`'dan önce gelir; `K-2`, `K-10`'dan; harfler Türkçe
+sıradadır. Yeni bir tablo `No`'ya (`$no`) göre sıralıdır. Numarası olmayan satırlar — hiç
+numaralanmamış bir köşe, boş bir hücre — hangi yöne sıralanırsa sıralansın **sonda** durur ve
+`No` sütununda tablodaki yerinin numarasını alır. Koordinata göre sıralamak (`sirala=$y`)
+batıdan doğuya dizer; `sirala=yok` satırları çizimdeki sıralarına döndürür. `$sira` her zaman
+tablodaki yeri sayar, sıralamadan sonra.
+
+```
+ÇIKTIÖĞE islem=ayarla ad=liste sirala=$no
+ÇIKTIÖĞE islem=ayarla ad=liste sirala=ada_no sirala_yon=azalan
+ÇIKTIÖĞE islem=ayarla ad=liste sirala=yok
+```
 
 **Sütunlar.** Her sütun bir **kaynak** gösterir — katmanın bir öznitelik sütunu ya da
 programın geometriden hesapladığı bir değer:

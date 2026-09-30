@@ -1076,7 +1076,8 @@ bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
         return false;
     for (const char* name :
          {"satirlar", "baslik_yazi", "baslik_renk", "baslik_zemin", "baslik_hiza", "baslik_kalin",
-          "cizgiler", "cizgi_renk", "cizgi_kalinlik", "seritli", "serit_renk", "ondalik_isaret"})
+          "cizgiler", "cizgi_renk", "cizgi_kalinlik", "seritli", "serit_renk", "ondalik_isaret",
+          "sirala", "sirala_yon"})
         if (!only(name, LayoutItemKind::Table, "bir tablo")) return false;
     if (const Value v = ctx.argument("izgara_etiket"); !v.empty()) {
         static constexpr const char* kWords[] = {"yok", "dis", "ic"};
@@ -1163,6 +1164,25 @@ bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
         const char* word                      = canonical_verb(v.as_text(), kWords);
         table.decimal_comma                   = word != kWords[1];
         ctx.record("ondalik_isaret", Value::text(word != nullptr ? word : "virgul"));
+    }
+    // THE ORDER OF THE ROWS: by a column's source, in natural order; `yok`
+    // gives the drawing's own order back.
+    if (const Value v = ctx.argument("sirala"); !v.empty()) {
+        if (core::turkish_key_equals(v.as_text(), "yok")) {
+            table.sort_by.clear();
+            ctx.record("sirala", Value::text("yok"));
+        } else {
+            const std::optional<std::string> source = column_source(ctx, bus, v.as_text());
+            if (!source) return false;
+            table.sort_by = *source;
+            ctx.record("sirala", Value::text(*source));
+        }
+    }
+    if (const Value v = ctx.argument("sirala_yon"); !v.empty()) {
+        static constexpr const char* kWords[] = {"artan", "azalan"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        table.sort_descending                 = word == kWords[1];
+        ctx.record("sirala_yon", Value::text(word != nullptr ? word : "artan"));
     }
     return true;
 }
@@ -1956,6 +1976,13 @@ KENTOS_COMMAND(layout_item)
                 Param::choice("ondalik_isaret", Arity::optional(), {"virgul", "nokta"},
                               "Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25)")
                     .en("decimal_mark"),
+                Param::text("sirala", Arity::optional(),
+                            "Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir "
+                            "öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra")
+                    .en("sort_by"),
+                Param::choice("sirala_yon", Arity::optional(), {"artan", "azalan"},
+                              "Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda")
+                    .en("sort_order"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

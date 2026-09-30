@@ -1597,6 +1597,8 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `seritli` | bool | isteğe bağlı | Satırları birer atlayarak boyar |
 | `serit_renk` | text | isteğe bağlı | Boyanan satırların rengi |
 | `ondalik_isaret` | text | isteğe bağlı | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) |
+| `sirala` | text | isteğe bağlı | Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra |
+| `sirala_yon` | text | isteğe bağlı | Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda |
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)
 
@@ -8929,6 +8931,18 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "nokta"
           ],
           "description": "Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) (metin)"
+        },
+        "sirala": {
+          "type": "string",
+          "description": "Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra (metin)"
+        },
+        "sirala_yon": {
+          "type": "string",
+          "enum": [
+            "artan",
+            "azalan"
+          ],
+          "description": "Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda (metin)"
         },
         "varsayimlar": {
           "type": "array",

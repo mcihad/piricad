@@ -158,11 +158,15 @@ TEST_CASE("Tablo: yeni tablo koordinat listesidir; ortak köşe bir kez, noktan�
     CHECK(t.heads == std::vector<std::string>{"No", "Sağa (Y)", "Yukarı (X)"});
 
     // SIX CORNERS, not eight: the two on the shared edge are one point each.
+    // IN THE ORDER OF THEIR NUMBERS, a new table's default: the surveyed
+    // point's own number first, then the corners nobody numbered, each under
+    // its place in the table.
     REQUIRE(t.rows.size() == 6);
-    CHECK(t.rows[0] == std::vector<std::string>{"1", "485300,00", "4310200,00"});
-    CHECK(t.rows[1] == std::vector<std::string>{"2", "485400,00", "4310200,00"});
-    // THE SURVEYED POINT'S OWN NUMBER, where it stands.
-    CHECK(t.rows[2] == std::vector<std::string>{"P-17", "485400,00", "4310260,00"});
+    CHECK(item.table.sort_by == "$no");
+    CHECK(t.rows[0] == std::vector<std::string>{"P-17", "485400,00", "4310260,00"});
+    CHECK(t.rows[1] == std::vector<std::string>{"2", "485300,00", "4310200,00"});
+    CHECK(t.rows[2] == std::vector<std::string>{"3", "485400,00", "4310200,00"});
+    CHECK(t.rows[4][1] == "485480,00");
     CHECK(t.rows[4][1] == "485480,00");
 }
 
@@ -337,11 +341,19 @@ TEST_CASE("Tablo: köşenin numarası, KÖŞENUMARALA'nın paftaya yazdığıdı
     std::vector<std::string> numbers;
     for (const auto& row : t.rows)
         numbers.push_back(row[0]);
-    // THE LEFT PARCEL'S CORNERS FIRST, in its own order: the shared ones carry
+    // IN THE ORDER OF THE NUMBERS THE SHEET SHOWS: the shared corners carry
     // the number the right parcel's corners were given, and where a surveyed
     // point (P-17) and a written number meet, the sheet's number wins — the
-    // coordinate table says what the pafta shows. A corner nobody numbered
-    // keeps its row.
+    // coordinate table says what the pafta shows. The corners nobody numbered
+    // come last, each under its place.
+    CHECK(numbers == std::vector<std::string>{"K-1", "K-2", "K-3", "K-4", "5", "6"});
+
+    // AND IN THE DRAWING'S OWN ORDER, when asked: the left parcel's corners
+    // first, as it holds them.
+    r.run("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo sirala=yok");
+    numbers.clear();
+    for (const auto& row : r.text().rows)
+        numbers.push_back(row[0]);
     CHECK(numbers == std::vector<std::string>{"1", "K-1", "K-4", "4", "K-2", "K-3"});
 }
 
@@ -378,4 +390,44 @@ TEST_CASE("Tablo: noktanın yanındaki numara yazısı listeye ikinci kez girmez
     // AND AS OBJECTS: an attribute table lists the points, not their labels.
     r.run("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo satirlar=nesne");
     CHECK(r.text().rows.size() == 3);
+}
+
+TEST_CASE("Tablo: doğal sıra — 2, 10'dan önce; K-2, K-10'dan önce; azalan ve koordinata göre")
+{
+    Rig r;
+    r.run("SÜTUN nokta_no metin");
+    r.run("KATMAN ad=NOKTA");
+    const char* points[][2] = {{"485300,4310200", "10"},
+                               {"485310,4310210", "K-10"},
+                               {"485320,4310190", "2"},
+                               {"485330,4310180", "K-2"},
+                               {"485340,4310220", "1"}};
+    int key                 = 0;
+    for (const auto& [at, number] : points) {
+        r.run(std::string("NOKTA ") + at);
+        r.run("ÖZNİTELİK nokta_no " + std::to_string(++key) + " \"" + number + "\"");
+    }
+    r.run("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay");
+    r.run("ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=tablo ad=tablo metin=NOKTA");
+    const auto numbers = [&r] {
+        std::vector<std::string> out;
+        for (const auto& row : r.text().rows)
+            out.push_back(row[0]);
+        return out;
+    };
+    CHECK(numbers() == std::vector<std::string>{"1", "2", "10", "K-2", "K-10"});
+
+    r.run("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo sirala_yon=azalan");
+    CHECK(numbers() == std::vector<std::string>{"K-10", "K-2", "10", "2", "1"});
+
+    // BY A COORDINATE, as a number: the easting (`Sağa (Y)`), west to east.
+    r.run("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo sirala=$y sirala_yon=artan");
+    CHECK(numbers() == std::vector<std::string>{"10", "K-10", "2", "K-2", "1"});
+    r.run("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo sirala=$x");
+    CHECK(numbers().front() == "K-2"); // the southernmost, 4310180
+
+    CHECK(r.refused("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=tablo sirala=$kot")
+              .find("Tanınmayan hesaplanan sütun") != std::string::npos);
+    CHECK(r.refused("ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita sirala=$no")
+              .find("yalnız bir tablo öğesine verilir") != std::string::npos);
 }

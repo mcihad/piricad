@@ -228,6 +228,11 @@ struct LayoutTableStyle
     bool stripes{false};                     ///< every second row filled
     std::uint32_t stripe_colour{0xFFF2F2F2}; ///< AARRGGBB
     bool decimal_comma{true};                ///< `1,25` as a Turkish sheet writes it; else `1.25`
+    /// The source the rows are put in order by — `$no`, `$y`, an attribute id —
+    /// in natural order (`2` before `10`, `K-2` before `K-10`). Empty: in the
+    /// order the drawing holds them.
+    std::string sort_by{};
+    bool sort_descending{false}; ///< largest first
 
     friend bool operator==(const LayoutTableStyle&, const LayoutTableStyle&) = default;
 };

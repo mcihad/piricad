@@ -20,6 +20,10 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   satırlar ve tablonun ondalık işareti (`virgul`/`nokta`).
 - `$no` köşenin paftadaki numarasıdır: `KÖŞENUMARALA`'nın köşeye yazdığı numara, yoksa
   köşedeki numaralı noktanın `nokta_no`'su, yoksa satır sırası.
+- Tablo satırları bir sütuna göre **doğal sırayla** dizilir (`sirala=`, `sirala_yon=`):
+  `2`, `10`'dan önce; `K-2`, `K-10`'dan önce. Yeni tablo numara sırasıyla gelir;
+  numarasız satırlar sonda. Noktalar çizimdeki sırayla, köşeler parselin köşe sırasıyla
+  geliyordu (bildirilen).
 - Sayılar tam sayı aritmetiğiyle, yarım sıfırdan uzağa yuvarlanarak yazılır; aynı çizim
   her platformda aynı rakamları basar.
 - Tablo yalnız noktaları, çizgileri ve alanları listeler: aynı katmandaki yazılar —

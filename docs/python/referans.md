@@ -2766,6 +2766,8 @@ cad.layout_item(
     stripes: bool,
     stripe_color: str,
     decimal_mark: str,
+    sort_by: str,
+    sort_order: str,
 ) -> int
 ```
 
@@ -2829,6 +2831,8 @@ cad.layout_item(
 | `stripes` | `bool` | `seritli` | Satırları birer atlayarak boyar |
 | `stripe_color` | `str` | `serit_renk` | Boyanan satırların rengi |
 | `decimal_mark` | `str` | `ondalik_isaret` | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) |
+| `sort_by` | `str` | `sirala` | Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra |
+| `sort_order` | `str` | `sirala_yon` | Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda |
 
 [Komut sayfası](../komutlar/layout_item.md)
 

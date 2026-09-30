@@ -898,7 +898,13 @@ struct LayoutTableRecord
     std::uint8_t lines;            ///< 39
     std::uint8_t stripes;          ///< 40
     std::uint8_t decimal_comma;    ///< 41
-    std::uint8_t reserved[22];     ///< 42  zero-filled
+    std::uint8_t sort_descending;  ///< 42
+    std::uint8_t reserved0;        ///< 43  zero-filled
+    /// 44  into the string pool: the source the rows are ordered by; 0 = in
+    /// the drawing's own order. Taken out of the reserved run, so a table
+    /// written before it reads back unordered, as it was written.
+    std::uint32_t sort_by;
+    std::uint8_t reserved[16]; ///< 48  zero-filled
 };
 
 static_assert(sizeof(LayoutTableRecord) == 64, "wire record");

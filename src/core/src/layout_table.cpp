@@ -112,6 +112,61 @@ bool listed(const Document& doc, EntityId e)
     return !doc.texts().has(doc.entities().slot[e]);
 }
 
+/// NATURAL ORDER, as a person counts: `2` before `10`, `K-2` before `K-10`,
+/// `P-7` before `P-17`; letters by the Turkish fold, so `Ç` sits with `C`.
+///
+/// HAND-ROLLED, and said: the one collator in this program that orders numbers
+/// this way — Qt's `QCollator` in numeric mode — lives above the core, which
+/// links nothing that could (CLAUDE.md 3.2). Digits are tested by their code
+/// points, never by `<cctype>` (5.6).
+int natural_compare(std::string_view a, std::string_view b)
+{
+    const std::string x = turkish_fold_key(a);
+    const std::string y = turkish_fold_key(b);
+    const auto digit    = [](char c) { return c >= '0' && c <= '9'; };
+    std::size_t i       = 0;
+    std::size_t j       = 0;
+    while (i < x.size() && j < y.size()) {
+        if (digit(x[i]) && digit(y[j])) {
+            std::size_t ie = i;
+            std::size_t je = j;
+            while (ie < x.size() && digit(x[ie]))
+                ++ie;
+            while (je < y.size() && digit(y[je]))
+                ++je;
+            std::string_view nx(x.data() + i, ie - i);
+            std::string_view ny(y.data() + j, je - j);
+            while (nx.size() > 1 && nx.front() == '0')
+                nx.remove_prefix(1);
+            while (ny.size() > 1 && ny.front() == '0')
+                ny.remove_prefix(1);
+            if (nx.size() != ny.size()) return nx.size() < ny.size() ? -1 : 1;
+            if (const int c = nx.compare(ny); c != 0) return c < 0 ? -1 : 1;
+            i = ie;
+            j = je;
+            continue;
+        }
+        if (x[i] != y[j])
+            return static_cast<unsigned char>(x[i]) < static_cast<unsigned char>(y[j]) ? -1 : 1;
+        ++i;
+        ++j;
+    }
+    if (i < x.size()) return 1;
+    if (j < y.size()) return -1;
+    return 0;
+}
+
+/// What a row is ordered by: a number, or words in natural order, or nothing —
+/// and a row with nothing to be ordered by goes last, whichever way the table
+/// is ordered.
+struct SortKey
+{
+    bool present{false};
+    bool numeric{false};
+    double number{0.0};
+    std::string text;
+};
+
 /// One row of a table: the object it comes from, and where it stands.
 struct Row
 {
@@ -206,7 +261,7 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item)
     // EVERY NAME RESOLVED BEFORE A ROW IS WRITTEN: a column the drawing has
     // lost refuses the table, it does not print as a column of blanks.
     std::vector<AttrId> attrs(out.columns.size(), kNoAttr);
-    bool wants_number = false;
+    bool wants_number = turkish_key_equals(item.table.sort_by, "$no");
     for (std::size_t c = 0; c < out.columns.size(); ++c) {
         const LayoutColumn& column = out.columns[c];
         if (const TableSource* computed = table_source(column.source); computed != nullptr) {
@@ -284,11 +339,105 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item)
             if (!xs.empty()) numbered.emplace(std::pair{xs[0], ys[0]}, held.value().text);
         }
 
+    // ---- each row's own number ---------------------------------------------
+    //
+    // The number written at the corner, else the surveyed point's own, else —
+    // for an object row — the object's own `nokta_no`. Empty when there is
+    // none; the row then gets its place in the table, AFTER the order is made.
+    std::vector<std::string> real(rows.size());
+    if (wants_number)
+        for (std::size_t n = 0; n < rows.size(); ++n) {
+            const std::pair<Mm, Mm> here{rows[n].at.x, rows[n].at.y};
+            if (item.table.rows == TableRows::Vertices)
+                if (const auto found = labelled.find(here); found != labelled.end()) {
+                    real[n] = found->second;
+                    continue;
+                }
+            if (const auto found = numbered.find(here); found != numbered.end()) {
+                real[n] = found->second;
+            } else if (number_column != kNoAttr && item.table.rows == TableRows::Objects) {
+                if (const auto own = doc.attribute(number_column, rows[n].entity);
+                    own && own.value().present)
+                    real[n] = own.value().text;
+            }
+        }
+
+    // ---- the order ----------------------------------------------------------
+    //
+    // BY WHAT THE TABLE IS SORTED BY, in natural order and stably, so rows with
+    // the same key keep the order the drawing holds them in. A row with no key
+    // — a corner nobody numbered, an empty cell — goes last either way.
+    std::vector<std::size_t> order(rows.size());
+    for (std::size_t n = 0; n < order.size(); ++n)
+        order[n] = n;
+    if (const std::string& by = item.table.sort_by;
+        !by.empty() && !turkish_key_equals(by, "$sira")) {
+        const TableSource* computed = table_source(by);
+        const AttrId by_attr        = computed == nullptr ? attribute_of(doc, by) : kNoAttr;
+        if (computed == nullptr && by_attr == kNoAttr)
+            return err(ErrorCode::NotFound, "tablo: sıralama sütunu '" + by + "' yok");
+        const std::string_view word = computed != nullptr ? computed->word : std::string_view();
+        std::vector<SortKey> keys(rows.size());
+        for (std::size_t n = 0; n < rows.size(); ++n) {
+            SortKey& k   = keys[n];
+            const Row& r = rows[n];
+            if (word == "$no") {
+                k.text    = real[n];
+                k.present = !k.text.empty();
+            } else if (word == "$y" || word == "$x") {
+                k.present = true;
+                k.numeric = true;
+                k.number  = static_cast<double>(word == "$y" ? r.at.x : r.at.y);
+            } else if (word == "$alan") {
+                k.present = true;
+                k.numeric = true;
+                k.number  = static_cast<double>(doc.entity_area(r.entity));
+            } else if (word == "$uzunluk") {
+                k.present = true;
+                k.numeric = true;
+                k.number  = static_cast<double>(doc.entity_perimeter(r.entity));
+            } else if (word == "$katman") {
+                const Layer* held = doc.layer(entities.layer[r.entity]);
+                k.text            = held != nullptr ? held->name : std::string();
+                k.present         = !k.text.empty();
+            } else if (by_attr != kNoAttr) {
+                const auto held = doc.attribute(by_attr, r.entity);
+                if (!held || !held.value().present) continue;
+                const AttrValue& v = held.value();
+                k.present          = true;
+                if (v.type == AttrType::Int64 || v.type == AttrType::Length ||
+                    v.type == AttrType::Decimal) {
+                    k.numeric    = true;
+                    double scale = 1.0;
+                    for (int d = 0; d < (v.type == AttrType::Decimal ? v.scale : 0); ++d)
+                        scale *= 10.0;
+                    k.number = static_cast<double>(v.number) / scale;
+                } else {
+                    k.text = attr_display(v, DecimalMark::Point);
+                }
+            }
+        }
+        const bool down = item.table.sort_descending;
+        std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+            const SortKey& ka = keys[a];
+            const SortKey& kb = keys[b];
+            if (ka.present != kb.present) return ka.present;
+            if (!ka.present) return false;
+            int c = 0;
+            if (ka.numeric && kb.numeric)
+                c = ka.number < kb.number ? -1 : (kb.number < ka.number ? 1 : 0);
+            else
+                c = natural_compare(ka.text, kb.text);
+            return down ? c > 0 : c < 0;
+        });
+    }
+
     // ---- the cells --------------------------------------------------------
     const bool comma = item.table.decimal_comma;
     out.rows.reserve(rows.size());
-    for (std::size_t n = 0; n < rows.size(); ++n) {
-        const Row& row = rows[n];
+    for (std::size_t at = 0; at < order.size(); ++at) {
+        const std::size_t n = order[at];
+        const Row& row      = rows[n];
         std::vector<std::string> cells;
         cells.reserve(out.columns.size());
         for (std::size_t c = 0; c < out.columns.size(); ++c) {
@@ -303,27 +452,13 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item)
                 return format_fixed(v, 0, column.decimals < 0 ? 0 : column.decimals,
                                                column.thousands, comma);
             };
+            // THE ROW'S PLACE IS ITS PLACE IN THE TABLE, after the order: the
+            // `Sıra` column counts down the page, whatever it was sorted by.
             if (word == "$sira") {
-                cells.push_back(whole(static_cast<std::int64_t>(n + 1)));
+                cells.push_back(whole(static_cast<std::int64_t>(at + 1)));
             } else if (word == "$no") {
-                // The number written at the corner, else the surveyed point's
-                // own, else the row's.
-                std::string said;
-                const std::pair<Mm, Mm> here{row.at.x, row.at.y};
-                if (item.table.rows == TableRows::Vertices) {
-                    if (const auto found = labelled.find(here); found != labelled.end())
-                        said = found->second;
-                }
-                if (said.empty()) {
-                    if (const auto found = numbered.find(here); found != numbered.end()) {
-                        said = found->second;
-                    } else if (number_column != kNoAttr && item.table.rows == TableRows::Objects) {
-                        if (const auto own = doc.attribute(number_column, row.entity);
-                            own && own.value().present)
-                            said = own.value().text;
-                    }
-                }
-                cells.push_back(said.empty() ? whole(static_cast<std::int64_t>(n + 1)) : said);
+                cells.push_back(real[n].empty() ? whole(static_cast<std::int64_t>(at + 1))
+                                                : real[n]);
             } else if (word == "$y") {
                 // THE EASTING — `Sağa (Y)` — which the model keeps in `x`.
                 cells.push_back(

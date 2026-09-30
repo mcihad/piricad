@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 122 (106 tanesi onay ister)
-- Katalog parmak izi: `15200202992243533373`
+- Katalog parmak izi: `16953577254139571366`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1138,6 +1138,8 @@ Onay ister.
 | `seritli` | boolean | hayır | Satırları birer atlayarak boyar (evet/hayır) |
 | `serit_renk` | string | hayır | Boyanan satırların rengi (metin) |
 | `ondalik_isaret` | string | hayır | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) (metin) |
+| `sirala` | string | hayır | Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra (metin) |
+| `sirala_yon` | string | hayır | Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layout_template` — Çıktı Şablonu

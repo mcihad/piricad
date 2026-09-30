@@ -926,6 +926,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
                     tr.lines            = t.lines ? 1u : 0u;
                     tr.stripes          = t.stripes ? 1u : 0u;
                     tr.decimal_comma    = t.decimal_comma ? 1u : 0u;
+                    tr.sort_descending  = t.sort_descending ? 1u : 0u;
+                    tr.sort_by          = pool.intern(t.sort_by);
                     for (const core::LayoutColumn& c : item.table_columns) {
                         LayoutTableColumnRecord cr{};
                         cr.source    = pool.intern(c.source);

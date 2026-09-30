@@ -1881,6 +1881,8 @@ def layout_item(
     stripes: bool = ...,
     stripe_color: str = ...,
     decimal_mark: str = ...,
+    sort_by: str = ...,
+    sort_order: str = ...,
 ) -> int:
     """Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
 
@@ -1943,6 +1945,8 @@ def layout_item(
         stripes — Satırları birer atlayarak boyar
         stripe_color — Boyanan satırların rengi
         decimal_mark — Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25)
+        sort_by — Satırların sıralandığı sütun: $no, $y, $x, $alan… ya da bir öznitelik; doğal sırayla (2 önce, 10 sonra). 'yok' çizimdeki sıra
+        sort_order — Sıralama yönü; numarası olmayan satırlar her iki yönde de sonda
     """
 
 def layout_template(

@@ -3318,6 +3318,40 @@ void LayoutDesigner::buildTableProperties(const core::Layout& /*l*/, const core:
              ? tr("Koordinat listesi: her köşe bir satır, iki parselin ortak köşesi bir kez.")
              : tr("Öznitelik tablosu: katmandaki her nesne bir satır."));
 
+    // THE ORDER OF THE ROWS. By number unless told otherwise — a coordinate
+    // list is read by number — and by any column's source in natural order.
+    auto* order = new ComboBox(properties_);
+    order->addItem(tr("Çizimdeki sıra"), QStringLiteral("yok"));
+    for (const core::TableSource& one : core::table_sources())
+        if (std::string_view(one.word) != "$sira")
+            order->addItem(QString::fromUtf8(one.heading), QString::fromUtf8(one.word));
+    {
+        const core::AttrTable& attrs = doc.attributes();
+        for (std::size_t c = 0; c < attrs.columns(); ++c)
+            if (const core::AttrColumn* held = attrs.column(static_cast<core::AttrId>(c));
+                held != nullptr &&
+                (item.text.empty() || core::attr_applies_to(held->spec(), item.text)))
+                order->addItem(QString::fromStdString(held->spec().name_tr.empty()
+                                                          ? held->spec().id
+                                                          : held->spec().name_tr),
+                               QString::fromStdString(held->spec().id));
+    }
+    const int ordered =
+        style.sort_by.empty() ? 0 : order->findData(QString::fromStdString(style.sort_by));
+    order->setCurrentIndex(std::max(ordered, 0));
+    order->setAccessibleName(tr("Satırların sıralandığı sütun"));
+    connect(order, &QComboBox::currentIndexChanged, this, [this, order](int i) {
+        if (filling_ || i < 0) return;
+        edit(QStringLiteral("sirala=%1").arg(quoted(order->itemData(i).toString())));
+    });
+    row(tr("Sıralama"), order);
+    if (!style.sort_by.empty())
+        row(tr("Yön"),
+            wordsEditor({tr("Artan"), tr("Azalan")},
+                        {QStringLiteral("artan"), QStringLiteral("azalan")},
+                        style.sort_descending ? 1 : 0, "sirala_yon", tr("Sıralama yönü")));
+    help(tr("Doğal sıra: 2, 10'dan önce; K-2, K-10'dan önce. Numarası olmayan satırlar sonda."));
+
     // ---- the columns: the list, and the one picked in it ----------------------
     const std::vector<core::LayoutColumn> columns = core::table_column_list(doc, item);
     const int count                               = static_cast<int>(columns.size());

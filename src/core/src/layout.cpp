@@ -305,6 +305,8 @@ std::uint64_t LayoutStore::fold(std::uint64_t seed) const
                 h                         = fnv1a_int(t.stripes ? 1 : 0, h);
                 h                         = fnv1a_int(t.stripe_colour, h);
                 h                         = fnv1a_int(t.decimal_comma ? 1 : 0, h);
+                h                         = fold_text(h, t.sort_by);
+                h                         = fnv1a_int(t.sort_descending ? 1 : 0, h);
             }
             h = fnv1a_int(l.page_of(i), h);
         }
@@ -441,6 +443,8 @@ std::string layout_to_json(const Layout& layout, std::string_view name)
             style.set("seritli", Json::boolean(t.stripes));
             style.set("serit_renk", int_json(t.stripe_colour));
             style.set("ondalik_virgul", Json::boolean(t.decimal_comma));
+            if (!t.sort_by.empty()) style.set("siralama", Json::string(t.sort_by));
+            if (t.sort_descending) style.set("azalan", Json::boolean(true));
             one.set("tablo", std::move(style));
         }
         items.push_back(std::move(one));
@@ -587,8 +591,10 @@ Result<Layout> layout_from_json(std::string_view text, std::string name)
                 t.stripes = flag("seritli", false);
                 t.stripe_colour =
                     static_cast<std::uint32_t>(int_of(*style, "serit_renk", 0xFFF2F2F2));
-                t.decimal_comma = flag("ondalik_virgul", true);
-                item.table      = t;
+                t.decimal_comma   = flag("ondalik_virgul", true);
+                t.sort_by         = text_of(*style, "siralama");
+                t.sort_descending = flag("azalan", false);
+                item.table        = t;
             }
 
             out.items.push_back(std::move(item));
@@ -729,6 +735,10 @@ LayoutItem default_item(LayoutItemKind kind)
         if (kind == LayoutItemKind::Table) {
             out.table_columns = default_table_columns();
             out.table.rows    = TableRows::Vertices;
+            // IN THE ORDER OF THEIR NUMBERS: a coordinate list is read by
+            // number, and the order a drawing happens to hold its corners in
+            // is nobody's.
+            out.table.sort_by = "$no";
         }
         break;
     case LayoutItemKind::ScaleBar:
@@ -880,6 +890,8 @@ std::vector<SheetTie> sheet_ties(const Document& doc, const Layout& layout)
             // attribute source is, like every other column a sheet reads.
             for (const LayoutColumn& c : item.table_columns)
                 if (table_source(c.source) == nullptr) column(item.id, c.source);
+            if (!item.table.sort_by.empty() && table_source(item.table.sort_by) == nullptr)
+                column(item.id, item.table.sort_by);
             break;
         default: break;
         }

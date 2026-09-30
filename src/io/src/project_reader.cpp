@@ -1068,6 +1068,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     style.stripes       = tr.stripes != 0;
                     style.stripe_colour = tr.stripe_colour;
                     style.decimal_comma = tr.decimal_comma != 0;
+                    auto sort_by        = strings.at(tr.sort_by, "tablo sıralaması");
+                    if (!sort_by) return sort_by.error();
+                    style.sort_by         = std::move(sort_by.value());
+                    style.sort_descending = tr.sort_descending != 0;
                 }
 
                 out.items.push_back(std::move(item));
