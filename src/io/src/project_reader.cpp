@@ -880,6 +880,32 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             return run_first <= rows && run_count <= rows - run_first;
         };
 
+        // ---- the tables' columns and styles, when a table has them ---------
+        //
+        // One record per table item, pointing at its item by index and at a run
+        // of its columns. Checked here, before any item is built: a record for an
+        // item the file does not have, two for one item, or a run past the end
+        // is a corrupt file (io.md R18), and it is refused rather than read as
+        // somebody else's columns.
+        const std::uint64_t table_n   = view.count_of(kBlkLayoutTables);
+        const std::uint64_t tcolumn_n = view.count_of(kBlkLayoutTableColumns);
+        auto table_records =
+            view.column<LayoutTableRecord>(kBlkLayoutTables, table_n, "yerleşim tablosu");
+        if (!table_records) return table_records.error();
+        auto table_columns =
+            view.column<LayoutTableColumnRecord>(kBlkLayoutTableColumns, tcolumn_n, "tablo sütunu");
+        if (!table_columns) return table_columns.error();
+        std::vector<std::int64_t> table_of(static_cast<std::size_t>(item_n), -1);
+        for (std::uint64_t t = 0; t < table_n; ++t) {
+            const LayoutTableRecord& tr = table_records.value()[static_cast<std::size_t>(t)];
+            if (tr.item >= item_n || !run_fits(tr.first_column, tr.column_count, tcolumn_n) ||
+                table_of[tr.item] >= 0)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(t + 1) +
+                               ". tablo kaydı dosyanın öğelerine ya da sütunlarına uymuyor.");
+            table_of[tr.item] = static_cast<std::int64_t>(t);
+        }
+
         std::vector<core::Layout> sheets;
         sheets.reserve(static_cast<std::size_t>(layout_n));
 
@@ -1000,6 +1026,48 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                         strings.at(name_rows.value()[ir.first_column + n], "yerleşim sütunu");
                     if (!one) return one.error();
                     item.columns.push_back(std::move(one.value()));
+                }
+
+                if (const std::int64_t t = table_of[r.first_item + ii]; t >= 0) {
+                    if (item.kind != core::LayoutItemKind::Table)
+                        return err(ErrorCode::ParseError,
+                                   std::string(kErrConsist) + ": '" + item.id +
+                                       "' bir tablo değil ama tablo kaydı taşıyor.");
+                    const LayoutTableRecord& tr =
+                        table_records.value()[static_cast<std::size_t>(t)];
+                    for (std::uint32_t n = 0; n < tr.column_count; ++n) {
+                        const LayoutTableColumnRecord& cr =
+                            table_columns.value()[tr.first_column + n];
+                        auto source = strings.at(cr.source, "tablo sütununun kaynağı");
+                        if (!source) return source.error();
+                        auto heading = strings.at(cr.heading, "tablo sütununun başlığı");
+                        if (!heading) return heading.error();
+                        core::LayoutColumn column;
+                        column.source   = std::move(source.value());
+                        column.heading  = std::move(heading.value());
+                        column.width    = std::max(0, cr.width_um);
+                        column.decimals = static_cast<std::int8_t>(
+                            std::clamp(static_cast<int>(cr.decimals), -1, 9));
+                        column.align     = std::min<std::uint8_t>(cr.align, 2);
+                        column.thousands = cr.thousands != 0;
+                        column.mono      = cr.mono != 0;
+                        item.table_columns.push_back(std::move(column));
+                    }
+                    core::LayoutTableStyle& style = item.table;
+                    style.rows = tr.rows == static_cast<std::uint8_t>(core::TableRows::Vertices)
+                                     ? core::TableRows::Vertices
+                                     : core::TableRows::Objects;
+                    style.header_height = std::max(0, tr.header_height_um);
+                    style.header_colour = tr.header_colour;
+                    style.header_fill   = tr.header_fill;
+                    style.header_align  = std::min<std::uint8_t>(tr.header_align, 3);
+                    style.header_bold   = tr.header_bold != 0;
+                    style.lines         = tr.lines != 0;
+                    style.line_colour   = tr.line_colour;
+                    style.line_width    = std::max(0, tr.line_width_um);
+                    style.stripes       = tr.stripes != 0;
+                    style.stripe_colour = tr.stripe_colour;
+                    style.decimal_comma = tr.decimal_comma != 0;
                 }
 
                 out.items.push_back(std::move(item));

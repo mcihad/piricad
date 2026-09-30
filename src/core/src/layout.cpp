@@ -280,6 +280,32 @@ std::uint64_t LayoutStore::fold(std::uint64_t seed) const
             // different numbers are not the same drawing, so they may not share a
             // fingerprint.
             h = fold_text(h, item.linked_map);
+            // THE TABLE'S COLUMNS AND ITS STYLE, only when it has them: a
+            // layout written before either existed folds to what it did.
+            for (const LayoutColumn& c : item.table_columns) {
+                h = fold_text(h, c.source);
+                h = fold_text(h, c.heading);
+                h = fnv1a_int(c.width, h);
+                h = fnv1a_int(c.decimals, h);
+                h = fnv1a_int(c.align, h);
+                h = fnv1a_int(c.thousands ? 1 : 0, h);
+                h = fnv1a_int(c.mono ? 1 : 0, h);
+            }
+            if (!(item.table == LayoutTableStyle{})) {
+                const LayoutTableStyle& t = item.table;
+                h                         = fnv1a_int(static_cast<std::int64_t>(t.rows), h);
+                h                         = fnv1a_int(t.header_height, h);
+                h                         = fnv1a_int(t.header_colour, h);
+                h                         = fnv1a_int(t.header_fill, h);
+                h                         = fnv1a_int(t.header_align, h);
+                h                         = fnv1a_int(t.header_bold ? 1 : 0, h);
+                h                         = fnv1a_int(t.lines ? 1 : 0, h);
+                h                         = fnv1a_int(t.line_colour, h);
+                h                         = fnv1a_int(t.line_width, h);
+                h                         = fnv1a_int(t.stripes ? 1 : 0, h);
+                h                         = fnv1a_int(t.stripe_colour, h);
+                h                         = fnv1a_int(t.decimal_comma ? 1 : 0, h);
+            }
             h = fnv1a_int(l.page_of(i), h);
         }
     }
@@ -382,6 +408,40 @@ std::string layout_to_json(const Layout& layout, std::string_view name)
             for (const std::string& column : item.columns)
                 names.push_back(Json::string(column));
             one.set("sutunlar", Json::array(std::move(names)));
+        }
+        // A TABLE'S COLUMNS AND STYLE, only when it has them, so a template
+        // written before they existed is the same text it was.
+        if (!item.table_columns.empty()) {
+            JsonArray cols;
+            for (const LayoutColumn& c : item.table_columns) {
+                Json col = Json::object({});
+                col.set("kaynak", Json::string(c.source));
+                if (!c.heading.empty()) col.set("baslik", Json::string(c.heading));
+                if (c.width > 0) col.set("genislik", int_json(c.width));
+                if (c.decimals >= 0) col.set("ondalik", int_json(c.decimals));
+                if (c.align != 0) col.set("hiza", int_json(c.align));
+                if (c.thousands) col.set("binlik", Json::boolean(true));
+                if (c.mono) col.set("esaralik", Json::boolean(true));
+                cols.push_back(std::move(col));
+            }
+            one.set("tablo_sutunlari", Json::array(std::move(cols)));
+        }
+        if (!(item.table == LayoutTableStyle{})) {
+            const LayoutTableStyle& t = item.table;
+            Json style                = Json::object({});
+            style.set("satirlar", Json::string(t.rows == TableRows::Vertices ? "kose" : "nesne"));
+            style.set("baslik_yazi", int_json(t.header_height));
+            style.set("baslik_renk", int_json(t.header_colour));
+            style.set("baslik_zemin", int_json(t.header_fill));
+            style.set("baslik_hiza", int_json(t.header_align));
+            style.set("baslik_kalin", Json::boolean(t.header_bold));
+            style.set("cizgiler", Json::boolean(t.lines));
+            style.set("cizgi_renk", int_json(t.line_colour));
+            style.set("cizgi_kalinlik", int_json(t.line_width));
+            style.set("seritli", Json::boolean(t.stripes));
+            style.set("serit_renk", int_json(t.stripe_colour));
+            style.set("ondalik_virgul", Json::boolean(t.decimal_comma));
+            one.set("tablo", std::move(style));
         }
         items.push_back(std::move(one));
     }
@@ -487,6 +547,49 @@ Result<Layout> layout_from_json(std::string_view text, std::string name)
             if (const Json* names = one.find("sutunlar"); names != nullptr && names->is_array())
                 for (const Json& named : names->as_array())
                     if (named.is_string()) item.columns.push_back(named.as_string());
+            if (const Json* cols = one.find("tablo_sutunlari"); cols != nullptr && cols->is_array())
+                for (const Json& c : cols->as_array()) {
+                    if (!c.is_object()) continue;
+                    LayoutColumn col;
+                    col.source = text_of(c, "kaynak");
+                    if (col.source.empty()) continue;
+                    col.heading = text_of(c, "baslik");
+                    col.width   = static_cast<Um>(std::max<std::int64_t>(0, int_of(c, "genislik")));
+                    col.decimals = static_cast<std::int8_t>(
+                        std::clamp<std::int64_t>(int_of(c, "ondalik", -1), -1, 9));
+                    col.align = static_cast<std::uint8_t>(
+                        std::clamp<std::int64_t>(int_of(c, "hiza"), 0, 2));
+                    col.thousands = bool_of(c, "binlik");
+                    col.mono      = bool_of(c, "esaralik");
+                    item.table_columns.push_back(std::move(col));
+                }
+            if (const Json* style = one.find("tablo"); style != nullptr && style->is_object()) {
+                const auto flag = [style](const char* key, bool fallback) {
+                    const Json* v = style->find(key);
+                    return v != nullptr && v->is_bool() ? v->as_bool() : fallback;
+                };
+                LayoutTableStyle t;
+                t.rows = text_of(*style, "satirlar") == "kose" ? TableRows::Vertices
+                                                               : TableRows::Objects;
+                t.header_height =
+                    static_cast<Um>(std::max<std::int64_t>(0, int_of(*style, "baslik_yazi")));
+                t.header_colour =
+                    static_cast<std::uint32_t>(int_of(*style, "baslik_renk", 0xFF000000));
+                t.header_fill  = static_cast<std::uint32_t>(int_of(*style, "baslik_zemin", 0));
+                t.header_align = static_cast<std::uint8_t>(
+                    std::clamp<std::int64_t>(int_of(*style, "baslik_hiza", 3), 0, 3));
+                t.header_bold = flag("baslik_kalin", true);
+                t.lines       = flag("cizgiler", true);
+                t.line_colour =
+                    static_cast<std::uint32_t>(int_of(*style, "cizgi_renk", 0xFF000000));
+                t.line_width =
+                    static_cast<Um>(std::max<std::int64_t>(0, int_of(*style, "cizgi_kalinlik")));
+                t.stripes = flag("seritli", false);
+                t.stripe_colour =
+                    static_cast<std::uint32_t>(int_of(*style, "serit_renk", 0xFFF2F2F2));
+                t.decimal_comma = flag("ondalik_virgul", true);
+                item.table      = t;
+            }
 
             out.items.push_back(std::move(item));
             out.item_pages.push_back(static_cast<std::int32_t>(int_of(one, "sayfa")));
@@ -549,6 +652,53 @@ Box2 map_window(const LayoutItem& item)
 
 // ----------------------------------------------------------- default_layout --
 
+namespace {
+
+// THE VALUES A TABLE COMPUTES, one row each. The words are what `kaynak=`
+// takes and what the file keeps; the heads are what a column gets when the
+// user gives it none.
+constexpr TableSource kTableSources[] = {
+    {"$no", "No", "köşenin numarası (KÖŞENUMARALA ya da nokta); yoksa sırası"},
+    {"$sira", "Sıra", "satırın sıra numarası"},
+    {"$y", "Sağa (Y)", "doğu koordinatı"},
+    {"$x", "Yukarı (X)", "kuzey koordinatı"},
+    {"$alan", "Alan (m²)", "nesnenin alanı"},
+    {"$uzunluk", "Uzunluk (m)", "çizginin uzunluğu ya da alanın çevresi"},
+    {"$katman", "Katman", "nesnenin katmanı"},
+};
+
+} // namespace
+
+std::span<const TableSource> table_sources()
+{
+    return kTableSources;
+}
+
+const TableSource* table_source(std::string_view word)
+{
+    for (const TableSource& one : kTableSources)
+        if (turkish_key_equals(word, one.word)) return &one;
+    return nullptr;
+}
+
+std::vector<LayoutColumn> default_table_columns()
+{
+    // FIGURES TO THE RIGHT AND IN THE MONOSPACED FACE, so the metres of one
+    // row stand over the metres of the next; two decimals, the centimetre a
+    // coordinate list is written to.
+    LayoutColumn number;
+    number.source = "$no";
+    number.align  = 1;
+    LayoutColumn east;
+    east.source        = "$y";
+    east.decimals      = 2;
+    east.align         = 2;
+    east.mono          = true;
+    LayoutColumn north = east;
+    north.source       = "$x";
+    return {number, east, north};
+}
+
 LayoutItem default_item(LayoutItemKind kind)
 {
     LayoutItem out;
@@ -572,6 +722,14 @@ LayoutItem default_item(LayoutItemKind kind)
         // through them.
         out.background    = true;
         out.frame_visible = true;
+        // A NEW TABLE IS A COORDINATE LIST — the table a pafta carries most —
+        // and lists nothing it was not asked for. It used to print every
+        // attribute column the layer had, which is a table nobody wanted and
+        // everybody had to take apart.
+        if (kind == LayoutItemKind::Table) {
+            out.table_columns = default_table_columns();
+            out.table.rows    = TableRows::Vertices;
+        }
         break;
     case LayoutItemKind::ScaleBar:
         out.style = 4; // four segments
@@ -718,6 +876,10 @@ std::vector<SheetTie> sheet_ties(const Document& doc, const Layout& layout)
             layer(item.id, item.text);
             for (const std::string& c : item.columns)
                 column(item.id, c);
+            // A COMPUTED SOURCE IS NOT A NAME the drawing can lose; an
+            // attribute source is, like every other column a sheet reads.
+            for (const LayoutColumn& c : item.table_columns)
+                if (table_source(c.source) == nullptr) column(item.id, c.source);
             break;
         default: break;
         }

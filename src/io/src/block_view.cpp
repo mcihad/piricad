@@ -98,6 +98,8 @@ std::string known_block_name(std::uint32_t id)
     case kBlkLayoutPages:
     case kBlkLayoutItems:
     case kBlkLayoutNames: return "çıktı yerleşimleri";
+    case kBlkLayoutTables:
+    case kBlkLayoutTableColumns: return "yerleşim tabloları";
     default: return {};
     }
 }

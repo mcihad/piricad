@@ -46,6 +46,10 @@ buluşur ve çevirme orada yapılır.
 ÇIKTIÖĞE islem=cogalt [yerlesim=<ad>] ad=<ad> [yeni_ad=<ad>] [x=<mm> y=<mm>] [ayarlar…]
 ÇIKTIÖĞE islem=ayarla [yerlesim=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
          [pencere=x1,y1 pencere=x2,y2] [izgara=<biçim>] [kilit=evet] …
+ÇIKTIÖĞE islem=sutunekle [yerlesim=<ad>] ad=<tablo> kaynak=<sütun> [hedef=<sıra>] [sütun ayarları…]
+ÇIKTIÖĞE islem=sutunayarla [yerlesim=<ad>] ad=<tablo> sutun=<sıra> [sütun ayarları…]
+ÇIKTIÖĞE islem=sutuntasi [yerlesim=<ad>] ad=<tablo> sutun=<sıra> hedef=<sıra>
+ÇIKTIÖĞE islem=sutunsil [yerlesim=<ad>] ad=<tablo> sutun=<sıra>
 ```
 
 `ekle` aynı satırda verilen **her ayarı** uygular: konum, boyut, yazı, renk… Yeni
@@ -68,7 +72,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 
 | Parametre | Anlamı |
 |---|---|
-| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad`, `cogalt` |
+| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad`, `cogalt`; tablonun sütunları için `sutunekle`, `sutunayarla`, `sutuntasi`, `sutunsil` |
 | `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
 | `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo`, `grafik` |
@@ -84,7 +88,26 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `sira` | Çizim sırası; büyük olan üstte |
 | `satir_siniri` | Tablo öğesinin yazacağı en çok satır; `0` = kutuya sığdığı kadar |
-| `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla (`hepsi` listeyi boşaltır); **grafik** öğesinde sayımın yapılacağı tek sütun |
+| `sutunlar` | Tablonun sütunlarını bir kerede, sırasıyla kurar — her biri kendi öntanımlı biçimiyle; `hepsi` katmanın bütün özniteliklerini yazar. **Grafik** öğesinde sayımın yapılacağı tek sütun |
+| `sutun` | Tablonun kaçıncı sütunu (1'den başlar); `sutunayarla`, `sutuntasi`, `sutunsil` için |
+| `hedef` | Sütunun gideceği sıra; `sutunekle`de verilmezse sona eklenir |
+| `kaynak` | Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan bir değer — `$no`, `$sira`, `$y`, `$x`, `$alan`, `$uzunluk`, `$katman` |
+| `baslik` | Sütunun başlığı; verilmezse kaynağın kendi adı |
+| `sutun_hiza` | Sütundaki değerlerin hizası: `sol`, `orta`, `sag` |
+| `ondalik` | Sayının ondalık basamak sayısı (0…9); `-1` değeri olduğu gibi yazar |
+| `binlik` | Sayının binliklerini ayırır: `1.234.567,89` |
+| `sutun_genislik` | Sütunun kâğıttaki genişliği, mm; `0` sabit sütunlardan kalan yeri paylaşır |
+| `esaralik` | Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır |
+| `satirlar` | Tablonun bir satırı: `nesne` (katmandaki her nesne) ya da `kose` (her köşe — koordinat listesi) |
+| `baslik_yazi` | Başlık satırının yazı yüksekliği, mm; `0` tablonun yazı yüksekliği |
+| `baslik_renk` | Başlık yazısının rengi |
+| `baslik_zemin` | Başlık satırının zemin rengi; `yok` zeminsiz |
+| `baslik_hiza` | Başlıkların hizası: `sol`, `orta`, `sag` ya da `sutun` (her başlık kendi sütunu gibi) |
+| `baslik_kalin` | Başlıkları kalın yazar (öntanımlı `evet`) |
+| `cizgiler` | Hücrelerin çevresine çizgi çeker (öntanımlı `evet`) |
+| `cizgi_renk`, `cizgi_kalinlik` | Hücre çizgilerinin rengi ve kalınlığı (mm; `0` kıl çizgi) |
+| `seritli`, `serit_renk` | Satırları birer atlayarak boyar, ve o satırların rengi |
+| `ondalik_isaret` | `virgul` (`1,25`, öntanımlı) ya da `nokta` (`1.25`); tablodaki bütün sayılar için |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
 | `yeni_ad` | `islem=ad` için öğenin yeni adı; `islem=cogalt` için kopyanın adı (verilmezse `olcek2` gibi türetilir) |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
@@ -106,24 +129,90 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 
 ### Tablo öğesi
 
-`metin=` tablonun **katman adıdır**. Sütunlar o katmanın şemasından gelir;
-yalnız bazılarını istiyorsanız `sutunlar=` ile sırasıyla yazın — anahtar birden
-çok kez yazılır, `hepsi` listeyi boşaltır:
+`metin=` tablonun **katman adıdır**; tablo o katmanı okur. Bir tablonun iki şeyi
+kararlaştırılır: **bir satırın ne olduğu** ve **sütunları**.
+
+**Satırlar** (`satirlar=`):
+
+| Değer | Bir satır | Ne için |
+|---|---|---|
+| `kose` | katmandaki nesnelerin her köşesi; iki parselin **ortak köşesi bir kez** listelenir | koordinat listesi |
+| `nesne` | katmandaki her nesne | öznitelik tablosu: ada, parsel, alan… |
+
+Tablo katmandaki **noktaları, çizgileri ve alanları** listeler. Aynı katmandaki
+**yazılar** — noktanın yanına yazılmış numarası, parselin ada/parsel yazısı,
+`KÖŞENUMARALA`'nın numaraları — ölçüler, kılavuz çizgileri ve taramalar satır olmaz:
+bir yazı adlandırdığı şeyin biraz yanında durur ve listeye girseydi her nokta ikinci
+kez girerdi.
+
+**Yeni bir tablo koordinat listesi olarak gelir**: `No`, `Sağa (Y)`, `Yukarı (X)`
+sütunları ve köşe satırlarıyla; katmanın öznitelikleri siz eklemedikçe tabloya girmez.
+Koordinatlar iki ondalıkla (santimetre), sağa hizalı ve eş aralıklı yazılır.
+
+**Sütunlar.** Her sütun bir **kaynak** gösterir — katmanın bir öznitelik sütunu ya da
+programın geometriden hesapladığı bir değer:
+
+| Kaynak | Başlık | Ne yazar |
+|---|---|---|
+| `$no` | No | köşenin **paftada yazan numarası**: [KÖŞENUMARALA](kose_numarala.md) ile köşeye yazılmış numara; yoksa köşede duran numaralı noktanın numarası (`NOKTALAR`'ın okuduğu `nokta_no`); ikisi de yoksa satırın sırası |
+| `$sira` | Sıra | satırın sıra numarası |
+| `$y` | Sağa (Y) | doğu koordinatı |
+| `$x` | Yukarı (X) | kuzey koordinatı |
+| `$alan` | Alan (m²) | nesnenin alanı |
+| `$uzunluk` | Uzunluk (m) | çizginin uzunluğu ya da alanın çevresi |
+| `$katman` | Katman | nesnenin katmanı |
+
+Köşeler `KÖŞENUMARALA` ile numaralandıysa koordinat listesi **paftadaki numaraları
+yazar** — ortak bir köşe hangi parselden numaralandıysa o numarayla; paftadaki numara ile
+tablodaki numara böylece birbirini tutar. `nesne` satırlarında `$no` nesnenin kendi
+`nokta_no` değeridir, yoksa sırası.
+
+`nesne` satırlarında `$y` ve `$x` nesnenin yerini verir: nokta kendi yerini, kapalı bir
+alan **ağırlık merkezini** (yakalamadaki `AĞIRLIK MERKEZİ` ile aynı hesap), öteki
+nesneler ilk köşesini.
+
+Her sütunun **başlığı**, **hizası**, **ondalık basamağı**, **binlik ayırıcısı**, **eş
+aralıklı yazısı** ve **genişliği** ayrı ayrı verilir. Sütunlar tek tek eklenir, taşınır,
+ayarlanır ve silinir; her biri tek bir geri alma adımıdır:
 
 ```
-ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL sutunlar=ada sutunlar=parsel sutunlar=alan
+ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL satirlar=nesne sutunlar=ada_no sutunlar=parsel_no
+ÇIKTIÖĞE islem=sutunekle ad=liste kaynak=$alan baslik="Alan (m²)" ondalik=2 binlik=evet sutun_hiza=sag
+ÇIKTIÖĞE islem=sutuntasi ad=liste sutun=3 hedef=1
+ÇIKTIÖĞE islem=sutunayarla ad=liste sutun=1 sutun_genislik=25 esaralik=evet
+ÇIKTIÖĞE islem=sutunsil ad=liste sutun=2
 ```
 
-Tablonun katmanı ya da sütunlarından biri çizimde yoksa — başka bir çizim için
+`sutunlar=` sütunları bir kerede, sırasıyla kurar; her biri kendi öntanımlı biçimiyle
+gelir, sonra `sutunayarla` ile biçimlenir. `sutunlar=hepsi` katmanın bütün özniteliklerini
+yazar. Genişliği verilen sütun o genişliği alır; verilmeyenler kalan yeri eşit paylaşır.
+
+**Sayılar tam sayı aritmetiğiyle yazılır**: bir koordinat her platformda aynı rakamla
+basılır, yarım da **sıfırdan uzağa** yuvarlanır — `485320,155` iki ondalıkla
+`485320,16` olur. Ondalık işareti tablonun kendisinindir (`ondalik_isaret=`); virgülle
+binlik ayırıcı nokta (`1.234,56`), noktayla virgüldür (`1,234.56`).
+
+**Başlık satırı** kendi yazı boyunu, kalınlığını, rengini, zeminini ve hizasını taşır;
+`baslik_hiza=sutun` her başlığı kendi sütununun hizasıyla yazar. **Hücre çizgileri**
+(öntanımlı açık) kapatılınca tabloda yalnız başlığın altındaki çizgi kalır; `seritli=evet`
+satırları birer atlayarak boyar.
+
+Tablonun katmanı ya da bir öznitelik kaynağı çizimde yoksa — başka bir çizim için
 hazırlanmış bir yerleşim, sonradan silinmiş bir sütun — tablo **boş basılmaz**: kutunun
 yerinde kesikli bir çerçeve içinde `tablo: 'X' adlı katman yok` yazar ve
-`ÇIKTIYERLEŞİMİ islem=denetle` bunu söyler.
+`ÇIKTIYERLEŞİMİ islem=denetle` bunu söyler. Hesaplanan bir kaynak (`$y`…) çizimden
+kaybolamaz.
 
 `satir_siniri` verilmezse kutuya kaç satır sığıyorsa o kadarı yazılır ve
 **sığmayanlar sayılarak bildirilir** — hem kâğıdın üstünde ("… 79 satır daha
 sığmadı") hem de komutun sonucunda. Sessizce ilk on bir parseli gösteren bir
 tablo, eksiksiz sanılarak dosyalanan bir tablodur; kâğıdın üstündeki not onu
 elinde tutan içindir, sonuçtaki uyarı da diğer herkes için.
+
+Sütunları ayarlanamayan eski bir programda yazılmış tablo, kendi sütun listesi
+olmadığı için eskiden yazdığını yazar — katmanın bütün öznitelikleri ya da `sutunlar=`
+ile seçilenler. Bir sütun fiili ona ilk dokunduğunda o liste tablonun kendi listesine
+dönüşür.
 
 ### Metin yer tutucuları
 
@@ -381,7 +470,7 @@ sırayla gruplanmıştır:
 | Grup | Ne karara bağlar |
 |---|---|
 | **Konum ve boyut** | X (soldan), Y (üstten), genişlik, yükseklik, döndürme; çok sayfalı yerleşimde öğenin sayfası |
-| **Türe özgü** | Harita: ölçek (yazılır ya da plan ölçeklerinden seçilir), kapsam (**Çizimin tamamı**, **Ana pencereden al**), katmanlar, koordinat ızgarası. Metin: yazı, **Alan ekle ▾** ile yer tutucu, yazı boyu, renk, yatay ve dikey hizalama. Ölçek çubuğu: bağlı harita, bölüm sayısı, yazı boyu, renk. Kuzey oku: bağlı harita, renk. Lejant: başlık, bağlı harita, yazı. Resim: dosya. Şekil: biçim, çizgi, dolgu. Tablo: katman, sütunlar, satır sınırı. Grafik: katman, sayılan sütun, bağlı harita |
+| **Türe özgü** | Harita: ölçek (yazılır ya da plan ölçeklerinden seçilir), kapsam (**Çizimin tamamı**, **Ana pencereden al**), katmanlar, koordinat ızgarası. Metin: yazı, **Alan ekle ▾** ile yer tutucu, yazı boyu, renk, yatay ve dikey hizalama. Ölçek çubuğu: bağlı harita, bölüm sayısı, yazı boyu, renk. Kuzey oku: bağlı harita, renk. Lejant: başlık, bağlı harita, yazı. Resim: dosya. Şekil: biçim, çizgi, dolgu. Tablo: katman, bir satırın ne olduğu (nesne ya da köşe), sütun listesi — **Sütun ekle ▾**, yukarı, aşağı, sil — ve seçili sütunun başlığı, kaynağı, hizası, ondalığı, binlik ayırıcısı, eş aralıklı yazısı ve genişliği; başlık satırı, hücre çizgileri, şeritler, satır sınırı, ondalık işareti. Grafik: katman, sayılan sütun, bağlı harita |
 | **Çerçeve ve zemin** | Çerçeve, rengi ve kalınlığı; zemin ve rengi |
 | **Öğe** | Kilit ve öğenin adı |
 

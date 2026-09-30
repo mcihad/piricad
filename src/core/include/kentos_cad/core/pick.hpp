@@ -80,6 +80,20 @@ bool segment_touches_box(Point2 a, Point2 b, const Box2& box) noexcept;
 /// for the selection and the highlight to disagree (CLAUDE.md 5.16).
 bool ring_contains(std::span<const Mm> xs, std::span<const Mm> ys, Point2 probe) noexcept;
 
+/// The area centroid of a closed ring's vertices, or false for a ring that
+/// encloses nothing.
+///
+/// Accumulated in `double` rather than int64: the cross products of a hundred
+/// vertices of a 20 m parcel fit, but a 5 km ring in TM3 does not, and an
+/// overflowing centroid would put the snap marker in another province. The
+/// summation order is the ring's own vertex order, which is fixed by model.md
+/// R11, so the result is the same on every platform (`-ffp-contract=off`).
+///
+/// ONE CENTROID for the snap engine's `AĞIRLIK MERKEZİ` and a table's
+/// coordinate of a parcel: two formulas for one point would put the marker and
+/// the printed figure a millimetre apart.
+bool points_centroid(std::span<const Mm> xs, std::span<const Mm> ys, Point2& out);
+
 /// Intersection of the closed segments [a,b] and [c,d]. False when they are
 /// parallel, collinear or do not meet. Collinear overlap is deliberately NOT an
 /// intersection: it has no single point, and a snap must produce one point.

@@ -88,11 +88,6 @@ Mm snap_axis(Mm v, Mm step) noexcept
     return q * step;
 }
 
-/// Area centroid of one ring, or false for a ring that encloses nothing.
-///
-/// Accumulated in `double` rather than int64: the cross products of a hundred
-/// vertices of a 20 m parcel fit, but a 5 km ring in TM3 does not, and an
-/// overflowing centroid would put the snap marker in another province. The
 /// How wide the surface-normal aid catches, as the TANGENT of its half-angle.
 ///
 /// tan(20°). Twenty degrees either side of the perpendicular is wide enough that
@@ -314,42 +309,6 @@ bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
 
     if (best < 0.0) return false;
     out = Point2{mm_round(bx * kNormalScale), mm_round(by * kNormalScale)};
-    return true;
-}
-
-/// summation order is the ring's own vertex order, which is fixed by model.md
-/// R11, so the result is the same on every platform (`-ffp-contract=off`).
-/// Over the closed ring's vertices as spans, so a block member's ring placed
-/// out of its definition answers with the very arithmetic the piece PATLAT
-/// makes of it will.
-bool points_centroid(std::span<const Mm> xs, std::span<const Mm> ys, Point2& out)
-{
-    if (xs.size() < 3) return false;
-
-    // Translated to the first vertex, exactly as RingGeometry::ring_area does.
-    const Mm ox = xs[0];
-    const Mm oy = ys[0];
-
-    double twice_area = 0.0;
-    double cx         = 0.0;
-    double cy         = 0.0;
-
-    for (std::size_t i = 0; i < xs.size(); ++i) {
-        const std::size_t j = (i + 1) % xs.size();
-        const double x0     = static_cast<double>(xs[i] - ox);
-        const double y0     = static_cast<double>(ys[i] - oy);
-        const double x1     = static_cast<double>(xs[j] - ox);
-        const double y1     = static_cast<double>(ys[j] - oy);
-        const double cross  = x0 * y1 - x1 * y0;
-        twice_area += cross;
-        cx += (x0 + x1) * cross;
-        cy += (y0 + y1) * cross;
-    }
-
-    if (twice_area == 0.0) return false;
-
-    const double scale = 1.0 / (3.0 * twice_area);
-    out                = Point2{ox + mm_round(cx * scale), oy + mm_round(cy * scale)};
     return true;
 }
 

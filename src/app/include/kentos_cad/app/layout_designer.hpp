@@ -465,26 +465,37 @@ private:
     /// A dim line under the last row, in the editor column.
     void help(const QString& text);
 
+    /// Where an editor sends what it writes: `edit` on the pick when empty; a
+    /// table column's editors send it through `sutunayarla` instead.
+    using Writer = std::function<void(const QString&)>;
+
     /// A paper-millimetre field that writes `name=` on the pick.
-    QWidget* mmEditor(core::Um value, const char* name, const QString& spoken, int decimals = 1);
+    QWidget* mmEditor(core::Um value, const char* name, const QString& spoken, int decimals = 1,
+                      const Writer& write = {});
 
     /// A whole-number field that writes `name=` on the pick.
     QWidget* countEditor(long long value, const char* name, const QString& spoken, int least,
-                         int most, const QString& unit = QString());
+                         int most, const QString& unit = QString(), const Writer& write = {});
 
     /// A free-text field that writes a quoted `name=` on the pick.
     QWidget* textEditor(const QString& value, const char* name, const QString& spoken,
-                        const QString& hint);
+                        const QString& hint, const Writer& write = {});
 
     /// A colour field that writes `name=#RRGGBB` on the pick.
-    QWidget* colourEditor(std::uint32_t value, const char* name, const QString& spoken);
+    QWidget* colourEditor(std::uint32_t value, const char* name, const QString& spoken,
+                          const Writer& write = {});
 
     /// A switch that writes `name=evet|hayir` on the pick.
-    QWidget* switchEditor(bool on, const char* name, const QString& spoken);
+    QWidget* switchEditor(bool on, const char* name, const QString& spoken,
+                          const Writer& write = {});
 
     /// Several words, one written: a segment that writes `name=<word>`.
     QWidget* wordsEditor(const QStringList& shown, const QStringList& words, int current,
-                         const char* name, const QString& spoken);
+                         const char* name, const QString& spoken, const Writer& write = {});
+
+    /// A table's own section of the inspector: its rows, its columns — the
+    /// list, and the one picked in it — its head, its lines and its type.
+    void buildTableProperties(const core::Layout& l, const core::LayoutItem& item);
 
     /// Which map frame an item belongs to.
     QWidget* mapEditor(const core::Layout& l, const core::LayoutItem& item);
@@ -537,6 +548,9 @@ private:
     QLabel* pickReadout_{nullptr};
     Button* troubleReadout_{nullptr};
     QLabel* hint_{nullptr};
+
+    /// Which of a table's columns the inspector is editing, from 0.
+    int tableColumn_{0};
 
     /// See `probeBlankPaper`.
     int blankPaperPercent_{-1};

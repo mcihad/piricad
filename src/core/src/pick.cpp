@@ -257,6 +257,37 @@ bool inside_circle(const Document& doc, EntityId e, Point2 centre, double limit)
 
 } // namespace
 
+bool points_centroid(std::span<const Mm> xs, std::span<const Mm> ys, Point2& out)
+{
+    if (xs.size() < 3) return false;
+
+    // Translated to the first vertex, exactly as RingGeometry::ring_area does.
+    const Mm ox = xs[0];
+    const Mm oy = ys[0];
+
+    double twice_area = 0.0;
+    double cx         = 0.0;
+    double cy         = 0.0;
+
+    for (std::size_t i = 0; i < xs.size(); ++i) {
+        const std::size_t j = (i + 1) % xs.size();
+        const double x0     = static_cast<double>(xs[i] - ox);
+        const double y0     = static_cast<double>(ys[i] - oy);
+        const double x1     = static_cast<double>(xs[j] - ox);
+        const double y1     = static_cast<double>(ys[j] - oy);
+        const double cross  = x0 * y1 - x1 * y0;
+        twice_area += cross;
+        cx += (x0 + x1) * cross;
+        cy += (y0 + y1) * cross;
+    }
+
+    if (twice_area == 0.0) return false;
+
+    const double scale = 1.0 / (3.0 * twice_area);
+    out                = Point2{ox + mm_round(cx * scale), oy + mm_round(cy * scale)};
+    return true;
+}
+
 bool ring_contains(std::span<const Mm> xs, std::span<const Mm> ys, Point2 probe) noexcept
 {
     const std::size_t n = xs.size();

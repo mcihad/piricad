@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 122 (106 tanesi onay ister)
-- Katalog parmak izi: `5279102128459183156`
+- Katalog parmak izi: `15200202992243533373`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1117,6 +1117,27 @@ Onay ister.
 | `izgara_yazi` | number | hayır | Izgaranın koordinat yazılarının yüksekliği [kâğıt mm] (sayı) |
 | `bolum` | integer | hayır | Ölçek çubuğunun bölüm sayısı (tam sayı) |
 | `sekil` | string | hayır | Şekil öğesinin biçimi (metin) |
+| `sutun` | integer | hayır | Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi için (tam sayı) |
+| `hedef` | integer | hayır | Sütunun gideceği sıra; sutunekle ve sutuntasi için. sutunekle'de verilmezse sona eklenir (tam sayı) |
+| `kaynak` | string | hayır | Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y (Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman (metin) |
+| `baslik` | string | hayır | Sütun başlığı; verilmezse kaynağın kendi adı (metin) |
+| `sutun_hiza` | string | hayır | Sütundaki değerlerin hizası (metin) |
+| `ondalik` | integer | hayır | Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar (tam sayı) |
+| `binlik` | boolean | hayır | Sayının binliklerini ayırır: 1.234.567,89 (evet/hayır) |
+| `sutun_genislik` | number | hayır | Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır [mm] (sayı) |
+| `esaralik` | boolean | hayır | Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır (evet/hayır) |
+| `satirlar` | string | hayır | Tablonun bir satırı: katmandaki bir nesne ya da bir köşe (koordinat listesi; ortak köşe bir kez) (metin) |
+| `baslik_yazi` | number | hayır | Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği [mm] (sayı) |
+| `baslik_renk` | string | hayır | Başlık yazısının rengi (metin) |
+| `baslik_zemin` | string | hayır | Başlık satırının zemin rengi; 'yok' zeminsiz (metin) |
+| `baslik_hiza` | string | hayır | Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar (metin) |
+| `baslik_kalin` | boolean | hayır | Başlıkları kalın yazar (evet/hayır) |
+| `cizgiler` | boolean | hayır | Hücrelerin çevresine çizgi çeker (evet/hayır) |
+| `cizgi_renk` | string | hayır | Hücre çizgilerinin rengi (metin) |
+| `cizgi_kalinlik` | number | hayır | Hücre çizgilerinin kalınlığı; 0 kıl çizgi [mm] (sayı) |
+| `seritli` | boolean | hayır | Satırları birer atlayarak boyar (evet/hayır) |
+| `serit_renk` | string | hayır | Boyanan satırların rengi (metin) |
+| `ondalik_isaret` | string | hayır | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layout_template` — Çıktı Şablonu

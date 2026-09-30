@@ -6,6 +6,7 @@
 
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/layout_table.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/scene.hpp"
@@ -646,16 +647,8 @@ void paint_table(QPainter& painter, const QRectF& box, const core::Document& doc
                  std::vector<std::string>* trouble, const core::LayoutItem& item,
                  double px_per_paper_mm)
 {
-    const QFont font = font_at(item.text_height, px_per_paper_mm);
-    const QFontMetricsF metrics(font);
-    const double row_h = metrics.height() * 1.4;
-
     painter.save();
     painter.setClipRect(box);
-    painter.setFont(font);
-
-    const core::AttrTable& table = document.attributes();
-    const std::string layer      = item.text;
 
     // A NAME THAT POINTS AT NOTHING IS SAID, never drawn as an empty table
     // (TODOS F-04): a layer the drawing lacks drew its header over no rows — an
@@ -666,116 +659,134 @@ void paint_table(QPainter& painter, const QRectF& box, const core::Document& doc
         painter.setBrush(Qt::NoBrush);
         painter.drawRect(box);
         painter.setPen(colour_of(item.text_colour));
+        painter.setFont(font_at(item.text_height, px_per_paper_mm));
         painter.drawText(box, Qt::AlignCenter | Qt::TextWordWrap, why);
         painter.restore();
     };
-    if (!layer.empty() && document.find_layer(layer) == core::kNoLayer) {
-        refuse(QObject::tr("tablo: '%1' adlı katman yok").arg(QString::fromStdString(layer)));
+
+    // WHAT IT SAYS COMES FROM THE CORE (`layout_table.hpp`) — rows, heads and
+    // every figure — and this only decides where the words go, so the PDF, the
+    // printer and the designer's preview print the same table.
+    const core::Result<core::TableText> made = core::table_text(document, item);
+    if (!made) {
+        refuse(QString::fromStdString(made.error().message));
         return;
     }
-    for (const std::string& named : item.columns) {
-        bool held = false;
-        for (std::size_t c = 0; c < table.columns() && !held; ++c)
-            if (const core::AttrColumn* one = table.column(static_cast<core::AttrId>(c));
-                one != nullptr && core::turkish_key_equals(named, one->spec().id))
-                held = true;
-        if (!held) {
-            refuse(QObject::tr("tablo: '%1' adlı öznitelik sütunu yok")
-                       .arg(QString::fromStdString(named)));
-            return;
+    const core::TableText& table        = made.value();
+    const core::LayoutTableStyle& style = item.table;
+    const std::size_t n                 = table.columns.size();
+
+    const QFont body = font_at(item.text_height, px_per_paper_mm);
+    QFont mono       = body;
+    mono.setFamily(QStringLiteral("IBM Plex Mono"));
+    QFont head =
+        font_at(style.header_height > 0 ? style.header_height : item.text_height, px_per_paper_mm);
+    if (style.header_bold) head.setWeight(QFont::DemiBold);
+    const double row_h  = QFontMetricsF(body).height() * 1.4;
+    const double head_h = QFontMetricsF(head).height() * 1.4;
+    const double pad    = std::max(1.5, 0.8 * px_per_paper_mm);
+
+    // THE WIDTHS: a column given one keeps it; the others share what is left.
+    std::vector<double> widths(n, 0.0);
+    double fixed    = 0.0;
+    std::size_t any = 0;
+    for (std::size_t c = 0; c < n; ++c) {
+        if (table.columns[c].width > 0) {
+            widths[c] = mm_of(table.columns[c].width) * px_per_paper_mm;
+            fixed += widths[c];
+        } else {
+            ++any;
         }
     }
-
-    // WHICH COLUMNS. The item's own list when it names one, otherwise every
-    // column the layer offers — which is what `attr_applies_to` answers, and the
-    // same question the attribute table asks (`attribute_table.cpp`).
-    std::vector<core::AttrId> columns;
-    for (std::size_t c = 0; c < table.columns(); ++c) {
-        const core::AttrColumn* held = table.column(static_cast<core::AttrId>(c));
-        if (held == nullptr) continue;
-        if (!layer.empty() && !core::attr_applies_to(held->spec(), layer)) continue;
-        if (!item.columns.empty()) {
-            bool wanted = false;
-            for (const std::string& named : item.columns)
-                if (core::turkish_key_equals(named, held->spec().id)) wanted = true;
-            if (!wanted) continue;
-        }
-        columns.push_back(static_cast<core::AttrId>(c));
+    const double share =
+        any > 0 ? std::max(0.0, box.width() - fixed) / static_cast<double>(any) : 0.0;
+    std::vector<double> left(n + 1, box.left());
+    for (std::size_t c = 0; c < n; ++c) {
+        if (table.columns[c].width <= 0) widths[c] = share;
+        left[c + 1] = left[c] + widths[c];
     }
-
-    if (columns.empty()) {
-        painter.setPen(QPen(colour_of(item.text_colour), 0.8, Qt::DashLine));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawRect(box);
-        painter.drawText(box, Qt::AlignCenter | Qt::TextWordWrap,
-                         layer.empty() ? QObject::tr("tablo: katman seçilmedi")
-                                       : QObject::tr("tablo: '%1' katmanında sütun yok")
-                                             .arg(QString::fromStdString(layer)));
-        painter.restore();
-        return;
-    }
-
-    const double col_w = box.width() / static_cast<double>(columns.size());
-    painter.setPen(colour_of(item.text_colour));
+    const auto aligned = [](std::uint8_t align) {
+        const Qt::Alignment across = align == 1   ? Qt::AlignHCenter
+                                     : align == 2 ? Qt::AlignRight
+                                                  : Qt::AlignLeft;
+        return static_cast<int>(across | Qt::AlignVCenter);
+    };
 
     // ---- the head ----
     double y = box.top();
-    painter.save();
-    QFont head = font;
-    head.setWeight(QFont::DemiBold);
+    if ((style.header_fill >> 24) != 0)
+        painter.fillRect(QRectF(box.left(), y, left[n] - box.left(), head_h),
+                         colour_of(style.header_fill));
     painter.setFont(head);
-    for (std::size_t c = 0; c < columns.size(); ++c) {
-        const core::AttrColumn* held = table.column(columns[c]);
-        const QRectF cell(box.left() + static_cast<double>(c) * col_w, y, col_w, row_h);
-        painter.drawText(cell.adjusted(2, 0, -2, 0), Qt::AlignVCenter | Qt::AlignLeft,
-                         metrics.elidedText(QString::fromStdString(held->spec().name_tr),
-                                            Qt::ElideRight, col_w - 4));
+    painter.setPen(colour_of(style.header_colour));
+    const QFontMetricsF head_metrics(head);
+    for (std::size_t c = 0; c < n; ++c) {
+        const QRectF cell = QRectF(left[c], y, widths[c], head_h).adjusted(pad, 0, -pad, 0);
+        const std::uint8_t align =
+            style.header_align <= 2 ? style.header_align : table.columns[c].align;
+        painter.drawText(cell, aligned(align),
+                         head_metrics.elidedText(QString::fromStdString(table.heads[c]),
+                                                 Qt::ElideRight, cell.width()));
     }
-    painter.restore();
-    y += row_h;
-    painter.drawLine(QPointF(box.left(), y), QPointF(box.right(), y));
+    y += head_h;
+    const double body_top = y;
 
-    // ---- the rows, in slot order, from the layer ----
-    const core::LayerId only = layer.empty() ? core::kNoLayer : document.find_layer(layer);
-    const std::int32_t cap =
-        item.row_limit > 0 ? item.row_limit
-                           : static_cast<std::int32_t>((box.bottom() - y) / std::max(1.0, row_h));
-
-    std::int32_t written = 0;
-    std::size_t skipped  = 0;
-    for (core::EntityId slot = 0; slot < document.entities().size(); ++slot) {
-        if (!document.alive(slot)) continue;
-        if (!layer.empty() && (only == core::kNoLayer || document.entities().layer[slot] != only))
-            continue;
-        if (written >= cap || y + row_h > box.bottom()) {
-            ++skipped;
-            continue;
-        }
-
-        for (std::size_t c = 0; c < columns.size(); ++c) {
-            const core::Result<core::AttrValue> cell =
-                table.get(columns[c], document.entities().slot[slot]);
-            const QString text =
-                cell.ok() ? QString::fromStdString(core::attr_display(cell.value())) : QString();
-            const QRectF at(box.left() + static_cast<double>(c) * col_w, y, col_w, row_h);
-            painter.drawText(at.adjusted(2, 0, -2, 0), Qt::AlignVCenter | Qt::AlignLeft,
-                             metrics.elidedText(text, Qt::ElideRight, col_w - 4));
+    // ---- the rows ----
+    const std::size_t fits =
+        static_cast<std::size_t>(std::max(0.0, (box.bottom() - y) / std::max(1.0, row_h)));
+    const std::size_t cap =
+        item.row_limit > 0 ? std::min<std::size_t>(fits, static_cast<std::size_t>(item.row_limit))
+                           : fits;
+    const std::size_t shown   = std::min(cap, table.rows.size());
+    const std::size_t skipped = table.rows.size() - shown;
+    const QFontMetricsF body_metrics(body);
+    const QFontMetricsF mono_metrics(mono);
+    for (std::size_t r = 0; r < shown; ++r) {
+        if (style.stripes && r % 2 == 1)
+            painter.fillRect(QRectF(box.left(), y, left[n] - box.left(), row_h),
+                             colour_of(style.stripe_colour));
+        painter.setPen(colour_of(item.text_colour));
+        for (std::size_t c = 0; c < n; ++c) {
+            const bool figures = table.columns[c].mono;
+            painter.setFont(figures ? mono : body);
+            const QRectF cell = QRectF(left[c], y, widths[c], row_h).adjusted(pad, 0, -pad, 0);
+            painter.drawText(cell, aligned(table.columns[c].align),
+                             (figures ? mono_metrics : body_metrics)
+                                 .elidedText(QString::fromStdString(table.rows[r][c]),
+                                             Qt::ElideRight, cell.width()));
         }
         y += row_h;
-        ++written;
+    }
+
+    // ---- the lines ----
+    //
+    // A LINE ROUND EVERY CELL, the way a coordinate list is ruled; without them
+    // the one rule the table always had, under its head.
+    const double width_px =
+        std::max(0.6, mm_of(style.line_width > 0 ? style.line_width : 100) * px_per_paper_mm);
+    painter.setPen(QPen(colour_of(style.line_colour), width_px));
+    painter.setBrush(Qt::NoBrush);
+    if (style.lines) {
+        const QRectF ruled(box.left(), box.top(), left[n] - box.left(), y - box.top());
+        painter.drawRect(ruled);
+        for (std::size_t c = 1; c < n; ++c)
+            painter.drawLine(QPointF(left[c], ruled.top()), QPointF(left[c], ruled.bottom()));
+        for (double at = body_top; at < y - 0.5; at += row_h)
+            painter.drawLine(QPointF(ruled.left(), at), QPointF(ruled.right(), at));
+    } else {
+        painter.drawLine(QPointF(box.left(), body_top), QPointF(left[n], body_top));
     }
 
     // A TRUNCATED TABLE SAYS SO. A sheet that quietly showed the first eleven of
     // ninety parcels would be a sheet somebody files believing it is complete.
     if (skipped > 0 && y + row_h <= box.bottom() + row_h) {
-        painter.save();
-        QFont note = font;
+        QFont note = body;
         note.setItalic(true);
         painter.setFont(note);
-        painter.drawText(QRectF(box.left(), y, box.width(), row_h).adjusted(2, 0, -2, 0),
+        painter.setPen(colour_of(item.text_colour));
+        painter.drawText(QRectF(box.left(), y, box.width(), row_h).adjusted(pad, 0, -pad, 0),
                          Qt::AlignVCenter | Qt::AlignLeft,
                          QObject::tr("… %1 satır daha sığmadı").arg(skipped));
-        painter.restore();
     }
 
     // AND IT SAYS SO TO THE CALLER, not only on the paper. A client that exported

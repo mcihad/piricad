@@ -56,6 +56,7 @@ add_executable(kentos_tests
     unit/test_dimtools.cpp
     unit/test_hatchlink.cpp
     unit/test_draw_layer.cpp
+    unit/test_layout_table.cpp
     unit/test_textlayout.cpp
     unit/test_identity.cpp
     unit/test_dependency.cpp

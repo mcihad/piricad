@@ -35,6 +35,7 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/layout.hpp"
+#include "kentos_cad/core/layout_table.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
@@ -733,6 +734,8 @@ Task<void> run_layout(Context& ctx)
 /// script that placed a title at 312,12 got it at the margin, under the map —
 /// the silent surplus `.claude/command.md` P15 forbids, on the verb a script
 /// uses most. False after refusing.
+std::optional<std::string> column_source(Context& ctx, Bus& bus, const std::string& word);
+
 bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
                       const std::string& id)
 {
@@ -809,21 +812,50 @@ bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
                               "verilir."));
             return false;
         }
-        std::vector<std::string> wanted;
-        for (const std::string& one : v.as_texts()) {
-            if (core::turkish_key_equals(one, "hepsi")) {
-                wanted.clear();
-                break;
+        // A TABLE KEEPS ITS COLUMNS AS ITS OWN LIST (`table_columns`), each with
+        // its head and format; `sutunlar` names them in one go, each in its
+        // default format, and `hepsi` writes out every attribute the layer has.
+        // A chart counts by the first of `columns`, as it always did.
+        if (item.kind == LayoutItemKind::Table) {
+            std::vector<core::LayoutColumn> wanted;
+            bool all = false;
+            for (const std::string& one : v.as_texts()) {
+                if (core::turkish_key_equals(one, "hepsi")) {
+                    all = true;
+                    break;
+                }
+                const std::optional<std::string> source = column_source(ctx, bus, one);
+                if (!source) return false;
+                core::LayoutColumn column;
+                column.source = *source;
+                wanted.push_back(std::move(column));
             }
-            if (bus.document().attributes().find(one) == core::kNoAttr) {
-                ctx.session().fail(
-                    core::err(core::ErrorCode::NotFound, "Öznitelik sütunu yok: '" + one + "'."));
-                return false;
+            if (all) {
+                LayoutItem every = item;
+                every.table_columns.clear();
+                every.columns.clear();
+                wanted = core::table_column_list(bus.document(), every);
             }
-            wanted.push_back(one);
+            item.table_columns = std::move(wanted);
+            item.columns.clear();
+            ctx.record("sutunlar", v);
+        } else {
+            std::vector<std::string> wanted;
+            for (const std::string& one : v.as_texts()) {
+                if (core::turkish_key_equals(one, "hepsi")) {
+                    wanted.clear();
+                    break;
+                }
+                if (bus.document().attributes().find(one) == core::kNoAttr) {
+                    ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                                 "Öznitelik sütunu yok: '" + one + "'."));
+                    return false;
+                }
+                wanted.push_back(one);
+            }
+            item.columns = std::move(wanted);
+            ctx.record("sutunlar", v);
         }
-        item.columns = std::move(wanted);
-        ctx.record("sutunlar", v);
     }
 
     // WHICH LAYERS THIS FRAME DRAWS. The field has been on the model all
@@ -1042,6 +1074,10 @@ bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
         !only("bolum", LayoutItemKind::ScaleBar, "bir ölçek çubuğu") ||
         !only("sekil", LayoutItemKind::Shape, "bir şekil"))
         return false;
+    for (const char* name :
+         {"satirlar", "baslik_yazi", "baslik_renk", "baslik_zemin", "baslik_hiza", "baslik_kalin",
+          "cizgiler", "cizgi_renk", "cizgi_kalinlik", "seritli", "serit_renk", "ondalik_isaret"})
+        if (!only(name, LayoutItemKind::Table, "bir tablo")) return false;
     if (const Value v = ctx.argument("izgara_etiket"); !v.empty()) {
         static constexpr const char* kWords[] = {"yok", "dis", "ic"};
         const char* word                      = canonical_verb(v.as_text(), kWords);
@@ -1071,6 +1107,209 @@ bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
                                                                     : core::LayoutShape::Line;
         ctx.record("sekil", Value::text(word != nullptr ? word : "cizgi"));
     }
+
+    // ---- how a table is drawn -----------------------------------------------
+    core::LayoutTableStyle& table = item.table;
+    if (const Value v = ctx.argument("satirlar"); !v.empty()) {
+        static constexpr const char* kWords[] = {"nesne", "kose"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        table.rows = word == kWords[1] ? core::TableRows::Vertices : core::TableRows::Objects;
+        ctx.record("satirlar", Value::text(word != nullptr ? word : "nesne"));
+    }
+    if (const Value v = ctx.argument("baslik_yazi"); !v.empty()) {
+        table.header_height = um_of(std::max(0.0, v.as_number()));
+        ctx.record("baslik_yazi", v);
+    }
+    if (!take_colour("baslik_renk", table.header_colour)) return false;
+    // A HEAD WITH NO FILL is said with a word, not with a transparent colour
+    // nobody would think to type.
+    if (const Value v = ctx.argument("baslik_zemin"); !v.empty()) {
+        if (v.kind() == Value::Kind::Text && core::turkish_key_equals(v.as_text(), "yok")) {
+            table.header_fill = 0;
+            ctx.record("baslik_zemin", Value::text("yok"));
+        } else if (!take_colour("baslik_zemin", table.header_fill)) {
+            return false;
+        }
+    }
+    if (const Value v = ctx.argument("baslik_hiza"); !v.empty()) {
+        static constexpr const char* kWords[] = {"sol", "orta", "sag", "sutun"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        table.header_align                    = static_cast<std::uint8_t>(word == kWords[0]   ? 0
+                                                                          : word == kWords[1] ? 1
+                                                                          : word == kWords[2] ? 2
+                                                                                              : 3);
+        ctx.record("baslik_hiza", Value::text(word != nullptr ? word : "sutun"));
+    }
+    if (const Value v = ctx.argument("baslik_kalin"); !v.empty()) {
+        table.header_bold = v.as_bool();
+        ctx.record("baslik_kalin", v);
+    }
+    if (const Value v = ctx.argument("cizgiler"); !v.empty()) {
+        table.lines = v.as_bool();
+        ctx.record("cizgiler", v);
+    }
+    if (!take_colour("cizgi_renk", table.line_colour)) return false;
+    if (const Value v = ctx.argument("cizgi_kalinlik"); !v.empty()) {
+        table.line_width = um_of(std::max(0.0, v.as_number()));
+        ctx.record("cizgi_kalinlik", v);
+    }
+    if (const Value v = ctx.argument("seritli"); !v.empty()) {
+        table.stripes = v.as_bool();
+        ctx.record("seritli", v);
+    }
+    if (!take_colour("serit_renk", table.stripe_colour)) return false;
+    if (const Value v = ctx.argument("ondalik_isaret"); !v.empty()) {
+        static constexpr const char* kWords[] = {"virgul", "nokta"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        table.decimal_comma                   = word != kWords[1];
+        ctx.record("ondalik_isaret", Value::text(word != nullptr ? word : "virgul"));
+    }
+    return true;
+}
+
+/// Whether `word` is a source a table column may show: a computed value
+/// (`core::table_sources`) or an attribute column the drawing has. Refuses by
+/// name otherwise, listing what there is.
+std::optional<std::string> column_source(Context& ctx, Bus& bus, const std::string& word)
+{
+    if (const core::TableSource* computed = core::table_source(word); computed != nullptr)
+        return std::string(computed->word);
+    if (!word.empty() && word.front() == '$') {
+        std::string known;
+        for (const core::TableSource& one : core::table_sources())
+            known += (known.empty() ? "" : ", ") + std::string(one.word);
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "Tanınmayan hesaplanan sütun: '" + word + "'. Olanlar: " + known + "."));
+        return std::nullopt;
+    }
+    if (bus.document().attributes().find(word) == core::kNoAttr) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::NotFound, "Öznitelik sütunu yok: '" + word + "'."));
+        return std::nullopt;
+    }
+    return word;
+}
+
+/// Reads the settings of ONE table column from the line into `column`.
+bool take_column(Context& ctx, Bus& bus, core::LayoutColumn& column)
+{
+    if (const Value v = ctx.argument("kaynak"); !v.empty()) {
+        const std::optional<std::string> source = column_source(ctx, bus, v.as_text());
+        if (!source) return false;
+        column.source = *source;
+        ctx.record("kaynak", Value::text(*source));
+    }
+    if (const Value v = ctx.argument("baslik"); !v.empty()) {
+        column.heading = v.as_text();
+        ctx.record("baslik", v);
+    }
+    if (const Value v = ctx.argument("sutun_hiza"); !v.empty()) {
+        static constexpr const char* kWords[] = {"sol", "orta", "sag"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        column.align = static_cast<std::uint8_t>(word == kWords[0] ? 0 : word == kWords[1] ? 1 : 2);
+        ctx.record("sutun_hiza", Value::text(word != nullptr ? word : "sag"));
+    }
+    if (const Value v = ctx.argument("ondalik"); !v.empty()) {
+        column.decimals = static_cast<std::int8_t>(v.as_int());
+        ctx.record("ondalik", v);
+    }
+    if (const Value v = ctx.argument("binlik"); !v.empty()) {
+        column.thousands = v.as_bool();
+        ctx.record("binlik", v);
+    }
+    if (const Value v = ctx.argument("sutun_genislik"); !v.empty()) {
+        column.width = um_of(std::max(0.0, v.as_number()));
+        ctx.record("sutun_genislik", v);
+    }
+    if (const Value v = ctx.argument("esaralik"); !v.empty()) {
+        column.mono = v.as_bool();
+        ctx.record("esaralik", v);
+    }
+    return true;
+}
+
+/// One of the four column verbs on table `item`.
+///
+/// A TABLE OF THE OLDER KIND GETS ITS COLUMNS WRITTEN OUT FIRST: what it
+/// printed — its `columns` list, or every attribute its layer has — becomes
+/// its own list, so the verb edits the table the user is looking at rather
+/// than an empty one.
+bool column_verb(Context& ctx, Bus& bus, LayoutItem& item, const std::string& op)
+{
+    const std::string& id = item.id;
+    if (item.kind != LayoutItemKind::Table) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "'" + id + "' bir tablo değil; " + op + " yalnız tabloya verilir."));
+        return false;
+    }
+    if (item.table_columns.empty()) {
+        item.table_columns = core::table_column_list(bus.document(), item);
+        item.columns.clear();
+    }
+    std::vector<core::LayoutColumn>& columns = item.table_columns;
+    const auto position                      = [&](const char* name, std::size_t last,
+                              std::size_t fallback) -> std::optional<std::size_t> {
+        const Value v = ctx.argument(name);
+        if (v.empty()) return fallback;
+        const std::int64_t at = v.as_int();
+        if (at < 1 || static_cast<std::size_t>(at) > last) {
+            ctx.session().fail(core::err(
+                core::ErrorCode::InvalidArgument,
+                "'" + id + "' tablosunda " + std::to_string(columns.size()) + " sütun var; " +
+                    std::string(name) + "=" + std::to_string(at) + " yok."));
+            return std::nullopt;
+        }
+        ctx.record(name, v);
+        return static_cast<std::size_t>(at - 1);
+    };
+
+    if (op == "sutunekle") {
+        if (ctx.argument("kaynak").empty()) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Hangi sütun? kaynak=<öznitelik> ya da kaynak=$y, $x, "
+                                         "$no, $sira, $alan, $uzunluk, $katman"));
+            return false;
+        }
+        core::LayoutColumn column;
+        if (!take_column(ctx, bus, column)) return false;
+        const auto at = position("hedef", columns.size() + 1, columns.size());
+        if (!at) return false;
+        columns.insert(columns.begin() + static_cast<std::ptrdiff_t>(*at), std::move(column));
+        return true;
+    }
+
+    if (columns.empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "'" + id + "' tablosunda sütun yok; önce sutunekle."));
+        return false;
+    }
+    if (ctx.argument("sutun").empty()) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "Hangi sütun? sutun=<1…" + std::to_string(columns.size()) + ">"));
+        return false;
+    }
+    const auto which = position("sutun", columns.size(), 0);
+    if (!which) return false;
+
+    if (op == "sutunayarla") return take_column(ctx, bus, columns[*which]);
+    if (op == "sutunsil") {
+        columns.erase(columns.begin() + static_cast<std::ptrdiff_t>(*which));
+        return true;
+    }
+    // sutuntasi
+    if (ctx.argument("hedef").empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Nereye? hedef=<1…" + std::to_string(columns.size()) + ">"));
+        return false;
+    }
+    const auto to = position("hedef", columns.size(), 0);
+    if (!to) return false;
+    core::LayoutColumn moving = std::move(columns[*which]);
+    columns.erase(columns.begin() + static_cast<std::ptrdiff_t>(*which));
+    columns.insert(columns.begin() + static_cast<std::ptrdiff_t>(*to), std::move(moving));
     return true;
 }
 
@@ -1079,17 +1318,20 @@ Task<void> run_item(Context& ctx)
     Bus& bus                      = ctx.session().bus();
     const core::LayoutStore& have = bus.document().layouts();
 
-    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil",   "tasi",
-                                             "ayarla",  "ad",   "cogalt"};
-    auto verb =
-        co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla / ad / cogalt");
+    static constexpr const char* kVerbs[] = {"listele",     "ekle",     "sil",      "tasi",
+                                             "ayarla",      "ad",       "cogalt",   "sutunekle",
+                                             "sutunayarla", "sutunsil", "sutuntasi"};
+    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla / ad / "
+                                           "cogalt / sutunekle / sutunayarla / sutunsil / "
+                                           "sutuntasi");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Tanınmayan işlem: '" + *verb +
                                          "'. İşlemler: listele / ekle / sil / tasi / ayarla / ad / "
-                                         "cogalt"));
+                                         "cogalt / sutunekle / sutunayarla / sutunsil / "
+                                         "sutuntasi"));
         co_return;
     }
     const std::string op = resolved;
@@ -1269,6 +1511,16 @@ Task<void> run_item(Context& ctx)
             }
 
             if (!apply_properties(ctx, bus, *target, *item, *id)) co_return;
+        } else if (op == "sutunekle" || op == "sutunayarla" || op == "sutunsil" ||
+                   op == "sutuntasi") {
+            LayoutItem* item = target->find(*id);
+            if (item == nullptr) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound,
+                              "'" + sheet + "' yerleşiminde öğe yok: '" + *id + "'."));
+                co_return;
+            }
+            if (!column_verb(ctx, bus, *item, op)) co_return;
         } else {
             ctx.session().fail(core::err(core::ErrorCode::Internal,
                                          "'" + op + "' işlemi tanımlı ama uygulanmamış."));
@@ -1513,7 +1765,8 @@ KENTOS_COMMAND(layout_item)
         .params =
             {
                 Param::choice("islem", Arity::exactly(1),
-                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad", "cogalt"},
+                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad", "cogalt",
+                               "sutunekle", "sutunayarla", "sutunsil", "sutuntasi"},
                               "Ne yapılacağı")
                     .en("action"),
                 Param::text("yerlesim", Arity::optional(),
@@ -1637,6 +1890,72 @@ KENTOS_COMMAND(layout_item)
                 Param::choice("sekil", Arity::optional(), {"dikdortgen", "elips", "cizgi"},
                               "Şekil öğesinin biçimi")
                     .en("shape"),
+                // ---- a table's columns, one at a time --------------------------
+                Param::integer_range("sutun", Arity::optional(), 1, 64,
+                                     "Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi "
+                                     "için")
+                    .en("column"),
+                Param::integer_range("hedef", Arity::optional(), 1, 65,
+                                     "Sütunun gideceği sıra; sutunekle ve sutuntasi için. "
+                                     "sutunekle'de verilmezse sona eklenir")
+                    .en("to_position"),
+                Param::text("kaynak", Arity::optional(),
+                            "Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y "
+                            "(Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman")
+                    .en("source"),
+                Param::text("baslik", Arity::optional(),
+                            "Sütun başlığı; verilmezse kaynağın kendi adı")
+                    .en("heading"),
+                Param::choice("sutun_hiza", Arity::optional(), {"sol", "orta", "sag"},
+                              "Sütundaki değerlerin hizası")
+                    .en("column_align"),
+                Param::integer_range("ondalik", Arity::optional(), -1, 9,
+                                     "Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar")
+                    .en("decimals"),
+                Param::boolean("binlik", Arity::optional(),
+                               "Sayının binliklerini ayırır: 1.234.567,89")
+                    .en("thousands"),
+                Param::number("sutun_genislik", Arity::optional(),
+                              "Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır")
+                    .measured_in("mm")
+                    .en("column_width"),
+                Param::boolean("esaralik", Arity::optional(),
+                               "Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır")
+                    .en("monospace"),
+                // ---- how a table is drawn -------------------------------------
+                Param::choice("satirlar", Arity::optional(), {"nesne", "kose"},
+                              "Tablonun bir satırı: katmandaki bir nesne ya da bir köşe "
+                              "(koordinat listesi; ortak köşe bir kez)")
+                    .en("rows"),
+                Param::number("baslik_yazi", Arity::optional(),
+                              "Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği")
+                    .measured_in("mm")
+                    .en("heading_height"),
+                Param::text("baslik_renk", Arity::optional(), "Başlık yazısının rengi")
+                    .en("heading_color"),
+                Param::text("baslik_zemin", Arity::optional(),
+                            "Başlık satırının zemin rengi; 'yok' zeminsiz")
+                    .en("heading_fill"),
+                Param::choice("baslik_hiza", Arity::optional(), {"sol", "orta", "sag", "sutun"},
+                              "Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar")
+                    .en("heading_align"),
+                Param::boolean("baslik_kalin", Arity::optional(), "Başlıkları kalın yazar")
+                    .en("heading_bold"),
+                Param::boolean("cizgiler", Arity::optional(), "Hücrelerin çevresine çizgi çeker")
+                    .en("lines"),
+                Param::text("cizgi_renk", Arity::optional(), "Hücre çizgilerinin rengi")
+                    .en("line_color"),
+                Param::number("cizgi_kalinlik", Arity::optional(),
+                              "Hücre çizgilerinin kalınlığı; 0 kıl çizgi")
+                    .measured_in("mm")
+                    .en("line_width"),
+                Param::boolean("seritli", Arity::optional(), "Satırları birer atlayarak boyar")
+                    .en("stripes"),
+                Param::text("serit_renk", Arity::optional(), "Boyanan satırların rengi")
+                    .en("stripe_color"),
+                Param::choice("ondalik_isaret", Arity::optional(), {"virgul", "nokta"},
+                              "Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25)")
+                    .en("decimal_mark"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -1656,6 +1975,10 @@ KENTOS_COMMAND(layout_item)
                 {"ayarla", Effect::DocumentEdit},
                 {"ad", Effect::DocumentEdit},
                 {"cogalt", Effect::DocumentEdit},
+                {"sutunekle", Effect::DocumentEdit},
+                {"sutunayarla", Effect::DocumentEdit},
+                {"sutunsil", Effect::DocumentEdit},
+                {"sutuntasi", Effect::DocumentEdit},
             },
     };
 }

@@ -1860,6 +1860,27 @@ def layout_item(
     grid_text_height: float = ...,
     segments: int = ...,
     shape: str = ...,
+    column: int = ...,
+    to_position: int = ...,
+    source: str = ...,
+    heading: str = ...,
+    column_align: str = ...,
+    decimals: int = ...,
+    thousands: bool = ...,
+    column_width: float = ...,
+    monospace: bool = ...,
+    rows: str = ...,
+    heading_height: float = ...,
+    heading_color: str = ...,
+    heading_fill: str = ...,
+    heading_align: str = ...,
+    heading_bold: bool = ...,
+    lines: bool = ...,
+    line_color: str = ...,
+    line_width: float = ...,
+    stripes: bool = ...,
+    stripe_color: str = ...,
+    decimal_mark: str = ...,
 ) -> int:
     """Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
 
@@ -1901,6 +1922,27 @@ def layout_item(
         grid_text_height — Izgaranın koordinat yazılarının yüksekliği [kâğıt mm]
         segments — Ölçek çubuğunun bölüm sayısı
         shape — Şekil öğesinin biçimi
+        column — Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi için
+        to_position — Sütunun gideceği sıra; sutunekle ve sutuntasi için. sutunekle'de verilmezse sona eklenir
+        source — Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y (Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman
+        heading — Sütun başlığı; verilmezse kaynağın kendi adı
+        column_align — Sütundaki değerlerin hizası
+        decimals — Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar
+        thousands — Sayının binliklerini ayırır: 1.234.567,89
+        column_width — Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır [mm]
+        monospace — Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır
+        rows — Tablonun bir satırı: katmandaki bir nesne ya da bir köşe (koordinat listesi; ortak köşe bir kez)
+        heading_height — Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği [mm]
+        heading_color — Başlık yazısının rengi
+        heading_fill — Başlık satırının zemin rengi; 'yok' zeminsiz
+        heading_align — Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar
+        heading_bold — Başlıkları kalın yazar
+        lines — Hücrelerin çevresine çizgi çeker
+        line_color — Hücre çizgilerinin rengi
+        line_width — Hücre çizgilerinin kalınlığı; 0 kıl çizgi [mm]
+        stripes — Satırları birer atlayarak boyar
+        stripe_color — Boyanan satırların rengi
+        decimal_mark — Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25)
     """
 
 def layout_template(

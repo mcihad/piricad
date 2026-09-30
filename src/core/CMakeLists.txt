@@ -39,6 +39,7 @@ add_library(kentos_core STATIC
     src/ellipse.cpp
     src/guide.cpp
     src/layout.cpp
+    src/layout_table.cpp
     src/offset.cpp
     src/parallel.cpp
     src/planar.cpp

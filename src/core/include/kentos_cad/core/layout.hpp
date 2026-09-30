@@ -177,6 +177,83 @@ enum class GridLabels : std::uint8_t {
     Inside,  ///< inside the frame, for a map that fills the sheet
 };
 
+/// What one row of a table item is.
+///
+/// A SHEET CARRIES TWO KINDS OF TABLE and they read the same layer differently.
+/// An attribute table lists the OBJECTS — one parcel a row, its ada, its parsel,
+/// its area. A coordinate list lists the CORNERS — every point a row, its
+/// number, its `Sağa (Y)` and `Yukarı (X)` — and a corner two parcels share is
+/// one point, listed once.
+enum class TableRows : std::uint8_t {
+    Objects,  ///< one row per object on the layer
+    Vertices, ///< one row per distinct corner of the layer's objects
+};
+
+/// One column of a table item: what it shows, what its head says, how its
+/// cells are written.
+///
+/// THE SOURCE IS A NAME, like every other thing a sheet reads (model.md R46h):
+/// an attribute column's id, or one of the values the program computes from the
+/// geometry, which start with `$` (`table_sources`) — an attribute id is a
+/// lowercase word and never does, so the two cannot be confused.
+struct LayoutColumn
+{
+    std::string source;       ///< an attribute id, or `$y`, `$x`, `$no`, `$sira`, `$alan`, …
+    std::string heading;      ///< the head cell; empty = the source's own name
+    Um width{0};              ///< on paper; 0 = a share of what the fixed columns leave
+    std::int8_t decimals{-1}; ///< a number's digits after the mark; -1 = as the value is
+    std::uint8_t align{0};    ///< 0 left, 1 centre, 2 right
+    bool thousands{false};    ///< group a number's thousands: `485 320,15`
+    bool mono{false};         ///< the monospaced face, so a column of figures lines up
+
+    friend bool operator==(const LayoutColumn&, const LayoutColumn&) = default;
+};
+
+/// How a table item is drawn, beyond its columns.
+///
+/// THE DEFAULTS ARE THE TABLE A SHEET HAD before any of this could be set — a
+/// bold head, a rule under it, the item's own text size and colour — plus the
+/// cell lines a printed coordinate list is read by.
+struct LayoutTableStyle
+{
+    TableRows rows{TableRows::Objects};      ///< what one row is: an object or a corner
+    Um header_height{0};                     ///< the head's cap height; 0 = the item's
+    std::uint32_t header_colour{0xFF000000}; ///< AARRGGBB
+    std::uint32_t header_fill{0x00000000};   ///< AARRGGBB; alpha 0 = none
+    std::uint8_t header_align{3};            ///< 0 left, 1 centre, 2 right, 3 each column's
+    bool header_bold{true};                  ///< the head in the demibold face
+    bool lines{true};                        ///< a line round every cell
+    std::uint32_t line_colour{0xFF000000};   ///< AARRGGBB
+    Um line_width{0};                        ///< on paper; 0 = a hairline
+    bool stripes{false};                     ///< every second row filled
+    std::uint32_t stripe_colour{0xFFF2F2F2}; ///< AARRGGBB
+    bool decimal_comma{true};                ///< `1,25` as a Turkish sheet writes it; else `1.25`
+
+    friend bool operator==(const LayoutTableStyle&, const LayoutTableStyle&) = default;
+};
+
+/// One value the program computes for a table cell from the geometry.
+struct TableSource
+{
+    const char* word;    ///< what `kaynak=` takes: `$y`
+    const char* heading; ///< the head it gets when none is given: `Sağa (Y)`
+    const char* what;    ///< one line for a menu: `doğu koordinatı`
+};
+
+/// Every computed source, in the order a menu offers them.
+///
+/// `$y` IS THE EASTING AND `$x` THE NORTHING, the Turkish surveying convention
+/// (model.md R37a): the head reads `Sağa (Y)` and `Yukarı (X)`, never a bare
+/// `X` beside a 485 km value.
+std::span<const TableSource> table_sources();
+
+/// The computed source `word` names, or null for an attribute id.
+const TableSource* table_source(std::string_view word);
+
+/// The columns a new table starts with: the coordinate list — `No`,
+/// `Sağa (Y)`, `Yukarı (X)` — of the layer's corners.
+std::vector<LayoutColumn> default_table_columns();
+
 /// One item on a page.
 ///
 /// EVERY FIELD SAYS WHICH KIND READS IT. A kind that does not read a field
@@ -241,8 +318,18 @@ struct LayoutItem
     /// a different theme of the same ground.
     std::vector<std::string> layers;
 
-    /// Table: the attribute columns to print, in order. Empty means every column.
+    /// Chart: the column it counts by. Table, in a layout written before
+    /// `table_columns`: the attribute columns to print, in order, empty meaning
+    /// every one — read as it always was whenever `table_columns` is empty.
     std::vector<std::string> columns;
+
+    /// Table: its columns, each with its own head and format. EMPTY means the
+    /// table is one written before columns could be set, and `columns` above
+    /// says what it prints (`table_column_list`).
+    std::vector<LayoutColumn> table_columns;
+
+    /// Table: what a row is and how the table is drawn.
+    LayoutTableStyle table{};
 
     /// WHICH MAP FRAME THIS ITEM BELONGS TO, by that item's own id.
     ///
@@ -355,7 +442,9 @@ struct LayoutItem
                a.grid_interval == b.grid_interval && a.grid_width == b.grid_width &&
                a.grid_colour == b.grid_colour && a.grid_text_height == b.grid_text_height &&
                a.layers == b.layers && a.style == b.style && a.shape == b.shape &&
-               a.columns == b.columns && a.row_limit == b.row_limit && a.linked_map == b.linked_map;
+               a.columns == b.columns && a.row_limit == b.row_limit &&
+               a.linked_map == b.linked_map && a.table_columns == b.table_columns &&
+               a.table == b.table;
     }
 };
 

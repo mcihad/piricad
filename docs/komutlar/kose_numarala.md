@@ -19,6 +19,13 @@ sayfasında; `bagla=hayır` serbest yazı üretir.
 Numaranın biçimi sizindir: önek, en az basamak sayısı ve dolgu, ilk numara, sonek. `A`
 öneki, 5 basamak ve `0` dolgusu `A00001, A00002, …` verir.
 
+**Koordinat çizelgesi aynı numarayı yazar.** Çıktı yerleşimindeki bir tablonun `No`
+sütunu (`$no`, köşe satırlarıyla) köşeye bağlı bu numarayı okur: paftada köşenin yanında
+`A00003` yazıyorsa çizelgede o köşenin satırı da `A00003` der — iki parselin ortak köşesi
+hangisinden numaralandıysa o numarayla. Ayrıntı [Çıktı Öğesi](layout_item.md) sayfasının
+tablo bölümünde. Numarası bağlı değilse (`bagla=hayır`) çizelge onu bulamaz ve köşeye sıra
+numarası verir.
+
 Bu bir [işlem aracıdır](../islem/README.md): kapsam, asenkron çalışma, Durdur, tek geri
 alma adımı ve çıktı katmanı orada anlatılır.
 

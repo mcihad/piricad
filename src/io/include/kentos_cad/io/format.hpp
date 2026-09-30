@@ -433,6 +433,14 @@ enum BlockId : std::uint32_t {
     /// `kBlkBlockMembers` uses, and for the same reason: a nested list in a
     /// fixed record is a run plus a first/count pair.
     kBlkLayoutNames = 0x008D, ///< u32[]
+    /// A table item's columns and style, one record per table that has either
+    /// (model.md: `LayoutItem::table_columns`, `LayoutItem::table`), and the
+    /// columns themselves, per table a contiguous run. Written only when a table
+    /// has them, so a drawing whose tables are all of the older kind keeps its
+    /// bytes, and an older reader skips both and prints the table it always did
+    /// (R10: optional, no version bump).
+    kBlkLayoutTables       = 0x009A, ///< LayoutTableRecord[]
+    kBlkLayoutTableColumns = 0x009B, ///< LayoutTableColumnRecord[], per table a run
 
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
     /// Precomputed Douglas–Peucker LOD levels in quadtree tiles (io.md R6).
@@ -871,6 +879,43 @@ struct LayoutItemRecord
 };
 
 static_assert(sizeof(LayoutItemRecord) == 160, "wire record");
+
+/// A table item's style and where its columns are (`kBlkLayoutTables`).
+struct LayoutTableRecord
+{
+    std::uint32_t item;            ///<  0  index into kBlkLayoutItems
+    std::uint32_t first_column;    ///<  4  into kBlkLayoutTableColumns
+    std::uint32_t column_count;    ///<  8
+    std::int32_t header_height_um; ///< 12  0 = the item's text height
+    std::uint32_t header_colour;   ///< 16  AARRGGBB
+    std::uint32_t header_fill;     ///< 20  AARRGGBB; alpha 0 = none
+    std::uint32_t line_colour;     ///< 24  AARRGGBB
+    std::int32_t line_width_um;    ///< 28  0 = a hairline
+    std::uint32_t stripe_colour;   ///< 32  AARRGGBB
+    std::uint8_t rows;             ///< 36  core::TableRows
+    std::uint8_t header_align;     ///< 37  0 left, 1 centre, 2 right, 3 each column's
+    std::uint8_t header_bold;      ///< 38
+    std::uint8_t lines;            ///< 39
+    std::uint8_t stripes;          ///< 40
+    std::uint8_t decimal_comma;    ///< 41
+    std::uint8_t reserved[22];     ///< 42  zero-filled
+};
+
+static_assert(sizeof(LayoutTableRecord) == 64, "wire record");
+
+/// One column of a table item (`kBlkLayoutTableColumns`).
+struct LayoutTableColumnRecord
+{
+    std::uint32_t source;   ///<  0  into the string pool: an attribute id or `$y`, `$x`, …
+    std::uint32_t heading;  ///<  4  into the string pool; 0 = the source's own name
+    std::int32_t width_um;  ///<  8  0 = a share of what is left
+    std::int8_t decimals;   ///< 12  -1 = as the value is
+    std::uint8_t align;     ///< 13  0 left, 1 centre, 2 right
+    std::uint8_t thousands; ///< 14
+    std::uint8_t mono;      ///< 15
+};
+
+static_assert(sizeof(LayoutTableColumnRecord) == 16, "wire record");
 
 /// One block definition (model.md R45). Members and uses are runs into their
 /// own columns, so a block with neither costs a record and nothing else.

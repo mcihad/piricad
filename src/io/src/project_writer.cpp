@@ -830,6 +830,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<LayoutPageRecord> page_rows;
     std::vector<LayoutItemRecord> item_rows;
     std::vector<std::uint32_t> name_rows;
+    std::vector<LayoutTableRecord> table_rows;
+    std::vector<LayoutTableColumnRecord> table_column_rows;
     {
 
         for (const core::Layout& l : doc.layouts().all()) {
@@ -902,6 +904,41 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
                 out.column_count = static_cast<std::uint32_t>(item.columns.size());
                 for (const std::string& col : item.columns)
                     name_rows.push_back(pool.intern(col));
+
+                // A TABLE'S COLUMNS AND STYLE, beside the item and only when it
+                // has either: an older table costs no byte here.
+                if (item.kind == core::LayoutItemKind::Table &&
+                    (!item.table_columns.empty() || !(item.table == core::LayoutTableStyle{}))) {
+                    const core::LayoutTableStyle& t = item.table;
+                    LayoutTableRecord tr{};
+                    tr.item             = static_cast<std::uint32_t>(item_rows.size());
+                    tr.first_column     = static_cast<std::uint32_t>(table_column_rows.size());
+                    tr.column_count     = static_cast<std::uint32_t>(item.table_columns.size());
+                    tr.header_height_um = t.header_height;
+                    tr.header_colour    = t.header_colour;
+                    tr.header_fill      = t.header_fill;
+                    tr.line_colour      = t.line_colour;
+                    tr.line_width_um    = t.line_width;
+                    tr.stripe_colour    = t.stripe_colour;
+                    tr.rows             = static_cast<std::uint8_t>(t.rows);
+                    tr.header_align     = t.header_align;
+                    tr.header_bold      = t.header_bold ? 1u : 0u;
+                    tr.lines            = t.lines ? 1u : 0u;
+                    tr.stripes          = t.stripes ? 1u : 0u;
+                    tr.decimal_comma    = t.decimal_comma ? 1u : 0u;
+                    for (const core::LayoutColumn& c : item.table_columns) {
+                        LayoutTableColumnRecord cr{};
+                        cr.source    = pool.intern(c.source);
+                        cr.heading   = pool.intern(c.heading);
+                        cr.width_um  = c.width;
+                        cr.decimals  = c.decimals;
+                        cr.align     = c.align;
+                        cr.thousands = c.thousands ? 1u : 0u;
+                        cr.mono      = c.mono ? 1u : 0u;
+                        table_column_rows.push_back(cr);
+                    }
+                    table_rows.push_back(tr);
+                }
 
                 item_rows.push_back(out);
             }
@@ -997,6 +1034,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         blocks.push_back(column(kBlkLayoutPages, page_rows));
         if (!item_rows.empty()) blocks.push_back(column(kBlkLayoutItems, item_rows));
         if (!name_rows.empty()) blocks.push_back(column(kBlkLayoutNames, name_rows));
+        if (!table_rows.empty()) {
+            blocks.push_back(column(kBlkLayoutTables, table_rows));
+            if (!table_column_rows.empty())
+                blocks.push_back(column(kBlkLayoutTableColumns, table_column_rows));
+        }
     }
 
     const bool all_rows = external.empty();

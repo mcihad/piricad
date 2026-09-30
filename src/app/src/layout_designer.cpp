@@ -8,6 +8,7 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/layout_table.hpp"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -2418,7 +2419,7 @@ void LayoutDesigner::help(const QString& text)
 }
 
 QWidget* LayoutDesigner::mmEditor(core::Um value, const char* name, const QString& spoken,
-                                  int decimals)
+                                  int decimals, const Writer& write)
 {
     FieldSpec spec = decimal_of(decimals);
     spec.suffix    = QStringLiteral("mm");
@@ -2428,41 +2429,44 @@ QWidget* LayoutDesigner::mmEditor(core::Um value, const char* name, const QStrin
     field->setValue(shown);
     field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key, decimals, shown](const QString& typed) {
-        if (filling_) return;
-        QString number = typed.trimmed();
-        number.replace(QLatin1Char(','), QLatin1Char('.'));
-        bool ok            = false;
-        const double value = number.toDouble(&ok);
-        const QString said = QString::number(value, 'f', decimals);
-        // A FIELD LEFT AS IT WAS WRITES NOTHING: a visit is not an edit, and
-        // one that ran a command put a no-op on the undo stack.
-        if (!ok || said == shown) return;
-        edit(QStringLiteral("%1=%2").arg(key, said));
-    });
+    connect(field, &Field::committed, this,
+            [this, key, decimals, shown, write](const QString& typed) {
+                if (filling_) return;
+                QString number = typed.trimmed();
+                number.replace(QLatin1Char(','), QLatin1Char('.'));
+                bool ok            = false;
+                const double value = number.toDouble(&ok);
+                const QString said = QString::number(value, 'f', decimals);
+                // A FIELD LEFT AS IT WAS WRITES NOTHING: a visit is not an edit,
+                // and one that ran a command put a no-op on the undo stack.
+                if (!ok || said == shown) return;
+                const QString line = QStringLiteral("%1=%2").arg(key, said);
+                write ? write(line) : edit(line);
+            });
     return field;
 }
 
 QWidget* LayoutDesigner::countEditor(long long value, const char* name, const QString& spoken,
-                                     int least, int most, const QString& unit)
+                                     int least, int most, const QString& unit, const Writer& write)
 {
     auto* field = new Field(number_of(least, most, unit), properties_);
     field->setFixedHeight(static_cast<int>(ControlSize::Regular));
     field->setValue(QString::number(value));
     field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
+    connect(field, &Field::committed, this, [this, key, value, write](const QString& typed) {
         if (filling_) return;
         bool ok             = false;
         const long long got = typed.trimmed().toLongLong(&ok);
         if (!ok || got == value) return;
-        edit(QStringLiteral("%1=%2").arg(key).arg(got));
+        const QString line = QStringLiteral("%1=%2").arg(key).arg(got);
+        write ? write(line) : edit(line);
     });
     return field;
 }
 
 QWidget* LayoutDesigner::textEditor(const QString& value, const char* name, const QString& spoken,
-                                    const QString& hint)
+                                    const QString& hint, const Writer& write)
 {
     FieldSpec spec   = field_of(FieldKind::Text);
     spec.placeholder = hint;
@@ -2471,14 +2475,16 @@ QWidget* LayoutDesigner::textEditor(const QString& value, const char* name, cons
     field->setValue(value);
     field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
+    connect(field, &Field::committed, this, [this, key, value, write](const QString& typed) {
         if (filling_ || typed == value) return;
-        edit(QStringLiteral("%1=%2").arg(key, quoted(typed)));
+        const QString line = QStringLiteral("%1=%2").arg(key, quoted(typed));
+        write ? write(line) : edit(line);
     });
     return field;
 }
 
-QWidget* LayoutDesigner::colourEditor(std::uint32_t value, const char* name, const QString& spoken)
+QWidget* LayoutDesigner::colourEditor(std::uint32_t value, const char* name, const QString& spoken,
+                                      const Writer& write)
 {
     auto* field = new Field(field_of(FieldKind::Colour), properties_);
     field->setFixedHeight(static_cast<int>(ControlSize::Regular));
@@ -2489,17 +2495,19 @@ QWidget* LayoutDesigner::colourEditor(std::uint32_t value, const char* name, con
         QStringLiteral("%1").arg(value, 8, 16, QLatin1Char('0')).toUpper()));
     field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
+    connect(field, &Field::committed, this, [this, key, value, write](const QString& typed) {
         if (filling_) return;
         bool ok                 = false;
         const std::uint32_t got = typed.mid(2).toUInt(&ok, 16);
         if (!ok || got == value) return;
-        edit(QStringLiteral("%1=%2").arg(key, colour_word(got)));
+        const QString line = QStringLiteral("%1=%2").arg(key, colour_word(got));
+        write ? write(line) : edit(line);
     });
     return field;
 }
 
-QWidget* LayoutDesigner::switchEditor(bool on, const char* name, const QString& spoken)
+QWidget* LayoutDesigner::switchEditor(bool on, const char* name, const QString& spoken,
+                                      const Writer& write)
 {
     // A SWITCH AND ITS WORD, left-aligned in the editor column: the pill says
     // the state by its knob's side and the word says it in text (§13).
@@ -2517,16 +2525,18 @@ QWidget* LayoutDesigner::switchEditor(bool on, const char* name, const QString& 
     line->addWidget(word);
     line->addStretch(1);
     const QString key = QString::fromUtf8(name);
-    connect(pill, &QAbstractButton::toggled, this, [this, key](bool checked) {
+    connect(pill, &QAbstractButton::toggled, this, [this, key, write](bool checked) {
         if (filling_) return;
-        edit(QStringLiteral("%1=%2").arg(key, checked ? QStringLiteral("evet")
-                                                      : QStringLiteral("hayir")));
+        const QString line = QStringLiteral("%1=%2").arg(key, checked ? QStringLiteral("evet")
+                                                                      : QStringLiteral("hayir"));
+        write ? write(line) : edit(line);
     });
     return holder;
 }
 
 QWidget* LayoutDesigner::wordsEditor(const QStringList& shown, const QStringList& words,
-                                     int current, const char* name, const QString& spoken)
+                                     int current, const char* name, const QString& spoken,
+                                     const Writer& write)
 {
     auto* choice = new Segment(properties_);
     choice->setControlSize(ControlSize::Compact);
@@ -2535,9 +2545,10 @@ QWidget* LayoutDesigner::wordsEditor(const QStringList& shown, const QStringList
     choice->setCurrent(current);
     choice->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(choice, &Segment::currentChanged, this, [this, key, words](int at) {
+    connect(choice, &Segment::currentChanged, this, [this, key, words, write](int at) {
         if (filling_ || at < 0 || at >= words.size()) return;
-        edit(QStringLiteral("%1=%2").arg(key, words.at(at)));
+        const QString line = QStringLiteral("%1=%2").arg(key, words.at(at));
+        write ? write(line) : edit(line);
     });
     return choice;
 }
@@ -2581,7 +2592,8 @@ void LayoutDesigner::buildProperties()
                                 ? QStringLiteral("sayfa:%1").arg(canvas_->page())
                                 : QStringLiteral("öğe:%1").arg(picked.join(QLatin1Char('|')));
     const bool same       = subject == shownFor_;
-    const int keep        = same && scroll_ != nullptr ? scroll_->verticalScrollBar()->value() : 0;
+    if (!same) tableColumn_ = 0; ///< another table starts at its first column
+    const int keep = same && scroll_ != nullptr ? scroll_->verticalScrollBar()->value() : 0;
     QString focused;
     for (QWidget* w = QApplication::focusWidget(); w != nullptr; w = w->parentWidget())
         if (auto* field = qobject_cast<Field*>(w);
@@ -3197,10 +3209,9 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
                 colourEditor(item.background_colour, "zemin_renk", tr("Dolgu rengi")));
         break;
     }
-    case LayoutItemKind::Table:
+    case LayoutItemKind::Table: buildTableProperties(l, item); break;
     case LayoutItemKind::Chart: {
-        const bool table = item.kind == LayoutItemKind::Table;
-        group(table ? tr("TABLO") : tr("GRAFİK"));
+        group(tr("GRAFİK"));
         auto* source = new ComboBox(properties_);
         source->addItem(tr("Katman seçin"), QString());
         for (const core::Layer& layer : doc.layers())
@@ -3214,70 +3225,25 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
         });
         row(tr("Katman"), source);
 
-        // THE COLUMNS, from the drawing's own schema: a table ticks the ones
-        // it shows (none ticked is all of them), a chart counts one.
-        QStringList columns;
+        auto* counted = new ComboBox(properties_);
+        counted->addItem(tr("Sütun seçin"), QString());
         const core::AttrTable& attributes = doc.attributes();
         for (std::size_t c = 0; c < attributes.columns(); ++c)
             if (const core::AttrColumn* column = attributes.column(static_cast<core::AttrId>(c));
                 column != nullptr)
-                columns << QString::fromStdString(column->spec().id);
-        if (table) {
-            group(tr("SÜTUNLAR"),
-                  item.columns.empty() ? tr("hepsi") : tr("%1 sütun").arg(item.columns.size()));
-            if (columns.isEmpty()) help(tr("Çizimde öznitelik sütunu yok."));
-            for (const QString& name : columns) {
-                auto* tick = new CheckBox(name, properties_);
-                tick->setChecked(item.columns.empty() ||
-                                 std::find(item.columns.begin(), item.columns.end(),
-                                           name.toStdString()) != item.columns.end());
-                connect(tick, &QAbstractButton::toggled, this, [this, name, columns](bool on) {
-                    if (filling_) return;
-                    const core::Layout* sheet = layout();
-                    const core::LayoutItem* shownItem =
-                        sheet == nullptr ? nullptr : sheet->find(canvas_->selected().toStdString());
-                    if (shownItem == nullptr) return;
-                    // NONE NAMED IS ALL OF THEM, so the first untick starts
-                    // from the full list rather than from nothing.
-                    QStringList kept;
-                    if (shownItem->columns.empty())
-                        kept = columns;
-                    else
-                        for (const std::string& one : shownItem->columns)
-                            kept << QString::fromStdString(one);
-                    kept.removeAll(name);
-                    if (on) kept << name;
-                    QStringList words;
-                    for (const QString& one : kept)
-                        words << QStringLiteral("sutunlar=%1").arg(quoted(one));
-                    edit(words.isEmpty() || kept.size() == columns.size()
-                             ? QStringLiteral("sutunlar=hepsi")
-                             : words.join(QLatin1Char(' ')));
-                });
-                row(QString(), tick);
-            }
-            group(tr("GÖRÜNÜŞ"));
-            row(tr("Satır sınırı"),
-                countEditor(item.row_limit, "satir_siniri",
-                            tr("Satır sınırı; 0 kutuya sığdığı kadar"), 0, 100000));
-            help(tr("0 kutuya sığdığı kadar satır gösterir."));
-        } else {
-            auto* counted = new ComboBox(properties_);
-            counted->addItem(tr("Sütun seçin"), QString());
-            for (const QString& name : columns)
-                counted->addItem(name, name);
-            const int held = item.columns.empty()
-                                 ? 0
-                                 : counted->findData(QString::fromStdString(item.columns.front()));
-            counted->setCurrentIndex(std::max(held, 0));
-            counted->setAccessibleName(tr("Sayılacak sütun"));
-            connect(counted, &QComboBox::currentIndexChanged, this, [this, counted](int at) {
-                if (filling_ || at <= 0) return;
-                edit(QStringLiteral("sutunlar=%1").arg(quoted(counted->itemData(at).toString())));
-            });
-            row(tr("Sütun"), counted);
-            row(tr("Harita"), mapEditor(l, item));
-        }
+                counted->addItem(QString::fromStdString(column->spec().id),
+                                 QString::fromStdString(column->spec().id));
+        const int held = item.columns.empty()
+                             ? 0
+                             : counted->findData(QString::fromStdString(item.columns.front()));
+        counted->setCurrentIndex(std::max(held, 0));
+        counted->setAccessibleName(tr("Sayılacak sütun"));
+        connect(counted, &QComboBox::currentIndexChanged, this, [this, counted](int at) {
+            if (filling_ || at <= 0) return;
+            edit(QStringLiteral("sutunlar=%1").arg(quoted(counted->itemData(at).toString())));
+        });
+        row(tr("Sütun"), counted);
+        row(tr("Harita"), mapEditor(l, item));
         row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Yazı boyu")));
         row(tr("Yazı rengi"), colourEditor(item.text_colour, "yazi_renk", tr("Yazı rengi")));
         break;
@@ -3318,6 +3284,260 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
     });
     row(tr("Ad"), named);
     help(tr("Komut satırı ve betik öğeyi ad= ile bu adla anar."));
+}
+
+/// A TABLE'S SECTION OF THE INSPECTOR: what a row is, its columns — the list
+/// and the one picked in it — its head, its lines and its type.
+///
+/// Every control writes one `ÇIKTIÖĞE` line, as everything else here does: a
+/// column's settings through `sutunayarla sutun=N`, the list through
+/// `sutunekle`, `sutuntasi` and `sutunsil`.
+void LayoutDesigner::buildTableProperties(const core::Layout& /*l*/, const core::LayoutItem& item)
+{
+    const core::Document& doc           = controller_.document();
+    const core::LayoutTableStyle& style = item.table;
+
+    group(tr("TABLO"));
+    auto* source = new ComboBox(properties_);
+    source->addItem(tr("Katman seçin"), QString());
+    for (const core::Layer& layer : doc.layers())
+        source->addItem(QString::fromStdString(layer.name), QString::fromStdString(layer.name));
+    const int chosen = source->findData(QString::fromStdString(item.text));
+    source->setCurrentIndex(chosen >= 0 ? chosen : 0);
+    source->setAccessibleName(tr("Tablonun okuduğu katman"));
+    connect(source, &QComboBox::currentIndexChanged, this, [this, source](int at) {
+        if (filling_ || at <= 0) return;
+        edit(QStringLiteral("metin=%1").arg(quoted(source->itemData(at).toString())));
+    });
+    row(tr("Katman"), source);
+    row(tr("Bir satır"),
+        wordsEditor({tr("Nesne"), tr("Köşe")}, {QStringLiteral("nesne"), QStringLiteral("kose")},
+                    style.rows == core::TableRows::Vertices ? 1 : 0, "satirlar",
+                    tr("Bir satır: katmandaki bir nesne ya da bir köşe")));
+    help(style.rows == core::TableRows::Vertices
+             ? tr("Koordinat listesi: her köşe bir satır, iki parselin ortak köşesi bir kez.")
+             : tr("Öznitelik tablosu: katmandaki her nesne bir satır."));
+
+    // ---- the columns: the list, and the one picked in it ----------------------
+    const std::vector<core::LayoutColumn> columns = core::table_column_list(doc, item);
+    const int count                               = static_cast<int>(columns.size());
+    tableColumn_ = std::clamp(tableColumn_, 0, std::max(0, count - 1));
+    group(tr("SÜTUNLAR"), count == 1 ? tr("1 sütun") : tr("%1 sütun").arg(count));
+
+    auto* list = new QListWidget(properties_);
+    list->setObjectName(QStringLiteral("layoutColumns"));
+    list->setFrameShape(QFrame::NoFrame);
+    list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    list->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    list->setAccessibleName(tr("Tablonun sütunları"));
+    for (int c = 0; c < count; ++c) {
+        const core::LayoutColumn& column = columns[static_cast<std::size_t>(c)];
+        // WHAT THE HEAD SAYS, AND WHAT IT SHOWS: `Sağa (Y)` over `$y` tells a
+        // reader what the heading promises and where the figures come from.
+        auto* entry =
+            new QListWidgetItem(tr("%1.  %2   —   %3")
+                                    .arg(c + 1)
+                                    .arg(QString::fromStdString(core::table_heading(doc, column)),
+                                         QString::fromStdString(column.source)),
+                                list);
+        entry->setToolTip(QString::fromStdString(column.source));
+    }
+    // AS TALL AS ITS ROWS, measured rather than assumed: the sheet gives a
+    // list row its own height, and a list one row short hides a column.
+    list->setUniformItemSizes(true);
+    const int rowHeight = count > 0 ? std::max(24, list->sizeHintForRow(0)) : 24;
+    list->setFixedHeight(std::max(1, count) * rowHeight + 2 * list->frameWidth() + 2);
+    if (count > 0) list->setCurrentRow(tableColumn_);
+    connect(list, &QListWidget::currentRowChanged, this, [this](int at) {
+        if (filling_ || at < 0 || at == tableColumn_) return;
+        tableColumn_ = at;
+        buildProperties();
+    });
+    propertyColumn_->addWidget(list);
+
+    // THE LIST'S OWN VERBS, under it: add from a menu that says what each
+    // computed value is, move the picked one, take it away.
+    auto* verbs = new QWidget(properties_);
+    auto* line  = new QHBoxLayout(verbs);
+    line->setContentsMargins(0, 0, 0, 0);
+    line->setSpacing(4);
+    auto* add = new Button(ButtonRole::Secondary, tr("Sütun ekle"), Glyph::Plus, verbs);
+    add->setControlSize(ControlSize::Compact);
+    auto* sources = new QMenu(add);
+    for (const core::TableSource& one : core::table_sources())
+        connect(sources->addAction(
+                    QStringLiteral("%1 — %2").arg(QString::fromUtf8(one.heading), tr(one.what))),
+                &QAction::triggered, this, [this, count, word = QString::fromUtf8(one.word)] {
+                    tableColumn_ = count;
+                    edit(QStringLiteral("kaynak=%1").arg(word), QStringLiteral("sutunekle"));
+                });
+    // THE LAYER'S ATTRIBUTES, by what the attribute table calls them.
+    const core::AttrTable& attributes = doc.attributes();
+    bool first                        = true;
+    for (std::size_t c = 0; c < attributes.columns(); ++c) {
+        const core::AttrColumn* held = attributes.column(static_cast<core::AttrId>(c));
+        if (held == nullptr) continue;
+        if (!item.text.empty() && !core::attr_applies_to(held->spec(), item.text)) continue;
+        if (first) sources->addSeparator();
+        first               = false;
+        const QString id    = QString::fromStdString(held->spec().id);
+        const QString named = QString::fromStdString(held->spec().name_tr);
+        connect(sources->addAction(named.isEmpty() ? id : QStringLiteral("%1 — %2").arg(named, id)),
+                &QAction::triggered, this, [this, count, id] {
+                    tableColumn_ = count;
+                    edit(QStringLiteral("kaynak=%1").arg(quoted(id)), QStringLiteral("sutunekle"));
+                });
+    }
+    add->setMenuArrow(sources);
+    line->addWidget(add);
+    line->addStretch(1);
+    const auto columnVerb = [this, verbs, line](Glyph glyph, const QString& tip, bool enabled,
+                                                auto&& act) {
+        Button* b = strip_button(glyph, tip, verbs);
+        b->setEnabled(enabled);
+        connect(b, &QPushButton::clicked, this, std::forward<decltype(act)>(act));
+        line->addWidget(b);
+    };
+    const int at = tableColumn_;
+    columnVerb(Glyph::ChevronUp, tr("Sütunu öne al — tabloda bir sola"), count > 1 && at > 0,
+               [this, at] {
+                   tableColumn_ = at - 1;
+                   edit(QStringLiteral("sutun=%1 hedef=%2").arg(at + 1).arg(at),
+                        QStringLiteral("sutuntasi"));
+               });
+    columnVerb(Glyph::ChevronDown, tr("Sütunu arkaya al — tabloda bir sağa"),
+               count > 1 && at + 1 < count, [this, at] {
+                   tableColumn_ = at + 1;
+                   edit(QStringLiteral("sutun=%1 hedef=%2").arg(at + 1).arg(at + 2),
+                        QStringLiteral("sutuntasi"));
+               });
+    columnVerb(Glyph::Trash, tr("Sütunu sil"), count > 0, [this, at] {
+        edit(QStringLiteral("sutun=%1").arg(at + 1), QStringLiteral("sutunsil"));
+    });
+    propertyColumn_->addWidget(verbs);
+
+    // ---- the picked column ------------------------------------------------------
+    if (count > 0) {
+        const core::LayoutColumn& column = columns[static_cast<std::size_t>(at)];
+        const Writer write               = [this, at](const QString& change) {
+            edit(QStringLiteral("sutun=%1 %2").arg(at + 1).arg(change),
+                               QStringLiteral("sutunayarla"));
+        };
+        group(tr("%1. SÜTUN").arg(at + 1));
+        row(tr("Başlık"),
+            textEditor(QString::fromStdString(column.heading), "baslik", tr("Sütun başlığı"),
+                       QString::fromStdString(core::table_heading(doc, column)), write));
+
+        auto* shows = new ComboBox(properties_);
+        for (const core::TableSource& one : core::table_sources())
+            shows->addItem(QStringLiteral("%1 — %2").arg(QString::fromUtf8(one.word),
+                                                         QString::fromUtf8(one.heading)),
+                           QString::fromUtf8(one.word));
+        for (std::size_t c = 0; c < attributes.columns(); ++c)
+            if (const core::AttrColumn* held = attributes.column(static_cast<core::AttrId>(c));
+                held != nullptr &&
+                (item.text.empty() || core::attr_applies_to(held->spec(), item.text)))
+                shows->addItem(QString::fromStdString(held->spec().id),
+                               QString::fromStdString(held->spec().id));
+        const int held = shows->findData(QString::fromStdString(column.source));
+        if (held < 0)
+            shows->addItem(QString::fromStdString(column.source),
+                           QString::fromStdString(column.source));
+        shows->setCurrentIndex(held >= 0 ? held : shows->count() - 1);
+        shows->setAccessibleName(tr("Sütunun gösterdiği"));
+        connect(shows, &QComboBox::currentIndexChanged, this, [shows, write, this](int i) {
+            if (filling_ || i < 0) return;
+            write(QStringLiteral("kaynak=%1").arg(quoted(shows->itemData(i).toString())));
+        });
+        row(tr("Gösterdiği"), shows);
+        row(tr("Hiza"),
+            wordsEditor({tr("Sol"), tr("Orta"), tr("Sağ")},
+                        {QStringLiteral("sol"), QStringLiteral("orta"), QStringLiteral("sag")},
+                        column.align, "sutun_hiza", tr("Sütunun hizası"), write));
+        row(tr("Ondalık"),
+            countEditor(column.decimals, "ondalik", tr("Ondalık basamak; -1 olduğu gibi"), -1, 9,
+                        QString(), write));
+        help(tr("-1 değeri olduğu gibi yazar; koordinat 3, alan ve uzunluk 2 basamak."));
+        row(tr("Binlik ayırıcı"),
+            switchEditor(column.thousands, "binlik", tr("Binlikleri ayır"), write));
+        row(tr("Eş aralıklı"), switchEditor(column.mono, "esaralik",
+                                            tr("Eş aralıklı yazı; rakamlar alt alta"), write));
+        row(tr("Genişlik"), mmEditor(column.width, "sutun_genislik",
+                                     tr("Sütun genişliği; 0 kalan yeri paylaşır"), 1, write));
+        help(tr("0, sabit genişlikli sütunlardan kalan yeri eşit paylaşır."));
+    }
+
+    // ---- the head -----------------------------------------------------------------
+    group(tr("BAŞLIK SATIRI"));
+    // A LIST, NOT A SEGMENT: four words do not fit the editor column, and cut
+    // to `ütu | Drta` they said nothing.
+    auto* headAlign = new ComboBox(properties_);
+    for (const auto& [word, text] :
+         {std::pair{"sutun", "Sütunun hizasıyla"}, std::pair{"sol", "Sol"},
+          std::pair{"orta", "Orta"}, std::pair{"sag", "Sağ"}})
+        headAlign->addItem(tr(text), QString::fromUtf8(word));
+    headAlign->setCurrentIndex(style.header_align <= 2 ? style.header_align + 1 : 0);
+    headAlign->setAccessibleName(tr("Başlıkların hizası"));
+    connect(headAlign, &QComboBox::currentIndexChanged, this, [this, headAlign](int i) {
+        if (filling_ || i < 0) return;
+        edit(QStringLiteral("baslik_hiza=%1").arg(headAlign->itemData(i).toString()));
+    });
+    row(tr("Hiza"), headAlign);
+    row(tr("Kalın"), switchEditor(style.header_bold, "baslik_kalin", tr("Kalın başlık")));
+    row(tr("Yazı boyu"),
+        mmEditor(style.header_height, "baslik_yazi", tr("Başlığın yazı boyu; 0 tablonunki")));
+    row(tr("Renk"), colourEditor(style.header_colour, "baslik_renk", tr("Başlığın rengi")));
+    const bool filled = (style.header_fill >> 24) != 0;
+    auto* fill        = new QWidget(properties_);
+    fill->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    auto* fillRow = new QHBoxLayout(fill);
+    fillRow->setContentsMargins(0, 0, 0, 0);
+    fillRow->setSpacing(8);
+    auto* pill = new ToggleSwitch(fill);
+    pill->setChecked(filled);
+    pill->setAccessibleName(tr("Başlık zemini"));
+    fillRow->addWidget(pill);
+    auto* pillWord = new QLabel(filled ? tr("açık") : tr("kapalı"), fill);
+    pillWord->setObjectName(QStringLiteral("formHelp"));
+    fillRow->addWidget(pillWord);
+    fillRow->addStretch(1);
+    // SWITCHED ON, THE HEAD TAKES THE TABLE'S OWN STRIPE COLOUR — a light fill
+    // the sheet already uses — and the colour field under it changes it.
+    const std::uint32_t light = style.stripe_colour;
+    connect(pill, &QAbstractButton::toggled, this, [this, light](bool on) {
+        if (filling_) return;
+        edit(on ? QStringLiteral("baslik_zemin=%1").arg(colour_word(light))
+                : QStringLiteral("baslik_zemin=yok"));
+    });
+    row(tr("Zemin"), fill);
+    if (filled)
+        row(tr("Zemin rengi"),
+            colourEditor(style.header_fill, "baslik_zemin", tr("Başlık zemini")));
+
+    // ---- the lines and the rows -----------------------------------------------------
+    group(tr("ÇİZGİLER VE SATIRLAR"));
+    row(tr("Hücre çizgileri"), switchEditor(style.lines, "cizgiler", tr("Hücre çizgileri")));
+    if (style.lines) {
+        row(tr("Çizgi rengi"), colourEditor(style.line_colour, "cizgi_renk", tr("Çizgi rengi")));
+        row(tr("Kalınlık"),
+            mmEditor(style.line_width, "cizgi_kalinlik", tr("Çizgi kalınlığı; 0 kıl çizgi"), 2));
+    }
+    row(tr("Şeritli"),
+        switchEditor(style.stripes, "seritli", tr("Satırları birer atlayarak boya")));
+    if (style.stripes)
+        row(tr("Şerit rengi"), colourEditor(style.stripe_colour, "serit_renk", tr("Şerit rengi")));
+    row(tr("Satır sınırı"), countEditor(item.row_limit, "satir_siniri",
+                                        tr("Satır sınırı; 0 kutuya sığdığı kadar"), 0, 100000));
+    help(tr("0 kutuya sığdığı kadar satır gösterir; sığmayanlar tablonun altında sayılır."));
+
+    // ---- the type -----------------------------------------------------------------
+    group(tr("YAZI"));
+    row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Tablonun yazı boyu")));
+    row(tr("Renk"), colourEditor(item.text_colour, "yazi_renk", tr("Tablonun yazı rengi")));
+    row(tr("Ondalık işareti"),
+        wordsEditor({tr("Virgül  1,25"), tr("Nokta  1.25")},
+                    {QStringLiteral("virgul"), QStringLiteral("nokta")},
+                    style.decimal_comma ? 0 : 1, "ondalik_isaret", tr("Ondalık işareti")));
 }
 
 void LayoutDesigner::showItem(const QString& id)

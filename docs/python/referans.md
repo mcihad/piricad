@@ -2745,6 +2745,27 @@ cad.layout_item(
     grid_text_height: float,
     segments: int,
     shape: str,
+    column: int,
+    to_position: int,
+    source: str,
+    heading: str,
+    column_align: str,
+    decimals: int,
+    thousands: bool,
+    column_width: float,
+    monospace: bool,
+    rows: str,
+    heading_height: float,
+    heading_color: str,
+    heading_fill: str,
+    heading_align: str,
+    heading_bold: bool,
+    lines: bool,
+    line_color: str,
+    line_width: float,
+    stripes: bool,
+    stripe_color: str,
+    decimal_mark: str,
 ) -> int
 ```
 
@@ -2787,6 +2808,27 @@ cad.layout_item(
 | `grid_text_height` | `float` | `izgara_yazi` | Izgaranın koordinat yazılarının yüksekliği [kâğıt mm] |
 | `segments` | `int` | `bolum` | Ölçek çubuğunun bölüm sayısı |
 | `shape` | `str` | `sekil` | Şekil öğesinin biçimi |
+| `column` | `int` | `sutun` | Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi için |
+| `to_position` | `int` | `hedef` | Sütunun gideceği sıra; sutunekle ve sutuntasi için. sutunekle'de verilmezse sona eklenir |
+| `source` | `str` | `kaynak` | Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y (Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman |
+| `heading` | `str` | `baslik` | Sütun başlığı; verilmezse kaynağın kendi adı |
+| `column_align` | `str` | `sutun_hiza` | Sütundaki değerlerin hizası |
+| `decimals` | `int` | `ondalik` | Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar |
+| `thousands` | `bool` | `binlik` | Sayının binliklerini ayırır: 1.234.567,89 |
+| `column_width` | `float` | `sutun_genislik` | Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır [mm] |
+| `monospace` | `bool` | `esaralik` | Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır |
+| `rows` | `str` | `satirlar` | Tablonun bir satırı: katmandaki bir nesne ya da bir köşe (koordinat listesi; ortak köşe bir kez) |
+| `heading_height` | `float` | `baslik_yazi` | Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği [mm] |
+| `heading_color` | `str` | `baslik_renk` | Başlık yazısının rengi |
+| `heading_fill` | `str` | `baslik_zemin` | Başlık satırının zemin rengi; 'yok' zeminsiz |
+| `heading_align` | `str` | `baslik_hiza` | Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar |
+| `heading_bold` | `bool` | `baslik_kalin` | Başlıkları kalın yazar |
+| `lines` | `bool` | `cizgiler` | Hücrelerin çevresine çizgi çeker |
+| `line_color` | `str` | `cizgi_renk` | Hücre çizgilerinin rengi |
+| `line_width` | `float` | `cizgi_kalinlik` | Hücre çizgilerinin kalınlığı; 0 kıl çizgi [mm] |
+| `stripes` | `bool` | `seritli` | Satırları birer atlayarak boyar |
+| `stripe_color` | `str` | `serit_renk` | Boyanan satırların rengi |
+| `decimal_mark` | `str` | `ondalik_isaret` | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) |
 
 [Komut sayfası](../komutlar/layout_item.md)
 

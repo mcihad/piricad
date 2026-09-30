@@ -58,6 +58,8 @@
 #include <QNetworkRequest>
 #include <QPainter>
 #include <QRegularExpression>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
@@ -1280,6 +1282,22 @@ int main(int argc, char** argv)
                          QApplication::activeModalWidget());
                 });
             }
+            // THE TABLE'S COLUMNS AND ITS STYLE, further down its inspector.
+            later([pose] { pose(QStringLiteral("tablo")); });
+            for (const auto& [name, share] : {std::pair{"pencere-yerlesim-tablo-sutunlar", 30},
+                                              std::pair{"pencere-yerlesim-tablo-bicem", 100}}) {
+                later([share] {
+                    if (QWidget* top = QApplication::activeModalWidget(); top != nullptr)
+                        for (QScrollArea* area : top->findChildren<QScrollArea*>()) {
+                            QScrollBar* bar = area->verticalScrollBar();
+                            bar->setValue(bar->maximum() * share / 100);
+                        }
+                });
+                later([shot, name] {
+                    shot(QString::fromUtf8(name), QApplication::activeModalWidget());
+                });
+            }
+
             // AND AT THE LEAST IT MAY BE: nothing may be cut at 1040 × 680.
             later([designer] {
                 if (auto* open = designer(); open != nullptr) open->resize(open->minimumSize());

@@ -1576,6 +1576,27 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `izgara_yazi` | number | isteğe bağlı | Izgaranın koordinat yazılarının yüksekliği |
 | `bolum` | integer | isteğe bağlı | Ölçek çubuğunun bölüm sayısı |
 | `sekil` | text | isteğe bağlı | Şekil öğesinin biçimi |
+| `sutun` | integer | isteğe bağlı | Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi için |
+| `hedef` | integer | isteğe bağlı | Sütunun gideceği sıra; sutunekle ve sutuntasi için. sutunekle'de verilmezse sona eklenir |
+| `kaynak` | text | isteğe bağlı | Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y (Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman |
+| `baslik` | text | isteğe bağlı | Sütun başlığı; verilmezse kaynağın kendi adı |
+| `sutun_hiza` | text | isteğe bağlı | Sütundaki değerlerin hizası |
+| `ondalik` | integer | isteğe bağlı | Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar |
+| `binlik` | bool | isteğe bağlı | Sayının binliklerini ayırır: 1.234.567,89 |
+| `sutun_genislik` | number | isteğe bağlı | Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır |
+| `esaralik` | bool | isteğe bağlı | Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır |
+| `satirlar` | text | isteğe bağlı | Tablonun bir satırı: katmandaki bir nesne ya da bir köşe (koordinat listesi; ortak köşe bir kez) |
+| `baslik_yazi` | number | isteğe bağlı | Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği |
+| `baslik_renk` | text | isteğe bağlı | Başlık yazısının rengi |
+| `baslik_zemin` | text | isteğe bağlı | Başlık satırının zemin rengi; 'yok' zeminsiz |
+| `baslik_hiza` | text | isteğe bağlı | Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar |
+| `baslik_kalin` | bool | isteğe bağlı | Başlıkları kalın yazar |
+| `cizgiler` | bool | isteğe bağlı | Hücrelerin çevresine çizgi çeker |
+| `cizgi_renk` | text | isteğe bağlı | Hücre çizgilerinin rengi |
+| `cizgi_kalinlik` | number | isteğe bağlı | Hücre çizgilerinin kalınlığı; 0 kıl çizgi |
+| `seritli` | bool | isteğe bağlı | Satırları birer atlayarak boyar |
+| `serit_renk` | text | isteğe bağlı | Boyanan satırların rengi |
+| `ondalik_isaret` | text | isteğe bağlı | Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) |
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)
 
@@ -8548,7 +8569,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "tasi",
             "ayarla",
             "ad",
-            "cogalt"
+            "cogalt",
+            "sutunekle",
+            "sutunayarla",
+            "sutunsil",
+            "sutuntasi"
           ],
           "description": "Ne yapılacağı (metin)"
         },
@@ -8795,6 +8820,115 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "cizgi"
           ],
           "description": "Şekil öğesinin biçimi (metin)"
+        },
+        "sutun": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Tablonun kaçıncı sütunu; sutunayarla, sutunsil, sutuntasi için (tam sayı)"
+        },
+        "hedef": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65,
+          "description": "Sütunun gideceği sıra; sutunekle ve sutuntasi için. sutunekle'de verilmezse sona eklenir (tam sayı)"
+        },
+        "kaynak": {
+          "type": "string",
+          "description": "Sütunun gösterdiği: bir öznitelik sütunu ya da hesaplanan $y (Sağa), $x (Yukarı), $no, $sira, $alan, $uzunluk, $katman (metin)"
+        },
+        "baslik": {
+          "type": "string",
+          "description": "Sütun başlığı; verilmezse kaynağın kendi adı (metin)"
+        },
+        "sutun_hiza": {
+          "type": "string",
+          "enum": [
+            "sol",
+            "orta",
+            "sag"
+          ],
+          "description": "Sütundaki değerlerin hizası (metin)"
+        },
+        "ondalik": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9,
+          "description": "Sayının ondalık basamak sayısı; -1 değeri olduğu gibi yazar (tam sayı)"
+        },
+        "binlik": {
+          "type": "boolean",
+          "description": "Sayının binliklerini ayırır: 1.234.567,89 (evet/hayır)"
+        },
+        "sutun_genislik": {
+          "type": "number",
+          "description": "Sütunun kâğıttaki genişliği; 0 ya da verilmezse kalan yeri paylaşır [mm] (sayı)"
+        },
+        "esaralik": {
+          "type": "boolean",
+          "description": "Sütunu eş aralıklı yazıyla yazar; rakamlar alt alta hizalanır (evet/hayır)"
+        },
+        "satirlar": {
+          "type": "string",
+          "enum": [
+            "nesne",
+            "kose"
+          ],
+          "description": "Tablonun bir satırı: katmandaki bir nesne ya da bir köşe (koordinat listesi; ortak köşe bir kez) (metin)"
+        },
+        "baslik_yazi": {
+          "type": "number",
+          "description": "Başlık satırının yazı yüksekliği; 0 öğenin yazı yüksekliği [mm] (sayı)"
+        },
+        "baslik_renk": {
+          "type": "string",
+          "description": "Başlık yazısının rengi (metin)"
+        },
+        "baslik_zemin": {
+          "type": "string",
+          "description": "Başlık satırının zemin rengi; 'yok' zeminsiz (metin)"
+        },
+        "baslik_hiza": {
+          "type": "string",
+          "enum": [
+            "sol",
+            "orta",
+            "sag",
+            "sutun"
+          ],
+          "description": "Başlıkların hizası; 'sutun' her başlığı kendi sütunu gibi hizalar (metin)"
+        },
+        "baslik_kalin": {
+          "type": "boolean",
+          "description": "Başlıkları kalın yazar (evet/hayır)"
+        },
+        "cizgiler": {
+          "type": "boolean",
+          "description": "Hücrelerin çevresine çizgi çeker (evet/hayır)"
+        },
+        "cizgi_renk": {
+          "type": "string",
+          "description": "Hücre çizgilerinin rengi (metin)"
+        },
+        "cizgi_kalinlik": {
+          "type": "number",
+          "description": "Hücre çizgilerinin kalınlığı; 0 kıl çizgi [mm] (sayı)"
+        },
+        "seritli": {
+          "type": "boolean",
+          "description": "Satırları birer atlayarak boyar (evet/hayır)"
+        },
+        "serit_renk": {
+          "type": "string",
+          "description": "Boyanan satırların rengi (metin)"
+        },
+        "ondalik_isaret": {
+          "type": "string",
+          "enum": [
+            "virgul",
+            "nokta"
+          ],
+          "description": "Ondalık işareti: virgül (1,25; öntanımlı) ya da nokta (1.25) (metin)"
         },
         "varsayimlar": {
           "type": "array",

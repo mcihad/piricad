@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — tablo öğesinde sütun yönetimi ve koordinat listesi
+
+- Yeni bir tablo **koordinat listesi** olarak gelir — `No`, `Sağa (Y)`, `Yukarı (X)`
+  sütunları ve köşe satırları; katmanın öznitelikleri siz eklemedikçe girmez. Tablo bir
+  satır olarak katmandaki **nesneyi** ya da **köşeyi** alır (`satirlar=nesne|kose`); iki
+  parselin ortak köşesi bir kez listelenir.
+- Her sütunun kaynağı (öznitelik ya da hesaplanan `$no`, `$sira`, `$y`, `$x`, `$alan`,
+  `$uzunluk`, `$katman`), başlığı, hizası, ondalık basamağı, binlik ayırıcısı, eş aralıklı
+  yazısı ve genişliği ayrı ayrı ayarlanır: `ÇIKTIÖĞE islem=sutunekle | sutunayarla |
+  sutuntasi | sutunsil`, her biri tek geri alma adımı.
+- Başlık satırının yazı boyu, kalınlığı, rengi, zemini ve hizası; hücre çizgileri, şeritli
+  satırlar ve tablonun ondalık işareti (`virgul`/`nokta`).
+- `$no` köşenin paftadaki numarasıdır: `KÖŞENUMARALA`'nın köşeye yazdığı numara, yoksa
+  köşedeki numaralı noktanın `nokta_no`'su, yoksa satır sırası.
+- Sayılar tam sayı aritmetiğiyle, yarım sıfırdan uzağa yuvarlanarak yazılır; aynı çizim
+  her platformda aynı rakamları basar.
+- Tablo yalnız noktaları, çizgileri ve alanları listeler: aynı katmandaki yazılar —
+  noktanın yanındaki numarası, parselin ada/parsel yazısı — ölçüler ve taramalar satır
+  olmaz. Noktanın numara yazısı listeye köşe olarak giriyor, her nokta iki kez çıkıyordu;
+  eski öznitelik tabloları da yazıları boş satır olarak basıyordu.
+- Tasarımcının denetçisinde tablo bölümü: sütun listesi ve "Sütun ekle ▾" menüsü, seçili
+  sütunun ayarları, başlık, çizgi ve yazı ayarları.
+- Dosya biçimine iki isteğe bağlı blok (`0x009A`, `0x009B`); sütunsuz tablolu bir çizimin
+  dosyası bayt bayt aynı kalır, eski bir sürüm tabloyu eskisi gibi basar.
+
 ### Eklendi — PiriCAD logosu ve uygulama simgesi
 
 - Hakkında penceresi PiriCAD logosunu taşır ve pencerenin adı **PiriCAD Hakkında**'dır;
