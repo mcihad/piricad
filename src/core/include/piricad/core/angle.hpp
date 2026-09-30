@@ -31,6 +31,7 @@
 #include "piricad/core/units.hpp"
 
 #include <cstdint>
+#include <limits>
 #include <string>
 
 namespace piricad::core {
@@ -141,7 +142,20 @@ constexpr double udeg_per_angle_unit(AngleUnit unit) noexcept
 /// arithmetic like any other.
 constexpr std::int64_t udeg_from_angle(double value, AngleUnit unit) noexcept
 {
-    return mm_round(value * udeg_per_angle_unit(unit));
+    // The multiply is guarded, not assumed safe: at runtime `1e308 grad` scales
+    // to ±inf and `mm_round` saturates that, but a floating-point overflow is
+    // not a constant expression, so a `static_assert` over the same input is
+    // ill-formed on GCC (Apple clang accepts it — the two disagree, and GCC is
+    // the conforming one). Past the largest double divided by the factor, the
+    // product is ≥ `kMmSaturatedReal` in every rounding of it, so the saturated
+    // answer is decided without the multiply; below it the product is finite and
+    // the arithmetic is exactly what it always was. NaN answers false to both
+    // comparisons and keeps `mm_round`'s own fold.
+    const double factor = udeg_per_angle_unit(unit);
+    const double largest = std::numeric_limits<double>::max() / factor;
+    if (value >= largest) return kMmSaturated;
+    if (value <= -largest) return -kMmSaturated;
+    return mm_round(value * factor);
 }
 
 /// `turns` of a full turn written in `unit`: the inverse of the conversion a
