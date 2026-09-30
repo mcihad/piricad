@@ -9,19 +9,28 @@
 #include <QGridLayout>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QLabel>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPlainTextEdit>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
+#include <algorithm>
+#include <cmath>
+
 namespace kentos::app {
 namespace {
 
-constexpr int kWindowWidth  = 620;
-constexpr int kWindowHeight = 520;
-constexpr int kMarkSize     = 64;
+constexpr int kWindowWidth  = 640;
+constexpr int kWindowHeight = 600;
+
+/// The logo's band at the top of the window. Tall enough that the word under
+/// the emblem is read as a word, not as a caption.
+constexpr int kBrandHeight = 168;
+
+/// Alpha below this is the antialiasing haze round the mark, not the mark.
+constexpr int kInk = 30;
 
 const Tokens& tokensOf(ThemeMode mode)
 {
@@ -36,57 +45,103 @@ QString resourceText(const QString& path)
                                                             : QString();
 }
 
-/// THE PROGRAM'S MARK: a parcel and the north arrow of the sheet it is drawn on,
-/// white on the accent — the two things every drawing this program makes has.
-class Mark : public QWidget, public Themed
+/// The logo cut to its ink. The artwork carries a wide transparent margin, and
+/// a margin inside the band would centre the mark somewhere it is not.
+QImage inked(const QImage& logo)
+{
+    const QImage argb = logo.convertToFormat(QImage::Format_ARGB32);
+    int left = argb.width(), top = argb.height(), right = -1, bottom = -1;
+    for (int y = 0; y < argb.height(); ++y) {
+        const auto* line = reinterpret_cast<const QRgb*>(argb.constScanLine(y));
+        for (int x = 0; x < argb.width(); ++x)
+            if (qAlpha(line[x]) > kInk) {
+                left   = std::min(left, x);
+                right  = std::max(right, x);
+                top    = std::min(top, y);
+                bottom = std::max(bottom, y);
+            }
+    }
+    if (right < left || bottom < top) return argb;
+    return argb.copy(QRect(QPoint(left, top), QPoint(right, bottom)));
+}
+
+/// The mark for a dark window: the navy redrawn in `ink`, the water's blue kept.
+///
+/// The logo is two colours — a deep navy and a light blue — and the navy is
+/// the one a dark ground swallows. Each pixel is placed between the two by its
+/// lightness, so an edge where navy meets blue blends the way the artwork
+/// blended it, and the alpha of every pixel is left exactly as it was drawn.
+QImage onDark(const QImage& logo, const QColor& ink)
+{
+    constexpr double kNavy = 0.16; ///< the navy's lightness, near enough
+    constexpr double kBlue = 0.52; ///< the water's
+    QImage out             = logo.convertToFormat(QImage::Format_ARGB32);
+    for (int y = 0; y < out.height(); ++y) {
+        auto* line = reinterpret_cast<QRgb*>(out.scanLine(y));
+        for (int x = 0; x < out.width(); ++x) {
+            const QColor was = QColor::fromRgba(line[x]);
+            if (was.alpha() == 0) continue;
+            const double keep = std::clamp(
+                (static_cast<double>(was.lightnessF()) - kNavy) / (kBlue - kNavy), 0.0, 1.0);
+            const auto mix = [keep](int from, int to) {
+                return static_cast<int>(std::lround(from + (to - from) * keep));
+            };
+            line[x] = qRgba(mix(ink.red(), was.red()), mix(ink.green(), was.green()),
+                            mix(ink.blue(), was.blue()), was.alpha());
+        }
+    }
+    return out;
+}
+
+/// THE PROGRAM'S MARK: the logo as it was drawn, the compass emblem over the
+/// word, centred in a band at the top of the window.
+///
+/// Drawn as it is on the light theme. On the dark one its navy would be a
+/// shape nobody can see, so the navy is redrawn in the theme's own text ink
+/// (`onDark`) — the same mark in both themes, rather than a white box pasted
+/// onto a dark window.
+class Brand : public QWidget, public Themed
 {
 public:
-    explicit Mark(QWidget* parent) : QWidget(parent)
+    explicit Brand(QWidget* parent) : QWidget(parent)
     {
-        setFixedSize(kMarkSize, kMarkSize);
-        setAccessibleName(QObject::tr("KentOS CAD işareti"));
+        setFixedHeight(kBrandHeight);
+        setAccessibleName(QObject::tr("PiriCAD logosu"));
+        logo_ = inked(QImage(QStringLiteral(":/brand/data/images/piricad_logo.png")));
     }
 
     void applyTheme(ThemeMode mode) override
     {
         theme_ = mode;
+        shown_ = QImage();
         update();
     }
 
 protected:
     void paintEvent(QPaintEvent* /*event*/) override
     {
-        const Tokens& t = tokensOf(theme_);
+        if (logo_.isNull()) return;
+        // SCALED ONCE PER SIZE AND THEME, smoothly: a 1080 px artwork drawn into
+        // a 160 px band by the painter's own filter comes out jagged.
+        const qreal dpr  = devicePixelRatioF();
+        const QSize room = (QSizeF(size()) * dpr).toSize();
+        if (shown_.isNull() || shownFor_ != room) {
+            const QImage source =
+                theme_ == ThemeMode::Dark ? onDark(logo_, tokensOf(theme_).text) : logo_;
+            shown_ = source.scaled(room, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            shown_.setDevicePixelRatio(dpr);
+            shownFor_ = room;
+        }
         QPainter p(this);
-        p.setRenderHint(QPainter::Antialiasing, true);
-        p.setPen(Qt::NoPen);
-        p.setBrush(t.accent);
-        p.drawRoundedRect(QRectF(rect()), 15.0, 15.0);
-
-        const QColor ink = t.onAccent;
-        // The parcel, with its corners.
-        const QPolygonF parcel(
-            {QPointF(14.0, 24.0), QPointF(38.0, 17.0), QPointF(47.0, 44.0), QPointF(19.0, 49.0)});
-        QColor wash = ink;
-        wash.setAlphaF(0.18F);
-        p.setBrush(wash);
-        p.setPen(QPen(ink, 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        p.drawPolygon(parcel);
-        p.setPen(Qt::NoPen);
-        p.setBrush(ink);
-        for (const QPointF& at : parcel)
-            p.drawRect(QRectF(at.x() - 2.6, at.y() - 2.6, 5.2, 5.2));
-        // And the north arrow over it.
-        QPainterPath arrow;
-        arrow.moveTo(50.0, 8.0);
-        arrow.lineTo(54.5, 20.0);
-        arrow.lineTo(50.0, 17.0);
-        arrow.lineTo(45.5, 20.0);
-        arrow.closeSubpath();
-        p.drawPath(arrow);
+        const QSizeF drawn = QSizeF(shown_.size()) / dpr;
+        p.drawImage(QPointF((width() - drawn.width()) / 2.0, (height() - drawn.height()) / 2.0),
+                    shown_);
     }
 
 private:
+    QImage logo_;
+    QImage shown_;
+    QSize shownFor_;
     ThemeMode theme_{ThemeMode::Dark};
 };
 
@@ -107,36 +162,37 @@ QPlainTextEdit* textPage(const QString& text, const QString& name, QWidget* pare
 AboutDialog::AboutDialog(const AboutFacts& facts, QWidget* parent)
     : DialogFrame(parent), facts_(facts)
 {
-    setHeading(Glyph::Info, tr("KentOS CAD Hakkında"));
+    // THE NAME ON THIS WINDOW IS PiriCAD, the logo's own word; the rest of the
+    // program keeps its name until the maintainer renames it (CLAUDE.md 0.5a).
+    setHeading(Glyph::Info, tr("PiriCAD Hakkında"));
     resize(kWindowWidth, kWindowHeight);
-    setMinimumSize(520, 420);
+    setMinimumSize(560, 520);
 
     auto* body   = new QWidget(this);
     auto* column = new QVBoxLayout(body);
-    column->setContentsMargins(24, 22, 24, 14);
-    column->setSpacing(16);
+    column->setContentsMargins(24, 18, 24, 14);
+    column->setSpacing(14);
 
-    // ---- the name and the build ---------------------------------------------
-    auto* hero = new QHBoxLayout();
-    hero->setSpacing(16);
-    auto* mark = new Mark(body);
+    // ---- the mark, what it is and which build -------------------------------
+    //
+    // CENTRED, as a title page is: the logo stacks the emblem over the word,
+    // and a stacked mark set against the left edge reads as a picture that
+    // slipped. The tagline and the build line sit under it on the same axis.
+    auto* mark = new Brand(body);
     mark_      = mark;
-    hero->addWidget(mark, 0, Qt::AlignTop);
-    auto* names = new QVBoxLayout();
-    names->setSpacing(2);
-    auto* title = new QLabel(tr("KentOS CAD"), body);
-    title->setObjectName(QStringLiteral("aboutTitle"));
+    column->addWidget(mark);
     auto* tagline = new QLabel(tr("Türkiye odaklı CBS + CAD — kadastro, imar ve ölçme için"), body);
     tagline->setObjectName(QStringLiteral("aboutTagline"));
+    tagline->setAlignment(Qt::AlignHCenter);
     auto* build = new QLabel(tr("Sürüm %1 · GPLv3 veya sonrası").arg(facts_.version), body);
     build->setObjectName(QStringLiteral("aboutBuild"));
-    names->addWidget(title);
+    build->setAlignment(Qt::AlignHCenter);
+    auto* names = new QVBoxLayout();
+    names->setSpacing(4);
     names->addWidget(tagline);
-    names->addSpacing(4);
     names->addWidget(build);
-    names->addStretch(1);
-    hero->addLayout(names, 1);
-    column->addLayout(hero);
+    column->addLayout(names);
+    column->addSpacing(4);
 
     // ---- the three pages ----------------------------------------------------
     pages_ = new Segment(body);
@@ -221,7 +277,7 @@ void AboutDialog::applyTheme(ThemeMode mode)
 
 QString AboutDialog::factsText() const
 {
-    return tr("KentOS CAD %1\nQt %2\nÇizim motoru: %3\nPlatform: %4\nKomutlar: %5 (%6 işlem "
+    return tr("PiriCAD %1\nQt %2\nÇizim motoru: %3\nPlatform: %4\nKomutlar: %5 (%6 işlem "
               "aracı)")
         .arg(facts_.version, facts_.qt, facts_.backend, facts_.platform)
         .arg(facts_.commands)

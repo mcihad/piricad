@@ -586,8 +586,6 @@ QString themeStyleSheet(ThemeMode mode)
                                            padding: 6px 8px; }
 
         /* ---- the About window, about_dialog.cpp ----------------------------- */
-        QLabel#aboutTitle                { background: transparent; color: %(text)s;
-                                           font-size: 22px; font-weight: 600; }
         QLabel#aboutTagline              { background: transparent; color: %(textDim)s;
                                            font-size: 13px; }
         QLabel#aboutBuild                { background: transparent; color: %(textFaint)s;

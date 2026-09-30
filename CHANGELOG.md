@@ -6,6 +6,13 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — PiriCAD logosu ve uygulama simgesi
+
+- Hakkında penceresi PiriCAD logosunu taşır ve pencerenin adı **PiriCAD Hakkında**'dır;
+  koyu temada logonun laciverti temanın yazı rengiyle çizilir.
+- Uygulamanın simgesi (macOS `.icns`, Windows `.ico`, Linux ve pencere simgesi) logonun
+  pusula ambleminden, `scripts/uygulama-simgesi.py` ile üretilir.
+
 ### Değişti — çıktı yerleşimi tasarımcısı yeniden kuruldu
 
 - Solda **araç sütunu**: seç ve dokuz öğe türü; öğe kâğıtta sürüklenerek çizilir,

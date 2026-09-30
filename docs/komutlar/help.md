@@ -123,10 +123,15 @@ Sayfanın düzeni:
 Tuşlar: `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazar (parametrelerini
 orada tamamlarsınız), `Esc` kapatır. Süzgeç alanındaki imleç hiç oradan ayrılmaz.
 
-**KentOS CAD ▸ Hakkında** sürümü, Qt'yi, çizim motorunu, platformu ve komut sayısını
-gösterir; **Bileşenler** sayfası programın üzerine kurulduğu açık kaynak bileşenleri,
-**Lisans** sayfası lisans metnini taşır. **Bilgileri Kopyala** bu bilgileri bir hata
-bildirimine yapıştırmak için panoya alır.
+**KentOS CAD ▸ Hakkında** penceresi en üstte PiriCAD logosunu taşır; koyu temada
+logonun lacivert kısımları temanın yazı rengiyle çizilir, sudaki mavi olduğu gibi
+kalır. Altında sürüm, Qt, çizim motoru, platform ve komut sayısı yazar; **Bileşenler**
+sayfası programın üzerine kurulduğu açık kaynak bileşenleri, **Lisans** sayfası lisans
+metnini taşır. **Bilgileri Kopyala** bu bilgileri bir hata bildirimine yapıştırmak için
+panoya alır.
+
+Programın simgesi — Dock'ta, görev çubuğunda ve pencerelerde görünen — aynı logonun
+pusula ambleminden yapılmıştır.
 
 ### Betik
 

@@ -159,6 +159,28 @@ qt_add_resources(kentos_cad "kentos_about"
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${CMAKE_SOURCE_DIR}/LICENSES/AGPL-3.0-or-later.txt")
 
+# THE PROGRAM'S MARK: the logo the About window draws, and the icon every
+# window carries at run time. Both are pictures the program shows, not data it
+# reads (CLAUDE.md 3.5 keeps catalogues and grids out of the binary; a logo is
+# neither). The icon is made from the logo by `scripts/uygulama-simgesi.py`.
+qt_add_resources(kentos_cad "kentos_brand"
+    PREFIX "/brand"
+    BASE "${CMAKE_SOURCE_DIR}"
+    FILES
+        "${CMAKE_SOURCE_DIR}/data/images/piricad_logo.png"
+        "${CMAKE_SOURCE_DIR}/packaging/icon/piricad-1024.png")
+
+# THE ICON THE SYSTEM SHOWS before the program runs — the Finder and the dock
+# read the bundle's `.icns`, Explorer the executable's resource.
+if(APPLE)
+    set(_kentos_icns "${CMAKE_SOURCE_DIR}/packaging/macos/KentOSCad.icns")
+    target_sources(kentos_cad PRIVATE "${_kentos_icns}")
+    set_source_files_properties("${_kentos_icns}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    set_target_properties(kentos_cad PROPERTIES MACOSX_BUNDLE_ICON_FILE "KentOSCad.icns")
+elseif(WIN32)
+    target_sources(kentos_cad PRIVATE "${CMAKE_SOURCE_DIR}/packaging/windows/kentoscad.rc")
+endif()
+
 # QT'S OWN STRINGS IN TURKISH: the standard buttons of every message box, file
 # and colour dialog (`Tamam`, `İptal`, `Evet`, `Hayır`, `Kaydet`) come from Qt's
 # catalogue, not from ours. Embedded when this Qt carries it, so the program

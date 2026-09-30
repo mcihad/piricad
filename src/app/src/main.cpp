@@ -44,6 +44,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QImage>
 #include <QKeyEvent>
 #include <QLibraryInfo>
@@ -239,6 +240,11 @@ int main(int argc, char** argv)
 
     QApplication::setApplicationName(QStringLiteral("KentOSCad"));
     QApplication::setApplicationVersion(QStringLiteral(KENTOS_VERSION));
+
+    // EVERY WINDOW'S ICON, and on Linux the task bar's: the bundle and the
+    // executable carry their own for the system, and this is the one Qt hands
+    // to each window it opens (`scripts/uygulama-simgesi.py` makes it).
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/brand/packaging/icon/piricad-1024.png")));
     QApplication::setOrganizationName(QStringLiteral("KentOSCad"));
     QApplication::setOrganizationDomain(QStringLiteral("kentoscad.org"));
 
@@ -1126,7 +1132,7 @@ int main(int argc, char** argv)
     // rather than what a test harness draws. Same category as the other two:
     // developer tooling, an environment variable rather than a CLI flag.
     // ONE WINDOW, PHOTOGRAPHED, for the hand that is redesigning it:
-    // `KENTOS_WINDOW_SHOT=yazdir|disa|ice|yerlesim|hepsi` with `KENTOS_SHOT_DIR`.
+    // `KENTOS_WINDOW_SHOT=yazdir|disa|ice|yerlesim|hakkinda|hepsi` with `KENTOS_SHOT_DIR`.
     // The same drawing and the same sheet every time, the window opened in its
     // working state, grabbed and put away — seconds, where the whole sequence
     // below takes minutes. Developer tooling, like the rest of this block.
@@ -1213,6 +1219,23 @@ int main(int argc, char** argv)
                 shot(QStringLiteral("pencere-ice-2"), QApplication::activeModalWidget());
             });
             later(closeModal);
+        }
+        if (wanted("hakkinda")) {
+            // THE ABOUT WINDOW IN BOTH THEMES: the logo is navy, and the dark
+            // one is where a navy mark disappears if nothing is done about it.
+            for (const bool dark : {false, true}) {
+                later([&window, dark] {
+                    QMetaObject::invokeMethod(&window, "toggleTheme", Qt::DirectConnection,
+                                              Q_ARG(bool, dark));
+                    QMetaObject::invokeMethod(&window, "showAbout", Qt::QueuedConnection);
+                });
+                later([shot, dark] {
+                    shot(dark ? QStringLiteral("pencere-hakkinda-koyu")
+                              : QStringLiteral("pencere-hakkinda-acik"),
+                         QApplication::activeModalWidget());
+                });
+                later(closeModal);
+            }
         }
         if (wanted("yerlesim")) {
             // THE WINDOW AT THE SIZE IT OPENS AT, not at the size of whatever
