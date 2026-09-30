@@ -78,20 +78,20 @@ reddedilir: dosyayı diske indirip öyle açın.
 
 **KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** İçe Aktar
 penceresini açar. **Gözat…** penceresinin süzgecinde **Netcad çizimi** satırı vardır;
-**Desteklenen tüm dosyalar** satırı da `.ncz` dosyalarını gösterir. Pencerenin adımları öteki
-biçimlerdekiyle aynıdır ([İÇEAKTAR sayfasındaki anlatım](../komutlar/import.md#arayüz));
-NCZ'de şunları bilin:
+**Desteklenen tüm dosyalar** satırı da `.ncz` dosyalarını gösterir; dosyayı pencereye
+sürükleyip bırakmak da olur. Pencere öteki biçimlerdekiyle aynıdır
+([İÇEAKTAR sayfasındaki anlatım](../komutlar/import.md#arayüz)); NCZ'de şunları bilin:
 
-- **1 · DOSYA.** **İleri**'ye bastığınızda dosya okunur ve çizime hiçbir şey eklenmez. Büyük
-  bir dosyada **Okumayı durdur** okumayı keser. Pencere dosyayı **iki kez** okur: bir kez
-  önizleme için, bir kez de **İçe Aktar**'a bastığınızda komut çalışırken.
-- **2 · KATMANLAR.** Okuyucunun uyarıları (koordinat sistemi, uzaktaki nesneler, pafta
-  çerçeveleri…) sayfanın üstünde şeritler olarak durur; kutucukla katman seçilir. Soldaki
-  önizleme dosyanın çizimidir.
-- **3 · ALANLAR.** NCZ'nin alanları dosyadan gelmez, okuyucunun sabit **on yedi** alanıdır
-  ([Öznitelik alanları](#öznitelik-alanları)). Hepsi işaretli gelir; sütun istemiyorsanız
-  **Hiçbiri**'ne basın. Hepsi işaretliyse pencere `alanlar=*`, bir kısmı işaretliyse
-  `alanlar="…"` yazar; hiçbiri işaretli değilse `alanlar` yazılmaz.
+- **Dosya.** Bir `.ncz` seçildiği anda okunur ve çizime hiçbir şey eklenmez. Büyük bir
+  dosyada **Okumayı durdur** okumayı keser. Pencere dosyayı **iki kez** okur: bir kez
+  önizleme için, bir kez de **İçe aktar**'a bastığınızda komut çalışırken.
+- **Katmanlar.** Okuyucunun uyarıları (koordinat sistemi, uzaktaki nesneler, pafta
+  çerçeveleri…) çizimin üstünde şeritler olarak durur; sağ sütundaki **Katmanlar**
+  bölmesinde kutucukla katman seçilir.
+- **Alanlar.** NCZ'nin alanları dosyadan gelmez, okuyucunun sabit **on yedi** alanıdır
+  ([Öznitelik alanları](#öznitelik-alanları)). **Alanlar** bölmesinde hepsi işaretli gelir;
+  sütun istemiyorsanız **Hiçbiri**'ne basın. Hepsi işaretliyse pencere `alanlar=*`, bir
+  kısmı işaretliyse `alanlar="…"` yazar; hiçbiri işaretli değilse `alanlar` yazılmaz.
 
 Pencere yalnızca argüman toplar: kurduğu `İÇEAKTAR` satırı, aynı işi bir betikte yazacağınız
 satırın aynısıdır. İçe aktarma bitince görünüm çizimin kapsamına yakınlaşır.

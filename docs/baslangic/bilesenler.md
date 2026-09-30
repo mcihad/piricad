@@ -244,7 +244,7 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | **Katman Özellikleri** | `Milimetre \| Harita birimi \| Piksel` segmenti, sınıf tablosu, `{ }` veriye bağlama düğmeleri, renk kilidi onay kutusu, menülü `Stil` düğmesi |
 | **Öznitelik Tablosu** | tablo, ifade çubuğu, `Tablo \| Form` segmenti, birincil `Filtrele`, hücre içi girdiler |
 | **Yeni Sütun** | üstte etiketli form satırları, zorunlu işaretleri, birincil `Tanımla` |
-| **İçe Aktar** | ikincil `Gözat…`, yükleme çizgisi, birincil `İleri` |
+| **İçe Aktar** | ikincil `Gözat…`, bırakma çerçevesi, yükleme çizgisi, ikincil `Okumayı durdur`, uyarı şeritleri, `Katmanlar \| Alanlar` segmenti, işaret listeleri, hayalet `Tümü` / `Hiçbiri`, ikincil `İptal`, birincil `İçe aktar` |
 | **Yazdır** | açılır liste (profil), sayı ve nokta girdileri, ikincil `… ölçeğine yuvarla`, hayalet `Çerçeveye dön`, `PDF \| Yazıcı` segmenti, katlanan gruplar, şifre kutuları, onay kutuları, ikincil `İptal`, birincil `Yazdır` |
 | **Veritabanı** | bölüm başlıkları, etiketi üstte alanlar, birincil `Bağlan`, hayalet `Yenile`, yıkıcı `Projeyi Sil` |
 | **Yapay Zeka** paneli | döküm, ileti balonu, düşünme göstergesi, ek pençesi, bağlam ölçeri, açılır liste (model seçimi), ikon düğmeler (`Dosya ekle`, `Yeni sohbet`), ikincil `Dur`, birincil `Gönder` |

@@ -1166,10 +1166,11 @@ int main(int argc, char** argv)
         const auto closeModal = [] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         };
-        const QString dxf = into + QStringLiteral("/ornek-cizim.dxf");
+        const QString dxf  = into + QStringLiteral("/ornek-cizim.dxf");
+        const QString gpkg = into + QStringLiteral("/ornek-cizim.gpkg");
 
         const bool shootDark = qgetenv("KENTOS_SHOT_THEME") == QByteArrayLiteral("koyu");
-        later([&window, dxf, shootDark] {
+        later([&window, dxf, gpkg, shootDark] {
             QMetaObject::invokeMethod(&window, "toggleTheme", Qt::DirectConnection,
                                       Q_ARG(bool, shootDark));
             window.resize(1880, 1058);
@@ -1182,6 +1183,10 @@ int main(int argc, char** argv)
                 window.runScriptLine(QString::fromUtf8(line));
             window.runScriptLine(QStringLiteral("DIŞAAKTAR dosya=\"%1\" bicim=dxf").arg(dxf));
             window.endCommand(); ///< the export is a job; the sheet waits for it
+            // AND A GEOPACKAGE, which carries the parcels' attributes: the file
+            // the import window's field pane has something to list for.
+            window.runScriptLine(QStringLiteral("DIŞAAKTAR dosya=\"%1\" bicim=GPKG").arg(gpkg));
+            window.endCommand();
             window.runScriptLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"));
             // A PAFTA AS ONE IS LAID OUT: the map on the left, the title block
@@ -1279,14 +1284,58 @@ int main(int argc, char** argv)
             later(closeModal);
         }
         if (wanted("ice")) {
+            // THE INVITATION: the window before a file is named.
             later([&window] { (void)window.openImportWizard(); });
             later([shot] {
                 shot(QStringLiteral("pencere-ice-1"), QApplication::activeModalWidget());
             });
+            // A FILE THIS BUILD DOES NOT READ, and the verdict where it is named.
+            later([into] {
+                const QString text = into + QStringLiteral("/notlar.txt");
+                QFile note(text);
+                if (note.open(QIODevice::WriteOnly)) note.write("ada 1284\n");
+                note.close();
+                if (auto* wizard =
+                        qobject_cast<kentos::app::ImportWizard*>(QApplication::activeModalWidget()))
+                    wizard->setPath(text);
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-okunmaz"), QApplication::activeModalWidget());
+            });
             later(closeModal);
-            later([&window, dxf] { (void)window.openImportWizard(dxf); });
+            // A DRAWING THAT NAMES NO SYSTEM: the DXF the sheet above was
+            // exported to, copied away from the `.prj` beside it, so the reader's
+            // notices stand above the drawing as a real DXF brings them.
+            later([&window, dxf, into] {
+                const QString bare = into + QStringLiteral("/ornek-sistemsiz.dxf");
+                QFile::remove(bare);
+                (void)QFile::copy(dxf, bare);
+                (void)window.openImportWizard(bare);
+            });
             later([shot] {
                 shot(QStringLiteral("pencere-ice-2"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+            // A GEOPACKAGE, with its fields, and the pane that lists them.
+            later([&window, gpkg] { (void)window.openImportWizard(gpkg); });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-3"), QApplication::activeModalWidget());
+            });
+            later([] {
+                if (auto* wizard =
+                        qobject_cast<kentos::app::ImportWizard*>(QApplication::activeModalWidget()))
+                    (void)wizard->probeSettle(2, 2000);
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-alanlar"), QApplication::activeModalWidget());
+            });
+            // THE LEAST THE WINDOW ALLOWS.
+            later([] {
+                if (QWidget* top = QApplication::activeModalWidget(); top != nullptr)
+                    top->resize(top->minimumSize());
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-en-kucuk"), QApplication::activeModalWidget());
             });
             later(closeModal);
         }

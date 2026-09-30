@@ -239,48 +239,53 @@ Nesne eşlemesi, akıllı nesneler, pafta çerçeveleri, koordinat sistemi ve ra
 
 ### Arayüz
 
-**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **üç sayfalık içe
-aktarma sihirbazını** açar.
+**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **İçe Aktar
+penceresini** açar. Pencere tek sayfadır: üstte dosya, ortada dosyanın çizimi, sağda katmanlar
+ve alanlar, altta pencerenin çalıştıracağı komut satırı.
 
-**1 · DOSYA.** Sayfanın en üstünde ne olacağı yazar: dosya önce yalnızca okunur,
-çizime hiçbir şey eklenmez. Yolu yazın ya da **Gözat…** ile seçin. Sayfa dosyanın
-biçimini, boyutunu ve son değişiklik tarihini gösterir; sayfanın dibinde bu
-yapının okuyabildiği biçimler, her birinin yanında **okunur**, **okunur ·
-yazılır** ya da **okunmaz** etiketiyle listelenir.
+**Dosya.** Yolu üstteki **Dosya** kutusuna yazın, **Gözat…** ile seçin ya da dosyayı
+Finder'dan veya Dosya Gezgini'nden pencerenin üstüne bırakın; bıraktığınız yerin çerçevesi o
+sırada mavileşir. Kutunun altında dosyanın biçimi, boyutu ve son değişiklik tarihi yazar.
+Dosya seçilmeden önce ortada ne yapılacağı yazar, sağ sütunda ise bu yapının okuyabildiği
+biçimler, her birinin yanında **okunur**, **okunur, yazılır** ya da **okunmaz** etiketiyle
+listelenir.
 
 **Okunamayan bir dosya seçtiğinizde bunu orada söyler.** Bir `.dwg` (bu yapı DWG
-okumuyorsa) ya da listede olmayan bir uzantı seçerseniz alanın altında ne
-yapmanız gerektiğini yazan bir uyarı çıkar ve **İleri** kapalı kalır. Önceden
-herhangi bir dosya **İleri**'yi açıyordu ve ret bir sonraki sayfada geliyordu.
+okumuyorsa) ya da listede olmayan bir uzantı seçerseniz ortada ne yapmanız gerektiğini yazan
+bir uyarı çıkar ve dosya okunmaz.
 
-**İleri**'ye bastığınızda dosya okunur — okuma sürerken geçen süre yazılır ve
-**Okumayı durdur** ile okuma gerçekten durdurulur. Bu adımda çizime **hiçbir şey
-eklenmez**.
+**Okunabilen bir dosya hemen okunur.** Bir düğmeye basmanız gerekmez: yazarken okuma,
+yazmayı bıraktığınızda başlar. Okuma sürerken dosyanın adı ve geçen süre yazılır;
+**Okumayı durdur** okumayı gerçekten durdurur, **Yeniden oku** aynı dosyayı baştan okur. Bu
+adımda çizime **hiçbir şey eklenmez**: dosya yalnızca pencerenin kendi önizlemesine okunur.
 
-**2 · KATMANLAR.** Sayfanın en üstünde, çizimin üzerinde, **okuyucunun
-uyarıları** durur — her biri kendi şeridinde, kalın satırı olan ve altında ne
-yapılacağını yazan. En çok gerekeni ilk sıradadır: *dosya koordinat sistemi
-bildirmiyor*. Bir DXF koordinat sistemi taşıyamaz, o yüzden çizimin kendi sistemi
-varsayılır — ve TM30 ile TM33'ü karıştırmak sessizce yanlış bir tapu üretir, bu
-yüzden varsayım küçük yazıyla değil uyarı olarak durur. Dosyanın kendi olguları
-(sürücü, nesne ve katman sayısı, sistem, okunan türler) çizimin **altında**,
-sessiz satırlar hâlinde kalır: olgu olgudur, uyarı uyarıdır.
+**Çizim.** Okuma bitince dosyanın çizimi pencerenin ortasını doldurur. Tekerlekle yakınlaşır,
+sürüklemeyle kayar. Çizimin üstünde **okuyucunun uyarıları** durur — her biri kendi
+şeridinde, kalın satırı olan ve altında ne yapılacağını yazan. En çok gerekeni ilk sıradadır:
+*dosya koordinat sistemi bildirmiyor*. Bir DXF koordinat sistemi taşıyamaz, o yüzden çizimin
+kendi sistemi varsayılır — ve TM30 ile TM33'ü karıştırmak sessizce yanlış bir tapu üretir,
+bu yüzden varsayım küçük yazıyla değil uyarı olarak durur. Dosyanın kendi olguları (sürücü,
+nesne ve katman sayısı, sistem, okunan türler) çizimin **altındaki** sessiz şeritte kalır:
+olgu olgudur, uyarı uyarıdır.
 
-Solda dosyanın çizimi, sağda katman listesi. Her satırda
-katmanın adı ve o katmandan kaç nesne geleceği yazar; kutucuğu kaldırdığınız
-katman soldaki çizimden de kalkar, böylece ne aldığınızı almadan önce
-görürsünüz. **Tümü** ve **Hiçbiri** bağlantıları görünen satırlara uygulanır —
-arama kutusuna bir şey yazdıysanız yalnızca süzgeçten geçen katmanları
-etkilerler. Çizim tekerlekle yakınlaşır, sürüklemeyle kayar.
+**Katmanlar.** Sağ sütunun **Katmanlar** bölmesinde her satır katmanın adını ve o katmandan
+kaç nesne geleceğini yazar. Hepsi işaretli gelir. Satırın herhangi bir yerine tıklamak ya da
+satırdayken **Boşluk**'a basmak işareti değiştirir; işaretini kaldırdığınız katman ortadaki
+çizimden de kalkar, böylece ne aldığınızı almadan önce görürsünüz. **Tümü** ve **Hiçbiri**
+görünen satırlara uygulanır — arama kutusuna bir şey yazdıysanız yalnızca süzgeçten geçen
+katmanları etkilerler. Altta kaç katmanın ve kaç nesnenin aktarılacağı yazar.
 
-Üçüncü sayfa **ALANLAR**: dosyanın öznitelik alanları katman adı, alan adı, olacağı
-sütun türü ve ilk değeriyle listelenir; işaretlediğiniz alanlar sütun olarak okunur
-(`Tümü` / `Hiçbiri` düğmeleri listenin üstündedir). Alanı olmayan bir dosyada sayfa
-bunu söyler ve boş kalır.
+**Alanlar.** **Alanlar** bölmesi dosyanın öznitelik alanlarını **adıyla, birer kez**
+listeler: satırın üstünde alanın adı, altında olacağı sütun türü, ilk değeri ve hangi
+katmandan geldiği (birkaç katmanda geçiyorsa kaç katmanda geçtiği) yazar. Birkaç katmanda
+geçen bir alan tek sütun olur, bu yüzden tek satırdır. İşaretlediğiniz alanlar sütun olarak
+okunur; **Hiçbiri** yalnız geometriyi getirir. Alanı olmayan bir dosyada bölme bunu söyler.
 
-**İçe Aktar**, işaretlediğiniz katmanlar ve alanlarla tek bir `İÇEAKTAR` satırı kurar ve
-onu çalıştırır. Pencere yalnızca argüman toplar: kurduğu satır, aynı işi bir
-betikte yazacağınız satırın tıpatıp aynısıdır.
+**Komut ve İçe aktar.** Pencerenin en altında, işaretlediğiniz katmanlar ve alanlarla
+kurulmuş `İÇEAKTAR` satırı yazar ve her işaretle güncellenir: bütün katmanlar işaretliyse
+`katmanlar` yazılmaz, bütün alanlar işaretliyse `alanlar=*` yazılır. **İçe aktar** bu satırı
+çalıştırır. Pencere yalnızca argüman toplar: kurduğu satır, aynı işi bir betikte yazacağınız
+satırın tıpatıp aynısıdır; en az bir katman işaretli değilse düğme kapalı durur.
 
 **Okuma pencereyi dondurmaz.** Dosya ayrı bir iş parçacığında okunur; bu sürede
 durum çubuğunda `İçe aktarılıyor: <dosya>` yazısı, altında kayan bir şerit ve
@@ -348,7 +353,7 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `io.no_driver: ... sürücüsü okuma için açık değil.` | Biçim yalnız yazılıyor | Desteklenen bir biçime çevirin |
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
 | `'...' açılamadı: ...` | Dosya yok, okunamıyor ya da bozuk | Yolu ve izinleri denetleyin |
-| `İçe aktarma iptal edildi; çizim değişmedi.` | Sihirbazda **Okumayı durdur**'a basıldı | Yeniden **İleri**'ye basın |
+| `İçe aktarma iptal edildi; çizim değişmedi.` | Okuma sürerken durduruldu | İçe Aktar penceresinde **Yeniden oku**'ya basın ya da komutu yeniden çalıştırın |
 | `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
 | `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulup dönüştürün ve yeniden aktarın |
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |

@@ -1,19 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the two-page import wizard.
+// KentOSCad — app: the import window.
 //
 // WHAT THIS WINDOW IS ALLOWED TO DO, stated once, because it is the same rule
-// `database_dialog.hpp` opens with. It collects two arguments — a path and a list
-// of layer names — and then runs ONE `İÇEAKTAR` line through the controller. It
-// holds no GDAL header, no LibreDWG header and no import loop. The OK button
-// produces a journal line a script could have written by hand, which is what
-// Article 1.2 means by "the GUI is just one client".
+// `database_dialog.hpp` opens with. It collects three arguments — a path, a list
+// of layer names and a list of field names — and then runs ONE `İÇEAKTAR` line
+// through the controller. It holds no GDAL header, no LibreDWG header and no
+// import loop. The import button produces a journal line a script could have
+// written by hand, which is what Article 1.2 means by "the GUI is just one
+// client" — and the line is on screen, under everything, as the print window
+// shows its own.
 //
-// THE PROBE IS THE EXCEPTION THAT PROVES IT. Page two cannot honestly ask "which
-// layers do you want" until something has read the file, so the wizard reads it
+// THE PROBE IS THE EXCEPTION THAT PROVES IT. The window cannot honestly ask
+// "which layers do you want" until something has read the file, so it reads it
 // once into a SCRATCH document it owns — never the user's — through
 // `io::probe_import`. Nothing in that scratch document is journalled, undoable or
 // saveable; it exists to fill a checklist and to draw a picture. The real import
 // runs afterwards, through the bus, with the ticked names.
+//
+// ONE PAGE, NOT THREE. This was a wizard: a page holding one path field, a page
+// of layers, a page of fields, with `İleri` between them — so the first thing a
+// user saw was a field and a reference list in a window a thousand pixels wide,
+// and the read, which changes nothing, waited for a press. Now naming a file the
+// program can read reads it: the drawing fills the window the moment it has been
+// read, and the layers and the fields are two panes of one column beside it.
 #pragma once
 
 #include "kentos_cad/app/dialog_chrome.hpp"
@@ -35,6 +44,9 @@
 #include <QThread>
 #include <QWidget>
 
+class QDragEnterEvent;
+class QDragLeaveEvent;
+class QDropEvent;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -88,8 +100,8 @@ private:
     core::Result<io::ImportProbe> outcome_;
 };
 
-/// The left half of page two: the file's own geometry, drawn by the SAME renderer
-/// the canvas uses.
+/// The window's stage once a file has been read: the file's own geometry, drawn
+/// by the SAME renderer the canvas uses.
 ///
 /// A second preview renderer would be a second answer to "what does this look
 /// like", and the two would drift — the note on `FrameContext::target` says the
@@ -146,56 +158,73 @@ private:
     bool dragging_ = false;
 };
 
-/// File, then layers. Two pages, one command.
+/// A file, its layers and its fields — one window, one command.
 class ImportWizard : public DialogFrame
 {
     Q_OBJECT
 
 public:
-    /// Opens on the file page. Nothing is read until the user asks for it.
+    /// Opens on the invitation to pick a file. Nothing is read until one is named.
     ImportWizard(Controller& controller, ThemeMode theme, QWidget* parent = nullptr);
     ~ImportWizard() override;
 
-    /// The file to start on, so the toolbar's "içe aktar" can open the wizard
-    /// already pointing at a chosen path. Empty opens on the picker.
+    /// The file to start on, so the toolbar's "içe aktar" can open the window
+    /// already pointing at a chosen path. Empty opens on the invitation. A path
+    /// the program can read starts being read a moment later, as a typed one does.
     void setPath(const QString& path);
 
-    /// Points the wizard at `path` and starts reading it at once, landing on the
-    /// layer page when the read finishes. What a drag-and-drop — and the
-    /// screenshot probe — needs: the file is already chosen, so asking for it
-    /// again is a page the user has no work to do on.
+    /// Points the window at `path` and starts reading it at once. What a drop on
+    /// the window — and the screenshot probe — needs: the file is already chosen,
+    /// so there is no typing to wait out.
     void beginWith(const QString& path);
 
     /// For the screenshot probe: waits for a read started by `beginWith` to
-    /// finish, at most `msecs`, then shows `page`. False when the read did not
-    /// finish in time — the probe then photographs nothing rather than a spinner.
+    /// finish, at most `msecs`, then shows the column's pane for `page` — 1 the
+    /// layers, 2 the fields, the numbers the wizard's pages had. False when the
+    /// read did not finish in time — the probe then photographs nothing rather
+    /// than a spinner.
     bool probeSettle(int page, int msecs = 15000);
 
     /// The `İÇEAKTAR` line the user approved, or empty when they cancelled. The
-    /// caller runs it: the wizard states the work, the controller does it.
+    /// caller runs it: the window states the work, the controller does it.
     QString commandLine() const { return line_; }
 
-    /// Hands the theme to the children AND to the row delegate, which is not a
-    /// widget and therefore not reached by the walk `DialogFrame` does.
+    /// Hands the theme to the children AND to the row delegates, which are not
+    /// widgets and therefore not reached by the walk `DialogFrame` does.
     void applyTheme(ThemeMode mode) override;
 
-private:
-    // ---- pages ----
-    QWidget* buildFilePage();
+protected:
+    /// A file dragged over the window is taken when it is one local file.
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    /// The drag went elsewhere: the frame stops answering it.
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    /// A file dropped on the window is read at once, as `beginWith` reads it.
+    void dropEvent(QDropEvent* event) override;
 
-    /// Reads `text` as a path and says, on the page where it was typed, whether
-    /// this program can open it — the facts line, the verdict banner and whether
-    /// `İleri` is live.
+private:
+    // ---- the window's parts ----
+    QWidget* buildFileStrip();
+    QWidget* buildStage();
+    QWidget* buildInvitation();
+    QWidget* buildReading();
+    QWidget* buildDrawing();
+    QWidget* buildColumn();
+    QWidget* buildLayerPane();
+    QWidget* buildFieldPane();
+    QWidget* buildCommandStrip();
+
+    /// Reads `text` as a path and says, where it was typed, whether this program
+    /// can open it — the facts line and the verdict banner — and, when it can,
+    /// has it read once the typing has settled.
     void judgePick(const QString& text);
-    QWidget* buildLayerPage();
-    QWidget* buildFieldPage();
-    QWidget* buildStepper();
 
     // ---- acting ----
     void browse();
     void startProbe();
     void probeFinished();
-    void showPage(int page);
+
+    /// The column's pane: 0 the layers, 1 the fields.
+    void showPane(int pane);
     void setAllChecked(bool on);
     void refreshTally();
     void applyVisibility();
@@ -203,18 +232,25 @@ private:
     /// Every ticked layer name, in the order the file holds them.
     QStringList chosen() const;
 
-    // ---- the field page ----
+    // ---- the field pane ----
     void setAllFieldsChecked(bool on);
     void refreshFieldTally();
 
     /// Every ticked field name, once each, in the order the file holds them.
     QStringList chosenFields() const;
 
+    /// The line the window stands for as it stands: empty until a file has been
+    /// read and at least one layer is ticked.
+    QString lineFor() const;
+
+    /// Writes that line into the command strip and says whether the import
+    /// button is live.
+    void refreshLine();
+
     Controller& controller_;
 
-    QStackedWidget* pages_ = nullptr;
-    QLineEdit* pathField_  = nullptr;
-    QLabel* fileFacts_     = nullptr;
+    QLineEdit* pathField_ = nullptr;
+    QLabel* fileFacts_    = nullptr;
 
     /// THE VERDICT ON THE PICK, shown where the pick is made.
     ///
@@ -223,17 +259,17 @@ private:
     /// `.txt` — was accepted here and refused a page later, after the user had
     /// committed to the flow. The format list was printed at the bottom as
     /// reference the user was expected to check for themselves.
-    Banner* verdict_         = nullptr;
+    Banner* verdict_ = nullptr;
+
+    /// The left of the window: the invitation, the read under way (or what
+    /// stopped it), and the drawing once it has been read.
+    QStackedWidget* stage_ = nullptr;
+    QWidget* dropZone_     = nullptr; ///< the invitation's frame, lit while a file is held over it
     ProgressStrip* progress_ = nullptr;
     QLabel* progressText_    = nullptr;
-    QWidget* progressBox_    = nullptr;
-    QLabel* stepOne_         = nullptr;
-    QLabel* stepTwo_         = nullptr;
-    QLabel* stepThree_       = nullptr;
-    QWidget* stepRule_       = nullptr;
-    QWidget* stepRuleTwo_    = nullptr;
-    QListWidget* fields_     = nullptr;
-    QLabel* fieldTally_      = nullptr;
+    Banner* failure_         = nullptr; ///< why the last read did not finish
+    Banner* stopped_         = nullptr; ///< the last read was stopped by the user
+    Button* stopRead_        = nullptr; ///< stops the read under way
 
     /// The reader's diagnostics, one banner each, above the drawing.
     ///
@@ -252,19 +288,33 @@ private:
     ThemeMode mode_ = ThemeMode::Dark;
 
     ImportPreview* preview_ = nullptr;
+    QLabel* summary_        = nullptr; ///< the file's facts, under the drawing
+
+    /// The right of the window: a note until a file has been read, then the
+    /// two panes and the switch between them.
+    QStackedWidget* column_ = nullptr;
+    Segment* paneSwitch_    = nullptr;
+    QStackedWidget* panes_  = nullptr;
     QListWidget* layers_    = nullptr;
     QLineEdit* filter_      = nullptr;
-    QLabel* summary_        = nullptr;
     QLabel* tally_          = nullptr;
+    QListWidget* fields_    = nullptr;
+    QLabel* fieldTally_     = nullptr;
 
-    Button* back_   = nullptr;
-    Button* next_   = nullptr;
-    Button* cancel_ = nullptr;
+    QLabel* command_ = nullptr; ///< the line the import button will run
+    Button* go_      = nullptr;
+    Button* cancel_  = nullptr;
 
     std::unique_ptr<core::Document> scratch_;
     ImportProbeThread* probe_ = nullptr;
     QTimer* ticker_           = nullptr;
+    QTimer* settle_           = nullptr; ///< reads a typed path once the typing stops
     QElapsedTimer elapsed_;
+
+    QString probed_;            ///< the path the stage's read is, or was, of
+    bool pickReadable_ = false; ///< the path in the field names a file this build reads
+    bool restart_      = false; ///< the pick changed during a read: read the new one after
+    bool filling_      = false; ///< the lists are being filled, not ticked
 
     io::ImportProbe found_;
     QString line_;

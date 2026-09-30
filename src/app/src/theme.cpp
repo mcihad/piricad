@@ -455,14 +455,16 @@ QString themeStyleSheet(ThemeMode mode)
          * with a hard edge against it, the line under the sheet in the
          * darkest strip, and the command in a band of its own over the
          * footer. */
-        QWidget#printColumn              { background: %(window)s;
+        QWidget#printColumn,
+        QWidget#importColumn             { background: %(window)s;
                                            border-left: 1px solid %(lineHard)s; }
         QLabel#printSummary              { background: %(strip)s; color: %(textDim)s;
                                            border-top: 1px solid %(lineHard)s;
                                            padding: 0px 16px; font-size: 11px; }
         QLabel#printReading              { background: transparent; color: %(readout)s;
                                            font-family: "IBM Plex Mono"; font-size: 12px; }
-        QWidget#printCommandStrip        { background: %(window)s;
+        QWidget#printCommandStrip,
+        QWidget#importCommandStrip       { background: %(window)s;
                                            border-top: 1px solid %(lineHard)s; }
 
         /* ---- style designer, §8 -------------------------------------------- */
@@ -527,22 +529,28 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#rowHelp                   { background: transparent; color: %(textFaint)s;
                                            font-size: 11px; }
 
-        /* ---- import wizard, §16.3's window parts, cut to two pages ---------- */
-        QWidget#wizardStepper            { background: %(raised)s;
+        /* ---- import window ------------------------------------------------ */
+        /* The pick across the top in the tool row's ground; the choices in the
+         * print window's column; the invitation in plain words on the window. */
+        QWidget#importFileStrip          { background: %(raised)s;
                                            border-bottom: 1px solid %(lineHard)s; }
-        QLabel#wizardStepOn              { background: transparent; color: %(accentHi)s;
-                                           font-size: 10.5px; font-weight: 600;
-                                           letter-spacing: 1px; }
-        QLabel#wizardStepDone            { background: transparent; color: %(textDim)s;
-                                           font-size: 10.5px; letter-spacing: 1px; }
-        QLabel#wizardStepOff             { background: transparent; color: %(textFaint)s;
-                                           font-size: 10.5px; letter-spacing: 1px; }
-        QWidget#wizardStepRule           { background: %(lineSoft)s; }
         QListWidget#importLayerList      { background: %(window)s; border: 1px solid %(border)s;
                                            border-radius: 4px; }
-        QWidget#importPreview            { border: 1px solid %(border)s; border-radius: 4px; }
-        QLabel#danger                    { background: transparent; color: %(danger)s;
-                                           font-size: 11.5px; }
+        QLabel#importSummary             { background: %(strip)s; color: %(textDim)s;
+                                           border-top: 1px solid %(lineHard)s;
+                                           padding: 5px 16px; font-size: 11px; }
+        QLabel#importInviteTitle         { background: transparent; color: %(text)s;
+                                           font-size: 16px; font-weight: 600; }
+        QLabel#importInviteText          { background: transparent; color: %(textDim)s;
+                                           font-size: 12px; }
+        QLabel#importFormatExt           { background: transparent; color: %(text)s;
+                                           font-family: "IBM Plex Mono"; font-size: 12px; }
+        /* Two pixels, because Qt draws a one-pixel dash as a row of dots that
+         * disappears on the window's ground at a hundred per cent. */
+        QWidget#importDropZone           { background: transparent;
+                                           border: 2px dashed %(border)s; border-radius: 6px; }
+        QWidget#importDropZone[armed="true"] { background: %(wash)s;
+                                           border: 2px dashed %(accent)s; }
 
         /* ---- attribute table, §9 -------------------------------------------- */
         QWidget#rendererRow              { background: %(raised)s;

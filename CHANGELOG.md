@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — İçe Aktar penceresi tek sayfa oldu
+
+- Üç adımlı sihirbaz (Dosya, Katmanlar, Alanlar ve aralarında **İleri**) kalktı. Pencere
+  tek sayfadır: üstte dosya, ortada dosyanın çizimi, sağda Yazdır penceresinin sütunu
+  gibi bir sütunda **Katmanlar | Alanlar**, altta çalıştırılacak `İÇEAKTAR` satırı.
+- Okunabilen bir dosya seçildiği anda okunur; okuma çizime hiçbir şey eklemediği için bir
+  düğme beklemez. **Okumayı durdur** artık ayrı bir düğmedir, **Yeniden oku** aynı dosyayı
+  baştan okur; okuma sürerken **İptal** yine pencereyi kapatır.
+- Dosya pencerenin üstüne sürükleyip bırakılabilir; bırakma yerinin çerçevesi o sırada
+  mavileşir.
+- Dosya seçilmeden önce sağ sütun bu yapının okuduğu biçimleri etiketleriyle listeler.
+- Alanlar adıyla **birer kez** listelenir. Aynı alan dört katmanda geçiyorsa dört satır
+  vardı ve birinin işaretini kaldırmak hiçbir şey değiştirmiyordu, çünkü `alanlar=` ada
+  bakar.
+- Pencere 1180 × 740 açılır ve her adımda boy değiştirmez; 940 × 600'e kadar küçülür.
+
+### Düzeltildi — İçe Aktar penceresinde Windows yolu, kutuya tıklama, Boşluk
+
+- Elle yazılan ya da Dosya Gezgini'nden yapıştırılan bir Windows yolu komut satırına
+  kaçışsız yazılıyordu: `C:\Users\nora\tapu.dxf` ayrıştırıcıda `\n` ile bölünüp `C:Users`
+  ve yeni bir satır oluyordu. Yol ve katman adları artık kaçışlarıyla yazılır.
+- Katman satırında doğrudan işaret kutusuna tıklamak işareti iki kez değiştirip olduğu
+  gibi bırakıyordu; satırın her yeri artık bir kez değiştirir. **Boşluk** ile verilen işaret
+  sayıma ve komut satırına ulaşmıyordu.
+
 ### Değişti — Yazdır penceresi yeniden kuruldu
 
 - Pencerenin büyük bölümünü kâğıdın kendisi kaplar: kâğıt kendi oranında, tasarımcının
