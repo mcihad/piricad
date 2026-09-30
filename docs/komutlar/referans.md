@@ -1562,6 +1562,20 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `katmanlar` | text | 0–64 | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |
 | `harita` | text | isteğe bağlı | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
+| `aci` | number | isteğe bağlı | Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası çevresinde |
+| `cerceve_renk` | text | isteğe bağlı | Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir renk adı |
+| `cerceve_kalinlik` | number | isteğe bağlı | Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi |
+| `zemin` | bool | isteğe bağlı | Öğenin arkası zemin rengiyle doldurulsun mu |
+| `zemin_renk` | text | isteğe bağlı | Zeminin (şekilde dolgunun) rengi |
+| `yazi_renk` | text | isteğe bağlı | Yazının, ölçek çubuğunun ve kuzey okunun rengi |
+| `yatay_hizala` | text | isteğe bağlı | Metnin kutudaki yatay yeri |
+| `dikey_hizala` | text | isteğe bağlı | Metnin kutudaki dikey yeri |
+| `izgara_etiket` | text | isteğe bağlı | Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya da içinde |
+| `izgara_renk` | text | isteğe bağlı | Harita ızgarasının rengi |
+| `izgara_kalinlik` | number | isteğe bağlı | Izgara çizgisinin kalınlığı; 0 kıl çizgi |
+| `izgara_yazi` | number | isteğe bağlı | Izgaranın koordinat yazılarının yüksekliği |
+| `bolum` | integer | isteğe bağlı | Ölçek çubuğunun bölüm sayısı |
+| `sekil` | text | isteğe bağlı | Şekil öğesinin biçimi |
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)
 
@@ -8702,6 +8716,84 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "minimum": -1000,
           "maximum": 1000,
           "description": "Çizim sırası; büyük olan üstte (tam sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası çevresinde (sayı)"
+        },
+        "cerceve_renk": {
+          "type": "string",
+          "description": "Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir renk adı (metin)"
+        },
+        "cerceve_kalinlik": {
+          "type": "number",
+          "description": "Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi [kâğıt mm] (sayı)"
+        },
+        "zemin": {
+          "type": "boolean",
+          "description": "Öğenin arkası zemin rengiyle doldurulsun mu (evet/hayır)"
+        },
+        "zemin_renk": {
+          "type": "string",
+          "description": "Zeminin (şekilde dolgunun) rengi (metin)"
+        },
+        "yazi_renk": {
+          "type": "string",
+          "description": "Yazının, ölçek çubuğunun ve kuzey okunun rengi (metin)"
+        },
+        "yatay_hizala": {
+          "type": "string",
+          "enum": [
+            "sol",
+            "orta",
+            "sag"
+          ],
+          "description": "Metnin kutudaki yatay yeri (metin)"
+        },
+        "dikey_hizala": {
+          "type": "string",
+          "enum": [
+            "ust",
+            "orta",
+            "alt"
+          ],
+          "description": "Metnin kutudaki dikey yeri (metin)"
+        },
+        "izgara_etiket": {
+          "type": "string",
+          "enum": [
+            "yok",
+            "dis",
+            "ic"
+          ],
+          "description": "Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya da içinde (metin)"
+        },
+        "izgara_renk": {
+          "type": "string",
+          "description": "Harita ızgarasının rengi (metin)"
+        },
+        "izgara_kalinlik": {
+          "type": "number",
+          "description": "Izgara çizgisinin kalınlığı; 0 kıl çizgi [kâğıt mm] (sayı)"
+        },
+        "izgara_yazi": {
+          "type": "number",
+          "description": "Izgaranın koordinat yazılarının yüksekliği [kâğıt mm] (sayı)"
+        },
+        "bolum": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Ölçek çubuğunun bölüm sayısı (tam sayı)"
+        },
+        "sekil": {
+          "type": "string",
+          "enum": [
+            "dikdortgen",
+            "elips",
+            "cizgi"
+          ],
+          "description": "Şekil öğesinin biçimi (metin)"
         },
         "varsayimlar": {
           "type": "array",

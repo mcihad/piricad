@@ -2881,6 +2881,64 @@ TEST_CASE("PROOF: katman= — soru sürerken verilen, ilk satırdaki ve betiktek
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
 }
 
+TEST_CASE("PROOF: ÇIKTIÖĞE ekle ve ayarla — arayüz, komut satırı, betik ve oynatma aynı sayfayı "
+          "bırakır")
+{
+    // The designer's two gestures: a box drawn on the sheet (`ekle` with its
+    // frame) and a property changed (`ayarla`). The GUI sends the lines the
+    // designer sends; the command line types them; the script names them.
+    const std::vector<std::string> setup{"ALAN 0,0 100,0 100,80 0,80",
+                                         "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"};
+    const std::vector<std::string> lines{
+        "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=metin ad=antet x=312 y=12 genislik=96 "
+        "yukseklik=18 metin=\"Ada 1284\" yazi=5 yatay_hizala=sol zemin=evet zemin_renk=#F2F2F2",
+        "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita izgara=cizgi izgara_etiket=ic "
+        "izgara_renk=#808080 aci=0",
+        "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=antet aci=90 cerceve=evet cerceve_renk=#0000FF"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    for (const auto& line : lines) {
+        auto started = gui.bus.begin_interactive(line, Origin::Gui);
+        REQUIRE(started.ok());
+        REQUIRE(gui.bus.finish(*started.value()).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    for (const auto& line : lines)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.area","args":{"noktalar":[[0,0],[100000,0],[100000,80000],[0,80000]]}},
+                      {"cmd":"core.layout","args":{"islem":"ekle","ad":"Pafta","kagit":"A3","yon":"yatay"}},
+                      {"cmd":"core.layout_item","args":{"islem":"ekle","yerlesim":"Pafta","tur":"metin",
+                        "ad":"antet","x":312,"y":12,"genislik":96,"yukseklik":18,"metin":"Ada 1284",
+                        "yazi":5,"yatay_hizala":"sol","zemin":true,"zemin_renk":"#F2F2F2"}},
+                      {"cmd":"core.layout_item","args":{"islem":"ayarla","yerlesim":"Pafta","ad":"harita",
+                        "izgara":"cizgi","izgara_etiket":"ic","izgara_renk":"#808080","aci":0}},
+                      {"cmd":"core.layout_item","args":{"islem":"ayarla","yerlesim":"Pafta","ad":"antet",
+                        "aci":90,"cerceve":true,"cerceve_renk":"#0000FF"}}]})")
+                    .ok());
+    }
+    const core::Layout* sheet = gui.doc.layouts().find("Pafta");
+    REQUIRE(sheet != nullptr);
+    REQUIRE(sheet->find("antet") != nullptr);
+    CHECK_EQ(sheet->find("antet")->frame.x, core::um_from_mm(312));
+    CHECK_EQ(sheet->find("antet")->rotation_udeg, 90000000);
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the

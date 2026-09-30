@@ -2731,6 +2731,20 @@ cad.layout_item(
     layers: list[str],
     map: str,
     order: int,
+    rotation: float,
+    frame_color: str,
+    frame_width: float,
+    background: bool,
+    background_color: str,
+    text_color: str,
+    align: str,
+    vertical_align: str,
+    grid_labels: str,
+    grid_color: str,
+    grid_width: float,
+    grid_text_height: float,
+    segments: int,
+    shape: str,
 ) -> int
 ```
 
@@ -2759,6 +2773,20 @@ cad.layout_item(
 | `layers` | `list[str]` | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |
 | `map` | `str` | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır |
 | `order` | `int` | `sira` | Çizim sırası; büyük olan üstte |
+| `rotation` | `float` | `aci` | Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası çevresinde |
+| `frame_color` | `str` | `cerceve_renk` | Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir renk adı |
+| `frame_width` | `float` | `cerceve_kalinlik` | Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi [kâğıt mm] |
+| `background` | `bool` | `zemin` | Öğenin arkası zemin rengiyle doldurulsun mu |
+| `background_color` | `str` | `zemin_renk` | Zeminin (şekilde dolgunun) rengi |
+| `text_color` | `str` | `yazi_renk` | Yazının, ölçek çubuğunun ve kuzey okunun rengi |
+| `align` | `str` | `yatay_hizala` | Metnin kutudaki yatay yeri |
+| `vertical_align` | `str` | `dikey_hizala` | Metnin kutudaki dikey yeri |
+| `grid_labels` | `str` | `izgara_etiket` | Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya da içinde |
+| `grid_color` | `str` | `izgara_renk` | Harita ızgarasının rengi |
+| `grid_width` | `float` | `izgara_kalinlik` | Izgara çizgisinin kalınlığı; 0 kıl çizgi [kâğıt mm] |
+| `grid_text_height` | `float` | `izgara_yazi` | Izgaranın koordinat yazılarının yüksekliği [kâğıt mm] |
+| `segments` | `int` | `bolum` | Ölçek çubuğunun bölüm sayısı |
+| `shape` | `str` | `sekil` | Şekil öğesinin biçimi |
 
 [Komut sayfası](../komutlar/layout_item.md)
 

@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çıktı öğesinin görünümü komuttan ayarlanır
+
+- `ÇIKTIÖĞE` döndürmeyi (`aci`), çerçeve rengini ve kalınlığını, zemini ve zemin
+  rengini, yazı rengini, metnin yatay ve dikey hizasını, harita ızgarasının koordinat
+  yazılarını (`izgara_etiket=yok|dis|ic`), ızgara rengini, kalınlığını ve yazı
+  boyunu, ölçek çubuğunun bölüm sayısını (`bolum`) ve şeklin biçimini
+  (`sekil=dikdortgen|elips|cizgi`) alır. Pafta bunları hep taşıyor ve çiziyordu;
+  hiçbir istemci ayarlayamıyordu.
+
+### Düzeltildi — çıktı öğesi eklenirken verilen ayarlar yok sayılıyordu
+
+- `ÇIKTIÖĞE islem=ekle` öğeyi varsayılan kutusunda kuruyor, aynı satırdaki `x`, `y`,
+  `genislik`, `yukseklik`, `metin` ve öteki ayarları sessizce atıyordu; bir betiğin
+  sağ üste koyduğu başlık haritanın altında, sol üstte çıkıyordu. Artık hepsi uygulanır.
+- `yazi=2.5` tam sayıya (2 mm) kesiliyordu.
+
 ### Eklendi — ölçü krokisinden hızlı çizim
 
 - `DÖRDÜNCÜKÖŞE noktalar=A B C`: ölçülen üç köşeden dördüncüsü (Netcad'in 4. Köşeyi Oluştur'u);

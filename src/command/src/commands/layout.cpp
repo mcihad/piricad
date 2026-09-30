@@ -29,6 +29,7 @@
 // designed these two are typed by a person or a script, and a model composes a
 // sheet by asking the person to run them.
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/colour.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
@@ -723,6 +724,356 @@ Task<void> run_layout(Context& ctx)
 
 // =========================================================== ÇIKTIÖĞE ========
 
+/// THE ITEM'S SETTINGS, from whatever of them the line carries — for `ekle` and
+/// `ayarla` alike.
+///
+/// ONE BLOCK FOR BOTH, and that is the fix. `ekle` used to make the item at its
+/// default box and stop: `x=`, `y=`, `genislik=`, `metin=` and every other
+/// setting on the same line were recorded nowhere and applied never, so a
+/// script that placed a title at 312,12 got it at the margin, under the map —
+/// the silent surplus `.claude/command.md` P15 forbids, on the verb a script
+/// uses most. False after refusing.
+bool apply_properties(Context& ctx, Bus& bus, Layout& target, LayoutItem& item,
+                      const std::string& id)
+{
+    const std::string& sheet = target.name;
+    const auto take_um       = [&ctx](const char* name, Um& into) {
+        const Value v = ctx.argument(name);
+        if (v.empty()) return;
+        into = um_of(v.as_number());
+        ctx.record(name, v);
+    };
+    take_um("x", item.frame.x);
+    take_um("y", item.frame.y);
+    take_um("genislik", item.frame.w);
+    take_um("yukseklik", item.frame.h);
+
+    // MOVING BETWEEN PAGES IS A MOVE TOO. Without this a two-page layout
+    // could be built but nothing could be carried from one sheet to the
+    // other, and the only way to move a title block would be to delete it
+    // and make another one — which is not the same title block.
+    if (const Value v = ctx.argument("sayfa"); !v.empty()) {
+        const std::int64_t wanted = v.as_int();
+        if (wanted < 1 || wanted > static_cast<std::int64_t>(target.pages.size())) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "'" + sheet + "' yerleşiminde " +
+                                             std::to_string(target.pages.size()) + " sayfa var; " +
+                                             std::to_string(wanted) + ". sayfa yok."));
+            return false;
+        }
+        for (std::size_t i = 0; i < target.items.size(); ++i)
+            if (&target.items[i] == &item)
+                target.item_pages[i] = static_cast<std::int32_t>(wanted - 1);
+        ctx.record("sayfa", v);
+    }
+
+    if (const Value v = ctx.argument("metin"); !v.empty()) {
+        item.text = v.as_text();
+        ctx.record("metin", v);
+    }
+    if (const Value v = ctx.argument("yazi"); !v.empty()) {
+        item.text_height = um_of(v.as_number());
+        ctx.record("yazi", v);
+    }
+    if (const Value v = ctx.argument("olcek"); !v.empty()) {
+        item.scale = v.as_int();
+        ctx.record("olcek", v);
+    }
+
+    // HOW MANY ROWS, AND WHICH COLUMNS. Both were on the model and
+    // reachable from no client — and `docs/komutlar/layout_item.md` has
+    // been promising `satir_siniri` the whole time, which makes it a
+    // documented feature that did not exist.
+    if (const Value v = ctx.argument("satir_siniri"); !v.empty()) {
+        if (item.kind != LayoutItemKind::Table) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "'" + id +
+                                             "' bir tablo değil; satir_siniri yalnız "
+                                             "tabloya verilir."));
+            return false;
+        }
+        item.row_limit = static_cast<std::int32_t>(v.as_int());
+        ctx.record("satir_siniri", v);
+    }
+
+    if (const Value v = ctx.argument("sutunlar"); !v.empty()) {
+        // TWO KINDS TAKE COLUMNS, and they take them for different
+        // reasons: a table PRINTS them, a chart COUNTS BY the first one
+        // (TODOS L-09). The refusal names both rather than only the one
+        // this branch was written for.
+        if (item.kind != LayoutItemKind::Table && item.kind != LayoutItemKind::Chart) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument,
+                          "'" + id +
+                              "' bir tablo ya da grafik değil; sutunlar yalnız onlara "
+                              "verilir."));
+            return false;
+        }
+        std::vector<std::string> wanted;
+        for (const std::string& one : v.as_texts()) {
+            if (core::turkish_key_equals(one, "hepsi")) {
+                wanted.clear();
+                break;
+            }
+            if (bus.document().attributes().find(one) == core::kNoAttr) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound, "Öznitelik sütunu yok: '" + one + "'."));
+                return false;
+            }
+            wanted.push_back(one);
+        }
+        item.columns = std::move(wanted);
+        ctx.record("sutunlar", v);
+    }
+
+    // WHICH LAYERS THIS FRAME DRAWS. The field has been on the model all
+    // along with no way to set it, which made "this map draws these
+    // layers" a promise the product could not keep from any client. It
+    // needed `Value::Kind::TextList` first: a comma would not do, because
+    // a layer name is not validated and may contain one.
+    //
+    // `hepsi` empties the list rather than naming a layer called that:
+    // without a word for it there would be no way back from a filter once
+    // set, and "delete the item and make another one" is not an answer.
+    if (const Value v = ctx.argument("katmanlar"); !v.empty()) {
+        if (item.kind != LayoutItemKind::Map) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument,
+                          "'" + id +
+                              "' bir harita çerçevesi değil; katmanlar yalnız haritaya "
+                              "verilir."));
+            return false;
+        }
+        std::vector<std::string> wanted;
+        for (const std::string& one : v.as_texts()) {
+            if (core::turkish_key_equals(one, "hepsi")) {
+                wanted.clear();
+                break;
+            }
+            const auto& drawn = bus.document().layers();
+            const bool known =
+                std::any_of(drawn.begin(), drawn.end(), [&one](const core::Layer& layer) {
+                    return core::turkish_key_equals(layer.name, one);
+                });
+            if (!known) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound, "Katman yok: '" + one + "'."));
+                return false;
+            }
+            wanted.push_back(one);
+        }
+        item.layers = std::move(wanted);
+        ctx.record("katmanlar", v);
+    }
+
+    // WHICH MAP THIS ITEM BELONGS TO. A scale bar states a map's scale
+    // and a `<olcek>` placeholder its denominator; on a sheet with two
+    // map frames at two scales, "the map" is not a question the program
+    // may answer by taking the first one it finds.
+    //
+    // `ilk` clears the link rather than naming an item called that:
+    // without a word for it there would be no way back once set.
+    if (const Value v = ctx.argument("harita"); !v.empty()) {
+        const std::string wanted = v.as_text();
+        if (core::turkish_key_equals(wanted, "ilk")) {
+            item.linked_map.clear();
+        } else {
+            const LayoutItem* named = target.find(wanted);
+            if (named == nullptr || named->kind != LayoutItemKind::Map) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound, "'" + sheet + "' yerleşiminde '" + wanted +
+                                                             "' adlı bir harita çerçevesi yok."));
+                return false;
+            }
+            if (item.kind == LayoutItemKind::Map) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "Bir harita çerçevesi başka bir haritaya bağlanmaz."));
+                return false;
+            }
+            item.linked_map = wanted;
+        }
+        ctx.record("harita", v);
+    }
+
+    // WHERE THE MAP FRAME LOOKS. Two ground corners, the same shape
+    // `YAZDIR pencere=` takes — which is what lets the canvas's print
+    // frame aim a layout: the user drags a rectangle and the window types
+    // this line (Article 1.2, and the reason the frame is not a private
+    // road into the designer).
+    if (const Value v = ctx.argument("pencere"); !v.empty()) {
+        const std::vector<core::Point2> corners = v.as_points();
+        if (corners.size() != 2) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "pencere iki köşe ister: pencere=x1,y1 x2,y2"));
+            return false;
+        }
+        const core::Box2 box{
+            std::min(corners[0].x, corners[1].x), std::min(corners[0].y, corners[1].y),
+            std::max(corners[0].x, corners[1].x), std::max(corners[0].y, corners[1].y)};
+        if (box.empty()) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Pencerenin iki köşesi bir dikdörtgen "
+                                         "kurmuyor."));
+            return false;
+        }
+        if (item.kind != core::LayoutItemKind::Map) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "'" + id +
+                                             "' bir harita çerçevesi değil; "
+                                             "pencere yalnız haritaya verilir."));
+            return false;
+        }
+        item.extent = box;
+        ctx.record("pencere", v);
+    }
+    if (const Value v = ctx.argument("izgara"); !v.empty()) {
+        static constexpr const char* kGrids[] = {"yok", "arti", "cizgi", "centik"};
+        const char* word                      = canonical_verb(v.as_text(), kGrids);
+        if (word == nullptr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument, "Izgara: yok / arti / cizgi / centik"));
+            return false;
+        }
+        const std::string_view grid_word{word};
+        if (grid_word == "yok")
+            item.grid = core::GridStyle::None;
+        else if (grid_word == "arti")
+            item.grid = core::GridStyle::Cross;
+        else if (grid_word == "cizgi")
+            item.grid = core::GridStyle::Line;
+        else
+            item.grid = core::GridStyle::Tick;
+        ctx.record("izgara", Value::text(word));
+    }
+    if (const Value v = ctx.argument("izgara_aralik"); !v.empty()) {
+        item.grid_interval = v.as_int();
+        ctx.record("izgara_aralik", v);
+    }
+    if (const Value v = ctx.argument("kilit"); !v.empty()) {
+        item.locked = v.as_bool();
+        ctx.record("kilit", v);
+    }
+    if (const Value v = ctx.argument("cerceve"); !v.empty()) {
+        item.frame_visible = v.as_bool();
+        ctx.record("cerceve", v);
+    }
+    if (const Value v = ctx.argument("sira"); !v.empty()) {
+        item.z = static_cast<std::int32_t>(v.as_int());
+        ctx.record("sira", v);
+    }
+
+    // ---- how it looks, which the model and the sheet have always carried ----
+    //
+    // THE TURN, THE INKS, THE FILL AND THE ALIGNMENT. Every one of these was a
+    // field of `LayoutItem`, written to the file and honoured by the sheet
+    // (`paint_layout_page`), and not one could be set from any client: a title
+    // could not be centred, a frame could not be grey, a legend could not stand
+    // on white. What the file keeps and the sheet draws, the command sets.
+    if (const Value v = ctx.argument("aci"); !v.empty()) {
+        const double degrees = v.as_number();
+        if (!(std::abs(degrees) <= 360.0)) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Açı -360 ile 360 derece arasında olmalı; " +
+                                             std::to_string(degrees) + " verildi."));
+            return false;
+        }
+        item.rotation_udeg = static_cast<std::int32_t>(std::llround(degrees * 1000000.0));
+        ctx.record("aci", v);
+    }
+    const auto take_colour = [&ctx](const char* name, std::uint32_t& into) {
+        const Value v = ctx.argument(name);
+        if (v.empty()) return true;
+        const std::string word =
+            v.kind() == Value::Kind::Text ? v.as_text() : std::to_string(v.as_int());
+        const std::optional<std::uint32_t> colour = parse_colour(word);
+        if (!colour) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         std::string(name) + ": tanınmayan renk '" + word +
+                                             "'. #RRGGBB, #AARRGGBB ya da bir renk adı "
+                                             "yazın: siyah, kırmızı, mavi…"));
+            return false;
+        }
+        into = *colour;
+        ctx.record(name, Value::text(colour_hex(*colour)));
+        return true;
+    };
+    if (!take_colour("cerceve_renk", item.frame_colour) ||
+        !take_colour("zemin_renk", item.background_colour) ||
+        !take_colour("yazi_renk", item.text_colour))
+        return false;
+    if (const Value v = ctx.argument("cerceve_kalinlik"); !v.empty()) {
+        if (!(v.as_number() >= 0.0 && v.as_number() <= 20.0)) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Çerçeve kalınlığı 0 ile 20 mm arasında olmalı."));
+            return false;
+        }
+        item.frame_width = um_of(v.as_number());
+        ctx.record("cerceve_kalinlik", v);
+    }
+    if (const Value v = ctx.argument("zemin"); !v.empty()) {
+        item.background = v.as_bool();
+        ctx.record("zemin", v);
+    }
+    if (const Value v = ctx.argument("yatay_hizala"); !v.empty()) {
+        static constexpr const char* kWords[] = {"sol", "orta", "sag"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        item.align_h = static_cast<std::uint8_t>(word == kWords[0] ? 0 : word == kWords[1] ? 1 : 2);
+        ctx.record("yatay_hizala", Value::text(word != nullptr ? word : "sag"));
+    }
+    if (const Value v = ctx.argument("dikey_hizala"); !v.empty()) {
+        static constexpr const char* kWords[] = {"ust", "orta", "alt"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        item.align_v = static_cast<std::uint8_t>(word == kWords[0] ? 0 : word == kWords[1] ? 1 : 2);
+        ctx.record("dikey_hizala", Value::text(word != nullptr ? word : "alt"));
+    }
+
+    // ---- what only one kind has --------------------------------------------
+    const auto only = [&ctx, &item, &id](const char* name, LayoutItemKind kind, const char* what) {
+        if (ctx.argument(name).empty() || item.kind == kind) return true;
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "'" + id + "' " + what + " değil; " + name + " yalnız " +
+                                         what + " öğesine verilir."));
+        return false;
+    };
+    if (!only("izgara_etiket", LayoutItemKind::Map, "bir harita çerçevesi") ||
+        !only("izgara_renk", LayoutItemKind::Map, "bir harita çerçevesi") ||
+        !only("izgara_kalinlik", LayoutItemKind::Map, "bir harita çerçevesi") ||
+        !only("izgara_yazi", LayoutItemKind::Map, "bir harita çerçevesi") ||
+        !only("bolum", LayoutItemKind::ScaleBar, "bir ölçek çubuğu") ||
+        !only("sekil", LayoutItemKind::Shape, "bir şekil"))
+        return false;
+    if (const Value v = ctx.argument("izgara_etiket"); !v.empty()) {
+        static constexpr const char* kWords[] = {"yok", "dis", "ic"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        item.grid_labels                      = word == kWords[0]   ? core::GridLabels::None
+                                                : word == kWords[1] ? core::GridLabels::Outside
+                                                                    : core::GridLabels::Inside;
+        ctx.record("izgara_etiket", Value::text(word != nullptr ? word : "ic"));
+    }
+    if (!take_colour("izgara_renk", item.grid_colour)) return false;
+    if (const Value v = ctx.argument("izgara_kalinlik"); !v.empty()) {
+        item.grid_width = um_of(std::max(0.0, v.as_number()));
+        ctx.record("izgara_kalinlik", v);
+    }
+    if (const Value v = ctx.argument("izgara_yazi"); !v.empty()) {
+        item.grid_text_height = um_of(std::max(0.5, v.as_number()));
+        ctx.record("izgara_yazi", v);
+    }
+    if (const Value v = ctx.argument("bolum"); !v.empty()) {
+        item.style = static_cast<std::int32_t>(v.as_int());
+        ctx.record("bolum", v);
+    }
+    if (const Value v = ctx.argument("sekil"); !v.empty()) {
+        static constexpr const char* kWords[] = {"dikdortgen", "elips", "cizgi"};
+        const char* word                      = canonical_verb(v.as_text(), kWords);
+        item.shape                            = word == kWords[0]   ? core::LayoutShape::Rectangle
+                                                : word == kWords[1] ? core::LayoutShape::Ellipse
+                                                                    : core::LayoutShape::Line;
+        ctx.record("sekil", Value::text(word != nullptr ? word : "cizgi"));
+    }
+    return true;
+}
+
 Task<void> run_item(Context& ctx)
 {
     Bus& bus                      = ctx.session().bus();
@@ -811,6 +1162,8 @@ Task<void> run_item(Context& ctx)
 
         target->items.push_back(std::move(item));
         target->item_pages.push_back(0);
+        LayoutItem& made = target->items.back();
+        if (!apply_properties(ctx, bus, *target, made, made.id)) co_return;
     } else {
         auto id = co_await ctx.text("ad", "Öğe adı");
         if (!id || id->empty()) {
@@ -872,231 +1225,7 @@ Task<void> run_item(Context& ctx)
                 co_return;
             }
 
-            const auto take_um = [&ctx](const char* name, Um& into) {
-                const Value v = ctx.argument(name);
-                if (v.empty()) return;
-                into = um_of(v.as_number());
-                ctx.record(name, v);
-            };
-            take_um("x", item->frame.x);
-            take_um("y", item->frame.y);
-            take_um("genislik", item->frame.w);
-            take_um("yukseklik", item->frame.h);
-
-            // MOVING BETWEEN PAGES IS A MOVE TOO. Without this a two-page layout
-            // could be built but nothing could be carried from one sheet to the
-            // other, and the only way to move a title block would be to delete it
-            // and make another one — which is not the same title block.
-            if (const Value v = ctx.argument("sayfa"); !v.empty()) {
-                const std::int64_t wanted = v.as_int();
-                if (wanted < 1 || wanted > static_cast<std::int64_t>(target->pages.size())) {
-                    ctx.session().fail(core::err(
-                        core::ErrorCode::InvalidArgument,
-                        "'" + sheet + "' yerleşiminde " + std::to_string(target->pages.size()) +
-                            " sayfa var; " + std::to_string(wanted) + ". sayfa yok."));
-                    co_return;
-                }
-                for (std::size_t i = 0; i < target->items.size(); ++i)
-                    if (&target->items[i] == item)
-                        target->item_pages[i] = static_cast<std::int32_t>(wanted - 1);
-                ctx.record("sayfa", v);
-            }
-
-            if (const Value v = ctx.argument("metin"); !v.empty()) {
-                item->text = v.as_text();
-                ctx.record("metin", v);
-            }
-            if (const Value v = ctx.argument("yazi"); !v.empty()) {
-                item->text_height = um(v.as_int());
-                ctx.record("yazi", v);
-            }
-            if (const Value v = ctx.argument("olcek"); !v.empty()) {
-                item->scale = v.as_int();
-                ctx.record("olcek", v);
-            }
-
-            // HOW MANY ROWS, AND WHICH COLUMNS. Both were on the model and
-            // reachable from no client — and `docs/komutlar/layout_item.md` has
-            // been promising `satir_siniri` the whole time, which makes it a
-            // documented feature that did not exist.
-            if (const Value v = ctx.argument("satir_siniri"); !v.empty()) {
-                if (item->kind != LayoutItemKind::Table) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "'" + *id +
-                                                     "' bir tablo değil; satir_siniri yalnız "
-                                                     "tabloya verilir."));
-                    co_return;
-                }
-                item->row_limit = static_cast<std::int32_t>(v.as_int());
-                ctx.record("satir_siniri", v);
-            }
-
-            if (const Value v = ctx.argument("sutunlar"); !v.empty()) {
-                // TWO KINDS TAKE COLUMNS, and they take them for different
-                // reasons: a table PRINTS them, a chart COUNTS BY the first one
-                // (TODOS L-09). The refusal names both rather than only the one
-                // this branch was written for.
-                if (item->kind != LayoutItemKind::Table && item->kind != LayoutItemKind::Chart) {
-                    ctx.session().fail(
-                        core::err(core::ErrorCode::InvalidArgument,
-                                  "'" + *id +
-                                      "' bir tablo ya da grafik değil; sutunlar yalnız onlara "
-                                      "verilir."));
-                    co_return;
-                }
-                std::vector<std::string> wanted;
-                for (const std::string& one : v.as_texts()) {
-                    if (core::turkish_key_equals(one, "hepsi")) {
-                        wanted.clear();
-                        break;
-                    }
-                    if (bus.document().attributes().find(one) == core::kNoAttr) {
-                        ctx.session().fail(core::err(core::ErrorCode::NotFound,
-                                                     "Öznitelik sütunu yok: '" + one + "'."));
-                        co_return;
-                    }
-                    wanted.push_back(one);
-                }
-                item->columns = std::move(wanted);
-                ctx.record("sutunlar", v);
-            }
-
-            // WHICH LAYERS THIS FRAME DRAWS. The field has been on the model all
-            // along with no way to set it, which made "this map draws these
-            // layers" a promise the product could not keep from any client. It
-            // needed `Value::Kind::TextList` first: a comma would not do, because
-            // a layer name is not validated and may contain one.
-            //
-            // `hepsi` empties the list rather than naming a layer called that:
-            // without a word for it there would be no way back from a filter once
-            // set, and "delete the item and make another one" is not an answer.
-            if (const Value v = ctx.argument("katmanlar"); !v.empty()) {
-                if (item->kind != LayoutItemKind::Map) {
-                    ctx.session().fail(
-                        core::err(core::ErrorCode::InvalidArgument,
-                                  "'" + *id +
-                                      "' bir harita çerçevesi değil; katmanlar yalnız haritaya "
-                                      "verilir."));
-                    co_return;
-                }
-                std::vector<std::string> wanted;
-                for (const std::string& one : v.as_texts()) {
-                    if (core::turkish_key_equals(one, "hepsi")) {
-                        wanted.clear();
-                        break;
-                    }
-                    const auto& drawn = bus.document().layers();
-                    const bool known =
-                        std::any_of(drawn.begin(), drawn.end(), [&one](const core::Layer& layer) {
-                            return core::turkish_key_equals(layer.name, one);
-                        });
-                    if (!known) {
-                        ctx.session().fail(
-                            core::err(core::ErrorCode::NotFound, "Katman yok: '" + one + "'."));
-                        co_return;
-                    }
-                    wanted.push_back(one);
-                }
-                item->layers = std::move(wanted);
-                ctx.record("katmanlar", v);
-            }
-
-            // WHICH MAP THIS ITEM BELONGS TO. A scale bar states a map's scale
-            // and a `<olcek>` placeholder its denominator; on a sheet with two
-            // map frames at two scales, "the map" is not a question the program
-            // may answer by taking the first one it finds.
-            //
-            // `ilk` clears the link rather than naming an item called that:
-            // without a word for it there would be no way back once set.
-            if (const Value v = ctx.argument("harita"); !v.empty()) {
-                const std::string wanted = v.as_text();
-                if (core::turkish_key_equals(wanted, "ilk")) {
-                    item->linked_map.clear();
-                } else {
-                    const LayoutItem* named = target->find(wanted);
-                    if (named == nullptr || named->kind != LayoutItemKind::Map) {
-                        ctx.session().fail(core::err(core::ErrorCode::NotFound,
-                                                     "'" + sheet + "' yerleşiminde '" + wanted +
-                                                         "' adlı bir harita çerçevesi yok."));
-                        co_return;
-                    }
-                    if (item->kind == LayoutItemKind::Map) {
-                        ctx.session().fail(
-                            core::err(core::ErrorCode::InvalidArgument,
-                                      "Bir harita çerçevesi başka bir haritaya bağlanmaz."));
-                        co_return;
-                    }
-                    item->linked_map = wanted;
-                }
-                ctx.record("harita", v);
-            }
-
-            // WHERE THE MAP FRAME LOOKS. Two ground corners, the same shape
-            // `YAZDIR pencere=` takes — which is what lets the canvas's print
-            // frame aim a layout: the user drags a rectangle and the window types
-            // this line (Article 1.2, and the reason the frame is not a private
-            // road into the designer).
-            if (const Value v = ctx.argument("pencere"); !v.empty()) {
-                const std::vector<core::Point2> corners = v.as_points();
-                if (corners.size() != 2) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "pencere iki köşe ister: pencere=x1,y1 x2,y2"));
-                    co_return;
-                }
-                const core::Box2 box{
-                    std::min(corners[0].x, corners[1].x), std::min(corners[0].y, corners[1].y),
-                    std::max(corners[0].x, corners[1].x), std::max(corners[0].y, corners[1].y)};
-                if (box.empty()) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "Pencerenin iki köşesi bir dikdörtgen "
-                                                 "kurmuyor."));
-                    co_return;
-                }
-                if (item->kind != core::LayoutItemKind::Map) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "'" + *id +
-                                                     "' bir harita çerçevesi değil; "
-                                                     "pencere yalnız haritaya verilir."));
-                    co_return;
-                }
-                item->extent = box;
-                ctx.record("pencere", v);
-            }
-            if (const Value v = ctx.argument("izgara"); !v.empty()) {
-                static constexpr const char* kGrids[] = {"yok", "arti", "cizgi", "centik"};
-                const char* word                      = canonical_verb(v.as_text(), kGrids);
-                if (word == nullptr) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "Izgara: yok / arti / cizgi / centik"));
-                    co_return;
-                }
-                const std::string_view grid_word{word};
-                if (grid_word == "yok")
-                    item->grid = core::GridStyle::None;
-                else if (grid_word == "arti")
-                    item->grid = core::GridStyle::Cross;
-                else if (grid_word == "cizgi")
-                    item->grid = core::GridStyle::Line;
-                else
-                    item->grid = core::GridStyle::Tick;
-                ctx.record("izgara", Value::text(word));
-            }
-            if (const Value v = ctx.argument("izgara_aralik"); !v.empty()) {
-                item->grid_interval = v.as_int();
-                ctx.record("izgara_aralik", v);
-            }
-            if (const Value v = ctx.argument("kilit"); !v.empty()) {
-                item->locked = v.as_bool();
-                ctx.record("kilit", v);
-            }
-            if (const Value v = ctx.argument("cerceve"); !v.empty()) {
-                item->frame_visible = v.as_bool();
-                ctx.record("cerceve", v);
-            }
-            if (const Value v = ctx.argument("sira"); !v.empty()) {
-                item->z = static_cast<std::int32_t>(v.as_int());
-                ctx.record("sira", v);
-            }
+            if (!apply_properties(ctx, bus, *target, *item, *id)) co_return;
         } else {
             ctx.session().fail(core::err(core::ErrorCode::Internal,
                                          "'" + op + "' işlemi tanımlı ama uygulanmamış."));
@@ -1417,6 +1546,52 @@ KENTOS_COMMAND(layout_item)
                 Param::integer_range("sira", Arity::optional(), -1000, 1000,
                                      "Çizim sırası; büyük olan üstte")
                     .en("order"),
+                Param::number("aci", Arity::optional(),
+                              "Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası "
+                              "çevresinde")
+                    .en("rotation"),
+                Param::text("cerceve_renk", Arity::optional(),
+                            "Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir "
+                            "renk adı")
+                    .en("frame_color"),
+                Param::number("cerceve_kalinlik", Arity::optional(),
+                              "Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi")
+                    .measured_in("kâğıt mm")
+                    .en("frame_width"),
+                Param::boolean("zemin", Arity::optional(),
+                               "Öğenin arkası zemin rengiyle doldurulsun mu")
+                    .en("background"),
+                Param::text("zemin_renk", Arity::optional(), "Zeminin (şekilde dolgunun) rengi")
+                    .en("background_color"),
+                Param::text("yazi_renk", Arity::optional(),
+                            "Yazının, ölçek çubuğunun ve kuzey okunun rengi")
+                    .en("text_color"),
+                Param::choice("yatay_hizala", Arity::optional(), {"sol", "orta", "sag"},
+                              "Metnin kutudaki yatay yeri")
+                    .en("align"),
+                Param::choice("dikey_hizala", Arity::optional(), {"ust", "orta", "alt"},
+                              "Metnin kutudaki dikey yeri")
+                    .en("vertical_align"),
+                Param::choice("izgara_etiket", Arity::optional(), {"yok", "dis", "ic"},
+                              "Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya "
+                              "da içinde")
+                    .en("grid_labels"),
+                Param::text("izgara_renk", Arity::optional(), "Harita ızgarasının rengi")
+                    .en("grid_color"),
+                Param::number("izgara_kalinlik", Arity::optional(),
+                              "Izgara çizgisinin kalınlığı; 0 kıl çizgi")
+                    .measured_in("kâğıt mm")
+                    .en("grid_width"),
+                Param::number("izgara_yazi", Arity::optional(),
+                              "Izgaranın koordinat yazılarının yüksekliği")
+                    .measured_in("kâğıt mm")
+                    .en("grid_text_height"),
+                Param::integer_range("bolum", Arity::optional(), 1, 10,
+                                     "Ölçek çubuğunun bölüm sayısı")
+                    .en("segments"),
+                Param::choice("sekil", Arity::optional(), {"dikdortgen", "elips", "cizgi"},
+                              "Şekil öğesinin biçimi")
+                    .en("shape"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

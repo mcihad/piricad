@@ -39,13 +39,18 @@ buluşur ve çevirme orada yapılır.
 
 ```
 ÇIKTIÖĞE islem=listele [yerlesim=<ad>]
-ÇIKTIÖĞE islem=ekle [yerlesim=<ad>] tur=<tür> [ad=<ad>]
+ÇIKTIÖĞE islem=ekle [yerlesim=<ad>] tur=<tür> [ad=<ad>] [x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>] [ayarlar…]
 ÇIKTIÖĞE islem=sil [yerlesim=<ad>] ad=<ad>
 ÇIKTIÖĞE islem=tasi [yerlesim=<ad>] ad=<ad> x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>
 ÇIKTIÖĞE islem=ad [yerlesim=<ad>] ad=<ad> yeni_ad=<ad>
 ÇIKTIÖĞE islem=ayarla [yerlesim=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
          [pencere=x1,y1 pencere=x2,y2] [izgara=<biçim>] [kilit=evet] …
 ```
+
+`ekle` aynı satırda verilen **her ayarı** uygular: konum, boyut, yazı, renk… Yeni
+öğe önce kendi türünün varsayılanıyla kurulur, sonra satırın söyledikleri üstüne
+yazılır. Yalnız `tur=` verilen öğe kâğıdın sol üstünde, kenar payının içinde
+belirir.
 
 `yerlesim=` **çizimde tek yerleşim varsa gerekmez**. İki ya da daha fazlası varsa
 zorunludur: hangisinin kastedildiğini tahmin etmek, yanlış yerleşimin düzenlenmesidir.
@@ -83,6 +88,20 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `yeni_ad` | `islem=ad` için öğenin yeni adı |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
 | `sayfa` | Öğenin duracağı sayfa (1'den başlar); `tasi` ile verilir |
+| `aci` | Öğenin dönüşü, derece; sayfada **saat yönünde**, öğenin ortası çevresinde (−360…360) |
+| `cerceve_renk` | Çerçevenin rengi — şekilde çizginin. `#RRGGBB`, `#AARRGGBB` ya da bir renk adı: `siyah`, `kırmızı`, `mavi`… |
+| `cerceve_kalinlik` | Çerçevenin kalınlığı, kâğıt milimetresi (0…20); `0` kıl çizgi |
+| `zemin` | Öğenin arkası zemin rengiyle doldurulsun mu |
+| `zemin_renk` | Zeminin rengi — şekilde dolgunun |
+| `yazi_renk` | Yazının, ölçek çubuğunun ve kuzey okunun rengi |
+| `yatay_hizala` | Metnin kutudaki yatay yeri: `sol`, `orta`, `sag` |
+| `dikey_hizala` | Metnin kutudaki dikey yeri: `ust`, `orta`, `alt` |
+| `izgara_etiket` | Harita ızgarasının koordinat yazıları: `yok`, `dis` (çerçevenin dışında, öntanımlı), `ic` |
+| `izgara_renk` | Harita ızgarasının rengi |
+| `izgara_kalinlik` | Izgara çizgisinin kalınlığı, kâğıt milimetresi; `0` kıl çizgi |
+| `izgara_yazi` | Izgara yazılarının yüksekliği, kâğıt milimetresi |
+| `bolum` | Ölçek çubuğunun bölüm sayısı (1…10) |
+| `sekil` | Şekil öğesinin biçimi: `dikdortgen`, `elips`, `cizgi` |
 
 ### Tablo öğesi
 
@@ -167,6 +186,25 @@ değil kimliğe göre tutulur; dosyaya yazılırken hedefin **yeni** adı yazıl
 **Bağlı olduğu harita silinirse öğe sessizce ilk haritaya dönmez.** Çizilmez ve
 bildirilir: imzalanan bir belgede başka bir haritanın ölçeğini sessizce yazan bir
 ölçek çubuğu, yanlış bir sayıdır.
+
+### Görünüm: döndürme, renk, zemin, hizalama
+
+Her öğe döndürülebilir, çerçevesi ve zemini renklendirilebilir; metin kutunun içinde
+dokuz yere yaslanabilir. Renk `#RRGGBB`, saydam bir renk `#AARRGGBB` ya da bir renk
+adıyla yazılır; komut günlüğü rengi her zaman `#RRGGBB` biçiminde tutar.
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 100,0 100,80 0,80
+ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay
+ÇIKTIÖĞE islem=ekle tur=metin ad=antet x=312 y=12 genislik=96 yukseklik=18 metin="Ada 1284 · Pafta 3" yazi=5 yatay_hizala=sol zemin=evet zemin_renk=#F2F2F2 cerceve=evet cerceve_kalinlik=0.35
+ÇIKTIÖĞE islem=ayarla ad=harita izgara=cizgi izgara_etiket=ic izgara_renk=#808080 izgara_kalinlik=0.18
+ÇIKTIÖĞE islem=ayarla ad=olcek bolum=5
+ÇIKTIÖĞE islem=ekle tur=sekil ad=damga sekil=elips x=330 y=250 genislik=40 yukseklik=30 cerceve_renk=mavi
+```
+
+Izgara, ölçek bölümü ve şekil biçimi yalnız kendi türlerine verilir; başka bir öğeye
+verildiğinde komut hangi türe ait olduğunu söyleyerek reddeder.
 
 ### Ölçek mi pencere mi
 
@@ -355,6 +393,12 @@ Bir yerleşimi baştan sona kuran betik:
 | `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | Sayfa sayısını görün |
 | `Izgara: yok / arti / cizgi / centik` | Tanınmayan ızgara biçimi | Listedeki sözcüklerden birini yazın |
 | `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
+| `Açı -360 ile 360 derece arasında olmalı; 400 verildi.` | `aci=` aralık dışında | Açıyı −360…360 arasında verin |
+| `cerceve_renk: tanınmayan renk 'X'. #RRGGBB, #AARRGGBB ya da bir renk adı yazın: siyah, kırmızı, mavi…` | Renk okunamadı (`zemin_renk`, `yazi_renk`, `izgara_renk` için aynı biçim) | Rengi onaltılık ya da adıyla yazın |
+| `Çerçeve kalınlığı 0 ile 20 mm arasında olmalı.` | `cerceve_kalinlik=` aralık dışında | 0…20 mm verin |
+| `'X' bir harita çerçevesi değil; izgara_etiket yalnız bir harita çerçevesi öğesine verilir.` | Izgara ayarı harita olmayan bir öğeye verildi (`izgara_renk`, `izgara_kalinlik`, `izgara_yazi` için aynı biçim) | Harita öğesinin adını verin |
+| `'X' bir ölçek çubuğu değil; bolum yalnız bir ölçek çubuğu öğesine verilir.` | `bolum=` ölçek çubuğu olmayan bir öğeye verildi | Ölçek çubuğunun adını verin |
+| `'X' bir şekil değil; sekil yalnız bir şekil öğesine verilir.` | `sekil=` şekil olmayan bir öğeye verildi | Şekil öğesinin adını verin |
 
 ## İlgili
 

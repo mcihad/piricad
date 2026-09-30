@@ -1846,6 +1846,20 @@ def layout_item(
     layers: list[str] = ...,
     map: str = ...,
     order: int = ...,
+    rotation: float = ...,
+    frame_color: str = ...,
+    frame_width: float = ...,
+    background: bool = ...,
+    background_color: str = ...,
+    text_color: str = ...,
+    align: str = ...,
+    vertical_align: str = ...,
+    grid_labels: str = ...,
+    grid_color: str = ...,
+    grid_width: float = ...,
+    grid_text_height: float = ...,
+    segments: int = ...,
+    shape: str = ...,
 ) -> int:
     """Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
 
@@ -1873,6 +1887,20 @@ def layout_item(
         layers — Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır
         map — Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır
         order — Çizim sırası; büyük olan üstte
+        rotation — Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası çevresinde
+        frame_color — Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir renk adı
+        frame_width — Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi [kâğıt mm]
+        background — Öğenin arkası zemin rengiyle doldurulsun mu
+        background_color — Zeminin (şekilde dolgunun) rengi
+        text_color — Yazının, ölçek çubuğunun ve kuzey okunun rengi
+        align — Metnin kutudaki yatay yeri
+        vertical_align — Metnin kutudaki dikey yeri
+        grid_labels — Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya da içinde
+        grid_color — Harita ızgarasının rengi
+        grid_width — Izgara çizgisinin kalınlığı; 0 kıl çizgi [kâğıt mm]
+        grid_text_height — Izgaranın koordinat yazılarının yüksekliği [kâğıt mm]
+        segments — Ölçek çubuğunun bölüm sayısı
+        shape — Şekil öğesinin biçimi
     """
 
 def layout_template(

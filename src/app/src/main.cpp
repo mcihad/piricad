@@ -349,7 +349,7 @@ int main(int argc, char** argv)
              "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
              "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
              "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",  "KENTOS_VIEW_PROBE",
-             "KENTOS_OFFER_PROBE",     "KENTOS_PROMPT_PROBE",
+             "KENTOS_OFFER_PROBE",     "KENTOS_PROMPT_PROBE",  "KENTOS_WINDOW_SHOT",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -1091,7 +1091,108 @@ int main(int argc, char** argv)
     // the named directory — so a reviewer sees what the program actually draws
     // rather than what a test harness draws. Same category as the other two:
     // developer tooling, an environment variable rather than a CLI flag.
-    if (const QByteArray dir = qgetenv("KENTOS_SHOT_DIR"); !dir.isEmpty()) {
+    // ONE WINDOW, PHOTOGRAPHED, for the hand that is redesigning it:
+    // `KENTOS_WINDOW_SHOT=yazdir|disa|ice|yerlesim|hepsi` with `KENTOS_SHOT_DIR`.
+    // The same drawing and the same sheet every time, the window opened in its
+    // working state, grabbed and put away — seconds, where the whole sequence
+    // below takes minutes. Developer tooling, like the rest of this block.
+    if (const QByteArray only = qgetenv("KENTOS_WINDOW_SHOT"), shots = qgetenv("KENTOS_SHOT_DIR");
+        !only.isEmpty() && !shots.isEmpty()) {
+        const QString into = QString::fromLocal8Bit(shots);
+        const QString want = QString::fromLocal8Bit(only);
+        QDir().mkpath(into);
+        const auto wanted = [&want](const char* name) {
+            return want == QLatin1String("hepsi") || want == QLatin1String(name);
+        };
+        int at          = kFrameDumpSettleMs;
+        const auto shot = [into](const QString& name, QWidget* subject) {
+            if (subject == nullptr) return;
+            const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
+            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[kentos] %s\n",
+                               qPrintable(path));
+        };
+        const auto later = [&window, &at](auto&& step) {
+            at += 400;
+            QTimer::singleShot(at, &window, step);
+        };
+        const auto closeModal = [] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        };
+        const QString dxf = into + QStringLiteral("/ornek-cizim.dxf");
+
+        later([&window, dxf] {
+            window.resize(1880, 1058);
+            window.seedProbeDrawing();
+            for (const char* line :
+                 {"KATMAN ad=BİNA", "ALAN 10,10 45,10 45,40 10,40",
+                  "ALAN 140,12 190,12 190,52 140,52", "KATMAN ad=YOL", "ÇOKLUÇİZGİ -10,90 240,90",
+                  "ÇOKLUÇİZGİ -10,110 240,110", "KATMAN ad=YAZI", "METİN 50,60 \"21\" 3000",
+                  "METİN 170,60 \"22\" 3000", "YAKINLAŞ KAPSAM"})
+                window.runScriptLine(QString::fromUtf8(line));
+            window.runScriptLine(QStringLiteral("DIŞAAKTAR dosya=\"%1\" bicim=dxf").arg(dxf));
+            window.endCommand(); ///< the export is a job; the sheet waits for it
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"));
+            for (const char* line :
+                 {"ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita izgara=arti",
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=kuzey ad=kuzey x=380 y=36 genislik=24 "
+                  "yukseklik=30",
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=olcek ad=olcek x=312 y=74 genislik=90 "
+                  "yukseklik=12",
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=lejant ad=lejant x=312 y=94 genislik=96 "
+                  "yukseklik=70",
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=tablo ad=tablo x=312 y=172 genislik=96 "
+                  "yukseklik=60 metin=\"Kadastro Parselleri\""})
+                window.runScriptLine(QString::fromUtf8(line));
+        });
+        if (wanted("yazdir")) {
+            later([&window] { window.openPrintDialog(window.controller()->document().extent()); });
+            later([shot] {
+                shot(QStringLiteral("pencere-yazdir"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+        }
+        if (wanted("disa")) {
+            later([&window] {
+                QMetaObject::invokeMethod(&window, "exportData", Qt::QueuedConnection);
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-disa"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+        }
+        if (wanted("ice")) {
+            later([&window] { (void)window.openImportWizard(); });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-1"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+            later([&window, dxf] { (void)window.openImportWizard(dxf); });
+            later([shot] {
+                shot(QStringLiteral("pencere-ice-2"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+        }
+        if (wanted("yerlesim")) {
+            later([&window] {
+                window.openLayoutDesigner(QStringLiteral("Pafta"),
+                                          window.controller()->document().extent());
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yerlesim"), QApplication::activeModalWidget());
+            });
+            later([] {
+                if (auto* designer = qobject_cast<kentos::app::LayoutDesigner*>(
+                        QApplication::activeModalWidget()))
+                    designer->showItem(QStringLiteral("harita"));
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yerlesim-harita"), QApplication::activeModalWidget());
+            });
+            later(closeModal);
+        }
+        later([] { QApplication::exit(0); });
+    } else if (const QByteArray dir = qgetenv("KENTOS_SHOT_DIR"); !dir.isEmpty()) {
         const QString into = QString::fromLocal8Bit(dir);
         QDir().mkpath(into);
 
@@ -1196,6 +1297,8 @@ int main(int argc, char** argv)
         // own event loop — which is fine: a `singleShot` fires in a nested loop
         // like any other.
         later([&window] {
+            window.controller()->cancelAll(); ///< the print frame still asks for its area
+            QCoreApplication::sendPostedEvents();
             window.seedProbeDrawing();
             window.runScriptLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284 / Pafta 3\" kagit=A3 "

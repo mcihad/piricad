@@ -891,6 +891,113 @@ TEST_CASE("IO: çıktı yerleşimi dosyayla gider, öğeleriyle birlikte geri ge
     CHECK(reloaded.doc.content_hash() == hash_before);
 }
 
+TEST_CASE("Çıktı öğesi: ekle, satırın verdiği kutuyu ve ayarları uygular")
+{
+    // THE REGRESSION: `ekle` made the item at its default box and dropped every
+    // other argument on the line, so a title placed at 312,12 landed at the
+    // margin under the map (`.claude/command.md` P15).
+    Rig r;
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay", Origin::Test)
+            .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ekle tur=metin ad=antet x=312 y=12.5 genislik=96 "
+                              "yukseklik=18 metin=\"Ada 1284\" yazi=2.5 yatay_hizala=sol",
+                              Origin::Test)
+                .ok());
+    const core::Layout* l = r.doc.layouts().find("Pafta");
+    REQUIRE(l != nullptr);
+    const core::LayoutItem* item = l->find("antet");
+    REQUIRE(item != nullptr);
+    CHECK(item->frame.x == core::um_from_mm(312));
+    CHECK(item->frame.y == 12500);
+    CHECK(item->frame.w == core::um_from_mm(96));
+    CHECK(item->frame.h == core::um_from_mm(18));
+    CHECK(item->text == "Ada 1284");
+    CHECK(item->text_height == 2500); // 2.5 mm, not truncated to 2
+    CHECK(item->align_h == 0);
+
+    // AND THE JOURNAL KEEPS WHAT WAS APPLIED, so a replay places it again.
+    const auto& last = r.journal.entries().back();
+    CHECK(last.args.get("x").as_number() == doctest::Approx(312.0));
+    CHECK(last.args.get("metin").as_text() == "Ada 1284");
+}
+
+TEST_CASE("Çıktı öğesi: döndürme, renkler, zemin, hizalama ve ızgara komuttan verilir, dosyayla "
+          "gidip gelir")
+{
+    TempDir tmp("yerlesim-gorunum");
+    const std::string path = tmp.file("gorunum.pcad");
+    Rig written;
+    for (const char* line :
+         {"ALAN noktalar=0,0 100,0 100,80 0,80", "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A4",
+          "ÇIKTIÖĞE islem=ayarla ad=baslik aci=15 yazi_renk=#C0392B zemin=evet "
+          "zemin_renk=#F2F2F2 cerceve=evet cerceve_renk=mavi cerceve_kalinlik=0.35 "
+          "yatay_hizala=sag dikey_hizala=ust",
+          "ÇIKTIÖĞE islem=ayarla ad=harita izgara=cizgi izgara_etiket=ic izgara_renk=#808080 "
+          "izgara_kalinlik=0.18 izgara_yazi=2.2",
+          "ÇIKTIÖĞE islem=ayarla ad=olcek bolum=5",
+          "ÇIKTIÖĞE islem=ekle tur=sekil ad=cerceve2 sekil=elips x=20 y=30 genislik=40 "
+          "yukseklik=20"}) {
+        auto ran = written.bus.execute_line(line, Origin::Test);
+        REQUIRE_MESSAGE(ran.ok(), line << ": " << (ran.ok() ? "" : ran.error().message));
+    }
+    const std::uint64_t hash_before = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    REQUIRE(reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    const core::Layout* back = reloaded.doc.layouts().find("Pafta");
+    REQUIRE(back != nullptr);
+
+    const core::LayoutItem* title = back->find("baslik");
+    REQUIRE(title != nullptr);
+    CHECK(title->rotation_udeg == 15000000);
+    CHECK(title->text_colour == 0xFFC0392Bu);
+    CHECK(title->background == true);
+    CHECK(title->background_colour == 0xFFF2F2F2u);
+    CHECK(title->frame_visible == true);
+    CHECK(title->frame_width == 350);
+    CHECK(title->align_h == 2);
+    CHECK(title->align_v == 0);
+
+    const core::LayoutItem* map = back->find("harita");
+    REQUIRE(map != nullptr);
+    CHECK(map->grid_labels == core::GridLabels::Inside);
+    CHECK(map->grid_colour == 0xFF808080u);
+    CHECK(map->grid_width == 180);
+    CHECK(map->grid_text_height == 2200);
+
+    CHECK(back->find("olcek")->style == 5);
+    REQUIRE(back->find("cerceve2") != nullptr);
+    CHECK(back->find("cerceve2")->shape == core::LayoutShape::Ellipse);
+    CHECK(reloaded.doc.content_hash() == hash_before);
+
+    // THE JOURNAL KEEPS ONE SPELLING of a colour, whatever was typed.
+    bool spelled = false;
+    for (const auto& e : written.journal.entries())
+        if (e.args.get("cerceve_renk").as_text() == "#0000FF") spelled = true;
+    CHECK(spelled);
+}
+
+TEST_CASE("Çıktı öğesi: yalnız bir türe ait ayar başka türe verilince adıyla reddedilir")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta", Origin::Test).ok());
+    const auto refused = [&r](const char* line, const char* why) {
+        const auto got = r.bus.execute_line(line, Origin::Test);
+        REQUIRE_FALSE(got.ok());
+        CHECK_MESSAGE(got.error().message.find(why) != std::string::npos, got.error().message);
+    };
+    refused("ÇIKTIÖĞE islem=ayarla ad=baslik izgara_etiket=dis",
+            "izgara_etiket yalnız bir harita çerçevesi öğesine verilir");
+    refused("ÇIKTIÖĞE islem=ayarla ad=harita bolum=3", "bolum yalnız bir ölçek çubuğu");
+    refused("ÇIKTIÖĞE islem=ayarla ad=baslik sekil=elips", "sekil yalnız bir şekil");
+    refused("ÇIKTIÖĞE islem=ayarla ad=baslik yazi_renk=gökkuşağı", "tanınmayan renk");
+    refused("ÇIKTIÖĞE islem=ayarla ad=baslik aci=400", "Açı -360 ile 360 derece");
+    refused("ÇIKTIÖĞE islem=ayarla ad=baslik cerceve_kalinlik=25", "0 ile 20 mm");
+}
+
 TEST_CASE("IO: yerleşimi olmayan bir çizim yerleşim bloğu yazmaz")
 {
     TempDir tmp("yerlesimsiz");

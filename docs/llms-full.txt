@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 122 (106 tanesi onay ister)
-- Katalog parmak izi: `12601658972664784148`
+- Katalog parmak izi: `17700508604719201377`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1103,6 +1103,20 @@ Onay ister.
 | `katmanlar` | array | hayır | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır (metin) |
 | `harita` | string | hayır | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır (metin) |
 | `sira` | integer | hayır | Çizim sırası; büyük olan üstte (tam sayı) |
+| `aci` | number | hayır | Öğenin dönüşü, derece; sayfada saat yönünde, öğenin ortası çevresinde (sayı) |
+| `cerceve_renk` | string | hayır | Çerçevenin (şekilde çizginin) rengi: #RRGGBB, #AARRGGBB ya da bir renk adı (metin) |
+| `cerceve_kalinlik` | number | hayır | Çerçevenin (şekilde çizginin) kalınlığı; 0 kıl çizgi [kâğıt mm] (sayı) |
+| `zemin` | boolean | hayır | Öğenin arkası zemin rengiyle doldurulsun mu (evet/hayır) |
+| `zemin_renk` | string | hayır | Zeminin (şekilde dolgunun) rengi (metin) |
+| `yazi_renk` | string | hayır | Yazının, ölçek çubuğunun ve kuzey okunun rengi (metin) |
+| `yatay_hizala` | string | hayır | Metnin kutudaki yatay yeri (metin) |
+| `dikey_hizala` | string | hayır | Metnin kutudaki dikey yeri (metin) |
+| `izgara_etiket` | string | hayır | Harita ızgarasının koordinat yazıları: yok, çerçevenin dışında ya da içinde (metin) |
+| `izgara_renk` | string | hayır | Harita ızgarasının rengi (metin) |
+| `izgara_kalinlik` | number | hayır | Izgara çizgisinin kalınlığı; 0 kıl çizgi [kâğıt mm] (sayı) |
+| `izgara_yazi` | number | hayır | Izgaranın koordinat yazılarının yüksekliği [kâğıt mm] (sayı) |
+| `bolum` | integer | hayır | Ölçek çubuğunun bölüm sayısı (tam sayı) |
+| `sekil` | string | hayır | Şekil öğesinin biçimi (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layout_template` — Çıktı Şablonu
